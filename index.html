@@ -576,6 +576,32 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 
 
 <script>
+
+var APP_PW = 'tfugen2025';
+var SK = 'tfgn_auth';
+function checkAuth(){
+  var ok = sessionStorage.getItem(SK)===APP_PW;
+  var ls = document.getElementById('login-screen');
+  if(ls) ls.style.display = ok ? 'none' : 'flex';
+  if(ok){ loadFromSupabase(); }
+  else { setTimeout(function(){ var p=document.getElementById('pw-in'); if(p)p.focus(); },100); }
+}
+function doLogin(){
+  var pw=document.getElementById('pw-in');
+  var err=document.getElementById('pw-err');
+  if(!pw)return;
+  if(pw.value===APP_PW){
+    sessionStorage.setItem(SK,APP_PW);
+    var ls=document.getElementById('login-screen');
+    if(ls)ls.style.display='none';
+    loadFromSupabase();
+  } else {
+    if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d0 \u05e9\u05d2\u05d5\u05d9\u05d4';
+    pw.value='';pw.focus();
+    setTimeout(function(){if(err)err.textContent='';},2000);
+  }
+}
+
 // ============ SUPABASE CONFIG ============
 var SB_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SB_KEY = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
@@ -1486,6 +1512,19 @@ g('madd') && (g('madd').style.display='none');
 var mTr=g('m-tr');
 if(mTr){ new MutationObserver(function(ml){ ml.forEach(function(m){ if(m.attributeName==='class'&&mTr.classList.contains('on')) setTimeout(initSig,120); }); }).observe(mTr,{attributes:true}); }
 rDash();
+checkAuth();
 </script>
 </body>
 </html>
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--su);border:1px solid var(--br);border-radius:16px;padding:32px 24px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:32px;margin-bottom:12px">&#128274;</div>
+    <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:4px">&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:24px">&#1514;&#1506;&#1513;&#1497;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503;</div>
+    <input id="pw-in" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1488;" style="text-align:center;font-size:18px;letter-spacing:4px;margin-bottom:12px" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="pw-err" style="color:var(--rd);font-size:12px;margin-bottom:8px;min-height:18px"></div>
+    <button onclick="doLogin()" style="width:100%;padding:12px;background:var(--ac);color:#0f0f13;border:none;border-radius:8px;font-size:15px;font-weight:900;font-family:Heebo,sans-serif;cursor:pointer">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <div style="font-size:10px;color:var(--t3);margin-top:16px">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;&#1492; | &#1514;&#1506;&#1513;&#1497;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  </div>
+</div>
+
