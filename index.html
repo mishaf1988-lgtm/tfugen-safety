@@ -998,7 +998,17 @@ function loadFromSupabase() {
     {key:'inc',  tbl:'inc'},
     {key:'tr',   tbl:'tr'},
     {key:'rsk',  tbl:'rsk'},
-    {key:'emp',  tbl:'emp'}
+    {key:'emp',  tbl:'emp'},
+    {key:'ptw',  tbl:'ptw'},
+    {key:'ppe',  tbl:'ppe'},
+    {key:'med',  tbl:'med'},
+    {key:'ins',  tbl:'ins'},
+    {key:'drl',  tbl:'drl'},
+    {key:'ctr',  tbl:'ctr'},
+    {key:'wst',  tbl:'wst'},
+    {key:'hzm',  tbl:'hzm'},
+    {key:'env',  tbl:'env'},
+    {key:'leg',  tbl:'leg'}
   ];
   
   var pending = tables.length;
@@ -1049,19 +1059,6 @@ function sbDel(table, id) {
   });
 }
 
-// ============================================================
-// NEW MODULES DATA
-// ============================================================
-DB.ptw = DB.ptw || [];
-DB.ppe = DB.ppe || [];
-DB.med = DB.med || [];
-DB.ins = DB.ins || [];
-DB.drl = DB.drl || [];
-DB.ctr = DB.ctr || [];
-DB.wst = DB.wst || [];
-DB.hzm = DB.hzm || [];
-DB.env = DB.env || [];
-DB.leg = DB.leg || [];
 
 // ============================================================
 // SAVE FUNCTIONS \u2014 NEW MODULES
@@ -1365,10 +1362,10 @@ var YA={ticks:{color:'#9090a8',font:{family:'Heebo'}},grid:{color:'#2e2e3a'}};
 // ============================================================
 // DATA
 // ============================================================
-var DB = {docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],files:[],hist:[]};
+var DB = {docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],files:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[]};
 function ldb() {
   try { var x = localStorage.getItem('tfgn'); if (x) DB = JSON.parse(x); } catch(e) {}
-  ['docs','auds','ncr','inc','tr','rsk','emp','files','hist'].forEach(function(k){ DB[k]=DB[k]||[]; });
+  ['docs','auds','ncr','inc','tr','rsk','emp','files','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg'].forEach(function(k){ DB[k]=DB[k]||[]; });
 }
 function sdb() { try { localStorage.setItem('tfgn', JSON.stringify(DB)); } catch(e) {} }
 
@@ -1680,6 +1677,8 @@ function delRec(store, id, fn) {
 // ============================================================
 // RENDER FUNCTIONS
 // ============================================================
+function delR(store,id,fn){ delRec(store,id,fn); }
+
 function rDocs() {
   var data=DB.docs;
   si('doc-tb', data.length ? data.map(function(d){
