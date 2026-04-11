@@ -698,7 +698,7 @@ function sbSync(){
     });
   });
 }
-function delRow(tbl,id,fn){if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7?'))return;DB[tbl]=DB[tbl].filter(function(r){return r.id!==id;});sbDel(tbl,id);addLog('\u05e4\u05e8\u05d9\u05d8 \u05e0\u05de\u05d7\u05e7 \u05de'+tbl);sdb();fn();}
+function delRow(tbl,id,fn){DB[tbl]=DB[tbl].filter(function(r){return r.id!==id;});sbDel(tbl,id);addLog('\u05e4\u05e8\u05d9\u05d8 \u05e0\u05de\u05d7\u05e7 \u05de'+tbl);sdb();toast('\u05e0\u05de\u05d7\u05e7 &#10003;');fn();}
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
