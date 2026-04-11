@@ -832,8 +832,8 @@ function checkAuth(){
   var ok = sessionStorage.getItem(SK)===APP_PW;
   var ls = document.getElementById('login-screen');
   if(ls) ls.style.display = ok ? 'none' : 'flex';
-  if(ok){ loadFromSupabase(); }
-  else { setTimeout(function(){ var p=document.getElementById('pw-in'); if(p)p.focus(); },100); }
+  if(!ok){ setTimeout(function(){ var p=document.getElementById('pw-in'); if(p)p.focus(); },100); }
+  // loadFromSupabase will be called from main script init if already logged in
 }
 function doLogin(){
   var pw=document.getElementById('pw-in');
@@ -843,7 +843,12 @@ function doLogin(){
     sessionStorage.setItem(SK,APP_PW);
     var ls=document.getElementById('login-screen');
     if(ls)ls.style.display='none';
-    loadFromSupabase();
+    // Call loadFromSupabase if available, otherwise just refresh
+    if(typeof loadFromSupabase === 'function'){
+      loadFromSupabase();
+    } else {
+      window.location.reload();
+    }
   } else {
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d0 \u05e9\u05d2\u05d5\u05d9\u05d4';
     pw.value='';pw.focus();
@@ -1930,7 +1935,11 @@ g('madd') && (g('madd').style.display='none');
 var mTr=g('m-tr');
 if(mTr){ new MutationObserver(function(ml){ ml.forEach(function(m){ if(m.attributeName==='class'&&mTr.classList.contains('on')) setTimeout(initSig,120); }); }).observe(mTr,{attributes:true}); }
 rDash();
-checkAuth();
+var _authOk = sessionStorage.getItem('tfgn_auth')==='Medwp123';
+var _ls = document.getElementById('login-screen');
+if(_ls) _ls.style.display = _authOk ? 'none' : 'flex';
+if(_authOk){ loadFromSupabase(); }
+else { setTimeout(function(){ var p=document.getElementById('pw-in'); if(p)p.focus(); },100); }
 </script>
 </body>
 </html>
