@@ -1009,7 +1009,12 @@ function rPtwView(id){
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
   if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.ptw.map(function(p){var vid=p.id;return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button></td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27"+vid+"\\x27)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ptw.map(function(p){
+    var vid=p.id;
+    var vbtn='<button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button>';
+    var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;</button>';
+    return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
+  }).join('');
 }
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
