@@ -234,12 +234,9 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
 </div>
 
 <div id="pg-ptw-view" class="page">
-  <div class="row">
-    <button class="btn btn-s" onclick="goPage('ptw')" style="font-size:13px">&#8594; חזרה</button>
-    <div class="page-title" id="ptw-view-num">צפיית הרשאה</div>
-  </div>
+  <div class="row"><button class="btn btn-s" onclick="goPage('ptw')" style="font-size:13px">&#8594; &#1495;&#1494;&#1512;&#1492;</button><div class="page-title">&#1510;&#1508;&#1497;&#1497;&#1514; &#1492;&#1512;&#1513;&#1488;&#1492;</div></div>
   <div class="card" id="ptw-view-card" style="font-size:13px;line-height:2.2"></div>
-  <div class="page-footer">&#169; <strong>מיכאל פרייליך</strong> | תפוגן 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-ppe" class="page">
@@ -712,7 +709,7 @@ function goPage(id){
 }
 function rPage(){
   var m={dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    'ptw-view':function(){},'ptw':rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -981,10 +978,10 @@ function rPtwView(id){
   var p=DB.ptw.find(function(x){return x.id===id;});
   if(!p){goPage('ptw');return;}
   var el=g('ptw-view-num');
-  if(el)el.textContent=p.num||'\u05d4\u05e8\u05e9\u05d0\u05d4';
-  var row=function(l,v){return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:90px;flex-shrink:0">'+l+'</span><strong>'+v+'</strong></div>';};
+  if(el)el.textContent=p.num||'PTW';
+  function row(l,v){return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:90px;flex-shrink:0">'+l+'</span><strong>'+v+'</strong></div>';}
   var html='';
-  html+=row('\u05de\u05e1'',p.num||'-');
+  html+=row('\u05de\u05e1\'',p.num||'-');
   html+=row('\u05e7\u05d1\u05dc\u05df',p.con||'-');
   html+=row('\u05ea\u05d0\u05e8\u05d9\u05da',(p.ds||'-')+' \u05e2\u05d3 '+(p.de||'-'));
   html+=row('\u05e9\u05e2\u05d5\u05ea',(p.ts||'-')+' - '+(p.te||'-'));
@@ -1006,7 +1003,7 @@ function rPtwView(id){
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
   if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.ptw.map(function(p){return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" onclick="rPtwView(\\x27'+p.id+'\\x27);goPage(\\x27ptw-view\\x27);">&#128065;</button></td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27'+p.id+'\\x27)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ptw.map(function(p){var vid=p.id;return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button></td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27"+vid+"\\x27)">&#128465;</button></td></tr>';}).join('');
 }
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
