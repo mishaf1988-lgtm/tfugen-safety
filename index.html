@@ -143,7 +143,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
     <p>&#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503;</p>
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
-    <button id="login-btn" onclick="doLogin()">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <button id="login-btn" onclick="var v=document.getElementById('pw').value;if(v==='Medwp123'){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';ldb();rDash();sbSync();}else{document.getElementById('pw-err').textContent='X';document.getElementById('pw').value='';}">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
   </div>
 </div>
