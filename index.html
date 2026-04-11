@@ -739,8 +739,9 @@ function confirmDel(){
   var pw=g('del-pw');
   if(!pw)return;
   if(pw.value===DEL_PW){
+    var t=_delPending.tbl,i=_delPending.id;
     cancelDel();
-    if(_delPending.tbl&&_delPending.id)delById(_delPending.tbl,_delPending.id);
+    if(t&&i)delById(t,i);
   }else{
     var err=g('del-pw-err');
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d0 \u05e9\u05d2\u05d5\u05d9\u05d4';
