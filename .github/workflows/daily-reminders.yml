@@ -1,0 +1,25 @@
+name: Daily Safety Reminders
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 9:00 AM Israel time (UTC+3)
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install requests
+      - name: Send daily reminders
+        env:
+          SUPABASE_URL: https://znhjtpcltrxxyfjczgvw.supabase.co
+          SUPABASE_KEY: sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M
+          RESEND_KEY: re_5ePLmABG_4DBKoj96KJNNzrdy98L9wJZ6
+          TO_EMAIL: sviva@tapugan.co.il
+        run: python3 .github/scripts/send_reminders.py
