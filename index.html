@@ -843,12 +843,6 @@ function doLogin(){
     sessionStorage.setItem(SK,APP_PW);
     var ls=document.getElementById('login-screen');
     if(ls)ls.style.display='none';
-    // Call loadFromSupabase if available, otherwise just refresh
-    if(typeof loadFromSupabase === 'function'){
-      loadFromSupabase();
-    } else {
-      window.location.reload();
-    }
   } else {
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d0 \u05e9\u05d2\u05d5\u05d9\u05d4';
     pw.value='';pw.focus();
