@@ -1053,10 +1053,12 @@ function doLogin(){
   var pw=g('pw');
   if(!pw)return;
   if(pw.value===PW){
-    sessionStorage.setItem(SK,PW);
+    try{sessionStorage.setItem(SK,PW);}catch(e){}
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
-    ldb();rDash();sbSync();
+    try{ldb();}catch(e){}
+    try{goPage('dash');}catch(e){}
+    try{sbSync();}catch(e){}
   }else{
     var err=g('pw-err');
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
@@ -1068,7 +1070,9 @@ function doLogin(){
   var ok=sessionStorage.getItem(SK)===PW;
   if(ok){
     var app=g('app');if(app)app.style.display='block';
-    ldb();rDash();sbSync();
+    try{ldb();}catch(e){}
+    try{goPage('dash');}catch(e){}
+    try{sbSync();}catch(e){}
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
@@ -1077,7 +1081,4 @@ function doLogin(){
   if(lb)lb.addEventListener('click',doLogin);
   var pw=g('pw');
   if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
-})();
-</script>
-</body>
-</html>
+}catch(e){var ls=g('login');if(ls)ls.style.display='flex';}})();
