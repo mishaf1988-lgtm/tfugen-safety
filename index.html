@@ -1357,25 +1357,6 @@ function rLeg2(){
   }).join('');
 }
 
-// ============================================================
-// EXTEND goPage + nav
-// ============================================================
-var _origGoPage = goPage;
-goPage = function(id) {
-  document.querySelectorAll('.vw').forEach(function(el){el.classList.remove('on');});
-  var el = g('v-'+id); if(el) el.classList.add('on');
-  document.querySelectorAll('.ni,.bi').forEach(function(el){el.classList.remove('on');});
-  document.querySelectorAll('.ni,.bi').forEach(function(el){
-    var oc = el.getAttribute('onclick');
-    if(oc && oc.indexOf("'"+id+"'") > -1) el.classList.add('on');
-  });
-  var ma = g('madd'); if(ma) ma.style.display = 'block';
-  CUR = id;
-  var fn={dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,files:rFi,emp:rEmp,cal:rCal,kpi:rKpi,lg:rLg,
-    ptw:rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg2};
-  if(fn[id]) fn[id]();
-};
-
 </script>
 
 <script>var XA={ticks:{color:'#9090a8',font:{family:'Heebo'}},grid:{color:'#2e2e3a'}};
@@ -1395,7 +1376,7 @@ function sdb() { try { localStorage.setItem('tfgn', JSON.stringify(DB)); } catch
 // HELPERS
 // ============================================================
 var CH = {}, CUR = 'dash', NI = 1, SH = [];
-var VM = {dash:null,docs:'m-doc',aud:'m-aud',ncr:'m-ncr',inc:'m-inc',tr:'m-tr',rsk:'m-rsk',files:'fi-up',emp:'m-emp',cal:null,kpi:null,lg:null};
+var VM = {dash:null,docs:'m-doc',aud:'m-aud',ncr:'m-ncr',inc:'m-inc',tr:'m-tr',rsk:'m-rsk',files:'fi-up',emp:'m-emp',cal:null,kpi:null,lg:null,ptw:'m-ptw',ppe:'m-ppe',med:'m-med',ins:'m-ins',drl:'m-drl',ctr:'m-ctr',wst:'m-wst',hzm:'m-hzm',env:'m-env',leg:'m-leg'};
 
 function g(id) { return document.getElementById(id); }
 function si(id,v) { var el=g(id); if(el) el.innerHTML=v; }
@@ -1445,7 +1426,7 @@ function goPage(v) {
   var ma = g('madd');
   if(ma) ma.style.display = VM[v] ? 'block' : 'none';
   CUR = v;
-  var rv = {dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,files:rFi,emp:rEmp,cal:rCal,kpi:rKpi,lg:rLg};
+  var rv = {dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,files:rFi,emp:rEmp,cal:rCal,kpi:rKpi,lg:rLg,ptw:rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg2};
   if(rv[v]) rv[v]();
 }
 function mAdd() {
