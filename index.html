@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -183,7 +182,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 <div class="app">
 
 <!-- SIDEBAR -->
-
 <aside class="sb">
   <div class="logo">
     <div class="logo-t">ניהול הבטיחות<br>ואיכות הסביבה</div>
@@ -217,7 +215,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </aside>
 
 <!-- MOBILE TOP -->
-
 <div class="mb">
   <div class="ml">ניהול הבטיחות<br>תעשיות תפוגן</div>
   <div class="mb-r">
@@ -227,7 +224,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- MOBILE BOTTOM NAV -->
-
 <nav class="bn">
   <button class="bi on" onclick="goPage('dash')"><span class="ic">&#127968;</span>&#1512;&#1488;&#1513;&#1497;</button>
   <button class="bi" onclick="goPage('docs')"><span class="ic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
@@ -243,7 +239,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </nav>
 
 <!-- NOTIFICATION PANEL -->
-
 <div class="ntp" id="ntp" onclick="if(event.target===this)toggleNotif()">
   <div class="ntb">
     <div class="nth"><span>&#128276; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</span>
@@ -255,7 +250,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 <main class="mn">
 
 <!-- DASHBOARD -->
-
 <div id="v-dash" class="vw on">
   <div class="tb"><div><div class="pt">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; <span>&#1512;&#1488;&#1513;&#1497;</span></div><div id="dd" style="font-size:11px;color:var(--t3);margin-top:2px"></div></div>
     <div style="display:flex;gap:6px"><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button><button class="btn bg2 bs" onclick="xp()">&#128229; JSON</button></div></div>
@@ -282,7 +276,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- DOCS -->
-
 <div id="v-docs" class="vw">
   <div class="tb"><div class="pt">&#1502;&#1505;&#1502;&#1499;&#1497; <span>ISO</span></div><div style="display:flex;gap:6px"><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button><button class="btn bp" onclick="openM('m-doc')">+ &#1492;&#1493;&#1505;&#1507;</button></div></div>
   <div class="sr" id="doc-sr"></div>
@@ -291,7 +284,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- AUDITS -->
-
 <div id="v-aud" class="vw">
   <div class="tb"><div class="pt">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; <span>&#1508;&#1504;&#1497;&#1502;&#1497;&#1493;&#1514;</span></div><div style="display:flex;gap:6px"><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button><button class="btn bp" onclick="openM('m-aud')">+ &#1492;&#1493;&#1505;&#1507;</button></div></div>
   <div class="sr" id="aud-sr"></div>
@@ -300,7 +292,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- NCR -->
-
 <div id="v-ncr" class="vw">
   <div class="tb"><div class="pt">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; / <span>CAPA</span></div><button class="btn bp" onclick="openM('m-ncr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="sr" id="ncr-sr"></div>
@@ -309,7 +300,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- INCIDENTS -->
-
 <div id="v-inc" class="vw">
   <div class="tb"><div class="pt">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><div style="display:flex;gap:6px"><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button><button class="btn bp" onclick="openM('m-inc')">+ &#1492;&#1493;&#1505;&#1497;&#1507;</button></div></div>
   <div class="sr" id="inc-sr"></div>
@@ -318,7 +308,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- TRAINING -->
-
 <div id="v-tr" class="vw">
   <div class="tb"><div class="pt">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</span></div><div style="display:flex;gap:6px"><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button><button class="btn bp" onclick="openM('m-tr')">+ &#1492;&#1493;&#1505;&#1497;&#1507;</button></div></div>
   <div class="sr" id="tr-sr"></div>
@@ -327,7 +316,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- RISKS -->
-
 <div id="v-rsk" class="vw">
   <div class="tb"><div class="pt">&#1504;&#1497;&#1492;&#1493;&#1500; <span>&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501;</span></div><button class="btn bp" onclick="openM('m-rsk')">+ &#1492;&#1493;&#1505;&#1497;&#1507;</button></div>
   <div class="g2" style="margin-bottom:14px">
@@ -346,7 +334,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- FILES -->
-
 <div id="v-files" class="vw">
   <div class="tb"><div class="pt">&#128193; &#1511;&#1489;&#1510;&#1497;&#1501; <span>&#1493;&#1514;&#1502;&#1493;&#1504;&#1493;&#1514;</span></div>
     <div style="display:flex;gap:6px;align-items:center">
@@ -375,7 +362,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- EMPLOYEES -->
-
 <div id="v-emp" class="vw">
   <div class="tb"><div class="pt">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; <span>&#1493;&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</span></div><button class="btn bp" onclick="openM('m-emp')">+ &#1492;&#1493;&#1505;&#1497;&#1507;</button></div>
   <div class="emp-grid" id="emp-grid"><div style="grid-column:1/-1;color:var(--t3);font-size:12px;padding:16px 0">&#1488;&#1497;&#1503; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div></div>
@@ -385,7 +371,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- CALENDAR -->
-
 <div id="v-cal" class="vw">
   <div class="tb"><div class="pt">&#1500;&#1493;&#1495; <span>&#1513;&#1504;&#1492;</span></div>
     <div style="display:flex;gap:6px;align-items:center"><button class="btn bg2 bs" onclick="prevMo()">&#8594;</button><span id="cal-title" style="font-size:13px;font-weight:700;padding:0 8px"></span><button class="btn bg2 bs" onclick="nextMo()">&#8592;</button></div></div>
@@ -403,7 +388,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- KPI -->
-
 <div id="v-kpi" class="vw">
   <div class="tb"><div class="pt">KPI <span>&#1493;&#1502;&#1491;&#1491;&#1497;&#1501;</span></div><button class="btn bg2 bs" onclick="expPDF()">&#128229; PDF</button></div>
   <div class="kg" id="kpi-x"></div>
@@ -420,7 +404,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div>
 
 <!-- HISTORY -->
-
 <div id="v-lg" class="vw">
   <div class="tb"><div class="pt">&#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; <span>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</span></div>
     <button class="btn bd bs" id="clr-lg">&#128465; &#1504;&#1511;&#1492;</button></div>
@@ -434,7 +417,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 <!-- ======= MODALS ======= -->
 
 <!-- DOC -->
-
 <div class="mo" id="m-doc" onclick="if(event.target===this)closeM('m-doc')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-doc')">&#10005;</button>
 <div class="mt">&#128196; &#1492;&#1493;&#1505;&#1508;&#1514; &#1502;&#1505;&#1502;&#1498; ISO</div>
 <div class="fg">
@@ -459,7 +441,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- AUDIT -->
-
 <div class="mo" id="m-aud" onclick="if(event.target===this)closeM('m-aud')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-aud')">&#10005;</button>
 <div class="mt">&#128269; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1508;&#1504;&#1497;&#1502;&#1497;&#1514; &#1495;&#1491;&#1513;&#1492;</div>
 <div class="fg">
@@ -484,7 +465,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- NCR -->
-
 <div class="mo" id="m-ncr" onclick="if(event.target===this)closeM('m-ncr')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-ncr')">&#10005;</button>
 <div class="mt">&#128295; &#1491;&#1497;&#1493;&#1493;&#1495; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1492;</div>
 <div class="fg">
@@ -508,7 +488,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- INCIDENT -->
-
 <div class="mo" id="m-inc" onclick="if(event.target===this)closeM('m-inc')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-inc')">&#10005;</button>
 <div class="mt">&#9888; &#1491;&#1497;&#1493;&#1493;&#1495; &#1514;&#1488;&#1493;&#1504;&#1492; / &#1488;&#1497;&#1512;&#1493;&#1506;</div>
 <div class="fg">
@@ -534,7 +513,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- TRAINING -->
-
 <div class="mo" id="m-tr" onclick="if(event.target===this)closeM('m-tr')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-tr')">&#10005;</button>
 <div class="mt">&#127891; &#1492;&#1493;&#1505;&#1508;&#1514; &#1492;&#1491;&#1512;&#1499;&#1492;</div>
 <div class="fg">
@@ -561,7 +539,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- RISK -->
-
 <div class="mo" id="m-rsk" onclick="if(event.target===this)closeM('m-rsk')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-rsk')">&#10005;</button>
 <div class="mt">&#9889; &#1492;&#1493;&#1505;&#1508;&#1514; &#1505;&#1497;&#1499;&#1493;&#1503;</div>
 <div class="fg">
@@ -584,7 +561,6 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 </div></div>
 
 <!-- EMPLOYEE -->
-
 <div class="mo" id="m-emp" onclick="if(event.target===this)closeM('m-emp')"><div class="md"><div class="mh"></div><button class="mx" onclick="closeM('m-emp')">&#10005;</button>
 <div class="mt">&#128100; &#1492;&#1493;&#1505;&#1508;&#1514; &#1506;&#1493;&#1489;&#1491;</div>
 <div class="fg">
@@ -1381,42 +1357,38 @@ function expPDF() {
       + '<tr><td>\u05e7\u05d1\u05e6\u05d9\u05dd</td><td>'+DB.files.length+'</td></tr>';
     win.document.write('<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>\u05d3\u05d5\u05d7 \u05ea\u05e4\u05d5\u05d2\u05df</title>'
       + '<style>body{font-family:Arial;padding:20px;direction:rtl}h1{color:#333}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 10px;text-align:right}th{background:#f0f0f0}.ft{margin-top:20px;font-size:11px;color:#777;text-align:center}button{background:#f5c518;border:none;padding:8px 20px;font-size:14px;cursor:pointer;border-radius:6px;margin-bottom:16px}@media print{button{display:none}}</style>'
-
-```
-  + '</head><body>'
-  + '<h1>\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u2013 \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df</h1>'
-  + '<p>\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: <strong>\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05db\u05d4</strong> | '+new Date().toLocaleDateString('he-IL')+'</p>'
-  + '<br><button onclick="window.print()">\u25c4 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db\u05d5-PDF</button>'
-  + '<table><thead><tr><th>\u05de\u05d3\u05d3</th><th>\u05e2\u05e8\u05da</th></tr></thead><tbody>'+rows+'</tbody></table>'
-  + '<div class="ft">\u00a9 \u05db\u05dc \u05d4\u05d6\u05db\u05d5\u05d9\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea | \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05db\u05d4 \u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea | \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df 2025</div>'
-  + '</body></html>');
-win.document.close();
-toast('\u05d3\u05d5\u05d7 \u05e0\u05e4\u05ea\u05d7 \u2013 \u05dc\u05d7\u05e5 \u05d4\u05d3\u05e4\u05e1', 'ok');
-```
-
+      + '</head><body>'
+      + '<h1>\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u2013 \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df</h1>'
+      + '<p>\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: <strong>\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05db\u05d4</strong> | '+new Date().toLocaleDateString('he-IL')+'</p>'
+      + '<br><button onclick="window.print()">\u25c4 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db\u05d5-PDF</button>'
+      + '<table><thead><tr><th>\u05de\u05d3\u05d3</th><th>\u05e2\u05e8\u05da</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      + '<div class="ft">\u00a9 \u05db\u05dc \u05d4\u05d6\u05db\u05d5\u05d9\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea | \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05db\u05d4 \u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea | \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df 2025</div>'
+      + '</body></html>');
+    win.document.close();
+    toast('\u05d3\u05d5\u05d7 \u05e0\u05e4\u05ea\u05d7 \u2013 \u05dc\u05d7\u05e5 \u05d4\u05d3\u05e4\u05e1', 'ok');
+  }
 }
-}
+
 
 function xp(){
-var d={generated:new Date().toLocaleString(‘he-IL’),docs:DB.docs.length,auds:DB.auds.length,inc:DB.inc.length,ncr:DB.ncr.length,tr:DB.tr.length,rsk:DB.rsk.length,emp:DB.emp.length,files:DB.files.length};
-var a=document.createElement(‘a’);
-a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:‘application/json’}));
-a.download=‘tfgn-’+new Date().toISOString().split(‘T’)[0]+’.json’;
-a.click();
+  var d={generated:new Date().toLocaleString('he-IL'),docs:DB.docs.length,auds:DB.auds.length,inc:DB.inc.length,ncr:DB.ncr.length,tr:DB.tr.length,rsk:DB.rsk.length,emp:DB.emp.length,files:DB.files.length};
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+  a.download='tfgn-'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();
 }
 
 // ============================================================
 // INIT
 // ============================================================
 ldb();
-var clg=g(‘clr-lg’);
-if(clg) clg.onclick=function(){ if(confirm(’\u05dc\u05e0\u05e7\u05d5\u05ea?’)){ DB.hist=[]; sdb(); rLg(); } };
-g(‘dd’) && (g(‘dd’).textContent=new Date().toLocaleDateString(‘he-IL’,{weekday:‘long’,year:‘numeric’,month:‘long’,day:‘numeric’}));
-g(‘madd’) && (g(‘madd’).style.display=‘none’);
-var mTr=g(‘m-tr’);
-if(mTr){ new MutationObserver(function(ml){ ml.forEach(function(m){ if(m.attributeName===‘class’&&mTr.classList.contains(‘on’)) setTimeout(initSig,120); }); }).observe(mTr,{attributes:true}); }
+var clg=g('clr-lg');
+if(clg) clg.onclick=function(){ if(confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?')){ DB.hist=[]; sdb(); rLg(); } };
+g('dd') && (g('dd').textContent=new Date().toLocaleDateString('he-IL',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+g('madd') && (g('madd').style.display='none');
+var mTr=g('m-tr');
+if(mTr){ new MutationObserver(function(ml){ ml.forEach(function(m){ if(m.attributeName==='class'&&mTr.classList.contains('on')) setTimeout(initSig,120); }); }).observe(mTr,{attributes:true}); }
 rDash();
 </script>
-
 </body>
 </html>
