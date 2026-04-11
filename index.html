@@ -1065,11 +1065,13 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
+var LOGGED_IN=false;
 function doLogin(){
   var pw=g('pw');
   if(!pw)return;
   if(pw.value===PW){
-    sessionStorage.setItem(SK,PW);
+    LOGGED_IN=true;
+    try{sessionStorage.setItem(SK,PW);}catch(e){}
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
     ldb();rDash();sbSync();
@@ -1081,16 +1083,16 @@ function doLogin(){
   }
 }
 (function(){
-  var ok=sessionStorage.getItem(SK)===PW;
+  var ok=false;
+  try{ok=sessionStorage.getItem(SK)===PW;}catch(e){}
   if(ok){
+    LOGGED_IN=true;
     var app=g('app');if(app)app.style.display='block';
     ldb();rDash();sbSync();
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
   }
-  var lb=g('login-btn');
-  if(lb)lb.addEventListener('click',doLogin);
   var pw=g('pw');
   if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 })();
