@@ -1102,6 +1102,88 @@ function svPtw(){
 }
 
 
+function ptwPrint(){
+  var con=gv('ptw-con');
+  if(!con){
+    // Save first if not saved
+    svPtw();
+    return;
+  }
+  function cb(id){var el=document.getElementById(id);return el&&el.checked;}
+  var types=[];
+  if(cb('ptw-hot'))types.push('\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea');
+  if(cb('ptw-hgt'))types.push('\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4');
+  if(cb('ptw-elc'))types.push('\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc');
+  if(cb('ptw-eng'))types.push('\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4');
+  if(cb('ptw-lft'))types.push('\u05d4\u05e0\u05e4\u05d4');
+  if(cb('ptw-chm'))types.push('\u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd');
+  if(cb('ptw-cnf'))types.push('\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3');
+  if(cb('ptw-rof'))types.push('\u05d2\u05d2\u05d5\u05ea');
+  var safety=[];
+  if(cb('ptw-s1'))safety.push('\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9');
+  if(cb('ptw-s2'))safety.push('\u05e8\u05ea\u05de\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+  if(cb('ptw-s3'))safety.push('\u05e7\u05e1\u05d3\u05d4');
+  if(cb('ptw-s4'))safety.push('\u05de\u05d8\u05e3 \u05db\u05d9\u05d1\u05d5\u05d9');
+  if(cb('ptw-s5'))safety.push('\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d6\u05d5\u05d2\u05d5\u05ea');
+  if(cb('ptw-s6'))safety.push('\u05d1\u05d9\u05d3\u05d5\u05d3 \u05d0\u05d6\u05d5\u05e8');
+  if(cb('ptw-s7'))safety.push('\u05e4\u05d9\u05e0\u05d5\u05d9 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d3\u05dc\u05d9\u05e7\u05d9\u05dd');
+  if(cb('ptw-s8'))safety.push('\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e1\u05d5\u05e4\u05d9\u05ea');
+  if(gv('ptw-sother'))safety.push(gv('ptw-sother'));
+  var num=gv('ptw-num')||'PTW-????';
+  var html='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">'
+    +'<title>\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 '+num+'</title>'
+    +'<style>'
+    +'body{font-family:Arial,sans-serif;margin:0;padding:16px;direction:rtl;font-size:12px}'
+    +'h2{text-align:center;color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:6px;margin-bottom:12px}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:10px}'
+    +'th{background:#cc1f1f;color:#fff;padding:6px 8px;text-align:right;font-size:11px}'
+    +'td{border:1px solid #bbb;padding:6px 8px;vertical-align:top}'
+    +'.sec th{background:#8b0000}'
+    +'.sig td{height:50px;vertical-align:bottom;font-size:11px}'
+    +'.note{border:1px solid #bbb;padding:10px;border-radius:6px;margin-top:10px;font-size:11px}'
+    +'button{background:#cc1f1f;color:#fff;border:none;padding:8px 20px;cursor:pointer;border-radius:6px;margin-bottom:12px;font-size:13px}'
+    +'@media print{button{display:none}}'
+    +'</style></head><body>'
+    +'<button onclick="window.print()">&#128247; \u05d4\u05d3\u05e4\u05e1</button>'
+    +'<h2>\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea &mdash; \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df</h2>'
+    +'<table><tr><td><b>\u05de\u05e1\u05e4\u05e8:</b> '+num+'</td>'
+    +'<td><b>\u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d7\u05d9\u05dc\u05d4:</b> '+gv('ptw-ds')+'</td>'
+    +'<td><b>\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05dd:</b> '+gv('ptw-de')+'</td></tr>'
+    +'<tr><td><b>\u05e9\u05e2\u05ea \u05d4\u05ea\u05d7\u05dc\u05d4:</b> '+gv('ptw-ts')+'</td>'
+    +'<td><b>\u05e9\u05e2\u05ea \u05e1\u05d9\u05d5\u05dd:</b> '+gv('ptw-te')+'</td>'
+    +'<td><b>\u05d0\u05d6\u05d5\u05e8/\u05de\u05d7\u05dc\u05e7\u05d4:</b> '+gv('ptw-area')+'/'+gv('ptw-dep')+'</td></tr>'
+    +'<tr><td><b>\u05e9\u05dd \u05e7\u05d1\u05dc\u05df:</b> '+con+'</td>'
+    +'<td><b>\u05d0\u05d7\u05e8\u05d0\u05d9:</b> '+gv('ptw-sup')+'</td>'
+    +'<td><b>\u05e0\u05d9\u05d9\u05d3:</b> '+gv('ptw-ph')+'</td></tr>'
+    +'<tr><td colspan="3"><b>\u05e9\u05de\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd:</b> '+gv('ptw-wkr')+'</td></tr>'
+    +'<tr><td colspan="3"><b>\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4:</b> '+gv('ptw-desc')+'</td></tr>'
+    +'<tr><td colspan="3"><b>\u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4:</b> '+types.join(', ')+'</td></tr>'
+    +'<tr><td colspan="3"><b>\u05d0\u05de\u05e6\u05e2\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea:</b> '+safety.join(', ')+'</td></tr>'
+    +'</table>'
+    +'<table class="sec sig"><tr><th colspan="3">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d5\u05d7\u05ea\u05d9\u05de\u05d5\u05ea</th></tr>'
+    +'<tr><td>\u05de\u05d1\u05e6\u05e2: '+gv('ptw-sg1n')+'<br>\u05ea\u05d0\u05e8\u05d9\u05da: '+gv('ptw-sg1d')+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:<br><br></td><td></td></tr>'
+    +'<tr><td>\u05de\u05e4\u05e7\u05d7/\u05de\u05d6\u05de\u05d9\u05df: '+gv('ptw-sg2n')+'<br>\u05ea\u05d0\u05e8\u05d9\u05da: '+gv('ptw-sg2d')+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:<br><br></td><td></td></tr>'
+    +'<tr><td>\u05de\u05e0\u05d4\u05dc \u05de\u05d7\u05dc\u05e7\u05d4: '+gv('ptw-sg3n')+'<br>\u05ea\u05d0\u05e8\u05d9\u05da: '+gv('ptw-sg3d')+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:<br><br></td><td></td></tr>'
+    +'<tr><td>\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+gv('ptw-sg4n')+'<br>\u05ea\u05d0\u05e8\u05d9\u05da: '+gv('ptw-sg4d')+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:<br><br></td><td></td></tr>'
+    +'</table>'
+    +'<div class="note"><b>\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e1\u05d9\u05d5\u05dd \u05e2\u05d1\u05d5\u05d3\u05d4:</b><br>'
+    +'\u05e9\u05e2\u05ea \u05e1\u05d9\u05d5\u05dd: __________ '
+    +'\u05e9\u05dd \u05d4\u05de\u05d1\u05e6\u05e2: __________________ '
+    +'\u05d7\u05ea\u05d9\u05de\u05d4: __________<br><br>'
+    +'\u05e9\u05dd \u05de\u05e4\u05e7\u05d7: __________________ '
+    +'\u05d7\u05ea\u05d9\u05de\u05d4: __________ '
+    +'\u05e9\u05e2\u05d4: __________'
+    +'</div>'
+    +'<p style="text-align:center;margin-top:14px;font-size:10px;color:#999">'
+    +'&#169; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e2\u05e9\u05d9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df 2025'
+    +'</p></body></html>';
+  var win=window.open('','_blank');
+  if(!win){alert('\u05d0\u05e0\u05d0 \u05d0\u05e4\u05e9\u05e8 \u05e7\u05d5\u05e4\u05e6\u05d5\u05ea (Popup Blocker). \u05e4\u05ea\u05d7 \u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d1\u05d3\u05e4\u05d3\u05e4\u05df.');return;}
+  win.document.write(html);
+  win.document.close();
+}
+
+
 function svPpe(){
   var ty=gv('ppe-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
   var _r={id:gid(),ty:ty,w:gv('ppe-w'),m:gv('ppe-m'),d:gv('ppe-d'),e:gv('ppe-e'),c:gv('ppe-c')};
