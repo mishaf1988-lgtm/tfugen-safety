@@ -106,6 +106,7 @@ tr:last-child td{border-bottom:none}tr:nth-child(even) td{background:rgba(204,31
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fp{display:flex;flex-direction:column;gap:4px}.fp.f{grid-column:span 2}
 label{font-size:11px;font-weight:700;color:var(--t2)}
+input[type=checkbox]{-webkit-appearance:checkbox;width:16px;height:16px;min-width:16px;cursor:pointer;margin:0}
 input,select,textarea{background:#f8f9fa;border:1.5px solid var(--br);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Heebo',sans-serif;font-size:13px;outline:none;transition:border-color .15s;width:100%;-webkit-appearance:none}
 input:focus,select:focus,textarea:focus{border-color:var(--ac);background:#fff;box-shadow:0 0 0 3px rgba(204,31,31,.1)}
 textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
@@ -715,7 +716,7 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 
 
 <!-- PTW MODAL - TFUGEN FULL FORM -->
-<div class="mo" id="m-ptw" onclick="if(event.target===this)closeM('m-ptw')">
+<div class="mo" id="m-ptw">
 <div class="md" style="max-width:620px">
 <div class="mh"></div>
 <button class="fx" onclick="closeM('m-ptw')">&#10005;</button>
@@ -743,28 +744,28 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 <div style="margin-bottom:12px">
   <div style="font-weight:900;color:var(--ac);margin-bottom:8px;font-size:13px">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492; (&#1505;&#1502;&#1503; &#1488;&#1514; &#1499;&#1500; &#1492;&#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;&#1501;):</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-hot"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1495;&#1502;&#1493;&#1514;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-hgt"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-elc"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1495;&#1513;&#1502;&#1500;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-eng"> &#1504;&#1497;&#1514;&#1493;&#1511; &#1488;&#1504;&#1512;&#1490;&#1497;&#1492;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-lft"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1492;&#1504;&#1508;&#1492;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-chm"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1511;&#1512;&#1489;&#1514; &#1499;&#1497;&#1502;&#1497;&#1511;&#1500;&#1497;&#1501;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-cnf"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1495;&#1500;&#1500; &#1502;&#1493;&#1511;&#1507;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-rof"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1506;&#1500; &#1490;&#1490;&#1493;&#1514;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-hot"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1495;&#1502;&#1493;&#1514;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-hgt"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-elc"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1495;&#1513;&#1502;&#1500;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-eng"> &#1504;&#1497;&#1514;&#1493;&#1511; &#1488;&#1504;&#1512;&#1490;&#1497;&#1492;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-lft"> &#1506;&#1489;&#1493;&#1491;&#1493;&#1514; &#1492;&#1504;&#1508;&#1492;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-chm"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1511;&#1512;&#1489;&#1514; &#1499;&#1497;&#1502;&#1497;&#1511;&#1500;&#1497;&#1501;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-cnf"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1495;&#1500;&#1500; &#1502;&#1493;&#1511;&#1507;</label>
+    <label style="display:block;font-weight:400;background:#fff;padding:8px;border-radius:6px;border:1px solid var(--br);cursor:pointer;-webkit-tap-highlight-color:rgba(204,31,87,.1)"><input type="checkbox" id="ptw-rof"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1506;&#1500; &#1490;&#1490;&#1493;&#1514;</label>
   </div>
 </div>
 
 <div style="margin-bottom:12px">
   <div style="font-weight:900;color:var(--ac);margin-bottom:8px;font-size:13px">&#1488;&#1502;&#1510;&#1506;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; (&#1505;&#1502;&#1503; &#1488;&#1514; &#1492;&#1504;&#1491;&#1512;&#1513;&#1497;&#1501;):</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s1"> &#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; &#1488;&#1497;&#1513;&#1497;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s2"> &#1512;&#1514;&#1502;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s3"> &#1511;&#1505;&#1491;&#1492;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s4"> &#1502;&#1496;&#1507; &#1499;&#1497;&#1489;&#1493;&#1497;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s5"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1494;&#1493;&#1490;&#1493;&#1514;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s6"> &#1489;&#1497;&#1491;&#1493;&#1491; &#1488;&#1494;&#1493;&#1512;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s7"> &#1508;&#1497;&#1504;&#1493;&#1497; &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1491;&#1500;&#1497;&#1511;&#1497;&#1501;</label>
-    <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br)"><input type="checkbox" id="ptw-s8"> &#1489;&#1491;&#1497;&#1511;&#1492; &#1505;&#1493;&#1508;&#1497;&#1514;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s1"> &#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; &#1488;&#1497;&#1513;&#1497;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s2"> &#1512;&#1514;&#1502;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s3"> &#1511;&#1505;&#1491;&#1492;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s4"> &#1502;&#1496;&#1507; &#1499;&#1497;&#1489;&#1493;&#1497;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s5"> &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1494;&#1493;&#1490;&#1493;&#1514;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s6"> &#1489;&#1497;&#1491;&#1493;&#1491; &#1488;&#1494;&#1493;&#1512;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s7"> &#1508;&#1497;&#1504;&#1493;&#1497; &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1491;&#1500;&#1497;&#1511;&#1497;&#1501;</label>
+    <label style="display:block;font-weight:400;font-size:12px;background:#fff;padding:7px;border-radius:6px;border:1px solid var(--br);cursor:pointer"><input type="checkbox" id="ptw-s8"> &#1489;&#1491;&#1497;&#1511;&#1492; &#1505;&#1493;&#1508;&#1497;&#1514;</label>
   </div>
   <div style="margin-top:8px">
     <label style="font-size:11px;font-weight:700;color:var(--t2)">&#1488;&#1495;&#1512;</label>
