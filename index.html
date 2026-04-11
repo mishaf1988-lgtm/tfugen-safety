@@ -574,6 +574,103 @@ textarea{resize:vertical;min-height:68px}select option{background:var(--s2)}
 <div class="fa"><button class="btn bg2" onclick="closeM('m-emp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn bp" onclick="svEmp()">&#128190; &#1513;&#1502;&#1493;&#1512;</button></div>
 </div></div>
 
+
+<script>
+// ============ SUPABASE CONFIG ============
+var SB_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+var SB_KEY = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+var SB_ONLINE = false;
+
+function sbHeaders() {
+  return {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+function sbFetch(method, table, body, query) {
+  var url = SB_URL + '/rest/v1/' + table + (query || '');
+  var opts = { method: method, headers: sbHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(function(r) {
+    if (!r.ok) throw new Error(r.status);
+    return r.status === 204 ? null : r.json();
+  });
+}
+
+function sbLoad(table) {
+  return sbFetch('GET', table, null, '?select=*&order=created_at.desc');
+}
+function sbInsert(table, row) {
+  return sbFetch('POST', table, row);
+}
+function sbDelete(table, id) {
+  return sbFetch('DELETE', table, null, '?id=eq.' + id);
+}
+
+// Load all data from Supabase
+function loadFromSupabase() {
+  var tables = [
+    {key:'docs', tbl:'docs'},
+    {key:'auds', tbl:'auds'},
+    {key:'ncr',  tbl:'ncr'},
+    {key:'inc',  tbl:'inc'},
+    {key:'tr',   tbl:'tr'},
+    {key:'rsk',  tbl:'rsk'},
+    {key:'emp',  tbl:'emp'}
+  ];
+  
+  var pending = tables.length;
+  var ok = true;
+  
+  tables.forEach(function(t) {
+    sbLoad(t.tbl).then(function(rows) {
+      if (rows && rows.length > 0) DB[t.key] = rows;
+      pending--;
+      if (pending === 0 && ok) {
+        SB_ONLINE = true;
+        sdb();
+        goPage(CUR);
+        showStatus('מחובר לענן ✓', 'ok');
+      }
+    }).catch(function(e) {
+      pending--;
+      ok = false;
+      if (pending === 0) {
+        showStatus('עובד אופליין', 'warn');
+        goPage(CUR);
+      }
+    });
+  });
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('sb-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'ok' ? 'var(--ok)' : type === 'warn' ? 'var(--wn)' : 'var(--rd)';
+}
+
+// Override sdb to also sync to Supabase
+var _origSdb = null; // will be set after main script loads
+
+// Wrap insert functions to also push to Supabase
+function sbSave(table, row) {
+  if (!SB_ONLINE) return;
+  sbInsert(table, row).catch(function(e) {
+    console.warn('Supabase insert error:', e);
+  });
+}
+function sbDel(table, id) {
+  if (!SB_ONLINE) return;
+  sbDelete(table, id).catch(function(e) {
+    console.warn('Supabase delete error:', e);
+  });
+}
+</script>
+
 <script>var XA={ticks:{color:'#9090a8',font:{family:'Heebo'}},grid:{color:'#2e2e3a'}};
 var YA={ticks:{color:'#9090a8',font:{family:'Heebo'}},grid:{color:'#2e2e3a'}};
 
@@ -835,7 +932,7 @@ function clearSig() { var c=g('sig-cv'); if(c&&sigCtx) sigCtx.clearRect(0,0,c.wi
 // ============================================================
 function svDoc() {
   var n=gv('d-n').trim(); if(!n){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05de\u05e1\u05de\u05da'); return; }
-  DB.docs.push({id:gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e'),s:gv('d-s'),i:gv('d-i'),nt:gv('d-nt')});
+  var _doc={id:gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e'),s:gv('d-s'),i:gv('d-i'),nt:gv('d-nt')};DB.docs.push(_doc);sbSave('docs',_doc);
   addH('\u05de\u05e1\u05de\u05da','\u05e0\u05d5\u05e1\u05e3: '+n); sdb(); closeM('m-doc');
   ['d-n','d-o','d-nt','d-i'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   var dv=g('d-v'); if(dv) dv.value='1.0';
@@ -843,21 +940,21 @@ function svDoc() {
 }
 function svAud() {
   var n=gv('a-n').trim(); if(!n){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e0\u05d5\u05e9\u05d0'); return; }
-  DB.auds.push({id:gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d'),f:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),f2:gv('a-f2'),sm:gv('a-sm')});
+  var _r={id:gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d'),f:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};DB.auds.push(_r);sbSave('auds',_r);
   addH('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea','\u05e0\u05d5\u05e1\u05e4\u05d4: '+n); sdb(); closeM('m-aud');
   ['a-n','a-a','a-sm'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05d5\u05e1\u05e4\u05d4 &#10003;','ok'); rAud();
 }
 function svNcr() {
   var d=gv('nc-d').trim(); if(!d){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8'); return; }
-  DB.ncr.push({id:gid(),num:'NCR-'+String(NI++).padStart(4,'0'),d:d,a:gv('nc-a'),p:gv('nc-p'),o:gv('nc-o'),f:gv('nc-f'),u:gv('nc-u'),s:gv('nc-st'),c:gv('nc-c')});
+  var _r={id:gid(),num:'NCR-'+String(NI++).padStart(4,'0'),d:d,a:gv('nc-a'),p:gv('nc-p'),o:gv('nc-o'),u:gv('nc-u'),s:gv('nc-st'),c:gv('nc-c')};DB.ncr.push(_r);sbSave('ncr',_r);
   addH('NCR','\u05e0\u05d5\u05e1\u05e3: '+d.substring(0,40)); sdb(); closeM('m-ncr');
   ['nc-d','nc-o','nc-c'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   toast('\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d4 &#10003;','ok'); rNcr();
 }
 function svInc() {
   var d=gv('i-d').trim(); if(!d){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8'); return; }
-  DB.inc.push({id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),w:gv('i-w'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),p:gv('i-p')});
+  var _r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),p:gv('i-p')};DB.inc.push(_r);sbSave('inc',_r);
   addH('\u05d0\u05d9\u05e8\u05d5\u05e2','\u05d3\u05d5\u05d5\u05d7: '+d.substring(0,40)); sdb(); closeM('m-inc');
   ['i-d','i-l','i-w','i-r','i-p'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7 &#10003;','ok'); rInc();
@@ -866,21 +963,21 @@ function svTr() {
   var w=gv('t-w').trim(), n=gv('t-n').trim();
   if(!w||!n){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e2\u05d5\u05d1\u05d3 \u05d5\u05e9\u05dd \u05d4\u05d3\u05e8\u05db\u05d4'); return; }
   var hasSig = !!(sigData&&sigData.length>100);
-  DB.tr.push({id:gid(),w:w,n:n,c:gv('t-c'),tr:gv('t-tr'),d:gv('t-d'),e:gv('t-e'),sc:gi('t-sc'),s:gv('t-st'),sig:hasSig});
+  var _r={id:gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d'),e:gv('t-e'),sc:gi('t-sc'),s:gv('t-st'),sig:hasSig};DB.tr.push(_r);sbSave('tr',_r);
   addH('\u05d4\u05d3\u05e8\u05db\u05d4','\u05e0\u05e8\u05e9\u05de\u05d4: '+w+' - '+n+(hasSig?' [\u05d7\u05ea\u05d5\u05dd]':'')); sdb(); closeM('m-tr');
   ['t-w','t-n','t-tr'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   clearSig(); toast('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e8\u05e9\u05de\u05d4 &#10003;','ok'); rTr();
 }
 function svRsk() {
   var d=gv('r-d').trim(); if(!d){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8'); return; }
-  DB.rsk.push({id:gid(),d:d,a:gv('r-a'),o:gv('r-o'),p:parseInt(gv('r-p')),sv:parseInt(gv('r-s')),ct:gv('r-ct'),ac:gv('r-ac')});
+  var _r={id:gid(),d:d,a:gv('r-a'),o:gv('r-o'),p:parseInt(gv('r-p')),sv:parseInt(gv('r-s')),ac:gv('r-ac')};DB.rsk.push(_r);sbSave('rsk',_r);
   addH('\u05e1\u05d9\u05db\u05d5\u05df','\u05e0\u05d5\u05e1\u05e3: '+d.substring(0,40)); sdb(); closeM('m-rsk');
   ['r-d','r-o','r-ct','r-ac'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   toast('\u05e1\u05d9\u05db\u05d5\u05df \u05e0\u05d5\u05e1\u05e3 &#10003;','ok'); rRsk();
 }
 function svEmp() {
   var n=gv('e-n').trim(); if(!n){ alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd'); return; }
-  DB.emp.push({id:gid(),n:n,r:gv('e-r'),dep:gv('e-d'),s:gv('e-s'),eid:gv('e-id'),ph:gv('e-ph')});
+  var _r={id:gid(),n:n,r:gv('e-r'),dep:gv('e-d'),s:gv('e-s'),ph:gv('e-ph')};DB.emp.push(_r);sbSave('emp',_r);
   addH('\u05e2\u05d5\u05d1\u05d3','\u05e0\u05d5\u05e1\u05e3: '+n); sdb(); closeM('m-emp');
   ['e-n','e-r','e-d','e-s','e-id','e-ph'].forEach(function(i){ var el=g(i); if(el) el.value=''; });
   toast('\u05e2\u05d5\u05d1\u05d3 \u05e0\u05d5\u05e1\u05e3 &#10003;','ok'); rEmp();
