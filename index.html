@@ -908,13 +908,13 @@ function loadFromSupabase() {
         SB_ONLINE = true;
         sdb();
         goPage(CUR);
-        showStatus('מחובר לענן ✓', 'ok');
+        showStatus('\u05de\u05d7\u05d5\u05d1\u05e8 \u05dc\u05e2\u05e0\u05df \u2713', 'ok');
       }
     }).catch(function(e) {
       pending--;
       ok = false;
       if (pending === 0) {
-        showStatus('עובד אופליין', 'warn');
+        showStatus('\u05e2\u05d5\u05d1\u05d3 \u05d0\u05d5\u05e4\u05dc\u05d9\u05d9\u05df', 'warn');
         goPage(CUR);
       }
     });
@@ -960,7 +960,7 @@ DB.env = DB.env || [];
 DB.leg = DB.leg || [];
 
 // ============================================================
-// SAVE FUNCTIONS — NEW MODULES
+// SAVE FUNCTIONS \u2014 NEW MODULES
 // ============================================================
 function svPtw(){
   var ty=gv('ptw-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05e1\u05d5\u05d2');return;}
@@ -1014,7 +1014,7 @@ function svLeg(){
 }
 
 // ============================================================
-// RENDER FUNCTIONS — NEW MODULES
+// RENDER FUNCTIONS \u2014 NEW MODULES
 // ============================================================
 function rPtw(){
   var tb=g('ptw-tb');if(!tb)return;
