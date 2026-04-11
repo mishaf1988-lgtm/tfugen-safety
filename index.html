@@ -143,7 +143,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
     <p>&#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503;</p>
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
-    <button id="login-btn" onclick="var v=document.getElementById('pw').value;if(v==='Medwp123'){document.getElementById('login').style.display='none';document.getElementById('app').style.display='block';try{ldb();}catch(e){}try{goPage('dash');}catch(e){}try{sbSync();}catch(e){};}else{document.getElementById('pw-err').textContent='סיסמא שגויה';document.getElementById('pw').value='';}">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <button id="login-btn" onclick="doLogin()">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
   </div>
 </div>
@@ -503,17 +503,6 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
     <button class="btn btn-s" onclick="closeModal('m-ptw')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-s" onclick="ptwPrint()">&#128247; &#1492;&#1491;&#1508;&#1505;</button>
     <button class="btn btn-p" onclick="svPtw()">&#1513;&#1502;&#1493;&#1512;</button>
-  </div>
-</div>
-
-<!-- PTW VIEW MODAL -->
-<div class="overlay" id="ov-ptw-view" onclick="closeModal('m-ptw-view')"></div>
-<div class="modal" id="m-ptw-view" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ptw-view')">&times;</button>
-  <div class="modal-title" id="ptw-view-title">צפיית הרשאה</div>
-  <div id="ptw-view-body" style="font-size:13px;line-height:2"></div>
-  <div class="modal-footer">
-    <button class="btn btn-s" onclick="closeModal('m-ptw-view')">סגור</button>
   </div>
 </div>
 
@@ -982,33 +971,28 @@ function rEmp(){
 function ptwView(id){
   var p=DB.ptw.find(function(x){return x.id===id;});
   if(!p)return;
-  var row=function(l,v){return '<div style="display:flex;gap:8px;border-bottom:1px solid #eee;padding:6px 0"><span style="color:#888;min-width:90px">'+l+'</span><strong>'+v+'</strong></div>';};
-  var html='';
-  html+=row('\u05de\u05e1'',p.num);
-  html+=row('\u05ea\u05d0\u05e8\u05d9\u05da',(p.ds||'-')+' \u05e2\u05d3 '+(p.de||'-'));
-  html+=row('\u05e9\u05e2\u05d5\u05ea',(p.ts||'-')+' - '+(p.te||'-'));
-  html+=row('\u05d0\u05d6\u05d5\u05e8',(p.area||'-')+' / '+(p.dep||'-'));
-  html+=row('\u05e7\u05d1\u05dc\u05df',p.con||'-');
-  html+=row('\u05d0\u05d7\u05e8\u05d0\u05d9',p.sup||'-');
-  html+=row('\u05e0\u05d9\u05d9\u05d3',p.ph||'-');
-  html+=row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',p.wkr||'-');
-  html+=row('\u05ea\u05d9\u05d0\u05d5\u05e8',p.desc||'-');
-  html+=row('\u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4',p.types||'-');
-  html+=row('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',p.safety||'-');
-  html+='<div style="margin-top:12px;font-weight:700;color:#cc1f1f">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd:</div>';
-  html+=row('\u05de\u05d1\u05e6\u05e2',(p.sg1n||'-')+' ('+fd(p.sg1d)+')');
-  html+=row('\u05de\u05e4\u05e7\u05d7',(p.sg2n||'-')+' ('+fd(p.sg2d)+')');
-  html+=row('\u05de\u05e0\u05d4\u05dc',(p.sg3n||'-')+' ('+fd(p.sg3d)+')');
-  html+=row('\u05de\u05de\u05d5\u05e0\u05d4',(p.sg4n||'-')+' ('+fd(p.sg4d)+')');
-  g('ptw-view-title').textContent='\u05d4\u05e8\u05e9\u05d0\u05d4 '+p.num;
-  g('ptw-view-body').innerHTML=html;
-  g('ov-ptw-view').style.display='block';
-  g('m-ptw-view').style.display='block';
+  var msg='\u05de\u05e1\u0027: '+p.num+'\n'
+    +'\u05e7\u05d1\u05dc\u05df: '+p.con+'\n'
+    +'\u05ea\u05d0\u05e8\u05d9\u05da: '+(p.ds||'-')+' \u05e2\u05d3 '+(p.de||'-')+'\n'
+    +'\u05e9\u05e2\u05d5\u05ea: '+(p.ts||'-')+'-'+(p.te||'-')+'\n'
+    +'\u05d0\u05d6\u05d5\u05e8: '+(p.area||'-')+'/'+(p.dep||'-')+'\n'
+    +'\u05d0\u05d7\u05e8\u05d0\u05d9: '+(p.sup||'-')+'\n'
+    +'\u05e0\u05d9\u05d9\u05d3: '+(p.ph||'-')+'\n'
+    +'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: '+(p.wkr||'-')+'\n'
+    +'\u05ea\u05d9\u05d0\u05d5\u05e8: '+(p.desc||'-')+'\n'
+    +'\u05e1\u05d5\u05d2: '+(p.types||'-')+'\n'
+    +'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+(p.safety||'-')+'\n'
+    +'---\n'
+    +'\u05de\u05d1\u05e6\u05e2: '+(p.sg1n||'-')+'\n'
+    +'\u05de\u05e4\u05e7\u05d7: '+(p.sg2n||'-')+'\n'
+    +'\u05de\u05e0\u05d4\u05dc: '+(p.sg3n||'-')+'\n'
+    +'\u05de\u05de\u05d5\u05e0\u05d4: '+(p.sg4n||'-');
+  alert(msg);
 }
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
   if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.ptw.map(function(p){return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-ptw-id="'+p.id+'" onclick="ptwView(this.getAttribute(\x27data-ptw-id\x27))">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-del-t="ptw" data-del-id="'+p.id+'" onclick="delById(this.getAttribute(\x27data-del-t\x27),this.getAttribute(\x27data-del-id\x27))">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ptw.map(function(p){return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" onclick="ptwView(\\x27'+p.id+'\\x27)">&#128065;</button></td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27'+p.id+'\\x27)">&#128465;</button></td></tr>';}).join('');
 }
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
@@ -1065,13 +1049,11 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
-var LOGGED_IN=false;
 function doLogin(){
   var pw=g('pw');
   if(!pw)return;
   if(pw.value===PW){
-    LOGGED_IN=true;
-    try{sessionStorage.setItem(SK,PW);}catch(e){}
+    sessionStorage.setItem(SK,PW);
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
     ldb();rDash();sbSync();
@@ -1083,16 +1065,16 @@ function doLogin(){
   }
 }
 (function(){
-  var ok=false;
-  try{ok=sessionStorage.getItem(SK)===PW;}catch(e){}
+  var ok=sessionStorage.getItem(SK)===PW;
   if(ok){
-    LOGGED_IN=true;
     var app=g('app');if(app)app.style.display='block';
     ldb();rDash();sbSync();
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
   }
+  var lb=g('login-btn');
+  if(lb)lb.addEventListener('click',doLogin);
   var pw=g('pw');
   if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 })();
