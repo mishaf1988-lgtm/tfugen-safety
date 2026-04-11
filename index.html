@@ -233,6 +233,15 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
+<div id="pg-ptw-view" class="page">
+  <div class="row">
+    <button class="btn btn-s" onclick="goPage('ptw')" style="font-size:13px">&#8594; חזרה</button>
+    <div class="page-title" id="ptw-view-num">צפיית הרשאה</div>
+  </div>
+  <div class="card" id="ptw-view-card" style="font-size:13px;line-height:2.2"></div>
+  <div class="page-footer">&#169; <strong>מיכאל פרייליך</strong> | תפוגן 2025</div>
+</div>
+
 <div id="pg-ppe" class="page">
   <div class="row"><div class="page-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; <span>PPE</span></div><button class="btn btn-p" onclick="openModal('m-ppe')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1493;&#1490;</th><th>&#1506;&#1493;&#1489;&#1491;</th><th>&#1502;&#1508;&#1512;&#1496;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1502;&#1510;&#1489;</th><th></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
@@ -703,7 +712,7 @@ function goPage(id){
 }
 function rPage(){
   var m={dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    'ptw-view':function(){},'ptw':rPtw,ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -968,10 +977,36 @@ function rEmp(){
   if(!DB.emp.length){tb.innerHTML='<tr><td colspan="5" class="et">\u05d0\u05d9\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</td></tr>';return;}
   tb.innerHTML=DB.emp.map(function(e){return '<tr><td><strong>'+e.n+'</strong></td><td>'+(e.r||'&#8212;')+'</td><td>'+(e.dep||'&#8212;')+'</td><td>'+(e.ph||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27emp\\x27,\\x27"+e.id+"\\x27)">&#128465;</button></td></tr>';}).join('');
 }
+function rPtwView(id){
+  var p=DB.ptw.find(function(x){return x.id===id;});
+  if(!p){goPage('ptw');return;}
+  var el=g('ptw-view-num');
+  if(el)el.textContent=p.num||'\u05d4\u05e8\u05e9\u05d0\u05d4';
+  var row=function(l,v){return '<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:90px;flex-shrink:0">'+l+'</span><strong>'+v+'</strong></div>';};
+  var html='';
+  html+=row('\u05de\u05e1'',p.num||'-');
+  html+=row('\u05e7\u05d1\u05dc\u05df',p.con||'-');
+  html+=row('\u05ea\u05d0\u05e8\u05d9\u05da',(p.ds||'-')+' \u05e2\u05d3 '+(p.de||'-'));
+  html+=row('\u05e9\u05e2\u05d5\u05ea',(p.ts||'-')+' - '+(p.te||'-'));
+  html+=row('\u05d0\u05d6\u05d5\u05e8',(p.area||'-')+'/'+(p.dep||'-'));
+  html+=row('\u05d0\u05d7\u05e8\u05d0\u05d9',p.sup||'-');
+  html+=row('\u05e0\u05d9\u05d9\u05d3',p.ph||'-');
+  html+=row('\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',p.wkr||'-');
+  html+=row('\u05ea\u05d9\u05d0\u05d5\u05e8',p.desc||'-');
+  html+=row('\u05e1\u05d5\u05d2',p.types||'-');
+  html+=row('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',p.safety||'-');
+  html+='<div style="margin-top:12px;font-weight:700;color:#cc1f1f">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd:</div>';
+  html+=row('\u05de\u05d1\u05e6\u05e2',(p.sg1n||'-')+' ('+fd(p.sg1d)+')');
+  html+=row('\u05de\u05e4\u05e7\u05d7',(p.sg2n||'-')+' ('+fd(p.sg2d)+')');
+  html+=row('\u05de\u05e0\u05d4\u05dc',(p.sg3n||'-')+' ('+fd(p.sg3d)+')');
+  html+=row('\u05de\u05de\u05d5\u05e0\u05d4',(p.sg4n||'-')+' ('+fd(p.sg4d)+')');
+  var card=g('ptw-view-card');
+  if(card)card.innerHTML=html;
+}
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
   if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.ptw.map(function(p){return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27"+p.id+"\\x27)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ptw.map(function(p){return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td><button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" onclick="rPtwView(\\x27'+p.id+'\\x27);goPage(\\x27ptw-view\\x27);">&#128065;</button></td><td><button class="btn btn-d btn-sm" onclick="delById(\\x27ptw\\x27,\\x27'+p.id+'\\x27)">&#128465;</button></td></tr>';}).join('');
 }
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
