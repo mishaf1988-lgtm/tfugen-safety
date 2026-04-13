@@ -198,7 +198,8 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
 </div>
 
 <div id="pg-ncr" class="page">
-  <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>CAPA</span></div><button class="btn btn-p" onclick="openModal('m-ncr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>CAPA</span></div><button class="btn btn-s" style="background:#1d4ed8;margin-right:8px" onclick="openImportModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
+<button class="btn btn-p" onclick="openModal('m-ncr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1514;&#1497;&#1488;&#1493;&#1512;</th><th>&#1506;&#1491;')}</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-ncr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -772,7 +773,7 @@ function rPage(){
 function openModal(id){
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
-  if(ov){ov.style.display='block';}
+  if(ov){ov.style.display=window.innerWidth>=700?'flex':'block';document.body.style.overflow='hidden';window.scrollTo(0,0);}
   if(mo){
     mo.style.display='block';
     var t=new Date().toISOString().split('T')[0];
@@ -785,6 +786,7 @@ function closeModal(id){
   var mo=g(id);
   if(ov)ov.style.display='none';
   if(mo)mo.style.display='none';
+  document.body.style.overflow='';
 }
 function svDoc(){
   var n=gv('d-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
@@ -965,7 +967,30 @@ function ptwPrint(){
   parts.push('<tr><td>\u05de\u05de\u05d5\u05e0\u05d4: '+p.sg4n+'</td><td>'+p.sg4d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('</table>');
   parts.push('<p style="text-align:center;font-size:10px;color:#999">&copy; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e4\u05d5\u05d2\u05df 2025</p>');
-  parts.push('</body></html>');
+  parts.push('
+<div class="overlay" id="ov-m-import-xl" onclick="closeImportModal()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:998;align-items:center;justify-content:center"></div>
+<div class="modal" id="m-import-xl" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;max-width:460px;width:90%;background:#fff;border-radius:14px;padding:24px;direction:rtl;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+  <button onclick="closeImportModal()" style="position:absolute;left:12px;top:12px;background:none;border:none;font-size:18px;cursor:pointer;color:#888">&#10005;</button>
+  <div style="font-size:16px;font-weight:700;color:#cc1f1f;margin-bottom:14px">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel &#8212; &#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div>
+  <div style="background:#f0f4f8;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#4a5568;line-height:1.7">
+    <b>&#1499;&#1493;&#1514;&#1512;&#1493;&#1514; &#1504;&#1514;&#1502;&#1499;&#1493;&#1514; &#1489;&#1490;&#1497;&#1500;&#1497;&#1493;&#1503;:</b><br>
+    &#8226; <b>&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</b>: &#1508;&#1497;&#1512;&#1493;&#1496; | &#1514;&#1488;&#1512;&#1497;&#1498; | &#1505;&#1497;&#1489;&#1492; | &#1508;&#1506;&#1493;&#1500;&#1492; | &#1488;&#1495;&#1512;&#1488;&#1497; | &#1502;&#1493;&#1506;&#1491; | &#1505;&#1496;&#1496;&#1493;&#1505;<br>
+    &#8226; <b>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</b>: &#1502;&#1495;&#1500;&#1511;&#1492; | &#1502;&#1508;&#1490;&#1506; | &#1508;&#1506;&#1493;&#1500;&#1492; | &#1514;&#1488;&#1512;&#1497;&#1498; | &#1488;&#1495;&#1512;&#1497;&#1493;&#1514; | &#1505;&#1496;&#1496;&#1493;&#1505;
+  </div>
+  <div id="xl-drop" onclick="document.getElementById('xl-file-inp').click()" ondragover="event.preventDefault();this.style.background='#fdecea'" ondragleave="this.style.background='#fff'" ondrop="xlDrop(event)" style="border:2px dashed #cc1f1f;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#fff;transition:.2s">
+    <div style="font-size:36px">&#128196;</div>
+    <div style="font-weight:700;color:#cc1f1f;margin:6px 0">&#1500;&#1495;&#1509; &#1500;&#1489;&#1495;&#1497;&#1512;&#1514; &#1511;&#1493;&#1489;&#1509; Excel</div>
+    <div style="font-size:11px;color:#aaa">&#1488;&#1493; &#1490;&#1512;&#1493;&#1512; &#1500;&#1499;&#1488;&#1503; &bull; xlsx, xls, csv</div>
+  </div>
+  <input type="file" id="xl-file-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="xlReadFile(this.files[0])">
+  <div id="xl-status" style="margin-top:10px;min-height:20px;font-size:13px;text-align:center;color:#5a6070"></div>
+  <div id="xl-prog-wrap" style="display:none;margin-top:6px"><div style="background:#e2e8f0;border-radius:4px;height:5px"><div id="xl-prog-bar" style="background:#cc1f1f;height:100%;width:0%;transition:.3s border-radius:4px"></div></div></div>
+  <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+    <button onclick="closeImportModal()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button id="xl-ok-btn" onclick="xlConfirm()" style="display:none;padding:8px 20px;background:#cc1f1f;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">&#9654; &#1497;&#1497;&#1489;&#1488; &#1500;&#1502;&#1506;&#1512;&#1499;&#1514;</button>
+  </div>
+</div>
+</body></html>');
   w.document.write(parts.join(''));
   w.document.close();
 }
@@ -1217,6 +1242,122 @@ function doLogin(){
   var pw=g('pw');
   if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 })();
+
+// ===== EXCEL IMPORT FEATURE =====
+var _xlData=[];
+function openImportModal(){
+  var ov=document.getElementById('ov-m-import-xl'),mo=document.getElementById('m-import-xl');
+  if(ov){ov.style.display='flex';document.body.style.overflow='hidden';window.scrollTo(0,0);}
+  if(mo)mo.style.display='block';
+  _xlData=[];
+  var s=document.getElementById('xl-status');if(s)s.textContent='';
+  var b=document.getElementById('xl-ok-btn');if(b)b.style.display='none';
+  var p=document.getElementById('xl-prog-wrap');if(p)p.style.display='none';
+  var inp=document.getElementById('xl-file-inp');if(inp)inp.value='';
+}
+function closeImportModal(){
+  var ov=document.getElementById('ov-m-import-xl'),mo=document.getElementById('m-import-xl');
+  if(ov)ov.style.display='none';if(mo)mo.style.display='none';
+  document.body.style.overflow='';
+}
+function xlSt(msg,col){var s=document.getElementById('xl-status');if(s){s.textContent=msg;s.style.color=col||'#5a6070';}}
+function xlProg(p){var w=document.getElementById('xl-prog-wrap');if(w)w.style.display='block';var b=document.getElementById('xl-prog-bar');if(b)b.style.width=p+'%';}
+function xlDrop(e){e.preventDefault();var d=document.getElementById('xl-drop');if(d)d.style.background='#fff';var f=e.dataTransfer&&e.dataTransfer.files[0];if(f)xlReadFile(f);}
+function xlReadFile(file){
+  if(!file)return;
+  xlSt('\u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5...','#d97706');xlProg(10);_xlData=[];
+  var btn=document.getElementById('xl-ok-btn');if(btn)btn.style.display='none';
+  var doRead=function(){
+    var rd=new FileReader();
+    rd.onload=function(e){
+      try{
+        xlProg(40);
+        var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+        _xlData=xlParse(wb);xlProg(90);
+        if(_xlData.length>0){
+          xlSt('\u05e0\u05de\u05e6\u05d0\u05d5 '+_xlData.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d9\u05d9\u05d1\u05d5\u05d0','#16a34a');
+          var b=document.getElementById('xl-ok-btn');if(b)b.style.display='block';
+        }else{
+          xlSt('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05ea\u05d0\u05d9\u05de\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5','#cc1f1f');
+        }
+        xlProg(100);
+      }catch(err){xlSt('\u05e9\u05d2\u05d9\u05d0\u05d4: '+err.message,'#cc1f1f');}
+    };
+    rd.readAsArrayBuffer(file);
+  };
+  if(typeof XLSX==='undefined'){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=doRead;document.head.appendChild(s);
+  }else doRead();
+}
+function xlSv(v){if(v===null||v===undefined)return '';var s=String(v).trim();return(s==='null'||s==='undefined')?'':s;}
+function xlDate(v){
+  if(!v)return '';
+  try{
+    if(v instanceof Date)return v.toISOString().split('T')[0];
+    var s=xlSv(v);if(!s)return '';
+    if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split('/');return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');}
+    var d=new Date(s);return isNaN(d)?s:d.toISOString().split('T')[0];
+  }catch(e){return xlSv(v);}
+}
+function xlGid(n){return 'xl'+String(n).padStart(4,'0')+Math.random().toString(36).substr(2,4);}
+function xlParse(wb){
+  var res=[],idx=(DB&&DB.ncr?DB.ncr.length:0)+1;
+  var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};
+  wb.SheetNames.forEach(function(sn){
+    var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0||sn.toLowerCase().indexOf('env')>=0;
+    var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0||sn.toLowerCase().indexOf('saf')>=0||sn.toLowerCase().indexOf('safety')>=0;
+    if(!isEnv&&!isSaf)return;
+    var ws=wb.Sheets[sn];
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    var hIdx=-1;
+    for(var r=0;r<Math.min(8,rows.length);r++){
+      if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}
+    }
+    if(hIdx<0)return;
+    var ds=hIdx+1;
+    if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;
+    for(var r2=ds;r2<rows.length;r2++){
+      var row=rows[r2];
+      if(row.filter(function(c){return xlSv(c);}).length<2)continue;
+      var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:'',s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',src_date:'',category:isEnv?'env':'saf'};
+      if(isEnv){
+        rec.d=xlSv(row[1]);rec.src_date=xlDate(row[2]);rec.root_cause=xlSv(row[3]);
+        rec.immediate=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);
+        rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';
+        rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);
+      }else{
+        var dept=xlSv(row[1]),haz=xlSv(row[2]);
+        rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);
+        rec.src_date=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);
+        rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';
+      }
+      if(!rec.d)continue;
+      res.push(rec);idx++;
+    }
+  });
+  return res;
+}
+function xlConfirm(){
+  if(!_xlData||!_xlData.length)return;
+  var btn=document.getElementById('xl-ok-btn');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}
+  var existing=(DB.ncr||[]).map(function(r){return r.num;});
+  var toAdd=_xlData.filter(function(r){return existing.indexOf(r.num)<0;});
+  if(!toAdd.length){
+    xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea \u05d1\u05de\u05e2\u05e8\u05db\u05ea','#d97706');
+    if(btn){btn.disabled=false;btn.style.display='none';}return;
+  }
+  DB.ncr=(DB.ncr||[]).concat(toAdd);
+  NCRI=DB.ncr.length+1;
+  toAdd.forEach(function(r){try{sbIns('ncr',r);}catch(e){}});
+  try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+toAdd.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea');}catch(e){}
+  sdb();
+  closeImportModal();
+  toast('\u05d9\u05d5\u05d1\u05d0 \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4: '+toAdd.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');
+  try{rNcr();}catch(e){}try{rDash();}catch(e){}
+}
+// ===== END EXCEL IMPORT FEATURE =====
 </script>
 </body>
 </html>
