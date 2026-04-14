@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
+<title>&#1504;&#1497;&#1492;&#1493;&#1500; &#14h92;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -186,7 +186,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
-  <div style="margin:16px 8px 0;direction:rtl">
+  <div id="ncr-status-widget" style="margin:16px 8px 0;direction:rtl">
     <div style="font-size:14px;font-weight:700;color:var(--ac);margin-bottom:10px;border-right:3px solid var(--ac);padding-right:8px">&#128202; &#1505;&#1496;&#1496;&#1493;&#1505; &#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
       <div style="background:var(--su);border-radius:10px;padding:14px;text-align:center;border-right:3px solid #cc1f1f">
@@ -813,6 +813,7 @@ function rPage(){
   var m={'view':function(){},dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
   if(m[CUR])m[CUR]();
+  var w=g('ncr-status-widget');if(w)w.style.display=(id==='dash'||id==='ncr')?'':'none';
 }
 function openModal(id){
   var ov=g('ov-'+id.substr(2));
