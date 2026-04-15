@@ -176,7 +176,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
     <div class="kpi kpi-r"><div class="kpi-label">&#1502;&#1505;&#1502;&#1499;&#1497; ISO</div><div class="kpi-val" id="k1">0</div><div class="kpi-sub" id="k1s">-</div></div>
     <div class="kpi kpi-r"><div class="kpi-label">&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</div><div class="kpi-val" id="k2">0</div><div class="kpi-sub" id="k2s">-</div></div>
     <div class="kpi kpi-g"><div class="kpi-label">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div><div class="kpi-val" id="k3">0%</div><div class="kpi-sub" id="k3s">-</div></div>
-    <div class="kpi kpi-b"><div class="kpi-label">אי התאמות &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div><div class="kpi-val" id="k4">0</div><div class="kpi-sub" id="k4s">-</div></div>
+    <div class="kpi kpi-b"><div class="kpi-label">×× ××ª××××ª &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div><div class="kpi-val" id="k4">0</div><div class="kpi-sub" id="k4s">-</div></div>
     <div class="kpi kpi-o"><div class="kpi-label">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><div class="kpi-val" id="k5">0</div><div class="kpi-sub">-</div></div>
     <div class="kpi kpi-r"><div class="kpi-label">&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501;</div><div class="kpi-val" id="k6">0</div><div class="kpi-sub">RPN&ge;15</div></div>
     <div class="kpi kpi-r"><div class="kpi-label">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</div><div class="kpi-val" id="k7">0</div><div class="kpi-sub">LTIF</div></div>
@@ -224,7 +224,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
-    <button class="btn btn-p" onclick="openModal('m-ncr')">+ &#1495;&#1491;&#1513;</button></div>
+    <button class="btn btn-p" onclick="openModal('m-ncr')">+ &#1495;&#1491;&#1513;</button><button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
   <div style="display:flex;gap:8px;margin:8px 0 12px;direction:rtl">
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:12px;padding:6px 14px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:12px;padding:6px 14px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
@@ -354,7 +354,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <button class="bn on" id="bn-dash" onclick="goPage('dash')"><span class="ic">&#127968;</span>&#1512;&#1488;&#1513;&#1497;</button>
   <button class="bn" id="bn-docs" onclick="goPage('docs')"><span class="ic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
   <button class="bn" id="bn-aud" onclick="goPage('aud')"><span class="ic">&#128269;</span>&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514;</button>
-  <button class="bn" id="bn-ncr" onclick="goPage('ncr')"><span class="ic">&#128295;</span>אי התאמות</button>
+  <button class="bn" id="bn-ncr" onclick="goPage('ncr')"><span class="ic">&#128295;</span>×× ××ª××××ª</button>
   <button class="bn" id="bn-inc" onclick="goPage('inc')"><span class="ic">&#9888;</span>&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</button>
   <button class="bn" id="bn-tr" onclick="goPage('tr')"><span class="ic">&#127891;</span>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</button>
   <button class="bn" id="bn-rsk" onclick="goPage('rsk')"><span class="ic">&#9889;</span>&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501;</button>
@@ -873,10 +873,10 @@ function svAud(){
 }
 function svNcr(){
   var id=g('ncr-id')&&g('ncr-id').value;
-  var d=gv('ncr-d'),a=gv('ncr-a')||gv('ncr-sel-a')||'בטיחות';
-  if(!d){toast('תיאור הוא שדה חובה');return;}
-  var s=gv('ncr-s')||'פתוח';
-  var cat = (a==='איכות סביבה') ? 'env' : 'saf';
+  var d=gv('ncr-d'),a=gv('ncr-a')||gv('ncr-sel-a')||'××××××ª';
+  if(!d){toast('×ª××××¨ ××× ×©×× ××××');return;}
+  var s=gv('ncr-s')||'×¤×ª××';
+  var cat = (a==='×××××ª ×¡××××') ? 'env' : 'saf';
   var rec={
     id:id||(NCRI++).toString(36)+Date.now().toString(36),
     num:id?DB.ncr.find(function(r){return r.id===id;})||{} && (DB.ncr.find(function(r){return r.id===id;})||{num:''}).num:'NCR-'+String(DB.ncr.length+1).padStart(4,'0'),
@@ -888,16 +888,16 @@ function svNcr(){
     u:gv('ncr-u')||'',
     s:s,
     sd:gv('ncr-sd')||'',
-    cd:s==='סגור'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):'',
+    cd:s==='×¡×××¨'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):'',
     notes:gv('ncr-notes')||'',
-    p:gv('ncr-p')||'בינונית',
+    p:gv('ncr-p')||'××× ×× ××ª',
     ts:new Date().toISOString()
   };
   if(id){DB.ncr=DB.ncr.map(function(r){return r.id===id?rec:r;});sbUpd('ncr',rec);}
   else{DB.ncr.push(rec);sbIns('ncr',rec);}
-  addLog((id?'עדכון':'חדש')+' NCR: '+d.substring(0,30));
+  addLog((id?'×¢××××':'×××©')+' NCR: '+d.substring(0,30));
   sdb();closeModal('m-ncr');rNcr();rDash();
-  toast('נשמר ✓');
+  toast('× ×©××¨ â');
 }
 
 function svInc(){
@@ -1058,7 +1058,24 @@ function ptwPrint(){
   parts.push('<tr><td>\u05de\u05de\u05d5\u05e0\u05d4: '+p.sg4n+'</td><td>'+p.sg4d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('</table>');
   parts.push('<p style="text-align:center;font-size:10px;color:#999">&copy; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e4\u05d5\u05d2\u05df 2025</p>');
-  parts.push('</body></html>');
+  parts.push('
+<div id="ncr-agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;direction:rtl;font-family:Heebo,Arial,sans-serif">
+<div style="background:#0a0c0e;border:1px solid #1e3a5f;border-radius:12px;width:min(95vw,900px);height:min(90vh,700px);margin:3vh auto;display:flex;flex-direction:column;overflow:hidden">
+<div style="background:#111416;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3a5f;flex-shrink:0">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">&#129302;</span>
+<div style="font-size:15px;font-weight:700;color:#fff">&#1505;&#1493;&#1499;&#1503; NCR/CAPA &middot; <span id="ncr-agent-count" style="color:#4a9adf">0</span> &#1512;&#1513;&#1493;&#1502;&#1493;&#1514;</div></div>
+<div style="display:flex;gap:8px">
+<button onclick="ncrAgentAnalyzeAll()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">&#128269; &#1504;&#1514;&#1495; &#1491;&#1508;&#1493;&#1505;&#1497;&#1501;</button>
+<button onclick="document.getElementById('ncr-agent-modal').style.display='none'" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 14px;font-size:14px;cursor:pointer">&times;</button>
+</div></div>
+<div style="display:flex;flex:1;overflow:hidden">
+<div id="ncr-agent-list" style="flex:1;overflow-y:auto;padding:10px"></div>
+<div id="ncr-agent-panel" style="display:none;width:360px;border-right:1px solid #1e3a5f;background:#0d1014;overflow-y:auto;padding:12px;flex-shrink:0"></div>
+</div>
+<div style="background:#0d1014;border-top:1px solid #1e3a5f;padding:6px 16px;font-size:10px;color:#3a5a7a">&#127981; &#1514;&#1508;&#1493;&#1490;&#1503; | &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | NCR Agent v2.0</div>
+</div></div>
+<script src="ncr-agent.js"></script>
+</body></html>');
   w.document.write(parts.join(''));
   w.document.close();
 }
@@ -1089,9 +1106,9 @@ function rDash(){
   if(da)da.innerHTML=ra.length?ra.map(function(a){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+a.n+'</span>'+sb(a.s)+'</div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea</p>';
 
   // NCR stats
-  var ncrAll=DB.ncr.length, ncrOpen=DB.ncr.filter(function(r){return r.s==='פתוח'||r.s==='בטיפול';}).length;
-  var ncrSaf=DB.ncr.filter(function(r){return r.category==='saf'||r.a==='בטיחות';}).length;
-  var ncrEnv=DB.ncr.filter(function(r){return r.category==='env'||r.a==='איכות סביבה';}).length;
+  var ncrAll=DB.ncr.length, ncrOpen=DB.ncr.filter(function(r){return r.s==='×¤×ª××'||r.s==='××××¤××';}).length;
+  var ncrSaf=DB.ncr.filter(function(r){return r.category==='saf'||r.a==='××××××ª';}).length;
+  var ncrEnv=DB.ncr.filter(function(r){return r.category==='env'||r.a==='×××××ª ×¡××××';}).length;
   var elNcrAll=g('kpi-ncr-all'),elNcrOpen=g('kpi-ncr-open'),elNcrSaf=g('kpi-ncr-saf'),elNcrEnv=g('kpi-ncr-env');
   if(elNcrAll) elNcrAll.textContent=ncrAll;
   if(elNcrOpen) elNcrOpen.textContent=ncrOpen;
@@ -1112,13 +1129,13 @@ function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
 var filter=window._ncrFilter||'all';
 var rows=DB.ncr.filter(function(n){
-  if(filter==='saf')return n.category==='saf'||(n.a&&n.a.indexOf('בטיחות')>=0);
-  if(filter==='env')return n.category==='env'||(n.a&&n.a.indexOf('סביבה')>=0);
+  if(filter==='saf')return n.category==='saf'||(n.a&&n.a.indexOf('××××××ª')>=0);
+  if(filter==='env')return n.category==='env'||(n.a&&n.a.indexOf('×¡××××')>=0);
   return true;
 });
-if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">אין רשומות</td></tr>';return;}
+if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">××× ×¨×©××××ª</td></tr>';return;}
 tb.innerHTML=rows.map(function(n){
-  var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('בטיחות')>=0);
+  var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('××××××ª')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
   var loc=n.loc||n.location||'';
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+n.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
@@ -1146,7 +1163,7 @@ rNcr();
 }
 function ncrStatusChange(){
 var s=g('ncr-s'),w=g('ncr-close-wrap');
-if(s&&w)w.style.display=(s.value==='סגור')?'block':'none';
+if(s&&w)w.style.display=(s.value==='×¡×××¨')?'block':'none';
 }
 
 function ncrTab(t){
@@ -1159,7 +1176,7 @@ function ncrTab(t){
 }
 function ncrStatusChange(){
   var s=g('ncr-s');var w=g('ncr-close-wrap');
-  if(s&&w) w.style.display=(s.value==='סגור')?'block':'none';
+  if(s&&w) w.style.display=(s.value==='×¡×××¨')?'block':'none';
 }
 
 function rInc(){
@@ -1191,7 +1208,7 @@ var VIEW_CONFIG={
   auds:{title:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea',back:'aud',fields:[
     ['\u05e0\u05d5\u05e9\u05d0','n'],['\u05de\u05d1\u05e7\u05e8','a'],['\u05ea\u05d0\u05e8\u05d9\u05da','d'],
     ['\u05e6\u05d9\u05d5\u05df','sc'],['\u05e1\u05d9\u05db\u05d5\u05dd','sm'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
-  ncr:{title:'אי התאמות / \u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',back:'ncr',fields:[
+  ncr:{title:'×× ××ª××××ª / \u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',back:'ncr',fields:[
     ['\u05de\u05e1\'','num'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05d0\u05d6\u05d5\u05e8','a'],
     ['\u05e1\u05d9\u05d1\u05d4','p'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','o'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   inc:{title:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',back:'inc',fields:[
