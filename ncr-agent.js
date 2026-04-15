@@ -3,7 +3,7 @@ var _nad=[];
 var _naf={};
 var _SB='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
-var _AI='https://api.anthropic.com/v1/messages';
+var _AI='/api/claude';
 var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
 var _SC={'closed':'#00cc55','open':'#ff4444','wip':'#f0a000'};
 function _gpc(p){return _P[p==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'q':p==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'h':p==='\u05e0\u05de\u05d5\u05db\u05d4'?'l':'m']||_P.m;}
