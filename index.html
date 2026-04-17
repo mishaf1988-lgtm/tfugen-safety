@@ -348,6 +348,24 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
+<div id="pg-exp" class="page">
+  <div class="page-title">&#1505;&#1493;&#1499;&#1503; <span>&#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</span></div>
+  <div class="kgrid">
+    <div class="kpi kpi-r"><div class="kpi-label">&#1508;&#1490;</div><div class="kpi-val" id="exp-k1">0</div><div class="kpi-sub">&#1514;&#1493;&#1511;&#1507; &#1513;&#1508;&#1490;</div></div>
+    <div class="kpi kpi-r"><div class="kpi-label">&#1508;&#1493;&#1511;&#1506; &#1489;-7 &#1497;</div><div class="kpi-val" id="exp-k2">0</div><div class="kpi-sub">&#1491;&#1495;&#1493;&#1507;</div></div>
+    <div class="kpi kpi-o"><div class="kpi-label">&#1508;&#1493;&#1511;&#1506; &#1489;-30 &#1497;</div><div class="kpi-val" id="exp-k3">0</div><div class="kpi-sub">&#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</div></div>
+    <div class="kpi kpi-b"><div class="kpi-label">&#1505;&#1492;"&#1499; &#1489;&#1502;&#1506;&#1511;&#1489;</div><div class="kpi-val" id="exp-k4">0</div><div class="kpi-sub">&#1499;&#1500; &#1492;&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div></div>
+  </div>
+  <div class="row">
+    <button class="btn btn-s btn-sm" id="exp-f-all" onclick="setExpFilter('all')">&#1492;&#1499;&#1500;</button>
+    <button class="btn btn-s btn-sm" id="exp-f-expired" style="color:var(--bad)" onclick="setExpFilter('expired')">&#1508;&#1490;</button>
+    <button class="btn btn-s btn-sm" id="exp-f-7" style="color:var(--bad)" onclick="setExpFilter('7')">&le;7 &#1497;</button>
+    <button class="btn btn-s btn-sm" id="exp-f-30" style="color:var(--warn)" onclick="setExpFilter('30')">8-30 &#1497;</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1508;&#1512;&#1497;&#1496;</th><th>&#1502;&#1493;&#1491;&#1493;&#1500;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1497;&#1502;&#1497;&#1501;</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+</div>
+
 </div><!-- /main -->
 
 <!-- BOTTOM NAV -->
@@ -370,6 +388,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <button class="bn" id="bn-hzm" onclick="goPage('hzm')"><span class="ic">&#9762;</span>&#1495;&#1493;&#1502;&#1512;&#1497;&#1501;</button>
   <button class="bn" id="bn-env" onclick="goPage('env')"><span class="ic">&#127807;</span>&#1504;&#1497;&#1496;&#1493;&#1512;</button>
   <button class="bn" id="bn-leg" onclick="goPage('leg')"><span class="ic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
+  <button class="bn" id="bn-exp" onclick="goPage('exp')"><span class="ic">&#9200;</span>&#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</button>
   <button class="bn" id="bn-lg" onclick="goPage('lg')"><span class="ic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
 </nav>
 
@@ -813,7 +832,7 @@ function goPage(id){
 }
 function rPage(){
   var m={'view':function(){},dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg,exp:rExp};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -1079,12 +1098,15 @@ function rDash(){
   var alerts='',exp=[];
   docs.forEach(function(d){var x=du(d.e);if(x>=0&&x<=30)exp.push({n:d.n,x:x,t:'\u05de\u05e1\u05de\u05da'});});
   tr.forEach(function(t){var x=du(t.e);if(x>=0&&x<=30)exp.push({n:t.n+' ('+t.w+')',x:x,t:'\u05d4\u05d3\u05e8\u05db\u05d4'});});
+  DB.ppe.forEach(function(p){var x=du(p.e);if(x>=0&&x<=30)exp.push({n:p.ty+(p.w?' \u2013 '+p.w:''),x:x,t:'PPE'});});
+  DB.med.forEach(function(m){var x=du(m.e);if(x>=0&&x<=30)exp.push({n:m.w+' \u2013 '+m.ty,x:x,t:'\u05db\u05e9\u05d9\u05e8\u05d5\u05ea'});});
+  DB.ctr.forEach(function(c){var x=du(c.e);if(x>=0&&x<=30)exp.push({n:c.n,x:x,t:'\u05e7\u05d1\u05dc\u05df'});});
   exp.sort(function(a,b){return a.x-b.x;});
   if(kc>0)alerts+='<div class="alert alert-r">'+kc+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc</div>';
   if(exp.length>0)alerts+='<div class="alert alert-w">'+exp.length+' \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05d1-30 \u05d9\u05d5\u05dd</div>';
   var al=g('dash-alerts');if(al)al.innerHTML=alerts;
   var de=g('dash-exp');
-  if(de)de.innerHTML=exp.length?exp.slice(0,5).map(function(e){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+e.n.substring(0,35)+' <span style="color:var(--t3);font-size:10px">'+e.t+'</span></span><span class="b '+(e.x<=7?'bR':e.x<=14?'bY':'bY')+'">'+e.x+'\u05d9</span></div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</p>';
+  if(de)de.innerHTML=(exp.length?exp.slice(0,5).map(function(e){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+e.n.substring(0,35)+' <span style="color:var(--t3);font-size:10px">'+e.t+'</span></span><span class="b '+(e.x<=7?'bR':e.x<=14?'bY':'bY')+'">'+e.x+'\u05d9</span></div>';}).join('')+'<div style="text-align:center;margin-top:8px"><button class="btn btn-s btn-sm" onclick="goPage(\'exp\')">\u05e1\u05d5\u05db\u05df \u05ea\u05d5\u05e7\u05e4\u05d9\u05dd &rarr;</button></div>':'<p class="et">\u05d0\u05d9\u05df \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</p>');
   var da=g('dash-auds');
   var ra=DB.auds.slice().sort(function(a,b){return new Date(b.d)-new Date(a.d);}).slice(0,4);
   if(da)da.innerHTML=ra.length?ra.map(function(a){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+a.n+'</span>'+sb(a.s)+'</div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea</p>';
@@ -1341,6 +1363,36 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
+var _expFilter='all';
+function setExpFilter(f){
+  _expFilter=f;
+  ['all','expired','7','30'].forEach(function(k){var el=g('exp-f-'+k);if(el){el.style.background=(k===f?'var(--red)':'');el.style.color=(k===f?'#fff':'');}});
+  rExp();
+}
+function rExp(){
+  var all=[];
+  DB.docs.forEach(function(d){if(d.e){var x=du(d.e);all.push({n:d.n,t:'\u05de\u05e1\u05de\u05da',e:d.e,x:x});}});
+  DB.tr.forEach(function(t){if(t.e){var x=du(t.e);all.push({n:t.n+(t.w?' ('+t.w+')':''),t:'\u05d4\u05d3\u05e8\u05db\u05d4',e:t.e,x:x});}});
+  DB.ppe.forEach(function(p){if(p.e){var x=du(p.e);all.push({n:p.ty+(p.w?' \u2013 '+p.w:''),t:'PPE',e:p.e,x:x});}});
+  DB.med.forEach(function(m){if(m.e){var x=du(m.e);all.push({n:m.w+' \u2013 '+m.ty,t:'\u05db\u05e9\u05d9\u05e8\u05d5\u05ea',e:m.e,x:x});}});
+  DB.ctr.forEach(function(c){if(c.e){var x=du(c.e);all.push({n:c.n,t:'\u05e7\u05d1\u05dc\u05df',e:c.e,x:x});}});
+  all.sort(function(a,b){return a.x-b.x;});
+  var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
+  set('exp-k1',all.filter(function(i){return i.x<0;}).length);
+  set('exp-k2',all.filter(function(i){return i.x>=0&&i.x<=7;}).length);
+  set('exp-k3',all.filter(function(i){return i.x>7&&i.x<=30;}).length);
+  set('exp-k4',all.length);
+  var tb=g('tb-exp');if(!tb)return;
+  var rows=all;
+  if(_expFilter==='expired')rows=all.filter(function(i){return i.x<0;});
+  else if(_expFilter==='7')rows=all.filter(function(i){return i.x>=0&&i.x<=7;});
+  else if(_expFilter==='30')rows=all.filter(function(i){return i.x>7&&i.x<=30;});
+  if(!rows.length){tb.innerHTML='<tr><td colspan="4" class="et">\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd</td></tr>';return;}
+  tb.innerHTML=rows.map(function(i){
+    var badge=i.x<0?'<span class="b bR">\u05e4\u05d2 '+Math.abs(i.x)+'\u05d9</span>':i.x<=7?'<span class="b bR">'+i.x+'\u05d9</span>':i.x<=30?'<span class="b bY">'+i.x+'\u05d9</span>':'<span class="b bG">'+i.x+'\u05d9</span>';
+    return '<tr><td><strong>'+i.n.substring(0,35)+'</strong></td><td><span class="b bX">'+i.t+'</span></td><td>'+fd(i.e)+'</td><td>'+badge+'</td></tr>';
+  }).join('');
+}
 function doLogin(){
   var pw=g('pw');
   if(!pw)return;
