@@ -348,6 +348,38 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
+<div id="pg-exp" class="page">
+  <div class="page-title">&#9200; &#1508;&#1511;&#1497;&#1506;&#1493;&#1514; <span>&#1493;&#1495;&#1497;&#1491;&#1493;&#1513;&#1497;&#1501;</span></div>
+  <div class="kgrid" id="exp-kpis">
+    <div class="kpi kpi-r"><div class="kpi-label">&#1508;&#1490;</div><div class="kpi-val" id="exp-k1">0</div><div class="kpi-sub">&#1508;&#1490;&#1493; &#1514;&#1493;&#1511;&#1507;</div></div>
+    <div class="kpi kpi-o"><div class="kpi-label">&#1489;30 &#1497;&#1493;&#1501;</div><div class="kpi-val" id="exp-k2">0</div><div class="kpi-sub">&#1491;&#1493;&#1512;&#1513;&#1497;&#1501; &#1496;&#1497;&#1508;&#1493;&#1500;</div></div>
+    <div class="kpi kpi-b"><div class="kpi-label">&#1489;90 &#1497;&#1493;&#1501;</div><div class="kpi-val" id="exp-k3">0</div><div class="kpi-sub">&#1500;&#1495;&#1497;&#1491;&#1493;&#1513;</div></div>
+    <div class="kpi kpi-g"><div class="kpi-label">&#1504;&#1493;&#1514;&#1512;&#1497;&#1501;</div><div class="kpi-val" id="exp-k4">0</div><div class="kpi-sub">&#1489;&#1514;&#1493;&#1511;&#1507;</div></div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap" id="exp-filter-row">
+      <button class="btn btn-p btn-sm" onclick="expFilter('all')" id="expf-all">&#1492;&#1499;&#1500;</button>
+      <button class="btn btn-s btn-sm" onclick="expFilter('expired')" id="expf-expired">&#128308; &#1508;&#1490;</button>
+      <button class="btn btn-s btn-sm" onclick="expFilter('7')" id="expf-7">7 &#1497;</button>
+      <button class="btn btn-s btn-sm" onclick="expFilter('30')" id="expf-30">30 &#1497;</button>
+      <button class="btn btn-s btn-sm" onclick="expFilter('60')" id="expf-60">60 &#1497;</button>
+      <button class="btn btn-s btn-sm" onclick="expFilter('90')" id="expf-90">90 &#1497;</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>&#1508;&#1512;&#1497;&#1496;</th>
+        <th>&#1502;&#1493;&#1491;&#1493;&#1500;</th>
+        <th>&#1514;&#1493;&#1511;&#1507;</th>
+        <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+      </tr></thead>
+      <tbody id="exp-tbody"><tr><td colspan="4" class="et">&#1496;&#1493;&#1506;&#1503;...</td></tr></tbody>
+    </table></div>
+  </div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+</div>
+
 </div><!-- /main -->
 
 <!-- BOTTOM NAV -->
@@ -371,6 +403,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <button class="bn" id="bn-env" onclick="goPage('env')"><span class="ic">&#127807;</span>&#1504;&#1497;&#1496;&#1493;&#1512;</button>
   <button class="bn" id="bn-leg" onclick="goPage('leg')"><span class="ic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
   <button class="bn" id="bn-lg" onclick="goPage('lg')"><span class="ic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
+  <button class="bn" id="bn-exp" onclick="goPage('exp')"><span class="ic">&#9200;</span>&#1508;&#1511;&#1497;&#1506;&#1493;&#1514;</button>
 </nav>
 
 <div class="overlay" id="ov-del-confirm" onclick="cancelDel()"></div>
@@ -813,7 +846,7 @@ function goPage(id){
 }
 function rPage(){
   var m={'view':function(){},dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg,exp:rExp};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -1341,6 +1374,54 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
+
+var EXP_FILTER='all';
+function expFilter(f){
+  EXP_FILTER=f;
+  document.querySelectorAll('[id^="expf-"]').forEach(function(b){b.className='btn btn-s btn-sm';});
+  var a=g('expf-'+f);if(a)a.className='btn btn-p btn-sm';
+  rExp();
+}
+function rExp(){
+  var items=[];
+  function addItems(arr,label,nameF,expF){
+    (arr||[]).forEach(function(r){
+      var e=r[expF];if(!e)return;
+      var x=du(e);
+      items.push({name:nameF(r),mod:label,exp:e,days:x});
+    });
+  }
+  addItems(DB.docs,'\u05de\u05e1\u05de\u05da',function(r){return r.n||'?';},'e');
+  addItems(DB.tr,'\u05d4\u05d3\u05e8\u05db\u05d4',function(r){return (r.n||'?')+' ('+(r.w||'')+')';},'e');
+  addItems(DB.ppe,'PPE',function(r){return (r.ty||'?')+' ('+(r.w||'')+')';},'e');
+  addItems(DB.med,'\u05e8\u05e4\u05d5\u05d0\u05d9',function(r){return (r.w||'?')+' - '+(r.ty||'');},'e');
+  addItems(DB.ctr,'\u05e7\u05d1\u05dc\u05df',function(r){return r.n||'?';},'e');
+  items.sort(function(a,b){return a.days-b.days;});
+  var expired=items.filter(function(i){return i.days<0;});
+  var in30=items.filter(function(i){return i.days>=0&&i.days<=30;});
+  var in90=items.filter(function(i){return i.days>=0&&i.days<=90;});
+  var ok=items.filter(function(i){return i.days>90;});
+  var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
+  set('exp-k1',expired.length);set('exp-k2',in30.length);set('exp-k3',in90.length);set('exp-k4',ok.length);
+  var show=items;
+  if(EXP_FILTER==='expired')show=expired;
+  else if(EXP_FILTER==='7')show=items.filter(function(i){return i.days>=0&&i.days<=7;});
+  else if(EXP_FILTER==='30')show=in30;
+  else if(EXP_FILTER==='60')show=items.filter(function(i){return i.days>=0&&i.days<=60;});
+  else if(EXP_FILTER==='90')show=in90;
+  var tb=g('exp-tbody');if(!tb)return;
+  if(!show.length){tb.innerHTML='<tr><td colspan="4" class="et">\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd</td></tr>';return;}
+  tb.innerHTML=show.map(function(i){
+    var badge,label;
+    if(i.days<0){badge='bR';label='\u05e4\u05d2 '+Math.abs(i.days)+'\u05d9';}
+    else if(i.days<=7){badge='bR';label=i.days+'\u05d9';}
+    else if(i.days<=30){badge='bY';label=i.days+'\u05d9';}
+    else if(i.days<=60){badge='bY';label=i.days+'\u05d9';}
+    else if(i.days<=90){badge='bB';label=i.days+'\u05d9';}
+    else{badge='bG';label=i.days+'\u05d9';}
+    return '<tr><td><strong>'+i.name.substring(0,40)+'</strong></td><td><span class="b bX">'+i.mod+'</span></td><td>'+fd(i.exp)+'</td><td><span class="b '+badge+'">'+label+'</span></td></tr>';
+  }).join('');
+}
 function doLogin(){
   var pw=g('pw');
   if(!pw)return;
