@@ -348,6 +348,33 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
+
+<div id="pg-exp" class="page">
+  <div class="page-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; <span>&#1488;&#1490;&#1504;&#1496;</span></div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button class="btn btn-p btn-sm" id="ef-all" onclick="setExpFilter('all')">&#1492;&#1499;&#1500;</button>
+    <button class="btn btn-s btn-sm" id="ef-ex" onclick="setExpFilter('ex')">&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</button>
+    <button class="btn btn-s btn-sm" id="ef-30" onclick="setExpFilter('30')">&le;30 &#1497;&#1502;&#1497;&#1501;</button>
+    <button class="btn btn-s btn-sm" id="ef-60" onclick="setExpFilter('60')">&le;60 &#1497;&#1502;&#1497;&#1501;</button>
+    <button class="btn btn-s btn-sm" id="ef-90" onclick="setExpFilter('90')">&le;90 &#1497;&#1502;&#1497;&#1501;</button>
+  </div>
+  <div class="kgrid">
+    <div class="kpi kpi-r"><div class="kpi-label">&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</div><div class="kpi-val" id="kexp-ex">0</div></div>
+    <div class="kpi kpi-o"><div class="kpi-label">&le;30 &#1497;&#1502;&#1497;&#1501;</div><div class="kpi-val" id="kexp-30">0</div></div>
+    <div class="kpi kpi-b"><div class="kpi-label">&le;60 &#1497;&#1502;&#1497;&#1501;</div><div class="kpi-val" id="kexp-60">0</div></div>
+    <div class="kpi kpi-g"><div class="kpi-label">&#1505;&#1492;"&#1499;</div><div class="kpi-val" id="kexp-all">0</div></div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>&#1513;&#1501;</th><th>&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492;</th><th>&#1514;&#1508;&#1493;&#1490;&#1492;</th><th>&#1497;&#1502;&#1497;&#1501;</th></tr></thead>
+        <tbody id="tb-exp"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+</div>
+
 </div><!-- /main -->
 
 <!-- BOTTOM NAV -->
@@ -371,6 +398,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <button class="bn" id="bn-env" onclick="goPage('env')"><span class="ic">&#127807;</span>&#1504;&#1497;&#1496;&#1493;&#1512;</button>
   <button class="bn" id="bn-leg" onclick="goPage('leg')"><span class="ic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
   <button class="bn" id="bn-lg" onclick="goPage('lg')"><span class="ic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
+  <button class="bn" id="bn-exp" onclick="goPage('exp')"><span class="ic">&#9201;</span>&#1508;&#1511;&#1497;&#1506;&#1493;&#1514;</button>
 </nav>
 
 <div class="overlay" id="ov-del-confirm" onclick="cancelDel()"></div>
@@ -813,7 +841,7 @@ function goPage(id){
 }
 function rPage(){
   var m={'view':function(){},dash:rDash,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg,exp:rExp};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -1385,6 +1413,35 @@ function xlParse(wb){var res=[],idx=1;var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1
 function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var ex=dbncr.map(function(r){return r.num;});var add=window._xlData.filter(function(r){return ex.indexOf(r.num)<0;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#d97706');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length);}catch(e){}try{sdb();}catch(e){}closeXlModal();try{toast('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
 
 
+var EXP_FILTER='all';
+function setExpFilter(f){EXP_FILTER=f;rExp();}
+function rExp(){
+  var items=[];
+  DB.docs.forEach(function(d){if(d.e)items.push({n:d.n||'-',cat:'\u05de\u05e1\u05de\u05da',e:d.e,x:du(d.e)});});
+  DB.tr.forEach(function(t){if(t.e)items.push({n:(t.n||'-')+(t.w?' ('+t.w+')':''),cat:'\u05d4\u05d3\u05e8\u05db\u05d4',e:t.e,x:du(t.e)});});
+  DB.ppe.forEach(function(p){if(p.e)items.push({n:(p.ty||'PPE')+(p.w?' \u2014 '+p.w:''),cat:'PPE',e:p.e,x:du(p.e)});});
+  DB.med.forEach(function(m){if(m.e)items.push({n:m.w||'-',cat:'\u05e8\u05e4\u05d5\u05d0\u05d9',e:m.e,x:du(m.e)});});
+  DB.ctr.forEach(function(c){if(c.e)items.push({n:c.n||'-',cat:'\u05e7\u05d1\u05dc\u05df',e:c.e,x:du(c.e)});});
+  var ex=items.filter(function(i){return i.x<0;}).length;
+  var d30=items.filter(function(i){return i.x>=0&&i.x<=30;}).length;
+  var d60=items.filter(function(i){return i.x>=0&&i.x<=60;}).length;
+  var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
+  set('kexp-ex',ex);set('kexp-30',d30);set('kexp-60',d60);set('kexp-all',items.length);
+  var f=EXP_FILTER;
+  ['all','ex','30','60','90'].forEach(function(k){var b=g('ef-'+k);if(b)b.className='btn btn-sm '+(f===k?'btn-p':'btn-s');});
+  var filtered=f==='ex'?items.filter(function(i){return i.x<0;}):
+    f==='30'?items.filter(function(i){return i.x<0||i.x<=30;}):
+    f==='60'?items.filter(function(i){return i.x<0||i.x<=60;}):
+    f==='90'?items.filter(function(i){return i.x<0||i.x<=90;}):items;
+  filtered.sort(function(a,b){return a.x-b.x;});
+  var tb=g('tb-exp');if(!tb)return;
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="4" class="et">\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd</td></tr>';return;}
+  tb.innerHTML=filtered.map(function(i){
+    var dc=i.x<0?'bR':i.x<=30?'bY':i.x<=60?'bB':'bG';
+    var dt=i.x<0?'\u05e4\u05d2':'+'+i.x+'\u05d9';
+    return '<tr><td>'+i.n+'</td><td><span class="b bX">'+i.cat+'</span></td><td>'+fd(i.e)+'</td><td><span class="b '+dc+'">'+dt+'</span></td></tr>';
+  }).join('');
+}
 function loadFromSupabase(){
   if(!SBU||!SBK)return;
   // Load NCR from Supabase and merge with localStorage
