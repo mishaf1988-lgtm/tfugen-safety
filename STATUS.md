@@ -26,6 +26,7 @@
 - [x] **Skill `tfugen-dev`** — אכיפת חוקי פיתוח אוטומטית
 - [x] **תשתית סנכרון** — CLAUDE.md + DECISIONS.md
 - [x] **NCR Agent v4** (PR הנוכחי, 5a) — prompt ISO 45001/14001, שמירה ל-`ncr_ai`, badge עם version, aggregate על פתוחים בלבד (150)
+- [x] **NCR Agent Accept & Apply** (PR 5b) — כפתור "החל ניתוח על ה-NCR" שמזרים `rc/c/o/u` מ-`ncr_ai` ל-`ncr` + זיהוי אוטומטי של מצב "הוחל"
 - [x] **Equipment Inspections** — דף `pg-eqi` + טבלה `equip_inspections` + ייבוא Excel/CSV + אינטגרציה עם Expiries Agent
 
 ---
@@ -33,7 +34,6 @@
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
-- [ ] **2b. NCR Agent — Accept & Apply** (PR 5b) — כפתור להזרים את ה-AI מ-`_naf` ל-`n.rc/c/u` של ה-NCR + badge ב-`pg-ncr`
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
