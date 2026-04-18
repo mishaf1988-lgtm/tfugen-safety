@@ -1645,11 +1645,11 @@ window.ncrAgentAnalyzeAll=function(){
   P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">Analyzing '+open.length+' open NCRs...</div>';
   var byA={},byP={},byS={};
   open.forEach(function(n){byA[n.a]=(byA[n.a]||0)+1;byP[n.p]=(byP[n.p]||0)+1;byS[n.s]=(byS[n.s]||0)+1;});
-  var sample=open.slice(0,150).map(function(n){return n.num+' ['+(n.p||'')+'] '+(n.a||'')+': '+(n.d||'');}).join('\n');
+  var sample=open.slice(0,40).map(function(n){return n.num+' ['+(n.p||'')+'] '+(n.a||'')+': '+(n.d||'').substring(0,120);}).join('\n');
   var prompt=
     'You are a safety analyst at Tfugen Industries, certified in ISO 45001 and ISO 14001.\n'+
     'Analyze the OPEN NCRs below and respond in Hebrew only.\n\n'+
-    'Total open: '+open.length+' (sample: '+Math.min(open.length,150)+').\n'+
+    'Total open: '+open.length+' (sample: '+Math.min(open.length,40)+').\n'+
     'By area: '+JSON.stringify(byA)+'\n'+
     'By priority: '+JSON.stringify(byP)+'\n'+
     'By status: '+JSON.stringify(byS)+'\n\n'+
@@ -1660,7 +1660,7 @@ window.ncrAgentAnalyzeAll=function(){
     '3. Systemic recommendations / \u05d4\u05de\u05dc\u05e6\u05d5\u05ea \u05de\u05e2\u05e8\u05db\u05ea\u05d9\u05d5\u05ea\n'+
     '4. Urgent alerts / \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:_AI_MODEL,max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
     if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
     var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
