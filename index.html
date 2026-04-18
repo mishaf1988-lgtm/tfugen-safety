@@ -1738,12 +1738,12 @@ window._ncrSel=function(id){
   if(n.o)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+n.o+'</span>';
   h+='</div>'+(n.c?'<div style="font-size:11px;color:#7aaa7a;margin-top:5px">'+n.c+'</div>':'')+'</div>';
   var an=_naf[id];
-  if(an&&!an.err)h+=_ncrFmt(an,pc);
+  if(an&&!an.err)h+=_ncrFmt(an,pc,n);
   else if(!an)h+='<button onclick="_ncrAI(\''+id+'\')" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
   else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+((an&&an.msg)||'unknown')+'</div>';
   P.innerHTML=h;
 };
-function _ncrFmt(an,pc){
+function _ncrFmt(an,pc,n){
   var h='';
   if(an.risk){var rc=_gpc(an.risk);
     h+='<div style="background:'+rc.bg+';border:1px solid '+rc.b+';border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:7px"><span style="color:#aaccee">Risk</span><span style="font-weight:800;color:'+rc.c+'">'+an.risk+'</span></div>';
@@ -1759,8 +1759,35 @@ function _ncrFmt(an,pc){
     an.corrective_actions.forEach(function(a,i){h+='<div style="font-size:12px;color:#aaccaa;margin-bottom:4px">'+(i+1)+'. '+a+'</div>';});
     h+='</div>';
   }
+  if(n){
+    var ca0=(an.corrective_actions&&an.corrective_actions[0])||'';
+    var applied=(n.rc||'')===(an.root_cause||'')&&(n.c||'')===ca0&&(n.o||'')===(an.owner_suggested||'')&&(n.u||'')===(an.due_suggested||'');
+    if(applied){
+      h+='<div style="background:#0d2a0d;border:1px solid #00cc55;border-radius:8px;color:#00cc55;padding:10px;font-size:12px;font-weight:700;text-align:center;margin-top:8px">&#10003; \u05d4\u05d5\u05d7\u05dc \u05e2\u05dc \u05d4-NCR (v'+(an.version||1)+')</div>';
+    }else{
+      h+='<button onclick="_ncrApply(\''+n.id+'\')" style="width:100%;background:#0d2a0d;border:1px solid #00cc55;border-radius:8px;color:#00cc55;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">&#10003; \u05d4\u05d7\u05dc \u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d4-NCR</button>';
+    }
+  }
   return h;
 }
+window._ncrApply=function(id){
+  var n=_nad.find(function(x){return x.id===id;});if(!n)return;
+  var an=_naf[id];if(!an||an.err)return;
+  if(!confirm('\u05dc\u05d4\u05d7\u05dc \u05d0\u05ea \u05d4\u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d4-NCR?\n(\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 + \u05e4\u05e2\u05d5\u05dc\u05d4 + \u05d0\u05d7\u05e8\u05d0\u05d9 + \u05d9\u05e2\u05d3 \u05d9\u05d5\u05d7\u05dc\u05e4\u05d5)'))return;
+  var ca0=(an.corrective_actions&&an.corrective_actions[0])||'';
+  var patch={rc:an.root_cause||null,c:ca0||null,o:an.owner_suggested||null,u:an.due_suggested||null};
+  fetch(_SB+'/rest/v1/ncr?id=eq.'+encodeURIComponent(id),{
+    method:'PATCH',
+    headers:{apikey:_SK,Authorization:'Bearer '+_SK,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify(patch)
+  }).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    n.rc=patch.rc||'';n.c=patch.c||'';n.o=patch.o||'';n.u=patch.u||'';
+    if(window.DB&&window.DB.ncr){var rec=window.DB.ncr.find(function(x){return x.id===id;});if(rec){rec.rc=n.rc;rec.c=n.c;rec.o=n.o;rec.u=n.u;}}
+    _ncrRender();window._ncrSel(id);
+    if(typeof rNcr==='function')rNcr();if(typeof rDash==='function')rDash();
+  }).catch(function(err){alert('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05d7\u05dc\u05d4: '+(err&&err.message||err));});
+};
 window._ncrAI=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
   document.getElementById('ncr-agent-panel').innerHTML+='<div style="text-align:center;padding:20px;color:#4a6a8a">Analyzing...</div>';
