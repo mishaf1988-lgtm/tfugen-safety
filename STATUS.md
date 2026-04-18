@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-18
+**Last updated**: 2026-04-18 (NCR Accept & Apply)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -26,15 +26,21 @@
 - [x] **Skill `tfugen-dev`** — אכיפת חוקי פיתוח אוטומטית
 - [x] **תשתית סנכרון** — CLAUDE.md + DECISIONS.md
 - [x] **NCR Agent v4** (PR הנוכחי, 5a) — prompt ISO 45001/14001, שמירה ל-`ncr_ai`, badge עם version, aggregate על פתוחים בלבד (150)
+- [x] **NCR Agent — Accept & Apply** (PR 5b) — כפתור "קבל והחל" מזרים RC/CAPA/owner/due מ-`_naf` ל-NCR ב-Supabase + badge AI ב-`pg-ncr` + `ncrAIInit` לטעינה אוטומטית
 
 ---
 
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
-- [ ] **2b. NCR Agent — Accept & Apply** (PR 5b) — כפתור להזרים את ה-AI מ-`_naf` ל-`n.rc/c/u` של ה-NCR + badge ב-`pg-ncr`
+- [x] **2b. NCR Agent — Accept & Apply** ✅ הושלם
+- [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
+
+### 💬 הערות לריצה הבאה
+✅ הושלם: NCR Agent — Accept & Apply. כפתור ירוק "✓ קבל והחל ל-NCR" מופיע בפאנל הניתוח → מזרים `rc`/`c`/`o`/`u` ל-Supabase + מעדכן DB מקומי + badge AI בטבלת pg-ncr טוען אוטומטית ב-goPage('ncr').
+המשימה הבאה: **2c. NCR Agent — UX/Filter** (filter לסגורים + chunk aggregation).
 
 ### ⚠️ פעולה ידנית נדרשת
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.

@@ -47,6 +47,8 @@ function _ncrLoadAI(){
   })
   .catch(function(err){console.warn('ncr_ai load skipped:',err);});
 }
+var _naiDone=false;
+window.ncrAIInit=function(){if(_naiDone)return;_naiDone=true;_ncrLoadAI().then(function(){if(window.rNcr)window.rNcr();});};
 function _ncrRender(){
   var L=document.getElementById('ncr-agent-list');
   if(!_nad.length){L.innerHTML='<div style="text-align:center;padding:40px;color:#4a6a8a">No data</div>';return;}
@@ -76,12 +78,12 @@ window._ncrSel=function(id){
   if(n.o)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+n.o+'</span>';
   h+='</div>'+(n.c?'<div style="font-size:11px;color:#7aaa7a;margin-top:5px">'+n.c+'</div>':'')+'</div>';
   var an=_naf[id];
-  if(an&&!an.err)h+=_ncrFmt(an,pc);
+  if(an&&!an.err)h+=_ncrFmt(an,pc,id);
   else if(!an)h+='<button onclick="_ncrAI(\''+id+'\')" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
   else h+='<div style="color:#ff4444;text-align:center;padding:12px">Error</div>';
   P.innerHTML=h;
 };
-function _ncrFmt(an,pc){
+function _ncrFmt(an,pc,ncrId){
   var h='';
   if(an.risk){var rc=_gpc(an.risk);
     h+='<div style="background:'+rc.bg+';border:1px solid '+rc.b+';border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:7px"><span style="color:#aaccee">Risk</span><span style="font-weight:800;color:'+rc.c+'">'+an.risk+'</span></div>';
@@ -97,8 +99,47 @@ function _ncrFmt(an,pc){
     an.corrective_actions.forEach(function(a,i){h+='<div style="font-size:12px;color:#aaccaa;margin-bottom:4px">'+(i+1)+'. '+a+'</div>';});
     h+='</div>';
   }
+  if(an.owner_suggested||an.due_suggested){
+    h+='<div style="display:flex;gap:8px;margin-bottom:7px">';
+    if(an.owner_suggested)h+='<div style="flex:1;background:#1a1a2a;border:1px solid #3a3a5a;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#7a7aaa">\u05d0\u05d7\u05e8\u05d0\u05d9 \u05de\u05d5\u05e6\u05e2</div><div style="font-size:11px;color:#aaaadd">'+an.owner_suggested+'</div></div>';
+    if(an.due_suggested)h+='<div style="flex:1;background:#1a1a2a;border:1px solid #3a3a5a;border-radius:6px;padding:7px 10px"><div style="font-size:9px;color:#7a7aaa">\u05d9\u05e2\u05d3 \u05de\u05d5\u05e6\u05e2</div><div style="font-size:11px;color:#aaaadd">'+an.due_suggested+'</div></div>';
+    h+='</div>';
+  }
+  if(ncrId){
+    h+='<button id="nap-'+ncrId+'" onclick="_ncrApply(\''+ncrId+'\')" style="width:100%;background:#1a3a1a;border:1px solid #2a6a2a;border-radius:8px;color:#4adf4a;padding:9px;font-size:12px;font-weight:700;cursor:pointer;margin-top:2px">&#10003; \u05e7\u05d1\u05dc \u05d5\u05d4\u05d7\u05dc \u05dc-NCR</button>';
+  }
   return h;
 }
+window._ncrApply=function(id){
+  var an=_naf[id];if(!an)return;
+  var patch={};
+  if(an.root_cause)patch.rc=an.root_cause;
+  if(an.corrective_actions&&an.corrective_actions.length)patch.c=an.corrective_actions.join(' | ');
+  if(an.owner_suggested)patch.o=an.owner_suggested;
+  if(an.due_suggested)patch.u=an.due_suggested;
+  if(!Object.keys(patch).length)return;
+  var btn=document.getElementById('nap-'+id);
+  if(btn){btn.disabled=true;btn.textContent='\u05de\u05d7\u05d9\u05dc...';}
+  fetch(_SB+'/rest/v1/ncr?id=eq.'+id,{
+    method:'PATCH',
+    headers:{apikey:_SK,Authorization:'Bearer '+_SK,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify(patch)
+  }).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    _nad=_nad.map(function(rec){return rec.id===id?Object.assign({},rec,patch):rec;});
+    if(window.DB&&window.DB.ncr){
+      window.DB.ncr=window.DB.ncr.map(function(rec){return rec.id===id?Object.assign({},rec,patch):rec;});
+      if(window.sdb)window.sdb();
+      if(window.rNcr)window.rNcr();
+    }
+    _ncrRender();
+    if(btn){btn.textContent='\u2705 \u05d4\u05d5\u05d7\u05dc';btn.style.background='#003d00';btn.style.color='#aaffaa';}
+    if(window.toast)window.toast('\u05d4\u05d5\u05d7\u05dc \u05dc-NCR \u2713');
+  }).catch(function(){
+    if(btn){btn.disabled=false;btn.textContent='\u05e7\u05d1\u05dc \u05d5\u05d4\u05d7\u05dc \u05dc-NCR';btn.style.background='';}
+    if(window.toast)window.toast('Error applying');
+  });
+};
 window._ncrAI=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
   document.getElementById('ncr-agent-panel').innerHTML+='<div style="text-align:center;padding:20px;color:#4a6a8a">Analyzing...</div>';

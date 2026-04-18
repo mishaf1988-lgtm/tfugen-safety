@@ -829,6 +829,7 @@ function goPage(id){
   var bn=g('bn-'+id);if(bn)bn.classList.add('on');
   CUR=id;
   rPage();
+  if(id==='ncr')setTimeout(function(){if(window.ncrAIInit)window.ncrAIInit();},50);
   var w=g('ncr-status-widget');if(w)w.style.display=(id==='dash'||id==='ncr')?'':'none';
 }
 function rPage(){
@@ -1194,8 +1195,9 @@ tb.innerHTML=rows.map(function(n){
   var loc=n.loc||n.location||'';
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+n.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+n.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+  var aiBadge=(window._naf&&window._naf[n.id])?'<span style="background:#1a2a5a;border:1px solid #4a6aaa;border-radius:10px;padding:0 4px;font-size:8px;color:#7aaadf;vertical-align:middle;margin-right:3px">AI</span>':'';
   return '<tr>'+
-    '<td><span class="b bX">'+(n.num||'&#8212;')+'</span></td>'+
+    '<td><span class="b bX">'+(n.num||'&#8212;')+'</span>'+aiBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
     '<td>'+ loc.substring(0,20) +'</td>'+
