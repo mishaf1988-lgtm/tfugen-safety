@@ -1554,7 +1554,7 @@ window._ncrSel=function(id){
   var an=_naf[id];
   if(an&&!an.err)h+=_ncrFmt(an,pc);
   else if(!an)h+='<button onclick="_ncrAI(\''+id+'\')" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
-  else h+='<div style="color:#ff4444;text-align:center;padding:12px">Error</div>';
+  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+((an&&an.msg)||'unknown')+'</div>';
   P.innerHTML=h;
 };
 function _ncrFmt(an,pc){
@@ -1636,7 +1636,7 @@ window._ncrAI=function(id){
       })
     }).catch(function(){});
     _ncrRender();window._ncrSel(id);
-  }).catch(function(){_naf[id]={err:true};window._ncrSel(id);});
+  }).catch(function(err){console.error('_ncrAI err:',err);_naf[id]={err:true,msg:(err&&err.message||String(err))};window._ncrSel(id);});
 };
 window.ncrAgentAnalyzeAll=function(){
   var P=document.getElementById('ncr-agent-panel');
@@ -1661,9 +1661,11 @@ window.ncrAgentAnalyzeAll=function(){
     '4. Urgent alerts / \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:_AI_MODEL,max_tokens:1500,messages:[{role:'user',content:prompt}]})
-  }).then(function(r){return r.json();}).then(function(d){
-    P.innerHTML='<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+(d.content&&d.content[0]?d.content[0].text:'Error')+'</div>';
-  }).catch(function(){P.innerHTML='<div style="color:#ff4444;text-align:center">Error</div>';});
+  }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
+    if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
+    var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
+    P.innerHTML='<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+(d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500))+'</div>';
+  }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+(err&&err.message||err)+'</div>';});
 };
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 </script>
