@@ -1486,7 +1486,7 @@ var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600'
 var _SC={'closed':'#00cc55','open':'#ff4444','wip':'#f0a000'};
 function _gpc(p){return _P[p==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'q':p==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'h':p==='\u05e0\u05de\u05d5\u05db\u05d4'?'l':'m']||_P.m;}
 function _gsc(s){return s==='\u05e1\u05d2\u05d5\u05e8'?'#00cc55':s==='\u05e4\u05ea\u05d5\u05d7'?'#ff4444':s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#f0a000':'#7a9ab8';}
-window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.display='flex';_ncrLoad();};
+window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.display='flex';var _c=document.getElementById('ncr-agent-count');if(_c&&!_c.dataset.vmark){_c.insertAdjacentHTML('afterend',' <span style="font-size:10px;color:#00cc55;padding:0 6px">v4.3</span>');_c.dataset.vmark='1';}_ncrLoad();};
 function _ncrLoad(){
   var L=document.getElementById('ncr-agent-list');
   L.innerHTML='<div style="text-align:center;padding:40px;color:#4a6a8a">Loading...</div>';
@@ -1498,8 +1498,8 @@ function _ncrLoad(){
     if(ce)ce.textContent=res.ct?res.ct.split('/')[1]:_nad.length;
   })
   .then(function(){return _ncrLoadAI();})
-  .then(function(){try{_ncrRender();}catch(e){console.error('NCR render error:',e);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444">Render Error: '+(e&&e.message||e)+'</div>';}})
-  .catch(function(err){console.error('NCR load error:',err);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444">Load Error: '+(err&&err.message||err)+'</div>';});
+  .then(function(){try{_ncrRender();}catch(e){console.error('NCR render error:',e);var msg='Render Error: '+(e&&e.message||e);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444;font-size:11px;word-break:break-word">[v4.3 render]<br>'+msg+'</div>';try{alert(msg);}catch(_){}}})
+  .catch(function(err){console.error('NCR load error:',err);var msg='Load Error: '+(err&&err.message||err);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444;font-size:11px;word-break:break-word">[v4.3 load]<br>'+msg+'</div>';try{alert(msg);}catch(_){}});
 }
 function _ncrLoadAI(){
   return fetch(_SB+'/rest/v1/ncr_ai?select=*&order=version.desc',{headers:{apikey:_SK,Authorization:'Bearer '+_SK}})
