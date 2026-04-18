@@ -13,6 +13,20 @@
 
 ---
 
+## 2026-04-18 — דף חדש: בדיקות ציוד (`equip_inspections`)
+**החלטה**: דף נפרד `pg-eqi` לבדיקות ציוד חובה לפי פקודת הבטיחות. טבלה חדשה `equip_inspections` עם שדות `code/n/vendor/loc/d/e/s/notes`. השדה `e` (תוקף הבא) משולב אוטומטית ב-Expiries Agent.
+**סיבה**:
+- המשתמש העלה דוח ציוד ולא היה לו מקום מתאים (דף "סיורי בטיחות" היה לא מתאים).
+- שמירת השדה `e` כ-single letter מתיישרת עם convention הפרויקט ומאפשרת שימוש ב-`eb()` / `fd()` / `du()` הקיימים.
+- כולל ייבוא Excel/CSV גנרי עם זיהוי אוטומטי של headers (code/name/vendor/loc/dates/status/notes).
+**אלטרנטיבות שנדחו**:
+- לשנות את דף "סיורי בטיחות" הקיים → המשתמש ציין שיש לו גם סיורים אמיתיים (חובה ל-45001).
+- לשמור כעמודה ב-`ins` → שני יישויות שונות. בדיקות ציוד לפי פקודה ≠ סיור בטיחות שבועי.
+**השלכות**:
+- 18 טבלאות → **19 טבלאות**. עודכן ב-CLAUDE.md.
+- Migration ידני דרוש: `migrations/2026-04-18_equip_inspections.sql`.
+- ה-Expiries Agent ו-`rDash()` סורקים עכשיו גם את הטבלה הזו.
+
 ## 2026-04-18 — NCR Agent v4: שמירה ל-DB בטבלה נפרדת `ncr_ai`
 **החלטה**: ניתוחי AI של NCR נשמרים בטבלה חדשה `ncr_ai` (bigserial id, ncr_id text, version int, risk/rc/ia/ca/prev, owner_suggested, due_suggested, ts, created_by). כל ניתוח חדש = version חדש (שומר היסטוריה).
 **סיבה**:
