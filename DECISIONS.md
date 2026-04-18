@@ -13,6 +13,72 @@
 
 ---
 
+## 2026-04-18 — Outbox hardening (hotfix): 3 באגים שגרמו לאובדן נתונים
+**החלטה**: תיקון שלושה באגים קריטיים במנגנון ה-outbox:
+1. **`ldb()` לא שחזרה `equip_inspections`** — רשימת הטבלאות לשחזור מ-localStorage לא כללה את הטבלה החדשה. אחרי רענון, הנתונים "נעלמו" מה-DB בזיכרון גם אם נשמרו ב-localStorage. נוסף לרשימה.
+2. **`_obDrain` שמט שגיאות 4xx בשקט** — אם Supabase החזיר 404 (טבלה לא קיימת), 401/403 (הרשאות) או 400 (סכמה לא תואמת), הפעולה הוסרה מהתור ונמחקה לנצח בלי להודיע למשתמש. תוקן: כל שגיאה (4xx או 5xx) משאירה את הפעולה בתור, מעלה מונה `tries`, שומרת את ה-body האחרון של השגיאה ב-`tfgn_outbox_lasterr`, ומציגה badge אדום.
+3. **`sbSync` יכלה לדרוס נתונים מקומיים** — אם טבלה בענן ריקה אבל יש פעולות pending באאוטבוקס, sbSync מדלגת על fetch של אותה טבלה (מונע race של דריסה לפני ש-drain מצליח).
+
+**נוסף גם**:
+- **Upsert semantics** — POST עם `Prefer: resolution=merge-duplicates` → retry של אותה שורה לא מחזיר 409 conflict, אלא הופך ל-update.
+- **Diagnostic popup** — לחיצה על sync-pill מציגה: מצב `SB_ON`, כמות פעולות בתור, פירוט הפעולות הראשונות (tbl/op/tries/lastError), השגיאה האחרונה עם body, ואפשרות להפעיל drain מידית.
+- **`OB_ERR_KEY='tfgn_outbox_lasterr'`** ב-localStorage לשמירת השגיאה האחרונה בין טעינות.
+
+**סיבה**: המשתמש דיווח: "העלתי ציוד דרך אקסל, עשיתי רענון, נעלם שוב". הסיבה המצטברת של 3 הבאגים מעל: localStorage שמר את הנתונים אבל ldb לא שחזרה אותם, הענן לא קיבל כי טבלה אולי חסרה במיגרציה → 404, והפעולה הוסרה בשקט. השילוב של 3 הבאגים שיצר חור שחור.
+
+**אלטרנטיבות שנדחו**:
+- להעביר ל-IndexedDB — overkill לבעיה של list missing in array.
+- Real-time subscription (Supabase realtime) — לא פותר את הבעיה של failed writes; מוסיף מורכבות.
+- Toast על כל שגיאה — רועש מדי; pill + click diagnostic עדיף.
+
+**קישורים**: commit על branch `claude/resume-tfugen-safety-SJ4tU`
+
+---
+
+## 2026-04-18 — Outbox pattern לסנכרון ענן אמין
+**החלטה**: כל פעולות הכתיבה ל-Supabase (`sbIns/sbUpd/sbDel`) עוברות דרך outbox queue ב-localStorage (`tfgn_outbox`). ה-queue נמשך (drain) ל-ענן ב-4 טריגרים: (1) אחרי ש-`sbSync` מסיים וקובע `SB_ON=true`; (2) `online` event; (3) `focus` event; (4) כל 30 שניות דרך setInterval. Badge ב-topbar (`#sync-pill`) מראה כמות פעולות ממתינות ומתחלף ל-"בענן ✓" לשנייה אחרי drain מוצלח.
+
+**סיבה**:
+- **תיקון באג קריטי**: `sbUpd` נקראה ב-2 מקומות (svNcr:1002, svEqi:1424) אבל **מעולם לא הוגדרה** → כל UPDATE של NCR/equip_inspections לא הגיע לענן.
+- `sbIns` גם נחסם ב-`if(!SB_ON)return` — אם המשתמש העלה Excel לפני ש-sbSync הסתיים, הנתונים נעלמו בשקט (רק ב-localStorage).
+- `.catch(function(){})` בלע שגיאות רשת — המשתמש לא ידע שהסנכרון נפל.
+- דרישה מפורשת של המשתמש: "כל פעולה, מכל מקום, מיד בענן".
+
+**אלטרנטיבות שנדחו**:
+- להסיר רק את ה-`SB_ON` check — לא פותר את ה-swallow של שגיאות רשת
+- להוסיף sync button ידני — דורש מעורבות, לא "מיד בענן"
+- להשתמש ב-IndexedDB — overkill ל-queue קטן; localStorage מספיק
+
+**מנגנון טכני**:
+- `_obPush(op)` שומר `{op, tbl, row|id, ts, oid}` ב-queue
+- `_obSend(op)` עושה את ה-fetch בפועל ומזרוק error עם `status`
+- `_obDrain()` עובר על ה-queue, משאיר בה פעולות שנכשלו עם 5xx/network, מנקה 4xx (כנראה conflict/duplicate)
+- `navigator.onLine===false` → לא מנסה כלל (שומר סוללה)
+- `_obBusy` mutex מונע drains חופפים
+
+**השלכות**:
+- Badge חדש ב-topbar משמאל לפעמון
+- `tfgn_outbox` חדש ב-localStorage של המשתמש
+- אין schema changes, אין migration
+- פעולות ישנות שהוחמצו (לפני התיקון) עדיין רק ב-localStorage — המשתמש יצטרך לייבא מחדש אם נמצא פער
+
+## 2026-04-18 — Dashboard 2.0 (Phase A): גרפים ב-rDash
+**החלטה**: הוספת 4 גרפים אינטראקטיביים לדשבורד באמצעות Chart.js 4 מ-CDN. גרפים: NCR trend (line, 12 חודשים, Safety vs Env), Incidents+lost-days (combo bar+line), Expiries stacked bar לפי 6 קטגוריות × 4 רמות דחיפות, Risk heatmap bubble chart 5×5. כל גרף עם `onclick` drill-down לעמוד המתאים.
+**סיבה**:
+- דרישה מפורשת של המשתמש להחליף את Vitre — Vitre יש visualizations, TFUGEN לא.
+- Chart.js 4 UMD מ-CDN הוא ~60KB gzipped, בלי build step, מתאים ל-single-file architecture.
+- Graceful fallback: אם CDN לא נטען, `if(typeof Chart==='undefined')return` → KPI tiles הקיימים ממשיכים לעבוד.
+**אלטרנטיבות שנדחו**:
+- D3.js — גמיש מדי, דורש יותר קוד ל-setup, overkill ל-4 גרפים
+- ECharts — ~400KB, כבד מדי
+- Google Charts — תלוי ב-Google API, פחות responsive
+- SVG ידני — זמן פיתוח ארוך, תחזוקה קשה
+**השלכות**:
+- תלות חדשה: Chart.js 4.4.1 UMD מ-jsdelivr
+- instances נשמרים ב-`_dashChartInst` וממוחזרים (destroy+create) ב-`rDash()` re-call
+- עברית ב-labels — כולה `\uXXXX` (0 raw Hebrew חדש ב-JS)
+- CSS חדש: `.dash-charts`, `.chart-card`, `.chart-wrap` — responsive (single col mobile, 2-col desktop ≥768px)
+
 ## 2026-04-18 — NCR Agent Accept & Apply (PR 5b)
 **החלטה**: הוספת כפתור ירוק "✅ החל ניתוח על ה-NCR" בפאנל הסוכן. בלחיצה → PATCH ל-`ncr` עם 4 שדות:
 - `root_cause` → `rc`
