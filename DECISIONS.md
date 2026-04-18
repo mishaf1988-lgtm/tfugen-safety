@@ -13,6 +13,23 @@
 
 ---
 
+## 2026-04-18 — Dashboard 2.0 (Phase A): גרפים ב-rDash
+**החלטה**: הוספת 4 גרפים אינטראקטיביים לדשבורד באמצעות Chart.js 4 מ-CDN. גרפים: NCR trend (line, 12 חודשים, Safety vs Env), Incidents+lost-days (combo bar+line), Expiries stacked bar לפי 6 קטגוריות × 4 רמות דחיפות, Risk heatmap bubble chart 5×5. כל גרף עם `onclick` drill-down לעמוד המתאים.
+**סיבה**:
+- דרישה מפורשת של המשתמש להחליף את Vitre — Vitre יש visualizations, TFUGEN לא.
+- Chart.js 4 UMD מ-CDN הוא ~60KB gzipped, בלי build step, מתאים ל-single-file architecture.
+- Graceful fallback: אם CDN לא נטען, `if(typeof Chart==='undefined')return` → KPI tiles הקיימים ממשיכים לעבוד.
+**אלטרנטיבות שנדחו**:
+- D3.js — גמיש מדי, דורש יותר קוד ל-setup, overkill ל-4 גרפים
+- ECharts — ~400KB, כבד מדי
+- Google Charts — תלוי ב-Google API, פחות responsive
+- SVG ידני — זמן פיתוח ארוך, תחזוקה קשה
+**השלכות**:
+- תלות חדשה: Chart.js 4.4.1 UMD מ-jsdelivr
+- instances נשמרים ב-`_dashChartInst` וממוחזרים (destroy+create) ב-`rDash()` re-call
+- עברית ב-labels — כולה `\uXXXX` (0 raw Hebrew חדש ב-JS)
+- CSS חדש: `.dash-charts`, `.chart-card`, `.chart-wrap` — responsive (single col mobile, 2-col desktop ≥768px)
+
 ## 2026-04-18 — NCR Agent Accept & Apply (PR 5b)
 **החלטה**: הוספת כפתור ירוק "✅ החל ניתוח על ה-NCR" בפאנל הסוכן. בלחיצה → PATCH ל-`ncr` עם 4 שדות:
 - `root_cause` → `rc`
