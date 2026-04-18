@@ -20,14 +20,14 @@ function _ncrLoad(){
     _nad=Array.isArray(res.d)?res.d:[];
     var ce=document.getElementById('ncr-agent-count');
     if(ce)ce.textContent=res.ct?res.ct.split('/')[1]:_nad.length;
-    return _ncrLoadAI();
   })
-  .then(function(){_ncrRender();})
-  .catch(function(){L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444">Error</div>';});
+  .then(function(){return _ncrLoadAI();})
+  .then(function(){try{_ncrRender();}catch(e){console.error('NCR render error:',e);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444">Render Error: '+(e&&e.message||e)+'</div>';}})
+  .catch(function(err){console.error('NCR load error:',err);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444">Load Error: '+(err&&err.message||err)+'</div>';});
 }
 function _ncrLoadAI(){
   return fetch(_SB+'/rest/v1/ncr_ai?select=*&order=version.desc',{headers:{apikey:_SK,Authorization:'Bearer '+_SK}})
-  .then(function(r){return r.ok?r.json():[];})
+  .then(function(r){if(!r.ok){console.warn('ncr_ai fetch not ok:',r.status);return [];}return r.json();})
   .then(function(rows){
     if(!Array.isArray(rows))return;
     rows.forEach(function(r){
@@ -45,7 +45,7 @@ function _ncrLoadAI(){
       _naVer[r.ncr_id]=r.version;
     });
   })
-  .catch(function(){});
+  .catch(function(err){console.warn('ncr_ai load skipped:',err);});
 }
 function _ncrRender(){
   var L=document.getElementById('ncr-agent-list');
@@ -53,7 +53,7 @@ function _ncrRender(){
   var h='';
   _nad.forEach(function(n){
     var pc=_gpc(n.p),sc=_gsc(n.s),an=_naf[n.id];
-    h+='<div onclick="_ncrSel(\'' +n.id+ '\'" style="background:'+pc.bg+';border-right:3px solid '+pc.b+';border-radius:7px;padding:9px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:10px">';
+    h+='<div onclick="_ncrSel(\''+n.id+'\')" style="background:'+pc.bg+';border-right:3px solid '+pc.b+';border-radius:7px;padding:9px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:10px">';
     h+='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:#4a7aaa">'+(n.num||'')+'</div>';
     h+='<div style="font-size:12px;color:#ddeeff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(n.d||'')+'</div>';
     h+='<div style="font-size:10px;color:#5a7a9a">'+(n.a||'')+(n.o?' - '+n.o:'')+'</div></div>';
@@ -77,7 +77,7 @@ window._ncrSel=function(id){
   h+='</div>'+(n.c?'<div style="font-size:11px;color:#7aaa7a;margin-top:5px">'+n.c+'</div>':'')+'</div>';
   var an=_naf[id];
   if(an&&!an.err)h+=_ncrFmt(an,pc);
-  else if(!an)h+='<button onclick="_ncrAI(\'' +id+ '\'" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
+  else if(!an)h+='<button onclick="_ncrAI(\''+id+'\')" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
   else h+='<div style="color:#ff4444;text-align:center;padding:12px">Error</div>';
   P.innerHTML=h;
 };
