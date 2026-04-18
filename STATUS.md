@@ -26,6 +26,7 @@
 - [x] **Skill `tfugen-dev`** — אכיפת חוקי פיתוח אוטומטית
 - [x] **תשתית סנכרון** — CLAUDE.md + DECISIONS.md
 - [x] **NCR Agent v4** (PR הנוכחי, 5a) — prompt ISO 45001/14001, שמירה ל-`ncr_ai`, badge עם version, aggregate על פתוחים בלבד (150)
+- [x] **Equipment Inspections** — דף `pg-eqi` + טבלה `equip_inspections` + ייבוא Excel/CSV + אינטגרציה עם Expiries Agent
 
 ---
 
@@ -38,6 +39,7 @@
 
 ### ⚠️ פעולה ידנית נדרשת
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
 - [ ] **Morning Round** — checklist יומי (PPE/אש/מעברים/דגימות)
