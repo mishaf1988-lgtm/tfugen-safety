@@ -13,6 +13,33 @@
 
 ---
 
+## 2026-04-18 — Outbox pattern לסנכרון ענן אמין
+**החלטה**: כל פעולות הכתיבה ל-Supabase (`sbIns/sbUpd/sbDel`) עוברות דרך outbox queue ב-localStorage (`tfgn_outbox`). ה-queue נמשך (drain) ל-ענן ב-4 טריגרים: (1) אחרי ש-`sbSync` מסיים וקובע `SB_ON=true`; (2) `online` event; (3) `focus` event; (4) כל 30 שניות דרך setInterval. Badge ב-topbar (`#sync-pill`) מראה כמות פעולות ממתינות ומתחלף ל-"בענן ✓" לשנייה אחרי drain מוצלח.
+
+**סיבה**:
+- **תיקון באג קריטי**: `sbUpd` נקראה ב-2 מקומות (svNcr:1002, svEqi:1424) אבל **מעולם לא הוגדרה** → כל UPDATE של NCR/equip_inspections לא הגיע לענן.
+- `sbIns` גם נחסם ב-`if(!SB_ON)return` — אם המשתמש העלה Excel לפני ש-sbSync הסתיים, הנתונים נעלמו בשקט (רק ב-localStorage).
+- `.catch(function(){})` בלע שגיאות רשת — המשתמש לא ידע שהסנכרון נפל.
+- דרישה מפורשת של המשתמש: "כל פעולה, מכל מקום, מיד בענן".
+
+**אלטרנטיבות שנדחו**:
+- להסיר רק את ה-`SB_ON` check — לא פותר את ה-swallow של שגיאות רשת
+- להוסיף sync button ידני — דורש מעורבות, לא "מיד בענן"
+- להשתמש ב-IndexedDB — overkill ל-queue קטן; localStorage מספיק
+
+**מנגנון טכני**:
+- `_obPush(op)` שומר `{op, tbl, row|id, ts, oid}` ב-queue
+- `_obSend(op)` עושה את ה-fetch בפועל ומזרוק error עם `status`
+- `_obDrain()` עובר על ה-queue, משאיר בה פעולות שנכשלו עם 5xx/network, מנקה 4xx (כנראה conflict/duplicate)
+- `navigator.onLine===false` → לא מנסה כלל (שומר סוללה)
+- `_obBusy` mutex מונע drains חופפים
+
+**השלכות**:
+- Badge חדש ב-topbar משמאל לפעמון
+- `tfgn_outbox` חדש ב-localStorage של המשתמש
+- אין schema changes, אין migration
+- פעולות ישנות שהוחמצו (לפני התיקון) עדיין רק ב-localStorage — המשתמש יצטרך לייבא מחדש אם נמצא פער
+
 ## 2026-04-18 — Dashboard 2.0 (Phase A): גרפים ב-rDash
 **החלטה**: הוספת 4 גרפים אינטראקטיביים לדשבורד באמצעות Chart.js 4 מ-CDN. גרפים: NCR trend (line, 12 חודשים, Safety vs Env), Incidents+lost-days (combo bar+line), Expiries stacked bar לפי 6 קטגוריות × 4 רמות דחיפות, Risk heatmap bubble chart 5×5. כל גרף עם `onclick` drill-down לעמוד המתאים.
 **סיבה**:
