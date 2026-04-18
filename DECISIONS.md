@@ -13,6 +13,28 @@
 
 ---
 
+## 2026-04-18 — Outbox hardening (hotfix): 3 באגים שגרמו לאובדן נתונים
+**החלטה**: תיקון שלושה באגים קריטיים במנגנון ה-outbox:
+1. **`ldb()` לא שחזרה `equip_inspections`** — רשימת הטבלאות לשחזור מ-localStorage לא כללה את הטבלה החדשה. אחרי רענון, הנתונים "נעלמו" מה-DB בזיכרון גם אם נשמרו ב-localStorage. נוסף לרשימה.
+2. **`_obDrain` שמט שגיאות 4xx בשקט** — אם Supabase החזיר 404 (טבלה לא קיימת), 401/403 (הרשאות) או 400 (סכמה לא תואמת), הפעולה הוסרה מהתור ונמחקה לנצח בלי להודיע למשתמש. תוקן: כל שגיאה (4xx או 5xx) משאירה את הפעולה בתור, מעלה מונה `tries`, שומרת את ה-body האחרון של השגיאה ב-`tfgn_outbox_lasterr`, ומציגה badge אדום.
+3. **`sbSync` יכלה לדרוס נתונים מקומיים** — אם טבלה בענן ריקה אבל יש פעולות pending באאוטבוקס, sbSync מדלגת על fetch של אותה טבלה (מונע race של דריסה לפני ש-drain מצליח).
+
+**נוסף גם**:
+- **Upsert semantics** — POST עם `Prefer: resolution=merge-duplicates` → retry של אותה שורה לא מחזיר 409 conflict, אלא הופך ל-update.
+- **Diagnostic popup** — לחיצה על sync-pill מציגה: מצב `SB_ON`, כמות פעולות בתור, פירוט הפעולות הראשונות (tbl/op/tries/lastError), השגיאה האחרונה עם body, ואפשרות להפעיל drain מידית.
+- **`OB_ERR_KEY='tfgn_outbox_lasterr'`** ב-localStorage לשמירת השגיאה האחרונה בין טעינות.
+
+**סיבה**: המשתמש דיווח: "העלתי ציוד דרך אקסל, עשיתי רענון, נעלם שוב". הסיבה המצטברת של 3 הבאגים מעל: localStorage שמר את הנתונים אבל ldb לא שחזרה אותם, הענן לא קיבל כי טבלה אולי חסרה במיגרציה → 404, והפעולה הוסרה בשקט. השילוב של 3 הבאגים שיצר חור שחור.
+
+**אלטרנטיבות שנדחו**:
+- להעביר ל-IndexedDB — overkill לבעיה של list missing in array.
+- Real-time subscription (Supabase realtime) — לא פותר את הבעיה של failed writes; מוסיף מורכבות.
+- Toast על כל שגיאה — רועש מדי; pill + click diagnostic עדיף.
+
+**קישורים**: commit על branch `claude/resume-tfugen-safety-SJ4tU`
+
+---
+
 ## 2026-04-18 — Outbox pattern לסנכרון ענן אמין
 **החלטה**: כל פעולות הכתיבה ל-Supabase (`sbIns/sbUpd/sbDel`) עוברות דרך outbox queue ב-localStorage (`tfgn_outbox`). ה-queue נמשך (drain) ל-ענן ב-4 טריגרים: (1) אחרי ש-`sbSync` מסיים וקובע `SB_ON=true`; (2) `online` event; (3) `focus` event; (4) כל 30 שניות דרך setInterval. Badge ב-topbar (`#sync-pill`) מראה כמות פעולות ממתינות ומתחלף ל-"בענן ✓" לשנייה אחרי drain מוצלח.
 
