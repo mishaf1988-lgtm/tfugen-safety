@@ -16,7 +16,7 @@ Claude Code loads this file automatically at the start of every session in this 
 | שכבה | טכנולוגיה |
 |---|---|
 | UI | **single-file** `index.html` (~1500 lines) — אין build step, אין framework |
-| Backend | **Supabase** — 17 טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
+| Backend | **Supabase** — 18 טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
 | AI | Vercel serverless `api/claude.js` → Claude API |
 | Deploy | Vercel auto-deploy מ-`main` |
 
@@ -51,7 +51,7 @@ Claude Code loads this file automatically at the start of every session in this 
 5. **בדוק**:
    - [ ] אין שגיאות console
    - [ ] אין עברית raw ב-JS
-   - [ ] 17 טבלאות עדיין 200 OK
+   - [ ] 18 טבלאות עדיין 200 OK
 6. **עדכן** `STATUS.md` + הוסף שורה ל-`DECISIONS.md` אם יש החלטה ארכיטקטונית
 7. **Commit + Push + PR**
 
@@ -75,6 +75,7 @@ Claude Code loads this file automatically at the start of every session in this 
 - `api/claude.js` — API key של Claude, אל תחשוף בקומיטים
 - קריאות Supabase — אל תשנה את ה-schema בלי דיון
 - `ncr` table (375 רשומות production) — אין למחוק/להחליף
+- `ncr_ai` table — ניתוחי AI של NCR (היסטוריה לפי `version`). אסור למחוק שורות היסטוריות
 
 ## הפניות
 

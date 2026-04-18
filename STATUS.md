@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-17
+**Last updated**: 2026-04-18
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,28 +11,33 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `4bfcd32` (main) |
-| תאריך | 2026-04-17 |
-| Tag | `stable-2026-04-17-expiries` |
-| מצב | 17 טבלאות OK · Expiries Agent עובד · Skills + CLAUDE.md פעילים |
+| Commit | *(יעודכן אחרי merge)* |
+| תאריך | 2026-04-18 |
+| Tag | `stable-2026-04-18-ncr-agent` |
+| מצב | 18 טבלאות OK · NCR Agent v4 שומר ל-DB · Expiries עובד · Skills + CLAUDE.md פעילים |
 
 ---
 
 ## ✅ הושלם
 
-- [x] Supabase sync — 17 טבלאות מחזירות 200 OK
+- [x] Supabase sync — 17 טבלאות מחזירות 200 OK (+ `ncr_ai` טבלה 18)
 - [x] 375 רשומות NCR הועלו
 - [x] **Expiries Agent** (PR #4) — דף `pg-exp` מאוחד + התראות dashboard משודרגות
 - [x] **Skill `tfugen-dev`** — אכיפת חוקי פיתוח אוטומטית
 - [x] **תשתית סנכרון** — CLAUDE.md + DECISIONS.md
+- [x] **NCR Agent v4** (PR הנוכחי, 5a) — prompt ISO 45001/14001, שמירה ל-`ncr_ai`, badge עם version, aggregate על פתוחים בלבד (150)
 
 ---
 
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
-- [ ] **2. NCR/CAPA Agent** — ניתוח AI של NCR פתוחים + המלצות CAPA
+- [ ] **2b. NCR Agent — Accept & Apply** (PR 5b) — כפתור להזרים את ה-AI מ-`_naf` ל-`n.rc/c/u` של ה-NCR + badge ב-`pg-ncr`
+- [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
+
+### ⚠️ פעולה ידנית נדרשת
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
 - [ ] **Morning Round** — checklist יומי (PPE/אש/מעברים/דגימות)
