@@ -986,12 +986,12 @@ function _obDrain(){
 function sbIns(tbl,row){_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
-function sbSync(){
+function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
-    if(pending[t]){done++;if(done===tbls.length){SB_ON=true;sdb();rPage();_obDrain();}return;}
+    if(pending[t]){done++;if(done===tbls.length){SB_ON=true;sdb();if(!silent)rPage();else rDash();_obDrain();}return;}
     sbGet(t).then(function(rows){
       if(rows&&rows.length){
         // Merge: keep local-only rows, overwrite with cloud versions when id matches
@@ -1000,14 +1000,14 @@ function sbSync(){
         DB[t]=rows.concat(localOnly);
       }
       done++;
-      if(done===tbls.length){SB_ON=true;sdb();rPage();_obDrain();}
+      if(done===tbls.length){SB_ON=true;sdb();if(!silent)rPage();else rDash();_obDrain();}
     });
   });
 }
-window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync();});
-window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync();});
+window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync(true);});
+window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync(true);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON)sbSync();},60*1000);
+setInterval(function(){if(SB_ON)sbSync(true);},60*1000);
 document.addEventListener('DOMContentLoaded',function(){_obBadge();});
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
