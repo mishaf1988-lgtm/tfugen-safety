@@ -340,7 +340,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#1502;&#1491;&#1493;&#1493;&#1495;</th>
     <th>&#1495;&#1493;&#1502;&#1512;&#1492;</th>
     <th>&#1505;&#1496;.</th>
-    <th></th><th></th>
+    <th>&#128247;</th><th></th>
   </tr></thead><tbody id="tb-nm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
 </div>
@@ -780,6 +780,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-e"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="eqi-s"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1495;&#1497;&#1497;&#1489; &#1489;&#1491;&#1497;&#1511;&#1492;</option><option>&#1500;&#1488; &#1514;&#1511;&#1497;&#1503;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="eqi-notes"></textarea></div>
+    <div class="field fw"><label>&#128247; &#1510;&#1497;&#1500;&#1493;&#1501;</label><div id="eqi-photo-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_eqiPickPhoto()">&#128247; &#1510;&#1500;&#1501; / &#1489;&#1495;&#1512; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-eqi')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svEqi()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -811,6 +812,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="nm-typ"><option>&#1508;&#1497;&#1494;&#1497;</option><option>&#1499;&#1497;&#1502;&#1497;</option><option>&#1495;&#1513;&#1502;&#1500;&#1497;</option><option>&#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1504;&#1508;&#1497;&#1500;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="nm-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="nm-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#128247; &#1510;&#1497;&#1500;&#1493;&#1501;</label><div id="nm-photo-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_nmPickPhoto()">&#128247; &#1510;&#1500;&#1501; / &#1489;&#1495;&#1512; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -1538,6 +1540,9 @@ function eqiEdit(id){
     g('eqi-e').value=r.e||'';
     g('eqi-s').value=r.s||'\u05ea\u05e7\u05d9\u05df';
     g('eqi-notes').value=r.notes||'';
+    _eqiPhotoUrl=r.photo_url||null;
+    var pa=g('eqi-photo-area');
+    if(pa)pa.innerHTML=r.photo_url?_photoPreview(r.photo_url,'_eqiClearPhoto'):_photoPickBtn('_eqiPickPhoto');
   },30);
 }
 function svEqi(){
@@ -1554,12 +1559,13 @@ function svEqi(){
     e:gv('eqi-e')||null,
     s:gv('eqi-s')||'\u05ea\u05e7\u05d9\u05df',
     notes:gv('eqi-notes')||null,
+    photo_url:_eqiPhotoUrl||null,
     ts:new Date().toISOString()
   };
   if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?rec:r;});sbUpd('equip_inspections',rec);}
   else{DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);}
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3: '+n.substring(0,30));
-  sdb();closeModal('m-eqi');rEqi();rDash();
+  _eqiClearPhoto();sdb();closeModal('m-eqi');rEqi();rDash();
   toast('\u05e0\u05e9\u05de\u05e8 \u2713');
 }
 function openEqiXl(){openModal('m-eqi-xl');window._eqiXlData=[];var s=g('eqi-xl-st');if(s)s.textContent='';var b=g('eqi-xl-ok');if(b)b.style.display='none';var i=g('eqi-xl-inp');if(i)i.value='';}
@@ -1646,15 +1652,16 @@ function rNm(){
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td><button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var ph=r.photo_url?'<a href="'+r.photo_url+'" target="_blank"><img src="'+r.photo_url+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td><button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svNm(){
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),ts:new Date().toISOString()};
+  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_nmPhotoUrl||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
   DB.near_miss.push(r);sbIns('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
-  closeModal('m-nm');['nm-desc','nm-area','nm-rep','nm-notes','nm-t'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  closeModal('m-nm');['nm-desc','nm-area','nm-rep','nm-notes','nm-t'].forEach(function(id){var el=g(id);if(el)el.value='';});_nmClearPhoto();
   toast('\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713');rNm();rDash();
 }
 // ---- MORNING ROUND ----
@@ -2284,5 +2291,69 @@ console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
 
 <div id="ov-xl" onclick="closeXlModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:998;align-items:center;justify-content:center"></div><div id="m-xl" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;width:90%;max-width:460px;background:#fff;border-radius:14px;padding:24px;direction:rtl;box-shadow:0 8px 32px rgba(0,0,0,.18)"><button onclick="closeXlModal()" style="position:absolute;left:12px;top:12px;background:none;border:none;font-size:20px;cursor:pointer;color:#888">&#10005;</button><div style="font-size:16px;font-weight:700;color:#cc1f1f;margin-bottom:14px">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</div><div style="background:#f0f4f8;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#4a5568;line-height:1.8">&#8226; <b>&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</b>: &#1508;&#1497;&#1512;&#1493;&#1496; | &#1514;&#1488;&#1512;&#1497;&#1498; | &#1505;&#1497;&#1489;&#1492; | &#1508;&#1506;&#1493;&#1500;&#1492; | &#1488;&#1495;&#1512;&#1488;&#1497; | &#1505;&#1496;&#1496;&#1493;&#1505;<br>&#8226; <b>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</b>: &#1502;&#1495;&#1500;&#1511;&#1492; | &#1502;&#1508;&#1490;&#1506; | &#1508;&#1506;&#1493;&#1500;&#1492; | &#1514;&#1488;&#1512;&#1497;&#1498; | &#1488;&#1495;&#1512;&#1497;&#1493;&#1514; | &#1505;&#1496;&#1496;&#1493;&#1505;</div><div id="xl-dz" onclick="xlPickFile()" ondragover="event.preventDefault();this.style.background='#fdecea'" ondragleave="this.style.background='#fff'" ondrop="xlDrop(event)" style="border:2px dashed #cc1f1f;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#fff"><div style="font-size:36px">&#128196;</div><div style="font-weight:700;color:#cc1f1f;margin:6px 0">&#1500;&#1495;&#1509; &#1500;&#1489;&#1495;&#1497;&#1512;&#1514; &#1511;&#1493;&#1489;&#1509;</div><div style="font-size:11px;color:#aaa">xlsx / xls / csv</div></div><input type="file" id="xl-inp" accept=".xlsx,.xls,.csv" style="display:none" onchange="xlRead(this.files[0])"><div id="xl-st" style="margin-top:10px;min-height:20px;font-size:13px;text-align:center;color:#5a6070"></div><div id="xl-pw" style="display:none;margin-top:6px"><div style="background:#e2e8f0;border-radius:4px;height:5px;overflow:hidden"><div id="xl-pb" style="background:#cc1f1f;height:100%;width:0%;transition:width .3s"></div></div></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button onclick="closeXlModal()" style="padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button id="xl-ok" onclick="xlOk()" style="display:none;padding:8px 20px;background:#cc1f1f;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer">&#9654; &#1497;&#1497;&#1489;&#1488;</button></div></div>
+
+<input type="file" id="nm-photo-inp" accept="image/*" capture="environment" style="display:none" onchange="_nmPhotoRead(this.files[0])">
+<input type="file" id="eqi-photo-inp" accept="image/*" capture="environment" style="display:none" onchange="_eqiPhotoRead(this.files[0])">
+<script>
+var _nmPhotoUrl=null,_eqiPhotoUrl=null;
+var _PHOTO_BUCKET='incidents-photos';
+function _imgCompress(file,maxPx,q,cb){
+  var r=new FileReader();
+  r.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var w=img.width,h=img.height;
+      if(w>maxPx||h>maxPx){var sc=maxPx/Math.max(w,h);w=Math.round(w*sc);h=Math.round(h*sc);}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(function(blob){cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(file);
+}
+function _imgUpload(blob,filename){
+  return fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+filename,{
+    method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob
+  }).then(function(r){
+    if(!r.ok)return r.text().then(function(t){throw new Error(t);});
+    return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+filename;
+  });
+}
+function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style="width:100%" onclick="'+fn+'()">\u128247 \u05e6\u05dc\u05dd / \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';}
+function _photoPreview(src,clearFn){return '<img src="'+src+'" style="max-width:100%;max-height:160px;border-radius:8px;margin-top:4px;display:block"><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';}
+
+function _nmPickPhoto(){var i=g('nm-photo-inp');if(i){i.value='';i.click();}}
+function _nmPhotoRead(file){
+  if(!file)return;
+  var area=g('nm-photo-area');if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05d1\u05d3...</div>';
+  _imgCompress(file,1024,0.82,function(blob,dataUrl){
+    var fname='nm-'+Date.now()+'.jpg';
+    _imgUpload(blob,fname).then(function(url){
+      _nmPhotoUrl=url;if(area)area.innerHTML=_photoPreview(dataUrl,'_nmClearPhoto');
+    }).catch(function(){
+      toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 \u2014 \u05d1\u05d3\u05d5\u05e7 Supabase Storage');
+      if(area)area.innerHTML=_photoPickBtn('_nmPickPhoto');
+    });
+  });
+}
+function _nmClearPhoto(){_nmPhotoUrl=null;var a=g('nm-photo-area');if(a)a.innerHTML=_photoPickBtn('_nmPickPhoto');}
+
+function _eqiPickPhoto(){var i=g('eqi-photo-inp');if(i){i.value='';i.click();}}
+function _eqiPhotoRead(file){
+  if(!file)return;
+  var area=g('eqi-photo-area');if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05d1\u05d3...</div>';
+  _imgCompress(file,1024,0.82,function(blob,dataUrl){
+    var fname='eqi-'+Date.now()+'.jpg';
+    _imgUpload(blob,fname).then(function(url){
+      _eqiPhotoUrl=url;if(area)area.innerHTML=_photoPreview(dataUrl,'_eqiClearPhoto');
+    }).catch(function(){
+      toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 \u2014 \u05d1\u05d3\u05d5\u05e7 Supabase Storage');
+      if(area)area.innerHTML=_photoPickBtn('_eqiPickPhoto');
+    });
+  });
+}
+function _eqiClearPhoto(){_eqiPhotoUrl=null;var a=g('eqi-photo-area');if(a)a.innerHTML=_photoPickBtn('_eqiPickPhoto');}
+</script>
 </body>
 </html>
