@@ -2385,12 +2385,26 @@ var _attachPending={};  // areaId -> true while uploading
 
 function _attachBusy(){for(var k in _attachPending){if(_attachPending[k])return true;}return false;}
 
-function _uploadErr(status,bodyText){
-  var msg='\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 '+status;
-  if(status===404)msg+=' \u2014 bucket \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd';
-  else if(status===400||status===403)msg+=' \u2014 \u05d7\u05e1\u05e8\u05d4 \u05d4\u05e8\u05e9\u05d0\u05d4';
+function _uploadErrMsg(status){
+  var msg='\u05e9\u05d2\u05d9\u05d0\u05d4 '+status;
+  if(status===404)msg+=' \u2014 bucket "incidents-photos" \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd \u05d1-Supabase';
+  else if(status===403)msg+=' \u2014 \u05d7\u05e1\u05e8\u05d4 \u05d4\u05e8\u05e9\u05d0\u05ea INSERT \u05dc-anon \u05d1-bucket';
+  else if(status===400)msg+=' \u2014 \u05e7\u05dc\u05d8 \u05e4\u05d2\u05d5\u05dd (\u05d1\u05d3\u05d5\u05e7 policy)';
+  else if(status==='net')msg='\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e8\u05e9\u05ea';
+  return msg;
+}
+
+function _attachShowErr(areaId,status,bodyText){
   try{console.error('[upload]',status,bodyText,'bucket=',_PHOTO_BUCKET);}catch(e){}
-  toast(msg);
+  var area=g(areaId);if(!area)return;
+  var msg=_uploadErrMsg(status);
+  area.innerHTML='<div style="padding:10px;background:#fce4e4;border:1px solid #cc1f1f;border-radius:8px;color:#cc1f1f;font-size:12px;line-height:1.5;margin-bottom:6px"><b>\u26a0 '+msg+'</b><div style="margin-top:4px;color:#7a2222;font-size:11px">\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d9\u05d9\u05e9\u05de\u05e8 \u05dc\u05dc\u05d0 \u05ea\u05de\u05d5\u05e0\u05d4. \u05ea\u05e7\u05e0\u05d9 \u05d0\u05ea \u05d4\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d1-Supabase \u05d5\u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1.</div></div>'+
+    '<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">&#128247; \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
+}
+
+function _uploadErr(status,bodyText){
+  try{console.error('[upload]',status,bodyText,'bucket=',_PHOTO_BUCKET);}catch(e){}
+  toast('\u05d4\u05e2\u05dc\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+_uploadErrMsg(status));
 }
 function _fileUpload(file,prefix,cb){
   var isImg=/^image\//i.test(file.type);
@@ -2400,10 +2414,10 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':ct,'x-upsert':'true'},body:body})
       .then(function(r){
-        if(!r.ok)return r.text().then(function(t){_uploadErr(r.status,t);cb(null);});
+        if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
         cb(pubUrl);
       })
-      .catch(function(e){_uploadErr('net',e&&e.message);cb(null);});
+      .catch(function(e){cb(null,'net',e&&e.message);});
   }
   if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,'image/jpeg');});
   else doUpload(file,file.type||'application/octet-stream');
@@ -2426,10 +2440,10 @@ function _attachPick(areaId,prefix){
     var file=inp.files&&inp.files[0];if(!file)return;
     var area=g(areaId);if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05dc\u05d4...</div>';
     _attachPending[areaId]=true;
-    _fileUpload(file,prefix,function(url){
+    _fileUpload(file,prefix,function(url,errStatus,errBody){
       _attachPending[areaId]=false;
       if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);}
-      else{_attachUrls[areaId]=null;_attachClear(areaId);}
+      else{_attachUrls[areaId]=null;_attachShowErr(areaId,errStatus,errBody);}
     });
   };
   inp.click();
