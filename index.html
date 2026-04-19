@@ -1564,7 +1564,8 @@ function rEqi(){
   tb.innerHTML=rows.map(function(r){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+r.id+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
-    return '<tr><td><strong>'+(r.code||'&#8212;')+'</strong></td><td>'+(r.n||'')+'</td><td>'+(r.vendor||'&#8212;')+'</td><td>'+(r.loc||'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+edit+'</td><td>'+del+'</td></tr>';
+    var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    return '<tr><td><strong>'+(r.code||'&#8212;')+'</strong></td><td>'+(r.n||'')+'</td><td>'+(r.vendor||'&#8212;')+'</td><td>'+(r.loc||'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
 function eqiEdit(id){
@@ -1693,7 +1694,8 @@ function rNm(){
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
     var ph=r.photo_url?'<a href="'+r.photo_url+'" target="_blank"><img src="'+r.photo_url+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td><button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svNm(){
@@ -1724,7 +1726,8 @@ function rRound(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd</td></tr>';return;}
   function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
   tb.innerHTML=rows.map(function(r){
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector||'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td><button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector||'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svRound(){
@@ -1873,7 +1876,16 @@ var VIEW_CONFIG={
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e1\u05d5\u05d2','ty'],['\u05de\u05d3\u05d3','me'],
     ['\u05ea\u05d5\u05e6\u05d0\u05d4','r'],['\u05e0\u05d5\u05e8\u05de\u05d4','lim'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   leg:{title:'\u05e6\u05d9\u05d5\u05ea \u05e8\u05d2\u05d5\u05dc\u05d8\u05d5\u05e8\u05d9\u05ea',back:'leg',fields:[
-    ['\u05de\u05e7\u05d5\u05e8','s'],['\u05e0\u05d5\u05e9\u05d0','d'],['\u05ea\u05d7\u05d5\u05dd','a'],['\u05de\u05e6\u05d1','c'],['\u05e2\u05d3\u05db\u05d5\u05df','u']]}
+    ['\u05de\u05e7\u05d5\u05e8','s'],['\u05e0\u05d5\u05e9\u05d0','d'],['\u05ea\u05d7\u05d5\u05dd','a'],['\u05de\u05e6\u05d1','c'],['\u05e2\u05d3\u05db\u05d5\u05df','u']]},
+  near_miss:{title:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',back:'nm',fields:[
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e9\u05e2\u05d4','t'],['\u05ea\u05d9\u05d0\u05d5\u05e8','descr'],['\u05d0\u05d6\u05d5\u05e8','area'],
+    ['\u05de\u05d3\u05d5\u05d5\u05d7','rep'],['\u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05e1\u05d5\u05d2','typ'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
+  equip_inspections:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',back:'eqi',fields:[
+    ['\u05e7\u05d5\u05d3','code'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
+    ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
+  rounds:{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',back:'round',fields:[
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e4\u05e7\u05d7','inspector'],['\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9','fire'],['\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd','corridors'],
+    ['PPE','ppe'],['\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','samples'],['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','chemicals'],['\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','firstaid'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]}
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
@@ -1889,9 +1901,19 @@ function showView(tbl,id){
   var html='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
-    if(val===undefined||val===null||val==='')val='-';
+    if(val===true)val='\u2713';
+    else if(val===false)val='\u2717';
+    else if(val===undefined||val===null||val==='')val='-';
     html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+f[0]+'</span><strong>'+val+'</strong></div>';
   });
+  var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
+  if(pUrl){
+    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a href="'+pUrl+'" target="_blank"><img src="'+pUrl+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
+  }
+  if(rec.file_url){
+    var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
+    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a href="'+rec.file_url+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+fname+'</a></div>';
+  }
   if(body)body.innerHTML=html;
   goPage('view');
 }
