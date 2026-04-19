@@ -70,7 +70,7 @@
 - אין schema changes, אין migration
 - פעולות ישנות שהוחמצו (לפני התיקון) עדיין רק ב-localStorage — המשתמש יצטרך לייבא מחדש אם נמצא פער
 
-## 2026-04-18 — Dashboard 2.0 (Phase A): גרפים ב-rDash
+## 2026-04-18 — Dashboard 2.0 (Phase A): גרפים ב-rDash (בוטל — ראה הסרה למעלה)
 **החלטה**: הוספת 4 גרפים אינטראקטיביים לדשבורד באמצעות Chart.js 4 מ-CDN. גרפים: NCR trend (line, 12 חודשים, Safety vs Env), Incidents+lost-days (combo bar+line), Expiries stacked bar לפי 6 קטגוריות × 4 רמות דחיפות, Risk heatmap bubble chart 5×5. כל גרף עם `onclick` drill-down לעמוד המתאים.
 **סיבה**:
 - דרישה מפורשת של המשתמש להחליף את Vitre — Vitre יש visualizations, TFUGEN לא.
@@ -185,6 +185,13 @@
 **החלטה**: הקשר קבוע של הפרויקט עובר לקבצים ב-root של ה-repo — לא בזיכרון של חשבון Claude ספציפי.
 **סיבה**: המשתמש עובד מ-2 חשבונות (מחשב + טלפון). GitHub הוא single source of truth.
 **השלכה**: כל החלטה ארכיטקטונית חדשה — שורה ביומן הזה.
+
+## 2026-04-19 — Near-Miss capture + Morning Round
+**החלטה**: נוספו שני מודולים חדשים: `near_miss` (כמעט ונפגע) ו-`rounds` (סבב בוקר יומי).
+**סיבה**: דרישות ISO 45001 — תיעוד אירועי כמעט ונפגע + checklist בוקר יומי.
+**מבנה**: near_miss — שדות: id, d, t, desc, area, rep, sev, typ, s, notes. rounds — שדות: id, d, inspector, fire, corridors, ppe, samples, chemicals, firstaid, notes, s. שדות boolean ב-rounds (לא jsonb) לפשטות עם REST API.
+**KPIs**: Dashboard מציג ספירת near_miss החודש + סטטוס סבב בוקר היום + התראה אם לא בוצע.
+**Migrations**: `2026-04-19_near_miss.sql`, `2026-04-19_rounds.sql`.
 
 ---
 

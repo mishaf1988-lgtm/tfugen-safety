@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-18
+**Last updated**: 2026-04-19
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -31,6 +31,8 @@
 - [x] **Outbox cloud sync** — `sbIns/sbUpd/sbDel` עברו ל-queue ב-localStorage עם retry אוטומטי (online/focus/30s). תיקן באג קריטי: `sbUpd` כלל לא היה מוגדר → UPDATEs של NCR ו-equip_inspections לא נשמרו בענן. Badge ב-topbar מראה פעולות ממתינות.
 - [x] **Outbox hardening (hotfix)** — תיקון 3 באגים שגרמו לנתונים להיעלם אחרי רענון: (1) `ldb()` לא שחזרה `equip_inspections` מ-localStorage, (2) שגיאות 4xx (כולל 404 "טבלה לא קיימת") נמחקו מהתור בשקט, (3) `sbSync` יכלה לדרוס נתונים מקומיים כשהטבלה בענן ריקה. נוסף upsert (`resolution=merge-duplicates`), חלון אבחון בלחיצה על ה-pill, ו-skip לטבלאות עם פעולות ממתינות.
 - [x] **Equipment Inspections** — דף `pg-eqi` + טבלה `equip_inspections` + ייבוא Excel/CSV + אינטגרציה עם Expiries Agent
+- [x] **Near-Miss capture** — דף `pg-nm` + טבלה `near_miss` + KPI בdashboard + פילטר לפי סטטוס
+- [x] **Morning Round** — דף `pg-round` + טבלה `rounds` + checklist יומי (6 פריטים) + התראה בdashboard + KPI
 
 ---
 
@@ -44,9 +46,11 @@
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
 
+### ⚠️ פעולה ידנית נדרשת (חדש)
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-19_near_miss.sql`
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-19_rounds.sql`
+
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
-- [ ] **Morning Round** — checklist יומי (PPE/אש/מעברים/דגימות)
-- [ ] **Near-Miss capture** — כפתור מהיר + יחס לincidents
 - [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
