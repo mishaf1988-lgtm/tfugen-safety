@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS near_miss (
   id      text        PRIMARY KEY,
   d       date,                        -- incident date
   t       text,                        -- time (HH:MM)
-  desc    text        NOT NULL,        -- description
+  descr   text        NOT NULL,        -- description
   area    text,                        -- area / location
   rep     text,                        -- reported by
   sev     text        DEFAULT 'קטין',  -- severity: קטין / בינוני / חמור
