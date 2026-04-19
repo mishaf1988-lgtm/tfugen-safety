@@ -240,6 +240,7 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
   <div class="row"><div class="page-title">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; <span>&#1510;&#1497;&#1493;&#1491; &#1500;&#1508;&#1497; &#1508;&#1511;&#1493;&#1491;&#1492;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openEqiXl()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
+    <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <div class="row" style="margin:8px 0">
     <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
@@ -1574,6 +1575,19 @@ function eqiXlOk(){
   closeEqiXl();
   toast('\u05d9\u05d5\u05d1\u05d0: '+data.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u2713');
   rEqi();
+}
+function delAllEqi(){
+  if(!confirm('\u05de\u05d7\u05e7 \u05d0\u05ea \u05db\u05dc \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 (\u05d2\u05dd \u05de\u05d4\u05e9\u05e8\u05ea)?\n\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d1\u05dc\u05ea\u05d9 \u05d4\u05e4\u05d9\u05db\u05d4.'))return;
+  // Clear local
+  DB.equip_inspections=[];
+  // Remove any outbox ops for this table
+  var q=_obGet().filter(function(op){return op.tbl!=='equip_inspections';});_obSet(q);_obBadge();
+  sdb();
+  // Delete all rows in Supabase (filter: id not null = all rows)
+  fetch(SBU+'/rest/v1/equip_inspections?id=not.is.null',{method:'DELETE',headers:sbH()})
+    .then(function(){toast('\u05db\u05dc \u05d4\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e0\u05de\u05d7\u05e7\u05d5 \u2713');})
+    .catch(function(){toast('\u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05e7\u05d5\u05de\u05d9 \u05d1\u05d5\u05e6\u05e2, \u05d1\u05d3\u05d5\u05e7 Supabase');});
+  rEqi();rDash();
 }
 // ---- NEAR-MISS ----
 function nmFilter(f){window._nmFilter=f;['all','open','closed'].forEach(function(k){var el=g('nm-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rNm();}
