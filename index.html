@@ -1004,9 +1004,10 @@ function sbSync(){
     });
   });
 }
-window.addEventListener('online',function(){_obDrain();});
-window.addEventListener('focus',function(){_obDrain();});
+window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync();});
+window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync();});
 setInterval(function(){_obDrain();},30000);
+setInterval(function(){if(SB_ON)sbSync();},3*60*1000);
 document.addEventListener('DOMContentLoaded',function(){_obBadge();});
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
