@@ -434,6 +434,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row">
     <button class="btn btn-s" id="view-back" onclick="goPage('dash')" style="font-size:13px">&#8594; &#1495;&#1494;&#1512;&#1492;</button>
     <div class="page-title" id="view-title">&#1510;&#1508;&#1497;&#1497;&#1492;</div>
+    <button class="btn btn-s" id="view-pdf" style="font-size:13px;display:none" onclick="printReport(this.dataset.vtbl,this.dataset.vid)">&#128424; PDF</button>
   </div>
   <div class="card" id="view-body" style="font-size:13px;line-height:2.2"></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
@@ -1567,7 +1568,8 @@ function rEqi(){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+r.id+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    return '<tr><td><strong>'+(r.code||'&#8212;')+'</strong></td><td>'+(r.n||'')+'</td><td>'+(r.vendor||'&#8212;')+'</td><td>'+(r.loc||'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+edit+'</td><td>'+del+'</td></tr>';
+    var pdf='<button class="btn btn-d btn-sm" onclick="printReport(\'equip_inspections\',\''+r.id+'\')" title="PDF">&#128424;</button>';
+    return '<tr><td><strong>'+(r.code||'&#8212;')+'</strong></td><td>'+(r.n||'')+'</td><td>'+(r.vendor||'&#8212;')+'</td><td>'+(r.loc||'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
 function eqiEdit(id){
@@ -1698,7 +1700,8 @@ function rNm(){
     var sc=sevCls[r.sev]||'bX';
     var ph=r.photo_url?'<a href="'+r.photo_url+'" target="_blank"><img src="'+r.photo_url+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'near_miss\',\''+r.id+'\')" title="PDF">&#128424;</button>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svNm(){
@@ -1731,7 +1734,8 @@ function rRound(){
   function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
   tb.innerHTML=rows.map(function(r){
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector||'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'rounds\',\''+r.id+'\')" title="PDF">&#128424;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector||'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svRound(){
@@ -1819,12 +1823,12 @@ function rInc(){
   var tb=g('tb-inc');if(!tb)return;
   if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd</td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+i.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+i.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+i.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" onclick="printReport(\'inc\',\''+i.id+'\')" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+i.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
   if(!DB.tr.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+t.w+'</strong></td><td>'+t.n+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+t.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+t.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+t.w+'</strong></td><td>'+t.n+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+t.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" onclick="printReport(\'tr\',\''+t.id+'\')" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+t.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rRsk(){
   var tb=g('tb-rsk');if(!tb)return;
@@ -1902,6 +1906,7 @@ function showView(tbl,id){
   var body=g('view-body');
   if(title)title.textContent=cfg.title;
   if(back)back.setAttribute('onclick',"goPage('"+cfg.back+"')");
+  var pdfBtn=g('view-pdf');if(pdfBtn){pdfBtn.style.display='';pdfBtn.dataset.vtbl=tbl;pdfBtn.dataset.vid=id;}
   var html='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
@@ -1920,6 +1925,58 @@ function showView(tbl,id){
   }
   if(body)body.innerHTML=html;
   goPage('view');
+}
+
+function printReport(tbl,id){
+  var cfg=VIEW_CONFIG[tbl];if(!cfg){toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05d3\u05e4\u05d9\u05e1');return;}
+  var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
+  var rows='';
+  cfg.fields.forEach(function(f){
+    var val=rec[f[1]];
+    if(val===true)val='\u2713';
+    else if(val===false)val='\u2717';
+    else if(val===undefined||val===null||val==='')val='\u2014';
+    if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))val=fd(val);
+    rows+='<tr><th>'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
+  });
+  var fileBlock=rec.file_url?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+rec.file_url+'">'+rec.file_url.split('/').pop().split('?')[0]+'</a></div>':'';
+  var photoBlock=pUrl?'<div class="photo"><img src="'+pUrl+'" alt="photo"></div>':'';
+  var now=new Date();
+  var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+cfg.title+' \u2014 TFUGEN</title>'+
+    '<style>'+
+    '*{box-sizing:border-box}'+
+    'body{font-family:Arial,"Segoe UI",sans-serif;margin:20px;color:#111;direction:rtl}'+
+    '.hdr{border-bottom:3px solid #cc1f1f;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:baseline}'+
+    '.hdr h1{margin:0;font-size:20px;color:#cc1f1f}'+
+    '.hdr .co{font-size:13px;color:#666}'+
+    '.sub{font-size:14px;color:#333;margin-bottom:14px;font-weight:700}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:16px}'+
+    'th,td{border:1px solid #bbb;padding:7px 10px;text-align:right;font-size:13px;vertical-align:top}'+
+    'th{background:#f2f2f2;width:130px;color:#444;font-weight:700}'+
+    '.photo{margin:16px 0;page-break-inside:avoid;text-align:center}'+
+    '.photo img{max-width:100%;max-height:50vh;border:1px solid #999;border-radius:4px}'+
+    '.file{margin:10px 0;padding:8px;background:#f8f8f8;border:1px solid #ddd;font-size:12px}'+
+    '.ftr{margin-top:28px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#777;display:flex;justify-content:space-between}'+
+    '.noprint{margin:12px 0;text-align:center}'+
+    '.noprint button{background:#cc1f1f;color:#fff;border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;margin:0 4px}'+
+    '.noprint .sz{background:#fff;color:#333;border:1px solid #999}'+
+    '@media print{.noprint{display:none}body{margin:10mm}.photo img{max-height:95vh}}'+
+    '</style></head><body>'+
+    '<div class="noprint"><button onclick="window.print()">\uD83D\uDDA8 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
+    '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'95vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4</button>'+
+    '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'50vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d7\u05e6\u05d9 \u05e2\u05de\u05d5\u05d3</button></div>'+
+    '<div class="hdr"><h1>'+cfg.title+'</h1><div class="co">TFUGEN \u2014 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4</div></div>'+
+    '<div class="sub">'+cfg.title+' \u05de\u05e1\' '+String(rec.id).slice(-6)+'</div>'+
+    '<table>'+rows+'</table>'+photoBlock+fileBlock+
+    '<div class="ftr"><span>\u05d4\u05d5\u05e4\u05e7: '+stamp+'</span><span>ISO 45001 / 14001</span></div>'+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},400);};</script>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(!w){toast('\u05d7\u05e1\u05d5\u05dd \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u2014 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05e4\u05d3\u05e3');return;}
+  w.document.open();w.document.write(html);w.document.close();
 }
 function rPtwView(id){
   var p=DB.ptw.find(function(x){return x.id===id;});
