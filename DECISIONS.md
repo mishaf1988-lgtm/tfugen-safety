@@ -13,7 +13,7 @@
 
 ---
 
-## 2026-04-18 — Revert: הסרת Dashboard 2.0 Phase A
+## 2026-04-19 — Revert: הסרת Dashboard 2.0 Phase A
 **החלטה**: הסרת 4 הגרפים (Chart.js) שנוספו ב-PR #16. הוסרו: HTML (`.dash-charts` block), CSS (`.dash-charts/.chart-card/.chart-wrap`), `<script>` CDN ל-Chart.js, וכל פונקציית `_dashCharts` + `_dashChartInst`. `rDash` חוזר להיות KPI tiles + alerts בלבד.
 **סיבה**: החלטה של המשתמש — הגרפים לא סיפקו ערך מספיק או לא התאימו לזרימת העבודה היומיומית.
 **אלטרנטיבות שנדחו**: להשאיר מכובה (feature flag) — מיותר; אם בעתיד ירצה, קל להחזיר מההיסטוריה.
