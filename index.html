@@ -2378,20 +2378,28 @@ function _imgCompress(file,maxPx,q,cb){
 // Supports: images (compressed), PDF, Word, Excel
 var _attachUrls={};  // keyed by areaId
 
+function _uploadErr(status,bodyText){
+  var msg='\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 '+status;
+  if(status===404)msg+=' \u2014 bucket \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd';
+  else if(status===400||status===403)msg+=' \u2014 \u05d7\u05e1\u05e8\u05d4 \u05d4\u05e8\u05e9\u05d0\u05d4';
+  try{console.error('[upload]',status,bodyText,'bucket=',_PHOTO_BUCKET);}catch(e){}
+  toast(msg);
+}
 function _fileUpload(file,prefix,cb){
   var isImg=/^image\//i.test(file.type);
   var fname=prefix+'-'+Date.now()+(isImg?'.jpg':('-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')));
-  if(isImg){
-    _imgCompress(file,1200,0.85,function(blob){
-      fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob})
-        .then(function(r){if(!r.ok)throw new Error(r.status);return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;})
-        .then(cb).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4');cb(null);});
-    });
-  }else{
-    fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},body:file})
-      .then(function(r){if(!r.ok)throw new Error(r.status);return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;})
-      .then(cb).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4');cb(null);});
+  var url=SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname;
+  var pubUrl=SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;
+  function doUpload(body,ct){
+    fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':ct,'x-upsert':'true'},body:body})
+      .then(function(r){
+        if(!r.ok)return r.text().then(function(t){_uploadErr(r.status,t);cb(null);});
+        cb(pubUrl);
+      })
+      .catch(function(e){_uploadErr('net',e&&e.message);cb(null);});
   }
+  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,'image/jpeg');});
+  else doUpload(file,file.type||'application/octet-stream');
 }
 
 function _attachRender(areaId,url,fname){
