@@ -1275,6 +1275,7 @@ function svNcr(){
 }
 
 function svInc(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
   var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   DB.inc.push(r);sbIns('inc',r);addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));sdb();closeModal('m-inc');
@@ -1283,6 +1284,7 @@ function svInc(){
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
 }
 function svTr(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var w=gv('t-w'),n=gv('t-n');
   if(!w||!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e2\u05d5\u05d1\u05d3 \u05d5\u05d4\u05d3\u05e8\u05db\u05d4');return;}
   var r={id:gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d'),e:gv('t-e'),sc:gi('t-sc'),s:gv('t-st'),file_url:_attachUrls['tr-attach-area']||null};
@@ -1587,6 +1589,7 @@ function eqiEdit(id){
   },30);
 }
 function svEqi(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var id=g('eqi-id')&&g('eqi-id').value;
   var n=gv('eqi-n');
   if(!n){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
@@ -1699,6 +1702,7 @@ function rNm(){
   }).join('');
 }
 function svNm(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
@@ -2377,6 +2381,9 @@ function _imgCompress(file,maxPx,q,cb){
 // --- Generic file/photo attach system ---
 // Supports: images (compressed), PDF, Word, Excel
 var _attachUrls={};  // keyed by areaId
+var _attachPending={};  // areaId -> true while uploading
+
+function _attachBusy(){for(var k in _attachPending){if(_attachPending[k])return true;}return false;}
 
 function _uploadErr(status,bodyText){
   var msg='\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 '+status;
@@ -2418,7 +2425,9 @@ function _attachPick(areaId,prefix){
   inp.onchange=function(){
     var file=inp.files&&inp.files[0];if(!file)return;
     var area=g(areaId);if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05dc\u05d4...</div>';
+    _attachPending[areaId]=true;
     _fileUpload(file,prefix,function(url){
+      _attachPending[areaId]=false;
       if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);}
       else{_attachUrls[areaId]=null;_attachClear(areaId);}
     });
