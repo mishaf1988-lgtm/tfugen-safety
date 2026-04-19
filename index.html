@@ -137,6 +137,28 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
 }
 
 .bn .em{font-size:22px;line-height:1.2;display:block;}
+
+/* ---- EMPLOYEE MODE (Stage A) ---- */
+body.emp-mode .bnav{display:none}
+body.emp-mode .topbar-title,body.emp-mode #sync-pill,body.emp-mode #force-sync-btn,body.emp-mode #bell,body.emp-mode #ncr-status-widget{display:none!important}
+body.emp-mode .main{padding:62px 12px 20px}
+body.emp-mode .page{display:none!important}
+body.emp-mode #pg-emp-home{display:block!important}
+.emp-hero{text-align:center;padding:18px 8px 12px}
+.emp-hero h1{font-size:22px;font-weight:900;color:var(--tx);margin-bottom:4px}
+.emp-hero p{font-size:13px;color:var(--t2)}
+.emp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.emp-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border:2px solid var(--border);border-radius:14px;padding:22px 10px;font-family:'Heebo',Arial,sans-serif;font-size:14px;font-weight:900;color:var(--tx);min-height:130px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:.15s}
+.emp-btn:active{transform:scale(.97)}
+.emp-btn .emi{font-size:40px;line-height:1;margin-bottom:8px}
+.emp-btn.r{border-color:var(--red);background:#fff5f5}
+.emp-btn.o{border-color:var(--warn);background:#fff8ed}
+.emp-btn.y{border-color:#eab308;background:#fefce8}
+.emp-btn.b{border-color:var(--blue);background:#eff6ff}
+.emp-toggle{display:block;width:100%;margin-top:22px;padding:11px;background:#f0f1f3;color:var(--t2);border:1px solid var(--border);border-radius:8px;font-family:'Heebo',Arial,sans-serif;font-size:12px;font-weight:700}
+#emp-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none}
+#emp-mode-badge{display:none;background:#ecfdf5;color:#166534;border:1px solid #16a34a;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
+body.emp-mode #emp-mode-badge{display:inline-block}
 </style>
 </head>
 <body>
@@ -175,6 +197,22 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
 <div class="main" id="main">
 
 <!-- PAGES -->
+<!-- EMPLOYEE HOME (Stage A — quick report buttons) -->
+<div id="pg-emp-home" class="page">
+  <div class="emp-hero">
+    <h1>&#1513;&#1500;&#1493;&#1501;, &#1502;&#1492; &#1500;&#1491;&#1493;&#1493;&#1495;?</h1>
+    <p>&#1489;&#1495;&#1512; &#1505;&#1493;&#1490; &#1491;&#1497;&#1493;&#1493;&#1495;</p>
+  </div>
+  <div class="emp-grid">
+    <button class="emp-btn r" onclick="empReport('nm')"><span class="emi">&#9940;</span>&#1511;&#1512;&#1493;&#1489;<br>&#1500;&#1514;&#1488;&#1493;&#1504;&#1492;</button>
+    <button class="emp-btn o" onclick="empReport('eqi')"><span class="emi">&#128295;</span>&#1514;&#1511;&#1500;&#1492;<br>&#1489;&#1510;&#1497;&#1493;&#1491;</button>
+    <button class="emp-btn y" onclick="empReport('round')"><span class="emi">&#9728;</span>&#1505;&#1489;&#1489;<br>&#1489;&#1493;&#1511;&#1512;</button>
+    <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
+  </div>
+  <button class="emp-toggle" onclick="empToggle(false)">&#10140; &#1506;&#1489;&#1493;&#1512; &#1500;&#1502;&#1502;&#1513;&#1511; &#1492;&#1502;&#1500;&#1488;</button>
+</div>
+<div id="emp-toast"></div>
+
 <div id="pg-dash" class="page on">
   <div class="page-title">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; <span>&#1512;&#1488;&#1513;&#1497;</span></div>
   <div id="dash-alerts"></div>
@@ -1901,7 +1939,7 @@ function doLogin(){
     sessionStorage.setItem(SK,PW);
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
-    ldb();rDash();sbSync();
+    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();
   }else{
     var err=g('pw-err');
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
@@ -1909,11 +1947,45 @@ function doLogin(){
     setTimeout(function(){if(err)err.textContent='';},2000);
   }
 }
+// ---- EMPLOYEE MODE (Stage A) ----
+var EMP_KEY='tfgn_emp_mode';
+function empIsOn(){return document.body.classList.contains('emp-mode');}
+function empToggle(on){
+  if(on){
+    document.body.classList.add('emp-mode');
+    try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
+    CUR='emp-home';
+  }else{
+    document.body.classList.remove('emp-mode');
+    try{localStorage.removeItem(EMP_KEY);}catch(e){}
+    goPage('dash');
+  }
+}
+function empToast(msg){
+  var t=g('emp-toast');if(!t)return;
+  t.textContent=msg;t.style.display='block';
+  setTimeout(function(){t.style.display='none';},2200);
+}
+function empReport(type){
+  var m={nm:'m-nm',eqi:'m-eqi',round:'m-round',tr:'m-tr'};
+  var mid=m[type];if(!mid)return;
+  openModal(mid);
+  if(type==='eqi'){var s=g('eqi-s');if(s)s.value='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df';}
+}
+(function(){
+  try{
+    var qs=window.location.search||'';
+    if(/[?&]emp=1\b/.test(qs))localStorage.setItem(EMP_KEY,'1');
+    if(/[?&]emp=0\b/.test(qs))localStorage.removeItem(EMP_KEY);
+  }catch(e){}
+  if(localStorage.getItem(EMP_KEY)==='1')document.body.classList.add('emp-mode');
+})();
+
 (function(){
   var ok=sessionStorage.getItem(SK)===PW;
   if(ok){
     var app=g('app');if(app)app.style.display='block';
-    ldb();rDash();sbSync();
+    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
