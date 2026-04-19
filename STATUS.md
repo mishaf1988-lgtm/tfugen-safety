@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | *(יעודכן אחרי merge)* |
-| תאריך | 2026-04-18 |
-| Tag | `stable-2026-04-18-ncr-agent` |
-| מצב | 18 טבלאות OK · NCR Agent v4 שומר ל-DB · Expiries עובד · Skills + CLAUDE.md פעילים |
+| Commit | `abca665` |
+| תאריך | 2026-04-19 |
+| Tag | `stable-2026-04-19-reports-flow` |
+| מצב | 20 טבלאות OK · Realtime sync פעיל · צילום/PDF בכל טפסי הדיווח · QR Stage A · Skills + CLAUDE.md פעילים |
 
 ---
 
@@ -34,6 +34,10 @@
 - [x] **Near-Miss capture** — דף `pg-nm` + טבלה `near_miss` + KPI בdashboard + פילטר לפי סטטוס
 - [x] **Morning Round** — דף `pg-round` + טבלה `rounds` + checklist יומי (6 פריטים) + התראה בdashboard + KPI
 - [x] **QR Stage A — Employee UI** — דף `pg-emp-home` עם 4 כפתורים גדולים (קרוב לתאונה / תקלה בציוד / סבב בוקר / דיווח הדרכה). נכנסים ב-`?emp=1`, יוצאים דרך כפתור "עבור למימשק המלא". לא נוגע במודאלים/שמירות הקיימות.
+- [x] **QR Stage A polish** (PRs #29-31) — כפתור toggle למצב עובד ב-topbar, כפתור "דיווח מהיר" במסך login, תיקון סנכרון ל-emp-session (SB_ON לא היה נדלק).
+- [x] **Photo/file upload** (PRs #32-34, #36, #39-41) — העלאה לכל טפסי הדיווח (near-miss, EQI, incidents, training). דחיסת תמונות לצד לקוח, תמיכה ב-PDF/Word/Excel. גלריה + מצלמה במובייל. חסימת שמירה תוך כדי העלאה. שגיאות מוצגות בתוך תיבת הצירוף.
+- [x] **Realtime cross-device sync** (PR #35) — `supabase-js` + `postgres_changes` WebSocket. שינוי במכשיר אחד מופיע בכולם תוך פחות משנייה. Polling יורד ל-2 דקות כ-safety net.
+- [x] **View + PDF per report** (PRs #37, #42-43) — כפתורי 👁 ו-🖨 PDF לדיווחי near-miss / rounds / equipment. הדפסה מציגה תמונה גדולה.
 
 ---
 
@@ -48,8 +52,12 @@
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-19_near_miss.sql`
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-19_rounds.sql`
+- [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
+- [x] ~~`migrations/2026-04-19_rounds.sql`~~ — הורץ
+- [x] ~~`migrations/2026-04-19_photo_url.sql`~~ — הורץ
+- [x] ~~`migrations/2026-04-19_inc_tr_file_url.sql`~~ — הורץ
+- [x] ~~`migrations/2026-04-19_realtime_publication.sql`~~ — הורץ
+- [x] ~~Storage bucket `incidents-photos` + INSERT policy לאנונימי~~ — הוגדר
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
 - [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות
