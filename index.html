@@ -25,6 +25,10 @@ button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:n
 #pw:focus{outline:none;border-color:var(--red)}
 #pw-err{color:var(--bad);font-size:12px;min-height:18px;margin-bottom:8px}
 #login-btn{width:100%;padding:13px;background:var(--red);color:#fff;border-radius:8px;font-size:15px;font-weight:900;box-shadow:0 4px 12px rgba(204,31,31,.4)}
+.login-sep{display:flex;align-items:center;gap:10px;margin:16px 0 12px;color:#9098a8;font-size:11px;font-weight:700}
+.login-sep::before,.login-sep::after{content:'';flex:1;height:1px;background:#dde0e6}
+#login-emp-btn{width:100%;padding:13px;background:#fff;color:var(--tx);border:2px solid var(--ok);border-radius:8px;font-size:14px;font-weight:900;font-family:'Heebo',Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}
+#login-emp-btn:active{background:#f0fdf4}
 
 /* ---- APP SHELL ---- */
 #app{display:none;height:100%}
@@ -172,6 +176,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <div class="login-sep">&#1488;&#1493;</div>
+    <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">&#128119;</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1502;&#1492;&#1497;&#1512; (&#1500;&#1500;&#1488; &#1505;&#1497;&#1505;&#1502;&#1492;)</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
   </div>
 </div>
@@ -1959,8 +1965,23 @@ function empToggle(on){
   }else{
     document.body.classList.remove('emp-mode');
     try{localStorage.removeItem(EMP_KEY);}catch(e){}
-    goPage('dash');
+    if(sessionStorage.getItem(SK)===PW){
+      goPage('dash');
+    }else{
+      sessionStorage.removeItem(SK);
+      var app=g('app');if(app)app.style.display='none';
+      var ls=g('login');if(ls)ls.style.display='flex';
+      setTimeout(function(){var p=g('pw');if(p){p.value='';p.focus();}},100);
+    }
   }
+}
+function doEmpLogin(){
+  sessionStorage.setItem(SK,'emp');
+  try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
+  document.body.classList.add('emp-mode');
+  var ls=g('login');if(ls)ls.style.display='none';
+  var app=g('app');if(app)app.style.display='block';
+  ldb();CUR='emp-home';
 }
 function empToast(msg){
   var t=g('emp-toast');if(!t)return;
@@ -1983,10 +2004,16 @@ function empReport(type){
 })();
 
 (function(){
-  var ok=sessionStorage.getItem(SK)===PW;
-  if(ok){
+  var sk=sessionStorage.getItem(SK);
+  var isAdmin=sk===PW;
+  var isEmp=sk==='emp';
+  if(isAdmin){
     var app=g('app');if(app)app.style.display='block';
     ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();
+  }else if(isEmp){
+    document.body.classList.add('emp-mode');
+    var app=g('app');if(app)app.style.display='block';
+    ldb();CUR='emp-home';
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
