@@ -1517,8 +1517,8 @@ function svEqi(){
   sdb();closeModal('m-eqi');rEqi();rDash();
   toast('\u05e0\u05e9\u05de\u05e8 \u2713');
 }
-function openEqiXl(){var ov=g('ov-eqi-xl'),mo=g('m-eqi-xl');if(ov){ov.style.display='flex';document.body.style.overflow='hidden';window.scrollTo(0,0);}if(mo)mo.style.display='block';window._eqiXlData=[];var s=g('eqi-xl-st');if(s)s.textContent='';var b=g('eqi-xl-ok');if(b)b.style.display='none';var i=g('eqi-xl-inp');if(i)i.value='';}
-function closeEqiXl(){var ov=g('ov-eqi-xl'),mo=g('m-eqi-xl');if(ov)ov.style.display='none';if(mo)mo.style.display='none';document.body.style.overflow='';}
+function openEqiXl(){openModal('m-eqi-xl');window._eqiXlData=[];var s=g('eqi-xl-st');if(s)s.textContent='';var b=g('eqi-xl-ok');if(b)b.style.display='none';var i=g('eqi-xl-inp');if(i)i.value='';}
+function closeEqiXl(){closeModal('m-eqi-xl');}
 function _eqiDate(v){if(!v)return null;try{if(v instanceof Date)return v.toISOString().split('T')[0];var s=String(v).trim();if(!s)return null;if(/^\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{4}$/.test(s)){var p=s.split(/[\/\.\-]/);return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');}if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.split('T')[0];var d=new Date(s);return isNaN(d.getTime())?null:d.toISOString().split('T')[0];}catch(e){return null;}}
 function _eqiCol(header){var h=String(header||'').toLowerCase().trim();if(/code|\u05de\u05e1\u05e4\u05e8|\u05e7\u05d5\u05d3/.test(h))return 'code';if(/name|desc|\u05ea\u05d9\u05d0\u05d5\u05e8|\u05e9\u05dd/.test(h))return 'n';if(/vendor|supplier|\u05e1\u05e4\u05e7|\u05d9\u05e6\u05e8\u05df/.test(h))return 'vendor';if(/loc|area|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d6\u05d5\u05e8/.test(h))return 'loc';if(/last|prev|\u05d0\u05d7\u05e8\u05d5\u05df|\u05d1\u05d9\u05e6\u05d5\u05e2/.test(h))return 'd';if(/next|due|\u05d4\u05d1\u05d0|\u05ea\u05d5\u05e7\u05e3/.test(h))return 'e';if(/status|\u05e1\u05d8\u05d8\u05d5\u05e1/.test(h))return 's';if(/note|\u05d4\u05e2\u05e8\u05d4/.test(h))return 'notes';return null;}
 function eqiXlRead(file){
