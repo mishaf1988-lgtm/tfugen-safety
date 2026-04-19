@@ -1578,14 +1578,14 @@ function rNm(){
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.desc||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td><button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+r.t:'')+'</td><td>'+(r.area||'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+String(r.descr||'').substring(0,60)+'</td><td>'+(r.rep||'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev||'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td><button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svNm(){
-  var desc=gv('nm-desc');if(!desc){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),desc:desc,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),ts:new Date().toISOString()};
+  var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
-  DB.near_miss.push(r);sbIns('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+desc.substring(0,30));sdb();
+  DB.near_miss.push(r);sbIns('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
   closeModal('m-nm');['nm-desc','nm-area','nm-rep','nm-notes','nm-t'].forEach(function(id){var el=g(id);if(el)el.value='';});
   toast('\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713');rNm();rDash();
 }
