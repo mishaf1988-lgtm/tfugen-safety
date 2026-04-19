@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -63,10 +62,6 @@ button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:n
 
 /* ---- KPI GRID ---- */
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.dash-charts{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
-.chart-card{padding:12px 10px 10px}
-.chart-wrap{position:relative;height:230px;width:100%}
-@media(min-width:768px){.dash-charts{grid-template-columns:1fr 1fr}}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden;box-shadow:var(--sh)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .kpi-r::before{background:var(--red)}.kpi-g::before{background:var(--ok)}.kpi-b::before{background:var(--blue)}.kpi-o::before{background:var(--warn)}
@@ -217,27 +212,6 @@ input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:ch
       </div>
     </div>
   </div>
-
-  <!-- CHARTS: Phase A (Dashboard 2.0) -->
-  <div class="dash-charts">
-    <div class="card chart-card">
-      <div class="card-title">&#128200; &#1502;&#1490;&#1502;&#1514; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; &mdash; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
-      <div class="chart-wrap"><canvas id="ch-ncr"></canvas></div>
-    </div>
-    <div class="card chart-card">
-      <div class="card-title">&#9888;&#65039; &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1493;&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503; &mdash; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
-      <div class="chart-wrap"><canvas id="ch-inc"></canvas></div>
-    </div>
-    <div class="card chart-card">
-      <div class="card-title">&#9203; &#1514;&#1508;&#1493;&#1490;&#1493;&#1514; &#1500;&#1508;&#1497; &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; &#1493;&#1491;&#1495;&#1497;&#1508;&#1493;&#1514;</div>
-      <div class="chart-wrap"><canvas id="ch-exp"></canvas></div>
-    </div>
-    <div class="card chart-card">
-      <div class="card-title">&#127919; &#1502;&#1508;&#1514; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; (&#1492;&#1505;&#1514;&#1489;&#1512;&#1493;&#1514; &times; &#1495;&#1493;&#1502;&#1512;&#1514;)</div>
-      <div class="chart-wrap" style="height:300px"><canvas id="ch-rsk"></canvas></div>
-    </div>
-  </div>
-
 
 <div id="pg-exp" class="page">
   <div class="page-title">&#1505;&#1493;&#1499;&#1503; <span>&#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</span></div>
@@ -1278,112 +1252,6 @@ function rDash(){
   if(elNcrOpen) elNcrOpen.textContent=ncrOpen;
   if(elNcrSaf) elNcrSaf.textContent=ncrSaf;
   if(elNcrEnv) elNcrEnv.textContent=ncrEnv;
-  try{_dashCharts();}catch(e){console.warn('dashCharts err:',e);}
-}
-var _dashChartInst={};
-function _dashCharts(){
-  if(typeof Chart==='undefined')return;
-  var now=new Date();
-  var months=[];
-  for(var i=11;i>=0;i--){
-    var dt=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push({k:dt.getFullYear()+'-'+(dt.getMonth()+1),lbl:(dt.getMonth()+1)+'/'+String(dt.getFullYear()).slice(-2)});
-  }
-  var mkey=function(d){if(!d)return null;var x=new Date(d);if(isNaN(x))return null;return x.getFullYear()+'-'+(x.getMonth()+1);};
-  var findIdx=function(k){for(var j=0;j<months.length;j++)if(months[j].k===k)return j;return -1;};
-  var ncrSaf=months.map(function(){return 0;}),ncrEnv=months.map(function(){return 0;});
-  (DB.ncr||[]).forEach(function(n){
-    var k=mkey(n.sd||n.ts||n.created_at);if(!k)return;
-    var idx=findIdx(k);if(idx<0)return;
-    if(n.category==='env'||n.a==='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4')ncrEnv[idx]++;
-    else ncrSaf[idx]++;
-  });
-  var incCnt=months.map(function(){return 0;}),incDy=months.map(function(){return 0;});
-  (DB.inc||[]).forEach(function(it){
-    var k=mkey(it.dt||it.d);if(!k)return;
-    var idx=findIdx(k);if(idx<0)return;
-    incCnt[idx]++;incDy[idx]+=(+it.dy||0);
-  });
-  var expCats=[
-    {lbl:'\u05de\u05e1\u05de\u05db\u05d9\u05dd',src:DB.docs},
-    {lbl:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea',src:DB.tr},
-    {lbl:'\u05e6\u05de\u05d2',src:DB.ppe},
-    {lbl:'\u05e8\u05e4\u05d5\u05d0\u05d9',src:DB.med},
-    {lbl:'\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',src:DB.ctr},
-    {lbl:'\u05e6\u05d9\u05d5\u05d3',src:DB.equip_inspections}
-  ];
-  var expOv=[],exp7=[],exp30=[],exp90=[];
-  expCats.forEach(function(c){
-    var ov=0,d7=0,d30=0,d90=0;
-    (c.src||[]).forEach(function(r){
-      if(!r.e)return;var x=du(r.e);
-      if(x<0)ov++;else if(x<=7)d7++;else if(x<=30)d30++;else if(x<=90)d90++;
-    });
-    expOv.push(ov);exp7.push(d7);exp30.push(d30);exp90.push(d90);
-  });
-  var risk=[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]];
-  (DB.rsk||[]).forEach(function(x){
-    var p=Math.max(1,Math.min(5,+x.p||0)),s=Math.max(1,Math.min(5,+x.sv||0));
-    if(p>=1&&s>=1)risk[s-1][p-1]++;
-  });
-  var rskPts=[];
-  for(var sv=1;sv<=5;sv++)for(var pr=1;pr<=5;pr++){
-    var c=risk[sv-1][pr-1];if(c>0)rskPts.push({x:pr,y:sv,r:7+c*4,c:c});
-  }
-  var destroy=function(k){if(_dashChartInst[k]){try{_dashChartInst[k].destroy();}catch(e){}_dashChartInst[k]=null;}};
-  var common={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{family:'Heebo',size:11}}}}};
-  var labels=months.map(function(m){return m.lbl;});
-  var c1=document.getElementById('ch-ncr');
-  if(c1){destroy('ncr');_dashChartInst.ncr=new Chart(c1,{
-    type:'line',
-    data:{labels:labels,datasets:[
-      {label:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',data:ncrSaf,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.15)',tension:.35,fill:true},
-      {label:'\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4',data:ncrEnv,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.15)',tension:.35,fill:true}
-    ]},
-    options:Object.assign({},common,{onClick:function(e,els){if(els&&els.length){var ds=els[0].datasetIndex;goPage('ncr');if(typeof ncrTab==='function')ncrTab(ds===0?'saf':'env');}}})
-  });}
-  var c2=document.getElementById('ch-inc');
-  if(c2){destroy('inc');_dashChartInst.inc=new Chart(c2,{
-    data:{labels:labels,datasets:[
-      {type:'bar',label:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',data:incCnt,backgroundColor:'#2176ae',yAxisID:'y'},
-      {type:'line',label:'\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',data:incDy,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.2)',tension:.3,yAxisID:'y1'}
-    ]},
-    options:Object.assign({},common,{
-      scales:{y:{beginAtZero:true,position:'right'},y1:{beginAtZero:true,position:'left',grid:{drawOnChartArea:false}}},
-      onClick:function(){goPage('inc');}
-    })
-  });}
-  var c3=document.getElementById('ch-exp');
-  if(c3){destroy('exp');_dashChartInst.exp=new Chart(c3,{
-    type:'bar',
-    data:{labels:expCats.map(function(c){return c.lbl;}),datasets:[
-      {label:'\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3',data:expOv,backgroundColor:'#ef4444'},
-      {label:'\u2264 7 \u05d9\u05de\u05d9\u05dd',data:exp7,backgroundColor:'#f59e0b'},
-      {label:'\u2264 30 \u05d9\u05d5\u05dd',data:exp30,backgroundColor:'#fbbf24'},
-      {label:'\u2264 90 \u05d9\u05d5\u05dd',data:exp90,backgroundColor:'#84cc16'}
-    ]},
-    options:Object.assign({},common,{
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},
-      onClick:function(e,els){goPage('exp');if(els&&els.length&&typeof expFilter==='function'){var di=els[0].datasetIndex;expFilter(di===0?'exp':(di===1?'7':(di===2?'30':'90')));}}
-    })
-  });}
-  var c4=document.getElementById('ch-rsk');
-  if(c4){destroy('rsk');_dashChartInst.rsk=new Chart(c4,{
-    type:'bubble',
-    data:{datasets:[{
-      label:'\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd',
-      data:rskPts,
-      backgroundColor:function(ctx){var d=ctx.raw;if(!d)return '#ccc';var rpn=d.x*d.y;return rpn>=15?'#cc1f1f':(rpn>=9?'#f59e0b':'#16a34a');}
-    }]},
-    options:Object.assign({},common,{
-      scales:{
-        x:{title:{display:true,text:'\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea (1-5)',font:{family:'Heebo'}},min:.5,max:5.5,ticks:{stepSize:1}},
-        y:{title:{display:true,text:'\u05d7\u05d5\u05de\u05e8\u05ea (1-5)',font:{family:'Heebo'}},min:.5,max:5.5,ticks:{stepSize:1}}
-      },
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return '\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd: '+ctx.raw.c+' | RPN: '+(ctx.raw.x*ctx.raw.y);}}}},
-      onClick:function(){goPage('rsk');}
-    })
-  });}
 }
 function _expCollect(){
   var items=[];
