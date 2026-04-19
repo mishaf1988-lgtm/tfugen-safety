@@ -1019,27 +1019,34 @@ function syncDiag(){
 function forceSync(){
   var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
   var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
-  toast('\u05de\u05e2\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05dc\u05e2\u05e0\u05df...');
-  var pushDone=0,pushTotal=0;
-  syncTbls.forEach(function(t){var rows=DB[t];if(rows&&rows.length)pushTotal++;});
+  var ok=0,fail=0,skip=0,pushDone=0,pushTotal=0;
+  var failTbls=[];
+  syncTbls.forEach(function(t){var rows=DB[t];if(rows&&rows.length)pushTotal++;else skip++;});
+  toast('\u05de\u05e2\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd... ('+pushTotal+' \u05d8\u05d1\u05dc\u05d0\u05d5\u05ea)');
   if(pushTotal===0){
     sbSync();
     if(btn){btn.style.opacity='';btn.disabled=false;}
-    toast('\u05de\u05d5\u05e8\u05d9\u05d3 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd...');
+    toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');
     return;
   }
   syncTbls.forEach(function(t){
     var rows=DB[t];
     if(!rows||!rows.length)return;
     fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)})
-      .then(function(){pushDone++;if(pushDone>=pushTotal)_afterPush();})
-      .catch(function(){pushDone++;if(pushDone>=pushTotal)_afterPush();});
+      .then(function(r){
+        if(r.ok||r.status===201||r.status===200){ok++;}
+        else{fail++;failTbls.push(t+'('+r.status+')');}
+        pushDone++;if(pushDone>=pushTotal)_afterPush();
+      })
+      .catch(function(e){fail++;failTbls.push(t+'(net)');pushDone++;if(pushDone>=pushTotal)_afterPush();});
   });
   function _afterPush(){
     sbSync();
     setTimeout(function(){
       if(btn){btn.style.opacity='';btn.disabled=false;}
-      toast('\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d4\u05e1\u05ea\u05d9\u05d9\u05dd \u2713');
+      var msg='\u05e1\u05e0\u05db\u05e8\u05d5\u05df: '+ok+' \u05d4\u05e6\u05dc\u05d9\u05d7\u05d5';
+      if(fail>0)msg+=' | '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5 ('+failTbls.join(',')+')';
+      alert(msg);
     },2000);
   }
 }
