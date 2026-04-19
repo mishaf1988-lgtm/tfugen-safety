@@ -1972,7 +1972,7 @@ function printReport(tbl,id){
     '<div class="sub">'+cfg.title+' \u05de\u05e1\' '+String(rec.id).slice(-6)+'</div>'+
     '<table>'+rows+'</table>'+photoBlock+fileBlock+
     '<div class="ftr"><span>\u05d4\u05d5\u05e4\u05e7: '+stamp+'</span><span>ISO 45001 / 14001</span></div>'+
-    '<script>window.onload=function(){setTimeout(function(){window.print();},400);};</script>'+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'+
     '</body></html>';
   var w=window.open('','_blank');
   if(!w){toast('\u05d7\u05e1\u05d5\u05dd \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u2014 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05e4\u05d3\u05e3');return;}
