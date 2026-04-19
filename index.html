@@ -615,6 +615,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</label><input type="number" id="i-dy" placeholder="0" min="0"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="i-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1495;&#1511;&#1497;&#1512;&#1492;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label><div id="inc-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('inc-attach-area','inc')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-inc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svInc()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -632,6 +633,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="t-e"></div>
     <div class="field"><label>&#1510;&#1497;&#1493;&#1503; (%)</label><input type="number" id="t-sc" placeholder="90" min="0" max="100"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="t-st"><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1514;&#1492;&#1500;&#1497;&#1498;</option><option>&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</option></select></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</label><div id="tr-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tr-attach-area','tr')">&#128247; &#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -1035,21 +1037,21 @@ function _obDrain(){
 function sbIns(tbl,row){_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
+function _sbRefresh(silent){rDash();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
-    if(pending[t]){done++;if(done===tbls.length){SB_ON=true;sdb();if(!silent)rPage();else rDash();_obDrain();}return;}
+    if(pending[t]){done++;if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}return;}
     sbGet(t).then(function(rows){
       if(rows&&rows.length){
-        // Merge: keep local-only rows, overwrite with cloud versions when id matches
         var cloudIds={};rows.forEach(function(r){if(r.id)cloudIds[r.id]=r;});
         var localOnly=(DB[t]||[]).filter(function(r){return r.id&&!cloudIds[r.id];});
         DB[t]=rows.concat(localOnly);
       }
       done++;
-      if(done===tbls.length){SB_ON=true;sdb();if(!silent)rPage();else rDash();_obDrain();}
+      if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}
     });
   });
 }
@@ -1238,17 +1240,19 @@ function svNcr(){
 
 function svInc(){
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
-  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r')};
+  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   DB.inc.push(r);sbIns('inc',r);addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));sdb();closeModal('m-inc');
   ['i-d','i-l','i-r'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  _attachClear('inc-attach-area');
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
 }
 function svTr(){
   var w=gv('t-w'),n=gv('t-n');
   if(!w||!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e2\u05d5\u05d1\u05d3 \u05d5\u05d4\u05d3\u05e8\u05db\u05d4');return;}
-  var r={id:gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d'),e:gv('t-e'),sc:gi('t-sc'),s:gv('t-st')};
+  var r={id:gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d'),e:gv('t-e'),sc:gi('t-sc'),s:gv('t-st'),file_url:_attachUrls['tr-attach-area']||null};
   DB.tr.push(r);sbIns('tr',r);addLog('\u05d4\u05d3\u05e8\u05db\u05d4: '+w+' - '+n);sdb();closeModal('m-tr');
   ['t-w','t-n'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  _attachClear('tr-attach-area');
   toast('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rTr();
 }
 function svRsk(){
@@ -2312,48 +2316,75 @@ function _imgCompress(file,maxPx,q,cb){
   };
   r.readAsDataURL(file);
 }
-function _imgUpload(blob,filename){
-  return fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+filename,{
-    method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob
-  }).then(function(r){
-    if(!r.ok)return r.text().then(function(t){throw new Error(t);});
-    return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+filename;
-  });
-}
-function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style="width:100%" onclick="'+fn+'()">\u128247 \u05e6\u05dc\u05dd / \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';}
-function _photoPreview(src,clearFn){return '<img src="'+src+'" style="max-width:100%;max-height:160px;border-radius:8px;margin-top:4px;display:block"><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';}
+// --- Generic file/photo attach system ---
+// Supports: images (compressed), PDF, Word, Excel
+var _attachUrls={};  // keyed by areaId
 
-function _nmPickPhoto(){var i=g('nm-photo-inp');if(i){i.value='';i.click();}}
-function _nmPhotoRead(file){
-  if(!file)return;
-  var area=g('nm-photo-area');if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05d1\u05d3...</div>';
-  _imgCompress(file,1024,0.82,function(blob,dataUrl){
-    var fname='nm-'+Date.now()+'.jpg';
-    _imgUpload(blob,fname).then(function(url){
-      _nmPhotoUrl=url;if(area)area.innerHTML=_photoPreview(dataUrl,'_nmClearPhoto');
-    }).catch(function(){
-      toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 \u2014 \u05d1\u05d3\u05d5\u05e7 Supabase Storage');
-      if(area)area.innerHTML=_photoPickBtn('_nmPickPhoto');
+function _fileUpload(file,prefix,cb){
+  var isImg=/^image\//i.test(file.type);
+  var fname=prefix+'-'+Date.now()+(isImg?'.jpg':('-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')));
+  if(isImg){
+    _imgCompress(file,1200,0.85,function(blob){
+      fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob})
+        .then(function(r){if(!r.ok)throw new Error(r.status);return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;})
+        .then(cb).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4');cb(null);});
     });
-  });
+  }else{
+    fetch(SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},body:file})
+      .then(function(r){if(!r.ok)throw new Error(r.status);return SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;})
+      .then(cb).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4');cb(null);});
+  }
 }
-function _nmClearPhoto(){_nmPhotoUrl=null;var a=g('nm-photo-area');if(a)a.innerHTML=_photoPickBtn('_nmPickPhoto');}
 
-function _eqiPickPhoto(){var i=g('eqi-photo-inp');if(i){i.value='';i.click();}}
-function _eqiPhotoRead(file){
-  if(!file)return;
-  var area=g('eqi-photo-area');if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05d1\u05d3...</div>';
-  _imgCompress(file,1024,0.82,function(blob,dataUrl){
-    var fname='eqi-'+Date.now()+'.jpg';
-    _imgUpload(blob,fname).then(function(url){
-      _eqiPhotoUrl=url;if(area)area.innerHTML=_photoPreview(dataUrl,'_eqiClearPhoto');
-    }).catch(function(){
-      toast('\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 \u2014 \u05d1\u05d3\u05d5\u05e7 Supabase Storage');
-      if(area)area.innerHTML=_photoPickBtn('_eqiPickPhoto');
-    });
-  });
+function _attachRender(areaId,url,fname){
+  var area=g(areaId);if(!area)return;
+  var isImg=url&&/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
+  var preview=isImg
+    ?'<a href="'+url+'" target="_blank"><img src="'+url+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
+    :'<a href="'+url+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname||'\u05e7\u05d5\u05d1\u05e5')+'</a>';
+  area.innerHTML=preview+'<br><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="_attachClear(\''+areaId+'\')">\u05d4\u05e1\u05e8</button>';
 }
-function _eqiClearPhoto(){_eqiPhotoUrl=null;var a=g('eqi-photo-area');if(a)a.innerHTML=_photoPickBtn('_eqiPickPhoto');}
+
+function _attachPick(areaId,prefix){
+  var inp=g('_att_inp_'+areaId);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_att_inp_'+areaId;inp.accept='image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx';inp.style.display='none';inp.setAttribute('capture','environment');document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=function(){
+    var file=inp.files&&inp.files[0];if(!file)return;
+    var area=g(areaId);if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05dc\u05d4...</div>';
+    _fileUpload(file,prefix,function(url){
+      if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);}
+      else{_attachUrls[areaId]=null;_attachClear(areaId);}
+    });
+  };
+  inp.click();
+}
+
+function _attachClear(areaId){
+  _attachUrls[areaId]=null;
+  var area=g(areaId);
+  if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5</button>';
+}
+
+function _attachLoad(areaId,url,prefix){
+  if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,'');}
+  else _attachClear(areaId);
+}
+
+function _attachBtn(areaId){return '<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5</button>';}
+
+// Legacy aliases for nm/eqi (keep backward compat)
+var _nmPhotoUrl=null,_eqiPhotoUrl=null;
+function _nmPickPhoto(){_attachPick('nm-photo-area','nm');}
+function _nmClearPhoto(){_nmPhotoUrl=null;_attachClear('nm-photo-area');}
+function _eqiPickPhoto(){_attachPick('eqi-photo-area','eqi');}
+function _eqiClearPhoto(){_eqiPhotoUrl=null;_attachClear('eqi-photo-area');}
+function _photoPreview(src,clearFn){
+  var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(src)||src.startsWith('data:image');
+  return isImg?'<a href="'+src+'" target="_blank"><img src="'+src+'" style="max-width:100%;max-height:160px;border-radius:8px;display:block"></a><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>'
+    :'<a href="'+src+'" target="_blank" style="font-size:12px">&#128196; \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</a><button class="btn btn-d btn-sm" style="margin-right:8px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>';
+}
+function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style="width:100%" onclick="'+fn+'()">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d1\u05e5</button>';}
 </script>
 </body>
 </html>
