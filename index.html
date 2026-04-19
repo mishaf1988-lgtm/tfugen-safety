@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -1058,11 +1059,46 @@ function sbSync(silent){
 window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync(true);});
 window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync(true);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON)sbSync(true);},15*1000);
+setInterval(function(){if(SB_ON)sbSync(true);},120*1000);
+
+// --- Realtime sync (Supabase postgres_changes) ---
+var _sbRT=null,_rtState='off';
+function _rtStart(){
+  if(_sbRT||typeof supabase==='undefined')return;
+  try{
+    var c=supabase.createClient(SBU,SBK);
+    var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
+    var ch=c.channel('tfgn-all-changes');
+    tbls.forEach(function(t){
+      ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
+    });
+    ch.subscribe(function(st){
+      _rtState=st;
+      var pill=g('sync-pill');
+      if(pill){pill.title='Realtime: '+st;if(st==='SUBSCRIBED')pill.setAttribute('data-rt','on');}
+    });
+    _sbRT=c;
+  }catch(e){_rtState='err';}
+}
+function _rtApply(tbl,payload){
+  if(!DB[tbl])DB[tbl]=[];
+  var ev=payload.eventType,nr=payload.new,or_=payload.old;
+  if(ev==='INSERT'&&nr&&nr.id){
+    if(DB[tbl].some(function(r){return r.id===nr.id;}))return;
+    DB[tbl].unshift(nr);
+  }else if(ev==='UPDATE'&&nr&&nr.id){
+    var found=false;
+    DB[tbl]=DB[tbl].map(function(r){if(r.id===nr.id){found=true;return nr;}return r;});
+    if(!found)DB[tbl].unshift(nr);
+  }else if(ev==='DELETE'&&or_&&or_.id){
+    DB[tbl]=DB[tbl].filter(function(r){return r.id!==or_.id;});
+  }else return;
+  sdb();_sbRefresh(true);
+}
 document.addEventListener('DOMContentLoaded',function(){_obBadge();});
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
-  var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
+  var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'Realtime: '+_rtState,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
   if(le){lines.push('','\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4:','  \u05d8\u05d1\u05dc\u05d4: '+(le.tbl||'?'),'  \u05e4\u05e2\u05d5\u05dc\u05d4: '+(le.op||'?'),'  \u05e1\u05d8\u05d8\u05d5\u05e1: '+(le.status||'net'));if(le.body)lines.push('  \u05e4\u05e8\u05d8\u05d9\u05dd: '+le.body);}
   if(q.length){lines.push('','\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8:');q.slice(0,10).forEach(function(op){lines.push('  '+op.op+' '+op.tbl+(op.tries?(' \u00d7'+op.tries):'')+(op.lastError?(' \u2014 '+op.lastError):''));});if(q.length>10)lines.push('  ...\u05d5\u05e2\u05d5\u05d3 '+(q.length-10));}
   lines.push('','\u05dc\u05e0\u05e1\u05d5\u05ea \u05d0\u05d9\u05dc\u05d5\u05e3 \u05de\u05d7\u05d3\u05e9?');
@@ -1957,7 +1993,7 @@ function doLogin(){
     sessionStorage.setItem(SK,PW);
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
-    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();
+    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
   }else{
     var err=g('pw-err');
     if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
@@ -2021,12 +2057,12 @@ function empReport(type){
   var isEmp=sk==='emp';
   if(isAdmin){
     var app=g('app');if(app)app.style.display='block';
-    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();
+    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
   }else if(isEmp){
     document.body.classList.add('emp-mode');
     var app=g('app');if(app)app.style.display='block';
     ldb();CUR='emp-home';
-    SB_ON=true;_obDrain();
+    SB_ON=true;_obDrain();sbSync();_rtStart();
   }else{
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
