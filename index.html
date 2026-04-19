@@ -372,6 +372,23 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
 </div>
 
+<!-- TOOLBOX TALKS PAGE -->
+<div id="pg-toolbox" class="page">
+  <div class="row">
+    <div class="page-title">&#128483; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
+    <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th>&#1504;&#1493;&#1513;&#1488;</th>
+    <th>&#1502;&#1506;&#1489;&#1497;&#1512;</th>
+    <th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
+    <th>&#1505;&#1496;.</th>
+    <th></th>
+  </tr></thead><tbody id="tb-toolbox"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+</div>
+
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
@@ -526,6 +543,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="bn" id="bn-leg" onclick="goPage('leg')"><span class="ic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
   <button class="bn" id="bn-nm" onclick="goPage('nm')"><span class="ic">&#9940;</span>&#1499;&#1502;&#1506;&#1496;</button>
   <button class="bn" id="bn-round" onclick="goPage('round')"><span class="ic">&#9728;</span>&#1505;&#1489;&#1489;</button>
+  <button class="bn" id="bn-toolbox" onclick="goPage('toolbox')"><span class="ic">&#128483;</span>&#1513;&#1497;&#1495;&#1493;&#1514;</button>
   <button class="bn" id="bn-lg" onclick="goPage('lg')"><span class="ic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
 </nav>
 
@@ -845,6 +863,25 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-round')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRound()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- TOOLBOX TALKS MODAL -->
+<div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
+<div class="modal" id="m-toolbox" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-toolbox')">&#10005;</button>
+  <div class="modal-title">&#128483; &#1513;&#1497;&#1495;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+  <div class="fgrid">
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="tb-d"></div>
+    <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488; *</label><input id="tb-topic" placeholder="PPE, &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;, &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;..."></div>
+    <div class="field"><label>&#1502;&#1506;&#1489;&#1497;&#1512;</label><input id="tb-presenter"></div>
+    <div class="field"><label>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</label><input id="tb-attendees" placeholder="&#1513;&#1502;&#1493;&#1514; &#1488;&#1493; &#1502;&#1505;&#1508;&#1512;"></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tb-s"><option>&#1504;&#1502;&#1505;&#1512;&#1492;</option><option>&#1502;&#1514;&#1493;&#1499;&#1504;&#1504;&#1514;</option><option>&#1489;&#1493;&#1496;&#1500;&#1492;</option></select></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tb-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label>
+      <div id="tb-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tb-attach-area','toolbox')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-toolbox')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svToolbox()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
 <!-- INS MODAL -->
 <div class="overlay" id="ov-ins" onclick="closeModal('m-ins')"></div>
 <div class="modal" id="m-ins" style="display:none">
@@ -965,7 +1002,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var PW='Medwp123';
 var SK='tfgn_auth';
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],toolbox:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -986,7 +1023,7 @@ var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',toolbox:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1041,7 +1078,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:ro
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','toolbox'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1068,7 +1105,7 @@ function _rtStart(){
   if(_sbRT||typeof supabase==='undefined')return;
   try{
     var c=supabase.createClient(SBU,SBK);
-    var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
+    var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','toolbox'];
     var ch=c.channel('tfgn-all-changes');
     tbls.forEach(function(t){
       ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -1187,7 +1224,7 @@ function goPage(id){
 }
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,med:rMed,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg,toolbox:rToolbox};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -1755,6 +1792,32 @@ function svRound(){
   toast('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
 }
 // ---- END NEAR-MISS + ROUND ----
+
+// ---- TOOLBOX TALKS ----
+function rToolbox(){
+  var tb=g('tb-toolbox');if(!tb)return;
+  var rows=DB.toolbox||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</td></tr>';return;}
+  tb.innerHTML=rows.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).map(function(r){
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'toolbox\',\''+r.id+'\')" title="PDF">&#128424;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="toolbox" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:180px;word-break:break-word">'+(r.topic||'\u2014')+'</td><td>'+(r.presenter||'\u2014')+'</td><td>'+(r.attendees||'\u2014')+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' '+delBtn+'</td></tr>';
+  }).join('');
+}
+function svToolbox(){
+  var topic=gv('tb-topic');
+  if(!topic){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0');return;}
+  var r={id:gid(),d:gv('tb-d')||new Date().toISOString().split('T')[0],topic:topic,presenter:gv('tb-presenter'),attendees:gv('tb-attendees'),s:gv('tb-s')||'\u05e0\u05de\u05e1\u05e8\u05d4',notes:gv('tb-notes'),file_url:_attachUrls['tb-attach-area']||null,ts:new Date().toISOString()};
+  if(!DB.toolbox)DB.toolbox=[];
+  DB.toolbox.push(r);sbIns('toolbox',r);addLog('\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+topic.substring(0,30));sdb();
+  closeModal('m-toolbox');
+  ['tb-topic','tb-presenter','tb-attendees','tb-notes','tb-d'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  _attachClear('tb-attach-area');
+  toast('\u05e9\u05d9\u05d7\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rToolbox();rDash();
+}
+// ---- END TOOLBOX ----
+
 function rDocs(){
   var tb=g('tb-docs');if(!tb)return;
   if(!DB.docs.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd</td></tr>';return;}
@@ -1893,7 +1956,9 @@ var VIEW_CONFIG={
     ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   rounds:{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',back:'round',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e4\u05e7\u05d7','inspector'],['\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9','fire'],['\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd','corridors'],
-    ['PPE','ppe'],['\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','samples'],['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','chemicals'],['\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','firstaid'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]}
+    ['PPE','ppe'],['\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','samples'],['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','chemicals'],['\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','firstaid'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
+  toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'file_url'}
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];

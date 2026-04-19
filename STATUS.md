@@ -58,9 +58,10 @@
 - [x] ~~`migrations/2026-04-19_inc_tr_file_url.sql`~~ — הורץ
 - [x] ~~`migrations/2026-04-19_realtime_publication.sql`~~ — הורץ
 - [x] ~~Storage bucket `incidents-photos` + INSERT policy לאנונימי~~ — הוגדר
+- [ ] **הרץ migration חדש**: `migrations/2026-04-19_toolbox.sql` (Toolbox Talks)
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
-- [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות
+- [x] **Toolbox Talks** — דף `pg-toolbox` + טבלה `toolbox` + מודאל להוספה + Realtime + VIEW + PDF. דורש migration `2026-04-19_toolbox.sql`.
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
 - [ ] **Management Review Dashboard** — סיכום רבעוני ל-PDF
