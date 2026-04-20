@@ -1927,10 +1927,19 @@ function showView(tbl,id){
   goPage('view');
 }
 
+function _reportRef(tbl,rec){
+  var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP'}[tbl]||(tbl.toUpperCase().slice(0,4));
+  var yr=rec.d?rec.d.slice(0,4):String(new Date().getFullYear());
+  var recs=(DB[tbl]||[]).filter(function(r){return r.d&&r.d.slice(0,4)===yr;}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});
+  var idx=recs.findIndex(function(r){return r.id===rec.id;});
+  return pfx+'-'+yr+'-'+String(idx>=0?idx+1:1).padStart(3,'0');
+}
 function printReport(tbl,id){
   var cfg=VIEW_CONFIG[tbl];if(!cfg){toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05d3\u05e4\u05d9\u05e1');return;}
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var ref=_reportRef(tbl,rec);
+  var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   var rows='';
   cfg.fields.forEach(function(f){
@@ -1945,22 +1954,29 @@ function printReport(tbl,id){
   var photoBlock=pUrl?'<div class="photo"><img src="'+pUrl+'" alt="photo"></div>':'';
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+cfg.title+' \u2014 TFUGEN</title>'+
+  var logoImg=logoSrc?'<img class="doc-logo" src="'+logoSrc+'" alt="TFUGEN">':'<span style="font-size:28px;font-weight:900;color:#cc1f1f">TFUGEN</span>';
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+ref+' \u2014 '+cfg.title+'</title>'+
     '<style>'+
     '*{box-sizing:border-box}'+
     'body{font-family:Arial,"Segoe UI",sans-serif;margin:20px;color:#111;direction:rtl}'+
-    '.hdr{border-bottom:3px solid #cc1f1f;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:baseline}'+
-    '.hdr h1{margin:0;font-size:20px;color:#cc1f1f}'+
-    '.hdr .co{font-size:13px;color:#666}'+
-    '.sub{font-size:14px;color:#333;margin-bottom:14px;font-weight:700}'+
+    '.doc-hdr{margin-bottom:22px}'+
+    '.doc-top{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid #e0e0e0;margin-bottom:12px}'+
+    '.doc-logo{height:64px;width:auto;object-fit:contain}'+
+    '.doc-co .cname{font-size:17px;font-weight:700;color:#cc1f1f;margin-bottom:3px}'+
+    '.doc-co .csub{font-size:11px;color:#888;line-height:1.7}'+
+    '.doc-title-band{background:#cc1f1f;color:#fff;padding:13px 18px;font-size:23px;font-weight:700;border-radius:5px;margin-bottom:10px}'+
+    '.doc-meta{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#555;padding:7px 0;border-bottom:2px solid #cc1f1f;margin-bottom:18px}'+
+    '.doc-ref-lbl{color:#888}'+
+    '.doc-ref-num{font-size:17px;font-weight:700;color:#cc1f1f;direction:ltr;unicode-bidi:isolate;margin-right:4px}'+
+    '.doc-date{color:#999;font-size:12px}'+
     'table{width:100%;border-collapse:collapse;margin-bottom:16px}'+
     'th,td{border:1px solid #bbb;padding:7px 10px;text-align:right;font-size:13px;vertical-align:top}'+
-    'th{background:#f2f2f2;width:130px;color:#444;font-weight:700}'+
+    'th{background:#f7f7f7;width:140px;color:#444;font-weight:700}'+
     '.photo{margin:16px 0;page-break-inside:avoid;text-align:center}'+
-    '.photo img{max-width:100%;max-height:50vh;border:1px solid #999;border-radius:4px}'+
+    '.photo img{max-width:100%;max-height:50vh;border:1px solid #ccc;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.1)}'+
     '.file{margin:10px 0;padding:8px;background:#f8f8f8;border:1px solid #ddd;font-size:12px}'+
-    '.ftr{margin-top:28px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#777;display:flex;justify-content:space-between}'+
-    '.noprint{margin:12px 0;text-align:center}'+
+    '.ftr{margin-top:28px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#aaa;display:flex;justify-content:space-between}'+
+    '.noprint{margin:12px 0;text-align:center;padding:10px;background:#f5f5f5;border-radius:6px}'+
     '.noprint button{background:#cc1f1f;color:#fff;border:none;padding:10px 22px;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;margin:0 4px}'+
     '.noprint .sz{background:#fff;color:#333;border:1px solid #999}'+
     '@media print{.noprint{display:none}body{margin:10mm}.photo img{max-height:95vh}}'+
@@ -1968,10 +1984,19 @@ function printReport(tbl,id){
     '<div class="noprint"><button onclick="window.print()">\uD83D\uDDA8 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'95vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'50vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d7\u05e6\u05d9 \u05e2\u05de\u05d5\u05d3</button></div>'+
-    '<div class="hdr"><h1>'+cfg.title+'</h1><div class="co">TFUGEN \u2014 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4</div></div>'+
-    '<div class="sub">'+cfg.title+' \u05de\u05e1\' '+String(rec.id).slice(-6)+'</div>'+
+    '<div class="doc-hdr">'+
+      '<div class="doc-top">'+
+        '<div class="doc-co"><div class="cname">TFUGEN</div><div class="csub">\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4</div><div class="csub">ISO 45001 / ISO 14001</div></div>'+
+        logoImg+
+      '</div>'+
+      '<div class="doc-title-band">'+cfg.title+'</div>'+
+      '<div class="doc-meta">'+
+        '<span><span class="doc-ref-lbl">\u05e1\u05d9\u05de\u05d5\u05db\u05d9\u05df: </span><span class="doc-ref-num">'+ref+'</span></span>'+
+        '<span class="doc-date">\u05d4\u05d5\u05e4\u05e7: '+stamp+'</span>'+
+      '</div>'+
+    '</div>'+
     '<table>'+rows+'</table>'+photoBlock+fileBlock+
-    '<div class="ftr"><span>\u05d4\u05d5\u05e4\u05e7: '+stamp+'</span><span>ISO 45001 / 14001</span></div>'+
+    '<div class="ftr"><span>ISO 45001 / ISO 14001 \u2014 TFUGEN</span><span>'+ref+'</span></div>'+
     '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'+
     '</body></html>';
   var w=window.open('','_blank');
