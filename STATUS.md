@@ -33,6 +33,7 @@
 - [x] **Equipment Inspections** — דף `pg-eqi` + טבלה `equip_inspections` + ייבוא Excel/CSV + אינטגרציה עם Expiries Agent
 - [x] **Near-Miss capture** — דף `pg-nm` + טבלה `near_miss` + KPI בdashboard + פילטר לפי סטטוס
 - [x] **Morning Round** — דף `pg-round` + טבלה `rounds` + checklist יומי (6 פריטים) + התראה בdashboard + KPI
+- [x] **QR Stage A — Employee UI** — דף `pg-emp-home` עם 4 כפתורים גדולים (קרוב לתאונה / תקלה בציוד / סבב בוקר / דיווח הדרכה). נכנסים ב-`?emp=1`, יוצאים דרך כפתור "עבור למימשק המלא". לא נוגע במודאלים/שמירות הקיימות.
 
 ---
 
