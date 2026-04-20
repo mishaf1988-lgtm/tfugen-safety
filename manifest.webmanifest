@@ -1,0 +1,20 @@
+{
+  "name": "Tapugan - מערכת ניהול תעשיות תפוגן",
+  "short_name": "Tapugan",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f3f5",
+  "theme_color": "#cc1f1f",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
