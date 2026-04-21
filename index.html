@@ -1011,10 +1011,13 @@ function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x)
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
-function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'application/json','Prefer':'return=representation'};}
-function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
+var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
+function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth'}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
+function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
+function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
+function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts'};
-function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
+function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
 var _obBusy=false;
@@ -1034,13 +1037,15 @@ function _obBadge(state){
   p.classList.add('on');if(ic)ic.textContent='\u21ba';if(tx)tx.textContent=n+' \u05de\u05de\u05ea\u05d9\u05df\u05d5\u05ea';
 }
 function _obSend(op){
-  var url,opts={};
-  if(op.op==='ins'){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=sbHUpsert();opts.body=JSON.stringify(op.row);}
-  else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}
-  else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
-  else return Promise.reject(new Error('unknown op'));
-  return fetch(url,opts).then(function(r){
-    if(!r.ok){return r.text().then(function(body){var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});}
+  return _sbAuth().then(function(){
+    var url,opts={};
+    if(op.op==='ins'){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=sbHUpsert();opts.body=JSON.stringify(op.row);}
+    else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}
+    else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
+    else return Promise.reject(new Error('unknown op'));
+    return fetch(url,opts).then(function(r){
+      if(!r.ok){return r.text().then(function(body){var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});}
+    });
   });
 }
 function _obDrain(){
@@ -1093,20 +1098,22 @@ setInterval(function(){if(SB_ON)sbSync(true);},120*1000);
 var _sbRT=null,_rtState='off';
 function _rtStart(){
   if(_sbRT||typeof supabase==='undefined')return;
-  try{
-    var c=supabase.createClient(SBU,SBK);
-    var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests'];
-    var ch=c.channel('tfgn-all-changes');
-    tbls.forEach(function(t){
-      ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
-    });
-    ch.subscribe(function(st){
-      _rtState=st;
-      var pill=g('sync-pill');
-      if(pill){pill.title='Realtime: '+st;if(st==='SUBSCRIBED')pill.setAttribute('data-rt','on');}
-    });
-    _sbRT=c;
-  }catch(e){_rtState='err';}
+  _sbAuth().then(function(){
+    try{
+      var c=_sbClient;
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests'];
+      var ch=c.channel('tfgn-all-changes');
+      tbls.forEach(function(t){
+        ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
+      });
+      ch.subscribe(function(st){
+        _rtState=st;
+        var pill=g('sync-pill');
+        if(pill){pill.title='Realtime: '+st;if(st==='SUBSCRIBED')pill.setAttribute('data-rt','on');}
+      });
+      _sbRT=c;
+    }catch(e){_rtState='err';}
+  }).catch(function(){_rtState='err';});
 }
 function _rtApply(tbl,payload){
   if(!DB[tbl])DB[tbl]=[];
@@ -1123,7 +1130,7 @@ function _rtApply(tbl,payload){
   }else return;
   sdb();_sbRefresh(true);
 }
-document.addEventListener('DOMContentLoaded',function(){_obBadge();});
+document.addEventListener('DOMContentLoaded',function(){_obBadge();_sbAuth().catch(function(){});});
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
   var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'Realtime: '+_rtState,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
@@ -1148,7 +1155,9 @@ function forceSync(){
   syncTbls.forEach(function(t){
     var rows=DB[t];
     if(!rows||!rows.length)return;
-    fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)})
+    _sbAuth().then(function(){
+      return fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)});
+    })
       .then(function(r){
         if(r.ok||r.status===201||r.status===200){ok++;}
         else{fail++;failTbls.push(t+'('+r.status+')');}
@@ -1700,7 +1709,7 @@ function delAllEqi(){
   var q=_obGet().filter(function(op){return op.tbl!=='equip_inspections';});_obSet(q);_obBadge();
   sdb();
   // Delete all rows in Supabase (filter: id not null = all rows)
-  fetch(SBU+'/rest/v1/equip_inspections?id=not.is.null',{method:'DELETE',headers:sbH()})
+  _sbAuth().then(function(){return fetch(SBU+'/rest/v1/equip_inspections?id=not.is.null',{method:'DELETE',headers:sbH()});})
     .then(function(){toast('\u05db\u05dc \u05d4\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e0\u05de\u05d7\u05e7\u05d5 \u2713');})
     .catch(function(){toast('\u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05e7\u05d5\u05de\u05d9 \u05d1\u05d5\u05e6\u05e2, \u05d1\u05d3\u05d5\u05e7 Supabase');});
   rEqi();rDash();
@@ -2293,7 +2302,7 @@ function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=docume
 function loadFromSupabase(){
   if(!SBU||!SBK)return;
   // Load NCR from Supabase and merge with localStorage
-  fetch(SBU+'/rest/v1/ncr?select=*&limit=1000',{headers:sbH()})
+  _sbAuth().then(function(){return fetch(SBU+'/rest/v1/ncr?select=*&limit=1000',{headers:sbH()});})
     .then(function(r){return r.json();})
     .then(function(rows){
       if(!Array.isArray(rows)||!rows.length)return;
@@ -2589,7 +2598,9 @@ function _fileUpload(file,prefix,cb){
   var url=SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname;
   var pubUrl=SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;
   function doUpload(body,ct){
-    fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+SBK,'Content-Type':ct,'x-upsert':'true'},body:body})
+    _sbAuth().then(function(){
+      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':ct,'x-upsert':'true'},body:body});
+    })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
         cb(pubUrl);
