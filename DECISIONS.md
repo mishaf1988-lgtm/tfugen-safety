@@ -13,6 +13,17 @@
 
 ---
 
+## 2026-04-21 — הפרדת הרשאות admin/emp ב-RLS (Vuln #7)
+**החלטה**: החלפת ה-policy היחיד `authenticated_all` (מ-Vuln #2) בשני policies מופרדים על כל 22 הטבלאות:
+1. `admin_all` — FOR ALL, רק כשה-JWT claim `is_anonymous` הוא FALSE או חסר (כלומר email sign-in בלבד).
+2. `emp_insert` על 4 טבלאות בלבד (`near_miss`, `rounds`, `equip_inspections`, `tr`) — INSERT only, לכל `authenticated` (כולל anonymous).
+Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דבר, ולא יכולים INSERT לטבלאות מעבר לארבע. גם הסרתי את `sbSync()` מתזרים ה-startup של emp mode — הוא היה מחזיר [] לכל הטבלאות (אין SELECT) ועלול היה למחוק localStorage מקומי.
+**סיבה**: לפני השינוי, עובד שטח שנכנס עם "דיווח מהיר" קיבל session anonymous עם הרשאות מלאות ל-DB דרך ה-policy הפתוח. מהקונסול יכל למחוק NCRs, לערוך סיכוני סביבה, לראות הכל. ה-admin login שנוסף ב-Vuln #6 היה רק מחסום UI.
+**בדיקה נדרשת לאחר deploy**: אדמין עדיין רואה ועורך הכל; עובד יכול לשלוח 4 סוגי דיווחים; ניסיון של emp לגשת ל-`/rest/v1/ncr` מה-DevTools מחזיר []/403.
+**אלטרנטיבות שנדחו**: (1) created_by + row-level ownership — דורש migration לכל הטבלאות. (2) שני anon keys שונים (emp/admin) — Supabase לא תומך. (3) פונקציית RPC מתווכת — overkill כשיש JWT claim מובנה.
+
+---
+
 ## 2026-04-21 — החלפת סיסמה קשיחה ב-Supabase Auth (Vuln #6)
 **החלטה**: הסרת `PW='Medwp123'` מהקוד. `doLogin()` מתחבר דרך `supabase.auth.signInWithPassword({email:'admin@tfugen.local', password})`. דגל `_isAdmin` in-memory מחליף את `sessionStorage[SK]===PW`. מצב עובד ממשיך לעבוד דרך `_sbAuth()` (anonymous sign-in) + `EMP_KEY` ב-localStorage. ה-session של Supabase נשמר אוטומטית ב-`localStorage` (`tfgn_sb_auth`).
 **סיבה**: הסיסמה היתה בקוד המקור — נצפית על ידי כל מי שפתח DevTools. עכשיו האימות אמיתי, עם session JWT שפג.
