@@ -44,6 +44,20 @@ function jsonErr(msg, status, cors) {
   });
 }
 
+function isAllowedCaller(req, allowed) {
+  const origin = req.headers.get('origin') || '';
+  if (origin && allowed.includes(origin)) return true;
+  // Same-origin fetches from Safari sometimes omit Origin — fall back to Referer.
+  const referer = req.headers.get('referer') || '';
+  if (referer) {
+    try {
+      const refOrigin = new URL(referer).origin;
+      if (allowed.includes(refOrigin)) return true;
+    } catch (e) {}
+  }
+  return false;
+}
+
 export default async function handler(req) {
   const allowed = getAllowedOrigins();
   const origin = req.headers.get('origin') || '';
@@ -55,7 +69,7 @@ export default async function handler(req) {
   if (req.method !== 'POST') {
     return jsonErr('method not allowed', 405, cors);
   }
-  if (!allowed.includes(origin)) {
+  if (!isAllowedCaller(req, allowed)) {
     return jsonErr('origin not allowed', 403, cors);
   }
 
