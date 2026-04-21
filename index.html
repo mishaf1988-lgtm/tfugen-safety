@@ -990,8 +990,8 @@ id="m-ncr" style="display:none">
 
 <script>
 'use strict';
-var PW='Medwp123';
-var SK='tfgn_auth';
+var ADMIN_EMAIL='admin@tfugen.local';
+var _isAdmin=false;
 var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[]};
 var CUR='dash';
 var NCRI=1;
@@ -2203,20 +2203,32 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
+function _loginErr(msg){
+  var err=g('pw-err');if(err)err.textContent=msg;
+  var pw=g('pw');if(pw){pw.value='';pw.focus();}
+  setTimeout(function(){var e=g('pw-err');if(e)e.textContent='';},2500);
+}
 function doLogin(){
-  var pw=g('pw');
-  if(!pw)return;
-  if(pw.value===PW){
-    sessionStorage.setItem(SK,PW);
+  var pw=g('pw');if(!pw)return;
+  var val=pw.value;if(!val){_loginErr('\u05d4\u05d6\u05df \u05e1\u05d9\u05e1\u05de\u05d4');return;}
+  var lb=g('login-btn');if(lb){lb.disabled=true;lb.dataset.txt=lb.textContent||'';lb.textContent='\u05de\u05ea\u05d7\u05d1\u05e8...';}
+  _sbBoot();
+  if(!_sbClient){if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}_loginErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');return;}
+  _sbClient.auth.signInWithPassword({email:ADMIN_EMAIL,password:val}).then(function(r){
+    if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+    if(r.error||!r.data||!r.data.session){_loginErr('\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4');return;}
+    _sbToken=r.data.session.access_token;
+    _sbAuthPromise=Promise.resolve(r.data.session);
+    _isAdmin=true;
+    try{localStorage.removeItem(EMP_KEY);}catch(e){}
+    document.body.classList.remove('emp-mode');
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
     ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
-  }else{
-    var err=g('pw-err');
-    if(err)err.textContent='\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4';
-    pw.value='';pw.focus();
-    setTimeout(function(){if(err)err.textContent='';},2000);
-  }
+  }).catch(function(){
+    if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+    _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
+  });
 }
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
@@ -2229,10 +2241,12 @@ function empToggle(on){
   }else{
     document.body.classList.remove('emp-mode');
     try{localStorage.removeItem(EMP_KEY);}catch(e){}
-    if(sessionStorage.getItem(SK)===PW){
+    if(_isAdmin){
       goPage('dash');
     }else{
-      sessionStorage.removeItem(SK);
+      _isAdmin=false;
+      try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
+      _sbToken=null;_sbAuthPromise=null;
       var app=g('app');if(app)app.style.display='none';
       var ls=g('login');if(ls)ls.style.display='flex';
       setTimeout(function(){var p=g('pw');if(p){p.value='';p.focus();}},100);
@@ -2240,11 +2254,12 @@ function empToggle(on){
   }
 }
 function doEmpLogin(){
-  sessionStorage.setItem(SK,'emp');
+  _isAdmin=false;
   try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
   document.body.classList.add('emp-mode');
   var ls=g('login');if(ls)ls.style.display='none';
   var app=g('app');if(app)app.style.display='block';
+  _sbAuth().catch(function(){});
   ldb();CUR='emp-home';
   SB_ON=true;_obDrain();
 }
@@ -2269,25 +2284,33 @@ function empReport(type){
 })();
 
 (function(){
-  var sk=sessionStorage.getItem(SK);
-  var isAdmin=sk===PW;
-  var isEmp=sk==='emp';
-  if(isAdmin){
-    var app=g('app');if(app)app.style.display='block';
-    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
-  }else if(isEmp){
-    document.body.classList.add('emp-mode');
-    var app=g('app');if(app)app.style.display='block';
-    ldb();CUR='emp-home';
-    SB_ON=true;_obDrain();sbSync();_rtStart();
-  }else{
+  function showLogin(){
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
   }
-  var lb=g('login-btn');
-  if(lb)lb.addEventListener('click',doLogin);
-  var pw=g('pw');
-  if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+  function proceed(session){
+    var admin=!!(session&&session.user&&!session.user.is_anonymous&&session.user.email);
+    var emp=false;try{emp=localStorage.getItem(EMP_KEY)==='1';}catch(e){}
+    _isAdmin=admin;
+    if(admin){
+      _sbToken=session.access_token;
+      _sbAuthPromise=Promise.resolve(session);
+      var app=g('app');if(app)app.style.display='block';
+      ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
+    }else if(emp){
+      document.body.classList.add('emp-mode');
+      var app=g('app');if(app)app.style.display='block';
+      ldb();CUR='emp-home';
+      SB_ON=true;_obDrain();sbSync();_rtStart();
+    }else{
+      showLogin();
+    }
+    var lb=g('login-btn');if(lb)lb.addEventListener('click',doLogin);
+    var pw=g('pw');if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+  }
+  _sbBoot();
+  if(!_sbClient){proceed(null);return;}
+  _sbClient.auth.getSession().then(function(r){proceed(r&&r.data?r.data.session:null);}).catch(function(){proceed(null);});
 })();
 
 function openXlModal(){var ov=document.getElementById('ov-xl'),mo=document.getElementById('m-xl');if(ov){ov.style.display='flex';document.body.style.overflow='hidden';window.scrollTo(0,0);}if(mo)mo.style.display='block';window._xlData=[];var s=document.getElementById('xl-st');if(s)s.textContent='';var b=document.getElementById('xl-ok');if(b)b.style.display='none';var p=document.getElementById('xl-pw');if(p)p.style.display='none';var i=document.getElementById('xl-inp');if(i)i.value='';}

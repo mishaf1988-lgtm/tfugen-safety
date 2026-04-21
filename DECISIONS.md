@@ -13,6 +13,14 @@
 
 ---
 
+## 2026-04-21 — החלפת סיסמה קשיחה ב-Supabase Auth (Vuln #6)
+**החלטה**: הסרת `PW='Medwp123'` מהקוד. `doLogin()` מתחבר דרך `supabase.auth.signInWithPassword({email:'admin@tfugen.local', password})`. דגל `_isAdmin` in-memory מחליף את `sessionStorage[SK]===PW`. מצב עובד ממשיך לעבוד דרך `_sbAuth()` (anonymous sign-in) + `EMP_KEY` ב-localStorage. ה-session של Supabase נשמר אוטומטית ב-`localStorage` (`tfgn_sb_auth`).
+**סיבה**: הסיסמה היתה בקוד המקור — נצפית על ידי כל מי שפתח DevTools. עכשיו האימות אמיתי, עם session JWT שפג.
+**הגדרה חד-פעמית נדרשת**: Supabase → Authentication → Users → Add user. Email: `admin@tfugen.local`, Password: בחירת המשתמש, Auto-confirm: ON. בלי זה ה-login יישבר.
+**אלטרנטיבות שנדחו**: (1) hash של הסיסמה ב-localStorage — עדיין client-side, אפשר לזייף. (2) API serverless לבדיקת סיסמה — דורש תחזוקה והקוד כבר משתמש ב-Supabase. (3) Magic link — דורש שרת מייל. (4) OAuth — overkill למשתמש יחיד.
+
+---
+
 ## 2026-04-19 — הוספת skill `tfugen-ref` לחיסכון בטוקנים
 **החלטה**: יצירת skill פרויקטי חדש ב-`.claude/skills/tfugen-ref/SKILL.md` עם: סכימות 21 הטבלאות, מספרי שורות של helpers מרכזיים ב-`index.html`, מילון עברית→\\uXXXX מוכן, ו-skeletons של VIEW_CONFIG/save/row. נטען אוטומטית לפי ה-description כשעורכים את `index.html`.
 **סיבה**: הפחתת קריאות/greps חוזרות ל-`index.html` (~2500 שורות). כל משימת view חדשה דרשה ~200 שורות קריאה רק כדי להיזכר במבנה. צפי חיסכון 30-40% טוקנים במשימות סטנדרטיות.
