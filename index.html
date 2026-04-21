@@ -1595,10 +1595,10 @@ function rEqi(){
   rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
   if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
-    var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+r.id+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
-    var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdf='<button class="btn btn-d btn-sm" onclick="printReport(\'equip_inspections\',\''+r.id+'\')" title="PDF">&#128424;</button>';
+    var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(r.loc?esc(r.loc):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
@@ -1729,9 +1729,9 @@ function rNm(){
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
     var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'near_miss\',\''+r.id+'\')" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+(r.area?esc(r.area):'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+(r.area?esc(r.area):'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');_signifyDom(tb);
 }
 function svNm(){
@@ -1763,9 +1763,9 @@ function rRound(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd</td></tr>';return;}
   function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
   tb.innerHTML=rows.map(function(r){
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'rounds\',\''+r.id+'\')" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="rounds" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
 }
 function svRound(){
@@ -1788,12 +1788,12 @@ function svRound(){
 function rDocs(){
   var tb=g('tb-docs');if(!tb)return;
   if(!DB.docs.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd</td></tr>';return;}
-  tb.innerHTML=DB.docs.map(function(d){return '<tr><td><strong>'+d.n+'</strong></td><td>'+d.c+'</td><td>v'+d.v+'</td><td>'+(d.o||'&#8212;')+'</td><td>'+eb(d.e)+'</td><td>'+sb(d.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="docs" data-vid="'+d.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="docs" data-did="'+d.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.docs.map(function(d){return '<tr><td><strong>'+d.n+'</strong></td><td>'+d.c+'</td><td>v'+d.v+'</td><td>'+(d.o||'&#8212;')+'</td><td>'+eb(d.e)+'</td><td>'+sb(d.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="docs" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="docs" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rAud(){
   var tb=g('tb-aud');if(!tb)return;
   if(!DB.auds.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.auds.map(function(a){return '<tr><td><strong>'+a.n+'</strong></td><td>'+(a.a||'&#8212;')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+a.sc+'%</span>':'&#8212;')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+a.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+a.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.auds.map(function(a){return '<tr><td><strong>'+a.n+'</strong></td><td>'+(a.a||'&#8212;')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+a.sc+'%</span>':'&#8212;')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+esc(a.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+esc(a.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
@@ -1808,8 +1808,8 @@ tb.innerHTML=rows.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('בטיחות')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
   var loc=n.loc||n.location||'';
-  var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+n.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
-  var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+n.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+  var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
+  var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   return '<tr>'+
     '<td><span class="b bX">'+(n.num||'&#8212;')+'</span></td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
@@ -1853,22 +1853,22 @@ function rInc(){
   var tb=g('tb-inc');if(!tb)return;
   if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd</td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+i.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" onclick="printReport(\'inc\',\''+i.id+'\')" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+i.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
   if(!DB.tr.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+t.w+'</strong></td><td>'+t.n+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+t.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" onclick="printReport(\'tr\',\''+t.id+'\')" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+t.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+t.w+'</strong></td><td>'+t.n+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rRsk(){
   var tb=g('tb-rsk');if(!tb)return;
   if(!DB.rsk.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd</td></tr>';return;}
-  tb.innerHTML=DB.rsk.map(function(r){var rpn=r.p*r.sv;return '<tr><td>'+r.d.substring(0,25)+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+r.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.rsk.map(function(r){var rpn=r.p*r.sv;return '<tr><td>'+r.d.substring(0,25)+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rEmp(){
   var tb=g('tb-emp');if(!tb)return;
   if(!DB.emp.length){tb.innerHTML='<tr><td colspan="5" class="et">\u05d0\u05d9\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</td></tr>';return;}
-  tb.innerHTML=DB.emp.map(function(e){return '<tr><td><strong>'+e.n+'</strong></td><td>'+(e.r||'&#8212;')+'</td><td>'+(e.dep||'&#8212;')+'</td><td>'+(e.ph||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+e.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+e.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.emp.map(function(e){return '<tr><td><strong>'+e.n+'</strong></td><td>'+(e.r||'&#8212;')+'</td><td>'+(e.dep||'&#8212;')+'</td><td>'+(e.ph||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 
 var VIEW_CONFIG={
@@ -2104,9 +2104,9 @@ function rHearing(){
   var cnt=g('hearing-count');if(cnt)cnt.textContent=list.length+' / '+(DB.hearing_tests||[]).length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
   if(!list.length){tb.innerHTML='<tr><td colspan="10" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=list.map(function(r){
-    var view='<button class="btn btn-d btn-sm" onclick="showView(\'hearing_tests\',\''+r.id+'\')">&#128065;</button>';
-    var pdf='<button class="btn btn-d btn-sm" onclick="printReport(\'hearing_tests\',\''+r.id+'\')" title="PDF">&#128424;</button>';
-    var del='<button class="btn btn-d btn-sm" onclick="askDel(\'hearing_tests\',\''+r.id+'\')">&#128465;</button>';
+    var view='<button class="btn btn-d btn-sm" data-vtbl="hearing_tests" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdf='<button class="btn btn-d btn-sm" data-ptbl="hearing_tests" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    var del='<button class="btn btn-d btn-sm" data-dtbl="hearing_tests" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var notes=(r.notes||'').replace(/</g,'&lt;');if(notes.length>32)notes=notes.substring(0,32)+'...';
     return '<tr><td><strong>'+(r.emp_name?esc(r.emp_name):'\u2014')+'</strong></td><td>'+(r.emp_id?esc(r.emp_id):'\u2014')+'</td><td>'+(r.age?esc(r.age):'\u2014')+'</td><td>'+(r.role?esc(r.role):'\u2014')+'</td><td>'+(r.dept?esc(r.dept):'\u2014')+'</td><td>'+fd(r.test_date)+'</td><td style="max-width:200px">'+notes+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+view+' '+pdf+'</td><td>'+del+'</td></tr>';
   }).join('');
@@ -2148,7 +2148,7 @@ function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
   if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=DB.ptw.map(function(p){
-    var vid=p.id;
+    var vid=esc(p.id);
     var vbtn='<button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button>';
     var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;</button>';
     return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
@@ -2157,45 +2157,45 @@ function rPtw(){
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
   if(!DB.ppe.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05e6\u05d9\u05d5\u05d3</td></tr>';return;}
-  tb.innerHTML=DB.ppe.map(function(p){var cm={'\u05ea\u05e7\u05d9\u05df':'bG','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05d7\u05dc\u05e4\u05d4':'bY','\u05e4\u05d2\u05d5\u05dd':'bR'};return '<tr><td>'+esc(p.ty)+'</td><td>'+(p.w?esc(p.w):'&#8212;')+'</td><td>'+(p.m?esc(p.m):'&#8212;')+'</td><td>'+fd(p.d)+'</td><td>'+eb(p.e)+'</td><td><span class="b '+(cm[p.c]||'bX')+'">'+esc(p.c)+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="ppe" data-vid="'+p.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ppe" data-did="'+p.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ppe.map(function(p){var cm={'\u05ea\u05e7\u05d9\u05df':'bG','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05d7\u05dc\u05e4\u05d4':'bY','\u05e4\u05d2\u05d5\u05dd':'bR'};return '<tr><td>'+esc(p.ty)+'</td><td>'+(p.w?esc(p.w):'&#8212;')+'</td><td>'+(p.m?esc(p.m):'&#8212;')+'</td><td>'+fd(p.d)+'</td><td>'+eb(p.e)+'</td><td><span class="b '+(cm[p.c]||'bX')+'">'+esc(p.c)+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="ppe" data-vid="'+esc(p.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ppe" data-did="'+esc(p.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rIns(){
   var tb=g('tb-ins');if(!tb)return;
   if(!DB.ins.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd</td></tr>';return;}
-  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+fd(i.d)+'</td><td>'+i.a+'</td><td>'+(i.i||'&#8212;')+'</td><td>'+(i.sc?'<span style="font-weight:700;color:'+(i.sc>=80?'var(--ok)':i.sc>=60?'var(--warn)':'var(--bad)')+'">'+i.sc+'%</span>':'&#8212;')+'</td><td>'+(i.fn||'').substring(0,30)+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+i.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+i.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+fd(i.d)+'</td><td>'+i.a+'</td><td>'+(i.i||'&#8212;')+'</td><td>'+(i.sc?'<span style="font-weight:700;color:'+(i.sc>=80?'var(--ok)':i.sc>=60?'var(--warn)':'var(--bad)')+'">'+i.sc+'%</span>':'&#8212;')+'</td><td>'+(i.fn||'').substring(0,30)+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rDrl(){
   var tb=g('tb-drl');if(!tb)return;
   if(!DB.drl.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd</td></tr>';return;}
-  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+d.ty+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+d.sc+'%</span>':'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+d.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+d.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+d.ty+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+d.sc+'%</span>':'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rCtr(){
   var tb=g('tb-ctr');if(!tb)return;
   if(!DB.ctr.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd</td></tr>';return;}
   var tc={'\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05dc\u05d0 \u05d4\u05d5\u05db\u05e9\u05e8':'bR','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05db\u05e9\u05e8\u05d4':'bY'};
-  tb.innerHTML=DB.ctr.map(function(c){return '<tr><td><strong>'+c.n+'</strong></td><td>'+(c.ty||'&#8212;')+'</td><td>'+(c.c||'&#8212;')+'</td><td>'+eb(c.e)+'</td><td><span class="b '+(tc[c.tr]||'bX')+'">'+c.tr+'</span></td><td>'+sb(c.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ctr" data-vid="'+c.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ctr" data-did="'+c.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ctr.map(function(c){return '<tr><td><strong>'+c.n+'</strong></td><td>'+(c.ty||'&#8212;')+'</td><td>'+(c.c||'&#8212;')+'</td><td>'+eb(c.e)+'</td><td><span class="b '+(tc[c.tr]||'bX')+'">'+c.tr+'</span></td><td>'+sb(c.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ctr" data-vid="'+esc(c.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ctr" data-did="'+esc(c.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rWst(){
   var tb=g('tb-wst');if(!tb)return;
   if(!DB.wst.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   var tot=DB.wst.reduce(function(s,w){return s+w.q;},0);
-  tb.innerHTML=DB.wst.map(function(w){return '<tr><td>'+fd(w.d)+'</td><td>'+w.ty+'</td><td>'+w.q+'</td><td>'+(w.c||'&#8212;')+'</td><td>'+(w.h||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="wst" data-vid="'+w.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="wst" data-did="'+w.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.wst.map(function(w){return '<tr><td>'+fd(w.d)+'</td><td>'+w.ty+'</td><td>'+w.q+'</td><td>'+(w.c||'&#8212;')+'</td><td>'+(w.h||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="wst" data-vid="'+esc(w.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="wst" data-did="'+esc(w.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rHzm(){
   var tb=g('tb-hzm');if(!tb)return;
   if(!DB.hzm.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.hzm.map(function(h){return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(h.loc?esc(h.loc):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+h.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+h.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.hzm.map(function(h){return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(h.loc?esc(h.loc):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rEnv(){
   var tb=g('tb-env');if(!tb)return;
   if(!DB.env.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05d3\u05d9\u05d3\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.env.map(function(e){return '<tr><td>'+fd(e.d)+'</td><td>'+e.ty+'</td><td>'+(e.me||'&#8212;')+'</td><td><strong>'+(e.r||'&#8212;')+'</strong> '+(e.u||'')+'</td><td>'+(e.lim||'&#8212;')+'</td><td>'+sb(e.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env" data-vid="'+e.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="env" data-did="'+e.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.env.map(function(e){return '<tr><td>'+fd(e.d)+'</td><td>'+e.ty+'</td><td>'+(e.me||'&#8212;')+'</td><td><strong>'+(e.r||'&#8212;')+'</strong> '+(e.u||'')+'</td><td>'+(e.lim||'&#8212;')+'</td><td>'+sb(e.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="env" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rLeg(){
   var tb=g('tb-leg');if(!tb)return;
   if(!DB.leg.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.leg.map(function(l){return '<tr><td>'+l.s+'</td><td>'+(l.d||'').substring(0,30)+'</td><td>'+l.a+'</td><td>'+sb(l.c)+'</td><td>'+fd(l.u)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+l.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="leg" data-did="'+l.id+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.leg.map(function(l){return '<tr><td>'+l.s+'</td><td>'+(l.d||'').substring(0,30)+'</td><td>'+l.a+'</td><td>'+sb(l.c)+'</td><td>'+fd(l.u)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+esc(l.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="leg" data-did="'+esc(l.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rLg(){
   var el=g('log-list');if(!el)return;
@@ -2561,10 +2561,10 @@ window.ncrAgentAnalyzeAll=function(){
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
-    if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
-    var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+(res.txt||'').substring(0,500)+'</div>';return;}
-    P.innerHTML='<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+(d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500))+'</div>';
-  }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+(err&&err.message||err)+'</div>';});
+    if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
+    var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
+    P.innerHTML='<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+esc(d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500))+'</div>';
+  }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+esc(err&&err.message||String(err))+'</div>';});
 };
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 </script>

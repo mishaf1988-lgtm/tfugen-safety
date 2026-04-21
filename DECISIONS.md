@@ -13,6 +13,13 @@
 
 ---
 
+## 2026-04-21 — XSS דרך `id` לא-מוכר באינליין onclick + sink שני של LLM (Vuln #8)
+**החלטה**: (1) החלפת כל `onclick="fn('tbl','"+r.id+"')"` האינליין בתבנית `data-*` + `this.dataset.*`. (2) הוספת `esc()` לערכי attribute `data-vid/data-did/data-pid` (עצירת attribute break-out). (3) `esc()` על הטקסט המוחזר מה-LLM ב-`analyzeOne()` (שורה 2566) + על טקסטי שגיאה של API/Parse/Network (2564/2565/2567).
+**סיבה**: מ-Vuln #7 עובד anonymous יכול `INSERT` לטבלאות `near_miss`/`rounds`/`equip_inspections`/`tr`. שדה `id` בקליינט נקבע לרוב מה-DB, אבל הכנסה ישירה דרך REST API מאפשרת לתוקף לשתול `id` כ-`x');alert(1);//` → אחרי רינדור אצל ה-admin הקוד יורץ. האיסקיפ של ערך ה-`data-*` מונע גם שבירת attribute עם `"`. התיקון ב-LLM sink משלים את `analyzeAll` שכבר תוקן ב-Vuln #4.
+**אלטרנטיבות שנדחו**: (1) `CSP strict-dynamic` — דורש שינוי גדול של ה-inline handlers בכל הקובץ. (2) `textContent` במקום `innerHTML` לתוצאת LLM — מאבדים שבירות שורה/עיצוב. (3) UUID enforcement בצד DB בלבד — לא משנה שיש עדיין XSS דרך שדות אחרים בעתיד.
+
+---
+
 ## 2026-04-21 — הפרדת הרשאות admin/emp ב-RLS (Vuln #7)
 **החלטה**: החלפת ה-policy היחיד `authenticated_all` (מ-Vuln #2) בשני policies מופרדים על כל 22 הטבלאות:
 1. `admin_all` — FOR ALL, רק כשה-JWT claim `is_anonymous` הוא FALSE או חסר (כלומר email sign-in בלבד).
