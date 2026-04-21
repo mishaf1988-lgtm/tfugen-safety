@@ -13,6 +13,36 @@
 
 ---
 
+## 2026-04-21 — XSS נוספים שנתפסו בבדיקה צולבת של 3 סוכנים (Vuln #9)
+**החלטה**: תיקון 3 XSS HIGH נוספים + hardening של NCR agent:
+1. `_printReportDo` (שורות 1989-1992) — `escU()` על `pUrl`/`fileSigned` לפני שילוב ב-`<img src>`/`<a href>`. `_sign()` fallback (שורה 2628) שונה מ-`cb(u)` ל-`cb('')` כדי לא להעביר URL-ים לא-storage/לא-data דרך הפונקציה.
+2. `rTr` (שורה 1861) — `esc(t.w)`, `esc(t.n)` לפני שילוב ב-`innerHTML`.
+3. `rEqi` (שורה 1599) — `esc(r.id)` על `data-eid` (רגרסיה מ-Vuln #8 שכיסה רק data-vid/data-did/data-pid).
+4. NCR agent (`_ncrRender`/`_ncrSel`/`_ncrFmt` שורות 2398-2457) — `esc()` על כל שדות ה-NCR הממוסגרים + החלפת `onclick="_ncrSel('+n.id+')"` ל-`data-nid` + `this.dataset.nid`.
+**סיבה**: לפני התיקון — (1) עובד anonymous שמכניס `photo_url="x\" onerror=\"…\""` ל-`near_miss`/`tr`/`equip_inspections` יכל לגרום ל-XSS ב-print-window של האדמין. (2) עובד שמכניס שם עובד עם `<img src=x onerror=>` יכל להפעיל XSS ב-`innerHTML` של רשימת ההדרכות. (3) שורה 1599 החמיצה את תיקון Vuln #8 — תוקף יכל לשתול `id` עם שבירת attribute. (4) NCR agent היה latent (fetch מה-API שבור אחרי Vuln #7 כי משתמש ב-`_SK` במקום JWT), אבל כשיתוקן — יש XSS פוטנציאלי דרך פלט LLM שנשמר ב-`ncr_ai`.
+**שיטה**: בדיקה צולבת של 3 סוכנים עצמאיים — 2 מבצעים audit מקבילי; 1 מאמת ממצאים חלוקים. הסכמה מלאה על ממצאים 1-2; ממצא 3 זוהה רק על ידי B (A פספס); ממצא 4 זוהה רק על ידי A, ואומת כ-latent על ידי C.
+**אלטרנטיבות שנדחו**: (1) CSP strict-dynamic — שינוי גדול לכל ה-inline handlers. (2) trusted-types — דורש refactor. (3) החלפת כל ה-innerHTML ב-textContent — מאבדים עיצוב.
+
+---
+
+## 2026-04-21 — XSS דרך `id` לא-מוכר באינליין onclick + sink שני של LLM (Vuln #8)
+**החלטה**: (1) החלפת כל `onclick="fn('tbl','"+r.id+"')"` האינליין בתבנית `data-*` + `this.dataset.*`. (2) הוספת `esc()` לערכי attribute `data-vid/data-did/data-pid` (עצירת attribute break-out). (3) `esc()` על הטקסט המוחזר מה-LLM ב-`analyzeOne()` (שורה 2566) + על טקסטי שגיאה של API/Parse/Network (2564/2565/2567).
+**סיבה**: מ-Vuln #7 עובד anonymous יכול `INSERT` לטבלאות `near_miss`/`rounds`/`equip_inspections`/`tr`. שדה `id` בקליינט נקבע לרוב מה-DB, אבל הכנסה ישירה דרך REST API מאפשרת לתוקף לשתול `id` כ-`x');alert(1);//` → אחרי רינדור אצל ה-admin הקוד יורץ. האיסקיפ של ערך ה-`data-*` מונע גם שבירת attribute עם `"`. התיקון ב-LLM sink משלים את `analyzeAll` שכבר תוקן ב-Vuln #4.
+**אלטרנטיבות שנדחו**: (1) `CSP strict-dynamic` — דורש שינוי גדול של ה-inline handlers בכל הקובץ. (2) `textContent` במקום `innerHTML` לתוצאת LLM — מאבדים שבירות שורה/עיצוב. (3) UUID enforcement בצד DB בלבד — לא משנה שיש עדיין XSS דרך שדות אחרים בעתיד.
+
+---
+
+## 2026-04-21 — הפרדת הרשאות admin/emp ב-RLS (Vuln #7)
+**החלטה**: החלפת ה-policy היחיד `authenticated_all` (מ-Vuln #2) בשני policies מופרדים על כל 22 הטבלאות:
+1. `admin_all` — FOR ALL, רק כשה-JWT claim `is_anonymous` הוא FALSE או חסר (כלומר email sign-in בלבד).
+2. `emp_insert` על 4 טבלאות בלבד (`near_miss`, `rounds`, `equip_inspections`, `tr`) — INSERT only, לכל `authenticated` (כולל anonymous).
+Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דבר, ולא יכולים INSERT לטבלאות מעבר לארבע. גם הסרתי את `sbSync()` מתזרים ה-startup של emp mode — הוא היה מחזיר [] לכל הטבלאות (אין SELECT) ועלול היה למחוק localStorage מקומי.
+**סיבה**: לפני השינוי, עובד שטח שנכנס עם "דיווח מהיר" קיבל session anonymous עם הרשאות מלאות ל-DB דרך ה-policy הפתוח. מהקונסול יכל למחוק NCRs, לערוך סיכוני סביבה, לראות הכל. ה-admin login שנוסף ב-Vuln #6 היה רק מחסום UI.
+**בדיקה נדרשת לאחר deploy**: אדמין עדיין רואה ועורך הכל; עובד יכול לשלוח 4 סוגי דיווחים; ניסיון של emp לגשת ל-`/rest/v1/ncr` מה-DevTools מחזיר []/403.
+**אלטרנטיבות שנדחו**: (1) created_by + row-level ownership — דורש migration לכל הטבלאות. (2) שני anon keys שונים (emp/admin) — Supabase לא תומך. (3) פונקציית RPC מתווכת — overkill כשיש JWT claim מובנה.
+
+---
+
 ## 2026-04-21 — החלפת סיסמה קשיחה ב-Supabase Auth (Vuln #6)
 **החלטה**: הסרת `PW='Medwp123'` מהקוד. `doLogin()` מתחבר דרך `supabase.auth.signInWithPassword({email:'admin@tfugen.local', password})`. דגל `_isAdmin` in-memory מחליף את `sessionStorage[SK]===PW`. מצב עובד ממשיך לעבוד דרך `_sbAuth()` (anonymous sign-in) + `EMP_KEY` ב-localStorage. ה-session של Supabase נשמר אוטומטית ב-`localStorage` (`tfgn_sb_auth`).
 **סיבה**: הסיסמה היתה בקוד המקור — נצפית על ידי כל מי שפתח DevTools. עכשיו האימות אמיתי, עם session JWT שפג.
