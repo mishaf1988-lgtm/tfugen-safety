@@ -1617,7 +1617,7 @@ function eqiEdit(id){
     g('eqi-notes').value=r.notes||'';
     _eqiPhotoUrl=r.photo_url||null;
     var pa=g('eqi-photo-area');
-    if(pa)pa.innerHTML=r.photo_url?_photoPreview(r.photo_url,'_eqiClearPhoto'):_photoPickBtn('_eqiPickPhoto');
+    if(pa){pa.innerHTML=r.photo_url?_photoPreview(r.photo_url,'_eqiClearPhoto'):_photoPickBtn('_eqiPickPhoto');if(r.photo_url)_signifyDom(pa);}
   },30);
 }
 function svEqi(){
@@ -1728,11 +1728,11 @@ function rNm(){
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
-    var ph=r.photo_url?'<a href="'+escU(r.photo_url)+'" target="_blank"><img src="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
+    var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+r.id+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" onclick="printReport(\'near_miss\',\''+r.id+'\')" title="PDF">&#128424;</button>';
     return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+(r.area?esc(r.area):'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+r.id+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
-  }).join('');
+  }).join('');_signifyDom(tb);
 }
 function svNm(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
@@ -1949,13 +1949,13 @@ function showView(tbl,id){
   });
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   if(pUrl){
-    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a href="'+escU(pUrl)+'" target="_blank"><img src="'+escU(pUrl)+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
+    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a data-sign="'+escU(pUrl)+'" target="_blank"><img data-sign="'+escU(pUrl)+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
   }
   if(rec.file_url){
     var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
-    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a href="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
+    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
   }
-  if(body)body.innerHTML=html;
+  if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
 }
 
@@ -1971,9 +1971,12 @@ function printReport(tbl,id){
   var cfg=VIEW_CONFIG[tbl];if(!cfg){toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05d3\u05e4\u05d9\u05e1');return;}
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var pUrlRaw=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
+  _sign(pUrlRaw,function(signedPhoto){_sign(rec.file_url,function(signedFile){_printReportDo(tbl,id,cfg,rec,signedPhoto,signedFile);});});
+}
+function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
   var ref=_reportRef(tbl,rec);
   var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
-  var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   var rows='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
@@ -1983,7 +1986,7 @@ function printReport(tbl,id){
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))val=fd(val);
     rows+='<tr><th>'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
   });
-  var fileBlock=rec.file_url?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+rec.file_url+'">'+rec.file_url.split('/').pop().split('?')[0]+'</a></div>':'';
+  var fileBlock=rec.file_url?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+(fileSigned||'')+'">'+esc(rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
   var photoBlock=pUrl?'<div class="photo"><img src="'+pUrl+'" alt="photo"></div>':'';
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
@@ -2594,6 +2597,29 @@ function _uploadErr(status,bodyText){
   try{console.error('[upload]',status,bodyText,'bucket=',_PHOTO_BUCKET);}catch(e){}
   toast('\u05d4\u05e2\u05dc\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+_uploadErrMsg(status));
 }
+var _signCache={};
+function _sign(u,cb){
+  if(!u){cb('');return;}
+  if(/^data:/i.test(u)){cb(u);return;}
+  var m=String(u).match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/]+)\/([^?]+)/);
+  if(!m){cb(u);return;}
+  var bucket=m[1],path=m[2],key=bucket+'/'+path,c=_signCache[key];
+  if(c&&c.exp>Date.now()){cb(c.url);return;}
+  _sbAuth().then(function(){
+    if(!_sbToken)throw new Error('no session');
+    return fetch(SBU+'/storage/v1/object/sign/'+bucket+'/'+path,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});
+  }).then(function(r){return r&&r.ok?r.json():null;}).then(function(d){
+    if(d&&d.signedURL){var s=SBU+'/storage/v1'+d.signedURL;_signCache[key]={url:s,exp:Date.now()+55*60*1000};cb(s);}
+    else cb('');
+  }).catch(function(){cb('');});
+}
+function _signifyDom(root){
+  var els=(root||document).querySelectorAll('[data-sign]');
+  Array.prototype.forEach.call(els,function(el){
+    var u=el.getAttribute('data-sign');el.removeAttribute('data-sign');
+    _sign(u,function(s){if(!s)return;var a=el.tagName==='IMG'?'src':'href';el.setAttribute(a,s);});
+  });
+}
 function _fileUpload(file,prefix,cb){
   var isImg=/^image\//i.test(file.type);
   var fname=prefix+'-'+Date.now()+(isImg?'.jpg':('-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')));
@@ -2601,7 +2627,8 @@ function _fileUpload(file,prefix,cb){
   var pubUrl=SBU+'/storage/v1/object/public/'+_PHOTO_BUCKET+'/'+fname;
   function doUpload(body,ct){
     _sbAuth().then(function(){
-      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':ct,'x-upsert':'true'},body:body});
+      if(!_sbToken)throw new Error('no session');
+      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'x-upsert':'true'},body:body});
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
@@ -2617,9 +2644,9 @@ function _attachRender(areaId,url,fname){
   var area=g(areaId);if(!area)return;
   var isImg=url&&/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
   var preview=isImg
-    ?'<a href="'+url+'" target="_blank"><img src="'+url+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
-    :'<a href="'+url+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname||'\u05e7\u05d5\u05d1\u05e5')+'</a>';
-  area.innerHTML=preview+'<br><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="_attachClear(\''+areaId+'\')">\u05d4\u05e1\u05e8</button>';
+    ?'<a data-sign="'+escU(url)+'" target="_blank"><img data-sign="'+escU(url)+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
+    :'<a data-sign="'+escU(url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname?esc(fname):'\u05e7\u05d5\u05d1\u05e5')+'</a>';
+  area.innerHTML=preview+'<br><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="_attachClear(\''+areaId+'\')">\u05d4\u05e1\u05e8</button>';_signifyDom(area);
 }
 
 function _attachPick(areaId,prefix){
@@ -2660,8 +2687,8 @@ function _eqiPickPhoto(){_attachPick('eqi-photo-area','eqi');}
 function _eqiClearPhoto(){_eqiPhotoUrl=null;_attachClear('eqi-photo-area');}
 function _photoPreview(src,clearFn){
   var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(src)||src.startsWith('data:image');
-  return isImg?'<a href="'+src+'" target="_blank"><img src="'+src+'" style="max-width:100%;max-height:160px;border-radius:8px;display:block"></a><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>'
-    :'<a href="'+src+'" target="_blank" style="font-size:12px">&#128196; \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</a><button class="btn btn-d btn-sm" style="margin-right:8px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>';
+  return isImg?'<a data-sign="'+escU(src)+'" target="_blank"><img data-sign="'+escU(src)+'" style="max-width:100%;max-height:160px;border-radius:8px;display:block"></a><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>'
+    :'<a data-sign="'+escU(src)+'" target="_blank" style="font-size:12px">&#128196; \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</a><button class="btn btn-d btn-sm" style="margin-right:8px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>';
 }
 function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style="width:100%" onclick="'+fn+'()">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d1\u05e5</button>';}
 </script>
