@@ -1596,7 +1596,7 @@ function rEqi(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    var edit='<button class="btn btn-d btn-sm" data-eid="'+r.id+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
+    var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(r.loc?esc(r.loc):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
@@ -1858,7 +1858,7 @@ function rInc(){
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
   if(!DB.tr.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+t.w+'</strong></td><td>'+t.n+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+esc(t.w)+'</strong></td><td>'+esc(t.n)+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rRsk(){
   var tb=g('tb-rsk');if(!tb)return;
@@ -1986,8 +1986,10 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))val=fd(val);
     rows+='<tr><th>'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
   });
-  var fileBlock=rec.file_url?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+(fileSigned||'')+'">'+esc(rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
-  var photoBlock=pUrl?'<div class="photo"><img src="'+pUrl+'" alt="photo"></div>':'';
+  var fileSafe=escU(fileSigned||'');
+  var photoSafe=escU(pUrl||'');
+  var fileBlock=rec.file_url&&fileSafe?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+fileSafe+'">'+esc(rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
+  var photoBlock=photoSafe?'<div class="photo"><img src="'+photoSafe+'" alt="photo"></div>':'';
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
   var logoImg=logoSrc?'<img class="doc-logo" src="'+logoSrc+'" alt="TFUGEN">':'<span style="font-size:28px;font-weight:900;color:#cc1f1f">TFUGEN</span>';
@@ -2401,13 +2403,13 @@ function _ncrRender(){
   var h='';
   _nad.forEach(function(n){
     var pc=_gpc(n.p),sc=_gsc(n.s),an=_naf[n.id];
-    h+='<div onclick="_ncrSel(\''+n.id+'\')" style="background:'+pc.bg+';border-right:3px solid '+pc.b+';border-radius:7px;padding:9px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:10px">';
-    h+='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:#4a7aaa">'+(n.num||'')+'</div>';
-    h+='<div style="font-size:12px;color:#ddeeff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(n.d||'')+'</div>';
-    h+='<div style="font-size:10px;color:#5a7a9a">'+(n.a||'')+(n.o?' - '+n.o:'')+'</div></div>';
-    h+='<div style="display:flex;gap:4px"><span style="background:'+sc+'22;border:1px solid '+sc+'55;border-radius:20px;padding:1px 7px;font-size:9px;color:'+sc+'">'+(n.s||'')+'</span>';
-    h+='<span style="background:'+pc.c+'22;border:1px solid '+pc.c+'55;border-radius:20px;padding:1px 7px;font-size:9px;color:'+pc.c+'">'+(n.p||'')+'</span>';
-    if(an&&an.risk)h+='<span style="font-size:9px;color:#4a9adf">&#10003;AI'+(an.version?' v'+an.version:'')+'</span>';
+    h+='<div data-nid="'+esc(n.id)+'" onclick="_ncrSel(this.dataset.nid)" style="background:'+pc.bg+';border-right:3px solid '+pc.b+';border-radius:7px;padding:9px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:10px">';
+    h+='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:#4a7aaa">'+esc(n.num||'')+'</div>';
+    h+='<div style="font-size:12px;color:#ddeeff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.d||'')+'</div>';
+    h+='<div style="font-size:10px;color:#5a7a9a">'+esc(n.a||'')+esc(n.o?' - '+n.o:'')+'</div></div>';
+    h+='<div style="display:flex;gap:4px"><span style="background:'+sc+'22;border:1px solid '+sc+'55;border-radius:20px;padding:1px 7px;font-size:9px;color:'+sc+'">'+esc(n.s||'')+'</span>';
+    h+='<span style="background:'+pc.c+'22;border:1px solid '+pc.c+'55;border-radius:20px;padding:1px 7px;font-size:9px;color:'+pc.c+'">'+esc(n.p||'')+'</span>';
+    if(an&&an.risk)h+='<span style="font-size:9px;color:#4a9adf">&#10003;AI'+(an.version?' v'+esc(an.version):'')+'</span>';
     h+='</div></div>';
   });
   L.innerHTML=h;
@@ -2417,16 +2419,16 @@ window._ncrSel=function(id){
   var P=document.getElementById('ncr-agent-panel');P.style.display='block';
   var pc=_gpc(n.p),sc=_gsc(n.s);
   var h='<div style="background:#111416;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;margin-bottom:8px">';
-  h+='<div style="font-size:10px;color:#4a7aaa">'+(n.num||'')+'</div>';
-  h+='<div style="font-size:13px;font-weight:700;color:#fff">'+(n.d||'')+'</div>';
+  h+='<div style="font-size:10px;color:#4a7aaa">'+esc(n.num||'')+'</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#fff">'+esc(n.d||'')+'</div>';
   h+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">';
-  if(n.a)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+n.a+'</span>';
-  if(n.o)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+n.o+'</span>';
-  h+='</div>'+(n.c?'<div style="font-size:11px;color:#7aaa7a;margin-top:5px">'+n.c+'</div>':'')+'</div>';
+  if(n.a)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+esc(n.a)+'</span>';
+  if(n.o)h+='<span style="background:#1a2a3a;border-radius:4px;padding:2px 6px;font-size:9px;color:#7a9ab8">'+esc(n.o)+'</span>';
+  h+='</div>'+(n.c?'<div style="font-size:11px;color:#7aaa7a;margin-top:5px">'+esc(n.c)+'</div>':'')+'</div>';
   var an=_naf[id];
   if(an&&!an.err)h+=_ncrFmt(an,pc,n);
-  else if(!an)h+='<button onclick="_ncrAI(\''+id+'\')" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
-  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+((an&&an.msg)||'unknown')+'</div>';
+  else if(!an)h+='<button data-nid="'+esc(id)+'" onclick="_ncrAI(this.dataset.nid)" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
+  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+esc((an&&an.msg)||'unknown')+'</div>';
   P.innerHTML=h;
 };
 function _ncrFmt(an,pc,n){
@@ -2437,12 +2439,12 @@ function _ncrFmt(an,pc,n){
   var secs=[{i:'&#128269;',col:'#4a9adf',v:an.root_cause},{i:'&#9889;',col:'#ff6600',v:an.immediate_action},{i:'&#128737;',col:'#9a4adf',v:an.preventive}];
   secs.forEach(function(s){if(!s.v)return;
     h+='<div style="background:#111416;border-right:3px solid '+s.col+';border-radius:8px;padding:9px 12px;margin-bottom:7px">';
-    h+='<div style="font-size:11px;color:'+s.col+';">'+s.i+'</div><div style="font-size:12px;color:#aaccee;line-height:1.6">'+s.v+'</div></div>';
+    h+='<div style="font-size:11px;color:'+s.col+';">'+s.i+'</div><div style="font-size:12px;color:#aaccee;line-height:1.6">'+esc(s.v)+'</div></div>';
   });
   if(an.corrective_actions&&an.corrective_actions.length){
     h+='<div style="background:#0d1a0d;border-right:3px solid #00cc55;border-radius:8px;padding:9px 12px;margin-bottom:7px">';
     h+='<div style="color:#00cc55;margin-bottom:5px">CAPA</div>';
-    an.corrective_actions.forEach(function(a,i){h+='<div style="font-size:12px;color:#aaccaa;margin-bottom:4px">'+(i+1)+'. '+a+'</div>';});
+    an.corrective_actions.forEach(function(a,i){h+='<div style="font-size:12px;color:#aaccaa;margin-bottom:4px">'+(i+1)+'. '+esc(a)+'</div>';});
     h+='</div>';
   }
   if(n){
@@ -2451,7 +2453,7 @@ function _ncrFmt(an,pc,n){
     if(applied){
       h+='<div style="background:#0d2a0d;border:1px solid #00cc55;border-radius:8px;color:#00cc55;padding:10px;font-size:12px;font-weight:700;text-align:center;margin-top:8px">&#10003; \u05d4\u05d5\u05d7\u05dc \u05e2\u05dc \u05d4-NCR (v'+esc(an.version||1)+')</div>';
     }else{
-      h+='<button onclick="_ncrApply(\''+n.id+'\')" style="width:100%;background:#0d2a0d;border:1px solid #00cc55;border-radius:8px;color:#00cc55;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">&#10003; \u05d4\u05d7\u05dc \u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d4-NCR</button>';
+      h+='<button data-nid="'+esc(n.id)+'" onclick="_ncrApply(this.dataset.nid)" style="width:100%;background:#0d2a0d;border:1px solid #00cc55;border-radius:8px;color:#00cc55;padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">&#10003; \u05d4\u05d7\u05dc \u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d4-NCR</button>';
     }
   }
   return h;
@@ -2625,7 +2627,7 @@ function _sign(u,cb){
   if(!u){cb('');return;}
   if(/^data:/i.test(u)){cb(u);return;}
   var m=String(u).match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/]+)\/([^?]+)/);
-  if(!m){cb(u);return;}
+  if(!m){cb('');return;}
   var bucket=m[1],path=m[2],key=bucket+'/'+path,c=_signCache[key];
   if(c&&c.exp>Date.now()){cb(c.url);return;}
   _sbAuth().then(function(){
