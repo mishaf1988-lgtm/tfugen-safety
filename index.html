@@ -119,10 +119,10 @@ tr:last-child td{border-bottom:none}
 .cap-fab:active{transform:scale(.95)}
 body.emp-mode .cap-fab{display:none}
 /* fullscreen override — applied by capOpen after openModal runs */
-.modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;border-radius:0!important;margin:0!important;padding:16px!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
+.modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
-.modal.cap-fullscreen .close-btn{width:42px;height:42px;font-size:22px}
-.modal.cap-fullscreen .modal-footer{padding-top:12px;margin-top:auto;border-top:1px solid var(--border);background:#fff;position:sticky;bottom:-1px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;padding-bottom:10px;z-index:2;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.modal.cap-fullscreen .close-btn{width:42px;height:42px;font-size:22px;z-index:3}
+.modal.cap-fullscreen .modal-footer{padding-top:12px;margin-top:auto;border-top:1px solid var(--border);background:#fff;position:sticky;bottom:-1px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;padding-bottom:calc(14px + env(safe-area-inset-bottom));z-index:2;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .modal.cap-fullscreen .modal-footer .btn{min-height:44px;padding:10px 16px;font-size:14px}
 .cap-mode-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
 .cap-mode-btn{padding:22px 8px;border:2px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:inherit;min-height:110px}
