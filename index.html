@@ -627,22 +627,63 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <!-- SMART CAPTURE MODAL -->
 <div class="overlay" id="ov-cap" onclick="closeModal('m-cap')"></div>
-<div class="modal" id="m-cap" style="display:none;max-width:460px">
+<div class="modal" id="m-cap" style="display:none;max-width:480px">
   <button class="close-btn" onclick="closeModal('m-cap')">&#10005;</button>
   <div class="modal-title">&#10024; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;</div>
-  <div style="font-size:12px;color:var(--t3);margin-bottom:4px">&#1514;&#1488;&#1512; &#1489;&#1511;&#1493;&#1500;, &#1510;&#1500;&#1501; &#1514;&#1502;&#1493;&#1504;&#1492;, &#1488;&#1493; &#1492;&#1511;&#1500;&#1491; &#1502;&#1492; &#1513;&#1511;&#1512;&#1492;. ה-AI &#1497;&#1494;&#1492;&#1492; &#1488;&#1514; &#1505;&#1493;&#1490; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495; &#1493;&#1497;&#1502;&#1500;&#1488; &#1488;&#1514; &#1492;&#1496;&#1493;&#1508;&#1505; &#1492;&#1504;&#1499;&#1493;&#1503;.</div>
-  <div class="cap-mode-btns">
-    <button type="button" class="cap-mode-btn" id="cap-m-voice" onclick="capStartVoice()"><span class="ic">&#127908;</span><span>&#1491;&#1489;&#1512;</span></button>
-    <button type="button" class="cap-mode-btn" id="cap-m-photo" onclick="capStartPhoto()"><span class="ic">&#128247;</span><span>&#1510;&#1500;&#1501;/&#1493;&#1497;&#1491;&#1488;&#1493;</span></button>
-    <button type="button" class="cap-mode-btn" id="cap-m-text" onclick="capShowText()"><span class="ic">&#9997;</span><span>&#1492;&#1511;&#1500;&#1491;</span></button>
+
+  <!-- INPUT STAGE -->
+  <div id="cap-stage-input">
+    <div style="font-size:12px;color:var(--t3);margin-bottom:4px">&#1514;&#1488;&#1512; &#1489;&#1511;&#1493;&#1500;, &#1510;&#1500;&#1501; &#1514;&#1502;&#1493;&#1504;&#1492;/&#1493;&#1497;&#1491;&#1488;&#1493;, &#1488;&#1493; &#1492;&#1511;&#1500;&#1491; &#1502;&#1492; &#1513;&#1511;&#1512;&#1492;. ה-AI &#1497;&#1494;&#1492;&#1492; &#1488;&#1514; &#1505;&#1493;&#1490; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;.</div>
+    <div class="cap-mode-btns">
+      <button type="button" class="cap-mode-btn" id="cap-m-voice" onclick="capStartVoice()"><span class="ic">&#127908;</span><span>&#1491;&#1489;&#1512;</span></button>
+      <button type="button" class="cap-mode-btn" id="cap-m-photo" onclick="capStartPhoto()"><span class="ic">&#128247;</span><span>&#1510;&#1500;&#1501;/&#1493;&#1497;&#1491;&#1488;&#1493;</span></button>
+      <button type="button" class="cap-mode-btn" id="cap-m-text" onclick="capShowText()"><span class="ic">&#9997;</span><span>&#1492;&#1511;&#1500;&#1491;</span></button>
+    </div>
+    <div id="cap-status" style="padding:6px 0;text-align:center;font-size:12px;color:var(--t3);min-height:20px"></div>
+    <textarea id="cap-transcript" placeholder="תיאור האירוע..." rows="4" style="display:none;width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+    <img id="cap-photo-preview" alt="" style="display:none;max-width:100%;max-height:220px;border-radius:10px;margin-top:8px">
+    <input type="file" id="cap-photo-inp" accept="image/*,video/*" style="display:none">
   </div>
-  <div id="cap-status" style="padding:6px 0;text-align:center;font-size:12px;color:var(--t3);min-height:20px"></div>
-  <textarea id="cap-transcript" placeholder="תיאור האירוע..." rows="4" style="display:none;width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
-  <img id="cap-photo-preview" alt="" style="display:none;max-width:100%;max-height:220px;border-radius:10px;margin-top:8px">
-  <input type="file" id="cap-photo-inp" accept="image/*,video/*" style="display:none">
-  <div id="cap-result" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #22c55e;border-radius:10px;font-size:13px;line-height:1.6"></div>
+
+  <!-- REVIEW STAGE (after AI analysis) -->
+  <div id="cap-stage-review" style="display:none">
+    <div id="cap-rev-badge" style="display:flex;align-items:center;gap:10px;padding:12px;background:#f0fdf4;border:2px solid #22c55e;border-radius:12px;margin-bottom:12px">
+      <div style="font-size:28px">&#10024;</div>
+      <div style="flex:1">
+        <div style="font-size:11px;color:var(--t3)">&#1494;&#1493;&#1492;&#1492;</div>
+        <div id="cap-rev-type" style="font-size:16px;font-weight:700"></div>
+      </div>
+      <div id="cap-rev-confidence" style="font-size:11px;color:var(--t3);text-align:left"></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:var(--t3);font-weight:700">&#1514;&#1497;&#1488;&#1493;&#1512; (&#1504;&#1497;&#1514;&#1503; &#1500;&#1506;&#1512;&#1497;&#1499;&#1492;)</label>
+      <textarea id="cap-rev-desc" rows="3" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;margin-top:3px"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:12px">
+      <div style="padding:8px;background:#f8fafc;border-radius:6px"><div style="color:var(--t3);font-size:10px">&#1488;&#1494;&#1493;&#1512;</div><div id="cap-rev-area" style="font-weight:700"></div></div>
+      <div style="padding:8px;background:#f8fafc;border-radius:6px"><div style="color:var(--t3);font-size:10px">&#1495;&#1493;&#1502;&#1512;&#1492;</div><div id="cap-rev-sev" style="font-weight:700"></div></div>
+      <div style="padding:8px;background:#f8fafc;border-radius:6px"><div style="color:var(--t3);font-size:10px">&#1502;&#1491;&#1493;&#1493;&#1495;</div><div id="cap-rev-rep" style="font-weight:700"></div></div>
+      <div style="padding:8px;background:#f8fafc;border-radius:6px"><div style="color:var(--t3);font-size:10px">&#1514;&#1488;&#1512;&#1497;&#1498; / &#1513;&#1506;&#1492;</div><div id="cap-rev-date" style="font-weight:700"></div></div>
+    </div>
+    <div id="cap-rev-action-box" style="margin-bottom:10px;padding:10px;background:#fef3c7;border-right:3px solid #f59e0b;border-radius:8px">
+      <div style="font-size:10px;color:#92400e;font-weight:700;margin-bottom:2px">&#128161; &#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1493;&#1510;&#1506;&#1514;</div>
+      <div id="cap-rev-action" style="font-size:13px;line-height:1.5"></div>
+    </div>
+    <details style="margin-bottom:12px">
+      <summary style="font-size:11px;color:var(--t3);cursor:pointer;padding:4px 0">&#9432; &#1492;&#1506;&#1512;&#1493;&#1514; / &#1508;&#1512;&#1513;&#1504;&#1493;&#1497;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1514;</summary>
+      <div id="cap-rev-notes" style="padding:8px;font-size:12px;color:var(--t2);background:#f8fafc;border-radius:6px;margin-top:4px;line-height:1.5"></div>
+    </details>
+    <div style="padding:10px;background:#eff6ff;border:1px dashed #93c5fd;border-radius:8px;margin-bottom:4px">
+      <label style="font-size:11px;color:#1e40af;font-weight:700;display:block;margin-bottom:4px">&#128172; &#1492;&#1508;&#1507; &#1488;&#1493; &#1491;&#1497;&#1497;&#1511; (&#1488;&#1493;&#1508;&#1510;&#1497;&#1493;&#1504;&#1500;&#1497;)</label>
+      <input id="cap-rev-clarify" type="text" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1491;&#1500;&#1497;&#1508;&#1492; &#1502;&#1510;&#1497;&#1504;&#1493;&#1512;" style="width:100%;padding:8px;border:1px solid #93c5fd;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box" oninput="capOnClarifyChange()">
+      <div style="font-size:10px;color:var(--t3);margin-top:3px">הוסף פרטים שחסרו בניתוח — ולחץ "נתח שוב" לעדכן את הזיהוי</div>
+    </div>
+  </div>
+
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-s" id="cap-refine-btn" onclick="capRefine()" style="display:none;background:#fef3c7;color:#92400e">&#128260; &#1504;&#1514;&#1495; &#1513;&#1493;&#1489;</button>
+    <button class="btn btn-p" id="cap-confirm-btn" onclick="capConfirm()" style="display:none">&#9989; &#1492;&#1502;&#1513;&#1498; &#1500;&#1496;&#1493;&#1508;&#1505;</button>
     <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" disabled>&#128302; &#1513;&#1500;&#1495; &#1500;&#1504;&#1497;&#1514;&#1493;&#1495; AI</button>
   </div>
 </div>
@@ -2854,20 +2895,28 @@ window.ncrAgentAnalyzeAll=function(){
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
 /* ---- Smart Capture: voice + photo + text -> AI triage -> pre-filled modal ---- */
-var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null, _capVideoFrames=null;
+var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null, _capVideoFrames=null, _capAiResult=null;
 var _capRec=null, _capRecActive=false;
 
 function capOpen(){
-  _capMode=null; _capTranscript=''; _capPhotoB64=null; _capPhotoUrl=null; _capVideoFrames=null;
+  _capMode=null; _capTranscript=''; _capPhotoB64=null; _capPhotoUrl=null; _capVideoFrames=null; _capAiResult=null;
   var ta=g('cap-transcript'); if(ta){ta.value=''; ta.style.display='none';}
   var pp=g('cap-photo-preview'); if(pp){pp.src=''; pp.style.display='none';}
   g('cap-status').textContent='';
-  var res=g('cap-result'); if(res){res.style.display='none'; res.innerHTML='';}
-  g('cap-submit').disabled=true;
+  _capShowStage('input');
+  g('cap-submit').style.display=''; g('cap-submit').disabled=true;
+  var cb=g('cap-confirm-btn'); if(cb)cb.style.display='none';
+  var rb=g('cap-refine-btn'); if(rb)rb.style.display='none';
   ['cap-m-voice','cap-m-photo','cap-m-text'].forEach(function(id){var el=g(id); if(el)el.className='cap-mode-btn';});
   try{if(_capRec){_capRec.stop();}}catch(e){}
   _capRecActive=false;
   openModal('m-cap');
+}
+
+function _capShowStage(which){
+  var inp=g('cap-stage-input'), rev=g('cap-stage-review');
+  if(inp) inp.style.display=(which==='input'?'':'none');
+  if(rev) rev.style.display=(which==='review'?'':'none');
 }
 
 function capStartVoice(){
@@ -3068,47 +3117,108 @@ function capSubmit(){
   var text=_capTranscript || ((g('cap-transcript')||{}).value||'').trim();
   var hasPhoto=!!_capPhotoB64;
   if(!text && !hasPhoto && !(_capVideoFrames&&_capVideoFrames.length)){ alert('\u05d7\u05e1\u05e8 \u05e7\u05dc\u05d8 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7'); return; }
-  g('cap-submit').disabled=true;
-  g('cap-status').textContent='🤖 AI \u05de\u05e0\u05ea\u05d7...';
+  _capAnalyze(text, false);
+}
+
+function capRefine(){
+  var clar=((g('cap-rev-clarify')||{}).value||'').trim();
+  if(!clar){ alert('\u05d4\u05d5\u05e1\u05e3 \u05d4\u05d1\u05d4\u05e8\u05d4 \u05dc\u05e4\u05e0\u05d9 \u05e0\u05d9\u05ea\u05d5\u05d7 \u05d7\u05d5\u05d6\u05e8'); return; }
+  var combined = clar + (_capTranscript ? (' | ' + _capTranscript) : '');
+  _capAnalyze(combined, true);
+}
+
+function capOnClarifyChange(){
+  var el=g('cap-refine-btn'); if(!el)return;
+  var v=((g('cap-rev-clarify')||{}).value||'').trim();
+  el.style.opacity = v ? '1' : '0.5';
+}
+
+function _capAnalyze(text, isRefine){
+  text = text || '';
+  g('cap-submit').disabled = true;
+  var refineBtn = g('cap-refine-btn'); if(refineBtn) refineBtn.disabled = true;
+  g('cap-status').textContent = isRefine ? '🔄 \u05de\u05e0\u05ea\u05d7 \u05e9\u05d5\u05d1 \u05e2\u05dd \u05d4\u05d4\u05d1\u05d4\u05e8\u05d4...' : '🤖 AI \u05de\u05e0\u05ea\u05d7...';
+  var hasPhoto = !!_capPhotoB64;
   var userContent;
   var framesList = (_capVideoFrames && _capVideoFrames.length) ? _capVideoFrames : (hasPhoto ? [_capPhotoB64] : null);
   if(framesList){
     userContent = framesList.map(function(f){
       return {type:'image',source:{type:'base64',media_type:'image/jpeg',data:f.split(',')[1]}};
     });
-    var promptText = CAP_PROMPT + (framesList.length>1 ? ('\n\nThese are '+framesList.length+' frames from a short video — describe what is consistent across them.'):'') + (text?('\n\nAdditional context from user: '+text):'');
+    var promptText = CAP_PROMPT + (framesList.length>1 ? ('\n\nThese are '+framesList.length+' frames from a short video — describe what is CONSISTENT across them.'):'') + (text?('\n\nUser context: '+text):'');
     userContent.push({type:'text', text: promptText});
   }else{
     userContent = CAP_PROMPT + '\n\nUser input: ' + text;
   }
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:_AI_MODEL,max_tokens:700,messages:[{role:'user',content:userContent}]})
+    body:JSON.stringify({model:_AI_MODEL,max_tokens:800,messages:[{role:'user',content:userContent}]})
   })
   .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,txt:t};});})
   .then(function(res){
     if(!res.ok){
       g('cap-status').textContent='API '+res.status+': '+((res.txt||'').substring(0,100));
-      g('cap-submit').disabled=false;
-      return;
+      g('cap-submit').disabled=false; if(refineBtn) refineBtn.disabled=false; return;
     }
     var d; try{d=JSON.parse(res.txt);}catch(e){
       g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e4\u05d9\u05e2\u05e0\u05d5\u05d7';
-      g('cap-submit').disabled=false;
-      return;
+      g('cap-submit').disabled=false; if(refineBtn) refineBtn.disabled=false; return;
     }
     var txt=(d.content && d.content[0] && d.content[0].text) || '';
     var j; try{ j=JSON.parse(txt.replace(/```json|```/g,'').trim()); }catch(e){
       g('cap-status').textContent='\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4 \u05de\u05d4-AI';
-      var rr=g('cap-result'); if(rr){rr.style.display=''; rr.textContent=txt.substring(0,400);}
-      g('cap-submit').disabled=false;
-      return;
+      g('cap-submit').disabled=false; if(refineBtn) refineBtn.disabled=false; return;
     }
-    capDispatch(j);
+    _capAiResult = j;
+    capShowReview(j);
+    if(refineBtn) refineBtn.disabled=false;
   })
   .catch(function(err){
     g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err);
-    g('cap-submit').disabled=false;
+    g('cap-submit').disabled=false; if(refineBtn) refineBtn.disabled=false;
   });
+}
+
+function capShowReview(j){
+  _capShowStage('review');
+  g('cap-submit').style.display='none';
+  g('cap-confirm-btn').style.display='';
+  g('cap-refine-btn').style.display='';
+  g('cap-status').textContent='';
+  var typeEl=g('cap-rev-type'); if(typeEl) typeEl.textContent = capTypeLabel(j.type||'other');
+  var confEl=g('cap-rev-confidence');
+  if(confEl){
+    var cc = typeof j.confidence==='number' ? j.confidence : 0;
+    var pct = Math.round(cc*100);
+    var col = pct>=75 ? '#16a34a' : (pct>=50 ? '#f59e0b' : '#dc2626');
+    confEl.innerHTML = '<span style="color:'+col+';font-weight:700">'+pct+'%</span><br>\u05d5\u05d3\u05d0\u05d5\u05ea';
+  }
+  var badge=g('cap-rev-badge');
+  if(badge){
+    var cc2 = typeof j.confidence==='number' ? j.confidence : 0;
+    if(cc2<0.5){ badge.style.background='#fef3c7'; badge.style.borderColor='#f59e0b'; }
+    else if(cc2<0.75){ badge.style.background='#fff7ed'; badge.style.borderColor='#fb923c'; }
+    else{ badge.style.background='#f0fdf4'; badge.style.borderColor='#22c55e'; }
+  }
+  var descEl=g('cap-rev-desc'); if(descEl) descEl.value = j.description || '';
+  function _sTxt(id,v){var el=g(id); if(el)el.textContent = v || '—';}
+  _sTxt('cap-rev-area', j.area);
+  _sTxt('cap-rev-sev', j.severity);
+  _sTxt('cap-rev-rep', j.reporter);
+  _sTxt('cap-rev-date', (j.date||'') + (j.time?(' '+j.time):''));
+  _sTxt('cap-rev-action', j.suggested_action);
+  _sTxt('cap-rev-notes', j.notes || '\u05d0\u05d9\u05df \u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea');
+  var clar=g('cap-rev-clarify'); if(clar) clar.value='';
+  capOnClarifyChange();
+}
+
+function capConfirm(){
+  if(!_capAiResult){ alert('\u05dc\u05d0 \u05d6\u05de\u05d9\u05df'); return; }
+  var descEl=g('cap-rev-desc');
+  if(descEl){
+    var ed=(descEl.value||'').trim();
+    if(ed) _capAiResult.description = ed;
+  }
+  capDispatch(_capAiResult);
 }
 
 function capTypeLabel(t){
@@ -3121,52 +3231,43 @@ function capDispatch(j){
   var d=j.date||today, t=j.time||'', desc=j.description||'', area=j.area||'';
   var rep=j.reporter||'', sev=j.severity||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9', notes=j.notes||j.suggested_action||'';
   var sevNm={'\u05e7\u05d8\u05df':'\u05e7\u05d8\u05d9\u05df','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9','\u05d7\u05de\u05d5\u05e8':'\u05d7\u05de\u05d5\u05e8','\u05e7\u05e8\u05d9\u05d8\u05d9':'\u05d7\u05de\u05d5\u05e8'}[sev] || sev;
-  var res=g('cap-result');
-  if(res){
-    res.style.display='';
-    res.innerHTML='<div style="font-weight:700;margin-bottom:4px">✨ \u05d6\u05d5\u05d4\u05d4: '+esc(capTypeLabel(j.type))+'</div>'+
-      (desc?'<div>'+esc(desc)+'</div>':'')+
-      (j.suggested_action?'<div style="margin-top:6px;color:var(--t3);font-size:11px">💡 '+esc(j.suggested_action)+'</div>':'');
-  }
   function _setIf(id,v){var el=g(id); if(el)el.value=v||'';}
-  setTimeout(function(){
-    closeModal('m-cap');
-    switch(j.type){
-      case 'nm':
-        openModal('m-nm');
-        _setIf('nm-d',d); _setIf('nm-t',t); _setIf('nm-desc',desc); _setIf('nm-area',area);
-        _setIf('nm-rep',rep); _setIf('nm-sev',sevNm); _setIf('nm-notes',notes);
-        if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
-        break;
-      case 'inc':
-        openModal('m-inc');
-        _setIf('inc-dt',d+(t?'T'+t:'')); _setIf('inc-d',desc);
-        _setIf('inc-sv',sev==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'\u05d7\u05de\u05d5\u05e8':sev); _setIf('inc-l',area); _setIf('inc-r',rep||notes);
-        if(_capPhotoUrl) _attachUrls['inc-attach-area']=_capPhotoUrl;
-        break;
-      case 'ncr':
-        openModal('m-ncr');
-        _setIf('ncr-d',desc); _setIf('ncr-loc',area); _setIf('ncr-o',rep);
-        _setIf('ncr-notes',notes); _setIf('ncr-sd',d);
-        break;
-      case 'eqi':
-        openModal('m-eqi');
-        _setIf('eqi-n',desc); _setIf('eqi-loc',area); _setIf('eqi-notes',notes); _setIf('eqi-d',d);
-        if(_capPhotoUrl) _attachUrls['eqi-photo-area']=_capPhotoUrl;
-        break;
-      case 'ppe':
-        openModal('m-ppe'); _setIf('ppe-n',desc); _setIf('ppe-w',rep);
-        break;
-      case 'tr':
-        openModal('m-tr'); _setIf('tr-n',desc); _setIf('tr-w',rep); _setIf('tr-d',d);
-        break;
-      default:
-        openModal('m-nm');
-        _setIf('nm-d',d); _setIf('nm-desc',desc+(notes?(' — '+notes):'')); _setIf('nm-area',area); _setIf('nm-rep',rep);
-        if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
-    }
-    try{toast('✨ \u05d6\u05d5\u05d4\u05d4: '+capTypeLabel(j.type));}catch(e){}
-  },1000);
+  closeModal('m-cap');
+  switch(j.type){
+    case 'nm':
+      openModal('m-nm');
+      _setIf('nm-d',d); _setIf('nm-t',t); _setIf('nm-desc',desc); _setIf('nm-area',area);
+      _setIf('nm-rep',rep); _setIf('nm-sev',sevNm); _setIf('nm-notes',notes);
+      if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
+      break;
+    case 'inc':
+      openModal('m-inc');
+      _setIf('inc-dt',d+(t?'T'+t:'')); _setIf('inc-d',desc);
+      _setIf('inc-sv',sev==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'\u05d7\u05de\u05d5\u05e8':sev); _setIf('inc-l',area); _setIf('inc-r',rep||notes);
+      if(_capPhotoUrl) _attachUrls['inc-attach-area']=_capPhotoUrl;
+      break;
+    case 'ncr':
+      openModal('m-ncr');
+      _setIf('ncr-d',desc); _setIf('ncr-loc',area); _setIf('ncr-o',rep);
+      _setIf('ncr-notes',notes); _setIf('ncr-sd',d);
+      break;
+    case 'eqi':
+      openModal('m-eqi');
+      _setIf('eqi-n',desc); _setIf('eqi-loc',area); _setIf('eqi-notes',notes); _setIf('eqi-d',d);
+      if(_capPhotoUrl) _attachUrls['eqi-photo-area']=_capPhotoUrl;
+      break;
+    case 'ppe':
+      openModal('m-ppe'); _setIf('ppe-n',desc); _setIf('ppe-w',rep);
+      break;
+    case 'tr':
+      openModal('m-tr'); _setIf('tr-n',desc); _setIf('tr-w',rep); _setIf('tr-d',d);
+      break;
+    default:
+      openModal('m-nm');
+      _setIf('nm-d',d); _setIf('nm-desc',desc+(notes?(' — '+notes):'')); _setIf('nm-area',area); _setIf('nm-rep',rep);
+      if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
+  }
+  try{toast('✨ \u05d6\u05d5\u05d4\u05d4: '+capTypeLabel(j.type));}catch(e){}
 }
 console.log('Smart Capture ready');
 </script>
