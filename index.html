@@ -114,6 +114,18 @@ tr:last-child td{border-bottom:none}
 /* ---- FAB ---- */
 .fab{position:fixed;bottom:70px;left:14px;width:52px;height:52px;border-radius:50%;background:var(--red);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 4px 16px rgba(204,31,31,.4);display:none}
 
+/* ---- Smart Capture FAB + modal ---- */
+.cap-fab{position:fixed;bottom:78px;left:14px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4a9adf);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 20px rgba(124,58,237,.5);border:none;cursor:pointer;direction:ltr}
+.cap-fab:active{transform:scale(.95)}
+body.emp-mode .cap-fab{display:none}
+.cap-mode-btns{display:flex;gap:10px;margin:16px 0}
+.cap-mode-btn{flex:1;padding:18px 8px;border:2px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:8px;font-family:inherit}
+.cap-mode-btn:active{background:#f5f5f5}
+.cap-mode-btn .ic{font-size:28px}
+.cap-mode-btn.recording{border-color:#e11d48;background:#fff5f5;animation:cap-pulse 1.2s ease-in-out infinite}
+.cap-mode-btn.done{border-color:#22c55e;background:#f0fdf4}
+@keyframes cap-pulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,.4)}50%{box-shadow:0 0 0 8px rgba(225,29,72,0)}}
+
 /* ---- MODAL ---- */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .modal{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;max-height:90vh;overflow-y:auto;z-index:101;border-top:3px solid var(--red)}
@@ -610,6 +622,30 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 </div><!-- /main -->
+
+<button id="cap-fab" class="cap-fab" onclick="capOpen()" title="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;" aria-label="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;">&#10024;</button>
+
+<!-- SMART CAPTURE MODAL -->
+<div class="overlay" id="ov-cap" onclick="closeModal('m-cap')"></div>
+<div class="modal" id="m-cap" style="display:none;max-width:460px">
+  <button class="close-btn" onclick="closeModal('m-cap')">&#10005;</button>
+  <div class="modal-title">&#10024; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;</div>
+  <div style="font-size:12px;color:var(--t3);margin-bottom:4px">&#1514;&#1488;&#1512; &#1489;&#1511;&#1493;&#1500;, &#1510;&#1500;&#1501; &#1514;&#1502;&#1493;&#1504;&#1492;, &#1488;&#1493; &#1492;&#1511;&#1500;&#1491; &#1502;&#1492; &#1513;&#1511;&#1512;&#1492;. ה-AI &#1497;&#1494;&#1492;&#1492; &#1488;&#1514; &#1505;&#1493;&#1490; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495; &#1493;&#1497;&#1502;&#1500;&#1488; &#1488;&#1514; &#1492;&#1496;&#1493;&#1508;&#1505; &#1492;&#1504;&#1499;&#1493;&#1503;.</div>
+  <div class="cap-mode-btns">
+    <button type="button" class="cap-mode-btn" id="cap-m-voice" onclick="capStartVoice()"><span class="ic">&#127908;</span><span>&#1491;&#1489;&#1512;</span></button>
+    <button type="button" class="cap-mode-btn" id="cap-m-photo" onclick="capStartPhoto()"><span class="ic">&#128247;</span><span>&#1510;&#1500;&#1501;</span></button>
+    <button type="button" class="cap-mode-btn" id="cap-m-text" onclick="capShowText()"><span class="ic">&#9997;</span><span>&#1492;&#1511;&#1500;&#1491;</span></button>
+  </div>
+  <div id="cap-status" style="padding:6px 0;text-align:center;font-size:12px;color:var(--t3);min-height:20px"></div>
+  <textarea id="cap-transcript" placeholder="תיאור האירוע..." rows="4" style="display:none;width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+  <img id="cap-photo-preview" alt="" style="display:none;max-width:100%;max-height:220px;border-radius:10px;margin-top:8px">
+  <input type="file" id="cap-photo-inp" accept="image/*" style="display:none">
+  <div id="cap-result" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #22c55e;border-radius:10px;font-size:13px;line-height:1.6"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" disabled>&#128302; &#1513;&#1500;&#1495; &#1500;&#1504;&#1497;&#1514;&#1493;&#1495; AI</button>
+  </div>
+</div>
 
 <!-- BOTTOM NAV -->
 <nav class="bnav" id="bnav">
@@ -2816,6 +2852,234 @@ window.ncrAgentAnalyzeAll=function(){
   }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+esc(err&&err.message||String(err))+'</div>';});
 };
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
+
+/* ---- Smart Capture: voice + photo + text -> AI triage -> pre-filled modal ---- */
+var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null;
+var _capRec=null, _capRecActive=false;
+
+function capOpen(){
+  _capMode=null; _capTranscript=''; _capPhotoB64=null; _capPhotoUrl=null;
+  var ta=g('cap-transcript'); if(ta){ta.value=''; ta.style.display='none';}
+  var pp=g('cap-photo-preview'); if(pp){pp.src=''; pp.style.display='none';}
+  g('cap-status').textContent='';
+  var res=g('cap-result'); if(res){res.style.display='none'; res.innerHTML='';}
+  g('cap-submit').disabled=true;
+  ['cap-m-voice','cap-m-photo','cap-m-text'].forEach(function(id){var el=g(id); if(el)el.className='cap-mode-btn';});
+  try{if(_capRec){_capRec.stop();}}catch(e){}
+  _capRecActive=false;
+  openModal('m-cap');
+}
+
+function capStartVoice(){
+  _capMode='voice';
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    alert('\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05dc\u05d0 \u05ea\u05d5\u05de\u05da \u05d1\u05d6\u05d9\u05d4\u05d5\u05d9 \u05e7\u05d5\u05dc\u05d9. \u05e0\u05e1\u05d4 \u05d3\u05e4\u05d3\u05e4\u05df \u05d0\u05d7\u05e8 \u05d0\u05d5 "\u05d4\u05e7\u05dc\u05d3".');
+    return;
+  }
+  if(_capRecActive){ try{_capRec.stop();}catch(e){} return; }
+  _capRec=new SR();
+  _capRec.lang='he-IL';
+  _capRec.continuous=true;
+  _capRec.interimResults=true;
+  _capRec.onresult=function(e){
+    var txt='';
+    for(var i=0;i<e.results.length;i++) txt += e.results[i][0].transcript;
+    _capTranscript=txt.trim();
+    var ta=g('cap-transcript');
+    if(ta){ta.style.display=''; ta.value=_capTranscript;}
+    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64);
+  };
+  _capRec.onerror=function(ev){
+    g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(ev.error||'?');
+    _capRecActive=false;
+    var mb=g('cap-m-voice'); if(mb)mb.className='cap-mode-btn';
+  };
+  _capRec.onend=function(){
+    _capRecActive=false;
+    var mb=g('cap-m-voice'); if(mb)mb.className='cap-mode-btn'+(_capTranscript?' done':'');
+    g('cap-status').textContent=_capTranscript?'\u05de\u05d5\u05db\u05df \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 — \u05dc\u05d7\u05e5 "\u05e9\u05dc\u05d7 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 AI"':'\u05dc\u05d0 \u05d6\u05d5\u05d4\u05d4 \u05d8\u05e7\u05e1\u05d8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';
+  };
+  try{
+    _capRec.start();
+    _capRecActive=true;
+    var mb=g('cap-m-voice'); if(mb)mb.className='cap-mode-btn recording';
+    g('cap-status').textContent='🎤 \u05de\u05e7\u05e9\u05d9\u05d1... \u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05dc\u05e2\u05e6\u05d9\u05e8\u05d4';
+  }catch(e){
+    alert('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e4\u05e2\u05d9\u05dc \u05de\u05d9\u05e7\u05e8\u05d5\u05e4\u05d5\u05df: '+(e.message||e));
+  }
+}
+
+function capStartPhoto(){
+  _capMode='photo';
+  var inp=g('cap-photo-inp');
+  if(!inp)return;
+  inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0]; if(!f)return;
+    g('cap-status').textContent='\u05d3\u05d5\u05d7\u05e1 \u05ea\u05de\u05d5\u05e0\u05d4...';
+    _imgCompress(f,1200,0.7,function(blob,dataUrl){
+      _capPhotoB64=dataUrl;
+      var pp=g('cap-photo-preview'); if(pp){pp.src=dataUrl; pp.style.display='';}
+      var mb=g('cap-m-photo'); if(mb)mb.className='cap-mode-btn done';
+      g('cap-status').textContent='\u05de\u05e2\u05dc\u05d4 \u05dc\u05d0\u05d7\u05e1\u05d5\u05df...';
+      _fileUpload(blob,'cap-'+Date.now(),function(url,status,errBody){
+        if(url){
+          _capPhotoUrl=url;
+          g('cap-status').textContent='\u05de\u05d5\u05db\u05df \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 — \u05dc\u05d7\u05e5 "\u05e9\u05dc\u05d7 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 AI"';
+        }else{
+          g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05d4 ('+status+'): '+((errBody||'').substring(0,80))+' — \u05e0\u05d9\u05ea\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05e0\u05ea\u05d7';
+        }
+        g('cap-submit').disabled=false;
+      });
+    });
+  };
+  inp.click();
+}
+
+function capShowText(){
+  _capMode='text';
+  var ta=g('cap-transcript');
+  if(!ta)return;
+  ta.style.display=''; ta.focus();
+  var mb=g('cap-m-text'); if(mb)mb.className='cap-mode-btn recording';
+  g('cap-status').textContent='\u05d4\u05e7\u05dc\u05d3 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05d5\u05dc\u05d7\u05e5 "\u05e9\u05dc\u05d7 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 AI"';
+  ta.oninput=function(){
+    _capTranscript=(ta.value||'').trim();
+    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64);
+  };
+}
+
+var CAP_PROMPT = 'You are a safety triage assistant at Tfugen Industries factory. Analyze the user input (voice transcript / photo / text) and determine:\n' +
+  '1. Event type\n' +
+  '2. Structured fields for a safety report\n\n' +
+  'Event types:\n' +
+  '  nm = near-miss (close call, no injury/damage)\n' +
+  '  inc = actual incident (injury or damage occurred)\n' +
+  '  ncr = non-conformance (procedure/policy violation, not an event)\n' +
+  '  eqi = equipment inspection issue\n' +
+  '  ppe = PPE problem (missing, broken, expired)\n' +
+  '  tr = training-related issue\n' +
+  '  other = does not clearly fit — still fill fields\n\n' +
+  'Severity scale (use Hebrew values):\n' +
+  '  \u05e7\u05d8\u05df | \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9 | \u05d7\u05de\u05d5\u05e8 | \u05e7\u05e8\u05d9\u05d8\u05d9\n\n' +
+  'If the input is a photo, describe visible hazards concretely (PPE missing, chemical spill, wet floor, cable trip, missing guard, etc.).\n\n' +
+  'Respond with pure JSON (no markdown fences), Hebrew values where applicable:\n' +
+  '{\n' +
+  '  "type": "nm|inc|ncr|eqi|ppe|tr|other",\n' +
+  '  "confidence": 0.0,\n' +
+  '  "description": "1-2 sentences in Hebrew",\n' +
+  '  "area": "location in Hebrew (\u05d9\u05d9\u05e6\u05d5\u05e8 / \u05de\u05d7\u05e1\u05df / \u05de\u05e9\u05e8\u05d3 / \u05de\u05e2\u05d1\u05d3\u05d4 / \u05d5\u05db\u05d3\')",\n' +
+  '  "severity": "\u05e7\u05d8\u05df|\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9|\u05d7\u05de\u05d5\u05e8|\u05e7\u05e8\u05d9\u05d8\u05d9",\n' +
+  '  "reporter": "name if mentioned, else null",\n' +
+  '  "date": "YYYY-MM-DD (today if not stated)",\n' +
+  '  "time": "HH:MM or null",\n' +
+  '  "suggested_action": "one sentence in Hebrew",\n' +
+  '  "notes": "additional details in Hebrew"\n' +
+  '}';
+
+function capSubmit(){
+  var text=_capTranscript || ((g('cap-transcript')||{}).value||'').trim();
+  var hasPhoto=!!_capPhotoB64;
+  if(!text && !hasPhoto){ alert('\u05d7\u05e1\u05e8 \u05e7\u05dc\u05d8 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7'); return; }
+  g('cap-submit').disabled=true;
+  g('cap-status').textContent='🤖 AI \u05de\u05e0\u05ea\u05d7...';
+  var userContent;
+  if(hasPhoto){
+    var b64=_capPhotoB64.split(',')[1];
+    userContent=[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+                 {type:'text',text:CAP_PROMPT + (text?('\n\nAdditional context from user: '+text):'')}];
+  }else{
+    userContent=CAP_PROMPT+'\n\nUser input: '+text;
+  }
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:_AI_MODEL,max_tokens:700,messages:[{role:'user',content:userContent}]})
+  })
+  .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,txt:t};});})
+  .then(function(res){
+    if(!res.ok){
+      g('cap-status').textContent='API '+res.status+': '+((res.txt||'').substring(0,100));
+      g('cap-submit').disabled=false;
+      return;
+    }
+    var d; try{d=JSON.parse(res.txt);}catch(e){
+      g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e4\u05d9\u05e2\u05e0\u05d5\u05d7';
+      g('cap-submit').disabled=false;
+      return;
+    }
+    var txt=(d.content && d.content[0] && d.content[0].text) || '';
+    var j; try{ j=JSON.parse(txt.replace(/```json|```/g,'').trim()); }catch(e){
+      g('cap-status').textContent='\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05e0\u05d4 \u05de\u05d4-AI';
+      var rr=g('cap-result'); if(rr){rr.style.display=''; rr.textContent=txt.substring(0,400);}
+      g('cap-submit').disabled=false;
+      return;
+    }
+    capDispatch(j);
+  })
+  .catch(function(err){
+    g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err);
+    g('cap-submit').disabled=false;
+  });
+}
+
+function capTypeLabel(t){
+  var m={nm:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2', inc:'\u05d0\u05d9\u05e8\u05d5\u05e2', ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4', eqi:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3', ppe:'PPE', tr:'\u05d4\u05d3\u05e8\u05db\u05d4', other:'\u05db\u05dc\u05dc\u05d9'};
+  return m[t] || t;
+}
+
+function capDispatch(j){
+  var today=new Date().toISOString().split('T')[0];
+  var d=j.date||today, t=j.time||'', desc=j.description||'', area=j.area||'';
+  var rep=j.reporter||'', sev=j.severity||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9', notes=j.notes||j.suggested_action||'';
+  var sevNm={'\u05e7\u05d8\u05df':'\u05e7\u05d8\u05d9\u05df','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9','\u05d7\u05de\u05d5\u05e8':'\u05d7\u05de\u05d5\u05e8','\u05e7\u05e8\u05d9\u05d8\u05d9':'\u05d7\u05de\u05d5\u05e8'}[sev] || sev;
+  var res=g('cap-result');
+  if(res){
+    res.style.display='';
+    res.innerHTML='<div style="font-weight:700;margin-bottom:4px">✨ \u05d6\u05d5\u05d4\u05d4: '+esc(capTypeLabel(j.type))+'</div>'+
+      (desc?'<div>'+esc(desc)+'</div>':'')+
+      (j.suggested_action?'<div style="margin-top:6px;color:var(--t3);font-size:11px">💡 '+esc(j.suggested_action)+'</div>':'');
+  }
+  function _setIf(id,v){var el=g(id); if(el)el.value=v||'';}
+  setTimeout(function(){
+    closeModal('m-cap');
+    switch(j.type){
+      case 'nm':
+        openModal('m-nm');
+        _setIf('nm-d',d); _setIf('nm-t',t); _setIf('nm-desc',desc); _setIf('nm-area',area);
+        _setIf('nm-rep',rep); _setIf('nm-sev',sevNm); _setIf('nm-notes',notes);
+        if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
+        break;
+      case 'inc':
+        openModal('m-inc');
+        _setIf('inc-dt',d+(t?'T'+t:'')); _setIf('inc-d',desc);
+        _setIf('inc-sv',sev==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'\u05d7\u05de\u05d5\u05e8':sev); _setIf('inc-l',area); _setIf('inc-r',rep||notes);
+        if(_capPhotoUrl) _attachUrls['inc-attach-area']=_capPhotoUrl;
+        break;
+      case 'ncr':
+        openModal('m-ncr');
+        _setIf('ncr-d',desc); _setIf('ncr-loc',area); _setIf('ncr-o',rep);
+        _setIf('ncr-notes',notes); _setIf('ncr-sd',d);
+        break;
+      case 'eqi':
+        openModal('m-eqi');
+        _setIf('eqi-n',desc); _setIf('eqi-loc',area); _setIf('eqi-notes',notes); _setIf('eqi-d',d);
+        if(_capPhotoUrl) _attachUrls['eqi-photo-area']=_capPhotoUrl;
+        break;
+      case 'ppe':
+        openModal('m-ppe'); _setIf('ppe-n',desc); _setIf('ppe-w',rep);
+        break;
+      case 'tr':
+        openModal('m-tr'); _setIf('tr-n',desc); _setIf('tr-w',rep); _setIf('tr-d',d);
+        break;
+      default:
+        openModal('m-nm');
+        _setIf('nm-d',d); _setIf('nm-desc',desc+(notes?(' — '+notes):'')); _setIf('nm-area',area); _setIf('nm-rep',rep);
+        if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
+    }
+    try{toast('✨ \u05d6\u05d5\u05d4\u05d4: '+capTypeLabel(j.type));}catch(e){}
+  },1000);
+}
+console.log('Smart Capture ready');
 </script>
 
 
