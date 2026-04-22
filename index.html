@@ -88,18 +88,31 @@ button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:n
 /* ---- KPI GRID ---- */
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 
-/* Dashboard hero "what needs attention today" */
-.hero-today{background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);border:1px solid #fca5a5;border-radius:16px;padding:18px 18px 16px;margin-bottom:14px;cursor:pointer;box-shadow:0 2px 8px rgba(204,31,31,.08)}
-.hero-today.ok{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border-color:#86efac;box-shadow:0 2px 8px rgba(34,197,94,.08)}
-.hero-today .ht-title{font-size:13px;color:var(--t2);font-weight:700;margin-bottom:2px}
-.hero-today .ht-num{font-size:48px;font-weight:900;line-height:1;color:#b91c1c;margin:6px 0 2px}
-.hero-today.ok .ht-num{color:#15803d}
-.hero-today .ht-sub{font-size:13px;color:var(--t2);margin-bottom:12px}
-.hero-today .ht-pills{display:flex;flex-wrap:wrap;gap:6px}
-.hero-pill{background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:700;color:var(--t2);display:inline-flex;align-items:center;gap:5px}
-.hero-pill.red{color:#b91c1c;border-color:#fca5a5;background:#fff}
-.hero-pill.amber{color:#b45309;border-color:#fcd34d}
-.hero-pill.green{color:#15803d;border-color:#86efac}
+/* Dashboard "Today" — actionable list of what needs attention */
+.today-list{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.today-header{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-bottom:1px solid #fca5a5;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.today-header.ok{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac}
+.today-header .t-title{font-size:15px;font-weight:800;color:#b91c1c}
+.today-header.ok .t-title{color:#15803d}
+.today-header .t-count{font-size:12px;font-weight:800;color:#b91c1c;background:#fff;padding:4px 10px;border-radius:999px;border:1px solid #fca5a5}
+.today-header.ok .t-count{color:#15803d;border-color:#86efac}
+.today-item{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #f0f1f3;min-height:64px;background:#fff}
+.today-item:last-child{border-bottom:none}
+.today-item:active{background:#f8fafc}
+.today-item .ti-ic{font-size:22px;flex-shrink:0;width:30px;text-align:center;line-height:1}
+.today-item .ti-body{flex:1;min-width:0}
+.today-item .ti-title{font-size:14px;font-weight:700;color:var(--tx);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.today-item .ti-sub{font-size:11px;color:var(--t3);margin-top:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.today-item .ti-badge{flex-shrink:0;font-size:10px;font-weight:800;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.today-item .ti-badge.red{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}
+.today-item .ti-badge.amber{background:#fef3c7;color:#b45309;border:1px solid #fcd34d}
+.today-item .ti-badge.blue{background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd}
+.today-item .ti-chev{color:var(--t3);font-size:16px;flex-shrink:0;opacity:.6}
+.today-more{padding:12px 14px;text-align:center;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;background:#fafafa;border-top:1px solid #f0f1f3}
+.today-empty{padding:30px 14px;text-align:center;background:#f0fdf4}
+.today-empty .te-ic{font-size:48px;color:#15803d;margin-bottom:6px;line-height:1}
+.today-empty .te-msg{font-size:16px;font-weight:800;color:#15803d}
+.today-empty .te-sub{font-size:12px;color:#15803d;opacity:.8;margin-top:3px}
 
 /* Monthly metrics strip — 4 compact tiles */
 .monthly-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
@@ -332,12 +345,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-dash" class="page on">
   <div class="page-title">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; <span>&#1512;&#1488;&#1513;&#1497;</span></div>
 
-  <!-- HERO: what needs my attention today -->
-  <div id="dash-hero" class="hero-today" onclick="goPage('tasks');tskFilter('all')">
-    <div class="ht-title">&#127919; &#1496;&#1497;&#1508;&#1493;&#1500; &#1492;&#1497;&#1493;&#1501;</div>
-    <div class="ht-num" id="hero-num">0</div>
-    <div class="ht-sub" id="hero-sub">&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1502;&#1502;&#1514;&#1497;&#1504;&#1493;&#1514;</div>
-    <div class="ht-pills" id="hero-pills"></div>
+  <!-- TODAY: actionable checklist of what needs my attention -->
+  <div class="today-list">
+    <div class="today-header" id="today-header">
+      <div class="t-title">&#127919; &#1492;&#1497;&#1493;&#1501;</div>
+      <div class="t-count" id="today-count">&#8212;</div>
+    </div>
+    <div id="today-items"></div>
   </div>
 
   <div id="dash-alerts"></div>
@@ -1720,6 +1734,74 @@ function ptwPrint(){
   w.document.write(parts.join(''));
   w.document.close();
 }
+
+// ---- Dashboard "Today" — actionable checklist aggregated from all modules ----
+function _sourceIcon(tbl){
+  var m={ncr:'🚨',inc:'⚠️',near_miss:'🚫',rsk:'⚡',ppe:'🦺',tr:'🎓',docs:'📄',ctr:'🤝',equip_inspections:'🔧',round:'☀',tasks:'✅'};
+  return m[tbl]||'✅';
+}
+function _todayClick(fn,a1,a2){
+  if(fn==='round'){openModal('m-round');return;}
+  if(fn==='view'){showView(a1,a2);return;}
+  if(fn==='edit'){editTsk(a1);return;}
+  if(fn==='tasks'){goPage('tasks');if(typeof tskFilter==='function')tskFilter(a1||'all');return;}
+}
+function _renderToday(){
+  var listEl=g('today-items'), hdr=g('today-header'), cnt=g('today-count');
+  if(!listEl)return;
+  var today=new Date().toISOString().split('T')[0];
+  var items=[];
+  // 1. Morning round (highest priority — daily task)
+  var todayRound=(DB.rounds||[]).find(function(r){return r.d===today;});
+  if(!todayRound){
+    items.push({priority:0,icon:'☀',title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 — \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',sub:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d9\u05d5\u05de\u05d9\u05ea',badge:'\u05e2\u05e9\u05d4',badgeCls:'amber',fn:'round',a1:'',a2:''});
+  }
+  // 2. Tasks aggregated (manual + virtual)
+  var allTasks=(DB.tasks||[]).slice();
+  if(typeof _collectVirtualTasks==='function'){ allTasks = allTasks.concat(_collectVirtualTasks()); }
+  var activeTasks=allTasks.filter(function(t){return t.status!==_TSK_DONE&&t.status!==_TSK_CANC;});
+  activeTasks.forEach(function(t){
+    var clickFn = t.isVirtual ? 'view' : 'edit';
+    var a1 = t.isVirtual ? (t.source_table||'tasks') : t.id;
+    var a2 = t.isVirtual ? (t.source_id||'') : '';
+    var baseItem = {icon:_sourceIcon(t.source_table||'tasks'),title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',fn:clickFn,a1:a1,a2:a2};
+    if(t.due){
+      var daysUntil=du(t.due);
+      if(daysUntil<0){
+        items.push(Object.assign(baseItem,{priority:1,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee+' · '):'')+'\u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 '+Math.abs(daysUntil)+' \u05d9\u05de\u05d9\u05dd',badge:'\u05e4\u05d9\u05d2\u05d5\u05e8',badgeCls:'red'}));
+      }else if(daysUntil===0){
+        items.push(Object.assign(baseItem,{priority:2,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee):'\u05d9\u05e2\u05d3: \u05d4\u05d9\u05d5\u05dd'),badge:'\u05d4\u05d9\u05d5\u05dd',badgeCls:'amber'}));
+      }else if(daysUntil<=7){
+        items.push(Object.assign(baseItem,{priority:3,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee+' · '):'')+'\u05d9\u05e2\u05d3 \u05d1\u05e2\u05d5\u05d3 '+daysUntil+' \u05d9\u05de\u05d9\u05dd',badge:daysUntil+'\u05d9',badgeCls:'blue'}));
+      }
+    }
+  });
+  // Sort by priority, then by due date
+  items.sort(function(a,b){return a.priority-b.priority;});
+  var TOP=6;
+  var topItems=items.slice(0,TOP);
+  var extraCount=items.length-topItems.length;
+  if(items.length===0){
+    if(hdr)hdr.classList.add('ok');
+    if(cnt)cnt.textContent='0';
+    listEl.innerHTML='<div class="today-empty"><div class="te-ic">✓</div><div class="te-msg">\u05d4\u05db\u05dc \u05de\u05e2\u05d5\u05d3\u05db\u05df</div><div class="te-sub">\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea</div></div>';
+    return;
+  }
+  if(hdr)hdr.classList.remove('ok');
+  if(cnt)cnt.textContent=items.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea';
+  var html=topItems.map(function(it){
+    return '<div class="today-item" data-fn="'+esc(it.fn)+'" data-a1="'+esc(String(it.a1||''))+'" data-a2="'+esc(String(it.a2||''))+'" onclick="_todayClick(this.dataset.fn,this.dataset.a1,this.dataset.a2)">'+
+      '<div class="ti-ic">'+it.icon+'</div>'+
+      '<div class="ti-body"><div class="ti-title">'+esc(it.title)+'</div><div class="ti-sub">'+esc(it.sub)+'</div></div>'+
+      '<div class="ti-badge '+it.badgeCls+'">'+esc(it.badge)+'</div>'+
+      '<div class="ti-chev">◂</div>'+
+      '</div>';
+  }).join('');
+  if(extraCount>0){
+    html+='<div class="today-more" onclick="goPage(\'tasks\');tskFilter(\'all\')">→ \u05e8\u05d0\u05d4 \u05d4\u05db\u05dc ('+items.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea)</div>';
+  }
+  listEl.innerHTML=html;
+}
 function rDash(){
   var docs=DB.docs,inc=DB.inc,tr=DB.tr,ncr=DB.ncr,rsk=DB.rsk;
   // HERO-1: safety streak (days since last incident)
@@ -1790,26 +1872,7 @@ function rDash(){
   if(tOver>0)alerts='<div class="alert alert-r" onclick="goPage(\'tasks\');tskFilter(\'over\')" style="cursor:pointer">\u23f0 '+tOver+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u2192</div>'+alerts;
   var al=g('dash-alerts');if(al)al.innerHTML=alerts;
 
-  // HERO "\u05d8\u05d9\u05e4\u05d5\u05dc \u05d4\u05d9\u05d5\u05dd" — aggregated attention counter
-  var expiredCount = 0;
-  exp.forEach(function(e){if(e.x<0)expiredCount++;});
-  var roundPending = todayRound ? 0 : 1;
-  var heroTotal = tOpen + expiredCount + roundPending;
-  var heroEl=g('dash-hero'), numEl=g('hero-num'), subEl=g('hero-sub'), pillsEl=g('hero-pills');
-  if(numEl) numEl.textContent = heroTotal;
-  if(heroEl){ heroEl.classList.toggle('ok', heroTotal===0); }
-  if(subEl){
-    subEl.textContent = heroTotal===0 ? '\u05d4\u05db\u05dc \u05de\u05e2\u05d5\u05d3\u05db\u05df — \u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3' : '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea';
-  }
-  if(pillsEl){
-    var pills=[];
-    if(tOver>0) pills.push('<span class="hero-pill red">⏰ '+tOver+' \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8</span>');
-    if(tOpen-tOver>0) pills.push('<span class="hero-pill amber">✅ '+(tOpen-tOver)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea</span>');
-    if(expiredCount>0) pills.push('<span class="hero-pill red">⚠ '+expiredCount+' \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea</span>');
-    if(roundPending) pills.push('<span class="hero-pill amber">☀ \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd</span>');
-    if(heroTotal===0) pills.push('<span class="hero-pill green">✓ \u05dc\u05dc\u05d0 \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea</span>');
-    pillsEl.innerHTML = pills.join('');
-  }
+  try{_renderToday();}catch(err){console.warn('today render err:',err);}
   // MONTHLY STRIP
   var incMonth = (inc||[]).filter(function(i){return (i.dt||'').startsWith(ym);}).length;
   var _s=function(id,v){var el=g(id); if(el)el.textContent=v;};
