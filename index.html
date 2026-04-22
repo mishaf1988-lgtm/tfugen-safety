@@ -2875,10 +2875,19 @@ function _refreshUsersDatalist(){
   dl.innerHTML=active.map(function(u){return '<option value="'+esc(u.full_name)+'">';}).join('');
 }
 function _fetchCurrentUserProfile(){
-  if(!_currentUser||!_currentUser.username||_currentUser.username==='admin'){_applyRoleGates();return;}
+  if(!_currentUser||!_currentUser.username){_applyRoleGates();return;}
+  if(_currentUser.username==='admin'){
+    _applyRoleGates();
+    try{toast('\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd, \u05d0\u05d3\u05de\u05d9\u05df ✨',{ok:true});}catch(e){}
+    return;
+  }
   var u=(DB.app_users||[]).find(function(x){return (x.username||'').toLowerCase()===_currentUser.username;});
   if(u){for(var k in u)_currentUser[k]=u[k];}
   _applyRoleGates();
+  try{
+    var name=(_currentUser.full_name||_currentUser.username||'').trim();
+    if(name){toast('\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd, '+name+' ✨',{ok:true});}
+  }catch(e){}
 }
 function doLogin(){
   var pw=g('pw');if(!pw)return;
