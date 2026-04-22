@@ -633,13 +633,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div style="font-size:12px;color:var(--t3);margin-bottom:4px">&#1514;&#1488;&#1512; &#1489;&#1511;&#1493;&#1500;, &#1510;&#1500;&#1501; &#1514;&#1502;&#1493;&#1504;&#1492;, &#1488;&#1493; &#1492;&#1511;&#1500;&#1491; &#1502;&#1492; &#1513;&#1511;&#1512;&#1492;. ה-AI &#1497;&#1494;&#1492;&#1492; &#1488;&#1514; &#1505;&#1493;&#1490; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495; &#1493;&#1497;&#1502;&#1500;&#1488; &#1488;&#1514; &#1492;&#1496;&#1493;&#1508;&#1505; &#1492;&#1504;&#1499;&#1493;&#1503;.</div>
   <div class="cap-mode-btns">
     <button type="button" class="cap-mode-btn" id="cap-m-voice" onclick="capStartVoice()"><span class="ic">&#127908;</span><span>&#1491;&#1489;&#1512;</span></button>
-    <button type="button" class="cap-mode-btn" id="cap-m-photo" onclick="capStartPhoto()"><span class="ic">&#128247;</span><span>&#1510;&#1500;&#1501;</span></button>
+    <button type="button" class="cap-mode-btn" id="cap-m-photo" onclick="capStartPhoto()"><span class="ic">&#128247;</span><span>&#1510;&#1500;&#1501;/&#1493;&#1497;&#1491;&#1488;&#1493;</span></button>
     <button type="button" class="cap-mode-btn" id="cap-m-text" onclick="capShowText()"><span class="ic">&#9997;</span><span>&#1492;&#1511;&#1500;&#1491;</span></button>
   </div>
   <div id="cap-status" style="padding:6px 0;text-align:center;font-size:12px;color:var(--t3);min-height:20px"></div>
   <textarea id="cap-transcript" placeholder="תיאור האירוע..." rows="4" style="display:none;width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
   <img id="cap-photo-preview" alt="" style="display:none;max-width:100%;max-height:220px;border-radius:10px;margin-top:8px">
-  <input type="file" id="cap-photo-inp" accept="image/*" style="display:none">
+  <input type="file" id="cap-photo-inp" accept="image/*,video/*" style="display:none">
   <div id="cap-result" style="display:none;margin-top:12px;padding:12px;background:#f0fdf4;border:1px solid #22c55e;border-radius:10px;font-size:13px;line-height:1.6"></div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
@@ -2854,11 +2854,11 @@ window.ncrAgentAnalyzeAll=function(){
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
 /* ---- Smart Capture: voice + photo + text -> AI triage -> pre-filled modal ---- */
-var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null;
+var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null, _capVideoFrames=null;
 var _capRec=null, _capRecActive=false;
 
 function capOpen(){
-  _capMode=null; _capTranscript=''; _capPhotoB64=null; _capPhotoUrl=null;
+  _capMode=null; _capTranscript=''; _capPhotoB64=null; _capPhotoUrl=null; _capVideoFrames=null;
   var ta=g('cap-transcript'); if(ta){ta.value=''; ta.style.display='none';}
   var pp=g('cap-photo-preview'); if(pp){pp.src=''; pp.style.display='none';}
   g('cap-status').textContent='';
@@ -2888,7 +2888,7 @@ function capStartVoice(){
     _capTranscript=txt.trim();
     var ta=g('cap-transcript');
     if(ta){ta.style.display=''; ta.value=_capTranscript;}
-    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64);
+    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64||(_capVideoFrames&&_capVideoFrames.length));
   };
   _capRec.onerror=function(ev){
     g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(ev.error||'?');
@@ -2917,6 +2917,8 @@ function capStartPhoto(){
   inp.value='';
   inp.onchange=function(){
     var f=inp.files&&inp.files[0]; if(!f)return;
+    var isVideo=/^video\//i.test(f.type);
+    if(isVideo){ capHandleVideo(f); return; }
     g('cap-status').textContent='\u05d3\u05d5\u05d7\u05e1 \u05ea\u05de\u05d5\u05e0\u05d4...';
     _imgCompress(f,1200,0.7,function(blob,dataUrl){
       _capPhotoB64=dataUrl;
@@ -2937,6 +2939,74 @@ function capStartPhoto(){
   inp.click();
 }
 
+function capHandleVideo(file){
+  if(file.size > 50*1024*1024){
+    g('cap-status').textContent='\u05d4\u05d5\u05d5\u05d9\u05d3\u05d0\u05d5 \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05de\u05e7\u05e1\u05d9\u05de\u05d5\u05dd 50MB)';
+    return;
+  }
+  g('cap-status').textContent='\u05de\u05d7\u05dc\u05e5 \u05de\u05e1\u05d2\u05e8\u05d5\u05ea \u05de\u05d4\u05d5\u05d5\u05d9\u05d3\u05d0\u05d5...';
+  _capExtractFrames(file, 3, function(frames){
+    if(!frames||!frames.length){
+      g('cap-status').textContent='\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05d5\u05d5\u05d9\u05d3\u05d0\u05d5';
+      return;
+    }
+    _capVideoFrames=frames;
+    _capPhotoB64=frames[0]; // show first frame as preview; all 3 go to Claude
+    var pp=g('cap-photo-preview'); if(pp){pp.src=frames[0]; pp.style.display='';}
+    var mb=g('cap-m-photo'); if(mb)mb.className='cap-mode-btn done';
+    g('cap-status').textContent='\u05de\u05e2\u05dc\u05d4 \u05d5\u05d9\u05d3\u05d0\u05d5 \u05dc\u05d0\u05d7\u05e1\u05d5\u05df ('+frames.length+' \u05de\u05e1\u05d2\u05e8\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7)...';
+    _fileUpload(file,'cap-vid-'+Date.now(),function(url,status,errBody){
+      if(url){
+        _capPhotoUrl=url;
+        g('cap-status').textContent='\u05de\u05d5\u05db\u05df \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 — '+frames.length+' \u05de\u05e1\u05d2\u05e8\u05d5\u05ea \u05e0\u05d1\u05d7\u05e8\u05d5 \u05de\u05d4\u05d5\u05d5\u05d9\u05d3\u05d0\u05d5';
+      }else{
+        g('cap-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05d5\u05d9\u05d3\u05d0\u05d5 ('+status+') — \u05e0\u05d9\u05ea\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05e0\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05d2\u05e8\u05d5\u05ea';
+      }
+      g('cap-submit').disabled=false;
+    });
+  });
+}
+
+function _capExtractFrames(file, count, cb){
+  var video=document.createElement('video');
+  var url=URL.createObjectURL(file);
+  video.src=url;
+  video.muted=true;
+  video.playsInline=true;
+  video.preload='auto';
+  var done=false;
+  function cleanup(){ try{URL.revokeObjectURL(url);}catch(e){} }
+  video.onerror=function(){if(!done){done=true;cleanup();cb([]);}};
+  video.onloadedmetadata=function(){
+    var dur=video.duration;
+    if(!dur || !isFinite(dur) || dur<=0){ done=true; cleanup(); cb([]); return; }
+    var safeDur=Math.min(dur,120); // max 2 min scan
+    var times=[];
+    for(var i=1;i<=count;i++) times.push(safeDur*i/(count+1));
+    var frames=[], idx=0;
+    function grab(){
+      if(idx>=times.length){ done=true; cleanup(); cb(frames); return; }
+      video.currentTime=times[idx];
+    }
+    video.onseeked=function(){
+      try{
+        var w=video.videoWidth||640, h=video.videoHeight||480;
+        var sc=Math.min(1, 800/Math.max(w,h));
+        var cw=Math.round(w*sc), ch=Math.round(h*sc);
+        var canvas=document.createElement('canvas');
+        canvas.width=cw; canvas.height=ch;
+        canvas.getContext('2d').drawImage(video,0,0,cw,ch);
+        frames.push(canvas.toDataURL('image/jpeg',0.6));
+      }catch(e){ /* skip frame */ }
+      idx++;
+      setTimeout(grab,50);
+    };
+    grab();
+  };
+  // kick load
+  video.load();
+}
+
 function capShowText(){
   _capMode='text';
   var ta=g('cap-transcript');
@@ -2946,51 +3016,70 @@ function capShowText(){
   g('cap-status').textContent='\u05d4\u05e7\u05dc\u05d3 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05d5\u05dc\u05d7\u05e5 "\u05e9\u05dc\u05d7 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7 AI"';
   ta.oninput=function(){
     _capTranscript=(ta.value||'').trim();
-    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64);
+    g('cap-submit').disabled=!(_capTranscript||_capPhotoB64||(_capVideoFrames&&_capVideoFrames.length));
   };
 }
 
-var CAP_PROMPT = 'You are a safety triage assistant at Tfugen Industries factory. Analyze the user input (voice transcript / photo / text) and determine:\n' +
-  '1. Event type\n' +
-  '2. Structured fields for a safety report\n\n' +
+var CAP_PROMPT = 'You are a safety + environmental inspector at Tfugen Industries factory, certified in ISO 45001 (occupational health & safety) and ISO 14001 (environmental management). Your job is SAFETY TRIAGE — classify the report and extract structured fields.\n\n' +
+  'CRITICAL RULES — DO NOT HALLUCINATE:\n' +
+  '  1. Report ONLY what you can clearly see. Do NOT speculate.\n' +
+  '  2. A red/dark puddle on the floor is ALMOST CERTAINLY NOT blood. It is typically paint, oil, wine/beverage, coolant, red marker, etc. Describe the color + texture only. Never assume injury from color alone.\n' +
+  '  3. A person in the scene does NOT mean an incident occurred. Only report "inc" if there is UNAMBIGUOUS evidence of injury or damage.\n' +
+  '  4. If unsure, write "\u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8" in the description and lower confidence (<0.6).\n' +
+  '  5. Do NOT invent hazards that are not visible.\n' +
+  '  6. Multiple video frames: describe WHAT IS CONSISTENT ACROSS FRAMES — ignore brief motion blur / transient artifacts.\n\n' +
+  'IN-SCOPE — things to flag when visible:\n' +
+  '  Slip/trip: spilled liquid, loose cables/hoses/pipes on floor, objects in walkways, wet surface, uneven flooring\n' +
+  '  PPE: missing helmet / goggles / gloves / ear protection / safety shoes / hi-vis vest where expected; damaged PPE\n' +
+  '  Chemicals: unlabeled containers, leaking drums, unsealed caps, incompatible storage, missing SDS signage\n' +
+  '  Electrical: exposed wires, overloaded outlets, wet electrical equipment, missing covers on panels\n' +
+  '  Fire: blocked exits / extinguishers, flammables near ignition, sprinkler obstruction, missing smoke detectors\n' +
+  '  Equipment: missing/removed machine guards, damaged lock-out tags, loose fasteners, leaks from equipment\n' +
+  '  Environment (ISO 14001): air/water/soil contamination, leaking oil/chemicals into drain, non-segregated waste, air emission points\n' +
+  '  Housekeeping: clutter blocking access, disorganized storage creating tipping hazard, overcrowding in walkways\n' +
+  '  Ergonomics: unsafe lifting setup, awkward postures required by layout\n\n' +
+  'OUT OF SCOPE — DO NOT FLAG:\n' +
+  '  Aesthetics (ugly walls, unpainted areas), team vibes, unrelated maintenance, product quality issues\n\n' +
   'Event types:\n' +
-  '  nm = near-miss (close call, no injury/damage)\n' +
-  '  inc = actual incident (injury or damage occurred)\n' +
-  '  ncr = non-conformance (procedure/policy violation, not an event)\n' +
-  '  eqi = equipment inspection issue\n' +
-  '  ppe = PPE problem (missing, broken, expired)\n' +
-  '  tr = training-related issue\n' +
-  '  other = does not clearly fit — still fill fields\n\n' +
-  'Severity scale (use Hebrew values):\n' +
-  '  \u05e7\u05d8\u05df | \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9 | \u05d7\u05de\u05d5\u05e8 | \u05e7\u05e8\u05d9\u05d8\u05d9\n\n' +
-  'If the input is a photo, describe visible hazards concretely (PPE missing, chemical spill, wet floor, cable trip, missing guard, etc.).\n\n' +
+  '  nm = near-miss (close call, no injury/damage occurred but could have)\n' +
+  '  inc = actual incident (injury OR damage occurred, unambiguously visible)\n' +
+  '  ncr = non-conformance (procedure/policy violation — not an event, a system gap)\n' +
+  '  eqi = equipment inspection finding (machine fault, missing inspection tag, damaged guard)\n' +
+  '  ppe = PPE problem (missing / broken / expired)\n' +
+  '  tr = training-related (worker clearly lacks training for the task shown)\n' +
+  '  other = safety/env relevant but does not cleanly fit above\n\n' +
+  'Severity (Hebrew values): \u05e7\u05d8\u05df | \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9 | \u05d7\u05de\u05d5\u05e8 | \u05e7\u05e8\u05d9\u05d8\u05d9\n' +
+  '  \u05e7\u05e8\u05d9\u05d8\u05d9 only when life-threatening is CLEAR (exposed live wire near water, fire, major structural failure, etc.)\n\n' +
   'Respond with pure JSON (no markdown fences), Hebrew values where applicable:\n' +
   '{\n' +
   '  "type": "nm|inc|ncr|eqi|ppe|tr|other",\n' +
   '  "confidence": 0.0,\n' +
-  '  "description": "1-2 sentences in Hebrew",\n' +
-  '  "area": "location in Hebrew (\u05d9\u05d9\u05e6\u05d5\u05e8 / \u05de\u05d7\u05e1\u05df / \u05de\u05e9\u05e8\u05d3 / \u05de\u05e2\u05d1\u05d3\u05d4 / \u05d5\u05db\u05d3\')",\n' +
+  '  "description": "Literal description of what you actually see, in Hebrew. Use \"\u05e0\u05e8\u05d0\u05d4 \u05db...\" / \"\u05d9\u05d9\u05ea\u05db\u05df\" for uncertain items. 1-2 sentences.",\n' +
+  '  "area": "location in Hebrew (\u05d9\u05d9\u05e6\u05d5\u05e8 / \u05de\u05d7\u05e1\u05df / \u05de\u05e9\u05e8\u05d3 / \u05de\u05e2\u05d1\u05d3\u05d4 / \u05d7\u05d5\u05e5 / \u05d5\u05db\u05d3\\\'), else null",\n' +
   '  "severity": "\u05e7\u05d8\u05df|\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9|\u05d7\u05de\u05d5\u05e8|\u05e7\u05e8\u05d9\u05d8\u05d9",\n' +
   '  "reporter": "name if mentioned, else null",\n' +
   '  "date": "YYYY-MM-DD (today if not stated)",\n' +
   '  "time": "HH:MM or null",\n' +
-  '  "suggested_action": "one sentence in Hebrew",\n' +
-  '  "notes": "additional details in Hebrew"\n' +
+  '  "suggested_action": "one concrete next-step in Hebrew (e.g. \\"\u05dc\u05e0\u05e7\u05d5\u05ea \u05d0\u05ea \u05d4\u05db\u05ea\u05dd \u05de\u05d9\u05d9\u05d3\u05d9\u05ea \u05d5\u05dc\u05ea\u05dc\u05d5\u05ea \u05e9\u05dc\u05d8 \u05d4\u05d7\u05dc\u05e7\u05d4\\")",\n' +
+  '  "notes": "Alternative interpretations / uncertainty / additional details in Hebrew. If you were unsure about any call, state it here."\n' +
   '}';
 
 function capSubmit(){
   var text=_capTranscript || ((g('cap-transcript')||{}).value||'').trim();
   var hasPhoto=!!_capPhotoB64;
-  if(!text && !hasPhoto){ alert('\u05d7\u05e1\u05e8 \u05e7\u05dc\u05d8 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7'); return; }
+  if(!text && !hasPhoto && !(_capVideoFrames&&_capVideoFrames.length)){ alert('\u05d7\u05e1\u05e8 \u05e7\u05dc\u05d8 \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7'); return; }
   g('cap-submit').disabled=true;
   g('cap-status').textContent='🤖 AI \u05de\u05e0\u05ea\u05d7...';
   var userContent;
-  if(hasPhoto){
-    var b64=_capPhotoB64.split(',')[1];
-    userContent=[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-                 {type:'text',text:CAP_PROMPT + (text?('\n\nAdditional context from user: '+text):'')}];
+  var framesList = (_capVideoFrames && _capVideoFrames.length) ? _capVideoFrames : (hasPhoto ? [_capPhotoB64] : null);
+  if(framesList){
+    userContent = framesList.map(function(f){
+      return {type:'image',source:{type:'base64',media_type:'image/jpeg',data:f.split(',')[1]}};
+    });
+    var promptText = CAP_PROMPT + (framesList.length>1 ? ('\n\nThese are '+framesList.length+' frames from a short video — describe what is consistent across them.'):'') + (text?('\n\nAdditional context from user: '+text):'');
+    userContent.push({type:'text', text: promptText});
   }else{
-    userContent=CAP_PROMPT+'\n\nUser input: '+text;
+    userContent = CAP_PROMPT + '\n\nUser input: ' + text;
   }
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:_AI_MODEL,max_tokens:700,messages:[{role:'user',content:userContent}]})
