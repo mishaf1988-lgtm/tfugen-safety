@@ -310,6 +310,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <img src="/logo.jpg" alt="Tfugen">
     <h2>&#1514;&#1493;&#1499;&#1504;&#1492; &#1500;&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</h2>
     <p>&#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503;</p>
+    <input id="uname" type="text" placeholder="&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; (&#1500;&#1502;&#1513;&#1500;: user1)" autocomplete="username" autocapitalize="off" style="width:100%;padding:12px;text-align:center;font-size:16px;border:2px solid var(--border);border-radius:8px;margin-bottom:8px;font-family:inherit;box-sizing:border-box;-webkit-appearance:none">
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
@@ -483,6 +484,49 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </tr></thead><tbody id="tb-nm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
 </div>
+
+<!-- USERS PAGE (admin only) -->
+<div id="pg-users" class="page">
+  <div class="row">
+    <div class="page-title">&#128100; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; <span>&#1504;&#1497;&#1492;&#1493;&#1500;</span></div>
+  </div>
+  <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th>&#1513;&#1501; &#1502;&#1500;&#1488;</th>
+    <th>&#1514;&#1508;&#1511;&#1497;&#1491;</th>
+    <th>&#1502;&#1495;&#1500;&#1511;&#1492;</th>
+    <th>&#1496;&#1500;&#1508;&#1493;&#1503;</th>
+    <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+    <th></th>
+  </tr></thead><tbody id="tb-users"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
+</div>
+
+<!-- USER EDIT MODAL -->
+<div class="overlay" id="ov-user" onclick="closeModal('m-user')"></div>
+<div class="modal" id="m-user" style="display:none;max-width:440px">
+  <button class="close-btn" onclick="closeModal('m-user')">&#10005;</button>
+  <div class="modal-title">&#9997; &#1506;&#1512;&#1497;&#1499;&#1514; &#1502;&#1513;&#1514;&#1502;&#1513;</div>
+  <input type="hidden" id="u-id">
+  <div class="fgrid">
+    <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; (&#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;)</label><input id="u-username" disabled style="background:#f5f5f5"></div>
+    <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="u-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select></div>
+    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="u-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512; / &#1488;&#1495;&#1494;&#1511;&#1492; / ..."></div>
+    <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="u-phone" type="tel" placeholder="050-1234567"></div>
+    <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="u-email" type="email" placeholder="name@co.il"></div>
+    <div class="field fw"><label><input type="checkbox" id="u-active" style="margin-left:8px"> &#1502;&#1513;&#1514;&#1502;&#1513; &#1508;&#1506;&#1497;&#1500; (&#1497;&#1493;&#1499;&#1500; &#1500;&#1492;&#1497;&#1499;&#1504;&#1505;)</label></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="u-notes" rows="2"></textarea></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-user')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" onclick="svUser()">&#1513;&#1502;&#1493;&#1512;</button>
+  </div>
+</div>
+
+<!-- Global datalist of active users for "reporter" dropdowns — populated by _refreshUsersDatalist() -->
+<datalist id="active-users-list"></datalist>
 
 <!-- TASKS PAGE -->
 <div id="pg-tasks" class="page">
@@ -814,6 +858,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
     <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')"><span class="sic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
+
+    <div class="sheet-group-title">&#1504;&#1497;&#1492;&#1493;&#1500;</div>
+    <button class="sheet-btn" id="sheet-btn-users" onclick="_goFromSheet('m-modules-sheet','users')" style="display:none"><span class="sic">&#128100;</span>&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</button>
   </div>
 </div>
 
@@ -1085,7 +1132,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1513;&#1506;&#1492;</label><input type="time" id="nm-t" placeholder="08:30"></div>
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="nm-desc" rows="3"></textarea></div>
     <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><input id="nm-area" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512;/&#1502;&#1495;&#1505;&#1503;/&#1502;&#1506;&#1489;&#1491;&#1492;..."></div>
-    <div class="field"><label>&#1502;&#1491;&#1493;&#1493;&#1495;</label><input id="nm-rep"></div>
+    <div class="field"><label>&#1502;&#1491;&#1493;&#1493;&#1495;</label><input id="nm-rep" list="active-users-list" placeholder="&#1489;&#1495;&#1512; &#1488;&#1493; &#1492;&#1511;&#1500;&#1491;..."></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="nm-sev"><option>&#1511;&#1496;&#1497;&#1503;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option></select></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="nm-typ"><option>&#1508;&#1497;&#1494;&#1497;</option><option>&#1499;&#1497;&#1502;&#1497;</option><option>&#1495;&#1513;&#1502;&#1500;&#1497;</option><option>&#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1504;&#1508;&#1497;&#1500;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="nm-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
@@ -1259,7 +1306,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1285,7 +1332,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1294,7 +1341,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1349,9 +1396,9 @@ function _obDrain(){
 function sbIns(tbl,row){_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
-function _sbRefresh(silent){rDash();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
+function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1379,7 +1426,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -1418,7 +1465,7 @@ function syncDiag(){
   if(confirm(lines.join('\n')))_obDrain();
 }
 function forceSync(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users'];
   var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
   var ok=0,fail=0,skip=0,pushDone=0,pushTotal=0;
   var failTbls=[];
@@ -1498,7 +1545,7 @@ var _navGroup={
   docs:'modules',aud:'modules',tr:'modules',hearing:'modules',leg:'modules',
   rsk:'modules',ptw:'modules',ppe:'modules',ctr:'modules',
   wst:'modules',hzm:'modules',env:'modules',
-  emp:'modules',drl:'modules',ins:'modules',lg:'modules'
+  emp:'modules',drl:'modules',ins:'modules',lg:'modules',users:'modules'
 };
 function goPage(id){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -1511,7 +1558,7 @@ function goPage(id){
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
-  var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
+  var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
   if(m[CUR])m[CUR]();
 }
@@ -2279,6 +2326,66 @@ function _collectVirtualTasks(){
   (DB.tasks||[]).forEach(function(t){if(t.source_table&&t.source_id)manual[t.source_table+':'+t.source_id]=true;});
   return virt.filter(function(v){return !manual[v.source_table+':'+v.source_id];});
 }
+
+// ---- APP USERS (admin-only) ----
+function rUsers(){
+  var tb=g('tb-users'); if(!tb)return;
+  var users=(DB.app_users||[]).slice().sort(function(a,b){return (a.username||'')<(b.username||'')?-1:1;});
+  if(!users.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd. \u05d4\u05e8\u05e5 \u05d0\u05ea \u05d4-migration \u05e9\u05dc app_users.</td></tr>';return;}
+  tb.innerHTML = users.map(function(u){
+    var status = u.active?'<span class="b bG">\u05e4\u05e2\u05d9\u05dc</span>':'<span class="b bX">\u05dc\u05d0 \u05e9\u05d5\u05d9\u05da</span>';
+    var roleBadge = {'\u05d0\u05d3\u05de\u05d9\u05df':'bR','\u05de\u05e0\u05d4\u05dc':'bY','\u05de\u05d3\u05d5\u05d5\u05d7':'bX'}[u.role]||'bX';
+    var nameCell = u.full_name?esc(u.full_name):'<span style="color:var(--t3);font-style:italic">\u05d8\u05e8\u05dd \u05e9\u05d5\u05d9\u05da</span>';
+    var editBtn = '<button class="btn btn-d btn-sm" data-uid="'+esc(u.id)+'" onclick="editUser(this.dataset.uid)">✎</button>';
+    return '<tr>'+
+      '<td data-label="\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9"><strong>'+esc(u.username||u.id)+'</strong></td>'+
+      '<td data-label="\u05e9\u05dd \u05de\u05dc\u05d0">'+nameCell+'</td>'+
+      '<td data-label="\u05ea\u05e4\u05e7\u05d9\u05d3">'+(u.role?'<span class="b '+roleBadge+'">'+esc(u.role)+'</span>':'—')+'</td>'+
+      '<td data-label="\u05de\u05d7\u05dc\u05e7\u05d4">'+(u.dept?esc(u.dept):'—')+'</td>'+
+      '<td data-label="\u05d8\u05dc\u05e4\u05d5\u05df">'+(u.phone?esc(u.phone):'—')+'</td>'+
+      '<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+status+'</td>'+
+      '<td data-label="">'+editBtn+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function editUser(id){
+  var u=(DB.app_users||[]).find(function(x){return x.id===id;});
+  if(!u){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  g('u-id').value=u.id;
+  g('u-username').value=u.username||u.id;
+  g('u-full-name').value=u.full_name||'';
+  g('u-role').value=u.role||'\u05de\u05d3\u05d5\u05d5\u05d7';
+  g('u-dept').value=u.dept||'';
+  g('u-phone').value=u.phone||'';
+  g('u-email').value=u.email||'';
+  g('u-active').checked=!!u.active;
+  g('u-notes').value=u.notes||'';
+  openModal('m-user');
+}
+
+function svUser(){
+  var id=gv('u-id'); if(!id){toast('\u05de\u05d6\u05d4\u05d4 \u05d7\u05e1\u05e8');return;}
+  var name=gv('u-full-name');
+  if(!name){toast('\u05e9\u05dd \u05de\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4');return;}
+  var u=(DB.app_users||[]).find(function(x){return x.id===id;});
+  if(!u){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  u.full_name=name;
+  u.role=gv('u-role')||'\u05de\u05d3\u05d5\u05d5\u05d7';
+  u.dept=gv('u-dept')||null;
+  u.phone=gv('u-phone')||null;
+  u.email=gv('u-email')||null;
+  u.active=!!g('u-active').checked;
+  u.notes=gv('u-notes')||null;
+  u.ts=new Date().toISOString();
+  sbUpd('app_users',u);
+  sdb();
+  closeModal('m-user');
+  toast('\u05e0\u05e9\u05de\u05e8 ✓');
+  rUsers();
+}
+// ---- END APP USERS ----
+
 function rTasks(){
   var tb=g('tb-tasks');if(!tb)return;
   var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
@@ -2747,23 +2854,56 @@ function _loginErr(msg){
   var pw=g('pw');if(pw){pw.value='';pw.focus();}
   setTimeout(function(){var e=g('pw-err');if(e)e.textContent='';},2500);
 }
+// Current logged-in user profile (after login). Null for anonymous/emp mode.
+var _currentUser=null;
+function _resolveEmail(unameOrEmail){
+  var v=(unameOrEmail||'').trim();
+  if(!v)return '';
+  if(v.indexOf('@')>=0)return v.toLowerCase();
+  if(v==='admin')return ADMIN_EMAIL;
+  return v.toLowerCase()+'@tfugen.local';
+}
+function _applyRoleGates(){
+  var isAdmin = _currentUser && (_currentUser.username==='admin' || _currentUser.role==='\u05d0\u05d3\u05de\u05d9\u05df');
+  var usersBtn=g('sheet-btn-users');
+  if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
+  _refreshUsersDatalist();
+}
+function _refreshUsersDatalist(){
+  var dl=g('active-users-list'); if(!dl)return;
+  var active=(DB.app_users||[]).filter(function(u){return u.active&&u.full_name;});
+  dl.innerHTML=active.map(function(u){return '<option value="'+esc(u.full_name)+'">';}).join('');
+}
+function _fetchCurrentUserProfile(){
+  if(!_currentUser||!_currentUser.username||_currentUser.username==='admin'){_applyRoleGates();return;}
+  var u=(DB.app_users||[]).find(function(x){return (x.username||'').toLowerCase()===_currentUser.username;});
+  if(u){for(var k in u)_currentUser[k]=u[k];}
+  _applyRoleGates();
+}
 function doLogin(){
   var pw=g('pw');if(!pw)return;
-  var val=pw.value;if(!val){_loginErr('\u05d4\u05d6\u05df \u05e1\u05d9\u05e1\u05de\u05d4');return;}
+  var unameEl=g('uname');
+  var uname=unameEl?(unameEl.value||'').trim():'';
+  var val=pw.value;
+  if(!val){_loginErr('\u05d4\u05d6\u05df \u05e1\u05d9\u05e1\u05de\u05d4');return;}
+  if(!uname)uname='admin';
+  var email=_resolveEmail(uname);
   var lb=g('login-btn');if(lb){lb.disabled=true;lb.dataset.txt=lb.textContent||'';lb.textContent='\u05de\u05ea\u05d7\u05d1\u05e8...';}
   _sbBoot();
   if(!_sbClient){if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}_loginErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');return;}
-  _sbClient.auth.signInWithPassword({email:ADMIN_EMAIL,password:val}).then(function(r){
+  _sbClient.auth.signInWithPassword({email:email,password:val}).then(function(r){
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
-    if(r.error||!r.data||!r.data.session){_loginErr('\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4');return;}
+    if(r.error||!r.data||!r.data.session){_loginErr('\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd');return;}
     _sbToken=r.data.session.access_token;
     _sbAuthPromise=Promise.resolve(r.data.session);
     _isAdmin=true;
+    _currentUser = (email===ADMIN_EMAIL) ? {username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'} : {username:uname.toLowerCase(),role:null,full_name:null};
     try{localStorage.removeItem(EMP_KEY);}catch(e){}
     document.body.classList.remove('emp-mode');
     var ls=g('login');if(ls)ls.style.display='none';
     var app=g('app');if(app)app.style.display='block';
     ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
+    setTimeout(_fetchCurrentUserProfile,900);
   }).catch(function(){
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
