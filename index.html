@@ -1621,8 +1621,8 @@ function rDash(){
   if(elRound){elRound.style.color=todayRound?'var(--ok)':'var(--red)';}
   // Round alert if not done today
   if(!todayRound)alerts='<div class="alert alert-w" onclick="goPage(\'round\')" style="cursor:pointer">&#9728; \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2 \u05d4\u05d9\u05d5\u05dd \u2192</div>'+alerts;
-  // Tasks KPI — open count + overdue alert
-  var tAll=(DB.tasks||[]);
+  // Tasks KPI — open count + overdue alert (includes virtual tasks from NCR/inc/expired)
+  var tAll=(DB.tasks||[]).concat(typeof _collectVirtualTasks==='function'?_collectVirtualTasks():[]);
   var tOpen=tAll.filter(function(r){return r.status===_TSK_OPEN||r.status===_TSK_PROG;}).length;
   var tOver=tAll.filter(function(r){return r.due&&r.due<today&&r.status!==_TSK_DONE&&r.status!==_TSK_CANC;}).length;
   var elTsk=g('k-tsk'),elTskS=g('k-tsk-s');
@@ -1899,7 +1899,7 @@ var _TSK_CANC='\u05d1\u05d5\u05d8\u05dc';
 var _TSK_PRI_DEF='\u05e8\u05d2\u05d9\u05dc';
 function tskFilter(f){window._tskFilter=f;['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
-function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3'};return m[tbl]||tbl;}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
@@ -1913,6 +1913,24 @@ function openTskModal(srcTbl,srcId){
     var short=rec?(rec.num||rec.n||rec.code||rec.descr||srcId):srcId;
     if(vw)vw.textContent=_tskSrcLabel(srcTbl)+': '+short;
     if(lbl)lbl.style.display='';
+    if(rec){
+      var titleEl=g('tsk-title');
+      if(titleEl&&!titleEl.value){
+        if(srcTbl==='ncr')titleEl.value=(rec.num?rec.num+' — ':'')+String(rec.d||'').substring(0,80);
+        else if(srcTbl==='inc')titleEl.value=String(rec.d||'').substring(0,80);
+        else if(srcTbl==='near_miss')titleEl.value=String(rec.descr||'').substring(0,80);
+        else if(['ppe','tr','docs','ctr','equip_inspections'].indexOf(srcTbl)>=0)titleEl.value='\u05dc\u05d7\u05d3\u05e9: '+(rec.n||rec.ty||rec.code||'');
+      }
+      var asgEl=g('tsk-assignee');
+      if(asgEl&&!asgEl.value){
+        asgEl.value=rec.o||rec.w||rec.vendor||rec.rep||rec.r||rec.c||'';
+      }
+      var dueEl=g('tsk-due');
+      if(dueEl&&!dueEl.value){
+        dueEl.value=rec.u||rec.e||'';
+      }
+      if(['ppe','tr','docs','ctr','equip_inspections'].indexOf(srcTbl)>=0&&pr)pr.value='\u05d2\u05d1\u05d5\u05d4';
+    }
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
@@ -1940,9 +1958,40 @@ function editTsk(id){
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
+function _collectVirtualTasks(){
+  var virt=[],today=new Date().toISOString().split('T')[0];
+  function _isOpenish(s){return s===_TSK_OPEN||s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}
+  function _mapStatus(s){return s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?_TSK_PROG:s;}
+  (DB.ncr||[]).forEach(function(n){
+    if(!_isOpenish(n.s))return;
+    virt.push({id:'v:ncr:'+n.id,title:(n.num?n.num+' \u2014 ':'')+String(n.d||'').substring(0,60),assignee:n.o||null,due:n.u||null,status:_mapStatus(n.s),priority:_TSK_PRI_DEF,source_table:'ncr',source_id:n.id,notes:null,isVirtual:true});
+  });
+  (DB.inc||[]).forEach(function(i){
+    if(!_isOpenish(i.s))return;
+    virt.push({id:'v:inc:'+i.id,title:'\u05ea\u05e7\u05e8\u05d9\u05ea: '+String(i.d||'').substring(0,60),assignee:i.r||null,due:null,status:_mapStatus(i.s),priority:i.sv==='\u05d7\u05de\u05d5\u05e8'?'\u05e7\u05e8\u05d9\u05d8\u05d9':_TSK_PRI_DEF,source_table:'inc',source_id:i.id,notes:null,isVirtual:true});
+  });
+  (DB.near_miss||[]).forEach(function(m){
+    if(!_isOpenish(m.s))return;
+    virt.push({id:'v:near_miss:'+m.id,title:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+String(m.descr||'').substring(0,60),assignee:m.rep||null,due:null,status:_mapStatus(m.s),priority:m.sev==='\u05d7\u05de\u05d5\u05e8'?'\u05e7\u05e8\u05d9\u05d8\u05d9':_TSK_PRI_DEF,source_table:'near_miss',source_id:m.id,notes:null,isVirtual:true});
+  });
+  function _addExp(tbl,nameFn,ownerFn){
+    (DB[tbl]||[]).forEach(function(r){
+      if(!r.e||r.e>=today)return;
+      virt.push({id:'v:'+tbl+':'+r.id,title:'\u05dc\u05d7\u05d3\u05e9: '+nameFn(r),assignee:ownerFn(r),due:r.e,status:_TSK_OPEN,priority:'\u05d2\u05d1\u05d5\u05d4',source_table:tbl,source_id:r.id,notes:null,isVirtual:true});
+    });
+  }
+  _addExp('ppe',function(r){return (r.ty||'')+(r.w?' ('+r.w+')':'');},function(r){return r.w||null;});
+  _addExp('tr',function(r){return (r.n||'')+(r.w?' - '+r.w:'');},function(r){return r.w||null;});
+  _addExp('docs',function(r){return r.n||'';},function(r){return r.o||null;});
+  _addExp('ctr',function(r){return r.n||'';},function(r){return r.c||null;});
+  _addExp('equip_inspections',function(r){return r.n||r.code||'';},function(r){return r.vendor||null;});
+  var manual={};
+  (DB.tasks||[]).forEach(function(t){if(t.source_table&&t.source_id)manual[t.source_table+':'+t.source_id]=true;});
+  return virt.filter(function(v){return !manual[v.source_table+':'+v.source_id];});
+}
 function rTasks(){
   var tb=g('tb-tasks');if(!tb)return;
-  var rows=(DB.tasks||[]).slice();
+  var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
   var today=new Date().toISOString().split('T')[0];
   var f=window._tskFilter||'all';
   function isDone(r){return r.status===_TSK_DONE||r.status===_TSK_CANC;}
@@ -1963,11 +2012,20 @@ function rTasks(){
       if(dd<0)dueCls=';color:var(--bad);font-weight:700';
       else if(dd<=3)dueCls=';color:var(--warn);font-weight:700';
     }
-    var src=r.source_table&&r.source_id?'<span class="b bX" style="font-size:10px">'+esc(_tskSrcLabel(r.source_table))+'</span>':'\u2014';
-    var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)">&#9998;</button>';
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+    var srcLabel=r.source_table&&r.source_id?esc(_tskSrcLabel(r.source_table))+(r.isVirtual?' <span style="font-size:9px;color:var(--t3)">(\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9)</span>':''):'';
+    var src=srcLabel?'<span class="b bX" style="font-size:10px">'+srcLabel+'</span>':'\u2014';
+    var actions;
+    if(r.isVirtual){
+      var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4 \u05d1\u05de\u05e7\u05d5\u05e8">&#128065;</button>';
+      var promoteBtn='<button class="btn btn-d btn-sm" data-stbl="'+esc(r.source_table)+'" data-sid="'+esc(r.source_id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" title="\u05d4\u05e4\u05d5\u05da \u05dc\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05e6\u05de\u05d0\u05d9\u05ea">&#10133;</button>';
+      actions=srcViewBtn+' '+promoteBtn;
+    }else{
+      var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)">&#9998;</button>';
+      var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+      var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+      actions=viewBtn+' '+editBtn+' '+delBtn;
+    }
+    return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
   }).join('');
 }
 // ---- END TASKS ----
