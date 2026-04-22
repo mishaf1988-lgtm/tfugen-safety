@@ -39,13 +39,14 @@
 - [x] **Realtime cross-device sync** (PR #35) — `supabase-js` + `postgres_changes` WebSocket. שינוי במכשיר אחד מופיע בכולם תוך פחות משנייה. Polling יורד ל-2 דקות כ-safety net.
 - [x] **View + PDF per report** (PRs #37, #42-43) — כפתורי 👁 ו-🖨 PDF לדיווחי near-miss / rounds / equipment. הדפסה מציגה תמונה גדולה.
 - [x] **Phase C — Tasks module (CAPA follow-up)** — דף `pg-tasks` + טבלה `tasks` + מודאל יצירה/עריכה (8 שדות) + KPI בדשבורד (פתוחות + בפיגור) + alert אדום כשיש משימות פג-יעד. VIEW_CONFIG, PDF ref prefix `TSK`, סינון (הכל/פתוחות/בהתקדמות/פג יעד/הושלמו).
+- [x] **Phase C.1 — Virtual tasks (auto-derived)** — דף המשימות מציג אוטומטית גם: NCR פתוחים/בטיפול, תקריות פתוחות, near-miss פתוחים, ופריטים שפג תוקפם (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד). שורות וירטואליות מסומנות "(אוטומטי)", יש להן רק 👁 (צפייה במקור) ו-➕ (הפוך למשימה עצמאית — פתיחה של המודאל עם הכל מוכן). אם יצרת ידנית משימה עם source_table+source_id התואמים — הוירטואלית לא תוצג (מניעת כפילות).
+- [x] **Fixes** — rename "משימות" → "משימות ומעקב" (5 מקומות), Phase B export toolbar wipe-then-insert (הורג כפילויות), מובייל thead `display:none` (נקי יותר מ-off-screen), data-label על כל td של משימות לתצוגת כרטיס תקנית במובייל.
 
 ---
 
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
-- [ ] **Phase C.2 — Task integration buttons** — כפתור "➕ פתח משימה" בתוך view של NCR/inc/rsk שימלא אוטומטית `source_table`+`source_id` (openTskModal כבר תומך, נשאר לחווט את הכפתורים)
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
