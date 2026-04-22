@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-19
+**Last updated**: 2026-04-22
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -38,18 +38,21 @@
 - [x] **Photo/file upload** (PRs #32-34, #36, #39-41) — העלאה לכל טפסי הדיווח (near-miss, EQI, incidents, training). דחיסת תמונות לצד לקוח, תמיכה ב-PDF/Word/Excel. גלריה + מצלמה במובייל. חסימת שמירה תוך כדי העלאה. שגיאות מוצגות בתוך תיבת הצירוף.
 - [x] **Realtime cross-device sync** (PR #35) — `supabase-js` + `postgres_changes` WebSocket. שינוי במכשיר אחד מופיע בכולם תוך פחות משנייה. Polling יורד ל-2 דקות כ-safety net.
 - [x] **View + PDF per report** (PRs #37, #42-43) — כפתורי 👁 ו-🖨 PDF לדיווחי near-miss / rounds / equipment. הדפסה מציגה תמונה גדולה.
+- [x] **Phase C — Tasks module (CAPA follow-up)** — דף `pg-tasks` + טבלה `tasks` + מודאל יצירה/עריכה (8 שדות) + KPI בדשבורד (פתוחות + בפיגור) + alert אדום כשיש משימות פג-יעד. VIEW_CONFIG, PDF ref prefix `TSK`, סינון (הכל/פתוחות/בהתקדמות/פג יעד/הושלמו).
 
 ---
 
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
+- [ ] **Phase C.2 — Task integration buttons** — כפתור "➕ פתח משימה" בתוך view של NCR/inc/rsk שימלא אוטומטית `source_table`+`source_id` (openTskModal כבר תומך, נשאר לחווט את הכפתורים)
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
 ### ⚠️ פעולה ידנית נדרשת
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22).
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ

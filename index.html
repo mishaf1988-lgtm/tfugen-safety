@@ -288,6 +288,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="kpi kpi-g"><div class="kpi-label">&#1492;&#1512;&#1513;&#1488;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</div><div class="kpi-val" id="k8">0</div><div class="kpi-sub">PTW</div></div>
     <div class="kpi kpi-o" style="cursor:pointer" onclick="goPage('nm')"><div class="kpi-label">&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div><div class="kpi-val" id="k-nm">0</div><div class="kpi-sub" id="k-nm-s">&#1492;&#1495;&#1493;&#1491;&#1513;</div></div>
     <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('round')"><div class="kpi-label">&#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div><div class="kpi-val" id="k-round">&#8212;</div><div class="kpi-sub" id="k-round-s">&#1492;&#1497;&#1493;&#1501;</div></div>
+    <div class="kpi kpi-b" style="cursor:pointer" onclick="goPage('tasks');tskFilter('open')"><div class="kpi-label">&#9989; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</div><div class="kpi-val" id="k-tsk">0</div><div class="kpi-sub" id="k-tsk-s">&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div></div>
   </div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -397,6 +398,31 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#128247;</th><th></th>
   </tr></thead><tbody id="tb-nm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
+</div>
+
+<!-- TASKS PAGE -->
+<div id="pg-tasks" class="page">
+  <div class="row">
+    <div class="page-title">&#9989; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; <span>CAPA &#1493;&#1502;&#1506;&#1511;&#1489;</span></div>
+    <button class="btn btn-p" onclick="openTskModal()">+ &#1502;&#1513;&#1497;&#1502;&#1492;</button>
+  </div>
+  <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 10px">
+    <button class="btn btn-p" id="tsk-tab-all" onclick="tskFilter('all')">&#1492;&#1499;&#1500;</button>
+    <button class="btn btn-s" id="tsk-tab-open" onclick="tskFilter('open')">&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</button>
+    <button class="btn btn-s" id="tsk-tab-prog" onclick="tskFilter('prog')">&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</button>
+    <button class="btn btn-s" id="tsk-tab-over" onclick="tskFilter('over')">&#1508;&#1497;&#1490;&#1493;&#1512; &#1497;&#1506;&#1491;</button>
+    <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+    <th>&#1497;&#1506;&#1491;</th>
+    <th>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</th>
+    <th>&#1502;&#1511;&#1493;&#1512;</th>
+    <th>&#1505;&#1496;.</th>
+    <th></th>
+  </tr></thead><tbody id="tb-tasks"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1502;&#1506;&#1511;&#1489; CAPA</div>
 </div>
 
 <!-- MORNING ROUND PAGE -->
@@ -609,6 +635,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="bn" id="bn-leg" onclick="goPage('leg')"><span class="ic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
   <button class="bn" id="bn-nm" onclick="goPage('nm')"><span class="ic">&#9940;</span>&#1499;&#1502;&#1506;&#1496;</button>
   <button class="bn" id="bn-round" onclick="goPage('round')"><span class="ic">&#9728;</span>&#1505;&#1489;&#1489;</button>
+  <button class="bn" id="bn-tasks" onclick="goPage('tasks')"><span class="ic">&#9989;</span>&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
   <button class="bn" id="bn-lg" onclick="goPage('lg')"><span class="ic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
 </nav>
 
@@ -914,6 +941,26 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-round')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRound()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- TASK MODAL -->
+<div class="overlay" id="ov-tsk" onclick="closeModal('m-tsk')"></div>
+<div class="modal" id="m-tsk" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tsk')">&#10005;</button>
+  <div class="modal-title" id="m-tsk-title">&#9989; &#1502;&#1513;&#1497;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
+  <input type="hidden" id="tsk-id">
+  <input type="hidden" id="tsk-src-tbl">
+  <input type="hidden" id="tsk-src-id">
+  <div class="fgrid">
+    <div class="field fw"><label>&#1499;&#1493;&#1514;&#1512;&#1514; *</label><input id="tsk-title" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1492;&#1495;&#1500;&#1507; &#1502;&#1498;&#1513;&#1493;&#1500; &#1489;&#1495;&#1491;&#1512; &#1502;&#1499;&#1493;&#1504;&#1493;&#1514;"></div>
+    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="tsk-assignee" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;"></div>
+    <div class="field"><label>&#1497;&#1506;&#1491;</label><input type="date" id="tsk-due"></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tsk-status"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
+    <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tsk-notes" rows="2"></textarea></div>
+    <div class="field fw" id="tsk-src-label" style="display:none"><label>&#1502;&#1511;&#1493;&#1512;</label><div id="tsk-src-view" style="padding:6px 8px;background:#f5f5f5;border-radius:6px;font-size:12px;color:var(--t2)">&#8212;</div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
 <!-- INS MODAL -->
 <div class="overlay" id="ov-ins" onclick="closeModal('m-ins')"></div>
 <div class="modal" id="m-ins" style="display:none">
@@ -1034,7 +1081,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1051,7 +1098,7 @@ function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\
 function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1060,7 +1107,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1117,7 +1164,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:ro
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1145,7 +1192,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -1184,7 +1231,7 @@ function syncDiag(){
   if(confirm(lines.join('\n')))_obDrain();
 }
 function forceSync(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks'];
   var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
   var ok=0,fail=0,skip=0,pushDone=0,pushTotal=0;
   var failTbls=[];
@@ -1266,7 +1313,7 @@ function goPage(id){
   var w=g('ncr-status-widget');if(w)w.style.display=(id==='dash'||id==='ncr')?'':'none';
 }
 function rPage(){
-  var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
+  var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
   if(m[CUR])m[CUR]();
 }
@@ -1574,6 +1621,15 @@ function rDash(){
   if(elRound){elRound.style.color=todayRound?'var(--ok)':'var(--red)';}
   // Round alert if not done today
   if(!todayRound)alerts='<div class="alert alert-w" onclick="goPage(\'round\')" style="cursor:pointer">&#9728; \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2 \u05d4\u05d9\u05d5\u05dd \u2192</div>'+alerts;
+  // Tasks KPI — open count + overdue alert
+  var tAll=(DB.tasks||[]);
+  var tOpen=tAll.filter(function(r){return r.status===_TSK_OPEN||r.status===_TSK_PROG;}).length;
+  var tOver=tAll.filter(function(r){return r.due&&r.due<today&&r.status!==_TSK_DONE&&r.status!==_TSK_CANC;}).length;
+  var elTsk=g('k-tsk'),elTskS=g('k-tsk-s');
+  if(elTsk)elTsk.textContent=tOpen;
+  if(elTskS)elTskS.textContent=tOver>0?('\u05e4\u05ea\u05d5\u05d7\u05d5\u05ea ('+tOver+' \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8)'):'\u05e4\u05ea\u05d5\u05d7\u05d5\u05ea';
+  if(elTsk)elTsk.style.color=tOver>0?'var(--bad)':'';
+  if(tOver>0)alerts='<div class="alert alert-r" onclick="goPage(\'tasks\');tskFilter(\'over\')" style="cursor:pointer">\u23f0 '+tOver+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u2192</div>'+alerts;
   var al=g('dash-alerts');if(al)al.innerHTML=alerts;
 }
 function _expCollect(){
@@ -1834,6 +1890,87 @@ function svRound(){
   toast('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
 }
 // ---- END NEAR-MISS + ROUND ----
+// ---- TASKS (CAPA follow-up) ----
+window._tskFilter='all';
+var _TSK_OPEN='\u05e4\u05ea\u05d5\u05d7';
+var _TSK_PROG='\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea';
+var _TSK_DONE='\u05d4\u05d5\u05e9\u05dc\u05dd';
+var _TSK_CANC='\u05d1\u05d5\u05d8\u05dc';
+var _TSK_PRI_DEF='\u05e8\u05d2\u05d9\u05dc';
+function tskFilter(f){window._tskFilter=f;['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();}
+function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3'};return m[tbl]||tbl;}
+function openTskModal(srcTbl,srcId){
+  ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
+  var pr=g('tsk-priority');if(pr)pr.value=_TSK_PRI_DEF;
+  g('tsk-id').value='';
+  g('tsk-src-tbl').value=srcTbl||'';
+  g('tsk-src-id').value=srcId||'';
+  var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
+  if(srcTbl&&srcId){
+    var rec=(DB[srcTbl]||[]).find(function(r){return r.id===srcId;});
+    var short=rec?(rec.num||rec.n||rec.code||rec.descr||srcId):srcId;
+    if(vw)vw.textContent=_tskSrcLabel(srcTbl)+': '+short;
+    if(lbl)lbl.style.display='';
+  }else if(lbl){lbl.style.display='none';}
+  openModal('m-tsk');
+}
+function svTsk(){
+  var t=gv('tsk-title');if(!t){toast('\u05db\u05d5\u05ea\u05e8\u05ea \u05d7\u05d5\u05d1\u05d4');return;}
+  var id=gv('tsk-id')||gid();
+  var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
+  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
+  if(!DB.tasks)DB.tasks=[];
+  if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
+  else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
+  sdb();closeModal('m-tsk');toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTasks();rDash();
+}
+function editTsk(id){
+  var rec=(DB.tasks||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  g('tsk-id').value=rec.id;g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
+  g('tsk-status').value=rec.status||_TSK_OPEN;g('tsk-priority').value=rec.priority||_TSK_PRI_DEF;g('tsk-notes').value=rec.notes||'';
+  g('tsk-src-tbl').value=rec.source_table||'';g('tsk-src-id').value=rec.source_id||'';
+  var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
+  if(rec.source_table&&rec.source_id){
+    var sr=(DB[rec.source_table]||[]).find(function(r){return r.id===rec.source_id;});
+    var short=sr?(sr.num||sr.n||sr.code||sr.descr||rec.source_id):rec.source_id;
+    if(vw)vw.textContent=_tskSrcLabel(rec.source_table)+': '+short;
+    if(lbl)lbl.style.display='';
+  }else if(lbl){lbl.style.display='none';}
+  openModal('m-tsk');
+}
+function rTasks(){
+  var tb=g('tb-tasks');if(!tb)return;
+  var rows=(DB.tasks||[]).slice();
+  var today=new Date().toISOString().split('T')[0];
+  var f=window._tskFilter||'all';
+  function isDone(r){return r.status===_TSK_DONE||r.status===_TSK_CANC;}
+  if(f==='open')rows=rows.filter(function(r){return r.status===_TSK_OPEN;});
+  else if(f==='prog')rows=rows.filter(function(r){return r.status===_TSK_PROG;});
+  else if(f==='done')rows=rows.filter(isDone);
+  else if(f==='over')rows=rows.filter(function(r){return r.due&&r.due<today&&!isDone(r);});
+  rows.sort(function(a,b){
+    var an=isDone(a)?1:0,bn=isDone(b)?1:0;
+    if(an!==bn)return an-bn;
+    return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
+  });
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea</td></tr>';return;}
+  tb.innerHTML=rows.map(function(r){
+    var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
+    if(r.due&&!isDone(r)){
+      var dd=du(r.due);
+      if(dd<0)dueCls=';color:var(--bad);font-weight:700';
+      else if(dd<=3)dueCls=';color:var(--warn);font-weight:700';
+    }
+    var src=r.source_table&&r.source_id?'<span class="b bX" style="font-size:10px">'+esc(_tskSrcLabel(r.source_table))+'</span>':'\u2014';
+    var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)">&#9998;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    return '<tr><td style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td>'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td>'+_tskPriBadge(r.priority)+'</td><td>'+src+'</td><td>'+sb(r.status)+'</td><td>'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+  }).join('');
+}
+// ---- END TASKS ----
 function rDocs(){
   var tb=g('tb-docs');if(!tb)return;
   if(!DB.docs.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd</td></tr>';return;}
@@ -1974,7 +2111,10 @@ var VIEW_CONFIG={
   hearing_tests:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',back:'hearing',fields:[
     ['\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3','emp_name'],['\u05ea"\u05d6','emp_id'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d9\u05d3\u05d4','dob'],['\u05d2\u05d9\u05dc','age'],['\u05de\u05d9\u05df','gender'],
     ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],['\u05e7\u05d5\u05e4\u05d4/\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],['\u05e9\u05e0\u05d4','year'],
-    ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]}
+    ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
+  tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea',back:'tasks',fields:[
+    ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
+    ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]}
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
@@ -2009,7 +2149,7 @@ function showView(tbl,id){
 }
 
 function _reportRef(tbl,rec){
-  var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT'}[tbl]||(tbl.toUpperCase().slice(0,4));
+  var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT',tasks:'TSK'}[tbl]||(tbl.toUpperCase().slice(0,4));
   var dateField=tbl==='hearing_tests'?(rec.test_date||rec.dob):rec.d;
   var yr=dateField?dateField.slice(0,4):String(new Date().getFullYear());
   var recs=(DB[tbl]||[]).filter(function(r){var rd=tbl==='hearing_tests'?(r.test_date||r.dob):r.d;return rd&&rd.slice(0,4)===yr;}).sort(function(a,b){var ad=tbl==='hearing_tests'?(a.test_date||a.dob):a.d;var bd=tbl==='hearing_tests'?(b.test_date||b.dob):b.d;return ad<bd?-1:ad>bd?1:0;});
