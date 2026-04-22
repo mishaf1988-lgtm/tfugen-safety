@@ -118,10 +118,16 @@ tr:last-child td{border-bottom:none}
 .cap-fab{position:fixed;bottom:78px;left:14px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4a9adf);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 20px rgba(124,58,237,.5);border:none;cursor:pointer;direction:ltr}
 .cap-fab:active{transform:scale(.95)}
 body.emp-mode .cap-fab{display:none}
-.cap-mode-btns{display:flex;gap:10px;margin:16px 0}
-.cap-mode-btn{flex:1;padding:18px 8px;border:2px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:8px;font-family:inherit}
+/* fullscreen override — applied by capOpen after openModal runs */
+.modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;border-radius:0!important;margin:0!important;padding:16px!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
+.modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
+.modal.cap-fullscreen .close-btn{width:42px;height:42px;font-size:22px}
+.modal.cap-fullscreen .modal-footer{padding-top:12px;margin-top:auto;border-top:1px solid var(--border);background:#fff;position:sticky;bottom:-1px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;padding-bottom:10px;z-index:2;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.modal.cap-fullscreen .modal-footer .btn{min-height:44px;padding:10px 16px;font-size:14px}
+.cap-mode-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
+.cap-mode-btn{padding:22px 8px;border:2px solid var(--border);border-radius:14px;background:#fff;cursor:pointer;font-size:14px;font-weight:700;color:var(--tx);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:inherit;min-height:110px}
 .cap-mode-btn:active{background:#f5f5f5}
-.cap-mode-btn .ic{font-size:28px}
+.cap-mode-btn .ic{font-size:36px;line-height:1}
 .cap-mode-btn.recording{border-color:#e11d48;background:#fff5f5;animation:cap-pulse 1.2s ease-in-out infinite}
 .cap-mode-btn.done{border-color:#22c55e;background:#f0fdf4}
 @keyframes cap-pulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,72,.4)}50%{box-shadow:0 0 0 8px rgba(225,29,72,0)}}
@@ -680,11 +686,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </div>
 
-  <div class="modal-footer">
-    <button class="btn btn-s" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
-    <button class="btn btn-s" id="cap-refine-btn" onclick="capRefine()" style="display:none;background:#fef3c7;color:#92400e">&#128260; &#1504;&#1514;&#1495; &#1513;&#1493;&#1489;</button>
-    <button class="btn btn-p" id="cap-confirm-btn" onclick="capConfirm()" style="display:none">&#9989; &#1492;&#1502;&#1513;&#1498; &#1500;&#1496;&#1493;&#1508;&#1505;</button>
-    <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" disabled>&#128302; &#1513;&#1500;&#1495; &#1500;&#1504;&#1497;&#1514;&#1493;&#1495; AI</button>
+  <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
+    <button class="btn btn-s" style="white-space:nowrap" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-s" id="cap-refine-btn" onclick="capRefine()" style="display:none;white-space:nowrap;background:#fef3c7;color:#92400e;border:1px solid #fbbf24">&#128260; &#1504;&#1514;&#1495; &#1513;&#1493;&#1489;</button>
+    <button class="btn btn-p" id="cap-confirm-btn" onclick="capConfirm()" style="display:none;white-space:nowrap">&#9989; &#1492;&#1502;&#1513;&#1498;</button>
+    <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" style="white-space:nowrap" disabled>&#128302; &#1504;&#1514;&#1495;</button>
   </div>
 </div>
 
@@ -2911,6 +2917,8 @@ function capOpen(){
   try{if(_capRec){_capRec.stop();}}catch(e){}
   _capRecActive=false;
   openModal('m-cap');
+  var mm=g('m-cap'); if(mm){mm.classList.add('cap-fullscreen');}
+  var ov=g('ov-cap'); if(ov){ov.style.display='none';}
 }
 
 function _capShowStage(which){
