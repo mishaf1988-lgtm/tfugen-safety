@@ -19,7 +19,7 @@ const ALLOWED_MODELS = [
   'claude-haiku-4-5'
 ];
 const MAX_TOKENS_CAP = 1200;
-const MAX_BODY_BYTES = 50000;
+const MAX_BODY_BYTES = 300000;  // bumped from 50KB to allow inline base64 images for Smart Capture (vision)
 
 function getAllowedOrigins() {
   const extra = (process.env.ALLOWED_ORIGINS || '')
