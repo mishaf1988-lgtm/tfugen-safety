@@ -2892,22 +2892,56 @@ function doLogin(){
   _sbBoot();
   if(!_sbClient){if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}_loginErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');return;}
   _sbClient.auth.signInWithPassword({email:email,password:val}).then(function(r){
-    if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
-    if(r.error||!r.data||!r.data.session){_loginErr('\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd');return;}
+    if(r.error||!r.data||!r.data.session){
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+      _loginErr('\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd');return;
+    }
     _sbToken=r.data.session.access_token;
     _sbAuthPromise=Promise.resolve(r.data.session);
-    _isAdmin=true;
-    _currentUser = (email===ADMIN_EMAIL) ? {username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'} : {username:uname.toLowerCase(),role:null,full_name:null};
-    try{localStorage.removeItem(EMP_KEY);}catch(e){}
-    document.body.classList.remove('emp-mode');
-    var ls=g('login');if(ls)ls.style.display='none';
-    var app=g('app');if(app)app.style.display='block';
-    ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
-    setTimeout(_fetchCurrentUserProfile,900);
+
+    // Admin bypasses the approval gate
+    if(email===ADMIN_EMAIL){
+      _currentUser={username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'};
+      _finishLogin(lb);return;
+    }
+
+    // For non-admin users — check the app_users row for approval (active=true + full_name)
+    fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
+      headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
+    }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
+      var u=rows[0];
+      var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
+      if(!approved){
+        try{_sbClient.auth.signOut();}catch(e){}
+        _sbToken=null;_sbAuthPromise=null;
+        if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+        _loginErr('\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d8\u05e8\u05dd \u05d0\u05d5\u05e9\u05e8 \u05e2\u05f4\u05d9 \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05e0\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df.');
+        return;
+      }
+      _currentUser={username:uname.toLowerCase()};
+      for(var k in u)_currentUser[k]=u[k];
+      _finishLogin(lb);
+    }).catch(function(err){
+      try{_sbClient.auth.signOut();}catch(e){}
+      _sbToken=null;_sbAuthPromise=null;
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+      _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e8\u05e9\u05d0\u05d4: '+(err&&err.message||err));
+    });
   }).catch(function(){
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
   });
+}
+
+function _finishLogin(lb){
+  if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+  _isAdmin=true;
+  try{localStorage.removeItem(EMP_KEY);}catch(e){}
+  document.body.classList.remove('emp-mode');
+  var ls=g('login');if(ls)ls.style.display='none';
+  var app=g('app');if(app)app.style.display='block';
+  ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
+  setTimeout(_fetchCurrentUserProfile,900);
 }
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
