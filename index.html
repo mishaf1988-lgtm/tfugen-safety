@@ -22,6 +22,17 @@
   --blue:#2176ae;--sh:0 1px 4px rgba(0,0,0,.08);
   --ac:var(--red);--su:#f9fafb
 }
+/* High-contrast mode — for outdoor factory light. Toggled via body.hc */
+body.hc{
+  --bg:#fff;--card:#fff;--border:#555;--su:#f0f0f0;
+  --tx:#000;--t2:#111;--t3:#333;
+  --ok:#0a7a2f;--warn:#9a4d00;--bad:#b00;--blue:#144a80;
+  --sh:0 0 0 1px #666;
+}
+body.hc .topbar{border-bottom-width:4px}
+body.hc .bn{color:#000}
+body.hc .bn.on{color:var(--red);border-top-width:4px}
+body.hc .btn,body.hc input,body.hc select,body.hc textarea{border-width:2px!important}
 html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px}
 button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:none}
 
@@ -142,7 +153,9 @@ table{width:100%;border-collapse:collapse;font-size:14px}
 th{background:var(--red);color:#fff;padding:9px 8px;text-align:right;font-size:12px;font-weight:700;text-transform:uppercase;white-space:nowrap}
 td{padding:9px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
 tr:last-child td{border-bottom:none}
-.et{text-align:center;padding:24px;color:var(--t3)}
+.et{text-align:center;padding:28px 20px;color:var(--t3);font-size:14px}
+.et-ic{font-size:38px;display:block;margin-bottom:8px;opacity:.5}
+.et-cta{display:inline-block;margin-top:12px;padding:10px 18px;background:var(--red);color:#fff!important;border-radius:8px;font-weight:700;text-decoration:none;min-height:44px;box-sizing:border-box;font-size:14px}
 
 /* ---- BADGES ---- */
 .b{display:inline-block;padding:3px 8px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap}
@@ -233,7 +246,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .alert-r{background:#fff1f1;border-color:var(--red);color:#991515}
 
 /* ---- TOAST ---- */
-.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;z-index:999;pointer-events:none;white-space:nowrap;animation:ta .3s}
+.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;z-index:999;pointer-events:none;white-space:nowrap;animation:toast-in .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.toast.ok{background:linear-gradient(135deg,#15803d,#22c55e)}
+@keyframes toast-in{from{transform:translateX(-50%) translateY(30px) scale(.8);opacity:0}to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
 @keyframes ta{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
 /* ---- FOOTER ---- */
@@ -313,6 +328,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <button class="bell" id="force-sync-btn" title="&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1500;&#1488;" onclick="forceSync()">&#9729;</button>
     <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
+    <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
     <button class="bell" id="bell">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -1257,7 +1273,16 @@ function fd(d){if(!d)return '&#8212;';try{var p=d.split('T')[0].split('-');retur
 function du(d){if(!d)return 9999;try{return Math.ceil((new Date(d)-new Date())/86400000);}catch(e){return 9999;}}
 function eb(d){var x=du(d);if(x>60)return '<span class="b bG">'+fd(d)+'</span>';if(x>=0&&x<=30)return '<span class="b bY">'+x+'\u05d9</span>';if(x<0)return '<span class="b bR">\u05e4\u05d2</span>';return '<span class="b bG">'+fd(d)+'</span>';}
 function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\u05dc\u05dd':'bG','\u05e1\u05d2\u05d5\u05e8':'bG','\u05e4\u05e2\u05d9\u05dc':'bG','\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2':'bY','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'bY','\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'bY','\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05de\u05ea\u05d5\u05db\u05e0\u05df':'bB','\u05de\u05e6\u05d9\u05d9\u05ea':'bG','\u05e4\u05ea\u05d5\u05d7':'bR','\u05dc\u05d0 \u05de\u05e6\u05d9\u05d9\u05ea':'bR','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3':'bR','\u05de\u05d1\u05d5\u05d8\u05dc':'bR','\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc':'bR'};return '<span class="b '+(m[s]||'bX')+'">'+(s?esc(s):'&#8212;')+'</span>';}
-function toast(msg){var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
+function toast(msg,opts){var t=document.createElement('div');t.className='toast'+((opts&&opts.ok)||/✓|✅/.test(msg||'')?' ok':'');t.textContent=msg;document.body.appendChild(t);if(t.classList.contains('ok')&&navigator.vibrate){try{navigator.vibrate(35);}catch(e){}}setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
+
+// High-contrast mode — outdoor factory light readability
+function hcToggle(){
+  var on=!document.body.classList.contains('hc');
+  document.body.classList.toggle('hc',on);
+  try{localStorage.setItem('tfgn_hc',on?'1':'0');}catch(e){}
+  toast(on?'מצב ניגודיות גבוהה פעיל':'מצב רגיל');
+}
+(function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
 function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
@@ -2094,7 +2119,7 @@ function rNm(){
   var f=window._nmFilter||'all';
   if(f==='open')rows=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   if(f==='closed')rows=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd</td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">🚫<span class="et-ic"></span>\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2<br><button class="et-cta" onclick="openModal(\'m-nm\')">+ \u05d3\u05d9\u05d5\u05d5\u05d7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
@@ -2130,7 +2155,7 @@ function rRound(){
   }
   var tb=g('tb-round');if(!tb)return;
   var rows=(DB.rounds||[]).slice().sort(function(a,b){return (b.d||'')>(a.d||'')?1:-1;});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd</td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">☀<span class="et-ic"></span>\u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8<br><button class="et-cta" onclick="openModal(\'m-round\')">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
   tb.innerHTML=rows.map(function(r){
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
@@ -2269,7 +2294,7 @@ function rTasks(){
     if(an!==bn)return an-bn;
     return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea</td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
@@ -2360,7 +2385,7 @@ function ncrStatusChange(){
 
 function rInc(){
   var tb=g('tb-inc');if(!tb)return;
-  if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd</td></tr>';return;}
+  if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">✓<span class="et-ic"></span>\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05e8\u05e9\u05d5\u05de\u05d9\u05dd<br><span style="font-size:12px;color:var(--ok);font-weight:700">\u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3 — \u05e8\u05e6\u05e3 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9</span></td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
   tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
