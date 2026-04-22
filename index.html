@@ -173,7 +173,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 @media(max-width:600px){
   .tbl-wrap{overflow-x:visible}
   .tbl-wrap table,.tbl-wrap thead,.tbl-wrap tbody,.tbl-wrap tr,.tbl-wrap th,.tbl-wrap td{display:block;width:auto}
-  .tbl-wrap thead{position:absolute;top:-9999px;left:-9999px}
+  .tbl-wrap thead{display:none}
   .tbl-wrap tr{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;box-shadow:var(--sh)}
   .tbl-wrap td{border:none;padding:5px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;white-space:normal;min-height:28px}
   .tbl-wrap td::before{content:attr(data-label);color:var(--t3);font-size:11px;font-weight:700;flex-shrink:0;text-align:right}
@@ -1955,7 +1955,7 @@ function rTasks(){
     if(an!==bn)return an-bn;
     return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea</td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
@@ -1967,7 +1967,7 @@ function rTasks(){
     var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)">&#9998;</button>';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td>'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td>'+_tskPriBadge(r.priority)+'</td><td>'+src+'</td><td>'+sb(r.status)+'</td><td>'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 // ---- END TASKS ----
@@ -3049,19 +3049,19 @@ function _expXlsx(tbodyId){
 }
 function _expPdf(){window.print();}
 
-/* auto-inject Export buttons next to each .tbl-wrap */
+/* auto-inject Export buttons next to each .tbl-wrap — idempotent via data-exp-for marker */
 (function(){
   function inject(){
     document.querySelectorAll('.tbl-wrap').forEach(function(w){
-      if(w.parentElement&&w.parentElement.previousElementSibling&&w.parentElement.previousElementSibling.classList.contains('tfu-exp-row'))return;
       var tbl=w.querySelector('table');if(!tbl)return;
       var tb=tbl.querySelector('tbody');if(!tb||!tb.id)return;
+      var id=tb.id;
+      if(document.querySelector('.tfu-exp-row[data-exp-for="'+id+'"]'))return;
       var host=w.parentElement;if(!host)return;
-      if(host.previousElementSibling&&host.previousElementSibling.classList.contains('tfu-exp-row'))return;
       var row=document.createElement('div');
       row.className='tfu-exp-row row';
+      row.setAttribute('data-exp-for',id);
       row.style.cssText='gap:6px;justify-content:flex-end;margin:4px 0 6px';
-      var id=tb.id;
       row.innerHTML='<button class="btn btn-s" data-tb="'+id+'" onclick="_expXlsx(this.dataset.tb)" title="\u05d9\u05d9\u05e6\u05d5\u05d0 Excel">&#128196; Excel</button>'+
                     '<button class="btn btn-s" onclick="_expPdf()" title="\u05d4\u05d3\u05e4\u05e1\u05d4 / PDF">&#128438; PDF</button>';
       host.parentElement.insertBefore(row,host);
