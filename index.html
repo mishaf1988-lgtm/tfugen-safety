@@ -87,6 +87,33 @@ button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:n
 
 /* ---- KPI GRID ---- */
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+
+/* Dashboard hero "what needs attention today" */
+.hero-today{background:linear-gradient(135deg,#fef2f2 0%,#fee2e2 100%);border:1px solid #fca5a5;border-radius:16px;padding:18px 18px 16px;margin-bottom:14px;cursor:pointer;box-shadow:0 2px 8px rgba(204,31,31,.08)}
+.hero-today.ok{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border-color:#86efac;box-shadow:0 2px 8px rgba(34,197,94,.08)}
+.hero-today .ht-title{font-size:13px;color:var(--t2);font-weight:700;margin-bottom:2px}
+.hero-today .ht-num{font-size:48px;font-weight:900;line-height:1;color:#b91c1c;margin:6px 0 2px}
+.hero-today.ok .ht-num{color:#15803d}
+.hero-today .ht-sub{font-size:13px;color:var(--t2);margin-bottom:12px}
+.hero-today .ht-pills{display:flex;flex-wrap:wrap;gap:6px}
+.hero-pill{background:#fff;border:1px solid var(--border);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:700;color:var(--t2);display:inline-flex;align-items:center;gap:5px}
+.hero-pill.red{color:#b91c1c;border-color:#fca5a5;background:#fff}
+.hero-pill.amber{color:#b45309;border-color:#fcd34d}
+.hero-pill.green{color:#15803d;border-color:#86efac}
+
+/* Monthly metrics strip — 4 compact tiles */
+.monthly-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.ms-tile{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 4px;text-align:center}
+.ms-tile .ms-val{font-size:20px;font-weight:800;line-height:1.2;color:var(--ac)}
+.ms-tile .ms-lbl{font-size:10px;color:var(--t3);margin-top:3px;font-weight:600;line-height:1.2}
+
+/* Collapsible "more metrics" */
+.more-accordion{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.more-accordion summary{padding:13px 14px;font-size:13px;font-weight:700;color:var(--tx);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.more-accordion summary::-webkit-details-marker{display:none}
+.more-accordion summary::after{content:'▼';font-size:10px;color:var(--t3);transition:transform .2s}
+.more-accordion[open] summary::after{transform:rotate(180deg)}
+.more-accordion .kgrid{padding:4px 10px 12px;margin-bottom:0}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden;box-shadow:var(--sh)}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
 .kpi-r::before{background:var(--red)}.kpi-g::before{background:var(--ok)}.kpi-b::before{background:var(--blue)}.kpi-o::before{background:var(--warn)}
@@ -303,45 +330,42 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-dash" class="page on">
   <div class="page-title">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; <span>&#1512;&#1488;&#1513;&#1497;</span></div>
+
+  <!-- HERO: what needs my attention today -->
+  <div id="dash-hero" class="hero-today" onclick="goPage('tasks');tskFilter('all')">
+    <div class="ht-title">&#127919; &#1496;&#1497;&#1508;&#1493;&#1500; &#1492;&#1497;&#1493;&#1501;</div>
+    <div class="ht-num" id="hero-num">0</div>
+    <div class="ht-sub" id="hero-sub">&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1502;&#1502;&#1514;&#1497;&#1504;&#1493;&#1514;</div>
+    <div class="ht-pills" id="hero-pills"></div>
+  </div>
+
   <div id="dash-alerts"></div>
   <div id="safety-streak" class="streak-hero" style="display:none"></div>
-  <div class="kgrid">
-    <div class="kpi kpi-r"><div class="kpi-label">&#1502;&#1505;&#1502;&#1499;&#1497; ISO</div><div class="kpi-val" id="k1">0</div><div class="kpi-sub" id="k1s">-</div></div>
-    <div class="kpi kpi-r"><div class="kpi-label">&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</div><div class="kpi-val" id="k2">0</div><div class="kpi-sub" id="k2s">-</div></div>
-    <div class="kpi kpi-g"><div class="kpi-label">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div><div class="kpi-val" id="k3">0%</div><div class="kpi-sub" id="k3s">-</div></div>
-    <div class="kpi kpi-b"><div class="kpi-label">אי התאמות &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div><div class="kpi-val" id="k4">0</div><div class="kpi-sub" id="k4s">-</div></div>
-    <div class="kpi kpi-o"><div class="kpi-label">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><div class="kpi-val" id="k5">0</div><div class="kpi-sub">-</div></div>
-    <div class="kpi kpi-r"><div class="kpi-label">&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501;</div><div class="kpi-val" id="k6">0</div><div class="kpi-sub">RPN&ge;15</div></div>
-    <div class="kpi kpi-r"><div class="kpi-label">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</div><div class="kpi-val" id="k7">0</div><div class="kpi-sub">LTIF</div></div>
-    <div class="kpi kpi-g"><div class="kpi-label">&#1492;&#1512;&#1513;&#1488;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</div><div class="kpi-val" id="k8">0</div><div class="kpi-sub">PTW</div></div>
-    <div class="kpi kpi-o" style="cursor:pointer" onclick="goPage('nm')"><div class="kpi-label">&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div><div class="kpi-val" id="k-nm">0</div><div class="kpi-sub" id="k-nm-s">&#1492;&#1495;&#1493;&#1491;&#1513;</div></div>
-    <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('round')"><div class="kpi-label">&#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div><div class="kpi-val" id="k-round">&#8212;</div><div class="kpi-sub" id="k-round-s">&#1492;&#1497;&#1493;&#1501;</div></div>
-    <div class="kpi kpi-b" style="cursor:pointer" onclick="goPage('tasks');tskFilter('open')"><div class="kpi-label">&#9989; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1502;&#1506;&#1511;&#1489;</div><div class="kpi-val" id="k-tsk">0</div><div class="kpi-sub" id="k-tsk-s">&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div></div>
+
+  <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
+  <div class="monthly-strip">
+    <div class="ms-tile"><div class="ms-val" id="ms-inc">0</div><div class="ms-lbl">&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; (&#1513;&#1504;&#1492;)</div></div>
+    <div class="ms-tile"><div class="ms-val" id="ms-nm">0</div><div class="ms-lbl">&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506; (&#1495;&#1493;&#1491;&#1513;)</div></div>
+    <div class="ms-tile"><div class="ms-val" id="ms-ltif">0</div><div class="ms-lbl">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503; (LTIF)</div></div>
+    <div class="ms-tile"><div class="ms-val" id="ms-streak">&#8212;</div><div class="ms-lbl">&#1497;&#1502;&#1497; &#1512;&#1510;&#1507; &#1489;&#1496;&#1493;&#1495;&#1497;&#1501;</div></div>
   </div>
+
+  <!-- COLLAPSIBLE: other metrics -->
+  <details class="more-accordion">
+    <summary>&#128202; &#1502;&#1491;&#1491;&#1497;&#1501; &#1504;&#1493;&#1505;&#1508;&#1497;&#1501;</summary>
+    <div class="kgrid">
+      <div class="kpi kpi-r" style="cursor:pointer" onclick="goPage('docs')"><div class="kpi-label">&#1502;&#1505;&#1502;&#1499;&#1497; ISO</div><div class="kpi-val" id="k1">0</div><div class="kpi-sub" id="k1s">-</div></div>
+      <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('tr')"><div class="kpi-label">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div><div class="kpi-val" id="k3">0%</div><div class="kpi-sub" id="k3s">-</div></div>
+      <div class="kpi kpi-b" style="cursor:pointer" onclick="goPage('ncr')"><div class="kpi-label">אי התאמות &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div><div class="kpi-val" id="k4">0</div><div class="kpi-sub" id="k4s">-</div></div>
+      <div class="kpi kpi-r" style="cursor:pointer" onclick="goPage('rsk')"><div class="kpi-label">&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501;</div><div class="kpi-val" id="k6">0</div><div class="kpi-sub">RPN&ge;15</div></div>
+      <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('ptw')"><div class="kpi-label">&#1492;&#1512;&#1513;&#1488;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</div><div class="kpi-val" id="k8">0</div><div class="kpi-sub">PTW</div></div>
+      <div class="kpi kpi-o" style="cursor:pointer" onclick="goPage('emp')"><div class="kpi-label">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><div class="kpi-val" id="k5">0</div><div class="kpi-sub">-</div></div>
+    </div>
+  </details>
+
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
-  <div id="ncr-status-widget" style="margin:16px 8px 0;direction:rtl">
-    <div style="font-size:14px;font-weight:700;color:var(--ac);margin-bottom:10px;border-right:3px solid var(--ac);padding-right:8px">&#128202; &#1505;&#1496;&#1496;&#1493;&#1505; &#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-      <div style="background:var(--su);border-radius:10px;padding:14px;text-align:center;border-right:3px solid #cc1f1f">
-        <div id="kpi-ncr-all" style="font-size:28px;font-weight:700;color:var(--ac)">0</div>
-        <div style="font-size:11px;color:var(--t2)">&#1505;&#1492;"&#1499; &#1500;&#1497;&#1511;&#1493;&#1497;&#1497;&#1501;</div>
-      </div>
-      <div style="background:var(--su);border-radius:10px;padding:14px;text-align:center;border-right:3px solid #f59e0b">
-        <div id="kpi-ncr-open" style="font-size:28px;font-weight:700;color:#f59e0b">0</div>
-        <div style="font-size:11px;color:var(--t2)">&#1508;&#1514;&#1493;&#1495;&#1497;&#1501; / &#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</div>
-      </div>
-      <div style="background:var(--su);border-radius:10px;padding:14px;text-align:center;border-right:3px solid #ef4444;cursor:pointer" onclick="goPage('ncr');ncrTab('saf')">
-        <div id="kpi-ncr-saf" style="font-size:28px;font-weight:700;color:#ef4444">0</div>
-        <div style="font-size:11px;color:var(--t2)">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
-      </div>
-      <div style="background:var(--su);border-radius:10px;padding:14px;text-align:center;border-right:3px solid #22c55e;cursor:pointer" onclick="goPage('ncr');ncrTab('env')">
-        <div id="kpi-ncr-env" style="font-size:28px;font-weight:700;color:#22c55e">0</div>
-        <div style="font-size:11px;color:var(--t2)">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</div>
-      </div>
-    </div>
-  </div>
 </div>
 
 
@@ -1443,7 +1467,6 @@ function goPage(id){
   var bn=g('bn-'+navId);if(bn)bn.classList.add('on');
   CUR=id;
   rPage();
-  var w=g('ncr-status-widget');if(w)w.style.display=(id==='dash'||id==='ncr')?'':'none';
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
@@ -1765,6 +1788,35 @@ function rDash(){
   if(elTsk)elTsk.style.color=tOver>0?'var(--bad)':'';
   if(tOver>0)alerts='<div class="alert alert-r" onclick="goPage(\'tasks\');tskFilter(\'over\')" style="cursor:pointer">\u23f0 '+tOver+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u2192</div>'+alerts;
   var al=g('dash-alerts');if(al)al.innerHTML=alerts;
+
+  // HERO "\u05d8\u05d9\u05e4\u05d5\u05dc \u05d4\u05d9\u05d5\u05dd" — aggregated attention counter
+  var expiredCount = 0;
+  exp.forEach(function(e){if(e.x<0)expiredCount++;});
+  var roundPending = todayRound ? 0 : 1;
+  var heroTotal = tOpen + expiredCount + roundPending;
+  var heroEl=g('dash-hero'), numEl=g('hero-num'), subEl=g('hero-sub'), pillsEl=g('hero-pills');
+  if(numEl) numEl.textContent = heroTotal;
+  if(heroEl){ heroEl.classList.toggle('ok', heroTotal===0); }
+  if(subEl){
+    subEl.textContent = heroTotal===0 ? '\u05d4\u05db\u05dc \u05de\u05e2\u05d5\u05d3\u05db\u05df — \u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3' : '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea';
+  }
+  if(pillsEl){
+    var pills=[];
+    if(tOver>0) pills.push('<span class="hero-pill red">⏰ '+tOver+' \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8</span>');
+    if(tOpen-tOver>0) pills.push('<span class="hero-pill amber">✅ '+(tOpen-tOver)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea</span>');
+    if(expiredCount>0) pills.push('<span class="hero-pill red">⚠ '+expiredCount+' \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea</span>');
+    if(roundPending) pills.push('<span class="hero-pill amber">☀ \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd</span>');
+    if(heroTotal===0) pills.push('<span class="hero-pill green">✓ \u05dc\u05dc\u05d0 \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea</span>');
+    pillsEl.innerHTML = pills.join('');
+  }
+  // MONTHLY STRIP
+  var incMonth = (inc||[]).filter(function(i){return (i.dt||'').startsWith(ym);}).length;
+  var _s=function(id,v){var el=g(id); if(el)el.textContent=v;};
+  _s('ms-inc', incMonth);
+  _s('ms-nm', nmMonth);
+  _s('ms-ltif', kl);
+  if(!_lastInc) _s('ms-streak','∞');
+  else { _s('ms-streak', Math.max(0,Math.floor((Date.now()-_lastInc)/86400000))); }
 }
 function _expCollect(){
   var items=[];
