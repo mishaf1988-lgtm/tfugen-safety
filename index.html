@@ -3116,14 +3116,17 @@ function _expPdf(){window.print();}
       var tbl=w.querySelector('table');if(!tbl)return;
       var tb=tbl.querySelector('tbody');if(!tb||!tb.id)return;
       var id=tb.id;
-      var host=w.parentElement;if(!host||!host.parentElement)return;
+      // Anchor is the wrapping .card if there is one; otherwise the .tbl-wrap itself.
+      // This ensures the inserted row always lives inside the .page div, so display:none hides it properly.
+      var anchor=w.closest('.card')||w;
+      if(!anchor.parentElement)return;
       var row=document.createElement('div');
       row.className='tfu-exp-row row';
       row.setAttribute('data-exp-for',id);
       row.style.cssText='gap:6px;justify-content:flex-end;margin:4px 0 6px';
       row.innerHTML='<button class="btn btn-s" data-tb="'+id+'" onclick="_expXlsx(this.dataset.tb)" title="\u05d9\u05d9\u05e6\u05d5\u05d0 Excel">&#128196; Excel</button>'+
                     '<button class="btn btn-s" onclick="_expPdf()" title="\u05d4\u05d3\u05e4\u05e1\u05d4 / PDF">&#128438; PDF</button>';
-      host.parentElement.insertBefore(row,host);
+      anchor.parentElement.insertBefore(row,anchor);
     });
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();
