@@ -3049,15 +3049,16 @@ function _expXlsx(tbodyId){
 }
 function _expPdf(){window.print();}
 
-/* auto-inject Export buttons next to each .tbl-wrap — idempotent via data-exp-for marker */
+/* auto-inject Export buttons next to each .tbl-wrap — wipe-then-insert to prevent any duplicates */
 (function(){
   function inject(){
+    // Remove ALL existing export rows first (handles legacy duplicates from older versions)
+    document.querySelectorAll('.tfu-exp-row').forEach(function(r){r.remove();});
     document.querySelectorAll('.tbl-wrap').forEach(function(w){
       var tbl=w.querySelector('table');if(!tbl)return;
       var tb=tbl.querySelector('tbody');if(!tb||!tb.id)return;
       var id=tb.id;
-      if(document.querySelector('.tfu-exp-row[data-exp-for="'+id+'"]'))return;
-      var host=w.parentElement;if(!host)return;
+      var host=w.parentElement;if(!host||!host.parentElement)return;
       var row=document.createElement('div');
       row.className='tfu-exp-row row';
       row.setAttribute('data-exp-for',id);
