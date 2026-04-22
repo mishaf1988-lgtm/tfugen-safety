@@ -13,6 +13,39 @@
 
 ---
 
+## 2026-04-22 — ניהול משתמשים: 10 slots גנריים + דף ניהול + login עם שם משתמש
+
+**החלטה**: במקום לבנות מערכת user-creation מלאה (שהייתה דורשת `/api/create-user` serverless endpoint עם `SUPABASE_SERVICE_ROLE_KEY`), נבחרה **גישת pre-provisioning**: מנהל יוצר ב-Supabase Dashboard פעם אחת 10 חשבונות Auth (`user1@tfugen.local` עד `user10@tfugen.local`), ומטה כל ההמשך נעשה באפליקציה — מנהל מזהה פרופילים לכל משתמש דרך דף "משתמשים" (פרטים: שם מלא, תפקיד, מחלקה, טלפון, אימייל, פעיל).
+
+**סיבה**:
+- המשתמש מתלבט אם ומתי יעבור ל-login אמיתי; רצה תשתית שתעבוד בלי setup מסובך. הגישה הזאת מביאה login פעיל מיד עם 2 דקות setup חד-פעמי.
+- אין צורך ב-`SUPABASE_SERVICE_ROLE_KEY` במשתני סביבה של Vercel.
+- אין צורך ב-serverless endpoint נוסף (מעבר ל-`api/claude.js` הקיים).
+- תפקידים בסיסיים (אדמין / מנהל / מדווח) — כולם יכולים להיכנס ולדווח. בהמשך יהיה אפשר להוסיף RLS per-role מבלי לשבור משהו.
+
+**שינויים טכניים**:
+1. מיגרציה `2026-04-22_app_users.sql` — טבלה + 10 placeholder rows + 2 RLS policies (`app_users_read` לכולם, `app_users_admin_write` לאדמין בלבד).
+2. דף `pg-users` (מודולים → משתמשים, מוסתר ללא-אדמינים).
+3. מודאל `m-user` לעריכת פרופיל (שם משתמש לא ניתן לשינוי — `disabled`).
+4. `doLogin()` — מקבל שדה חדש `uname`. מיפוי: שם `user1` → `user1@tfugen.local`. שם `admin` או ריק → ADMIN_EMAIL (תאימות אחורה).
+5. `_currentUser` — אובייקט בזיכרון אחרי login, כולל role. `_fetchCurrentUserProfile()` ממלא אחרי sbSync.
+6. `_applyRoleGates()` — מציג את כפתור "משתמשים" רק לאדמין.
+7. `<datalist id="active-users-list">` עולמי, מאוכלס מ-`_refreshUsersDatalist()`. שדה "מדווח" בטפסים משתמש ב-`list=active-users-list` — autocomplete חלק בין משתמשים פעילים, עם fallback להקלדה חופשית.
+
+**אלטרנטיבות שנדחו**:
+- **Service role + `/api/create-user`**: דורש SERVICE_ROLE_KEY במשתני Vercel, endpoint נוסף. נכון להיות עם scale גדול, לא עכשיו.
+- **App-level password hashing** (bcrypt ב-JS, סיסמה בטבלה): פחות בטוח, לא מנצל את הזמינות של Supabase Auth.
+- **Supabase invite flow** (email confirmation + set password): דורש הגדרת SMTP, מסבך את onboarding.
+
+**השלכות**:
+- 22 → **23 טבלאות** (`app_users` נוספה).
+- הוספתה ל-sync layer: `ldb()`, `sbSync`, `_rtStart`, `forceSync`, `_sbTsCol` — כולן כוללות עכשיו `app_users`.
+- ב-login קיים שדה חדש "שם משתמש". אם נשאר ריק — נופל בחזרה ל-`admin@tfugen.local` (תאימות לאחור).
+- משתמשים אנונימיים (עובדים) יכולים לקרוא את `app_users` אבל לא לכתוב.
+- setup ידני: מנהל חייב לייצר את 10 חשבונות ה-Auth פעם אחת ב-Supabase Dashboard.
+
+---
+
 ## 2026-04-22 — Smart Capture: דיווח בקול / תמונה / טקסט עם AI triage
 
 **החלטה**: FAB סגול בתחתית משמאל פותח מודאל עם 3 מצבי קלט:

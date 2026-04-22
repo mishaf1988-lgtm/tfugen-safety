@@ -55,6 +55,8 @@
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22).
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-22_app_users.sql` — יוצר טבלת app_users + 10 שורות placeholder (user1–user10) + RLS.
+- [ ] **צור 10 משתמשי Supabase Auth ידנית** (Dashboard → Authentication → Users → Add user): `user1@tfugen.local` עד `user10@tfugen.local`, סיסמאות `Aa000001!` עד `Aa000010!`, **Auto Confirm User: ON** בכל אחד.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
