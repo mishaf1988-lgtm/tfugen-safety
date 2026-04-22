@@ -632,9 +632,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <button id="cap-fab" class="cap-fab" onclick="capOpen()" title="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;" aria-label="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;">&#10024;</button>
 
 <!-- SMART CAPTURE MODAL -->
-<div class="overlay" id="ov-cap" onclick="closeModal('m-cap')"></div>
+<div class="overlay" id="ov-cap" onclick="capClose()"></div>
 <div class="modal" id="m-cap" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-cap')">&#10005;</button>
+  <button class="close-btn" onclick="capClose()">&#10005;</button>
   <div class="modal-title">&#10024; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;</div>
 
   <!-- INPUT STAGE -->
@@ -687,7 +687,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 
   <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
-    <button class="btn btn-s" style="white-space:nowrap" onclick="closeModal('m-cap')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-s" style="white-space:nowrap" onclick="capClose()">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-s" id="cap-refine-btn" onclick="capRefine()" style="display:none;white-space:nowrap;background:#fef3c7;color:#92400e;border:1px solid #fbbf24">&#128260; &#1504;&#1514;&#1495; &#1513;&#1493;&#1489;</button>
     <button class="btn btn-p" id="cap-confirm-btn" onclick="capConfirm()" style="display:none;white-space:nowrap">&#9989; &#1492;&#1502;&#1513;&#1498;</button>
     <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" style="white-space:nowrap" disabled>&#128302; &#1504;&#1514;&#1495;</button>
@@ -2927,6 +2927,15 @@ function _capShowStage(which){
   if(rev) rev.style.display=(which==='review'?'':'none');
 }
 
+function capClose(){
+  // Remove the !important fullscreen class BEFORE closeModal so
+  // display:none inline style can actually take effect.
+  var mm=g('m-cap'); if(mm) mm.classList.remove('cap-fullscreen');
+  try{if(_capRec){_capRec.stop();}}catch(e){}
+  _capRecActive=false;
+  closeModal('m-cap');
+}
+
 function capStartVoice(){
   _capMode='voice';
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -3240,6 +3249,7 @@ function capDispatch(j){
   var rep=j.reporter||'', sev=j.severity||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9', notes=j.notes||j.suggested_action||'';
   var sevNm={'\u05e7\u05d8\u05df':'\u05e7\u05d8\u05d9\u05df','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9','\u05d7\u05de\u05d5\u05e8':'\u05d7\u05de\u05d5\u05e8','\u05e7\u05e8\u05d9\u05d8\u05d9':'\u05d7\u05de\u05d5\u05e8'}[sev] || sev;
   function _setIf(id,v){var el=g(id); if(el)el.value=v||'';}
+  var mm=g('m-cap'); if(mm) mm.classList.remove('cap-fullscreen');
   closeModal('m-cap');
   switch(j.type){
     case 'nm':
