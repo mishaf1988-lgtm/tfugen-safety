@@ -101,28 +101,41 @@ export default async function handler(req) {
   const oldEmail = oldUsername + '@tfugen.local';
   const newEmail = newUsername + '@tfugen.local';
 
-  // 3. Find auth user by old email
-  const findResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users?filter=email.eq.' + encodeURIComponent(oldEmail), {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
-  });
-  if (!findResp.ok) {
-    const errText = await findResp.text();
-    return jsonErr('failed to lookup user (' + findResp.status + '): ' + errText.slice(0, 200), 502, cors);
+  // 3. Fetch all auth users (Supabase Admin API ignores arbitrary `filter`
+  // params; the only supported search is `?filter=<substr>` on email).
+  // We have at most 10-20 users — just page through.
+  async function listAllUsers() {
+    const all = [];
+    for (let page = 1; page <= 10; page++) {
+      const r = await fetch(SUPABASE_URL + '/auth/v1/admin/users?page=' + page + '&per_page=1000', {
+        headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
+      });
+      if (!r.ok) throw new Error('lookup failed: HTTP ' + r.status + ' ' + (await r.text()).slice(0, 200));
+      const j = await r.json();
+      const arr = j.users || [];
+      all.push(...arr);
+      if (arr.length < 1000) break;
+    }
+    return all;
   }
-  const findJson = await findResp.json();
-  const users = findJson.users || [];
-  const targetUser = users.find(u => u.email === oldEmail);
-  if (!targetUser) return jsonErr('auth user not found for ' + oldEmail, 404, cors);
+
+  let allUsers;
+  try {
+    allUsers = await listAllUsers();
+  } catch (e) {
+    return jsonErr('failed to lookup users: ' + e.message, 502, cors);
+  }
+
+  const lcOld = oldEmail.toLowerCase();
+  const lcNew = newEmail.toLowerCase();
+  const targetUser = allUsers.find(u => (u.email || '').toLowerCase() === lcOld);
+  if (!targetUser) {
+    return jsonErr('auth user not found for ' + oldEmail + ' (scanned ' + allUsers.length + ' users)', 404, cors);
+  }
 
   // 4. Check newEmail not taken
-  const collisionResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users?filter=email.eq.' + encodeURIComponent(newEmail), {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
-  });
-  if (collisionResp.ok) {
-    const cj = await collisionResp.json();
-    const collide = (cj.users || []).find(u => u.email === newEmail);
-    if (collide) return jsonErr('username already taken', 409, cors);
-  }
+  const collide = allUsers.find(u => (u.email || '').toLowerCase() === lcNew);
+  if (collide) return jsonErr('username "' + newUsername + '" already taken', 409, cors);
 
   // 5. Update auth.users email
   const updAuthResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
