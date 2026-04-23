@@ -489,6 +489,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-users" class="page">
   <div class="row">
     <div class="page-title">&#128100; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; <span>&#1504;&#1497;&#1492;&#1493;&#1500;</span></div>
+    <button class="btn btn-p" onclick="openNewUserModal()">+ &#1502;&#1513;&#1514;&#1502;&#1513; &#1495;&#1491;&#1513;</button>
   </div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
@@ -501,6 +502,48 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th></th>
   </tr></thead><tbody id="tb-users"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
+</div>
+
+<!-- NEW USER MODAL (admin only) -->
+<div class="overlay" id="ov-newuser" onclick="closeModal('m-newuser')"></div>
+<div class="modal" id="m-newuser" style="display:none;max-width:440px">
+  <button class="close-btn" onclick="closeModal('m-newuser')">&#10005;</button>
+  <div class="modal-title">&#10133; &#1502;&#1513;&#1514;&#1502;&#1513; &#1495;&#1491;&#1513;</div>
+  <div style="font-size:12px;color:var(--t3);margin-bottom:8px">&#1497;&#1497;&#1493;&#1510;&#1512; &#1495;&#1513;&#1489;&#1493;&#1503; &#1499;&#1504;&#1497;&#1505;&#1492; + &#1505;&#1497;&#1505;&#1502;&#1492; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514;. &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1514;&#1493;&#1510;&#1490; &#1488;&#1495;&#1512;&#1497; &#1492;&#1497;&#1510;&#1497;&#1512;&#1492; — &#1494;&#1493; &#1492;&#1492;&#1494;&#1491;&#1502;&#1504;&#1493;&#1514; &#1492;&#1497;&#1495;&#1497;&#1491;&#1492; &#1500;&#1512;&#1488;&#1493;&#1514; &#1488;&#1493;&#1514;&#1492;.</div>
+  <div class="fgrid">
+    <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; * (&#1488;&#1493;&#1514;&#1497;&#1493;&#1514; &#1500;&#1488; &#1506;&#1489;&#1512;&#1497;&#1493;&#1514;)</label><input id="nu-username" placeholder="yossi" autocapitalize="off" autocomplete="off"></div>
+    <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="nu-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="nu-role"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select></div>
+    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="nu-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512;"></div>
+    <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="nu-phone" type="tel" placeholder="050-1234567"></div>
+    <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="nu-email" type="email" placeholder="name@co.il"></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="nu-notes" rows="2"></textarea></div>
+  </div>
+  <div id="nu-status" style="font-size:12px;color:var(--t3);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-newuser')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" id="nu-submit" onclick="createNewUser()">&#10133; &#1497;&#1510;&#1493;&#1512;</button>
+  </div>
+</div>
+
+<!-- USER CREDENTIALS MODAL (one-time view after create) -->
+<div class="overlay" id="ov-credentials" onclick="closeModal('m-credentials')"></div>
+<div class="modal" id="m-credentials" style="display:none;max-width:420px">
+  <button class="close-btn" onclick="closeModal('m-credentials')">&#10005;</button>
+  <div class="modal-title">&#9989; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513; &#1504;&#1493;&#1510;&#1512;</div>
+  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#92400e">
+    &#9888; &#1494;&#1493; &#1492;&#1508;&#1506;&#1501; &#1492;&#1497;&#1495;&#1497;&#1491;&#1492; &#1513;&#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1502;&#1493;&#1510;&#1490;&#1514;. &#1492;&#1506;&#1514;&#1497;&#1511; &#1488;&#1493;&#1514;&#1492; &#1500;&#1502;&#1513;&#1514;&#1502;&#1513; &#1500;&#1508;&#1504;&#1497; &#1505;&#1490;&#1497;&#1512;&#1492;.
+  </div>
+  <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px;font-family:monospace;font-size:14px;direction:ltr;text-align:left">
+    <div style="color:var(--t3);font-size:11px;margin-bottom:4px">USERNAME</div>
+    <div id="cr-username" style="font-weight:700;font-size:18px;color:var(--ac);margin-bottom:12px;user-select:all">—</div>
+    <div style="color:var(--t3);font-size:11px;margin-bottom:4px">PASSWORD</div>
+    <div id="cr-password" style="font-weight:700;font-size:18px;color:var(--ac);user-select:all">—</div>
+  </div>
+  <button class="btn btn-s" style="width:100%;margin-top:12px" onclick="copyCredentials()">&#128203; &#1492;&#1506;&#1514;&#1511; &#1500;&#1500;&#1493;&#1495;</button>
+  <div class="modal-footer">
+    <button class="btn btn-p" onclick="closeModal('m-credentials')">&#1505;&#1497;&#1497;&#1502;&#1514;&#1497; &#1500;&#1492;&#1506;&#1514;&#1497;&#1511;</button>
+  </div>
 </div>
 
 <!-- USER EDIT MODAL -->
@@ -2383,6 +2426,86 @@ function svUser(){
   closeModal('m-user');
   toast('\u05e0\u05e9\u05de\u05e8 ✓');
   rUsers();
+}
+
+function openNewUserModal(){
+  ['nu-username','nu-full-name','nu-dept','nu-phone','nu-email','nu-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var r=g('nu-role');if(r)r.value='\u05de\u05d3\u05d5\u05d5\u05d7';
+  var st=g('nu-status');if(st)st.textContent='';
+  var btn=g('nu-submit');if(btn){btn.disabled=false;btn.textContent='➕ \u05d9\u05e6\u05d5\u05e8';}
+  openModal('m-newuser');
+}
+function createNewUser(){
+  var username=(gv('nu-username')||'').trim().toLowerCase();
+  var fullName=gv('nu-full-name');
+  if(!username||!/^[a-z][a-z0-9_-]{2,29}$/.test(username)){
+    g('nu-status').textContent='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea 3-30 \u05ea\u05d5\u05d5\u05d9\u05dd, \u05dc\u05d4\u05ea\u05d7\u05d9\u05dc \u05d1\u05d0\u05d5\u05ea, \u05d5\u05dc\u05d4\u05db\u05d9\u05dc \u05e8\u05e7 a-z, 0-9, _, -';
+    g('nu-status').style.color='var(--bad)';
+    return;
+  }
+  if(!fullName){
+    g('nu-status').textContent='\u05e9\u05dd \u05de\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4';
+    g('nu-status').style.color='var(--bad)';
+    return;
+  }
+  if(!_sbToken){
+    g('nu-status').textContent='\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8. \u05e0\u05e1\u05d4 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1 \u05de\u05d7\u05d3\u05e9.';
+    g('nu-status').style.color='var(--bad)';
+    return;
+  }
+  var btn=g('nu-submit');btn.disabled=true;btn.textContent='⏳ \u05d9\u05d5\u05e6\u05e8...';
+  var st=g('nu-status');st.style.color='var(--t3)';st.textContent='\u05e9\u05d5\u05dc\u05d7 \u05dc\u05e9\u05e8\u05ea...';
+
+  var body={
+    username: username,
+    full_name: fullName,
+    role: gv('nu-role')||'\u05de\u05d3\u05d5\u05d5\u05d7',
+    dept: gv('nu-dept')||null,
+    phone: gv('nu-phone')||null,
+    email: gv('nu-email')||null,
+    notes: gv('nu-notes')||null
+  };
+  fetch('/api/create-user',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});})
+  .then(function(res){
+    btn.disabled=false;btn.textContent='➕ \u05d9\u05e6\u05d5\u05e8';
+    if(!res.ok||res.j.error){
+      st.style.color='var(--bad)';
+      st.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(res.j.error||('HTTP '+res.status));
+      return;
+    }
+    if(res.j.warning){
+      st.style.color='var(--warn)';
+      st.textContent='\u05d4\u05e6\u05dc\u05d9\u05d7 \u05d7\u05dc\u05e7\u05d9\u05ea: '+res.j.warning;
+    }
+    closeModal('m-newuser');
+    // Show credentials modal
+    g('cr-username').textContent=res.j.username;
+    g('cr-password').textContent=res.j.password;
+    openModal('m-credentials');
+    // Refresh local data
+    sbSync();
+    setTimeout(function(){if(typeof rUsers==='function')rUsers();_refreshUsersDatalist();},800);
+  }).catch(function(err){
+    btn.disabled=false;btn.textContent='➕ \u05d9\u05e6\u05d5\u05e8';
+    st.style.color='var(--bad)';
+    st.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err);
+  });
+}
+function copyCredentials(){
+  var u=g('cr-username').textContent;
+  var p=g('cr-password').textContent;
+  var txt='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9: '+u+'\n\u05e1\u05d9\u05e1\u05de\u05d4: '+p+'\n\u05db\u05e0\u05d9\u05e1\u05d4: https://tfugen-safety.vercel.app';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 ✓',{ok:true});}).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05e2\u05ea\u05e7\u05d4');});
+  }else{
+    var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 ✓',{ok:true});}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05e2\u05ea\u05e7\u05d4');}
+    document.body.removeChild(ta);
+  }
 }
 // ---- END APP USERS ----
 
