@@ -546,6 +546,26 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 </div>
 
+<!-- RENAME USERNAME MODAL -->
+<div class="overlay" id="ov-rename" onclick="closeModal('m-rename')"></div>
+<div class="modal" id="m-rename" style="display:none;max-width:400px">
+  <button class="close-btn" onclick="closeModal('m-rename')">&#10005;</button>
+  <div class="modal-title">&#128260; &#1513;&#1497;&#1504;&#1493;&#1497; &#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</div>
+  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:#92400e;line-height:1.5">
+    &#9888; &#1513;&#1497;&#1504;&#1493;&#1497; &#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; &#1502;&#1513;&#1504;&#1492; &#1490;&#1501; &#1488;&#1514; &#1492;-email &#1489;-Supabase Auth.
+    &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1500;&#1488; &#1502;&#1513;&#1514;&#1504;&#1492;. &#1492;&#1502;&#1513;&#1514;&#1502;&#1513; &#1497;&#1497;&#1499;&#1504;&#1505; &#1502;&#1506;&#1499;&#1513;&#1497;&#1493; &#1493;&#1488;&#1497;&#1500;&#1498; &#1506;&#1501; &#1492;&#1513;&#1501; &#1492;&#1495;&#1491;&#1513;.
+  </div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1513;&#1501; &#1504;&#1493;&#1499;&#1495;&#1497;</label><input id="rn-old" disabled style="background:#f5f5f5"></div>
+    <div class="field fw"><label>&#1513;&#1501; &#1495;&#1491;&#1513; *</label><input id="rn-new" placeholder="yossi" autocapitalize="off" autocomplete="off"></div>
+  </div>
+  <div id="rn-status" style="font-size:12px;color:var(--t3);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-rename')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" id="rn-submit" onclick="doRenameUser()">&#128260; &#1513;&#1504;&#1492;</button>
+  </div>
+</div>
+
 <!-- USER EDIT MODAL -->
 <div class="overlay" id="ov-user" onclick="closeModal('m-user')"></div>
 <div class="modal" id="m-user" style="display:none;max-width:440px">
@@ -553,7 +573,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="modal-title">&#9997; &#1506;&#1512;&#1497;&#1499;&#1514; &#1502;&#1513;&#1514;&#1502;&#1513;</div>
   <input type="hidden" id="u-id">
   <div class="fgrid">
-    <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; (&#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;)</label><input id="u-username" disabled style="background:#f5f5f5"></div>
+    <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="u-username" disabled style="background:#f5f5f5;flex:1">
+        <button type="button" class="btn btn-s" style="white-space:nowrap;background:#fef3c7;color:#92400e;border:1px solid #fbbf24;min-height:44px" onclick="openRenameDialog()">&#128260; &#1513;&#1504;&#1492;</button>
+      </div>
+    </div>
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="u-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
     <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="u-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512; / &#1488;&#1495;&#1494;&#1511;&#1492; / ..."></div>
@@ -2506,6 +2531,67 @@ function copyCredentials(){
     try{document.execCommand('copy');toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 ✓',{ok:true});}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05e2\u05ea\u05e7\u05d4');}
     document.body.removeChild(ta);
   }
+}
+
+function openRenameDialog(){
+  var oldUname = (g('u-username')||{}).value || '';
+  if(!oldUname){toast('\u05e4\u05ea\u05d7 \u05e7\u05d5\u05d3\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4');return;}
+  if(oldUname==='admin'){alert('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05e9\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 "admin"');return;}
+  g('rn-old').value = oldUname;
+  g('rn-new').value = '';
+  var st=g('rn-status');st.style.color='var(--t3)';st.textContent='';
+  var btn=g('rn-submit');btn.disabled=false;btn.textContent='🔄 \u05e9\u05e0\u05d4';
+  openModal('m-rename');
+}
+
+function doRenameUser(){
+  var oldUname = gv('rn-old');
+  var newUname = (gv('rn-new')||'').trim().toLowerCase();
+  var st=g('rn-status');
+  if(!/^[a-z][a-z0-9_-]{2,29}$/.test(newUname)){
+    st.style.color='var(--bad)';
+    st.textContent='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9: 3-30 \u05ea\u05d5\u05d5\u05d9\u05dd, \u05de\u05ea\u05d7\u05d9\u05dc \u05d1\u05d0\u05d5\u05ea, \u05e8\u05e7 a-z 0-9 _ -';
+    return;
+  }
+  if(newUname===oldUname){
+    st.style.color='var(--bad)';
+    st.textContent='\u05d4\u05e9\u05dd \u05d4\u05d7\u05d3\u05e9 \u05d6\u05d4\u05d4 \u05dc\u05d9\u05e9\u05df';
+    return;
+  }
+  if(!confirm('\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05e9\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05de-"'+oldUname+'" \u05dc-"'+newUname+'"?\n\n\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d9\u05d9\u05d0\u05dc\u05e5 \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9 \u05e2\u05dd \u05d4\u05e9\u05dd \u05d4\u05d7\u05d3\u05e9.')){
+    return;
+  }
+  if(!_sbToken){
+    st.style.color='var(--bad)';st.textContent='\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8';return;
+  }
+  var btn=g('rn-submit');btn.disabled=true;btn.textContent='⏳ \u05de\u05e9\u05e0\u05d4...';
+  st.style.color='var(--t3)';st.textContent='\u05de\u05e2\u05d3\u05db\u05df \u05d0\u05ea Auth + \u05d4\u05d8\u05d1\u05dc\u05d4...';
+  fetch('/api/rename-user',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
+    body:JSON.stringify({old_username:oldUname,new_username:newUname})
+  }).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});})
+  .then(function(res){
+    btn.disabled=false;btn.textContent='🔄 \u05e9\u05e0\u05d4';
+    if(!res.ok||res.j.error){
+      st.style.color='var(--bad)';
+      st.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(res.j.error||('HTTP '+res.status));
+      return;
+    }
+    if(res.j.partial){
+      st.style.color='var(--warn)';
+      st.textContent='\u05d4\u05e6\u05dc\u05d9\u05d7 \u05d7\u05dc\u05e7\u05d9\u05ea: '+res.j.warning;
+    }
+    closeModal('m-rename');
+    closeModal('m-user');
+    toast('\u05e9\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05e9\u05d5\u05e0\u05d4 ✓',{ok:true});
+    sbSync();
+    setTimeout(function(){if(typeof rUsers==='function')rUsers();_refreshUsersDatalist();},800);
+  }).catch(function(err){
+    btn.disabled=false;btn.textContent='🔄 \u05e9\u05e0\u05d4';
+    st.style.color='var(--bad)';
+    st.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err);
+  });
 }
 // ---- END APP USERS ----
 
