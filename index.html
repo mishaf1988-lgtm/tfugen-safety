@@ -587,6 +587,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field fw"><label><input type="checkbox" id="u-active" style="margin-left:8px"> &#1502;&#1513;&#1514;&#1502;&#1513; &#1508;&#1506;&#1497;&#1500; (&#1497;&#1493;&#1499;&#1500; &#1500;&#1492;&#1497;&#1499;&#1504;&#1505;)</label></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="u-notes" rows="2"></textarea></div>
   </div>
+  <div style="margin-top:12px">
+    <button type="button" class="btn btn-s" style="width:100%;background:#fef3c7;color:#92400e;border:1px solid #fbbf24" onclick="openResetPwDialog()">&#128273; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492; &#1500;&#1502;&#1513;&#1514;&#1502;&#1513; &#1494;&#1492;</button>
+  </div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-user')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-p" onclick="svUser()">&#1513;&#1502;&#1493;&#1512;</button>
@@ -1615,7 +1618,18 @@ var _navGroup={
   wst:'modules',hzm:'modules',env:'modules',
   emp:'modules',drl:'modules',ins:'modules',lg:'modules',users:'modules'
 };
+// Pages that only the admin account can open. Non-admin users are
+// redirected to the dashboard with a toast, even if they try
+// goPage('users') from devtools or a stale link.
+var _ADMIN_ONLY_PAGES = {users:1};
+function _isAdminUser(){
+  return _currentUser && (_currentUser.username==='admin' || _currentUser.role==='אדמין');
+}
 function goPage(id){
+  if(_ADMIN_ONLY_PAGES[id] && !_isAdminUser()){
+    try{toast('אין הרשאה — עמוד זה נגיש רק למנהל המערכת');}catch(e){}
+    id='dash';
+  }
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
   document.querySelectorAll('.bn').forEach(function(b){b.classList.remove('on');});
   var pg=g('pg-'+id);if(pg)pg.classList.add('on');
@@ -2544,6 +2558,35 @@ function openRenameDialog(){
   openModal('m-rename');
 }
 
+
+function openResetPwDialog(){
+  var uname = (g('u-username')||{}).value || '';
+  if(!uname){toast('\u05e4\u05ea\u05d7 \u05e7\u05d5\u05d3\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4');return;}
+  if(uname==='admin'){alert('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d0\u05e4\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df \u05e8\u05d0\u05e9\u05d9 \u05de\u05db\u05d0\u05df');return;}
+  if(!confirm('\u05dc\u05d9\u05d9\u05e6\u05e8 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05dc\u05de\u05e9\u05ea\u05de\u05e9 "'+uname+'"?\n\n\u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05ea\u05d5\u05e6\u05d2 \u05dc\u05da \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea \u05d1\u05dc\u05d1\u05d3. \u05d4\u05e9\u05de\u05d5\u05e8 \u05d5\u05d4\u05e2\u05d1\u05e8 \u05dc\u05de\u05e9\u05ea\u05de\u05e9.\n\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d9\u05e6\u05d8\u05e8\u05da \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9 \u05e2\u05dd \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4.')){
+    return;
+  }
+  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  toast('\u05de\u05d0\u05e4\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4...');
+  fetch('/api/reset-password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
+    body:JSON.stringify({username:uname})
+  }).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});})
+  .then(function(res){
+    if(!res.ok||res.j.error){
+      alert('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d0\u05d9\u05e4\u05d5\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4: '+(res.j.error||('HTTP '+res.status)));
+      return;
+    }
+    closeModal('m-user');
+    g('cr-username').textContent=res.j.username;
+    g('cr-password').textContent=res.j.password;
+    openModal('m-credentials');
+  }).catch(function(err){
+    alert('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err));
+  });
+}
+
 function doRenameUser(){
   var oldUname = gv('rn-old');
   var newUname = (gv('rn-new')||'').trim().toLowerCase();
@@ -3073,9 +3116,14 @@ function _resolveEmail(unameOrEmail){
   return v.toLowerCase()+'@tfugen.local';
 }
 function _applyRoleGates(){
-  var isAdmin = _currentUser && (_currentUser.username==='admin' || _currentUser.role==='\u05d0\u05d3\u05de\u05d9\u05df');
+  var isAdmin = _isAdminUser();
   var usersBtn=g('sheet-btn-users');
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
+  // If a non-admin is somehow sitting on an admin-only page (stale session,
+  // direct navigation, etc.) \u2014 kick them to dashboard.
+  if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
+    goPage('dash');
+  }
   _refreshUsersDatalist();
 }
 function _refreshUsersDatalist(){
