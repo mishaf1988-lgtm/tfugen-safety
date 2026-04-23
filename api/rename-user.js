@@ -152,55 +152,40 @@ export default async function handler(req) {
     return jsonErr('auth update failed (' + updAuthResp.status + '): ' + errText.slice(0, 300), 502, cors);
   }
 
-  // 6. Insert NEW app_users row first (with all old data), then delete the old row.
-  // We can't UPDATE id directly via PostgREST without ON CONFLICT, so do INSERT (copy) + DELETE.
-  // Step 6a: fetch the old row
-  const fetchOldResp = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(oldUsername) + '&select=*', {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
-  });
-  if (!fetchOldResp.ok) {
-    return jsonErr('fetch old app_users failed', 502, cors);
-  }
-  const oldRows = await fetchOldResp.json();
-  const oldRow = oldRows[0] || { id: oldUsername, username: oldUsername, active: true };
-
-  // Step 6b: insert new row (copy old, override id+username)
-  const newRow = Object.assign({}, oldRow, {
-    id: newUsername,
-    username: newUsername,
-    ts: new Date().toISOString()
-  });
-  const insNewResp = await fetch(SUPABASE_URL + '/rest/v1/app_users', {
-    method: 'POST',
+  // 6. Atomic update of app_users primary key via PATCH.
+  // PostgreSQL allows UPDATE on PRIMARY KEY as long as no FK references it.
+  // Using PATCH avoids the INSERT+DELETE window that left orphan rows.
+  const patchResp = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(oldUsername), {
+    method: 'PATCH',
     headers: {
       apikey: serviceKey,
       Authorization: 'Bearer ' + serviceKey,
       'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates'
+      Prefer: 'return=representation'
     },
-    body: JSON.stringify(newRow)
+    body: JSON.stringify({
+      id: newUsername,
+      username: newUsername,
+      ts: new Date().toISOString()
+    })
   });
-  if (!insNewResp.ok) {
-    const errText = await insNewResp.text();
-    // Auth was renamed; app_users couldn't be updated. Caller should retry.
+
+  if (!patchResp.ok) {
+    const errText = await patchResp.text();
     return jsonResp({
       partial: true,
-      warning: 'auth renamed but new app_users row failed: ' + errText.slice(0, 200),
+      warning: 'auth email was renamed but app_users update failed: ' + errText.slice(0, 300),
       old_username: oldUsername,
       new_username: newUsername
     }, 200, cors);
   }
 
-  // Step 6c: delete the old row
-  const delOldResp = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(oldUsername), {
-    method: 'DELETE',
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
-  });
-  if (!delOldResp.ok) {
-    // Both rows now exist temporarily; not catastrophic
+  // Verify exactly one row was updated (defense-in-depth)
+  const updatedRows = await patchResp.json();
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
     return jsonResp({
       partial: true,
-      warning: 'both old + new rows exist; admin should delete old one manually',
+      warning: 'auth renamed but app_users PATCH returned zero rows — check RLS / row existence',
       old_username: oldUsername,
       new_username: newUsername
     }, 200, cors);
