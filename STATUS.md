@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-24
+**Last updated**: 2026-04-24 (task B closed)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -52,8 +52,8 @@
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
 ### ⚠️ פעולה ידנית נדרשת
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט. *(סטטוס לא ידוע — לא נמצאה הוכחה ברורה שהורץ)*
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד. *(סטטוס לא ידוע)*
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql`~~ — **הורץ ואומת ידנית ב-2026-04-24**. הטבלה `ncr_ai` קיימת, 2 האינדקסים (`ncr_ai_ncr_id_idx`, `ncr_ai_ncr_id_version_idx`) קיימים, RLS disabled. אומת ב-Supabase (information_schema + pg_indexes + pg_class.relrowsecurity) ובבדיקה חיה — NCR Agent שומר ניתוחים בלי שגיאה.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql`~~ — **הורץ ואומת ידנית ב-2026-04-24**. הטבלה `equip_inspections` קיימת, 2 האינדקסים (`equip_inspections_e_idx`, `equip_inspections_code_idx`) קיימים, RLS disabled. אומת ב-Supabase ובבדיקה חיה — דף בדיקות ציוד נטען ללא שגיאות.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22). *(סטטוס לא ידוע)*
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-22_app_users.sql`~~ — טבלת `app_users` פעילה, 10 placeholders קיימים, RLS פעיל. דף ניהול משתמשים עובד בפרודקשן.
 - [x] ~~**צור 10 משתמשי Supabase Auth ידנית**~~ — user1@tfugen.local עד user10@tfugen.local נוצרו, סיסמאות Aa000001! עד Aa000010!. אומת ע״י כניסה ישירה למערכת.
