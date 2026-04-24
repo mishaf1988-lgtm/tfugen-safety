@@ -15,8 +15,8 @@ Claude Code loads this file automatically at the start of every session in this 
 
 | שכבה | טכנולוגיה |
 |---|---|
-| UI | **single-file** `index.html` (~1500 lines) — אין build step, אין framework |
-| Backend | **Supabase** — 19 טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
+| UI | **single-file** `index.html` (~4290 lines) — אין build step, אין framework |
+| Backend | **Supabase** — 23 טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
 | AI | Vercel serverless `api/claude.js` → Claude API |
 | Deploy | Vercel auto-deploy מ-`main` |
 
@@ -51,7 +51,7 @@ Claude Code loads this file automatically at the start of every session in this 
 5. **בדוק**:
    - [ ] אין שגיאות console
    - [ ] אין עברית raw ב-JS
-   - [ ] 19 טבלאות עדיין 200 OK
+   - [ ] 23 טבלאות עדיין 200 OK
 6. **עדכן** `STATUS.md` + הוסף שורה ל-`DECISIONS.md` אם יש החלטה ארכיטקטונית
 7. **Commit + Push + PR**
 

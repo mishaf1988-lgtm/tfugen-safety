@@ -13,6 +13,97 @@
 
 ---
 
+## 2026-04-23 — NCR columns migration (schema drift fix)
+
+**החלטה**: נוסף קובץ `migrations/2026-04-22_ncr_columns.sql` שמוסיף 5 עמודות חסרות לטבלת `ncr`: `cd` (close date), `sd` (source date), `loc` (location), `root_cause`, `immediate`. הקוד ב-`svNcr` וב-`xlParse` שלח את השדות האלה אבל הטבלה ב-production לא כללה אותם → שגיאות `PGRST204` ו-6 פעולות ins תקועות ב-outbox.
+
+**סיבה**: schema drift דומה לתיקון `category` מ-2026-04-22 — הקוד התפתח מעבר למה שיש ב-DB. ה-outbox החזיר שגיאות HTTP 400 בלי להעיר למשתמש. הוספתי `IF NOT EXISTS` לכל `ALTER` כדי שיהיה בטוח להרצה חוזרת.
+
+**אלטרנטיבות שנדחו**: להסיר את השדות מהקוד — אבל הם בשימוש אמיתי (מסך "סגירת NCR" משתמש ב-`cd`, Excel import משתמש ב-`root_cause`/`immediate`).
+
+**השלכות**: אין שינוי בקוד, רק SQL. נדרשת הרצה ידנית של ה-migration ב-Supabase. אחרי ההרצה — ה-outbox מתנקה אוטומטית ומטמיע את 6 הפעולות התקועות.
+
+---
+
+## 2026-04-23 — תיקון אבטחה: RLS של app_users נעולה לאדמין בלבד
+
+**החלטה**: ה-policy `app_users_admin_write` שוחלפה — במקום `is_anonymous=false` (שאיפשר לכל משתמש מחובר לכתוב), התנאי עכשיו `auth.jwt() ->> 'email' = 'admin@tfugen.local'`. קובץ המיגרציה: `migrations/2026-04-23_app_users_admin_only_rls.sql`.
+
+**סיבה**: חור אבטחה אמיתי — כל משתמש (כולל מדווח רגיל) היה יכול דרך DevTools לקרוא ל-REST API ישירות ולשנות/למחוק שורות בטבלת `app_users`. ב-UI הגבלנו רק את הכפתורים, אבל ה-backend היה פתוח.
+
+**השלכות**:
+- SELECT נשאר פתוח לכל משתמש מחובר (צריך למלא dropdown של "מדווח").
+- רק `admin@tfugen.local` יכול INSERT/UPDATE/DELETE.
+- ה-endpoints `/api/create-user`, `/api/rename-user`, `/api/reset-password`, `/api/delete-user` כבר משתמשים ב-service_role key (שעוקף RLS) — לכן ה-policy המחמירה לא שוברת אותם.
+- בלי ההרצה: כל משתמש מחובר יכול לפגוע בטבלה.
+
+**אלטרנטיבות שנדחו**:
+- הצפנה/האפה של הרשאות ברמת הקוד — לא פתרון, ניתן לעקוף דרך DevTools.
+- role-based RLS עם טבלת roles נפרדת — עודף תשתית לשלב זה.
+
+**קישור**: session עם פתיחת המיגרציה + PR #75.
+
+---
+
+## 2026-04-23 — ניהול משתמשים מלא מתוך האפליקציה (CRUD)
+
+**החלטה**: נוספו 4 serverless endpoints ב-Vercel תחת `api/`:
+1. `create-user.js` — אדמין יוצר משתמש חדש, מייצר סיסמה רנדומלית (`Aa` + 6 תווים + `!`), שומר ב-Supabase Auth ובטבלת `app_users`, מציג את פרטי הכניסה פעם אחת.
+2. `rename-user.js` — משנה username (גם ה-email ב-Auth וגם ה-id ב-`app_users`). משתמש ב-PATCH אטומי למניעת שורות זומבי.
+3. `reset-password.js` — מייצר סיסמה חדשה רנדומלית למשתמש קיים.
+4. `delete-user.js` — מוחק את חשבון ה-Auth ואת שורת `app_users`.
+
+ה-UI התרחב: דף `pg-users` עם כפתור "+ משתמש חדש", מודאל עריכה עם 3 כפתורי פעולה (🔄 שנה שם, 🔑 איפוס סיסמה, 🗑 מחק).
+
+**סיבה**: הגישה המקורית מ-2026-04-22 ("10 slots גנריים, admin משייך דרך האפליקציה") הייתה מוגבלת — חסרה אפשרות להוסיף משתמשים מעבר ל-10, ולא ניתן היה לשנות שם משתמש / לאפס סיסמה / למחוק בלי לעבור ל-Supabase Dashboard. המשתמש ביקש במפורש שהכל יהיה מהאפליקציה.
+
+**תלויות חדשות**:
+- `SUPABASE_SERVICE_ROLE_KEY` במשתני סביבה של Vercel (הוסף ידנית פעם אחת).
+- כל endpoint מאמת `Authorization: Bearer <token>` של המשתמש, מוודא `email === admin@tfugen.local`, דוחה אחרת.
+
+**אלטרנטיבות שנדחו**:
+- להישאר ב-10 slots הקשיחים — הגבלה לא סבירה.
+- לממש self-service password change למשתמש רגיל — דחוי לעתיד.
+
+**השלכות**: אין שינוי schema. 4 endpoints חדשים → costs נמוכים (`admin` קוראים בלבד). דורש את `SERVICE_ROLE_KEY` בסביבת Vercel — אם לא מוגדר, ה-endpoint מחזיר שגיאה בצורה מסודרת.
+
+**קישור**: PRs #72, #73, #74, #75, #76.
+
+---
+
+## 2026-04-23 — Design Polish Tiers 0-3 (15 המלצות מ-design review agent)
+
+**החלטה**: יושמו 12 מתוך 15 המלצות מ-agent עיצוב UX שהורץ על הפרויקט. שינויים עיקריים:
+
+**Tier 1 — מבניים**:
+1. **ניווט 4 טאבים** במקום 24 כפתורים גוללים: `ראשי · משימות · דיווחים · מודולים`. "דיווחים" ו"מודולים" פותחים **bottom sheets** עם פריטים מקובצים.
+2. **דשבורד היררכי**: רשימת "🎯 היום" actionable בראש (משימות בפיגור / תפוגות / סבב ממתין) → monthly-strip (4 KPI) → accordion "מדדים נוספים".
+3. **FAB ✨ Smart Capture** הוזז לפינה ימין-תחתונה עם לייבל "דווח" (אזור האגודל הטבעי ב-RTL).
+
+**Tier 2 — פולש**:
+4. Tap targets 44×44 (תקן iOS HIG) בכל הכפתורים הקטנים.
+5. Modal footer מאוחד עם safe-area + sticky-bottom.
+6. Topbar RTL תקני (לוגו ימין, כותרת, actions שמאל, ללא absolute-centering שנהג להתנגש).
+7. Time input auto-default ל"עכשיו".
+8. Alerts מצומצמים + dismissable (✕).
+
+**Tier 3 — Delight**:
+9. Haptic vibrate + bounce animation על שמירה מוצלחת.
+10. **מצב ניגודיות גבוהה 🌗** (toggle ב-topbar) — לאור חזק במפעל.
+11. Empty states עם CTA (במקום "אין דיווחים" יבש).
+12. Toast ירוק "ברוכים הבאים, [שם] ✨" אחרי login עם vibrate.
+
+**נדחו**:
+- #8 (swipe actions על שורות טבלה) — פרויקט נפרד הדורש gesture handlers מלאים.
+- #13 (morning round banner גדול) — הועבר ל-Today list; לא נדרש נפרד.
+- #14 (unify statuses cross-module) — דורש migration של נתונים קיימים.
+
+**סיבה**: ה-agent הצביע על גלילה אופקית של 24 כפתורים בניווט כחיכוך הגדול ביותר, ועל 11 KPI tiles שוות-משקל כ"נקודת מוצא לא ברורה". השינוי הופך את המובייל מ"לא נוח" ל"שימושי".
+
+**השלכות**: אין שינוי schema, אין תלויות חדשות, רק CSS/HTML/JS ב-`index.html`. אין הגירה נתונים. PRs: #62-#69.
+
+---
+
 ## 2026-04-22 — ניהול משתמשים: 10 slots גנריים + דף ניהול + login עם שם משתמש
 
 **החלטה**: במקום לבנות מערכת user-creation מלאה (שהייתה דורשת `/api/create-user` serverless endpoint עם `SUPABASE_SERVICE_ROLE_KEY`), נבחרה **גישת pre-provisioning**: מנהל יוצר ב-Supabase Dashboard פעם אחת 10 חשבונות Auth (`user1@tfugen.local` עד `user10@tfugen.local`), ומטה כל ההמשך נעשה באפליקציה — מנהל מזהה פרופילים לכל משתמש דרך דף "משתמשים" (פרטים: שם מלא, תפקיד, מחלקה, טלפון, אימייל, פעיל).
