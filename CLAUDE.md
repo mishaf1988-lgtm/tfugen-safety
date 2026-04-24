@@ -34,6 +34,7 @@ Claude Code loads this file automatically at the start of every session in this 
    - `showView(table, id)` → צפייה בפריט
 5. **אל תיצור קבצי HTML נוספים**. הכל ב-`index.html`.
 6. **אל תוסיף framework / build step / bundler**.
+7. **אין לסמן `[x]` בלי הוכחת הרצה** — פעולה ידנית ב-Supabase, migration, RLS, Storage policy או שינוי Auth תסומן כבוצעה ב-`STATUS.md` רק אחרי שהמשתמש אישר במפורש שההרצה והאימות עברו. `IF NOT EXISTS` אומר שההרצה בטוחה לחזרה, אבל לא מוכיח שהפעולה בוצעה או שהאפליקציה עובדת.
 
 ## שפה ותקשורת
 
