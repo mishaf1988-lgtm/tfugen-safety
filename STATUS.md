@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-22
+**Last updated**: 2026-04-23
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `abca665` |
-| תאריך | 2026-04-19 |
-| Tag | `stable-2026-04-19-reports-flow` |
-| מצב | 20 טבלאות OK · Realtime sync פעיל · צילום/PDF בכל טפסי הדיווח · QR Stage A · Skills + CLAUDE.md פעילים |
+| Commit | `a7c2067` |
+| תאריך | 2026-04-23 |
+| Tag | — (טרם נוצר) |
+| מצב | 23 טבלאות · ניהול משתמשים מלא דרך האפליקציה (create/rename/reset/delete) · Smart Capture (קול+תמונה+וידאו) · Tasks + Virtual Tasks · Design Polish Tiers 0-3 (nav 4-טאבים, דשבורד "היום", FAB ✨, high-contrast, 44×44 tap targets) · תיקון אבטחה RLS לאדמין בלבד |
 
 ---
 
@@ -52,11 +52,13 @@
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
 ### ⚠️ פעולה ידנית נדרשת
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22).
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-22_app_users.sql` — יוצר טבלת app_users + 10 שורות placeholder (user1–user10) + RLS.
-- [ ] **צור 10 משתמשי Supabase Auth ידנית** (Dashboard → Authentication → Users → Add user): `user1@tfugen.local` עד `user10@tfugen.local`, סיסמאות `Aa000001!` עד `Aa000010!`, **Auto Confirm User: ON** בכל אחד.
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql` (SQL Editor → Paste → Run). ללא זה, שמירת ניתוחי AI תיכשל בשקט. *(סטטוס לא ידוע — לא נמצאה הוכחה ברורה שהורץ)*
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql` (SQL Editor → Paste → Run). ללא זה, דף בדיקות ציוד לא יעבוד. *(סטטוס לא ידוע)*
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22). *(סטטוס לא ידוע)*
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-22_app_users.sql`~~ — טבלת `app_users` פעילה, 10 placeholders קיימים, RLS פעיל. דף ניהול משתמשים עובד בפרודקשן.
+- [x] ~~**צור 10 משתמשי Supabase Auth ידנית**~~ — user1@tfugen.local עד user10@tfugen.local נוצרו, סיסמאות Aa000001! עד Aa000010!. אומת ע״י כניסה ישירה למערכת.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-22_ncr_columns.sql`~~ — הוסיף עמודות `cd`, `sd`, `loc`, `root_cause`, `immediate` לטבלת `ncr`. הורץ בתגובה לשגיאת `PGRST204 Could not find the 'cd' column` — ה-outbox התנקה מייד לאחר מכן.
+- [ ] **🔒 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-23_app_users_admin_only_rls.sql` — נועלת את שורת ה-policy `app_users_admin_write` לאדמין בלבד (במקום כל משתמש לא-אנונימי). **חור אבטחה אם לא יורץ**: כל משתמש מחובר יכול לשנות את רשימת המשתמשים דרך REST API. *(סטטוס לא ידוע — לא נמצאה הוכחה חד-משמעית שהורץ)*
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
@@ -84,6 +86,9 @@
 - [ ] NCR table debug — התנהגות בעת insert ריק
 - [ ] Fix NCR Agent v3 — edge cases
 
+### 📌 Pull Requests פתוחים — דרושה החלטה
+- [ ] **PR #45 — Toolbox Talks** — עדיין פתוח (לא מוזג ולא נסגר). דרוש להחליט: למזג / לסגור / להמשיך לעבד. ראה גם branch `routine/toolbox-talks-2026-04-19`.
+
 ---
 
 ## 🔄 פרוטוקול סנכרון בין חשבונות
@@ -109,7 +114,7 @@
 צור branch: routine/TASK-NAME-YYYY-MM-DD.
 
 כשמסיים:
-1. וודא 17 טבלאות 200 OK
+1. וודא 23 טבלאות 200 OK
 2. וודא אין שגיאות console
 3. עדכן STATUS.md (סמן V, עדכן Last Known Good)
 4. הוסף שורה ל-DECISIONS.md אם יש החלטה ארכיטקטונית
