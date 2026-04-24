@@ -1720,8 +1720,8 @@ function svNcr(){
     o:gv('ncr-o')||'',
     u:gv('ncr-u')||'',
     s:s,
-    sd:gv('ncr-sd')||'',
-    cd:s==='סגור'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):'',
+    sd:gv('ncr-sd')||null,
+    cd:s==='סגור'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):null,
     notes:gv('ncr-notes')||'',
     p:gv('ncr-p')||'בינונית',
     ts:new Date().toISOString()
