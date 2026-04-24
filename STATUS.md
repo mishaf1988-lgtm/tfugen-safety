@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-24 (task B closed)
+**Last updated**: 2026-04-24 (tasks B + D closed)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -48,13 +48,14 @@
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
+- [ ] **🚨 אבטחה — `admin_all` RLS drift על טבלאות נוספות** — זוהה ב-2026-04-24 בזמן סגירת שלב D. על טבלת `tasks` הייתה policy ישנה בשם `admin_all` עם תנאי `is_anonymous = false` (אותו חור אבטחה שתוקן ב-`app_users` ב-PR #78). ה-policy נמחקה מ-`tasks`, אבל **ייתכן שקיימת על טבלאות נוספות** (`ncr`, `inc`, `docs` וכו'). נדרש לסרוק את כל הטבלאות ולהחליט אם לאחד/לעדכן.
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
 ### ⚠️ פעולה ידנית נדרשת
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-18_ncr_ai.sql`~~ — **הורץ ואומת ידנית ב-2026-04-24**. הטבלה `ncr_ai` קיימת, 2 האינדקסים (`ncr_ai_ncr_id_idx`, `ncr_ai_ncr_id_version_idx`) קיימים, RLS disabled. אומת ב-Supabase (information_schema + pg_indexes + pg_class.relrowsecurity) ובבדיקה חיה — NCR Agent שומר ניתוחים בלי שגיאה.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-18_equip_inspections.sql`~~ — **הורץ ואומת ידנית ב-2026-04-24**. הטבלה `equip_inspections` קיימת, 2 האינדקסים (`equip_inspections_e_idx`, `equip_inspections_code_idx`) קיימים, RLS disabled. אומת ב-Supabase ובבדיקה חיה — דף בדיקות ציוד נטען ללא שגיאות.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` (SQL Editor → Paste → Run). ללא זה, משימות יישמרו ב-localStorage בלבד (ה-outbox ידחה INSERT ל-404). דרוש גם להוסיף policies RLS בסגנון `2026-04-21_rls_roles.sql` לטבלת `tasks` (ראה DECISIONS 2026-04-22). *(סטטוס לא ידוע)*
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-21_tasks.sql` + `migrations/2026-04-24_tasks_rls.sql`~~ — **הורצו ואומתו ידנית ב-2026-04-24**. הטבלה `tasks` נוצרה עם 10 עמודות ו-3 אינדקסים (`tasks_due_idx`, `tasks_status_idx`, `tasks_source_idx`). RLS מופעל עם policy יחיד `tasks_admin_manager_all` — רק `admin@tfugen.local` או משתמשים עם `role='אדמין'`/`role='מנהל'` מקבלים CRUD מלא. אומת ב-Supabase (pg_policy + pg_class) ובבדיקה חיה — admin יצר משימה חדשה ב-UI, המשימה שרדה רענון, outbox נשאר נקי.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-22_app_users.sql`~~ — טבלת `app_users` פעילה, 10 placeholders קיימים, RLS פעיל. דף ניהול משתמשים עובד בפרודקשן.
 - [x] ~~**צור 10 משתמשי Supabase Auth ידנית**~~ — user1@tfugen.local עד user10@tfugen.local נוצרו, סיסמאות Aa000001! עד Aa000010!. אומת ע״י כניסה ישירה למערכת.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-22_ncr_columns.sql`~~ — הוסיף עמודות `cd`, `sd`, `loc`, `root_cause`, `immediate` לטבלת `ncr`. הורץ בתגובה לשגיאת `PGRST204 Could not find the 'cd' column` — ה-outbox התנקה מייד לאחר מכן.
