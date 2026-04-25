@@ -2909,7 +2909,8 @@ function rTasks(){
     if(r.isVirtual){
       var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4 \u05d1\u05de\u05e7\u05d5\u05e8">&#128065;</button>';
       var promoteBtn='<button class="btn btn-d btn-sm" data-stbl="'+esc(r.source_table)+'" data-sid="'+esc(r.source_id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" title="\u05d4\u05e4\u05d5\u05da \u05dc\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05e6\u05de\u05d0\u05d9\u05ea">&#10133;</button>';
-      actions=srcViewBtn+' '+promoteBtn;
+      var srcDelBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="'+esc(r.source_table)+'" data-did="'+esc(r.source_id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05d9\u05e7\u05ea \u05e8\u05e9\u05d5\u05de\u05ea \u05d4\u05de\u05e7\u05d5\u05e8">&#128465;</button>';
+      actions=srcViewBtn+' '+promoteBtn+' '+srcDelBtn;
     }else{
       var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d9\u05d4">&#128065;</button>';
       var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)" title="\u05e2\u05e8\u05d9\u05db\u05d4 / \u05e2\u05d3\u05db\u05d5\u05df \u05e9\u05dd">&#9998;</button>';
