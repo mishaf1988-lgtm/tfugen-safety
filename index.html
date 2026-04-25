@@ -840,14 +840,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <div id="pg-leg" class="page">
-  <div class="row"><div class="page-title">&#1495;&#1493;&#1511;&#1497;&#1501; &#1493;&#1514;&#1511;&#1504;&#1493;&#1514; <span>&#1512;&#1490;&#1493;&#1500;&#1510;&#1497;&#1492; &#1493;&#1510;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openNewLegModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row"><div class="page-title">&#1495;&#1493;&#1511;&#1497;&#1501; &#1493;&#1514;&#1511;&#1504;&#1493;&#1514; <span>&#1512;&#1490;&#1493;&#1500;&#1510;&#1497;&#1492; &#1493;&#1510;&#1497;&#1493;&#1514;</span></div><div style="display:flex;gap:6px"><button class="btn btn-s" onclick="openLegStarterModal()" title="&#1512;&#1513;&#1497;&#1502;&#1514; &#1495;&#1493;&#1511;&#1497;&#1501; &#1502;&#1493;&#1502;&#1500;&#1510;&#1497;&#1501;">&#127793; &#1502;&#1493;&#1502;&#1500;&#1510;&#1497;&#1501;</button><button class="btn btn-p" onclick="openNewLegModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div></div>
   <div class="card" style="border-right:4px solid #7c3aed;margin-bottom:12px">
     <div class="card-title">&#129302; &#1513;&#1488;&#1500; &#1488;&#1514; &#1492;-AI <span style="font-size:10px;color:var(--t3);font-weight:600">(&#1502;&#1493;&#1490;&#1489;&#1500; &#1500;&#1495;&#1493;&#1511;&#1497;&#1501; &#1513;&#1489;&#1502;&#1488;&#1490;&#1512;)</span></div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <textarea id="leg-q-input" rows="2" placeholder="\u05dc\u05de\u05e9\u05dc: \u05de\u05d4 \u05d4\u05d7\u05d5\u05d1\u05d4 \u05dc\u05d3\u05d5\u05d5\u05d7 \u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05de\u05e4\u05e7\u05d7? \u05de\u05d4 \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4-PPE \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4?" style="width:100%;font-size:14px;resize:vertical"></textarea>
+      <textarea id="leg-q-input" rows="2" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1502;&#1492; &#1492;&#1495;&#1493;&#1489;&#1492; &#1500;&#1491;&#1493;&#1493;&#1495; &#1514;&#1511;&#1512;&#1497;&#1514; &#1500;&#1502;&#1508;&#1511;&#1495;? &#1502;&#1492; &#1491;&#1512;&#1497;&#1513;&#1493;&#1514; &#1492;-PPE &#1489;&#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;?" style="width:100%;font-size:14px;resize:vertical"></textarea>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-p" style="background:#7c3aed" onclick="legAskAI()">&#129302; \u05e9\u05d0\u05dc</button>
-        <span style="font-size:10px;color:var(--t3)">\u05d4-AI \u05de\u05d2\u05d9\u05d1 \u05e8\u05e7 \u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05e9\u05d4\u05d6\u05e0\u05ea \u2014 \u05dc\u05d0 \u05de\u05d9\u05d3\u05e2 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9. \u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05de\u05dc\u05d0 \u05d1\u05d3\u05d5\u05e7 \u05d1\u05e0\u05d1\u05d5.</span>
+        <button class="btn btn-p" style="background:#7c3aed" onclick="legAskAI()">&#129302; &#1513;&#1488;&#1500;</button>
+        <span style="font-size:10px;color:var(--t3)">&#1492;-AI &#1502;&#1490;&#1497;&#1489; &#1512;&#1511; &#1502;&#1514;&#1493;&#1498; &#1492;&#1495;&#1493;&#1511;&#1497;&#1501; &#1513;&#1492;&#1494;&#1504;&#1514; &#8212; &#1500;&#1488; &#1502;&#1497;&#1491;&#1506; &#1495;&#1497;&#1510;&#1493;&#1504;&#1497;. &#1500;&#1488;&#1497;&#1502;&#1493;&#1514; &#1502;&#1500;&#1488; &#1489;&#1491;&#1493;&#1511; &#1489;&#1504;&#1489;&#1493;.</span>
       </div>
       <div id="leg-q-result"></div>
     </div>
@@ -2092,6 +2092,77 @@ function svLeg(){
   }
   sdb();closeModal('m-leg');
   toast('\u05e0\u05e9\u05de\u05e8 \u2713');rLeg();
+}
+// Curated list of common Israeli safety + environment laws and regulations.
+// Only metadata (name, official identifier, link to Nevo). The full text /
+// summary remains empty — user fills it from the linked source.
+var LEG_STARTER_LAWS = [
+  {s:'\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 [\u05e0\u05d5\u05e1\u05d7 \u05d7\u05d3\u05e9]',law_num:'\u05d4\u05ea\u05e9"\u05dc-1970',law_type:'\u05d7\u05d5\u05e7',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05db\u05dc\u05dc\u05d9',src_url:'https://www.nevo.co.il/law_html/law00/74793.htm'},
+  {s:'\u05d7\u05d5\u05e7 \u05d0\u05e8\u05d2\u05d5\u05df \u05d4\u05e4\u05d9\u05e7\u05d5\u05d7 \u05e2\u05dc \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4',law_num:'\u05ea\u05e9\u05d9"\u05d3-1954',law_type:'\u05d7\u05d5\u05e7',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05e4\u05d9\u05e7\u05d5\u05d7',src_url:'https://www.nevo.co.il/law_html/law01/p182_001.htm'},
+  {s:'\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4)',law_num:'\u05ea\u05e9\u05e1"\u05d6-2007',law_type:'\u05ea\u05e7\u05e0\u05d4',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4',src_url:'https://www.nevo.co.il/law_html/law01/999_900.htm'},
+  {s:'\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d1\u05e0\u05d9\u05d9\u05d4)',law_num:'\u05ea\u05e9\u05de"\u05d7-1988',law_type:'\u05ea\u05e7\u05e0\u05d4',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05d1\u05e0\u05d9\u05d9\u05d4',src_url:'https://www.nevo.co.il/law_html/law01/166_028.htm'},
+  {s:'\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05d7\u05e9\u05de\u05dc)',law_num:'\u05ea\u05e9"\u05df-1990',law_type:'\u05ea\u05e7\u05e0\u05d4',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05d7\u05e9\u05de\u05dc',src_url:'https://www.nevo.co.il/law_html/law01/170_002.htm'},
+  {s:'\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05d2\u05d9\u05d4\u05d5\u05ea \u05ea\u05e2\u05e1\u05d5\u05e7\u05ea\u05d9\u05ea \u05d5\u05d1\u05e8\u05d9\u05d0\u05d5\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05e8\u05e2\u05e9)',law_num:'\u05ea\u05e9\u05de"\u05d3-1984',law_type:'\u05ea\u05e7\u05e0\u05d4',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'\u05e8\u05e2\u05e9',src_url:'https://www.nevo.co.il/law_html/law01/166_009.htm'},
+  {s:'\u05d7\u05d5\u05e7 \u05d4\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d4\u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',law_num:'\u05d4\u05ea\u05e9\u05e0"\u05d2-1993',law_type:'\u05d7\u05d5\u05e7',a:'\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4',topic:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',src_url:'https://www.nevo.co.il/law_html/law01/p182_002.htm'},
+  {s:'\u05d7\u05d5\u05e7 \u05d0\u05d5\u05d5\u05d9\u05e8 \u05e0\u05e7\u05d9',law_num:'\u05d4\u05ea\u05e9\u05e1"\u05d7-2008',law_type:'\u05d7\u05d5\u05e7',a:'\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4',topic:'\u05d0\u05d5\u05d5\u05d9\u05e8',src_url:'https://www.nevo.co.il/law_html/law01/999_877.htm'},
+  {s:'\u05d7\u05d5\u05e7 \u05e9\u05de\u05d9\u05e8\u05ea \u05d4\u05e0\u05d9\u05e7\u05d9\u05d5\u05df',law_num:'\u05d4\u05ea\u05e9\u05de"\u05d3-1984',law_type:'\u05d7\u05d5\u05e7',a:'\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4',topic:'\u05e4\u05e1\u05d5\u05dc\u05ea',src_url:'https://www.nevo.co.il/law_html/law01/166_005.htm'},
+  {s:'\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 (\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9)',law_num:'\u05ea\u05e9\u05e0"\u05d6-1997',law_type:'\u05ea\u05e7\u05e0\u05d4',a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',topic:'PPE',src_url:'https://www.nevo.co.il/law_html/law01/166_010.htm'}
+];
+function openLegStarterModal(){
+  var m=g('m-leg-starter');var ov=g('ov-leg-starter');
+  if(!m||!ov){
+    // First call: build the modal in the DOM
+    var html='<div class="overlay" id="ov-leg-starter" onclick="closeModal(\'m-leg-starter\')"></div>'+
+      '<div class="modal" id="m-leg-starter" style="display:none;max-width:560px">'+
+      '<button class="close-btn" onclick="closeModal(\'m-leg-starter\')">&#10005;</button>'+
+      '<div class="modal-title">\u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7\u05d9\u05dd \u05de\u05d5\u05de\u05dc\u05e6\u05d9\u05dd</div>'+
+      '<div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">\u05d1\u05d7\u05e8 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u2014 \u05d9\u05d9\u05d5\u05e6\u05e8\u05d5 \u05d2\u05dc\u05d9\u05d9\u05d5\u05ea \u05e8\u05d9\u05e7\u05d5\u05ea \u05e2\u05dd \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05e7, \u05ea\u05d7\u05d5\u05dd \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc-\u05e0\u05d1\u05d5. \u05ea\u05de\u05dc\u05d0 \u05d0\u05ea \u05d4\u05ea\u05e7\u05e6\u05d9\u05e8 \u05d5\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05de\u05dc\u05d0 \u05d1\u05e2\u05e6\u05de\u05da \u05de\u05d4\u05de\u05e7\u05d5\u05e8.</div>'+
+      '<div id="leg-starter-list" style="max-height:50vh;overflow-y:auto"></div>'+
+      '<div class="modal-footer"><button class="btn btn-s" onclick="closeModal(\'m-leg-starter\')">\u05d1\u05d9\u05d8\u05d5\u05dc</button><button class="btn btn-p" onclick="addLegStarterSelected()">\u05d4\u05d5\u05e1\u05e3 \u05de\u05e1\u05d5\u05de\u05e0\u05d9\u05dd</button></div>'+
+      '</div>';
+    var holder=document.createElement('div');holder.innerHTML=html;
+    var app=document.getElementById('app')||document.body;
+    while(holder.firstChild)app.appendChild(holder.firstChild);
+  }
+  // Populate list (skip ones already in DB by name match)
+  var existing={};(DB.leg||[]).forEach(function(r){if(r.s)existing[r.s]=true;});
+  var list=g('leg-starter-list');
+  list.innerHTML=LEG_STARTER_LAWS.map(function(law,i){
+    var inDb=existing[law.s];
+    return '<label style="display:flex;align-items:flex-start;gap:8px;padding:10px 8px;border-bottom:1px solid #f0f0f0;'+(inDb?'opacity:.5':'cursor:pointer')+'">'+
+      '<input type="checkbox" data-idx="'+i+'" '+(inDb?'disabled':'')+' style="width:18px;height:18px;margin-top:2px">'+
+      '<div style="flex:1"><div style="font-weight:700;font-size:13px">'+esc(law.s)+'</div>'+
+      '<div style="font-size:11px;color:var(--t3);margin-top:3px">'+esc(law.law_type)+' &middot; '+esc(law.law_num)+' &middot; '+esc(law.topic)+(inDb?' &middot; <span style="color:var(--ok);font-weight:700">\u05db\u05d1\u05e8 \u05d1\u05de\u05e2\u05e8\u05db\u05ea</span>':'')+'</div></div></label>';
+  }).join('');
+  openModal('m-leg-starter');
+}
+function addLegStarterSelected(){
+  var boxes=document.querySelectorAll('#leg-starter-list input[type=checkbox]:checked');
+  if(!boxes.length){toast('\u05dc\u05d0 \u05e0\u05d1\u05d7\u05e8 \u05db\u05dc\u05d5\u05dd');return;}
+  var added=0;
+  Array.prototype.forEach.call(boxes,function(b){
+    var law=LEG_STARTER_LAWS[parseInt(b.dataset.idx,10)];
+    if(!law)return;
+    var rec={
+      id:gid(),
+      s:law.s,
+      d:null,
+      a:law.a,
+      c:'\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9',
+      u:null,o:null,
+      law_type:law.law_type,
+      law_num:law.law_num,
+      topic:law.topic,
+      src_url:law.src_url,
+      summary:null,
+      full_text:null,
+      last_review:null
+    };
+    DB.leg.push(rec);sbIns('leg',rec);added++;
+  });
+  sdb();closeModal('m-leg-starter');
+  toast('\u05e0\u05d5\u05e1\u05e4\u05d5 '+added+' \u05d7\u05d5\u05e7\u05d9\u05dd ✓');
+  rLeg();
 }
 function legAskAI(){
   var q=(gv('leg-q-input')||'').trim();
