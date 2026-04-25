@@ -3476,11 +3476,31 @@ function _ncrLoadAI(){
   })
   .catch(function(err){console.warn('ncr_ai load skipped:',err);});
 }
+window._naSetFilter=function(f){window._naFilter=f;_ncrRender();};
 function _ncrRender(){
   var L=document.getElementById('ncr-agent-list');
   if(!_nad.length){L.innerHTML='<div style="text-align:center;padding:40px;color:#4a6a8a">No data</div>';return;}
-  var h='';
-  _nad.forEach(function(n){
+  var f=window._naFilter||'open';
+  var CL='\u05e1\u05d2\u05d5\u05e8'; // closed
+  var nOpen=_nad.filter(function(n){return n.s!==CL;}).length;
+  var nClosed=_nad.filter(function(n){return n.s===CL;}).length;
+  var rows=_nad.filter(function(n){
+    if(f==='open')return n.s!==CL;
+    if(f==='closed')return n.s===CL;
+    return true;
+  });
+  function chip(key,label,count){
+    var on=(f===key);
+    return '<button onclick="window._naSetFilter(\''+key+'\')" style="background:'+(on?'#1a3a5a':'#0d1014')+';border:1px solid '+(on?'#4a9adf':'#1e3a5f')+';border-radius:18px;color:'+(on?'#aaccee':'#5a7a9a')+';padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;font-family:inherit">'+label+' <span style="opacity:.7">('+count+')</span></button>';
+  }
+  var bar='<div style="padding:4px 4px 10px 4px;border-bottom:1px solid #1e3a5f;margin-bottom:8px;display:flex;flex-wrap:wrap">'
+    +chip('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',nOpen)
+    +chip('closed','\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd',nClosed)
+    +chip('all','\u05d4\u05db\u05dc',_nad.length)
+    +'</div>';
+  if(!rows.length){L.innerHTML=bar+'<div style="text-align:center;padding:40px;color:#4a6a8a">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05dc\u05d8\u05e8 \u05d6\u05d4</div>';return;}
+  var h=bar;
+  rows.forEach(function(n){
     var pc=_gpc(n.p),sc=_gsc(n.s),an=_naf[n.id];
     h+='<div data-nid="'+esc(n.id)+'" onclick="_ncrSel(this.dataset.nid)" style="background:'+pc.bg+';border-right:3px solid '+pc.b+';border-radius:7px;padding:9px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:10px">';
     h+='<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:#4a7aaa">'+esc(n.num||'')+'</div>';
