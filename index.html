@@ -668,6 +668,23 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
 </div>
 
+<!-- AUDIT LOG PAGE -->
+<div id="pg-audit" class="page">
+  <div class="row">
+    <div class="page-title">&#128279; &#1497;&#1493;&#1502;&#1503; <span>&#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</span></div>
+    <button class="btn btn-s" onclick="rAudit()" style="background:#3b82f6">&#8635; &#1512;&#1506;&#1504;&#1503;</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th>&#1494;&#1502;&#1503;</th>
+    <th>&#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th>&#1508;&#1506;&#1493;&#1500;&#1492;</th>
+    <th>&#1496;&#1489;&#1500;&#1492;</th>
+    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th></th>
+  </tr></thead><tbody id="tb-audit"><tr><td colspan="6" class="et">&#1496;&#1493;&#1506;&#1503;...</td></tr></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1497;&#1493;&#1502;&#1503; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</div>
+</div>
+
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
@@ -951,6 +968,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
     <div class="sheet-group-title">&#1504;&#1497;&#1492;&#1493;&#1500;</div>
     <button class="sheet-btn" id="sheet-btn-users" onclick="_goFromSheet('m-modules-sheet','users')" style="display:none"><span class="sic">&#128100;</span>&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</button>
+    <button class="sheet-btn" id="sheet-btn-audit" onclick="_goFromSheet('m-modules-sheet','audit')" style="display:none"><span class="sic">&#128279;</span>&#1497;&#1493;&#1502;&#1503; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</button>
   </div>
 </div>
 
@@ -1415,7 +1433,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1450,7 +1468,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1502,9 +1520,21 @@ function _obDrain(){
   });
   return p.then(function(){_obSet(remaining);_obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':(remaining.length?null:'ok'));});
 }
-function sbIns(tbl,row){_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
+function _audTitle(row){if(!row||typeof row!=='object')return null;var v=row.title||row.topic||row.d||row.descr||row.n||row.num||'';return String(v).substring(0,80)||null;}
+function _aud(op,tbl,idOrRow){
+  if(tbl==='audit_log')return;
+  try{
+    var record_id,title=null;
+    if(op==='del'){record_id=String(idOrRow||'');}
+    else{record_id=(idOrRow&&idOrRow.id)?String(idOrRow.id):null;title=_audTitle(idOrRow);}
+    var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?_currentUser.username+'@tfugen.local':null;
+    var entry={user_email:u,table_name:tbl,record_id:record_id,op:op,title:title};
+    _obPush({op:'ins',tbl:'audit_log',row:entry});
+  }catch(e){console.warn('audit failed:',e);}
+}
+function sbIns(tbl,row){_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox'];
@@ -1655,12 +1685,12 @@ var _navGroup={
   docs:'modules',aud:'modules',tr:'modules',hearing:'modules',leg:'modules',
   rsk:'modules',ptw:'modules',ppe:'modules',ctr:'modules',
   wst:'modules',hzm:'modules',env:'modules',
-  emp:'modules',drl:'modules',ins:'modules',lg:'modules',users:'modules'
+  emp:'modules',drl:'modules',ins:'modules',lg:'modules',users:'modules',audit:'modules'
 };
 // Pages that only the admin account can open. Non-admin users are
 // redirected to the dashboard with a toast, even if they try
 // goPage('users') from devtools or a stale link.
-var _ADMIN_ONLY_PAGES = {users:1};
+var _ADMIN_ONLY_PAGES = {users:1,audit:1};
 function _isAdminUser(){
   return _currentUser && (_currentUser.username==='admin' || _currentUser.role==='אדמין');
 }
@@ -1680,7 +1710,7 @@ function goPage(id){
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,lg:rLg};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -2374,6 +2404,31 @@ function svToolbox(){
   toast('\u05e9\u05d9\u05d7\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rToolbox();rDash();
 }
 // ---- END TOOLBOX ----
+
+// ---- AUDIT LOG ----
+function rAudit(){
+  var tb=g('tb-audit');if(!tb)return;
+  tb.innerHTML='<tr><td colspan="6" class="et">\u05d8\u05d5\u05e2\u05df...</td></tr>';
+  _sbAuth().then(function(){
+    return fetch(SBU+'/rest/v1/audit_log?select=*&order=ts.desc&limit=200',{headers:sbH()});
+  }).then(function(r){return r.ok?r.json():[];}).then(function(rows){
+    if(!Array.isArray(rows)||!rows.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
+    var opLbl={ins:'\u05d9\u05e6\u05d9\u05e8\u05d4',upd:'\u05e2\u05d3\u05db\u05d5\u05df',del:'\u05de\u05d7\u05d9\u05e7\u05d4'};
+    var opColor={ins:'#16a34a',upd:'#2563eb',del:'#cc1f1f'};
+    tb.innerHTML=rows.map(function(r){
+      var dt=new Date(r.ts);var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
+      var u=(r.user_email||'').split('@')[0]||'—';
+      var op=opLbl[r.op]||r.op;var oc=opColor[r.op]||'#666';
+      var t=r.title||'—';if(t.length>60)t=t.substring(0,60)+'…';
+      var viewBtn='';
+      if(r.op!=='del'&&r.record_id&&r.table_name){
+        viewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.table_name)+'" data-vid="'+esc(r.record_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4">&#128065;</button>';
+      }
+      return '<tr><td style="font-size:11px;white-space:nowrap">'+dtStr+'</td><td><strong>'+esc(u)+'</strong></td><td><span style="color:'+oc+';font-weight:700">'+op+'</span></td><td><code style="font-size:11px">'+esc(r.table_name)+'</code></td><td style="max-width:240px;word-break:break-word">'+esc(t)+'</td><td>'+viewBtn+'</td></tr>';
+    }).join('');
+  }).catch(function(e){console.warn('audit fetch:',e);tb.innerHTML='<tr><td colspan="6" class="et">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05d4</td></tr>';});
+}
+// ---- END AUDIT LOG ----
 
 // ---- TASKS (CAPA follow-up) ----
 window._tskFilter='all';
@@ -3221,6 +3276,8 @@ function _applyRoleGates(){
   var isAdmin = _isAdminUser();
   var usersBtn=g('sheet-btn-users');
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
+  var auditBtn=g('sheet-btn-audit');
+  if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
