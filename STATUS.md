@@ -82,7 +82,7 @@
 - [ ] **חיפוש גלובלי** — 🔍 על כל המודולים
 - [ ] **ייצוא PDF** — לכל דף
 - [ ] **WhatsApp Meta API** — התראות לאחראי
-- [ ] **Audit Trail** — מי שינה מה ומתי
+- [ ] **Audit Trail** — מי שינה מה ומתי. **קוד מימוש דחוף ל-merge**: דף `pg-audit` (אדמין/מנהל בלבד), טבלת `audit_log` עם RLS. דורש הרצת `migrations/2026-04-24_audit_log.sql` ב-Supabase.
 - [ ] **Agent Dashboard** — ריכוז כל ה-AI agents
 
 ### 🔵 באגים ידועים
