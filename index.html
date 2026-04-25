@@ -2228,9 +2228,20 @@ function legAskAI(){
   var resultEl=g('leg-q-result');
   if(q.length<3){if(resultEl)resultEl.innerHTML='';toast('\u05d4\u05e7\u05dc\u05d3 \u05e9\u05d0\u05dc\u05d4');return;}
   var laws=(DB.leg||[]).filter(function(l){return l.full_text||l.summary;});
+  var totalLaws=(DB.leg||[]).length;
+  var stubsCount=totalLaws-laws.length;
   if(!laws.length){
-    if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd \u05e2\u05dd \u05ea\u05d5\u05db\u05df \u05d1\u05de\u05d0\u05d2\u05e8. \u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7 \u05e2\u05dd \u05ea\u05e7\u05e6\u05d9\u05e8/\u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.</div>';
+    var msg='';
+    if(totalLaws===0){
+      msg='\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd \u05d1\u05de\u05d0\u05d2\u05e8. \u05dc\u05d7\u05e5 "\ud83c\udf31 \u05de\u05d5\u05de\u05dc\u05e6\u05d9\u05dd" \u05db\u05d3\u05d9 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e8\u05e9\u05d9\u05de\u05ea \u05d7\u05d5\u05e7\u05d9\u05dd, \u05d5\u05d0\u05d6 \u05e2\u05e8\u05d5\u05da \u05db\u05dc \u05d7\u05d5\u05e7 \u05d5\u05d4\u05d5\u05e1\u05e3 \u05dc\u05d5 \u05ea\u05e7\u05e6\u05d9\u05e8 \u05d5\u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0 \u05de-\u05e0\u05d1\u05d5.';
+    }else{
+      msg='\u05d9\u05e9 '+totalLaws+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d1\u05de\u05d0\u05d2\u05e8 \u05d0\u05d1\u05dc \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05de\u05d4\u05dd \u05dc\u05d0 \u05db\u05d5\u05dc\u05dc \u05ea\u05e7\u05e6\u05d9\u05e8 \u05d0\u05d5 \u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0. \u05dc\u05d7\u05e5 \u270e \u05e2\u05dc \u05db\u05dc \u05d7\u05d5\u05e7 \u05d5\u05d4\u05d3\u05d1\u05e7 \u05d0\u05ea \u05d4\u05ea\u05d5\u05db\u05df \u05de-\u05e0\u05d1\u05d5 (\u05dc\u05e4\u05d9 \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \ud83d\udd17 \u05e9\u05de\u05d5\u05e4\u05d9\u05e2 \u05dc\u05d9\u05d3 \u05db\u05dc \u05d7\u05d5\u05e7).';
+    }
+    if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px;line-height:1.6">'+msg+'</div>';
     return;
+  }
+  if(stubsCount>0){
+    // Hint: some laws still empty
   }
   if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05d7\u05d5\u05e9\u05d1... ('+laws.length+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d1\u05de\u05d0\u05d2\u05e8)</div>';
   var lawsBlock=laws.slice(0,40).map(function(l){
@@ -3664,7 +3675,9 @@ function rLeg(){
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+esc(l.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;</button>';
     var editBtn='<button class="btn btn-d btn-sm" data-lid="'+esc(l.id)+'" onclick="editLeg(this.dataset.lid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
     var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="leg" data-did="'+esc(l.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
-    return '<tr><td style="max-width:260px">'+nameCell+'</td><td>'+lt+'</td><td>'+esc(l.a||'')+'</td><td>'+sb(l.c)+'</td><td>'+fd(l.u)+'</td><td>'+srcBtn+'</td><td>'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+    var hasContent=l.summary||l.full_text;
+    var contentBadge=hasContent?'<span style="font-size:9px;color:var(--ok);font-weight:700">✓ \u05ea\u05d5\u05db\u05df</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⚠ \u05dc\u05dc\u05d0 \u05ea\u05d5\u05db\u05df</span>';
+    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 function legFilter(f){window._legFilter=f;['all','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05db\u05d7 \u05d0\u05d3\u05dd','\u05db\u05dc\u05dc\u05d9'].forEach(function(k){var el=g('leg-tab-'+k.replace(/ /g,'_'));if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rLeg();}
