@@ -651,6 +651,23 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
 </div>
 
+<!-- TOOLBOX TALKS PAGE -->
+<div id="pg-toolbox" class="page">
+  <div class="row">
+    <div class="page-title">&#128483; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
+    <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th>&#1504;&#1493;&#1513;&#1488;</th>
+    <th>&#1502;&#1506;&#1489;&#1497;&#1512;</th>
+    <th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
+    <th>&#1505;&#1496;.</th>
+    <th></th>
+  </tr></thead><tbody id="tb-toolbox"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+</div>
+
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
@@ -893,6 +910,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','nm')"><span class="sic">&#9940;</span>&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','inc')"><span class="sic">&#9888;</span>&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','round')"><span class="sic">&#9728;</span>&#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','toolbox')"><span class="sic">&#128483;</span>&#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','ncr')"><span class="sic">&#128295;</span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','exp')"><span class="sic">&#9200;</span>&#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','eqi')"><span class="sic">&#128295;</span>&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</button>
@@ -1238,6 +1256,25 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-round')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRound()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- TOOLBOX TALKS MODAL -->
+<div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
+<div class="modal" id="m-toolbox" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-toolbox')">&#10005;</button>
+  <div class="modal-title">&#128483; &#1513;&#1497;&#1495;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+  <div class="fgrid">
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="tb-d"></div>
+    <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488; *</label><input id="tb-topic" placeholder="PPE, &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;, &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;..."></div>
+    <div class="field"><label>&#1502;&#1506;&#1489;&#1497;&#1512;</label><input id="tb-presenter"></div>
+    <div class="field"><label>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</label><input id="tb-attendees" placeholder="&#1513;&#1502;&#1493;&#1514; &#1488;&#1493; &#1502;&#1505;&#1508;&#1512;"></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tb-s"><option>&#1504;&#1502;&#1505;&#1512;&#1492;</option><option>&#1502;&#1514;&#1493;&#1499;&#1504;&#1504;&#1514;</option><option>&#1489;&#1493;&#1496;&#1500;&#1492;</option></select></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tb-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label>
+      <div id="tb-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tb-attach-area','toolbox')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-toolbox')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svToolbox()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
 <!-- TASK MODAL -->
 <div class="overlay" id="ov-tsk" onclick="closeModal('m-tsk')"></div>
 <div class="modal" id="m-tsk" style="display:none">
@@ -1378,7 +1415,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1404,7 +1441,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1413,7 +1450,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1470,7 +1507,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_obPush({op:'upd',tbl:tbl,row:ro
 function sbDel(tbl,id){_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1498,7 +1535,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -1538,7 +1575,7 @@ function syncDiag(){
   if(q.length&&confirm('\u05dc\u05e0\u05e7\u05d5\u05ea '+q.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5\u05ea \u05de\u05d4\u05ea\u05d5\u05e8? (\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d8\u05dc)')){_obSet([]);_obSetErr(null);_obBadge();toast('\u05d4\u05ea\u05d5\u05e8 \u05e0\u05d5\u05e7\u05d4 \u2713');}
 }
 function forceSync(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox'];
   var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
   var ok=0,fail=0,skip=0,pushDone=0,pushTotal=0;
   var failTbls=[];
@@ -1607,14 +1644,14 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox};
   delRow(tbl,id,fn[tbl]||function(){});
 }
 // Maps each page to its top-level nav tab so the correct bn stays highlighted
 // after navigation via bottom sheets.
 var _navGroup={
   dash:'dash',tasks:'tasks','emp-home':'dash','view':null,'ptw-view':null,
-  nm:'reports',inc:'reports',round:'reports',ncr:'reports',exp:'reports',eqi:'reports',
+  nm:'reports',inc:'reports',round:'reports',ncr:'reports',exp:'reports',eqi:'reports',toolbox:'reports',
   docs:'modules',aud:'modules',tr:'modules',hearing:'modules',leg:'modules',
   rsk:'modules',ptw:'modules',ppe:'modules',ctr:'modules',
   wst:'modules',hzm:'modules',env:'modules',
@@ -1643,7 +1680,7 @@ function goPage(id){
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,lg:rLg};
   if(m[CUR])m[CUR]();
 }
 function openModal(id){
@@ -2311,6 +2348,33 @@ function svRound(){
   toast('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
 }
 // ---- END NEAR-MISS + ROUND ----
+
+// ---- TOOLBOX TALKS ----
+function rToolbox(){
+  var tb=g('tb-toolbox');if(!tb)return;
+  var rows=DB.toolbox||[];
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</td></tr>';return;}
+  tb.innerHTML=rows.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).map(function(r){
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="toolbox" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="toolbox" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:180px;word-break:break-word">'+esc(r.topic||'\u2014')+'</td><td>'+(r.presenter?esc(r.presenter):'\u2014')+'</td><td>'+(r.attendees?esc(r.attendees):'\u2014')+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' '+delBtn+'</td></tr>';
+  }).join('');
+}
+function svToolbox(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
+  var topic=gv('tb-topic');
+  if(!topic){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0');return;}
+  var r={id:gid(),d:gv('tb-d')||null,topic:topic,presenter:gv('tb-presenter')||null,attendees:gv('tb-attendees')||null,s:gv('tb-s')||'\u05e0\u05de\u05e1\u05e8\u05d4',notes:gv('tb-notes')||null,file_url:_attachUrls['tb-attach-area']||null,ts:new Date().toISOString()};
+  if(!DB.toolbox)DB.toolbox=[];
+  DB.toolbox.push(r);sbIns('toolbox',r);addLog('\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+topic.substring(0,30));sdb();
+  closeModal('m-toolbox');
+  ['tb-topic','tb-presenter','tb-attendees','tb-notes','tb-d'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  if(typeof _attachClear==='function')_attachClear('tb-attach-area');
+  toast('\u05e9\u05d9\u05d7\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rToolbox();rDash();
+}
+// ---- END TOOLBOX ----
+
 // ---- TASKS (CAPA follow-up) ----
 window._tskFilter='all';
 var _TSK_OPEN='\u05e4\u05ea\u05d5\u05d7';
@@ -2856,7 +2920,9 @@ var VIEW_CONFIG={
     ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
-    ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]}
+    ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
+  toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'file_url'}
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
@@ -2891,7 +2957,7 @@ function showView(tbl,id){
 }
 
 function _reportRef(tbl,rec){
-  var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT',tasks:'TSK'}[tbl]||(tbl.toUpperCase().slice(0,4));
+  var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT',tasks:'TSK',toolbox:'TLK'}[tbl]||(tbl.toUpperCase().slice(0,4));
   var dateField=tbl==='hearing_tests'?(rec.test_date||rec.dob):rec.d;
   var yr=dateField?dateField.slice(0,4):String(new Date().getFullYear());
   var recs=(DB[tbl]||[]).filter(function(r){var rd=tbl==='hearing_tests'?(r.test_date||r.dob):r.d;return rd&&rd.slice(0,4)===yr;}).sort(function(a,b){var ad=tbl==='hearing_tests'?(a.test_date||a.dob):a.d;var bd=tbl==='hearing_tests'?(b.test_date||b.dob):b.d;return ad<bd?-1:ad>bd?1:0;});
