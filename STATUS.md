@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-24 (tasks B + D closed)
+**Last updated**: 2026-04-24 (tasks B + D closed · RLS Stage 1 deployed)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -48,7 +48,9 @@
 ## 📋 תור משימות
 
 ### 🔴 עדיפות גבוהה
-- [ ] **🚨 אבטחה — `admin_all` RLS drift על טבלאות נוספות** — זוהה ב-2026-04-24 בזמן סגירת שלב D. על טבלת `tasks` הייתה policy ישנה בשם `admin_all` עם תנאי `is_anonymous = false` (אותו חור אבטחה שתוקן ב-`app_users` ב-PR #78). ה-policy נמחקה מ-`tasks`, אבל **ייתכן שקיימת על טבלאות נוספות** (`ncr`, `inc`, `docs` וכו'). נדרש לסרוק את כל הטבלאות ולהחליט אם לאחד/לעדכן.
+- [x] ~~**🚨 אבטחה — RLS Stage 1: סגירת anonymous access**~~ — **הורץ ואומת ידנית ב-2026-04-24**. הוסרו 9 פוליסות `open USING true` (auds/docs/emp/files/hist/inc/ncr/rsk/tr), נוספה `public.is_admin_manager()` helper, הוגדרו policies ל-`files`+`hist`, ו-`app_users_read` הוגבל ל-`TO authenticated`. אומת ב-4 שאילתות Supabase (0 open, רק authenticated USING true, פונקציה קיימת, files/hist מוגנות) ובבדיקות UI (admin עם 375 NCRs, 7 דפים, emp-mode + דיווח near_miss, אין 401/403). PR #84. תוכנן לפי חוות דעת יועץ חיצוני — גישה בשלבים (לא all-in-one).
+- [ ] **🚨 אבטחה — RLS Stage 2: החלפת 22 פוליסות `admin_all`** — כל הטבלאות עם `is_anonymous=false` יחליפו ל-`public.is_admin_manager()`. user1..user10 לא יוכלו יותר CRUD דרך REST. emp_insert נשאר ללא שינוי. שלב מתוכנן — לא הורץ.
+- [ ] **🚨 אבטחה — RLS Stage 3: הקשחת `emp_insert`** — 4 פוליסות (`equip_inspections`, `near_miss`, `rounds`, `tr`) — בדיקת `WITH CHECK` והגבלת עמודות רגישות. שלב מתוכנן — לא הורץ.
 - [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
