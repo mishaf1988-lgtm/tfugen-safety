@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-24 (tasks B + D closed · RLS Stages 1+2 deployed)
+**Last updated**: 2026-04-24 (tasks B + D closed · RLS Stages 1+2 deployed · PR #45 closed)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -90,7 +90,7 @@
 - [ ] Fix NCR Agent v3 — edge cases
 
 ### 📌 Pull Requests פתוחים — דרושה החלטה
-- [ ] **PR #45 — Toolbox Talks** — עדיין פתוח (לא מוזג ולא נסגר). דרוש להחליט: למזג / לסגור / להמשיך לעבד. ראה גם branch `routine/toolbox-talks-2026-04-19`.
+- [x] ~~**PR #45 — Toolbox Talks**~~ — **נסגר ב-2026-04-24**. הבסיס היה ישן (5 ימים), קונפליקטים ב-`index.html`, והמיגרציה הכילה `DISABLE ROW LEVEL SECURITY` שמנוגדת למדיניות ה-RLS החדשה. Toolbox Talks נשאר תחת "🟡 תוספות ISO" לטיפול עתידי במימוש טרי עם `is_admin_manager()` policy.
 
 ---
 
