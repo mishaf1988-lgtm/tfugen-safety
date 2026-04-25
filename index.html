@@ -1604,41 +1604,61 @@ function syncDiag(){
   if(confirm(lines.join('\n'))){_obDrain();return;}
   if(q.length&&confirm('\u05dc\u05e0\u05e7\u05d5\u05ea '+q.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5\u05ea \u05de\u05d4\u05ea\u05d5\u05e8? (\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d8\u05dc)')){_obSet([]);_obSetErr(null);_obBadge();toast('\u05d4\u05ea\u05d5\u05e8 \u05e0\u05d5\u05e7\u05d4 \u2713');}
 }
+function _forceSyncPerRow(t,rows){
+  // Per-row fallback when batch POST fails \u2014 finds & skips bad rows
+  var ok=0,bad=[];var p=Promise.resolve();
+  rows.forEach(function(row){
+    p=p.then(function(){
+      return fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify([row])})
+        .then(function(r){if(r.ok)ok++;else bad.push(row.id||'?');})
+        .catch(function(){bad.push(row.id||'?');});
+    });
+  });
+  return p.then(function(){return {table:t,ok:ok,bad:bad};});
+}
 function forceSync(){
   var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox'];
   var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
-  var ok=0,fail=0,skip=0,pushDone=0,pushTotal=0;
-  var failTbls=[];
-  syncTbls.forEach(function(t){var rows=DB[t];if(rows&&rows.length)pushTotal++;else skip++;});
-  toast('\u05de\u05e2\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd... ('+pushTotal+' \u05d8\u05d1\u05dc\u05d0\u05d5\u05ea)');
-  if(pushTotal===0){
+  var totalRowsToPush=0;
+  syncTbls.forEach(function(t){var r=DB[t];if(r&&r.length)totalRowsToPush+=r.length;});
+  if(totalRowsToPush===0){
     sbSync();
     if(btn){btn.style.opacity='';btn.disabled=false;}
     toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');
     return;
   }
+  toast('\u05de\u05e2\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd... ('+totalRowsToPush+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea)');
+  var allOk=0,allBad=[];
+  var p=Promise.resolve();
   syncTbls.forEach(function(t){
     var rows=DB[t];
     if(!rows||!rows.length)return;
-    _sbAuth().then(function(){
-      return fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)});
-    })
-      .then(function(r){
-        if(r.ok||r.status===201||r.status===200){ok++;}
-        else{fail++;failTbls.push(t+'('+r.status+')');}
-        pushDone++;if(pushDone>=pushTotal)_afterPush();
-      })
-      .catch(function(e){fail++;failTbls.push(t+'(net)');pushDone++;if(pushDone>=pushTotal)_afterPush();});
+    p=p.then(function(){return _sbAuth();}).then(function(){
+      // Try batch first (fast path)
+      return fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)})
+        .then(function(r){
+          if(r.ok){return {table:t,ok:rows.length,bad:[]};}
+          // Batch failed \u2014 fall back to per-row
+          return _forceSyncPerRow(t,rows);
+        })
+        .catch(function(){return _forceSyncPerRow(t,rows);})
+        .then(function(res){
+          allOk+=res.ok;
+          if(res.bad&&res.bad.length)allBad.push(res.table+': '+res.bad.length+' \u05e9\u05d5\u05e8\u05d5\u05ea \u05e9\u05d2\u05d5\u05d9\u05d5\u05ea');
+        });
+    });
   });
-  function _afterPush(){
+  p.then(function(){
     sbSync();
-    setTimeout(function(){
-      if(btn){btn.style.opacity='';btn.disabled=false;}
-      var msg='\u05e1\u05e0\u05db\u05e8\u05d5\u05df: '+ok+' \u05d4\u05e6\u05dc\u05d9\u05d7\u05d5';
-      if(fail>0)msg+=' | '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5 ('+failTbls.join(',')+')';
-      alert(msg);
-    },2000);
-  }
+    if(btn){btn.style.opacity='';btn.disabled=false;}
+    var msg=allOk+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e1\u05d5\u05e0\u05db\u05e8\u05e0\u05d5';
+    if(allBad.length)msg+=' \u00b7 '+allBad.length+' \u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05e2\u05dd \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea (\u05dc\u05d7\u05e5 \u05e2\u05dc \u05d4\u05e2\u05e0\u05df \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd)';
+    toast(msg);
+    if(allBad.length){
+      console.warn('forceSync issues:',allBad);
+      try{localStorage.setItem('tfgn_lastForceSyncIssues',JSON.stringify({ts:new Date().toISOString(),issues:allBad}));}catch(e){}
+    }
+  });
 }
 function delRow(tbl,id,fn){DB[tbl]=DB[tbl].filter(function(r){return r.id!==id;});sbDel(tbl,id);addLog('\u05e4\u05e8\u05d9\u05d8 \u05e0\u05de\u05d7\u05e7 \u05de'+tbl);sdb();toast('\u05e0\u05de\u05d7\u05e7 &#10003;');fn();}
 var DEL_PW='123456';
