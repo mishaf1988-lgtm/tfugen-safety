@@ -951,6 +951,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','rsk')"><span class="sic">&#9889;</span>&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ptw')"><span class="sic">&#128274;</span>&#1492;&#1512;&#1513;&#1488;&#1492;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ppe')"><span class="sic">&#9939;</span>PPE</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')"><span class="sic">&#128295;</span>&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ctr')"><span class="sic">&#129309;</span>&#1511;&#1489;&#1500;&#1504;&#1497;&#1501;</button>
 
     <div class="sheet-group-title">&#1505;&#1489;&#1497;&#1489;&#1492;</div>
@@ -1491,7 +1492,7 @@ function _obBadge(state){
 function _obSend(op){
   return _sbAuth().then(function(){
     var url,opts={};
-    if(op.op==='ins'){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=sbHUpsert();opts.body=JSON.stringify(op.row);}
+    if(op.op==='ins'){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
     else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
