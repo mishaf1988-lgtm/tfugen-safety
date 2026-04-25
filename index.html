@@ -940,7 +940,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="modal" id="m-del-confirm" style="display:none;max-width:300px">
   <div class="modal-title">&#1502;&#1495;&#1497;&#1511;&#1492;</div>
   <p style="font-size:13px;color:#666;margin-bottom:12px">&#1492;&#1494;&#1503; &#1505;&#1497;&#1505;&#1502;&#1492; &#1500;&#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1495;&#1497;&#1511;&#1492;</p>
-  <input id="del-pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;text-align:center;box-sizing:border-box">
+  <input id="del-pw" type="password" inputmode="numeric" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" onkeydown="if(event.key==='Enter')confirmDel()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;text-align:center;box-sizing:border-box">
   <div id="del-pw-err" style="color:#cc1f1f;font-size:12px;min-height:18px;margin-top:4px;text-align:center"></div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="cancelDel()">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
@@ -2860,10 +2860,10 @@ var VIEW_CONFIG={
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
-  if(!cfg)return;
+  if(!cfg){console.warn('showView: no VIEW_CONFIG for',tbl);toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e6\u05d9\u05d2');return;}
   var db=DB[tbl]||[];
   var rec=db.find(function(r){return r.id===id;});
-  if(!rec){goPage(cfg.back);return;}
+  if(!rec){console.warn('showView: record not found',tbl,id);toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05dc\u05e8\u05e2\u05e0\u05df');return;}
   var title=g('view-title');
   var back=g('view-back');
   var body=g('view-body');
