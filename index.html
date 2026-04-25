@@ -1738,7 +1738,24 @@ function rPage(){
     ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,lg:rLg};
   if(m[CUR])m[CUR]();
 }
+var _modalLastScrollY=0;
+function _closeAllOpenModals(except){
+  // Hide every visible modal + its overlay before opening a new one.
+  // Prevents the 'two modals stacked / previous one covers the new' bug.
+  document.querySelectorAll('.modal').forEach(function(mo){
+    if(except && mo.id===except) return;
+    if(mo.style.display==='block'||mo.style.display==='flex'){
+      mo.style.display='none';
+      var ov=g('ov-'+(mo.id||'').substr(2));
+      if(ov)ov.style.display='none';
+    }
+  });
+}
 function openModal(id){
+  _closeAllOpenModals(id);
+  if(!document.body.style.overflow||document.body.style.overflow!=='hidden'){
+    _modalLastScrollY=window.scrollY||0;
+  }
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
   if(ov){
@@ -1751,17 +1768,27 @@ function openModal(id){
     ov.style.zIndex='1000';
     ov.style.background='rgba(0,0,0,.55)';
     document.body.style.overflow='hidden';
-    window.scrollTo(0,0);
   }
   if(mo){
     mo.style.display='block';
     mo.style.position='fixed';
-    mo.style.top='50%';
-    mo.style.left='50%';
-    mo.style.transform='translate(-50%,-50%)';
     mo.style.zIndex='1001';
-    mo.style.maxHeight='90vh';
     mo.style.overflowY='auto';
+    // Mobile-safe positioning: if viewport is short, anchor near top
+    // so the on-screen keyboard / URL bar doesn't hide the bottom of
+    // the modal. Otherwise center the modal as before.
+    var vh=window.innerHeight||document.documentElement.clientHeight;
+    if(vh<700){
+      mo.style.top='8px';
+      mo.style.left='50%';
+      mo.style.transform='translateX(-50%)';
+      mo.style.maxHeight=(vh-16)+'px';
+    }else{
+      mo.style.top='50%';
+      mo.style.left='50%';
+      mo.style.transform='translate(-50%,-50%)';
+      mo.style.maxHeight='90vh';
+    }
     var t=new Date().toISOString().split('T')[0];
     mo.querySelectorAll('input[type=date]').forEach(function(i){if(!i.value)i.value=t;});
     mo.querySelectorAll('input[type=datetime-local]').forEach(function(i){if(!i.value)i.value=new Date().toISOString().slice(0,16);});
@@ -1772,6 +1799,8 @@ function openModal(id){
     var ctx=ctxMap[id];
     if(ctx)try{renderFL(ctx);}catch(e){}
     if(id==='m-train')try{initSig();}catch(e){}
+    // Scroll modal to top on open so user always sees the title first
+    setTimeout(function(){try{mo.scrollTop=0;}catch(e){}},0);
   }
 }
 
@@ -1779,9 +1808,25 @@ function closeModal(id){
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
   if(ov){ov.style.display='none';ov.style.position='';ov.style.width='';ov.style.height='';}
-  if(mo){mo.style.display='none';mo.style.position='';mo.style.top='';mo.style.left='';mo.style.transform='';}
-  document.body.style.overflow='';
+  if(mo){mo.style.display='none';mo.style.position='';mo.style.top='';mo.style.left='';mo.style.transform='';mo.style.maxHeight='';}
+  // Only release body scroll if no modal is still open (e.g., a parent modal)
+  var anyOpen=false;
+  document.querySelectorAll('.modal').forEach(function(m){if(m.style.display==='block'||m.style.display==='flex')anyOpen=true;});
+  if(!anyOpen){
+    document.body.style.overflow='';
+    if(_modalLastScrollY)try{window.scrollTo(0,_modalLastScrollY);}catch(e){}
+  }
 }
+
+// Esc key closes the topmost open modal
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var open=null;
+  document.querySelectorAll('.modal').forEach(function(m){
+    if(m.style.display==='block'||m.style.display==='flex')open=m;
+  });
+  if(open&&open.id)closeModal(open.id);
+});
 
 function svDoc(){
   var n=gv('d-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
