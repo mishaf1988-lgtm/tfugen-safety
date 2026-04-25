@@ -840,8 +840,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <div id="pg-leg" class="page">
-  <div class="row"><div class="page-title">&#1510;&#1497;&#1493;&#1514; <span>&#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;</span></div><button class="btn btn-p" onclick="openModal('m-leg')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1511;&#1493;&#1512; &#1495;&#1493;&#1511;&#1497;</th><th>&#1504;&#1493;&#1513;&#1488;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1502;&#1510;&#1489; &#1510;&#1497;&#1493;&#1514;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
+  <div class="row"><div class="page-title">&#1495;&#1493;&#1511;&#1497;&#1501; &#1493;&#1514;&#1511;&#1504;&#1493;&#1514; <span>&#1512;&#1490;&#1493;&#1500;&#1510;&#1497;&#1492; &#1493;&#1510;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-leg')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1511;&#1493;&#1512; &#1495;&#1493;&#1511;&#1497;</th><th>&#1504;&#1493;&#1513;&#1488;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -953,7 +953,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','aud')"><span class="sic">&#128269;</span>&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','tr')"><span class="sic">&#127891;</span>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hearing')"><span class="sic">&#128066;</span>&#1513;&#1502;&#1497;&#1506;&#1492;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','leg')"><span class="sic">&#9878;</span>&#1510;&#1497;&#1493;&#1514;</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','leg')"><span class="sic">&#9878;</span>&#1495;&#1493;&#1511;&#1497;&#1501;<br>&#1493;&#1514;&#1511;&#1504;&#1493;&#1514;</button>
 
     <div class="sheet-group-title">&#1514;&#1508;&#1506;&#1493;&#1500; &#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','rsk')"><span class="sic">&#9889;</span>&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501;</button>
@@ -1427,12 +1427,12 @@ id="m-ncr" style="display:none">
 <div class="overlay" id="ov-leg" onclick="closeModal('m-leg')"></div>
 <div class="modal" id="m-leg" style="display:none">
   <button class="close-btn" onclick="closeModal('m-leg')">&#10005;</button>
-  <div class="modal-title">&#1491;&#1512;&#1497;&#1513;&#1492; &#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;&#1514;</div>
+  <div class="modal-title">&#1495;&#1493;&#1511; / &#1514;&#1511;&#1504;&#1492; / &#1491;&#1512;&#1497;&#1513;&#1492; &#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;&#1514;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1502;&#1511;&#1493;&#1512; &#1495;&#1493;&#1511;&#1497; *</label><input id="leg-s" placeholder="&#1514;&#1511;&#1504;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; / &#1491;&#1497;&#1504;&#1497; &#1506;&#1489;&#1493;&#1491;&#1492;"></div>
     <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488;</label><textarea id="leg-d"></textarea></div>
     <div class="field"><label>&#1514;&#1495;&#1493;&#1501;</label><select id="leg-a"><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1505;&#1489;&#1497;&#1489;&#1492;</option><option>&#1499;&#1495; &#1488;&#1491;&#1501;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514;</option></select></div>
-    <div class="field"><label>&#1502;&#1510;&#1489; &#1510;&#1497;&#1493;&#1514;</label><select id="leg-c"><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</label><select id="leg-c"><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1499;&#1493;&#1503; &#1488;&#1495;&#1512;&#1493;&#1503;</label><input type="date" id="leg-u"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="leg-o"></div>
   </div>
