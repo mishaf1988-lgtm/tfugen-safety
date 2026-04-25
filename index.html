@@ -2265,11 +2265,11 @@ function legAskAI(){
   if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05d7\u05d5\u05e9\u05d1...</div>';
   var withContent=allLaws.filter(function(l){return l.full_text||l.summary;});
   var stubsOnly=allLaws.filter(function(l){return !(l.full_text||l.summary);});
-  var contentBlock=withContent.slice(0,30).map(function(l){
+  var contentBlock=withContent.slice(0,15).map(function(l){
     var head='['+l.s+(l.law_num?' '+l.law_num:'')+(l.law_type?' / '+l.law_type:'')+']';
     var body='';
     if(l.summary)body+='\n\u05ea\u05e7\u05e6\u05d9\u05e8: '+l.summary;
-    if(l.full_text)body+='\n\u05ea\u05d5\u05db\u05df:\n'+l.full_text.substring(0,4000);
+    if(l.full_text)body+='\n\u05ea\u05d5\u05db\u05df:\n'+l.full_text.substring(0,80000);
     if(l.src_url)body+='\n\u05de\u05e7\u05d5\u05e8: '+l.src_url;
     return head+body;
   }).join('\n\n---\n\n');
