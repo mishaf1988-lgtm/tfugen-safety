@@ -205,6 +205,11 @@ body.emp-mode .cap-fab{display:none}
 .modal{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;max-height:90vh;overflow-y:auto;z-index:101;border-top:3px solid var(--red)}
 .modal-title{font-size:16px;font-weight:900;margin-bottom:16px;color:var(--tx)}
 .close-btn{position:absolute;top:16px;left:16px;background:#f0f1f3;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:13px;color:var(--t2)}
+/* Mobile fullscreen modal pattern (applied via JS on viewports <768px) */
+.modal.is-fullscreen{padding:14px 14px calc(28px + env(safe-area-inset-bottom)) 14px;border-radius:0;border-top:none}
+.modal.is-fullscreen .close-btn{position:sticky;top:0;left:auto;right:0;float:right;font-size:15px;font-weight:700;padding:10px 16px;min-height:44px;background:#fff;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06);z-index:10;margin-left:0}
+.modal.is-fullscreen .modal-title{font-size:20px;padding-top:6px;clear:both}
+.modal.is-fullscreen .modal-footer{position:sticky;bottom:0;background:#fff;padding-top:10px;margin-top:14px;border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04)}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fw{grid-column:1/-1}
 .field{display:flex;flex-direction:column;gap:5px}
@@ -1774,18 +1779,41 @@ function openModal(id){
     mo.style.position='fixed';
     mo.style.zIndex='1001';
     mo.style.overflowY='auto';
-    // Mobile-safe positioning: if viewport is short, anchor near top
-    // so the on-screen keyboard / URL bar doesn't hide the bottom of
-    // the modal. Otherwise center the modal as before.
+    // Three layouts:
+    //   - vw < 768  → fullscreen page-like (mobile, the dominant case)
+    //   - vh < 700  → top-anchored (laptop with small window or keyboard)
+    //   - else      → centered modal (desktop with room)
+    var vw=window.innerWidth||document.documentElement.clientWidth;
     var vh=window.innerHeight||document.documentElement.clientHeight;
-    if(vh<700){
+    var isFs=(vw<768);
+    if(isFs){
+      mo.classList.add('is-fullscreen');
+      mo.style.top='0';
+      mo.style.left='0';
+      mo.style.right='0';
+      mo.style.bottom='0';
+      mo.style.width='100%';
+      mo.style.maxWidth='none';
+      mo.style.height='100%';
+      mo.style.maxHeight='none';
+      mo.style.transform='none';
+      mo.style.borderRadius='0';
+      // Hide overlay in fullscreen — modal IS the overlay
+      if(ov)ov.style.display='none';
+    }else if(vh<700){
+      mo.classList.remove('is-fullscreen');
       mo.style.top='8px';
       mo.style.left='50%';
+      mo.style.right='';
+      mo.style.bottom='';
       mo.style.transform='translateX(-50%)';
       mo.style.maxHeight=(vh-16)+'px';
     }else{
+      mo.classList.remove('is-fullscreen');
       mo.style.top='50%';
       mo.style.left='50%';
+      mo.style.right='';
+      mo.style.bottom='';
       mo.style.transform='translate(-50%,-50%)';
       mo.style.maxHeight='90vh';
     }
@@ -1808,7 +1836,7 @@ function closeModal(id){
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
   if(ov){ov.style.display='none';ov.style.position='';ov.style.width='';ov.style.height='';}
-  if(mo){mo.style.display='none';mo.style.position='';mo.style.top='';mo.style.left='';mo.style.transform='';mo.style.maxHeight='';}
+  if(mo){mo.style.display='none';mo.style.position='';mo.style.top='';mo.style.left='';mo.style.right='';mo.style.bottom='';mo.style.transform='';mo.style.maxHeight='';mo.style.width='';mo.style.maxWidth='';mo.style.height='';mo.style.borderRadius='';mo.classList.remove('is-fullscreen');}
   // Only release body scroll if no modal is still open (e.g., a parent modal)
   var anyOpen=false;
   document.querySelectorAll('.modal').forEach(function(m){if(m.style.display==='block'||m.style.display==='flex')anyOpen=true;});
