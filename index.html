@@ -2911,9 +2911,11 @@ function rTasks(){
       var promoteBtn='<button class="btn btn-d btn-sm" data-stbl="'+esc(r.source_table)+'" data-sid="'+esc(r.source_id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" title="\u05d4\u05e4\u05d5\u05da \u05dc\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05e6\u05de\u05d0\u05d9\u05ea">&#10133;</button>';
       actions=srcViewBtn+' '+promoteBtn;
     }else{
-      var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-      var menuBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="_tskMenu(this.dataset.tid,this)" title="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">⋯</button>';
-      actions=viewBtn+' '+menuBtn;
+      var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d9\u05d4">&#128065;</button>';
+      var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)" title="\u05e2\u05e8\u05d9\u05db\u05d4 / \u05e2\u05d3\u05db\u05d5\u05df \u05e9\u05dd">&#9998;</button>';
+      var menuBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="_tskMenu(this.dataset.tid,this)" title="\u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05d4\u05d9\u05e8">⋯</button>';
+      var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05d9\u05e7\u05d4">&#128465;</button>';
+      actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
     return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
   }).join('');
