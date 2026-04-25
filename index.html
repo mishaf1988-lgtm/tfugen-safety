@@ -691,7 +691,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
-    <button class="btn btn-p" onclick="openModal('m-ncr')">+ &#1495;&#1491;&#1513;</button><button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
+    <button class="btn btn-p" onclick="openNewNcrModal()">+ &#1495;&#1491;&#1513;</button><button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
   <div style="display:flex;gap:8px;margin:8px 0 12px;direction:rtl">
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:14px;padding:10px 16px;min-height:44px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
@@ -1033,6 +1033,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-ncr')">&#10005;</button>
   <div class="modal-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1492; / &#1502;&#1502;&#1510;&#1488;</div>
+  <input type="hidden" id="ncr-id">
   <div class="fgrid">
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="ncr-d" class="inp" rows="2" placeholder="&#1514;&#1488;&#1512; &#1488;&#1514; &#1492;&#1502;&#1502;&#1510;&#1488;..."></textarea></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="ncr-a" class="inp"><option value="">&#1489;&#1495;&#1512;...</option><option value="&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option value="&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</option></select></div>
@@ -1795,6 +1796,25 @@ function svAud(){
   DB.auds.push(r);sbIns('auds',r);addLog('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05d5\u05e1\u05e4\u05d4: '+n);sdb();closeModal('m-aud');
   ['a-n','a-a','a-sm'].forEach(function(i){var el=g(i);if(el)el.value='';});
   toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rAud();
+}
+function openNewNcrModal(){
+  ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  var a=g('ncr-a');if(a)a.value='';
+  var s=g('ncr-s');if(s)s.value='\u05e4\u05ea\u05d5\u05d7';
+  if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
+  openModal('m-ncr');
+}
+function editNcr(id){
+  var rec=(DB.ncr||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  g('ncr-id').value=rec.id;
+  var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
+  setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
+  setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);
+  setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
+  setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
+  if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
+  openModal('m-ncr');
 }
 function svNcr(){
   var id=g('ncr-id')&&g('ncr-id').value;
@@ -2924,6 +2944,7 @@ tb.innerHTML=rows.map(function(n){
   var loc=n.loc||n.location||'';
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+  var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="\u05e2\u05e8\u05d9\u05db\u05d4">&#9998;</button>';
   return '<tr>'+
     '<td><span class="b bX">'+(n.num||'&#8212;')+'</span></td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
@@ -2933,7 +2954,7 @@ tb.innerHTML=rows.map(function(n){
     '<td>'+sb(n.s)+'</td>'+
     '<td>'+(n.o||'').substring(0,15)+'</td>'+
     '<td>'+eb(n.u)+'</td>'+
-    '<td>'+viewBtn+' '+delBtn+'</td>'+
+    '<td>'+viewBtn+' '+editBtn+' '+delBtn+'</td>'+
   '</tr>';
 }).join('');
 }
