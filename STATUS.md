@@ -72,7 +72,7 @@
 - [x] ~~Storage bucket `incidents-photos` + INSERT policy לאנונימי~~ — הוגדר
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
-- [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות
+- [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות. **קוד מימוש דחוף ל-merge ב-PR חדש** (יורש לוגי מ-PR #45 שנסגר). דורש הרצת `migrations/2026-04-24_toolbox.sql` ב-Supabase.
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
 - [ ] **Management Review Dashboard** — סיכום רבעוני ל-PDF
