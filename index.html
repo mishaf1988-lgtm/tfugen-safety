@@ -841,6 +841,17 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-leg" class="page">
   <div class="row"><div class="page-title">&#1495;&#1493;&#1511;&#1497;&#1501; &#1493;&#1514;&#1511;&#1504;&#1493;&#1514; <span>&#1512;&#1490;&#1493;&#1500;&#1510;&#1497;&#1492; &#1493;&#1510;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openNewLegModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="card" style="border-right:4px solid #7c3aed;margin-bottom:12px">
+    <div class="card-title">&#129302; &#1513;&#1488;&#1500; &#1488;&#1514; &#1492;-AI <span style="font-size:10px;color:var(--t3);font-weight:600">(&#1502;&#1493;&#1490;&#1489;&#1500; &#1500;&#1495;&#1493;&#1511;&#1497;&#1501; &#1513;&#1489;&#1502;&#1488;&#1490;&#1512;)</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <textarea id="leg-q-input" rows="2" placeholder="\u05dc\u05de\u05e9\u05dc: \u05de\u05d4 \u05d4\u05d7\u05d5\u05d1\u05d4 \u05dc\u05d3\u05d5\u05d5\u05d7 \u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05de\u05e4\u05e7\u05d7? \u05de\u05d4 \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4-PPE \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4?" style="width:100%;font-size:14px;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-p" style="background:#7c3aed" onclick="legAskAI()">&#129302; \u05e9\u05d0\u05dc</button>
+        <span style="font-size:10px;color:var(--t3)">\u05d4-AI \u05de\u05d2\u05d9\u05d1 \u05e8\u05e7 \u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05e9\u05d4\u05d6\u05e0\u05ea \u2014 \u05dc\u05d0 \u05de\u05d9\u05d3\u05e2 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9. \u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05de\u05dc\u05d0 \u05d1\u05d3\u05d5\u05e7 \u05d1\u05e0\u05d1\u05d5.</span>
+      </div>
+      <div id="leg-q-result"></div>
+    </div>
+  </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th>&#1502;&#1511;&#1493;&#1512;</th><th>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -2081,6 +2092,48 @@ function svLeg(){
   }
   sdb();closeModal('m-leg');
   toast('\u05e0\u05e9\u05de\u05e8 \u2713');rLeg();
+}
+function legAskAI(){
+  var q=(gv('leg-q-input')||'').trim();
+  var resultEl=g('leg-q-result');
+  if(q.length<3){if(resultEl)resultEl.innerHTML='';toast('\u05d4\u05e7\u05dc\u05d3 \u05e9\u05d0\u05dc\u05d4');return;}
+  var laws=(DB.leg||[]).filter(function(l){return l.full_text||l.summary;});
+  if(!laws.length){
+    if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd \u05e2\u05dd \u05ea\u05d5\u05db\u05df \u05d1\u05de\u05d0\u05d2\u05e8. \u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7 \u05e2\u05dd \u05ea\u05e7\u05e6\u05d9\u05e8/\u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.</div>';
+    return;
+  }
+  if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05d7\u05d5\u05e9\u05d1... ('+laws.length+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d1\u05de\u05d0\u05d2\u05e8)</div>';
+  var lawsBlock=laws.slice(0,40).map(function(l){
+    var head='['+l.s+(l.law_num?' '+l.law_num:'')+(l.law_type?' / '+l.law_type:'')+']';
+    var body='';
+    if(l.summary)body+='\n\u05ea\u05e7\u05e6\u05d9\u05e8: '+l.summary;
+    if(l.full_text)body+='\n\u05ea\u05d5\u05db\u05df:\n'+l.full_text.substring(0,4000);
+    if(l.src_url)body+='\n\u05de\u05e7\u05d5\u05e8: '+l.src_url;
+    return head+body;
+  }).join('\n\n---\n\n');
+  var sys='\u05d0\u05ea\u05d4 \u05e2\u05d5\u05d6\u05e8 \u05de\u05e9\u05e4\u05d8\u05d9 \u05d1\u05ea\u05d7\u05d5\u05dd \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4. \u05e2\u05dc\u05d9\u05da \u05dc\u05e2\u05e0\u05d5\u05ea \u05e2\u05dc \u05d1\u05e1\u05d9\u05e1 \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05d4\u05ea\u05e7\u05e0\u05d5\u05ea \u05e9\u05d9\u05e1\u05d5\u05e4\u05e7\u05d5 \u05dc\u05da \u05db\u05e7\u05dc\u05d8 \u05d1\u05dc\u05d1\u05d3. \u05d0\u05e1\u05d5\u05e8 \u05dc\u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05d9\u05d3\u05e2 \u05e4\u05e0\u05d9\u05de\u05d9 \u05de\u05e9\u05dc\u05da \u05de-training. \u05e2\u05e0\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3.';
+  var userMsg=
+    '\u05d4\u05e0\u05d4 \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05d4\u05ea\u05e7\u05e0\u05d5\u05ea \u05d4\u05d6\u05de\u05d9\u05e0\u05d9\u05dd \u05d0\u05e6\u05dc\u05d9:\n\n'+lawsBlock+'\n\n---\n\n'+
+    '\u05e9\u05d0\u05dc\u05d4: '+q+'\n\n'+
+    '\u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05ea\u05e9\u05d5\u05d1\u05d4 (\u05d7\u05d5\u05d1\u05d4):\n'+
+    '1. \u05e2\u05e0\u05d4 \u05d0\u05da \u05d5\u05e8\u05e7 \u05dc\u05e4\u05d9 \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05e9\u05dc\u05de\u05e2\u05dc\u05d4.\n'+
+    '2. \u05e6\u05d9\u05d9\u05df \u05d1\u05de\u05e4\u05d5\u05e8\u05e9 \u05de\u05d0\u05d9\u05d6\u05d4 \u05d7\u05d5\u05e7/\u05ea\u05e7\u05e0\u05d4 \u05d0\u05ea\u05d4 \u05de\u05e6\u05d8\u05d8 (\u05e9\u05dd + \u05de\u05e1\u05e4\u05e8).\n'+
+    '3. \u05d0\u05dd \u05d4\u05e9\u05d0\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05e2\u05e0\u05d9\u05ea \u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05d4\u05d0\u05dc\u05d4 — \u05db\u05ea\u05d5\u05d1 \u05d1\u05d3\u05d9\u05d5\u05e7: "\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05ea\u05e9\u05d5\u05d1\u05d4 \u05d1\u05de\u05d0\u05d2\u05e8. \u05d1\u05d3\u05d5\u05e7 \u05d1\u05e0\u05d1\u05d5 \u05d0\u05d5 \u05d4\u05d5\u05e1\u05e3 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7 \u05d4\u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9."\n'+
+    '4. \u05d4\u05e1\u05d1\u05e8 \u05de\u05d5\u05e9\u05d2\u05d9\u05dd \u05e9\u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8\u05d9\u05dd — \u05de\u05d5\u05ea\u05e8. \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05d9\u05d3\u05e2 \u05de\u05e9\u05e4\u05d8\u05d9 \u05e9\u05d0\u05d9\u05e0\u05d5 \u05d1\u05de\u05d0\u05d2\u05e8 — \u05d0\u05e1\u05d5\u05e8.\n'+
+    '5. \u05e2\u05e0\u05d4 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05d1\u05e8\u05d5\u05e8\u05d4, \u05dc\u05d0 \u05d9\u05d5\u05ea\u05e8 \u05de-300 \u05de\u05d9\u05dc\u05d9\u05dd.';
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:_AI_MODEL,max_tokens:1200,messages:[{role:'user',content:userMsg}],system:sys})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.error){throw new Error(d.error.message||JSON.stringify(d.error));}
+    var t=d.content&&d.content[0]?d.content[0].text:'';
+    if(!t){
+      if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px">\u05dc\u05d0 \u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05ea\u05e9\u05d5\u05d1\u05d4. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.</div>';
+      return;
+    }
+    if(resultEl)resultEl.innerHTML='<div style="background:#f5f7fa;padding:14px;border-radius:10px;border-right:3px solid #7c3aed;font-size:13px;line-height:1.7;white-space:pre-wrap">'+esc(t)+'</div><div style="font-size:10px;color:var(--t3);margin-top:6px">\u05ea\u05e9\u05d5\u05d1\u05d4 \u05de\u05d1\u05d5\u05e1\u05e1\u05ea \u05e2\u05dc '+laws.length+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d1\u05de\u05d0\u05d2\u05e8. \u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05e4\u05e1\u05e7\u05e0\u05d9 — \u05d1\u05d3\u05d5\u05e7 \u05d1\u05e0\u05d1\u05d5.</div>';
+  }).catch(function(e){
+    if(resultEl)resultEl.innerHTML='<div class="et" style="padding:14px;color:var(--bad)">\u05e9\u05d2\u05d9\u05d0\u05d4: '+esc(e.message||String(e))+'</div>';
+  });
 }
 function ptwPrint(){
   var num=gv('ptw-num')||('PTW-'+String(DB.ptw.length+1).padStart(4,'0'));
