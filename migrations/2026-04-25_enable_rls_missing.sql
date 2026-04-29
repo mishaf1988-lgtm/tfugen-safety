@@ -1,0 +1,51 @@
+-- Migration: enable RLS on equip_inspections and ncr_ai
+-- Date: 2026-04-25
+--
+-- Context: Supabase Security Advisor flagged 4 errors on 2026-04-27:
+--   1. Policy Exists RLS Disabled — public.equip_inspections
+--   2. Policy Exists RLS Disabled — public.ncr_ai
+--   3. RLS Disabled in Public      — public.equip_inspections
+--   4. RLS Disabled in Public      — public.ncr_ai
+--
+-- Both tables already have admin/manager policies attached
+-- (`equip_inspections_admin_manager_all`, `ncr_ai_admin_manager_all`)
+-- from RLS Stage 2 (2026-04-24). However, RLS itself was never
+-- toggled ON at the table level, so the policies are inert and
+-- anyone with the anon key can read/write/delete via REST.
+--
+-- Root cause: the original CREATE TABLE migrations for these tables
+-- (2026-04-18) explicitly left RLS disabled. The blanket migration
+-- 2026-04-20_enable_rls.sql that would have flipped them ON was
+-- apparently not executed in production (or was reverted). Stage 1+2
+-- created policies but did not re-enable RLS.
+--
+-- After this migration:
+--   - Only admin@tfugen.local or users with role='אדמין'/'מנהל'
+--     can SELECT/INSERT/UPDATE/DELETE on these tables.
+--   - The Equipment Inspections page (pg-eqi) still works for admin.
+--   - NCR Agent still saves analyses to ncr_ai for admin.
+--   - Anonymous emp-mode users lose all access (they had no UI for
+--     these tables anyway).
+--
+-- Safe to re-run: ALTER TABLE ... ENABLE RLS is idempotent.
+
+ALTER TABLE public.equip_inspections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ncr_ai            ENABLE ROW LEVEL SECURITY;
+
+-- Verify (run separately):
+-- SELECT relname, relrowsecurity
+--   FROM pg_class
+--  WHERE relname IN ('equip_inspections','ncr_ai')
+--    AND relnamespace = 'public'::regnamespace;
+-- Expected: both rows show relrowsecurity = true.
+--
+-- SELECT tablename, policyname
+--   FROM pg_policies
+--  WHERE schemaname = 'public'
+--    AND tablename IN ('equip_inspections','ncr_ai');
+-- Expected: 2 rows — equip_inspections_admin_manager_all
+--                    ncr_ai_admin_manager_all
+
+-- Rollback (NOT recommended — re-opens public access):
+-- ALTER TABLE public.equip_inspections DISABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.ncr_ai            DISABLE ROW LEVEL SECURITY;
