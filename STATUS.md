@@ -64,6 +64,7 @@
 - [x] ~~**🔒 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-23_app_users_admin_only_rls.sql`~~ — **הורץ ב-2026-04-24 ואומת ידנית**. ה-policy `app_users_admin_write` נעולה ל-`auth.jwt() ->> 'email' = 'admin@tfugen.local'` בלבד (במקום `is_anonymous = false`). אומת ב-3 בדיקות: (1) admin ניהל משתמשים בהצלחה, (2) משתמש רגיל לא יכול לכתוב ל-`app_users`, (3) dropdown של מדווחים עדיין נטען כרגיל. חור האבטחה סגור.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
+- [ ] **🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql` — Supabase Security Advisor סימן 4 שגיאות ב-2026-04-27: RLS לא מופעל על `equip_inspections` ו-`ncr_ai`, למרות שהפוליסות `_admin_manager_all` קיימות. ה-migration מפעיל RLS על שתיהן (2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`). **אחרי הרצה**: לוודא ש-(1) Security Advisor מציג 0 errors, (2) admin עדיין רואה את דף בדיקות ציוד, (3) NCR Agent עדיין שומר ניתוחים.
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
 - [x] ~~`migrations/2026-04-19_rounds.sql`~~ — הורץ
 - [x] ~~`migrations/2026-04-19_photo_url.sql`~~ — הורץ
