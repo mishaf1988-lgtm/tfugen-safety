@@ -14,6 +14,8 @@ export const config = { runtime: 'edge' };
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://tfugen-safety.vercel.app'
 ];
+// Vercel preview deployments for this project: tfugen-safety-<hash>-mishaf1988-lgtms-projects.vercel.app
+const PREVIEW_ORIGIN_RE = /^https:\/\/tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$/;
 const ALLOWED_MODELS = [
   'claude-sonnet-4-6',
   'claude-haiku-4-5'
@@ -27,8 +29,14 @@ function getAllowedOrigins() {
   return [...DEFAULT_ALLOWED_ORIGINS, ...extra];
 }
 
+function originPasses(origin, allowed) {
+  if (!origin) return false;
+  if (allowed.includes(origin)) return true;
+  return PREVIEW_ORIGIN_RE.test(origin);
+}
+
 function corsHeaders(origin, allowed) {
-  const allow = allowed.includes(origin) ? origin : allowed[0];
+  const allow = originPasses(origin, allowed) ? origin : allowed[0];
   return {
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'POST,OPTIONS',
@@ -46,13 +54,13 @@ function jsonErr(msg, status, cors) {
 
 function isAllowedCaller(req, allowed) {
   const origin = req.headers.get('origin') || '';
-  if (origin && allowed.includes(origin)) return true;
+  if (originPasses(origin, allowed)) return true;
   // Same-origin fetches from Safari sometimes omit Origin — fall back to Referer.
   const referer = req.headers.get('referer') || '';
   if (referer) {
     try {
       const refOrigin = new URL(referer).origin;
-      if (allowed.includes(refOrigin)) return true;
+      if (originPasses(refOrigin, allowed)) return true;
     } catch (e) {}
   }
   return false;
