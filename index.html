@@ -3960,7 +3960,7 @@ window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.
 function _ncrLoad(){
   var L=document.getElementById('ncr-agent-list');
   L.innerHTML='<div style="text-align:center;padding:40px;color:#4a6a8a">Loading...</div>';
-  fetch(_SB+'/rest/v1/ncr?select=*&limit=500&order=created_at.desc',{headers:{apikey:_SK,Authorization:'Bearer '+_SK,Prefer:'count=exact'}})
+  fetch(_SB+'/rest/v1/ncr?select=*&limit=500&order=created_at.desc',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),Prefer:'count=exact'}})
   .then(function(r){var ct=r.headers.get('content-range');return r.json().then(function(d){return{d:d,ct:ct};});})
   .then(function(res){
     _nad=Array.isArray(res.d)?res.d:[];
@@ -3972,7 +3972,7 @@ function _ncrLoad(){
   .catch(function(err){console.error('NCR load error:',err);var msg='Load Error: '+(err&&err.message||err);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444;font-size:11px;word-break:break-word">[v4.3 load]<br>'+msg+'</div>';try{alert(msg);}catch(_){}});
 }
 function _ncrLoadAI(){
-  return fetch(_SB+'/rest/v1/ncr_ai?select=*&order=version.desc',{headers:{apikey:_SK,Authorization:'Bearer '+_SK}})
+  return fetch(_SB+'/rest/v1/ncr_ai?select=*&order=version.desc',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK)}})
   .then(function(r){if(!r.ok){console.warn('ncr_ai fetch not ok:',r.status);return [];}return r.json();})
   .then(function(rows){
     if(!Array.isArray(rows))return;
@@ -4099,7 +4099,7 @@ window._ncrApply=function(id){
   var patch={rc:an.root_cause||null,c:ca0||null,o:an.owner_suggested||null,u:an.due_suggested||null};
   fetch(_SB+'/rest/v1/ncr?id=eq.'+encodeURIComponent(id),{
     method:'PATCH',
-    headers:{apikey:_SK,Authorization:'Bearer '+_SK,'Content-Type':'application/json',Prefer:'return=minimal'},
+    headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=minimal'},
     body:JSON.stringify(patch)
   }).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -4120,7 +4120,7 @@ window._ncrFb=function(id,val){
   window._ncrSel(id);
   fetch(_SB+'/rest/v1/ncr_ai?ncr_id=eq.'+encodeURIComponent(id)+'&version=eq.'+encodeURIComponent(an.version),{
     method:'PATCH',
-    headers:{apikey:_SK,Authorization:'Bearer '+_SK,'Content-Type':'application/json',Prefer:'return=minimal'},
+    headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=minimal'},
     body:JSON.stringify({feedback:newFb,feedback_user:newFb?u:null,feedback_ts:newFb?ts:null})
   }).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -4177,7 +4177,7 @@ window._ncrAI=function(id){
     _naVer[id]=nextVer;
     fetch(_SB+'/rest/v1/ncr_ai',{
       method:'POST',
-      headers:{apikey:_SK,Authorization:'Bearer '+_SK,'Content-Type':'application/json',Prefer:'return=minimal'},
+      headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=minimal'},
       body:JSON.stringify({
         ncr_id:id,
         version:nextVer,
