@@ -340,6 +340,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
+    <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -4153,13 +4154,37 @@ var _naf={};
 var _naVer={};
 var _SB='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+/* ---- PWA: register service worker + install prompt ---- */
+var _pwaPrompt=null;
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed:',e);});
+  });
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _pwaPrompt=e;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='';
+});
+window.addEventListener('appinstalled',function(){
+  _pwaPrompt=null;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='none';
+  try{toast('\u05d4\u05d5\u05ea\u05e7\u05df \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4 \u2713');}catch(e){}
+});
+window._pwaInstall=function(){
+  if(!_pwaPrompt){toast('\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05ea\u05e7\u05e0\u05ea \u05d0\u05d5 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05d6\u05d4');return;}
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
+};
 var _AI='/api/claude';
 var _AI_MODEL='claude-sonnet-4-6';
 var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
 var _SC={'closed':'#00cc55','open':'#ff4444','wip':'#f0a000'};
 function _gpc(p){return _P[p==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'q':p==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'h':p==='\u05e0\u05de\u05d5\u05db\u05d4'?'l':'m']||_P.m;}
 function _gsc(s){return s==='\u05e1\u05d2\u05d5\u05e8'?'#00cc55':s==='\u05e4\u05ea\u05d5\u05d7'?'#ff4444':s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#f0a000':'#7a9ab8';}
-window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.display='flex';var _c=document.getElementById('ncr-agent-count');if(_c&&!_c.dataset.vmark){_c.insertAdjacentHTML('afterend',' <span style="font-size:10px;color:#00cc55;padding:0 6px">v4.3</span>');_c.dataset.vmark='1';}_ncrLoad();};
+window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.display='flex';var _c=document.getElementById('ncr-agent-count');if(_c&&!_c.dataset.vmark){_c.insertAdjacentHTML('afterend',' <span style="font-size:10px;color:#00cc55;padding:0 6px">v4.3</span>');_c.dataset.vmark='1';}_ncrLoad();if(typeof _ncrPatternsLoad==='function')_ncrPatternsLoad();};
 function _ncrLoad(){
   var L=document.getElementById('ncr-agent-list');
   L.innerHTML='<div style="text-align:center;padding:40px;color:#4a6a8a">Loading...</div>';
@@ -4402,6 +4427,7 @@ window.ncrAgentAnalyzeAll=function(){
   var P=document.getElementById('ncr-agent-panel');
   P.style.display='block';
   var open=_nad.filter(function(n){return n.s==='\u05e4\u05ea\u05d5\u05d7'||n.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
+  var closed=_nad.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
   P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">Analyzing '+open.length+' open NCRs...</div>';
   var byA={},byP={},byS={};
   open.forEach(function(n){byA[n.a]=(byA[n.a]||0)+1;byP[n.p]=(byP[n.p]||0)+1;byS[n.s]=(byS[n.s]||0)+1;});
@@ -4424,8 +4450,43 @@ window.ncrAgentAnalyzeAll=function(){
   }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
     if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
     var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
-    P.innerHTML='<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+esc(d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500))+'</div>';
+    var content=d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500);
+    _ncrRenderAggregate(content);
+    var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
+    fetch(_SB+'/rest/v1/ncr_patterns',{
+      method:'POST',
+      headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=representation'},
+      body:JSON.stringify({content:content,open_count:open.length,closed_count:closed,by_area:byA,by_priority:byP,by_status:byS,created_by:u})
+    }).then(function(r){if(r.ok)return r.json();}).then(function(rows){
+      if(rows&&rows[0])_ncrPatternsCache.unshift(rows[0]);
+      if(_ncrPatternsCache.length>10)_ncrPatternsCache=_ncrPatternsCache.slice(0,10);
+      _ncrRenderAggregate(content);
+    }).catch(function(){});
   }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+esc(err&&err.message||String(err))+'</div>';});
+};
+var _ncrPatternsCache=[];
+function _ncrPatternsLoad(){
+  return fetch(_SB+'/rest/v1/ncr_patterns?select=*&order=ts.desc&limit=10',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK)}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(rows){_ncrPatternsCache=Array.isArray(rows)?rows:[];})
+    .catch(function(){_ncrPatternsCache=[];});
+}
+function _ncrRenderAggregate(content){
+  var P=document.getElementById('ncr-agent-panel');if(!P)return;
+  var hist='';
+  if(_ncrPatternsCache.length){
+    hist='<div style="background:#0d1014;border:1px solid #1e3a5f;border-radius:8px;padding:8px 10px;margin-bottom:8px"><div style="font-size:10px;color:#7a9ab8;margin-bottom:5px;font-weight:700">&#128220; \u05e0\u05d9\u05ea\u05d5\u05d7\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd</div>';
+    _ncrPatternsCache.slice(0,5).forEach(function(p,i){
+      var dt=new Date(p.ts);var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
+      hist+='<div data-pidx="'+i+'" onclick="_ncrPatternShow(this.dataset.pidx)" style="display:flex;justify-content:space-between;font-size:11px;color:#aaccee;padding:3px 0;cursor:pointer;border-top:1px solid #1a2a3a"><span>'+dtStr+'</span><span style="color:#5a7a9a">'+(p.open_count||0)+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span></div>';
+    });
+    hist+='</div>';
+  }
+  P.innerHTML=hist+'<div style="font-size:12px;line-height:1.8;color:#c0d4e8;white-space:pre-wrap;padding:4px">'+esc(content||'')+'</div>';
+}
+window._ncrPatternShow=function(idx){
+  var p=_ncrPatternsCache[Number(idx)||0];if(!p)return;
+  _ncrRenderAggregate(p.content||'');
 };
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
