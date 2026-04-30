@@ -13,6 +13,41 @@
 
 ---
 
+## 2026-04-30 — Sensitivity flag (`sens`) על NCR
+
+**החלטה**: הוספת flag `sens boolean DEFAULT false` ל-NCR (migration `2026-04-30_ncr_sensitivity.sql`). UI: checkbox 🔒 במודאל, badge ברשימה, gating ב-4 נקודות. **הגנה ברמת UI בלבד** כרגע — RLS אמיתי יבוא בנפרד.
+
+**מבנה**:
+- Migration: `ALTER TABLE ncr ADD COLUMN sens boolean DEFAULT false` + partial index `WHERE sens=true`.
+- Modal: שדה `<input type="checkbox" id="ncr-sens">` בסוף ה-fgrid עם label "🔒 רגיש (נראה לאדמין בלבד)".
+- `openNewNcrModal`: מאפס את ה-checkbox.
+- `editNcr`: מציב `.checked=!!rec.sens`. **חסם**: אם הרשומה רגישה והמשתמש לא admin → toast "אין הרשאה" ויציאה.
+- `svNcr`: שומר `sens:!!(g('ncr-sens')&&g('ncr-sens').checked)`.
+- `rNcr`: מסנן `n.sens && !isAdm` החוצה. מוסיף `🔒` ליד `n.num` עבור רשומות רגישות (גלוי רק לאדמין).
+- `showView`: חסום ישיר אם `tbl==='ncr' && rec.sens && !_isAdminUser()`.
+- `_ncrLoad` (NCR Agent): פילטר על raw API response — non-admin לא יראה רשומות רגישות במודאל הסוכן.
+
+**סיבה**: NCRs לפעמים מכילים מידע רגיש — חקירות HR, מקרי משפט, פרטיות. Vitre §16#16. עד היום לא היה מנגנון להגביל גישה רטרוספקטיבית למקרים רגישים. ה-flag מאפשר לאדמין לסמן "זה רק לי" בלי ליצור טבלה נפרדת.
+
+**מה לא נעשה (במכוון)**:
+- **RLS אמיתי על `sens=true`**: דורש שינוי policy `ncr_admin_manager_all` להוסיף `WHERE NOT sens OR is_admin`. אפשר אבל מוסיף שכבת מורכבות. כרגע ה-UI gate מספיק מול user1..user10 שבכלל לא יכולים לקרוא את הטבלה (Stage 2 חסם אותם).
+- **רגישות פר-טבלה אחרת** (incidents, near_miss, tasks): NCR הוא המקרה הברור היחיד שהמשתמש העלה. אפשר להרחיב בעתיד עם אותו דפוס.
+- **תיעוד "מי קיבל גישה"**: ה-`audit_log` כבר רושם כל read אם המשתמש דרך REST. UI gate לא מתועד — מקובל כי זו רק שכבת UX.
+
+**אלטרנטיבות שנדחו**:
+- **טבלה נפרדת `ncr_sensitive`**: יותר נורמלי אבל מסבך queries (UNION) ו-realtime sync.
+- **שדה `visibility` enum**: גמיש מדי לרמה שלא נדרשת. boolean מספיק.
+- **Encrypted column**: overkill — זה לא PII רגיש קריפטוגרפית, זה גישה מבצעית.
+
+**השלכות**:
+- אין שינוי ב-NCR-ים קיימים (`sens=NULL` או `false`).
+- 4 נקודות gating ב-UI: `editNcr`, `rNcr`, `showView`, `_ncrLoad`.
+- אם user1..user10 איכשהו מצליחים לעקוף RLS → עדיין יסוננו ברמת UI לפני שהם רואים פרטים.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — Sub-tasks (`parent_id`) על משימות
 
 **החלטה**: הוספת עמודה `parent_id text` ל-`tasks` (migration `2026-04-30_tasks_parent.sql`) + UI מינימלי לקישור משימה ל-משימת אב, בהשראת Vitre §16#4.
