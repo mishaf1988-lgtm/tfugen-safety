@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `8646b68` |
+| Commit | `58bfb09` |
 | תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
 | מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
