@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 deployed + 3 pre-existing bug fixes)
+**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 + Reopen flow + 3 pre-existing bug fixes)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `faecf89` |
+| Commit | (יעודכן אחרי push) |
 | תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
-| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · 3 תיקוני bugs קודמים שהתגלו (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
+| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -41,6 +41,7 @@
 - [x] **Phase C — Tasks module (CAPA follow-up)** — דף `pg-tasks` + טבלה `tasks` + מודאל יצירה/עריכה (8 שדות) + KPI בדשבורד (פתוחות + בפיגור) + alert אדום כשיש משימות פג-יעד. VIEW_CONFIG, PDF ref prefix `TSK`, סינון (הכל/פתוחות/בהתקדמות/פג יעד/הושלמו).
 - [x] **Phase C.1 — Virtual tasks (auto-derived)** — דף המשימות מציג אוטומטית גם: NCR פתוחים/בטיפול, תקריות פתוחות, near-miss פתוחים, ופריטים שפג תוקפם (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד). שורות וירטואליות מסומנות "(אוטומטי)", יש להן רק 👁 (צפייה במקור) ו-➕ (הפוך למשימה עצמאית — פתיחה של המודאל עם הכל מוכן). אם יצרת ידנית משימה עם source_table+source_id התואמים — הוירטואלית לא תוצג (מניעת כפילות).
 - [x] **NCR Agent — Feedback Loop (👍/👎/🔄)** — בהשראת Vitre §9.2. כל ניתוח AI ב-`ncr_ai` מקבל 3 כפתורים: 👍/👎 (toggle, אופטימי, rollback בשגיאה) ו-🔄 (יצירת ניתוח מחדש = גרסה חדשה). הכפתור הפעיל מודגש בצבע + שורה "משוב על ידי X" מתחת. Migration `2026-04-30_ncr_ai_feedback.sql` הורץ ידנית (3 עמודות חדשות + CHECK constraint). אומת ידנית 30/4: NCR-0357 קיבל feedback='up' עם feedback_user='admin'. בנה dataset של ניתוחים מדורגים לכוונון prompt בעתיד.
+- [x] **Reopen flow על Task/NCR סגורים** — בהשראת Vitre §10.2. כשפותחים `showView` עבור task ב-`הושלם`/`בוטל` או NCR ב-`סגור`, מופיע כפתור 🔓 "פתח מחדש". בלחיצה: prompt לסיבה (חובה) → סטטוס חוזר ל-`פתוח`, `closed_date`/`cd` מתאפסים, ו-stamp מצורף ל-`notes` בפורמט `[נפתח מחדש YYYY-MM-DD על ידי USER: REASON]`. ללא migration — משתמש בעמודות קיימות. אין hooks ל-audit_log עדיין (נשמר ל-PR נפרד).
 - [x] **NCR Agent — 3 bug fixes קודמים שזוהו תוך הפיתוח** —
   1. **JWT auth**: 5 fetch calls השתמשו ב-`Bearer _SK` (publishable key) במקום `Bearer _sbToken` (JWT של admin). אחרי RLS Stage 2, זה החזיר 0 שורות במקום 375. תוקן עם `(_sbToken||_SK)`.
   2. **CORS preview origins**: `api/claude.js` חסם 403 כל preview deployment. נוסף regex `^https://tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$` שמתיר רק previews של ה-team הזה.

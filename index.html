@@ -3446,9 +3446,35 @@ function showView(tbl,id){
     var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
   }
+  var canReopen=(tbl==='tasks'&&(rec.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||rec.status==='\u05d1\u05d5\u05d8\u05dc'))||
+                (tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8');
+  if(canReopen){
+    html+='<div style="margin-top:14px"><button data-rtbl="'+esc(tbl)+'" data-rid="'+esc(id)+'" onclick="_reopen(this.dataset.rtbl,this.dataset.rid)" style="width:100%;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;color:#b45309;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128275; \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button></div>';
+  }
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
 }
+window._reopen=function(tbl,id){
+  var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  var reason=prompt('\u05e1\u05d9\u05d1\u05d4 \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9 (\u05d7\u05d5\u05d1\u05d4):');
+  if(reason===null)return;
+  reason=String(reason).trim();
+  if(!reason){toast('\u05d3\u05e8\u05d5\u05e9\u05d4 \u05e1\u05d9\u05d1\u05d4 \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9');return;}
+  var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
+  var today=new Date().toISOString().split('T')[0];
+  var stamp='\n[\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 '+today+' \u05e2\u05dc \u05d9\u05d3\u05d9 '+u+': '+reason+']';
+  rec.notes=(rec.notes?String(rec.notes):'')+stamp;
+  if(tbl==='tasks'){rec.status='\u05e4\u05ea\u05d5\u05d7';rec.closed_date=null;}
+  else if(tbl==='ncr'){rec.s='\u05e4\u05ea\u05d5\u05d7';rec.cd=null;}
+  rec.ts=new Date().toISOString();
+  sbUpd(tbl,rec);sdb();
+  toast('\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 \u2713');
+  if(tbl==='tasks'&&typeof rTasks==='function')rTasks();
+  if(tbl==='ncr'&&typeof rNcr==='function')rNcr();
+  if(typeof rDash==='function')rDash();
+  showView(tbl,id);
+};
 
 function _reportRef(tbl,rec){
   var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT',tasks:'TSK',toolbox:'TLK'}[tbl]||(tbl.toUpperCase().slice(0,4));

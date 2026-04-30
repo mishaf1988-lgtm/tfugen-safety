@@ -13,6 +13,35 @@
 
 ---
 
+## 2026-04-30 — Reopen flow על Task/NCR סגורים
+
+**החלטה**: כשפותחים `showView` עבור Task ב-`הושלם`/`בוטל` או NCR ב-`סגור`, מופיע כפתור 🔓 "פתח מחדש" כתוב מתחת לכל השדות.
+
+**מבנה**:
+- ב-`showView` נוסף `canReopen` boolean — true רק לטבלאות tasks/ncr כשהסטטוס סגור.
+- אם true, מצורף כפתור עם `data-rtbl`/`data-rid` שקורא ל-`window._reopen(tbl, id)`.
+- `_reopen`:
+  1. `prompt('סיבה לפתיחה מחדש (חובה):')` — אם null או ריק → toast הודעה ויציאה.
+  2. נוסף stamp ל-`notes`: `\n[נפתח מחדש YYYY-MM-DD על ידי USER: REASON]`.
+  3. סטטוס חוזר ל-`פתוח`, `closed_date`/`cd` מתאפסים ל-null.
+  4. `sbUpd` + `sdb` + `rTasks`/`rNcr` + `rDash` + `showView` (rerender).
+
+**סיבה**: עד היום היה אפשר ידנית לערוך task חזרה ל-"פתוח" דרך menu, אבל **בלי תיעוד**. ה-Reopen flow הופך פעולה רגישה (רטרוספקטיבה על משימה סגורה) לאקט מתועד עם סיבה וחתימה. זה גם הצעד הראשון לכיוון Audit Trail מלא — ה-stamp ב-notes שומר את ה-history גם אם audit_log טרם הוטמע.
+
+**אלטרנטיבות שנדחו**:
+- שימוש ב-`audit_log` table (קוד מימוש קיים, ממתין ל-merge ב-STATUS): מסתבך — דורש merge מקבילי. נשמר ל-PR נפרד.
+- prompt() החלפה ל-modal HTML מותאם: prompt נטיב פשוט, כבר עובד טוב במובייל. אם נצטרך עיצוב — נחליף בעתיד.
+- כפתור Reopen ישיר ב-rTasks (רשימה), לא רק ב-showView: הרשימה כבר עמוסה. ה-detail view הוא המקום הטבעי לפעולה רטרוספקטיבית.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- שינוי יחיד ב-`showView` (12 שורות) + פונקציה חדשה `_reopen` (20 שורות).
+- תאימות לאחור מלאה: tasks שהיו DONE/CANC ערוכים דרך Edit modal ממשיכים לעבוד.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — NCR Agent Feedback Loop (👍/👎/🔄) + 3 תיקוני bugs קודמים
 
 **החלטה**: יושם feedback loop על כל ניתוח AI ב-NCR Agent (בהשראת Vitre §9.2). כל גרסת ניתוח ב-`ncr_ai` יכולה לקבל 👍 (חיובי) / 👎 (שלילי) / 🔄 (יצירת גרסה חדשה).
