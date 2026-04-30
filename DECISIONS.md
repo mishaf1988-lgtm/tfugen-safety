@@ -13,6 +13,45 @@
 
 ---
 
+## 2026-04-30 — NCR Agent Feedback Loop (👍/👎/🔄) + 3 תיקוני bugs קודמים
+
+**החלטה**: יושם feedback loop על כל ניתוח AI ב-NCR Agent (בהשראת Vitre §9.2). כל גרסת ניתוח ב-`ncr_ai` יכולה לקבל 👍 (חיובי) / 👎 (שלילי) / 🔄 (יצירת גרסה חדשה).
+
+**מבנה**:
+- Migration `2026-04-30_ncr_ai_feedback.sql` — 3 עמודות חדשות ל-`ncr_ai`: `feedback` (text + CHECK constraint 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz).
+- `_ncrLoadAI` טוען feedback ל-cache המקומי `_naf[id]`.
+- `_ncrFmt` מרנדר 3 כפתורים בתחתית הניתוח. הפעיל מודגש בצבע (ירוק/אדום) + שורה "משוב על ידי X" מתחת.
+- `window._ncrFb(id, val)` — toggle אופטימי, PATCH ל-`ncr_ai?ncr_id=eq.X&version=eq.Y` עם rollback בשגיאה. 🔄 מפעיל את `_ncrAI(id)` הקיים → גרסה חדשה.
+
+**סיבה**: Vitre יש feedback loop ו-Tfugen לא. בעוד שנה יהיה dataset של ניתוחים שאדמין סימן כ"רעים" → אפשר לכוונן את ה-prompt ולהוכיח שיפור איכות.
+
+**תיקוני bugs קודמים שזוהו תוך הפיתוח** (כולם ב-PR אחד):
+
+1. **JWT auth** (`index.html`): 5 fetch calls ב-NCR Agent השתמשו ב-`Bearer _SK` (publishable key) במקום ב-`Bearer _sbToken` (JWT של admin). אחרי RLS Stage 2 (24/4) — `is_admin_manager()` בודקת אימייל ב-JWT. עם publishable key לבד → אין email → `_admin_manager_all` policy חוזרת false → 0 שורות. תוקן ל-`(_sbToken||_SK)` כמו `sbH()` (שורה 1497).
+
+2. **CORS preview origins** (`api/claude.js`): ה-allowlist הקשיח של `https://tfugen-safety.vercel.app` חסם כל preview deployment עם 403. נוסף regex `^https://tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$` ש-(1) מאפשר רק previews של ה-team הזה (לא team אחר), (2) production עדיין עובר את ה-allowlist הקשיח. אומת מול 6 cases כולל evil.com lookalikes.
+
+3. **max_tokens** (`index.html` שורה 4158): היה 900 → תשובות עברית נחתכו באמצע JSON (`Unterminated string at position 1347`). עברית UTF-8 צורכת ~1.5 tokens לתו, ועם schema של 5 שדות ארוכים זה לא הספיק. הועלה ל-1200 (= MAX_TOKENS_CAP של ה-API endpoint).
+
+**אימות end-to-end ב-2026-04-30**:
+- Migration הורץ → 3 עמודות נוצרו (אומת ב-`information_schema.columns`).
+- Admin פתח NCR-0357 → לחץ "Analyze with Claude" → קיבל ניתוח מלא בעברית (לא נחתך).
+- לחץ 👍 → ב-Supabase: `ncr_ai.ncr_id='xl0357189o', version=1, feedback='up', feedback_user='admin', feedback_ts='2026-04-30 10:36:16'`.
+
+**אלטרנטיבות שנדחו**:
+- שמירת ה-feedback בטבלה נפרדת — מיותר, יחיד-לאחת עם `ncr_ai`. החזקת ה-feedback באותה שורה מפשטת query והיסטוריה.
+- 🔄 שמייצר גרסה חדשה אבל מעתיק את ה-feedback של גרסה קודמת — לא הגיוני, גרסה חדשה זו ניתוח חדש שצריך להעריך מחדש.
+- שינוי schema של `_SK` עצמו (לעדכן אותו אחרי login) — שביר וקשה לקרוא; הפתרון `(_sbToken||_SK)` נכון יותר ועקבי עם `sbH()`.
+
+**השלכות**:
+- אין שינוי schema במידה שלא הורץ ה-migration החדש — הקוד fallback ל-`feedback||null` ו-PATCH ייכשל בשקט.
+- 4 commits ב-branch: `cf93ffe` (feedback feature), `da3f55d` (JWT fix), `2f477eb` (CORS fix), `faecf89` (max_tokens fix).
+- לא נוגע ב-`ncr` (375 רשומות production).
+
+**קישור**: branch `claude/check-software-status-9iZMX`, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-24 — ברירת מחדל לתכנון RLS עבור tasks
 
 **החלטה**:
