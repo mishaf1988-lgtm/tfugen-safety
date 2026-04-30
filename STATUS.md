@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-27 (RLS enabled on equip_inspections + ncr_ai · 0 Security Advisor errors)
+**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 deployed + 3 pre-existing bug fixes)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `a7c2067` |
-| תאריך | 2026-04-23 |
+| Commit | `faecf89` |
+| תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
-| מצב | 23 טבלאות · ניהול משתמשים מלא דרך האפליקציה (create/rename/reset/delete) · Smart Capture (קול+תמונה+וידאו) · Tasks + Virtual Tasks · Design Polish Tiers 0-3 (nav 4-טאבים, דשבורד "היום", FAB ✨, high-contrast, 44×44 tap targets) · תיקון אבטחה RLS לאדמין בלבד |
+| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · 3 תיקוני bugs קודמים שהתגלו (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -40,6 +40,11 @@
 - [x] **View + PDF per report** (PRs #37, #42-43) — כפתורי 👁 ו-🖨 PDF לדיווחי near-miss / rounds / equipment. הדפסה מציגה תמונה גדולה.
 - [x] **Phase C — Tasks module (CAPA follow-up)** — דף `pg-tasks` + טבלה `tasks` + מודאל יצירה/עריכה (8 שדות) + KPI בדשבורד (פתוחות + בפיגור) + alert אדום כשיש משימות פג-יעד. VIEW_CONFIG, PDF ref prefix `TSK`, סינון (הכל/פתוחות/בהתקדמות/פג יעד/הושלמו).
 - [x] **Phase C.1 — Virtual tasks (auto-derived)** — דף המשימות מציג אוטומטית גם: NCR פתוחים/בטיפול, תקריות פתוחות, near-miss פתוחים, ופריטים שפג תוקפם (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד). שורות וירטואליות מסומנות "(אוטומטי)", יש להן רק 👁 (צפייה במקור) ו-➕ (הפוך למשימה עצמאית — פתיחה של המודאל עם הכל מוכן). אם יצרת ידנית משימה עם source_table+source_id התואמים — הוירטואלית לא תוצג (מניעת כפילות).
+- [x] **NCR Agent — Feedback Loop (👍/👎/🔄)** — בהשראת Vitre §9.2. כל ניתוח AI ב-`ncr_ai` מקבל 3 כפתורים: 👍/👎 (toggle, אופטימי, rollback בשגיאה) ו-🔄 (יצירת ניתוח מחדש = גרסה חדשה). הכפתור הפעיל מודגש בצבע + שורה "משוב על ידי X" מתחת. Migration `2026-04-30_ncr_ai_feedback.sql` הורץ ידנית (3 עמודות חדשות + CHECK constraint). אומת ידנית 30/4: NCR-0357 קיבל feedback='up' עם feedback_user='admin'. בנה dataset של ניתוחים מדורגים לכוונון prompt בעתיד.
+- [x] **NCR Agent — 3 bug fixes קודמים שזוהו תוך הפיתוח** —
+  1. **JWT auth**: 5 fetch calls השתמשו ב-`Bearer _SK` (publishable key) במקום `Bearer _sbToken` (JWT של admin). אחרי RLS Stage 2, זה החזיר 0 שורות במקום 375. תוקן עם `(_sbToken||_SK)`.
+  2. **CORS preview origins**: `api/claude.js` חסם 403 כל preview deployment. נוסף regex `^https://tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$` שמתיר רק previews של ה-team הזה.
+  3. **max_tokens**: היה 900 → תשובות עברית נחתכו באמצע JSON (`Unterminated string at position 1347`). הועלה ל-1200.
 - [x] **Smart Capture — דיווח בקול/תמונה/טקסט** — FAB סגול בצד שמאל-תחתון (✨). לחיצה פותחת מודאל עם 3 מצבים: 🎤 דבר (Web Speech API בעברית) / 📷 צלם (Claude Vision מנתח תמונה) / ✍ הקלד. ה-AI מזהה את סוג הדיווח (nm/inc/ncr/eqi/ppe/tr) ופותח את הטופס הנכון עם כל השדות מוכנים (תיאור, אזור, חומרה, מדווח, תאריך, תמונה). ה-endpoint `/api/claude` הועלה ל-300KB body limit כדי לאפשר תמונות base64.
 - [x] **Fixes** — rename "משימות" → "משימות ומעקב" (5 מקומות), Phase B export toolbar wipe-then-insert (הורג כפילויות), מובייל thead `display:none` (נקי יותר מ-off-screen), data-label על כל td של משימות לתצוגת כרטיס תקנית במובייל.
 
@@ -64,6 +69,7 @@
 - [x] ~~**🔒 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-23_app_users_admin_only_rls.sql`~~ — **הורץ ב-2026-04-24 ואומת ידנית**. ה-policy `app_users_admin_write` נעולה ל-`auth.jwt() ->> 'email' = 'admin@tfugen.local'` בלבד (במקום `is_anonymous = false`). אומת ב-3 בדיקות: (1) admin ניהל משתמשים בהצלחה, (2) משתמש רגיל לא יכול לכתוב ל-`app_users`, (3) dropdown של מדווחים עדיין נטען כרגיל. חור האבטחה סגור.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
 - [x] ~~`migrations/2026-04-19_rounds.sql`~~ — הורץ
