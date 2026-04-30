@@ -622,6 +622,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
     <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
     <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
     <th>&#1497;&#1506;&#1491;</th>
@@ -630,6 +631,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#1505;&#1496;.</th>
     <th></th>
   </tr></thead><tbody id="tb-tasks"></tbody></table></div></div>
+  <div id="tsk-bulk-bar" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#1a3a5a;border:1px solid #4a9adf;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:50">
+    <span style="color:#aaccee;font-size:13px;font-weight:700"><span id="tsk-bulk-count">0</span> &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1504;&#1489;&#1495;&#1512;&#1493;</span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="_tskBulkAction('close')" style="background:#16a34a;border:none;border-radius:7px;color:#fff;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">&#10003; סגור הכל</button>
+      <button onclick="_tskBulkAction('cancel')" style="background:#cc1f1f;border:none;border-radius:7px;color:#fff;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">&#128683; בטל הכל</button>
+      <button onclick="_tskBulkClear()" style="background:#0d1014;border:1px solid #4a9adf;border-radius:7px;color:#aaccee;padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit">נקה בחירה</button>
+    </span>
+  </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1502;&#1506;&#1511;&#1489;</div>
 </div>
 
@@ -2818,11 +2827,53 @@ function rAudit(){
 
 // ---- TASKS (CAPA follow-up) ----
 window._tskFilter='all';
+window._tskSel={};
 var _TSK_OPEN='\u05e4\u05ea\u05d5\u05d7';
 var _TSK_PROG='\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea';
 var _TSK_DONE='\u05d4\u05d5\u05e9\u05dc\u05dd';
 var _TSK_CANC='\u05d1\u05d5\u05d8\u05dc';
 var _TSK_PRI_DEF='\u05e8\u05d2\u05d9\u05dc';
+function _tskBulkSync(){
+  var bar=g('tsk-bulk-bar');if(!bar)return;
+  var n=Object.keys(window._tskSel).length;
+  if(n===0){bar.style.display='none';var sa=g('tsk-bulk-all');if(sa)sa.checked=false;return;}
+  bar.style.display='flex';
+  var c=g('tsk-bulk-count');if(c)c.textContent=n;
+}
+window._tskBulkToggle=function(id,checked){
+  if(checked)window._tskSel[id]=true;
+  else delete window._tskSel[id];
+  _tskBulkSync();
+};
+window._tskBulkSelectAll=function(checked){
+  var boxes=document.querySelectorAll('input[name="tsk-row-cb"]');
+  window._tskSel={};
+  boxes.forEach(function(b){b.checked=checked;if(checked&&b.value)window._tskSel[b.value]=true;});
+  _tskBulkSync();
+};
+window._tskBulkClear=function(){
+  window._tskSel={};
+  var boxes=document.querySelectorAll('input[name="tsk-row-cb"]');
+  boxes.forEach(function(b){b.checked=false;});
+  _tskBulkSync();
+};
+window._tskBulkAction=function(action){
+  var ids=Object.keys(window._tskSel);if(!ids.length)return;
+  var status=action==='close'?_TSK_DONE:_TSK_CANC;
+  if(!confirm('\u05d4\u05d0\u05dd \u05dc\u05d4\u05d7\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 "'+status+'" \u05e2\u05dc '+ids.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea?'))return;
+  var n=0,today=new Date().toISOString().split('T')[0],now=new Date().toISOString();
+  ids.forEach(function(id){
+    var idx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
+    if(idx<0)return;
+    DB.tasks[idx].status=status;
+    DB.tasks[idx].ts=now;
+    if(status===_TSK_DONE&&!DB.tasks[idx].closed_date)DB.tasks[idx].closed_date=today;
+    sbUpd('tasks',DB.tasks[idx]);n++;
+  });
+  sdb();window._tskSel={};
+  toast(n+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u2713');
+  rTasks();rDash();
+};
 function _tskQuickStatus(id,newStatus){
   var idx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
   if(idx<0){toast('\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
@@ -2867,7 +2918,7 @@ function _tskMenu(taskId,anchor){
   document.body.appendChild(menu);
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 }
-function tskFilter(f){window._tskFilter=f;['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();}
+function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
 function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
@@ -3237,7 +3288,7 @@ function rTasks(){
     if(an!==bn)return an-bn;
     return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';if(typeof _tskBulkClear==='function')_tskBulkClear();return;}
   tb.innerHTML=rows.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
@@ -3260,7 +3311,8 @@ function rTasks(){
       var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
       actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
-    return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
+    var cb=r.isVirtual?'':'<input type="checkbox" name="tsk-row-cb" value="'+esc(r.id)+'" onclick="_tskBulkToggle(this.value,this.checked)" style="cursor:pointer">';
+    return '<tr><td data-label="" style="text-align:center;width:32px">'+cb+'</td><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
   }).join('');
 }
 // ---- END TASKS ----

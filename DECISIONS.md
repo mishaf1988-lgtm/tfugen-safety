@@ -13,6 +13,36 @@
 
 ---
 
+## 2026-04-30 — Bulk actions על דף משימות
+
+**החלטה**: הוספת multi-select למשימות עם 3 פעולות מרובות: סגור הכל / בטל הכל / נקה בחירה. בהשראת Vitre §14.2.
+
+**מבנה**:
+- `<th>` חדש בראש טבלת המשימות עם `tsk-bulk-all` checkbox.
+- `<td>` חדש בכל שורה — checkbox עם `name="tsk-row-cb"` ו-`value=task.id`. **רק לשורות לא-וירטואליות** (וירטואליות לא ניתן לשנות במחזור אחד — הן קוראות מטבלאות מקור שונות).
+- `#tsk-bulk-bar` sticky bottom — נסתר כשהבחירה ריקה, מופיע אוטומטית כשיש בחירה.
+- State: `window._tskSel = {id: true}` (object של ID-ים נבחרים).
+- 5 פונקציות: `_tskBulkSync` (UI), `_tskBulkToggle` (כפתור בודד), `_tskBulkSelectAll` (header), `_tskBulkClear` (איפוס), `_tskBulkAction` (`'close'`/`'cancel'`).
+- `tskFilter` (החלפת טאב) מנקה את הבחירה כדי למנוע סטיית state.
+
+**סיבה**: עומס יומיומי של מנהל בטיחות — 10 משימות פג-יעד שצריך לסגור בבת-אחת היה 10 קליקים נפרדים. עם bulk actions זה הופך לקליק אחד. תואם ל-Vitre §14.2 (anti-pattern של "לא תגיב חוסך זמן").
+
+**אלטרנטיבות שנדחו**:
+- **שורות וירטואליות + bulk**: דורש promote-to-task לכל אחת לפני האקציה — מורכב מדי. הסרתי אותן מ-bulk.
+- **Bulk delete**: פגיעה רטרוספקטיבית גדולה מדי, אם המשתמש יבחר בטעות. הקיים `askDel` נשאר פר-שורה.
+- **Bulk reassign**: מצריך UI נוסף לבחירת assignee. נשמר לעתיד.
+- **Bulk modify priority**: דומה — נדחה.
+
+**השלכות**:
+- `colspan` של empty state עובר מ-7 ל-8 (עמודה חדשה).
+- `_tskBulkClear` נקרא אחרי empty state כדי למנוע bar רפאים.
+- אין שינוי schema, אין migration.
+- **תאימות לאחור**: `_tskQuickStatus`, `_tskMenu`, `editTsk` ממשיכים לעבוד פר-שורה. ה-bulk bar הוא תוספת מקבילה.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — Reopen flow על Task/NCR סגורים
 
 **החלטה**: כשפותחים `showView` עבור Task ב-`הושלם`/`בוטל` או NCR ב-`סגור`, מופיע כפתור 🔓 "פתח מחדש" כתוב מתחת לכל השדות.
