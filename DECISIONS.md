@@ -13,6 +13,43 @@
 
 ---
 
+## 2026-04-30 — ייצוא PDF גלובלי (`window.print` לדף פעיל)
+
+**החלטה**: כפתור 🖨 בtopbar שמדפיס את הדף הפעיל בלבד עם print-header אוטומטי. שימוש ב-`window.print()` הנייטיב — אין תלות חיצונית (jsPDF, dompurify, וכו').
+
+**מבנה**:
+- **באג קודם תוקן**: ה-CSS להדפסה (line 310) הכריח `.page{display:block!important}` — מה שגרם להדפסה של **כל 23 הדפים** במקום הפעיל. שונה ל-`.page{display:none!important}.page.on{display:block!important}`.
+- **כפתור 🖨** בtopbar (`#print-btn`) ליד 🔍.
+- **`_printPage()`**:
+  1. מוצא את `.page.on`.
+  2. שולף את ה-`.page-title` text → title.
+  3. בונה `<div id="print-header">` עם title + "תפוגן · תאריך הפקה" + שם משתמש.
+  4. מכניס בראש הדף.
+  5. קורא ל-`window.print()`.
+  6. `afterprint` event מנקה את ה-header.
+  7. fallback timeout של 2s למקרה ש-`afterprint` לא נורה (Safari).
+
+**סיבה**: המשתמש (מנהל בטיחות) צריך להציג רשימות לרגולטור (משרד העבודה, מבקר ISO). עד היום היה רק PDF פר-רשומה (`printReport`). חסר היה ייצוא של רשימה שלמה. Vitre §10.1 (ייצוא לאקסל) — לקחתי את אותו רעיון אבל ל-PDF (יותר נפוץ בישראל).
+
+**מה לא נעשה (במכוון)**:
+- **jsPDF / pdfmake**: ספרייה כבדה (>200KB), פוגעת בעקרון "single-file no-deps". `window.print()` כבר עובד בכל דפדפן + יש "Save as PDF" בדיאלוג.
+- **ייצוא לאקסל**: קל יחסית להוסיף עם `xlsx-populate` או יצירת CSV. נשמר לעתיד אם יהיה ביקוש.
+- **כותרת מותאמת פר דף** (לוגו, חתימה): ה-print-header גנרי מספיק. אם רגולטור ידרוש פורמט ספציפי — נטפל אז.
+
+**אלטרנטיבות שנדחו**:
+- **חלון חדש עם HTML מאופורמט**: דורש לבנות מחדש את התוכן. ה-CSS print כבר עובד נכון — רק היה צריך לתקן באג של page visibility.
+- **הוצאה ל-PDF דרך serverless endpoint**: גזית מורכבות שאין צורך בה.
+- **Print preview modal**: overengineering — הדפדפן כבר מציג preview.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- תיקון באג קודם (כל הדפים מודפסים) הוא bonus.
+- כל דף קיים מקבל יכולת print/PDF "חינם" — כי ה-CSS print כבר היה רוב העבודה.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — חיפוש גלובלי על 9 טבלאות
 
 **החלטה**: כפתור 🔍 בtopbar פותח מודאל עם search input חי שסורק 9 טבלאות ראשיות באופן מקומי (in-memory, ללא REST). תוצאות מקסימום 50 לקליק `showView`.

@@ -307,7 +307,7 @@ body.emp-mode #pg-emp-home{display:block!important}
 body.emp-mode #emp-mode-badge{display:inline-block}
 
 /* ---- PRINT ---- */
-@media print{.topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row{display:none!important}.main{padding:0!important;max-width:none!important;height:auto!important}.page{display:block!important}body{background:#fff!important}.card{box-shadow:none!important;border:1px solid #ccc}}
+@media print{.topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row{display:none!important}.main{padding:0!important;max-width:none!important;height:auto!important}.page{display:none!important}.page.on{display:block!important}#print-header{display:block!important}body{background:#fff!important}.card{box-shadow:none!important;border:1px solid #ccc}}
 </style>
 </head>
 <body>
@@ -339,6 +339,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
+    <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -3604,6 +3605,23 @@ function _gsearchRender(){
 window.openGlobalSearch=function(){
   openModal('m-gsearch');
   setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
+};
+window._printPage=function(){
+  var on=document.querySelector('.page.on');
+  if(!on){toast('אין דף פעיל להדפסה');return;}
+  var titleEl=on.querySelector('.page-title');
+  var title=titleEl?String(titleEl.textContent||'').replace(/\s+/g,' ').trim():'TFUGEN';
+  var d=new Date().toISOString().split('T')[0];
+  var u=(typeof _currentUser!=='undefined'&&_currentUser)?(_currentUser.full_name||_currentUser.username||''):'';
+  var prev=document.getElementById('print-header');if(prev&&prev.parentNode)prev.parentNode.removeChild(prev);
+  var hdr=document.createElement('div');
+  hdr.id='print-header';
+  hdr.style.cssText='display:none;border-bottom:2px solid #000;padding:0 0 10px;margin-bottom:14px';
+  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">תפוגן · מערכת ניהול בטיחות</div></div><div style="font-size:11px;color:#555;text-align:left">תאריך הפקה: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
+  on.insertBefore(hdr,on.firstChild);
+  var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
+  window.addEventListener('afterprint',cleanup);
+  setTimeout(function(){window.print();setTimeout(cleanup,2000);},80);
 };
 window._reopen=function(tbl,id){
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
