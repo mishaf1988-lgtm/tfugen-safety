@@ -4155,7 +4155,7 @@ window._ncrAI=function(id){
     '  "due_days": 14\n'+
     '}';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:_AI_MODEL,max_tokens:900,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:_AI_MODEL,max_tokens:1200,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.json();}).then(function(d){
     var t=d.content&&d.content[0]?d.content[0].text:'';
     var obj=JSON.parse(t.replace(/```json|```/g,'').trim());
