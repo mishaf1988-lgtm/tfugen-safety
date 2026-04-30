@@ -93,7 +93,7 @@
 
 ### 🟢 תשתית / UX
 - [ ] **PWA** — install, offline, push notifications
-- [ ] **חיפוש גלובלי** — 🔍 על כל המודולים
+- [x] **חיפוש גלובלי** — 🔍 על 9 הטבלאות הראשיות. כפתור 🔍 בtopbar פותח מודאל עם input חי. סורק `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg` (~5-10 שדות פר טבלה). תוצאות עם icon + label + preview, מקסימום 50, קליק → `showView`. סינון רגישות (NCR `sens=true` לא מוצג ל-non-admin). ללא migration. UI בלבד.
 - [ ] **ייצוא PDF** — לכל דף
 - [ ] **WhatsApp Meta API** — התראות לאחראי
 - [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.

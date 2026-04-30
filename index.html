@@ -338,6 +338,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="force-sync-btn" title="&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1500;&#1488;" onclick="forceSync()">&#9729;</button>
     <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
+    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -1343,6 +1344,18 @@ id="m-ncr" style="display:none">
     <div class="field fw" id="tsk-src-label" style="display:none"><label>&#1502;&#1511;&#1493;&#1512;</label><div id="tsk-src-view" style="padding:6px 8px;background:#f5f5f5;border-radius:6px;font-size:12px;color:var(--t2)">&#8212;</div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
+<!-- GLOBAL SEARCH MODAL -->
+<div class="overlay" id="ov-gsearch" onclick="closeModal('m-gsearch')"></div>
+<div class="modal" id="m-gsearch" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-gsearch')">&#10005;</button>
+  <div class="modal-title">&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</div>
+  <div class="fgrid">
+    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_gsearchRender()" autocomplete="off"></div>
+  </div>
+  <div id="gsearch-results" style="margin-top:6px;max-height:55vh;overflow-y:auto;border-top:1px solid var(--brd);padding-top:6px"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-gsearch')">&#1505;&#1490;&#1493;&#1512;</button></div>
 </div>
 
 <!-- INS MODAL -->
@@ -3538,6 +3551,60 @@ function showView(tbl,id){
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
 }
+var _SEARCH_TBLS=[
+  {tbl:'ncr',label:'אי-התאמה',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
+  {tbl:'equip_inspections',label:'בדיקת ציוד',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
+  {tbl:'near_miss',label:'כמעט ונפגע',icon:'⚡',fields:['descr','area','rep','notes','typ'],view:function(r){return String(r.descr||'').substring(0,80);}},
+  {tbl:'inc',label:'תקרית',icon:'🚨',fields:['d','r','l','ty'],view:function(r){return String(r.d||'').substring(0,80);}},
+  {tbl:'tasks',label:'משימה',icon:'✅',fields:['title','assignee','notes'],view:function(r){return r.title||'';}},
+  {tbl:'tr',label:'הדרכה',icon:'📚',fields:['n','w','c'],view:function(r){return (r.n||'')+(r.w?' — '+r.w:'');}},
+  {tbl:'docs',label:'מסמך',icon:'📄',fields:['n','o','c'],view:function(r){return r.n||'';}},
+  {tbl:'emp',label:'עובד',icon:'👤',fields:['n','r','dep','ph'],view:function(r){return (r.n||'')+(r.r?' — '+r.r:'');}},
+  {tbl:'leg',label:'חוק',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}}
+];
+function _globalSearch(q){
+  q=String(q||'').trim().toLowerCase();
+  if(q.length<2)return [];
+  var isAdm=_isAdminUser();
+  var results=[];
+  for(var t=0;t<_SEARCH_TBLS.length;t++){
+    var cfg=_SEARCH_TBLS[t],rows=DB[cfg.tbl]||[];
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      if(cfg.tbl==='ncr'&&r.sens&&!isAdm)continue;
+      var matched=false;
+      for(var f=0;f<cfg.fields.length;f++){
+        var v=r[cfg.fields[f]];
+        if(v&&String(v).toLowerCase().indexOf(q)>=0){matched=true;break;}
+      }
+      if(matched){
+        results.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});
+        if(results.length>=50)return results;
+      }
+    }
+  }
+  return results;
+}
+function _gsearchRender(){
+  var q=gv('gsearch-q')||'';
+  var box=g('gsearch-results');if(!box)return;
+  if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">הקלד 2+ תווים</div>';return;}
+  var rs=_globalSearch(q);
+  if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">אין תוצאות</div>';return;}
+  box.innerHTML=rs.map(function(r){
+    return '<div data-stbl="'+esc(r.tbl)+'" data-sid="'+esc(r.id)+'" onclick="closeModal(\'m-gsearch\');showView(this.dataset.stbl,this.dataset.sid)" style="display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer">'+
+      '<span style="font-size:18px;width:30px;text-align:center;flex-shrink:0">'+r.icon+'</span>'+
+      '<div style="flex:1;min-width:0;overflow:hidden">'+
+        '<div style="font-size:10px;color:#888">'+esc(r.label)+'</div>'+
+        '<div style="font-size:13px;color:#1a1d23;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.view||'—')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+window.openGlobalSearch=function(){
+  openModal('m-gsearch');
+  setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
+};
 window._reopen=function(tbl,id){
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}

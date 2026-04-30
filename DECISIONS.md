@@ -13,6 +13,40 @@
 
 ---
 
+## 2026-04-30 — חיפוש גלובלי על 9 טבלאות
+
+**החלטה**: כפתור 🔍 בtopbar פותח מודאל עם search input חי שסורק 9 טבלאות ראשיות באופן מקומי (in-memory, ללא REST). תוצאות מקסימום 50 לקליק `showView`.
+
+**מבנה**:
+- `_SEARCH_TBLS` — array של config פר טבלה: `{tbl, label, icon, fields, view}`. הטבלאות: `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg`.
+- `_globalSearch(q)` — מסנן case-insensitive substring על השדות המוגדרים פר טבלה. עוצר ב-50 התאמות. סינון רגישות: NCR `sens=true` מסונן ל-non-admin.
+- `_gsearchRender()` — קורא ל-`_globalSearch(gv('gsearch-q'))`, רנדר תוצאות עם icon + label + preview (max 80 תווים).
+- `openGlobalSearch()` — `openModal('m-gsearch')` + autofocus + reset.
+- HTML: כפתור `#gsearch-btn` בtopbar (`<button class="bell">🔍</button>`), modal `#m-gsearch` עם input + `#gsearch-results` div.
+
+**סיבה**: 23 טבלאות, 1000+ רשומות סה"כ. עד היום למצוא "איפה ראיתי משהו על PPE ב-Q2?" דרש ניווט בין דפים + scrolling. Vitre לא מציעה גם — זו הזדמנות לעקוף.
+
+**מה לא נעשה (במכוון)**:
+- **חיפוש דרך REST/Postgres FTS**: מצוין לגדלים גדולים (10k+ rows), אבל בגדלים הנוכחיים (~1k), in-memory על `DB[*]` הוא אינסטנט, ללא round-trip.
+- **חיפוש פר-table dropdown** ("חפש רק ב-NCR"): לא דרוש כשיש מקסימום 50 תוצאות.
+- **כל הטבלאות**: ויתרתי על `rsk`, `ppe`, `med`, `ctr`, `wst`, `hzm`, `env`, `auds`, `ptw`, `ins`, `drl`, `rounds`, `toolbox`, `hearing_tests`. אם יהיה ביקוש — קל להוסיף ל-`_SEARCH_TBLS`.
+- **fuzzy matching / typo tolerance**: substring exact מתאים לעברית. כיוון של שיפור עתידי.
+
+**אלטרנטיבות שנדחו**:
+- **Inline filter בכל דף**: כבר יש פילטרים פר-דף (סטטוס/קטגוריה). חיפוש גלובלי משלים, לא חופף.
+- **Side-panel קבוע**: צורך מקום מסך, פחות מכוון בלחיצה.
+- **PostgREST `like` query פר אות**: חוויית משתמש איטית במובייל, רוחב פס בזבזני.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- ~70 שורות JS חדשות + 12 שורות HTML.
+- `_globalSearch` תלוי ב-`DB` בזיכרון — אם sync לא הושלם בעוד אין נתונים, יחזיר ריק. במצב רגיל זה לא קורה כי `sbSync` רץ ב-startup.
+- שימוש ב-`_isAdminUser()` למיסוך NCR רגישים — עקבי עם החלטה הקודמת.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — Sensitivity flag (`sens`) על NCR
 
 **החלטה**: הוספת flag `sens boolean DEFAULT false` ל-NCR (migration `2026-04-30_ncr_sensitivity.sql`). UI: checkbox 🔒 במודאל, badge ברשימה, gating ב-4 נקודות. **הגנה ברמת UI בלבד** כרגע — RLS אמיתי יבוא בנפרד.
