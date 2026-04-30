@@ -3016,6 +3016,7 @@ function editTsk(id){
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
+var _VIRT_LEAD_DAYS=30;
 function _collectVirtualTasks(){
   var virt=[],today=new Date().toISOString().split('T')[0];
   function _isOpenish(s){return s===_TSK_OPEN||s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}
@@ -3034,8 +3035,15 @@ function _collectVirtualTasks(){
   });
   function _addExp(tbl,nameFn,ownerFn){
     (DB[tbl]||[]).forEach(function(r){
-      if(!r.e||r.e>=today)return;
-      virt.push({id:'v:'+tbl+':'+r.id,title:'\u05dc\u05d7\u05d3\u05e9: '+nameFn(r),assignee:ownerFn(r),due:r.e,status:_TSK_OPEN,priority:'\u05d2\u05d1\u05d5\u05d4',source_table:tbl,source_id:r.id,notes:null,isVirtual:true});
+      if(!r.e)return;
+      var days=du(r.e);
+      if(days>_VIRT_LEAD_DAYS)return;
+      var priority,prefix;
+      if(days<0){priority='\u05e7\u05e8\u05d9\u05d8\u05d9';prefix='\u05e4\u05d2 ('+Math.abs(days)+' \u05d9\u05de\u05d9\u05dd) \u2014 ';}
+      else if(days===0){priority='\u05d2\u05d1\u05d5\u05d4';prefix='\u05e4\u05d2 \u05d4\u05d9\u05d5\u05dd \u2014 ';}
+      else if(days<=7){priority='\u05d2\u05d1\u05d5\u05d4';prefix='\u05e4\u05d2 \u05d1\u05e2\u05d5\u05d3 '+days+' '+(days===1?'\u05d9\u05d5\u05dd':'\u05d9\u05de\u05d9\u05dd')+' \u2014 ';}
+      else{priority='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea';prefix='\u05e4\u05d2 \u05d1\u05e2\u05d5\u05d3 '+days+' \u05d9\u05de\u05d9\u05dd \u2014 ';}
+      virt.push({id:'v:'+tbl+':'+r.id,title:prefix+nameFn(r),assignee:ownerFn(r),due:r.e,status:_TSK_OPEN,priority:priority,source_table:tbl,source_id:r.id,notes:null,isVirtual:true});
     });
   }
   _addExp('ppe',function(r){return (r.ty||'')+(r.w?' ('+r.w+')':'');},function(r){return r.w||null;});

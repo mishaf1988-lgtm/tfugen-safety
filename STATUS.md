@@ -95,6 +95,7 @@
 - [ ] **PWA** — install, offline, push notifications
 - [x] **חיפוש גלובלי** — 🔍 על 9 הטבלאות הראשיות. כפתור 🔍 בtopbar פותח מודאל עם input חי. סורק `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg` (~5-10 שדות פר טבלה). תוצאות עם icon + label + preview, מקסימום 50, קליק → `showView`. סינון רגישות (NCR `sens=true` לא מוצג ל-non-admin). ללא migration. UI בלבד.
 - [x] **ייצוא PDF גלובלי** — כפתור 🖨 בtopbar שמדפיס/מייצא ל-PDF את הדף הפעיל בלבד (תוקן באג בו ה-CSS להדפסה הראה את כל הדפים). מוסיף print-header אוטומטי עם כותרת + תאריך + שם משתמש. עובד מכל דף — דשבורד, NCR, משימות, ביקורות וכו'. ב-Chrome/Safari יש דיאלוג "Save as PDF". ללא תלות חיצונית (jsPDF), ללא migration.
+- [x] **Recurrence Engine מזוער (Virtual Tasks 30-day window)** — בהשראת Vitre §12.2. עד היום `_collectVirtualTasks` הציג רק פריטים שכבר פגו (`r.e < today`). עכשיו: כל פריט במרחק עד 30 יום מתפוגה (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד) נהפך לוירטואלי עם עדיפות מדורגת: **קריטי** (פג), **גבוה** (היום או 1-7 ימים), **בינונית** (8-30 ימים). הכותרת מציינת "פג בעוד X ימים" כדי שהמשתמש יבין מהר. אין צורך ב-cron — מחושב חי בכל רענון. ללא migration, ללא endpoint חדש.
 - [ ] **ייצוא PDF** — לכל דף
 - [ ] **WhatsApp Meta API** — התראות לאחראי
 - [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.
