@@ -1338,6 +1338,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tsk-status"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tsk-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#8627; &#1502;&#1513;&#1497;&#1502;&#1492; &#1488;&#1489; (&#1488;&#1493;&#1508;&#1510;&#1497;&#1493;&#1504;&#1500;&#1497;)</label><select id="tsk-parent"><option value="">&#8212;</option></select></div>
     <div class="field fw" id="tsk-src-label" style="display:none"><label>&#1502;&#1511;&#1493;&#1512;</label><div id="tsk-src-view" style="padding:6px 8px;background:#f5f5f5;border-radius:6px;font-size:12px;color:var(--t2)">&#8212;</div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -2928,6 +2929,8 @@ function openTskModal(srcTbl,srcId){
   g('tsk-id').value='';
   g('tsk-src-tbl').value=srcTbl||'';
   g('tsk-src-id').value=srcId||'';
+  _populateTskParent(null);
+  var pSel=g('tsk-parent');if(pSel)pSel.value='';
   var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
   if(srcTbl&&srcId){
     var rec=(DB[srcTbl]||[]).find(function(r){return r.id===srcId;});
@@ -2955,11 +2958,24 @@ function openTskModal(srcTbl,srcId){
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
+function _populateTskParent(currentId){
+  var sel=g('tsk-parent');if(!sel)return;
+  var pool=(DB.tasks||[]).slice().sort(function(a,b){return (a.title||'')<(b.title||'')?-1:1;});
+  var html='<option value="">\u2014</option>';
+  pool.forEach(function(t){
+    if(currentId&&t.id===currentId)return;
+    var lbl=String(t.title||'').substring(0,80);
+    html+='<option value="'+esc(t.id)+'">'+esc(lbl)+'</option>';
+  });
+  sel.innerHTML=html;
+}
 function svTsk(){
   var t=gv('tsk-title');if(!t){toast('\u05db\u05d5\u05ea\u05e8\u05ea \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('tsk-id')||gid();
+  var pid=gv('tsk-parent')||null;
+  if(pid===id)pid=null;
   var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
+  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
@@ -2970,6 +2986,8 @@ function editTsk(id){
   g('tsk-id').value=rec.id;g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
   g('tsk-status').value=rec.status||_TSK_OPEN;g('tsk-priority').value=rec.priority||_TSK_PRI_DEF;g('tsk-notes').value=rec.notes||'';
   g('tsk-src-tbl').value=rec.source_table||'';g('tsk-src-id').value=rec.source_id||'';
+  _populateTskParent(rec.id);
+  var pSel=g('tsk-parent');if(pSel)pSel.value=rec.parent_id||'';
   var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
   if(rec.source_table&&rec.source_id){
     var sr=(DB[rec.source_table]||[]).find(function(r){return r.id===rec.source_id;});
@@ -3312,7 +3330,12 @@ function rTasks(){
       actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
     var cb=r.isVirtual?'':'<input type="checkbox" name="tsk-row-cb" value="'+esc(r.id)+'" onclick="_tskBulkToggle(this.value,this.checked)" style="cursor:pointer">';
-    return '<tr><td data-label="" style="text-align:center;width:32px">'+cb+'</td><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
+    var pBadge='';
+    if(r.parent_id){
+      var par=(DB.tasks||[]).find(function(x){return x.id===r.parent_id;});
+      if(par){pBadge='<div style="font-size:10px;color:var(--t3);margin-bottom:2px">&#8627; '+esc(String(par.title||'').substring(0,40))+'</div>';}
+    }
+    return '<tr><td data-label="" style="text-align:center;width:32px">'+cb+'</td><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+pBadge+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
   }).join('');
 }
 // ---- END TASKS ----

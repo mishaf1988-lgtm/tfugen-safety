@@ -13,6 +13,37 @@
 
 ---
 
+## 2026-04-30 — Sub-tasks (`parent_id`) על משימות
+
+**החלטה**: הוספת עמודה `parent_id text` ל-`tasks` (migration `2026-04-30_tasks_parent.sql`) + UI מינימלי לקישור משימה ל-משימת אב, בהשראת Vitre §16#4.
+
+**מבנה**:
+- Migration: `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id text` + partial index.
+- `_populateTskParent(currentId)` — פונקציה חדשה שממלאת את ה-`<select id="tsk-parent">` בכל המשימות חוץ מהמשימה הנוכחית (מונע self-parent).
+- `openTskModal` קוראת ל-`_populateTskParent(null)`, `editTsk` קוראת עם ה-id הנוכחי.
+- `svTsk` מוסיף `parent_id: gv('tsk-parent')||null` לאובייקט המשימה. בודק `pid===id` כ-defensive null-out.
+- `rTasks` מציג `↳ <PARENT TITLE>` בראש כל שורת sub-task (max 40 תווים).
+
+**סיבה**: מנהל בטיחות לעיתים מקבל משימה גדולה ("Q2 audit") שדורשת פירוק ל-5-10 sub-tasks. עד עכשיו היו צריכים לכתוב הכל ב-notes או ליצור משימות נפרדות בלי קישור. parent_id נותן מבנה היררכי בלי enforcement — המשתמש יכול ליצור עץ של 1 רמה (הרגיל) או יותר אם רוצה.
+
+**מה לא נעשה (במכוון)**:
+- **enforcement שאי אפשר לסגור הורה לפני sub-tasks**: גמיש מדי לחסום, יוצר friction. UX hint יכול להתווסף בעתיד.
+- **תצוגת עץ מקוננת ב-rTasks**: דורש refactor של ה-sort + indent logic. ה-badge "↳ <אב>" נותן 80% מהערך ב-20% מהמאמץ.
+- **טיפול במחיקת הורה**: כרגע אם הורה נמחק, ה-sub-tasks נשארים עם `parent_id` שמצביע על none. ה-badge פשוט לא יראה (ה-find מחזיר undefined). לא קריטי — נטפל אם זה יהיה באג.
+
+**אלטרנטיבות שנדחו**:
+- **Tag-based grouping** (`tags` array): עמום, לא היררכי. קשה לעקוב מי תחת מי.
+- **JSON `subtasks` במשימת אב**: שובר את ה-flat REST queries.
+
+**השלכות**:
+- אין שינוי schema ב-7 טבלאות אחרות.
+- ה-dropdown מציג את כל המשימות הקיימות (כולל סגורות) — עלול להיות ארוך אם המשתמש מצטבר 200+ משימות. אם יהיה pain — נסנן לפי סטטוס+תאריך.
+- תאימות מלאה לאחור: שורות בלי `parent_id` נראות בדיוק כמו לפני.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — External IDs (`ext_id`) על 7 טבלאות ראשיות
 
 **החלטה**: יצירת migration `2026-04-30_external_ids.sql` שמוסיף עמודת `ext_id text` ל-7 טבלאות ראשיות: `ncr`, `equip_inspections`, `emp`, `tr`, `ppe`, `med`, `tasks`. כולל index חלקי (`WHERE ext_id IS NOT NULL`) על כל אחת.
