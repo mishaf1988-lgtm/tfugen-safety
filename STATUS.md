@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 deployed + 3 pre-existing bug fixes)
+**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 + Reopen flow + Bulk actions on tasks + 3 pre-existing bug fixes)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `faecf89` |
+| Commit | `5d1c839` |
 | תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
-| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · 3 תיקוני bugs קודמים שהתגלו (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
+| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -41,6 +41,10 @@
 - [x] **Phase C — Tasks module (CAPA follow-up)** — דף `pg-tasks` + טבלה `tasks` + מודאל יצירה/עריכה (8 שדות) + KPI בדשבורד (פתוחות + בפיגור) + alert אדום כשיש משימות פג-יעד. VIEW_CONFIG, PDF ref prefix `TSK`, סינון (הכל/פתוחות/בהתקדמות/פג יעד/הושלמו).
 - [x] **Phase C.1 — Virtual tasks (auto-derived)** — דף המשימות מציג אוטומטית גם: NCR פתוחים/בטיפול, תקריות פתוחות, near-miss פתוחים, ופריטים שפג תוקפם (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד). שורות וירטואליות מסומנות "(אוטומטי)", יש להן רק 👁 (צפייה במקור) ו-➕ (הפוך למשימה עצמאית — פתיחה של המודאל עם הכל מוכן). אם יצרת ידנית משימה עם source_table+source_id התואמים — הוירטואלית לא תוצג (מניעת כפילות).
 - [x] **NCR Agent — Feedback Loop (👍/👎/🔄)** — בהשראת Vitre §9.2. כל ניתוח AI ב-`ncr_ai` מקבל 3 כפתורים: 👍/👎 (toggle, אופטימי, rollback בשגיאה) ו-🔄 (יצירת ניתוח מחדש = גרסה חדשה). הכפתור הפעיל מודגש בצבע + שורה "משוב על ידי X" מתחת. Migration `2026-04-30_ncr_ai_feedback.sql` הורץ ידנית (3 עמודות חדשות + CHECK constraint). אומת ידנית 30/4: NCR-0357 קיבל feedback='up' עם feedback_user='admin'. בנה dataset של ניתוחים מדורגים לכוונון prompt בעתיד.
+- [x] **Reopen flow על Task/NCR סגורים** — בהשראת Vitre §10.2. כשפותחים `showView` עבור task ב-`הושלם`/`בוטל` או NCR ב-`סגור`, מופיע כפתור 🔓 "פתח מחדש". בלחיצה: prompt לסיבה (חובה) → סטטוס חוזר ל-`פתוח`, `closed_date`/`cd` מתאפסים, ו-stamp מצורף ל-`notes` בפורמט `[נפתח מחדש YYYY-MM-DD על ידי USER: REASON]`. ללא migration — משתמש בעמודות קיימות. אין hooks ל-audit_log עדיין (נשמר ל-PR נפרד).
+- [x] **Bulk actions על דף משימות** — בהשראת Vitre §14.2. checkbox column בכל שורה (לא וירטואליים) + select-all בכותרת. כשנבחרת לפחות אחת — sticky bar בתחתית הדף עם 3 כפתורים: "סגור הכל" (סטטוס=הושלם + closed_date היום), "בטל הכל" (סטטוס=בוטל), "נקה בחירה". האקציה רצה על כל ה-IDs דרך `sbUpd` עם confirm + toast. שינוי filter מנקה את הבחירה. ללא migration. שורות וירטואליות (NCR/inc/expired) נמנעות כי הן לא קיימות ב-`DB.tasks`.
+- [x] **Sub-tasks (parent_id) על משימות** — בהשראת Vitre §16#4. עמודה חדשה `parent_id text` ב-`tasks` (migration `2026-04-30_tasks_parent.sql` + index חלקי). UI: dropdown "↳ משימה אב (אופציונלי)" במודאל יצירה/עריכה, שמכיל את כל המשימות הקיימות (פרט לזו הנערכת). תצוגה: badge "↳ <כותרת אב>" בראש כל שורת sub-task ברשימה. שמירה ב-`svTsk` כולל validation שמונעת self-parent. תאימות מלאה לאחור — שורות בלי `parent_id` נראות בדיוק כמו לפני.
+- [x] **Sensitivity flag (sens) על NCR** — בהשראת Vitre §16#16. עמודה `sens boolean DEFAULT false` ב-`ncr` (migration `2026-04-30_ncr_sensitivity.sql` + partial index). UI: checkbox "🔒 רגיש (נראה לאדמין בלבד)" במודאל; badge 🔒 ליד מספר ה-NCR ברשימה. Gating: `rNcr` מסנן רשומות רגישות ל-non-admin, `editNcr`/`showView` חוסמים גישה ישירה, `_ncrLoad` (NCR Agent) מסנן גם. הגנה ברמת UI בלבד כרגע — RLS אמיתי יכול להוסיף בעתיד עם תנאי על ה-policy `ncr_admin_manager_all`.
 - [x] **NCR Agent — 3 bug fixes קודמים שזוהו תוך הפיתוח** —
   1. **JWT auth**: 5 fetch calls השתמשו ב-`Bearer _SK` (publishable key) במקום `Bearer _sbToken` (JWT של admin). אחרי RLS Stage 2, זה החזיר 0 שורות במקום 375. תוקן עם `(_sbToken||_SK)`.
   2. **CORS preview origins**: `api/claude.js` חסם 403 כל preview deployment. נוסף regex `^https://tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$` שמתיר רק previews של ה-team הזה.
@@ -69,6 +73,9 @@
 - [x] ~~**🔒 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-23_app_users_admin_only_rls.sql`~~ — **הורץ ב-2026-04-24 ואומת ידנית**. ה-policy `app_users_admin_write` נעולה ל-`auth.jwt() ->> 'email' = 'admin@tfugen.local'` בלבד (במקום `is_anonymous = false`). אומת ב-3 בדיקות: (1) admin ניהל משתמשים בהצלחה, (2) משתמש רגיל לא יכול לכתוב ל-`app_users`, (3) dropdown של מדווחים עדיין נטען כרגיל. חור האבטחה סגור.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_tasks_parent.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `parent_id text` ב-`tasks` + partial index `tasks_parent_id_idx` נוצרו. תומך ב-Sub-tasks. אומת ב-`information_schema.columns`.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_sensitivity.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `sens boolean DEFAULT false` ב-`ncr` + partial index `ncr_sens_idx WHERE sens=true` נוצרו. תומך ב-Sensitivity flag (UI gating ב-4 נקודות). אומת ב-`information_schema.columns`.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
@@ -86,10 +93,12 @@
 
 ### 🟢 תשתית / UX
 - [ ] **PWA** — install, offline, push notifications
-- [ ] **חיפוש גלובלי** — 🔍 על כל המודולים
+- [x] **חיפוש גלובלי** — 🔍 על 9 הטבלאות הראשיות. כפתור 🔍 בtopbar פותח מודאל עם input חי. סורק `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg` (~5-10 שדות פר טבלה). תוצאות עם icon + label + preview, מקסימום 50, קליק → `showView`. סינון רגישות (NCR `sens=true` לא מוצג ל-non-admin). ללא migration. UI בלבד.
+- [x] **ייצוא PDF גלובלי** — כפתור 🖨 בtopbar שמדפיס/מייצא ל-PDF את הדף הפעיל בלבד (תוקן באג בו ה-CSS להדפסה הראה את כל הדפים). מוסיף print-header אוטומטי עם כותרת + תאריך + שם משתמש. עובד מכל דף — דשבורד, NCR, משימות, ביקורות וכו'. ב-Chrome/Safari יש דיאלוג "Save as PDF". ללא תלות חיצונית (jsPDF), ללא migration.
+- [x] **Recurrence Engine מזוער (Virtual Tasks 30-day window)** — בהשראת Vitre §12.2. עד היום `_collectVirtualTasks` הציג רק פריטים שכבר פגו (`r.e < today`). עכשיו: כל פריט במרחק עד 30 יום מתפוגה (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד) נהפך לוירטואלי עם עדיפות מדורגת: **קריטי** (פג), **גבוה** (היום או 1-7 ימים), **בינונית** (8-30 ימים). הכותרת מציינת "פג בעוד X ימים" כדי שהמשתמש יבין מהר. אין צורך ב-cron — מחושב חי בכל רענון. ללא migration, ללא endpoint חדש.
 - [ ] **ייצוא PDF** — לכל דף
 - [ ] **WhatsApp Meta API** — התראות לאחראי
-- [ ] **Audit Trail** — מי שינה מה ומתי. **קוד מימוש דחוף ל-merge**: דף `pg-audit` (אדמין/מנהל בלבד), טבלת `audit_log` עם RLS. דורש הרצת `migrations/2026-04-24_audit_log.sql` ב-Supabase.
+- [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.
 - [ ] **Agent Dashboard** — ריכוז כל ה-AI agents
 
 ### 🔵 באגים ידועים

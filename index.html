@@ -307,7 +307,7 @@ body.emp-mode #pg-emp-home{display:block!important}
 body.emp-mode #emp-mode-badge{display:inline-block}
 
 /* ---- PRINT ---- */
-@media print{.topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row{display:none!important}.main{padding:0!important;max-width:none!important;height:auto!important}.page{display:block!important}body{background:#fff!important}.card{box-shadow:none!important;border:1px solid #ccc}}
+@media print{.topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row{display:none!important}.main{padding:0!important;max-width:none!important;height:auto!important}.page{display:none!important}.page.on{display:block!important}#print-header{display:block!important}body{background:#fff!important}.card{box-shadow:none!important;border:1px solid #ccc}}
 </style>
 </head>
 <body>
@@ -338,6 +338,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="force-sync-btn" title="&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1500;&#1488;" onclick="forceSync()">&#9729;</button>
     <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
+    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
+    <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -622,6 +624,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
     <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
     <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
     <th>&#1497;&#1506;&#1491;</th>
@@ -630,6 +633,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#1505;&#1496;.</th>
     <th></th>
   </tr></thead><tbody id="tb-tasks"></tbody></table></div></div>
+  <div id="tsk-bulk-bar" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#1a3a5a;border:1px solid #4a9adf;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:50">
+    <span style="color:#aaccee;font-size:13px;font-weight:700"><span id="tsk-bulk-count">0</span> &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1504;&#1489;&#1495;&#1512;&#1493;</span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="_tskBulkAction('close')" style="background:#16a34a;border:none;border-radius:7px;color:#fff;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">&#10003; סגור הכל</button>
+      <button onclick="_tskBulkAction('cancel')" style="background:#cc1f1f;border:none;border-radius:7px;color:#fff;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">&#128683; בטל הכל</button>
+      <button onclick="_tskBulkClear()" style="background:#0d1014;border:1px solid #4a9adf;border-radius:7px;color:#aaccee;padding:7px 13px;font-size:12px;cursor:pointer;font-family:inherit">נקה בחירה</button>
+    </span>
+  </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1502;&#1506;&#1511;&#1489;</div>
 </div>
 
@@ -1062,6 +1073,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ncr-s" class="inp" onchange="ncrStatusChange()"><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field" id="ncr-close-wrap"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492; &#1489;&#1508;&#1493;&#1506;&#1500;</label><input id="ncr-cd" type="date" class="inp"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="ncr-notes" class="inp" rows="2" placeholder="&#1492;&#1506;&#1512;&#1493;&#1514; &#1504;&#1493;&#1505;&#1508;&#1493;&#1514;..."></textarea></div>
+    <div class="field fw"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="ncr-sens" style="width:16px;height:16px;cursor:pointer">&#128274; &#1512;&#1490;&#1497;&#1513; (&#1504;&#1512;&#1488;&#1492; &#1500;&#1488;&#1491;&#1502;&#1497;&#1503; &#1489;&#1500;&#1489;&#1491;)</label></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-ncr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNcr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -1329,9 +1341,22 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tsk-status"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tsk-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#8627; &#1502;&#1513;&#1497;&#1502;&#1492; &#1488;&#1489; (&#1488;&#1493;&#1508;&#1510;&#1497;&#1493;&#1504;&#1500;&#1497;)</label><select id="tsk-parent"><option value="">&#8212;</option></select></div>
     <div class="field fw" id="tsk-src-label" style="display:none"><label>&#1502;&#1511;&#1493;&#1512;</label><div id="tsk-src-view" style="padding:6px 8px;background:#f5f5f5;border-radius:6px;font-size:12px;color:var(--t2)">&#8212;</div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
+<!-- GLOBAL SEARCH MODAL -->
+<div class="overlay" id="ov-gsearch" onclick="closeModal('m-gsearch')"></div>
+<div class="modal" id="m-gsearch" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-gsearch')">&#10005;</button>
+  <div class="modal-title">&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</div>
+  <div class="fgrid">
+    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_gsearchRender()" autocomplete="off"></div>
+  </div>
+  <div id="gsearch-results" style="margin-top:6px;max-height:55vh;overflow-y:auto;border-top:1px solid var(--brd);padding-top:6px"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-gsearch')">&#1505;&#1490;&#1493;&#1512;</button></div>
 </div>
 
 <!-- INS MODAL -->
@@ -1892,18 +1917,21 @@ function openNewNcrModal(){
   ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
   var a=g('ncr-a');if(a)a.value='';
   var s=g('ncr-s');if(s)s.value='\u05e4\u05ea\u05d5\u05d7';
+  var sn=g('ncr-sens');if(sn)sn.checked=false;
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   openModal('m-ncr');
 }
 function editNcr(id){
   var rec=(DB.ncr||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  if(rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   g('ncr-id').value=rec.id;
   var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
   setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
+  var sn=g('ncr-sens');if(sn)sn.checked=!!rec.sens;
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   openModal('m-ncr');
 }
@@ -1926,6 +1954,7 @@ function svNcr(){
     sd:gv('ncr-sd')||null,
     cd:s==='\u05e1\u05d2\u05d5\u05e8'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):null,
     notes:gv('ncr-notes')||'',
+    sens:!!(g('ncr-sens')&&g('ncr-sens').checked),
     p:gv('ncr-p')||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',
     ts:new Date().toISOString()
   };
@@ -2818,11 +2847,53 @@ function rAudit(){
 
 // ---- TASKS (CAPA follow-up) ----
 window._tskFilter='all';
+window._tskSel={};
 var _TSK_OPEN='\u05e4\u05ea\u05d5\u05d7';
 var _TSK_PROG='\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea';
 var _TSK_DONE='\u05d4\u05d5\u05e9\u05dc\u05dd';
 var _TSK_CANC='\u05d1\u05d5\u05d8\u05dc';
 var _TSK_PRI_DEF='\u05e8\u05d2\u05d9\u05dc';
+function _tskBulkSync(){
+  var bar=g('tsk-bulk-bar');if(!bar)return;
+  var n=Object.keys(window._tskSel).length;
+  if(n===0){bar.style.display='none';var sa=g('tsk-bulk-all');if(sa)sa.checked=false;return;}
+  bar.style.display='flex';
+  var c=g('tsk-bulk-count');if(c)c.textContent=n;
+}
+window._tskBulkToggle=function(id,checked){
+  if(checked)window._tskSel[id]=true;
+  else delete window._tskSel[id];
+  _tskBulkSync();
+};
+window._tskBulkSelectAll=function(checked){
+  var boxes=document.querySelectorAll('input[name="tsk-row-cb"]');
+  window._tskSel={};
+  boxes.forEach(function(b){b.checked=checked;if(checked&&b.value)window._tskSel[b.value]=true;});
+  _tskBulkSync();
+};
+window._tskBulkClear=function(){
+  window._tskSel={};
+  var boxes=document.querySelectorAll('input[name="tsk-row-cb"]');
+  boxes.forEach(function(b){b.checked=false;});
+  _tskBulkSync();
+};
+window._tskBulkAction=function(action){
+  var ids=Object.keys(window._tskSel);if(!ids.length)return;
+  var status=action==='close'?_TSK_DONE:_TSK_CANC;
+  if(!confirm('\u05d4\u05d0\u05dd \u05dc\u05d4\u05d7\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 "'+status+'" \u05e2\u05dc '+ids.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea?'))return;
+  var n=0,today=new Date().toISOString().split('T')[0],now=new Date().toISOString();
+  ids.forEach(function(id){
+    var idx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
+    if(idx<0)return;
+    DB.tasks[idx].status=status;
+    DB.tasks[idx].ts=now;
+    if(status===_TSK_DONE&&!DB.tasks[idx].closed_date)DB.tasks[idx].closed_date=today;
+    sbUpd('tasks',DB.tasks[idx]);n++;
+  });
+  sdb();window._tskSel={};
+  toast(n+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u2713');
+  rTasks();rDash();
+};
 function _tskQuickStatus(id,newStatus){
   var idx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
   if(idx<0){toast('\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
@@ -2867,7 +2938,7 @@ function _tskMenu(taskId,anchor){
   document.body.appendChild(menu);
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 }
-function tskFilter(f){window._tskFilter=f;['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();}
+function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
 function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
@@ -2877,6 +2948,8 @@ function openTskModal(srcTbl,srcId){
   g('tsk-id').value='';
   g('tsk-src-tbl').value=srcTbl||'';
   g('tsk-src-id').value=srcId||'';
+  _populateTskParent(null);
+  var pSel=g('tsk-parent');if(pSel)pSel.value='';
   var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
   if(srcTbl&&srcId){
     var rec=(DB[srcTbl]||[]).find(function(r){return r.id===srcId;});
@@ -2904,11 +2977,24 @@ function openTskModal(srcTbl,srcId){
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
+function _populateTskParent(currentId){
+  var sel=g('tsk-parent');if(!sel)return;
+  var pool=(DB.tasks||[]).slice().sort(function(a,b){return (a.title||'')<(b.title||'')?-1:1;});
+  var html='<option value="">\u2014</option>';
+  pool.forEach(function(t){
+    if(currentId&&t.id===currentId)return;
+    var lbl=String(t.title||'').substring(0,80);
+    html+='<option value="'+esc(t.id)+'">'+esc(lbl)+'</option>';
+  });
+  sel.innerHTML=html;
+}
 function svTsk(){
   var t=gv('tsk-title');if(!t){toast('\u05db\u05d5\u05ea\u05e8\u05ea \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('tsk-id')||gid();
+  var pid=gv('tsk-parent')||null;
+  if(pid===id)pid=null;
   var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
+  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
@@ -2919,6 +3005,8 @@ function editTsk(id){
   g('tsk-id').value=rec.id;g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
   g('tsk-status').value=rec.status||_TSK_OPEN;g('tsk-priority').value=rec.priority||_TSK_PRI_DEF;g('tsk-notes').value=rec.notes||'';
   g('tsk-src-tbl').value=rec.source_table||'';g('tsk-src-id').value=rec.source_id||'';
+  _populateTskParent(rec.id);
+  var pSel=g('tsk-parent');if(pSel)pSel.value=rec.parent_id||'';
   var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
   if(rec.source_table&&rec.source_id){
     var sr=(DB[rec.source_table]||[]).find(function(r){return r.id===rec.source_id;});
@@ -2928,6 +3016,7 @@ function editTsk(id){
   }else if(lbl){lbl.style.display='none';}
   openModal('m-tsk');
 }
+var _VIRT_LEAD_DAYS=30;
 function _collectVirtualTasks(){
   var virt=[],today=new Date().toISOString().split('T')[0];
   function _isOpenish(s){return s===_TSK_OPEN||s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}
@@ -2946,8 +3035,15 @@ function _collectVirtualTasks(){
   });
   function _addExp(tbl,nameFn,ownerFn){
     (DB[tbl]||[]).forEach(function(r){
-      if(!r.e||r.e>=today)return;
-      virt.push({id:'v:'+tbl+':'+r.id,title:'\u05dc\u05d7\u05d3\u05e9: '+nameFn(r),assignee:ownerFn(r),due:r.e,status:_TSK_OPEN,priority:'\u05d2\u05d1\u05d5\u05d4',source_table:tbl,source_id:r.id,notes:null,isVirtual:true});
+      if(!r.e)return;
+      var days=du(r.e);
+      if(days>_VIRT_LEAD_DAYS)return;
+      var priority,prefix;
+      if(days<0){priority='\u05e7\u05e8\u05d9\u05d8\u05d9';prefix='\u05e4\u05d2 ('+Math.abs(days)+' \u05d9\u05de\u05d9\u05dd) \u2014 ';}
+      else if(days===0){priority='\u05d2\u05d1\u05d5\u05d4';prefix='\u05e4\u05d2 \u05d4\u05d9\u05d5\u05dd \u2014 ';}
+      else if(days<=7){priority='\u05d2\u05d1\u05d5\u05d4';prefix='\u05e4\u05d2 \u05d1\u05e2\u05d5\u05d3 '+days+' '+(days===1?'\u05d9\u05d5\u05dd':'\u05d9\u05de\u05d9\u05dd')+' \u2014 ';}
+      else{priority='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea';prefix='\u05e4\u05d2 \u05d1\u05e2\u05d5\u05d3 '+days+' \u05d9\u05de\u05d9\u05dd \u2014 ';}
+      virt.push({id:'v:'+tbl+':'+r.id,title:prefix+nameFn(r),assignee:ownerFn(r),due:r.e,status:_TSK_OPEN,priority:priority,source_table:tbl,source_id:r.id,notes:null,isVirtual:true});
     });
   }
   _addExp('ppe',function(r){return (r.ty||'')+(r.w?' ('+r.w+')':'');},function(r){return r.w||null;});
@@ -3237,7 +3333,7 @@ function rTasks(){
     if(an!==bn)return an-bn;
     return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';if(typeof _tskBulkClear==='function')_tskBulkClear();return;}
   tb.innerHTML=rows.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
@@ -3260,7 +3356,13 @@ function rTasks(){
       var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
       actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
-    return '<tr><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
+    var cb=r.isVirtual?'':'<input type="checkbox" name="tsk-row-cb" value="'+esc(r.id)+'" onclick="_tskBulkToggle(this.value,this.checked)" style="cursor:pointer">';
+    var pBadge='';
+    if(r.parent_id){
+      var par=(DB.tasks||[]).find(function(x){return x.id===r.parent_id;});
+      if(par){pBadge='<div style="font-size:10px;color:var(--t3);margin-bottom:2px">&#8627; '+esc(String(par.title||'').substring(0,40))+'</div>';}
+    }
+    return '<tr><td data-label="" style="text-align:center;width:32px">'+cb+'</td><td data-label="\u05db\u05d5\u05ea\u05e8\u05ea" style="max-width:220px;word-break:break-word">'+pBadge+esc(r.title||'')+'</td><td data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td data-label="\u05d9\u05e2\u05d3"><span style="font-size:12px'+dueCls+'">'+dueLbl+'</span></td><td data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td data-label="">'+actions+'</td></tr>';
   }).join('');
 }
 // ---- END TASKS ----
@@ -3277,7 +3379,9 @@ function rAud(){
 function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
 var filter=window._ncrFilter||'all';
+var isAdm=_isAdminUser();
 var rows=DB.ncr.filter(function(n){
+  if(n.sens&&!isAdm)return false;
   if(filter==='saf')return n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   if(filter==='env')return n.category==='env'||(n.a&&n.a.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0);
   return true;
@@ -3286,12 +3390,13 @@ if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df
 tb.innerHTML=rows.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
+  var sensBadge=n.sens?' &#128274;':'';
   var loc=n.loc||n.location||'';
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
   return '<tr>'+
-    '<td><span class="b bX">'+(n.num||'&#8212;')+'</span></td>'+
+    '<td><span class="b bX">'+(n.num||'&#8212;')+'</span>'+sensBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
     '<td>'+ loc.substring(0,20) +'</td>'+
@@ -3424,6 +3529,7 @@ function showView(tbl,id){
   var db=DB[tbl]||[];
   var rec=db.find(function(r){return r.id===id;});
   if(!rec){console.warn('showView: record not found',tbl,id);toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05dc\u05e8\u05e2\u05e0\u05df');return;}
+  if(tbl==='ncr'&&rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   var title=g('view-title');
   var back=g('view-back');
   var body=g('view-body');
@@ -3446,9 +3552,106 @@ function showView(tbl,id){
     var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
   }
+  var canReopen=(tbl==='tasks'&&(rec.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||rec.status==='\u05d1\u05d5\u05d8\u05dc'))||
+                (tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8');
+  if(canReopen){
+    html+='<div style="margin-top:14px"><button data-rtbl="'+esc(tbl)+'" data-rid="'+esc(id)+'" onclick="_reopen(this.dataset.rtbl,this.dataset.rid)" style="width:100%;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;color:#b45309;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128275; \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button></div>';
+  }
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
 }
+var _SEARCH_TBLS=[
+  {tbl:'ncr',label:'אי-התאמה',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
+  {tbl:'equip_inspections',label:'בדיקת ציוד',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
+  {tbl:'near_miss',label:'כמעט ונפגע',icon:'⚡',fields:['descr','area','rep','notes','typ'],view:function(r){return String(r.descr||'').substring(0,80);}},
+  {tbl:'inc',label:'תקרית',icon:'🚨',fields:['d','r','l','ty'],view:function(r){return String(r.d||'').substring(0,80);}},
+  {tbl:'tasks',label:'משימה',icon:'✅',fields:['title','assignee','notes'],view:function(r){return r.title||'';}},
+  {tbl:'tr',label:'הדרכה',icon:'📚',fields:['n','w','c'],view:function(r){return (r.n||'')+(r.w?' — '+r.w:'');}},
+  {tbl:'docs',label:'מסמך',icon:'📄',fields:['n','o','c'],view:function(r){return r.n||'';}},
+  {tbl:'emp',label:'עובד',icon:'👤',fields:['n','r','dep','ph'],view:function(r){return (r.n||'')+(r.r?' — '+r.r:'');}},
+  {tbl:'leg',label:'חוק',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}}
+];
+function _globalSearch(q){
+  q=String(q||'').trim().toLowerCase();
+  if(q.length<2)return [];
+  var isAdm=_isAdminUser();
+  var results=[];
+  for(var t=0;t<_SEARCH_TBLS.length;t++){
+    var cfg=_SEARCH_TBLS[t],rows=DB[cfg.tbl]||[];
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i];
+      if(cfg.tbl==='ncr'&&r.sens&&!isAdm)continue;
+      var matched=false;
+      for(var f=0;f<cfg.fields.length;f++){
+        var v=r[cfg.fields[f]];
+        if(v&&String(v).toLowerCase().indexOf(q)>=0){matched=true;break;}
+      }
+      if(matched){
+        results.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});
+        if(results.length>=50)return results;
+      }
+    }
+  }
+  return results;
+}
+function _gsearchRender(){
+  var q=gv('gsearch-q')||'';
+  var box=g('gsearch-results');if(!box)return;
+  if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">הקלד 2+ תווים</div>';return;}
+  var rs=_globalSearch(q);
+  if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">אין תוצאות</div>';return;}
+  box.innerHTML=rs.map(function(r){
+    return '<div data-stbl="'+esc(r.tbl)+'" data-sid="'+esc(r.id)+'" onclick="closeModal(\'m-gsearch\');showView(this.dataset.stbl,this.dataset.sid)" style="display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer">'+
+      '<span style="font-size:18px;width:30px;text-align:center;flex-shrink:0">'+r.icon+'</span>'+
+      '<div style="flex:1;min-width:0;overflow:hidden">'+
+        '<div style="font-size:10px;color:#888">'+esc(r.label)+'</div>'+
+        '<div style="font-size:13px;color:#1a1d23;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(r.view||'—')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+window.openGlobalSearch=function(){
+  openModal('m-gsearch');
+  setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
+};
+window._printPage=function(){
+  var on=document.querySelector('.page.on');
+  if(!on){toast('אין דף פעיל להדפסה');return;}
+  var titleEl=on.querySelector('.page-title');
+  var title=titleEl?String(titleEl.textContent||'').replace(/\s+/g,' ').trim():'TFUGEN';
+  var d=new Date().toISOString().split('T')[0];
+  var u=(typeof _currentUser!=='undefined'&&_currentUser)?(_currentUser.full_name||_currentUser.username||''):'';
+  var prev=document.getElementById('print-header');if(prev&&prev.parentNode)prev.parentNode.removeChild(prev);
+  var hdr=document.createElement('div');
+  hdr.id='print-header';
+  hdr.style.cssText='display:none;border-bottom:2px solid #000;padding:0 0 10px;margin-bottom:14px';
+  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">תפוגן · מערכת ניהול בטיחות</div></div><div style="font-size:11px;color:#555;text-align:left">תאריך הפקה: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
+  on.insertBefore(hdr,on.firstChild);
+  var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
+  window.addEventListener('afterprint',cleanup);
+  setTimeout(function(){window.print();setTimeout(cleanup,2000);},80);
+};
+window._reopen=function(tbl,id){
+  var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  var reason=prompt('\u05e1\u05d9\u05d1\u05d4 \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9 (\u05d7\u05d5\u05d1\u05d4):');
+  if(reason===null)return;
+  reason=String(reason).trim();
+  if(!reason){toast('\u05d3\u05e8\u05d5\u05e9\u05d4 \u05e1\u05d9\u05d1\u05d4 \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u05de\u05d7\u05d3\u05e9');return;}
+  var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
+  var today=new Date().toISOString().split('T')[0];
+  var stamp='\n[\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 '+today+' \u05e2\u05dc \u05d9\u05d3\u05d9 '+u+': '+reason+']';
+  rec.notes=(rec.notes?String(rec.notes):'')+stamp;
+  if(tbl==='tasks'){rec.status='\u05e4\u05ea\u05d5\u05d7';rec.closed_date=null;}
+  else if(tbl==='ncr'){rec.s='\u05e4\u05ea\u05d5\u05d7';rec.cd=null;}
+  rec.ts=new Date().toISOString();
+  sbUpd(tbl,rec);sdb();
+  toast('\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 \u2713');
+  if(tbl==='tasks'&&typeof rTasks==='function')rTasks();
+  if(tbl==='ncr'&&typeof rNcr==='function')rNcr();
+  if(typeof rDash==='function')rDash();
+  showView(tbl,id);
+};
 
 function _reportRef(tbl,rec){
   var pfx={near_miss:'NM',equip_inspections:'EQI',rounds:'RND',inc:'INC',tr:'TR',docs:'DOC',ncr:'NCR',rsk:'RSK',ppe:'PPE',med:'MED',auds:'AUD',ptw:'PTW',drl:'DRL',ctr:'CTR',wst:'WST',hzm:'HZM',env:'ENV',leg:'LEG',ins:'INS',emp:'EMP',hearing_tests:'HT',tasks:'TSK',toolbox:'TLK'}[tbl]||(tbl.toUpperCase().slice(0,4));
@@ -3963,9 +4166,11 @@ function _ncrLoad(){
   fetch(_SB+'/rest/v1/ncr?select=*&limit=500&order=created_at.desc',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),Prefer:'count=exact'}})
   .then(function(r){var ct=r.headers.get('content-range');return r.json().then(function(d){return{d:d,ct:ct};});})
   .then(function(res){
-    _nad=Array.isArray(res.d)?res.d:[];
+    var raw=Array.isArray(res.d)?res.d:[];
+    if(!_isAdminUser())raw=raw.filter(function(n){return !n.sens;});
+    _nad=raw;
     var ce=document.getElementById('ncr-agent-count');
-    if(ce)ce.textContent=res.ct?res.ct.split('/')[1]:_nad.length;
+    if(ce)ce.textContent=_nad.length;
   })
   .then(function(){return _ncrLoadAI();})
   .then(function(){try{_ncrRender();}catch(e){console.error('NCR render error:',e);var msg='Render Error: '+(e&&e.message||e);L.innerHTML='<div style="text-align:center;padding:40px;color:#ff4444;font-size:11px;word-break:break-word">[v4.3 render]<br>'+msg+'</div>';try{alert(msg);}catch(_){}}})

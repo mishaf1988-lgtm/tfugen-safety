@@ -13,6 +13,288 @@
 
 ---
 
+## 2026-04-30 — Recurrence Engine מזוער (Virtual Tasks ב-30-day window)
+
+**החלטה**: הרחבת `_collectVirtualTasks._addExp` כך שיכלול לא רק פריטים שכבר פגו, אלא גם פריטים במרחק עד 30 יום מתפוגה. עדיפות מדורגת לפי דחיפות. **בלי cron, בלי endpoint חדש, בלי schema change** — חישוב on-the-fly בכל רענון של דף משימות / דשבורד.
+
+**מבנה**:
+- קבוע חדש `_VIRT_LEAD_DAYS=30` (קל לכוונון).
+- ב-`_addExp(tbl, nameFn, ownerFn)`:
+  - דילוג אם `days > _VIRT_LEAD_DAYS` (מחוץ לחלון).
+  - 4 דרגות עדיפות + prefix:
+    - `days < 0` → `קריטי` + `"פג (N ימים) — "`.
+    - `days === 0` → `גבוה` + `"פג היום — "`.
+    - `1 <= days <= 7` → `גבוה` + `"פג בעוד N יום/ימים — "`.
+    - `8 <= days <= 30` → `בינונית` + `"פג בעוד N ימים — "`.
+- `due` נשאר תאריך התפוגה האמיתי (כדי שמיון לפי due פועל).
+- חל על: ppe, tr, docs, ctr, equip_inspections — 5 הטבלאות הקיימות עם `e` (תאריך תפוגה).
+
+**סיבה**: Vitre §12.2 מציעה Recurrence Engine מלא (מנוע מתוזמן ב-cron שיוצר tasks אוטומטית כשמתקרב זמן). הגרסה המלאה דורשת:
+1. Vercel cron endpoint (חדש)
+2. Service-role key לכתיבה ל-DB
+3. Logic לכפילויות
+4. Notification (אם רוצים heads-up אקטיבי)
+
+**הגרסה המזוערת** מציגה את אותה תועלת (בעיני המשתמש: "אני רואה משימות שעומדות לפוג") ב-20 שורות JS, אפס תלות. אם בעתיד יידרש notification אקטיבי — ה-cron endpoint יהיה הצעד הבא.
+
+**מה לא נעשה (במכוון)**:
+- **יצירת tasks אמיתיים ב-DB**: הוויזואליות מספקת. אם המשתמש רוצה לפעול — הוא לוחץ ➕ ויוצר משימה אמיתית (כבר קיים).
+- **Vercel cron endpoint**: דחוי לעתיד אם יידרש שליחת התראה SMS/WhatsApp פעילה.
+- **חלון מתכוונן פר-טבלה**: כל הטבלאות חולקות 30 יום. אם ביקורות ציוד דורשות 60 יום מראש (פוקס), נוסיף config פר-טבלה.
+
+**אלטרנטיבות שנדחו**:
+- **קונפיג מלא של recurrence_types**: יחסית overengineering לנקודה הנוכחית.
+- **חלון בלי priority גרידציה**: משעמם — המשתמש יראה הכל אותו דבר.
+- **חלון 14 יום**: קצר מדי לפעולות שדורשות הזמנת ספק/קבלן (PPE replacement).
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- KPI של "משימות פתוחות" בדשבורד יגדל (כל הפריטים שיפוגו ב-30 יום הקרובים נכללים). זה רצוי — נותן תמונה אמיתית של עומס מתקרב.
+- אם יש >50 פריטים שפוגים ב-30 יום הקרובים, רשימת המשימות תיהיה ארוכה יותר. הפילטר "פיגור יעד" עדיין מציג רק עברו את due.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — ייצוא PDF גלובלי (`window.print` לדף פעיל)
+
+**החלטה**: כפתור 🖨 בtopbar שמדפיס את הדף הפעיל בלבד עם print-header אוטומטי. שימוש ב-`window.print()` הנייטיב — אין תלות חיצונית (jsPDF, dompurify, וכו').
+
+**מבנה**:
+- **באג קודם תוקן**: ה-CSS להדפסה (line 310) הכריח `.page{display:block!important}` — מה שגרם להדפסה של **כל 23 הדפים** במקום הפעיל. שונה ל-`.page{display:none!important}.page.on{display:block!important}`.
+- **כפתור 🖨** בtopbar (`#print-btn`) ליד 🔍.
+- **`_printPage()`**:
+  1. מוצא את `.page.on`.
+  2. שולף את ה-`.page-title` text → title.
+  3. בונה `<div id="print-header">` עם title + "תפוגן · תאריך הפקה" + שם משתמש.
+  4. מכניס בראש הדף.
+  5. קורא ל-`window.print()`.
+  6. `afterprint` event מנקה את ה-header.
+  7. fallback timeout של 2s למקרה ש-`afterprint` לא נורה (Safari).
+
+**סיבה**: המשתמש (מנהל בטיחות) צריך להציג רשימות לרגולטור (משרד העבודה, מבקר ISO). עד היום היה רק PDF פר-רשומה (`printReport`). חסר היה ייצוא של רשימה שלמה. Vitre §10.1 (ייצוא לאקסל) — לקחתי את אותו רעיון אבל ל-PDF (יותר נפוץ בישראל).
+
+**מה לא נעשה (במכוון)**:
+- **jsPDF / pdfmake**: ספרייה כבדה (>200KB), פוגעת בעקרון "single-file no-deps". `window.print()` כבר עובד בכל דפדפן + יש "Save as PDF" בדיאלוג.
+- **ייצוא לאקסל**: קל יחסית להוסיף עם `xlsx-populate` או יצירת CSV. נשמר לעתיד אם יהיה ביקוש.
+- **כותרת מותאמת פר דף** (לוגו, חתימה): ה-print-header גנרי מספיק. אם רגולטור ידרוש פורמט ספציפי — נטפל אז.
+
+**אלטרנטיבות שנדחו**:
+- **חלון חדש עם HTML מאופורמט**: דורש לבנות מחדש את התוכן. ה-CSS print כבר עובד נכון — רק היה צריך לתקן באג של page visibility.
+- **הוצאה ל-PDF דרך serverless endpoint**: גזית מורכבות שאין צורך בה.
+- **Print preview modal**: overengineering — הדפדפן כבר מציג preview.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- תיקון באג קודם (כל הדפים מודפסים) הוא bonus.
+- כל דף קיים מקבל יכולת print/PDF "חינם" — כי ה-CSS print כבר היה רוב העבודה.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — חיפוש גלובלי על 9 טבלאות
+
+**החלטה**: כפתור 🔍 בtopbar פותח מודאל עם search input חי שסורק 9 טבלאות ראשיות באופן מקומי (in-memory, ללא REST). תוצאות מקסימום 50 לקליק `showView`.
+
+**מבנה**:
+- `_SEARCH_TBLS` — array של config פר טבלה: `{tbl, label, icon, fields, view}`. הטבלאות: `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg`.
+- `_globalSearch(q)` — מסנן case-insensitive substring על השדות המוגדרים פר טבלה. עוצר ב-50 התאמות. סינון רגישות: NCR `sens=true` מסונן ל-non-admin.
+- `_gsearchRender()` — קורא ל-`_globalSearch(gv('gsearch-q'))`, רנדר תוצאות עם icon + label + preview (max 80 תווים).
+- `openGlobalSearch()` — `openModal('m-gsearch')` + autofocus + reset.
+- HTML: כפתור `#gsearch-btn` בtopbar (`<button class="bell">🔍</button>`), modal `#m-gsearch` עם input + `#gsearch-results` div.
+
+**סיבה**: 23 טבלאות, 1000+ רשומות סה"כ. עד היום למצוא "איפה ראיתי משהו על PPE ב-Q2?" דרש ניווט בין דפים + scrolling. Vitre לא מציעה גם — זו הזדמנות לעקוף.
+
+**מה לא נעשה (במכוון)**:
+- **חיפוש דרך REST/Postgres FTS**: מצוין לגדלים גדולים (10k+ rows), אבל בגדלים הנוכחיים (~1k), in-memory על `DB[*]` הוא אינסטנט, ללא round-trip.
+- **חיפוש פר-table dropdown** ("חפש רק ב-NCR"): לא דרוש כשיש מקסימום 50 תוצאות.
+- **כל הטבלאות**: ויתרתי על `rsk`, `ppe`, `med`, `ctr`, `wst`, `hzm`, `env`, `auds`, `ptw`, `ins`, `drl`, `rounds`, `toolbox`, `hearing_tests`. אם יהיה ביקוש — קל להוסיף ל-`_SEARCH_TBLS`.
+- **fuzzy matching / typo tolerance**: substring exact מתאים לעברית. כיוון של שיפור עתידי.
+
+**אלטרנטיבות שנדחו**:
+- **Inline filter בכל דף**: כבר יש פילטרים פר-דף (סטטוס/קטגוריה). חיפוש גלובלי משלים, לא חופף.
+- **Side-panel קבוע**: צורך מקום מסך, פחות מכוון בלחיצה.
+- **PostgREST `like` query פר אות**: חוויית משתמש איטית במובייל, רוחב פס בזבזני.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- ~70 שורות JS חדשות + 12 שורות HTML.
+- `_globalSearch` תלוי ב-`DB` בזיכרון — אם sync לא הושלם בעוד אין נתונים, יחזיר ריק. במצב רגיל זה לא קורה כי `sbSync` רץ ב-startup.
+- שימוש ב-`_isAdminUser()` למיסוך NCR רגישים — עקבי עם החלטה הקודמת.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — Sensitivity flag (`sens`) על NCR
+
+**החלטה**: הוספת flag `sens boolean DEFAULT false` ל-NCR (migration `2026-04-30_ncr_sensitivity.sql`). UI: checkbox 🔒 במודאל, badge ברשימה, gating ב-4 נקודות. **הגנה ברמת UI בלבד** כרגע — RLS אמיתי יבוא בנפרד.
+
+**מבנה**:
+- Migration: `ALTER TABLE ncr ADD COLUMN sens boolean DEFAULT false` + partial index `WHERE sens=true`.
+- Modal: שדה `<input type="checkbox" id="ncr-sens">` בסוף ה-fgrid עם label "🔒 רגיש (נראה לאדמין בלבד)".
+- `openNewNcrModal`: מאפס את ה-checkbox.
+- `editNcr`: מציב `.checked=!!rec.sens`. **חסם**: אם הרשומה רגישה והמשתמש לא admin → toast "אין הרשאה" ויציאה.
+- `svNcr`: שומר `sens:!!(g('ncr-sens')&&g('ncr-sens').checked)`.
+- `rNcr`: מסנן `n.sens && !isAdm` החוצה. מוסיף `🔒` ליד `n.num` עבור רשומות רגישות (גלוי רק לאדמין).
+- `showView`: חסום ישיר אם `tbl==='ncr' && rec.sens && !_isAdminUser()`.
+- `_ncrLoad` (NCR Agent): פילטר על raw API response — non-admin לא יראה רשומות רגישות במודאל הסוכן.
+
+**סיבה**: NCRs לפעמים מכילים מידע רגיש — חקירות HR, מקרי משפט, פרטיות. Vitre §16#16. עד היום לא היה מנגנון להגביל גישה רטרוספקטיבית למקרים רגישים. ה-flag מאפשר לאדמין לסמן "זה רק לי" בלי ליצור טבלה נפרדת.
+
+**מה לא נעשה (במכוון)**:
+- **RLS אמיתי על `sens=true`**: דורש שינוי policy `ncr_admin_manager_all` להוסיף `WHERE NOT sens OR is_admin`. אפשר אבל מוסיף שכבת מורכבות. כרגע ה-UI gate מספיק מול user1..user10 שבכלל לא יכולים לקרוא את הטבלה (Stage 2 חסם אותם).
+- **רגישות פר-טבלה אחרת** (incidents, near_miss, tasks): NCR הוא המקרה הברור היחיד שהמשתמש העלה. אפשר להרחיב בעתיד עם אותו דפוס.
+- **תיעוד "מי קיבל גישה"**: ה-`audit_log` כבר רושם כל read אם המשתמש דרך REST. UI gate לא מתועד — מקובל כי זו רק שכבת UX.
+
+**אלטרנטיבות שנדחו**:
+- **טבלה נפרדת `ncr_sensitive`**: יותר נורמלי אבל מסבך queries (UNION) ו-realtime sync.
+- **שדה `visibility` enum**: גמיש מדי לרמה שלא נדרשת. boolean מספיק.
+- **Encrypted column**: overkill — זה לא PII רגיש קריפטוגרפית, זה גישה מבצעית.
+
+**השלכות**:
+- אין שינוי ב-NCR-ים קיימים (`sens=NULL` או `false`).
+- 4 נקודות gating ב-UI: `editNcr`, `rNcr`, `showView`, `_ncrLoad`.
+- אם user1..user10 איכשהו מצליחים לעקוף RLS → עדיין יסוננו ברמת UI לפני שהם רואים פרטים.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — Sub-tasks (`parent_id`) על משימות
+
+**החלטה**: הוספת עמודה `parent_id text` ל-`tasks` (migration `2026-04-30_tasks_parent.sql`) + UI מינימלי לקישור משימה ל-משימת אב, בהשראת Vitre §16#4.
+
+**מבנה**:
+- Migration: `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_id text` + partial index.
+- `_populateTskParent(currentId)` — פונקציה חדשה שממלאת את ה-`<select id="tsk-parent">` בכל המשימות חוץ מהמשימה הנוכחית (מונע self-parent).
+- `openTskModal` קוראת ל-`_populateTskParent(null)`, `editTsk` קוראת עם ה-id הנוכחי.
+- `svTsk` מוסיף `parent_id: gv('tsk-parent')||null` לאובייקט המשימה. בודק `pid===id` כ-defensive null-out.
+- `rTasks` מציג `↳ <PARENT TITLE>` בראש כל שורת sub-task (max 40 תווים).
+
+**סיבה**: מנהל בטיחות לעיתים מקבל משימה גדולה ("Q2 audit") שדורשת פירוק ל-5-10 sub-tasks. עד עכשיו היו צריכים לכתוב הכל ב-notes או ליצור משימות נפרדות בלי קישור. parent_id נותן מבנה היררכי בלי enforcement — המשתמש יכול ליצור עץ של 1 רמה (הרגיל) או יותר אם רוצה.
+
+**מה לא נעשה (במכוון)**:
+- **enforcement שאי אפשר לסגור הורה לפני sub-tasks**: גמיש מדי לחסום, יוצר friction. UX hint יכול להתווסף בעתיד.
+- **תצוגת עץ מקוננת ב-rTasks**: דורש refactor של ה-sort + indent logic. ה-badge "↳ <אב>" נותן 80% מהערך ב-20% מהמאמץ.
+- **טיפול במחיקת הורה**: כרגע אם הורה נמחק, ה-sub-tasks נשארים עם `parent_id` שמצביע על none. ה-badge פשוט לא יראה (ה-find מחזיר undefined). לא קריטי — נטפל אם זה יהיה באג.
+
+**אלטרנטיבות שנדחו**:
+- **Tag-based grouping** (`tags` array): עמום, לא היררכי. קשה לעקוב מי תחת מי.
+- **JSON `subtasks` במשימת אב**: שובר את ה-flat REST queries.
+
+**השלכות**:
+- אין שינוי schema ב-7 טבלאות אחרות.
+- ה-dropdown מציג את כל המשימות הקיימות (כולל סגורות) — עלול להיות ארוך אם המשתמש מצטבר 200+ משימות. אם יהיה pain — נסנן לפי סטטוס+תאריך.
+- תאימות מלאה לאחור: שורות בלי `parent_id` נראות בדיוק כמו לפני.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — External IDs (`ext_id`) על 7 טבלאות ראשיות
+
+**החלטה**: יצירת migration `2026-04-30_external_ids.sql` שמוסיף עמודת `ext_id text` ל-7 טבלאות ראשיות: `ncr`, `equip_inspections`, `emp`, `tr`, `ppe`, `med`, `tasks`. כולל index חלקי (`WHERE ext_id IS NOT NULL`) על כל אחת.
+
+**סיבה**: Vitre §16#13 — כל ישות מחזיקה `externalId` נוסף ל-`id` הפנימי. תפוגן עתידה לעבור אינטגרציה עם ERP/SAP/payroll, ובלי `ext_id` נצטרך לעשות data migration כואב מאוד על 375+ NCRs ועוד מאות שורות באחרות. עדיף להוסיף עכשיו (`IF NOT EXISTS`, אפס סיכון) ולמלא לפי הצורך.
+
+**מה לא נעשה (במכוון)**:
+- **לא נוספו inputs ל-modals** — עד שיש אינטגרציה אמיתית, השדה מוצג רק ב-`showView` (אם יוצג). מילוי ידני ראשוני עוד לא נדרש.
+- **לא הוספתי UNIQUE constraint** — רוצה לאפשר מקרי קצה כמו "אותו `ext_id` ב-2 רשומות שונות" עד שנדע מה ה-source-of-truth של האינטגרציה הראשונה.
+- **לא הוספתי NOT NULL** — שדה אופציונלי ב-100% מהמקרים הנוכחיים.
+
+**אלטרנטיבות שנדחו**:
+- **טבלת `mappings` נפרדת** (`{table, internal_id, external_id, system}`): נורמליזציה יתרה לרמה שעוד לא נדרשת. אפשר לעבור אליה אם יהיו 3+ מערכות שונות.
+- **JSONB column `integrations`**: גמיש מדי, קשה ל-query, אין index יעיל. מתאים אם יש 5+ ערכים עתידיים פר-רשומה.
+- **לדחות לגמרי**: שווה הכאב של data migration על 375+ רשומות בעתיד? לא.
+
+**השלכות**:
+- אין שינוי קוד JS — מתווסף רק SQL.
+- 7 טבלאות מקבלות עמודה אופציונלית NULL.
+- כשיגיע ה-UI לאחר אינטגרציה: input חדש פשוט במודאלים הרלוונטיים.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — Audit Trail פעיל ומסומן כ-completed
+
+**החלטה**: סימון הפיצ'ר Audit Trail כפעיל ב-STATUS.md. הקוד והמיגרציה כבר היו במערכת מ-2026-04-24 — סוכם רק עכשיו עם אימות.
+
+**מצב קיים**:
+- Migration `migrations/2026-04-24_audit_log.sql` הורץ ב-Supabase (`audit_log` קיימת עם 25+ רשומות).
+- פונקציה `_aud(op, tbl, idOrRow)` (`index.html:1561`) קוראת אוטומטית מ-`sbIns`/`sbUpd`/`sbDel`. כל פעולת CRUD מתועדת.
+- דף `pg-audit` (`index.html:689`) + `rAudit()` (`index.html:2804`) — מציג 200 רשומות אחרונות עם user, op, table, title.
+- כפתור גישה ב-modules sheet (`#sheet-btn-audit`) מוצג רק לאדמין דרך `_applyRoleGates()` (`index.html:3817`).
+
+**אימות (30/4)**:
+- שאילתת `SELECT COUNT(*) FROM audit_log` → 25 רשומות.
+- כל ה-flow רץ אוטומטית — כל commit שלי לפיצ'ר feedback/reopen/bulk הוסיף שורות (אם בוצעו דרך REST + RLS authorized).
+
+**אין שינויים ל-DB או לקוד** — רק עדכון תיעוד.
+
+---
+
+## 2026-04-30 — Bulk actions על דף משימות
+
+**החלטה**: הוספת multi-select למשימות עם 3 פעולות מרובות: סגור הכל / בטל הכל / נקה בחירה. בהשראת Vitre §14.2.
+
+**מבנה**:
+- `<th>` חדש בראש טבלת המשימות עם `tsk-bulk-all` checkbox.
+- `<td>` חדש בכל שורה — checkbox עם `name="tsk-row-cb"` ו-`value=task.id`. **רק לשורות לא-וירטואליות** (וירטואליות לא ניתן לשנות במחזור אחד — הן קוראות מטבלאות מקור שונות).
+- `#tsk-bulk-bar` sticky bottom — נסתר כשהבחירה ריקה, מופיע אוטומטית כשיש בחירה.
+- State: `window._tskSel = {id: true}` (object של ID-ים נבחרים).
+- 5 פונקציות: `_tskBulkSync` (UI), `_tskBulkToggle` (כפתור בודד), `_tskBulkSelectAll` (header), `_tskBulkClear` (איפוס), `_tskBulkAction` (`'close'`/`'cancel'`).
+- `tskFilter` (החלפת טאב) מנקה את הבחירה כדי למנוע סטיית state.
+
+**סיבה**: עומס יומיומי של מנהל בטיחות — 10 משימות פג-יעד שצריך לסגור בבת-אחת היה 10 קליקים נפרדים. עם bulk actions זה הופך לקליק אחד. תואם ל-Vitre §14.2 (anti-pattern של "לא תגיב חוסך זמן").
+
+**אלטרנטיבות שנדחו**:
+- **שורות וירטואליות + bulk**: דורש promote-to-task לכל אחת לפני האקציה — מורכב מדי. הסרתי אותן מ-bulk.
+- **Bulk delete**: פגיעה רטרוספקטיבית גדולה מדי, אם המשתמש יבחר בטעות. הקיים `askDel` נשאר פר-שורה.
+- **Bulk reassign**: מצריך UI נוסף לבחירת assignee. נשמר לעתיד.
+- **Bulk modify priority**: דומה — נדחה.
+
+**השלכות**:
+- `colspan` של empty state עובר מ-7 ל-8 (עמודה חדשה).
+- `_tskBulkClear` נקרא אחרי empty state כדי למנוע bar רפאים.
+- אין שינוי schema, אין migration.
+- **תאימות לאחור**: `_tskQuickStatus`, `_tskMenu`, `editTsk` ממשיכים לעבוד פר-שורה. ה-bulk bar הוא תוספת מקבילה.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — Reopen flow על Task/NCR סגורים
+
+**החלטה**: כשפותחים `showView` עבור Task ב-`הושלם`/`בוטל` או NCR ב-`סגור`, מופיע כפתור 🔓 "פתח מחדש" כתוב מתחת לכל השדות.
+
+**מבנה**:
+- ב-`showView` נוסף `canReopen` boolean — true רק לטבלאות tasks/ncr כשהסטטוס סגור.
+- אם true, מצורף כפתור עם `data-rtbl`/`data-rid` שקורא ל-`window._reopen(tbl, id)`.
+- `_reopen`:
+  1. `prompt('סיבה לפתיחה מחדש (חובה):')` — אם null או ריק → toast הודעה ויציאה.
+  2. נוסף stamp ל-`notes`: `\n[נפתח מחדש YYYY-MM-DD על ידי USER: REASON]`.
+  3. סטטוס חוזר ל-`פתוח`, `closed_date`/`cd` מתאפסים ל-null.
+  4. `sbUpd` + `sdb` + `rTasks`/`rNcr` + `rDash` + `showView` (rerender).
+
+**סיבה**: עד היום היה אפשר ידנית לערוך task חזרה ל-"פתוח" דרך menu, אבל **בלי תיעוד**. ה-Reopen flow הופך פעולה רגישה (רטרוספקטיבה על משימה סגורה) לאקט מתועד עם סיבה וחתימה. זה גם הצעד הראשון לכיוון Audit Trail מלא — ה-stamp ב-notes שומר את ה-history גם אם audit_log טרם הוטמע.
+
+**אלטרנטיבות שנדחו**:
+- שימוש ב-`audit_log` table (קוד מימוש קיים, ממתין ל-merge ב-STATUS): מסתבך — דורש merge מקבילי. נשמר ל-PR נפרד.
+- prompt() החלפה ל-modal HTML מותאם: prompt נטיב פשוט, כבר עובד טוב במובייל. אם נצטרך עיצוב — נחליף בעתיד.
+- כפתור Reopen ישיר ב-rTasks (רשימה), לא רק ב-showView: הרשימה כבר עמוסה. ה-detail view הוא המקום הטבעי לפעולה רטרוספקטיבית.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- שינוי יחיד ב-`showView` (12 שורות) + פונקציה חדשה `_reopen` (20 שורות).
+- תאימות לאחור מלאה: tasks שהיו DONE/CANC ערוכים דרך Edit modal ממשיכים לעבוד.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — NCR Agent Feedback Loop (👍/👎/🔄) + 3 תיקוני bugs קודמים
 
 **החלטה**: יושם feedback loop על כל ניתוח AI ב-NCR Agent (בהשראת Vitre §9.2). כל גרסת ניתוח ב-`ncr_ai` יכולה לקבל 👍 (חיובי) / 👎 (שלילי) / 🔄 (יצירת גרסה חדשה).
