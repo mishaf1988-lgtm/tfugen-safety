@@ -13,6 +13,49 @@
 
 ---
 
+## 2026-04-30 — External IDs (`ext_id`) על 7 טבלאות ראשיות
+
+**החלטה**: יצירת migration `2026-04-30_external_ids.sql` שמוסיף עמודת `ext_id text` ל-7 טבלאות ראשיות: `ncr`, `equip_inspections`, `emp`, `tr`, `ppe`, `med`, `tasks`. כולל index חלקי (`WHERE ext_id IS NOT NULL`) על כל אחת.
+
+**סיבה**: Vitre §16#13 — כל ישות מחזיקה `externalId` נוסף ל-`id` הפנימי. תפוגן עתידה לעבור אינטגרציה עם ERP/SAP/payroll, ובלי `ext_id` נצטרך לעשות data migration כואב מאוד על 375+ NCRs ועוד מאות שורות באחרות. עדיף להוסיף עכשיו (`IF NOT EXISTS`, אפס סיכון) ולמלא לפי הצורך.
+
+**מה לא נעשה (במכוון)**:
+- **לא נוספו inputs ל-modals** — עד שיש אינטגרציה אמיתית, השדה מוצג רק ב-`showView` (אם יוצג). מילוי ידני ראשוני עוד לא נדרש.
+- **לא הוספתי UNIQUE constraint** — רוצה לאפשר מקרי קצה כמו "אותו `ext_id` ב-2 רשומות שונות" עד שנדע מה ה-source-of-truth של האינטגרציה הראשונה.
+- **לא הוספתי NOT NULL** — שדה אופציונלי ב-100% מהמקרים הנוכחיים.
+
+**אלטרנטיבות שנדחו**:
+- **טבלת `mappings` נפרדת** (`{table, internal_id, external_id, system}`): נורמליזציה יתרה לרמה שעוד לא נדרשת. אפשר לעבור אליה אם יהיו 3+ מערכות שונות.
+- **JSONB column `integrations`**: גמיש מדי, קשה ל-query, אין index יעיל. מתאים אם יש 5+ ערכים עתידיים פר-רשומה.
+- **לדחות לגמרי**: שווה הכאב של data migration על 375+ רשומות בעתיד? לא.
+
+**השלכות**:
+- אין שינוי קוד JS — מתווסף רק SQL.
+- 7 טבלאות מקבלות עמודה אופציונלית NULL.
+- כשיגיע ה-UI לאחר אינטגרציה: input חדש פשוט במודאלים הרלוונטיים.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, PR #121, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
+## 2026-04-30 — Audit Trail פעיל ומסומן כ-completed
+
+**החלטה**: סימון הפיצ'ר Audit Trail כפעיל ב-STATUS.md. הקוד והמיגרציה כבר היו במערכת מ-2026-04-24 — סוכם רק עכשיו עם אימות.
+
+**מצב קיים**:
+- Migration `migrations/2026-04-24_audit_log.sql` הורץ ב-Supabase (`audit_log` קיימת עם 25+ רשומות).
+- פונקציה `_aud(op, tbl, idOrRow)` (`index.html:1561`) קוראת אוטומטית מ-`sbIns`/`sbUpd`/`sbDel`. כל פעולת CRUD מתועדת.
+- דף `pg-audit` (`index.html:689`) + `rAudit()` (`index.html:2804`) — מציג 200 רשומות אחרונות עם user, op, table, title.
+- כפתור גישה ב-modules sheet (`#sheet-btn-audit`) מוצג רק לאדמין דרך `_applyRoleGates()` (`index.html:3817`).
+
+**אימות (30/4)**:
+- שאילתת `SELECT COUNT(*) FROM audit_log` → 25 רשומות.
+- כל ה-flow רץ אוטומטית — כל commit שלי לפיצ'ר feedback/reopen/bulk הוסיף שורות (אם בוצעו דרך REST + RLS authorized).
+
+**אין שינויים ל-DB או לקוד** — רק עדכון תיעוד.
+
+---
+
 ## 2026-04-30 — Bulk actions על דף משימות
 
 **החלטה**: הוספת multi-select למשימות עם 3 פעולות מרובות: סגור הכל / בטל הכל / נקה בחירה. בהשראת Vitre §14.2.

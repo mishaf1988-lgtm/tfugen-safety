@@ -71,6 +71,7 @@
 - [x] ~~**🔒 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-23_app_users_admin_only_rls.sql`~~ — **הורץ ב-2026-04-24 ואומת ידנית**. ה-policy `app_users_admin_write` נעולה ל-`auth.jwt() ->> 'email' = 'admin@tfugen.local'` בלבד (במקום `is_anonymous = false`). אומת ב-3 בדיקות: (1) admin ניהל משתמשים בהצלחה, (2) משתמש רגיל לא יכול לכתוב ל-`app_users`, (3) dropdown של מדווחים עדיין נטען כרגיל. חור האבטחה סגור.
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql` — מוסיף עמודה `ext_id text` ל-7 טבלאות ראשיות (ncr, equip_inspections, emp, tr, ppe, med, tasks) + indexes חלקיים. הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
 - [x] ~~`migrations/2026-04-19_near_miss.sql`~~ — הורץ
@@ -91,7 +92,7 @@
 - [ ] **חיפוש גלובלי** — 🔍 על כל המודולים
 - [ ] **ייצוא PDF** — לכל דף
 - [ ] **WhatsApp Meta API** — התראות לאחראי
-- [ ] **Audit Trail** — מי שינה מה ומתי. **קוד מימוש דחוף ל-merge**: דף `pg-audit` (אדמין/מנהל בלבד), טבלת `audit_log` עם RLS. דורש הרצת `migrations/2026-04-24_audit_log.sql` ב-Supabase.
+- [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.
 - [ ] **Agent Dashboard** — ריכוז כל ה-AI agents
 
 ### 🔵 באגים ידועים
