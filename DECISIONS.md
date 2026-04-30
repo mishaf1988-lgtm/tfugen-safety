@@ -13,6 +13,40 @@
 
 ---
 
+## 2026-04-30 — Pattern Detection History (`ncr_patterns`)
+
+**החלטה**: יצירת טבלה חדשה `ncr_patterns` לשמירת היסטוריה של "ניתוחים כלליים" שה-NCR Agent מייצר. כל קריאה ל-`ncrAgentAnalyzeAll` שומרת אוטומטית snapshot עם: AI content + open/closed counts + byArea/byPriority/byStatus כ-jsonb. מודאל הסוכן מציג "📜 ניתוחים קודמים" עם 5 התאריכים האחרונים — קליק מציג ניתוח קודם.
+
+**מבנה**:
+- Migration `2026-04-30_ncr_patterns.sql`: טבלה + RLS policy `ncr_patterns_admin_manager_all` עם `private.is_admin_manager()`.
+- שדות: `ts`, `content`, `open_count`, `closed_count`, `by_area`, `by_priority`, `by_status` (jsonb), `created_by`.
+- `_ncrPatternsCache` global array — עד 10 ניתוחים אחרונים בזיכרון.
+- `_ncrPatternsLoad()` — נקרא ב-`openNCRAgent`, fetches `?order=ts.desc&limit=10`.
+- `_ncrRenderAggregate(content)` — בונה את הפאנל: heading "📜 ניתוחים קודמים" עם 5 שורות (תאריך + open count) + הניתוח הנוכחי. כל שורה לחיצה דרך `_ncrPatternShow(idx)`.
+- `ncrAgentAnalyzeAll` משולב — אחרי ה-AI fetch, POST ל-`ncr_patterns` עם snapshot, ואז re-render.
+
+**סיבה**: Vitre §17 מדגישה ש"AI Agent רק עם summary, ללא pattern detection / prediction" — חולשה קלאסית. עד היום ה-NCR Agent רץ ניתוח אבל התוצאה לא נשמרה בשום מקום, ולכן אי אפשר היה להשוות "מה היה לפני חודש vs היום". עכשיו יש paper trail. בעתיד: trend chart, comparison עם קודם, התראות על דפוסים מתעוררים.
+
+**מה לא נעשה (במכוון)**:
+- **Trend / chart UI**: שלב הבא — אחרי שיש 3+ ניתוחים שמורים, אפשר להציג גרף.
+- **Auto-trigger מתוזמן**: כרגע user-triggered (לחיצה על "ניתוח כללי"). cron יומי דחוי לעתיד עם WhatsApp.
+- **השוואה אוטומטית עם קודם בתוך הprompt**: רעיון טוב — נוסיף בעתיד אם יש ביקוש.
+- **Embedding/vector search**: overengineering לכמות הנוכחית.
+
+**אלטרנטיבות שנדחו**:
+- **localStorage**: מאבד מ-2 התקנים שהמשתמש עובד מהם.
+- **שדה ב-`audit_log`**: ה-content ארוך מדי (1500+ תווים), audit_log לא מתאים.
+- **טבלה כללית `ai_outputs`**: מתחיל פתוח מדי. `ncr_patterns` ספציפית — נקייה.
+
+**השלכות**:
+- אין שינוי ב-NCR האקטיבי או בקוד הקיים מחוץ ל-`ncrAgentAnalyzeAll`.
+- POST שגיאה (לפני הרצת migration) נבלע בשקט — לא חוסם את הצגת הניתוח.
+- המשתמש יראה "📜 ניתוחים קודמים" ריק עד שיתחיל להריץ ניתוחים אחרי ה-migration.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — Recurrence Engine מזוער (Virtual Tasks ב-30-day window)
 
 **החלטה**: הרחבת `_collectVirtualTasks._addExp` כך שיכלול לא רק פריטים שכבר פגו, אלא גם פריטים במרחק עד 30 יום מתפוגה. עדיפות מדורגת לפי דחיפות. **בלי cron, בלי endpoint חדש, בלי schema change** — חישוב on-the-fly בכל רענון של דף משימות / דשבורד.
