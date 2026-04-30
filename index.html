@@ -340,6 +340,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
+    <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
@@ -4153,6 +4154,30 @@ var _naf={};
 var _naVer={};
 var _SB='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+/* ---- PWA: register service worker + install prompt ---- */
+var _pwaPrompt=null;
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed:',e);});
+  });
+}
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();
+  _pwaPrompt=e;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='';
+});
+window.addEventListener('appinstalled',function(){
+  _pwaPrompt=null;
+  var btn=document.getElementById('pwa-install-btn');
+  if(btn)btn.style.display='none';
+  try{toast('\u05d4\u05d5\u05ea\u05e7\u05df \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4 \u2713');}catch(e){}
+});
+window._pwaInstall=function(){
+  if(!_pwaPrompt){toast('\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05ea\u05e7\u05e0\u05ea \u05d0\u05d5 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05d6\u05d4');return;}
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
+};
 var _AI='/api/claude';
 var _AI_MODEL='claude-sonnet-4-6';
 var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};

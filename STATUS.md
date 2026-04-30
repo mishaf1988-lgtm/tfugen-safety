@@ -87,13 +87,13 @@
 - [x] ~~Storage bucket `incidents-photos` + INSERT policy לאנונימי~~ — הוגדר
 
 ### 🟡 תוספות ISO 14001/45001 (יומיומי)
-- [ ] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות. **קוד מימוש דחוף ל-merge ב-PR חדש** (יורש לוגי מ-PR #45 שנסגר). דורש הרצת `migrations/2026-04-24_toolbox.sql` ב-Supabase.
+- [x] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות. **פעיל מלא**: `pg-toolbox` page, `m-toolbox` modal עם file attach, `rToolbox`/`svToolbox`, VIEW_CONFIG, sheet button, migration `2026-04-24_toolbox.sql` הורץ. אומת 30/4: טבלת `toolbox` קיימת עם רשומה.
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
 - [ ] **Management Review Dashboard** — סיכום רבעוני ל-PDF
 
 ### 🟢 תשתית / UX
-- [ ] **PWA** — install, offline, push notifications
+- [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
 - [x] **חיפוש גלובלי** — 🔍 על 9 הטבלאות הראשיות. כפתור 🔍 בtopbar פותח מודאל עם input חי. סורק `ncr`, `equip_inspections`, `near_miss`, `inc`, `tasks`, `tr`, `docs`, `emp`, `leg` (~5-10 שדות פר טבלה). תוצאות עם icon + label + preview, מקסימום 50, קליק → `showView`. סינון רגישות (NCR `sens=true` לא מוצג ל-non-admin). ללא migration. UI בלבד.
 - [x] **ייצוא PDF גלובלי** — כפתור 🖨 בtopbar שמדפיס/מייצא ל-PDF את הדף הפעיל בלבד (תוקן באג בו ה-CSS להדפסה הראה את כל הדפים). מוסיף print-header אוטומטי עם כותרת + תאריך + שם משתמש. עובד מכל דף — דשבורד, NCR, משימות, ביקורות וכו'. ב-Chrome/Safari יש דיאלוג "Save as PDF". ללא תלות חיצונית (jsPDF), ללא migration.
 - [x] **Recurrence Engine מזוער (Virtual Tasks 30-day window)** — בהשראת Vitre §12.2. עד היום `_collectVirtualTasks` הציג רק פריטים שכבר פגו (`r.e < today`). עכשיו: כל פריט במרחק עד 30 יום מתפוגה (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד) נהפך לוירטואלי עם עדיפות מדורגת: **קריטי** (פג), **גבוה** (היום או 1-7 ימים), **בינונית** (8-30 ימים). הכותרת מציינת "פג בעוד X ימים" כדי שהמשתמש יבין מהר. אין צורך ב-cron — מחושב חי בכל רענון. ללא migration, ללא endpoint חדש.

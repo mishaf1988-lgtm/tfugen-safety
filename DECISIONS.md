@@ -13,6 +13,40 @@
 
 ---
 
+## 2026-04-30 — PWA: Service Worker shell-cache + install prompt
+
+**החלטה**: הוספת Service Worker מינימלי (`sw.js`) שמאחסן את ה-shell של האפליקציה (HTML/manifest/icon/logo) + כפתור install בtopbar שמשתמש ב-`beforeinstallprompt` event הסטנדרטי. ה-`manifest.webmanifest` כבר היה (display:standalone, theme_color, icon).
+
+**מבנה**:
+- `sw.js` ב-root: `install` → `caches.open('tfgn-v1').addAll([...])`. `activate` → ניקוי גרסאות ישנות + `clients.claim()`. `fetch` → bypass ל-API/REST (Supabase, /api/*, anthropic, googleapis), אחרת network-first עם cache fallback.
+- `index.html`: רישום SW על `load`, listener ל-`beforeinstallprompt` (שומר ב-`_pwaPrompt`, מציג כפתור), `appinstalled` (מסתיר כפתור + toast), `_pwaInstall()` שמפעיל את ה-prompt.
+- כפתור `#pwa-install-btn` בtopbar (📱) — `display:none` עד event.
+
+**סיבה**: עובד שטח עם טלפון לעיתים אין רשת בכל אזורי המפעל. PWA install:
+- מאפשר חוויה native-like (full-screen, במסך הבית).
+- Cache של ה-shell — האפליקציה נטענת מיידית גם offline (הנתונים האחרונים יציגו מ-localStorage).
+- Outbox הקיים כבר מטפל בכתיבות offline → סנכרון אוטומטי כשחוזר online.
+
+**מה לא נעשה (במכוון)**:
+- **Push notifications**: דורש Web Push subscription endpoint, VAPID keys, backend שולח. דחוי לאחרי WhatsApp שיהיה הנתיב העיקרי.
+- **Background sync API**: לא נתמך ב-Safari iOS. ה-outbox הנוכחי (online/focus/30s) טוב יותר באוניברסליות.
+- **Cache של דאטה (Supabase REST)**: רגישות זמן — נתונים ישנים מטעים. localStorage כבר משמש לזה דרך `ldb()`/`sdb()`.
+- **Workbox / cache strategies מתקדמות**: overengineering לכמות העבודה.
+- **Pre-caching של כל הדפים**: רק shell מאוחסן — אפליקציה single-file ממילא, ה-`/index.html` כולל הכל.
+
+**אלטרנטיבות שנדחו**:
+- **No SW, just manifest**: install prompt לא יצוץ ב-Chrome ללא SW.
+- **SW עם complex caching רב-שכבתי**: לא נדרש לסגנון single-file + REST API.
+
+**השלכות**:
+- אחרי deploy ראשון, מבקרים יקבלו את ה-SW. הפעם הבאה — עובד offline.
+- כפתור 📱 יופיע רק כשהדפדפן מחליט שמדובר ב-installable (Chrome/Edge/Samsung Browser; ב-iOS Safari יש "הוסף למסך הבית" ידני).
+- אפס מקרי קצה — bypass של API מבטיח שאין caching של נתונים stale.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — Pattern Detection History (`ncr_patterns`)
 
 **החלטה**: יצירת טבלה חדשה `ncr_patterns` לשמירת היסטוריה של "ניתוחים כלליים" שה-NCR Agent מייצר. כל קריאה ל-`ncrAgentAnalyzeAll` שומרת אוטומטית snapshot עם: AI content + open/closed counts + byArea/byPriority/byStatus כ-jsonb. מודאל הסוכן מציג "📜 ניתוחים קודמים" עם 5 התאריכים האחרונים — קליק מציג ניתוח קודם.
