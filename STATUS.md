@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-01 (Saved Views + Notifications Matrix — Vitre §16#6 + §11)
+**Last updated**: 2026-05-02 (overnight autonomous: 11 PRs polish — saved-views ל-EQI/Tasks, location filters בכל הטפסים, chained forms, more triggers, dashboard widgets)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `0120e08` |
-| תאריך | 2026-05-01 |
+| Commit | `a018f4c` |
+| תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
-| מצב | 28 טבלאות (+ `saved_views`, `notification_prefs`) · Saved Views פר-משתמש ב-NCR/NM · Notifications matrix (5 אירועים × 3 ערוצים) עם trigger פעיל על NCR קריטי · Locations hierarchy ב-5 טפסים · env_aspects עם file_url + page_files banner · sbGet 400 fix · NCR Agent feedback loop · Reopen flow · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
+| מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -114,6 +114,19 @@
 - [x] **10 locations נטענו ידנית (2026-05-01)** — ייצור טוגנים, קילופים, מעוצבים, אריזה, שפכים, חומר גלם, חצר, תוצ"ג, תשתיות, מעבדה. כולם level 1 שטוחים אחרי החלטת המשתמש לוותר על היררכיה (UPDATE על LOC-002/003/004 שהיו תחת ייצור טוגנים).
 - [x] **Saved Views per-user (PR #147)** — בהשראת Vitre §16#6. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. UI: כפתור 💾 (שמור) + Dropdown ⭐ (טען) + 🗑 (מחק) ליד הטאבים בעמודי NCR ו-Near Miss. helpers `_svUser`/`_svListForPage`/`_svSave`/`_svDelete`/`_svRenderSelect` (גנריים) + per-page glue (`svNcrSave/Apply/Delete`, `svNmSave/Apply/Delete`). Filters jsonb: `{ncrFilter, ncrLocFilter}` ל-NCR, `{nmFilter, nmLocFilter}` ל-NM — extensible לעמודים נוספים בעתיד בלי schema change.
 - [x] **Notifications Matrix (PR #148)** — בהשראת Vitre §11. טבלה חדשה `notification_prefs(id PK = user email, prefs jsonb, ts)` עם RLS לפי email. UI: מודאל 🔔 "הגדרות התראות" (תפריט → ניהול), מטריצה של 5 אירועים (`ncr_critical`, `task_overdue`, `expiry_30days`, `round_missed`, `incident_critical`) × 3 ערוצים (`whatsapp`, `email`, `inapp`) עם checkboxes. Generic dispatcher `_notifyEvent(eventKey, payload)` בודק העדפות ומפעיל ערוצים פעילים. **Trigger ראשון מחובר**: יצירת NCR בעדיפות "קריטי" → `_notifyEvent('ncr_critical', ...)`. Channels: in-app עובד מיידית (toast); WhatsApp — console.log עד שיאושרו ה-templates של Meta; Email — console.log עד שיוגדר SMTP/API. Hooks ל-task_overdue/expiry/round_missed/incident_critical יתווספו ב-PR נפרד.
+
+### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
+- [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
+- [x] **Location filters ל-PTW + EQI + Hzm (PR #151)** — משלים את הסינון בכל 5 הטפסים.
+- [x] **Chained forms (PR #152)** — בכמעט-נפגע "חמור" → כפתור פותח NCR טיוטה עם פרטים מועתקים.
+- [x] **3 triggers נוספים (PR #153)** — `_notifDailyScan` רץ פעם ביום (sessionStorage flag): task_overdue (3+ ימים פיגור), expiry_30days (תוך 30 יום), round_missed (אחרי 11:00).
+- [x] **incident_critical trigger (PR #154)** — תקרית חדשה בחומרה "חמור"/"קריטי" → notification.
+- [x] **Dashboard widget "פתוחים לפי אזור" (PR #155)** — top 8 אזורים ע"פ NCR פתוחים + כמעט-נפגע פתוחים.
+- [x] **showView auto-renders location_id (PR #156)** — כל רשומה עם location_id מציגה "📍 מיקום: <נתיב מלא>" אוטומטית.
+- [x] **Clickable by-location rows (PR #157)** — קליק על שורת אזור בדשבורד → NCR מסונן לאזור.
+- [x] **Counts per location (PR #158)** — עמוד מיקומים מציג badges ליד כל אזור עם NCR פתוחים + כמעט-נפגע פתוחים.
+- [x] **Saved Views ל-Equipment Inspections (PR #159)** — תופס סטטוס + חיפוש + מיקום.
+- [x] **Bell 🔔 בtopbar (PR #160)** — פותח הגדרות התראות בלחיצה.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
