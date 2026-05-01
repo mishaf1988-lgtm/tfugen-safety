@@ -342,6 +342,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
     <button class="bell" id="csv-btn" title="&#1497;&#1497;&#1510;&#1493;&#1488; &#1492;&#1491;&#1507; &#1500;&#1488;&#1511;&#1505;&#1500; (CSV)" onclick="_exportCSV()">&#128202;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
+    <button class="bell" id="bak-btn" title="&#1490;&#1497;&#1489;&#1493;&#1497; JSON" onclick="_exportBackup()">&#128190;</button>
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
@@ -5228,6 +5229,20 @@ function _gsearchRender(){
 window.openGlobalSearch=function(){
   openModal('m-gsearch');
   setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
+};
+window._exportBackup=function(){
+  try{
+    var snapshot={ts:new Date().toISOString(),app:'tfugen-safety',version:'overnight-2026-05-02',data:DB};
+    var json=JSON.stringify(snapshot,null,2);
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download='tfugen-backup-'+new Date().toISOString().split('T')[0]+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('\u05d2\u05d9\u05d1\u05d5\u05d9 JSON \u05d4\u05d5\u05e8\u05d3');
+  }catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d2\u05d9\u05d1\u05d5\u05d9: '+e.message);}
 };
 window._exportCSV=function(){
   var on=document.querySelector('.page.on');
