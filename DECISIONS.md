@@ -13,6 +13,88 @@
 
 ---
 
+## 2026-05-01 — Locations hierarchy (4-PR rollout)
+
+**החלטה**: טבלה `locations(id, name, parent_id → locations.id, level 1-3)` עם self-referencing FK. השלמה ב-4 PRs (#141 תשתית + UI, #142 NCR/NM, #143 PTW/EQI/Hazmat, #144 סינון). שדה `location_id` נוסף ל-5 טבלאות לצד שדות הטקסט הקיימים (לא במקומם). UI: dropdown שטוח עם הזחות (אחרי בקשת המשתמש לשטח) במקום cascading dropdowns.
+
+**סיבה**: שדות מיקום היו טקסט חופשי ב-5 מקומות שונים (ncr-loc / nm-area / ptw-area / eqi-loc / hzm-loc) — מקור לחוסר עקביות ("קו 1" / "קו א'" / "Line 1"). היררכיה תומכת בעתיד בדוחות "כל ה-NCR באזור X" וגם בהמשך scaling ל-71 sub-types בסגנון Vitre.
+
+**אלטרנטיבות שנדחו**:
+- **רשימה שטוחה (option A הראשון)** — נדחה לטובת היררכיה כדי לתת אופציה לעתיד. בסוף המשתמש בכל זאת בחר לשטח את 3 הילדים שמתחת ל"ייצור טוגנים".
+- **3 dropdowns מקושרים (cascading)** — נדחה כי על מובייל 3 שדות נפרדים מורכבים מדי. dropdown אחד שטוח עם הזחות (`↳`) נותן את אותו visual hierarchy בלי תקלות UX.
+- **Migration של נתונים ישנים** — נדחה. הערכים החופשיים נשארים, ושדה `location_id` חדש מתווסף לידם. אם הוא קיים — הוא קובע. אחרת — fallback לטקסט הישן (read-only).
+
+**שמירה לאחור**:
+- שדות `loc`/`area` המקוריים נשארים בטבלאות וב-record objects.
+- ב-edit modal: אם רשומה ישנה (`!location_id && loc`) — שדה הטקסט מוצג read-only עם opacity 0.7 + תווית "(טקסט ישן)".
+- ב-list view: `_locName(location_id) || loc || area || '—'` — תמיד יש fallback.
+
+**SQL idempotent**: כל המיגרציות עם `IF NOT EXISTS`, `INSERT ... ON CONFLICT (id) DO NOTHING`, `CREATE POLICY ... IF NOT EXISTS`.
+
+**10 מיקומים נטענו** (כל ה-level 1, אחרי flatten ידני): ייצור טוגנים, קילופים, מעוצבים, אריזה, שפכים, חומר גלם, חצר, תוצ"ג, תשתיות, מעבדה.
+
+**helpers משותפים**:
+- `_locFlatList()` — DFS על העץ, מחזיר `[{id, name, depth}]`.
+- `_locOptionsHtml(currentId)` — HTML של options עם הזחה לפי depth.
+- `_locFilterOptionsHtml(currentId, placeholder)` — אותו דבר לסינון, placeholder ניתן להחלפה.
+- `_locName(id)` — מחזיר נתיב מלא בפורמט "אזור / קו / תחנה".
+- `_locPopulate(selectId, currentId)` — מאכלס select.
+- openModal hook מאוכלס אוטומטית כל `select[id$="-location-id"]` בפתיחה ראשונה.
+
+**קישורים**: PRs #141, #142, #143, #144 · migrations: `2026-05-01_locations.sql`, `2026-05-01_location_fk.sql`, `2026-05-01_location_fk_more.sql`.
+
+---
+
+## 2026-05-01 — page_files: Generic per-page document attachment
+
+**החלטה**: טבלה `page_files(id PK = page slug, file_url, file_name, uploaded_by, ts)` כללית — שורה אחת פר עמוד, מציינת קובץ "רשמי" שמייצג את כל ה-register. UI: באנר ירוק בראש הכרטיס של env_aspects (כפתור העלאה / קישור הורדה / כפתור החלף). helpers (`_pageFileGet`/`_pageFileRender`/`_pageFileUpload`) generic.
+
+**סיבה**: המשתמש שיתף את טופס 28.01 (Excel רשמי שמכיל את כל 26 ההיבטים הסביבתיים) ורצה אותו זמין במערכת. צירוף פר-רשומה (PR #139) לא הולם — הקובץ מתאר את ה-register כולו, לא היבט בודד.
+
+**אלטרנטיבות שנדחו**:
+- **localStorage בלבד** — לא מסונכרן בין מכשירים.
+- **רשומה מיוחדת ב-env_aspects (id='REGISTER_FILE')** — מזהמת את הרשימה.
+- **שימוש ב-`docs` table הקיים** — `docs` לא היה לו `file_url` ועוד היה צריך לסמן אותו עם `category='env_aspects'` ולסנן.
+- **3 selects cascading עם stage לכל רמה** — overengineered.
+
+**שימוש עתידי**: אותה טבלה תוכל לאכסן גם את הקובץ הרשמי של סקר סיכונים, NCR register, וכל עמוד אחר — רק להוסיף `<div id="<page>-pagefile">` ב-HTML ו-`_pageFileRender('<page>', ...)` ב-render function של אותו עמוד.
+
+**קישורים**: PR #140 · migration: `2026-05-01_page_files.sql`.
+
+---
+
+## 2026-05-01 — env_aspects per-record file_url
+
+**החלטה**: עמודה `file_url text` נוספה ל-`env_aspects`. כל היבט סביבתי יכול לקבל קובץ נלווה (דוח מעבדה, תעודת מערכת לטיפול בשפכים, תמונת המקור).
+
+**סיבה**: PR #140 פותר את הקובץ הראשי (טופס 28.01), אבל חלק מההיבטים זקוקים למסמכים תומכים נפרדים — דוח אנליזת פליטות, רישיון משאיבת מים, וכו'.
+
+**אלטרנטיבות שנדחו**:
+- **רק page_files** — לא מאפשר חוויית "לכל היבט יש את הראיות שלו".
+- **טבלה נפרדת `env_aspects_files` עם many-to-many** — overkill לצורך הזה.
+
+**שימוש קיים**: file_url נתמך כבר ב-`showView` (line 3985) — מציג קישור הורדה אוטומטית. רק היה צריך להוסיף את כפתור ההעלאה במודאל ואת ה-📎 בטבלה.
+
+**קישורים**: PR #139 · migration: `2026-05-01_env_aspects_file_url.sql`.
+
+---
+
+## 2026-05-01 — sbGet 400 fix: tables without created_at
+
+**החלטה**: הרחבת `_sbTsCol` map כדי לכלול 4 טבלאות שיש להן רק עמודת `ts` (לא `created_at`): `env_aspects`, `hearing_tests`, `ncr_comments`, `ncr_patterns`.
+
+**סיבה**: `sbGet(tbl)` ב-line 1678 בנוי על default ל-`order=created_at.desc`. טבלאות שלא במפה ושאין להן `created_at` החזירו HTTP 400 מ-Supabase REST. תוצאה: sync נכשל בשקט (`r.ok ? r.json() : []`), וה-UI הציג 0 רשומות למרות שהן קיימות ב-DB. הבאג היה אקטיבי על env_aspects (26 רשומות לא מוצגות) עד שאומת מ-Supabase API logs ותוקן.
+
+**אלטרנטיבות שנדחו**:
+- **רישום `created_at` לכל טבלה ב-DB** — שינוי schema רחב ולא נחוץ.
+- **fallback אוטומטי בקוד (try `created_at`, on 400 try `ts`)** — מסבך, double-request.
+
+**lessons learned**: כל מיגרציה שיוצרת טבלה עם `ts` צריכה לכלול גם הוספה ל-`_sbTsCol` ב-PR. מומלץ להוסיף בדיקה אוטומטית.
+
+**קישורים**: PR #138.
+
+---
+
 ## 2026-04-30 — WhatsApp שלב 2 — 3 Templates עברית + כפתורי שליחה ידנית מ-showView
 
 **החלטה**: יצירת 3 custom Hebrew templates ב-Meta WhatsApp Manager + כפתור "📱 שלח התראת WhatsApp" admin-only ב-`showView` עבור NCR פתוח, משימה לא-סגורה, ופריט תפוגה תוך 30 יום. מנותב לפי טבלה ל-template הנכון עם פרמטרים אוטומטיים מהרשומה.
