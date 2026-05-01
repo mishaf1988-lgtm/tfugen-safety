@@ -387,6 +387,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 
   <div id="dash-today" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl"></div>
+  <div id="dash-insights" style="margin:0 0 10px"></div>
   <div id="dash-alerts"></div>
 
   <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
@@ -2778,6 +2779,32 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Auto-insights (3 signals max)
+  try{
+    var di2=g('dash-insights');
+    if(di2){
+      var ins=[];
+      var today2=new Date();today2.setHours(0,0,0,0);
+      // Insight 1: open NCRs in top location
+      var byLoc2={};
+      (DB.ncr||[]).forEach(function(n){if(n.s==='\u05e1\u05d2\u05d5\u05e8'||!n.location_id)return;byLoc2[n.location_id]=(byLoc2[n.location_id]||0)+1;});
+      var topLoc=Object.keys(byLoc2).sort(function(a,b){return byLoc2[b]-byLoc2[a];})[0];
+      if(topLoc&&byLoc2[topLoc]>=3){
+        var lname=(typeof _locName==='function')?_locName(topLoc):topLoc;
+        ins.push('💡 '+byLoc2[topLoc]+' NCRs \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8 "'+lname+'" — \u05db\u05d3\u05d0\u05d9 \u05dc\u05d1\u05d3\u05d5\u05e7.');
+      }
+      // Insight 2: this week incidents trend
+      var incThisWeek=(DB.inc||[]).filter(function(r){var d=new Date(r.dt||r.d);return !isNaN(d)&&((today2-d)/86400000)<=7;}).length;
+      var incLastWeek=(DB.inc||[]).filter(function(r){var d=new Date(r.dt||r.d);if(isNaN(d))return false;var a=(today2-d)/86400000;return a>7&&a<=14;}).length;
+      if(incThisWeek>incLastWeek&&incThisWeek>=2)ins.push('📈 \u05d4\u05e9\u05d1\u05d5\u05e2 \u05e0\u05e4\u05ea\u05d7\u05d5 '+incThisWeek+' \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea — \u05e2\u05dc\u05d9\u05d9\u05d4 \u05de-'+incLastWeek+' \u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8.');
+      // Insight 3: overdue tasks
+      var overdueT=(DB.tasks||[]).filter(function(t){if(!t.due||t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;return new Date(t.due)<today2;}).length;
+      if(overdueT>=3)ins.push('⏰ '+overdueT+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u05d9\u05e2\u05d3 — \u05de\u05e6\u05e8\u05d9\u05da \u05d8\u05d9\u05e4\u05d5\u05dc.');
+      if(ins.length){
+        di2.innerHTML='<div style="background:#fef9e7;border-right:3px solid #f59e0b;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.7">'+ins.map(function(s){return esc(s);}).join('<br>')+'</div>';
+      }else{di2.innerHTML='';}
+    }
+  }catch(e){console.warn('insights failed',e);}
   // Today header (Hebrew day name + date)
   try{
     var dt=g('dash-today');
