@@ -4684,6 +4684,13 @@ function _globalSearch(q){
   if(q.length<2)return [];
   var isAdm=_isAdminUser();
   var results=[];
+  // Pre-resolve location ids whose names contain q (search-by-location-name)
+  var matchingLocIds={};
+  if(typeof _locName==='function'){
+    (DB.locations||[]).forEach(function(loc){
+      if((loc.name||'').toLowerCase().indexOf(q)>=0)matchingLocIds[loc.id]=true;
+    });
+  }
   for(var t=0;t<_SEARCH_TBLS.length;t++){
     var cfg=_SEARCH_TBLS[t],rows=DB[cfg.tbl]||[];
     for(var i=0;i<rows.length;i++){
@@ -4694,6 +4701,8 @@ function _globalSearch(q){
         var v=r[cfg.fields[f]];
         if(v&&String(v).toLowerCase().indexOf(q)>=0){matched=true;break;}
       }
+      // Also match if record's location_id resolves to a name containing q
+      if(!matched && r.location_id && matchingLocIds[r.location_id])matched=true;
       if(matched){
         results.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});
         if(results.length>=50)return results;
