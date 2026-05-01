@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-30 (NCR Agent feedback loop 👍/👎/🔄 + Reopen flow + Bulk actions on tasks + 3 pre-existing bug fixes)
+**Last updated**: 2026-05-01 (Locations hierarchy 4-PR rollout + env_aspects file uploads + page_files + sync 400 fix)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `b82e78a` |
-| תאריך | 2026-04-30 |
+| Commit | `aecce15` |
+| תאריך | 2026-05-01 |
 | Tag | — (טרם נוצר) |
-| מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
+| מצב | 26 טבלאות (+ `locations`, `page_files`, `ncr_comments`) · Locations hierarchy פעיל ב-5 טפסים (NCR / Near-Miss / PTW / EQI / Hazmat) + סינון ב-NCR/NM · 10 אזורים מאוכלסים · env_aspects עם file_url פר-רשומה + banner "קובץ רשמי" פר-עמוד דרך page_files · sbGet 400 fix · NCR Agent feedback loop · Reopen flow · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -78,6 +78,11 @@
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_comments.sql` — טבלה חדשה `ncr_comments` (id, ncr_id, author, text, ts) + RLS policy admin/manager. ה-UI כבר מוכן (חלק "💬 הערות" ב-NCR view). בלי הרצה: ה-fetch ייכשל בשקט.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_patterns.sql` — טבלה חדשה `ncr_patterns` (history של ניתוחים מצטברים) + RLS policy `_admin_manager_all`. ה-UI כבר מוכן (auto-save + history list בסוכן). בלי הרצה: ה-POST ייכשל בשקט וההיסטוריה לא תיבנה.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_sensitivity.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `sens boolean DEFAULT false` ב-`ncr` + partial index `ncr_sens_idx WHERE sens=true` נוצרו. תומך ב-Sensitivity flag (UI gating ב-4 נקודות). אומת ב-`information_schema.columns`.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_env_aspects_file_url.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. הוסיף `file_url text` ל-`env_aspects`. תומך בצירוף קובץ פר-היבט סביבתי (PR #139).
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_page_files.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. טבלה חדשה `page_files(id PK, file_url, file_name, uploaded_by, ts)` עם RLS `_admin_manager_all`. תומך בבאנר "קובץ רשמי לעמוד" (PR #140).
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_locations.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. טבלה חדשה `locations(id PK, name, parent_id → locations.id, level 1-3, notes, ts)` עם RLS + 2 indexes. בסיס ל-feature מיקומים היררכי (PR #141).
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. הוסיף `location_id text REFERENCES locations(id) ON DELETE SET NULL` ל-`ncr` ו-`near_miss` + 2 indexes. PR #142.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk_more.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. אותו דבר ל-`ptw`, `equip_inspections`, `hzm` + 3 indexes. PR #143.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
@@ -97,6 +102,14 @@
 - [x] **Calendar View** — דף חדש `pg-cal` עם לוח שנה חודשי. נקודות צבעוניות פר-יום: 🔴 משימות, 🟡 תפוגות, 🟢 סבב בוקר, 🟣 ביקורות, 🔵 שיחות בטיחות. ניווט חודשים (◀ ▶ + "היום"). קליק על יום → רשימת פריטים מתחת עם קליק → showView. ניווט: מודולים → "הנהלה" → "לוח שנה".
 - [x] **NCR Comments Thread** — חלק חדש ב-`showView` של NCR בלבד. טבלה חדשה `ncr_comments(id, ncr_id, author, text, ts)` + RLS policy admin/manager. UI: רשימת הערות (descending by ts) עם author + תאריך, ושדה הזנה + כפתור פרסם. נטען אוטומטית מ-Supabase כשפותחים NCR. ערך: שיחה מובנית בין מנהל בטיחות ובעל אזור על כל NCR בלי לשרוף את שדה `notes`. מיגרציה `2026-05-01_ncr_comments.sql` הורצה.
 - [x] **Environmental Aspects (ISO 14001:6.1.2) — מותאם למתודולוגיה הרשמית של תפוגן** — דף `pg-easp` + טבלה `env_aspects` עם **כל 18 השדות** של הסקר הרשמי (טופס 28.01): aspect, activity (פעילות/מתקן), lifecycle (שלב במחזור חיים), control_type (שליטה/השפעה), direction (כיוון השפעה), impact, controls (בקרות קיימות), p_curr/sv_curr (דירוג בפועל), additional_controls (בקרות נוספות), p_pot/sv_pot (דירוג פוטנציאלי), status, owner, review_date, explanation, legal_ref, notes. **26 רשומות אמיתיות מהמפעל יובאו** (כולל אנרגיה, מים, ריח, שפכים, חומ"ס, פליטות, פסולת, אמוניה, גז טבעי, מערכת קירור, רעידת אדמה, פח"ע, מזג אוויר). UI: רשימה ממוינת לפי RPN בפועל יורד עם 2 badges (בפועל / פוטנציאלי), modal מאורגן ב-3 קבוצות (זיהוי / הערכת סיכון / ניהול), VIEW_CONFIG מלא לצפייה ב-18 שדות, מיגרציה הורצה אוטומטית.
+- [x] **sbGet 400 fix (PR #138)** — הבאג: `_sbTsCol` לא כלל `env_aspects` / `hearing_tests` / `ncr_comments` / `ncr_patterns` אז `sbGet()` שלח `order=created_at.desc` לטבלאות שיש להן רק `ts`. תוצאה: HTTP 400 ב-Supabase API logs, sync נכשל בשקט, וה-UI הציג 0 רשומות למרות 26 ב-DB. הוספת 4 הטבלאות למפה.
+- [x] **env_aspects per-record file_url (PR #139)** — מיגרציה `2026-05-01_env_aspects_file_url.sql` הוסיפה `file_url text`. UI: כפתור "📎 העלה קובץ" במודאל m-easp (Excel/PDF/תמונה), 📎 indicator בטבלה ליד רשומה עם קובץ, showView מציג קישור הורדה אוטומטית. שימוש: דוח מעבדה / תעודת מערכת / תמונת המקור פר-היבט.
+- [x] **page_files banner (PR #140)** — מנגנון כללי "קובץ רשמי לכל הטופס". טבלה חדשה `page_files(id PK = page slug, file_url, file_name, uploaded_by, ts)` + RLS `_admin_manager_all`. UI: באנר ירוק בראש הכרטיס של env_aspects עם כפתור העלאה / קישור הורדה / כפתור החלף. שימוש: טופס 28.01 הרשמי. helpers (`_pageFileGet`/`_pageFileRender`/`_pageFileUpload`) שימושיים בעתיד גם ל-rsk/ncr.
+- [x] **Locations hierarchy — PR 1/4 foundation (#141)** — מיגרציה `2026-05-01_locations.sql` יצרה טבלה `locations(id, name, parent_id → locations.id, level 1-3, notes, ts)` עם RLS, partial index על parent_id. עמוד חדש 📍 "מיקומים" תחת תפריט "ניהול" עם תצוגת עץ צבעונית (אזור=כחול / קו=צהוב / תחנה=ירוק), כפתור ＋ פר-שורה להוספת תת-רמה. modal m-loc, פונקציות rLoc/_locRenderNode/_locOpenAdd/editLoc/svLoc.
+- [x] **Locations hierarchy — PR 2/4 NCR + Near Miss (#142)** — מיגרציה `2026-05-01_location_fk.sql` הוסיפה `location_id text REFERENCES locations(id) ON DELETE SET NULL` ל-`ncr` ו-`near_miss`. UI: שדה הטקסט הישן (`ncr-loc`/`nm-area`) הוחלף ב-`<select>` שטוח עם הזחות; ערך ישן נשאר כשדה קריאה בלבד. helpers `_locFlatList`/`_locOptionsHtml`/`_locPopulate`/`_locName`. openModal hook אוטומטי מאוכלס כל `select[id$="-location-id"]`. רשימות NCR ו-Near Miss מציגות נתיב מלא דרך `_locName`.
+- [x] **Locations hierarchy — PR 3/4 PTW + EQI + Hazmat (#143)** — מיגרציה `2026-05-01_location_fk_more.sql` הוסיפה `location_id` ל-`ptw`, `equip_inspections`, `hzm`. אותו pattern: select מקושר + legacy text fallback + display בנתיב מלא בכל 3 הטבלאות.
+- [x] **Locations hierarchy — PR 4/4 filtering (#144)** — דרופדאון "סנן לפי מיקום" בעמוד NCR (ליד הטאבים) ובעמוד Near Miss. helper `_locFilterOptionsHtml` עם placeholder "— כל המיקומים —". `window._{ncr,nm}LocFilter` שומר state. אין migration.
+- [x] **10 locations נטענו ידנית (2026-05-01)** — ייצור טוגנים, קילופים, מעוצבים, אריזה, שפכים, חומר גלם, חצר, תוצ"ג, תשתיות, מעבדה. כולם level 1 שטוחים אחרי החלטת המשתמש לוותר על היררכיה (UPDATE על LOC-002/003/004 שהיו תחת ייצור טוגנים).
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
