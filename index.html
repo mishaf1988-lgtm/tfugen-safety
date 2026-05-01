@@ -1044,6 +1044,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1495;&#1493;&#1502;&#1512;&#1497;&#1501; <span>&#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-hzm')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="hzm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="hzm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th>UN</th><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th>&#1502;&#1497;&#1511;&#1493;&#1501;</th><th>MSDS</th><th></th><th></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -5873,6 +5874,19 @@ function rWst(){
 }
 function rHzm(){
   var tb=g('tb-hzm');if(!tb)return;
+  // Hzm summary
+  try{
+    var hSe=g('hzm-summary');
+    if(hSe){
+      var allHzm=DB.hzm||[];
+      var sevH=allHzm.filter(function(r){return r.hs==='גבוה'||r.hs==='קריטי';}).length;
+      var totalQty=allHzm.reduce(function(s,r){var q=parseFloat(r.q)||0;return s+q;},0);
+      hSe.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allHzm.length+'</strong></span>'+
+        (sevH?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">סיכון גבוה: <strong>'+sevH+'</strong></span>':'')+
+        (totalQty?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">כמות כוללת: <strong>'+totalQty.toFixed(1)+' ל</strong></span>':'');
+    }
+  }catch(e){}
   var locF=window._hzmLocFilter||'';
   var locSel=g('hzm-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
