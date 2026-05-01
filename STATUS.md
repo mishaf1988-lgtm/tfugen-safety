@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `55047ed` |
+| Commit | `f3e4feb` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -179,6 +179,13 @@
 - [x] **NM summary pills (PR #219)** — אותו pattern.
 - [x] **This-month dashboard widget (PR #220)** — סיכום החודש.
 - [x] **Tasks due today widget (PR #221)** — בדשבורד.
+- [x] **Inc summary pills (PR #223)** — כולל ימי אבדן.
+- [x] **EQI summary pills (PR #224)** — תפוגות+תקינים.
+- [x] **Row hover desktop (PR #225)** — CSS only.
+- [x] **Health score breakdown tooltip (PR #226)** — hover על הציון.
+- [x] **Section divider on dashboard (PR #227)**.
+- [x] **About modal (PR #228)** — קליק על תווית גרסה.
+- [x] **NCR smart sort (PR #229)** — פתוחים → עדיפות → תאריך.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
