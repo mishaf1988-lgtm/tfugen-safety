@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-02 (overnight autonomous: 11 PRs polish — saved-views ל-EQI/Tasks, location filters בכל הטפסים, chained forms, more triggers, dashboard widgets)
+**Last updated**: 2026-05-02 (overnight autonomous: 17 PRs polish — saved-views ל-Tasks/EQI/Hzm, location filters בכל הטפסים, chained forms, 5/5 notification triggers, dashboard widgets, clear-filters, search by location name)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `a018f4c` |
+| Commit | `d214c30` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -127,6 +127,11 @@
 - [x] **Counts per location (PR #158)** — עמוד מיקומים מציג badges ליד כל אזור עם NCR פתוחים + כמעט-נפגע פתוחים.
 - [x] **Saved Views ל-Equipment Inspections (PR #159)** — תופס סטטוס + חיפוש + מיקום.
 - [x] **Bell 🔔 בtopbar (PR #160)** — פותח הגדרות התראות בלחיצה.
+- [x] **Saved Views ל-Hazmat (PR #162)** — תופס פילטר מיקום.
+- [x] **Clear-all-filters ב-NCR (PR #163)** — כפתור "✕ נקה" מאפס פילטרים בלחיצה.
+- [x] **Smart empty-state ב-NCR (PR #164)** — כשהרשימה ריקה בעקבות סינון, מוצג לינק "נקה פילטרים" inline.
+- [x] **Clear-filters ב-NM + Tasks (PR #165)** — לעקביות עם NCR.
+- [x] **Global search by location name (PR #166)** — חיפוש "ייצור" יחזיר NCRs במיקום ייצור גם דרך location_id (לא רק טקסט loc/area).
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
