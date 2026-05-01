@@ -343,6 +343,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="csv-btn" title="&#1497;&#1497;&#1510;&#1493;&#1488; &#1492;&#1491;&#1507; &#1500;&#1488;&#1511;&#1505;&#1500; (CSV)" onclick="_exportCSV()">&#128202;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
     <button class="bell" id="bak-btn" title="&#1490;&#1497;&#1489;&#1493;&#1497; JSON" onclick="_exportBackup()">&#128190;</button>
+    <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
@@ -2782,6 +2783,19 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // My open tasks count badge
+  try{
+    var u=(typeof _svUser==='function')?_svUser():'';
+    var openCount=(DB.tasks||[]).filter(function(t){
+      if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;
+      return t.assignee && (t.assignee===u || (u && u.indexOf(t.assignee)>=0) || (t.assignee.indexOf((u||'').split('@')[0])>=0));
+    }).length;
+    var badge=g('my-tasks-badge');
+    if(badge){
+      if(openCount>0){badge.textContent=String(openCount);badge.style.display='';}
+      else badge.style.display='none';
+    }
+  }catch(e){}
   // Safety health score (rough composite)
   try{
     var dh=g('dash-health');
