@@ -386,6 +386,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="today-items"></div>
   </div>
 
+  <div id="dash-today" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl"></div>
   <div id="dash-alerts"></div>
 
   <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
@@ -2740,6 +2741,16 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Today header (Hebrew day name + date)
+  try{
+    var dt=g('dash-today');
+    if(dt){
+      var d=new Date();
+      var dayNames=['\u05e8\u05d0\u05e9\u05d5\u05df','\u05e9\u05e0\u05d9','\u05e9\u05dc\u05d9\u05e9\u05d9','\u05e8\u05d1\u05d9\u05e2\u05d9','\u05d7\u05de\u05d9\u05e9\u05d9','\u05e9\u05d9\u05e9\u05d9','\u05e9\u05d1\u05ea'];
+      var months=['\u05d9\u05e0\u05d5\u05d0\u05e8','\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8','\u05de\u05e8\u05e5','\u05d0\u05e4\u05e8\u05d9\u05dc','\u05de\u05d0\u05d9','\u05d9\u05d5\u05e0\u05d9','\u05d9\u05d5\u05dc\u05d9','\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8','\u05e1\u05e4\u05d8\u05de\u05d1\u05e8','\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8','\u05e0\u05d5\u05d1\u05de\u05d1\u05e8','\u05d3\u05e6\u05de\u05d1\u05e8'];
+      dt.textContent='📅 \u05d9\u05d5\u05dd '+dayNames[d.getDay()]+', '+d.getDate()+' \u05d1'+months[d.getMonth()]+' '+d.getFullYear();
+    }
+  }catch(e){}
   var docs=DB.docs,inc=DB.inc,tr=DB.tr,ncr=DB.ncr,rsk=DB.rsk;
   // HERO-1: safety streak (days since last incident)
   var _lastInc=null;(inc||[]).forEach(function(i){var d=i.dt&&new Date(i.dt);if(d&&!isNaN(d)&&(!_lastInc||d>_lastInc))_lastInc=d;});
