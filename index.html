@@ -417,6 +417,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </details>
 
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
+  <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -2951,6 +2952,26 @@ function rDash(){
       }).join('');
     }
   }catch(e){console.warn('dash-weekly failed',e);}
+
+  // Dashboard: recent activity (last 5 records across NCR/NM/inc/tasks)
+  try{
+    var dr=g('dash-recent');
+    if(dr){
+      var feed=[];
+      (DB.ncr||[]).slice(-30).forEach(function(n){feed.push({ts:n.ts||n.d,icon:'⚠',label:'NCR',title:(n.num||'')+': '+(n.d||'').substring(0,40),tbl:'ncr',id:n.id});});
+      (DB.near_miss||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts||n.d,icon:'⚡',label:'\u05db\u05de\u05e2\u05d8',title:(n.descr||'').substring(0,50),tbl:'near_miss',id:n.id});});
+      (DB.inc||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts||n.dt,icon:'🚨',label:'\u05ea\u05e7\u05e8\u05d9\u05ea',title:(n.d||'').substring(0,50),tbl:'inc',id:n.id});});
+      (DB.tasks||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts,icon:'📋',label:'\u05de\u05e9\u05d9\u05de\u05d4',title:(n.title||'').substring(0,50),tbl:'tasks',id:n.id});});
+      feed.sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');});
+      var recent=feed.slice(0,5);
+      if(recent.length){
+        dr.innerHTML=recent.map(function(r){
+          var d=r.ts?fd(String(r.ts).substring(0,10)):'';
+          return '<div data-tbl="'+esc(r.tbl)+'" data-id="'+esc(r.id||'')+'" onclick="if(this.dataset.id)showView(this.dataset.tbl,this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span style="flex:1">'+r.icon+' <strong>'+esc(r.label)+'</strong>: '+esc(r.title)+'</span><span style="color:var(--t3);font-size:10px">'+esc(d)+'</span></div>';
+        }).join('');
+      }
+    }
+  }catch(e){console.warn('dash-recent failed',e);}
 
   // Dashboard: open NCRs + open near-miss aggregated by location_id
   try{
