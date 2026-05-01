@@ -1496,6 +1496,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1492;&#1505;&#1489;&#1512; &#1500;&#1488;&#1497; &#1489;&#1497;&#1510;&#1493;&#1506;</label><textarea id="ea-explanation" rows="2"></textarea></div>
     <div class="field fw"><label>&#1492;&#1508;&#1504;&#1497;&#1492; &#1500;&#1495;&#1493;&#1511;/&#1514;&#1511;&#1504;&#1492;</label><input id="ea-legal" placeholder="לדוגמה: חוק אוויר נקי 2008"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="ea-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#128206; &#1511;&#1493;&#1489;&#1509; &#1502;&#1510;&#1493;&#1512;&#1507; (Excel / PDF / &#1510;&#1497;&#1500;&#1493;&#1501;)</label><div id="ea-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('ea-attach-area','easp')">&#128206; &#1492;&#1506;&#1500;&#1492; &#1511;&#1493;&#1489;&#1509;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-easp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svEasp()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -3855,7 +3856,8 @@ function rEasp(){
     var curBadge=rpnC?'<span style="background:'+_easpRpnColor(rpnC)+';color:'+(rpnC>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_curr||'?')+'\u00d7'+(r.sv_curr||'?')+'='+rpnC+'</span>':'\u2014';
     var potBadge=rpnP?'<span style="background:'+_easpRpnColor(rpnP)+';color:'+(rpnP>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_pot||'?')+'\u00d7'+(r.sv_pot||'?')+'='+rpnP+'</span>':'\u2014';
     var sb=r.status?'<span class="b bX" style="font-size:10px">'+esc(r.status)+'</span>':'\u2014';
-    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong><div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'\u2014')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'\u2014').substring(0,25))+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    var clip=r.file_url?' <span title="\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3" style="font-size:11px">&#128206;</span>':'';
+    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong>'+clip+'<div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'\u2014')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'\u2014').substring(0,25))+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
   }).join('');
 }
 function svEasp(){
@@ -3863,11 +3865,13 @@ function svEasp(){
   if(!aspect){toast('\u05d4\u05d9\u05d1\u05d8 \u05d4\u05d5\u05d0 \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('ea-id')||gid();
   var existingIdx=(DB.env_aspects||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,lifecycle:gv('ea-lifecycle')||null,control_type:gv('ea-control')||null,direction:gv('ea-direction')||null,impact:gv('ea-impact')||null,controls:gv('ea-controls')||null,p_curr:parseInt(gv('ea-pcurr'))||null,sv_curr:parseInt(gv('ea-svcurr'))||null,additional_controls:gv('ea-addctrl')||null,p_pot:parseInt(gv('ea-ppot'))||null,sv_pot:parseInt(gv('ea-svpot'))||null,status:gv('ea-status')||null,owner:gv('ea-owner')||null,review_date:gv('ea-review')||null,explanation:gv('ea-explanation')||null,legal_ref:gv('ea-legal')||null,notes:gv('ea-notes')||null,ts:new Date().toISOString()};
+  var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,lifecycle:gv('ea-lifecycle')||null,control_type:gv('ea-control')||null,direction:gv('ea-direction')||null,impact:gv('ea-impact')||null,controls:gv('ea-controls')||null,p_curr:parseInt(gv('ea-pcurr'))||null,sv_curr:parseInt(gv('ea-svcurr'))||null,additional_controls:gv('ea-addctrl')||null,p_pot:parseInt(gv('ea-ppot'))||null,sv_pot:parseInt(gv('ea-svpot'))||null,status:gv('ea-status')||null,owner:gv('ea-owner')||null,review_date:gv('ea-review')||null,explanation:gv('ea-explanation')||null,legal_ref:gv('ea-legal')||null,notes:gv('ea-notes')||null,file_url:_attachUrls['ea-attach-area']||null,ts:new Date().toISOString()};
   if(!DB.env_aspects)DB.env_aspects=[];
   if(existingIdx>=0){DB.env_aspects[existingIdx]=r;sbUpd('env_aspects',r);}
   else{DB.env_aspects.push(r);sbIns('env_aspects',r);}
-  sdb();closeModal('m-easp');toast('\u05e0\u05e9\u05de\u05e8 \u2713');rEasp();
+  sdb();closeModal('m-easp');toast('\u05e0\u05e9\u05de\u05e8 \u2713');
+  if(typeof _attachClear==='function')_attachClear('ea-attach-area');
+  rEasp();
 }
 function editEasp(id){
   var rec=(DB.env_aspects||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -3881,6 +3885,8 @@ function editEasp(id){
   setIf('ea-ppot',rec.p_pot);setIf('ea-svpot',rec.sv_pot);
   setIf('ea-status',rec.status);setIf('ea-owner',rec.owner);setIf('ea-review',rec.review_date);
   setIf('ea-explanation',rec.explanation);setIf('ea-legal',rec.legal_ref);setIf('ea-notes',rec.notes);
+  if(rec.file_url){_attachUrls['ea-attach-area']=rec.file_url;_attachRender('ea-attach-area',rec.file_url,(rec.file_url.split('/').pop()||'').split('?')[0]);}
+  else{if(typeof _attachClear==='function')_attachClear('ea-attach-area');}
   openModal('m-easp');
 }
 function rEmp(){
