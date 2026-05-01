@@ -504,6 +504,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svNmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
     <button class="btn btn-s" onclick="nmClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
+  <div id="nm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
     <th>&#1488;&#1494;&#1493;&#1512;</th>
@@ -3023,6 +3024,15 @@ function rNm(){
   var locSel=g('nm-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
   if(typeof _svRenderSelect==='function')_svRenderSelect('nm-sv-select','nm','');
+  // Active filter chips
+  var nmChipsEl=g('nm-active-chips');
+  if(nmChipsEl){
+    var chips=[];
+    if(f==='open')chips.push({label:'\u05e4\u05ea\u05d5\u05d7',clear:'nmFilter(\'all\')'});
+    if(f==='closed')chips.push({label:'\u05e1\u05d2\u05d5\u05e8',clear:'nmFilter(\'all\')'});
+    if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'nmLocFilter(\'\')'});}
+    nmChipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
+  }
   if(f==='open')rows=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   if(f==='closed')rows=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';});
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
