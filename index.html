@@ -417,6 +417,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </details>
 
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
+  <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -2965,6 +2966,26 @@ function rDash(){
       }).join('');
     }
   }catch(e){console.warn('dash-weekly failed',e);}
+
+  // Dashboard: this-month summary
+  try{
+    var dm=g('dash-month');
+    if(dm){
+      var nowM=new Date();var monthStart=new Date(nowM.getFullYear(),nowM.getMonth(),1).getTime();
+      function inMonth(s){if(!s)return false;var t=new Date(s).getTime();return !isNaN(t)&&t>=monthStart;}
+      var ncrM=(DB.ncr||[]).filter(function(r){return inMonth(r.d||r.ts);}).length;
+      var incM=(DB.inc||[]).filter(function(r){return inMonth(r.dt||r.d);}).length;
+      var nmM=(DB.near_miss||[]).filter(function(r){return inMonth(r.d||r.ts);}).length;
+      var tskDoneM=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inMonth(r.closed_date||r.cd||r.ts);}).length;
+      var rndM=(DB.rounds||[]).filter(function(r){return inMonth(r.d);}).length;
+      dm.innerHTML=
+        '<span style="background:#fff;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#cc1f1f">NCR: <strong>'+ncrM+'</strong></span>'+
+        '<span style="background:#fff;border:1px solid #b91c1c;border-radius:14px;padding:3px 10px;color:#b91c1c">\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea: <strong>'+incM+'</strong></span>'+
+        '<span style="background:#fff;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#b45309">\u05db\u05de\u05e2\u05d8: <strong>'+nmM+'</strong></span>'+
+        '<span style="background:#fff;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#16a34a">\u05de\u05e9\u05d9\u05de\u05d5\u05ea: <strong>'+tskDoneM+'</strong></span>'+
+        '<span style="background:#fff;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#2563eb">\u05e1\u05d1\u05d1\u05d9\u05dd: <strong>'+rndM+'</strong></span>';
+    }
+  }catch(e){}
 
   // Dashboard: total counts widget
   try{
