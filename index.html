@@ -665,6 +665,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="tskClearAll()" title="&#1504;&#1511;&#1492; &#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div id="tsk-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="tsk-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
     <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
@@ -4167,6 +4168,23 @@ function rTasks(){
   var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
   if(tprjF)rows=rows.filter(function(r){return r.project_id===tprjF;});
   if(tassF)rows=rows.filter(function(r){return r.assignee===tassF;});
+  // Summary stats
+  try{
+    var tsm=g('tsk-summary');
+    if(tsm){
+      var todayS=new Date().toISOString().split('T')[0];
+      var openR=rows.filter(function(r){return r.status===_TSK_OPEN;}).length;
+      var progR=rows.filter(function(r){return r.status===_TSK_PROG;}).length;
+      var doneR=rows.filter(function(r){return r.status===_TSK_DONE||r.status===_TSK_CANC;}).length;
+      var overR=rows.filter(function(r){if(!r.due||r.status===_TSK_DONE||r.status===_TSK_CANC)return false;return r.due<todayS;}).length;
+      tsm.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+rows.length+'</strong></span>'+
+        (openR?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">פתוחות: <strong>'+openR+'</strong></span>':'')+
+        (progR?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">בהתקדמות: <strong>'+progR+'</strong></span>':'')+
+        (doneR?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">הושלמו: <strong>'+doneR+'</strong></span>':'')+
+        (overR?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">פיגור: <strong>'+overR+'</strong></span>':'');
+    }
+  }catch(e){}
   var today=new Date().toISOString().split('T')[0];
   var f=window._tskFilter||'all';
   // Render active filter chips
