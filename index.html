@@ -1291,7 +1291,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497; &#1489;&#1513;&#1496;&#1495;</label><input id="ptw-sup"></div>
     <div class="field"><label>&#1504;&#1497;&#1497;&#1491;</label><input id="ptw-ph" type="tel"></div>
     <div class="field fw"><label>&#1513;&#1502;&#1493;&#1514; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label><input id="ptw-wkr"></div>
-    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><input id="ptw-area"></div>
+    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><select id="ptw-location-id" class="inp"></select></div>
+    <div class="field" id="ptw-area-legacy" style="display:none"><label>&#1488;&#1494;&#1493;&#1512; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="ptw-area" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="ptw-dep"></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1514;&#1495;&#1497;&#1500;&#1492;</label><input type="date" id="ptw-ds"></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1501;</label><input type="date" id="ptw-de"></div>
@@ -1374,7 +1375,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1511;&#1493;&#1491; &#1510;&#1497;&#1493;&#1491;</label><input id="eqi-code" placeholder="B213138-010"></div>
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><input id="eqi-n"></div>
     <div class="field"><label>&#1505;&#1508;&#1511;/&#1497;&#1510;&#1512;&#1503;</label><input id="eqi-vendor"></div>
-    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;/&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="eqi-loc"></div>
+    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;/&#1502;&#1497;&#1511;&#1493;&#1501;</label><select id="eqi-location-id" class="inp"></select></div>
+    <div class="field" id="eqi-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="eqi-loc" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="eqi-d"></div>
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-e"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="eqi-s"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1495;&#1497;&#1497;&#1489; &#1489;&#1491;&#1497;&#1511;&#1492;</option><option>&#1500;&#1488; &#1514;&#1511;&#1497;&#1503;</option></select></div>
@@ -1622,7 +1624,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1502;&#1505;&#1508;&#1512; UN</label><input id="hzm-un" placeholder="UN1234"></div>
     <div class="field"><label>&#1505;&#1497;&#1499;&#1493;&#1503;</label><select id="hzm-hs"><option>&#1504;&#1502;&#1493;&#1498;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1499;&#1502;&#1493;&#1514; &#1489;&#1502;&#1500;&#1488;&#1497; (&#1500;)</label><input type="number" id="hzm-q" placeholder="0" min="0"></div>
-    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; &#1488;&#1495;&#1505;&#1493;&#1503;</label><input id="hzm-loc"></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; &#1488;&#1495;&#1505;&#1493;&#1503;</label><select id="hzm-location-id" class="inp"></select></div>
+    <div class="field" id="hzm-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="hzm-loc" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>MSDS &#1502;&#1506;&#1493;&#1491;&#1499;&#1503;</label><input type="date" id="hzm-ms"></div>
     <div class="field fw"><label>&#1488;&#1502;&#1510;&#1506;&#1497; &#1489;&#1511;&#1512;&#1492; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><textarea id="hzm-em"></textarea></div>
   </div>
@@ -2214,7 +2217,7 @@ function svPtw(){
   if(getChk('ptw-s8'))safety.push('\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e1\u05d5\u05e4\u05d9\u05ea');
   var num=gv('ptw-num')||('PTW-'+String(DB.ptw.length+1).padStart(4,'0'));
   var r={id:gid(),num:num,con:con,sup:gv('ptw-sup'),ph:gv('ptw-ph'),wkr:gv('ptw-wkr'),
-    area:gv('ptw-area'),dep:gv('ptw-dep'),ds:gv('ptw-ds'),de:gv('ptw-de'),
+    area:gv('ptw-area'),location_id:gv('ptw-location-id')||null,dep:gv('ptw-dep'),ds:gv('ptw-ds'),de:gv('ptw-de'),
     ts:gv('ptw-ts'),te:gv('ptw-te'),desc:gv('ptw-desc'),
     types:types.join(', '),safety:safety.join(', '),
     sg1n:gv('ptw-sg1n'),sg1d:gv('ptw-sg1d'),sg2n:gv('ptw-sg2n'),sg2d:gv('ptw-sg2d'),
@@ -2256,7 +2259,7 @@ function svWst(){
 }
 function svHzm(){
   var n=gv('hzm-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gf('hzm-q'),loc:gv('hzm-loc'),ms:gv('hzm-ms'),em:gv('hzm-em')};
+  var r={id:gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms'),em:gv('hzm-em')};
   DB.hzm.push(r);sbIns('hzm',r);addLog('\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-hzm');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rHzm();
 }
@@ -2800,7 +2803,8 @@ function rEqi(){
     var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(r.loc?esc(r.loc):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
+    var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
+    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
 function eqiEdit(id){
@@ -2812,6 +2816,8 @@ function eqiEdit(id){
     g('eqi-n').value=r.n||'';
     g('eqi-vendor').value=r.vendor||'';
     g('eqi-loc').value=r.loc||'';
+    if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',r.location_id||null);
+    var elLeg=g('eqi-loc-legacy');if(elLeg)elLeg.style.display=(r.loc&&!r.location_id)?'':'none';
     g('eqi-d').value=r.d||'';
     g('eqi-e').value=r.e||'';
     g('eqi-s').value=r.s||'\u05ea\u05e7\u05d9\u05df';
@@ -2832,6 +2838,7 @@ function svEqi(){
     n:n,
     vendor:gv('eqi-vendor')||null,
     loc:gv('eqi-loc')||null,
+    location_id:gv('eqi-location-id')||null,
     d:gv('eqi-d')||null,
     e:gv('eqi-e')||null,
     s:gv('eqi-s')||'\u05ea\u05e7\u05d9\u05df',
@@ -4564,7 +4571,8 @@ function rPtw(){
     var vid=esc(p.id);
     var vbtn='<button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button>';
     var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;</button>';
-    return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+(p.area||'')+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
+    var areaTxt=(p.location_id&&typeof _locName==='function'?_locName(p.location_id):'')||p.area||'';
+    return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+esc(areaTxt)+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
   }).join('');
 }
 function rPpe(){
@@ -4598,7 +4606,7 @@ function rHzm(){
   var tb=g('tb-hzm');if(!tb)return;
   if(!DB.hzm.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.hzm.map(function(h){return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(h.loc?esc(h.loc):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.hzm.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rEnv(){
   var tb=g('tb-env');if(!tb)return;
