@@ -90,7 +90,7 @@
 - [x] **Toolbox Talks** — תיעוד שיחות בטיחות יומיות. **פעיל מלא**: `pg-toolbox` page, `m-toolbox` modal עם file attach, `rToolbox`/`svToolbox`, VIEW_CONFIG, sheet button, migration `2026-04-24_toolbox.sql` הורץ. אומת 30/4: טבלת `toolbox` קיימת עם רשומה.
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
-- [ ] **Management Review Dashboard** — סיכום רבעוני ל-PDF
+- [x] **Management Review Dashboard** — דף `pg-mr` admin-only עם KPI לסקירה רבעונית (ISO 45001:9.3, 14001:9.3). אוטומטית מזהה רבעון נוכחי. 3 קבוצות KPI: snapshot כללי (NCR פתוחים, משימות בפיגור, תפוגות 30 יום, סבבי בוקר החודש), אירועי תקופה (NCR נפתחו/נסגרו, תקריות + ימי אבדן, near-miss), מדדי ציות (% הדרכות/מסמכים/ציוד תקפים + שיחות בטיחות). 2 לוחות: 5 NCR קריטיים פתוחים + 10 תפוגות קרובות. ניתן להדפיס ל-PDF דרך כפתור 🖨 הקיים בtopbar. ניווט: מודולים → "הנהלה" → "סקירת הנהלה" (admin-only).
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
