@@ -1750,7 +1750,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1776,7 +1776,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1785,7 +1785,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1854,7 +1854,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:
 function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1882,7 +1882,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -4678,25 +4678,34 @@ function _notifDailyScan(){
 
 // Generic notification dispatcher
 // Returns array of channels that fired (for testing/logging).
+function _notifLog(eventKey,channel,payload){
+  try{
+    var rec={id:gid(),user_email:_svUser(),event_type:eventKey,channel:channel,payload:payload||{},ts:new Date().toISOString()};
+    if(!DB.notifications_log)DB.notifications_log=[];
+    DB.notifications_log.push(rec);
+    sbIns('notifications_log',rec);
+  }catch(e){console.warn('_notifLog failed',e);}
+}
 function _notifyEvent(eventKey,payload){
   var fired=[];
   var p=_notifPrefs();
   if(!p[eventKey])return fired;
   if(p[eventKey].whatsapp){
     try{
-      // Best-effort: only send if a phone is resolvable + a matching template exists.
-      // No-op for now (templates pending Meta approval). Logged for audit.
       console.info('[notif] would send WhatsApp for',eventKey,payload);
+      _notifLog(eventKey,'whatsapp_pending',payload);
       fired.push('whatsapp_pending');
     }catch(e){console.warn('[notif] wa fail',e);}
   }
   if(p[eventKey].email){
     console.info('[notif] would send Email for',eventKey,payload);
+    _notifLog(eventKey,'email_pending',payload);
     fired.push('email_pending');
   }
   if(p[eventKey].inapp){
     var label=({ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'})[eventKey]||eventKey;
     toast('\ud83d\udd14 '+label+(payload&&payload.title?': '+payload.title:''));
+    _notifLog(eventKey,'inapp',payload);
     fired.push('inapp');
   }
   return fired;
