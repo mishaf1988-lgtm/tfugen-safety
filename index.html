@@ -502,6 +502,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <select id="nm-sv-select" onchange="svNmApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svNmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
     <button class="btn btn-s" onclick="svNmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
+    <button class="btn btn-s" onclick="nmClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
@@ -645,6 +646,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <select id="tsk-sv-select" onchange="svTskApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svTskSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
     <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
+    <button class="btn btn-s" onclick="tskClearAll()" title="&#1504;&#1511;&#1492; &#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
@@ -3009,6 +3011,8 @@ function delAllEqi(){
 // ---- NEAR-MISS ----
 function nmFilter(f){window._nmFilter=f;['all','open','closed'].forEach(function(k){var el=g('nm-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rNm();}
 function nmLocFilter(v){window._nmLocFilter=v||'';rNm();}
+function nmClearAll(){window._nmLocFilter='';if(typeof nmFilter==='function')nmFilter('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function tskClearAll(){if(typeof tskFilter==='function')tskFilter('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function rNm(){
   var tb=g('tb-nm');if(!tb)return;
   var rows=(DB.near_miss||[]).slice().sort(function(a,b){return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;});
