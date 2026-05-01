@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `911e75b` |
+| Commit | `67a363c` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -151,6 +151,14 @@
 - [x] **Hebrew date header on dashboard (PR #186)** — "📅 יום שני, 5 במאי 2026".
 - [x] **Test notification button (PR #187)** — "🧪 בדיקה" במודאל הגדרות התראות.
 - [x] **Active-filters chips on Tasks (PR #188)** — לעקביות עם NCR/NM.
+- [x] **Inspection Types — recurrence templates (PR #190)** — Vitre §12.2. עמוד 🔍 + טבלה. Migration ב-COMBINED.
+- [x] **Inspection Types as virtual tasks (PR #191)** — בדיקה חוזרת תוך 30 יום מתאריך יעד מופיעה בעמוד המשימות.
+- [x] **EQI active-filter chips (PR #192)** — לעקביות.
+- [x] **Dashboard "by-project" widget (PR #193)** — top 5 פרויקטים פעילים.
+- [x] **Hzm active-filter chip (PR #194)** — לעקביות.
+- [x] **Dashboard inspection types upcoming widget (PR #195)** — top 5 בדיקות חוזרות בתוך 60 יום.
+- [x] **Dashboard auto-insights panel (PR #196)** — עד 3 משפטים אוטומטיים על דפוסים.
+- [x] **Dashboard safety health score (PR #197)** — ציון 0-100 צבעוני.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
