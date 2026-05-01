@@ -340,6 +340,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
+    <button class="bell" id="csv-btn" title="&#1497;&#1497;&#1510;&#1493;&#1488; &#1492;&#1491;&#1507; &#1500;&#1488;&#1511;&#1505;&#1500; (CSV)" onclick="_exportCSV()">&#128202;</button>
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
@@ -3631,6 +3632,38 @@ function _gsearchRender(){
 window.openGlobalSearch=function(){
   openModal('m-gsearch');
   setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
+};
+window._exportCSV=function(){
+  var on=document.querySelector('.page.on');
+  if(!on){toast('\u05d0\u05d9\u05df \u05d3\u05e3 \u05e4\u05e2\u05d9\u05dc');return;}
+  var table=on.querySelector('table');
+  if(!table){toast('\u05d0\u05d9\u05df \u05d8\u05d1\u05dc\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d1\u05d3\u05e3 \u05d4\u05d6\u05d4');return;}
+  function cellTxt(td){
+    var clone=td.cloneNode(true);
+    clone.querySelectorAll('button,input').forEach(function(e){e.remove();});
+    return String(clone.textContent||'').replace(/\s+/g,' ').trim();
+  }
+  function quote(s){s=String(s||'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+  var rows=[];
+  var heads=table.querySelectorAll('thead th');
+  if(heads.length)rows.push(Array.prototype.map.call(heads,cellTxt));
+  table.querySelectorAll('tbody tr').forEach(function(tr){
+    var tds=tr.querySelectorAll('td');
+    if(!tds.length)return;
+    if(tds.length===1&&tds[0].classList.contains('et'))return;
+    rows.push(Array.prototype.map.call(tds,cellTxt));
+  });
+  if(rows.length<=1){toast('\u05d0\u05d9\u05df \u05e9\u05d5\u05e8\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  var csv=rows.map(function(r){return r.map(quote).join(',');}).join('\r\n');
+  var titleEl=on.querySelector('.page-title');
+  var title=titleEl?String(titleEl.textContent||'').replace(/\s+/g,'_').trim():'tfugen';
+  var d=new Date().toISOString().split('T')[0];
+  var fname='tfugen_'+title+'_'+d+'.csv';
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);if(a.parentNode)a.parentNode.removeChild(a);},500);
+  toast('\u05d9\u05d9\u05e6\u05d5\u05d0 '+(rows.length-1)+' \u05e9\u05d5\u05e8\u05d5\u05ea \u2713');
 };
 window._printPage=function(){
   var on=document.querySelector('.page.on');
