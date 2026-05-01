@@ -409,6 +409,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
+    <button class="btn btn-p" onclick="_waTestPrompt()" style="font-size:13px">&#128241; &#1513;&#1500;&#1495; hello_world</button>
+    <div id="dash-wa-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
+  </div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -3942,6 +3946,8 @@ function _applyRoleGates(){
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
   var auditBtn=g('sheet-btn-audit');
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
+  var waCard=g('dash-wa-test');
+  if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
@@ -4177,6 +4183,40 @@ window._pwaInstall=function(){
   if(!_pwaPrompt){toast('\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05db\u05d1\u05e8 \u05de\u05d5\u05ea\u05e7\u05e0\u05ea \u05d0\u05d5 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea \u05d1\u05d3\u05e4\u05d3\u05e4\u05df \u05d6\u05d4');return;}
   _pwaPrompt.prompt();
   _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
+};
+/* ---- WhatsApp test ---- */
+window._waTestPrompt=function(){
+  var def=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.phone)||localStorage.getItem('tfgn_wa_last')||'+972';
+  var to=prompt('\u05de\u05e1\u05e4\u05e8 \u05e0\u05de\u05e2\u05df (E.164, \u05dc\u05d3\u05d5\u05d2\u05de\u05d4 +972547940073):',def);
+  if(!to)return;
+  to=String(to).trim();
+  try{localStorage.setItem('tfgn_wa_last',to);}catch(e){}
+  _waSend(to,{template:'hello_world'});
+};
+window._waSend=function(to,opts){
+  opts=opts||{};
+  var body={to:to};
+  if(opts.text)body.text=opts.text;
+  else{body.template=opts.template||'hello_world';if(opts.params)body.params=opts.params;if(opts.language)body.language=opts.language;}
+  var rEl=document.getElementById('dash-wa-result');
+  if(rEl)rEl.textContent='\u05e9\u05d5\u05dc\u05d7...';
+  return fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});})
+    .then(function(res){
+      if(res.ok){
+        toast('\u05e0\u05e9\u05dc\u05d7 \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4 \u2713');
+        if(rEl)rEl.textContent='\u2713 '+(res.data.messages&&res.data.messages[0]?res.data.messages[0].id:'sent');
+      }else{
+        var msg=(res.data&&res.data.error&&(res.data.error.message||res.data.error))||(res.data&&res.data.error)||('HTTP '+res.status);
+        toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(typeof msg==='string'?msg:JSON.stringify(msg)).substring(0,80));
+        if(rEl)rEl.textContent='\u2717 '+(typeof msg==='string'?msg:JSON.stringify(msg));
+      }
+      return res;
+    })
+    .catch(function(err){
+      toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(err&&err.message||err));
+      if(rEl)rEl.textContent='\u2717 network: '+(err&&err.message||err);
+    });
 };
 var _AI='/api/claude';
 var _AI_MODEL='claude-sonnet-4-6';
