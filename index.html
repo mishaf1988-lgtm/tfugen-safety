@@ -793,6 +793,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1490;&#1491;&#1512; &#1502;&#1492; &#1504;&#1493;&#1513;&#1488; &#1502;&#1493;&#1495;&#1494;&#1512; &#1500;&#1493;&#1493;&#1497;&#1491;&#1488;&#1493;&#1514; &#1488;&#1497;&#1500;&#1493; (&#1500;&#1502;&#1513;&#1500; &#1489;&#1491;&#1497;&#1511;&#1492; &#1513;&#1504;&#1514;&#1497;&#1514; &#1500;&#1502;&#1500;&#1490;&#1494;&#1493;&#1514;) &#1493;&#1499;&#1500; &#1499;&#1502;&#1492; &#1494;&#1502;&#1503;.</div>
+    <div id="itp-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
     <div id="itp-list"></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
@@ -5002,7 +5003,23 @@ window._dashByLocClick=function(locId){
 // Inspection Types (recurrence templates)
 function rItp(){
   var box=g('itp-list');if(!box)return;
-  var rows=(DB.inspection_types||[]).slice().sort(function(a,b){return (a.next_due||'9999')<(b.next_due||'9999')?-1:1;});
+  var allItp=DB.inspection_types||[];
+  // Summary
+  try{
+    var iSe=g('itp-summary');
+    if(iSe){
+      var todayI=new Date();todayI.setHours(0,0,0,0);
+      var actN=allItp.filter(function(r){return r.active!==false;}).length;
+      var pastN=allItp.filter(function(r){return r.active!==false&&r.next_due&&new Date(r.next_due)<todayI;}).length;
+      var soonN=allItp.filter(function(r){if(!r.active||!r.next_due)return false;var d=(new Date(r.next_due)-todayI)/86400000;return d>=0&&d<=30;}).length;
+      iSe.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allItp.length+'</strong></span>'+
+        (actN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">פעילים: <strong>'+actN+'</strong></span>':'')+
+        (soonN?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">≤30י: <strong>'+soonN+'</strong></span>':'')+
+        (pastN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">פג: <strong>'+pastN+'</strong></span>':'');
+    }
+  }catch(e){}
+  var rows=allItp.slice().sort(function(a,b){return (a.next_due||'9999')<(b.next_due||'9999')?-1:1;});
   if(!rows.length){box.innerHTML='<div style="padding:30px;text-align:center;color:var(--t3)"><div style="font-size:42px;margin-bottom:10px">🔍</div><div style="margin-bottom:14px">\u05d0\u05d9\u05df \u05e1\u05d5\u05d2\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05d5\u05d2\u05d3\u05e8\u05d9\u05dd</div><button class="btn btn-p" onclick="_itpOpenAdd()">+ \u05e1\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d5\u05df</button></div>';return;}
   var unitLbl={day:'\u05d9\u05de\u05d9\u05dd',week:'\u05e9\u05d1\u05d5\u05e2\u05d5\u05ea',month:'\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd',year:'\u05e9\u05e0\u05d9\u05dd'};
   box.innerHTML=rows.map(function(r){
