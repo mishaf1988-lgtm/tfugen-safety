@@ -4360,6 +4360,15 @@ var rows=DB.ncr.filter(function(n){
   if(prjF&&n.project_id!==prjF)return false;
   return true;
 });
+// Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then by date desc
+var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
+rows.sort(function(a,b){
+  var ac=a.s==='\u05e1\u05d2\u05d5\u05e8'?1:0, bc=b.s==='\u05e1\u05d2\u05d5\u05e8'?1:0;
+  if(ac!==bc)return ac-bc;
+  var ap=_pW[a.p]!==undefined?_pW[a.p]:4, bp=_pW[b.p]!==undefined?_pW[b.p]:4;
+  if(ap!==bp)return ap-bp;
+  return (b.d||'').localeCompare(a.d||'');
+});
 // Summary stats above table
 try{
   var summaryEl=g('ncr-summary');
