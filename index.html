@@ -408,6 +408,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </details>
 
+  <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
@@ -2723,6 +2724,40 @@ function rDash(){
   var da=g('dash-auds');
   var ra=DB.auds.slice().sort(function(a,b){return new Date(b.d)-new Date(a.d);}).slice(0,4);
   if(da)da.innerHTML=ra.length?ra.map(function(a){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+esc(a.n)+'</span>'+sb(a.s)+'</div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea</p>';
+
+  // Dashboard: open NCRs + open near-miss aggregated by location_id
+  try{
+    var dlc=g('dash-by-loc-card');
+    var dl=g('dash-by-loc');
+    var locs=DB.locations||[];
+    if(dl&&locs.length){
+      var byLoc={};
+      (DB.ncr||[]).forEach(function(n){
+        if(n.s==='\u05e1\u05d2\u05d5\u05e8')return;
+        if(!n.location_id)return;
+        if(!byLoc[n.location_id])byLoc[n.location_id]={ncr:0,nm:0};
+        byLoc[n.location_id].ncr++;
+      });
+      (DB.near_miss||[]).forEach(function(n){
+        if(n.s==='\u05e1\u05d2\u05d5\u05e8')return;
+        if(!n.location_id)return;
+        if(!byLoc[n.location_id])byLoc[n.location_id]={ncr:0,nm:0};
+        byLoc[n.location_id].nm++;
+      });
+      var keys=Object.keys(byLoc).sort(function(a,b){
+        var ta=byLoc[a].ncr+byLoc[a].nm, tb=byLoc[b].ncr+byLoc[b].nm;
+        return tb-ta;
+      });
+      if(keys.length){
+        if(dlc)dlc.style.display='';
+        dl.innerHTML=keys.slice(0,8).map(function(k){
+          var b=byLoc[k];
+          var name=(typeof _locName==='function')?_locName(k):k;
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span style="flex:1">'+esc(name||'\u2014')+'</span>'+(b.ncr?'<span class="b bR" style="font-size:10px;margin-left:4px">NCR '+b.ncr+'</span>':'')+(b.nm?'<span class="b bY" style="font-size:10px;margin-left:4px">\u05db\u05de\u05e2\u05d8 '+b.nm+'</span>':'')+'</div>';
+        }).join('');
+      }else{if(dlc)dlc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-by-loc failed',e);}
 
   // NCR stats
   var ncrAll=DB.ncr.length, ncrOpen=DB.ncr.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
