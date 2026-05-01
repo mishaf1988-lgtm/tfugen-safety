@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-01 (Locations hierarchy 4-PR rollout + env_aspects file uploads + page_files + sync 400 fix)
+**Last updated**: 2026-05-01 (Saved Views + Notifications Matrix — Vitre §16#6 + §11)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,10 +11,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `aecce15` |
+| Commit | `0120e08` |
 | תאריך | 2026-05-01 |
 | Tag | — (טרם נוצר) |
-| מצב | 26 טבלאות (+ `locations`, `page_files`, `ncr_comments`) · Locations hierarchy פעיל ב-5 טפסים (NCR / Near-Miss / PTW / EQI / Hazmat) + סינון ב-NCR/NM · 10 אזורים מאוכלסים · env_aspects עם file_url פר-רשומה + banner "קובץ רשמי" פר-עמוד דרך page_files · sbGet 400 fix · NCR Agent feedback loop · Reopen flow · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
+| מצב | 28 טבלאות (+ `saved_views`, `notification_prefs`) · Saved Views פר-משתמש ב-NCR/NM · Notifications matrix (5 אירועים × 3 ערוצים) עם trigger פעיל על NCR קריטי · Locations hierarchy ב-5 טפסים · env_aspects עם file_url + page_files banner · sbGet 400 fix · NCR Agent feedback loop · Reopen flow · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
 
 ---
 
@@ -83,6 +83,8 @@
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_locations.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. טבלה חדשה `locations(id PK, name, parent_id → locations.id, level 1-3, notes, ts)` עם RLS + 2 indexes. בסיס ל-feature מיקומים היררכי (PR #141).
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. הוסיף `location_id text REFERENCES locations(id) ON DELETE SET NULL` ל-`ncr` ו-`near_miss` + 2 indexes. PR #142.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk_more.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. אותו דבר ל-`ptw`, `equip_inspections`, `hzm` + 3 indexes. PR #143.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_saved_views.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. PR #147.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_notification_prefs.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `notification_prefs(id PK = email, prefs jsonb, ts)` עם RLS לפי email. PR #148.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
@@ -110,6 +112,8 @@
 - [x] **Locations hierarchy — PR 3/4 PTW + EQI + Hazmat (#143)** — מיגרציה `2026-05-01_location_fk_more.sql` הוסיפה `location_id` ל-`ptw`, `equip_inspections`, `hzm`. אותו pattern: select מקושר + legacy text fallback + display בנתיב מלא בכל 3 הטבלאות.
 - [x] **Locations hierarchy — PR 4/4 filtering (#144)** — דרופדאון "סנן לפי מיקום" בעמוד NCR (ליד הטאבים) ובעמוד Near Miss. helper `_locFilterOptionsHtml` עם placeholder "— כל המיקומים —". `window._{ncr,nm}LocFilter` שומר state. אין migration.
 - [x] **10 locations נטענו ידנית (2026-05-01)** — ייצור טוגנים, קילופים, מעוצבים, אריזה, שפכים, חומר גלם, חצר, תוצ"ג, תשתיות, מעבדה. כולם level 1 שטוחים אחרי החלטת המשתמש לוותר על היררכיה (UPDATE על LOC-002/003/004 שהיו תחת ייצור טוגנים).
+- [x] **Saved Views per-user (PR #147)** — בהשראת Vitre §16#6. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. UI: כפתור 💾 (שמור) + Dropdown ⭐ (טען) + 🗑 (מחק) ליד הטאבים בעמודי NCR ו-Near Miss. helpers `_svUser`/`_svListForPage`/`_svSave`/`_svDelete`/`_svRenderSelect` (גנריים) + per-page glue (`svNcrSave/Apply/Delete`, `svNmSave/Apply/Delete`). Filters jsonb: `{ncrFilter, ncrLocFilter}` ל-NCR, `{nmFilter, nmLocFilter}` ל-NM — extensible לעמודים נוספים בעתיד בלי schema change.
+- [x] **Notifications Matrix (PR #148)** — בהשראת Vitre §11. טבלה חדשה `notification_prefs(id PK = user email, prefs jsonb, ts)` עם RLS לפי email. UI: מודאל 🔔 "הגדרות התראות" (תפריט → ניהול), מטריצה של 5 אירועים (`ncr_critical`, `task_overdue`, `expiry_30days`, `round_missed`, `incident_critical`) × 3 ערוצים (`whatsapp`, `email`, `inapp`) עם checkboxes. Generic dispatcher `_notifyEvent(eventKey, payload)` בודק העדפות ומפעיל ערוצים פעילים. **Trigger ראשון מחובר**: יצירת NCR בעדיפות "קריטי" → `_notifyEvent('ncr_critical', ...)`. Channels: in-app עובד מיידית (toast); WhatsApp — console.log עד שיאושרו ה-templates של Meta; Email — console.log עד שיוגדר SMTP/API. Hooks ל-task_overdue/expiry/round_missed/incident_critical יתווספו ב-PR נפרד.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
