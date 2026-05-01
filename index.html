@@ -2682,6 +2682,7 @@ function _renderToday(){
   listEl.innerHTML=html;
 }
 function rDash(){
+  if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
   var docs=DB.docs,inc=DB.inc,tr=DB.tr,ncr=DB.ncr,rsk=DB.rsk;
   // HERO-1: safety streak (days since last incident)
   var _lastInc=null;(inc||[]).forEach(function(i){var d=i.dt&&new Date(i.dt);if(d&&!isNaN(d)&&(!_lastInc||d>_lastInc))_lastInc=d;});
@@ -4301,6 +4302,49 @@ function saveNotifSettings(){
   if(existing){var idx=DB.notification_prefs.findIndex(function(r){return r.id===u;});DB.notification_prefs[idx]=rec;sbUpd('notification_prefs',rec);}
   else{DB.notification_prefs.push(rec);sbIns('notification_prefs',rec);}
   sdb();closeModal('m-notif');toast('\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5 \u2713');
+}
+
+// Daily notification scan — fires once per session via sessionStorage flag
+function _notifDailyScan(){
+  try{
+    var flag='tfgn_notif_'+new Date().toISOString().substring(0,10);
+    if(sessionStorage.getItem(flag))return;
+    sessionStorage.setItem(flag,'1');
+    var today=new Date();today.setHours(0,0,0,0);
+    var todayStr=today.toISOString().split('T')[0];
+    // task_overdue: open/in-progress tasks with due < today - 3 days
+    var overdueTasks=(DB.tasks||[]).filter(function(t){
+      if(!t.due)return false;
+      if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;
+      var d=new Date(t.due);
+      var daysLate=Math.floor((today-d)/86400000);
+      return daysLate>=3;
+    }).slice(0,3);
+    overdueTasks.forEach(function(t){
+      _notifyEvent('task_overdue',{title:t.title||'\u05de\u05e9\u05d9\u05de\u05d4',id:t.id});
+    });
+    // expiry_30days: items expiring within 0-30 days
+    var expSoon=[];
+    ['ppe','tr','docs','ctr','drl','ins','med'].forEach(function(k){
+      (DB[k]||[]).forEach(function(r){
+        if(!r.e)return;
+        var d=new Date(r.e);
+        var days=Math.floor((d-today)/86400000);
+        if(days>=0&&days<=30)expSoon.push({tbl:k,id:r.id,name:r.n||r.t||'\u05e4\u05e8\u05d9\u05d8',days:days});
+      });
+    });
+    expSoon.slice(0,3).forEach(function(it){
+      _notifyEvent('expiry_30days',{title:it.name+' ('+it.days+' \u05d9\u05de\u05d9\u05dd)',id:it.id,table:it.tbl});
+    });
+    // round_missed: today's round not done yet and time > 11:00
+    var now=new Date();
+    if(now.getHours()>=11){
+      var lastRound=(DB.rounds||[]).reduce(function(m,r){return r.d>m?r.d:m;},'');
+      if(lastRound<todayStr){
+        _notifyEvent('round_missed',{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d9\u05d5\u05dd \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',id:todayStr});
+      }
+    }
+  }catch(e){console.warn('_notifDailyScan failed',e);}
 }
 
 // Generic notification dispatcher
