@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `3767025` |
+| Commit | `911e75b` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -147,6 +147,10 @@
 - [x] **Projects VIEW_CONFIG (PR #180)** — showView יודע להציג פרויקט.
 - [x] **Notifications log table (PR #182)** — `notifications_log` שומר audit trail של כל התראה שמופעלת. Migration ב-COMBINED.
 - [x] **Notifications log viewer (PR #183)** — בתחתית הגדרות התראות, section נפתח עם 20 התראות אחרונות.
+- [x] **Project badge in tasks list (PR #185)** — תווית "🏗️ פרויקט" בעמודת המקור.
+- [x] **Hebrew date header on dashboard (PR #186)** — "📅 יום שני, 5 במאי 2026".
+- [x] **Test notification button (PR #187)** — "🧪 בדיקה" במודאל הגדרות התראות.
+- [x] **Active-filters chips on Tasks (PR #188)** — לעקביות עם NCR/NM.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
