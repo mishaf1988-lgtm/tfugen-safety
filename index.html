@@ -705,6 +705,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1512;&#1497;&#1513;&#1493;&#1501; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1508;&#1497; ISO 14001 &#1505;&#1506;&#1497;&#1507; 6.1.2 &mdash; &#1497;&#1505;&#1493;&#1491;&#1493;&#1514; &#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1512;&#1490;&#1493;&#1503; &#1513;&#1497;&#1499;&#1493;&#1500;&#1493;&#1514; &#1500;&#1492;&#1513;&#1508;&#1497;&#1506; &#1506;&#1500; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;.</div>
+    <div id="easp-pagefile" style="margin:8px 0;padding:10px;background:#f0f7f0;border:1px solid #2d6a4f;border-radius:8px"></div>
     <div class="tbl-wrap"><table><thead><tr>
       <th>&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
       <th>&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
@@ -1640,7 +1641,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1666,7 +1667,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1675,7 +1676,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1744,7 +1745,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:
 function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1772,7 +1773,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -3843,8 +3844,41 @@ function _rskMatrix(){
   host.innerHTML=html;
 }
 function _easpRpnColor(rpn){if(rpn>=12)return '#cc1f1f';if(rpn>=4)return '#eab308';return '#16a34a';}
+function _pageFileGet(pageId){return (DB.page_files||[]).find(function(r){return r.id===pageId;});}
+function _pageFileRender(pageId,boxId){
+  var box=g(boxId);if(!box)return;
+  var rec=_pageFileGet(pageId);
+  if(rec&&rec.file_url){
+    var fname=rec.file_name||(rec.file_url.split('/').pop()||'').split('?')[0];
+    box.innerHTML='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#2d6a4f">📎 \u05e7\u05d5\u05d1\u05e5 \u05e8\u05e9\u05de\u05d9 \u05dc\u05d8\u05d5\u05e4\u05e1:</span><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#fff;border:1px solid #2d6a4f;border-radius:6px;color:#1a1d23;font-size:12px;text-decoration:none;font-weight:600">📄 '+esc(fname)+' — \u05d4\u05d5\u05e8\u05d3</a><button class="btn btn-d btn-sm" onclick="_pageFileUpload(\''+esc(pageId)+'\',\''+esc(boxId)+'\')" style="font-size:11px">\u05d4\u05d7\u05dc\u05e3</button></div>';
+    _signifyDom(box);
+  }else{
+    box.innerHTML='<button type="button" class="btn btn-s" onclick="_pageFileUpload(\''+esc(pageId)+'\',\''+esc(boxId)+'\')" style="width:100%">📎 \u05d4\u05e2\u05dc\u05d4 \u05e7\u05d5\u05d1\u05e5 \u05e8\u05e9\u05de\u05d9 \u05dc\u05db\u05dc \u05d4\u05d8\u05d5\u05e4\u05e1 (Excel / PDF / \u05ea\u05de\u05d5\u05e0\u05d4)</button>';
+  }
+}
+function _pageFileUpload(pageId,boxId){
+  var inpId='_pf_inp_'+pageId;
+  var inp=g(inpId);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id=inpId;inp.style.display='none';document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    var box=g(boxId);if(box)box.innerHTML='<div style="font-size:12px;color:#888">⏳ \u05de\u05e2\u05dc\u05d4 \u05e7\u05d5\u05d1\u05e5...</div>';
+    _fileUpload(f,'pf-'+pageId,function(url,errStatus,errBody){
+      if(!url){_uploadErr(errStatus,errBody);_pageFileRender(pageId,boxId);return;}
+      var rec={id:pageId,file_url:url,file_name:f.name,uploaded_by:(g('user-email')&&g('user-email').textContent)||null,ts:new Date().toISOString()};
+      var idx=(DB.page_files||[]).findIndex(function(r){return r.id===pageId;});
+      if(!DB.page_files)DB.page_files=[];
+      if(idx>=0){DB.page_files[idx]=rec;sbUpd('page_files',rec);}
+      else{DB.page_files.push(rec);sbIns('page_files',rec);}
+      sdb();toast('\u05e7\u05d5\u05d1\u05e5 \u05e2\u05d5\u05d3\u05db\u05df ✓');_pageFileRender(pageId,boxId);
+    });
+  };
+  inp.click();
+}
 function rEasp(){
   var tb=g('tb-easp');if(!tb)return;
+  _pageFileRender('env_aspects','easp-pagefile');
   var rows=DB.env_aspects||[];
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">\ud83c\udf33</span>\u05d0\u05d9\u05df \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-easp\')">+ \u05d4\u05d9\u05d1\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   tb.innerHTML=rows.slice().sort(function(a,b){
