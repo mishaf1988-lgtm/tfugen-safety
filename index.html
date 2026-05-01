@@ -954,6 +954,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-ptw" class="page">
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="row" style="margin:0 0 8px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select></div>
+  <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1511;&#1489;&#1500;&#1503;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1513;&#1506;&#1493;&#1514;</th><th>&#1502;&#1511;&#1493;&#1501;</th><th>&#1505;&#1496;.</th><th></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -5831,6 +5832,20 @@ function rPtwView(id){
 }
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
+  // PTW summary
+  try{
+    var pSe=g('ptw-summary');
+    if(pSe){
+      var allP=DB.ptw||[];
+      var todayP=new Date().toISOString().split('T')[0];
+      var openP=allP.filter(function(r){return r.s==='פתוח'||r.s==='בתוקף';}).length;
+      var todayP2=allP.filter(function(r){return r.ds===todayP;}).length;
+      pSe.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allP.length+'</strong></span>'+
+        (openP?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">פעילים: <strong>'+openP+'</strong></span>':'')+
+        (todayP2?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">היום: <strong>'+todayP2+'</strong></span>':'');
+    }
+  }catch(e){}
   var locF=window._ptwLocFilter||'';
   var locSel=g('ptw-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
