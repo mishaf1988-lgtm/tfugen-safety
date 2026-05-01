@@ -2936,10 +2936,13 @@ function rDash(){
         if(t>l)return '<span style="color:var(--bad)">▲'+(t-l)+'</span>';
         return '<span style="color:var(--ok)">▼'+(l-t)+'</span>';
       }
+      var tskDoneThis=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inRange(r.closed_date||r.cd,0,7);}).length;
+      var tskDoneLast=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inRange(r.closed_date||r.cd,7,14);}).length;
       var rows=[
         {label:'NCRs',a:ncrThis,b:ncrLast},
         {label:'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',a:nmThis,b:nmLast},
-        {label:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',a:incThis,b:incLast}
+        {label:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',a:incThis,b:incLast},
+        {label:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d4\u05d5\u05e9\u05dc\u05de\u05d5',a:tskDoneThis,b:tskDoneLast}
       ];
       dw.innerHTML=rows.map(function(r){
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:13px"><span style="flex:1">'+r.label+'</span><strong style="margin-left:8px">'+r.a+'</strong>'+delta(r.a,r.b)+' <span style="color:var(--t3);font-size:10px">(\u05e9\u05e2\u05d1\u05e8: '+r.b+')</span></div>';
