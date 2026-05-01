@@ -22,24 +22,54 @@ function originOk(origin) {
   return PREVIEW_RE.test(origin);
 }
 
-// Note: when re-creating a deleted template Meta locks the category. To
-// switch from MARKETING to UTILITY we need a NEW name. tfugen_expiry_warning
-// already succeeded (different name from the deleted _body suffix).
-// For task_overdue we now use _v2.
+// Pre-approved template bank — submit early so Meta approval is ready
+// when the wiring on each event is built. All UTILITY (transactional).
+// The endpoint is idempotent: if a template already exists with the
+// same name, Meta returns an error and we keep going.
 const TEMPLATES_TO_CREATE = [
   {
-    name: 'tfugen_task_overdue_v2',
+    name: 'tfugen_incident_alert',
     language: 'he',
     category: 'UTILITY',
     components: [{
       type: 'BODY',
-      text: '⏰ משימה בפיגור\n\nהמשימה "{{1}}" עברה את היעד שלה.\nאיחור: {{2}} ימים.\n\nנא לעדכן סטטוס:\nhttps://tfugen-safety.vercel.app',
-      example: { body_text: [['החלפת מטף כיבוי במחסן 3', '5']] }
+      text: '🚨 תקרית בטיחות\n\nסוג: {{1}}\nמיקום: {{2}}\nחומרה: {{3}}\n\nנא לטפל מיידית.\nhttps://tfugen-safety.vercel.app',
+      example: { body_text: [['החלקה', 'מחסן 3', 'בינונית']] }
+    }]
+  },
+  {
+    name: 'tfugen_ncr_closed',
+    language: 'he',
+    category: 'UTILITY',
+    components: [{
+      type: 'BODY',
+      text: '✅ NCR-{{1}} נסגר\n\nהטיפול הושלם על ידי {{2}}.\nתאריך: {{3}}\n\nתודה!',
+      example: { body_text: [['0357', 'מנהל בטיחות', '01/05/2026']] }
+    }]
+  },
+  {
+    name: 'tfugen_round_missed',
+    language: 'he',
+    category: 'UTILITY',
+    components: [{
+      type: 'BODY',
+      text: '🌅 סבב בוקר לא בוצע\n\nהיום {{1}} — סבב הבטיחות לא תועד.\nנא לבצע בהקדם.\n\nhttps://tfugen-safety.vercel.app',
+      example: { body_text: [['01/05/2026']] }
+    }]
+  },
+  {
+    name: 'tfugen_general_alert',
+    language: 'he',
+    category: 'UTILITY',
+    components: [{
+      type: 'BODY',
+      text: '📢 התראה ממערכת תפוגן\n\n{{1}}\n\nלפרטים:\nhttps://tfugen-safety.vercel.app',
+      example: { body_text: [['בדיקת ציוד דחופה - אנא בקרו במחסן 3']] }
     }]
   }
 ];
 
-// Already deleted in prior run. Keeping empty to make the endpoint idempotent.
+// All historical deletes already done. Keep empty for idempotent re-runs.
 const TEMPLATES_TO_DELETE = [];
 
 export default async function handler(req) {
