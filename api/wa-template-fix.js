@@ -22,9 +22,13 @@ function originOk(origin) {
   return PREVIEW_RE.test(origin);
 }
 
+// Note: when re-creating a deleted template Meta locks the category. To
+// switch from MARKETING to UTILITY we need a NEW name. tfugen_expiry_warning
+// already succeeded (different name from the deleted _body suffix).
+// For task_overdue we now use _v2.
 const TEMPLATES_TO_CREATE = [
   {
-    name: 'tfugen_task_overdue',
+    name: 'tfugen_task_overdue_v2',
     language: 'he',
     category: 'UTILITY',
     components: [{
@@ -32,20 +36,11 @@ const TEMPLATES_TO_CREATE = [
       text: '⏰ משימה בפיגור\n\nהמשימה "{{1}}" עברה את היעד שלה.\nאיחור: {{2}} ימים.\n\nנא לעדכן סטטוס:\nhttps://tfugen-safety.vercel.app',
       example: { body_text: [['החלפת מטף כיבוי במחסן 3', '5']] }
     }]
-  },
-  {
-    name: 'tfugen_expiry_warning',
-    language: 'he',
-    category: 'UTILITY',
-    components: [{
-      type: 'BODY',
-      text: '🔧 תזכורת חידוש\n\n{{1}} פג תוקף בעוד {{2}} ימים ({{3}}).\n\nנא לתאם חידוש:\nhttps://tfugen-safety.vercel.app',
-      example: { body_text: [['מטף כיבוי באולם A', '14', '15/05/2026']] }
-    }]
   }
 ];
 
-const TEMPLATES_TO_DELETE = ['tfugen_task_overdue', 'tfugen_expiry_warning_body'];
+// Already deleted in prior run. Keeping empty to make the endpoint idempotent.
+const TEMPLATES_TO_DELETE = [];
 
 export default async function handler(req) {
   const origin = req.headers.get('origin') || '';

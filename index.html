@@ -4388,7 +4388,7 @@ window._waTaskAlert=function(id){
   var today=new Date().toISOString().split('T')[0];
   var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
   var smart=_waResolvePhone(t.assignee);
-  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]},smart?t.assignee:null);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue_v2',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]},smart?t.assignee:null);
 };
 window._waExpiryAlert=function(tbl,id){
   var r=(DB[tbl]||[]).find(function(x){return x.id===id;});
