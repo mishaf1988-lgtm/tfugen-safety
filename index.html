@@ -412,6 +412,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
@@ -2892,6 +2893,28 @@ function rDash(){
       }else{if(dlc)dlc.style.display='none';}
     }
   }catch(e){console.warn('dash-by-loc failed',e);}
+
+  // Dashboard: by project widget
+  try{
+    var dpc=g('dash-by-prj-card');
+    var dp=g('dash-by-prj');
+    if(dp){
+      var byPrj={};
+      (DB.ncr||[]).forEach(function(n){if(n.s==='\u05e1\u05d2\u05d5\u05e8'||!n.project_id)return;byPrj[n.project_id]=byPrj[n.project_id]||{ncr:0,tsk:0,inc:0};byPrj[n.project_id].ncr++;});
+      (DB.tasks||[]).forEach(function(t){if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc'||!t.project_id)return;byPrj[t.project_id]=byPrj[t.project_id]||{ncr:0,tsk:0,inc:0};byPrj[t.project_id].tsk++;});
+      (DB.inc||[]).forEach(function(i){if(!i.project_id)return;byPrj[i.project_id]=byPrj[i.project_id]||{ncr:0,tsk:0,inc:0};byPrj[i.project_id].inc++;});
+      var pkeys=Object.keys(byPrj).sort(function(a,b){var ta=byPrj[a].ncr+byPrj[a].tsk+byPrj[a].inc,tb=byPrj[b].ncr+byPrj[b].tsk+byPrj[b].inc;return tb-ta;});
+      if(pkeys.length){
+        if(dpc)dpc.style.display='';
+        dp.innerHTML=pkeys.slice(0,5).map(function(k){
+          var b=byPrj[k];
+          var name=(typeof _prjName==='function')?_prjName(k):k;
+          var safeK=esc(k);
+          return '<div data-pid="'+safeK+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1">'+esc(name||'—')+'</span>'+(b.ncr?'<span class="b bR" style="font-size:10px;margin-left:4px">NCR '+b.ncr+'</span>':'')+(b.tsk?'<span class="b bY" style="font-size:10px;margin-left:4px">📋 '+b.tsk+'</span>':'')+(b.inc?'<span class="b bX" style="font-size:10px;margin-left:4px">🚨 '+b.inc+'</span>':'')+'</div>';
+        }).join('');
+      }else{if(dpc)dpc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-by-prj failed',e);}
 
   // NCR stats
   var ncrAll=DB.ncr.length, ncrOpen=DB.ncr.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
