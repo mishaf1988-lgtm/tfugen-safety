@@ -844,6 +844,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:#7f1d1d">&#128465;</button>
     <button class="btn btn-s" onclick="ncrClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:10px 12px;min-height:44px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
+  <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
     <th>&#1502;&#1505;&#1508;&#1512;</th>
     <th>&#1505;&#1493;&#1490;</th>
@@ -3862,6 +3863,15 @@ var locF=window._ncrLocFilter||'';
 var locSel=g('ncr-loc-filter');
 if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
 if(typeof _svRenderSelect==='function')_svRenderSelect('ncr-sv-select','ncr','');
+// Render active filter chips
+var chipsEl=g('ncr-active-chips');
+if(chipsEl){
+  var chips=[];
+  if(filter==='saf')chips.push({label:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',clear:'ncrTab(\'all\')'});
+  if(filter==='env')chips.push({label:'\u05e1\u05d1\u05d9\u05d1\u05d4',clear:'ncrTab(\'all\')'});
+  if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'ncrLocFilter(\'\')'});}
+  chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
+}
 var isAdm=_isAdminUser();
 var rows=DB.ncr.filter(function(n){
   if(n.sens&&!isAdm)return false;
