@@ -889,6 +889,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="ncrClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:10px 12px;min-height:44px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="ncr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
     <th>&#1502;&#1505;&#1508;&#1512;</th>
     <th>&#1505;&#1493;&#1490;</th>
@@ -4266,6 +4267,22 @@ var rows=DB.ncr.filter(function(n){
   if(prjF&&n.project_id!==prjF)return false;
   return true;
 });
+// Summary stats above table
+try{
+  var summaryEl=g('ncr-summary');
+  if(summaryEl){
+    var openN=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7';}).length;
+    var inProgN=rows.filter(function(r){return r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
+    var closedN=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
+    var critN=rows.filter(function(r){return r.p==='\u05e7\u05e8\u05d9\u05d8\u05d9';}).length;
+    summaryEl.innerHTML=
+      '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+rows.length+'</strong></span>'+
+      (openN?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">\u05e4\u05ea\u05d5\u05d7: <strong>'+openN+'</strong></span>':'')+
+      (inProgN?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc: <strong>'+inProgN+'</strong></span>':'')+
+      (closedN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">\u05e1\u05d2\u05d5\u05e8: <strong>'+closedN+'</strong></span>':'')+
+      (critN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05e7\u05e8\u05d9\u05d8\u05d9: <strong>'+critN+'</strong></span>':'');
+  }
+}catch(e){}
 if(!rows.length){
   var emptyMsg='\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
   if(locF||filter!=='all'){emptyMsg+=' \u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05e1\u05d9\u05e0\u05d5\u05df. <a onclick="ncrClearAll()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05e0\u05e7\u05d4 \u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd</a>';}
