@@ -4232,8 +4232,15 @@ window._pwaInstall=function(){
 };
 /* ---- WhatsApp test ---- */
 function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'+972547940073';}
-function _waConfirm(to,opts){
-  if(!confirm('לשלוח התראת WhatsApp ל-'+to+'?'))return;
+function _waResolvePhone(name){
+  if(!name)return null;
+  var n=String(name).trim();if(!n)return null;
+  var u=(DB.app_users||[]).find(function(x){return x.active!==false&&x.phone&&(x.full_name===n||x.username===n);});
+  return u?String(u.phone).trim():null;
+}
+function _waConfirm(to,opts,who){
+  var msg=who?'לשלוח התראת WhatsApp ל-'+to+' ('+who+')?':'לשלוח התראת WhatsApp ל-'+to+'?';
+  if(!confirm(msg))return;
   return _waSend(to,opts);
 }
 window._waNcrAlert=function(id){
@@ -4242,14 +4249,16 @@ window._waNcrAlert=function(id){
   var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
   var area=String(n.a||n.loc||'לא צוין').substring(0,60);
   var descr=String(n.d||'אין תיאור').substring(0,200);
-  _waConfirm(_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]});
+  var smart=_waResolvePhone(n.o);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]},smart?n.o:null);
 };
 window._waTaskAlert=function(id){
   var t=(DB.tasks||[]).find(function(r){return r.id===id;});
   if(!t){toast('לא נמצא');return;}
   var today=new Date().toISOString().split('T')[0];
   var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
-  _waConfirm(_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]});
+  var smart=_waResolvePhone(t.assignee);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]},smart?t.assignee:null);
 };
 window._waExpiryAlert=function(tbl,id){
   var r=(DB[tbl]||[]).find(function(x){return x.id===id;});
@@ -4258,7 +4267,9 @@ window._waExpiryAlert=function(tbl,id){
   var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
   var name=String(r.n||r.code||r.ty||'פריט')+(r.w?' ('+r.w+')':'');
   var dueDate=r.e?fd(r.e):'?';
-  _waConfirm(_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]});
+  var ownerName=r.w||r.vendor||r.o||r.c||null;
+  var smart=_waResolvePhone(ownerName);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]},smart?ownerName:null);
 };
 window._waAlertFromView=function(tbl,id){
   if(tbl==='ncr')return _waNcrAlert(id);
