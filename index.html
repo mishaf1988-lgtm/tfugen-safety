@@ -1606,6 +1606,10 @@ id="m-ncr" style="display:none">
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">&#1500;&#1499;&#1500; &#1505;&#1493;&#1490; &#1488;&#1497;&#1512;&#1493;&#1506; &#1489;&#1495;&#1512; &#1489;&#1488;&#1497;&#1494;&#1493; &#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1500;&#1511;&#1489;&#1500; &#1492;&#1514;&#1512;&#1488;&#1492;. WhatsApp/Email &#1497;&#1497;&#1499;&#1504;&#1505;&#1493; &#1500;&#1514;&#1493;&#1511;&#1507; &#1488;&#1495;&#1512;&#1497; &#1488;&#1497;&#1513;&#1493;&#1512; ה-templates &#1492;&#1502;&#1514;&#1488;&#1497;&#1502;&#1497;&#1501;.</div>
   <div class="modal-body">
     <table id="notif-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+    <details style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--t2)">&#128203; &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; (20 &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;)</summary>
+      <div id="notif-log-list" style="max-height:240px;overflow-y:auto;margin-top:8px;font-size:11px"></div>
+    </details>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -4515,6 +4519,22 @@ function openNotifSettings(){
     body+='</tr>';
   });
   g('notif-table').innerHTML='<thead>'+hdr+'</thead><tbody>'+body+'</tbody>';
+  // Render last 20 log entries
+  var logBox=g('notif-log-list');
+  if(logBox){
+    var logs=(DB.notifications_log||[]).slice().sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');}).slice(0,20);
+    if(!logs.length){
+      logBox.innerHTML='<div style="color:var(--t3);font-style:italic">— \u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df —</div>';
+    }else{
+      var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'};
+      var chLbl={whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',inapp:'🔔'};
+      logBox.innerHTML=logs.map(function(l){
+        var dt=new Date(l.ts);var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
+        var t=(l.payload&&l.payload.title)?String(l.payload.title).substring(0,40):'';
+        return '<div style="padding:5px 0;border-bottom:1px solid #f0f0f0"><span style="color:var(--t3)">'+dtStr+'</span> · '+(chLbl[l.channel]||esc(l.channel))+' · <strong>'+esc(evLbl[l.event_type]||l.event_type)+'</strong>'+(t?' — '+esc(t):'')+'</div>';
+      }).join('');
+    }
+  }
   openModal('m-notif');
 }
 function saveNotifSettings(){
