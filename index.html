@@ -697,6 +697,45 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
 </div>
 
+<!-- MANAGEMENT REVIEW DASHBOARD -->
+<div id="pg-mr" class="page">
+  <div class="row">
+    <div class="page-title">&#128203; &#1505;&#1511;&#1497;&#1512;&#1514; <span>&#1492;&#1504;&#1492;&#1500;&#1492;</span> <span id="mr-period" style="font-size:14px;color:var(--t3);font-weight:400"></span></div>
+    <button class="btn btn-s" onclick="rMr()" style="background:#3b82f6">&#8635; &#1512;&#1506;&#1504;&#1503;</button>
+  </div>
+  <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497; (snapshot &#1504;&#1493;&#1499;&#1495;&#1497;)</div>
+    <div class="kgrid">
+      <div class="kpi kpi-r"><div class="kpi-label">NCR &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div class="kpi-val" id="mr-ncr-open">0</div><div class="kpi-sub" id="mr-ncr-sub">-</div></div>
+      <div class="kpi kpi-o"><div class="kpi-label">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;</div><div class="kpi-val" id="mr-tasks-over">0</div><div class="kpi-sub">&#1499;&#1493;&#1500;&#1500; וירטואליות</div></div>
+      <div class="kpi kpi-y"><div class="kpi-label">&#1508;&#1490;י תוקף 30 &#1497;&#1493;&#1501;</div><div class="kpi-val" id="mr-exp-soon">0</div><div class="kpi-sub">PPE/הדרכה/מסמכים</div></div>
+      <div class="kpi kpi-g"><div class="kpi-label">&#1505;&#1489;&#1489;י בוקר החודש</div><div class="kpi-val" id="mr-rounds">0</div><div class="kpi-sub">/30</div></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">&#128197; רבעון נוכחי (אירועים בתקופה)</div>
+    <div class="kgrid">
+      <div class="kpi kpi-r"><div class="kpi-label">NCR שנפתחו</div><div class="kpi-val" id="mr-ncr-q-new">0</div></div>
+      <div class="kpi kpi-g"><div class="kpi-label">NCR שנסגרו</div><div class="kpi-val" id="mr-ncr-q-closed">0</div></div>
+      <div class="kpi kpi-o"><div class="kpi-label">תקריות</div><div class="kpi-val" id="mr-inc-q">0</div><div class="kpi-sub" id="mr-inc-sub">-</div></div>
+      <div class="kpi kpi-b"><div class="kpi-label">כמעט ונפגע</div><div class="kpi-val" id="mr-nm-q">0</div></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">⚠ 5 ה-NCR הקריטיים הפתוחים</div>
+    <div id="mr-top-ncr" style="font-size:13px"></div>
+  </div>
+  <div class="card"><div class="card-title">⏰ 10 התפוגות הקרובות</div>
+    <div id="mr-top-exp" style="font-size:13px"></div>
+  </div>
+  <div class="card"><div class="card-title">&#128737; מדדי ציות</div>
+    <div class="kgrid">
+      <div class="kpi kpi-g"><div class="kpi-label">הדרכות תקפות</div><div class="kpi-val" id="mr-tr-pct">0%</div><div class="kpi-sub" id="mr-tr-sub">-</div></div>
+      <div class="kpi kpi-g"><div class="kpi-label">מסמכים בתוקף</div><div class="kpi-val" id="mr-docs-pct">0%</div><div class="kpi-sub" id="mr-docs-sub">-</div></div>
+      <div class="kpi kpi-g"><div class="kpi-label">בדיקות ציוד תקפות</div><div class="kpi-val" id="mr-eqi-pct">0%</div><div class="kpi-sub" id="mr-eqi-sub">-</div></div>
+      <div class="kpi kpi-b"><div class="kpi-label">שיחות בטיחות (תקופה)</div><div class="kpi-val" id="mr-tlk-q">0</div></div>
+    </div>
+  </div>
+  <div class="page-footer">&#169; <strong>מיכאל פרייליך</strong> | סקירת הנהלה — ISO 45001 / 14001</div>
+</div>
+
 <!-- AUDIT LOG PAGE -->
 <div id="pg-audit" class="page">
   <div class="row">
@@ -1003,6 +1042,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','emp')"><span class="sic">&#128100;</span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')"><span class="sic">&#128680;</span>&#1514;&#1512;&#1490;&#1497;&#1500;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ins')"><span class="sic">&#128270;</span>&#1505;&#1497;&#1493;&#1512;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
+
+    <div class="sheet-group-title">&#1492;&#1504;&#1492;&#1500;&#1492;</div>
+    <button class="sheet-btn" id="sheet-btn-mr" onclick="_goFromSheet('m-modules-sheet','mr')" style="display:none"><span class="sic">&#128203;</span>&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492;</button>
 
     <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')"><span class="sic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
@@ -1793,7 +1835,7 @@ function goPage(id){
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,lg:rLg};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,lg:rLg};
   if(m[CUR])m[CUR]();
 }
 var _modalLastScrollY=0;
@@ -2831,6 +2873,92 @@ function svToolbox(){
 // ---- END TOOLBOX ----
 
 // ---- AUDIT LOG ----
+function _mrPeriod(){
+  var d=new Date();
+  var q=Math.floor(d.getMonth()/3)+1;
+  var y=d.getFullYear();
+  var sM=(q-1)*3;
+  var start=new Date(y,sM,1);
+  var end=new Date(y,sM+3,0,23,59,59);
+  return {q:q,y:y,start:start,end:end,label:'Q'+q+' '+y};
+}
+function _mrInPeriod(d,p){
+  if(!d)return false;
+  var nd=new Date(d);if(isNaN(nd))return false;
+  return nd>=p.start&&nd<=p.end;
+}
+function rMr(){
+  var p=_mrPeriod();
+  var pe=g('mr-period');if(pe)pe.textContent=' · '+p.label;
+  var today=new Date().toISOString().split('T')[0];
+  var thisMonth=today.substring(0,7);
+  var ncrAll=DB.ncr||[];
+  var openS=ncrAll.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';});
+  var openSaf=openS.filter(function(n){return n.category==='saf'||(n.a&&String(n.a).indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);}).length;
+  var openEnv=openS.filter(function(n){return n.category==='env'||(n.a&&String(n.a).indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0);}).length;
+  g('mr-ncr-open').textContent=openS.length;
+  g('mr-ncr-sub').textContent='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea '+openSaf+' / \u05e1\u05d1\u05d9\u05d1\u05d4 '+openEnv;
+  var tasksAll=(DB.tasks||[]).concat(typeof _collectVirtualTasks==='function'?_collectVirtualTasks():[]);
+  var DONE='\u05d4\u05d5\u05e9\u05dc\u05dd',CANC='\u05d1\u05d5\u05d8\u05dc';
+  var over=tasksAll.filter(function(t){return t.due&&t.due<today&&t.status!==DONE&&t.status!==CANC;}).length;
+  g('mr-tasks-over').textContent=over;
+  function expIn(tbl,days){
+    return (DB[tbl]||[]).filter(function(r){if(!r.e)return false;var dd=du(r.e);return dd>=0&&dd<=days;}).length;
+  }
+  var expSoon=expIn('ppe',30)+expIn('tr',30)+expIn('docs',30)+expIn('ctr',30)+expIn('equip_inspections',30)+expIn('med',30);
+  g('mr-exp-soon').textContent=expSoon;
+  var roundsM=(DB.rounds||[]).filter(function(r){return r.d&&String(r.d).substring(0,7)===thisMonth;}).length;
+  g('mr-rounds').textContent=roundsM;
+  g('mr-ncr-q-new').textContent=ncrAll.filter(function(n){return _mrInPeriod(n.sd||n.src_date||n.created_at||n.ts,p);}).length;
+  g('mr-ncr-q-closed').textContent=ncrAll.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8'&&_mrInPeriod(n.cd||n.close_date,p);}).length;
+  var incQ=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,p);});
+  g('mr-inc-q').textContent=incQ.length;
+  var lostDays=incQ.reduce(function(s,i){return s+(parseInt(i.dy)||0);},0);
+  g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df';
+  g('mr-nm-q').textContent=(DB.near_miss||[]).filter(function(m){return _mrInPeriod(m.d||m.ts,p);}).length;
+  function pct(t){
+    var rs=DB[t]||[];if(!rs.length)return {pct:0,t:0,v:0};
+    var v=rs.filter(function(r){return r.e&&r.e>=today;}).length;
+    return {pct:Math.round(v/rs.length*100),t:rs.length,v:v};
+  }
+  var trP=pct('tr'),dcP=pct('docs'),eqP=pct('equip_inspections');
+  g('mr-tr-pct').textContent=trP.pct+'%';g('mr-tr-sub').textContent=trP.v+' / '+trP.t;
+  g('mr-docs-pct').textContent=dcP.pct+'%';g('mr-docs-sub').textContent=dcP.v+' / '+dcP.t;
+  g('mr-eqi-pct').textContent=eqP.pct+'%';g('mr-eqi-sub').textContent=eqP.v+' / '+eqP.t;
+  g('mr-tlk-q').textContent=(DB.toolbox||[]).filter(function(t){return _mrInPeriod(t.d||t.ts,p);}).length;
+  var top5=openS.filter(function(n){return n.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'||n.p==='\u05d2\u05d1\u05d5\u05d4';}).sort(function(a,b){var ad=a.sd||a.src_date||'';var bd=b.sd||b.src_date||'';return ad>bd?-1:1;}).slice(0,5);
+  if(top5.length){
+    g('mr-top-ncr').innerHTML=top5.map(function(n){
+      return '<div data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'+
+        '<span class="b bR" style="font-size:10px">'+esc(n.num||'')+'</span>'+
+        '<div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(String(n.d||'').substring(0,80))+'</div>'+
+        '<div style="font-size:11px;color:var(--t3)">'+esc(n.a||'')+(n.o?' · '+esc(n.o):'')+'</div></div>'+
+      '</div>';
+    }).join('');
+  }else{g('mr-top-ncr').innerHTML='<div class="et" style="padding:14px">\u05d0\u05d9\u05df NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05e4\u05ea\u05d5\u05d7</div>';}
+  var allExp=[];
+  ['ppe','tr','docs','ctr','equip_inspections','med'].forEach(function(tb){
+    (DB[tb]||[]).forEach(function(r){
+      if(!r.e)return;var dd=du(r.e);if(dd<-30||dd>60)return;
+      var name=String(r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
+      allExp.push({tb:tb,id:r.id,name:name,e:r.e,dd:dd});
+    });
+  });
+  allExp.sort(function(a,b){return a.dd-b.dd;});
+  var top10=allExp.slice(0,10);
+  var TBL_LBL={ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',equip_inspections:'\u05e6\u05d9\u05d5\u05d3',med:'\u05de\u05d3\u05d9\u05e7\u05dc\u05d9'};
+  if(top10.length){
+    g('mr-top-exp').innerHTML=top10.map(function(x){
+      var col=x.dd<0?'#cc1f1f':x.dd<=7?'#ea580c':x.dd<=30?'#ca8a04':'#16a34a';
+      var txt=x.dd<0?'\u05e4\u05d2 ('+Math.abs(x.dd)+')':x.dd===0?'\u05d4\u05d9\u05d5\u05dd':'\u05d1\u05e2\u05d5\u05d3 '+x.dd;
+      return '<div data-vtbl="'+esc(x.tb)+'" data-vid="'+esc(x.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer">'+
+        '<span class="b bX" style="font-size:10px">'+TBL_LBL[x.tb]+'</span>'+
+        '<div style="flex:1;min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.name)+'</div>'+
+        '<div style="font-size:11px;color:'+col+';font-weight:700">'+txt+' · '+fd(x.e)+'</div></div>'+
+      '</div>';
+    }).join('');
+  }else{g('mr-top-exp').innerHTML='<div class="et" style="padding:14px">\u05d0\u05d9\u05df \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</div>';}
+}
 function rAudit(){
   var tb=g('tb-audit');if(!tb)return;
   tb.innerHTML='<tr><td colspan="6" class="et">\u05d8\u05d5\u05e2\u05df...</td></tr>';
@@ -3992,6 +4120,8 @@ function _applyRoleGates(){
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
   var auditBtn=g('sheet-btn-audit');
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
+  var mrBtn=g('sheet-btn-mr');
+  if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
@@ -4265,7 +4395,7 @@ window._waExpiryAlert=function(tbl,id){
   if(!r){toast('לא נמצא');return;}
   var today=new Date().toISOString().split('T')[0];
   var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
-  var name=String(r.n||r.code||r.ty||'פריט')+(r.w?' ('+r.w+')':'');
+  var name=String(r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
   var dueDate=r.e?fd(r.e):'?';
   var ownerName=r.w||r.vendor||r.o||r.c||null;
   var smart=_waResolvePhone(ownerName);
