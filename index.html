@@ -518,6 +518,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="nmClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div id="nm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="nm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
     <th>&#1488;&#1494;&#1493;&#1512;</th>
@@ -3363,6 +3364,22 @@ function rNm(){
   if(f==='open')rows=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   if(f==='closed')rows=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';});
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  // NM summary stats
+  try{
+    var nmS=g('nm-summary');
+    if(nmS){
+      var openR=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7';}).length;
+      var progR=rows.filter(function(r){return r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
+      var clsR=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
+      var sevR=rows.filter(function(r){return r.sev==='\u05d7\u05de\u05d5\u05e8';}).length;
+      nmS.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+rows.length+'</strong></span>'+
+        (openR?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">\u05e4\u05ea\u05d5\u05d7: <strong>'+openR+'</strong></span>':'')+
+        (progR?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc: <strong>'+progR+'</strong></span>':'')+
+        (clsR?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">\u05e1\u05d2\u05d5\u05e8: <strong>'+clsR+'</strong></span>':'')+
+        (sevR?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05d7\u05de\u05d5\u05e8: <strong>'+sevR+'</strong></span>':'');
+    }
+  }catch(e){}
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">🚫<span class="et-ic"></span>\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2<br><button class="et-cta" onclick="openModal(\'m-nm\')">+ \u05d3\u05d9\u05d5\u05d5\u05d7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
