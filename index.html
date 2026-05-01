@@ -1197,7 +1197,8 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="ncr-d" class="inp" rows="2" placeholder="&#1514;&#1488;&#1512; &#1488;&#1514; &#1492;&#1502;&#1502;&#1510;&#1488;..."></textarea></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="ncr-a" class="inp"><option value="">&#1489;&#1495;&#1512;...</option><option value="&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option value="&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1490;&#1497;&#1500;&#1493;&#1497;</label><input id="ncr-sd" type="date" class="inp"></div>
-    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="ncr-loc" type="text" class="inp" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1497;&#1510;&#1493;&#1512;, &#1495;&#1510;&#1512;..."></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><select id="ncr-location-id" class="inp"></select></div>
+    <div class="field" id="ncr-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="ncr-loc" type="text" class="inp" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;</label><input id="ncr-rc" type="text" class="inp" placeholder="&#1502;&#1492; &#1490;&#1512;&#1501; &#1500;&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1492;?"></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
@@ -1404,7 +1405,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="nm-d"></div>
     <div class="field"><label>&#1513;&#1506;&#1492;</label><input type="time" id="nm-t" placeholder="08:30"></div>
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="nm-desc" rows="3"></textarea></div>
-    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><input id="nm-area" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512;/&#1502;&#1495;&#1505;&#1503;/&#1502;&#1506;&#1489;&#1491;&#1492;..."></div>
+    <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><select id="nm-location-id" class="inp"></select></div>
+    <div class="field" id="nm-area-legacy" style="display:none"><label>&#1488;&#1494;&#1493;&#1512; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="nm-area" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1502;&#1491;&#1493;&#1493;&#1495;</label><input id="nm-rep" list="active-users-list" placeholder="&#1489;&#1495;&#1512; &#1488;&#1493; &#1492;&#1511;&#1500;&#1491;..."></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="nm-sev"><option>&#1511;&#1496;&#1497;&#1503;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option></select></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="nm-typ"><option>&#1508;&#1497;&#1494;&#1497;</option><option>&#1499;&#1497;&#1502;&#1497;</option><option>&#1495;&#1513;&#1502;&#1500;&#1497;</option><option>&#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1504;&#1508;&#1497;&#1500;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
@@ -2051,6 +2053,7 @@ function openModal(id){
     // Default empty time inputs to current local time (HH:MM) — 80% of reports are "now"
     var _hm=(function(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})();
     mo.querySelectorAll('input[type=time]').forEach(function(i){if(!i.value)i.value=_hm;});
+    if(typeof _locOptionsHtml==='function'){mo.querySelectorAll('select[id$="-location-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_locOptionsHtml(null);}});}
     var ctxMap={'m-doc':'doc','m-aud':'aud','m-ncr':'ncr','m-inc':'inc','m-tr':'tr','m-rsk':'rsk'};
     var ctx=ctxMap[id];
     if(ctx)try{renderFL(ctx);}catch(e){}
@@ -2103,6 +2106,8 @@ function openNewNcrModal(){
   var a=g('ncr-a');if(a)a.value='';
   var s=g('ncr-s');if(s)s.value='\u05e4\u05ea\u05d5\u05d7';
   var sn=g('ncr-sens');if(sn)sn.checked=false;
+  if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',null);
+  var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display='none';
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   openModal('m-ncr');
 }
@@ -2113,6 +2118,8 @@ function editNcr(id){
   g('ncr-id').value=rec.id;
   var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
+  if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id||null);
+  var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display=(rec.loc&&!rec.location_id)?'':'none';
   setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
@@ -2131,6 +2138,7 @@ function svNcr(){
     num:id?DB.ncr.find(function(r){return r.id===id;})||{} && (DB.ncr.find(function(r){return r.id===id;})||{num:''}).num:'NCR-'+String(DB.ncr.length+1).padStart(4,'0'),
     d:d, a:a, category:cat,
     loc:gv('ncr-loc')||'',
+    location_id:gv('ncr-location-id')||null,
     rc:gv('ncr-rc')||'',
     c:gv('ncr-c')||'',
     o:gv('ncr-o')||'',
@@ -2924,13 +2932,15 @@ function rNm(){
     var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+(r.area?esc(r.area):'\u2014')+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    var areaTxt=r.location_id&&typeof _locName==='function'?_locName(r.location_id):'';
+    if(!areaTxt)areaTxt=r.area||'\u2014';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');_signifyDom(tb);
 }
 function svNm(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
+  var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
   DB.near_miss.push(r);sbIns('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
   closeModal('m-nm');['nm-desc','nm-area','nm-rep','nm-notes','nm-t'].forEach(function(id){var el=g(id);if(el)el.value='';});_nmClearPhoto();
@@ -3759,7 +3769,7 @@ tb.innerHTML=rows.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
   var sensBadge=n.sens?' &#128274;':'';
-  var loc=n.loc||n.location||'';
+  var loc=(n.location_id&&typeof _locName==='function'?_locName(n.location_id):'')||n.loc||n.location||'';
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
@@ -4016,6 +4026,42 @@ function svLoc(){
   if(existingIdx>=0){DB.locations[existingIdx]=r;sbUpd('locations',r);}
   else{DB.locations.push(r);sbIns('locations',r);}
   sdb();closeModal('m-loc');toast('\u05e0\u05e9\u05de\u05e8 ✓');rLoc();
+}
+function _locFlatList(){
+  var rows=(DB.locations||[]).slice();
+  var out=[];
+  function visit(parentId,depth){
+    var children=rows.filter(function(r){return (r.parent_id||null)===parentId;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
+    children.forEach(function(c){out.push({id:c.id,name:c.name,depth:depth});visit(c.id,depth+1);});
+  }
+  visit(null,0);
+  return out;
+}
+function _locOptionsHtml(currentId){
+  var flat=_locFlatList();
+  var html='<option value="">— \u05d1\u05d7\u05e8 \u05de\u05d9\u05e7\u05d5\u05dd —</option>';
+  flat.forEach(function(it){
+    var pad=Array(it.depth+1).join('    ');
+    var arrow=it.depth?'↳ ':'';
+    var sel=it.id===currentId?' selected':'';
+    html+='<option value="'+esc(it.id)+'"'+sel+'>'+pad+arrow+esc(it.name)+'</option>';
+  });
+  return html;
+}
+function _locPopulate(selectId,currentId){
+  var sel=g(selectId);if(!sel)return;
+  sel.innerHTML=_locOptionsHtml(currentId);
+}
+function _locName(id){
+  if(!id)return '';
+  var rec=(DB.locations||[]).find(function(r){return r.id===id;});
+  if(!rec)return '';
+  var path=[rec.name];
+  while(rec&&rec.parent_id){
+    rec=(DB.locations||[]).find(function(r){return r.id===rec.parent_id;});
+    if(rec)path.unshift(rec.name);
+  }
+  return path.join(' / ');
 }
 function rEmp(){
   var tb=g('tb-emp');if(!tb)return;
