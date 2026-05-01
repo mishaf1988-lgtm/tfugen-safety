@@ -984,7 +984,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-hzm" class="page">
   <div class="row"><div class="page-title">&#1495;&#1493;&#1502;&#1512;&#1497;&#1501; <span>&#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-hzm')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="row" style="margin:0 0 8px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select></div>
+  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th>UN</th><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th>&#1502;&#1497;&#1511;&#1493;&#1501;</th><th>MSDS</th><th></th><th></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -4322,6 +4322,30 @@ function svEqiDelete(){
   _svDelete(v.id);_svRenderSelect('eqi-sv-select','eqi','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
 }
 
+// Hazmat saved-view glue
+function svHzmSave(){
+  var name=_svPromptName();if(!name)return;
+  var f={hzmLocFilter:window._hzmLocFilter||''};
+  _svSave('hzm',name,f);toast('\u05ea\u05e6\u05d5\u05d2\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');
+  _svRenderSelect('hzm-sv-select','hzm','');
+}
+function svHzmApply(viewId){
+  if(!viewId)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===viewId;});
+  if(!v){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var f=v.filters||{};
+  window._hzmLocFilter=f.hzmLocFilter||'';
+  rHzm();
+  toast('\u05d4\u05d5\u05d7\u05dc\u05d4: '+v.name);
+}
+function svHzmDelete(){
+  var sel=g('hzm-sv-select');if(!sel||!sel.value)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===sel.value;});
+  if(!v)return;
+  if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
+  _svDelete(v.id);_svRenderSelect('hzm-sv-select','hzm','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
+}
+
 // Notification Preferences (per-user matrix)
 var NOTIF_EVENTS=[
   {key:'ncr_critical',     label:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05e0\u05e4\u05ea\u05d7'},
@@ -5035,6 +5059,7 @@ function rHzm(){
   var locF=window._hzmLocFilter||'';
   var locSel=g('hzm-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
+  if(typeof _svRenderSelect==='function')_svRenderSelect('hzm-sv-select','hzm','');
   var rows=(DB.hzm||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
   if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
