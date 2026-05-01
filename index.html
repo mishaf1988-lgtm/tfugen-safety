@@ -492,6 +492,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" id="nm-tab-all" onclick="nmFilter('all')">&#1492;&#1499;&#1500;</button>
     <button class="btn btn-s" id="nm-tab-open" onclick="nmFilter('open')">&#1508;&#1514;&#1493;&#1495;</button>
     <button class="btn btn-s" id="nm-tab-closed" onclick="nmFilter('closed')">&#1505;&#1490;&#1493;&#1512;</button>
+    <select id="nm-loc-filter" onchange="nmLocFilter(this.value)" style="padding:8px;max-width:200px"></select>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
@@ -819,10 +820,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; <span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
     <button class="btn btn-p" onclick="openNewNcrModal()">+ &#1495;&#1491;&#1513;</button><button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
-  <div style="display:flex;gap:8px;margin:8px 0 12px;direction:rtl">
+  <div style="display:flex;gap:8px;margin:8px 0 12px;direction:rtl;flex-wrap:wrap;align-items:center">
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:14px;padding:10px 16px;min-height:44px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button id="ncr-tab-env" class="btn btn-s" onclick="ncrTab('env')" style="font-size:14px;padding:10px 16px;min-height:44px">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</button>
+    <select id="ncr-loc-filter" onchange="ncrLocFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
   </div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
     <th>&#1502;&#1505;&#1508;&#1512;</th>
@@ -2926,12 +2928,17 @@ function delAllEqi(){
 }
 // ---- NEAR-MISS ----
 function nmFilter(f){window._nmFilter=f;['all','open','closed'].forEach(function(k){var el=g('nm-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rNm();}
+function nmLocFilter(v){window._nmLocFilter=v||'';rNm();}
 function rNm(){
   var tb=g('tb-nm');if(!tb)return;
   var rows=(DB.near_miss||[]).slice().sort(function(a,b){return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;});
   var f=window._nmFilter||'all';
+  var locF=window._nmLocFilter||'';
+  var locSel=g('nm-loc-filter');
+  if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
   if(f==='open')rows=rows.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   if(f==='closed')rows=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';});
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">🚫<span class="et-ic"></span>\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2<br><button class="et-cta" onclick="openModal(\'m-nm\')">+ \u05d3\u05d9\u05d5\u05d5\u05d7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
@@ -3764,11 +3771,15 @@ function rAud(){
 function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
 var filter=window._ncrFilter||'all';
+var locF=window._ncrLocFilter||'';
+var locSel=g('ncr-loc-filter');
+if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
 var isAdm=_isAdminUser();
 var rows=DB.ncr.filter(function(n){
   if(n.sens&&!isAdm)return false;
-  if(filter==='saf')return n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
-  if(filter==='env')return n.category==='env'||(n.a&&n.a.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0);
+  if(filter==='saf'&&!(n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0)))return false;
+  if(filter==='env'&&!(n.category==='env'||(n.a&&n.a.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0)))return false;
+  if(locF&&n.location_id!==locF)return false;
   return true;
 });
 if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
@@ -3800,6 +3811,18 @@ window._ncrFilter=t;
   if(el)el.className='btn '+(t===k?'btn-p':'btn-s');
 });
 rNcr();
+}
+function ncrLocFilter(v){window._ncrLocFilter=v||'';rNcr();}
+function _locFilterOptionsHtml(currentId,placeholder){
+  var flat=(typeof _locFlatList==='function')?_locFlatList():[];
+  var html='<option value="">'+(placeholder||'— \u05db\u05dc \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd —')+'</option>';
+  flat.forEach(function(it){
+    var pad=Array(it.depth+1).join('    ');
+    var arrow=it.depth?'↳ ':'';
+    var sel=it.id===currentId?' selected':'';
+    html+='<option value="'+esc(it.id)+'"'+sel+'>'+pad+arrow+esc(it.name)+'</option>';
+  });
+  return html;
 }
 function ncrStatusChange(){
 var s=g('ncr-s'),w=g('ncr-close-wrap');
