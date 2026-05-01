@@ -13,6 +13,51 @@
 
 ---
 
+## 2026-04-30 — WhatsApp Meta Cloud API — שלב 1 (test send endpoint)
+
+**החלטה**: יצירת `api/wa-send.js` (Vercel Edge function) שמתפקד כ-proxy בטוח ל-Meta WhatsApp Business Cloud API. UI: כרטיס בדיקה admin-only בדשבורד.
+
+**מבנה**:
+- **Endpoint** `/api/wa-send`:
+  - POST בלבד, CORS allowlist (production + preview team subdomain).
+  - קורא `META_PHONE_NUMBER_ID` ו-`META_ACCESS_TOKEN` מ-env vars (אסור לשמור ב-git).
+  - מקבל `{to, template?, params?, language?, text?}`. ברירת מחדל: `hello_world` באנגלית (היחיד pre-approved של Meta).
+  - 3 modes: free-form text (רק תוך 24h מהודעה נכנסת), custom approved template, hello_world.
+  - מחזיר את ה-response של Meta כפי שהוא (בעיקר את `messages[0].id`).
+- **UI**: כרטיס `#dash-wa-test` בדשבורד, מוסתר ל-non-admin דרך `_applyRoleGates`. כפתור פותח `prompt()` לטלפון, שולח hello_world.
+- **JS helper** `window._waSend(to, opts)` — חשוף לשימוש עתידי מ-virtual tasks / Today's Focus.
+
+**סיבה**: עובד שטח / מנהל בטיחות צריך התראות real-time כשמתאמת משימה דחופה, NCR קריטי נפתח, או פג-תוקף ב-3 ימים. WhatsApp הוא הערוץ הדומיננטי בישראל. Meta Cloud API נותנת:
+- 1000 שיחות חינם בחודש (יותר ממספיק).
+- Pre-approved `hello_world` template לבדיקות מיידיות.
+- Templates מותאמים אחרי approval (24-48h).
+
+**מה לא נעשה (כרגע)**:
+- **Custom templates**: דורש submission ל-Meta + 24-48h approval. שלב 2.
+- **Auto-alerts** (קישור לפגי-תוקף, NCR קריטי): מחכה ל-template approval.
+- **Multi-recipient routing**: כרגע hello_world ל-single recipient. בעתיד: per-event channel matrix לפי Vitre §11.
+- **Webhook לקבלת responses**: לא נדרש לדחיפה חד-כיוונית של notifications.
+
+**תלויות חיצוניות**:
+- חשבון Meta Business + App "בטיחות".
+- 2 env vars ב-Vercel project settings: `META_PHONE_NUMBER_ID`, `META_ACCESS_TOKEN`.
+- Recipient phone במצב test mode חייב להיות מאומת ידנית ב-Meta dashboard (עד 5).
+
+**אבטחה**:
+- Token לא ב-repo. רק ב-Vercel env vars (encrypted at rest).
+- Origin allowlist על ה-endpoint כמו `/api/claude`.
+- אין auth header per-request כרגע — הfix צריך לבוא בשלב 2 (admin-only via JWT ב-Bearer).
+
+**אלטרנטיבות שנדחו**:
+- **Twilio WhatsApp**: יקר יותר ממיט (~$0.005 vs חינם עד 1000 שיחות).
+- **WhatsApp Business App ידני**: לא מיועד ל-API — לא scalable.
+- **Telegram Bot**: פחות נפוץ בישראל.
+- **SMS דרך Twilio**: יותר יקר, תגובה איטית, לא תומך media עשיר.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — PWA: Service Worker shell-cache + install prompt
 
 **החלטה**: הוספת Service Worker מינימלי (`sw.js`) שמאחסן את ה-shell של האפליקציה (HTML/manifest/icon/logo) + כפתור install בtopbar שמשתמש ב-`beforeinstallprompt` event הסטנדרטי. ה-`manifest.webmanifest` כבר היה (display:standalone, theme_color, icon).

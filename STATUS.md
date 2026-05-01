@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `b64b81e` |
+| Commit | `8525841` |
 | תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
 | מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
@@ -99,7 +99,7 @@
 - [x] **Recurrence Engine מזוער (Virtual Tasks 30-day window)** — בהשראת Vitre §12.2. עד היום `_collectVirtualTasks` הציג רק פריטים שכבר פגו (`r.e < today`). עכשיו: כל פריט במרחק עד 30 יום מתפוגה (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד) נהפך לוירטואלי עם עדיפות מדורגת: **קריטי** (פג), **גבוה** (היום או 1-7 ימים), **בינונית** (8-30 ימים). הכותרת מציינת "פג בעוד X ימים" כדי שהמשתמש יבין מהר. אין צורך ב-cron — מחושב חי בכל רענון. ללא migration, ללא endpoint חדש.
 - [x] **Pattern Detection History** — בהשראת Vitre §17 ("חוסר ב-AI עומק"). כל לחיצה על "ניתוח כללי" שומרת תוצאה ב-`ncr_patterns` (טבלה חדשה) עם snapshot של byArea/byPriority/byStatus + open/closed counts. במודאל הסוכן מופיע "📜 ניתוחים קודמים" עם 5 הניתוחים האחרונים — קליק על תאריך מציג את הניתוח של אז. בנה paper-trail היסטורי לזיהוי מגמות לאורך זמן.
 - [ ] **ייצוא PDF** — לכל דף
-- [ ] **WhatsApp Meta API** — התראות לאחראי
+- [x] **WhatsApp Meta API — שלב 1 (פעיל מלא + token קבוע) — אומת end-to-end 30/4**: endpoint `/api/wa-send.js` (Vercel Edge) שמדבר עם Meta Cloud API. 3 modes: hello_world template, custom approved template עם params, free-form text. env vars `META_PHONE_NUMBER_ID`/`META_ACCESS_TOKEN` ב-Vercel. **System User Token קבוע** (לא יפוג) שנוצר דרך Meta Business Settings עם הרשאות `whatsapp_business_messaging` + `whatsapp_business_management`. UI: כרטיס "📱 בדיקת WhatsApp" בדשבורד (admin-only) עם input לטלפון + כפתור שלח. **2 אימותים end-to-end**: ב-11:04 עם temp token, ב-11:21 עם permanent token — שניהם הצליחו. **שלב 2 (custom Hebrew templates + auto-alerts ל-NCR קריטי / פג-יעד)** — מחכה ל-template approval של Meta (24-48h).
 - [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.
 - [ ] **Agent Dashboard** — ריכוז כל ה-AI agents
 
