@@ -458,6 +458,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="eqi-tab-30" onclick="eqiFilter('30')">&le;30&#1497;</button>
     <button class="btn btn-s" id="eqi-tab-90" onclick="eqiFilter('90')">&le;90&#1497;</button>
     <button class="btn btn-s" id="eqi-tab-ok" onclick="eqiFilter('ok')">&#1514;&#1511;&#1497;&#1504;&#1497;&#1501;</button>
+    <select id="eqi-sv-select" onchange="svEqiApply(this.value)" style="padding:8px;max-width:180px"></select>
+    <button class="btn btn-s" onclick="svEqiSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
+    <button class="btn btn-s" onclick="svEqiDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1511;&#1493;&#1491;</th>
@@ -2857,6 +2860,7 @@ function rEqi(){
   var locF=window._eqiLocFilter||'';
   var locSel=g('eqi-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
+  if(typeof _svRenderSelect==='function')_svRenderSelect('eqi-sv-select','eqi','');
   var rows=(DB.equip_inspections||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
   var f=window._eqiFilter||'all';
@@ -4289,6 +4293,33 @@ function svTskDelete(){
 function ptwLocFilter(v){window._ptwLocFilter=v||'';rPtw();}
 function eqiLocFilter(v){window._eqiLocFilter=v||'';rEqi();}
 function hzmLocFilter(v){window._hzmLocFilter=v||'';rHzm();}
+
+// Equipment Inspections saved-view glue
+function svEqiSave(){
+  var name=_svPromptName();if(!name)return;
+  var f={eqiFilter:window._eqiFilter||'all',eqiQ:window._eqiQ||'',eqiLocFilter:window._eqiLocFilter||''};
+  _svSave('eqi',name,f);toast('\u05ea\u05e6\u05d5\u05d2\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 ✓');
+  _svRenderSelect('eqi-sv-select','eqi','');
+}
+function svEqiApply(viewId){
+  if(!viewId)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===viewId;});
+  if(!v){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var f=v.filters||{};
+  if(f.eqiFilter && typeof eqiFilter==='function')eqiFilter(f.eqiFilter);
+  window._eqiQ=f.eqiQ||'';
+  var qe=g('eqi-q');if(qe)qe.value=window._eqiQ;
+  window._eqiLocFilter=f.eqiLocFilter||'';
+  rEqi();
+  toast('\u05d4\u05d5\u05d7\u05dc\u05d4: '+v.name);
+}
+function svEqiDelete(){
+  var sel=g('eqi-sv-select');if(!sel||!sel.value)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===sel.value;});
+  if(!v)return;
+  if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
+  _svDelete(v.id);_svRenderSelect('eqi-sv-select','eqi','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
+}
 
 // Notification Preferences (per-user matrix)
 var NOTIF_EVENTS=[
