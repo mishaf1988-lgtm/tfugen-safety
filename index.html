@@ -636,6 +636,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="tsk-tab-prog" onclick="tskFilter('prog')">&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</button>
     <button class="btn btn-s" id="tsk-tab-over" onclick="tskFilter('over')">&#1508;&#1497;&#1490;&#1493;&#1512; &#1497;&#1506;&#1491;</button>
     <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
+    <select id="tsk-sv-select" onchange="svTskApply(this.value)" style="padding:8px;max-width:200px"></select>
+    <button class="btn btn-s" onclick="svTskSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
+    <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
@@ -3737,6 +3740,7 @@ function doRenameUser(){
 
 function rTasks(){
   var tb=g('tb-tasks');if(!tb)return;
+  if(typeof _svRenderSelect==='function')_svRenderSelect('tsk-sv-select','tasks','');
   var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
   var today=new Date().toISOString().split('T')[0];
   var f=window._tskFilter||'all';
@@ -4204,6 +4208,29 @@ function svNmDelete(){
   if(!v)return;
   if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
   _svDelete(v.id);_svRenderSelect('nm-sv-select','nm','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
+}
+
+// Tasks saved-view glue
+function svTskSave(){
+  var name=_svPromptName();if(!name)return;
+  var f={tskFilter:window._tskFilter||'all'};
+  _svSave('tasks',name,f);toast('\u05ea\u05e6\u05d5\u05d2\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');
+  _svRenderSelect('tsk-sv-select','tasks','');
+}
+function svTskApply(viewId){
+  if(!viewId)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===viewId;});
+  if(!v){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var f=v.filters||{};
+  if(f.tskFilter && typeof tskFilter==='function')tskFilter(f.tskFilter);
+  toast('\u05d4\u05d5\u05d7\u05dc\u05d4: '+v.name);
+}
+function svTskDelete(){
+  var sel=g('tsk-sv-select');if(!sel||!sel.value)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===sel.value;});
+  if(!v)return;
+  if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
+  _svDelete(v.id);_svRenderSelect('tsk-sv-select','tasks','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
 }
 
 // Notification Preferences (per-user matrix)
