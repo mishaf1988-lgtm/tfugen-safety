@@ -417,6 +417,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </details>
 
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
+  <div class="card" id="dash-today-tasks-card" style="display:none"><div class="card-title">&#9203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1492;&#1494;&#1492;</div><div id="dash-today-tasks"></div></div>
   <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
@@ -2966,6 +2967,22 @@ function rDash(){
       }).join('');
     }
   }catch(e){console.warn('dash-weekly failed',e);}
+
+  // Dashboard: tasks due today
+  try{
+    var dttc=g('dash-today-tasks-card');
+    var dtt=g('dash-today-tasks');
+    if(dtt){
+      var todayDD=new Date().toISOString().split('T')[0];
+      var todayTasks=(DB.tasks||[]).filter(function(t){return t.due===todayDD&&t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';});
+      if(todayTasks.length){
+        if(dttc)dttc.style.display='';
+        dtt.innerHTML=todayTasks.slice(0,5).map(function(t){
+          return '<div data-id="'+esc(t.id)+'" onclick="showView(\'tasks\',this.dataset.id)" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span>📋 '+esc((t.title||'').substring(0,50))+'</span>'+(t.assignee?'<span style="color:var(--t3);font-size:10px">'+esc(t.assignee)+'</span>':'')+'</div>';
+        }).join('');
+      }else{if(dttc)dttc.style.display='none';}
+    }
+  }catch(e){}
 
   // Dashboard: this-month summary
   try{
