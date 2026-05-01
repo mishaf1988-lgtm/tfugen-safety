@@ -854,6 +854,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button id="ncr-tab-env" class="btn btn-s" onclick="ncrTab('env')" style="font-size:14px;padding:10px 16px;min-height:44px">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</button>
     <select id="ncr-loc-filter" onchange="ncrLocFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
+    <select id="ncr-prj-filter" onchange="ncrPrjFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-sv-select" onchange="svNcrApply(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svNcrSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492; &#1504;&#1493;&#1499;&#1495;&#1497;&#1514;" style="padding:10px 12px;min-height:44px">&#128190;</button>
     <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:#7f1d1d">&#128465;</button>
@@ -3945,6 +3946,13 @@ var filter=window._ncrFilter||'all';
 var locF=window._ncrLocFilter||'';
 var locSel=g('ncr-loc-filter');
 if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
+var prjF=window._ncrPrjFilter||'';
+var prjFSel=g('ncr-prj-filter');
+if(prjFSel){
+  var prjOpts='<option value="">— כל הפרויקטים —</option>';
+  (DB.projects||[]).slice().filter(function(p){return p.status!=='בוטל';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');}).forEach(function(p){prjOpts+='<option value="'+esc(p.id)+'"'+(p.id===prjF?' selected':'')+'>'+esc(p.name)+'</option>';});
+  prjFSel.innerHTML=prjOpts;
+}
 if(typeof _svRenderSelect==='function')_svRenderSelect('ncr-sv-select','ncr','');
 // Render active filter chips
 var chipsEl=g('ncr-active-chips');
@@ -3953,6 +3961,7 @@ if(chipsEl){
   if(filter==='saf')chips.push({label:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',clear:'ncrTab(\'all\')'});
   if(filter==='env')chips.push({label:'\u05e1\u05d1\u05d9\u05d1\u05d4',clear:'ncrTab(\'all\')'});
   if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'ncrLocFilter(\'\')'});}
+  if(prjF){var pn=(typeof _prjName==='function')?_prjName(prjF):prjF;chips.push({label:'🏗️ '+pn,clear:'ncrPrjFilter(\'\')'});}
   chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
 }
 var isAdm=_isAdminUser();
@@ -3961,6 +3970,7 @@ var rows=DB.ncr.filter(function(n){
   if(filter==='saf'&&!(n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0)))return false;
   if(filter==='env'&&!(n.category==='env'||(n.a&&n.a.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0)))return false;
   if(locF&&n.location_id!==locF)return false;
+  if(prjF&&n.project_id!==prjF)return false;
   return true;
 });
 if(!rows.length){
@@ -3998,7 +4008,8 @@ window._ncrFilter=t;
 rNcr();
 }
 function ncrLocFilter(v){window._ncrLocFilter=v||'';rNcr();}
-function ncrClearAll(){window._ncrLocFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function ncrPrjFilter(v){window._ncrPrjFilter=v||'';rNcr();}
+function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function _locFilterOptionsHtml(currentId,placeholder){
   var flat=(typeof _locFlatList==='function')?_locFlatList():[];
   var html='<option value="">'+(placeholder||'— \u05db\u05dc \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd —')+'</option>';
