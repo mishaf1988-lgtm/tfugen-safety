@@ -121,6 +121,38 @@ BEGIN
 END $$;
 
 
+-- ----- inspection_types (recurrence templates, Vitre §12.2) -----
+CREATE TABLE IF NOT EXISTS inspection_types (
+  id            text        PRIMARY KEY,
+  name          text        NOT NULL,
+  scope_table   text,
+  recur_count   int         NOT NULL DEFAULT 1,
+  recur_unit    text        NOT NULL DEFAULT 'year',
+  next_due      date,
+  responsible   text,
+  notes         text,
+  active        boolean     NOT NULL DEFAULT true,
+  ts            timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS inspection_types_due_idx ON inspection_types(next_due) WHERE active=true;
+
+ALTER TABLE inspection_types ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy WHERE polname = 'inspection_types_admin_manager_all'
+  ) THEN
+    CREATE POLICY inspection_types_admin_manager_all ON inspection_types
+      FOR ALL
+      TO authenticated
+      USING (private.is_admin_manager())
+      WITH CHECK (private.is_admin_manager());
+  END IF;
+END $$;
+
+
 -- =====================================================================
 -- DONE. The UI works without these changes (sbIns queues writes), but
 -- once these run, sync flows normally and structured data persists.

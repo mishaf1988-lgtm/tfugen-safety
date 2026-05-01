@@ -766,6 +766,19 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
 </div>
 
+<!-- INSPECTION TYPES PAGE -->
+<div id="pg-itp" class="page">
+  <div class="row">
+    <div class="page-title">&#128270; <span>&#1505;&#1493;&#1490;&#1497; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1493;&#1494;&#1512;&#1497;&#1501;</span></div>
+    <button class="btn btn-p" onclick="_itpOpenAdd()">+ &#1505;&#1493;&#1490; &#1495;&#1491;&#1513;</button>
+  </div>
+  <div class="card">
+    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1490;&#1491;&#1512; &#1502;&#1492; &#1504;&#1493;&#1513;&#1488; &#1502;&#1493;&#1495;&#1494;&#1512; &#1500;&#1493;&#1493;&#1497;&#1491;&#1488;&#1493;&#1514; &#1488;&#1497;&#1500;&#1493; (&#1500;&#1502;&#1513;&#1500; &#1489;&#1491;&#1497;&#1511;&#1492; &#1513;&#1504;&#1514;&#1497;&#1514; &#1500;&#1502;&#1500;&#1490;&#1494;&#1493;&#1514;) &#1493;&#1499;&#1500; &#1499;&#1502;&#1492; &#1494;&#1502;&#1503;.</div>
+    <div id="itp-list"></div>
+  </div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
+</div>
+
 <!-- CALENDAR VIEW -->
 <div id="pg-cal" class="page">
   <div class="row">
@@ -1168,6 +1181,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')"><span class="sic">&#127811;</span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')"><span class="sic">&#128205;</span>&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>&#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;&#1497;&#1501;</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itp')"><span class="sic">&#128270;</span>&#1505;&#1493;&#1490;&#1497; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1493;&#1494;&#1512;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()"><span class="sic">&#128276;</span>&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</button>
 
     <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
@@ -1600,6 +1614,24 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-prj')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svPrj()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- INSPECTION TYPE MODAL -->
+<div class="overlay" id="ov-itp" onclick="closeModal('m-itp')"></div>
+<div class="modal" id="m-itp" style="display:none;max-width:480px">
+  <button class="close-btn" onclick="closeModal('m-itp')">&#10005;</button>
+  <div class="card-title" id="itp-title">&#1505;&#1493;&#1490; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1491;&#1513;</div>
+  <input type="hidden" id="itp-id">
+  <div class="modal-body">
+    <div class="field fw"><label>&#1513;&#1501; *</label><input id="itp-name" placeholder="לדוגמה: בדיקה שנתית למלגזות"></div>
+    <div class="field"><label>&#1514;&#1491;&#1497;&#1512;&#1493;&#1514;</label><input id="itp-recur-count" type="number" min="1" value="1" style="max-width:100px"></div>
+    <div class="field"><label>&#1497;&#1495;&#1497;&#1491;&#1514; &#1494;&#1502;&#1503;</label><select id="itp-recur-unit"><option value="day">&#1497;&#1502;&#1497;&#1501;</option><option value="week">&#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</option><option value="month">&#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</option><option value="year" selected>&#1513;&#1504;&#1497;&#1501;</option></select></div>
+    <div class="field"><label>&#1502;&#1493;&#1506;&#1491; &#1489;&#1497;&#1510;&#1493;&#1506; &#1492;&#1489;&#1488;</label><input id="itp-next-due" type="date"></div>
+    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="itp-responsible"></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="itp-notes" rows="2"></textarea></div>
+    <div class="field"><label><input type="checkbox" id="itp-active" checked> &#1508;&#1506;&#1497;&#1500;</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-itp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svItp()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
 <!-- NOTIFICATION SETTINGS MODAL -->
 <div class="overlay" id="ov-notif" onclick="closeModal('m-notif')"></div>
 <div class="modal" id="m-notif" style="display:none;max-width:560px">
@@ -1756,7 +1788,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1782,7 +1814,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1791,7 +1823,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1860,7 +1892,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:
 function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1888,7 +1920,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -2017,7 +2049,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp};
   delRow(tbl,id,fn[tbl]||function(){});
 }
 // Maps each page to its top-level nav tab so the correct bn stays highlighted
@@ -2053,7 +2085,7 @@ function goPage(id){
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp};
   if(m[CUR])m[CUR]();
 }
 var _modalLastScrollY=0;
@@ -4592,6 +4624,60 @@ window._dashByLocClick=function(locId){
   window._ncrFilter='all';
   goPage('ncr');
 };
+
+// Inspection Types (recurrence templates)
+function rItp(){
+  var box=g('itp-list');if(!box)return;
+  var rows=(DB.inspection_types||[]).slice().sort(function(a,b){return (a.next_due||'9999')<(b.next_due||'9999')?-1:1;});
+  if(!rows.length){box.innerHTML='<div style="padding:30px;text-align:center;color:var(--t3)"><div style="font-size:42px;margin-bottom:10px">🔍</div><div style="margin-bottom:14px">\u05d0\u05d9\u05df \u05e1\u05d5\u05d2\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05d5\u05d2\u05d3\u05e8\u05d9\u05dd</div><button class="btn btn-p" onclick="_itpOpenAdd()">+ \u05e1\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d5\u05df</button></div>';return;}
+  var unitLbl={day:'\u05d9\u05de\u05d9\u05dd',week:'\u05e9\u05d1\u05d5\u05e2\u05d5\u05ea',month:'\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd',year:'\u05e9\u05e0\u05d9\u05dd'};
+  box.innerHTML=rows.map(function(r){
+    var safeId=esc(r.id);
+    var due=r.next_due?fd(r.next_due):'?';
+    var dueCol='var(--t3)';
+    if(r.next_due){var dd=du(r.next_due);if(dd<0)dueCol='var(--bad)';else if(dd<=30)dueCol='var(--warn)';}
+    var bg=r.active?'#dcfce7':'#fce4e4';
+    var act=r.active?'\u05e4\u05e2\u05d9\u05dc':'\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+  }).join('');
+}
+function _itpOpenAdd(){
+  g('itp-id').value='';
+  g('itp-name').value='';
+  g('itp-recur-count').value='1';
+  g('itp-recur-unit').value='year';
+  g('itp-next-due').value='';
+  g('itp-responsible').value='';
+  g('itp-notes').value='';
+  g('itp-active').checked=true;
+  g('itp-title').textContent='\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d7\u05d3\u05e9';
+  openModal('m-itp');
+}
+function editItp(id){
+  var rec=(DB.inspection_types||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  g('itp-id').value=rec.id;
+  g('itp-name').value=rec.name||'';
+  g('itp-recur-count').value=rec.recur_count||1;
+  g('itp-recur-unit').value=rec.recur_unit||'year';
+  g('itp-next-due').value=rec.next_due||'';
+  g('itp-responsible').value=rec.responsible||'';
+  g('itp-notes').value=rec.notes||'';
+  g('itp-active').checked=rec.active!==false;
+  g('itp-title').textContent='\u05e2\u05e8\u05d9\u05db\u05ea \u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea';
+  openModal('m-itp');
+}
+function svItp(){
+  var name=(gv('itp-name')||'').trim();
+  if(!name){toast('\u05e9\u05dd \u05d7\u05d5\u05d1\u05d4');return;}
+  var id=gv('itp-id')||gid();
+  var existingIdx=(DB.inspection_types||[]).findIndex(function(r){return r.id===id;});
+  var r={id:id,name:name,recur_count:parseInt(gv('itp-recur-count'))||1,recur_unit:gv('itp-recur-unit')||'year',next_due:gv('itp-next-due')||null,responsible:gv('itp-responsible')||null,notes:gv('itp-notes')||null,active:!!(g('itp-active')&&g('itp-active').checked),ts:new Date().toISOString()};
+  if(!DB.inspection_types)DB.inspection_types=[];
+  if(existingIdx>=0){DB.inspection_types[existingIdx]=r;sbUpd('inspection_types',r);}
+  else{DB.inspection_types.push(r);sbIns('inspection_types',r);}
+  sdb();closeModal('m-itp');toast('\u05e0\u05e9\u05de\u05e8 ✓');rItp();
+}
 
 // Project select helpers (parallel to _loc helpers)
 function _prjOptionsHtml(currentId){
