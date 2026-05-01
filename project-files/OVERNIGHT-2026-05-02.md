@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `5777225`
-**Total PRs merged**: ~30
+**Latest commit**: `092dbe1`
+**Total PRs merged**: ~65
 
 ---
 
@@ -104,18 +104,21 @@ migrations/2026-05-02_OVERNIGHT_COMBINED.sql
 - **Email SMTP setup** — לחבר ערוץ Email אמיתי במטריצה
 - **Project rollup view** — דף מפורט פר פרויקט עם רשימה של NCRs/tasks/inc
 
-## מה כן הוסף בלילה הזה (PRs #138-#180)
+## מה כן הוסף בלילה הזה (PRs #138-#203)
 - ✅ Saved Views (NCR / NM / Tasks / EQI / Hzm)
-- ✅ Notifications matrix (5/5 triggers)
+- ✅ Notifications matrix (5/5 triggers + log + viewer + test button)
 - ✅ Locations (5 טפסים, סינון, dashboard, count badges)
 - ✅ Chained forms (near-miss → NCR draft)
 - ✅ Custom Properties — שדות מותאמים פר-רשומה
-- ✅ Projects — יצירה, ניהול, אינטגרציה ב-NCR/tasks/inc, סינון
-- ✅ Dashboard widgets (by location, weekly comparison)
-- ✅ Filter chips ויזואליים
+- ✅ Projects — יצירה, ניהול, אינטגרציה ב-NCR/tasks/inc, סינון, clickable
+- ✅ Inspection Types — תבניות בדיקות חוזרות + virtual tasks
+- ✅ Dashboard widgets: by-location, by-project, weekly comparison, upcoming inspections, auto-insights, safety health score, morning round reminder
+- ✅ Filter chips ויזואליים בכל הטפסים
 - ✅ Search by location name
-- ✅ Bell 🔔 בtopbar
+- ✅ Bell 🔔 + JSON backup 💾 + my-tasks 📝 בtopbar
+- ✅ Hebrew date header
 - ✅ showView auto-renders location + project
+- ✅ Emergency report 🆘 shortcut
 
 ---
 *נוצר אוטומטית ע"י Claude כסיכום סשן לילה אוטונומי.*
