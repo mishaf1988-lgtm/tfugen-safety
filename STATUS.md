@@ -74,6 +74,7 @@
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_tasks_parent.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `parent_id text` ב-`tasks` + partial index `tasks_parent_id_idx` נוצרו. תומך ב-Sub-tasks. אומת ב-`information_schema.columns`.
+- [ ] **הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_capa_verify.sql` — מוסיף 3 עמודות ל-`ncr` עבור CAPA Verification (`verified_by`, `verified_at`, `verification_notes`). ה-UI כבר מוכן.
 - [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_patterns.sql` — טבלה חדשה `ncr_patterns` (history של ניתוחים מצטברים) + RLS policy `_admin_manager_all`. ה-UI כבר מוכן (auto-save + history list בסוכן). בלי הרצה: ה-POST ייכשל בשקט וההיסטוריה לא תיבנה.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_sensitivity.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `sens boolean DEFAULT false` ב-`ncr` + partial index `ncr_sens_idx WHERE sens=true` נוצרו. תומך ב-Sensitivity flag (UI gating ב-4 נקודות). אומת ב-`information_schema.columns`.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
@@ -91,6 +92,9 @@
 - [ ] **Legal Register** — חוקים + סקירות תקופתיות (14001)
 - [ ] **Environmental Aspects** — רישום היבטים סביבתיים (14001:6.1.2)
 - [x] **Management Review Dashboard** — דף `pg-mr` admin-only עם KPI לסקירה רבעונית (ISO 45001:9.3, 14001:9.3). אוטומטית מזהה רבעון נוכחי. 3 קבוצות KPI: snapshot כללי (NCR פתוחים, משימות בפיגור, תפוגות 30 יום, סבבי בוקר החודש), אירועי תקופה (NCR נפתחו/נסגרו, תקריות + ימי אבדן, near-miss), מדדי ציות (% הדרכות/מסמכים/ציוד תקפים + שיחות בטיחות). 2 לוחות: 5 NCR קריטיים פתוחים + 10 תפוגות קרובות. ניתן להדפיס ל-PDF דרך כפתור 🖨 הקיים בtopbar. ניווט: מודולים → "הנהלה" → "סקירת הנהלה" (admin-only).
+- [x] **CAPA Verification** — בהשראת ISO 45001:10.2 (אימות אפקטיביות פעולות מתקנות). מיגרציה `2026-05-01_ncr_capa_verify.sql` הוסיפה 3 עמודות ל-`ncr`: `verified_by`, `verified_at`, `verification_notes`. ב-showView של NCR סגור: אם עברו 30+ יום מ-`cd` ועדיין לא אומת — admin רואה כפתור "✅ אמת אפקטיביות". prompt לתיאור → שמירה. אחרי אימות מוצג badge ירוק "✓ אומת על ידי X ב-DD/MM/YYYY". פחות מ-30 יום: כיתוב "אימות יהיה זמין בעוד N ימים".
+- [x] **Risk Matrix 5×5** — בהשראת ISO 45001:6.1.2 (HIRA). טאב חדש בדף `pg-rsk` עם תצוגת מטריצה ויזואלית 5×5 (P × S). כל ריבוע צבוע לפי RPN: ירוק (1-4), צהוב (5-9), כתום (10-15), אדום (16-25). מספר הסיכונים בכל ריבוע + קליק → showView של הסיכון הראשון. legend בתחתית.
+- [x] **Calendar View** — דף חדש `pg-cal` עם לוח שנה חודשי. נקודות צבעוניות פר-יום: 🔴 משימות, 🟡 תפוגות, 🟢 סבב בוקר, 🟣 ביקורות, 🔵 שיחות בטיחות. ניווט חודשים (◀ ▶ + "היום"). קליק על יום → רשימת פריטים מתחת עם קליק → showView. ניווט: מודולים → "הנהלה" → "לוח שנה".
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
