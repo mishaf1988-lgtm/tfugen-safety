@@ -388,6 +388,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
   <div id="dash-today" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl"></div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
+  <div id="dash-health" style="margin:0 0 10px"></div>
   <div id="dash-alerts"></div>
 
   <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
@@ -2779,6 +2780,27 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Safety health score (rough composite)
+  try{
+    var dh=g('dash-health');
+    if(dh){
+      var score=100;
+      var openNcr=(DB.ncr||[]).filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
+      score-=Math.min(openNcr*2,30);
+      var today3=new Date();today3.setHours(0,0,0,0);
+      var overdueT2=(DB.tasks||[]).filter(function(t){if(!t.due||t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;return new Date(t.due)<today3;}).length;
+      score-=Math.min(overdueT2*3,20);
+      var expSoon=0;
+      ['ppe','tr','docs','ctr'].forEach(function(k){(DB[k]||[]).forEach(function(r){if(!r.e)return;var d=new Date(r.e);var dd=(d-today3)/86400000;if(dd<0)expSoon++;});});
+      score-=Math.min(expSoon*2,20);
+      score=Math.max(score,0);
+      var color=score>=80?'#16a34a':(score>=60?'#eab308':'#cc1f1f');
+      var emoji=score>=80?'✅':(score>=60?'⚠️':'🚨');
+      var label=score>=80?'\u05ea\u05e7\u05d9\u05df':(score>=60?'\u05e9\u05de\u05d5\u05e8 \u05d2\u05d5\u05e8\u05dd':'\u05d3\u05d5\u05e8\u05e9 \u05d8\u05d9\u05e4\u05d5\u05dc');
+      dh.innerHTML='<div style="background:'+color+';color:#fff;padding:10px 14px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:700"><span>'+emoji+' \u05e6\u05d9\u05d5\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+score+'/100</span><span style="font-size:12px;font-weight:400">'+label+'</span></div>';
+    }
+  }catch(e){console.warn('health failed',e);}
+
   // Auto-insights (3 signals max)
   try{
     var di2=g('dash-insights');
