@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `5777225` |
+| Commit | `3767025` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -85,7 +85,7 @@
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk_more.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. אותו דבר ל-`ptw`, `equip_inspections`, `hzm` + 3 indexes. PR #143.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_saved_views.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. PR #147.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_notification_prefs.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `notification_prefs(id PK = email, prefs jsonb, ts)` עם RLS לפי email. PR #148.
-- [ ] **הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_OVERNIGHT_COMBINED.sql` — מאחד 4 migrations מהלילה: location_id ל-inc/hearing_tests, custom_props, projects, project_id FK ל-ncr/tasks/inc. **idempotent** — בטוח להריץ. אם לא יורץ — UI עדיין יעבוד (sbIns יכניס לתור), אבל הסכמה לא תתעדכן עד שיירוץ.
+- [ ] **הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_OVERNIGHT_COMBINED.sql` — מאחד 5 migrations מהלילה: location_id ל-inc/hearing_tests, custom_props, projects, project_id FK ל-ncr/tasks/inc, notifications_log. **idempotent** — בטוח להריץ. אם לא יורץ — UI עדיין יעבוד (sbIns יכניס לתור), אבל הסכמה לא תתעדכן עד שיירוץ.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
@@ -145,6 +145,8 @@
 - [x] **Tasks filter by project (PR #178)** — Dropdown סינון פרויקט.
 - [x] **Project name in NCR list (PR #179)** — בעמודת המיקום מוצג גם 🏗️ פרויקט.
 - [x] **Projects VIEW_CONFIG (PR #180)** — showView יודע להציג פרויקט.
+- [x] **Notifications log table (PR #182)** — `notifications_log` שומר audit trail של כל התראה שמופעלת. Migration ב-COMBINED.
+- [x] **Notifications log viewer (PR #183)** — בתחתית הגדרות התראות, section נפתח עם 20 התראות אחרונות.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
