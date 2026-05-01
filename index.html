@@ -1612,7 +1612,7 @@ id="m-ncr" style="display:none">
       <div id="notif-log-list" style="max-height:240px;overflow-y:auto;margin-top:8px;font-size:11px"></div>
     </details>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492;">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- GLOBAL SEARCH MODAL -->
@@ -4548,6 +4548,14 @@ function openNotifSettings(){
     }
   }
   openModal('m-notif');
+}
+function testNotif(){
+  if(typeof _notifyEvent!=='function'){toast('\u05dc\u05d0 \u05d6\u05de\u05d9\u05df');return;}
+  // Force a test event using current settings as if NCR critical opened
+  var prefs=_notifPrefs();
+  if(!prefs.ncr_critical){toast('\u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d5 \u05e2\u05e8\u05d5\u05e6\u05d9\u05dd \u05dc-NCR \u05e7\u05e8\u05d9\u05d8\u05d9. \u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05d5\u05e9\u05de\u05d5\u05e8.');return;}
+  _notifyEvent('ncr_critical',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4 — NCR-TEST \u05e7\u05e8\u05d9\u05d8\u05d9',id:'test'});
+  toast('🧪 \u05d4\u05ea\u05e8\u05d0\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 (\u05d1\u05d3\u05d5\u05e7 console + log \u05dc\u05de\u05d8\u05d4)');
 }
 function saveNotifSettings(){
   var u=_svUser();
