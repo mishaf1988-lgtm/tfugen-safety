@@ -7157,6 +7157,20 @@ function _expPdf(){window.print();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',inject);else inject();
   if(typeof goPage==='function'){var _g=goPage;window.goPage=function(id){_g(id);setTimeout(inject,30);};}
 })();
+
+// Scroll to top button
+(function(){
+  var btn=document.createElement('button');
+  btn.id='scroll-top-btn';
+  btn.textContent='↑';
+  btn.title='\u05d2\u05dc\u05d5\u05dc \u05dc\u05de\u05e2\u05dc\u05d4';
+  btn.style.cssText='position:fixed;bottom:80px;left:14px;z-index:99;width:42px;height:42px;border-radius:50%;background:#1a1d23;color:#fff;border:none;font-size:20px;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  btn.onclick=function(){window.scrollTo({top:0,behavior:'smooth'});};
+  document.body.appendChild(btn);
+  window.addEventListener('scroll',function(){
+    btn.style.display=window.scrollY>200?'block':'none';
+  });
+})();
 </script>
 </body>
 </html>
