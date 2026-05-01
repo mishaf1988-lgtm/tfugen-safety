@@ -4437,6 +4437,9 @@ function showView(tbl,id){
   if(canReopen){
     html+='<div style="margin-top:14px"><button data-rtbl="'+esc(tbl)+'" data-rid="'+esc(id)+'" onclick="_reopen(this.dataset.rtbl,this.dataset.rid)" style="width:100%;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;color:#b45309;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128275; \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button></div>';
   }
+  if(tbl==='near_miss'&&rec.sev==='\u05d7\u05de\u05d5\u05e8'){
+    html+='<div style="margin-top:10px"><button data-nmid="'+esc(id)+'" onclick="_chainNmToNcr(this.dataset.nmid)" style="width:100%;background:#fef2f2;border:1px solid #cc1f1f;border-radius:8px;color:#991b1b;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#9888;\ufe0f \u05e4\u05ea\u05d7 NCR \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4</button></div>';
+  }
   if(tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8'&&rec.cd){
     var capaAge=Math.floor((Date.now()-new Date(rec.cd).getTime())/86400000);
     if(rec.verified_by){
@@ -4612,6 +4615,28 @@ window._capaVerify=function(id){
   toast('\u05d0\u05d5\u05de\u05ea \u2713');
   showView('ncr',id);
   if(typeof rNcr==='function')rNcr();if(typeof rDash==='function')rDash();
+};
+window._chainNmToNcr=function(nmId){
+  var nm=(DB.near_miss||[]).find(function(r){return r.id===nmId;});
+  if(!nm){toast('\u05d3\u05d9\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  if(!confirm('\u05dc\u05e4\u05ea\u05d5\u05d7 NCR \u05d8\u05d9\u05d5\u05d8\u05d4 \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4?'))return;
+  // Close the view modal if open
+  var v=g('m-view');if(v&&v.style.display==='block')closeModal('m-view');
+  goPage('ncr');
+  setTimeout(function(){
+    if(typeof openNewNcrModal==='function'){openNewNcrModal();}else{openModal('m-ncr');}
+    setTimeout(function(){
+      var setIf=function(elId,val){var el=g(elId);if(el&&val)el.value=val;};
+      setIf('ncr-d','\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2: '+(nm.descr||'').substring(0,200));
+      setIf('ncr-loc',nm.area||'');
+      var locSel=g('ncr-location-id');if(locSel&&nm.location_id){locSel.value=nm.location_id;}
+      setIf('ncr-o',nm.rep||'');
+      setIf('ncr-sd',nm.d||new Date().toISOString().split('T')[0]);
+      setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 #'+nmId);
+      var prio=g('ncr-p');if(prio&&nm.sev==='\u05d7\u05de\u05d5\u05e8')prio.value='\u05e7\u05e8\u05d9\u05d8\u05d9';
+      toast('\u05d8\u05d9\u05d5\u05d8\u05ea NCR \u05de\u05d5\u05dc\u05d0\u05d4 — \u05e1\u05e7\u05d5\u05e8 \u05d5\u05e9\u05de\u05d5\u05e8');
+    },200);
+  },300);
 };
 window._reopen=function(tbl,id){
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
