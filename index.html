@@ -706,12 +706,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1512;&#1497;&#1513;&#1493;&#1501; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1508;&#1497; ISO 14001 &#1505;&#1506;&#1497;&#1507; 6.1.2 &mdash; &#1497;&#1505;&#1493;&#1491;&#1493;&#1514; &#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1512;&#1490;&#1493;&#1503; &#1513;&#1497;&#1499;&#1493;&#1500;&#1493;&#1514; &#1500;&#1492;&#1513;&#1508;&#1497;&#1506; &#1506;&#1500; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;.</div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>&#1492;&#1497;&#1489;&#1496;</th>
-      <th>&#1508;&#1506;&#1497;&#1500;&#1493;&#1514;</th>
-      <th>&#1492;&#1513;&#1508;&#1506;&#1492;</th>
-      <th>&#1502;&#1513;&#1502;&#1506;&#1493;&#1514;&#1497;&#1493;&#1514;</th>
+      <th>&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
+      <th>&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
+      <th>RPN &#1489;&#1508;&#1493;&#1506;&#1500;</th>
+      <th>RPN &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</th>
+      <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
       <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-      <th>&#1505;&#1511;&#1497;&#1512;&#1492;</th>
       <th></th>
       <th></th>
     </tr></thead><tbody id="tb-easp"></tbody></table></div>
@@ -1464,21 +1464,37 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
-<!-- ENV ASPECT MODAL -->
+<!-- ENV ASPECT MODAL (full ISO 14001:6.1.2 methodology) -->
 <div class="overlay" id="ov-easp" onclick="closeModal('m-easp')"></div>
-<div class="modal" id="m-easp" style="display:none">
+<div class="modal" id="m-easp" style="display:none;max-width:680px">
   <button class="close-btn" onclick="closeModal('m-easp')">&#10005;</button>
   <div class="modal-title">&#127811; &#1492;&#1497;&#1489;&#1496; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</div>
   <input type="hidden" id="ea-id">
+  <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:700">&#128205; &#1494;&#1497;&#1492;&#1493;&#1497;</div>
   <div class="fgrid">
-    <div class="field fw"><label>&#1492;&#1497;&#1489;&#1496; *</label><input id="ea-aspect" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1508;&#1500;&#1497;&#1496;&#1493;&#1514; CO2 &#1502;&#1491;&#1493;&#1491; &#1511;&#1497;&#1496;&#1493;&#1512;"></div>
-    <div class="field fw"><label>&#1508;&#1506;&#1497;&#1500;&#1493;&#1514;</label><input id="ea-activity" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1497;&#1497;&#1510;&#1493;&#1512; &#1511;&#1497;&#1496;&#1493;&#1512; &#1500;&#1514;&#1492;&#1500;&#1497;&#1498;"></div>
-    <div class="field fw"><label>&#1492;&#1513;&#1508;&#1506;&#1492; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1514;</label><textarea id="ea-impact" rows="2" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1514;&#1512;&#1493;&#1502;&#1492; &#1500;&#1492;&#1514;&#1495;&#1502;&#1502;&#1493;&#1514; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;&#1514;"></textarea></div>
-    <div class="field"><label>&#1502;&#1513;&#1502;&#1506;&#1493;&#1514;&#1497;&#1493;&#1514;</label><select id="ea-sig"><option value="">&#1489;&#1495;&#1512;...</option><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option></select></div>
-    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ea-owner" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;"></div>
-    <div class="field fw"><label>&#1492;&#1508;&#1504;&#1497;&#1492; &#1500;&#1495;&#1493;&#1511;/&#1514;&#1511;&#1504;&#1492;</label><input id="ea-legal" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1495;&#1493;&#1511; &#1488;&#1493;&#1493;&#1497;&#1512; &#1504;&#1511;&#1497; (&#1502;&#1504;&#1497;&#1506;&#1514; &#1494;&#1497;&#1492;&#1493;&#1501;) 2008"></div>
-    <div class="field fw"><label>&#1489;&#1511;&#1512;&#1493;&#1514; &#1511;&#1497;&#1497;&#1502;&#1493;&#1514;</label><textarea id="ea-controls" rows="2" placeholder="&#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: &#1502;&#1505;&#1504;&#1504;&#1497; &#1494;&#1497;&#1492;&#1493;&#1501;, &#1514;&#1495;&#1494;&#1493;&#1511;&#1492; &#1512;&#1489;&#1506;&#1493;&#1504;&#1497;&#1514;"></textarea></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1511;&#1497;&#1512;&#1492; &#1492;&#1489;&#1488;</label><input type="date" id="ea-review"></div>
+    <div class="field fw"><label>&#1492;&#1497;&#1489;&#1496; *</label><input id="ea-aspect" list="ea-aspect-opts" placeholder="לדוגמה: ניצול משאבי טבע"><datalist id="ea-aspect-opts"><option value="ניצול משאבי טבע"><option value="ריח"><option value="שפכים"><option value="חומרים מסוכנים"><option value="פליטות לאוויר"><option value="פסולת מוצקה"><option value="פסולת מסוכנת"><option value="זיהום מקורות מים/קרקע"><option value="אירועי חירום ביטחוניים"><option value="אסון טבע"><option value="אירועי מזג אוויר קיצוניים"></datalist></div>
+    <div class="field"><label>&#1508;&#1506;&#1497;&#1500;&#1493;&#1514;/&#1502;&#1514;&#1511;&#1503;</label><input id="ea-activity" placeholder="כלל המפעל / מתקן טיפול שפכים..."></div>
+    <div class="field"><label>&#1513;&#1500;&#1489; &#1489;&#1502;&#1495;&#1494;&#1493;&#1512; &#1492;&#1495;&#1497;&#1497;&#1501;</label><select id="ea-lifecycle"><option value="">בחר...</option><option>כרייה/חומרי גלם</option><option>תכנון ופיתוח</option><option>ייצור</option><option>שינוע</option><option>שימוש</option><option>סוף חיי מוצר</option></select></div>
+    <div class="field"><label>&#1513;&#1500;&#1497;&#1496;&#1492;/&#1492;&#1513;&#1508;&#1506;&#1492;</label><select id="ea-control"><option value="">בחר...</option><option>שליטה</option><option>השפעה</option></select></div>
+    <div class="field fw"><label>&#1499;&#1497;&#1493;&#1493;&#1503; &#1492;&#1492;&#1513;&#1508;&#1506;&#1492;</label><select id="ea-direction"><option value="">בחר...</option><option>השפעה של הארגון על הסביבה</option><option>השפעה של הסביבה על הארגון</option></select></div>
+  </div>
+  <div style="font-size:11px;color:var(--t3);margin:12px 0 6px;font-weight:700">&#9888; &#1492;&#1506;&#1512;&#1499;&#1514; &#1505;&#1497;&#1499;&#1493;&#1503;</div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1502;&#1513;&#1502;&#1506;&#1493;&#1514; &#1492;&#1492;&#1497;&#1489;&#1496;</label><textarea id="ea-impact" rows="2" placeholder="לדוגמה: שימוש מוגבר באנרגיה עלול לגרום לצריכת יתר של משאבי טבע מוגבלים"></textarea></div>
+    <div class="field fw"><label>&#1489;&#1511;&#1512;&#1493;&#1514; &#1511;&#1497;&#1497;&#1502;&#1493;&#1514;</label><textarea id="ea-controls" rows="2" placeholder="תיאור הבקרות הקיימות במפעל..."></textarea></div>
+    <div class="field"><label>&#1505;&#1489;&#1497;&#1512;&#1493;&#1514; (P) &#1489;&#1508;&#1493;&#1506;&#1500;</label><select id="ea-pcurr"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+    <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492; (S) &#1489;&#1508;&#1493;&#1506;&#1500;</label><select id="ea-svcurr"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+    <div class="field fw"><label>&#1489;&#1511;&#1512;&#1493;&#1514; &#1504;&#1493;&#1505;&#1508;&#1493;&#1514; &#1500;&#1502;&#1497;&#1494;&#1493;&#1512; &#1492;&#1505;&#1497;&#1499;&#1493;&#1503;</label><textarea id="ea-addctrl" rows="2" placeholder="המלצות לבקרות נוספות..."></textarea></div>
+    <div class="field"><label>P &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</label><select id="ea-ppot"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+    <div class="field"><label>S &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</label><select id="ea-svpot"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+  </div>
+  <div style="font-size:11px;color:var(--t3);margin:12px 0 6px;font-weight:700">&#128203; &#1504;&#1497;&#1492;&#1493;&#1500;</div>
+  <div class="fgrid">
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ea-status"><option value="">בחר...</option><option>בוצע</option><option>מבוצע בשוטף</option><option>בשוטף</option><option>בתכנון</option><option>קיים</option></select></div>
+    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ea-owner" placeholder="שם אחראי"></div>
+    <div class="field"><label>&#1500;&#1493;&#1494; &#1505;&#1511;&#1497;&#1512;&#1492;</label><input type="date" id="ea-review"></div>
+    <div class="field fw"><label>&#1492;&#1505;&#1489;&#1512; &#1500;&#1488;&#1497; &#1489;&#1497;&#1510;&#1493;&#1506;</label><textarea id="ea-explanation" rows="2"></textarea></div>
+    <div class="field fw"><label>&#1492;&#1508;&#1504;&#1497;&#1492; &#1500;&#1495;&#1493;&#1511;/&#1514;&#1511;&#1504;&#1492;</label><input id="ea-legal" placeholder="לדוגמה: חוק אוויר נקי 2008"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="ea-notes" rows="2"></textarea></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-easp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svEasp()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -3825,18 +3841,21 @@ function _rskMatrix(){
   html+='</div>';
   host.innerHTML=html;
 }
+function _easpRpnColor(rpn){if(rpn>=12)return '#cc1f1f';if(rpn>=4)return '#eab308';return '#16a34a';}
 function rEasp(){
   var tb=g('tb-easp');if(!tb)return;
   var rows=DB.env_aspects||[];
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">\ud83c\udf33</span>\u05d0\u05d9\u05df \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-easp\')">+ \u05d4\u05d9\u05d1\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  var SIG_COL={'\u05d2\u05d1\u05d5\u05d4\u05d4':'#cc1f1f','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':'#eab308','\u05e0\u05de\u05d5\u05db\u05d4':'#16a34a'};
   tb.innerHTML=rows.slice().sort(function(a,b){
-    var sigOrd={'\u05d2\u05d1\u05d5\u05d4\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05e0\u05de\u05d5\u05db\u05d4':3};
-    return (sigOrd[a.significance]||9)-(sigOrd[b.significance]||9);
+    var ar=(a.p_curr||0)*(a.sv_curr||0);var br=(b.p_curr||0)*(b.sv_curr||0);
+    return br-ar;
   }).map(function(r){
-    var col=SIG_COL[r.significance]||'#888';
-    var sigBadge=r.significance?'<span style="background:'+col+';color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+esc(r.significance)+'</span>':'—';
-    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,40))+'</strong></td><td>'+esc(String(r.activity||'').substring(0,30))+'</td><td>'+esc(String(r.impact||'').substring(0,40))+'</td><td>'+sigBadge+'</td><td>'+esc(r.owner||'—')+'</td><td>'+(r.review_date?eb(r.review_date):'—')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    var rpnC=(r.p_curr||0)*(r.sv_curr||0);
+    var rpnP=(r.p_pot||0)*(r.sv_pot||0);
+    var curBadge=rpnC?'<span style="background:'+_easpRpnColor(rpnC)+';color:'+(rpnC>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_curr||'?')+'\u00d7'+(r.sv_curr||'?')+'='+rpnC+'</span>':'\u2014';
+    var potBadge=rpnP?'<span style="background:'+_easpRpnColor(rpnP)+';color:'+(rpnP>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_pot||'?')+'\u00d7'+(r.sv_pot||'?')+'='+rpnP+'</span>':'\u2014';
+    var sb=r.status?'<span class="b bX" style="font-size:10px">'+esc(r.status)+'</span>':'\u2014';
+    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong><div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'\u2014')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'\u2014').substring(0,25))+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
   }).join('');
 }
 function svEasp(){
@@ -3844,7 +3863,7 @@ function svEasp(){
   if(!aspect){toast('\u05d4\u05d9\u05d1\u05d8 \u05d4\u05d5\u05d0 \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('ea-id')||gid();
   var existingIdx=(DB.env_aspects||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,impact:gv('ea-impact')||null,significance:gv('ea-sig')||null,owner:gv('ea-owner')||null,legal_ref:gv('ea-legal')||null,controls:gv('ea-controls')||null,review_date:gv('ea-review')||null,notes:gv('ea-notes')||null,ts:new Date().toISOString()};
+  var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,lifecycle:gv('ea-lifecycle')||null,control_type:gv('ea-control')||null,direction:gv('ea-direction')||null,impact:gv('ea-impact')||null,controls:gv('ea-controls')||null,p_curr:parseInt(gv('ea-pcurr'))||null,sv_curr:parseInt(gv('ea-svcurr'))||null,additional_controls:gv('ea-addctrl')||null,p_pot:parseInt(gv('ea-ppot'))||null,sv_pot:parseInt(gv('ea-svpot'))||null,status:gv('ea-status')||null,owner:gv('ea-owner')||null,review_date:gv('ea-review')||null,explanation:gv('ea-explanation')||null,legal_ref:gv('ea-legal')||null,notes:gv('ea-notes')||null,ts:new Date().toISOString()};
   if(!DB.env_aspects)DB.env_aspects=[];
   if(existingIdx>=0){DB.env_aspects[existingIdx]=r;sbUpd('env_aspects',r);}
   else{DB.env_aspects.push(r);sbIns('env_aspects',r);}
@@ -3854,9 +3873,14 @@ function editEasp(id){
   var rec=(DB.env_aspects||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
   g('ea-id').value=rec.id;
-  setIf('ea-aspect',rec.aspect);setIf('ea-activity',rec.activity);setIf('ea-impact',rec.impact);
-  setIf('ea-sig',rec.significance);setIf('ea-owner',rec.owner);setIf('ea-legal',rec.legal_ref);
-  setIf('ea-controls',rec.controls);setIf('ea-review',rec.review_date);setIf('ea-notes',rec.notes);
+  setIf('ea-aspect',rec.aspect);setIf('ea-activity',rec.activity);setIf('ea-lifecycle',rec.lifecycle);
+  setIf('ea-control',rec.control_type);setIf('ea-direction',rec.direction);
+  setIf('ea-impact',rec.impact);setIf('ea-controls',rec.controls);
+  setIf('ea-pcurr',rec.p_curr);setIf('ea-svcurr',rec.sv_curr);
+  setIf('ea-addctrl',rec.additional_controls);
+  setIf('ea-ppot',rec.p_pot);setIf('ea-svpot',rec.sv_pot);
+  setIf('ea-status',rec.status);setIf('ea-owner',rec.owner);setIf('ea-review',rec.review_date);
+  setIf('ea-explanation',rec.explanation);setIf('ea-legal',rec.legal_ref);setIf('ea-notes',rec.notes);
   openModal('m-easp');
 }
 function rEmp(){
@@ -3930,7 +3954,8 @@ var VIEW_CONFIG={
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
-    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'file_url'}
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'file_url'},
+  env_aspects:{title:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'easp',fields:[['\u05d4\u05d9\u05d1\u05d8','aspect'],['\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df','activity'],['\u05e9\u05dc\u05d1 \u05d7\u05d9\u05d9\u05dd','lifecycle'],['\u05e9\u05dc\u05d9\u05d8\u05d4/\u05d4\u05e9\u05e4\u05e2\u05d4','control_type'],['\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e9\u05e4\u05e2\u05d4','direction'],['\u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d4\u05d4\u05d9\u05d1\u05d8','impact'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','p_curr'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05e4\u05d5\u05e2\u05dc','sv_curr'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea','additional_controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','p_pot'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','sv_pot'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],['\u05d0\u05d7\u05e8\u05d0\u05d9','owner'],['\u05dc\u05d5\u05d6','review_date'],['\u05d4\u05e1\u05d1\u05e8 \u05dc\u05d0\u05d9 \u05d1\u05d9\u05e6\u05d5\u05e2','explanation'],['\u05d4\u05e4\u05e0\u05d9\u05d4 \u05dc\u05d7\u05d5\u05e7','legal_ref'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]}
 };
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
