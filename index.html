@@ -4091,7 +4091,13 @@ function _locRenderNode(node,allRows){
     ? '<button class="btn btn-d btn-sm" onclick="_locOpenAdd('+(node.level+1)+',\''+esc(node.id)+'\')" title="\u05d4\u05d5\u05e1\u05e3 \u05d1\u05df">＋</button>'
     : '';
   var safeId=esc(node.id);
-  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+  // Count active records using this location
+  var nNcr=(DB.ncr||[]).filter(function(r){return r.location_id===node.id && r.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
+  var nNm=(DB.near_miss||[]).filter(function(r){return r.location_id===node.id && r.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
+  var counts='';
+  if(nNcr)counts+=' <span class="b bR" style="font-size:9px" title="NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">NCR '+nNcr+'</span>';
+  if(nNm)counts+=' <span class="b bY" style="font-size:9px" title="\u05db\u05de\u05e2\u05d8 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">\u05db\u05de\u05e2\u05d8 '+nNm+'</span>';
+  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   children.forEach(function(c){html+=_locRenderNode(c,allRows);});
   return html;
 }
