@@ -3865,7 +3865,11 @@ var rows=DB.ncr.filter(function(n){
   if(locF&&n.location_id!==locF)return false;
   return true;
 });
-if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
+if(!rows.length){
+  var emptyMsg='\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
+  if(locF||filter!=='all'){emptyMsg+=' \u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05e1\u05d9\u05e0\u05d5\u05df. <a onclick="ncrClearAll()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05e0\u05e7\u05d4 \u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd</a>';}
+  tb.innerHTML='<tr><td colspan="9" class="et">'+emptyMsg+'</td></tr>';return;
+}
 tb.innerHTML=rows.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
