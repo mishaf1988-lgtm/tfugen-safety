@@ -655,6 +655,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="tsk-tab-over" onclick="tskFilter('over')">&#1508;&#1497;&#1490;&#1493;&#1512; &#1497;&#1506;&#1491;</button>
     <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
     <select id="tsk-prj-filter" onchange="tskPrjFilter(this.value)" style="padding:8px;max-width:200px"></select>
+    <select id="tsk-assignee-filter" onchange="tskAssigneeFilter(this.value)" style="padding:8px;max-width:160px"></select>
     <select id="tsk-sv-select" onchange="svTskApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svTskSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
     <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
@@ -3286,8 +3287,9 @@ function delAllEqi(){
 function nmFilter(f){window._nmFilter=f;['all','open','closed'].forEach(function(k){var el=g('nm-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rNm();}
 function nmLocFilter(v){window._nmLocFilter=v||'';rNm();}
 function nmClearAll(){window._nmLocFilter='';if(typeof nmFilter==='function')nmFilter('all');toast('\u05e0\u05d5\u05e7\u05d4');}
-function tskClearAll(){window._tskPrjFilter='';if(typeof tskFilter==='function')tskFilter('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function tskClearAll(){window._tskPrjFilter='';window._tskAssFilter='';if(typeof tskFilter==='function')tskFilter('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function tskPrjFilter(v){window._tskPrjFilter=v||'';rTasks();}
+function tskAssigneeFilter(v){window._tskAssFilter=v||'';rTasks();}
 function rNm(){
   var tb=g('tb-nm');if(!tb)return;
   var rows=(DB.near_miss||[]).slice().sort(function(a,b){return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;});
@@ -4100,8 +4102,19 @@ function rTasks(){
     (DB.projects||[]).slice().filter(function(p){return p.status!=='\u05d1\u05d5\u05d8\u05dc';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');}).forEach(function(p){opts+='<option value="'+esc(p.id)+'"'+(p.id===tprjF?' selected':'')+'>'+esc(p.name)+'</option>';});
     tprjSel.innerHTML=opts;
   }
+  // populate assignee filter dropdown from unique assignees in tasks
+  var tassF=window._tskAssFilter||'';
+  var tassSel=g('tsk-assignee-filter');
+  if(tassSel){
+    var assignees={};
+    (DB.tasks||[]).forEach(function(t){if(t.assignee)assignees[t.assignee]=1;});
+    var aopts='<option value="">— כל האחראים —</option>';
+    Object.keys(assignees).sort(function(a,b){return a.localeCompare(b,'he');}).forEach(function(a){aopts+='<option value="'+esc(a)+'"'+(a===tassF?' selected':'')+'>'+esc(a)+'</option>';});
+    tassSel.innerHTML=aopts;
+  }
   var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
   if(tprjF)rows=rows.filter(function(r){return r.project_id===tprjF;});
+  if(tassF)rows=rows.filter(function(r){return r.assignee===tassF;});
   var today=new Date().toISOString().split('T')[0];
   var f=window._tskFilter||'all';
   // Render active filter chips
