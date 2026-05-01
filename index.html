@@ -478,6 +478,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svEqiDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
   </div>
   <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div id="eqi-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1511;&#1493;&#1491;</th>
     <th>&#1514;&#1497;&#1488;&#1493;&#1512;</th>
@@ -3215,6 +3216,21 @@ function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(f
 function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
+  // EQI summary pills
+  try{
+    var eS=g('eqi-summary');
+    if(eS){
+      var allEqi=DB.equip_inspections||[];
+      var todayE=new Date();todayE.setHours(0,0,0,0);
+      var expN=0,soonN=0,okN=0;
+      allEqi.forEach(function(r){if(!r.e)return;var d=new Date(r.e);var dd=(d-todayE)/86400000;if(dd<0)expN++;else if(dd<=30)soonN++;else okN++;});
+      eS.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allEqi.length+'</strong></span>'+
+        (expN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">פג: <strong>'+expN+'</strong></span>':'')+
+        (soonN?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">≤30י: <strong>'+soonN+'</strong></span>':'')+
+        (okN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">תקינים: <strong>'+okN+'</strong></span>':'');
+    }
+  }catch(e){}
   var locF=window._eqiLocFilter||'';
   var locSel=g('eqi-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
