@@ -3908,9 +3908,42 @@ function showView(tbl,id){
   if(canWA&&_isAdminUser()){
     html+='<div style="margin-top:8px"><button data-watbl="'+esc(tbl)+'" data-waid="'+esc(id)+'" onclick="_waAlertFromView(this.dataset.watbl,this.dataset.waid)" style="width:100%;background:#0d3d2d;border:1px solid #10b981;border-radius:8px;color:#10b981;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128241; \u05e9\u05dc\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp</button></div>';
   }
+  if(tbl==='ncr'){
+    html+='<div id="ncr-comments-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:13px">&#128172; \u05d4\u05e2\u05e8\u05d5\u05ea (<span id="ncr-comments-count">0</span>)</div></div><div id="ncr-comments-list" style="font-size:12px;color:#888">\u05d8\u05d5\u05e2\u05df...</div><div style="display:flex;gap:6px;margin-top:8px"><input id="ncr-comment-input" placeholder="\u05d4\u05d5\u05e1\u05e3 \u05d4\u05e2\u05e8\u05d4..." style="flex:1;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:8px;font-family:inherit"><button data-cid="'+esc(id)+'" onclick="_ncrCommentAdd(this.dataset.cid)" style="padding:8px 14px;background:#3b82f6;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">\u05e4\u05e8\u05e1\u05dd</button></div></div>';
+  }
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
+  if(tbl==='ncr')_ncrCommentsLoad(id);
 }
+function _ncrCommentsLoad(id){
+  var box=g('ncr-comments-list');var cnt=g('ncr-comments-count');if(!box)return;
+  fetch(_SB+'/rest/v1/ncr_comments?ncr_id=eq.'+encodeURIComponent(id)+'&select=*&order=ts.desc&limit=50',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK)}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(rows){
+      if(!Array.isArray(rows))rows=[];
+      if(cnt)cnt.textContent=rows.length;
+      if(!rows.length){box.innerHTML='<div class="et" style="padding:10px;font-size:11px">\u05d0\u05d9\u05df \u05d4\u05e2\u05e8\u05d5\u05ea \u05e2\u05d3\u05d9\u05d9\u05df</div>';return;}
+      box.innerHTML=rows.map(function(c){
+        var dt=new Date(c.ts);var dts=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
+        return '<div style="padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:3px"><strong style="color:#1a1d23">'+esc(c.author||'')+'</strong><span>'+dts+'</span></div><div style="white-space:pre-wrap;color:#1a1d23">'+esc(c.text||'')+'</div></div>';
+      }).join('');
+    })
+    .catch(function(){if(box)box.innerHTML='<div class="et" style="padding:10px;font-size:11px;color:var(--bad)">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05d4\u05e2\u05e8\u05d5\u05ea</div>';});
+}
+window._ncrCommentAdd=function(id){
+  var inp=g('ncr-comment-input');var t=inp?String(inp.value||'').trim():'';
+  if(!t){toast('\u05d4\u05d6\u05df \u05d8\u05e7\u05e1\u05d8');return;}
+  var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
+  fetch(_SB+'/rest/v1/ncr_comments',{
+    method:'POST',
+    headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify({ncr_id:id,author:u,text:t})
+  }).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    inp.value='';toast('\u05e4\u05d5\u05e8\u05e1\u05dd \u2713');
+    _ncrCommentsLoad(id);
+  }).catch(function(err){toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err));});
+};
 var _SEARCH_TBLS=[
   {tbl:'ncr',label:'אי-התאמה',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
   {tbl:'equip_inspections',label:'בדיקת ציוד',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
