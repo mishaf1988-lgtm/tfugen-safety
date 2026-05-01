@@ -2817,6 +2817,27 @@ function rDash(){
     }
   }catch(e){console.warn('health failed',e);}
 
+  // Round-of-day reminder banner
+  try{
+    var todayStr=new Date().toISOString().split('T')[0];
+    var lastRound=(DB.rounds||[]).reduce(function(m,r){return r.d>m?r.d:m;},'');
+    var dh2=g('dash-health');
+    if(lastRound<todayStr && new Date().getHours()<14){
+      var existing=g('dash-round-reminder');
+      if(!existing && dh2){
+        var rmd=document.createElement('div');
+        rmd.id='dash-round-reminder';
+        rmd.style.cssText='background:#fef3c7;border-right:3px solid #b45309;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:10px;cursor:pointer';
+        rmd.onclick=function(){goPage('round');};
+        rmd.innerHTML='⏰ <strong>\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2 \u05d4\u05d9\u05d5\u05dd</strong> — \u05dc\u05d7\u05e5 \u05db\u05d3\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7';
+        dh2.parentNode.insertBefore(rmd, dh2);
+      }
+    }else{
+      var existing2=g('dash-round-reminder');
+      if(existing2)existing2.remove();
+    }
+  }catch(e){}
+
   // Auto-insights (3 signals max)
   try{
     var di2=g('dash-insights');
