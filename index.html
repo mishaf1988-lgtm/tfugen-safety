@@ -1239,6 +1239,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1490;&#1497;&#1500;&#1493;&#1497;</label><input id="ncr-sd" type="date" class="inp"></div>
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><select id="ncr-location-id" class="inp"></select></div>
     <div class="field" id="ncr-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="ncr-loc" type="text" class="inp" readonly style="opacity:0.7"></div>
+    <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="ncr-project-id" class="inp"></select></div>
     <div class="field"><label>&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;</label><input id="ncr-rc" type="text" class="inp" placeholder="&#1502;&#1492; &#1490;&#1512;&#1501; &#1500;&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1492;?"></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
@@ -1264,6 +1265,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="i-sv"><option>&#1511;&#1500;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><select id="i-location-id" class="inp"></select></div>
     <div class="field" id="i-l-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="i-l" type="text" readonly style="opacity:0.7"></div>
+    <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="i-project-id" class="inp"></select></div>
     <div class="field"><label>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</label><input type="number" id="i-dy" placeholder="0" min="0"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="i-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1495;&#1511;&#1497;&#1512;&#1492;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
@@ -1519,6 +1521,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tsk-notes" rows="2"></textarea></div>
     <div class="field fw"><label>&#8627; &#1502;&#1513;&#1497;&#1502;&#1492; &#1488;&#1489; (&#1488;&#1493;&#1508;&#1510;&#1497;&#1493;&#1504;&#1500;&#1497;)</label><select id="tsk-parent"><option value="">&#8212;</option></select></div>
+    <div class="field fw"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="tsk-project-id" class="inp"></select></div>
     <div class="field fw" id="tsk-src-label" style="display:none"><label>&#1502;&#1511;&#1493;&#1512;</label><div id="tsk-src-view" style="padding:6px 8px;background:#f5f5f5;border-radius:6px;font-size:12px;color:var(--t2)">&#8212;</div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -2126,6 +2129,7 @@ function openModal(id){
     var _hm=(function(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})();
     mo.querySelectorAll('input[type=time]').forEach(function(i){if(!i.value)i.value=_hm;});
     if(typeof _locOptionsHtml==='function'){mo.querySelectorAll('select[id$="-location-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_locOptionsHtml(null);}});}
+    if(typeof _prjOptionsHtml==='function'){mo.querySelectorAll('select[id$="-project-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_prjOptionsHtml(null);}});}
     var ctxMap={'m-doc':'doc','m-aud':'aud','m-ncr':'ncr','m-inc':'inc','m-tr':'tr','m-rsk':'rsk'};
     var ctx=ctxMap[id];
     if(ctx)try{renderFL(ctx);}catch(e){}
@@ -2192,6 +2196,7 @@ function editNcr(id){
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
   if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id||null);
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display=(rec.loc&&!rec.location_id)?'':'none';
+  var prjSel=g('ncr-project-id');if(prjSel&&typeof _prjOptionsHtml==='function'){prjSel.innerHTML=_prjOptionsHtml(rec.project_id||null);}
   setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
@@ -2211,6 +2216,7 @@ function svNcr(){
     d:d, a:a, category:cat,
     loc:gv('ncr-loc')||'',
     location_id:gv('ncr-location-id')||null,
+    project_id:gv('ncr-project-id')||null,
     rc:gv('ncr-rc')||'',
     c:gv('ncr-c')||'',
     o:gv('ncr-o')||'',
@@ -2238,7 +2244,7 @@ function svNcr(){
 function svInc(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
-  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
+  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   DB.inc.push(r);sbIns('inc',r);addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));sdb();closeModal('m-inc');
   if(typeof _notifyEvent==='function' && (r.sv==='\u05d7\u05de\u05d5\u05e8'||r.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9')){
     _notifyEvent('incident_critical',{title:(r.l||'\u05ea\u05e7\u05e8\u05d9\u05ea')+' \u2014 '+String(r.r||'').substring(0,40),id:r.id});
@@ -3549,7 +3555,7 @@ function svTsk(){
   var pid=gv('tsk-parent')||null;
   if(pid===id)pid=null;
   var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
+  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,project_id:gv('tsk-project-id')||null,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
@@ -3559,6 +3565,7 @@ function editTsk(id){
   var rec=(DB.tasks||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   g('tsk-id').value=rec.id;g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
   g('tsk-status').value=rec.status||_TSK_OPEN;g('tsk-priority').value=rec.priority||_TSK_PRI_DEF;g('tsk-notes').value=rec.notes||'';
+  var tprj=g('tsk-project-id');if(tprj&&typeof _prjOptionsHtml==='function'){tprj.innerHTML=_prjOptionsHtml(rec.project_id||null);}
   g('tsk-src-tbl').value=rec.source_table||'';g('tsk-src-id').value=rec.source_id||'';
   _populateTskParent(rec.id);
   var pSel=g('tsk-parent');if(pSel)pSel.value=rec.parent_id||'';
@@ -4510,6 +4517,23 @@ window._dashByLocClick=function(locId){
   goPage('ncr');
 };
 
+// Project select helpers (parallel to _loc helpers)
+function _prjOptionsHtml(currentId){
+  var rows=(DB.projects||[]).slice().filter(function(p){return p.status!=='בוטל';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
+  var html='<option value="">— בחר פרויקט —</option>';
+  rows.forEach(function(p){
+    var sel=p.id===currentId?' selected':'';
+    var st=p.status==='הושלם'?' (הושלם)':(p.status==='מושהה'?' (מושהה)':'');
+    html+='<option value="'+esc(p.id)+'"'+sel+'>'+esc(p.name)+esc(st)+'</option>';
+  });
+  return html;
+}
+function _prjName(id){
+  if(!id)return '';
+  var rec=(DB.projects||[]).find(function(r){return r.id===id;});
+  return rec?rec.name:'';
+}
+
 // Projects management (Vitre §16#18)
 function rPrj(){
   var box=g('prj-list');if(!box)return;
@@ -4756,6 +4780,16 @@ function showView(tbl,id){
       var locTxt=_locName(rec.location_id);
       if(locTxt){
         html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">\ud83d\udccd \u05de\u05d9\u05e7\u05d5\u05dd</span><strong>'+esc(locTxt)+'</strong></div>';
+      }
+    }
+  }
+  // Auto-render project_id
+  if(rec.project_id && typeof _prjName==='function'){
+    var alreadyP=cfg.fields.some(function(f){return f[1]==='project_id';});
+    if(!alreadyP){
+      var prjTxt=_prjName(rec.project_id);
+      if(prjTxt){
+        html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">\ud83c\udfd7\ufe0f \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8</span><strong>'+esc(prjTxt)+'</strong></div>';
       }
     }
   }
