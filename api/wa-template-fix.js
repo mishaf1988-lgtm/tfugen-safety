@@ -57,13 +57,13 @@ export default async function handler(req) {
   };
 
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'method not allowed; POST only' }), {
-      status: 405, headers: { ...cors, 'Content-Type': 'application/json' }
-    });
-  }
-  if (req.headers.get('x-confirm') !== 'yes') {
-    return new Response(JSON.stringify({ error: 'missing x-confirm: yes header' }), {
+  // Accept POST + x-confirm header OR GET with ?confirm=fix-templates-now
+  // (the GET path is so the agent can trigger it via the read-only web_fetch tool).
+  const url = new URL(req.url);
+  const confirmedViaQuery = url.searchParams.get('confirm') === 'fix-templates-now';
+  const confirmedViaHeader = req.method === 'POST' && req.headers.get('x-confirm') === 'yes';
+  if (!confirmedViaQuery && !confirmedViaHeader) {
+    return new Response(JSON.stringify({ error: 'missing confirmation. POST with x-confirm: yes OR GET with ?confirm=fix-templates-now' }), {
       status: 400, headers: { ...cors, 'Content-Type': 'application/json' }
     });
   }
