@@ -1669,6 +1669,7 @@ id="m-ncr" style="display:none">
     <details style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--t2)">&#128203; &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; (20 &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;)</summary>
       <div id="notif-log-list" style="max-height:240px;overflow-y:auto;margin-top:8px;font-size:11px"></div>
+      <button onclick="_notifLogExport()" style="margin-top:8px;margin-left:6px;font-size:11px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128202; CSV</button>
       <button onclick="_notifLogClear()" style="margin-top:8px;font-size:11px;background:#7f1d1d;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128465; &#1504;&#1511;&#1492; &#1497;&#1493;&#1502;&#1503; &#1502;&#1511;&#1493;&#1502;&#1497;</button>
     </details>
   </div>
@@ -4963,6 +4964,22 @@ function openNotifSettings(){
     }
   }
   openModal('m-notif');
+}
+function _notifLogExport(){
+  try{
+    var rows=(DB.notifications_log||[]).slice().sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');});
+    if(!rows.length){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0');return;}
+    var csv='﻿\u05ea\u05d0\u05e8\u05d9\u05da,\u05de\u05e9\u05ea\u05de\u05e9,\u05d0\u05d9\u05e8\u05d5\u05e2,\u05e2\u05e8\u05d5\u05e5,\u05e4\u05e8\u05d8\u05d9\u05dd\n';
+    rows.forEach(function(r){
+      var fields=[r.ts||'',r.user_email||'',r.event_type||'',r.channel||'',(r.payload&&r.payload.title)||''];
+      csv+=fields.map(function(f){return '"'+String(f).replace(/"/g,'""')+'"';}).join(',')+'\n';
+    });
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download='notifications-'+new Date().toISOString().split('T')[0]+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('CSV \u05d4\u05d5\u05e8\u05d3');
+  }catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+e.message);}
 }
 function _notifLogClear(){
   if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc \u05d9\u05d5\u05de\u05df \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d4\u05de\u05e7\u05d5\u05de\u05d9?'))return;
