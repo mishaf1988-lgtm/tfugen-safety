@@ -652,6 +652,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
     <button class="btn btn-s" onclick="tskClearAll()" title="&#1504;&#1511;&#1492; &#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
+  <div id="tsk-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
     <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
@@ -3913,6 +3914,17 @@ function rTasks(){
   if(tprjF)rows=rows.filter(function(r){return r.project_id===tprjF;});
   var today=new Date().toISOString().split('T')[0];
   var f=window._tskFilter||'all';
+  // Render active filter chips
+  var tchipsEl=g('tsk-active-chips');
+  if(tchipsEl){
+    var tchips=[];
+    if(f==='open')tchips.push({label:'\u05e4\u05ea\u05d5\u05d7',clear:'tskFilter(\'all\')'});
+    else if(f==='prog')tchips.push({label:'\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea',clear:'tskFilter(\'all\')'});
+    else if(f==='over')tchips.push({label:'\u05e4\u05d9\u05d2\u05d5\u05e8 \u05d9\u05e2\u05d3',clear:'tskFilter(\'all\')'});
+    else if(f==='done')tchips.push({label:'\u05d4\u05d5\u05e9\u05dc\u05de\u05d5',clear:'tskFilter(\'all\')'});
+    if(tprjF){var tpn=(typeof _prjName==='function')?_prjName(tprjF):tprjF;tchips.push({label:'🏗️ '+tpn,clear:'tskPrjFilter(\'\')'});}
+    tchipsEl.innerHTML=tchips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
+  }
   function isDone(r){return r.status===_TSK_DONE||r.status===_TSK_CANC;}
   if(f==='open')rows=rows.filter(function(r){return r.status===_TSK_OPEN;});
   else if(f==='prog')rows=rows.filter(function(r){return r.status===_TSK_PROG;});
@@ -4094,7 +4106,7 @@ window.rskTab=function(t){
 function _rskMatrix(){
   var host=g('rsk-matrix-host');if(!host)return;
   // Methodology per Tfugen safety manager: 4×4 matrix.
-  // Color thresholds: 1-3 green (קביל), 4-9 yellow (בינוני), 12-16 red (גבוה).
+  // Color thresholds: 1-3 green (\u05e7\u05d1\u05d9\u05dc), 4-9 yellow (\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9), 12-16 red (\u05d2\u05d1\u05d5\u05d4).
   var grid={};for(var p=1;p<=4;p++)for(var sv=1;sv<=4;sv++)grid[p+':'+sv]=[];
   (DB.rsk||[]).forEach(function(r){
     var pp=Math.max(1,Math.min(4,parseInt(r.p)||0));
@@ -4583,11 +4595,11 @@ window._dashByLocClick=function(locId){
 
 // Project select helpers (parallel to _loc helpers)
 function _prjOptionsHtml(currentId){
-  var rows=(DB.projects||[]).slice().filter(function(p){return p.status!=='בוטל';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
-  var html='<option value="">— בחר פרויקט —</option>';
+  var rows=(DB.projects||[]).slice().filter(function(p){return p.status!=='\u05d1\u05d5\u05d8\u05dc';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
+  var html='<option value="">— \u05d1\u05d7\u05e8 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 —</option>';
   rows.forEach(function(p){
     var sel=p.id===currentId?' selected':'';
-    var st=p.status==='הושלם'?' (הושלם)':(p.status==='מושהה'?' (מושהה)':'');
+    var st=p.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'?' (\u05d4\u05d5\u05e9\u05dc\u05dd)':(p.status==='\u05de\u05d5\u05e9\u05d4\u05d4'?' (\u05de\u05d5\u05e9\u05d4\u05d4)':'');
     html+='<option value="'+esc(p.id)+'"'+sel+'>'+esc(p.name)+esc(st)+'</option>';
   });
   return html;
@@ -4951,15 +4963,15 @@ window._ncrCommentAdd=function(id){
   }).catch(function(err){toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err));});
 };
 var _SEARCH_TBLS=[
-  {tbl:'ncr',label:'אי-התאמה',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
-  {tbl:'equip_inspections',label:'בדיקת ציוד',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
-  {tbl:'near_miss',label:'כמעט ונפגע',icon:'⚡',fields:['descr','area','rep','notes','typ'],view:function(r){return String(r.descr||'').substring(0,80);}},
-  {tbl:'inc',label:'תקרית',icon:'🚨',fields:['d','r','l','ty'],view:function(r){return String(r.d||'').substring(0,80);}},
-  {tbl:'tasks',label:'משימה',icon:'✅',fields:['title','assignee','notes'],view:function(r){return r.title||'';}},
-  {tbl:'tr',label:'הדרכה',icon:'📚',fields:['n','w','c'],view:function(r){return (r.n||'')+(r.w?' — '+r.w:'');}},
-  {tbl:'docs',label:'מסמך',icon:'📄',fields:['n','o','c'],view:function(r){return r.n||'';}},
-  {tbl:'emp',label:'עובד',icon:'👤',fields:['n','r','dep','ph'],view:function(r){return (r.n||'')+(r.r?' — '+r.r:'');}},
-  {tbl:'leg',label:'חוק',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}}
+  {tbl:'ncr',label:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
+  {tbl:'equip_inspections',label:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
+  {tbl:'near_miss',label:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',icon:'⚡',fields:['descr','area','rep','notes','typ'],view:function(r){return String(r.descr||'').substring(0,80);}},
+  {tbl:'inc',label:'\u05ea\u05e7\u05e8\u05d9\u05ea',icon:'🚨',fields:['d','r','l','ty'],view:function(r){return String(r.d||'').substring(0,80);}},
+  {tbl:'tasks',label:'\u05de\u05e9\u05d9\u05de\u05d4',icon:'✅',fields:['title','assignee','notes'],view:function(r){return r.title||'';}},
+  {tbl:'tr',label:'\u05d4\u05d3\u05e8\u05db\u05d4',icon:'📚',fields:['n','w','c'],view:function(r){return (r.n||'')+(r.w?' — '+r.w:'');}},
+  {tbl:'docs',label:'\u05de\u05e1\u05de\u05da',icon:'📄',fields:['n','o','c'],view:function(r){return r.n||'';}},
+  {tbl:'emp',label:'\u05e2\u05d5\u05d1\u05d3',icon:'👤',fields:['n','r','dep','ph'],view:function(r){return (r.n||'')+(r.r?' — '+r.r:'');}},
+  {tbl:'leg',label:'\u05d7\u05d5\u05e7',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}}
 ];
 function _globalSearch(q){
   q=String(q||'').trim().toLowerCase();
@@ -4996,9 +5008,9 @@ function _globalSearch(q){
 function _gsearchRender(){
   var q=gv('gsearch-q')||'';
   var box=g('gsearch-results');if(!box)return;
-  if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">הקלד 2+ תווים</div>';return;}
+  if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d4\u05e7\u05dc\u05d3 2+ \u05ea\u05d5\u05d5\u05d9\u05dd</div>';return;}
   var rs=_globalSearch(q);
-  if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">אין תוצאות</div>';return;}
+  if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>';return;}
   box.innerHTML=rs.map(function(r){
     return '<div data-stbl="'+esc(r.tbl)+'" data-sid="'+esc(r.id)+'" onclick="closeModal(\'m-gsearch\');showView(this.dataset.stbl,this.dataset.sid)" style="display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer">'+
       '<span style="font-size:18px;width:30px;text-align:center;flex-shrink:0">'+r.icon+'</span>'+
@@ -5047,7 +5059,7 @@ window._exportCSV=function(){
 };
 window._printPage=function(){
   var on=document.querySelector('.page.on');
-  if(!on){toast('אין דף פעיל להדפסה');return;}
+  if(!on){toast('\u05d0\u05d9\u05df \u05d3\u05e3 \u05e4\u05e2\u05d9\u05dc \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4');return;}
   var titleEl=on.querySelector('.page-title');
   var title=titleEl?String(titleEl.textContent||'').replace(/\s+/g,' ').trim():'TFUGEN';
   var d=new Date().toISOString().split('T')[0];
@@ -5056,7 +5068,7 @@ window._printPage=function(){
   var hdr=document.createElement('div');
   hdr.id='print-header';
   hdr.style.cssText='display:none;border-bottom:2px solid #000;padding:0 0 10px;margin-bottom:14px';
-  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">תפוגן · מערכת ניהול בטיחות</div></div><div style="font-size:11px;color:#555;text-align:left">תאריך הפקה: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
+  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">\u05ea\u05e4\u05d5\u05d2\u05df · \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div><div style="font-size:11px;color:#555;text-align:left">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e4\u05e7\u05d4: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
   on.insertBefore(hdr,on.firstChild);
   var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
   window.addEventListener('afterprint',cleanup);
@@ -5673,30 +5685,30 @@ function _waResolvePhone(name){
   return u?String(u.phone).trim():null;
 }
 function _waConfirm(to,opts,who){
-  var msg=who?'לשלוח התראת WhatsApp ל-'+to+' ('+who+')?':'לשלוח התראת WhatsApp ל-'+to+'?';
+  var msg=who?'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp \u05dc-'+to+' ('+who+')?':'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp \u05dc-'+to+'?';
   if(!confirm(msg))return;
   return _waSend(to,opts);
 }
 window._waNcrAlert=function(id){
   var n=(DB.ncr||[]).find(function(r){return r.id===id;});
-  if(!n){toast('לא נמצא');return;}
+  if(!n){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
-  var area=String(n.a||n.loc||'לא צוין').substring(0,60);
-  var descr=String(n.d||'אין תיאור').substring(0,200);
+  var area=String(n.a||n.loc||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df').substring(0,60);
+  var descr=String(n.d||'\u05d0\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8').substring(0,200);
   var smart=_waResolvePhone(n.o);
   _waConfirm(smart||_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]},smart?n.o:null);
 };
 window._waTaskAlert=function(id){
   var t=(DB.tasks||[]).find(function(r){return r.id===id;});
-  if(!t){toast('לא נמצא');return;}
+  if(!t){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var today=new Date().toISOString().split('T')[0];
   var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
   var smart=_waResolvePhone(t.assignee);
-  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue_v2',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]},smart?t.assignee:null);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue_v2',language:'he',params:[String(t.title||'\u05de\u05e9\u05d9\u05de\u05d4').substring(0,80),String(late)]},smart?t.assignee:null);
 };
 window._waExpiryAlert=function(tbl,id){
   var r=(DB[tbl]||[]).find(function(x){return x.id===id;});
-  if(!r){toast('לא נמצא');return;}
+  if(!r){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var today=new Date().toISOString().split('T')[0];
   var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
   var name=String(r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
@@ -5709,7 +5721,7 @@ window._waAlertFromView=function(tbl,id){
   if(tbl==='ncr')return _waNcrAlert(id);
   if(tbl==='tasks')return _waTaskAlert(id);
   if(['ppe','tr','docs','ctr','equip_inspections','med'].indexOf(tbl)>=0)return _waExpiryAlert(tbl,id);
-  toast('אין תבנית WhatsApp לסוג זה');
+  toast('\u05d0\u05d9\u05df \u05ea\u05d1\u05e0\u05d9\u05ea WhatsApp \u05dc\u05e1\u05d5\u05d2 \u05d6\u05d4');
 };
 window._waTestSend=function(){
   var inp=g('dash-wa-phone');
