@@ -1,15 +1,25 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `b5a5f1e`
-**Total PRs merged**: 17
+**Latest commit**: `5777225`
+**Total PRs merged**: ~30
+
+---
+
+## ⚠️ פעולה חד-פעמית בבוקר
+
+הרץ ב-Supabase SQL Editor את הקובץ:
+```
+migrations/2026-05-02_OVERNIGHT_COMBINED.sql
+```
+הוא idempotent (בטוח להריץ שוב, וגם בטוח אם כבר רץ חלק מהמיגרציות).
 
 ---
 
 ## TL;DR
-Night of polish work. All changes are **UI-only / additive**. No schema migrations, no data changes, no destructive operations. JS syntax validated on every commit.
+לילה של פיתוח. רוב ה-PRs UI-only. יש 4 migrations מאוחדות לקובץ אחד (COMBINED.sql). JS validated בכל commit.
 
-הבוקר אתה אמור לראות הכל פועל כרגיל + 17 שיפורים קלים.
+הבוקר אתה אמור לראות הכל פועל כרגיל + ~30 שיפורים, חלקם דורשים את ה-COMBINED SQL.
 
 ---
 
@@ -87,13 +97,25 @@ Night of polish work. All changes are **UI-only / additive**. No schema migratio
 
 ---
 
-## מה הושאר ב-backlog (לא בוצע הלילה — תלוי בהחלטה שלך)
-- **Custom Properties** (Vitre §16#5) — מורכב, צריך schema migration
+## מה הושאר ב-backlog (לא בוצע הלילה)
 - **Pattern Detection מתקדם** ב-NCR Agent
 - **Live PDF GUID** — מורכב
-- **Project-Form-Employee triad** — substantial
 - **Inspection Types** — recurring inspections engine מלא
 - **Email SMTP setup** — לחבר ערוץ Email אמיתי במטריצה
+- **Project rollup view** — דף מפורט פר פרויקט עם רשימה של NCRs/tasks/inc
+
+## מה כן הוסף בלילה הזה (PRs #138-#180)
+- ✅ Saved Views (NCR / NM / Tasks / EQI / Hzm)
+- ✅ Notifications matrix (5/5 triggers)
+- ✅ Locations (5 טפסים, סינון, dashboard, count badges)
+- ✅ Chained forms (near-miss → NCR draft)
+- ✅ Custom Properties — שדות מותאמים פר-רשומה
+- ✅ Projects — יצירה, ניהול, אינטגרציה ב-NCR/tasks/inc, סינון
+- ✅ Dashboard widgets (by location, weekly comparison)
+- ✅ Filter chips ויזואליים
+- ✅ Search by location name
+- ✅ Bell 🔔 בtopbar
+- ✅ showView auto-renders location + project
 
 ---
 *נוצר אוטומטית ע"י Claude כסיכום סשן לילה אוטונומי.*

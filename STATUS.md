@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-02 (overnight autonomous: 17 PRs polish — saved-views ל-Tasks/EQI/Hzm, location filters בכל הטפסים, chained forms, 5/5 notification triggers, dashboard widgets, clear-filters, search by location name)
+**Last updated**: 2026-05-02 (overnight autonomous: ~30 PRs total — saved-views, location filters, chained forms, notifications matrix 5/5, dashboard widgets, clear-filters, search by location name, **Custom Properties**, **Projects feature**, project filters/chips/integration)
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `d214c30` |
+| Commit | `5777225` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -85,6 +85,7 @@
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk_more.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. אותו דבר ל-`ptw`, `equip_inspections`, `hzm` + 3 indexes. PR #143.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_saved_views.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. PR #147.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_notification_prefs.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `notification_prefs(id PK = email, prefs jsonb, ts)` עם RLS לפי email. PR #148.
+- [ ] **הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_OVERNIGHT_COMBINED.sql` — מאחד 4 migrations מהלילה: location_id ל-inc/hearing_tests, custom_props, projects, project_id FK ל-ncr/tasks/inc. **idempotent** — בטוח להריץ. אם לא יורץ — UI עדיין יעבוד (sbIns יכניס לתור), אבל הסכמה לא תתעדכן עד שיירוץ.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
@@ -132,6 +133,18 @@
 - [x] **Smart empty-state ב-NCR (PR #164)** — כשהרשימה ריקה בעקבות סינון, מוצג לינק "נקה פילטרים" inline.
 - [x] **Clear-filters ב-NM + Tasks (PR #165)** — לעקביות עם NCR.
 - [x] **Global search by location name (PR #166)** — חיפוש "ייצור" יחזיר NCRs במיקום ייצור גם דרך location_id (לא רק טקסט loc/area).
+- [x] **location_id ב-incidents + hearing_tests (PR #169)** — תוסיף Dropdown מיקום בטופס תקריות. migration ב-COMBINED.
+- [x] **Active filters chips ב-NCR (PR #170)** — chips ויזואליים עם × להסרה.
+- [x] **Custom Properties (PR #171)** — שדות מותאמים פר-רשומה דרך showView. כל רשומה יכולה לקבל k/v חופשיים. migration ב-COMBINED.
+- [x] **Filter chips ב-NM (PR #172)** — אותו pattern.
+- [x] **Weekly comparison widget (PR #173)** — ▲▼ NCRs/NM/inc השבוע מול שבוע שעבר.
+- [x] **Projects foundation (PR #174)** — טבלה + עמוד 🏗️ "פרויקטים". migration ב-COMBINED.
+- [x] **Projects integrated in NCR/Tasks/Inc (PR #175)** — Dropdown 🏗️ פרויקט בכל המודלים. migration ב-COMBINED.
+- [x] **NCR filter by project (PR #176)** — Dropdown סינון פרויקט + chip.
+- [x] **Combined SQL (PR #177)** — `migrations/2026-05-02_OVERNIGHT_COMBINED.sql` — migration אחד לכל ה-4 שינויי schema של הלילה.
+- [x] **Tasks filter by project (PR #178)** — Dropdown סינון פרויקט.
+- [x] **Project name in NCR list (PR #179)** — בעמודת המיקום מוצג גם 🏗️ פרויקט.
+- [x] **Projects VIEW_CONFIG (PR #180)** — showView יודע להציג פרויקט.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
