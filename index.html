@@ -5215,7 +5215,9 @@ var _SEARCH_TBLS=[
   {tbl:'tr',label:'\u05d4\u05d3\u05e8\u05db\u05d4',icon:'📚',fields:['n','w','c'],view:function(r){return (r.n||'')+(r.w?' — '+r.w:'');}},
   {tbl:'docs',label:'\u05de\u05e1\u05de\u05da',icon:'📄',fields:['n','o','c'],view:function(r){return r.n||'';}},
   {tbl:'emp',label:'\u05e2\u05d5\u05d1\u05d3',icon:'👤',fields:['n','r','dep','ph'],view:function(r){return (r.n||'')+(r.r?' — '+r.r:'');}},
-  {tbl:'leg',label:'\u05d7\u05d5\u05e7',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}}
+  {tbl:'leg',label:'\u05d7\u05d5\u05e7',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}},
+  {tbl:'projects',label:'\u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8',icon:'🏗️',fields:['name','description','status'],view:function(r){return (r.name||'')+(r.status?' — '+r.status:'');}},
+  {tbl:'inspection_types',label:'\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4',icon:'🔍',fields:['name','responsible','notes'],view:function(r){return r.name||'';}}
 ];
 function _globalSearch(q){
   q=String(q||'').trim().toLowerCase();
