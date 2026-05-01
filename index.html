@@ -2753,7 +2753,8 @@ function rDash(){
         dl.innerHTML=keys.slice(0,8).map(function(k){
           var b=byLoc[k];
           var name=(typeof _locName==='function')?_locName(k):k;
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span style="flex:1">'+esc(name||'\u2014')+'</span>'+(b.ncr?'<span class="b bR" style="font-size:10px;margin-left:4px">NCR '+b.ncr+'</span>':'')+(b.nm?'<span class="b bY" style="font-size:10px;margin-left:4px">\u05db\u05de\u05e2\u05d8 '+b.nm+'</span>':'')+'</div>';
+          var safeK=esc(k);
+          return '<div data-loc="'+safeK+'" onclick="_dashByLocClick(this.dataset.loc)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1">'+esc(name||'\u2014')+'</span>'+(b.ncr?'<span class="b bR" style="font-size:10px;margin-left:4px">NCR '+b.ncr+'</span>':'')+(b.nm?'<span class="b bY" style="font-size:10px;margin-left:4px">\u05db\u05de\u05e2\u05d8 '+b.nm+'</span>':'')+'</div>';
         }).join('');
       }else{if(dlc)dlc.style.display='none';}
     }
@@ -4341,6 +4342,14 @@ function saveNotifSettings(){
   else{DB.notification_prefs.push(rec);sbIns('notification_prefs',rec);}
   sdb();closeModal('m-notif');toast('\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5 \u2713');
 }
+
+// Click handler for dashboard "open by location" widget rows
+window._dashByLocClick=function(locId){
+  if(!locId)return;
+  window._ncrLocFilter=locId;
+  window._ncrFilter='all';
+  goPage('ncr');
+};
 
 // Daily notification scan — fires once per session via sessionStorage flag
 function _notifDailyScan(){
