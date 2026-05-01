@@ -1245,7 +1245,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1493;&#1513;&#1506;&#1492;</label><input type="datetime-local" id="i-dt"></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="i-ty"><option>&#1514;&#1488;&#1493;&#1504;&#1492; &#1506;&#1501; &#1508;&#1510;&#1497;&#1506;&#1492;</option><option>&#1514;&#1488;&#1493;&#1504;&#1492; &#1500;&#1500;&#1488; &#1508;&#1510;&#1497;&#1506;&#1492;</option><option>Near Miss</option><option>&#1504;&#1494;&#1511; &#1500;&#1512;&#1499;&#1493;&#1513;</option><option>&#1488;&#1497;&#1512;&#1493;&#1506; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</option></select></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="i-sv"><option>&#1511;&#1500;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
-    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="i-l"></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><select id="i-location-id" class="inp"></select></div>
+    <div class="field" id="i-l-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="i-l" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</label><input type="number" id="i-dy" placeholder="0" min="0"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="i-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1495;&#1511;&#1497;&#1512;&#1492;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
@@ -2204,7 +2205,7 @@ function svNcr(){
 function svInc(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
-  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
+  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   DB.inc.push(r);sbIns('inc',r);addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));sdb();closeModal('m-inc');
   if(typeof _notifyEvent==='function' && (r.sv==='\u05d7\u05de\u05d5\u05e8'||r.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9')){
     _notifyEvent('incident_critical',{title:(r.l||'\u05ea\u05e7\u05e8\u05d9\u05ea')+' \u2014 '+String(r.r||'').substring(0,40),id:r.id});
