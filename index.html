@@ -465,6 +465,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svEqiSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
     <button class="btn btn-s" onclick="svEqiDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
   </div>
+  <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th>&#1511;&#1493;&#1491;</th>
     <th>&#1514;&#1497;&#1488;&#1493;&#1512;</th>
@@ -2990,6 +2991,20 @@ function rEqi(){
   var locSel=g('eqi-loc-filter');
   if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
   if(typeof _svRenderSelect==='function')_svRenderSelect('eqi-sv-select','eqi','');
+  // Render active filter chips
+  var ec=g('eqi-active-chips');
+  if(ec){
+    var ef=window._eqiFilter||'all';
+    var eq=window._eqiQ||'';
+    var chips=[];
+    if(ef==='exp')chips.push({label:'\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3',clear:'eqiFilter(\'all\')'});
+    else if(ef==='30')chips.push({label:'≤30\u05d9',clear:'eqiFilter(\'all\')'});
+    else if(ef==='90')chips.push({label:'≤90\u05d9',clear:'eqiFilter(\'all\')'});
+    else if(ef==='ok')chips.push({label:'\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',clear:'eqiFilter(\'all\')'});
+    if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'eqiLocFilter(\'\')'});}
+    if(eq)chips.push({label:'🔍 '+eq,clear:'(function(){var i=g(\'eqi-q\');if(i)i.value=\'\';eqiSearch();})()'});
+    ec.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
+  }
   var rows=(DB.equip_inspections||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
   var f=window._eqiFilter||'all';
