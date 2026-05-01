@@ -4506,6 +4506,16 @@ function showView(tbl,id){
     else if(val===undefined||val===null||val==='')val='-';
     html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+esc(f[0])+'</span><strong>'+(val==='\u2713'||val==='\u2717'||val==='-'?val:esc(val))+'</strong></div>';
   });
+  // Auto-render location_id (if record has it and config didn't include it)
+  if(rec.location_id && typeof _locName==='function'){
+    var alreadyRendered = cfg.fields.some(function(f){return f[1]==='location_id';});
+    if(!alreadyRendered){
+      var locTxt=_locName(rec.location_id);
+      if(locTxt){
+        html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">\ud83d\udccd \u05de\u05d9\u05e7\u05d5\u05dd</span><strong>'+esc(locTxt)+'</strong></div>';
+      }
+    }
+  }
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   if(pUrl){
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a data-sign="'+escU(pUrl)+'" target="_blank"><img data-sign="'+escU(pUrl)+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
