@@ -447,8 +447,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
-  <div class="row" style="margin:8px 0">
-    <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
+  <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:6px">
+    <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
+    <select id="eqi-loc-filter" onchange="eqiLocFilter(this.value)" style="padding:8px;max-width:200px"></select>
   </div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 10px">
     <button class="btn btn-p" id="eqi-tab-all" onclick="eqiFilter('all')">&#1492;&#1499;&#1500;</button>
@@ -889,6 +890,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ptw" class="page">
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row" style="margin:0 0 8px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1511;&#1489;&#1500;&#1503;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1513;&#1506;&#1493;&#1514;</th><th>&#1502;&#1511;&#1493;&#1501;</th><th>&#1505;&#1496;.</th><th></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -977,6 +979,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-hzm" class="page">
   <div class="row"><div class="page-title">&#1495;&#1493;&#1502;&#1512;&#1497;&#1501; <span>&#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-hzm')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row" style="margin:0 0 8px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th>UN</th><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th>&#1502;&#1497;&#1511;&#1493;&#1501;</th><th>MSDS</th><th></th><th></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -2811,7 +2814,11 @@ function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(f
 function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
+  var locF=window._eqiLocFilter||'';
+  var locSel=g('eqi-loc-filter');
+  if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
   var rows=(DB.equip_inspections||[]).slice();
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
   var f=window._eqiFilter||'all';
   rows=rows.filter(function(r){
     var x=r.e?du(r.e):9999;
@@ -4232,6 +4239,10 @@ function svTskDelete(){
   if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
   _svDelete(v.id);_svRenderSelect('tsk-sv-select','tasks','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
 }
+// Location filters for PTW + EQI + Hzm
+function ptwLocFilter(v){window._ptwLocFilter=v||'';rPtw();}
+function eqiLocFilter(v){window._eqiLocFilter=v||'';rEqi();}
+function hzmLocFilter(v){window._hzmLocFilter=v||'';rHzm();}
 
 // Notification Preferences (per-user matrix)
 var NOTIF_EVENTS=[
@@ -4814,8 +4825,13 @@ function rPtwView(id){
 }
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
-  if(!DB.ptw.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\ud83d\udd12<br>\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-ptw\')">+ \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
-  tb.innerHTML=DB.ptw.map(function(p){
+  var locF=window._ptwLocFilter||'';
+  var locSel=g('ptw-loc-filter');
+  if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
+  var rows=(DB.ptw||[]).slice();
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\ud83d\udd12<br>\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-ptw\')">+ \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  tb.innerHTML=rows.map(function(p){
     var vid=esc(p.id);
     var vbtn='<button class="btn btn-sm" style="background:#4d9fff;color:#fff;border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button>';
     var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;</button>';
@@ -4852,9 +4868,14 @@ function rWst(){
 }
 function rHzm(){
   var tb=g('tb-hzm');if(!tb)return;
-  if(!DB.hzm.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
+  var locF=window._hzmLocFilter||'';
+  var locSel=g('hzm-loc-filter');
+  if(locSel&&typeof _locFilterOptionsHtml==='function'){locSel.innerHTML=_locFilterOptionsHtml(locF);}
+  var rows=(DB.hzm||[]).slice();
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.hzm.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rEnv(){
   var tb=g('tb-env');if(!tb)return;
