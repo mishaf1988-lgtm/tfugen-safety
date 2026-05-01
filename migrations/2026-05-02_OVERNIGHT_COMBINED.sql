@@ -92,6 +92,35 @@ CREATE INDEX IF NOT EXISTS tasks_project_idx ON tasks(project_id) WHERE project_
 CREATE INDEX IF NOT EXISTS inc_project_idx   ON inc(project_id)   WHERE project_id IS NOT NULL;
 
 
+-- ----- notifications_log (audit trail for fired notifications) -----
+CREATE TABLE IF NOT EXISTS notifications_log (
+  id          text        PRIMARY KEY,
+  user_email  text,
+  event_type  text        NOT NULL,
+  channel     text        NOT NULL,
+  payload     jsonb,
+  ts          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS notifications_log_user_idx  ON notifications_log(user_email);
+CREATE INDEX IF NOT EXISTS notifications_log_event_idx ON notifications_log(event_type);
+
+ALTER TABLE notifications_log ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policy WHERE polname = 'notifications_log_admin_manager_all'
+  ) THEN
+    CREATE POLICY notifications_log_admin_manager_all ON notifications_log
+      FOR ALL
+      TO authenticated
+      USING (private.is_admin_manager())
+      WITH CHECK (private.is_admin_manager());
+  END IF;
+END $$;
+
+
 -- =====================================================================
 -- DONE. The UI works without these changes (sbIns queues writes), but
 -- once these run, sync flows normally and structured data persists.
