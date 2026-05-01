@@ -13,6 +13,46 @@
 
 ---
 
+## 2026-04-30 — WhatsApp שלב 2 — 3 Templates עברית + כפתורי שליחה ידנית מ-showView
+
+**החלטה**: יצירת 3 custom Hebrew templates ב-Meta WhatsApp Manager + כפתור "📱 שלח התראת WhatsApp" admin-only ב-`showView` עבור NCR פתוח, משימה לא-סגורה, ופריט תפוגה תוך 30 יום. מנותב לפי טבלה ל-template הנכון עם פרמטרים אוטומטיים מהרשומה.
+
+**ה-templates** (כולם Utility, עברית):
+- `tfugen_ncr_critical` (3 params: num, area, descr) — "🚨 התראת בטיחות. NCR-{{1}} בעדיפות *קריטי* נפתח באזור {{2}}. תיאור: {{3}}. ..."
+- `tfugen_task_overdue` (2 params: title, days_late) — "⏰ משימה בפיגור. המשימה '{{1}}' עברה את היעד שלה. איחור: {{2}} ימים. ..."
+- `tfugen_expiry_warning` (3 params: name, days, due_date) — "🔧 תזכורת חידוש. {{1}} פג תוקף בעוד {{2}} ימים ({{3}}). ..."
+
+**JS helpers** (חשופים ב-window):
+- `_waNcrAlert(id)` — מחפש ב-DB.ncr, שולח עם `tfugen_ncr_critical`.
+- `_waTaskAlert(id)` — מחשב days late מ-due, שולח עם `tfugen_task_overdue`.
+- `_waExpiryAlert(tbl, id)` — תומך ב-ppe/tr/docs/ctr/equip_inspections/med, שולח עם `tfugen_expiry_warning`.
+- `_waAlertFromView(tbl, id)` — מנתב לפי טבלה.
+- `_waConfirm(to, opts)` — confirm() popup לפני שליחה.
+- `_waLastTo()` — מחזיר localStorage או default `+972547940073`.
+
+**Gating ב-`showView`**:
+- NCR: `s !== 'סגור'` (active)
+- tasks: `status !== 'הושלם' && !== 'בוטל'`
+- expiry tables: `r.e && du(r.e) <= 30`
+- AND `_isAdminUser()` תמיד.
+
+**סיבה**: הכפתור הידני נותן לאדמין שליטה מלאה (אין spam של auto-alerts), ועובד מהרגע שMeta יאשרו את ה-templates (24-48h). אחרי החשיפה הזו ל-pattern, הצעד הבא יהיה auto-trigger מתוזמן (cron) — אבל זה דורש מספר עסקי אמיתי + מיפוי users → phone numbers.
+
+**אלטרנטיבות שנדחו**:
+- **Auto-trigger ב-svNcr** (כשנוצר NCR קריטי, אוטומטית WhatsApp): מסוכן — שגיאה כמו עדכון ב-status שאינו "באמת" יוצר התראה. מנהל בטיחות עדיף שליטה.
+- **בחירת recipient מתוך datalist של app_users**: לא קיים שדה `phone` ב-`app_users`. צריך migration. דחוי.
+- **שליחה לרשימת תפוצה**: כל recipient חייב להיות verified ב-Meta dashboard בtest mode. לא ניתן לרשימה גדולה. דחוי לאחרי production phone.
+
+**השלכות**:
+- אין שינוי schema, אין migration.
+- 3 templates בdashboard של Meta — חייבים להיות "פעיל" כדי שהשליחה תעבוד. כל זמן שהם "בבדיקה" — POST יחזיר שגיאה.
+- כשmeta יאשרו: הכפתורים מתחילים לעבוד מיד, אין צורך ב-deploy חדש.
+- יומן: כל send נשמר ל-Meta (ראה ב-WhatsApp Manager → Insights). אין tracking ב-DB שלנו עדיין.
+
+**קישור**: branch `claude/check-software-status-9iZMX`, session `01Ed4baKdhTjdkj43oHNwYNy`.
+
+---
+
 ## 2026-04-30 — WhatsApp Meta Cloud API — שלב 1 (test send endpoint)
 
 **החלטה**: יצירת `api/wa-send.js` (Vercel Edge function) שמתפקד כ-proxy בטוח ל-Meta WhatsApp Business Cloud API. UI: כרטיס בדיקה admin-only בדשבורד.

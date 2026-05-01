@@ -3566,6 +3566,15 @@ function showView(tbl,id){
   if(canReopen){
     html+='<div style="margin-top:14px"><button data-rtbl="'+esc(tbl)+'" data-rid="'+esc(id)+'" onclick="_reopen(this.dataset.rtbl,this.dataset.rid)" style="width:100%;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;color:#b45309;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128275; \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button></div>';
   }
+  var canWA=false;
+  if(tbl==='ncr'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canWA=true;
+  else if(tbl==='tasks'&&rec.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&rec.status!=='\u05d1\u05d5\u05d8\u05dc')canWA=true;
+  else if(['ppe','tr','docs','ctr','equip_inspections','med'].indexOf(tbl)>=0&&rec.e){
+    var dd=du(rec.e);if(dd<=30)canWA=true;
+  }
+  if(canWA&&_isAdminUser()){
+    html+='<div style="margin-top:8px"><button data-watbl="'+esc(tbl)+'" data-waid="'+esc(id)+'" onclick="_waAlertFromView(this.dataset.watbl,this.dataset.waid)" style="width:100%;background:#0d3d2d;border:1px solid #10b981;border-radius:8px;color:#10b981;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128241; \u05e9\u05dc\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp</button></div>';
+  }
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
 }
@@ -4189,6 +4198,41 @@ window._pwaInstall=function(){
   _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
 };
 /* ---- WhatsApp test ---- */
+function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'+972547940073';}
+function _waConfirm(to,opts){
+  if(!confirm('לשלוח התראת WhatsApp ל-'+to+'?'))return;
+  return _waSend(to,opts);
+}
+window._waNcrAlert=function(id){
+  var n=(DB.ncr||[]).find(function(r){return r.id===id;});
+  if(!n){toast('לא נמצא');return;}
+  var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
+  var area=String(n.a||n.loc||'לא צוין').substring(0,60);
+  var descr=String(n.d||'אין תיאור').substring(0,200);
+  _waConfirm(_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]});
+};
+window._waTaskAlert=function(id){
+  var t=(DB.tasks||[]).find(function(r){return r.id===id;});
+  if(!t){toast('לא נמצא');return;}
+  var today=new Date().toISOString().split('T')[0];
+  var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
+  _waConfirm(_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]});
+};
+window._waExpiryAlert=function(tbl,id){
+  var r=(DB[tbl]||[]).find(function(x){return x.id===id;});
+  if(!r){toast('לא נמצא');return;}
+  var today=new Date().toISOString().split('T')[0];
+  var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
+  var name=String(r.n||r.code||r.ty||'פריט')+(r.w?' ('+r.w+')':'');
+  var dueDate=r.e?fd(r.e):'?';
+  _waConfirm(_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]});
+};
+window._waAlertFromView=function(tbl,id){
+  if(tbl==='ncr')return _waNcrAlert(id);
+  if(tbl==='tasks')return _waTaskAlert(id);
+  if(['ppe','tr','docs','ctr','equip_inspections','med'].indexOf(tbl)>=0)return _waExpiryAlert(tbl,id);
+  toast('אין תבנית WhatsApp לסוג זה');
+};
 window._waTestSend=function(){
   var inp=g('dash-wa-phone');
   var to=inp?String(inp.value||'').trim():'';
