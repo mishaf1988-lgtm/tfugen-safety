@@ -3552,7 +3552,7 @@ function _tskMenu(taskId,anchor){
 }
 function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
-function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'};return m[tbl]||tbl;}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
@@ -3634,6 +3634,15 @@ function _collectVirtualTasks(){
   var virt=[],today=new Date().toISOString().split('T')[0];
   function _isOpenish(s){return s===_TSK_OPEN||s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}
   function _mapStatus(s){return s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?_TSK_PROG:s;}
+  // Inspection Types \u2014 surface as virtual tasks when next_due is within 30 days
+  (DB.inspection_types||[]).forEach(function(it){
+    if(!it.active||!it.next_due)return;
+    var d=du(it.next_due);
+    if(d>30)return; // not yet
+    var pri=d<0?'\u05e7\u05e8\u05d9\u05d8\u05d9':(d<=7?'\u05d2\u05d1\u05d5\u05d4':_TSK_PRI_DEF);
+    var prefix=d<0?'\u05e4\u05d2 \u05d1-'+(-d)+' \u05d9\u05de\u05d9\u05dd: ':(d===0?'\u05d4\u05d9\u05d5\u05dd: ':'\u05d1\u05e2\u05d5\u05d3 '+d+' \u05d9\u05de\u05d9\u05dd: ');
+    virt.push({id:'v:itp:'+it.id,title:prefix+(it.name||'\u05d1\u05d3\u05d9\u05e7\u05d4'),assignee:it.responsible||null,due:it.next_due,status:_TSK_OPEN,priority:pri,source_table:'inspection_types',source_id:it.id,notes:it.notes||null,isVirtual:true});
+  });
   (DB.ncr||[]).forEach(function(n){
     if(!_isOpenish(n.s))return;
     virt.push({id:'v:ncr:'+n.id,title:(n.num?n.num+' \u2014 ':'')+String(n.d||'').substring(0,60),assignee:n.o||null,due:n.u||null,status:_mapStatus(n.s),priority:_TSK_PRI_DEF,source_table:'ncr',source_id:n.id,notes:null,isVirtual:true});
