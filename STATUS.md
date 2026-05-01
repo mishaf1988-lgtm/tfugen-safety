@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `3203c4b` |
+| Commit | `e55ef5f` |
 | תאריך | 2026-04-30 |
 | Tag | — (טרם נוצר) |
 | מצב | 23 טבלאות · NCR Agent עם feedback loop (👍/👎/🔄) שמור ל-`ncr_ai` · Reopen flow על Task/NCR סגורים (עם סיבה+חתימה ב-notes) · 3 תיקוני bugs קודמים (auth JWT, CORS preview, max_tokens) · Smart Capture · Tasks + Virtual Tasks · RLS Stage 1+2 פעיל |
@@ -98,10 +98,12 @@
 - [x] **ייצוא PDF גלובלי** — כפתור 🖨 בtopbar שמדפיס/מייצא ל-PDF את הדף הפעיל בלבד (תוקן באג בו ה-CSS להדפסה הראה את כל הדפים). מוסיף print-header אוטומטי עם כותרת + תאריך + שם משתמש. עובד מכל דף — דשבורד, NCR, משימות, ביקורות וכו'. ב-Chrome/Safari יש דיאלוג "Save as PDF". ללא תלות חיצונית (jsPDF), ללא migration.
 - [x] **Recurrence Engine מזוער (Virtual Tasks 30-day window)** — בהשראת Vitre §12.2. עד היום `_collectVirtualTasks` הציג רק פריטים שכבר פגו (`r.e < today`). עכשיו: כל פריט במרחק עד 30 יום מתפוגה (PPE/הדרכה/מסמכים/קבלנים/בדיקות ציוד) נהפך לוירטואלי עם עדיפות מדורגת: **קריטי** (פג), **גבוה** (היום או 1-7 ימים), **בינונית** (8-30 ימים). הכותרת מציינת "פג בעוד X ימים" כדי שהמשתמש יבין מהר. אין צורך ב-cron — מחושב חי בכל רענון. ללא migration, ללא endpoint חדש.
 - [x] **Pattern Detection History** — בהשראת Vitre §17 ("חוסר ב-AI עומק"). כל לחיצה על "ניתוח כללי" שומרת תוצאה ב-`ncr_patterns` (טבלה חדשה) עם snapshot של byArea/byPriority/byStatus + open/closed counts. במודאל הסוכן מופיע "📜 ניתוחים קודמים" עם 5 הניתוחים האחרונים — קליק על תאריך מציג את הניתוח של אז. בנה paper-trail היסטורי לזיהוי מגמות לאורך זמן.
+- [x] **NCR Trend Chart (12 חודשים)** — כפתור "📈 מגמות" במודאל הסוכן. רנדר SVG inline (ללא תלות חיצונית) עם stacked bar chart: שורת בסיס לפי 12 חודשים אחרונים, אדום=בטיחות, ירוק=סביבה. מספר NCRs כותב מעל כל עמודה. מתחת: 3 KPI tiles (סה"כ בטיחות / סביבה / סגורים) על כל המאגר. נתון מתוך `_nad` (כל ה-NCRs שהsynced ב-Agent).
 - [ ] **ייצוא PDF** — לכל דף
 - [x] **WhatsApp Meta API — שלב 1 (פעיל מלא + token קבוע) — אומת end-to-end 30/4**: endpoint `/api/wa-send.js` (Vercel Edge) שמדבר עם Meta Cloud API. 3 modes: hello_world template, custom approved template עם params, free-form text. env vars `META_PHONE_NUMBER_ID`/`META_ACCESS_TOKEN` ב-Vercel. **System User Token קבוע** (לא יפוג) שנוצר דרך Meta Business Settings עם הרשאות `whatsapp_business_messaging` + `whatsapp_business_management`. UI: כרטיס "📱 בדיקת WhatsApp" בדשבורד (admin-only) עם input לטלפון + כפתור שלח. **2 אימותים end-to-end**: ב-11:04 עם temp token, ב-11:21 עם permanent token — שניהם הצליחו.
 - [x] **WhatsApp שלב 2A — 3 Custom Hebrew Templates נשלחו ל-Meta approval (30/4 11:32)**: `tfugen_ncr_critical` (NCR קריטי, 3 params), `tfugen_task_overdue` (משימה בפיגור, 2 params), `tfugen_expiry_warning` (חידוש ציוד/הסמכה, 3 params). כל ה-3 ב-status "בבדיקה" — תוך 24-48h יעברו ל-"פעיל". כל אחד מבוסס Utility category, עברית, עם דוגמאות parameters.
-- [x] **WhatsApp שלב 2B — כפתורי שליחה ידנית מ-`showView`**: כל NCR פתוח, משימה לא-סגורה, או פריט תפוגה תוך 30 יום — מציג כפתור "📱 שלח התראת WhatsApp" admin-only ב-detail view. בלחיצה: `confirm()` עם מספר ברירת מחדל (last used / +972547940073), ואז שולח עם הtemplate המתאים + פרמטרים אוטומטיים מהרשומה (NCR num/area/descr, task title/days_late, expiry name/days/date). עובד מיד אחרי שMeta יאשרו את ה-templates. JS helpers: `_waNcrAlert`, `_waTaskAlert`, `_waExpiryAlert`, `_waAlertFromView`.
+- [x] **WhatsApp שלב 2B — כפתורי שליחה ידנית מ-`showView`** + **Smart routing**: כל NCR פתוח, משימה לא-סגורה, או פריט תפוגה תוך 30 יום — מציג כפתור "📱 שלח התראת WhatsApp" admin-only ב-detail view. הוספת `_waResolvePhone(name)` שמחפשת ב-`app_users` (active=true + phone) לפי `full_name` או `username` ומחזירה את הטלפון. אם נמצא — שולח לשם עם confirm "לשלוח ל-X (אחראי)?", אחרת fallback ל-localStorage/+972547940073. JS helpers: `_waNcrAlert`, `_waTaskAlert`, `_waExpiryAlert`, `_waAlertFromView`. שדה phone כבר קיים ב-app_users (אין migration).
+- [x] **CSV Export גלובלי** — כפתור 📊 בtopbar שמייצא את הטבלה הנוכחית (ה-`.page.on table`) ל-CSV עם UTF-8 BOM. עברית מופיעה תקין ב-Excel. מנקה buttons/inputs מהתאים, quotes RFC 4180. Filename: `tfugen_<page>_<YYYY-MM-DD>.csv`. עובד על כל דף עם טבלה. ללא migration.
 - [x] **Audit Trail** — דף `pg-audit` (אדמין/מנהל בלבד), טבלה `audit_log` עם RLS, וגאשת `_aud()` שמרשמת אוטומטית כל `sbIns`/`sbUpd`/`sbDel`. Migration `2026-04-24_audit_log.sql` הורץ ב-Supabase (הטבלה קיימת עם 25+ רשומות מ-2026-04-30 לפחות). הכפתור ב-modules sheet מוצג רק לאדמין דרך `_applyRoleGates`.
 - [ ] **Agent Dashboard** — ריכוז כל ה-AI agents
 

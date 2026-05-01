@@ -4198,7 +4198,7 @@ function loadFromSupabase(){
     }).catch(function(e){console.warn('[TFUGEN] Sync error:',e);});
 }
 </script>
-<div id="ncr-agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;direction:rtl;font-family:Heebo,Arial,sans-serif"><div style="background:#0a0c0e;border:1px solid #1e3a5f;border-radius:12px;width:min(95vw,900px);height:min(90vh,700px);margin:3vh auto;display:flex;flex-direction:column;overflow:hidden"><div style="background:#111416;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3a5f;flex-shrink:0"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">&#129302;</span><div style="font-size:15px;font-weight:700;color:#fff">&#1505;&#1493;&#1499;&#1503; NCR/CAPA &middot; <span id="ncr-agent-count" style="color:#4a9adf">0</span> &#1512;&#1513;&#1493;&#1502;&#1493;&#1514;</div></div><div style="display:flex;gap:8px"><button onclick="ncrAgentAnalyzeAll()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1504;&#1497;&#1514;&#1493;&#1495; &#1488;&#1497;&#1514;&#1493;&#1512; &#1513;&#1500; &#1499;&#1500; &#1492;-NCR &#1492;&#1508;&#1514;&#1493;&#1495;&#1497;&#1501;">&#10024; &#1504;&#1497;&#1514;&#1493;&#1495; &#1499;&#1500;&#1500;&#1497;</button><button onclick="document.getElementById('ncr-agent-modal').style.display='none'" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 14px;font-size:14px;cursor:pointer">&times;</button></div></div><div style="display:flex;flex:1;overflow:hidden"><div id="ncr-agent-list" style="flex:1;overflow-y:auto;padding:10px"></div><div id="ncr-agent-panel" style="display:none;width:360px;border-right:1px solid #1e3a5f;background:#0d1014;overflow-y:auto;padding:12px;flex-shrink:0"></div></div><div style="background:#0d1014;border-top:1px solid #1e3a5f;padding:6px 16px;font-size:10px;color:#3a5a7a">&#127981; &#1514;&#1508;&#1493;&#1490;&#1503; | &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | NCR Agent v4</div></div></div>
+<div id="ncr-agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;direction:rtl;font-family:Heebo,Arial,sans-serif"><div style="background:#0a0c0e;border:1px solid #1e3a5f;border-radius:12px;width:min(95vw,900px);height:min(90vh,700px);margin:3vh auto;display:flex;flex-direction:column;overflow:hidden"><div style="background:#111416;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3a5f;flex-shrink:0"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">&#129302;</span><div style="font-size:15px;font-weight:700;color:#fff">&#1505;&#1493;&#1499;&#1503; NCR/CAPA &middot; <span id="ncr-agent-count" style="color:#4a9adf">0</span> &#1512;&#1513;&#1493;&#1502;&#1493;&#1514;</div></div><div style="display:flex;gap:8px"><button onclick="ncrAgentAnalyzeAll()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1504;&#1497;&#1514;&#1493;&#1495; &#1488;&#1497;&#1514;&#1493;&#1512; &#1513;&#1500; &#1499;&#1500; &#1492;-NCR &#1492;&#1508;&#1514;&#1493;&#1495;&#1497;&#1501;">&#10024; &#1504;&#1497;&#1514;&#1493;&#1495; &#1499;&#1500;&#1500;&#1497;</button><button onclick="_ncrShowTrend()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1490;&#1512;&#1507; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;">&#128200; &#1502;&#1490;&#1502;&#1493;&#1514;</button><button onclick="document.getElementById('ncr-agent-modal').style.display='none'" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 14px;font-size:14px;cursor:pointer">&times;</button></div></div><div style="display:flex;flex:1;overflow:hidden"><div id="ncr-agent-list" style="flex:1;overflow-y:auto;padding:10px"></div><div id="ncr-agent-panel" style="display:none;width:360px;border-right:1px solid #1e3a5f;background:#0d1014;overflow-y:auto;padding:12px;flex-shrink:0"></div></div><div style="background:#0d1014;border-top:1px solid #1e3a5f;padding:6px 16px;font-size:10px;color:#3a5a7a">&#127981; &#1514;&#1508;&#1493;&#1490;&#1503; | &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | NCR Agent v4</div></div></div>
 <script>
 /* NCR AI Agent TFUGEN SAFETY v4 — persisted analyses + ISO 45001/14001 prompt */
 var _nad=[];
@@ -4232,8 +4232,15 @@ window._pwaInstall=function(){
 };
 /* ---- WhatsApp test ---- */
 function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'+972547940073';}
-function _waConfirm(to,opts){
-  if(!confirm('לשלוח התראת WhatsApp ל-'+to+'?'))return;
+function _waResolvePhone(name){
+  if(!name)return null;
+  var n=String(name).trim();if(!n)return null;
+  var u=(DB.app_users||[]).find(function(x){return x.active!==false&&x.phone&&(x.full_name===n||x.username===n);});
+  return u?String(u.phone).trim():null;
+}
+function _waConfirm(to,opts,who){
+  var msg=who?'לשלוח התראת WhatsApp ל-'+to+' ('+who+')?':'לשלוח התראת WhatsApp ל-'+to+'?';
+  if(!confirm(msg))return;
   return _waSend(to,opts);
 }
 window._waNcrAlert=function(id){
@@ -4242,14 +4249,16 @@ window._waNcrAlert=function(id){
   var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
   var area=String(n.a||n.loc||'לא צוין').substring(0,60);
   var descr=String(n.d||'אין תיאור').substring(0,200);
-  _waConfirm(_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]});
+  var smart=_waResolvePhone(n.o);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]},smart?n.o:null);
 };
 window._waTaskAlert=function(id){
   var t=(DB.tasks||[]).find(function(r){return r.id===id;});
   if(!t){toast('לא נמצא');return;}
   var today=new Date().toISOString().split('T')[0];
   var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
-  _waConfirm(_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]});
+  var smart=_waResolvePhone(t.assignee);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_task_overdue',language:'he',params:[String(t.title||'משימה').substring(0,80),String(late)]},smart?t.assignee:null);
 };
 window._waExpiryAlert=function(tbl,id){
   var r=(DB[tbl]||[]).find(function(x){return x.id===id;});
@@ -4258,7 +4267,9 @@ window._waExpiryAlert=function(tbl,id){
   var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
   var name=String(r.n||r.code||r.ty||'פריט')+(r.w?' ('+r.w+')':'');
   var dueDate=r.e?fd(r.e):'?';
-  _waConfirm(_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]});
+  var ownerName=r.w||r.vendor||r.o||r.c||null;
+  var smart=_waResolvePhone(ownerName);
+  _waConfirm(smart||_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]},smart?ownerName:null);
 };
 window._waAlertFromView=function(tbl,id){
   if(tbl==='ncr')return _waNcrAlert(id);
@@ -4608,6 +4619,61 @@ function _ncrRenderAggregate(content){
 window._ncrPatternShow=function(idx){
   var p=_ncrPatternsCache[Number(idx)||0];if(!p)return;
   _ncrRenderAggregate(p.content||'');
+};
+function _ncrTrendSvg(){
+  var d=new Date(),months=[];
+  for(var i=11;i>=0;i--){
+    var m=new Date(d.getFullYear(),d.getMonth()-i,1);
+    months.push({y:m.getFullYear(),mo:m.getMonth(),lbl:(m.getMonth()+1)+'/'+String(m.getFullYear()).slice(2),saf:0,env:0});
+  }
+  var ENV='\u05e1\u05d1\u05d9\u05d1\u05d4';
+  (_nad||[]).forEach(function(n){
+    var src=n.sd||n.src_date||n.created_at||n.ts;
+    if(!src)return;
+    var nd=new Date(src);if(isNaN(nd))return;
+    var mi=-1;
+    for(var k=0;k<months.length;k++){if(months[k].y===nd.getFullYear()&&months[k].mo===nd.getMonth()){mi=k;break;}}
+    if(mi<0)return;
+    var isEnv=n.category==='env'||(n.a&&String(n.a).indexOf(ENV)>=0);
+    if(isEnv)months[mi].env++;else months[mi].saf++;
+  });
+  var max=1;
+  months.forEach(function(x){var t=x.saf+x.env;if(t>max)max=t;});
+  var W=360,H=140,padL=24,padR=8,padT=14,padB=28;
+  var chartW=W-padL-padR,chartH=H-padT-padB;
+  var slot=chartW/months.length,barW=Math.max(8,slot-4);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;background:#0d1014;border:1px solid #1e3a5f;border-radius:8px">';
+  svg+='<text x="'+(W-padR)+'" y="10" font-size="10" fill="#7a9ab8" text-anchor="end">12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</text>';
+  svg+='<text x="2" y="'+(padT+8)+'" font-size="9" fill="#7a9ab8">'+max+'</text>';
+  svg+='<text x="2" y="'+(padT+chartH+4)+'" font-size="9" fill="#7a9ab8">0</text>';
+  svg+='<line x1="'+padL+'" y1="'+(padT+chartH)+'" x2="'+(W-padR)+'" y2="'+(padT+chartH)+'" stroke="#1e3a5f"></line>';
+  months.forEach(function(mo,i){
+    var x=padL+i*slot+(slot-barW)/2;
+    var safH=(mo.saf/max)*chartH,envH=(mo.env/max)*chartH;
+    var safY=padT+chartH-safH,envY=safY-envH;
+    if(mo.saf>0)svg+='<rect x="'+x+'" y="'+safY+'" width="'+barW+'" height="'+safH+'" fill="#cc1f1f"></rect>';
+    if(mo.env>0)svg+='<rect x="'+x+'" y="'+envY+'" width="'+barW+'" height="'+envH+'" fill="#16a34a"></rect>';
+    var total=mo.saf+mo.env;
+    if(total>0)svg+='<text x="'+(x+barW/2)+'" y="'+(envY-2)+'" font-size="9" fill="#aaccee" text-anchor="middle">'+total+'</text>';
+    svg+='<text x="'+(x+barW/2)+'" y="'+(H-10)+'" font-size="9" fill="#5a7a9a" text-anchor="middle">'+mo.lbl+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+window._ncrShowTrend=function(){
+  var P=document.getElementById('ncr-agent-panel');if(!P)return;
+  P.style.display='block';
+  if(!_nad||!_nad.length){P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">\u05d8\u05d5\u05e2\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd...</div>';return;}
+  var legend='<div style="display:flex;gap:14px;justify-content:center;font-size:11px;margin-top:8px"><span style="color:#cc1f1f">\u25a0 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</span><span style="color:#16a34a">\u25a0 \u05e1\u05d1\u05d9\u05d1\u05d4</span></div>';
+  var totals={saf:0,env:0,closed:0};
+  var CL='\u05e1\u05d2\u05d5\u05e8',ENV='\u05e1\u05d1\u05d9\u05d1\u05d4';
+  _nad.forEach(function(n){
+    if(n.s===CL)totals.closed++;
+    var isEnv=n.category==='env'||(n.a&&String(n.a).indexOf(ENV)>=0);
+    if(isEnv)totals.env++;else totals.saf++;
+  });
+  var summary='<div style="display:flex;gap:8px;margin-top:10px;font-size:11px;flex-wrap:wrap"><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#cc1f1f;font-size:14px;font-weight:700">'+totals.saf+'</div><div style="color:#7a9ab8">\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#16a34a;font-size:14px;font-weight:700">'+totals.env+'</div><div style="color:#7a9ab8">\u05e1\u05d1\u05d9\u05d1\u05d4</div></div><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#5a7a9a;font-size:14px;font-weight:700">'+totals.closed+'</div><div style="color:#7a9ab8">\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd</div></div></div>';
+  P.innerHTML=_ncrTrendSvg()+legend+summary;
 };
 console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
