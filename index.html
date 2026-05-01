@@ -4862,7 +4862,7 @@ function rPrj(){
     var safeId=esc(p.id);
     var range='';
     if(p.start_date||p.end_date){range='<span style="font-size:10px;color:var(--t3)">'+(p.start_date?fd(p.start_date):'?')+' → '+(p.end_date?fd(p.end_date):'?')+'</span>';}
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1;cursor:pointer" data-pid="'+safeId+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   }).join('');
 }
 function _prjOpenAdd(){
