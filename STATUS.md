@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `67a363c` |
+| Commit | `4c75ace` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -159,6 +159,16 @@
 - [x] **Dashboard inspection types upcoming widget (PR #195)** — top 5 בדיקות חוזרות בתוך 60 יום.
 - [x] **Dashboard auto-insights panel (PR #196)** — עד 3 משפטים אוטומטיים על דפוסים.
 - [x] **Dashboard safety health score (PR #197)** — ציון 0-100 צבעוני.
+- [x] **JSON backup button (PR #199)** — 💾 בtopbar למנהל.
+- [x] **Emergency report shortcut (PR #200)** — 🆘 בדשבורד.
+- [x] **My-tasks badge (PR #201)** — 📝 בtopbar עם ספירה.
+- [x] **Morning round reminder (PR #202)** — באנר אם סבב לא בוצע ולפני 14:00.
+- [x] **Clickable project name (PR #203)** — בעמוד פרויקטים.
+- [x] **Tasks-completed in weekly comparison (PR #205)** — שורה 4 ב-widget.
+- [x] **Search projects + inspection_types (PR #206)** — חיפוש גלובלי מורחב.
+- [x] **Tasks filter by assignee (PR #207)** — Dropdown.
+- [x] **Version label (PR #208)** — v2026.05.02 בtopbar.
+- [x] **Recent activity feed (PR #209)** — 5 רשומות עדכניות בדשבורד.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
