@@ -3922,6 +3922,7 @@ function rTasks(){
     }
     var srcLabel=r.source_table&&r.source_id?esc(_tskSrcLabel(r.source_table))+(r.isVirtual?' <span style="font-size:9px;color:var(--t3)">(\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9)</span>':''):'';
     var src=srcLabel?'<span class="b bX" style="font-size:10px">'+srcLabel+'</span>':'\u2014';
+    if(r.project_id&&typeof _prjName==='function'){var pn=_prjName(r.project_id);if(pn)src+=' <span class="b" style="background:#dcecff;color:#1d4ed8;font-size:9px">\ud83c\udfd7\ufe0f '+esc(pn.substring(0,15))+'</span>';}
     var actions;
     if(r.isVirtual){
       var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1502;&#1511;&#1493;&#1512;">&#128065;</button>';
