@@ -410,8 +410,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
-    <button class="btn btn-p" onclick="_waTestPrompt()" style="font-size:13px">&#128241; &#1513;&#1500;&#1495; hello_world</button>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" value="+972547940073" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <button class="btn btn-p" onclick="_waTestSend()" style="font-size:13px;white-space:nowrap">&#128241; &#1513;&#1500;&#1495;</button>
+    </div>
     <div id="dash-wa-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1502;&#1505;&#1508;&#1512; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1502;&#1488;&#1493;&#1502;&#1514; &#1489;-Meta dashboard</div>
   </div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -4185,14 +4189,14 @@ window._pwaInstall=function(){
   _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
 };
 /* ---- WhatsApp test ---- */
-window._waTestPrompt=function(){
-  var def=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.phone)||localStorage.getItem('tfgn_wa_last')||'+972';
-  var to=prompt('\u05de\u05e1\u05e4\u05e8 \u05e0\u05de\u05e2\u05df (E.164, \u05dc\u05d3\u05d5\u05d2\u05de\u05d4 +972547940073):',def);
-  if(!to)return;
-  to=String(to).trim();
+window._waTestSend=function(){
+  var inp=g('dash-wa-phone');
+  var to=inp?String(inp.value||'').trim():'';
+  if(!to){var rEl=g('dash-wa-result');if(rEl)rEl.textContent='\u2717 \u05d4\u05d6\u05df \u05de\u05e1\u05e4\u05e8';return;}
   try{localStorage.setItem('tfgn_wa_last',to);}catch(e){}
   _waSend(to,{template:'hello_world'});
 };
+window._waTestPrompt=window._waTestSend;
 window._waSend=function(to,opts){
   opts=opts||{};
   var body={to:to};
