@@ -3994,6 +3994,8 @@ tb.innerHTML=rows.map(function(n){
   var ico=isSaf?'&#128737;':'&#127807;';
   var sensBadge=n.sens?' &#128274;':'';
   var loc=(n.location_id&&typeof _locName==='function'?_locName(n.location_id):'')||n.loc||n.location||'';
+  var prj=(n.project_id&&typeof _prjName==='function')?_prjName(n.project_id):'';
+  if(prj)loc=loc?(loc+' · 🏗️'+prj.substring(0,12)):('🏗️'+prj.substring(0,15));
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
