@@ -4414,7 +4414,7 @@ tb.innerHTML=rows.map(function(n){
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
   return '<tr>'+
-    '<td><span class="b bX">'+(n.num||'&#8212;')+'</span>'+sensBadge+staleBadge+'</td>'+
+    '<td><span class="b bX" title="לחץ להעתקה" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'הועתק\')">'+(n.num||'&#8212;')+'</span>'+sensBadge+staleBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
     '<td>'+ loc.substring(0,20) +'</td>'+
