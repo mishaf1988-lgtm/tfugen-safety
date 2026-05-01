@@ -3404,7 +3404,14 @@ function tskPrjFilter(v){window._tskPrjFilter=v||'';rTasks();}
 function tskAssigneeFilter(v){window._tskAssFilter=v||'';rTasks();}
 function rNm(){
   var tb=g('tb-nm');if(!tb)return;
-  var rows=(DB.near_miss||[]).slice().sort(function(a,b){return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;});
+  var _sevW={'חמור':0,'בינוני':1,'קל':2};
+  var rows=(DB.near_miss||[]).slice().sort(function(a,b){
+    var ac=a.s==='סגור'?1:0, bc=b.s==='סגור'?1:0;
+    if(ac!==bc)return ac-bc;
+    var as=_sevW[a.sev]!==undefined?_sevW[a.sev]:3, bs=_sevW[b.sev]!==undefined?_sevW[b.sev]:3;
+    if(as!==bs)return as-bs;
+    return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;
+  });
   var f=window._nmFilter||'all';
   var locF=window._nmLocFilter||'';
   var locSel=g('nm-loc-filter');
