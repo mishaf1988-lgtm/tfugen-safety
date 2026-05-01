@@ -413,6 +413,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
@@ -2916,6 +2917,26 @@ function rDash(){
       }else{if(dpc)dpc.style.display='none';}
     }
   }catch(e){console.warn('dash-by-prj failed',e);}
+
+  // Inspection types upcoming
+  try{
+    var dic=g('dash-itp-card');
+    var di=g('dash-itp');
+    if(di){
+      var its=(DB.inspection_types||[]).filter(function(t){return t.active && t.next_due;}).sort(function(a,b){return (a.next_due||'9999')<(b.next_due||'9999')?-1:1;});
+      // Show only those due within 60 days or already past
+      var soon=its.filter(function(t){var d=du(t.next_due);return d<=60;});
+      if(soon.length){
+        if(dic)dic.style.display='';
+        di.innerHTML=soon.slice(0,5).map(function(t){
+          var d=du(t.next_due);
+          var col=d<0?'var(--bad)':(d<=7?'var(--bad)':(d<=30?'var(--warn)':'var(--ok)'));
+          var lbl=d<0?'\u05e4\u05d2 \u05d1-'+(-d)+'\u05d9':(d===0?'\u05d4\u05d9\u05d5\u05dd':'\u05d1\u05e2\u05d5\u05d3 '+d+'\u05d9');
+          return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer" onclick="goPage(\'itp\')"><span>'+esc(t.name||'')+'</span><span style="color:'+col+';font-weight:600">'+esc(lbl)+'</span></div>';
+        }).join('');
+      }else{if(dic)dic.style.display='none';}
+    }
+  }catch(e){console.warn('dash-itp failed',e);}
 
   // NCR stats
   var ncrAll=DB.ncr.length, ncrOpen=DB.ncr.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
