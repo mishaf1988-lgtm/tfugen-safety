@@ -1546,7 +1546,7 @@ id="m-ncr" style="display:none">
   <input type="hidden" id="tsk-src-id">
   <div class="fgrid">
     <div class="field fw"><label>&#1499;&#1493;&#1514;&#1512;&#1514; *</label><input id="tsk-title" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1492;&#1495;&#1500;&#1507; &#1502;&#1498;&#1513;&#1493;&#1500; &#1489;&#1495;&#1491;&#1512; &#1502;&#1499;&#1493;&#1504;&#1493;&#1514;"></div>
-    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="tsk-assignee" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;"></div>
+    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="tsk-assignee" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;" list="tsk-assignee-list"><datalist id="tsk-assignee-list"></datalist></div>
     <div class="field"><label>&#1497;&#1506;&#1491;</label><input type="date" id="tsk-due"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tsk-status"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
@@ -2184,6 +2184,14 @@ function openModal(id){
     mo.querySelectorAll('input[type=time]').forEach(function(i){if(!i.value)i.value=_hm;});
     if(typeof _locOptionsHtml==='function'){mo.querySelectorAll('select[id$="-location-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_locOptionsHtml(null);}});}
     if(typeof _prjOptionsHtml==='function'){mo.querySelectorAll('select[id$="-project-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_prjOptionsHtml(null);}});}
+    // populate assignee datalists from app_users + emp
+    var dl=mo.querySelector('#tsk-assignee-list');
+    if(dl && !dl.options.length){
+      var names={};
+      (DB.app_users||[]).forEach(function(u){if(u.full_name)names[u.full_name]=1;else if(u.username)names[u.username]=1;});
+      (DB.emp||[]).forEach(function(e){if(e.n)names[e.n]=1;});
+      dl.innerHTML=Object.keys(names).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(n){return '<option value="'+esc(n)+'">';}).join('');
+    }
     var ctxMap={'m-doc':'doc','m-aud':'aud','m-ncr':'ncr','m-inc':'inc','m-tr':'tr','m-rsk':'rsk'};
     var ctx=ctxMap[id];
     if(ctx)try{renderFL(ctx);}catch(e){}
