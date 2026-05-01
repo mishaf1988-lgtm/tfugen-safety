@@ -1133,6 +1133,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','cal')"><span class="sic">&#128197;</span>&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')"><span class="sic">&#127811;</span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')"><span class="sic">&#128205;</span>&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501;</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()"><span class="sic">&#128276;</span>&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</button>
 
     <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')"><span class="sic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
@@ -1544,6 +1545,18 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-loc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svLoc()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- NOTIFICATION SETTINGS MODAL -->
+<div class="overlay" id="ov-notif" onclick="closeModal('m-notif')"></div>
+<div class="modal" id="m-notif" style="display:none;max-width:560px">
+  <button class="close-btn" onclick="closeModal('m-notif')">&#10005;</button>
+  <div class="card-title">&#128276; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</div>
+  <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">&#1500;&#1499;&#1500; &#1505;&#1493;&#1490; &#1488;&#1497;&#1512;&#1493;&#1506; &#1489;&#1495;&#1512; &#1489;&#1488;&#1497;&#1494;&#1493; &#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1500;&#1511;&#1489;&#1500; &#1492;&#1514;&#1512;&#1488;&#1492;. WhatsApp/Email &#1497;&#1497;&#1499;&#1504;&#1505;&#1493; &#1500;&#1514;&#1493;&#1511;&#1507; &#1488;&#1495;&#1512;&#1497; &#1488;&#1497;&#1513;&#1493;&#1512; ה-templates &#1492;&#1502;&#1514;&#1488;&#1497;&#1502;&#1497;&#1501;.</div>
+  <div class="modal-body">
+    <table id="notif-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
 <!-- GLOBAL SEARCH MODAL -->
 <div class="overlay" id="ov-gsearch" onclick="closeModal('m-gsearch')"></div>
 <div class="modal" id="m-gsearch" style="display:none">
@@ -1684,7 +1697,7 @@ id="m-ncr" style="display:none">
 'use strict';
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -1710,7 +1723,7 @@ function hcToggle(){
 (function(){try{if(localStorage.getItem('tfgn_hc')==='1')document.body.classList.add('hc');}catch(e){}})();
 function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB.hist.length>200)DB.hist=DB.hist.slice(0,200);}
 function sdb(){try{localStorage.setItem('tfgn2',JSON.stringify(DB));}catch(e){}}
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -1719,7 +1732,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -1788,7 +1801,7 @@ function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:
 function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs'];
   var pending=_obTblsPending();
   var done=0;
   tbls.forEach(function(t){
@@ -1816,7 +1829,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs'];
       var ch=c.channel('tfgn-all-changes');
       tbls.forEach(function(t){
         ch.on('postgres_changes',{event:'*',schema:'public',table:t},function(p){_rtApply(t,p);});
@@ -2163,7 +2176,12 @@ function svNcr(){
     ts:new Date().toISOString()
   };
   if(id){DB.ncr=DB.ncr.map(function(r){return r.id===id?rec:r;});sbUpd('ncr',rec);}
-  else{DB.ncr.push(rec);sbIns('ncr',rec);}
+  else{
+    DB.ncr.push(rec);sbIns('ncr',rec);
+    if(typeof _notifyEvent==='function' && rec.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'){
+      _notifyEvent('ncr_critical',{title:(rec.num||'')+' '+String(rec.d||'').substring(0,40),id:rec.id});
+    }
+  }
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' NCR: '+d.substring(0,30));
   sdb();closeModal('m-ncr');rNcr();rDash();
   toast('\u05e0\u05e9\u05de\u05e8 ✓');
@@ -4186,6 +4204,91 @@ function svNmDelete(){
   if(!v)return;
   if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
   _svDelete(v.id);_svRenderSelect('nm-sv-select','nm','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
+}
+
+// Notification Preferences (per-user matrix)
+var NOTIF_EVENTS=[
+  {key:'ncr_critical',     label:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05e0\u05e4\u05ea\u05d7'},
+  {key:'task_overdue',     label:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 3+ \u05d9\u05de\u05d9\u05dd'},
+  {key:'expiry_30days',    label:'\u05ea\u05e4\u05d5\u05d2\u05d4 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd (PPE/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05da)'},
+  {key:'round_missed',     label:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d7\u05e1\u05e8'},
+  {key:'incident_critical',label:'\u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea'}
+];
+var NOTIF_CHANNELS=[
+  {key:'whatsapp',label:'WhatsApp',icon:'\ud83d\udcf1'},
+  {key:'email',   label:'Email',   icon:'\ud83d\udce7'},
+  {key:'inapp',   label:'\u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',icon:'\ud83d\udd14'}
+];
+function _notifPrefsRow(){
+  var u=_svUser();
+  return (DB.notification_prefs||[]).find(function(r){return r.id===u;});
+}
+function _notifPrefs(){
+  var r=_notifPrefsRow();
+  return (r&&r.prefs)||{};
+}
+function _notifEnabled(eventKey,channelKey){
+  var p=_notifPrefs();
+  return !!(p[eventKey]&&p[eventKey][channelKey]);
+}
+function openNotifSettings(){
+  var modal=g('m-notif');if(!modal)return;
+  var prefs=_notifPrefs();
+  var hdr='<tr><th style="text-align:right;padding:6px">\u05d0\u05d9\u05e8\u05d5\u05e2</th>';
+  NOTIF_CHANNELS.forEach(function(c){hdr+='<th style="padding:6px">'+c.icon+'<br>'+c.label+'</th>';});
+  hdr+='</tr>';
+  var body='';
+  NOTIF_EVENTS.forEach(function(ev){
+    body+='<tr><td style="padding:6px;font-size:13px">'+esc(ev.label)+'</td>';
+    NOTIF_CHANNELS.forEach(function(c){
+      var checked=(prefs[ev.key]&&prefs[ev.key][c.key])?' checked':'';
+      body+='<td style="text-align:center;padding:6px"><input type="checkbox" data-ev="'+esc(ev.key)+'" data-ch="'+esc(c.key)+'"'+checked+' style="width:20px;height:20px"></td>';
+    });
+    body+='</tr>';
+  });
+  g('notif-table').innerHTML='<thead>'+hdr+'</thead><tbody>'+body+'</tbody>';
+  openModal('m-notif');
+}
+function saveNotifSettings(){
+  var u=_svUser();
+  var newPrefs={};
+  document.querySelectorAll('#notif-table input[type=checkbox]').forEach(function(cb){
+    var ev=cb.dataset.ev,ch=cb.dataset.ch;
+    if(!newPrefs[ev])newPrefs[ev]={};
+    newPrefs[ev][ch]=cb.checked;
+  });
+  if(!DB.notification_prefs)DB.notification_prefs=[];
+  var existing=_notifPrefsRow();
+  var rec={id:u,prefs:newPrefs,ts:new Date().toISOString()};
+  if(existing){var idx=DB.notification_prefs.findIndex(function(r){return r.id===u;});DB.notification_prefs[idx]=rec;sbUpd('notification_prefs',rec);}
+  else{DB.notification_prefs.push(rec);sbIns('notification_prefs',rec);}
+  sdb();closeModal('m-notif');toast('\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5 \u2713');
+}
+
+// Generic notification dispatcher
+// Returns array of channels that fired (for testing/logging).
+function _notifyEvent(eventKey,payload){
+  var fired=[];
+  var p=_notifPrefs();
+  if(!p[eventKey])return fired;
+  if(p[eventKey].whatsapp){
+    try{
+      // Best-effort: only send if a phone is resolvable + a matching template exists.
+      // No-op for now (templates pending Meta approval). Logged for audit.
+      console.info('[notif] would send WhatsApp for',eventKey,payload);
+      fired.push('whatsapp_pending');
+    }catch(e){console.warn('[notif] wa fail',e);}
+  }
+  if(p[eventKey].email){
+    console.info('[notif] would send Email for',eventKey,payload);
+    fired.push('email_pending');
+  }
+  if(p[eventKey].inapp){
+    var label=({ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'})[eventKey]||eventKey;
+    toast('\ud83d\udd14 '+label+(payload&&payload.title?': '+payload.title:''));
+    fired.push('inapp');
+  }
+  return fired;
 }
 
 function rEmp(){
