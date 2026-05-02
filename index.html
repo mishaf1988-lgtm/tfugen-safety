@@ -2097,7 +2097,20 @@ function _rtApply(tbl,payload){
   }else return;
   sdb();_sbRefresh(true);
 }
-document.addEventListener('DOMContentLoaded',function(){_obBadge();_sbAuth().catch(function(){});});
+// One-time outbox sanitizer: strip known-bad fields written by older PDF flow
+// before they get sent (otherwise PostgREST returns PGRST204 on every retry).
+function _obSanitize(){
+  try{
+    var BAD={equip_inspections:['last_inspection_date','status']};
+    var q=_obGet();var changed=false;
+    q.forEach(function(op){
+      if(!op.row||!BAD[op.tbl])return;
+      BAD[op.tbl].forEach(function(k){if(Object.prototype.hasOwnProperty.call(op.row,k)){delete op.row[k];changed=true;}});
+    });
+    if(changed)_obSet(q);
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});});
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
   var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'Realtime: '+_rtState,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
