@@ -1746,7 +1746,7 @@ id="m-ncr" style="display:none">
   <div class="modal-body" style="font-size:13px;line-height:1.7">
     <table style="width:100%;border-collapse:collapse">
       <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">?</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1492;&#1510;&#1490; &#1502;&#1505;&#1498; &#1494;&#1492;</td></tr>
-      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">Ctrl+K</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">Ctrl+K</kbd> &#1488;&#1493; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">/</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</td></tr>
       <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">N</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1488;&#1497;&#1497;&#1496;&#1501; &#1495;&#1491;&#1513; &#1489;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497;</td></tr>
       <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">D</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</td></tr>
       <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">N</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">NCR</td></tr>
@@ -8003,6 +8003,7 @@ document.addEventListener('keydown',function(e){
   }
   if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
   if(e.key==='?'){e.preventDefault();if(typeof openModal==='function')openModal('m-help');return;}
+  if(e.key==='/'){e.preventDefault();if(typeof openSearch==='function')openSearch();return;}
   if(e.key==='g'||e.key==='G'){window._gChordTs=Date.now();e.preventDefault();return;}
   if(window._gChordTs&&(Date.now()-window._gChordTs)<1500){
     var k=(e.key||'').toLowerCase();
