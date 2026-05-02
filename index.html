@@ -1218,6 +1218,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="modal sheet-modal" id="m-modules-sheet" style="display:none">
   <button class="close-btn" onclick="closeModal('m-modules-sheet')">&#10005;</button>
   <div class="modal-title">&#128203; &#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
+  <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_modulesSheetFilter(this.value)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
   <div class="sheet-grid">
     <div class="sheet-group-title">ISO &amp; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')"><span class="sic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
@@ -2197,6 +2198,27 @@ function goPage(id){
   rPage();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
+function _modulesSheetFilter(q){
+  q=String(q||'').trim().toLowerCase();
+  var sheet=g('m-modules-sheet');if(!sheet)return;
+  var btns=sheet.querySelectorAll('.sheet-btn');
+  var groups=sheet.querySelectorAll('.sheet-group-title');
+  if(!q){btns.forEach(function(b){b.style.display='';});groups.forEach(function(g){g.style.display='';});return;}
+  // Hide non-matching buttons
+  var visGroup={};
+  btns.forEach(function(b){
+    var txt=String(b.textContent||'').toLowerCase();
+    var match=txt.indexOf(q)>=0;
+    b.style.display=match?'':'none';
+    if(match){
+      // Find prev group title
+      var prev=b.previousElementSibling;
+      while(prev&&!prev.classList.contains('sheet-group-title'))prev=prev.previousElementSibling;
+      if(prev)visGroup[prev.textContent]=prev;
+    }
+  });
+  groups.forEach(function(g){g.style.display=visGroup[g.textContent]?'':'none';});
+}
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype};
