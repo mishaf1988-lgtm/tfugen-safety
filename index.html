@@ -336,9 +336,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="topbar">
   <div class="topbar-actions">
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
-    <button class="bell" id="force-sync-btn" title="&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1500;&#1488;" onclick="forceSync()">&#9729;</button>
-    <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
-    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
+    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
     <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
     <button class="bell" id="more-menu-btn" title="&#1506;&#1493;&#1491; &#1508;&#1506;&#1493;&#1500;&#1493;&#1514;" onclick="_topMoreMenu(this)">&#8943;</button>
@@ -4286,6 +4284,9 @@ window._topMoreMenu=function(anchor){
   function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
   function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
+  item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0',function(){if(typeof forceSync==='function')forceSync();});
+  item('\ud83d\udc77','\u05de\u05e6\u05d1 \u05e2\u05d5\u05d1\u05d3',function(){if(typeof empToggle==='function')empToggle(true);});
+  sep();
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
   item('\ud83d\udcbe','\u05d2\u05d9\u05d1\u05d5\u05d9 JSON',function(){if(typeof _exportBackup==='function')_exportBackup();});
