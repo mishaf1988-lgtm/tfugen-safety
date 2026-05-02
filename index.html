@@ -2005,6 +2005,7 @@ function _obSend(op){
 }
 function _obDrain(){
   if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  _obSanitize();  // strip known-bad fields from any ops queued since last drain
   var q=_obGet();if(!q.length){_obBadge('ok');_obSetErr(null);return Promise.resolve();}
   _obBusy=true;_obBadge();
   var remaining=[];var hadErr=false;var lastErr=null;
