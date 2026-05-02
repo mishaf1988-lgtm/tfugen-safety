@@ -1012,6 +1012,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="page-title" id="view-title">&#1510;&#1508;&#1497;&#1497;&#1492;</div>
     <button class="btn btn-s" id="view-pdf" style="font-size:13px;display:none" onclick="printReport(this.dataset.vtbl,this.dataset.vid)">&#128424; PDF</button>
     <button class="btn btn-s" id="view-copy" style="font-size:13px;display:none" onclick="_viewCopy(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1506;&#1514;&#1511; &#1505;&#1497;&#1499;&#1493;&#1501; &#1500;&#1511;&#1500;&#1497;&#1508;&#1489;&#1493;&#1512;&#1491;">&#128203;</button>
+    <button class="btn btn-s" id="view-link" style="font-size:13px;display:none" onclick="_copyDeepLink(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1506;&#1514;&#1511; &#1511;&#1497;&#1513;&#1493;&#1512; &#1497;&#1513;&#1497;&#1512;">&#128279;</button>
   </div>
   <div class="card" id="view-body" style="font-size:13px;line-height:2.2"></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
@@ -5941,6 +5942,7 @@ function showView(tbl,id){
   if(back)back.setAttribute('onclick',"goPage('"+cfg.back+"')");
   var pdfBtn=g('view-pdf');if(pdfBtn){pdfBtn.style.display='';pdfBtn.dataset.vtbl=tbl;pdfBtn.dataset.vid=id;}
   var cpBtn=g('view-copy');if(cpBtn){cpBtn.style.display='';cpBtn.dataset.vtbl=tbl;cpBtn.dataset.vid=id;}
+  var lnBtn=g('view-link');if(lnBtn){lnBtn.style.display='';lnBtn.dataset.vtbl=tbl;lnBtn.dataset.vid=id;}
   var html='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
@@ -7899,8 +7901,36 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
     var p=(e.state&&e.state.page)||(location.hash&&location.hash.slice(1));
     if(p)_g(p);
   });
-  if(location.hash){var p=location.hash.slice(1);if(p)setTimeout(function(){try{_g(p);}catch(e){}},100);}
+  if(location.hash){
+    var p=location.hash.slice(1);
+    if(p)setTimeout(function(){
+      try{
+        var m=p.match(/^view-([a-z_]+)-(.+)$/);
+        if(m&&typeof showView==='function'){
+          // Wait briefly so DB has loaded
+          var attempt=function(tries){
+            try{showView(m[1],m[2]);}catch(e){
+              if(tries>0)setTimeout(function(){attempt(tries-1);},400);
+            }
+          };
+          attempt(8);
+        }else{
+          _g(p);
+        }
+      }catch(e){}
+    },100);
+  }
 })();
+window._copyDeepLink=function(tbl,id){
+  try{
+    var url=location.origin+location.pathname+'#view-'+encodeURIComponent(tbl)+'-'+encodeURIComponent(id);
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');});
+    }else{
+      var ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}catch(e){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');}ta.remove();
+    }
+  }catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4');}
+};
 
 /* ---- EMP-2: ?report=<type> deep-link ---- */
 (function(){
