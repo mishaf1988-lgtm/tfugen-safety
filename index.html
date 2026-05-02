@@ -424,6 +424,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-today-tasks-card" style="display:none"><div class="card-title">&#9203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1492;&#1494;&#1492;</div><div id="dash-today-tasks"></div></div>
   <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
+  <div class="card" id="dash-tsk-bd-card" style="display:none"><div class="card-title">&#128218; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;</div><div id="dash-tsk-bd" style="font-size:12px"></div></div>
   <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
   <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
@@ -3089,6 +3090,39 @@ function rDash(){
         '<span style="background:#fff;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#2563eb">\u05e1\u05d1\u05d1\u05d9\u05dd: <strong>'+rndM+'</strong></span>';
     }
   }catch(e){}
+
+  // Dashboard: tasks status breakdown (horizontal bar)
+  try{
+    var dtbc=g('dash-tsk-bd-card');
+    var dtb=g('dash-tsk-bd');
+    if(dtb){
+      var allT=DB.tasks||[];
+      if(allT.length){
+        if(dtbc)dtbc.style.display='';
+        var today4=new Date();today4.setHours(0,0,0,0);
+        var statKeys=['\u05e4\u05ea\u05d5\u05d7','\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea','\u05d4\u05d5\u05e9\u05dc\u05dd','\u05d1\u05d5\u05d8\u05dc'];
+        var statColors={'\u05e4\u05ea\u05d5\u05d7':'#3b82f6','\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea':'#eab308','\u05d4\u05d5\u05e9\u05dc\u05dd':'#16a34a','\u05d1\u05d5\u05d8\u05dc':'#94a3b8'};
+        var bd={};statKeys.forEach(function(k){bd[k]=0;});
+        var overdue=0;
+        allT.forEach(function(t){
+          var s=t.status||'\u05e4\u05ea\u05d5\u05d7';
+          if(bd[s]!==undefined)bd[s]++;else bd[s]=(bd[s]||0)+1;
+          if(t.due&&s!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&s!=='\u05d1\u05d5\u05d8\u05dc'){try{if(new Date(t.due)<today4)overdue++;}catch(e){}}
+        });
+        var total=allT.length;
+        var bar='<div style="display:flex;height:18px;border-radius:9px;overflow:hidden;background:#eee">';
+        statKeys.forEach(function(k){
+          var n=bd[k]||0;if(!n)return;
+          var pct=Math.round(100*n/total);
+          bar+='<div title="'+esc(k+': '+n)+'" style="width:'+pct+'%;background:'+statColors[k]+';color:#fff;font-size:10px;text-align:center;line-height:18px;font-weight:600">'+(pct>=12?n:'')+'</div>';
+        });
+        bar+='</div>';
+        var legend=statKeys.map(function(k){return '<span style="display:inline-flex;align-items:center;gap:4px;margin-left:8px"><span style="width:10px;height:10px;border-radius:50%;background:'+statColors[k]+';display:inline-block"></span>'+esc(k)+': <b>'+(bd[k]||0)+'</b></span>';}).join('');
+        var ovText=overdue?'<div style="margin-top:6px;color:#cc1f1f;font-weight:700">\u23f3 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8: '+overdue+'</div>':'';
+        dtb.innerHTML=bar+'<div style="margin-top:8px;font-size:11px;color:#444">'+legend+'</div>'+ovText;
+      }else{if(dtbc)dtbc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-tsk-bd failed',e);}
 
   // Dashboard: NCR resolution time (avg days closed + avg open age)
   try{
