@@ -1,8 +1,35 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `f7fc6b2`
-**Total PRs merged**: ~110
+**Latest commit**: `ecebfa6`
+**Total PRs merged**: ~125 לילה + 11 בוקר
+
+---
+
+## ☀️ Morning Autonomous Run (2026-05-02 05:00–08:00 UTC = 08:00–11:00 IST)
+
+11 פיצ'רים נוספו אוטונומית בבוקר. כולם UI-only או DB-readonly — **אין migration חדשה לבוקר** (ה-3 migrations של הלילה עדיין נדרשות לפי הוראות בהמשך).
+
+### דשבורד
+- 🟢 **Quick-add row**: 4 כפתורים צבעוניים פותחים מודאל NCR/NM/Task/EQI מיידית.
+- 🔥 **Top critical/high NCRs widget**: עד 5 NCR פתוחים בעדיפות קריטי/גבוה. לחיצה → showView.
+- 📋 **Tasks status breakdown bar**: סרגל סטטוס ויזואלי (פתוח/בהתקדמות/הושלם/בוטל) + ⏳ בפיגור.
+- ⏱️ **NCR resolution time card**: ממוצע ימים לסגירה, ממוצע גיל פתוחים, % שנסגרו ב-30 יום.
+
+### NCR
+- 🏷 **Active chips extended**: chips נפרדים ל-Issue Type ול-quick filter (🔥/📅/⏱️/⏳).
+- 📊 **Summary pills**: נוספו "גבוה פתוח" + "⏳ פתוח 30+ ימים".
+
+### Issue Types
+- ➕ **Aggregate counts**: כל קטגוריה מציגה ספירת NCR+תקריות כולל תת-סוגים.
+- 🔗 **Clickable name**: קליק על שם → NCR מסונן באוטומט.
+
+### Topbar / שורטקאטים
+- ⌨️ **Keyboard shortcuts + help modal**: `?` פותח עזרה, `G+letter` ניווט (D/N/T/M/I/E/P/H/L/R), `Ctrl+K` חיפוש.
+- ❓ **Help button**: ❓ נוסף ב-topbar ליד תווית גרסה.
+
+### התראות
+- ⏰ **Notif log relative time**: "לפני 12ד׳" במקום DD/MM/YYYY (hover מציג datetime מלא).
 
 ---
 

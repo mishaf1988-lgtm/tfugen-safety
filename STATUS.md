@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `5c910ce` |
+| Commit | `ecebfa6` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -192,6 +192,21 @@
 - [x] **HZM summary pills (PR #236)**.
 - [x] **PTW summary pills (PR #237)**.
 - [x] **Projects filter tabs (PR #238)** — כל/פעילים/הושלמו.
+- [x] **NCR quick-filter presets (PR #240)** — 4 כפתורים מהירים: 🔥 קריטיים / 📅 השבוע / ⏱️ ישנים / ⏳ חורגים.
+- [x] **Issue Types hierarchy (PR #248)** — Vitre §6.3. טבלה `issue_types` 3-level עם `issue_type_id` ב-NCR ו-`inc`. עמוד 🎯 + dropdown סינון.
+- [x] **Issue Types seed data (PR #257)** — 30+ סוגי NCR ישראליים מוטמעים מראש.
+- [x] **Inspection Types seed data (PR #256)** — 15 בדיקות ציוד ישראליות מוטמעות.
+- [x] **Dashboard quick-add row (PR #259)** — 4 כפתורים צבעוניים: ⚠️ NCR / 🚨 כמעט-נפגע / ✅ משימה / 🔧 בדיקת ציוד.
+- [x] **Keyboard shortcuts + help modal (PR #260)** — `?` פותח עזרה, `G+D/N/T/M/I/E/P/H/L/R` ניווט מהיר. ❓ בtopbar.
+- [x] **Top critical/high NCRs widget (PR #261)** — 🔥 וידג'ט בדשבורד עם 5 NCRs פתוחים.
+- [x] **Issue Types aggregate counts (PR #262)** — כל קטגוריה מציגה NCR+תקריות מצטברים מתת-סוגים.
+- [x] **NCR resolution time KPI (PR #263)** — ⏱️ ממוצע ימים לסגירה / גיל פתוחים / % שנסגרו ב-30 יום.
+- [x] **Tasks status breakdown bar (PR #264)** — סרגל ויזואלי של פתוח/בהתקדמות/הושלם/בוטל + ⏳ בפיגור.
+- [x] **NCR summary pills extended (PR #265)** — נוספו "גבוה פתוח" ו-"⏳ פתוח 30+ ימים".
+- [x] **NCR active chips - itype + quick filter (PR #266)** — chips ויזואליים לסינון Issue Type ו-quick filter.
+- [x] **Issue Types clickable name (PR #267)** — קליק על שם → NCR מסונן.
+- [x] **Help button in topbar (PR #268)** — ❓ פותח חלון עזרה.
+- [x] **Notif log relative time (PR #269)** — "לפני 12ד׳" במקום DD/MM/YYYY.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).
