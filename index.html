@@ -3219,14 +3219,24 @@ function rDash(){
   }catch(e){}
 
   // Dashboard: recent activity (last 5 records across NCR/NM/inc/tasks)
+  // Baseline filter: only items created/updated after the saved timestamp.
+  // Initialized once per device. Click 'אפס' to reset.
   try{
     var dr=g('dash-recent');
     if(dr){
+      var _BASE_KEY='tfgn_recent_baseline';
+      var baseline=null;
+      try{baseline=localStorage.getItem(_BASE_KEY);}catch(e){}
+      if(!baseline){
+        baseline=new Date().toISOString();
+        try{localStorage.setItem(_BASE_KEY,baseline);}catch(e){}
+      }
       var feed=[];
       (DB.ncr||[]).slice(-30).forEach(function(n){feed.push({ts:n.ts||n.d,icon:'⚠',label:'NCR',title:(n.num||'')+': '+(n.d||'').substring(0,40),tbl:'ncr',id:n.id});});
       (DB.near_miss||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts||n.d,icon:'⚡',label:'\u05db\u05de\u05e2\u05d8',title:(n.descr||'').substring(0,50),tbl:'near_miss',id:n.id});});
       (DB.inc||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts||n.dt,icon:'🚨',label:'\u05ea\u05e7\u05e8\u05d9\u05ea',title:(n.d||'').substring(0,50),tbl:'inc',id:n.id});});
       (DB.tasks||[]).slice(-20).forEach(function(n){feed.push({ts:n.ts,icon:'📋',label:'\u05de\u05e9\u05d9\u05de\u05d4',title:(n.title||'').substring(0,50),tbl:'tasks',id:n.id});});
+      feed=feed.filter(function(r){return r.ts && String(r.ts)>=baseline;});
       feed.sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');});
       var recent=feed.slice(0,5);
       if(recent.length){
@@ -3234,6 +3244,8 @@ function rDash(){
           var d=r.ts?fd(String(r.ts).substring(0,10)):'';
           return '<div data-tbl="'+esc(r.tbl)+'" data-id="'+esc(r.id||'')+'" onclick="if(this.dataset.id)showView(this.dataset.tbl,this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span style="flex:1">'+r.icon+' <strong>'+esc(r.label)+'</strong>: '+esc(r.title)+'</span><span style="color:var(--t3);font-size:10px">'+esc(d)+'</span></div>';
         }).join('');
+      }else{
+        dr.innerHTML='<p class="et" style="font-size:11px">\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea \u05de\u05d0\u05d6 '+esc(fd(String(baseline).substring(0,10)))+' \u00b7 <a onclick="if(confirm(\'\u05d0\u05e4\u05e1 \u05d1\u05e1\u05d9\u05e1 \u05dc\u05de\u05e2\u05e7\u05d1 \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea?\')){try{localStorage.removeItem(\'tfgn_recent_baseline\');}catch(e){}rDash();toast(\'\u05d0\u05d5\u05e4\u05e1\');}" style="color:#1d4ed8;cursor:pointer;text-decoration:underline">\u05d0\u05e4\u05e1</a></p>';
       }
     }
   }catch(e){console.warn('dash-recent failed',e);}
