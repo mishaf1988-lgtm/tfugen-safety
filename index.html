@@ -970,7 +970,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ptw" class="page">
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="row" style="margin:0 0 8px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select></div>
+  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1511;&#1489;&#1500;&#1503;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1513;&#1506;&#1493;&#1514;</th><th>&#1502;&#1511;&#1493;&#1501;</th><th>&#1505;&#1496;.</th><th></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
@@ -4972,6 +4972,29 @@ function svHzmApply(viewId){
   rHzm();
   toast('\u05d4\u05d5\u05d7\u05dc\u05d4: '+v.name);
 }
+// PTW saved-view glue
+function svPtwSave(){
+  var name=_svPromptName();if(!name)return;
+  var f={ptwLocFilter:window._ptwLocFilter||''};
+  _svSave('ptw',name,f);toast('\u05ea\u05e6\u05d5\u05d2\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 ✓');
+  _svRenderSelect('ptw-sv-select','ptw','');
+}
+function svPtwApply(viewId){
+  if(!viewId)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===viewId;});
+  if(!v){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var f=v.filters||{};
+  window._ptwLocFilter=f.ptwLocFilter||'';
+  rPtw();
+  toast('\u05d4\u05d5\u05d7\u05dc\u05d4: '+v.name);
+}
+function svPtwDelete(){
+  var sel=g('ptw-sv-select');if(!sel||!sel.value)return;
+  var v=(DB.saved_views||[]).find(function(x){return x.id===sel.value;});
+  if(!v)return;
+  if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 "'+v.name+'"?'))return;
+  _svDelete(v.id);_svRenderSelect('ptw-sv-select','ptw','');toast('\u05e0\u05de\u05d7\u05e7\u05d4');
+}
 function svHzmDelete(){
   var sel=g('hzm-sv-select');if(!sel||!sel.value)return;
   var v=(DB.saved_views||[]).find(function(x){return x.id===sel.value;});
@@ -6038,6 +6061,7 @@ function rPtwView(id){
 }
 function rPtw(){
   var tb=g('tb-ptw');if(!tb)return;
+  if(typeof _svRenderSelect==='function')_svRenderSelect('ptw-sv-select','ptw','');
   // PTW summary
   try{
     var pSe=g('ptw-summary');
