@@ -6591,6 +6591,15 @@ function rHzm(){
   }
   var rows=(DB.hzm||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  // Sort: highest hazard severity first, then by MSDS expiry asc (soonest first)
+  var _hzmSevW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05da':3};
+  rows.sort(function(a,b){
+    var sa=_hzmSevW[a.hs]!==undefined?_hzmSevW[a.hs]:4;
+    var sb=_hzmSevW[b.hs]!==undefined?_hzmSevW[b.hs]:4;
+    if(sa!==sb)return sa-sb;
+    var ea=a.ms?du(a.ms):9999, eb_=b.ms?du(b.ms):9999;
+    return ea-eb_;
+  });
   if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
   tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'&#8212;')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
