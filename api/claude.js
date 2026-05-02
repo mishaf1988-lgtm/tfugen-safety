@@ -20,8 +20,8 @@ const ALLOWED_MODELS = [
   'claude-sonnet-4-6',
   'claude-haiku-4-5'
 ];
-const MAX_TOKENS_CAP = 1200;
-const MAX_BODY_BYTES = 600000;  // 600KB — fits 3 compressed video frames (base64) + prompt for Smart Capture vision
+const MAX_TOKENS_CAP = 1500;
+const MAX_BODY_BYTES = 6000000;  // 6MB — supports PDF inspections (~4MB raw → 5.4MB base64) + Smart Capture vision
 
 function getAllowedOrigins() {
   const extra = (process.env.ALLOWED_ORIGINS || '')

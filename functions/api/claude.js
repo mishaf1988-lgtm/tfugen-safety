@@ -10,8 +10,8 @@ import {
 } from '../_shared.js';
 
 const ALLOWED_MODELS = ['claude-sonnet-4-6', 'claude-haiku-4-5'];
-const MAX_TOKENS_CAP = 1200;
-const MAX_BODY_BYTES = 600000;
+const MAX_TOKENS_CAP = 1500;
+const MAX_BODY_BYTES = 6000000;  // 6MB to support PDF inspections
 
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
