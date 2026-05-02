@@ -7436,6 +7436,15 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed:',e);});
   });
+  // When a new SW activates it broadcasts {type:'sw-updated'} — reload once so
+  // the page actually starts running the fresh index.html instead of the
+  // cached JS that was loaded before the SW finished updating.
+  navigator.serviceWorker.addEventListener('message',function(ev){
+    if(ev.data && ev.data.type==='sw-updated' && !window._swReloaded){
+      window._swReloaded=true;
+      setTimeout(function(){location.reload();},250);
+    }
+  });
 }
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();

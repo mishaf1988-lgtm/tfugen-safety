@@ -2,7 +2,7 @@
 // Strategy: network-first for our static assets (so deploys are instant),
 // fall back to cache when offline. API/REST calls bypass entirely.
 
-const CACHE = 'tfgn-v19';
+const CACHE = 'tfgn-v20';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
 
 self.addEventListener('install', (e) => {
@@ -14,9 +14,13 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+      // Tell every open tab to reload so they pick up the fresh index.html
+      // immediately instead of running the previous (cached) JS until next nav.
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => clients.forEach((c) => c.postMessage({ type: 'sw-updated', cache: CACHE })))
   );
 });
 
