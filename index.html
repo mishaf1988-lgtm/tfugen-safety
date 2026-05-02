@@ -4449,8 +4449,11 @@ function _collectVirtualTasks(){
   _addExp('ctr',function(r){return r.n||'';},function(r){return r.c||null;});
   _addExp('equip_inspections',function(r){
     var n=r.n||'';
-    if(r.code && r.code!==r.n) n=(n?n+' ':'')+'['+r.code+']';
-    return n||r.code||'';
+    var code=r.code?String(r.code).trim():'';
+    // skip empty / placeholder codes like '-' or '—'
+    var hasRealCode = code && code!==r.n && !/^[-—_.]*$/.test(code);
+    if(hasRealCode) n=(n?n+' ':'')+'['+code+']';
+    return n||code||'';
   },function(r){return r.vendor||null;});
   var manual={};
   (DB.tasks||[]).forEach(function(t){if(t.source_table&&t.source_id)manual[t.source_table+':'+t.source_id]=true;});
