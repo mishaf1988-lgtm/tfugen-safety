@@ -913,6 +913,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:#7f1d1d">&#128465;</button>
     <button class="btn btn-s" onclick="ncrClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:10px 12px;min-height:44px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
+  <div style="margin:0 0 8px;display:flex;gap:6px;flex-wrap:wrap;font-size:11px">
+    <button class="btn btn-s" onclick="ncrQuickFilter('critical')" style="padding:5px 10px;font-size:11px">&#128293; &#1495;&#1502;&#1493;&#1512;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</button>
+    <button class="btn btn-s" onclick="ncrQuickFilter('week')" style="padding:5px 10px;font-size:11px">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506;</button>
+    <button class="btn btn-s" onclick="ncrQuickFilter('stale')" style="padding:5px 10px;font-size:11px">&#9201;&#65039; &#1497;&#1513;&#1504;&#1497;&#1501; (30+&#1497;)</button>
+    <button class="btn btn-s" onclick="ncrQuickFilter('overdue')" style="padding:5px 10px;font-size:11px">&#9203; &#1495;&#1493;&#1512;&#1490;&#1497;&#1501; &#1500;&#1497;&#1506;&#1491;</button>
+  </div>
   <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="ncr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
@@ -4445,6 +4451,15 @@ var rows=DB.ncr.filter(function(n){
   if(itypeF&&n.issue_type_id!==itypeF)return false;
   return true;
 });
+// Quick filters (presets)
+var _ncrQF=window._ncrQuickFilter||'';
+if(_ncrQF){
+  var todayQ=new Date();todayQ.setHours(0,0,0,0);
+  if(_ncrQF==='critical')rows=rows.filter(function(r){return r.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'&&r.s!=='\u05e1\u05d2\u05d5\u05e8';});
+  else if(_ncrQF==='week')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=7;});
+  else if(_ncrQF==='stale')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.ts)return false;return (Date.now()-new Date(r.ts).getTime())/86400000>=30;});
+  else if(_ncrQF==='overdue')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.u)return false;return new Date(r.u)<todayQ;});
+}
 // Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then by date desc
 var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
 rows.sort(function(a,b){
@@ -4511,7 +4526,8 @@ rNcr();
 function ncrLocFilter(v){window._ncrLocFilter=v||'';rNcr();}
 function ncrPrjFilter(v){window._ncrPrjFilter=v||'';rNcr();}
 function ncrItypeFilter(v){window._ncrItypeFilter=v||'';rNcr();}
-function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';window._ncrItypeFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function ncrQuickFilter(preset){window._ncrQuickFilter=preset||'';rNcr();toast('\u05e1\u05d9\u05e0\u05d5\u05df: '+preset);}
+function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';window._ncrItypeFilter='';window._ncrQuickFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function _locFilterOptionsHtml(currentId,placeholder){
   var flat=(typeof _locFlatList==='function')?_locFlatList():[];
   var html='<option value="">'+(placeholder||'— \u05db\u05dc \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd —')+'</option>';
