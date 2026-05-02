@@ -796,6 +796,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1490;&#1497;&#1497;&#1502;&#1493;&#1503; &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1493;&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1505; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;&#1497;&#1501; &#1500;&#1502;&#1506;&#1511;&#1489; &#1502;&#1503; &#1492;&#1497;&#1493;&#1494;&#1502;&#1492; &#1492;&#1495;&#1493;&#1510;&#1492; &#1500;&#1488;&#1497;&#1492; &#1493;&#1505;&#1492;&#1505; &#1488;&#1497;&#1500;&#1497;&#1497;&#1501;.</div>
     <div style="display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap"><button id="prj-tab-all" class="btn btn-p" onclick="prjFilter('all')" style="padding:6px 12px;font-size:12px">&#1492;&#1499;&#1500;</button><button id="prj-tab-active" class="btn btn-s" onclick="prjFilter('\u05e4\u05e2\u05d9\u05dc')" style="padding:6px 12px;font-size:12px">&#1508;&#1506;&#1497;&#1500;&#1497;&#1501;</button><button id="prj-tab-done" class="btn btn-s" onclick="prjFilter('\u05d4\u05d5\u05e9\u05dc\u05dd')" style="padding:6px 12px;font-size:12px">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button></div>
+    <div id="prj-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
     <div id="prj-list"></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
@@ -5325,8 +5326,23 @@ function prjFilter(s){
 }
 function rPrj(){
   var box=g('prj-list');if(!box)return;
+  var allP=DB.projects||[];
+  // Summary
+  try{
+    var pSe=g('prj-summary');
+    if(pSe){
+      var actN=allP.filter(function(r){return r.status==='\u05e4\u05e2\u05d9\u05dc';}).length;
+      var doneN=allP.filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd';}).length;
+      var holdN=allP.filter(function(r){return r.status==='\u05de\u05d5\u05e9\u05d4\u05d4';}).length;
+      pSe.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allP.length+'</strong></span>'+
+        (actN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">פעילים: <strong>'+actN+'</strong></span>':'')+
+        (doneN?'<span style="background:#dcecff;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">הושלמו: <strong>'+doneN+'</strong></span>':'')+
+        (holdN?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">מושהים: <strong>'+holdN+'</strong></span>':'');
+    }
+  }catch(e){}
   var f=window._prjFilter||'all';
-  var rows=(DB.projects||[]).slice().filter(function(p){return f==='all'||p.status===f;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
+  var rows=allP.slice().filter(function(p){return f==='all'||p.status===f;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
   if(!rows.length){box.innerHTML='<div style="padding:30px;text-align:center;color:var(--t3)"><div style="font-size:42px;margin-bottom:10px">🏗️</div><div style="margin-bottom:14px">\u05d0\u05d9\u05df \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd \u05de\u05d5\u05d2\u05d3\u05e8\u05d9\u05dd</div><button class="btn btn-p" onclick="_prjOpenAdd()">+ \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></div>';return;}
   var statusBg={'\u05e4\u05e2\u05d9\u05dc':'#dcfce7','\u05d4\u05d5\u05e9\u05dc\u05dd':'#dcecff','\u05de\u05d5\u05e9\u05d4\u05d4':'#fef3c7','\u05d1\u05d5\u05d8\u05dc':'#fce4e4'};
   box.innerHTML=rows.map(function(p){
