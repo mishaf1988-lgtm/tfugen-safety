@@ -3734,7 +3734,8 @@ function rEqi(){
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
     var pdfIcon=r.file_url?'<a data-sign="'+escU(r.file_url)+'" target="_blank" onclick="event.stopPropagation()" title="\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e1\u05e8\u05d5\u05e7" style="margin-right:6px;text-decoration:none;font-size:14px">&#128206;</a>':'';
-    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
+    var expCell=r.e?(fd(r.e)+'<br>'+eb(r.e)):'&#8212;';
+    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+expCell+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
   if(typeof _signifyDom==='function')_signifyDom(tb);
 }
