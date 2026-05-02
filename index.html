@@ -5405,13 +5405,15 @@ function openNotifSettings(){
   // Render last 20 log entries
   var logBox=g('notif-log-list');
   if(logBox){
-    var logs=(DB.notifications_log||[]).slice().sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');}).slice(0,20);
+    var _logShowAll=window._notifLogShowAll||false;
+    var _logsAll=(DB.notifications_log||[]).slice().sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');});
+    var logs=_logShowAll?_logsAll:_logsAll.slice(0,20);
     if(!logs.length){
       logBox.innerHTML='<div style="color:var(--t3);font-style:italic">— \u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df —</div>';
     }else{
       var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'};
       var chLbl={whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',inapp:'🔔'};
-      logBox.innerHTML=logs.map(function(l){
+      var _logHtml=logs.map(function(l){
         var dt=new Date(l.ts);
         var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
         var diffMin=Math.max(0,Math.floor((Date.now()-dt.getTime())/60000));
@@ -5422,6 +5424,12 @@ function openNotifSettings(){
         var t=(l.payload&&l.payload.title)?String(l.payload.title).substring(0,40):'';
         return '<div style="padding:5px 0;border-bottom:1px solid #f0f0f0"><span style="color:var(--t3)" title="'+dtStr+'">\u05dc\u05e4\u05e0\u05d9 '+rel+'</span> · '+(chLbl[l.channel]||esc(l.channel))+' · <strong>'+esc(evLbl[l.event_type]||l.event_type)+'</strong>'+(t?' — '+esc(t):'')+'</div>';
       }).join('');
+      if(!_logShowAll && _logsAll.length>20){
+        _logHtml+='<div style="padding:8px 0;text-align:center"><a onclick="window._notifLogShowAll=true;openNotifSettings();" style="color:#1d4ed8;cursor:pointer;font-size:12px;text-decoration:underline">\u05d4\u05e6\u05d2 \u05d0\u05ea \u05db\u05dc \u05d4-'+_logsAll.length+' \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea</a></div>';
+      }else if(_logShowAll && _logsAll.length>20){
+        _logHtml+='<div style="padding:8px 0;text-align:center"><a onclick="window._notifLogShowAll=false;openNotifSettings();" style="color:#1d4ed8;cursor:pointer;font-size:12px;text-decoration:underline">\u05d4\u05e6\u05d2 20 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05d1\u05dc\u05d1\u05d3</a></div>';
+      }
+      logBox.innerHTML=_logHtml;
     }
   }
   openModal('m-notif');
