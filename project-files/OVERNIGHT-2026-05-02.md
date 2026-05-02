@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `2f83806`
-**Total PRs merged**: ~125 לילה + 32 בוקר
+**Latest commit**: `265a74c`
+**Total PRs merged**: ~125 לילה + 34 בוקר
 
 ---
 
@@ -81,6 +81,10 @@
 
 ### דשבורד — תוספות אחרונות
 - ⌚ **Freshness time**: כותרת התאריך מציגה גם "עודכן ב-HH:MM" כדי להראות רענון נתונים.
+- 👥 **Top assignees**: עד 5 אחראים עם הכי הרבה משימות פתוחות, קליק → רשימת המשימות המסוננת.
+
+### Tasks
+- 📋 **Duplicate task**: פעולה חדשה בתפריט ⋯ — שיכפול מהיר של משימה.
 
 ---
 
