@@ -430,6 +430,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3202,6 +3203,40 @@ function rDash(){
       }else{if(ditc)ditc.style.display='none';}
     }
   }catch(e){console.warn('dash-by-itype failed',e);}
+
+  // Dashboard: top critical/high NCRs (up to 5)
+  try{
+    var dcc=g('dash-critical-card');
+    var dc=g('dash-critical');
+    if(dc){
+      var _CRIT='\u05e7\u05e8\u05d9\u05d8\u05d9';
+      var _HIGH='\u05d2\u05d1\u05d5\u05d4';
+      var _CLOS='\u05e1\u05d2\u05d5\u05e8';
+      var crit=(DB.ncr||[]).filter(function(n){
+        if(n.s===_CLOS)return false;
+        var pri=n.p||'';
+        return pri===_CRIT||pri===_HIGH;
+      }).sort(function(a,b){
+        var pa=a.p===_CRIT?0:1;
+        var pb=b.p===_CRIT?0:1;
+        if(pa!==pb)return pa-pb;
+        return (b.sd||'').localeCompare(a.sd||'');
+      });
+      if(crit.length){
+        if(dcc)dcc.style.display='';
+        dc.innerHTML=crit.slice(0,5).map(function(n){
+          var pri=n.p||'';
+          var color=pri===_CRIT?'#cc1f1f':'#e07a00';
+          var safeId=esc(n.id||'');
+          var num=esc(n.num||'');
+          var desc=esc((n.d||'').substring(0,60));
+          var locName='';
+          if(n.location_id&&typeof _locName==='function')locName=_locName(n.location_id);
+          return '<div data-id="'+safeId+'" onclick="if(typeof showView===\'function\')showView(\'ncr\',this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#fff5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+color+'">'+num+'</b>'+(locName?' &middot; 📍 '+esc(locName):'')+' &middot; '+desc+'</span><span class="b" style="background:'+color+';color:#fff;font-size:10px">'+esc(pri)+'</span></div>';
+        }).join('');
+      }else{if(dcc)dcc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-critical failed',e);}
 
   // Inspection types upcoming
   try{
