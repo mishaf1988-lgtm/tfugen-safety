@@ -436,6 +436,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-mine-card" style="display:none"><div class="card-title">&#128100; NCR &#1513;&#1500;&#1497; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-mine"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-rounds-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1506;&#1502;&#1497;&#1491;&#1492; &#1489;&#1505;&#1489;&#1489;&#1497; &#1489;&#1493;&#1511;&#1512; (30 &#1497;&#1493;&#1501;)</div><div id="dash-rounds"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3369,6 +3370,33 @@ function rDash(){
       }else{if(deac)deac.style.display='none';}
     }
   }catch(e){console.warn('dash-easp failed',e);}
+
+  // Dashboard: morning rounds 30-day compliance
+  try{
+    var drcCard=g('dash-rounds-card');
+    var drc=g('dash-rounds');
+    if(drc){
+      var dates={};
+      var nowR=new Date();
+      var fromR=new Date();fromR.setDate(fromR.getDate()-29);
+      (DB.rounds||[]).forEach(function(r){if(r.d)dates[r.d.substring(0,10)]=true;});
+      var done=0,tot=0,strip='';
+      for(var i=0;i<30;i++){
+        var dd=new Date(fromR);dd.setDate(fromR.getDate()+i);
+        var s=dd.toISOString().split('T')[0];
+        var has=!!dates[s];
+        var dow=dd.getDay(); // 0=Sunday in JS — for Israel work week 0-4 are workdays (Sun-Thu)
+        var isWeekend=(dow===5||dow===6); // Fri/Sat
+        if(!isWeekend){tot++;if(has)done++;}
+        var col=isWeekend?'#e5e7eb':(has?'#16a34a':'#fecaca');
+        strip+='<span title="'+s+(isWeekend?' (\u05e1\u05d5\u05e4\u05f4\u05e9)':(has?' \u2713':' \u2717'))+'" style="display:inline-block;width:10px;height:18px;background:'+col+';margin:0 1px;border-radius:2px;vertical-align:middle"></span>';
+      }
+      var pct=tot?Math.round(100*done/tot):0;
+      var pctCol=pct>=90?'#16a34a':(pct>=70?'#eab308':'#cc1f1f');
+      drcCard.style.display='';
+      drc.innerHTML='<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="font-size:32px;font-weight:800;color:'+pctCol+';line-height:1">'+pct+'%</div><div style="flex:1;min-width:140px"><div style="font-size:12px;color:#444;font-weight:600;margin-bottom:4px">'+done+' \u05de\u05ea\u05d5\u05da '+tot+' \u05d9\u05de\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4</div><div style="direction:ltr;text-align:right;line-height:0">'+strip+'</div><div style="font-size:10px;color:var(--t3);margin-top:4px;direction:rtl">\u05d9\u05e8\u05d5\u05e7=\u05d1\u05d5\u05e6\u05e2 \u00b7 \u05d0\u05d3\u05d5\u05dd=\u05d7\u05e1\u05e8 \u00b7 \u05d0\u05e4\u05d5\u05e8=\u05e1\u05d5\u05e4\u05f4\u05e9</div></div></div>';
+    }
+  }catch(e){console.warn('dash-rounds failed',e);}
 
   // Inspection types upcoming
   try{
