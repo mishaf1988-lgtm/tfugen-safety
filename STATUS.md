@@ -1,9 +1,16 @@
-# TFUGEN Safety — STATUS
+# Tapugan Safety — STATUS
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-02 (overnight autonomous: ~30 PRs total — saved-views, location filters, chained forms, notifications matrix 5/5, dashboard widgets, clear-filters, search by location name, **Custom Properties**, **Projects feature**, project filters/chips/integration)
-**Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
+**Last updated**: 2026-05-02 (Cloudflare migration ✓ + WhatsApp templates active)
+**Repo**: `mishaf1988-lgtm/tfugen-safety`
+
+## 🌐 שרתים
+
+| תפקיד | URL | סטטוס |
+|---|---|---|
+| **Production (Cloudflare Pages)** | 🟢 https://tapugan-safety.pages.dev | פעיל — מכאן עובדים מעכשיו |
+| Legacy (Vercel) | 🟡 https://tfugen-safety.vercel.app | יישאר עד ש-Meta יאשר את 5 ה-templates עם ה-URL החדש (~24-48h מ-2026-05-02). **אז אפשר לבטל**. |
 
 ---
 

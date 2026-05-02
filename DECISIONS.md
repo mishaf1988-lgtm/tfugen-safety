@@ -13,6 +13,31 @@
 
 ---
 
+## 2026-05-02 — מעבר מ-Vercel ל-Cloudflare Pages
+
+**החלטה**: ה-production הראשי עובר מ-`tfugen-safety.vercel.app` ל-**`tapugan-safety.pages.dev`** (Cloudflare Pages, free tier). הקוד ממשיך לחיות ב-repo `tfugen-safety` אבל הברנד עכשיו **"Tapugan Safety"** (כותרת HTML, manifest, alt). יש 2 תיקיות API מקבילות: `/api/*.js` ל-Vercel ו-`/functions/api/*.js` ל-Cloudflare. עד שהמעבר יהיה סופי, שני השרתים פעילים.
+
+**סיבה**:
+1. **שימוש מסחרי** — Vercel Hobby אסור פורמלית לשימוש מסחרי, וזו אפליקציה של חברה (תפוגן). Cloudflare Pages free tier מתיר שימוש מסחרי במפורש.
+2. **Rate limit** — Vercel Hobby = 100 deployments ביום. ביום עם פיתוח אינטנסיבי (8+ PRs) זה חוסם. Cloudflare ללא הגבלה.
+3. **חיסכון** — Vercel Pro = $20/חודש = 900 ₪/שנה. Cloudflare = 0 ₪.
+4. **ביצועים** — Cloudflare CDN עם POP בתל אביב, מהיר יותר בארץ.
+
+**אלטרנטיבות שנדחו**:
+- **שדרוג Vercel Pro** — $240/שנה. נדחה כי Cloudflare Pages חינם ועונה על אותם צרכים.
+- **Netlify** — דומה ל-Vercel, $19/חודש. לא מספיק חיסכון.
+- **שרת VPS פרטי (Hetzner/DO)** — $5/חודש אבל דורש DevOps שוטף. נדחה כי הצוות לא רוצה לתחזק תשתית.
+- **למחוק את Vercel מיידית** — נדחה כי 5 ה-WhatsApp templates ב-Meta עדיין מצביעים על ה-URL הישן. צריך להמתין ~48h לאישור Meta על העדכון.
+
+**מה לא נגעתי** ב-MVP:
+- שמות ה-templates של Meta נשארו עם הקידומת `tfugen_*` (אסור לשנות אחרי אישור).
+- מייל admin של Supabase Auth = `admin@tfugen.local` (אסור לשנות בלי לשבור את ה-RLS).
+- שם ה-repo: `tfugen-safety` (לא משנים — שובר commit history).
+
+**קישורים**: PRs #258, #265 (functions migration), #266 (test fix), #267 (test-all button), #268 (URL update endpoint).
+
+---
+
 ## 2026-05-01 — Locations hierarchy (4-PR rollout)
 
 **החלטה**: טבלה `locations(id, name, parent_id → locations.id, level 1-3)` עם self-referencing FK. השלמה ב-4 PRs (#141 תשתית + UI, #142 NCR/NM, #143 PTW/EQI/Hazmat, #144 סינון). שדה `location_id` נוסף ל-5 טבלאות לצד שדות הטקסט הקיימים (לא במקומם). UI: dropdown שטוח עם הזחות (אחרי בקשת המשתמש לשטח) במקום cascading dropdowns.
