@@ -4577,6 +4577,9 @@ if(chipsEl){
   if(filter==='env')chips.push({label:'\u05e1\u05d1\u05d9\u05d1\u05d4',clear:'ncrTab(\'all\')'});
   if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'ncrLocFilter(\'\')'});}
   if(prjF){var pn=(typeof _prjName==='function')?_prjName(prjF):prjF;chips.push({label:'🏗️ '+pn,clear:'ncrPrjFilter(\'\')'});}
+  if(itypeF){var itn=(typeof _itypeName==='function')?_itypeName(itypeF):itypeF;chips.push({label:'\ud83c\udfaf '+itn,clear:'ncrItypeFilter(\'\')'});}
+  var _qfNcr=window._ncrQuickFilter||'';
+  if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
   chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
 }
 var isAdm=_isAdminUser();
