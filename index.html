@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
+<title>Tapugan Safety &#8212; &#1504;&#1497;&#1492;&#1493;&#1500; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#cc1f1f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -316,7 +316,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <!-- LOGIN -->
 <div id="login">
   <div class="login-box">
-    <img src="/logo.jpg" alt="Tfugen">
+    <img src="/logo.jpg" alt="Tapugan Safety">
     <h2>&#1514;&#1493;&#1499;&#1504;&#1492; &#1500;&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</h2>
     <p>&#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503;</p>
     <input id="uname" type="text" placeholder="&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; (&#1500;&#1502;&#1513;&#1500;: user1)" autocomplete="username" autocapitalize="off" style="width:100%;padding:12px;text-align:center;font-size:16px;border:2px solid var(--border);border-radius:8px;margin-bottom:8px;font-family:inherit;box-sizing:border-box;-webkit-appearance:none">
@@ -344,7 +344,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
   <div class="topbar-left">
-    <img src="/logo.jpg" alt="Tfugen">
+    <img src="/logo.jpg" alt="Tapugan Safety">
     <div class="topbar-title">
       <div class="t1">&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
       <div class="t2">&#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;</div>
@@ -4449,8 +4449,11 @@ function _collectVirtualTasks(){
   _addExp('ctr',function(r){return r.n||'';},function(r){return r.c||null;});
   _addExp('equip_inspections',function(r){
     var n=r.n||'';
-    if(r.code && r.code!==r.n) n=(n?n+' ':'')+'['+r.code+']';
-    return n||r.code||'';
+    var code=r.code?String(r.code).trim():'';
+    // skip empty / placeholder codes like '-' or '—'
+    var hasRealCode = code && code!==r.n && !/^[-—_.]*$/.test(code);
+    if(hasRealCode) n=(n?n+' ':'')+'['+code+']';
+    return n||code||'';
   },function(r){return r.vendor||null;});
   var manual={};
   (DB.tasks||[]).forEach(function(t){if(t.source_table&&t.source_id)manual[t.source_table+':'+t.source_id]=true;});
@@ -5537,7 +5540,7 @@ function openNotifSettings(){
       logBox.innerHTML='<div style="color:var(--t3);font-style:italic">— \u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df —</div>';
     }else{
       var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'};
-      var chLbl={whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',inapp:'🔔'};
+      var chLbl={whatsapp:'📱 \u05e0\u05e9\u05dc\u05d7',whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',whatsapp_skipped:'📱 \u05d3\u05d5\u05dc\u05d2 (\u05d0\u05d9\u05df \u05e1\u05dc\u05d5\u05dc\u05e8\u05d9)',whatsapp_error:'📱 \u05e9\u05d2\u05d9\u05d0\u05d4',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',inapp:'🔔'};
       var _logHtml=logs.map(function(l){
         var dt=new Date(l.ts);
         var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
@@ -5961,16 +5964,68 @@ function _notifLog(eventKey,channel,payload){
     sbIns('notifications_log',rec);
   }catch(e){console.warn('_notifLog failed',e);}
 }
+function _notifBuildWaArgs(eventKey,payload){
+  // Map a notification event + payload to a WhatsApp template + params + recipient.
+  // Returns {to,template,language,params} or null when we can't resolve a phone.
+  if(!payload||!payload.id)return null;
+  var fmtTitle=function(s,n){return String(s||'').substring(0,n||80);};
+  if(eventKey==='ncr_critical'){
+    var n=(DB.ncr||[]).find(function(r){return r.id===payload.id;});if(!n)return null;
+    var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
+    var area=fmtTitle(n.a||n.loc||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df',60);
+    var descr=fmtTitle(n.d||'\u05d0\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8',200);
+    var to=_waResolvePhone(n.o)||_waLastTo();
+    return to?{to:to,template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]}:null;
+  }
+  if(eventKey==='incident_critical'){
+    var i=(DB.inc||[]).find(function(r){return r.id===payload.id;});if(!i)return null;
+    var loc=fmtTitle(i.l||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df',60);
+    var sev=fmtTitle(i.sv||'',30);
+    var rsn=fmtTitle(i.r||'\u05d0\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8',150);
+    var to2=_waResolvePhone(i.r||i.rep)||_waLastTo();
+    return to2?{to:to2,template:'tfugen_incident_alert',language:'he',params:[loc,sev,rsn]}:null;
+  }
+  if(eventKey==='task_overdue'){
+    var t=(DB.tasks||[]).find(function(r){return r.id===payload.id;});if(!t)return null;
+    var today=new Date().toISOString().split('T')[0];
+    var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
+    var to3=_waResolvePhone(t.assignee)||_waLastTo();
+    return to3?{to:to3,template:'tfugen_task_overdue_v2',language:'he',params:[fmtTitle(t.title,80),String(late)]}:null;
+  }
+  if(eventKey==='expiry_30days'){
+    var tbl=payload.table;if(!tbl)return null;
+    var r=(DB[tbl]||[]).find(function(x){return x.id===payload.id;});if(!r)return null;
+    var today2=new Date().toISOString().split('T')[0];
+    var days=r.e?Math.ceil((new Date(r.e)-new Date(today2))/86400000):0;
+    var name=fmtTitle((r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':''),80);
+    var due=r.e?fd(r.e):'?';
+    var to4=_waResolvePhone(r.w||r.vendor||r.o||r.c)||_waLastTo();
+    return to4?{to:to4,template:'tfugen_expiry_warning',language:'he',params:[name,String(days),due]}:null;
+  }
+  if(eventKey==='round_missed'){
+    var to5=_waLastTo();
+    return to5?{to:to5,template:'tfugen_round_missed',language:'he',params:[]}:null;
+  }
+  return null;
+}
 function _notifyEvent(eventKey,payload){
   var fired=[];
   var p=_notifPrefs();
   if(!p[eventKey])return fired;
   if(p[eventKey].whatsapp){
     try{
-      console.info('[notif] would send WhatsApp for',eventKey,payload);
-      _notifLog(eventKey,'whatsapp_pending',payload);
-      fired.push('whatsapp_pending');
-    }catch(e){console.warn('[notif] wa fail',e);}
+      var args=_notifBuildWaArgs(eventKey,payload);
+      if(args && typeof _waSend==='function'){
+        _waSend(args.to,{template:args.template,language:args.language,params:args.params});
+        _notifLog(eventKey,'whatsapp',payload);
+        fired.push('whatsapp');
+      }else{
+        // Couldn't resolve phone — fall back to log (no spam to default number)
+        console.info('[notif] WhatsApp skipped (no phone) for',eventKey,payload);
+        _notifLog(eventKey,'whatsapp_skipped',payload);
+        fired.push('whatsapp_skipped');
+      }
+    }catch(e){console.warn('[notif] wa fail',e);_notifLog(eventKey,'whatsapp_error',payload);}
   }
   if(p[eventKey].email){
     console.info('[notif] would send Email for',eventKey,payload);
