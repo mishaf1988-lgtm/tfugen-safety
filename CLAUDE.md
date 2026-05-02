@@ -4,10 +4,12 @@ Claude Code loads this file automatically at the start of every session in this 
 
 ## Project
 
-**TFUGEN Safety Management System** — מערכת ניהול בטיחות ואיכות סביבה לתעשיית תפוגן.
+**Tapugan Safety Management System** — מערכת ניהול בטיחות ואיכות סביבה לתעשיית תפוגן.
+(הברנד נקרא **Tapugan Safety**. ה-repo עדיין נקרא `tfugen-safety` מסיבות היסטוריות — לא משנים את שם ה-repo.)
 
 - **Repo**: `mishaf1988-lgtm/tfugen-safety`
-- **Live**: https://tfugen-safety.vercel.app
+- **Live (Production)**: 🟢 **https://tapugan-safety.pages.dev** ← השרת העיקרי, Cloudflare Pages
+- **Live (Legacy fallback)**: 🟡 https://tfugen-safety.vercel.app — עובד עדיין כי 5 ה-WhatsApp templates של Meta מצביעים על ה-URL הזה. **אל תפיל אותו** עד ש-Meta יאשרו את העדכונים (24-48h מ-2026-05-02).
 - **Standards**: ISO 14001 (סביבה) + ISO 45001 (בטיחות ובריאות תעסוקתית)
 - **User**: מנהל בטיחות במפעל (לא מפתח מקצועי — מעדיף שינויים קטנים, ברורים, ומוסברים).
 
@@ -15,10 +17,16 @@ Claude Code loads this file automatically at the start of every session in this 
 
 | שכבה | טכנולוגיה |
 |---|---|
-| UI | **single-file** `index.html` (~4895 lines) — אין build step, אין framework |
-| Backend | **Supabase** — 23 טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
-| AI | Vercel serverless `api/claude.js` → Claude API |
-| Deploy | Vercel auto-deploy מ-`main` |
+| UI | **single-file** `index.html` (~7800 lines) — אין build step, אין framework |
+| Backend | **Supabase** — 35+ טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
+| AI | Cloudflare Pages Function `functions/api/claude.js` → Claude API |
+| Deploy | **Cloudflare Pages** auto-deploy מ-`main` (project: `tapugan-safety`) |
+
+### חשוב — יש 2 תיקיות API מקבילות:
+- `/api/*.js` — קוד Vercel (Edge Functions, `process.env`, `default export`)
+- `/functions/api/*.js` — קוד Cloudflare Pages Functions (`onRequest`, `env` arg, named export)
+
+**שניהם פעילים במקביל**. שינוי קוד API צריך להתבצע **בשניהם** (או רק ב-Cloudflare ו-Vercel נשאר עם הגרסה הישנה — שווה לדון לפי המקרה). עד שמורידים סופית את Vercel, יש להחזיק קוד תקין בשני המקומות אם זה חשוב.
 
 ## חוקי פיתוח חובה
 
