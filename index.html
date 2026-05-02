@@ -390,7 +390,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="today-items"></div>
   </div>
 
-  <div style="margin:0 0 10px;display:flex;justify-content:flex-end"><button onclick="_emergencyReport()" style="background:#cc1f1f;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">&#127111; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1497;&#1512;&#1493;&#1501; &#1502;&#1492;&#1497;&#1512;</button></div>
+  <div style="margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+    <div id="dash-quick-add" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    <button onclick="_emergencyReport()" style="background:#cc1f1f;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">&#127111; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1497;&#1512;&#1493;&#1501; &#1502;&#1492;&#1497;&#1512;</button>
+  </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
@@ -2857,6 +2860,7 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  if(typeof _rDashQuickAdd==='function')_rDashQuickAdd();
   // My open tasks count badge
   try{
     var u=(typeof _svUser==='function')?_svUser():'';
@@ -5774,6 +5778,20 @@ window._emergencyReport=function(){
     var ty=g('i-ty');if(ty&&!ty.value)ty.value='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9';
     var dt=g('i-dt');if(dt&&!dt.value)dt.value=new Date().toISOString().slice(0,16);
   },300);
+};
+window._rDashQuickAdd=function(){
+  try{
+    var el=g('dash-quick-add');if(!el)return;
+    var btns=[
+      {ic:'\u26a0\ufe0f',lbl:'NCR',m:'m-ncr',c:'#cc1f1f'},
+      {ic:'\ud83d\udea8',lbl:'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',m:'m-nm',c:'#e07a00'},
+      {ic:'\u2705',lbl:'\u05de\u05e9\u05d9\u05de\u05d4',m:'m-tsk',c:'#2563eb'},
+      {ic:'\ud83d\udd27',lbl:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',m:'m-eqi',c:'#16a34a'}
+    ];
+    el.innerHTML=btns.map(function(b){
+      return '<button onclick="openModal(\''+b.m+'\')" title="\u05d4\u05d5\u05e1\u05e3 '+esc(b.lbl)+'" style="background:'+b.c+';color:#fff;border:none;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;display:inline-flex;align-items:center;gap:4px">'+b.ic+' '+esc(b.lbl)+'</button>';
+    }).join('');
+  }catch(e){console.warn('quick-add render failed',e);}
 };
 window._showAbout=function(){
   alert('TFUGEN Safety Management System\n\u05d2\u05e8\u05e1\u05d4: 2026.05.02\n\u05de\u05ea\u05d5\u05e2\u05d3 ISO 14001 + ISO 45001\n\n\u05de\u05e4\u05ea\u05d7: Claude\n\u05d1\u05e2\u05dc\u05d9\u05dd: \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05da\n\n\u05e2\u05d3\u05db\u05d5\u05df: '+new Date().toISOString().split('T')[0]);
