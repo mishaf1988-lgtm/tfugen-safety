@@ -62,7 +62,15 @@ Claude Code loads this file automatically at the start of every session in this 
    - [ ] אין עברית raw ב-JS
    - [ ] 23 טבלאות עדיין 200 OK
 6. **עדכן** `STATUS.md` + הוסף שורה ל-`DECISIONS.md` אם יש החלטה ארכיטקטונית
-7. **Commit + Push + PR**
+7. **Commit + Push + PR + Merge ל-main מיידית** — ראה למטה.
+
+## פריסה — חוק קבוע: למזג מיד, לא לחכות
+
+Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. כל קוד שיושב על branch לא מגיע למשתמש. לכן:
+
+- **בכל סיום משימה — פתח PR ומזג ל-`main` באותה הריצה** דרך `mcp__github__create_pull_request` + `mcp__github__merge_pull_request`. אסור לעצור על "המתנה לאישור מיזוג" — זה אישור עומד.
+- **לפני כל סשן דיבאג של "קוד לא מגיע":** ראשון — `git log origin/main..HEAD`. אם יש commits שלא מוזגו, מזג אותם **לפני** שמתחילים לחקור קאש/SW/דברים אחרים.
+- **חריג יחיד:** שינוי שאסור לפרסם בלי בדיקה ידנית — ציין במפורש שמשאיר על branch ובקש אישור.
 
 ## סנכרון בין 2 חשבונות Claude
 
