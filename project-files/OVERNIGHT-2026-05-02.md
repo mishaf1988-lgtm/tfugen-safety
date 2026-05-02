@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `b33857f`
-**Total PRs merged**: ~125 לילה + 16 בוקר
+**Latest commit**: `eb29ee8`
+**Total PRs merged**: ~125 לילה + 19 בוקר
 
 ---
 
@@ -41,6 +41,15 @@
 
 ### NM (כמעט-נפגע)
 - ⚡ **Severity filter**: dropdown סינון לפי חומרה (קל/בינוני/חמור/קריטי) + chip להסרה.
+
+### NCR — תוספות נוספות
+- 🎯 **Issue-type בעמודה**: עמודת המיקום מציגה גם את סוג אי-ההתאמות (אם קיים).
+
+### הדפסה
+- 🖨 **פילטרים בכותרת**: print-header כולל שורת "פילטרים: ..." עם כל ה-chips הפעילים.
+
+### showView
+- 📋 **Copy-to-clipboard**: כפתור חדש שמעתיק סיכום הרשומה כטקסט לשיתוף ב-WhatsApp/אימייל.
 
 ---
 
