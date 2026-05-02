@@ -437,6 +437,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-mine-card" style="display:none"><div class="card-title">&#128100; NCR &#1513;&#1500;&#1497; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-mine"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-rounds-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1506;&#1502;&#1497;&#1491;&#1492; &#1489;&#1505;&#1489;&#1489;&#1497; &#1489;&#1493;&#1511;&#1512; (30 &#1497;&#1493;&#1501;)</div><div id="dash-rounds"></div></div>
+  <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3399,6 +3400,47 @@ function rDash(){
       drc.innerHTML='<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="font-size:32px;font-weight:800;color:'+pctCol+';line-height:1">'+pct+'%</div><div style="flex:1;min-width:140px"><div style="font-size:12px;color:#444;font-weight:600;margin-bottom:4px">'+done+' \u05de\u05ea\u05d5\u05da '+tot+' \u05d9\u05de\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4</div><div style="direction:ltr;text-align:right;line-height:0">'+strip+'</div><div style="font-size:10px;color:var(--t3);margin-top:4px;direction:rtl">\u05d9\u05e8\u05d5\u05e7=\u05d1\u05d5\u05e6\u05e2 \u00b7 \u05d0\u05d3\u05d5\u05dd=\u05d7\u05e1\u05e8 \u00b7 \u05d0\u05e4\u05d5\u05e8=\u05e1\u05d5\u05e4\u05f4\u05e9</div></div></div>';
     }
   }catch(e){console.warn('dash-rounds failed',e);}
+
+  // Dashboard: upcoming this week (tasks + expiries within 7 days)
+  try{
+    var dwc=g('dash-week-card');
+    var dw=g('dash-week');
+    if(dw){
+      var nowW=new Date();nowW.setHours(0,0,0,0);
+      var endW=new Date(nowW.getTime()+7*86400000);
+      var items=[];
+      (DB.tasks||[]).forEach(function(t){
+        if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc'||!t.due)return;
+        var d=new Date(t.due);if(isNaN(d))return;
+        if(d>=nowW&&d<=endW)items.push({d:d,icon:'\u2705',label:'\u05de\u05e9\u05d9\u05de\u05d4',title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',tbl:'tasks',id:t.id});
+      });
+      ['ppe','tr','docs','ctr'].forEach(function(k){
+        (DB[k]||[]).forEach(function(r){
+          if(!r.e)return;var d=new Date(r.e);if(isNaN(d))return;
+          if(d>=nowW&&d<=endW){
+            var lblM={ppe:'\u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'}[k];
+            items.push({d:d,icon:'\u23f3',label:lblM,title:(r.n||r.t||r.full_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)'),tbl:k,id:r.id});
+          }
+        });
+      });
+      (DB.inspection_types||[]).forEach(function(r){
+        if(!r.next_due||r.active===false)return;var d=new Date(r.next_due);if(isNaN(d))return;
+        if(d>=nowW&&d<=endW)items.push({d:d,icon:'\ud83d\udd0d',label:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea',title:r.name||r.id,tbl:'inspection_types',id:r.id});
+      });
+      items.sort(function(a,b){return a.d-b.d;});
+      if(items.length){
+        dwc.style.display='';
+        dw.innerHTML=items.slice(0,8).map(function(it){
+          var safeId=esc(it.id||'');var safeTbl=esc(it.tbl||'');
+          var dStr=fd(it.d.toISOString().split('T')[0]);
+          var dd=Math.ceil((it.d-nowW)/86400000);
+          var rel=dd===0?'\u05d4\u05d9\u05d5\u05dd':(dd===1?'\u05de\u05d7\u05e8':('\u05d1\u05e2\u05d5\u05d3 '+dd+' \u05d9\u05de\u05d9\u05dd'));
+          var col=dd<=1?'#cc1f1f':(dd<=3?'#e07a00':'#1d4ed8');
+          return '<div data-id="'+safeId+'" data-tbl="'+safeTbl+'" onclick="if(typeof showView===\'function\')showView(this.dataset.tbl,this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#f5f5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.icon)+' <b>'+esc(it.label)+'</b> · '+esc(it.title.substring(0,40))+'</span><span style="font-size:10px;color:'+col+';font-weight:700;text-align:left">'+esc(dStr+' · '+rel)+'</span></div>';
+        }).join('');
+      }else{dwc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-week failed',e);}
 
   // Inspection types upcoming
   try{
