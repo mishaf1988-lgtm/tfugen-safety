@@ -1729,7 +1729,7 @@ id="m-ncr" style="display:none">
       <button onclick="_notifLogClear()" style="margin-top:8px;font-size:11px;background:#7f1d1d;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128465; &#1504;&#1511;&#1492; &#1497;&#1493;&#1502;&#1503; &#1502;&#1511;&#1493;&#1502;&#1497;</button>
     </details>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492;">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492; (hello_world)">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-s" onclick="testAllTriggers()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1502;&#1499;&#1500; 5 &#1492;-templates &#1488;&#1495;&#1491; &#1488;&#1495;&#1512;&#1497; &#1492;&#1513;&#1504;&#1497;" style="background:#1d4ed8;color:#fff">&#127919; &#1489;&#1491;&#1493;&#1511; &#1499;&#1493;&#1500;&#1501;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP -->
@@ -5616,6 +5616,54 @@ function testNotif(){
   }else{
     toast('\ud83e\uddea \u05d4\u05ea\u05e8\u05d0\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 (in-app \u05d1\u05dc\u05d1\u05d3)');
   }
+}
+function testAllTriggers(){
+  // Sequentially fire all 5 WhatsApp templates with realistic dummy params.
+  // Useful to verify Meta approved each template AND parameters render correctly.
+  var to=(typeof _waLastTo==='function')?_waLastTo():null;
+  if(!to){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4');return;}
+  if(!confirm('\u05e9\u05dc\u05d9\u05d7\u05ea 5 \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea WhatsApp \u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc-'+to+' (\u05d0\u05d7\u05ea \u05dc\u05db\u05dc template). \u05dc\u05d4\u05de\u05e9\u05d9\u05da?'))return;
+
+  var triggers=[
+    {key:'ncr_critical',template:'tfugen_ncr_critical',params:['9999','\u05d0\u05d6\u05d5\u05e8 \u05d1\u05d3\u05d9\u05e7\u05d4 \u2014 \u05d9\u05d9\u05e6\u05d5\u05e8','\u05d1\u05d3\u05d9\u05e7\u05d4: NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05d3\u05de\u05d4 \u2014 \u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05e4\u05e2\u05d5\u05dc\u05d4']},
+    {key:'task_overdue',template:'tfugen_task_overdue_v2',params:['\u05de\u05e9\u05d9\u05de\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 \u2014 \u05ea\u05d9\u05e7\u05d5\u05df \u05de\u05ea\u05e7\u05df','5']},
+    {key:'expiry_30days',template:'tfugen_expiry_warning',params:['\u05e4\u05e8\u05d9\u05d8 \u05d1\u05d3\u05d9\u05e7\u05d4 (PPE)','7','15/05/2026']},
+    {key:'round_missed',template:'tfugen_round_missed',params:[]},
+    {key:'incident_critical',template:'tfugen_incident_alert',params:['\u05de\u05d9\u05e7\u05d5\u05dd \u05d1\u05d3\u05d9\u05e7\u05d4','\u05d7\u05de\u05d5\u05e8','\u05d1\u05d3\u05d9\u05e7\u05d4: \u05ea\u05e7\u05e8\u05d9\u05ea \u05d3\u05de\u05d4 \u2014 \u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05e4\u05e2\u05d5\u05dc\u05d4']}
+  ];
+
+  var results=[];
+  function runOne(i){
+    if(i>=triggers.length){
+      var ok=results.filter(function(r){return r.ok;}).length;
+      var fail=results.length-ok;
+      toast('\ud83c\udfaf \u05e1\u05d9\u05db\u05d5\u05dd: '+ok+'/'+triggers.length+' \u05e0\u05e9\u05dc\u05d7\u05d5'+(fail?' \u00b7 '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
+      return;
+    }
+    var t=triggers[i];
+    toast('\ud83c\udfaf \u05e9\u05d5\u05dc\u05d7 '+(i+1)+'/'+triggers.length+': '+t.template+'...');
+    fetch('/api/wa-send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({to:to,template:t.template,language:'he',params:t.params})
+    }).then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
+      .then(function(res){
+        results.push(res);
+        if(res.ok){
+          if(typeof _notifLog==='function')_notifLog(t.key,'whatsapp',{title:t.template+' (\u05d1\u05d3\u05d9\u05e7\u05d4)',test:true,to:to});
+        }else{
+          var msg=(res.data&&res.data.error&&(res.data.error.message||res.data.error))||('HTTP '+res.status);
+          if(typeof _notifLog==='function')_notifLog(t.key,'whatsapp_error',{title:t.template+' (\u05d1\u05d3\u05d9\u05e7\u05d4)',test:true,error:String(msg)});
+        }
+        // Wait 1s between sends to avoid rate limiting + let user see toasts
+        setTimeout(function(){runOne(i+1);},1000);
+      })
+      .catch(function(e){
+        results.push({ok:false,error:e&&e.message||e});
+        setTimeout(function(){runOne(i+1);},1000);
+      });
+  }
+  runOne(0);
 }
 function saveNotifSettings(){
   var u=_svUser();
