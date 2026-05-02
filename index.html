@@ -1510,6 +1510,10 @@ id="m-ncr" style="display:none">
       <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="eqi-pdf-loc" class="inp"></div>
       <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input type="date" id="eqi-pdf-date" class="inp"></div>
       <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="eqi-pdf-expiry" class="inp"></div>
+      <div class="field"><label>&#1513;&#1501; &#1492;&#1489;&#1493;&#1491;&#1511;</label><input id="eqi-pdf-inspector" class="inp"></div>
+      <div class="field"><label>&#1505;&#1493;&#1490; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input id="eqi-pdf-instype" class="inp"></div>
+      <div class="field"><label>&#1502;&#1494;&#1502;&#1503; / &#1488;&#1490;&#1507;</label><input id="eqi-pdf-client" class="inp"></div>
+      <div class="field"><label>&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-pdf-next" class="inp"></div>
       <div class="field fw" id="eqi-pdf-report-row"><label>&#1502;&#1505;&#1508;&#1512; &#1514;&#1505;&#1511;&#1497;&#1512;</label><input id="eqi-pdf-report" class="inp"></div>
     </div>
     <div id="eqi-pdf-items-wrap" style="margin:10px 0;max-height:380px;overflow-y:auto"></div>
@@ -1957,7 +1961,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts'};
 function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
@@ -3992,7 +3996,7 @@ function _eqiPdfExtractJson(txt){
 }
 function _eqiPdfAnalyze(base64){
   // Multi-item prompt — extracts shared metadata + per-item identifiers.
-  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5. \u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown, \u05dc\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8 \u05de\u05e1\u05d1\u05d9\u05d1):\n\n{\n  "report_number": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 (\u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2)",\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 / \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 / \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea (\u05d0\u05dd \u05de\u05e9\u05d5\u05ea\u05e3 \u05dc\u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd)",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3",\n      "equipment_code": "\u05e7\u05d5\u05d3 / \u05de\u05e7\u05f4\u05d8 / \u05de\u05e1\u05e4\u05e8 \u05e6\u05d9\u05d5\u05d3 / \u05de\u05e1 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05e9\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8",\n      "vendor": "\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9 \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05de\u05e9\u05d5\u05ea\u05e3)",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea/\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05dc\u05e4\u05e8\u05d9\u05d8 \u05d4\u05d6\u05d4"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d9\u05db\u05d5\u05dc\u05d9\u05dd \u05dc\u05d4\u05d9\u05d5\u05ea 1-50 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd — \u05d4\u05d5\u05e6\u05d0 \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items.';
+  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5. \u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown, \u05dc\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8 \u05de\u05e1\u05d1\u05d9\u05d1):\n\n{\n  "report_number": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d4\u05e8\u05e9\u05de\u05d9",\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05db\u05dc\u05dc\u05d9 (\u05d9\u05db\u05d5\u05dc \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05d5\u05d7\u05dc\u05e3 \u05e2\u05f4\u05d9 expiry_date \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8)",\n  "next_inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 \u05d0\u05dd \u05e6\u05d5\u05d9\u05df \u05d1\u05e0\u05e4\u05e8\u05d3 \u05de\u05d4\u05ea\u05d5\u05e7\u05e3",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 / \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea (\u05d0\u05dd \u05de\u05e9\u05d5\u05ea\u05e3)",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df)",\n  "inspector": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d4\u05de\u05d5\u05e1\u05de\u05da / \u05de\u05d4\u05e0\u05d3\u05e1 + \u05de\u05e1 \u05e8\u05d9\u05e9\u05d5\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n  "client_name": "\u05e9\u05dd \u05d4\u05de\u05e4\u05e2\u05dc / \u05d4\u05d0\u05d2\u05e3 / \u05d4\u05de\u05d6\u05de\u05d9\u05df",\n  "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 (\u05d7\u05d6\u05d5\u05ea\u05d9 / \u05de\u05dc\u05d0 / \u05d9\u05e6\u05d9\u05d1\u05d5\u05ea / \u05e2\u05d5\u05de\u05e1 / \u05d0\u05d7\u05e8)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05d7\u05d5\u05d1\u05d4)",\n      "equipment_code": "\u05e7\u05d5\u05d3 / \u05de\u05e7\u05f4\u05d8 / \u05de\u05e1\u05e4\u05e8 \u05e6\u05d9\u05d5\u05d3 / \u05de\u05e1 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9",\n      "vendor": "\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05de\u05e9\u05d5\u05ea\u05e3)",\n      "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "next_inspection_date": "YYYY-MM-DD \u05de\u05d5\u05e2\u05d3 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8",\n      "cycle_months": "\u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d1\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea (\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd, \u05dc\u05d3\u05d5\u05d2\u05de\u05d4 6 \u05d0\u05d5 12)",\n      "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "deficiencies": "\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d4\u05ea\u05d2\u05dc\u05d5 (\u05e8\u05e9\u05d9\u05de\u05d4 / \u05d8\u05e7\u05e1\u05d8 \u05de\u05d4\u05d3\u05d5\u05d7)",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. cycle_months \u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd (\u05dc\u05d0 \u05de\u05d7\u05e8\u05d5\u05d6\u05ea). \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d9\u05db\u05d5\u05dc\u05d9\u05dd \u05dc\u05d4\u05d9\u05d5\u05ea 1-50 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd — \u05d4\u05d5\u05e6\u05d0 \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items. \u05d0\u05dd \u05dc\u05e4\u05e8\u05d9\u05d8 expiry_date \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9 — \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05e1\u05e4\u05e6\u05d9\u05e4\u05d9.';
   var body={
     model:_AI_MODEL,
     max_tokens:16000,
@@ -4044,30 +4048,80 @@ function _eqiPdfAnalyze(base64){
     .catch(function(e){g('eqi-pdf-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(e&&e.message||e);});
 }
 // Pick records in DB that this PDF item refers to. Returns {tier, candidates}.
+// Tier order (highest -> lowest confidence):
+//   report      same report_number already attached (idempotent re-upload)
+//   code        equipment_code exact match (after normalize)
+//   name+vendor name + vendor both match
+//   name-unique name matches and exactly one record has it
+//   ambiguous   name matches several records; user picks
+//   none        nothing matches; will create a new row
 function _eqiPdfResolveCandidates(item,data){
   var rows=DB.equip_inspections||[];
   var pdfCode=_eqiNormCode(item.equipment_code);
   var pdfName=_eqiNorm(item.equipment_name);
   var pdfVendor=_eqiNorm(item.vendor||data.vendor);
+  var pdfReport=_eqiNorm(data.report_number);
+  // 0) Same report_number already attached — same scan was processed before.
+  if(pdfReport){
+    var byReport=rows.filter(function(r){return _eqiNorm(r.report_number)===pdfReport;});
+    if(byReport.length){
+      if(pdfName){
+        var sub=byReport.filter(function(r){return _eqiNorm(r.n)===pdfName;});
+        if(sub.length)return {tier:'report',candidates:sub.map(_eqiPdfWrapCand)};
+      }
+      return {tier:'report',candidates:byReport.map(_eqiPdfWrapCand)};
+    }
+  }
   // 1) Exact code match — highest confidence (each code uniquely identifies an item).
   if(pdfCode){
     var byCode=rows.filter(function(r){return _eqiNormCode(r.code)===pdfCode;});
     if(byCode.length)return {tier:'code',candidates:byCode.map(_eqiPdfWrapCand)};
   }
-  // 2) Name + vendor match — both must match, multiple records OK (means duplicates of same physical equipment).
+  // 2) Name + vendor match — both must match, multiple records OK.
   if(pdfName && pdfVendor){
     var byNV=rows.filter(function(r){return _eqiNorm(r.n)===pdfName && _eqiNorm(r.vendor)===pdfVendor;});
     if(byNV.length)return {tier:'name+vendor',candidates:byNV.map(_eqiPdfWrapCand)};
   }
-  // 3) Name unique — only safe to auto-update if exactly 1 record exists with that name.
+  // 3) Name unique — exactly 1 record has it.
   if(pdfName){
     var byName=rows.filter(function(r){return _eqiNorm(r.n)===pdfName;});
     if(byName.length===1)return {tier:'name-unique',candidates:byName.map(_eqiPdfWrapCand)};
-    // 4) Multiple records with same name but no vendor distinguisher — ambiguous; user picks.
+    // 4) Same name on several records but no vendor/code distinguisher — user picks.
     if(byName.length>1)return {tier:'ambiguous',candidates:byName.map(_eqiPdfWrapCand)};
   }
   // 5) No match — will create new.
   return {tier:'none',candidates:[]};
+}
+// Resolve cycle_months for a PDF item: AI extraction -> derive from dates ->
+// inspection_types name lookup -> null. Used to fill cycle_months and to
+// project a next_inspection_date when the report didn't state one explicitly.
+function _eqiCycleResolve(item,data){
+  var raw=item.cycle_months;
+  if(raw!==null && raw!==undefined && raw!==''){
+    var n=parseInt(raw,10);
+    if(!isNaN(n) && n>0 && n<=120)return n;
+  }
+  var insp=item.inspection_date||data.inspection_date;
+  var exp=item.expiry_date||data.expiry_date;
+  if(insp && exp){
+    var d1=new Date(insp), d2=new Date(exp);
+    if(!isNaN(d1) && !isNaN(d2) && d2>d1){
+      var months=Math.round((d2-d1)/(1000*60*60*24*30.4375));
+      if(months>0 && months<=120)return months;
+    }
+  }
+  var nm=_eqiNorm(item.equipment_name);
+  if(nm && DB.inspection_types && DB.inspection_types.length){
+    var hit=DB.inspection_types.find(function(t){
+      var tn=_eqiNorm(t.name||t.n);
+      return tn && (nm.indexOf(tn)>=0 || tn.indexOf(nm)>=0);
+    });
+    if(hit){
+      if(hit.cycle_months)return parseInt(hit.cycle_months,10)||null;
+      if(hit.frequency_months)return parseInt(hit.frequency_months,10)||null;
+    }
+  }
+  return null;
 }
 function _eqiPdfWrapCand(rec){
   return {rec:rec,id:rec.id,currentExpiry:rec.e||null,_selected:true};
@@ -4089,6 +4143,10 @@ function _eqiPdfFillForm(data){
   g('eqi-pdf-loc').value=data.location||'';
   g('eqi-pdf-date').value=data.inspection_date||'';
   g('eqi-pdf-expiry').value=data.expiry_date||'';
+  var ins=g('eqi-pdf-inspector');if(ins)ins.value=data.inspector||'';
+  var ity=g('eqi-pdf-instype');if(ity)ity.value=data.inspection_type||'';
+  var cli=g('eqi-pdf-client');if(cli)cli.value=data.client_name||'';
+  var nxt=g('eqi-pdf-next');if(nxt)nxt.value=data.next_inspection_date||'';
   var rep=g('eqi-pdf-report-row');
   if(rep)rep.style.display=data.report_number?'':'none';
   var repInp=g('eqi-pdf-report');
@@ -4108,6 +4166,7 @@ function _eqiPdfItemRow(it,i,data){
   var badge,bg,border;
   if(tier==='none'){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
   else if(tier==='ambiguous'){badge='⚠ \u05e1\u05de\u05df \u05d9\u05d3\u05e0\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
+  else if(tier==='report'){badge='↻ \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8';bg='#e0e7ff';border='#4f46e5';}
   else if(tier==='code'){badge='✓ \u05d6\u05d5\u05d4\u05d4 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3';bg='#dcfce7';border='#16a34a';}
   else if(tier==='name+vendor'){badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd+\u05e1\u05e4\u05e7)';bg='#dcfce7';border='#16a34a';}
   else{badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9)';bg='#dbeafe';border='#1d4ed8';}
@@ -4180,6 +4239,10 @@ window._eqiPdfApply=function(silent){
   data.location=gv('eqi-pdf-loc')||data.location||null;
   data.inspection_date=gv('eqi-pdf-date')||data.inspection_date||null;
   data.expiry_date=gv('eqi-pdf-expiry')||data.expiry_date||null;
+  if(g('eqi-pdf-inspector'))data.inspector=gv('eqi-pdf-inspector')||data.inspector||null;
+  if(g('eqi-pdf-instype'))data.inspection_type=gv('eqi-pdf-instype')||data.inspection_type||null;
+  if(g('eqi-pdf-client'))data.client_name=gv('eqi-pdf-client')||data.client_name||null;
+  if(g('eqi-pdf-next'))data.next_inspection_date=gv('eqi-pdf-next')||data.next_inspection_date||null;
   if(g('eqi-pdf-report'))data.report_number=gv('eqi-pdf-report')||data.report_number||null;
   if(!data.expiry_date){alert('\u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05e1\u05d5\u05de\u05df');return;}
   var work=[];
@@ -4243,41 +4306,96 @@ function _eqiPdfPersistUpdate(rec,item,data,fileUrl){
   var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===rec.id;});
   if(idx<0)return Promise.reject(new Error('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e0\u05e2\u05dc\u05de\u05d4'));
   var live=DB.equip_inspections[idx];
-  // Apply changes to local copy first.
-  if(data.expiry_date)live.e=data.expiry_date;
-  if(data.inspection_date)live.d=data.inspection_date;
+  var prevExpiry=live.e||null;
+  var newExpiry=item.expiry_date||data.expiry_date||null;
+  var newInspection=item.inspection_date||data.inspection_date||null;
+  // Longest-expiry rule: keep whichever date is later. Always document the displaced
+  // (or kept) value in notes so the audit trail isn't lost.
+  var expiryDecision=null;
+  if(newExpiry && (!prevExpiry || newExpiry>prevExpiry)){live.e=newExpiry;expiryDecision='replaced';}
+  else if(newExpiry && prevExpiry && newExpiry<=prevExpiry){expiryDecision='kept-existing';}
+  if(newInspection)live.d=newInspection;
   if(item.vendor)live.vendor=item.vendor;
   else if(data.vendor && !live.vendor)live.vendor=data.vendor;
   if(data.location && !live.loc)live.loc=data.location;
   if(item.status)live.s=item.status;
-  // Store equipment_code if PDF supplied one and existing was empty/-.
   var pdfCode=item.equipment_code;
   if(pdfCode && (!live.code || live.code==='-' || live.code==='—'))live.code=pdfCode;
   if(data.report_number)live.report_number=data.report_number;
   if(fileUrl)live.file_url=fileUrl;
-  var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(data.inspection_date||fd(new Date().toISOString()))+(data.report_number?' · \u05ea\u05e1\u05e7\u05d9\u05e8 '+data.report_number:'')+'] '+(item.notes||item.status||'');
+  var inspector=item.inspector||data.inspector;
+  if(inspector)live.inspector=inspector;
+  var insType=item.inspection_type||data.inspection_type;
+  if(insType)live.inspection_type=insType;
+  var clientName=item.client_name||data.client_name;
+  if(clientName)live.client_name=clientName;
+  if(item.deficiencies)live.deficiencies=item.deficiencies;
+  var nextDate=item.next_inspection_date||data.next_inspection_date;
+  if(nextDate)live.next_inspection_date=nextDate;
+  var cycle=_eqiCycleResolve(item,data);
+  if(cycle)live.cycle_months=cycle;
+  var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(newInspection||fd(new Date().toISOString()))+(data.report_number?' · \u05ea\u05e1\u05e7\u05d9\u05e8 '+data.report_number:'')+'] '+(item.notes||item.status||'');
+  if(expiryDecision==='replaced' && prevExpiry){stamp+=' · [\u05ea\u05d5\u05e7\u05e3 \u05e7\u05d5\u05d3\u05dd '+fd(prevExpiry)+']';}
+  else if(expiryDecision==='kept-existing'){stamp+=' · [\u05ea\u05d5\u05e7\u05e3 \u05e0\u05e9\u05de\u05e8 '+fd(prevExpiry)+' > '+fd(newExpiry)+']';}
   live.notes=(live.notes?live.notes+'\n':'')+stamp;
   live.ts=new Date().toISOString();
-  return _eqiPdfSyncRow('upd',live);
+  return _eqiPdfSyncRow('upd',live).then(function(){return _eqiHistoryWrite(live.id,item,data,fileUrl);});
 }
 function _eqiPdfPersistCreate(item,data,fileUrl){
+  var cycle=_eqiCycleResolve(item,data);
   var rec={
     id:gid(),
     n:item.equipment_name,
     code:item.equipment_code||null,
     vendor:item.vendor||data.vendor||null,
     loc:data.location||null,
-    d:data.inspection_date||null,
-    e:data.expiry_date,
+    d:item.inspection_date||data.inspection_date||null,
+    e:item.expiry_date||data.expiry_date,
     s:item.status||'\u05ea\u05e7\u05d9\u05df',
     notes:item.notes||null,
     file_url:fileUrl||null,
     report_number:data.report_number||null,
+    inspector:item.inspector||data.inspector||null,
+    inspection_type:item.inspection_type||data.inspection_type||null,
+    next_inspection_date:item.next_inspection_date||data.next_inspection_date||null,
+    deficiencies:item.deficiencies||null,
+    client_name:item.client_name||data.client_name||null,
+    cycle_months:cycle||null,
     ts:new Date().toISOString()
   };
   if(!DB.equip_inspections)DB.equip_inspections=[];
   DB.equip_inspections.push(rec);
-  return _eqiPdfSyncRow('ins',rec);
+  return _eqiPdfSyncRow('ins',rec).then(function(){return _eqiHistoryWrite(rec.id,item,data,fileUrl);});
+}
+// Best-effort write to equip_inspection_history. Never rejects — the canonical
+// row is already persisted by the caller.
+function _eqiHistoryWrite(equipId,item,data,fileUrl){
+  try{
+    var cycle=_eqiCycleResolve(item,data);
+    var hist={
+      id:gid(),
+      equip_id:equipId||null,
+      inspection_date:item.inspection_date||data.inspection_date||null,
+      expiry_date:item.expiry_date||data.expiry_date||null,
+      next_inspection_date:item.next_inspection_date||data.next_inspection_date||null,
+      inspector:item.inspector||data.inspector||null,
+      report_number:data.report_number||null,
+      inspection_type:item.inspection_type||data.inspection_type||null,
+      status:item.status||null,
+      deficiencies:item.deficiencies||null,
+      notes:item.notes||null,
+      file_url:fileUrl||null,
+      cycle_months:cycle||null,
+      client_name:item.client_name||data.client_name||null,
+      vendor:item.vendor||data.vendor||null,
+      loc:data.location||null,
+      raw_json:{item:item,shared:{report_number:data.report_number,inspection_date:data.inspection_date,expiry_date:data.expiry_date,vendor:data.vendor,location:data.location,inspector:data.inspector,client_name:data.client_name,inspection_type:data.inspection_type}},
+      ts:new Date().toISOString()
+    };
+    return _sbAuth().then(function(){
+      return fetch(SBU+'/rest/v1/equip_inspection_history',{method:'POST',headers:sbHUpsert(),body:JSON.stringify(hist)});
+    }).then(function(r){if(!r.ok)console.warn('history write failed',r.status);}).catch(function(e){console.warn('history write threw',e);});
+  }catch(e){console.warn('history build threw',e);return Promise.resolve();}
 }
 // Push a row to Supabase and resolve only after a 200/201 — failures throw so
 // _eqiPdfApplyAll counts them correctly. Uses upsert so 409s don't break.
@@ -6650,7 +6768,10 @@ var VIEW_CONFIG={
     ['\u05de\u05d3\u05d5\u05d5\u05d7','rep'],['\u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05e1\u05d5\u05d2','typ'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   equip_inspections:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',back:'eqi',fields:[
     ['\u05e7\u05d5\u05d3','code'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
-    ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
+    ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4','next_inspection_date'],['\u05ea\u05d3\u05d9\u05e8\u05d5\u05ea (\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd)','cycle_months'],
+    ['\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4','inspection_type'],['\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05de\u05e6\u05d9\u05df / \u05d0\u05d2\u05e3','client_name'],
+    ['\u05de\u05e1\u05e4\u05e8 \u05ea\u05e1\u05e7\u05d9\u05e8','report_number'],['\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd','deficiencies'],
+    ['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url',extra:'_eqiHistorySection'},
   rounds:{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',back:'round',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e4\u05e7\u05d7','inspector'],['\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9','fire'],['\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd','corridors'],
     ['PPE','ppe'],['\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','samples'],['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','chemicals'],['\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','firstaid'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
@@ -6739,6 +6860,9 @@ function showView(tbl,id){
     var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
   }
+  if(tbl==='equip_inspections'){
+    html+='<div id="eqi-history-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">\ud83d\udcdc \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea (<span id="eqi-history-count">\u2026</span>)</div><div id="eqi-history-list" style="font-size:12px;color:#888">\u05d8\u05d5\u05e2\u05df\u2026</div></div>';
+  }
   var canReopen=(tbl==='tasks'&&(rec.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||rec.status==='\u05d1\u05d5\u05d8\u05dc'))||
                 (tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8');
   if(canReopen){
@@ -6772,6 +6896,32 @@ function showView(tbl,id){
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
   if(tbl==='ncr')_ncrCommentsLoad(id);
+  if(tbl==='equip_inspections')_eqiHistoryLoad(id);
+}
+function _eqiHistoryLoad(equipId){
+  var box=g('eqi-history-list'); var cnt=g('eqi-history-count');
+  if(!box)return;
+  fetch(_SB+'/rest/v1/equip_inspection_history?equip_id=eq.'+encodeURIComponent(equipId)+'&select=*&order=ts.desc&limit=50',{headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK)}})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(rows){
+      if(!Array.isArray(rows))rows=[];
+      if(cnt)cnt.textContent=rows.length;
+      if(!rows.length){box.innerHTML='<div class="et" style="padding:10px;font-size:11px">אין היסטוריה — בדיקה ראשונה תיווצר אחרי שתעלה תסקיר חדש.</div>';return;}
+      box.innerHTML=rows.map(function(h){
+        var when=h.inspection_date?fd(h.inspection_date):(h.ts?fd(String(h.ts).substring(0,10)):'—');
+        var exp=h.expiry_date?fd(h.expiry_date):'—';
+        var meta=[];
+        if(h.inspector)meta.push('בודק: '+esc(h.inspector));
+        if(h.inspection_type)meta.push('סוג: '+esc(h.inspection_type));
+        if(h.cycle_months)meta.push('כל '+esc(h.cycle_months)+' חודשים');
+        if(h.report_number)meta.push('תסקיר: '+esc(h.report_number));
+        var defs=h.deficiencies?'<div style="margin-top:4px;color:#b45309;font-size:11px">⚠ '+esc(h.deficiencies)+'</div>':'';
+        var fileLink=h.file_url?' · <a data-sign="'+escU(h.file_url)+'" target="_blank" style="color:#2563eb">📎 PDF</a>':'';
+        return '<div style="padding:8px 6px;border-bottom:1px solid #f0f0f0"><div style="display:flex;justify-content:space-between;gap:6px"><strong style="font-size:12px">'+esc(when)+' → תוקף '+esc(exp)+'</strong><span style="font-size:11px;color:#888">'+(h.status?esc(h.status):'')+fileLink+'</span></div>'+(meta.length?'<div style="font-size:11px;color:#666;margin-top:3px">'+meta.join(' · ')+'</div>':'')+defs+'</div>';
+      }).join('');
+      _signifyDom(box);
+    })
+    .catch(function(){box.innerHTML='<div class="et" style="padding:10px;font-size:11px;color:#b45309">שגיאה בטעינת היסטוריה</div>';});
 }
 function _ncrCommentsLoad(id){
   var box=g('ncr-comments-list');var cnt=g('ncr-comments-count');if(!box)return;
