@@ -1722,6 +1722,29 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492;">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- KEYBOARD SHORTCUTS HELP -->
+<div class="overlay" id="ov-help" onclick="closeModal('m-help')"></div>
+<div class="modal" id="m-help" style="display:none;max-width:520px">
+  <button class="close-btn" onclick="closeModal('m-help')">&#10005;</button>
+  <div class="modal-title">&#9000;&#65039; &#1511;&#1497;&#1510;&#1493;&#1512;&#1497; &#1502;&#1511;&#1500;&#1491;&#1514;</div>
+  <div class="modal-body" style="font-size:13px;line-height:1.7">
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">?</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1492;&#1510;&#1490; &#1502;&#1505;&#1498; &#1494;&#1492;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">Ctrl+K</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">N</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1488;&#1497;&#1497;&#1496;&#1501; &#1495;&#1491;&#1513; &#1489;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">D</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">N</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">NCR</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">T</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">M</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1499;&#1502;&#1506;&#1496;-&#1504;&#1508;&#1490;&#1506;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">I</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1514;&#1511;&#1512;&#1497;&#1493;&#1514;</td></tr>
+      <tr><td style="padding:6px 4px;border-bottom:1px solid #eee"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">G</kbd> &#1488;&#1494; <kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">E</kbd></td><td style="padding:6px 4px;border-bottom:1px solid #eee">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</td></tr>
+      <tr><td style="padding:6px 4px"><kbd style="background:#222;color:#fff;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:12px">Esc</kbd></td><td style="padding:6px 4px">&#1505;&#1490;&#1497;&#1512;&#1492;</td></tr>
+    </table>
+    <div style="margin-top:14px;padding:10px;background:#f8f8f8;border-radius:8px;font-size:12px;color:var(--t3)">&#128161; &#1502;&#1511;&#1500;&#1491;&#1493;&#1514; G &#1502;&#1499;&#1497;&#1500;&#1493;&#1514; &#1502;&#1499;&#1493;&#1493;&#1504;&#1493;&#1514; &#1499;&#1508;&#1493;&#1500;&#1493;&#1514; (&#1500;&#1495;&#1510;&#1493; G, &#1488;&#1494; &#1488;&#1493;&#1514; &#1497;&#1506;&#1491;)</div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-p" onclick="closeModal('m-help')">&#1505;&#1490;&#1497;&#1512;&#1492;</button></div>
+</div>
+
 <!-- GLOBAL SEARCH MODAL -->
 <div class="overlay" id="ov-gsearch" onclick="closeModal('m-gsearch')"></div>
 <div class="modal" id="m-gsearch" style="display:none">
@@ -7572,7 +7595,8 @@ function _srOpen(k,id){
   if(id&&typeof showView==='function'){try{showView(tm[k],id);}catch(e){}}
 }
 
-/* ---- GLOBAL SHORTCUTS (Esc, n, Ctrl+K) ---- */
+/* ---- GLOBAL SHORTCUTS (Esc, n, Ctrl+K, ?, g+x chord) ---- */
+window._gChordTs=0;
 document.addEventListener('keydown',function(e){
   var tag=(e.target&&e.target.tagName||'').toUpperCase();
   var typing=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(e.target&&e.target.isContentEditable));
@@ -7581,9 +7605,19 @@ document.addEventListener('keydown',function(e){
     var sm=g('m-search');if(sm&&sm.classList.contains('on')){closeSearch();e.preventDefault();return;}
     var ovs=document.querySelectorAll('.overlay');var openMid=null;ovs.forEach(function(ov){if(ov.style.display==='block'&&ov.id){var mid='m-'+ov.id.substr(3);var mo=g(mid);if(mo&&mo.style.display!=='none'&&mo.style.display!=='')openMid=mid;}});
     if(openMid){closeModal(openMid);e.preventDefault();}
+    window._gChordTs=0;
     return;
   }
-  if((e.key==='n'||e.key==='N')&&!typing&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='?'){e.preventDefault();if(typeof openModal==='function')openModal('m-help');return;}
+  if(e.key==='g'||e.key==='G'){window._gChordTs=Date.now();e.preventDefault();return;}
+  if(window._gChordTs&&(Date.now()-window._gChordTs)<1500){
+    var k=(e.key||'').toLowerCase();
+    var map={d:'dash',n:'ncr',t:'tasks',m:'nm',i:'inc',e:'eqi',p:'ptw',h:'hzm',l:'leg',r:'rsk'};
+    if(map[k]){e.preventDefault();window._gChordTs=0;if(typeof goPage==='function')goPage(map[k]);return;}
+    window._gChordTs=0;
+  }
+  if((e.key==='n'||e.key==='N')){
     if(typeof CUR==='undefined'||!CUR)return;
     var mid='m-'+CUR;if(g(mid)){e.preventDefault();openModal(mid);}
   }
