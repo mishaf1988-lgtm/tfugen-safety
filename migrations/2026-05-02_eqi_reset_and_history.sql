@@ -57,5 +57,5 @@ CREATE POLICY equip_inspection_history_admin_manager_all
   ON equip_inspection_history
   FOR ALL
   TO authenticated
-  USING (public.is_admin_manager())
-  WITH CHECK (public.is_admin_manager());
+  USING (private.is_admin_manager())
+  WITH CHECK (private.is_admin_manager());
