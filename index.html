@@ -4826,6 +4826,11 @@ tb.innerHTML=rows.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
   var sensBadge=n.sens?' &#128274;':'';
+  var priBadge='';
+  if(n.s!=='\u05e1\u05d2\u05d5\u05e8'){
+    if(n.p==='\u05e7\u05e8\u05d9\u05d8\u05d9')priBadge=' <span title="\u05e7\u05e8\u05d9\u05d8\u05d9" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#cc1f1f;vertical-align:middle"></span>';
+    else if(n.p==='\u05d2\u05d1\u05d5\u05d4')priBadge=' <span title="\u05d2\u05d1\u05d5\u05d4" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e07a00;vertical-align:middle"></span>';
+  }
   var staleBadge='';
   if(n.s!=='\u05e1\u05d2\u05d5\u05e8'&&n.ts){var ageDays=Math.floor((Date.now()-new Date(n.ts).getTime())/86400000);if(ageDays>=30)staleBadge=' <span title="\u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df '+ageDays+' \u05d9\u05de\u05d9\u05dd" style="color:var(--t3);font-size:10px">⏳</span>';}
   var loc=(n.location_id&&typeof _locName==='function'?_locName(n.location_id):'')||n.loc||n.location||'';
@@ -4837,7 +4842,7 @@ tb.innerHTML=rows.map(function(n){
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
   return '<tr>'+
-    '<td><span class="b bX" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e2\u05ea\u05e7\u05d4" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'\u05d4\u05d5\u05e2\u05ea\u05e7\')">'+(n.num||'&#8212;')+'</span>'+sensBadge+staleBadge+'</td>'+
+    '<td><span class="b bX" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e2\u05ea\u05e7\u05d4" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'\u05d4\u05d5\u05e2\u05ea\u05e7\')">'+(n.num||'&#8212;')+'</span>'+priBadge+sensBadge+staleBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
     '<td title="'+esc(loc)+'">'+ esc(loc.substring(0,30)) +'</td>'+
