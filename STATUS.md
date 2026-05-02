@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `5c910ce` |
+| Commit | `265a74c` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -85,7 +85,8 @@
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_location_fk_more.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. אותו דבר ל-`ptw`, `equip_inspections`, `hzm` + 3 indexes. PR #143.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_saved_views.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. PR #147.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_notification_prefs.sql`~~ — **הורץ ב-2026-05-01**. טבלה חדשה `notification_prefs(id PK = email, prefs jsonb, ts)` עם RLS לפי email. PR #148.
-- [ ] **הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_OVERNIGHT_COMBINED.sql` — מאחד 5 migrations מהלילה: location_id ל-inc/hearing_tests, custom_props, projects, project_id FK ל-ncr/tasks/inc, notifications_log. **idempotent** — בטוח להריץ. אם לא יורץ — UI עדיין יעבוד (sbIns יכניס לתור), אבל הסכמה לא תתעדכן עד שיירוץ.
+- [x] ~~**הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_OVERNIGHT_COMBINED.sql`~~ — **הורץ ידנית 2026-05-02**. כולל: location_id ל-inc/hearing_tests, custom_props, projects, project_id FK ל-ncr/tasks/inc, notifications_log, inspection_types.
+- [x] ~~**הרץ ה-COMBINED SQL ב-Supabase**: `migrations/2026-05-02_MORNING_COMBINED.sql`~~ — **הורץ ידנית 2026-05-02**. כולל: issue_types schema + issue_type_id ב-ncr/inc + 30 issue_types seeds + 15 inspection_types seeds.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_external_ids.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. 7 עמודות `ext_id text` נוספו (ncr, equip_inspections, emp, tr, ppe, med, tasks) + 7 partial indexes. אומת ב-`information_schema.columns` (7 שורות) ו-`pg_indexes` (7 idx). הכנה לאינטגרציות עתידיות ERP/SAP/payroll. Vitre §16#13.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_ai_feedback.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. הוסיף 3 עמודות ל-`ncr_ai`: `feedback` (text, CHECK 'up'/'down'/null), `feedback_user` (text), `feedback_ts` (timestamptz). אומת בשאילתת `information_schema.columns` (3 עמודות חדשות) + בדיקה חיה (NCR-0357 קיבל `feedback='up'` עם `feedback_user='admin'`).
 - [x] ~~**🚨 קריטי — הרץ migration ב-Supabase**: `migrations/2026-04-25_enable_rls_missing.sql`~~ — **הורץ ואומת ידנית ב-2026-04-27**. Supabase Security Advisor סימן 4 שגיאות (Policy Exists RLS Disabled + RLS Disabled in Public על `equip_inspections` ו-`ncr_ai`) — הפוליסות `_admin_manager_all` קיימות מ-Stage 2, אבל RLS לא הופעל ברמת הטבלה. אחרי הרצת 2 שורות `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`: (1) Security Advisor מראה **0 errors** (37 warnings נותרו, לא קריטיים), (2) דף בדיקות ציוד נטען עם רשומות, (3) NCR Agent רץ ושומר ניתוחים.
@@ -192,6 +193,44 @@
 - [x] **HZM summary pills (PR #236)**.
 - [x] **PTW summary pills (PR #237)**.
 - [x] **Projects filter tabs (PR #238)** — כל/פעילים/הושלמו.
+- [x] **NCR quick-filter presets (PR #240)** — 4 כפתורים מהירים: 🔥 קריטיים / 📅 השבוע / ⏱️ ישנים / ⏳ חורגים.
+- [x] **Issue Types hierarchy (PR #248)** — Vitre §6.3. טבלה `issue_types` 3-level עם `issue_type_id` ב-NCR ו-`inc`. עמוד 🎯 + dropdown סינון.
+- [x] **Issue Types seed data (PR #257)** — 30+ סוגי NCR ישראליים מוטמעים מראש.
+- [x] **Inspection Types seed data (PR #256)** — 15 בדיקות ציוד ישראליות מוטמעות.
+- [x] **Dashboard quick-add row (PR #259)** — 4 כפתורים צבעוניים: ⚠️ NCR / 🚨 כמעט-נפגע / ✅ משימה / 🔧 בדיקת ציוד.
+- [x] **Keyboard shortcuts + help modal (PR #260)** — `?` פותח עזרה, `G+D/N/T/M/I/E/P/H/L/R` ניווט מהיר. ❓ בtopbar.
+- [x] **Top critical/high NCRs widget (PR #261)** — 🔥 וידג'ט בדשבורד עם 5 NCRs פתוחים.
+- [x] **Issue Types aggregate counts (PR #262)** — כל קטגוריה מציגה NCR+תקריות מצטברים מתת-סוגים.
+- [x] **NCR resolution time KPI (PR #263)** — ⏱️ ממוצע ימים לסגירה / גיל פתוחים / % שנסגרו ב-30 יום.
+- [x] **Tasks status breakdown bar (PR #264)** — סרגל ויזואלי של פתוח/בהתקדמות/הושלם/בוטל + ⏳ בפיגור.
+- [x] **NCR summary pills extended (PR #265)** — נוספו "גבוה פתוח" ו-"⏳ פתוח 30+ ימים".
+- [x] **NCR active chips - itype + quick filter (PR #266)** — chips ויזואליים לסינון Issue Type ו-quick filter.
+- [x] **Issue Types clickable name (PR #267)** — קליק על שם → NCR מסונן.
+- [x] **Help button in topbar (PR #268)** — ❓ פותח חלון עזרה.
+- [x] **Notif log relative time (PR #269)** — "לפני 12ד׳" במקום DD/MM/YYYY.
+- [x] **My-open-NCRs widget (PR #270)** — 👤 בדשבורד מציג עד 5 NCRs פתוחים שמשויכים למשתמש.
+- [x] **NCR date-range quick filters (PR #271)** — 📅 30 יום / 90 יום נוספו לכפתורי quick-filter.
+- [x] **Top env aspects RPN widget (PR #272)** — 🌿 בדשבורד 5 ההיבטים הסביבתיים עם RPN בפועל גבוה.
+- [x] **Morning rounds 30-day compliance (PR #273)** — ☀️ בדשבורד % ביצוע + סטריפ ויזואלי 30 יום.
+- [x] **NM severity filter dropdown (PR #274)** — סינון לפי חומרה בעמוד כמעט-נפגע.
+- [x] **NCR list shows issue type (PR #275)** — בעמודת המיקום מוצג גם 🎯 סוג אי-התאמות.
+- [x] **Print active filters (PR #276)** — print-header כולל את "פילטרים: chip1 · chip2 ..." האקטיביים.
+- [x] **View copy-to-clipboard (PR #277)** — 📋 ב-showView מעתיק סיכום הרשומה לקליפבורד (לשיתוף ב-WhatsApp).
+- [x] **Upcoming-this-week dashboard widget (PR #278)** — 📅 מציג עד 8 פריטים בעלי deadline ב-7 ימים הקרובים (משימות + תפוגות + בדיקות).
+- [x] **Inline text search in Tasks (PR #279)** — שדה 🔍 לחיפוש בתוך כותרת/אחראי/הערות + chips.
+- [x] **env_aspects summary pills (PR #280)** — 5 pills: סה״כ, RPN גבוה, בינוני, נמוך, ⏰ ביקורת עברה.
+- [x] **NCR opens-vs-closes 4-week chart (PR #281)** — 📊 תרשים עמודות: 4 שבועות עם נפתח (אדום) מול נסגר (ירוק).
+- [x] **Copy deep-link button (PR #282)** — 🔗 ב-showView יוצר קישור שמטעין את הרשומה ישירות.
+- [x] **Slash key opens search (PR #283)** — `/` פותח חיפוש גלובלי (כמו Ctrl+K).
+- [x] **Notif log show-all toggle (PR #284)** — לינק "הצג את כל ה-N הרשומות" כשיש >20.
+- [x] **Hazmat default sort by severity+expiry (PR #285)** — סיכון גבוה ראשון, תוך כל קטגוריה לפי MSDS.
+- [x] **Tasks smart sort (PR #286)** — חורגים → עדיפות → תאריך יעד.
+- [x] **NCR priority dot in list (PR #287)** — 🔴 קריטי / 🟠 גבוה ליד מספר ה-NCR.
+- [x] **Bottom-nav tasks badge (PR #288)** — תווית אדומה עם ספירת משימות פתוחות בלשונית "משימות".
+- [x] **Dashboard freshness time (PR #289)** — "⌚ עודכן ב-HH:MM" בכותרת התאריך.
+- [x] **Modules-sheet inline search (PR #290)** — 🔍 חיפוש בתוך תפריט המודולים, מסנן כפתורים וכותרות קבוצות.
+- [x] **Task duplicate menu action (PR #291)** — 📋 "שכפל משימה" בתפריט ⋯ של כל משימה.
+- [x] **Top-assignees-by-open-tasks widget (PR #292)** — 👥 בדשבורד מציג עד 5 אחראים שיש להם הכי הרבה משימות פתוחות, קליק → סינון לפי האחראי.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).

@@ -1,8 +1,90 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `f7fc6b2`
-**Total PRs merged**: ~110
+**Latest commit**: `265a74c`
+**Total PRs merged**: ~125 לילה + 34 בוקר
+
+---
+
+## ☀️ Morning Autonomous Run (2026-05-02 05:00–08:00 UTC = 08:00–11:00 IST)
+
+11 פיצ'רים נוספו אוטונומית בבוקר. כולם UI-only או DB-readonly — **אין migration חדשה לבוקר** (ה-3 migrations של הלילה עדיין נדרשות לפי הוראות בהמשך).
+
+### דשבורד
+- 🟢 **Quick-add row**: 4 כפתורים צבעוניים פותחים מודאל NCR/NM/Task/EQI מיידית.
+- 🔥 **Top critical/high NCRs widget**: עד 5 NCR פתוחים בעדיפות קריטי/גבוה. לחיצה → showView.
+- 📋 **Tasks status breakdown bar**: סרגל סטטוס ויזואלי (פתוח/בהתקדמות/הושלם/בוטל) + ⏳ בפיגור.
+- ⏱️ **NCR resolution time card**: ממוצע ימים לסגירה, ממוצע גיל פתוחים, % שנסגרו ב-30 יום.
+
+### NCR
+- 🏷 **Active chips extended**: chips נפרדים ל-Issue Type ול-quick filter (🔥/📅/⏱️/⏳).
+- 📊 **Summary pills**: נוספו "גבוה פתוח" + "⏳ פתוח 30+ ימים".
+
+### Issue Types
+- ➕ **Aggregate counts**: כל קטגוריה מציגה ספירת NCR+תקריות כולל תת-סוגים.
+- 🔗 **Clickable name**: קליק על שם → NCR מסונן באוטומט.
+
+### Topbar / שורטקאטים
+- ⌨️ **Keyboard shortcuts + help modal**: `?` פותח עזרה, `G+letter` ניווט (D/N/T/M/I/E/P/H/L/R), `Ctrl+K` חיפוש.
+- ❓ **Help button**: ❓ נוסף ב-topbar ליד תווית גרסה.
+
+### התראות
+- ⏰ **Notif log relative time**: "לפני 12ד׳" במקום DD/MM/YYYY (hover מציג datetime מלא).
+
+### דשבורד — תוספות נוספות
+- 👤 **My-open NCRs widget**: עד 5 NCRs פתוחים שמשויכים למשתמש המחובר.
+- 🌿 **Top env aspects (RPN)**: 5 ההיבטים הסביבתיים בעלי RPN בפועל ≥ 10.
+- ☀️ **Morning rounds 30-day compliance**: % ביצוע + סטריפ 30 ימים (ירוק/אדום/אפור).
+
+### NCR
+- 📅 **Date-range quick filters**: כפתורי "30 יום" ו-"90 יום" נוספו לסרגל המהיר.
+
+### NM (כמעט-נפגע)
+- ⚡ **Severity filter**: dropdown סינון לפי חומרה (קל/בינוני/חמור/קריטי) + chip להסרה.
+
+### NCR — תוספות נוספות
+- 🎯 **Issue-type בעמודה**: עמודת המיקום מציגה גם את סוג אי-ההתאמות (אם קיים).
+
+### הדפסה
+- 🖨 **פילטרים בכותרת**: print-header כולל שורת "פילטרים: ..." עם כל ה-chips הפעילים.
+
+### showView
+- 📋 **Copy-to-clipboard**: כפתור חדש שמעתיק סיכום הרשומה כטקסט לשיתוף ב-WhatsApp/אימייל.
+- 🔗 **Deep-link**: כפתור חדש שמעתיק קישור שמטעין את הרשומה ישירות (`#view-tbl-id`).
+
+### דשבורד — תוספות שלישיות
+- 📅 **Upcoming this week**: עד 8 פריטים בעלי deadline ב-7 ימים הקרובים (משימות + תפוגות + בדיקות חוזרות).
+- 📊 **NCR opens vs closes**: תרשים עמודות 4 שבועות.
+
+### Tasks
+- 🔍 **Inline search**: חיפוש מהיר בתוך הרשימה.
+- 📋 **Smart sort**: חורגים → עדיפות → יעד.
+
+### NCR
+- 🔴 **Priority dot**: ליד המספר ברשימה (קריטי/גבוה).
+
+### env_aspects
+- 📊 **Summary pills**: סה״כ + פיזור RPN + ⏰ ביקורת עברה.
+
+### Hazmat
+- 📋 **Smart sort**: סיכון גבוה ראשון, אחר-כך MSDS.
+
+### Notifications
+- 🔢 **Show-all toggle**: לראות את כל הרשומות בלוג, לא רק 20.
+
+### שורטקאטים
+- ⌨️ **/** פותח חיפוש גלובלי (תוספת ל-Ctrl+K).
+
+### Navigation
+- 🔢 **Bottom-nav tasks badge**: ספירת משימות פתוחות בלשונית "משימות" בנאוויגציה התחתונה.
+- 🔍 **Modules-sheet search**: שדה חיפוש בתוך תפריט המודולים — מסנן בזמן אמת.
+
+### דשבורד — תוספות אחרונות
+- ⌚ **Freshness time**: כותרת התאריך מציגה גם "עודכן ב-HH:MM" כדי להראות רענון נתונים.
+- 👥 **Top assignees**: עד 5 אחראים עם הכי הרבה משימות פתוחות, קליק → רשימת המשימות המסוננת.
+
+### Tasks
+- 📋 **Duplicate task**: פעולה חדשה בתפריט ⋯ — שיכפול מהיר של משימה.
 
 ---
 
