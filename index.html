@@ -424,6 +424,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-today-tasks-card" style="display:none"><div class="card-title">&#9203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1492;&#1494;&#1492;</div><div id="dash-today-tasks"></div></div>
   <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
+  <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
   <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div style="margin:16px 0 6px;font-size:12px;color:var(--t3);font-weight:700;text-align:right;border-bottom:1px solid #ddd;padding-bottom:4px">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
@@ -3088,6 +3089,46 @@ function rDash(){
         '<span style="background:#fff;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#2563eb">\u05e1\u05d1\u05d1\u05d9\u05dd: <strong>'+rndM+'</strong></span>';
     }
   }catch(e){}
+
+  // Dashboard: NCR resolution time (avg days closed + avg open age)
+  try{
+    var dntc=g('dash-ncr-time-card');
+    var dnt=g('dash-ncr-time');
+    if(dnt){
+      var _CLOS2='\u05e1\u05d2\u05d5\u05e8';
+      var ncrAll=DB.ncr||[];
+      var closed=ncrAll.filter(function(n){return n.s===_CLOS2&&n.sd&&n.cd;});
+      var openR=ncrAll.filter(function(n){return n.s!==_CLOS2&&n.sd;});
+      var avgClose=null;
+      if(closed.length){
+        var sum=0,cnt=0;
+        closed.forEach(function(n){
+          try{var a=new Date(n.sd),b=new Date(n.cd);var dd=(b-a)/86400000;if(!isNaN(dd)&&dd>=0){sum+=dd;cnt++;}}catch(e){}
+        });
+        if(cnt)avgClose=sum/cnt;
+      }
+      var avgOpen=null;
+      if(openR.length){
+        var sum2=0,cnt2=0,now=new Date();
+        openR.forEach(function(n){
+          try{var a=new Date(n.sd);var dd=(now-a)/86400000;if(!isNaN(dd)&&dd>=0){sum2+=dd;cnt2++;}}catch(e){}
+        });
+        if(cnt2)avgOpen=sum2/cnt2;
+      }
+      var p30=ncrAll.filter(function(n){return n.s===_CLOS2&&n.sd&&n.cd;}).filter(function(n){
+        try{var d=(new Date(n.cd)-new Date(n.sd))/86400000;return d<=30;}catch(e){return false;}
+      }).length;
+      var pctIn30=closed.length?Math.round(100*p30/closed.length):null;
+      var pills=[];
+      if(avgClose!==null)pills.push({lbl:'\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9\u05dd \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4',v:avgClose.toFixed(1),color:'#16a34a',sub:closed.length+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd'});
+      if(avgOpen!==null)pills.push({lbl:'\u05de\u05de\u05d5\u05e6\u05e2 \u05d2\u05d9\u05dc \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',v:avgOpen.toFixed(0)+'\u05d9',color:avgOpen>30?'#cc1f1f':'#1d4ed8',sub:openR.length+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'});
+      if(pctIn30!==null)pills.push({lbl:'\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1-30 \u05d9\u05d5\u05dd',v:pctIn30+'%',color:pctIn30>=70?'#16a34a':(pctIn30>=40?'#eab308':'#cc1f1f'),sub:p30+'/'+closed.length});
+      if(pills.length){
+        if(dntc)dntc.style.display='';
+        dnt.innerHTML=pills.map(function(p){return '<div style="flex:1;min-width:120px;padding:8px 12px;background:#fff;border:1px solid '+p.color+';border-radius:8px;text-align:center"><div style="font-size:22px;font-weight:700;color:'+p.color+'">'+esc(String(p.v))+'</div><div style="font-size:11px;color:#444;font-weight:600">'+esc(p.lbl)+'</div><div style="font-size:9px;color:var(--t3);margin-top:2px">'+esc(p.sub)+'</div></div>';}).join('');
+      }else{if(dntc)dntc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-ncr-time failed',e);}
 
   // Dashboard: total counts widget
   try{
