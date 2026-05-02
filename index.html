@@ -2875,14 +2875,15 @@ function _renderToday(){
     var a1 = t.isVirtual ? (t.source_table||'tasks') : t.id;
     var a2 = t.isVirtual ? (t.source_id||'') : '';
     var baseItem = {icon:_sourceIcon(t.source_table||'tasks'),title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',fn:clickFn,a1:a1,a2:a2};
+    var _AL=(t.source_table==='equip_inspections')?'\u05e1\u05e4\u05e7':'\u05d0\u05d7\u05e8\u05d0\u05d9';
     if(t.due){
       var daysUntil=du(t.due);
       if(daysUntil<0){
-        items.push(Object.assign(baseItem,{priority:1,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee+' · '):'')+'\u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 '+Math.abs(daysUntil)+' \u05d9\u05de\u05d9\u05dd',badge:'\u05e4\u05d9\u05d2\u05d5\u05e8',badgeCls:'red'}));
+        items.push(Object.assign(baseItem,{priority:1,sub:(t.assignee?(_AL+': '+t.assignee+' · '):'')+'\u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 '+Math.abs(daysUntil)+' \u05d9\u05de\u05d9\u05dd',badge:'\u05e4\u05d9\u05d2\u05d5\u05e8',badgeCls:'red'}));
       }else if(daysUntil===0){
-        items.push(Object.assign(baseItem,{priority:2,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee):'\u05d9\u05e2\u05d3: \u05d4\u05d9\u05d5\u05dd'),badge:'\u05d4\u05d9\u05d5\u05dd',badgeCls:'amber'}));
+        items.push(Object.assign(baseItem,{priority:2,sub:(t.assignee?(_AL+': '+t.assignee):'\u05d9\u05e2\u05d3: \u05d4\u05d9\u05d5\u05dd'),badge:'\u05d4\u05d9\u05d5\u05dd',badgeCls:'amber'}));
       }else if(daysUntil<=7){
-        items.push(Object.assign(baseItem,{priority:3,sub:(t.assignee?('\u05d0\u05d7\u05e8\u05d0\u05d9: '+t.assignee+' · '):'')+'\u05d9\u05e2\u05d3 \u05d1\u05e2\u05d5\u05d3 '+daysUntil+' \u05d9\u05de\u05d9\u05dd',badge:daysUntil+'\u05d9',badgeCls:'blue'}));
+        items.push(Object.assign(baseItem,{priority:3,sub:(t.assignee?(_AL+': '+t.assignee+' · '):'')+'\u05d9\u05e2\u05d3 \u05d1\u05e2\u05d5\u05d3 '+daysUntil+' \u05d9\u05de\u05d9\u05dd',badge:daysUntil+'\u05d9',badgeCls:'blue'}));
       }
     }
   });
