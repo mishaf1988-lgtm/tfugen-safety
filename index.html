@@ -338,15 +338,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <button class="bell" id="force-sync-btn" title="&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1500;&#1488;" onclick="forceSync()">&#9729;</button>
     <button class="bell" id="emp-mode-btn" title="&#1502;&#1510;&#1489; &#1506;&#1493;&#1489;&#1491;" onclick="empToggle(true)">&#128119;</button>
-    <button class="bell" id="hc-btn" title="&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492;&#1492; (&#1488;&#1493;&#1512; &#1513;&#1502;&#1513;)" onclick="hcToggle()">&#9681;</button>
-    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;" onclick="openGlobalSearch()">&#128269;</button>
-    <button class="bell" id="print-btn" title="&#1492;&#1491;&#1508;&#1505;&#1514; &#1492;&#1491;&#1507; &#1492;&#1504;&#1493;&#1499;&#1495;&#1497; (PDF)" onclick="_printPage()">&#128424;</button>
-    <button class="bell" id="csv-btn" title="&#1497;&#1497;&#1510;&#1493;&#1488; &#1492;&#1491;&#1507; &#1500;&#1488;&#1511;&#1505;&#1500; (CSV)" onclick="_exportCSV()">&#128202;</button>
+    <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
-    <button class="bell" id="bak-btn" title="&#1490;&#1497;&#1489;&#1493;&#1497; JSON" onclick="_exportBackup()">&#128190;</button>
     <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
-    <button class="bell" id="help-btn" title="&#1499;&#1500;&#1497;&#1502; &#1506;&#1494;&#1512;&#1492; (?)" onclick="if(typeof openModal==='function')openModal('m-help')">&#10067;</button>
-    <span style="font-size:9px;color:var(--t3);align-self:center;margin:0 4px;direction:ltr;cursor:pointer" onclick="_showAbout()" title="&#1488;&#1493;&#1491;&#1493;&#1514;">v2026.05.02</span>
+    <button class="bell" id="more-menu-btn" title="&#1506;&#1493;&#1491; &#1508;&#1506;&#1493;&#1500;&#1493;&#1514;" onclick="_topMoreMenu(this)">&#8943;</button>
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
@@ -391,8 +386,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="today-items"></div>
   </div>
 
-  <div style="margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
-    <div id="dash-quick-add" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  <div style="margin:0 0 10px;display:flex;justify-content:flex-end">
     <button onclick="_emergencyReport()" style="background:#cc1f1f;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">&#127111; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1497;&#1512;&#1493;&#1501; &#1502;&#1492;&#1497;&#1512;</button>
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
@@ -2922,7 +2916,6 @@ function _renderToday(){
 }
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
-  if(typeof _rDashQuickAdd==='function')_rDashQuickAdd();
   // My open tasks count badge
   try{
     var u=(typeof _svUser==='function')?_svUser():'';
@@ -4272,6 +4265,38 @@ function _tskMenu(taskId,anchor){
   document.body.appendChild(menu);
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 }
+window._topMoreMenu=function(anchor){
+  var existing=document.getElementById('top-more-menu');if(existing){existing.remove();return;}
+  var menu=document.createElement('div');
+  menu.id='top-more-menu';
+  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:200px;font-family:inherit;direction:rtl';
+  var rect=anchor.getBoundingClientRect();
+  menu.style.top=(rect.bottom+4)+'px';
+  menu.style.right=Math.max(8,window.innerWidth-rect.right)+'px';
+  function item(emoji,label,fn){
+    var b=document.createElement('button');
+    b.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;text-align:right;cursor:pointer;font-size:13px;font-family:inherit;color:#222';
+    b.innerHTML='<span style="font-size:15px;width:20px;text-align:center">'+emoji+'</span><span>'+label+'</span>';
+    b.onmouseover=function(){b.style.background='#f5f7fa';};
+    b.onmouseout=function(){b.style.background='';};
+    b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
+    menu.appendChild(b);
+  }
+  function sep(){var d=document.createElement('div');d.style.cssText='height:1px;background:#eee;margin:4px 8px';menu.appendChild(d);}
+  function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
+  function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
+  function keyEsc(e){if(e.key==='Escape')closeMenu();}
+  item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
+  item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
+  item('\ud83d\udcbe','\u05d2\u05d9\u05d1\u05d5\u05d9 JSON',function(){if(typeof _exportBackup==='function')_exportBackup();});
+  sep();
+  item('\u25d0','\u05e0\u05d9\u05d2\u05d5\u05d3\u05d9\u05d5\u05ea \u05d2\u05d1\u05d5\u05d4\u05d4',function(){if(typeof hcToggle==='function')hcToggle();});
+  item('\u2753','\u05e2\u05d6\u05e8\u05d4 / \u05e7\u05d9\u05e6\u05d5\u05e8\u05d9 \u05de\u05e7\u05dc\u05d3\u05ea',function(){if(typeof openModal==='function')openModal('m-help');});
+  sep();
+  item('\u2139','\u05d0\u05d5\u05d3\u05d5\u05ea (v2026.05.02)',function(){if(typeof _showAbout==='function')_showAbout();});
+  document.body.appendChild(menu);
+  setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
+};
 function _tskDuplicate(id){
   var orig=(DB.tasks||[]).find(function(r){return r.id===id;});
   if(!orig){toast('\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
@@ -6228,20 +6253,6 @@ window._emergencyReport=function(){
     var ty=g('i-ty');if(ty&&!ty.value)ty.value='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9';
     var dt=g('i-dt');if(dt&&!dt.value)dt.value=new Date().toISOString().slice(0,16);
   },300);
-};
-window._rDashQuickAdd=function(){
-  try{
-    var el=g('dash-quick-add');if(!el)return;
-    var btns=[
-      {ic:'\u26a0\ufe0f',lbl:'NCR',m:'m-ncr',c:'#cc1f1f'},
-      {ic:'\ud83d\udea8',lbl:'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',m:'m-nm',c:'#e07a00'},
-      {ic:'\u2705',lbl:'\u05de\u05e9\u05d9\u05de\u05d4',m:'m-tsk',c:'#2563eb'},
-      {ic:'\ud83d\udd27',lbl:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',m:'m-eqi',c:'#16a34a'}
-    ];
-    el.innerHTML=btns.map(function(b){
-      return '<button onclick="openModal(\''+b.m+'\')" title="\u05d4\u05d5\u05e1\u05e3 '+esc(b.lbl)+'" style="background:'+b.c+';color:#fff;border:none;border-radius:8px;padding:7px 11px;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;display:inline-flex;align-items:center;gap:4px">'+b.ic+' '+esc(b.lbl)+'</button>';
-    }).join('');
-  }catch(e){console.warn('quick-add render failed',e);}
 };
 window._showAbout=function(){
   alert('TFUGEN Safety Management System\n\u05d2\u05e8\u05e1\u05d4: 2026.05.02\n\u05de\u05ea\u05d5\u05e2\u05d3 ISO 14001 + ISO 45001\n\n\u05de\u05e4\u05ea\u05d7: Claude\n\u05d1\u05e2\u05dc\u05d9\u05dd: \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05da\n\n\u05e2\u05d3\u05db\u05d5\u05df: '+new Date().toISOString().split('T')[0]);
