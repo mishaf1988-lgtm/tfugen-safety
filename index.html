@@ -1984,7 +1984,22 @@ function _obSend(op){
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
     return fetch(url,opts).then(function(r){
-      if(!r.ok){return r.text().then(function(body){var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});}
+      if(!r.ok){return r.text().then(function(body){
+        // Self-heal PGRST204 (schema cache): drop unknown column from payload and retry.
+        if(r.status===400 && op.row){
+          try{
+            var j=JSON.parse(body);
+            if(j && j.code==='PGRST204' && j.message){
+              var m=j.message.match(/Could not find the '([^']+)' column/);
+              if(m && Object.prototype.hasOwnProperty.call(op.row,m[1])){
+                delete op.row[m[1]];
+                return _obSend(op);
+              }
+            }
+          }catch(e){}
+        }
+        var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
+      });}
     });
   });
 }
