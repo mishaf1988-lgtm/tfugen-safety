@@ -4737,6 +4737,8 @@ tb.innerHTML=rows.map(function(n){
   var loc=(n.location_id&&typeof _locName==='function'?_locName(n.location_id):'')||n.loc||n.location||'';
   var prj=(n.project_id&&typeof _prjName==='function')?_prjName(n.project_id):'';
   if(prj)loc=loc?(loc+' · 🏗️'+prj.substring(0,12)):('🏗️'+prj.substring(0,15));
+  var ityp=(n.issue_type_id&&typeof _itypeName==='function')?_itypeName(n.issue_type_id):'';
+  if(ityp)loc=loc?(loc+' · 🎯'+ityp.substring(0,14)):('🎯'+ityp.substring(0,18));
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
@@ -4744,7 +4746,7 @@ tb.innerHTML=rows.map(function(n){
     '<td><span class="b bX" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e2\u05ea\u05e7\u05d4" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'\u05d4\u05d5\u05e2\u05ea\u05e7\')">'+(n.num||'&#8212;')+'</span>'+sensBadge+staleBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
-    '<td>'+ loc.substring(0,20) +'</td>'+
+    '<td title="'+esc(loc)+'">'+ esc(loc.substring(0,30)) +'</td>'+
     '<td>'+(n.d||'').substring(0,50)+'</td>'+
     '<td>'+sb(n.s)+'</td>'+
     '<td>'+(n.o||'').substring(0,15)+'</td>'+
