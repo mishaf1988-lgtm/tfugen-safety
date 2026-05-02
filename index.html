@@ -5587,11 +5587,35 @@ function _notifLogClear(){
 }
 function testNotif(){
   if(typeof _notifyEvent!=='function'){toast('\u05dc\u05d0 \u05d6\u05de\u05d9\u05df');return;}
-  // Force a test event using current settings as if NCR critical opened
   var prefs=_notifPrefs();
   if(!prefs.ncr_critical){toast('\u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d5 \u05e2\u05e8\u05d5\u05e6\u05d9\u05dd \u05dc-NCR \u05e7\u05e8\u05d9\u05d8\u05d9. \u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05d5\u05e9\u05de\u05d5\u05e8.');return;}
-  _notifyEvent('ncr_critical',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4 — NCR-TEST \u05e7\u05e8\u05d9\u05d8\u05d9',id:'test'});
-  toast('🧪 \u05d4\u05ea\u05e8\u05d0\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 (\u05d1\u05d3\u05d5\u05e7 console + log \u05dc\u05de\u05d8\u05d4)');
+  if(prefs.ncr_critical.inapp){
+    toast('\ud83d\udd14 NCR \u05e7\u05e8\u05d9\u05d8\u05d9: \u05d1\u05d3\u05d9\u05e7\u05d4 \u2014 NCR-TEST');
+    if(typeof _notifLog==='function')_notifLog('ncr_critical','inapp',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4',test:true});
+  }
+  if(prefs.ncr_critical.email && typeof _notifLog==='function'){
+    _notifLog('ncr_critical','email_pending',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4',test:true});
+  }
+  if(prefs.ncr_critical.whatsapp){
+    var to=(typeof _waLastTo==='function')?_waLastTo():null;
+    if(!to){toast('\ud83e\uddea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05de\u05e1\u05e4\u05e8 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4');return;}
+    if(!confirm('\u05e9\u05dc\u05d9\u05d7\u05ea WhatsApp \u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc-'+to+'?\n(template: hello_world)'))return;
+    toast('\ud83e\uddea \u05e9\u05d5\u05dc\u05d7...');
+    fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:to,template:'hello_world',language:'en_US'})})
+      .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
+      .then(function(res){
+        if(res.ok){
+          toast('\ud83e\uddea WhatsApp \u05e0\u05e9\u05dc\u05d7 \u05dc-'+to+' \u2713');
+          if(typeof _notifLog==='function')_notifLog('ncr_critical','whatsapp',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d9\u05d3\u05e0\u05d9\u05ea',test:true,to:to});
+        }else{
+          var msg=(res.data&&res.data.error&&(res.data.error.message||res.data.error))||('HTTP '+res.status);
+          toast('\ud83e\uddea \u05e9\u05d2\u05d9\u05d0\u05d4: '+(typeof msg==='string'?msg:JSON.stringify(msg)).substring(0,100));
+          if(typeof _notifLog==='function')_notifLog('ncr_critical','whatsapp_error',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4',test:true,error:String(msg)});
+        }
+      }).catch(function(e){toast('\ud83e\uddea \u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(e&&e.message||e));});
+  }else{
+    toast('\ud83e\uddea \u05d4\u05ea\u05e8\u05d0\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 (in-app \u05d1\u05dc\u05d1\u05d3)');
+  }
 }
 function saveNotifSettings(){
   var u=_svUser();
