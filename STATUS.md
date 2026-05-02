@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `ecebfa6` |
+| Commit | `b33857f` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -207,6 +207,11 @@
 - [x] **Issue Types clickable name (PR #267)** — קליק על שם → NCR מסונן.
 - [x] **Help button in topbar (PR #268)** — ❓ פותח חלון עזרה.
 - [x] **Notif log relative time (PR #269)** — "לפני 12ד׳" במקום DD/MM/YYYY.
+- [x] **My-open-NCRs widget (PR #270)** — 👤 בדשבורד מציג עד 5 NCRs פתוחים שמשויכים למשתמש.
+- [x] **NCR date-range quick filters (PR #271)** — 📅 30 יום / 90 יום נוספו לכפתורי quick-filter.
+- [x] **Top env aspects RPN widget (PR #272)** — 🌿 בדשבורד 5 ההיבטים הסביבתיים עם RPN בפועל גבוה.
+- [x] **Morning rounds 30-day compliance (PR #273)** — ☀️ בדשבורד % ביצוע + סטריפ ויזואלי 30 יום.
+- [x] **NM severity filter dropdown (PR #274)** — סינון לפי חומרה בעמוד כמעט-נפגע.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).

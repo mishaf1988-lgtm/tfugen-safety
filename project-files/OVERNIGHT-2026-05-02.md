@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `ecebfa6`
-**Total PRs merged**: ~125 לילה + 11 בוקר
+**Latest commit**: `b33857f`
+**Total PRs merged**: ~125 לילה + 16 בוקר
 
 ---
 
@@ -30,6 +30,17 @@
 
 ### התראות
 - ⏰ **Notif log relative time**: "לפני 12ד׳" במקום DD/MM/YYYY (hover מציג datetime מלא).
+
+### דשבורד — תוספות נוספות
+- 👤 **My-open NCRs widget**: עד 5 NCRs פתוחים שמשויכים למשתמש המחובר.
+- 🌿 **Top env aspects (RPN)**: 5 ההיבטים הסביבתיים בעלי RPN בפועל ≥ 10.
+- ☀️ **Morning rounds 30-day compliance**: % ביצוע + סטריפ 30 ימים (ירוק/אדום/אפור).
+
+### NCR
+- 📅 **Date-range quick filters**: כפתורי "30 יום" ו-"90 יום" נוספו לסרגל המהיר.
+
+### NM (כמעט-נפגע)
+- ⚡ **Severity filter**: dropdown סינון לפי חומרה (קל/בינוני/חמור/קריטי) + chip להסרה.
 
 ---
 
