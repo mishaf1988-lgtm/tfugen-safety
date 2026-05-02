@@ -1192,7 +1192,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <!-- BOTTOM NAV -->
 <nav class="bnav" id="bnav">
   <button class="bn on" id="bn-dash" onclick="goPage('dash')"><span class="ic">&#127968;</span>&#1512;&#1488;&#1513;&#1497;</button>
-  <button class="bn" id="bn-tasks" onclick="goPage('tasks')"><span class="ic">&#9989;</span>&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
+  <button class="bn" id="bn-tasks" onclick="goPage('tasks')" style="position:relative"><span class="ic">&#9989;</span>&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;<span id="bn-tasks-badge" style="display:none;position:absolute;top:4px;right:6px;background:#cc1f1f;color:#fff;font-size:9px;font-weight:700;border-radius:9px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
   <button class="bn" id="bn-reports" onclick="openModal('m-reports-sheet')"><span class="ic">&#9888;</span>&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</button>
   <button class="bn" id="bn-modules" onclick="openModal('m-modules-sheet')"><span class="ic">&#128203;</span>&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</button>
 </nav>
@@ -2911,6 +2911,13 @@ function rDash(){
     if(badge){
       if(openCount>0){badge.textContent=String(openCount);badge.style.display='';}
       else badge.style.display='none';
+    }
+    // Total open tasks badge in bottom nav
+    var totalOpen=(DB.tasks||[]).filter(function(t){return t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';}).length;
+    var bnBadge=g('bn-tasks-badge');
+    if(bnBadge){
+      if(totalOpen>0){bnBadge.textContent=totalOpen>99?'99+':String(totalOpen);bnBadge.style.display='';}
+      else bnBadge.style.display='none';
     }
   }catch(e){}
   // Safety health score (rough composite)
