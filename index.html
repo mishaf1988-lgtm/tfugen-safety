@@ -6104,11 +6104,18 @@ window._printPage=function(){
   var title=titleEl?String(titleEl.textContent||'').replace(/\s+/g,' ').trim():'TFUGEN';
   var d=new Date().toISOString().split('T')[0];
   var u=(typeof _currentUser!=='undefined'&&_currentUser)?(_currentUser.full_name||_currentUser.username||''):'';
+  // Collect active filters from any chip area in the current page
+  var chips=[];
+  on.querySelectorAll('[id$="-active-chips"] span').forEach(function(s){
+    var t=String(s.textContent||'').replace(/\u00d7/g,'').trim();
+    if(t)chips.push(t);
+  });
+  var filterLine=chips.length?('<div style="font-size:11px;color:#444;margin-top:4px"><strong>\u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd:</strong> '+esc(chips.join(' \u00b7 '))+'</div>'):'';
   var prev=document.getElementById('print-header');if(prev&&prev.parentNode)prev.parentNode.removeChild(prev);
   var hdr=document.createElement('div');
   hdr.id='print-header';
   hdr.style.cssText='display:none;border-bottom:2px solid #000;padding:0 0 10px;margin-bottom:14px';
-  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">\u05ea\u05e4\u05d5\u05d2\u05df · \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div><div style="font-size:11px;color:#555;text-align:left">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e4\u05e7\u05d4: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
+  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">\u05ea\u05e4\u05d5\u05d2\u05df · \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'+filterLine+'</div><div style="font-size:11px;color:#555;text-align:left">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e4\u05e7\u05d4: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
   on.insertBefore(hdr,on.firstChild);
   var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
   window.addEventListener('afterprint',cleanup);
