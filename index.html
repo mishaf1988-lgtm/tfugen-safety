@@ -906,6 +906,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button id="ncr-tab-env" class="btn btn-s" onclick="ncrTab('env')" style="font-size:14px;padding:10px 16px;min-height:44px">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</button>
     <select id="ncr-loc-filter" onchange="ncrLocFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-prj-filter" onchange="ncrPrjFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
+    <select id="ncr-itype-filter" onchange="ncrItypeFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-sv-select" onchange="svNcrApply(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svNcrSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492; &#1504;&#1493;&#1499;&#1495;&#1497;&#1514;" style="padding:10px 12px;min-height:44px">&#128190;</button>
     <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:#7f1d1d">&#128465;</button>
@@ -4390,6 +4391,19 @@ if(prjFSel){
   (DB.projects||[]).slice().filter(function(p){return p.status!=='בוטל';}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');}).forEach(function(p){prjOpts+='<option value="'+esc(p.id)+'"'+(p.id===prjF?' selected':'')+'>'+esc(p.name)+'</option>';});
   prjFSel.innerHTML=prjOpts;
 }
+var itypeF=window._ncrItypeFilter||'';
+var itypeFSel=g('ncr-itype-filter');
+if(itypeFSel){
+  var itypeOpts='<option value="">— \u05db\u05dc \u05d4\u05e1\u05d5\u05d2\u05d9\u05dd —</option>';
+  if(typeof _itypeFlatList==='function'){
+    _itypeFlatList().forEach(function(it){
+      var pad=Array(it.depth+1).join('    ');
+      var arrow=it.depth?'↳ ':'';
+      itypeOpts+='<option value="'+esc(it.id)+'"'+(it.id===itypeF?' selected':'')+'>'+pad+arrow+esc(it.name)+'</option>';
+    });
+  }
+  itypeFSel.innerHTML=itypeOpts;
+}
 if(typeof _svRenderSelect==='function')_svRenderSelect('ncr-sv-select','ncr','');
 // Render active filter chips
 var chipsEl=g('ncr-active-chips');
@@ -4408,6 +4422,7 @@ var rows=DB.ncr.filter(function(n){
   if(filter==='env'&&!(n.category==='env'||(n.a&&n.a.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0)))return false;
   if(locF&&n.location_id!==locF)return false;
   if(prjF&&n.project_id!==prjF)return false;
+  if(itypeF&&n.issue_type_id!==itypeF)return false;
   return true;
 });
 // Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then by date desc
@@ -4475,7 +4490,8 @@ rNcr();
 }
 function ncrLocFilter(v){window._ncrLocFilter=v||'';rNcr();}
 function ncrPrjFilter(v){window._ncrPrjFilter=v||'';rNcr();}
-function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function ncrItypeFilter(v){window._ncrItypeFilter=v||'';rNcr();}
+function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';window._ncrItypeFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function _locFilterOptionsHtml(currentId,placeholder){
   var flat=(typeof _locFlatList==='function')?_locFlatList():[];
   var html='<option value="">'+(placeholder||'— \u05db\u05dc \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd —')+'</option>';
