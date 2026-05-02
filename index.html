@@ -3884,7 +3884,7 @@ window._eqiPdfHandle=function(ev){
   var f=ev.target.files&&ev.target.files[0];
   if(!f)return;
   if(f.type!=='application/pdf' && !/\.pdf$/i.test(f.name)){toast('\u05e7\u05d5\u05d1\u05e5 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea PDF');return;}
-  if(f.size>4500000){toast('PDF \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05de\u05e7\u05e1\u05d9\u05de\u05d5\u05dd ~4.5MB)');return;}
+  if(f.size>18000000){toast('PDF \u05d2\u05d3\u05d5\u05dc \u05de\u05d3\u05d9 (\u05de\u05e7\u05e1\u05d9\u05de\u05d5\u05dd ~18MB)');return;}
   window._eqiPdfFile=f;  // keep File for later upload to Supabase Storage
   g('eqi-pdf-status').textContent='📄 \u05e7\u05d5\u05e8\u05d0 \u05d0\u05ea \u05d4-PDF... (~10-30 \u05e9\u05e0\u05d9\u05d5\u05ea)';
   g('eqi-pdf-result').style.display='none';
@@ -3934,13 +3934,13 @@ function _eqiPdfAnalyze(base64){
   var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown):\n\n{\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 / \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d0\u05d5 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df \u05db\u05dc\u05dc\u05d9 \u05dc\u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05dc\u05d3\u05d5\u05d2\u05de\u05d4: \u05e1\u05d2\u05d9\u05e8, \u05d7\u05d2\u05d5\u05e8\u05ea \u05d4\u05e8\u05de\u05d4, \u05de\u05e0\u05d5\u05e3, \u05de\u05ea\u05e7\u05df \u05d4\u05e8\u05de\u05d4)",\n      "equipment_code": "\u05de\u05e1\u05e4\u05e8 \u05d6\u05d9\u05d4\u05d5\u05d9 / \u05e7\u05d5\u05d3 \u05de\u05e1\u05e7\u05e8\u05d9\u05e8 / \u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05d7\u05e9\u05d5\u05d1\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd, \u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8, \u05ea\u05d5\u05e7\u05e3 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9 \u05dc\u05e4\u05e8\u05d9\u05d8)"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. \u05d0\u05dd \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e8\u05e7 \u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05d3 — items \u05d9\u05db\u05d9\u05dc \u05d0\u05d9\u05d1\u05e8 \u05d0\u05d7\u05d3. \u05d4\u05d7\u05d6\u05e8 \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05d1\u05d8\u05d1\u05dc\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea.';
   var body={
     model:_AI_MODEL,
-    max_tokens:1500,
+    max_tokens:16000,
     system:systemPrompt,
     messages:[{
       role:'user',
       content:[
         {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-        {type:'text',text:'\u05e0\u05ea\u05d7 \u05d0\u05ea \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d5\u05d7\u05dc\u05e5 \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 \u05d1-JSON \u05e9\u05d1\u05d9\u05e7\u05e9\u05ea\u05d9.'}
+        {type:'text',text:'\u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05e9\u05dc \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d5\u05d7\u05dc\u05e5 \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 (\u05d2\u05dd \u05d0\u05dd \u05d9\u05e9 20+). \u05d4\u05d7\u05d6\u05e8 JSON \u05de\u05dc\u05d0 \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8 \u05d0\u05ea items[]. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items.'}
       ]
     }]
   };
@@ -3967,9 +3967,10 @@ function _eqiPdfAnalyze(base64){
       // Compute match info per item.
       data.items.forEach(function(it){
         var mi=_eqiPdfFindMatch(it);
-        it._matchId=mi?mi.rec.id:null;
+        it._matchIds=mi?mi.recs.map(function(r){return r.id;}):[];
+        it._matchId=mi?mi.recs[0].id:null;  // primary match (for diff display)
         it._matchConf=mi?mi.confidence:null;
-        it._diffs=mi?_eqiPdfComputeDiff(mi.rec,_eqiPdfMergeMeta(it,data)):[];
+        it._diffs=mi?_eqiPdfComputeDiff(mi.recs[0],_eqiPdfMergeMeta(it,data)):[];
         it._selected=true;  // default: include
       });
       window._eqiPdfData=data;
@@ -4005,16 +4006,17 @@ function _eqiPdfMergeMeta(item,data){
 function _eqiPdfFindMatch(it){
   var code=String(it.equipment_code||'').trim();
   var name=String(it.equipment_name||'').trim();
+  var rows=DB.equip_inspections||[];
   if(code){
-    var byCode=(DB.equip_inspections||[]).find(function(r){return String(r.code||'').trim()===code;});
-    if(byCode)return {rec:byCode,confidence:'high'};
+    var byCode=rows.filter(function(r){return String(r.code||'').trim()===code;});
+    if(byCode.length)return {recs:byCode,confidence:'high'};
   }
   if(name){
     var nm=name.toLowerCase();
-    var byName=(DB.equip_inspections||[]).find(function(r){var rn=String(r.n||'').toLowerCase();return rn===nm;});
-    if(byName)return {rec:byName,confidence:'high'};
-    var fuzzy=(DB.equip_inspections||[]).find(function(r){var rn=String(r.n||'').toLowerCase();return rn.indexOf(nm)>=0||nm.indexOf(rn)>=0;});
-    if(fuzzy)return {rec:fuzzy,confidence:'low'};
+    var byName=rows.filter(function(r){var rn=String(r.n||'').toLowerCase();return rn===nm;});
+    if(byName.length)return {recs:byName,confidence:'high'};
+    var fuzzy=rows.filter(function(r){var rn=String(r.n||'').toLowerCase();return rn.indexOf(nm)>=0||nm.indexOf(rn)>=0;});
+    if(fuzzy.length)return {recs:fuzzy,confidence:'low'};
   }
   return null;
 }
@@ -4049,7 +4051,8 @@ function _eqiPdfItemRow(it,i){
   else if(conf==='low'){badge='⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05d7\u05dc\u05e7\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
   else if(it._diffs && it._diffs.length){badge='✓ \u05e2\u05d3\u05db\u05d5\u05df';bg='#dbeafe';border='#1d4ed8';}
   else{badge='✓ \u05d6\u05d4\u05d4';bg='#dcfce7';border='#16a34a';}
-  var matchLine=match?'<div style="font-size:11px;color:#555;margin-top:3px">\u05e7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea: <strong>'+esc(match.n||'?')+'</strong>'+(match.code?' ['+esc(match.code)+']':'')+'</div>':'';
+  var nMatches=(it._matchIds||[]).length||(matched?1:0);
+  var matchLine=match?'<div style="font-size:11px;color:#555;margin-top:3px">\u05e7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea: <strong>'+esc(match.n||'?')+'</strong>'+(match.code?' ['+esc(match.code)+']':'')+(nMatches>1?' <span style="background:#1d4ed8;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">\u00d7'+nMatches+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</span>':'')+'</div>':'';
   var diffLine='';
   if(match && it._diffs && it._diffs.length){
     diffLine='<ul style="margin:4px 0 0;padding-right:18px;font-size:11px;color:#444">'+it._diffs.map(function(d2){return '<li>'+esc(d2.field)+': <span style="text-decoration:line-through;color:#888">'+esc(String(d2.old||'—'))+'</span> ➝ <strong style="color:#16a34a">'+esc(String(d2.new))+'</strong></li>';}).join('')+'</ul>';
@@ -4113,9 +4116,16 @@ function _eqiPdfApplyAll(items,data,fileUrl,silent){
   var created=0,updated=0;
   items.forEach(function(it){
     var d=_eqiPdfMergeMeta(it,data);
-    var match=it._matchId?(DB.equip_inspections||[]).find(function(r){return r.id===it._matchId;}):null;
-    if(match){_eqiPdfUpdateOne(match,d,fileUrl);updated++;}
-    else{_eqiPdfCreateOne(d,fileUrl);created++;}
+    var ids=(it._matchIds&&it._matchIds.length)?it._matchIds:(it._matchId?[it._matchId]:[]);
+    if(ids.length){
+      // Update every record that matched (handles duplicates of the same equipment).
+      ids.forEach(function(rid){
+        var match=(DB.equip_inspections||[]).find(function(r){return r.id===rid;});
+        if(match){_eqiPdfUpdateOne(match,d,fileUrl);updated++;}
+      });
+    }else{
+      _eqiPdfCreateOne(d,fileUrl);created++;
+    }
   });
   var summary=[];
   if(updated)summary.push(updated+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
