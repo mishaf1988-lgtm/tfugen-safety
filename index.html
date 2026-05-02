@@ -1497,29 +1497,25 @@ id="m-ncr" style="display:none">
 <div class="overlay" id="ov-eqi" onclick="closeModal('m-eqi')"></div>
 <!-- EQI PDF AI ANALYSIS MODAL -->
 <div class="overlay" id="ov-eqi-pdf" onclick="closeModal('m-eqi-pdf')"></div>
-<div class="modal" id="m-eqi-pdf" style="display:none;max-width:560px">
+<div class="modal" id="m-eqi-pdf" style="display:none;max-width:720px">
   <button class="close-btn" onclick="closeModal('m-eqi-pdf')">&#10005;</button>
   <div class="modal-title">&#128196; &#1504;&#1497;&#1514;&#1493;&#1495; &#1514;&#1505;&#1511;&#1497;&#1512; &#1489;&#1491;&#1497;&#1511;&#1492; (PDF)</div>
   <div id="eqi-pdf-status" style="font-size:12px;color:var(--t3);margin-bottom:10px">&#1502;&#1493;&#1499;&#1503; &#1500;&#1492;&#1506;&#1500;&#1488;&#1492;...</div>
   <div id="eqi-pdf-result" style="display:none">
     <div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px">
-      &#10003; <strong>Claude AI &#1494;&#1497;&#1492;&#1492; &#1488;&#1514; &#1492;&#1502;&#1497;&#1491;&#1506; &#1492;&#1489;&#1488;</strong>. &#1489;&#1491;&#1493;&#1511; &#1493;&#1488;&#1513;&#1512;:
+      &#10003; <strong>Claude AI &#1494;&#1497;&#1492;&#1492; &#1488;&#1514; &#1492;&#1514;&#1505;&#1511;&#1497;&#1512;</strong>. &#1489;&#1491;&#1493;&#1511; &#1493;&#1488;&#1513;&#1512; &#1488;&#1497;&#1494;&#1493; &#1488;&#1489;&#1497;&#1494;&#1512;&#1497;&#1501; &#1500;&#1506;&#1491;&#1499;&#1503;:
     </div>
-    <div class="fgrid">
-      <div class="field"><label>&#1513;&#1501; &#1492;&#1510;&#1497;&#1493;&#1491;</label><input id="eqi-pdf-name" class="inp"></div>
-      <div class="field"><label>&#1511;&#1493;&#1491; / &#1502;&#1505;&#1508;&#1512; &#1494;&#1497;&#1492;&#1493;&#1497;</label><input id="eqi-pdf-code" class="inp"></div>
+    <div class="fgrid" style="background:#f8fafc;border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:10px">
       <div class="field"><label>&#1505;&#1508;&#1511; / &#1489;&#1493;&#1491;&#1511;</label><input id="eqi-pdf-vendor" class="inp"></div>
       <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="eqi-pdf-loc" class="inp"></div>
       <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input type="date" id="eqi-pdf-date" class="inp"></div>
-      <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491; (&#1492;&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;)</label><input type="date" id="eqi-pdf-expiry" class="inp"></div>
-      <div class="field fw"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="eqi-pdf-status-sel" class="inp"><option>&#1499;&#1513;&#1497;&#1512; &#1500;&#1506;&#1489;&#1493;&#1491;&#1492;</option><option>&#1500;&#1488; &#1499;&#1513;&#1497;&#1512;</option><option>&#1491;&#1512;&#1493;&#1513; &#1514;&#1497;&#1511;&#1493;&#1503;</option></select></div>
-      <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514; / &#1500;&#1497;&#1511;&#1493;&#1497;&#1497;&#1501;</label><textarea id="eqi-pdf-notes" rows="3"></textarea></div>
+      <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="eqi-pdf-expiry" class="inp"></div>
     </div>
-    <div id="eqi-pdf-match" style="margin:10px 0;padding:8px;background:#fef3c7;border:1px solid #b45309;border-radius:6px;font-size:12px;display:none"></div>
+    <div id="eqi-pdf-items-wrap" style="margin:10px 0;max-height:380px;overflow-y:auto"></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-eqi-pdf')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
-    <button class="btn btn-p" id="eqi-pdf-apply" onclick="_eqiPdfApply()" style="display:none">&#10003; &#1492;&#1495;&#1500; (&#1506;&#1491;&#1499;&#1503; / &#1497;&#1510;&#1497;&#1512;&#1492;)</button>
+    <button class="btn btn-p" id="eqi-pdf-apply" onclick="_eqiPdfApply()" style="display:none">&#10003; &#1492;&#1495;&#1500; (<span id="eqi-pdf-count">0</span>)</button>
   </div>
 </div>
 
@@ -3737,8 +3733,10 @@ function rEqi(){
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
-    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
+    var pdfIcon=r.file_url?'<a data-sign="'+escU(r.file_url)+'" target="_blank" onclick="event.stopPropagation()" title="\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e1\u05e8\u05d5\u05e7" style="margin-right:6px;text-decoration:none;font-size:14px">&#128206;</a>':'';
+    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+eb(r.e)+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
+  if(typeof _signifyDom==='function')_signifyDom(tb);
 }
 function eqiEdit(id){
   var r=(DB.equip_inspections||[]).find(function(x){return x.id===id;});if(!r)return;
@@ -3874,16 +3872,17 @@ window._eqiPdfHandle=function(ev){
   reader.readAsDataURL(f);
 };
 function _eqiPdfAnalyze(base64){
-  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d4\u05de\u05e6\u05d5\u05e8\u05e3 \u05d0\u05ea \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd \u05e2\u05dc \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7 \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown):\n\n{\n  "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05e8\u05d0\u05e9\u05d9",\n  "equipment_code": "\u05de\u05e1\u05e4\u05e8 \u05d6\u05d9\u05d4\u05d5\u05d9 / \u05e7\u05d5\u05d3 \u05de\u05e1\u05e7\u05e8\u05d9\u05e8 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d0\u05d5 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05e9\u05d1\u05d3\u05e7\u05d4",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n  "inspection_date": "YYYY-MM-DD",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3",\n  "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n  "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05d7\u05e9\u05d5\u05d1\u05d5\u05ea (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd, \u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8)"\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD.';
+  // Multi-item prompt: a single inspection report can list 5-10 equipment items.
+  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown):\n\n{\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 / \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d0\u05d5 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df \u05db\u05dc\u05dc\u05d9 \u05dc\u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05dc\u05d3\u05d5\u05d2\u05de\u05d4: \u05e1\u05d2\u05d9\u05e8, \u05d7\u05d2\u05d5\u05e8\u05ea \u05d4\u05e8\u05de\u05d4, \u05de\u05e0\u05d5\u05e3, \u05de\u05ea\u05e7\u05df \u05d4\u05e8\u05de\u05d4)",\n      "equipment_code": "\u05de\u05e1\u05e4\u05e8 \u05d6\u05d9\u05d4\u05d5\u05d9 / \u05e7\u05d5\u05d3 \u05de\u05e1\u05e7\u05e8\u05d9\u05e8 / \u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05d7\u05e9\u05d5\u05d1\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd, \u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8, \u05ea\u05d5\u05e7\u05e3 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9 \u05dc\u05e4\u05e8\u05d9\u05d8)"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. \u05d0\u05dd \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e8\u05e7 \u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05d3 — items \u05d9\u05db\u05d9\u05dc \u05d0\u05d9\u05d1\u05e8 \u05d0\u05d7\u05d3. \u05d4\u05d7\u05d6\u05e8 \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05d1\u05d8\u05d1\u05dc\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea.';
   var body={
     model:_AI_MODEL,
-    max_tokens:1200,
+    max_tokens:1500,
     system:systemPrompt,
     messages:[{
       role:'user',
       content:[
         {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-        {type:'text',text:'\u05e0\u05ea\u05d7 \u05d0\u05ea \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d5\u05d7\u05dc\u05e5 \u05d0\u05ea \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 JSON \u05e9\u05d1\u05d9\u05e7\u05e9\u05ea\u05d9.'}
+        {type:'text',text:'\u05e0\u05ea\u05d7 \u05d0\u05ea \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d5\u05d7\u05dc\u05e5 \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 \u05d1-JSON \u05e9\u05d1\u05d9\u05e7\u05e9\u05ea\u05d9.'}
       ]
     }]
   };
@@ -3896,33 +3895,56 @@ function _eqiPdfAnalyze(base64){
       if(!m){g('eqi-pdf-status').textContent='\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0: '+txt.substring(0,100);return;}
       var data;
       try{data=JSON.parse(m[0]);}catch(e){g('eqi-pdf-status').textContent='JSON \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df: '+e.message;return;}
+      // Backward-compat: if Claude returned single-item flat shape, wrap in items[].
+      if(!data.items || !data.items.length){
+        if(data.equipment_name||data.equipment_code){
+          data.items=[{equipment_name:data.equipment_name,equipment_code:data.equipment_code,status:data.status,notes:data.notes}];
+        }else{
+          data.items=[];
+        }
+      }
+      if(!data.items.length){g('eqi-pdf-status').textContent='\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8.';return;}
+      // Compute match info per item.
+      data.items.forEach(function(it){
+        var mi=_eqiPdfFindMatch(it);
+        it._matchId=mi?mi.rec.id:null;
+        it._matchConf=mi?mi.confidence:null;
+        it._diffs=mi?_eqiPdfComputeDiff(mi.rec,_eqiPdfMergeMeta(it,data)):[];
+        it._selected=true;  // default: include
+      });
       window._eqiPdfData=data;
-      var matchInfo=_eqiPdfFindMatch(data);
-      var match=matchInfo?matchInfo.rec:null;
-      var confidence=matchInfo?matchInfo.confidence:null;
-      window._eqiPdfMatchId=match?match.id:null;
-      window._eqiPdfMatchConfidence=confidence;
-      var diffs=match?_eqiPdfComputeDiff(match,data):null;
-      if(match && confidence==='high' && diffs && diffs.length===0){
-        g('eqi-pdf-status').textContent='✓ \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d6\u05d4\u05d9\u05dd. \u05e9\u05d5\u05de\u05e8 \u05d0\u05ea \u05d4-PDF...';
-        _eqiPdfDoApply(match,data,/*silent=*/true);
+      _eqiPdfFillForm(data);
+      var n=data.items.length;
+      var anyDiff=data.items.some(function(it){return !it._matchId || (it._matchConf!=='high') || (it._diffs && it._diffs.length);});
+      if(!anyDiff){
+        // All items match exactly — silent apply.
+        g('eqi-pdf-status').textContent='✓ \u05db\u05dc '+n+' \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d6\u05d4\u05d9\u05dd. \u05e9\u05d5\u05de\u05e8 \u05d0\u05ea \u05d4-PDF...';
+        _eqiPdfApply(/*silent=*/true);
         return;
       }
-      _eqiPdfFillForm(data,match,diffs,confidence);
-      var statusMsg;
-      if(!match)statusMsg='✓ \u05e6\u05d9\u05d5\u05d3 \u05d7\u05d3\u05e9. \u05d0\u05e9\u05e8 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e8\u05e9\u05d5\u05de\u05d4:';
-      else if(confidence==='low')statusMsg='⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05d7\u05dc\u05e7\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05e4\u05d9 \u05e9\u05dd, \u05dc\u05d0 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3). \u05d0\u05e9\u05e8 \u05e9\u05d6\u05d4 \u05d0\u05db\u05df \u05d4\u05e6\u05d9\u05d5\u05d3:';
-      else statusMsg='✓ \u05e0\u05de\u05e6\u05d0\u05d5 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd. \u05d0\u05e9\u05e8 \u05dc\u05e2\u05d3\u05db\u05df:';
-      g('eqi-pdf-status').textContent=statusMsg;
+      g('eqi-pdf-status').textContent='✓ \u05d6\u05d5\u05d4\u05d5 '+n+' \u05e4\u05e8\u05d9\u05d8'+(n>1?'\u05d9\u05dd':'')+'. \u05e1\u05de\u05df \u05d0\u05ea \u05e9\u05d1\u05e8\u05e6\u05d5\u05e0\u05da \u05dc\u05e2\u05d3\u05db\u05df \u05d5\u05dc\u05d7\u05e5 \u05d4\u05d7\u05dc:';
       g('eqi-pdf-result').style.display='';
       g('eqi-pdf-apply').style.display='';
+      _eqiPdfUpdateCount();
     })
     .catch(function(e){g('eqi-pdf-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(e&&e.message||e);});
 }
-function _eqiPdfFindMatch(d){
-  // Returns {rec, confidence} where confidence is 'high' (code match) or 'low' (fuzzy name) or null.
-  var code=String(d.equipment_code||'').trim();
-  var name=String(d.equipment_name||'').trim();
+function _eqiPdfMergeMeta(item,data){
+  // Combine an item with shared metadata so diff/finalize see one record-shaped object.
+  return {
+    equipment_name:item.equipment_name,
+    equipment_code:item.equipment_code,
+    vendor:data.vendor,
+    location:data.location,
+    inspection_date:data.inspection_date,
+    expiry_date:data.expiry_date,
+    status:item.status,
+    notes:item.notes
+  };
+}
+function _eqiPdfFindMatch(it){
+  var code=String(it.equipment_code||'').trim();
+  var name=String(it.equipment_name||'').trim();
   if(code){
     var byCode=(DB.equip_inspections||[]).find(function(r){return String(r.code||'').trim()===code;});
     if(byCode)return {rec:byCode,confidence:'high'};
@@ -3930,124 +3952,152 @@ function _eqiPdfFindMatch(d){
   if(name){
     var nm=name.toLowerCase();
     var byName=(DB.equip_inspections||[]).find(function(r){var rn=String(r.n||'').toLowerCase();return rn===nm;});
-    if(byName)return {rec:byName,confidence:'high'};  // exact name match
+    if(byName)return {rec:byName,confidence:'high'};
     var fuzzy=(DB.equip_inspections||[]).find(function(r){var rn=String(r.n||'').toLowerCase();return rn.indexOf(nm)>=0||nm.indexOf(rn)>=0;});
-    if(fuzzy)return {rec:fuzzy,confidence:'low'};  // fuzzy substring — needs confirmation
+    if(fuzzy)return {rec:fuzzy,confidence:'low'};
   }
   return null;
 }
 function _eqiPdfComputeDiff(rec,d){
   var diffs=[];
   function cmp(field,oldV,newV){
-    if(newV===null||newV===undefined||newV==='')return; // AI didn't extract — ignore
+    if(newV===null||newV===undefined||newV==='')return;
     if(String(oldV||'').trim()!==String(newV||'').trim())diffs.push({field:field,old:oldV||'',new:newV});
   }
   cmp('\u05ea\u05d5\u05e7\u05e3',rec.e,d.expiry_date);
   cmp('\u05e1\u05e4\u05e7',rec.vendor,d.vendor);
   cmp('\u05de\u05d9\u05e7\u05d5\u05dd',rec.loc,d.location);
-  cmp('\u05e1\u05d8\u05d8\u05d5\u05e1',rec.status,d.status);
+  cmp('\u05e1\u05d8\u05d8\u05d5\u05e1',rec.s,d.status);
   return diffs;
 }
-function _eqiPdfFillForm(d,match,diffs,confidence){
-  g('eqi-pdf-name').value=d.equipment_name||(match?match.n||'':'');
-  g('eqi-pdf-code').value=d.equipment_code||(match?match.code||'':'');
-  g('eqi-pdf-vendor').value=d.vendor||(match?match.vendor||'':'');
-  g('eqi-pdf-loc').value=d.location||(match?match.loc||'':'');
-  g('eqi-pdf-date').value=d.inspection_date||'';
-  g('eqi-pdf-expiry').value=d.expiry_date||'';
-  g('eqi-pdf-notes').value=d.notes||'';
-  var stSel=g('eqi-pdf-status-sel');
-  var stMap={'\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4':'\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4','\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8':'\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8','\u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df':'\u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df'};
-  stSel.value=stMap[d.status]||'\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4';
-  var matchEl=g('eqi-pdf-match');
-  if(match && confidence==='low'){
-    var partialHtml='⚠ <strong>\u05d4\u05ea\u05d0\u05de\u05d4 \u05d7\u05dc\u05e7\u05d9\u05ea</strong>: \u05de\u05e6\u05d0\u05ea\u05d9 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d3\u05d5\u05de\u05d4 \u05d1\u05e9\u05dd \u05d0\u05d1\u05dc \u05d1\u05dc\u05d9 \u05de\u05ea\u05d0\u05d9\u05dd \u05de\u05dc\u05d0 \u05d1\u05e7\u05d5\u05d3.<br><strong>\u05d4\u05d0\u05dd \u05d6\u05d4 \u05d4\u05e6\u05d9\u05d5\u05d3?</strong><br>• \u05d6\u05d9\u05d4\u05d5\u05d9 \u05dc\u05e4\u05d9 PDF: '+esc(d.equipment_name||'')+(d.equipment_code?' ['+esc(d.equipment_code)+']':'')+'<br>• \u05d1\u05de\u05e2\u05e8\u05db\u05ea: <strong>'+esc(match.n||'?')+'</strong>'+(match.code?' ['+esc(match.code)+']':'')+'<br><br>\u05d0\u05dd \u05dc\u05d0 — \u05d1\u05d8\u05dc \u05d5\u05d4\u05e2\u05dc\u05d4 \u05de\u05d7\u05d3\u05e9.';
-    matchEl.innerHTML=partialHtml;
-    matchEl.style.display='';
-    matchEl.style.background='#fef3c7';
-    matchEl.style.borderColor='#b45309';
-    return;
-  }
-  if(match && diffs && diffs.length){
-    var diffHtml='✓ \u05e0\u05de\u05e6\u05d0\u05d4 \u05d4\u05ea\u05d0\u05de\u05d4 \u05de\u05d3\u05d5\u05d9\u05e7\u05ea: <strong>'+esc(match.n||match.code||'?')+'</strong><br><strong>\u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05de\u05d6\u05d5\u05d4\u05d9\u05dd:</strong><ul style="margin:6px 0;padding-right:20px">';
-    diffs.forEach(function(d2){
-      diffHtml+='<li>'+esc(d2.field)+': <span style="text-decoration:line-through;color:#888">'+esc(String(d2.old||'—'))+'</span> ➝ <strong style="color:#16a34a">'+esc(String(d2.new))+'</strong></li>';
-    });
-    diffHtml+='</ul>';
-    matchEl.innerHTML=diffHtml;
-    matchEl.style.display='';
-    matchEl.style.background='#dcfce7';
-    matchEl.style.borderColor='#16a34a';
-  }else if(match){
-    matchEl.innerHTML='✓ \u05e0\u05de\u05e6\u05d0\u05d4 \u05d4\u05ea\u05d0\u05de\u05d4: <strong>'+esc(match.n||match.code||'?')+'</strong>. \u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05de\u05d6\u05d5\u05d4\u05d9\u05dd.';
-    matchEl.style.display='';
-    matchEl.style.background='#dcfce7';
-  }else{
-    matchEl.innerHTML='⚠ \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05d4\u05ea\u05d0\u05de\u05d4 \u05dc\u05e6\u05d9\u05d5\u05d3 \u05e7\u05d9\u05d9\u05dd. \u05d0\u05d9\u05e9\u05d5\u05e8 = \u05d9\u05e6\u05d9\u05e8\u05ea \u05e8\u05e9\u05d5\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4.';
-    matchEl.style.display='';
-    matchEl.style.background='#fef3c7';
-    matchEl.style.borderColor='#b45309';
-  }
+function _eqiPdfFillForm(data){
+  // Shared metadata fields (top of modal).
+  g('eqi-pdf-vendor').value=data.vendor||'';
+  g('eqi-pdf-loc').value=data.location||'';
+  g('eqi-pdf-date').value=data.inspection_date||'';
+  g('eqi-pdf-expiry').value=data.expiry_date||'';
+  // Render items list.
+  var wrap=g('eqi-pdf-items-wrap');
+  wrap.innerHTML=data.items.map(function(it,i){return _eqiPdfItemRow(it,i);}).join('');
 }
-window._eqiPdfApply=function(){
-  // Build data from current form values (user may have edited)
-  var data={
-    equipment_name:gv('eqi-pdf-name'),
-    equipment_code:gv('eqi-pdf-code'),
-    vendor:gv('eqi-pdf-vendor'),
-    location:gv('eqi-pdf-loc'),
-    inspection_date:gv('eqi-pdf-date')||null,
-    expiry_date:gv('eqi-pdf-expiry')||null,
-    status:gv('eqi-pdf-status-sel'),
-    notes:gv('eqi-pdf-notes')
-  };
-  if(!data.equipment_name && !data.equipment_code){alert('\u05e9\u05dd \u05d0\u05d5 \u05e7\u05d5\u05d3 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea');return;}
-  if(!data.expiry_date){alert('\u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea');return;}
-  var match=window._eqiPdfMatchId?(DB.equip_inspections||[]).find(function(r){return r.id===window._eqiPdfMatchId;}):null;
-  _eqiPdfDoApply(match,data,/*silent=*/false);
+function _eqiPdfItemRow(it,i){
+  var matched=!!it._matchId;
+  var match=matched?(DB.equip_inspections||[]).find(function(r){return r.id===it._matchId;}):null;
+  var conf=it._matchConf;
+  var badge,bg,border;
+  if(!matched){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
+  else if(conf==='low'){badge='⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05d7\u05dc\u05e7\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
+  else if(it._diffs && it._diffs.length){badge='✓ \u05e2\u05d3\u05db\u05d5\u05df';bg='#dbeafe';border='#1d4ed8';}
+  else{badge='✓ \u05d6\u05d4\u05d4';bg='#dcfce7';border='#16a34a';}
+  var matchLine=match?'<div style="font-size:11px;color:#555;margin-top:3px">\u05e7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea: <strong>'+esc(match.n||'?')+'</strong>'+(match.code?' ['+esc(match.code)+']':'')+'</div>':'';
+  var diffLine='';
+  if(match && it._diffs && it._diffs.length){
+    diffLine='<ul style="margin:4px 0 0;padding-right:18px;font-size:11px;color:#444">'+it._diffs.map(function(d2){return '<li>'+esc(d2.field)+': <span style="text-decoration:line-through;color:#888">'+esc(String(d2.old||'—'))+'</span> ➝ <strong style="color:#16a34a">'+esc(String(d2.new))+'</strong></li>';}).join('')+'</ul>';
+  }
+  var partialWarn=(matched && conf==='low')?'<div style="margin-top:4px;font-size:11px;color:#92400e;background:#fef9c3;padding:5px 7px;border-radius:6px">⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05dc\u05e4\u05d9 \u05e9\u05dd \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05d0 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3). \u05d5\u05d3\u05d0 \u05e9\u05d6\u05d4 \u05d0\u05db\u05df \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05e0\u05db\u05d5\u05df.</div>':'';
+  return '<div data-i="'+i+'" style="border:1px solid '+border+';background:'+bg+';border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">'+
+    '<div style="display:flex;align-items:flex-start;gap:8px">'+
+      '<input type="checkbox" data-i="'+i+'" '+(it._selected?'checked':'')+' onchange="_eqiPdfToggle(this)" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">'+
+          '<strong>'+esc(it.equipment_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)')+'</strong>'+
+          '<span style="font-size:10px;background:'+border+';color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap">'+badge+'</span>'+
+        '</div>'+
+        (it.equipment_code?'<div style="font-size:11px;color:#555;margin-top:2px">\u05e7\u05d5\u05d3: <code>'+esc(it.equipment_code)+'</code></div>':'')+
+        (it.status?'<div style="font-size:11px;color:#555;margin-top:2px">\u05e1\u05d8\u05d8\u05d5\u05e1: '+esc(it.status)+'</div>':'')+
+        (it.notes?'<div style="font-size:11px;color:#666;margin-top:2px">'+esc(it.notes)+'</div>':'')+
+        matchLine+
+        diffLine+
+        partialWarn+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+window._eqiPdfToggle=function(cb){
+  var i=parseInt(cb.dataset.i,10);
+  var data=window._eqiPdfData;if(!data||!data.items[i])return;
+  data.items[i]._selected=cb.checked;
+  _eqiPdfUpdateCount();
 };
-function _eqiPdfDoApply(match,data,silent){
-  // Step 1: upload PDF to Supabase Storage (best-effort)
+function _eqiPdfUpdateCount(){
+  var data=window._eqiPdfData;if(!data)return;
+  var n=data.items.filter(function(it){return it._selected;}).length;
+  var el=g('eqi-pdf-count');if(el)el.textContent=n;
+  var btn=g('eqi-pdf-apply');if(btn)btn.disabled=(n===0);
+}
+window._eqiPdfApply=function(silent){
+  var data=window._eqiPdfData;
+  if(!data){alert('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd');return;}
+  // Pick up any user edits to shared metadata.
+  data.vendor=gv('eqi-pdf-vendor')||data.vendor||null;
+  data.location=gv('eqi-pdf-loc')||data.location||null;
+  data.inspection_date=gv('eqi-pdf-date')||data.inspection_date||null;
+  data.expiry_date=gv('eqi-pdf-expiry')||data.expiry_date||null;
+  if(!data.expiry_date){alert('\u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05e1\u05d5\u05de\u05df');return;}
+  var items=data.items.filter(function(it){return it._selected;});
+  if(!items.length){alert('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05d3');return;}
+  // Step 1: upload PDF once. All selected items share the same file_url.
   var f=window._eqiPdfFile;
-  if(!f){_eqiPdfFinalize(match,data,null);return;}
+  if(!f){_eqiPdfApplyAll(items,data,null,silent);return;}
   if(!silent)g('eqi-pdf-status').textContent='📤 \u05de\u05e2\u05dc\u05d4 \u05d0\u05ea \u05d4-PDF \u05dc\u05e2\u05e0\u05df...';
   _fileUpload(f,'eqi-pdf',function(url,errStatus){
     if(!url){
-      if(!silent)g('eqi-pdf-status').textContent='⚠ \u05d4\u05e2\u05dc\u05d0\u05ea PDF \u05e0\u05db\u05e9\u05dc\u05d4 ('+errStatus+'). \u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05ea\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5.';
-      _eqiPdfFinalize(match,data,null);
+      if(!silent)g('eqi-pdf-status').textContent='⚠ \u05d4\u05e2\u05dc\u05d0\u05ea PDF \u05e0\u05db\u05e9\u05dc\u05d4 ('+errStatus+'). \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05ea\u05e2\u05d5\u05d3\u05db\u05e0\u05d4 \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5.';
+      _eqiPdfApplyAll(items,data,null,silent);
     }else{
-      _eqiPdfFinalize(match,data,url);
+      _eqiPdfApplyAll(items,data,url,silent);
     }
   });
-}
-function _eqiPdfFinalize(match,d,fileUrl){
-  var rec;
-  if(match){
-    var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===match.id;});
-    if(idx<0){toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e0\u05e2\u05dc\u05de\u05d4');return;}
-    rec=DB.equip_inspections[idx];
-    if(d.expiry_date)rec.e=d.expiry_date;
-    if(d.inspection_date)rec.last_inspection_date=d.inspection_date;
-    if(d.vendor)rec.vendor=d.vendor;
-    if(d.location)rec.loc=d.location;
-    if(d.status)rec.status=d.status;
-    if(fileUrl)rec.file_url=fileUrl;
-    var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(d.inspection_date||fd(new Date().toISOString()))+'] '+(d.notes||d.status||'');
-    rec.notes=(rec.notes?rec.notes+'\n':'')+stamp;
-    rec.ts=new Date().toISOString();
-    sbUpd('equip_inspections',rec);
-    toast('✓ \u05e2\u05d5\u05d3\u05db\u05df: '+(rec.n||rec.code));
-  }else{
-    rec={id:gid(),n:d.equipment_name,code:d.equipment_code||null,vendor:d.vendor||null,loc:d.location||null,e:d.expiry_date,status:d.status,notes:d.notes||null,file_url:fileUrl||null,ts:new Date().toISOString()};
-    if(d.inspection_date)rec.last_inspection_date=d.inspection_date;
-    if(!DB.equip_inspections)DB.equip_inspections=[];
-    DB.equip_inspections.push(rec);
-    sbIns('equip_inspections',rec);
-    toast('✓ \u05e0\u05d5\u05e6\u05e8 \u05d7\u05d3\u05e9: '+d.equipment_name);
-  }
+};
+function _eqiPdfApplyAll(items,data,fileUrl,silent){
+  var created=0,updated=0;
+  items.forEach(function(it){
+    var d=_eqiPdfMergeMeta(it,data);
+    var match=it._matchId?(DB.equip_inspections||[]).find(function(r){return r.id===it._matchId;}):null;
+    if(match){_eqiPdfUpdateOne(match,d,fileUrl);updated++;}
+    else{_eqiPdfCreateOne(d,fileUrl);created++;}
+  });
+  var summary=[];
+  if(updated)summary.push(updated+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
+  if(created)summary.push(created+' \u05e0\u05d5\u05e6\u05e8\u05d5');
+  toast('✓ '+summary.join(' · '));
   sdb();closeModal('m-eqi-pdf');
-  window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfMatchId=null;window._eqiPdfFile=null;
+  window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfFile=null;
   if(typeof rEqi==='function')rEqi();
+  if(typeof rDash==='function')rDash();
+}
+function _eqiPdfUpdateOne(match,d,fileUrl){
+  var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===match.id;});
+  if(idx<0)return;
+  var rec=DB.equip_inspections[idx];
+  if(d.expiry_date)rec.e=d.expiry_date;
+  if(d.inspection_date)rec.d=d.inspection_date;
+  if(d.vendor)rec.vendor=d.vendor;
+  if(d.location)rec.loc=d.location;
+  if(d.status)rec.s=d.status;
+  if(fileUrl)rec.file_url=fileUrl;
+  var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(d.inspection_date||fd(new Date().toISOString()))+'] '+(d.notes||d.status||'');
+  rec.notes=(rec.notes?rec.notes+'\n':'')+stamp;
+  rec.ts=new Date().toISOString();
+  sbUpd('equip_inspections',rec);
+}
+function _eqiPdfCreateOne(d,fileUrl){
+  var rec={
+    id:gid(),
+    n:d.equipment_name,
+    code:d.equipment_code||null,
+    vendor:d.vendor||null,
+    loc:d.location||null,
+    d:d.inspection_date||null,
+    e:d.expiry_date,
+    s:d.status||'\u05ea\u05e7\u05d9\u05df',
+    notes:d.notes||null,
+    file_url:fileUrl||null,
+    ts:new Date().toISOString()
+  };
+  if(!DB.equip_inspections)DB.equip_inspections=[];
+  DB.equip_inspections.push(rec);
+  sbIns('equip_inspections',rec);
 }
 
 function delAllEqi(){
