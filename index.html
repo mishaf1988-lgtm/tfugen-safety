@@ -760,6 +760,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1512;&#1497;&#1513;&#1493;&#1501; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1508;&#1497; ISO 14001 &#1505;&#1506;&#1497;&#1507; 6.1.2 &mdash; &#1497;&#1505;&#1493;&#1491;&#1493;&#1514; &#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1512;&#1490;&#1493;&#1503; &#1513;&#1497;&#1499;&#1493;&#1500;&#1493;&#1514; &#1500;&#1492;&#1513;&#1508;&#1497;&#1506; &#1506;&#1500; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;.</div>
     <div id="easp-pagefile" style="margin:8px 0;padding:10px;background:#f0f7f0;border:1px solid #2d6a4f;border-radius:8px"></div>
+    <div id="easp-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
     <div class="tbl-wrap"><table><thead><tr>
       <th>&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
       <th>&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
@@ -4606,7 +4607,7 @@ function rTasks(){
       var doneR=rows.filter(function(r){return r.status===_TSK_DONE||r.status===_TSK_CANC;}).length;
       var overR=rows.filter(function(r){if(!r.due||r.status===_TSK_DONE||r.status===_TSK_CANC)return false;return r.due<todayS;}).length;
       tsm.innerHTML=
-        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+rows.length+'</strong></span>'+
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+rows.length+'</strong></span>'+
         (openR?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">פתוחות: <strong>'+openR+'</strong></span>':'')+
         (progR?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">בהתקדמות: <strong>'+progR+'</strong></span>':'')+
         (doneR?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">הושלמו: <strong>'+doneR+'</strong></span>':'')+
@@ -4971,6 +4972,22 @@ function rEasp(){
   var tb=g('tb-easp');if(!tb)return;
   _pageFileRender('env_aspects','easp-pagefile');
   var rows=DB.env_aspects||[];
+  // Summary pills
+  try{
+    var es=g('easp-summary');
+    if(es){
+      var hi=rows.filter(function(r){return (r.p_curr||0)*(r.sv_curr||0)>=16;}).length;
+      var med=rows.filter(function(r){var x=(r.p_curr||0)*(r.sv_curr||0);return x>=10&&x<16;}).length;
+      var lo=rows.filter(function(r){var x=(r.p_curr||0)*(r.sv_curr||0);return x>0&&x<10;}).length;
+      var dueRev=rows.filter(function(r){if(!r.review_date)return false;try{return new Date(r.review_date)<new Date();}catch(e){return false;}}).length;
+      es.innerHTML=
+        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+rows.length+'</strong></span>'+
+        (hi?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">RPN \u05d2\u05d1\u05d5\u05d4 (16+): <strong>'+hi+'</strong></span>':'')+
+        (med?'<span style="background:#ffedd5;border:1px solid #ea580c;border-radius:14px;padding:3px 10px;color:#9a3412">RPN \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9 (10-15): <strong>'+med+'</strong></span>':'')+
+        (lo?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">RPN \u05e0\u05de\u05d5\u05da: <strong>'+lo+'</strong></span>':'')+
+        (dueRev?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">\u23f0 \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e7\u05e8\u05d4 \u05e2\u05d1\u05e8: <strong>'+dueRev+'</strong></span>':'');
+    }
+  }catch(e){}
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">\ud83c\udf33</span>\u05d0\u05d9\u05df \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-easp\')">+ \u05d4\u05d9\u05d1\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   tb.innerHTML=rows.slice().sort(function(a,b){
     var ar=(a.p_curr||0)*(a.sv_curr||0);var br=(b.p_curr||0)*(b.sv_curr||0);
