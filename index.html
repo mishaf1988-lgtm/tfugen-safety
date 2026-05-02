@@ -5279,6 +5279,15 @@ function rItype(){
   roots.forEach(function(r){html+=_itypeRenderNode(r,rows);});
   box.innerHTML=html;
 }
+function _itypeDescendantIds(nodeId,allRows){
+  var ids={};ids[nodeId]=1;
+  var queue=[nodeId];
+  while(queue.length){
+    var pid=queue.shift();
+    allRows.forEach(function(r){if(r.parent_id===pid&&!ids[r.id]){ids[r.id]=1;queue.push(r.id);}});
+  }
+  return ids;
+}
 function _itypeRenderNode(node,allRows){
   var children=allRows.filter(function(r){return r.parent_id===node.id;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'','he');});
   var levelLabel={1:'\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4',2:'\u05ea\u05ea-\u05e1\u05d5\u05d2',3:'\u05d5\u05e8\u05d9\u05d0\u05e0\u05d8'}[node.level]||'';
@@ -5286,8 +5295,12 @@ function _itypeRenderNode(node,allRows){
   var indent=(node.level-1)*18;
   var addBtn=node.level<3?'<button class="btn btn-d btn-sm" onclick="_itypeOpenAdd('+(node.level+1)+',\''+esc(node.id)+'\')" title="\u05d4\u05d5\u05e1\u05e3 \u05d1\u05df">＋</button>':'';
   var safeId=esc(node.id);
-  var nUsed=(DB.ncr||[]).filter(function(r){return r.issue_type_id===node.id;}).length;
-  var counts=nUsed?' <span class="b bX" style="font-size:9px">'+nUsed+'</span>':'';
+  var descendants=_itypeDescendantIds(node.id,allRows);
+  var ncrAgg=(DB.ncr||[]).filter(function(r){return r.issue_type_id&&descendants[r.issue_type_id];}).length;
+  var incAgg=(DB.inc||[]).filter(function(r){return r.issue_type_id&&descendants[r.issue_type_id];}).length;
+  var counts='';
+  if(ncrAgg)counts+=' <span class="b bR" style="font-size:9px" title="NCR \u05db\u05d5\u05dc\u05dc \u05ea\u05ea-\u05e1\u05d5\u05d2\u05d9\u05dd">NCR '+ncrAgg+'</span>';
+  if(incAgg)counts+=' <span class="b bY" style="font-size:9px" title="\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05db\u05d5\u05dc\u05dc \u05ea\u05ea-\u05e1\u05d5\u05d2\u05d9\u05dd">\u05ea\u05e7\u05e8 '+incAgg+'</span>';
   var catBadge=node.category?' <span style="background:#fff;color:#666;padding:1px 6px;border-radius:8px;font-size:9px">'+esc(node.category)+'</span>':'';
   var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:42px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+catBadge+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editItype(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'issue_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   children.forEach(function(c){html+=_itypeRenderNode(c,allRows);});
