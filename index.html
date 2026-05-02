@@ -3484,10 +3484,9 @@ function rDash(){
           }
         });
       });
-      (DB.inspection_types||[]).forEach(function(r){
-        if(!r.next_due||r.active===false)return;var d=new Date(r.next_due);if(isNaN(d))return;
-        if(d>=nowW&&d<=endW)items.push({d:d,icon:'\ud83d\udd0d',label:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea',title:r.name||r.id,tbl:'inspection_types',id:r.id});
-      });
+      // NOTE: inspection_types intentionally NOT included here \u2014 they're already shown
+      // in dash-itp-card and in the today-items virtual tasks. Including them again
+      // would triple-count each recurring inspection within the next 7 days.
       items.sort(function(a,b){return a.d-b.d;});
       if(items.length){
         dwc.style.display='';
