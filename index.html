@@ -1007,6 +1007,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="view-back" onclick="goPage('dash')" style="font-size:13px">&#8594; &#1495;&#1494;&#1512;&#1492;</button>
     <div class="page-title" id="view-title">&#1510;&#1508;&#1497;&#1497;&#1492;</div>
     <button class="btn btn-s" id="view-pdf" style="font-size:13px;display:none" onclick="printReport(this.dataset.vtbl,this.dataset.vid)">&#128424; PDF</button>
+    <button class="btn btn-s" id="view-copy" style="font-size:13px;display:none" onclick="_viewCopy(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1506;&#1514;&#1511; &#1505;&#1497;&#1499;&#1493;&#1501; &#1500;&#1511;&#1500;&#1497;&#1508;&#1489;&#1493;&#1512;&#1491;">&#128203;</button>
   </div>
   <div class="card" id="view-body" style="font-size:13px;line-height:2.2"></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
@@ -5839,6 +5840,7 @@ function showView(tbl,id){
   if(title)title.textContent=cfg.title;
   if(back)back.setAttribute('onclick',"goPage('"+cfg.back+"')");
   var pdfBtn=g('view-pdf');if(pdfBtn){pdfBtn.style.display='';pdfBtn.dataset.vtbl=tbl;pdfBtn.dataset.vid=id;}
+  var cpBtn=g('view-copy');if(cpBtn){cpBtn.style.display='';cpBtn.dataset.vtbl=tbl;cpBtn.dataset.vid=id;}
   var html='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
@@ -6120,6 +6122,28 @@ window._printPage=function(){
   var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
   window.addEventListener('afterprint',cleanup);
   setTimeout(function(){window.print();setTimeout(cleanup,2000);},80);
+};
+window._viewCopy=function(tbl,id){
+  try{
+    var cfg=VIEW_CONFIG[tbl];if(!cfg)return;
+    var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});if(!rec)return;
+    var lines=[cfg.title||tbl,''];
+    cfg.fields.forEach(function(f){
+      var v=rec[f[1]];
+      if(v===undefined||v===null||v==='')return;
+      if(v===true)v='✓';else if(v===false)v='✗';
+      lines.push(f[0]+': '+v);
+    });
+    if(rec.location_id&&typeof _locName==='function'){var ln=_locName(rec.location_id);if(ln)lines.push('\ud83d\udccd \u05de\u05d9\u05e7\u05d5\u05dd: '+ln);}
+    if(rec.project_id&&typeof _prjName==='function'){var pn=_prjName(rec.project_id);if(pn)lines.push('\ud83c\udfd7\ufe0f \u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8: '+pn);}
+    if(rec.issue_type_id&&typeof _itypeName==='function'){var itn=_itypeName(rec.issue_type_id);if(itn)lines.push('\ud83c\udfaf \u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea: '+itn);}
+    var txt=lines.join('\n');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}).catch(function(){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');});
+    }else{
+      var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}catch(e){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');}ta.remove();
+    }
+  }catch(e){console.warn('_viewCopy failed',e);toast('\u05e9\u05d2\u05d9\u05d0\u05d4');}
 };
 window._capaVerify=function(id){
   var rec=(DB.ncr||[]).find(function(r){return r.id===id;});
