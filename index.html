@@ -925,6 +925,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div style="margin:0 0 8px;display:flex;gap:6px;flex-wrap:wrap;font-size:11px">
     <button class="btn btn-s" onclick="ncrQuickFilter('critical')" style="padding:5px 10px;font-size:11px">&#128293; &#1495;&#1502;&#1493;&#1512;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</button>
     <button class="btn btn-s" onclick="ncrQuickFilter('week')" style="padding:5px 10px;font-size:11px">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506;</button>
+    <button class="btn btn-s" onclick="ncrQuickFilter('m1')" style="padding:5px 10px;font-size:11px">&#128197; 30 &#1497;&#1493;&#1501;</button>
+    <button class="btn btn-s" onclick="ncrQuickFilter('m3')" style="padding:5px 10px;font-size:11px">&#128197; 90 &#1497;&#1493;&#1501;</button>
     <button class="btn btn-s" onclick="ncrQuickFilter('stale')" style="padding:5px 10px;font-size:11px">&#9201;&#65039; &#1497;&#1513;&#1504;&#1497;&#1501; (30+&#1497;)</button>
     <button class="btn btn-s" onclick="ncrQuickFilter('overdue')" style="padding:5px 10px;font-size:11px">&#9203; &#1495;&#1493;&#1512;&#1490;&#1497;&#1501; &#1500;&#1497;&#1506;&#1491;</button>
   </div>
@@ -4612,7 +4614,7 @@ if(chipsEl){
   if(prjF){var pn=(typeof _prjName==='function')?_prjName(prjF):prjF;chips.push({label:'🏗️ '+pn,clear:'ncrPrjFilter(\'\')'});}
   if(itypeF){var itn=(typeof _itypeName==='function')?_itypeName(itypeF):itypeF;chips.push({label:'\ud83c\udfaf '+itn,clear:'ncrItypeFilter(\'\')'});}
   var _qfNcr=window._ncrQuickFilter||'';
-  if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
+  if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',m1:'\ud83d\udcc5 30 \u05d9\u05d5\u05dd',m3:'\ud83d\udcc5 90 \u05d9\u05d5\u05dd',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
   chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
 }
 var isAdm=_isAdminUser();
@@ -4631,6 +4633,8 @@ if(_ncrQF){
   var todayQ=new Date();todayQ.setHours(0,0,0,0);
   if(_ncrQF==='critical')rows=rows.filter(function(r){return r.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'&&r.s!=='\u05e1\u05d2\u05d5\u05e8';});
   else if(_ncrQF==='week')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=7;});
+  else if(_ncrQF==='m1')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=30;});
+  else if(_ncrQF==='m3')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=90;});
   else if(_ncrQF==='stale')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.ts)return false;return (Date.now()-new Date(r.ts).getTime())/86400000>=30;});
   else if(_ncrQF==='overdue')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.u)return false;return new Date(r.u)<todayQ;});
 }
