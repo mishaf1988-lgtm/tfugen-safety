@@ -2,7 +2,7 @@
 // Strategy: network-first for our static assets (so deploys are instant),
 // fall back to cache when offline. API/REST calls bypass entirely.
 
-const CACHE = 'tfgn-v3';
+const CACHE = 'tfgn-v4';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
 
 self.addEventListener('install', (e) => {
