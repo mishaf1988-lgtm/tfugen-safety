@@ -4419,7 +4419,7 @@ tb.innerHTML=rows.map(function(n){
     '<td style="text-align:center">'+ ico +'</td>'+
     '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
     '<td>'+ loc.substring(0,20) +'</td>'+
-    '<td>'+n.d.substring(0,50)+'</td>'+
+    '<td>'+(n.d||'').substring(0,50)+'</td>'+
     '<td>'+sb(n.s)+'</td>'+
     '<td>'+(n.o||'').substring(0,15)+'</td>'+
     '<td>'+eb(n.u)+'</td>'+
