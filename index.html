@@ -434,6 +434,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-mine-card" style="display:none"><div class="card-title">&#128100; NCR &#1513;&#1500;&#1497; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-mine"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3313,6 +3314,37 @@ function rDash(){
       }else{if(dcc)dcc.style.display='none';}
     }
   }catch(e){console.warn('dash-critical failed',e);}
+
+  // Dashboard: my open NCRs (assigned to current user)
+  try{
+    var dmc=g('dash-mine-card');
+    var dm=g('dash-mine');
+    var u2=(typeof _svUser==='function')?(_svUser()||''):'';
+    var uShort=(u2||'').split('@')[0];
+    if(dm&&u2){
+      var _CL3='\u05e1\u05d2\u05d5\u05e8';
+      var mine=(DB.ncr||[]).filter(function(n){
+        if(n.s===_CL3)return false;
+        var a=(n.a||'').toString().toLowerCase();
+        if(!a)return false;
+        return a===u2.toLowerCase()||a===uShort.toLowerCase()||a.indexOf(uShort.toLowerCase())>=0||a.indexOf(u2.toLowerCase())>=0;
+      }).sort(function(a,b){return (b.sd||'').localeCompare(a.sd||'');});
+      if(mine.length){
+        if(dmc)dmc.style.display='';
+        dm.innerHTML=mine.slice(0,5).map(function(n){
+          var safeId=esc(n.id||'');
+          var num=esc(n.num||'');
+          var desc=esc((n.d||'').substring(0,60));
+          var pri=n.p||'';
+          var prCol=pri==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'#cc1f1f':(pri==='\u05d2\u05d1\u05d5\u05d4'?'#e07a00':'#1d4ed8');
+          return '<div data-id="'+safeId+'" onclick="if(typeof showView===\'function\')showView(\'ncr\',this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#eef9f1\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+num+'</b> &middot; '+desc+'</span><span class="b" style="background:'+prCol+';color:#fff;font-size:10px">'+esc(pri||'—')+'</span></div>';
+        }).join('');
+        if(mine.length>5){
+          dm.innerHTML+='<div style="text-align:center;font-size:11px;color:var(--t3);margin-top:6px">+'+(mine.length-5)+' \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd</div>';
+        }
+      }else{if(dmc)dmc.style.display='none';}
+    }else{if(dmc)dmc.style.display='none';}
+  }catch(e){console.warn('dash-mine failed',e);}
 
   // Inspection types upcoming
   try{
