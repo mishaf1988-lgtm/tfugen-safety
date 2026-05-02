@@ -11,7 +11,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `eb29ee8` |
+| Commit | `0bad36c` |
 | תאריך | 2026-05-02 |
 | Tag | — (טרם נוצר) |
 | מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
@@ -215,6 +215,16 @@
 - [x] **NCR list shows issue type (PR #275)** — בעמודת המיקום מוצג גם 🎯 סוג אי-התאמות.
 - [x] **Print active filters (PR #276)** — print-header כולל את "פילטרים: chip1 · chip2 ..." האקטיביים.
 - [x] **View copy-to-clipboard (PR #277)** — 📋 ב-showView מעתיק סיכום הרשומה לקליפבורד (לשיתוף ב-WhatsApp).
+- [x] **Upcoming-this-week dashboard widget (PR #278)** — 📅 מציג עד 8 פריטים בעלי deadline ב-7 ימים הקרובים (משימות + תפוגות + בדיקות).
+- [x] **Inline text search in Tasks (PR #279)** — שדה 🔍 לחיפוש בתוך כותרת/אחראי/הערות + chips.
+- [x] **env_aspects summary pills (PR #280)** — 5 pills: סה״כ, RPN גבוה, בינוני, נמוך, ⏰ ביקורת עברה.
+- [x] **NCR opens-vs-closes 4-week chart (PR #281)** — 📊 תרשים עמודות: 4 שבועות עם נפתח (אדום) מול נסגר (ירוק).
+- [x] **Copy deep-link button (PR #282)** — 🔗 ב-showView יוצר קישור שמטעין את הרשומה ישירות.
+- [x] **Slash key opens search (PR #283)** — `/` פותח חיפוש גלובלי (כמו Ctrl+K).
+- [x] **Notif log show-all toggle (PR #284)** — לינק "הצג את כל ה-N הרשומות" כשיש >20.
+- [x] **Hazmat default sort by severity+expiry (PR #285)** — סיכון גבוה ראשון, תוך כל קטגוריה לפי MSDS.
+- [x] **Tasks smart sort (PR #286)** — חורגים → עדיפות → תאריך יעד.
+- [x] **NCR priority dot in list (PR #287)** — 🔴 קריטי / 🟠 גבוה ליד מספר ה-NCR.
 
 ### 🟢 תשתית / UX
 - [x] **PWA — install + offline (basic)** — Service Worker פשוט (`sw.js`) ב-shell-cache: cache-first ל-`index.html`/`manifest.webmanifest`/`icon.svg`/`logo.jpg`, network-first עם fallback. בקשות API (Supabase, /api/*, Anthropic) עוברות ישירות. `manifest.webmanifest` היה כבר. כפתור 📱 ב-topbar שמופיע ב-`beforeinstallprompt` event ומפעיל את ה-prompt של הדפדפן. **מה לא נעשה**: push notifications (דורש backend), background sync (יבוא עם WhatsApp).

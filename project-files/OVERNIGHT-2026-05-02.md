@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `eb29ee8`
-**Total PRs merged**: ~125 לילה + 19 בוקר
+**Latest commit**: `0bad36c`
+**Total PRs merged**: ~125 לילה + 29 בוקר
 
 ---
 
@@ -50,6 +50,30 @@
 
 ### showView
 - 📋 **Copy-to-clipboard**: כפתור חדש שמעתיק סיכום הרשומה כטקסט לשיתוף ב-WhatsApp/אימייל.
+- 🔗 **Deep-link**: כפתור חדש שמעתיק קישור שמטעין את הרשומה ישירות (`#view-tbl-id`).
+
+### דשבורד — תוספות שלישיות
+- 📅 **Upcoming this week**: עד 8 פריטים בעלי deadline ב-7 ימים הקרובים (משימות + תפוגות + בדיקות חוזרות).
+- 📊 **NCR opens vs closes**: תרשים עמודות 4 שבועות.
+
+### Tasks
+- 🔍 **Inline search**: חיפוש מהיר בתוך הרשימה.
+- 📋 **Smart sort**: חורגים → עדיפות → יעד.
+
+### NCR
+- 🔴 **Priority dot**: ליד המספר ברשימה (קריטי/גבוה).
+
+### env_aspects
+- 📊 **Summary pills**: סה״כ + פיזור RPN + ⏰ ביקורת עברה.
+
+### Hazmat
+- 📋 **Smart sort**: סיכון גבוה ראשון, אחר-כך MSDS.
+
+### Notifications
+- 🔢 **Show-all toggle**: לראות את כל הרשומות בלוג, לא רק 20.
+
+### שורטקאטים
+- ⌨️ **/** פותח חיפוש גלובלי (תוספת ל-Ctrl+K).
 
 ---
 
