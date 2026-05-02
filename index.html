@@ -438,6 +438,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-rounds-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1506;&#1502;&#1497;&#1491;&#1492; &#1489;&#1505;&#1489;&#1489;&#1497; &#1489;&#1493;&#1511;&#1512; (30 &#1497;&#1493;&#1501;)</div><div id="dash-rounds"></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
+  <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3443,6 +3444,40 @@ function rDash(){
       }else{dwc.style.display='none';}
     }
   }catch(e){console.warn('dash-week failed',e);}
+
+  // Dashboard: NCR opens vs closes — last 4 weeks
+  try{
+    var dovc=g('dash-ovc-card');
+    var dov=g('dash-ovc');
+    if(dov){
+      var nowOC=new Date();nowOC.setHours(0,0,0,0);
+      var weeks=[];
+      for(var w=3;w>=0;w--){
+        var endD=new Date(nowOC.getTime()-w*7*86400000);
+        var startD=new Date(endD.getTime()-7*86400000+86400000);
+        var lblS=String(startD.getDate()).padStart(2,'0')+'/'+String(startD.getMonth()+1).padStart(2,'0');
+        weeks.push({start:startD,end:endD,label:lblS,opened:0,closed:0});
+      }
+      function _wkBucket(d){if(!d)return -1;var dt=new Date(d);if(isNaN(dt))return -1;for(var i=0;i<weeks.length;i++){if(dt>=weeks[i].start&&dt<=weeks[i].end)return i;}return -1;}
+      (DB.ncr||[]).forEach(function(n){
+        var b=_wkBucket(n.sd||n.src_date||n.d);
+        if(b>=0)weeks[b].opened++;
+        if(n.s==='\u05e1\u05d2\u05d5\u05e8'&&n.cd){var bc=_wkBucket(n.cd);if(bc>=0)weeks[bc].closed++;}
+      });
+      var any=weeks.some(function(w){return w.opened||w.closed;});
+      if(any){
+        dovc.style.display='';
+        var maxV=Math.max.apply(null,weeks.map(function(w){return Math.max(w.opened,w.closed);}));
+        if(maxV<1)maxV=1;
+        var bars=weeks.map(function(w){
+          var hO=Math.round(60*w.opened/maxV);
+          var hC=Math.round(60*w.closed/maxV);
+          return '<div style="text-align:center;flex:1;min-width:60px"><div style="display:flex;align-items:flex-end;justify-content:center;height:65px;gap:3px"><div title="\u05e0\u05e4\u05ea\u05d7: '+w.opened+'" style="width:18px;background:#cc1f1f;height:'+hO+'px;border-radius:3px 3px 0 0"></div><div title="\u05e0\u05e1\u05d2\u05e8: '+w.closed+'" style="width:18px;background:#16a34a;height:'+hC+'px;border-radius:3px 3px 0 0"></div></div><div style="font-size:10px;color:#444;margin-top:4px;font-weight:600">'+esc(w.label)+'</div><div style="font-size:9px;color:var(--t3)">+'+w.opened+' / -'+w.closed+'</div></div>';
+        }).join('');
+        dov.innerHTML='<div style="display:flex;justify-content:space-around;align-items:flex-end;padding:8px 0">'+bars+'</div><div style="margin-top:6px;font-size:11px;color:#444;text-align:center"><span style="display:inline-flex;align-items:center;gap:4px;margin:0 8px"><span style="display:inline-block;width:10px;height:10px;background:#cc1f1f;border-radius:2px"></span>\u05e0\u05e4\u05ea\u05d7</span><span style="display:inline-flex;align-items:center;gap:4px;margin:0 8px"><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px"></span>\u05e0\u05e1\u05d2\u05e8</span></div>';
+      }else{dovc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-ovc failed',e);}
 
   // Inspection types upcoming
   try{
