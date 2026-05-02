@@ -1510,6 +1510,7 @@ id="m-ncr" style="display:none">
       <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="eqi-pdf-loc" class="inp"></div>
       <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input type="date" id="eqi-pdf-date" class="inp"></div>
       <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="eqi-pdf-expiry" class="inp"></div>
+      <div class="field fw" id="eqi-pdf-report-row"><label>&#1502;&#1505;&#1508;&#1512; &#1514;&#1505;&#1511;&#1497;&#1512;</label><input id="eqi-pdf-report" class="inp"></div>
     </div>
     <div id="eqi-pdf-items-wrap" style="margin:10px 0;max-height:380px;overflow-y:auto"></div>
   </div>
@@ -2112,14 +2113,30 @@ function _obSanitize(){
   }catch(e){}
 }
 document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});});
+// Last-resort cache reset: unregister every Service Worker, delete every
+// Cache Storage entry, then hard-reload. Triggered from syncDiag.
+window._forceFreshLoad=function(){
+  if(!confirm('ניקוי מלא של המטמון וטעינה מחדש? מומלץ אם העדכון האחרון לא מגיע.'))return;
+  var work=[];
+  if('serviceWorker' in navigator){
+    work.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));
+  }
+  if('caches' in window){
+    work.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));
+  }
+  Promise.all(work).then(function(){
+    location.replace('/?_freshload='+Date.now());
+  }).catch(function(){location.reload();});
+};
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
   var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'Realtime: '+_rtState,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
   if(le){lines.push('','\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4:','  \u05d8\u05d1\u05dc\u05d4: '+(le.tbl||'?'),'  \u05e4\u05e2\u05d5\u05dc\u05d4: '+(le.op||'?'),'  \u05e1\u05d8\u05d8\u05d5\u05e1: '+(le.status||'net'));if(le.body)lines.push('  \u05e4\u05e8\u05d8\u05d9\u05dd: '+le.body);}
   if(q.length){lines.push('','\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8:');q.slice(0,10).forEach(function(op){lines.push('  '+op.op+' '+op.tbl+(op.tries?(' \u00d7'+op.tries):'')+(op.lastError?(' \u2014 '+op.lastError):''));});if(q.length>10)lines.push('  ...\u05d5\u05e2\u05d5\u05d3 '+(q.length-10));}
-  lines.push('','\u05dc\u05e0\u05e1\u05d5\u05ea \u05d0\u05d9\u05dc\u05d5\u05e3 \u05de\u05d7\u05d3\u05e9?');
+  lines.push('','\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05e0\u05e1\u05d5\u05ea \u05d0\u05d9\u05dc\u05d5\u05e3 \u05de\u05d7\u05d3\u05e9. \u05d1\u05d9\u05d8\u05d5\u05dc = \u05d0\u05e4\u05e9\u05e8\u05d5\u05d9\u05d5\u05ea \u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05d8\u05de\u05d5\u05df + \u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d7\u05d3\u05e9.');
   if(confirm(lines.join('\n'))){_obDrain();return;}
-  if(q.length&&confirm('\u05dc\u05e0\u05e7\u05d5\u05ea '+q.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5\u05ea \u05de\u05d4\u05ea\u05d5\u05e8? (\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d8\u05dc)')){_obSet([]);_obSetErr(null);_obBadge();toast('\u05d4\u05ea\u05d5\u05e8 \u05e0\u05d5\u05e7\u05d4 \u2713');}
+  if(q.length&&confirm('\u05dc\u05e0\u05e7\u05d5\u05ea '+q.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5\u05ea \u05de\u05d4\u05ea\u05d5\u05e8? (\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d8\u05dc)\n\n\u05d0\u05d5 \u05d1\u05d9\u05d8\u05d5\u05dc \u2192 \u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05d8\u05de\u05d5\u05df \u05de\u05dc\u05d0 \u05d5\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d7\u05d3\u05e9')){_obSet([]);_obSetErr(null);_obBadge();toast('\u05d4\u05ea\u05d5\u05e8 \u05e0\u05d5\u05e7\u05d4 \u2713');return;}
+  _forceFreshLoad();
 }
 function _forceSyncPerRow(t,rows){
   // Per-row fallback when batch POST fails \u2014 finds & skips bad rows
@@ -3929,20 +3946,61 @@ function _eqiPdfExtractJson(txt){
   }
   return null;
 }
+function _eqiNorm(s){
+  if(s===null||s===undefined)return '';
+  var t=String(s);
+  // Strip Hebrew diacritics (nikud + ta'amim).
+  t=t.replace(/[\u0591-\u05c7]/g,'');
+  // Normalize geresh/gershayim and curly quotes to ASCII.
+  t=t.replace(/[\u05f3‘’ʼʹ]/g,"'");
+  t=t.replace(/[\u05f4“”]/g,'"');
+  // Collapse whitespace.
+  t=t.replace(/\s+/g,' ').trim();
+  // Lowercase ASCII letters.
+  t=t.toLowerCase();
+  return t;
+}
+function _eqiNormCode(s){
+  var t=_eqiNorm(s);
+  if(!t||t==='-'||t==='—'||t==='*')return '';
+  return t;
+}
+// Extract a JSON object from Claude's text response. Handles markdown code
+// fences, leading/trailing prose, and nested braces.
+function _eqiPdfExtractJson(txt){
+  if(!txt)return null;
+  var s=String(txt);
+  s=s.replace(/```(?:json)?\s*/gi,'').replace(/```/g,'');
+  var start=s.indexOf('{');
+  while(start>=0){
+    var depth=0,inStr=false,esc=false;
+    for(var i=start;i<s.length;i++){
+      var ch=s[i];
+      if(esc){esc=false;continue;}
+      if(ch==='\\'){esc=true;continue;}
+      if(ch==='"'){inStr=!inStr;continue;}
+      if(inStr)continue;
+      if(ch==='{')depth++;
+      else if(ch==='}'){depth--;if(depth===0){
+        var candidate=s.substring(start,i+1);
+        try{return JSON.parse(candidate);}catch(e){break;}
+      }}
+    }
+    start=s.indexOf('{',start+1);
+  }
+  return null;
+}
 function _eqiPdfAnalyze(base64){
-  // Multi-item prompt: a single inspection report can list 5-10 equipment items.
-  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown):\n\n{\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 / \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d0\u05d5 \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df \u05db\u05dc\u05dc\u05d9 \u05dc\u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05dc\u05d3\u05d5\u05d2\u05de\u05d4: \u05e1\u05d2\u05d9\u05e8, \u05d7\u05d2\u05d5\u05e8\u05ea \u05d4\u05e8\u05de\u05d4, \u05de\u05e0\u05d5\u05e3, \u05de\u05ea\u05e7\u05df \u05d4\u05e8\u05de\u05d4)",\n      "equipment_code": "\u05de\u05e1\u05e4\u05e8 \u05d6\u05d9\u05d4\u05d5\u05d9 / \u05e7\u05d5\u05d3 \u05de\u05e1\u05e7\u05e8\u05d9\u05e8 / \u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05d7\u05e9\u05d5\u05d1\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd, \u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8, \u05ea\u05d5\u05e7\u05e3 \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9 \u05dc\u05e4\u05e8\u05d9\u05d8)"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. \u05d0\u05dd \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e8\u05e7 \u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05d3 — items \u05d9\u05db\u05d9\u05dc \u05d0\u05d9\u05d1\u05e8 \u05d0\u05d7\u05d3. \u05d4\u05d7\u05d6\u05e8 \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05d1\u05d8\u05d1\u05dc\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea.';
+  // Multi-item prompt — extracts shared metadata + per-item identifiers.
+  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5. \u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown, \u05dc\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8 \u05de\u05e1\u05d1\u05d9\u05d1):\n\n{\n  "report_number": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 (\u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2)",\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 / \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 / \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea (\u05d0\u05dd \u05de\u05e9\u05d5\u05ea\u05e3 \u05dc\u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd)",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3",\n      "equipment_code": "\u05e7\u05d5\u05d3 / \u05de\u05e7\u05f4\u05d8 / \u05de\u05e1\u05e4\u05e8 \u05e6\u05d9\u05d5\u05d3 / \u05de\u05e1 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05e9\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8",\n      "vendor": "\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9 \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05de\u05e9\u05d5\u05ea\u05e3)",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea/\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05dc\u05e4\u05e8\u05d9\u05d8 \u05d4\u05d6\u05d4"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d9\u05db\u05d5\u05dc\u05d9\u05dd \u05dc\u05d4\u05d9\u05d5\u05ea 1-50 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd — \u05d4\u05d5\u05e6\u05d0 \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items.';
   var body={
     model:_AI_MODEL,
     max_tokens:16000,
     system:systemPrompt,
-    messages:[{
-      role:'user',
-      content:[
-        {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-        {type:'text',text:'\u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05e9\u05dc \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d5\u05d7\u05dc\u05e5 \u05d0\u05ea \u05db\u05dc \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5 (\u05d2\u05dd \u05d0\u05dd \u05d9\u05e9 20+). \u05d4\u05d7\u05d6\u05e8 JSON \u05de\u05dc\u05d0 \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8 \u05d0\u05ea items[]. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items.'}
-      ]
-    }]
+    messages:[{role:'user',content:[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+      {type:'text',text:'\u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05de\u05dc\u05d0 \u05e9\u05dc \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8.'}
+    ]}]
   };
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json();})
@@ -3951,223 +4009,287 @@ function _eqiPdfAnalyze(base64){
       var txt=j.content&&j.content[0]&&j.content[0].text||'';
       var data=_eqiPdfExtractJson(txt);
       if(!data){
-        var preview=String(txt).replace(/\s+/g,' ').substring(0,250);
+        var preview=String(txt).replace(/\s+/g,' ').substring(0,300);
         g('eqi-pdf-status').textContent='\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 JSON. \u05ea\u05d2\u05d5\u05d1\u05ea Claude: '+preview;
         return;
       }
-      // Backward-compat: if Claude returned single-item flat shape, wrap in items[].
+      // Backward-compat: if Claude returned single-item flat shape, wrap.
       if(!data.items || !data.items.length){
         if(data.equipment_name||data.equipment_code){
-          data.items=[{equipment_name:data.equipment_name,equipment_code:data.equipment_code,status:data.status,notes:data.notes}];
+          data.items=[{equipment_name:data.equipment_name,equipment_code:data.equipment_code,vendor:data.vendor,status:data.status,notes:data.notes}];
         }else{
           data.items=[];
         }
       }
       if(!data.items.length){g('eqi-pdf-status').textContent='\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8.';return;}
-      // Compute match info per item.
+      // Resolve candidates per item.
       data.items.forEach(function(it){
-        var mi=_eqiPdfFindMatch(it);
-        it._matchIds=mi?mi.recs.map(function(r){return r.id;}):[];
-        it._matchId=mi?mi.recs[0].id:null;  // primary match (for diff display)
-        it._matchConf=mi?mi.confidence:null;
-        it._diffs=mi?_eqiPdfComputeDiff(mi.recs[0],_eqiPdfMergeMeta(it,data)):[];
-        it._selected=true;  // default: include
+        var resolved=_eqiPdfResolveCandidates(it,data);
+        it._candidates=resolved.candidates;  // [{rec, currentExpiry, willUpdate}]
+        it._matchTier=resolved.tier;         // 'code' | 'name+vendor' | 'name-unique' | 'ambiguous' | 'none'
+        it._action=resolved.tier==='none'?'create':'update';
+        // For ambiguous matches user must explicitly opt-in candidates.
+        it._candidates.forEach(function(cnd){cnd._selected=(resolved.tier!=='ambiguous');});
+        it._selected=true;
       });
       window._eqiPdfData=data;
       _eqiPdfFillForm(data);
-      var n=data.items.length;
-      var anyDiff=data.items.some(function(it){return !it._matchId || (it._matchConf!=='high') || (it._diffs && it._diffs.length);});
-      if(!anyDiff){
-        // All items match exactly — silent apply.
-        g('eqi-pdf-status').textContent='✓ \u05db\u05dc '+n+' \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d6\u05d4\u05d9\u05dd. \u05e9\u05d5\u05de\u05e8 \u05d0\u05ea \u05d4-PDF...';
-        _eqiPdfApply(/*silent=*/true);
-        return;
-      }
-      g('eqi-pdf-status').textContent='✓ \u05d6\u05d5\u05d4\u05d5 '+n+' \u05e4\u05e8\u05d9\u05d8'+(n>1?'\u05d9\u05dd':'')+'. \u05e1\u05de\u05df \u05d0\u05ea \u05e9\u05d1\u05e8\u05e6\u05d5\u05e0\u05da \u05dc\u05e2\u05d3\u05db\u05df \u05d5\u05dc\u05d7\u05e5 \u05d4\u05d7\u05dc:';
       g('eqi-pdf-result').style.display='';
       g('eqi-pdf-apply').style.display='';
+      var n=data.items.length;
+      var anyAttention=data.items.some(function(it){return it._matchTier==='ambiguous'||it._matchTier==='none';});
+      g('eqi-pdf-status').textContent='✓ \u05d6\u05d5\u05d4\u05d5 '+n+' \u05e4\u05e8\u05d9\u05d8'+(n>1?'\u05d9\u05dd':'')+(anyAttention?' — \u05d7\u05dc\u05e7\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d9\u05d3\u05e0\u05d9':'.');
       _eqiPdfUpdateCount();
     })
     .catch(function(e){g('eqi-pdf-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(e&&e.message||e);});
 }
-function _eqiPdfMergeMeta(item,data){
-  // Combine an item with shared metadata so diff/finalize see one record-shaped object.
-  return {
-    equipment_name:item.equipment_name,
-    equipment_code:item.equipment_code,
-    vendor:data.vendor,
-    location:data.location,
-    inspection_date:data.inspection_date,
-    expiry_date:data.expiry_date,
-    status:item.status,
-    notes:item.notes
-  };
-}
-function _eqiPdfFindMatch(it){
-  var code=String(it.equipment_code||'').trim();
-  var name=String(it.equipment_name||'').trim();
+// Pick records in DB that this PDF item refers to. Returns {tier, candidates}.
+function _eqiPdfResolveCandidates(item,data){
   var rows=DB.equip_inspections||[];
-  if(code){
-    var byCode=rows.filter(function(r){return String(r.code||'').trim()===code;});
-    if(byCode.length)return {recs:byCode,confidence:'high'};
+  var pdfCode=_eqiNormCode(item.equipment_code);
+  var pdfName=_eqiNorm(item.equipment_name);
+  var pdfVendor=_eqiNorm(item.vendor||data.vendor);
+  // 1) Exact code match — highest confidence (each code uniquely identifies an item).
+  if(pdfCode){
+    var byCode=rows.filter(function(r){return _eqiNormCode(r.code)===pdfCode;});
+    if(byCode.length)return {tier:'code',candidates:byCode.map(_eqiPdfWrapCand)};
   }
-  if(name){
-    var nm=name.toLowerCase();
-    var byName=rows.filter(function(r){var rn=String(r.n||'').toLowerCase();return rn===nm;});
-    if(byName.length)return {recs:byName,confidence:'high'};
-    var fuzzy=rows.filter(function(r){var rn=String(r.n||'').toLowerCase();return rn.indexOf(nm)>=0||nm.indexOf(rn)>=0;});
-    if(fuzzy.length)return {recs:fuzzy,confidence:'low'};
+  // 2) Name + vendor match — both must match, multiple records OK (means duplicates of same physical equipment).
+  if(pdfName && pdfVendor){
+    var byNV=rows.filter(function(r){return _eqiNorm(r.n)===pdfName && _eqiNorm(r.vendor)===pdfVendor;});
+    if(byNV.length)return {tier:'name+vendor',candidates:byNV.map(_eqiPdfWrapCand)};
   }
-  return null;
+  // 3) Name unique — only safe to auto-update if exactly 1 record exists with that name.
+  if(pdfName){
+    var byName=rows.filter(function(r){return _eqiNorm(r.n)===pdfName;});
+    if(byName.length===1)return {tier:'name-unique',candidates:byName.map(_eqiPdfWrapCand)};
+    // 4) Multiple records with same name but no vendor distinguisher — ambiguous; user picks.
+    if(byName.length>1)return {tier:'ambiguous',candidates:byName.map(_eqiPdfWrapCand)};
+  }
+  // 5) No match — will create new.
+  return {tier:'none',candidates:[]};
 }
-function _eqiPdfComputeDiff(rec,d){
+function _eqiPdfWrapCand(rec){
+  return {rec:rec,id:rec.id,currentExpiry:rec.e||null,_selected:true};
+}
+function _eqiPdfComputeRecDiff(rec,proposed){
   var diffs=[];
   function cmp(field,oldV,newV){
     if(newV===null||newV===undefined||newV==='')return;
     if(String(oldV||'').trim()!==String(newV||'').trim())diffs.push({field:field,old:oldV||'',new:newV});
   }
-  cmp('\u05ea\u05d5\u05e7\u05e3',rec.e,d.expiry_date);
-  cmp('\u05e1\u05e4\u05e7',rec.vendor,d.vendor);
-  cmp('\u05de\u05d9\u05e7\u05d5\u05dd',rec.loc,d.location);
-  cmp('\u05e1\u05d8\u05d8\u05d5\u05e1',rec.s,d.status);
+  cmp('\u05ea\u05d5\u05e7\u05e3',rec.e,proposed.expiry_date);
+  cmp('\u05d1\u05d3\u05d9\u05e7\u05d4',rec.d,proposed.inspection_date);
+  cmp('\u05e1\u05d8\u05d8\u05d5\u05e1',rec.s,proposed.status);
+  if(_eqiNormCode(rec.code)!==_eqiNormCode(proposed.equipment_code))cmp('\u05e7\u05d5\u05d3',rec.code,proposed.equipment_code);
   return diffs;
 }
 function _eqiPdfFillForm(data){
-  // Shared metadata fields (top of modal).
   g('eqi-pdf-vendor').value=data.vendor||'';
   g('eqi-pdf-loc').value=data.location||'';
   g('eqi-pdf-date').value=data.inspection_date||'';
   g('eqi-pdf-expiry').value=data.expiry_date||'';
-  // Render items list.
+  var rep=g('eqi-pdf-report-row');
+  if(rep)rep.style.display=data.report_number?'':'none';
+  var repInp=g('eqi-pdf-report');
+  if(repInp)repInp.value=data.report_number||'';
   var wrap=g('eqi-pdf-items-wrap');
-  wrap.innerHTML=data.items.map(function(it,i){return _eqiPdfItemRow(it,i);}).join('');
+  wrap.innerHTML=data.items.map(function(it,i){return _eqiPdfItemRow(it,i,data);}).join('');
 }
-function _eqiPdfItemRow(it,i){
-  var matched=!!it._matchId;
-  var match=matched?(DB.equip_inspections||[]).find(function(r){return r.id===it._matchId;}):null;
-  var conf=it._matchConf;
+function _eqiPdfItemRow(it,i,data){
+  var tier=it._matchTier;
+  var nCands=it._candidates?it._candidates.length:0;
+  var meta={
+    equipment_code:it.equipment_code,
+    inspection_date:data.inspection_date,
+    expiry_date:data.expiry_date,
+    status:it.status
+  };
   var badge,bg,border;
-  if(!matched){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
-  else if(conf==='low'){badge='⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05d7\u05dc\u05e7\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
-  else if(it._diffs && it._diffs.length){badge='✓ \u05e2\u05d3\u05db\u05d5\u05df';bg='#dbeafe';border='#1d4ed8';}
-  else{badge='✓ \u05d6\u05d4\u05d4';bg='#dcfce7';border='#16a34a';}
-  var nMatches=(it._matchIds||[]).length||(matched?1:0);
-  var matchLine=match?'<div style="font-size:11px;color:#555;margin-top:3px">\u05e7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea: <strong>'+esc(match.n||'?')+'</strong>'+(match.code?' ['+esc(match.code)+']':'')+(nMatches>1?' <span style="background:#1d4ed8;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">\u00d7'+nMatches+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</span>':'')+'</div>':'';
-  var diffLine='';
-  if(match && it._diffs && it._diffs.length){
-    diffLine='<ul style="margin:4px 0 0;padding-right:18px;font-size:11px;color:#444">'+it._diffs.map(function(d2){return '<li>'+esc(d2.field)+': <span style="text-decoration:line-through;color:#888">'+esc(String(d2.old||'—'))+'</span> ➝ <strong style="color:#16a34a">'+esc(String(d2.new))+'</strong></li>';}).join('')+'</ul>';
+  if(tier==='none'){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
+  else if(tier==='ambiguous'){badge='⚠ \u05e1\u05de\u05df \u05d9\u05d3\u05e0\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
+  else if(tier==='code'){badge='✓ \u05d6\u05d5\u05d4\u05d4 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3';bg='#dcfce7';border='#16a34a';}
+  else if(tier==='name+vendor'){badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd+\u05e1\u05e4\u05e7)';bg='#dcfce7';border='#16a34a';}
+  else{badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9)';bg='#dbeafe';border='#1d4ed8';}
+  var hdr='<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">'+
+    '<input type="checkbox" data-i="'+i+'" '+(it._selected?'checked':'')+' onchange="_eqiPdfToggleItem(this)" style="width:16px;height:16px;cursor:pointer">'+
+    '<strong style="flex:1">'+esc(it.equipment_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)')+'</strong>'+
+    '<span style="font-size:10px;background:'+border+';color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap">'+badge+'</span>'+
+  '</div>';
+  var sub=[];
+  if(it.equipment_code)sub.push('\u05e7\u05d5\u05d3: <code>'+esc(it.equipment_code)+'</code>');
+  if(it.vendor)sub.push('\u05e1\u05e4\u05e7: '+esc(it.vendor));
+  if(it.status)sub.push('\u05e1\u05d8\u05d8\u05d5\u05e1: '+esc(it.status));
+  var subLine=sub.length?'<div style="font-size:11px;color:#555;margin-top:3px">'+sub.join(' · ')+'</div>':'';
+  var noteLine=it.notes?'<div style="font-size:11px;color:#666;margin-top:2px">'+esc(it.notes)+'</div>':'';
+  var candHtml='';
+  if(nCands>0){
+    var thead='<tr style="background:#f1f5f9"><th style="padding:4px;text-align:right;font-size:10px;width:24px"></th><th style="padding:4px;text-align:right;font-size:10px">\u05e1\u05e4\u05e7</th><th style="padding:4px;text-align:right;font-size:10px">\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9</th><th style="padding:4px;text-align:right;font-size:10px">→ \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d3\u05e9</th></tr>';
+    var tbody=it._candidates.map(function(cnd,ci){
+      var diff=_eqiPdfComputeRecDiff(cnd.rec,meta);
+      var diffMark=diff.length?'<span style="color:#1d4ed8;font-weight:700"> ✱</span>':'';
+      var oldExp=cnd.rec.e?fd(cnd.rec.e):'—';
+      var newExp=meta.expiry_date?fd(meta.expiry_date):'—';
+      return '<tr style="border-top:1px solid #e2e8f0">'+
+        '<td style="padding:4px"><input type="checkbox" data-i="'+i+'" data-ci="'+ci+'" '+(cnd._selected?'checked':'')+' onchange="_eqiPdfToggleCand(this)"></td>'+
+        '<td style="padding:4px;font-size:11px">'+esc(cnd.rec.vendor||'—')+'</td>'+
+        '<td style="padding:4px;font-size:11px;color:#888;text-decoration:'+(diff.length?'line-through':'none')+'">'+esc(oldExp)+'</td>'+
+        '<td style="padding:4px;font-size:11px;color:#16a34a;font-weight:700">'+esc(newExp)+diffMark+'</td>'+
+      '</tr>';
+    }).join('');
+    var hint=tier==='ambiguous'?'<div style="font-size:11px;color:#92400e;background:#fef9c3;padding:5px 7px;border-radius:6px;margin-bottom:4px">⚠ \u05e0\u05de\u05e6\u05d0\u05d5 '+nCands+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05dd \u05d4\u05e9\u05dd \u05d4\u05d6\u05d4 \u05d5\u05d1\u05dc\u05d9 \u05e7\u05d5\u05d3/\u05e1\u05e4\u05e7 \u05e9\u05d5\u05e0\u05d4. \u05e1\u05de\u05df \u05e8\u05e7 \u05d0\u05ea \u05d0\u05dc\u05d4 \u05e9\u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05de\u05ea\u05d9\u05d9\u05d7\u05e1 \u05d0\u05dc\u05d9\u05d4\u05df.</div>':'<div style="font-size:11px;color:#555;margin-bottom:4px">'+nCands+' \u05e8\u05e9\u05d5\u05de'+(nCands>1?'\u05d5\u05ea':'\u05d4')+' '+(nCands>1?'\u05d9\u05e2\u05d5\u05d3\u05db\u05e0\u05d5':'\u05ea\u05e2\u05d5\u05d3\u05db\u05df')+':</div>';
+    candHtml=hint+'<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden">'+thead+tbody+'</table>';
+  }else{
+    candHtml='<div style="font-size:11px;color:#92400e;background:#fef9c3;padding:5px 7px;border-radius:6px">+ \u05e6\u05d9\u05d5\u05d3 \u05d7\u05d3\u05e9 — \u05ea\u05d9\u05d5\u05d5\u05e6\u05e8 \u05e8\u05e9\u05d5\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</div>';
   }
-  var partialWarn=(matched && conf==='low')?'<div style="margin-top:4px;font-size:11px;color:#92400e;background:#fef9c3;padding:5px 7px;border-radius:6px">⚠ \u05d4\u05ea\u05d0\u05de\u05d4 \u05dc\u05e4\u05d9 \u05e9\u05dd \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05d0 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3). \u05d5\u05d3\u05d0 \u05e9\u05d6\u05d4 \u05d0\u05db\u05df \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05e0\u05db\u05d5\u05df.</div>':'';
   return '<div data-i="'+i+'" style="border:1px solid '+border+';background:'+bg+';border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">'+
-    '<div style="display:flex;align-items:flex-start;gap:8px">'+
-      '<input type="checkbox" data-i="'+i+'" '+(it._selected?'checked':'')+' onchange="_eqiPdfToggle(this)" style="margin-top:3px;flex-shrink:0;width:16px;height:16px;cursor:pointer">'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">'+
-          '<strong>'+esc(it.equipment_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)')+'</strong>'+
-          '<span style="font-size:10px;background:'+border+';color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap">'+badge+'</span>'+
-        '</div>'+
-        (it.equipment_code?'<div style="font-size:11px;color:#555;margin-top:2px">\u05e7\u05d5\u05d3: <code>'+esc(it.equipment_code)+'</code></div>':'')+
-        (it.status?'<div style="font-size:11px;color:#555;margin-top:2px">\u05e1\u05d8\u05d8\u05d5\u05e1: '+esc(it.status)+'</div>':'')+
-        (it.notes?'<div style="font-size:11px;color:#666;margin-top:2px">'+esc(it.notes)+'</div>':'')+
-        matchLine+
-        diffLine+
-        partialWarn+
-      '</div>'+
-    '</div>'+
+    hdr+subLine+noteLine+
+    '<div style="margin-top:6px">'+candHtml+'</div>'+
   '</div>';
 }
-window._eqiPdfToggle=function(cb){
+window._eqiPdfToggleItem=function(cb){
   var i=parseInt(cb.dataset.i,10);
   var data=window._eqiPdfData;if(!data||!data.items[i])return;
   data.items[i]._selected=cb.checked;
   _eqiPdfUpdateCount();
 };
+window._eqiPdfToggleCand=function(cb){
+  var i=parseInt(cb.dataset.i,10),ci=parseInt(cb.dataset.ci,10);
+  var data=window._eqiPdfData;if(!data||!data.items[i])return;
+  var cnd=data.items[i]._candidates[ci];if(!cnd)return;
+  cnd._selected=cb.checked;
+  _eqiPdfUpdateCount();
+};
 function _eqiPdfUpdateCount(){
   var data=window._eqiPdfData;if(!data)return;
-  var n=data.items.filter(function(it){return it._selected;}).length;
+  var n=0,r=0;
+  data.items.forEach(function(it){
+    if(!it._selected)return;
+    if(it._action==='create' && (!it._candidates||!it._candidates.length)){n++;}
+    if(it._candidates && it._candidates.length){
+      it._candidates.forEach(function(cnd){if(cnd._selected){r++;n++;}});
+    }
+  });
   var el=g('eqi-pdf-count');if(el)el.textContent=n;
   var btn=g('eqi-pdf-apply');if(btn)btn.disabled=(n===0);
 }
 window._eqiPdfApply=function(silent){
   var data=window._eqiPdfData;
   if(!data){alert('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd');return;}
-  // Pick up any user edits to shared metadata.
   data.vendor=gv('eqi-pdf-vendor')||data.vendor||null;
   data.location=gv('eqi-pdf-loc')||data.location||null;
   data.inspection_date=gv('eqi-pdf-date')||data.inspection_date||null;
   data.expiry_date=gv('eqi-pdf-expiry')||data.expiry_date||null;
+  if(g('eqi-pdf-report'))data.report_number=gv('eqi-pdf-report')||data.report_number||null;
   if(!data.expiry_date){alert('\u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05e1\u05d5\u05de\u05df');return;}
-  var items=data.items.filter(function(it){return it._selected;});
-  if(!items.length){alert('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05d3');return;}
-  // Step 1: upload PDF once. All selected items share the same file_url.
+  var work=[];
+  data.items.forEach(function(it){
+    if(!it._selected)return;
+    if(it._candidates && it._candidates.length){
+      it._candidates.forEach(function(cnd){if(cnd._selected)work.push({type:'update',item:it,rec:cnd.rec});});
+    }else if(it._action==='create'){
+      work.push({type:'create',item:it});
+    }
+  });
+  if(!work.length){alert('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e4\u05e2\u05d5\u05dc\u05d4 \u05d0\u05d7\u05ea');return;}
   var f=window._eqiPdfFile;
-  if(!f){_eqiPdfApplyAll(items,data,null,silent);return;}
-  if(!silent)g('eqi-pdf-status').textContent='📤 \u05de\u05e2\u05dc\u05d4 \u05d0\u05ea \u05d4-PDF \u05dc\u05e2\u05e0\u05df...';
+  if(!f){_eqiPdfApplyAll(work,data,null);return;}
+  g('eqi-pdf-status').textContent='📤 \u05de\u05e2\u05dc\u05d4 \u05d0\u05ea \u05d4-PDF \u05dc\u05e2\u05e0\u05df...';
   _fileUpload(f,'eqi-pdf',function(url,errStatus){
     if(!url){
-      if(!silent)g('eqi-pdf-status').textContent='⚠ \u05d4\u05e2\u05dc\u05d0\u05ea PDF \u05e0\u05db\u05e9\u05dc\u05d4 ('+errStatus+'). \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05ea\u05e2\u05d5\u05d3\u05db\u05e0\u05d4 \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5.';
-      _eqiPdfApplyAll(items,data,null,silent);
+      g('eqi-pdf-status').textContent='⚠ \u05d4\u05e2\u05dc\u05d0\u05ea PDF \u05e0\u05db\u05e9\u05dc\u05d4 ('+errStatus+'). \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d9\u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5.';
+      _eqiPdfApplyAll(work,data,null);
     }else{
-      _eqiPdfApplyAll(items,data,url,silent);
+      _eqiPdfApplyAll(work,data,url);
     }
   });
 };
-function _eqiPdfApplyAll(items,data,fileUrl,silent){
-  var created=0,updated=0;
-  items.forEach(function(it){
-    var d=_eqiPdfMergeMeta(it,data);
-    var ids=(it._matchIds&&it._matchIds.length)?it._matchIds:(it._matchId?[it._matchId]:[]);
-    if(ids.length){
-      // Update every record that matched (handles duplicates of the same equipment).
-      ids.forEach(function(rid){
-        var match=(DB.equip_inspections||[]).find(function(r){return r.id===rid;});
-        if(match){_eqiPdfUpdateOne(match,d,fileUrl);updated++;}
-      });
-    }else{
-      _eqiPdfCreateOne(d,fileUrl);created++;
+function _eqiPdfApplyAll(work,data,fileUrl){
+  var updated=0,created=0,failed=0;
+  var failures=[];
+  var p=Promise.resolve();
+  work.forEach(function(w){
+    p=p.then(function(){
+      try{
+        if(w.type==='update'){
+          return _eqiPdfPersistUpdate(w.rec,w.item,data,fileUrl).then(function(){updated++;}).catch(function(e){failed++;failures.push((w.rec.n||'?')+': '+(e&&e.message||e));});
+        }else{
+          return _eqiPdfPersistCreate(w.item,data,fileUrl).then(function(){created++;}).catch(function(e){failed++;failures.push((w.item.equipment_name||'\u05d7\u05d3\u05e9')+': '+(e&&e.message||e));});
+        }
+      }catch(e){failed++;failures.push(String(e));}
+    });
+  });
+  p.then(function(){
+    var parts=[];
+    if(updated)parts.push('✓ '+updated+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
+    if(created)parts.push('✓ '+created+' \u05e0\u05d5\u05e6\u05e8\u05d5');
+    if(failed)parts.push('✗ '+failed+' \u05e0\u05db\u05e9\u05dc\u05d5');
+    toast(parts.join(' · ')||'\u05d1\u05d5\u05e6\u05e2');
+    if(failures.length){
+      var sum='\u05e0\u05db\u05e9\u05dc\u05d5:\n'+failures.slice(0,8).join('\n');
+      g('eqi-pdf-status').textContent=sum;
+    }
+    sdb();
+    if(typeof rEqi==='function')rEqi();
+    if(typeof rDash==='function')rDash();
+    // If everything succeeded, close. Otherwise leave open so the user can see the failure list.
+    if(!failures.length){
+      closeModal('m-eqi-pdf');
+      window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfFile=null;
     }
   });
-  var summary=[];
-  if(updated)summary.push(updated+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
-  if(created)summary.push(created+' \u05e0\u05d5\u05e6\u05e8\u05d5');
-  toast('✓ '+summary.join(' · '));
-  sdb();closeModal('m-eqi-pdf');
-  window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfFile=null;
-  if(typeof rEqi==='function')rEqi();
-  if(typeof rDash==='function')rDash();
 }
-function _eqiPdfUpdateOne(match,d,fileUrl){
-  var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===match.id;});
-  if(idx<0)return;
-  var rec=DB.equip_inspections[idx];
-  if(d.expiry_date)rec.e=d.expiry_date;
-  if(d.inspection_date)rec.d=d.inspection_date;
-  if(d.vendor)rec.vendor=d.vendor;
-  if(d.location)rec.loc=d.location;
-  if(d.status)rec.s=d.status;
-  if(fileUrl)rec.file_url=fileUrl;
-  var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(d.inspection_date||fd(new Date().toISOString()))+'] '+(d.notes||d.status||'');
-  rec.notes=(rec.notes?rec.notes+'\n':'')+stamp;
-  rec.ts=new Date().toISOString();
-  sbUpd('equip_inspections',rec);
+function _eqiPdfPersistUpdate(rec,item,data,fileUrl){
+  var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===rec.id;});
+  if(idx<0)return Promise.reject(new Error('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e0\u05e2\u05dc\u05de\u05d4'));
+  var live=DB.equip_inspections[idx];
+  // Apply changes to local copy first.
+  if(data.expiry_date)live.e=data.expiry_date;
+  if(data.inspection_date)live.d=data.inspection_date;
+  if(item.vendor)live.vendor=item.vendor;
+  else if(data.vendor && !live.vendor)live.vendor=data.vendor;
+  if(data.location && !live.loc)live.loc=data.location;
+  if(item.status)live.s=item.status;
+  // Store equipment_code if PDF supplied one and existing was empty/-.
+  var pdfCode=item.equipment_code;
+  if(pdfCode && (!live.code || live.code==='-' || live.code==='—'))live.code=pdfCode;
+  if(data.report_number)live.report_number=data.report_number;
+  if(fileUrl)live.file_url=fileUrl;
+  var stamp='[\u05d1\u05d3\u05d9\u05e7\u05d4 '+(data.inspection_date||fd(new Date().toISOString()))+(data.report_number?' · \u05ea\u05e1\u05e7\u05d9\u05e8 '+data.report_number:'')+'] '+(item.notes||item.status||'');
+  live.notes=(live.notes?live.notes+'\n':'')+stamp;
+  live.ts=new Date().toISOString();
+  return _eqiPdfSyncRow('upd',live);
 }
-function _eqiPdfCreateOne(d,fileUrl){
+function _eqiPdfPersistCreate(item,data,fileUrl){
   var rec={
     id:gid(),
-    n:d.equipment_name,
-    code:d.equipment_code||null,
-    vendor:d.vendor||null,
-    loc:d.location||null,
-    d:d.inspection_date||null,
-    e:d.expiry_date,
-    s:d.status||'\u05ea\u05e7\u05d9\u05df',
-    notes:d.notes||null,
+    n:item.equipment_name,
+    code:item.equipment_code||null,
+    vendor:item.vendor||data.vendor||null,
+    loc:data.location||null,
+    d:data.inspection_date||null,
+    e:data.expiry_date,
+    s:item.status||'\u05ea\u05e7\u05d9\u05df',
+    notes:item.notes||null,
     file_url:fileUrl||null,
+    report_number:data.report_number||null,
     ts:new Date().toISOString()
   };
   if(!DB.equip_inspections)DB.equip_inspections=[];
   DB.equip_inspections.push(rec);
-  sbIns('equip_inspections',rec);
+  return _eqiPdfSyncRow('ins',rec);
+}
+// Push a row to Supabase and resolve only after a 200/201 — failures throw so
+// _eqiPdfApplyAll counts them correctly. Uses upsert so 409s don't break.
+function _eqiPdfSyncRow(op,rec){
+  return _sbAuth().then(function(){
+    var url,opts={};
+    if(op==='ins'){url=SBU+'/rest/v1/equip_inspections';opts.method='POST';opts.headers=sbHUpsert();opts.body=JSON.stringify(rec);}
+    else{url=SBU+'/rest/v1/equip_inspections?id=eq.'+encodeURIComponent(rec.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(rec);}
+    return fetch(url,opts).then(function(r){
+      if(!r.ok)return r.text().then(function(b){throw new Error('HTTP '+r.status+': '+b.substring(0,120));});
+    });
+  });
 }
 
 function delAllEqi(){
