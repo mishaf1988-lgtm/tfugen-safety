@@ -435,6 +435,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-mine-card" style="display:none"><div class="card-title">&#128100; NCR &#1513;&#1500;&#1497; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-mine"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3347,6 +3348,27 @@ function rDash(){
       }else{if(dmc)dmc.style.display='none';}
     }else{if(dmc)dmc.style.display='none';}
   }catch(e){console.warn('dash-mine failed',e);}
+
+  // Dashboard: top env aspects by RPN (current)
+  try{
+    var deac=g('dash-easp-card');
+    var dea=g('dash-easp');
+    if(dea){
+      var aspects=(DB.env_aspects||[]).filter(function(r){return (r.p_curr||0)*(r.sv_curr||0)>=10;}).sort(function(a,b){
+        var ar=(a.p_curr||0)*(a.sv_curr||0),br=(b.p_curr||0)*(b.sv_curr||0);return br-ar;
+      });
+      if(aspects.length){
+        if(deac)deac.style.display='';
+        dea.innerHTML=aspects.slice(0,5).map(function(r){
+          var rpn=(r.p_curr||0)*(r.sv_curr||0);
+          var color=rpn>=16?'#cc1f1f':(rpn>=10?'#e07a00':'#eab308');
+          var safeId=esc(r.id||'');
+          var asp=esc((r.aspect||'').substring(0,50));
+          return '<div data-id="'+safeId+'" onclick="if(typeof showView===\'function\')showView(\'env_aspects\',this.dataset.id);else goPage(\'easp\')" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#f0fdf4\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+asp+'</span><span class="b" style="background:'+color+';color:#fff;font-size:10px">RPN '+rpn+'</span></div>';
+        }).join('');
+      }else{if(deac)deac.style.display='none';}
+    }
+  }catch(e){console.warn('dash-easp failed',e);}
 
   // Inspection types upcoming
   try{
