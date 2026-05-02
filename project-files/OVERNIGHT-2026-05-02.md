@@ -1,8 +1,8 @@
 # Overnight Autonomous Session — 2026-05-02
 
 **Branch**: `claude/check-software-status-9iZMX`
-**Latest commit**: `0bad36c`
-**Total PRs merged**: ~125 לילה + 29 בוקר
+**Latest commit**: `2f83806`
+**Total PRs merged**: ~125 לילה + 32 בוקר
 
 ---
 
@@ -74,6 +74,13 @@
 
 ### שורטקאטים
 - ⌨️ **/** פותח חיפוש גלובלי (תוספת ל-Ctrl+K).
+
+### Navigation
+- 🔢 **Bottom-nav tasks badge**: ספירת משימות פתוחות בלשונית "משימות" בנאוויגציה התחתונה.
+- 🔍 **Modules-sheet search**: שדה חיפוש בתוך תפריט המודולים — מסנן בזמן אמת.
+
+### דשבורד — תוספות אחרונות
+- ⌚ **Freshness time**: כותרת התאריך מציגה גם "עודכן ב-HH:MM" כדי להראות רענון נתונים.
 
 ---
 
