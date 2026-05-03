@@ -3052,7 +3052,7 @@ function rDash(){
       var overdueT2=(DB.tasks||[]).filter(function(t){if(!t.due||t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;return new Date(t.due)<today3;}).length;
       score-=Math.min(overdueT2*3,20);
       var expSoon=0;
-      ['ppe','tr','docs','ctr'].forEach(function(k){(DB[k]||[]).forEach(function(r){if(!r.e)return;var d=new Date(r.e);var dd=(d-today3)/86400000;if(dd<0)expSoon++;});});
+      ['ppe','tr','docs','ctr','equip_inspections'].forEach(function(k){(DB[k]||[]).forEach(function(r){if(!r.e)return;var d=new Date(r.e);var dd=(d-today3)/86400000;if(dd<0)expSoon++;});});
       score-=Math.min(expSoon*2,20);
       score=Math.max(score,0);
       var color=score>=80?'#16a34a':(score>=60?'#eab308':'#cc1f1f');
