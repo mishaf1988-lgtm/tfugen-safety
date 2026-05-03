@@ -490,6 +490,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:6px">
     <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
     <select id="eqi-loc-filter" onchange="eqiLocFilter(this.value)" style="padding:8px;max-width:200px"></select>
+    <button class="btn btn-s" onclick="eqiResetFilters()" title="&#1488;&#1497;&#1508;&#1493;&#1505; &#1499;&#1500; &#1492;&#1502;&#1505;&#1504;&#1504;&#1497;&#1501; (&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; / &#1505;&#1496;&#1496;&#1493;&#1505; / &#1502;&#1497;&#1511;&#1493;&#1501; / &#1495;&#1497;&#1508;&#1493;&#1513;) &#1493;&#1502;&#1497;&#1497;&#1503;" style="padding:8px;background:#64748b">&#8634; &#1488;&#1497;&#1508;&#1493;&#1505;</button>
   </div>
   <div id="eqi-cat-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;overflow-x:auto"></div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 10px">
@@ -3849,8 +3850,49 @@ function _eqiCategoryOf(r){
   for(var i=0;i<rules.length;i++){if(rules[i].re.test(nm))return rules[i].cat;}
   return '\u05d0\u05d7\u05e8';
 }
-function eqiTypeFilter(t){window._eqiTypeFilter=t||'';rEqi();}
-function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rEqi();}
+// Persist sort/filter state across page reloads. Keys are namespaced under
+// tfgn_eqi_state. Restored on page load by _eqiRestoreState before the first
+// rEqi call. eqiResetFilters() blows it all away in one click.
+function _eqiSaveState(){
+  try{
+    localStorage.setItem('tfgn_eqi_state', JSON.stringify({
+      filter:window._eqiFilter||'all',
+      type:window._eqiTypeFilter||'',
+      loc:window._eqiLocFilter||'',
+      q:window._eqiQ||'',
+      sortCol:window._eqiSortCol||'',
+      sortDir:window._eqiSortDir||''
+    }));
+  }catch(e){}
+}
+function _eqiRestoreState(){
+  try{
+    var s=JSON.parse(localStorage.getItem('tfgn_eqi_state')||'{}');
+    if(s.filter)window._eqiFilter=s.filter;
+    if(s.type)window._eqiTypeFilter=s.type;
+    if(s.loc)window._eqiLocFilter=s.loc;
+    if(s.q){window._eqiQ=s.q;var qi=g('eqi-q');if(qi)qi.value=s.q;}
+    if(s.sortCol)window._eqiSortCol=s.sortCol;
+    if(s.sortDir)window._eqiSortDir=s.sortDir;
+  }catch(e){}
+}
+function eqiResetFilters(){
+  window._eqiFilter='all';
+  window._eqiTypeFilter='';
+  window._eqiLocFilter='';
+  window._eqiQ='';
+  window._eqiSortCol='e';
+  window._eqiSortDir='asc';
+  var qi=g('eqi-q');if(qi)qi.value='';
+  var lf=g('eqi-loc-filter');if(lf)lf.value='';
+  ['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(k==='all'?'btn-p':'btn-s');});
+  _eqiSaveState();
+  rEqi();
+  toast('כל המסננים אופסו ✓');
+}
+document.addEventListener('DOMContentLoaded',function(){_eqiRestoreState();});
+function eqiTypeFilter(t){window._eqiTypeFilter=t||'';_eqiSaveState();rEqi();}
+function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});_eqiSaveState();rEqi();}
 function eqiSort(col){
   // Click same column → toggle direction. Click new column → asc.
   if(window._eqiSortCol===col){
@@ -3859,9 +3901,10 @@ function eqiSort(col){
     window._eqiSortCol=col;
     window._eqiSortDir='asc';
   }
+  _eqiSaveState();
   rEqi();
 }
-function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
+function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';_eqiSaveState();rEqi();}
 // Bulk equipment status report — opens a print-friendly window with every
 // row currently visible on the equipment page (after category/status/search/
 // location filters). Designed for monthly ISO 45001 audits: header + summary
@@ -6989,7 +7032,7 @@ function svTskDelete(){
 }
 // Location filters for PTW + EQI + Hzm
 function ptwLocFilter(v){window._ptwLocFilter=v||'';rPtw();}
-function eqiLocFilter(v){window._eqiLocFilter=v||'';rEqi();}
+function eqiLocFilter(v){window._eqiLocFilter=v||'';if(typeof _eqiSaveState==='function')_eqiSaveState();rEqi();}
 function hzmLocFilter(v){window._hzmLocFilter=v||'';rHzm();}
 
 // Equipment Inspections saved-view glue
