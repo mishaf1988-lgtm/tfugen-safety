@@ -36,7 +36,7 @@ export async function onRequest({ request, env }) {
     parsed.max_tokens = Math.min(parsed.max_tokens || MAX_TOKENS_CAP, MAX_TOKENS_CAP);
   }
 
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -46,9 +46,23 @@ export async function onRequest({ request, env }) {
     body: JSON.stringify(parsed)
   });
 
-  const data = await r.text();
+  // Streaming path: pipe the SSE body straight through. Keeps the connection
+  // alive for long PDF analyses (>100s) so Cloudflare doesn't 524.
+  if (parsed.stream && upstream.body) {
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: {
+        ...cors,
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no'
+      }
+    });
+  }
+
+  const data = await upstream.text();
   return new Response(data, {
-    status: r.status,
+    status: upstream.status,
     headers: { ...cors, 'Content-Type': 'application/json' }
   });
 }
