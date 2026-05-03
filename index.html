@@ -5651,7 +5651,7 @@ function createNewUser(){
 function copyCredentials(){
   var u=g('cr-username').textContent;
   var p=g('cr-password').textContent;
-  var txt='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9: '+u+'\n\u05e1\u05d9\u05e1\u05de\u05d4: '+p+'\n\u05db\u05e0\u05d9\u05e1\u05d4: https://tfugen-safety.vercel.app';
+  var txt='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9: '+u+'\n\u05e1\u05d9\u05e1\u05de\u05d4: '+p+'\n\u05db\u05e0\u05d9\u05e1\u05d4: https://tapugan-safety.pages.dev';
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 ✓',{ok:true});}).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05e2\u05ea\u05e7\u05d4');});
   }else{

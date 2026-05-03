@@ -8,8 +8,7 @@ Claude Code loads this file automatically at the start of every session in this 
 (הברנד נקרא **Tapugan Safety**. ה-repo עדיין נקרא `tfugen-safety` מסיבות היסטוריות — לא משנים את שם ה-repo.)
 
 - **Repo**: `mishaf1988-lgtm/tfugen-safety`
-- **Live (Production)**: 🟢 **https://tapugan-safety.pages.dev** ← השרת העיקרי, Cloudflare Pages
-- **Live (Legacy fallback)**: 🟡 https://tfugen-safety.vercel.app — עובד עדיין כי 5 ה-WhatsApp templates של Meta מצביעים על ה-URL הזה. **אל תפיל אותו** עד ש-Meta יאשרו את העדכונים (24-48h מ-2026-05-02).
+- **Live (Production, sole)**: 🟢 **https://tapugan-safety.pages.dev** ← Cloudflare Pages, auto-deploy מ-`main`
 - **Standards**: ISO 14001 (סביבה) + ISO 45001 (בטיחות ובריאות תעסוקתית)
 - **User**: מנהל בטיחות במפעל (לא מפתח מקצועי — מעדיף שינויים קטנים, ברורים, ומוסברים).
 
@@ -19,14 +18,11 @@ Claude Code loads this file automatically at the start of every session in this 
 |---|---|
 | UI | **single-file** `index.html` (~7800 lines) — אין build step, אין framework |
 | Backend | **Supabase** — 35+ טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
-| AI | Cloudflare Pages Function `functions/api/claude.js` → Claude API |
+| AI | Cloudflare Pages Function `functions/api/claude.js` → Claude API (streaming) |
 | Deploy | **Cloudflare Pages** auto-deploy מ-`main` (project: `tapugan-safety`) |
 
-### חשוב — יש 2 תיקיות API מקבילות:
-- `/api/*.js` — קוד Vercel (Edge Functions, `process.env`, `default export`)
-- `/functions/api/*.js` — קוד Cloudflare Pages Functions (`onRequest`, `env` arg, named export)
-
-**שניהם פעילים במקביל**. שינוי קוד API צריך להתבצע **בשניהם** (או רק ב-Cloudflare ו-Vercel נשאר עם הגרסה הישנה — שווה לדון לפי המקרה). עד שמורידים סופית את Vercel, יש להחזיק קוד תקין בשני המקומות אם זה חשוב.
+### API endpoints — `/functions/api/*.js`
+כל קוד צד שרת יושב ב-`/functions/api/*.js` (Cloudflare Pages Functions API: `onRequest`, `env` arg, named export). אין יותר תיקיית `/api` של Vercel — הוסרה ב-2026-05-03 כשהמיגרציה ל-Cloudflare הושלמה.
 
 ## חוקי פיתוח חובה
 
