@@ -478,6 +478,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openEqiXl()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
     <button class="btn btn-s" style="background:#0891b2;margin-left:8px" onclick="openEqiXl2()" title="&#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512; &#1502;&#1500;&#1488; (&#1506;&#1491;&#1499;&#1504;&#1497; + &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;)">&#128190; &#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512;</button>
     <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPrintAll()" title="&#1492;&#1491;&#1508;&#1505; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501; (&#1502;&#1505;&#1504;&#1503; &#1500;&#1508;&#1497; &#1504;&#1493;&#1499;&#1495;&#1497;&#1493;&#1514; &#1505;&#1497;&#1504;&#1503;)">&#128424; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501;</button>
+    <button class="btn btn-s" style="background:#16a34a;margin-left:8px" onclick="_eqiExportCsv()" title="&#1497;&#1497;&#1510;&#1493;&#1488; CSV (&#1500;&#1488;&#1511;&#1505;&#1500; / &#1502;&#1497;&#1497;&#1500;)">&#128202; CSV</button>
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
@@ -3902,6 +3903,71 @@ function _eqiPrintAll(){
   w.document.open();w.document.write(html);w.document.close();
   setTimeout(function(){try{w.focus();}catch(e){}},100);
 }
+// CSV export of the equipment list. Same filter pipeline as rEqi/_eqiPrintAll
+// so the user gets exactly the rows currently visible on the page. Output is
+// UTF-8 with BOM (﻿) so Excel opens it with the correct Hebrew encoding.
+window._eqiExportCsv=function(){
+  var locF=window._eqiLocFilter||'';
+  var typeF=window._eqiTypeFilter||'';
+  var f=window._eqiFilter||'all';
+  var q=window._eqiQ||'';
+  var rows=(DB.equip_inspections||[]).slice();
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  if(typeF)rows=rows.filter(function(r){return _eqiCategoryOf(r)===typeF;});
+  rows=rows.filter(function(r){
+    var x=r.e?du(r.e):9999;
+    if(f==='exp')return r.e&&x<0;
+    if(f==='30')return r.e&&x>=0&&x<=30;
+    if(f==='90')return r.e&&x>=0&&x<=90;
+    if(f==='ok')return r.s==='תקין';
+    return true;
+  });
+  if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
+  rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  // Quote a single CSV field — wrap in "..." and escape internal quotes.
+  function q2(v){if(v===null||v===undefined)return '';var s=String(v);return '"'+s.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
+  var headers=[
+    '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','\u05e7\u05d5\u05d3','\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e6\u05d9\u05d5\u05d3',
+    '\u05d9\u05e6\u05e8\u05df','\u05d3\u05d2\u05dd','\u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9','\u05e9\u05e0\u05ea \u05d9\u05d9\u05e6\u05d5\u05e8',
+    '\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9','\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9',
+    '\u05e1\u05e4\u05e7/\u05d1\u05d5\u05d3\u05e7','\u05de\u05d9\u05e7\u05d5\u05dd',
+    '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4','\u05d9\u05de\u05d9\u05dd \u05e2\u05d3','\u05de\u05d7\u05d6\u05d5\u05e8 (\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd)',
+    '\u05e1\u05d8\u05d8\u05d5\u05e1','\u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8','\u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8 \u05e7\u05d5\u05d3\u05dd',
+    '\u05e9\u05dd \u05d1\u05d5\u05d3\u05e7','\u05de\u05e1\u05f3 \u05ea\u05e2\u05d5\u05d3\u05ea \u05d1\u05d5\u05d3\u05e7','\u05d8\u05dc\u05e4\u05d5\u05df \u05d1\u05d5\u05d3\u05e7',
+    '\u05dc\u05d7\u05e5 \u05e2\u05d1\u05d5\u05d3\u05d4','\u05dc\u05d7\u05e5 \u05d1\u05d3\u05d9\u05e7\u05d4','\u05dc\u05d7\u05e5 \u05de\u05d0\u05d5\u05e9\u05e8',
+    '\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd','\u05d4\u05e2\u05e8\u05d5\u05ea','\u05e7\u05d9\u05e9\u05d5\u05e8 PDF'
+  ];
+  var lines=[headers.map(q2).join(',')];
+  rows.forEach(function(r){
+    var dl=r.e?du(r.e):'';
+    var cat=(typeof _eqiCategoryOf==='function')?_eqiCategoryOf(r):'';
+    var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
+    lines.push([
+      cat, r.code, r.n,
+      r.manufacturer, r.model, r.serial_number, r.year_of_production,
+      r.license_number, r.internal_number,
+      r.vendor, locTxt,
+      r.d, r.e, dl, r.cycle_months,
+      r.s, r.report_number, r.previous_report_number,
+      r.inspector, r.inspector_certificate, r.inspector_phone,
+      r.work_pressure, r.test_pressure, r.approved_pressure,
+      r.deficiencies, r.notes, r.file_url
+    ].map(q2).join(','));
+  });
+  // ﻿ BOM up front so Excel auto-detects UTF-8 instead of mangling Hebrew.
+  var csv='﻿'+lines.join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var stamp=new Date().toISOString().substring(0,10);
+  var fname='tapugan-equipment'+'-'+stamp+'.csv';
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=fname;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+  toast('\u05d9\u05d5\u05e6\u05d0 ✓ '+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea');
+};
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
   // Equipment-type chip bar — counts per category, click to filter.
