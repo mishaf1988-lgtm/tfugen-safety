@@ -279,7 +279,10 @@ body.emp-mode .cap-fab{display:none}
 @keyframes modal-in{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.overlay,.modal{animation:none}}
 .modal-title{font-size:16px;font-weight:900;margin-bottom:16px;color:var(--tx)}
-.close-btn{position:absolute;top:16px;left:16px;background:#f0f1f3;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:13px;color:var(--t2)}
+.close-btn{position:absolute;top:16px;left:16px;background:#f0f1f3;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13px;color:var(--t2);transition:background .15s ease,transform .15s ease,color .15s ease;cursor:pointer}
+.close-btn:hover{background:#e8eaee;color:var(--tx)}
+.close-btn:active{transform:scale(.94)}
+body.hc .close-btn:hover,body.hc .close-btn:active{transform:none}
 /* Mobile fullscreen modal pattern (applied via JS on viewports <768px) */
 .modal.is-fullscreen{padding:14px 14px calc(28px + env(safe-area-inset-bottom)) 14px;border-radius:0;border-top:none}
 .modal.is-fullscreen .close-btn{position:sticky;top:0;left:auto;right:0;float:right;font-size:15px;font-weight:700;padding:10px 16px;min-height:44px;background:#fff;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06);z-index:10;margin-left:0}
@@ -303,7 +306,9 @@ body.hc input:focus,body.hc select:focus,body.hc textarea:focus{box-shadow:0 0 0
 input[type=checkbox]{width:16px;height:16px;min-width:16px;-webkit-appearance:checkbox;cursor:pointer}
 
 /* ---- STREAK HERO ---- */
-.streak-hero{background:linear-gradient(135deg,#cc1f1f,#7a0000);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 4px 16px rgba(204,31,31,.25);position:relative;overflow:hidden}
+.streak-hero{background:linear-gradient(135deg,#cc1f1f,#7a0000);color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 6px 22px rgba(204,31,31,.28),0 1px 3px rgba(204,31,31,.18);position:relative;overflow:hidden;transition:box-shadow .2s ease,transform .2s ease}
+@media(hover:hover){.streak-hero:hover{box-shadow:0 10px 30px rgba(204,31,31,.34),0 2px 5px rgba(204,31,31,.22);transform:translateY(-1px)}}
+body.hc .streak-hero:hover{transform:none;box-shadow:0 4px 16px rgba(204,31,31,.25)}
 .streak-hero::before{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
 .streak-hero::after{content:"";position:absolute;left:-60px;bottom:-60px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04)}
 .streak-hero .sk-num{font-size:56px;font-weight:900;line-height:1;letter-spacing:-1.5px;position:relative}
