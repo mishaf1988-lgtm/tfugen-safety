@@ -3824,9 +3824,10 @@ function rEqi(){
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
+    var licBadge=r.license_number?'<span style="display:inline-block;font-size:10px;color:#0c4a6e;background:#e0f2fe;padding:1px 6px;border-radius:8px;margin-right:4px;font-weight:500" title="\u05de\u05e1\u05e4\u05e8 \u05e8\u05d9\u05e9\u05d5\u05d9 / \u05e6\u05d9\u05d5\u05d3 \u05d4\u05e0\u05d3\u05e1\u05d9">\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+esc(r.license_number)+'</span>':'';
     var pdfIcon=r.file_url?'<a data-sign="'+escU(r.file_url)+'" target="_blank" onclick="event.stopPropagation()" title="\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e1\u05e8\u05d5\u05e7" style="margin-right:6px;text-decoration:none;font-size:14px">&#128206;</a>':'';
     var expCell=r.e?(fd(r.e)+'<br>'+eb(r.e)):'&#8212;';
-    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+expCell+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
+    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+licBadge+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+expCell+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
   }).join('');
   if(typeof _signifyDom==='function')_signifyDom(tb);
 }
@@ -4321,6 +4322,7 @@ function _eqiPdfItemRow(it,i,data){
   var badge,bg,border;
   if(tier==='none'){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
   else if(tier==='ambiguous'){badge='⚠ \u05e1\u05de\u05df \u05d9\u05d3\u05e0\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
+  else if(tier==='license'){badge='\u2713 \u05d6\u05d5\u05d4\u05d4 \u05dc\u05e4\u05d9 \u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9';bg='#dcfce7';border='#16a34a';}
   else if(tier==='report'){badge='↻ \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8';bg='#e0e7ff';border='#4f46e5';}
   else if(tier==='renewal'){badge='\u267b \u05d7\u05d9\u05d3\u05d5\u05e9 (\u05dc\u05e4\u05d9 \u05ea\u05e1\u05e7\u05d9\u05e8 \u05e7\u05d5\u05d3\u05dd)';bg='#dcfce7';border='#16a34a';}
   else if(tier==='code'){badge='✓ \u05d6\u05d5\u05d4\u05d4 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3';bg='#dcfce7';border='#16a34a';}
@@ -4328,7 +4330,7 @@ function _eqiPdfItemRow(it,i,data){
   else{badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9)';bg='#dbeafe';border='#1d4ed8';}
   var hdr='<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">'+
     '<input type="checkbox" data-i="'+i+'" '+(it._selected?'checked':'')+' onchange="_eqiPdfToggleItem(this)" style="width:16px;height:16px;cursor:pointer">'+
-    '<strong style="flex:1">'+esc(it.equipment_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)')+'</strong>'+
+    '<strong style="flex:1">'+esc(it.equipment_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)')+(function(){var ct=_eqiCategoryOf({n:it.equipment_name,inspection_type:it.inspection_type});return ct?' <span style="font-size:10px;color:#6b21a8;background:#f3e8ff;padding:1px 7px;border-radius:8px;font-weight:500;margin-right:6px">\ud83c\udff7\ufe0f '+esc(ct)+'</span>':'';}())+(it.license_number?' <span style="font-size:10px;color:#0c4a6e;background:#e0f2fe;padding:1px 7px;border-radius:8px;font-weight:500;margin-right:4px">\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+esc(it.license_number)+'</span>':'')+'</strong>'+
     '<span style="font-size:10px;background:'+border+';color:#fff;padding:2px 8px;border-radius:10px;white-space:nowrap">'+badge+'</span>'+
   '</div>';
   var sub=[];
@@ -4540,6 +4542,10 @@ function _eqiPdfPersistUpdate(rec,item,data,fileUrl){
   if(item.status)live.s=item.status;
   var pdfCode=item.equipment_code;
   if(pdfCode && (!live.code || live.code==='-' || live.code==='—'))live.code=pdfCode;
+  // Forklift / engineering license — stable per physical unit. Always overwrite
+  // when the PDF supplies a real value (excludes "-" / em-dash placeholders).
+  var pdfLic=item.license_number||data.license_number;
+  if(pdfLic && pdfLic!=='-' && pdfLic!=='—')live.license_number=pdfLic;
   // Track report chain for renewal detection. On renewal: shift current report_number
   // into previous_report_number before overwriting it. Otherwise, accept whatever the
   // PDF supplied (only if previous slot is still empty).
@@ -6998,7 +7004,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e9\u05e2\u05d4','t'],['\u05ea\u05d9\u05d0\u05d5\u05e8','descr'],['\u05d0\u05d6\u05d5\u05e8','area'],
     ['\u05de\u05d3\u05d5\u05d5\u05d7','rep'],['\u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05e1\u05d5\u05d2','typ'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   equip_inspections:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',back:'eqi',fields:[
-    ['\u05e7\u05d5\u05d3','code'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
+    ['\u05e7\u05d5\u05d3','code'],['\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9','license_number'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
     ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4','next_inspection_date'],['\u05ea\u05d3\u05d9\u05e8\u05d5\u05ea (\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd)','cycle_months'],
     ['\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4','inspection_type'],['\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05de\u05e6\u05d9\u05df / \u05d0\u05d2\u05e3','client_name'],
     ['\u05de\u05e1\u05e4\u05e8 \u05ea\u05e1\u05e7\u05d9\u05e8','report_number'],['\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd','deficiencies'],
