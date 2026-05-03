@@ -449,6 +449,27 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="dash-wa-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1502;&#1505;&#1508;&#1512; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1502;&#1488;&#1493;&#1502;&#1514; &#1489;-Meta dashboard</div>
   </div>
+  <div class="card" id="dash-cmb-test" style="display:none">
+    <div class="card-title">&#128241; WhatsApp &#1491;&#1512;&#1498; CallMeBot (admin)</div>
+    <details style="background:#f0f9ff;border:1px solid #0284c7;border-radius:8px;padding:8px;margin-bottom:10px;font-size:12px">
+      <summary style="cursor:pointer;font-weight:700;color:#0c4a6e">&#1488;&#1497;&#1498; &#1502;&#1511;&#1489;&#1500;&#1497;&#1501; API Key (3 &#1491;&#1511;&#1493;&#1514;)</summary>
+      <ol style="margin:8px 0 0 0;padding-right:20px;line-height:1.7">
+        <li>&#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1489;&#1488;&#1504;&#1513;&#1497; &#1492;&#1511;&#1513;&#1512; &#1488;&#1514; &#1492;&#1502;&#1505;&#1508;&#1512;: <code style="background:#fff;padding:2px 6px;border-radius:4px;direction:ltr;display:inline-block">+34 644 51 95 23</code> (&#1489;&#1513;&#1501; "CallMeBot").</li>
+        <li>&#1513;&#1493;&#1500;&#1495;&#1497;&#1501; &#1500;&#1493; &#1489;-WhatsApp &#1488;&#1514; &#1492;&#1492;&#1493;&#1491;&#1506;&#1492; &#1492;&#1494;&#1493;: <code style="background:#fff;padding:2px 6px;border-radius:4px;direction:ltr;display:inline-block">I allow callmebot to send me messages</code></li>
+        <li>&#1514;&#1493;&#1498; 2-3 &#1491;&#1511;&#1493;&#1514; &#1497;&#1490;&#1497;&#1506; &#1502;&#1505;&#1500; &#1502;&#1502;&#1504;&#1493; &#1506;&#1501; ה-API Key (&#1502;&#1505;&#1508;&#1512; &#1488;&#1512;&#1493;&#1498; &#1513;&#1500; &#1505;&#1508;&#1512;&#1493;&#1514;) &#8211; &#1492;&#1506;&#1514;&#1497;&#1511;&#1493; &#1500;&#1499;&#1488;&#1503;.</li>
+      </ol>
+    </details>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <input type="tel" id="dash-cmb-phone" placeholder="&#1496;&#1500;&#1508;&#1493;&#1503; &#1502;&#1500;&#1488; (&#1491;&#1493;&#1490;' 972547940073)" style="padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="text" id="dash-cmb-key" placeholder="API Key &#1502; CallMeBot" style="padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <input type="text" id="dash-cmb-text" placeholder="&#1496;&#1511;&#1505;&#1496; &#1492;&#1492;&#1493;&#1491;&#1506;&#1492;..." value="&#1489;&#1491;&#1497;&#1511;&#1492; &#1502; Tapugan Safety &#10003;" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px">
+      <button class="btn btn-p" onclick="_cmbTestSend()" style="font-size:13px;white-space:nowrap;background:#16a34a">&#128241; &#1513;&#1500;&#1495; &#1496;&#1505;&#1496;</button>
+    </div>
+    <div id="dash-cmb-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1504;&#1513;&#1502;&#1512;&#1493;&#1514; &#1502;&#1511;&#1493;&#1502;&#1497;&#1514; &#8212; &#1488;&#1497;&#1503; &#1510;&#1493;&#1512;&#1498; &#1500;&#1492;&#1494;&#1497;&#1503; &#1513;&#1493;&#1489;.</div>
+  </div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -7998,6 +8019,8 @@ function _applyRoleGates(){
   if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
+  var cmbCard=g('dash-cmb-test');
+  if(cmbCard) cmbCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
@@ -8323,6 +8346,51 @@ window._waSend=function(to,opts){
       if(rEl)rEl.textContent='\u2717 network: '+(err&&err.message||err);
     });
 };
+// CallMeBot — free WhatsApp via /api/callmebot-send. Each recipient owns their
+// own apikey (one-time pairing). Credentials persist in localStorage so the
+// admin doesn't have to re-enter them.
+window._cmbSend=function(phone,apikey,text){
+  return fetch('/api/callmebot-send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({phone:String(phone||'').replace(/[^0-9]/g,''),apikey:String(apikey||'').trim(),text:String(text||'')})
+  }).then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});});
+};
+window._cmbTestSend=function(){
+  var ph=g('dash-cmb-phone'),ak=g('dash-cmb-key'),tx=g('dash-cmb-text'),rEl=g('dash-cmb-result');
+  if(!ph||!ak||!tx)return;
+  var phone=String(ph.value||'').trim();
+  var apikey=String(ak.value||'').trim();
+  var text=String(tx.value||'').trim();
+  if(!phone||!apikey){if(rEl)rEl.textContent='✗ חסר טלפון או API Key';return;}
+  if(!text){if(rEl)rEl.textContent='✗ חסר טקסט';return;}
+  try{
+    localStorage.setItem('tfgn_cmb_phone',phone);
+    localStorage.setItem('tfgn_cmb_apikey',apikey);
+  }catch(e){}
+  if(rEl)rEl.textContent='שולח...';
+  _cmbSend(phone,apikey,text).then(function(res){
+    if(res.ok && res.data && res.data.ok){
+      toast('✓ נשלח דרך CallMeBot');
+      if(rEl)rEl.textContent='✓ '+(res.data.response||'sent');
+    }else{
+      var msg=(res.data&&res.data.response)||(res.data&&res.data.error)||('HTTP '+res.status);
+      toast('שגיאה: '+String(msg).substring(0,80));
+      if(rEl)rEl.textContent='✗ '+msg;
+    }
+  }).catch(function(e){
+    if(rEl)rEl.textContent='✗ '+(e&&e.message||e);
+  });
+};
+// Restore saved CallMeBot credentials on page load.
+document.addEventListener('DOMContentLoaded',function(){
+  try{
+    var p=localStorage.getItem('tfgn_cmb_phone'),k=localStorage.getItem('tfgn_cmb_apikey');
+    var phEl=g('dash-cmb-phone'),akEl=g('dash-cmb-key');
+    if(phEl && p)phEl.value=p;
+    if(akEl && k)akEl.value=k;
+  }catch(e){}
+});
 var _AI='/api/claude';
 var _AI_MODEL='claude-sonnet-4-6';
 var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
