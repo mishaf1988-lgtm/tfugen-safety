@@ -470,6 +470,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; <span>&#1510;&#1497;&#1493;&#1491; &#1500;&#1508;&#1497; &#1508;&#1511;&#1493;&#1491;&#1492;</span></div>
     <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPdfPick()" title="&#1492;&#1506;&#1500;&#1492; PDF &#1513;&#1500; &#1514;&#1505;&#1511;&#1497;&#1512; &#1489;&#1491;&#1497;&#1511;&#1492;">&#128196; PDF AI</button>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openEqiXl()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
+    <button class="btn btn-s" style="background:#0891b2;margin-left:8px" onclick="openEqiXl2()" title="&#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512; &#1502;&#1500;&#1488; (&#1506;&#1491;&#1499;&#1504;&#1497; + &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;)">&#128190; &#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512;</button>
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
@@ -1554,6 +1555,27 @@ id="m-ncr" style="display:none">
   <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="document.getElementById('eqi-xl-inp').click()">&#128196; &#1489;&#1495;&#1512; &#1511;&#1493;&#1489;&#1509; Excel/CSV</button>
   <div id="eqi-xl-st" style="font-size:12px;text-align:center;padding:6px"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeEqiXl()">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button id="eqi-xl-ok" class="btn btn-p" onclick="eqiXlOk()" style="display:none">&#1497;&#1497;&#1489;&#1488;</button></div>
+</div>
+
+<!-- EQI Full Excel Intake (31-column schema with history sheet) -->
+<div class="overlay" id="ov-eqi-xl2" onclick="closeEqiXl2()"></div>
+<div class="modal" id="m-eqi-xl2" style="display:none;max-width:720px">
+  <button class="close-btn" onclick="closeEqiXl2()">&#10005;</button>
+  <div class="modal-title">&#128190; &#1497;&#1497;&#1489;&#1493;&#1488; &#1488;&#1511;&#1505;&#1500; &#1502;&#1500;&#1488; &#8211; &#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512;</div>
+  <div style="background:#f0f9ff;border:1px solid #0284c7;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;color:#0c4a6e">
+    <strong>&#1502;&#1489;&#1504;&#1492; &#1502;&#1510;&#1493;&#1508;&#1492;:</strong> 3 &#1490;&#1500;&#1497;&#1493;&#1504;&#1493;&#1514; &#8212;
+    &#1490;&#1500;&#1497;&#1493;&#1503; "&#1506;&#1491;&#1499;&#1504;&#1497; - &#1500;&#1511;&#1500;&#1497;&#1496;&#1492;" (&#1497;&#1496;&#1506;&#1503; &#1500;-equip_inspections),
+    &#1490;&#1500;&#1497;&#1493;&#1503; "&#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492; &#1502;&#1500;&#1488;&#1492;" (&#1497;&#1496;&#1506;&#1503; &#1500;-equip_inspection_history),
+    31 &#1506;&#1502;&#1493;&#1491;&#1493;&#1514; &#1500;&#1499;&#1500; &#1490;&#1500;&#1497;&#1493;&#1503;.
+  </div>
+  <input type="file" id="eqi-xl2-inp" accept=".xlsx,.xls" style="display:none" onchange="eqiXl2Read(this.files[0])">
+  <button class="btn btn-p" style="width:100%;margin-bottom:10px;background:#0891b2" onclick="document.getElementById('eqi-xl2-inp').click()">&#128190; &#1489;&#1495;&#1512; &#1511;&#1493;&#1489;&#1509; .xlsx</button>
+  <div id="eqi-xl2-st" style="font-size:12px;text-align:center;padding:6px;color:var(--t3)"></div>
+  <div id="eqi-xl2-preview" style="display:none;margin-top:10px;max-height:300px;overflow-y:auto;font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeEqiXl2()">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button id="eqi-xl2-ok" class="btn btn-p" style="display:none;background:#0891b2" onclick="eqiXl2Apply()">&#10003; &#1496;&#1506;&#1503; (<span id="eqi-xl2-count">0</span>)</button>
+  </div>
 </div>
 
 <!-- NM MODAL (Near-Miss) -->
@@ -3935,6 +3957,189 @@ function eqiXlOk(){
   toast('\u05d9\u05d5\u05d1\u05d0: '+data.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u2713');
   rEqi();
 }
+
+// ---- Full Excel intake (48-row equipment + 67-row history, 31 columns) ----
+window.openEqiXl2=function(){openModal('m-eqi-xl2');window._eqiXl2={items:[],history:[]};var s=g('eqi-xl2-st');if(s)s.textContent='';g('eqi-xl2-preview').style.display='none';g('eqi-xl2-ok').style.display='none';g('eqi-xl2-inp').value='';};
+window.closeEqiXl2=function(){closeModal('m-eqi-xl2');};
+// Sheet name → role. We accept any sheet whose name contains the marker.
+function _eqiXl2SheetRole(name){
+  var n=String(name||'');
+  if(n.indexOf('\u05dc\u05e7\u05dc\u05d9\u05d8\u05d4')>=0||n.indexOf('עדכני')>=0)return 'items';
+  if(n.indexOf('היסטוריה')>=0)return 'history';
+  return null;
+}
+// Excel date → ISO. Handles JS Date, "DD/MM/YYYY", "YYYY-MM-DD", numeric serial.
+function _eqiXl2Date(v){
+  if(v===null||v===undefined||v==='')return null;
+  if(v instanceof Date)return v.toISOString().substring(0,10);
+  if(typeof v==='number'){
+    // Excel serial — days since 1899-12-30
+    var d=new Date((v-25569)*86400*1000);
+    if(!isNaN(d.getTime()))return d.toISOString().substring(0,10);
+  }
+  var s=String(v).trim();
+  if(!s)return null;
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.substring(0,10);
+  var m=s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+  if(m){
+    var y=m[3].length===2?'20'+m[3]:m[3];
+    return y+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');
+  }
+  var d2=new Date(s);
+  if(!isNaN(d2.getTime()))return d2.toISOString().substring(0,10);
+  return null;
+}
+function _eqiXl2Cell(row,idx){
+  if(idx>=row.length)return '';
+  var v=row[idx];
+  if(v===null||v===undefined)return '';
+  return String(v).trim();
+}
+function _eqiXl2Year(v){
+  var s=_eqiXl2Cell([v],0);
+  if(!s)return null;
+  var n=parseInt(s,10);
+  if(isNaN(n)||n<1900||n>2100)return null;
+  return n;
+}
+// Map a 31-column Excel row (A..AE) to a equip_inspections-shaped object.
+function _eqiXl2RowToRec(row){
+  var c=function(i){return _eqiXl2Cell(row,i);};
+  var name=[c(2),c(3)].filter(Boolean).join(' — ');
+  return {
+    code:c(1)||null,                       // B מזהה ציוד
+    inspection_type:c(0)||null,            // A קטגוריה
+    n:name||c(2)||c(3)||null,              // C+D
+    manufacturer:c(4)||null,               // E
+    model:c(5)||null,                      // F
+    serial_number:c(6)||null,              // G
+    year_of_production:_eqiXl2Year(c(7)),  // H
+    license_number:c(8)||null,             // I
+    loc:c(9)||null,                        // J
+    d:_eqiXl2Date(c(11)),                  // L last
+    e:_eqiXl2Date(c(12)),                  // M next
+    report_number:c(15)||null,             // P
+    previous_report_number:c(17)||null,    // R
+    inspector:c(19)||null,                 // T
+    inspector_certificate:c(20)||null,     // U
+    vendor:c(21)||null,                    // V company
+    inspector_phone:c(22)||null,           // W
+    inspector_address:c(23)||null,         // X
+    work_pressure:c(24)||null,             // Y
+    test_pressure:c(25)||null,             // Z
+    approved_pressure:c(26)||null,         // AA
+    s:c(27)||null,                         // AB inspection status
+    deficiencies:c(28)||null,              // AC
+    notes:[c(18),c(29)].filter(Boolean).join('\n')||null  // S + AD
+    // AE PDF path is local — skipped (user can attach via record later)
+  };
+}
+window.eqiXl2Read=function(file){
+  if(!file)return;
+  var st=g('eqi-xl2-st');st.textContent='קורא...';
+  var go=function(){
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      try{
+        var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});
+        var items=[],history=[];
+        wb.SheetNames.forEach(function(nm){
+          var role=_eqiXl2SheetRole(nm);
+          if(!role)return;
+          var ws=wb.Sheets[nm];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+          if(rows.length<2)return;
+          rows.slice(1).forEach(function(r){
+            if(!r || r.every(function(x){return x===''||x===null||x===undefined;}))return;
+            var rec=_eqiXl2RowToRec(r);
+            if(!rec.code && !rec.n)return;
+            if(role==='items')items.push(rec);
+            else history.push(rec);
+          });
+        });
+        window._eqiXl2={items:items,history:history};
+        var pv=g('eqi-xl2-preview');
+        pv.style.display='';
+        pv.innerHTML=
+          '<div style="margin-bottom:6px"><strong>'+items.length+'</strong> '+'\u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3'+' · <strong>'+history.length+'</strong> '+'\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4'+'</div>'+
+          (items.length?'<div style="font-size:10px;color:#666">'+'\u05d3\u05d5\u05d2\u05de\u05d4'+': '+items.slice(0,5).map(function(it){return esc((it.code||'?')+': '+(it.n||'').substring(0,40));}).join('<br>')+'</div>':'');
+        st.textContent='✓ '+items.length+'+'+history.length+' '+'\u05e9\u05d5\u05e8\u05d5\u05ea';
+        if(items.length||history.length){
+          g('eqi-xl2-ok').style.display='';
+          g('eqi-xl2-count').textContent=items.length+history.length;
+        }
+      }catch(er){st.textContent='שגיאה: '+er.message;}
+    };
+    rd.readAsArrayBuffer(file);
+  };
+  if(typeof XLSX==='undefined'){var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=go;document.head.appendChild(sc);}else go();
+};
+window.eqiXl2Apply=function(){
+  var d=window._eqiXl2;if(!d||(!d.items.length && !d.history.length)){alert('אין נתונים');return;}
+  var st=g('eqi-xl2-st');
+  var nIns=0,nHis=0,errs=[];
+  if(!DB.equip_inspections)DB.equip_inspections=[];
+  var p=Promise.resolve();
+  // Items
+  d.items.forEach(function(rec){
+    p=p.then(function(){
+      rec.id=gid();rec.ts=new Date().toISOString();
+      DB.equip_inspections.push(rec);
+      return _sbAuth().then(function(){
+        return fetch(SBU+'/rest/v1/equip_inspections',{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rec)})
+          .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('items HTTP '+r.status+': '+t.substring(0,80));});nIns++;});
+      }).catch(function(e){errs.push((rec.code||rec.n||'?')+': '+(e&&e.message||e));});
+    });
+  });
+  // History — must FK by code → equipment_id. Look up after items are inserted.
+  p=p.then(function(){
+    if(typeof st!=='undefined')st.textContent='שומר היסטוריה ('+d.history.length+')...';
+    var p2=Promise.resolve();
+    d.history.forEach(function(rec){
+      p2=p2.then(function(){
+        var equip=DB.equip_inspections.find(function(x){return String(x.code||'').trim()===String(rec.code||'').trim();});
+        var hist={
+          id:gid(),
+          equip_id:equip?equip.id:null,
+          inspection_date:rec.d||null,
+          expiry_date:rec.e||null,
+          report_number:rec.report_number||null,
+          inspector:rec.inspector||null,
+          inspector_certificate:rec.inspector_certificate||null,
+          inspector_phone:rec.inspector_phone||null,
+          inspector_address:rec.inspector_address||null,
+          inspection_type:rec.inspection_type||null,
+          status:rec.s||null,
+          deficiencies:rec.deficiencies||null,
+          notes:rec.notes||null,
+          vendor:rec.vendor||null,
+          loc:rec.loc||null,
+          manufacturer:rec.manufacturer||null,
+          model:rec.model||null,
+          serial_number:rec.serial_number||null,
+          year_of_production:rec.year_of_production||null,
+          work_pressure:rec.work_pressure||null,
+          test_pressure:rec.test_pressure||null,
+          approved_pressure:rec.approved_pressure||null,
+          ts:new Date().toISOString()
+        };
+        return _sbAuth().then(function(){
+          return fetch(SBU+'/rest/v1/equip_inspection_history',{method:'POST',headers:sbHUpsert(),body:JSON.stringify(hist)})
+            .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error('hist HTTP '+r.status+': '+t.substring(0,80));});nHis++;});
+        }).catch(function(e){errs.push('hist '+(rec.code||'?')+': '+(e&&e.message||e));});
+      });
+    });
+    return p2;
+  });
+  p.then(function(){
+    sdb();if(typeof rEqi==='function')rEqi();if(typeof rDash==='function')rDash();
+    var msg='✓ '+nIns+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d5'+' · '+nHis+' '+'\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d5'+(errs.length?' · ✗ '+errs.length+' '+'\u05e0\u05db\u05e9\u05dc\u05d5':'');
+    toast(msg);
+    if(errs.length){st.textContent='\u05e0\u05db\u05e9\u05dc\u05d5:'+'\n'+errs.slice(0,8).join('\n');}
+    else closeEqiXl2();
+  });
+};
+
 
 // ---- PDF inspection AI parser ----
 window._eqiPdfPick=function(){
