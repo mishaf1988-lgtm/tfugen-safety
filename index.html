@@ -4000,17 +4000,49 @@ function _eqiPdfAnalyze(base64){
   var body={
     model:_AI_MODEL,
     max_tokens:16000,
+    stream:true,
     system:systemPrompt,
     messages:[{role:'user',content:[
       {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
       {type:'text',text:'\u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05d5\u05d4\u05d7\u05d6\u05e8 JSON \u05de\u05dc\u05d0 \u05e9\u05dc \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8.'}
     ]}]
   };
+  // Stream mode: keeps the connection alive for long PDFs (Cloudflare 524 fix).
+  // Server pipes Anthropic's SSE through; we accumulate text_delta events.
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
-    .then(function(r){return r.json();})
-    .then(function(j){
-      if(j.error){g('eqi-pdf-status').textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(j.error.message||JSON.stringify(j.error));return;}
-      var txt=j.content&&j.content[0]&&j.content[0].text||'';
+    .then(function(r){
+      if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.substring(0,160));});}
+      if(!r.body)return r.text().then(function(t){throw new Error('no stream body: '+t.substring(0,160));});
+      var reader=r.body.getReader();
+      var dec=new TextDecoder('utf-8');
+      var carry='',acc='',apiErr=null;
+      function pump(){return reader.read().then(function(res){
+        if(res.done)return acc;
+        carry+=dec.decode(res.value,{stream:true});
+        var idx;
+        while((idx=carry.indexOf('\n'))>=0){
+          var line=carry.substring(0,idx);carry=carry.substring(idx+1);
+          if(!line.indexOf('data: ')){
+            var raw=line.substring(6);
+            if(raw==='[DONE]')continue;
+            try{
+              var ev=JSON.parse(raw);
+              if(ev.type==='content_block_delta' && ev.delta && typeof ev.delta.text==='string')acc+=ev.delta.text;
+              else if(ev.type==='error' && ev.error)apiErr=ev.error.message||JSON.stringify(ev.error);
+              else if(ev.type==='message_start' && ev.message && ev.message.usage){/*ok*/}
+            }catch(e){}
+          }
+        }
+        // Update status periodically so the user sees progress.
+        var st=g('eqi-pdf-status');if(st)st.textContent='\u270d\u05ea\u05d2\u05d5\u05d1\u05ea \u05de'+(' Claude... ('+acc.length+' \u05ea\u05d5\u05d5\u05d9\u05dd)');
+        return pump();
+      });}
+      return pump().then(function(text){
+        if(apiErr)throw new Error(apiErr);
+        return text;
+      });
+    })
+    .then(function(txt){
       var data=_eqiPdfExtractJson(txt);
       if(!data){
         var preview=String(txt).replace(/\s+/g,' ').substring(0,300);
