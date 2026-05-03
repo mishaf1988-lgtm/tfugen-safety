@@ -45,6 +45,14 @@ button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:n
   html{scrollbar-width:thin;scrollbar-color:#cbd0d8 transparent}
 }
 
+/* ---- SCROLL-TOP BUTTON ---- */
+#scroll-top-btn{transition:transform .18s ease,box-shadow .18s ease,opacity .18s ease}
+#scroll-top-btn:active{transform:scale(.92)!important}
+@media(hover:hover){
+  #scroll-top-btn:hover{transform:translateY(-2px) scale(1.05)!important;box-shadow:0 6px 18px rgba(0,0,0,.4)!important}
+}
+body.hc #scroll-top-btn:hover,body.hc #scroll-top-btn:active{transform:none!important}
+
 /* ---- LOGIN ---- */
 #login{display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#cc1f1f,#7a0000);z-index:1000;align-items:center;justify-content:center;padding:20px}
 .login-box{background:#fff;border-radius:16px;padding:32px 24px;width:100%;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -214,7 +222,7 @@ body.hc .et{background:#fff}
 body.hc .et-cta:hover,body.hc .et-cta:active{transform:none}
 
 /* ---- BADGES ---- */
-.b{display:inline-block;padding:3px 8px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap}
+.b{display:inline-block;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:.1px;line-height:1.4}
 .bG{background:rgba(22,163,74,.12);color:var(--ok);border:1px solid rgba(22,163,74,.25)}
 .bR{background:rgba(204,31,31,.12);color:var(--red);border:1px solid rgba(204,31,31,.25)}
 .bY{background:rgba(215,119,6,.12);color:var(--warn);border:1px solid rgba(215,119,6,.25)}
