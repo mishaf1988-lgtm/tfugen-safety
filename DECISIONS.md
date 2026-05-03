@@ -13,6 +13,14 @@
 
 ---
 
+## 2026-05-03 — מעבר סופי ל-Cloudflare, סוף החיים של Vercel
+**החלטה**: הסרנו את `/api/*.js` (Edge Functions של Vercel) ואת `vercel.json` מה-repo. כל קוד צד שרת חי רק ב-`/functions/api/*.js` (Cloudflare Pages Functions). הפרודקשן יחיד: `https://tapugan-safety.pages.dev`. הפניית URL ב-`index.html` (טקסט קוֹפי-לקוח עם פרטי כניסה) הוחלף מ-`tfugen-safety.vercel.app` ל-`tapugan-safety.pages.dev`.
+**סיבה**: ה-WhatsApp templates של Meta עודכנו לפני 24+ שעות. אין יותר תלות ב-Vercel. החזקת קוד API כפול בשני המקומות הייתה מקור לטעויות (כל שינוי דורש שני edits, סיכון לסטייה). מחיקה מורידה ~600 שורות קוד מיותר.
+**אלטרנטיבות שנדחו**: השארת Vercel כ-fallback (לא נחוץ כי Cloudflare יציב; וכפילות הקוד מסוכנת); רק docs cleanup בלי מחיקת קוד (משאיר חוב טכני).
+**קישורים**: PR — מעבר סופי ל-Cloudflare. החלטה משלימה ל-2026-05-02 ("הצהרת Cloudflare כ-primary").
+**הפעולה הידנית שנדרשת מהמשתמש**: למחוק את פרוייקט Vercel מה-dashboard (לא מתבצע אוטומטית).
+
+
 ## 2026-05-02 — מעבר מ-Vercel ל-Cloudflare Pages
 
 **החלטה**: ה-production הראשי עובר מ-`tfugen-safety.vercel.app` ל-**`tapugan-safety.pages.dev`** (Cloudflare Pages, free tier). הקוד ממשיך לחיות ב-repo `tfugen-safety` אבל הברנד עכשיו **"Tapugan Safety"** (כותרת HTML, manifest, alt). יש 2 תיקיות API מקבילות: `/api/*.js` ל-Vercel ו-`/functions/api/*.js` ל-Cloudflare. עד שהמעבר יהיה סופי, שני השרתים פעילים.
