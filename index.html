@@ -8361,9 +8361,18 @@ window._waSend=function(to,opts){
         toast('\u05e0\u05e9\u05dc\u05d7 \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4 \u2713');
         if(rEl)rEl.textContent='\u2713 '+(res.data.messages&&res.data.messages[0]?res.data.messages[0].id:'sent');
       }else{
-        var msg=(res.data&&res.data.error&&(res.data.error.message||res.data.error))||(res.data&&res.data.error)||('HTTP '+res.status);
+        // Surface the full Meta error so we can diagnose without guessing.
+        var er=res.data&&res.data.error;
+        var msg=(er&&er.message)||er||('HTTP '+res.status);
+        var detail=er?[
+          'code='+(er.code!==undefined?er.code:'?'),
+          'type='+(er.type||'?'),
+          'subcode='+(er.error_subcode!==undefined?er.error_subcode:'?'),
+          er.error_user_msg?'user='+er.error_user_msg:null,
+          er.fbtrace_id?'trace='+er.fbtrace_id:null
+        ].filter(Boolean).join(' \u00b7 '):'';
         toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(typeof msg==='string'?msg:JSON.stringify(msg)).substring(0,80));
-        if(rEl)rEl.textContent='\u2717 '+(typeof msg==='string'?msg:JSON.stringify(msg));
+        if(rEl)rEl.innerHTML='\u2717 '+esc(typeof msg==='string'?msg:JSON.stringify(msg))+(detail?'<br><span style="font-size:10px;color:#888">'+esc(detail)+'</span>':'');
       }
       return res;
     })
