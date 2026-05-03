@@ -4145,7 +4145,11 @@ function _eqiPdfComputeRecDiff(rec,proposed){
     if(newV===null||newV===undefined||newV==='')return;
     if(String(oldV||'').trim()!==String(newV||'').trim())diffs.push({field:field,old:oldV||'',new:newV});
   }
-  cmp('\u05ea\u05d5\u05e7\u05e3',rec.e,proposed.expiry_date);
+  // Expiry \u2014 only count as a diff if the PDF actually moves the expiry forward
+  // (longest-expiry rule). A PDF carrying an earlier date won't change the row.
+  if(proposed.expiry_date && (!rec.e || proposed.expiry_date>rec.e)){
+    cmp('\u05ea\u05d5\u05e7\u05e3',rec.e,proposed.expiry_date);
+  }
   cmp('\u05d1\u05d3\u05d9\u05e7\u05d4',rec.d,proposed.inspection_date);
   cmp('\u05e1\u05d8\u05d8\u05d5\u05e1',rec.s,proposed.status);
   if(_eqiNormCode(rec.code)!==_eqiNormCode(proposed.equipment_code))cmp('\u05e7\u05d5\u05d3',rec.code,proposed.equipment_code);
@@ -4201,13 +4205,22 @@ function _eqiPdfItemRow(it,i,data){
     var tbody=it._candidates.map(function(cnd,ci){
       var diff=_eqiPdfComputeRecDiff(cnd.rec,meta);
       var diffMark=diff.length?'<span style="color:#1d4ed8;font-weight:700"> ✱</span>':'';
-      var oldExp=cnd.rec.e?fd(cnd.rec.e):'—';
-      var newExp=meta.expiry_date?fd(meta.expiry_date):'—';
+      var pdfExp=meta.expiry_date||null;
+      var rowExp=cnd.rec.e||null;
+      // Longest-expiry rule: keep whichever date is later. If the PDF carries an
+      // earlier (or equal) expiry, the row's existing date wins — show it as the
+      // effective result instead of misleading the user with the PDF's earlier date.
+      var willKeep=!!(pdfExp && rowExp && pdfExp<=rowExp);
+      var effExp=willKeep?rowExp:(pdfExp||rowExp);
+      var oldExp=rowExp?fd(rowExp):'—';
+      var newExp=effExp?fd(effExp):'—';
+      var newCellColor=willKeep?'#075985':'#16a34a';
+      var note=willKeep?'<div style="font-size:10px;color:#075985;margin-top:2px">↻ נשמר התוקף הארוך (PDF נתן '+esc(fd(pdfExp))+')</div>':'';
       return '<tr style="border-top:1px solid #e2e8f0">'+
         '<td style="padding:4px"><input type="checkbox" data-i="'+i+'" data-ci="'+ci+'" '+(cnd._selected?'checked':'')+' onchange="_eqiPdfToggleCand(this)"></td>'+
         '<td style="padding:4px;font-size:11px">'+esc(cnd.rec.vendor||'—')+'</td>'+
-        '<td style="padding:4px;font-size:11px;color:#888;text-decoration:'+(diff.length?'line-through':'none')+'">'+esc(oldExp)+'</td>'+
-        '<td style="padding:4px;font-size:11px;color:#16a34a;font-weight:700">'+esc(newExp)+diffMark+'</td>'+
+        '<td style="padding:4px;font-size:11px;color:#888;text-decoration:'+(diff.length && !willKeep?'line-through':'none')+'">'+esc(oldExp)+'</td>'+
+        '<td style="padding:4px;font-size:11px;color:'+newCellColor+';font-weight:700">'+esc(newExp)+diffMark+note+'</td>'+
       '</tr>';
     }).join('');
     var hint=tier==='ambiguous'?'<div style="font-size:11px;color:#92400e;background:#fef9c3;padding:5px 7px;border-radius:6px;margin-bottom:4px">⚠ \u05e0\u05de\u05e6\u05d0\u05d5 '+nCands+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05dd \u05d4\u05e9\u05dd \u05d4\u05d6\u05d4 \u05d5\u05d1\u05dc\u05d9 \u05e7\u05d5\u05d3/\u05e1\u05e4\u05e7 \u05e9\u05d5\u05e0\u05d4. \u05e1\u05de\u05df \u05e8\u05e7 \u05d0\u05ea \u05d0\u05dc\u05d4 \u05e9\u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05de\u05ea\u05d9\u05d9\u05d7\u05e1 \u05d0\u05dc\u05d9\u05d4\u05df.</div>':'<div style="font-size:11px;color:#555;margin-bottom:4px">'+nCands+' \u05e8\u05e9\u05d5\u05de'+(nCands>1?'\u05d5\u05ea':'\u05d4')+' '+(nCands>1?'\u05d9\u05e2\u05d5\u05d3\u05db\u05e0\u05d5':'\u05ea\u05e2\u05d5\u05d3\u05db\u05df')+':</div>';
@@ -4294,7 +4307,10 @@ function _eqiPdfApplyAll(work,data,fileUrl){
             if(tier==='report')counts.refreshed++;
             else if(tier==='renewal')counts.renewed++;
             else counts.updated++;
-            actions.push({kind:tier==='report'?'refreshed':(tier==='renewal'?'renewed':'updated'),name:w.rec.n||'?',vendor:w.rec.vendor||'',oldExp:w.rec.e||'',newExp:(w.item.expiry_date||data.expiry_date||'')});
+            // Read what actually got persisted (longest-expiry rule may have kept the
+            // existing date even if the PDF carried a different one).
+            var savedRec=(DB.equip_inspections||[]).find(function(r){return r.id===w.rec.id;})||w.rec;
+            actions.push({kind:tier==='report'?'refreshed':(tier==='renewal'?'renewed':'updated'),name:savedRec.n||'?',vendor:savedRec.vendor||'',oldExp:w.rec.e||'',newExp:savedRec.e||''});
           }).catch(function(e){counts.failed++;failures.push((w.rec.n||'?')+': '+(e&&e.message||e));actions.push({kind:'failed',name:w.rec.n||'?',err:e&&e.message||String(e)});});
         }else{
           return _eqiPdfPersistCreate(w.item,data,fileUrl).then(function(){
@@ -4335,6 +4351,7 @@ function _eqiPdfShowSummary(counts,actions,data){
     if(a.kind==='failed')detail='שגיאה: '+esc(a.err||'');
     else if(a.kind==='created')detail='תוקף עד '+esc(a.newExp?fd(a.newExp):'—');
     else if(a.kind==='refreshed')detail='דבר לא השתנה (כבר עודכן בעבר מאותו תסקיר)';
+    else if(a.oldExp && a.newExp && a.oldExp===a.newExp)detail='התוקף הקיים נשמר ('+esc(fd(a.newExp))+') — היה ארוך יותר';
     else detail='תוקף '+esc(a.oldExp?fd(a.oldExp):'—')+' ➝ <strong>'+esc(a.newExp?fd(a.newExp):'—')+'</strong>';
     return '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span style="color:'+col+';font-weight:700;width:18px;text-align:center">'+icon+'</span><div style="flex:1"><div><strong>'+esc(a.name)+'</strong>'+(a.vendor?' <span style="color:#888">· '+esc(a.vendor)+'</span>':'')+'</div><div style="color:#555;font-size:11px">'+detail+'</div></div></div>';
   }).join('');
