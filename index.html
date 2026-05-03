@@ -470,6 +470,30 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="dash-cmb-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1504;&#1513;&#1502;&#1512;&#1493;&#1514; &#1502;&#1511;&#1493;&#1502;&#1497;&#1514; &#8212; &#1488;&#1497;&#1503; &#1510;&#1493;&#1512;&#1498; &#1500;&#1492;&#1494;&#1497;&#1503; &#1513;&#1493;&#1489;.</div>
   </div>
+  <div class="card" id="dash-ga-test" style="display:none">
+    <div class="card-title">&#128241; WhatsApp &#1491;&#1512;&#1498; Green API (admin)</div>
+    <details style="background:#ecfdf5;border:1px solid #16a34a;border-radius:8px;padding:8px;margin-bottom:10px;font-size:12px">
+      <summary style="cursor:pointer;font-weight:700;color:#15803d">&#1488;&#1497;&#1498; &#1502;&#1511;&#1489;&#1500;&#1497;&#1501; instance ID + token (5 &#1491;&#1511;&#1493;&#1514;)</summary>
+      <ol style="margin:8px 0 0 0;padding-right:20px;line-height:1.7">
+        <li>&#1499;&#1504;&#1505;&#1497;&#1501; &#1500;-<a href="https://green-api.com" target="_blank" style="color:#15803d;font-weight:700">green-api.com</a> &#1493;&#1497;&#1493;&#1510;&#1512;&#1497;&#1501; &#1495;&#1513;&#1489;&#1493;&#1503; &#1495;&#1497;&#1504;&#1502;&#1497;.</li>
+        <li>&#1500;&#1493;&#1495;&#1510;&#1497;&#1501; <strong>Create Instance</strong> &#1489;&#1502;&#1505;&#1500;&#1493;&#1500; &#1492;&#1495;&#1497;&#1504;&#1502;&#1497;.</li>
+        <li>&#1505;&#1493;&#1512;&#1511;&#1497;&#1501; &#1488;&#1514; &#1492;-QR &#1502;&#1492;-WhatsApp &#1513;&#1500;&#1499;&#1501; (&#1499;&#1502;&#1493; WhatsApp Web).</li>
+        <li>&#1502;&#1506;&#1514;&#1497;&#1511;&#1497;&#1501; &#1502;&#1492;&#1502;&#1505;&#1500;&#1493;&#1500; &#1488;&#1514; <code>idInstance</code> (&#1502;&#1505;&#1508;&#1512;) &#1493;-<code>apiTokenInstance</code> (&#1505;&#1496;&#1512;&#1497;&#1504;&#1490; &#1488;&#1512;&#1493;&#1498;).</li>
+        <li>&#1502;&#1490;&#1500; <strong>BUSINESS-100 &#1495;&#1497;&#1504;&#1502;&#1497;</strong> &#1502;&#1488;&#1508;&#1513;&#1512; 100 &#1492;&#1493;&#1491;&#1506;&#1493;&#1514; &#1489;&#1497;&#1493;&#1501;.</li>
+      </ol>
+    </details>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px">
+      <input type="text" id="dash-ga-id" placeholder="idInstance (&#1502;&#1505;&#1508;&#1512;)" style="padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="text" id="dash-ga-token" placeholder="apiTokenInstance" style="padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <input type="tel" id="dash-ga-phone" placeholder="&#1496;&#1500;&#1508;&#1493;&#1503; &#1497;&#1506;&#1491; (972547940073)" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="text" id="dash-ga-text" placeholder="&#1496;&#1511;&#1505;&#1496; &#1492;&#1492;&#1493;&#1491;&#1506;&#1492;..." value="&#1489;&#1491;&#1497;&#1511;&#1492; &#1502; Tapugan Safety &#10003;" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px">
+      <button class="btn btn-p" onclick="_gaTestSend()" style="font-size:13px;white-space:nowrap;background:#16a34a">&#128241; &#1513;&#1500;&#1495;</button>
+    </div>
+    <div id="dash-ga-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1492;&#1493;&#1491;&#1506;&#1493;&#1514; &#1497;&#1510;&#1488;&#1493; &#1502;&#1492;-WhatsApp &#1513;&#1500;&#1499;&#1501; &#1488;&#1497;&#1513;&#1497;&#1514;.</div>
+  </div>
   <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -8021,6 +8045,8 @@ function _applyRoleGates(){
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   var cmbCard=g('dash-cmb-test');
   if(cmbCard) cmbCard.style.display = isAdmin ? '' : 'none';
+  var gaCard=g('dash-ga-test');
+  if(gaCard) gaCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
@@ -8382,13 +8408,57 @@ window._cmbTestSend=function(){
     if(rEl)rEl.textContent='✗ '+(e&&e.message||e);
   });
 };
-// Restore saved CallMeBot credentials on page load.
+// Green API — programmatic WhatsApp via your own paired account (one QR scan).
+window._gaSend=function(idInstance,apiTokenInstance,phone,text){
+  return fetch('/api/greenapi-send',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({idInstance:String(idInstance||'').replace(/[^0-9]/g,''),apiTokenInstance:String(apiTokenInstance||'').trim(),phone:String(phone||'').replace(/[^0-9]/g,''),text:String(text||'')})
+  }).then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});});
+};
+window._gaTestSend=function(){
+  var idEl=g('dash-ga-id'),tkEl=g('dash-ga-token'),phEl=g('dash-ga-phone'),txEl=g('dash-ga-text'),rEl=g('dash-ga-result');
+  if(!idEl||!tkEl||!phEl||!txEl)return;
+  var id=String(idEl.value||'').trim();
+  var tk=String(tkEl.value||'').trim();
+  var phone=String(phEl.value||'').trim();
+  var text=String(txEl.value||'').trim();
+  if(!id||!tk){if(rEl)rEl.textContent='✗ חסר idInstance או apiTokenInstance';return;}
+  if(!phone){if(rEl)rEl.textContent='✗ חסר טלפון יעד';return;}
+  if(!text){if(rEl)rEl.textContent='✗ חסר טקסט';return;}
+  try{
+    localStorage.setItem('tfgn_ga_id',id);
+    localStorage.setItem('tfgn_ga_token',tk);
+    localStorage.setItem('tfgn_ga_phone',phone);
+  }catch(e){}
+  if(rEl)rEl.textContent='שולח...';
+  _gaSend(id,tk,phone,text).then(function(res){
+    if(res.ok && res.data && res.data.ok){
+      toast('✓ נשלח דרך Green API');
+      var msgId=res.data.response&&res.data.response.idMessage;
+      if(rEl)rEl.textContent='✓ '+(msgId||'sent');
+    }else{
+      var detail=res.data && (res.data.response||res.data.error||res.data);
+      var msg=typeof detail==='string'?detail:JSON.stringify(detail);
+      toast('שגיאה: '+msg.substring(0,80));
+      if(rEl)rEl.textContent='✗ '+msg;
+    }
+  }).catch(function(e){
+    if(rEl)rEl.textContent='✗ '+(e&&e.message||e);
+  });
+};
+// Restore saved CallMeBot + Green API credentials on page load.
 document.addEventListener('DOMContentLoaded',function(){
   try{
     var p=localStorage.getItem('tfgn_cmb_phone'),k=localStorage.getItem('tfgn_cmb_apikey');
     var phEl=g('dash-cmb-phone'),akEl=g('dash-cmb-key');
     if(phEl && p)phEl.value=p;
     if(akEl && k)akEl.value=k;
+    var gid=localStorage.getItem('tfgn_ga_id'),gtk=localStorage.getItem('tfgn_ga_token'),gph=localStorage.getItem('tfgn_ga_phone');
+    var idEl=g('dash-ga-id'),tkEl=g('dash-ga-token'),gphEl=g('dash-ga-phone');
+    if(idEl && gid)idEl.value=gid;
+    if(tkEl && gtk)tkEl.value=gtk;
+    if(gphEl && gph)gphEl.value=gph;
   }catch(e){}
 });
 var _AI='/api/claude';
