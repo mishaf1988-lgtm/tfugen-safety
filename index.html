@@ -3846,7 +3846,7 @@ function rEqi(){
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
-    var licBadge=r.license_number?'<span style="display:inline-block;font-size:10px;color:#0c4a6e;background:#e0f2fe;padding:1px 6px;border-radius:8px;margin-right:4px;font-weight:500" title="\u05de\u05e1\u05e4\u05e8 \u05e8\u05d9\u05e9\u05d5\u05d9 / \u05e6\u05d9\u05d5\u05d3 \u05d4\u05e0\u05d3\u05e1\u05d9">\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+esc(r.license_number)+'</span>':'';
+    var licBadge=r.license_number?'<span style="display:inline-block;font-size:10px;color:#0c4a6e;background:#e0f2fe;padding:1px 6px;border-radius:8px;margin-right:4px;font-weight:500" title="\u05de\u05e1\u05e4\u05e8 \u05e8\u05d9\u05e9\u05d5\u05d9 (\u05de\u05dc\u05d2\u05d6\u05d5\u05ea / \u05e6\u05d9\u05d5\u05d3 \u05d4\u05e0\u05d3\u05e1\u05d9)">\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+esc(r.license_number)+'</span>':(r.internal_number?'<span style="display:inline-block;font-size:10px;color:#5b21b6;background:#f3e8ff;padding:1px 6px;border-radius:8px;margin-right:4px;font-weight:500" title="\u05de\u05e1\u05e4\u05e8 \u05e4\u05e0\u05d9\u05de\u05d9 \u05d1\u05de\u05e4\u05e2\u05dc">\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9: '+esc(r.internal_number)+'</span>':'');
     var pdfIcon=r.file_url?'<a data-sign="'+escU(r.file_url)+'" target="_blank" onclick="event.stopPropagation()" title="\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e1\u05e8\u05d5\u05e7" style="margin-right:6px;text-decoration:none;font-size:14px">&#128206;</a>':'';
     var expCell=r.e?(fd(r.e)+'<br>'+eb(r.e)):'&#8212;';
     return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+licBadge+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+expCell+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
@@ -4014,7 +4014,10 @@ function _eqiXl2RowToRec(row){
     model:c(5)||null,                      // F
     serial_number:c(6)||null,              // G
     year_of_production:_eqiXl2Year(c(7)),  // H
-    license_number:c(8)||null,             // I
+    // Column I splits: real license plate for forklifts/cranes, otherwise an
+    // internal factory number. Decided by the category (col A).
+    license_number:(/מלגזה|מנוף|עגורן/.test(c(0))?(c(8)||null):null),
+    internal_number:(/מלגזה|מנוף|עגורן/.test(c(0))?null:(c(8)||null)),
     loc:c(9)||null,                        // J
     d:_eqiXl2Date(c(11)),                  // L last
     e:_eqiXl2Date(c(12)),                  // M next
@@ -7209,7 +7212,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e9\u05e2\u05d4','t'],['\u05ea\u05d9\u05d0\u05d5\u05e8','descr'],['\u05d0\u05d6\u05d5\u05e8','area'],
     ['\u05de\u05d3\u05d5\u05d5\u05d7','rep'],['\u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05e1\u05d5\u05d2','typ'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   equip_inspections:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',back:'eqi',fields:[
-    ['\u05e7\u05d5\u05d3','code'],['\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9','license_number'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
+    ['\u05e7\u05d5\u05d3','code'],['\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9','license_number'],['\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9','internal_number'],['\u05ea\u05d9\u05d0\u05d5\u05e8','n'],['\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df','vendor'],['\u05d0\u05d6\u05d5\u05e8','loc'],
     ['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05d4','e'],['\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4','next_inspection_date'],['\u05ea\u05d3\u05d9\u05e8\u05d5\u05ea (\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd)','cycle_months'],
     ['\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4','inspection_type'],['\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05de\u05e6\u05d9\u05df / \u05d0\u05d2\u05e3','client_name'],
     ['\u05de\u05e1\u05e4\u05e8 \u05ea\u05e1\u05e7\u05d9\u05e8','report_number'],['\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd','deficiencies'],
