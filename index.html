@@ -3996,7 +3996,7 @@ function _eqiPdfExtractJson(txt){
 }
 function _eqiPdfAnalyze(base64){
   // Multi-item prompt — extracts shared metadata + per-item identifiers.
-  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5. \u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown, \u05dc\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8 \u05de\u05e1\u05d1\u05d9\u05d1):\n\n{\n  "report_number": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d4\u05e8\u05e9\u05de\u05d9",\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05db\u05dc\u05dc\u05d9 (\u05d9\u05db\u05d5\u05dc \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05d5\u05d7\u05dc\u05e3 \u05e2\u05f4\u05d9 expiry_date \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8)",\n  "next_inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 \u05d0\u05dd \u05e6\u05d5\u05d9\u05df \u05d1\u05e0\u05e4\u05e8\u05d3 \u05de\u05d4\u05ea\u05d5\u05e7\u05e3",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 / \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea (\u05d0\u05dd \u05de\u05e9\u05d5\u05ea\u05e3)",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df)",\n  "inspector": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d4\u05de\u05d5\u05e1\u05de\u05da / \u05de\u05d4\u05e0\u05d3\u05e1 + \u05de\u05e1 \u05e8\u05d9\u05e9\u05d5\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n  "client_name": "\u05e9\u05dd \u05d4\u05de\u05e4\u05e2\u05dc / \u05d4\u05d0\u05d2\u05e3 / \u05d4\u05de\u05d6\u05de\u05d9\u05df",\n  "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 (\u05d7\u05d6\u05d5\u05ea\u05d9 / \u05de\u05dc\u05d0 / \u05d9\u05e6\u05d9\u05d1\u05d5\u05ea / \u05e2\u05d5\u05de\u05e1 / \u05d0\u05d7\u05e8)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05d7\u05d5\u05d1\u05d4)",\n      "equipment_code": "\u05e7\u05d5\u05d3 / \u05de\u05e7\u05f4\u05d8 / \u05de\u05e1\u05e4\u05e8 \u05e6\u05d9\u05d5\u05d3 / \u05de\u05e1 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9",\n      "vendor": "\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05de\u05e9\u05d5\u05ea\u05e3)",\n      "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "next_inspection_date": "YYYY-MM-DD \u05de\u05d5\u05e2\u05d3 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8",\n      "cycle_months": "\u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d1\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea (\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd, \u05dc\u05d3\u05d5\u05d2\u05de\u05d4 6 \u05d0\u05d5 12)",\n      "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "deficiencies": "\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d4\u05ea\u05d2\u05dc\u05d5 (\u05e8\u05e9\u05d9\u05de\u05d4 / \u05d8\u05e7\u05e1\u05d8 \u05de\u05d4\u05d3\u05d5\u05d7)",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. cycle_months \u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd (\u05dc\u05d0 \u05de\u05d7\u05e8\u05d5\u05d6\u05ea). \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d9\u05db\u05d5\u05dc\u05d9\u05dd \u05dc\u05d4\u05d9\u05d5\u05ea 1-50 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd — \u05d4\u05d5\u05e6\u05d0 \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items. \u05d0\u05dd \u05dc\u05e4\u05e8\u05d9\u05d8 expiry_date \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9 — \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05e1\u05e4\u05e6\u05d9\u05e4\u05d9.';
+  var systemPrompt='\u05d0\u05ea\u05d4 \u05de\u05d5\u05de\u05d7\u05d4 \u05dc\u05e7\u05e8\u05d9\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea (\u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, \u05d1\u05d5\u05d3\u05e7 \u05de\u05d5\u05e1\u05de\u05da). \u05d7\u05dc\u05e5 \u05de\u05d4-PDF \u05d0\u05ea \u05db\u05dc \u05d4\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05d1\u05d3\u05e7\u05d5. \u05d4\u05d7\u05d6\u05e8 JSON \u05d1\u05dc\u05d1\u05d3 (\u05dc\u05dc\u05d0 markdown, \u05dc\u05dc\u05d0 \u05d8\u05e7\u05e1\u05d8 \u05de\u05e1\u05d1\u05d9\u05d1):\n\n{\n  "report_number": "\u05de\u05e1\u05e4\u05e8 \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d4\u05e8\u05e9\u05de\u05d9",\n  "inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9",\n  "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05db\u05dc\u05dc\u05d9 (\u05d9\u05db\u05d5\u05dc \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05d5\u05d7\u05dc\u05e3 \u05e2\u05f4\u05d9 expiry_date \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8)",\n  "next_inspection_date": "YYYY-MM-DD \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 \u05d0\u05dd \u05e6\u05d5\u05d9\u05df \u05d1\u05e0\u05e4\u05e8\u05d3 \u05de\u05d4\u05ea\u05d5\u05e7\u05e3",\n  "vendor": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 / \u05d4\u05d7\u05d1\u05e8\u05d4 \u05d4\u05d1\u05d5\u05d3\u05e7\u05ea (\u05d0\u05dd \u05de\u05e9\u05d5\u05ea\u05e3)",\n  "location": "\u05de\u05d9\u05e7\u05d5\u05dd \u05db\u05dc\u05dc\u05d9 (\u05d0\u05dd \u05de\u05e6\u05d5\u05d9\u05df)",\n  "inspector": "\u05e9\u05dd \u05d4\u05d1\u05d5\u05d3\u05e7 \u05d4\u05de\u05d5\u05e1\u05de\u05da / \u05de\u05d4\u05e0\u05d3\u05e1 + \u05de\u05e1 \u05e8\u05d9\u05e9\u05d5\u05d9 \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2",\n  "client_name": "\u05e9\u05dd \u05d4\u05de\u05e4\u05e2\u05dc / \u05d4\u05d0\u05d2\u05e3 / \u05d4\u05de\u05d6\u05de\u05d9\u05df",\n  "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05db\u05dc\u05dc\u05d9 (\u05d7\u05d6\u05d5\u05ea\u05d9 / \u05de\u05dc\u05d0 / \u05d9\u05e6\u05d9\u05d1\u05d5\u05ea / \u05e2\u05d5\u05de\u05e1 / \u05d0\u05d7\u05e8)",\n  "items": [\n    {\n      "equipment_name": "\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3 \u05d4\u05d1\u05d5\u05d3\u05d3 (\u05d7\u05d5\u05d1\u05d4)",\n      "equipment_code": "\u05e7\u05d5\u05d3 / \u05de\u05e7\u05f4\u05d8 / \u05de\u05e1\u05e4\u05e8 \u05e6\u05d9\u05d5\u05d3 / \u05de\u05e1 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9",\n      "vendor": "\u05e1\u05e4\u05e7/\u05d9\u05e6\u05e8\u05df \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05de\u05e9\u05d5\u05ea\u05e3)",\n      "expiry_date": "YYYY-MM-DD \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05e4\u05e8 \u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "next_inspection_date": "YYYY-MM-DD \u05de\u05d5\u05e2\u05d3 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8",\n      "cycle_months": "\u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d1\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea (\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd, \u05dc\u05d3\u05d5\u05d2\u05de\u05d4 6 \u05d0\u05d5 12)",\n      "inspection_type": "\u05e1\u05d5\u05d2 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05e4\u05e8\u05d9\u05d8 (\u05d0\u05dd \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9)",\n      "status": "\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4 | \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8 | \u05d3\u05e8\u05d5\u05e9 \u05ea\u05d9\u05e7\u05d5\u05df",\n      "previous_report_number": "\u05de\u05e1\u05f3 \u05ea\u05e1\u05e7\u05d9\u05e8 \u05e7\u05d5\u05d3\u05dd \u05d0\u05dd \u05de\u05d5\u05e4\u05d9\u05e2 (\u05dc\u05d3\u05d5\u05d2\u05de\u05d4 \\"\u05de\u05e1\u05f3 \u05e7\u05d5\u05d3\u05dd: 179338\\")",\n      "deficiencies": "\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d4\u05ea\u05d2\u05dc\u05d5 (\u05e8\u05e9\u05d9\u05de\u05d4 / \u05d8\u05e7\u05e1\u05d8 \u05de\u05d4\u05d3\u05d5\u05d7)",\n      "notes": "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8"\n    }\n  ]\n}\n\n\u05db\u05dc\u05dc\u05d9\u05dd: \u05d0\u05dd \u05e9\u05d3\u05d4 \u05dc\u05d0 \u05d1\u05e8\u05d5\u05e8 — null. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 YYYY-MM-DD. cycle_months \u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd (\u05dc\u05d0 \u05de\u05d7\u05e8\u05d5\u05d6\u05ea). \u05d1\u05ea\u05e1\u05e7\u05d9\u05e8 \u05d9\u05db\u05d5\u05dc\u05d9\u05dd \u05dc\u05d4\u05d9\u05d5\u05ea 1-50 \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd — \u05d4\u05d5\u05e6\u05d0 \u05d0\u05ea \u05db\u05d5\u05dc\u05dd \u05d1\u05dc\u05d9 \u05dc\u05e7\u05e6\u05e8. \u05db\u05dc \u05e9\u05d5\u05e8\u05d4 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05e6\u05d9\u05d5\u05d3 = \u05e4\u05e8\u05d9\u05d8 \u05e0\u05e4\u05e8\u05d3 \u05d1-items. \u05d0\u05dd \u05dc\u05e4\u05e8\u05d9\u05d8 expiry_date \u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05db\u05dc\u05dc\u05d9 — \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05e1\u05e4\u05e6\u05d9\u05e4\u05d9.';
   var body={
     model:_AI_MODEL,
     max_tokens:16000,
@@ -4070,6 +4070,19 @@ function _eqiPdfResolveCandidates(item,data){
         if(sub.length)return {tier:'report',candidates:sub.map(_eqiPdfWrapCand)};
       }
       return {tier:'report',candidates:byReport.map(_eqiPdfWrapCand)};
+    }
+  }
+  // 0b) Renewal — PDF item carries previous_report_number that matches an
+  // existing record's report_number. Strong, name-independent signal.
+  var pdfPrev=_eqiNormCode(item.previous_report_number);
+  if(pdfPrev){
+    var byPrev=rows.filter(function(r){return _eqiNormCode(r.report_number)===pdfPrev;});
+    if(byPrev.length){
+      if(pdfName){
+        var nameInPrev=byPrev.filter(function(r){return _eqiNorm(r.n)===pdfName;});
+        if(nameInPrev.length)byPrev=nameInPrev;
+      }
+      return {tier:'renewal',candidates:byPrev.map(_eqiPdfWrapCand)};
     }
   }
   // 1) Exact code match — highest confidence (each code uniquely identifies an item).
@@ -4167,6 +4180,7 @@ function _eqiPdfItemRow(it,i,data){
   if(tier==='none'){badge='+ \u05d7\u05d3\u05e9';bg='#fef3c7';border='#b45309';}
   else if(tier==='ambiguous'){badge='⚠ \u05e1\u05de\u05df \u05d9\u05d3\u05e0\u05d9\u05ea';bg='#fef3c7';border='#b45309';}
   else if(tier==='report'){badge='↻ \u05e2\u05d3\u05db\u05d5\u05df \u05d4\u05ea\u05e1\u05e7\u05d9\u05e8';bg='#e0e7ff';border='#4f46e5';}
+  else if(tier==='renewal'){badge='\u267b \u05d7\u05d9\u05d3\u05d5\u05e9 (\u05dc\u05e4\u05d9 \u05ea\u05e1\u05e7\u05d9\u05e8 \u05e7\u05d5\u05d3\u05dd)';bg='#dcfce7';border='#16a34a';}
   else if(tier==='code'){badge='✓ \u05d6\u05d5\u05d4\u05d4 \u05dc\u05e4\u05d9 \u05e7\u05d5\u05d3';bg='#dcfce7';border='#16a34a';}
   else if(tier==='name+vendor'){badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd+\u05e1\u05e4\u05e7)';bg='#dcfce7';border='#16a34a';}
   else{badge='✓ \u05d6\u05d5\u05d4\u05d4 (\u05e9\u05dd \u05d9\u05d9\u05d7\u05d5\u05d3\u05d9)';bg='#dbeafe';border='#1d4ed8';}
@@ -4249,9 +4263,9 @@ window._eqiPdfApply=function(silent){
   data.items.forEach(function(it){
     if(!it._selected)return;
     if(it._candidates && it._candidates.length){
-      it._candidates.forEach(function(cnd){if(cnd._selected)work.push({type:'update',item:it,rec:cnd.rec});});
+      it._candidates.forEach(function(cnd){if(cnd._selected)work.push({type:'update',item:Object.assign({_tier:it._matchTier},it),rec:cnd.rec});});
     }else if(it._action==='create'){
-      work.push({type:'create',item:it});
+      work.push({type:'create',item:Object.assign({_tier:it._matchTier},it)});
     }
   });
   if(!work.length){alert('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05e4\u05e2\u05d5\u05dc\u05d4 \u05d0\u05d7\u05ea');return;}
@@ -4268,26 +4282,30 @@ window._eqiPdfApply=function(silent){
   });
 };
 function _eqiPdfApplyAll(work,data,fileUrl){
-  var updated=0,created=0,failed=0;
-  var failures=[];
+  var counts={refreshed:0,renewed:0,updated:0,created:0,failed:0};
+  var failures=[],actions=[];
   var p=Promise.resolve();
   work.forEach(function(w){
     p=p.then(function(){
       try{
+        var tier=w.tier||(w.item&&w.item._tier);
         if(w.type==='update'){
-          return _eqiPdfPersistUpdate(w.rec,w.item,data,fileUrl).then(function(){updated++;}).catch(function(e){failed++;failures.push((w.rec.n||'?')+': '+(e&&e.message||e));});
+          return _eqiPdfPersistUpdate(w.rec,w.item,data,fileUrl).then(function(){
+            if(tier==='report')counts.refreshed++;
+            else if(tier==='renewal')counts.renewed++;
+            else counts.updated++;
+            actions.push({kind:tier==='report'?'refreshed':(tier==='renewal'?'renewed':'updated'),name:w.rec.n||'?',vendor:w.rec.vendor||'',oldExp:w.rec.e||'',newExp:(w.item.expiry_date||data.expiry_date||'')});
+          }).catch(function(e){counts.failed++;failures.push((w.rec.n||'?')+': '+(e&&e.message||e));actions.push({kind:'failed',name:w.rec.n||'?',err:e&&e.message||String(e)});});
         }else{
-          return _eqiPdfPersistCreate(w.item,data,fileUrl).then(function(){created++;}).catch(function(e){failed++;failures.push((w.item.equipment_name||'\u05d7\u05d3\u05e9')+': '+(e&&e.message||e));});
+          return _eqiPdfPersistCreate(w.item,data,fileUrl).then(function(){
+            counts.created++;
+            actions.push({kind:'created',name:w.item.equipment_name||'?',vendor:w.item.vendor||data.vendor||'',newExp:(w.item.expiry_date||data.expiry_date||'')});
+          }).catch(function(e){counts.failed++;failures.push((w.item.equipment_name||'\u05d7\u05d3\u05e9')+': '+(e&&e.message||e));actions.push({kind:'failed',name:w.item.equipment_name||'?',err:e&&e.message||String(e)});});
         }
-      }catch(e){failed++;failures.push(String(e));}
+      }catch(e){counts.failed++;failures.push(String(e));}
     });
   });
   p.then(function(){
-    var parts=[];
-    if(updated)parts.push('✓ '+updated+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
-    if(created)parts.push('✓ '+created+' \u05e0\u05d5\u05e6\u05e8\u05d5');
-    if(failed)parts.push('✗ '+failed+' \u05e0\u05db\u05e9\u05dc\u05d5');
-    toast(parts.join(' · ')||'\u05d1\u05d5\u05e6\u05e2');
     if(failures.length){
       var sum='\u05e0\u05db\u05e9\u05dc\u05d5:\n'+failures.slice(0,8).join('\n');
       g('eqi-pdf-status').textContent=sum;
@@ -4295,12 +4313,39 @@ function _eqiPdfApplyAll(work,data,fileUrl){
     sdb();
     if(typeof rEqi==='function')rEqi();
     if(typeof rDash==='function')rDash();
-    // If everything succeeded, close. Otherwise leave open so the user can see the failure list.
-    if(!failures.length){
-      closeModal('m-eqi-pdf');
-      window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfFile=null;
-    }
+    _eqiPdfShowSummary(counts,actions,data);
   });
+}
+// Final summary screen — shows exactly what happened so nothing slips through.
+function _eqiPdfShowSummary(counts,actions,data){
+  var wrap=g('eqi-pdf-items-wrap');
+  if(!wrap)return;
+  var hdr='סיכום העלאת תסקיר'+(data.report_number?' '+data.report_number:'');
+  function pill(n,label,bg,fg){return n?'<span style="background:'+bg+';color:'+fg+';padding:4px 10px;border-radius:14px;font-size:12px;margin:0 4px 4px 0;display:inline-block"><strong>'+n+'</strong> '+label+'</span>':'';}
+  var pills=
+    pill(counts.refreshed,'כבר היה — רוענן','#e0e7ff','#3730a3')+
+    pill(counts.renewed,'חידושים','#dcfce7','#15803d')+
+    pill(counts.updated,'עודכנו','#dbeafe','#1d4ed8')+
+    pill(counts.created,'חדשים','#fef3c7','#92400e')+
+    pill(counts.failed,'נכשלו','#fee2e2','#991b1b');
+  var rows=actions.map(function(a){
+    var icon={refreshed:'↻',renewed:'♻',updated:'✓',created:'+',failed:'✗'}[a.kind]||'·';
+    var col={refreshed:'#3730a3',renewed:'#15803d',updated:'#1d4ed8',created:'#92400e',failed:'#991b1b'}[a.kind]||'#000';
+    var detail='';
+    if(a.kind==='failed')detail='שגיאה: '+esc(a.err||'');
+    else if(a.kind==='created')detail='תוקף עד '+esc(a.newExp?fd(a.newExp):'—');
+    else if(a.kind==='refreshed')detail='דבר לא השתנה (כבר עודכן בעבר מאותו תסקיר)';
+    else detail='תוקף '+esc(a.oldExp?fd(a.oldExp):'—')+' ➝ <strong>'+esc(a.newExp?fd(a.newExp):'—')+'</strong>';
+    return '<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span style="color:'+col+';font-weight:700;width:18px;text-align:center">'+icon+'</span><div style="flex:1"><div><strong>'+esc(a.name)+'</strong>'+(a.vendor?' <span style="color:#888">· '+esc(a.vendor)+'</span>':'')+'</div><div style="color:#555;font-size:11px">'+detail+'</div></div></div>';
+  }).join('');
+  wrap.innerHTML='<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px"><div style="font-size:13px;font-weight:700;margin-bottom:8px">'+esc(hdr)+'</div><div style="margin-bottom:10px">'+pills+'</div><div style="max-height:340px;overflow-y:auto">'+rows+'</div></div>';
+  g('eqi-pdf-status').textContent='הושלם.';
+  var btn=g('eqi-pdf-apply');
+  if(btn){
+    btn.disabled=false;
+    btn.textContent='סיום';
+    btn.onclick=function(){closeModal('m-eqi-pdf');window._eqiPdfData=null;window._eqiPdfBase64=null;window._eqiPdfFile=null;btn.onclick=function(){_eqiPdfApply();};};
+  }
 }
 function _eqiPdfPersistUpdate(rec,item,data,fileUrl){
   var idx=(DB.equip_inspections||[]).findIndex(function(r){return r.id===rec.id;});
@@ -4321,6 +4366,14 @@ function _eqiPdfPersistUpdate(rec,item,data,fileUrl){
   if(item.status)live.s=item.status;
   var pdfCode=item.equipment_code;
   if(pdfCode && (!live.code || live.code==='-' || live.code==='—'))live.code=pdfCode;
+  // Track report chain for renewal detection. On renewal: shift current report_number
+  // into previous_report_number before overwriting it. Otherwise, accept whatever the
+  // PDF supplied (only if previous slot is still empty).
+  if(item._tier==='renewal' && live.report_number && live.report_number!==data.report_number){
+    live.previous_report_number=live.report_number;
+  }else if(item.previous_report_number && !live.previous_report_number){
+    live.previous_report_number=item.previous_report_number;
+  }
   if(data.report_number)live.report_number=data.report_number;
   if(fileUrl)live.file_url=fileUrl;
   var inspector=item.inspector||data.inspector;
@@ -4355,6 +4408,7 @@ function _eqiPdfPersistCreate(item,data,fileUrl){
     notes:item.notes||null,
     file_url:fileUrl||null,
     report_number:data.report_number||null,
+    previous_report_number:item.previous_report_number||null,
     inspector:item.inspector||data.inspector||null,
     inspection_type:item.inspection_type||data.inspection_type||null,
     next_inspection_date:item.next_inspection_date||data.next_inspection_date||null,
