@@ -434,6 +434,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-stale-inc-card" style="display:none"><div class="card-title">&#128270; &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1489;&#1492;&#1502;&#1514;&#1504;&#1492; &#1500;&#1495;&#1511;&#1497;&#1512;&#1492;</div><div id="dash-stale-inc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-mine-card" style="display:none"><div class="card-title">&#128100; NCR &#1513;&#1500;&#1497; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-mine"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-assignees-card" style="display:none"><div class="card-title">&#128101; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1488;&#1495;&#1512;&#1488;&#1497; (&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;)</div><div id="dash-assignees"></div></div>
   <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -3543,6 +3544,29 @@ function rDash(){
       }else{if(dcc)dcc.style.display='none';}
     }
   }catch(e){console.warn('dash-critical failed',e);}
+
+  // Dashboard: severe incidents waiting for investigation (top 5 by age)
+  try{
+    var dsic=g('dash-stale-inc-card');
+    var dsi=g('dash-stale-inc');
+    if(dsi&&typeof _incStaleAge==='function'){
+      var stale=(DB.inc||[]).map(function(i){return {i:i,age:_incStaleAge(i)};})
+        .filter(function(x){return x.age>0;})
+        .sort(function(a,b){return b.age-a.age;});
+      if(stale.length){
+        if(dsic)dsic.style.display='';
+        dsi.innerHTML=stale.slice(0,5).map(function(x){
+          var i=x.i,age=x.age;
+          var safeId=esc(i.id||'');
+          var dt=fd(i.dt||i.d);
+          var desc=esc((i.d||'').substring(0,55));
+          var sev=esc(i.sv||'');
+          var sevColor=i.sv==='קריטי'?'#cc1f1f':'#e07a00';
+          return '<div data-id="'+safeId+'" onclick="if(typeof showView===\'function\')showView(\'inc\',this.dataset.id)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#fff5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+sevColor+'">'+dt+'</b> &middot; '+desc+'</span><span class="b" style="background:#7f1d1d;color:#fff;font-size:10px" title="'+sev+' - פתוח '+age+' ימים">🔍 '+age+'י׳</span></div>';
+        }).join('');
+      }else{if(dsic)dsic.style.display='none';}
+    }
+  }catch(e){console.warn('dash-stale-inc failed',e);}
 
   // Dashboard: my open NCRs (assigned to current user)
   try{
