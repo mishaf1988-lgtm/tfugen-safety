@@ -397,6 +397,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
   <div id="dash-health" style="margin:0 0 10px"></div>
+  <div class="card" id="dash-kpi-card" style="margin:0 0 10px"><div class="card-title">&#128202; &#1488;&#1497;&#1504;&#1491;&#1497;&#1511;&#1496;&#1493;&#1512;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; (Leading Indicators)</div><div id="dash-kpi"></div></div>
   <div id="dash-alerts"></div>
 
   <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
@@ -3022,6 +3023,61 @@ function _renderToday(){
   }
   listEl.innerHTML=html;
 }
+// ====== Leading-indicator KPI dashboard widget ======
+// Standard pattern from EHS software (SafetyCulture, Intelex, SmartQHSE):
+// 4 tiles showing forward-looking metrics, color-coded against industry
+// thresholds. Helps the safety manager see culture/health at a glance
+// instead of always reacting to lagging incidents.
+function _renderKpiCard(){
+  var box=g('dash-kpi'); if(!box)return;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var monthAgo=new Date(today); monthAgo.setMonth(monthAgo.getMonth()-1);
+  // KPI 1: % of equipment whose next-inspection date is in the future.
+  var allEq=(DB.equip_inspections||[]).filter(function(r){return r.e;});
+  var validEq=allEq.filter(function(r){return du(r.e)>=0;}).length;
+  var pctValid=allEq.length?Math.round(validEq*100/allEq.length):0;
+  // KPI 2: near-miss to incident ratio over the last 30 days. Per Heinrich
+  // pyramid an industry-healthy ratio is roughly 10-30 near-misses for every
+  // recordable incident — a high ratio means people are reporting actively.
+  var nm30=(DB.near_miss||[]).filter(function(r){
+    var d=r.d||r.dt; return d && new Date(d)>=monthAgo;
+  }).length;
+  var inc30=(DB.inc||[]).filter(function(r){
+    var d=r.dt||r.d; return d && new Date(d)>=monthAgo;
+  }).length;
+  var ratioStr, ratioVal;
+  if(inc30===0){ ratioStr=nm30>0?'∞':'—'; ratioVal=nm30>0?999:-1; }
+  else { ratioVal=nm30/inc30; ratioStr=ratioVal.toFixed(1); }
+  // KPI 3: % of closed NCRs that closed within 30 days of opening.
+  var ncrAll=(DB.ncr||[]);
+  var ncrClosed=ncrAll.filter(function(r){return r.cd;});
+  var ncrFastClose=ncrClosed.filter(function(r){
+    var days=(new Date(r.cd)-new Date(r.ts))/(1000*60*60*24);
+    return days<=30;
+  }).length;
+  var pctFastNcr=ncrClosed.length?Math.round(ncrFastClose*100/ncrClosed.length):0;
+  // KPI 4: average days NCR open → closed (lower is better).
+  var avgNcrDays=ncrClosed.length
+    ? Math.round(ncrClosed.reduce(function(s,r){return s+(new Date(r.cd)-new Date(r.ts))/(1000*60*60*24);},0)/ncrClosed.length)
+    : 0;
+  function tile(value,label,hint,color,tooltip){
+    return '<div title="'+esc(tooltip||'')+'" style="flex:1;min-width:140px;padding:10px;background:#fff;border:2px solid '+color+';border-radius:10px;text-align:center;cursor:default">'+
+      '<div style="font-size:26px;font-weight:700;color:'+color+';line-height:1">'+value+'</div>'+
+      '<div style="font-size:12px;color:#1a1d23;margin-top:4px;font-weight:600">'+label+'</div>'+
+      '<div style="font-size:10px;color:#5a6070;margin-top:2px">'+hint+'</div>'+
+    '</div>';
+  }
+  var validColor = pctValid>=85?'#16a34a':pctValid>=60?'#eab308':'#cc1f1f';
+  var ratioColor = ratioVal>=10?'#16a34a':ratioVal>=5?'#eab308':ratioVal<0?'#94a3b8':'#cc1f1f';
+  var fastColor  = pctFastNcr>=70?'#16a34a':pctFastNcr>=40?'#eab308':'#cc1f1f';
+  var avgColor   = avgNcrDays===0?'#94a3b8':avgNcrDays<=14?'#16a34a':avgNcrDays<=30?'#eab308':'#cc1f1f';
+  box.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+    tile(pctValid+'%', '\u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05d5\u05e7\u05e3', allEq.length+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd', validColor, '\u05d0\u05d7\u05d5\u05d6 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05ea\u05d5\u05e7\u05e4\u05dd \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e4\u05d2. \u05d9\u05e2\u05d3: 85% \u05d5\u05de\u05e2\u05dc\u05d4.')+
+    tile(ratioStr,    '\u05d9\u05d7\u05e1 Near-Miss : Incident (30 \u05d9\u05d5\u05dd)', nm30+' / '+inc30,                ratioColor, '\u05e4\u05d9\u05e8\u05de\u05d9\u05d3\u05ea Heinrich — \u05d9\u05d7\u05e1 \u05d1\u05e8\u05d9\u05d0 \u05d4\u05d5\u05d0 10:1 \u05d5\u05de\u05e2\u05dc\u05d4. \u05e2\u05e8\u05da \u05e0\u05de\u05d5\u05da \u05de\u05e6\u05d1\u05d9\u05e2 \u05e2\u05dc \u05ea\u05ea-\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05dc \u05db\u05de\u05e2\u05d8\u05d9\u05dd.')+
+    tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.')+
+    tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.')+
+  '</div>';
+}
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
   // My open tasks count badge
@@ -3698,6 +3754,7 @@ function rDash(){
   if(elTsk)elTsk.style.color=tOver>0?'var(--bad)':'';
   // overdue-tasks alert removed (now in Today list)
   var al=g('dash-alerts');if(al)al.innerHTML=alerts;
+  try{_renderKpiCard();}catch(_){console.warn(_);}
 
   try{_renderToday();}catch(err){console.warn('today render err:',err);}
   // MONTHLY STRIP
