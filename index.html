@@ -4340,6 +4340,7 @@ function rEqi(){
     var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
     var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    var clone='<button class="btn btn-d btn-sm" data-cid="'+esc(r.id)+'" onclick="_eqiClone(this.dataset.cid)" title="שכפל לציוד דומה (מנקה קוד / מס׳ סידורי / מס׳ רישוי)">&#128203;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
     // Identifier badge fallback chain so every record surfaces *something*
     // recognisable: forklift license \u2192 factory-internal number \u2192 manufacturer's
@@ -4352,7 +4353,7 @@ function rEqi(){
     var expCell=r.e?(fd(r.e)+'<br>'+eb(r.e)):'&#8212;';
     // Pack the action icons into a single small column so the description has
     // room to breathe and the row stays inside the viewport on narrow screens.
-    var acts='<div style="display:flex;gap:2px;justify-content:flex-start;flex-wrap:nowrap">'+view+pdf+edit+del+'</div>';
+    var acts='<div style="display:flex;gap:2px;justify-content:flex-start;flex-wrap:nowrap">'+view+pdf+edit+clone+del+'</div>';
     return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td>'+
       '<td style="max-width:280px"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3">'+pdfIcon+esc(r.n||'')+'</div>'+licBadge+'</td>'+
       '<td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td>'+
@@ -4364,6 +4365,30 @@ function rEqi(){
   }).join('');
   if(typeof _signifyDom==='function')_signifyDom(tb);
 }
+// Clone an equipment record into the new-equipment modal, with the unique
+// identifying fields cleared so the user is forced to set them. Useful when
+// the factory has multiple forklifts of the same model — copy manufacturer,
+// model, vendor, cycle, location, etc., then enter a fresh serial / license.
+window._eqiClone=function(id){
+  var r=(DB.equip_inspections||[]).find(function(x){return x.id===id;});if(!r)return;
+  openModal('m-eqi');
+  setTimeout(function(){
+    var idEl=g('eqi-id');if(idEl)idEl.value='';
+    g('eqi-code').value='';
+    g('eqi-n').value=(r.n||'')+' (עותק)';
+    g('eqi-vendor').value=r.vendor||'';
+    g('eqi-loc').value=r.loc||'';
+    if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',r.location_id||null);
+    g('eqi-d').value='';
+    g('eqi-e').value='';
+    g('eqi-s').value=r.s||'תקין';
+    g('eqi-notes').value='';
+    _eqiPhotoUrl=null;
+    var pa=g('eqi-photo-area');
+    if(pa)pa.innerHTML=_photoPickBtn('_eqiPickPhoto');
+    toast('שכופל. מלא קוד / מס׳ סידורי / תאריכים חדשים');
+  },30);
+};
 function eqiEdit(id){
   var r=(DB.equip_inspections||[]).find(function(x){return x.id===id;});if(!r)return;
   openModal('m-eqi');
