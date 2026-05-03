@@ -505,13 +505,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="eqi-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th>&#1511;&#1493;&#1491;</th>
-    <th>&#1514;&#1497;&#1488;&#1493;&#1512;</th>
-    <th>&#1505;&#1508;&#1511;</th>
-    <th>&#1488;&#1494;&#1493;&#1512;</th>
-    <th>&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</th>
-    <th>&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488;</th>
-    <th>&#1505;&#1496;.</th>
+    <th onclick="eqiSort('code')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;">&#1511;&#1493;&#1491; <span id="eqi-sort-code"></span></th>
+    <th onclick="eqiSort('n')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1513;&#1501;">&#1514;&#1497;&#1488;&#1493;&#1512; <span id="eqi-sort-n"></span></th>
+    <th onclick="eqiSort('vendor')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1508;&#1511;">&#1505;&#1508;&#1511; <span id="eqi-sort-vendor"></span></th>
+    <th onclick="eqiSort('loc')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;">&#1488;&#1494;&#1493;&#1512; <span id="eqi-sort-loc"></span></th>
+    <th onclick="eqiSort('d')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;">&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; <span id="eqi-sort-d"></span></th>
+    <th onclick="eqiSort('e')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1514;&#1493;&#1511;&#1507;">&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488; <span id="eqi-sort-e">&#8593;</span></th>
+    <th onclick="eqiSort('s')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;">&#1505;&#1496;. <span id="eqi-sort-s"></span></th>
     <th></th>
   </tr></thead><tbody id="tb-eqi"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</div>
@@ -3851,6 +3851,16 @@ function _eqiCategoryOf(r){
 }
 function eqiTypeFilter(t){window._eqiTypeFilter=t||'';rEqi();}
 function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rEqi();}
+function eqiSort(col){
+  // Click same column → toggle direction. Click new column → asc.
+  if(window._eqiSortCol===col){
+    window._eqiSortDir = window._eqiSortDir==='asc' ? 'desc' : 'asc';
+  }else{
+    window._eqiSortCol=col;
+    window._eqiSortDir='asc';
+  }
+  rEqi();
+}
 function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
 // Bulk equipment status report — opens a print-friendly window with every
 // row currently visible on the equipment page (after category/status/search/
@@ -4305,7 +4315,25 @@ function rEqi(){
   if(q){
     rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
   }
-  rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
+  // Click-to-sort. Default: by next-inspection date asc. Other columns get
+  // string-collation sort with locale-aware Hebrew.
+  var sortCol=window._eqiSortCol||'e';
+  var sortDir=window._eqiSortDir||'asc';
+  var dirSign=sortDir==='desc'?-1:1;
+  function _eqiSortKey(r,col){
+    if(col==='e'||col==='d'){return r[col]?du(r[col]):9999;}
+    return String(r[col]||'').toLowerCase();
+  }
+  rows.sort(function(a,b){
+    var ka=_eqiSortKey(a,sortCol),kb=_eqiSortKey(b,sortCol);
+    if(typeof ka==='number'&&typeof kb==='number')return (ka-kb)*dirSign;
+    return ka.localeCompare(kb,'he')*dirSign;
+  });
+  // Update arrow indicator on the active column header.
+  ['code','n','vendor','loc','d','e','s'].forEach(function(c){
+    var el=g('eqi-sort-'+c);if(!el)return;
+    el.textContent=(c===sortCol)?(sortDir==='asc'?'\u2191':'\u2193'):'';
+  });
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\u26a0\ufe0f<br>\u05d0\u05d9\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea<br><button class="et-cta" onclick="openNewNcrModal()">+ \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
