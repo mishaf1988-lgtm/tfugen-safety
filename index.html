@@ -477,6 +477,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPdfPick()" title="&#1492;&#1506;&#1500;&#1492; PDF &#1513;&#1500; &#1514;&#1505;&#1511;&#1497;&#1512; &#1489;&#1491;&#1497;&#1511;&#1492;">&#128196; PDF AI</button>
     <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openEqiXl()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
     <button class="btn btn-s" style="background:#0891b2;margin-left:8px" onclick="openEqiXl2()" title="&#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512; &#1502;&#1500;&#1488; (&#1506;&#1491;&#1499;&#1504;&#1497; + &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;)">&#128190; &#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512;</button>
+    <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPrintAll()" title="&#1492;&#1491;&#1508;&#1505; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501; (&#1502;&#1505;&#1504;&#1503; &#1500;&#1508;&#1497; &#1504;&#1493;&#1499;&#1495;&#1497;&#1493;&#1514; &#1505;&#1497;&#1504;&#1503;)">&#128424; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501;</button>
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
@@ -3774,6 +3775,133 @@ function _eqiCategoryOf(r){
 function eqiTypeFilter(t){window._eqiTypeFilter=t||'';rEqi();}
 function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rEqi();}
 function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
+// Bulk equipment status report — opens a print-friendly window with every
+// row currently visible on the equipment page (after category/status/search/
+// location filters). Designed for monthly ISO 45001 audits: header + summary
+// pills + table sorted by next-inspection-date + signature line + footer.
+function _eqiPrintAll(){
+  // Reuse the same filter pipeline as rEqi so what the user sees == what prints.
+  var locF=window._eqiLocFilter||'';
+  var typeF=window._eqiTypeFilter||'';
+  var f=window._eqiFilter||'all';
+  var q=window._eqiQ||'';
+  var rows=(DB.equip_inspections||[]).slice();
+  if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  if(typeF)rows=rows.filter(function(r){return _eqiCategoryOf(r)===typeF;});
+  rows=rows.filter(function(r){
+    var x=r.e?du(r.e):9999;
+    if(f==='exp')return r.e&&x<0;
+    if(f==='30')return r.e&&x>=0&&x<=30;
+    if(f==='90')return r.e&&x>=0&&x<=90;
+    if(f==='ok')return r.s==='תקין';
+    return true;
+  });
+  if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
+  rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d3\u05d5\u05d7');return;}
+  // Compute summary stats over the filtered set.
+  var stats={total:rows.length,exp:0,d30:0,ok:0};
+  rows.forEach(function(r){
+    if(!r.e)return;
+    var dl=du(r.e);
+    if(dl<0)stats.exp++;
+    else if(dl<=30)stats.d30++;
+    else stats.ok++;
+  });
+  var now=new Date();
+  var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
+  var filterChips=[];
+  if(typeF)filterChips.push(typeF);
+  if(f==='exp')filterChips.push('פג תוקף');
+  else if(f==='30')filterChips.push('≤0 30י');
+  else if(f==='90')filterChips.push('≤0 90י');
+  else if(f==='ok')filterChips.push('תקינים');
+  if(locF && typeof _locName==='function')filterChips.push(_locName(locF));
+  if(q)filterChips.push('חיפוש: '+q);
+  function rowCell(label,val){return '<td><span class="lbl">'+label+'</span>'+(val||'—')+'</td>';}
+  var bodyHtml=rows.map(function(r,i){
+    var cat=(typeof _eqiCategoryOf==='function')?_eqiCategoryOf(r):'';
+    var dl=r.e?du(r.e):null;
+    var statusCell=dl===null?'<span class="b ok">—</span>':
+      dl<0?'<span class="b bad">פג '+(-dl)+'י</span>':
+      dl<=30?'<span class="b warn">בעוד '+dl+'י</span>':
+      '<span class="b ok">בתוקף ('+dl+'י)</span>';
+    var ident=r.license_number?('מס׳ רישוי: '+r.license_number):
+              r.internal_number?('מס׳ פנימי: '+r.internal_number):
+              r.serial_number?('מס׳ סידורי: '+r.serial_number):'';
+    return '<tr>'+
+      '<td class="num">'+(i+1)+'</td>'+
+      '<td><b>'+esc(r.code||'—')+'</b></td>'+
+      '<td>'+esc(r.n||'')+(cat?'<div class="cat">קטגוריה: '+esc(cat)+'</div>':'')+(ident?'<div class="cat">'+esc(ident)+'</div>':'')+'</td>'+
+      '<td>'+esc(r.vendor||'—')+'</td>'+
+      '<td>'+esc(r.loc||((r.location_id&&typeof _locName==='function')?_locName(r.location_id):'')||'—')+'</td>'+
+      '<td class="dt">'+(r.d?fd(r.d):'—')+'</td>'+
+      '<td class="dt">'+(r.e?fd(r.e):'—')+'</td>'+
+      '<td>'+statusCell+'</td>'+
+      '<td>'+esc(r.s||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+  var html = '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>דוח מסכם ציוד · '+stamp+'</title>'+
+  '<style>'+
+    '@page{size:A4 landscape;margin:10mm}'+
+    'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:11px;margin:0}'+
+    '.head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #cc1f1f;padding:8px 0;margin-bottom:8px}'+
+    '.head img{height:42px}'+
+    '.head h1{margin:0;font-size:16px;color:#cc1f1f}'+
+    '.head .sub{font-size:11px;color:#5a6070;margin-top:2px}'+
+    '.summary{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;font-size:11px}'+
+    '.summary .pill{padding:4px 10px;border-radius:12px;border:1px solid #ddd;background:#f8fafc}'+
+    '.summary .pill.bad{background:#fee2e2;border-color:#cc1f1f;color:#991b1b}'+
+    '.summary .pill.warn{background:#fef3c7;border-color:#b45309;color:#92400e}'+
+    '.summary .pill.ok{background:#dcfce7;border-color:#16a34a;color:#15803d}'+
+    '.summary .filt{padding:4px 10px;border-radius:12px;background:#dbeafe;color:#1d4ed8;border:1px solid #4d9fff}'+
+    'table{width:100%;border-collapse:collapse;font-size:10px}'+
+    'th{background:#cc1f1f;color:#fff;text-align:right;padding:6px;border:1px solid #cc1f1f;white-space:nowrap}'+
+    'td{padding:5px 6px;border:1px solid #ddd;vertical-align:top}'+
+    'td.num{text-align:center;width:24px;color:#5a6070}'+
+    'td.dt{white-space:nowrap;direction:ltr;text-align:right}'+
+    'td .cat{font-size:9px;color:#6b21a8;margin-top:2px}'+
+    '.b{font-weight:700;padding:1px 6px;border-radius:8px;font-size:9px;white-space:nowrap}'+
+    '.b.ok{background:#dcfce7;color:#15803d}'+
+    '.b.warn{background:#fef3c7;color:#92400e}'+
+    '.b.bad{background:#fee2e2;color:#991b1b}'+
+    'tr{page-break-inside:avoid}'+
+    '.foot{margin-top:14px;display:flex;justify-content:space-between;font-size:10px;color:#5a6070;border-top:1px solid #ddd;padding-top:8px}'+
+    '.foot .sig{display:flex;gap:24px}'+
+    '.foot .sig .line{border-bottom:1px solid #1a1d23;width:140px;display:inline-block;height:18px}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
+  '</style></head><body>'+
+  '<button class="no-print" onclick="window.print()">הדפס עכשיו</button>'+
+  '<div class="head">'+
+    (logoSrc?'<img src="'+logoSrc+'">':'')+
+    '<div><h1>דוח מסכם &mdash; בדיקות ציוד תקופה (פקודת הבטיחות)</h1><div class="sub">תעשיות תפוגן &middot; הופק ב: '+esc(stamp)+'</div></div>'+
+  '</div>'+
+  '<div class="summary">'+
+    '<span class="pill"><b>סה"כ: </b>'+stats.total+'</span>'+
+    (stats.exp?'<span class="pill bad">פג תוקף: <b>'+stats.exp+'</b></span>':'')+
+    (stats.d30?'<span class="pill warn">≤0 30י: <b>'+stats.d30+'</b></span>':'')+
+    (stats.ok?'<span class="pill ok">תקינים: <b>'+stats.ok+'</b></span>':'')+
+    filterChips.map(function(c){return '<span class="filt">'+esc(c)+'</span>';}).join('')+
+  '</div>'+
+  '<table>'+
+    '<thead><tr><th>#</th><th>קוד</th><th>תיאור הציוד</th><th>ספק</th><th>מיקום</th><th>בדיקה אחרונה</th><th>בדיקה הבאה</th><th>מצב</th><th>סטטוס</th></tr></thead>'+
+    '<tbody>'+bodyHtml+'</tbody>'+
+  '</table>'+
+  '<div class="foot">'+
+    '<div>מערכת Tapugan Safety · ISO 14001 + ISO 45001</div>'+
+    '<div class="sig">'+
+      '<span>אישור מנהל הבטיחות: <span class="line"></span></span>'+
+      '<span>תאריך: <span class="line"></span></span>'+
+    '</div>'+
+  '</div>'+
+  '</body></html>';
+  var w=window.open('','_blank','noopener,noreferrer');
+  if(!w){toast('\u05e4\u05ea\u05d7 \u05d7\u05dc\u05d5\u05df \u05d7\u05d3\u05e9: \u05d9\u05e9 \u05dc\u05d1\u05d8\u05dc \u05d7\u05e1\u05d9\u05de\u05ea popups');return;}
+  w.document.open();w.document.write(html);w.document.close();
+  setTimeout(function(){try{w.focus();}catch(e){}},100);
+}
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
   // Equipment-type chip bar — counts per category, click to filter.
