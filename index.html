@@ -7700,6 +7700,32 @@ function showView(tbl,id){
   if(tbl==='ncr')_ncrCommentsLoad(id);
   if(tbl==='equip_inspections')_eqiHistoryLoad(id);
 }
+// ====== Repeat-deficiency detection ======
+// Industry pattern (per ISO 45001 Bird's pyramid): a deficiency that recurs
+// across consecutive inspections is a *real* problem (not a one-off cosmetic
+// issue). Auto-flag those so the safety manager doesn't have to compare
+// inspection texts manually.
+function _eqiNormalizeDef(s){
+  if(!s)return '';
+  return String(s).toLowerCase()
+    .replace(/[֑-ׇ]/g,'')
+    .replace(/[^֐-׿\w\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function _eqiDefSimilar(a,b){
+  var na=_eqiNormalizeDef(a), nb=_eqiNormalizeDef(b);
+  if(!na||!nb)return false;
+  if(na===nb)return true;
+  var minWord=3;
+  var ta=na.split(' ').filter(function(t){return t.length>=minWord;});
+  var tb=nb.split(' ').filter(function(t){return t.length>=minWord;});
+  if(ta.length<2||tb.length<2)return false;  // too little signal
+  var setB={};tb.forEach(function(t){setB[t]=true;});
+  var overlap=0;ta.forEach(function(t){if(setB[t])overlap++;});
+  // 50%+ word overlap relative to the smaller set → call it a repeat.
+  return overlap/Math.min(ta.length,tb.length) >= 0.5;
+}
 function _eqiHistoryLoad(equipId){
   var box=g('eqi-history-list'); var cnt=g('eqi-history-count');
   if(!box)return;
@@ -7709,7 +7735,22 @@ function _eqiHistoryLoad(equipId){
       if(!Array.isArray(rows))rows=[];
       if(cnt)cnt.textContent=rows.length;
       if(!rows.length){box.innerHTML='<div class="et" style="padding:10px;font-size:11px">אין היסטוריה — בדיקה ראשונה תיווצר אחרי שתעלה תסקיר חדש.</div>';return;}
-      box.innerHTML=rows.map(function(h){
+      // Pre-compute repeat flags: each row marked if its deficiency text overlaps
+      // with another row in the same equipment's history (50%+ word match).
+      var repeatFlags=rows.map(function(){return false;});
+      for(var i=0;i<rows.length;i++){
+        if(!rows[i].deficiencies)continue;
+        for(var j=0;j<rows.length;j++){
+          if(i===j)continue;
+          if(rows[j].deficiencies && _eqiDefSimilar(rows[i].deficiencies,rows[j].deficiencies)){
+            repeatFlags[i]=true;break;
+          }
+        }
+      }
+      var anyRepeat=repeatFlags.indexOf(true)>=0;
+      // If any repeat detected, prepend a banner so it's impossible to miss.
+      var banner=anyRepeat?'<div style="background:#fee2e2;border:1px solid #cc1f1f;color:#991b1b;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;font-weight:700">⚠ זוהו ליקויים חוזרים בהיסטוריה — מצריכים פעולה מתקנת</div>':'';
+      box.innerHTML=banner+rows.map(function(h,i){
         var when=h.inspection_date?fd(h.inspection_date):(h.ts?fd(String(h.ts).substring(0,10)):'—');
         var exp=h.expiry_date?fd(h.expiry_date):'—';
         var meta=[];
@@ -7717,7 +7758,9 @@ function _eqiHistoryLoad(equipId){
         if(h.inspection_type)meta.push('סוג: '+esc(h.inspection_type));
         if(h.cycle_months)meta.push('כל '+esc(h.cycle_months)+' חודשים');
         if(h.report_number)meta.push('תסקיר: '+esc(h.report_number));
-        var defs=h.deficiencies?'<div style="margin-top:4px;color:#b45309;font-size:11px">⚠ '+esc(h.deficiencies)+'</div>':'';
+        var repeatBadge=repeatFlags[i]?' <span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #cc1f1f;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;margin-right:4px" title="ליקוי דומה הופיע בבדיקה אחרת בהיסטוריה — מצריך CAPA">⚠ ליקוי חוזר</span>':'';
+        var defColor=repeatFlags[i]?'#991b1b':'#b45309';
+        var defs=h.deficiencies?'<div style="margin-top:4px;color:'+defColor+';font-size:11px">⚠ '+esc(h.deficiencies)+repeatBadge+'</div>':'';
         var fileLink=h.file_url?' · <a data-sign="'+escU(h.file_url)+'" target="_blank" style="color:#2563eb">📎 PDF</a>':'';
         return '<div style="padding:8px 6px;border-bottom:1px solid #f0f0f0"><div style="display:flex;justify-content:space-between;gap:6px"><strong style="font-size:12px">'+esc(when)+' → תוקף '+esc(exp)+'</strong><span style="font-size:11px;color:#888">'+(h.status?esc(h.status):'')+fileLink+'</span></div>'+(meta.length?'<div style="font-size:11px;color:#666;margin-top:3px">'+meta.join(' · ')+'</div>':'')+defs+'</div>';
       }).join('');
