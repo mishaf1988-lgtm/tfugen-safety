@@ -500,7 +500,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</th>
     <th>&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488;</th>
     <th>&#1505;&#1496;.</th>
-    <th></th><th></th>
+    <th></th>
   </tr></thead><tbody id="tb-eqi"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</div>
 </div>
@@ -3839,7 +3839,7 @@ function rEqi(){
     rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
   }
   rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et" data-label="">\u26a0\ufe0f<br>\u05d0\u05d9\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea<br><button class="et-cta" onclick="openNewNcrModal()">+ \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\u26a0\ufe0f<br>\u05d0\u05d9\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea<br><button class="et-cta" onclick="openNewNcrModal()">+ \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
@@ -3855,7 +3855,17 @@ function rEqi(){
       r.serial_number?'<span style="display:inline-block;font-size:10px;color:#374151;background:#f3f4f6;padding:1px 6px;border-radius:8px;margin-right:4px;font-weight:500" title="\u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05de\u05d4\u05d9\u05e6\u05e8\u05df">\u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9: '+esc(r.serial_number)+'</span>':'';
     var pdfIcon=r.file_url?'<a data-sign="'+escU(r.file_url)+'" target="_blank" onclick="event.stopPropagation()" title="\u05ea\u05e1\u05e7\u05d9\u05e8 \u05e1\u05e8\u05d5\u05e7" style="margin-right:6px;text-decoration:none;font-size:14px">&#128206;</a>':'';
     var expCell=r.e?(fd(r.e)+'<br>'+eb(r.e)):'&#8212;';
-    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td><td>'+pdfIcon+esc(r.n||'')+licBadge+'</td><td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td><td>'+(locTxt?esc(locTxt):'&#8212;')+'</td><td>'+fd(r.d)+'</td><td>'+expCell+'</td><td>'+sb(r.s)+'</td><td>'+view+' '+pdf+' '+edit+'</td><td>'+del+'</td></tr>';
+    // Pack the action icons into a single small column so the description has
+    // room to breathe and the row stays inside the viewport on narrow screens.
+    var acts='<div style="display:flex;gap:2px;justify-content:flex-start;flex-wrap:nowrap">'+view+pdf+edit+del+'</div>';
+    return '<tr><td><strong>'+(r.code?esc(r.code):'&#8212;')+'</strong></td>'+
+      '<td style="max-width:280px"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3">'+pdfIcon+esc(r.n||'')+'</div>'+licBadge+'</td>'+
+      '<td>'+(r.vendor?esc(r.vendor):'&#8212;')+'</td>'+
+      '<td>'+(locTxt?esc(locTxt):'&#8212;')+'</td>'+
+      '<td>'+fd(r.d)+'</td>'+
+      '<td>'+expCell+'</td>'+
+      '<td>'+sb(r.s)+'</td>'+
+      '<td style="white-space:nowrap">'+acts+'</td></tr>';
   }).join('');
   if(typeof _signifyDom==='function')_signifyDom(tb);
 }
