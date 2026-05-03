@@ -482,6 +482,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPrintAll()" title="&#1492;&#1491;&#1508;&#1505; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501; (&#1502;&#1505;&#1504;&#1503; &#1500;&#1508;&#1497; &#1504;&#1493;&#1499;&#1495;&#1497;&#1493;&#1514; &#1505;&#1497;&#1504;&#1503;)">&#128424; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501;</button>
     <button class="btn btn-s" style="background:#16a34a;margin-left:8px" onclick="_eqiExportCsv()" title="&#1497;&#1497;&#1510;&#1493;&#1488; CSV (&#1500;&#1488;&#1511;&#1505;&#1500; / &#1502;&#1497;&#1497;&#1500;)">&#128202; CSV</button>
     <button class="btn btn-s" style="background:#0d9488;margin-left:8px" onclick="_eqiPrintQrSheet()" title="&#1490;&#1497;&#1500;&#1497;&#1493;&#1503; QR &#1500;&#1499;&#1500; &#1492;&#1510;&#1497;&#1493;&#1491; (&#1500;&#1492;&#1491;&#1508;&#1505;&#1492; &#1500;&#1502;&#1491;&#1489;&#1511;&#1493;&#1514; &#1492;&#1502;&#1500;&#1490;&#1494;&#1493;&#1514;)">&#128290; QR &#1490;&#1497;&#1500;&#1497;&#1493;&#1503;</button>
+    <button class="btn btn-s" style="background:#ea580c;margin-left:8px" onclick="_eqiAutoTasksRun()" title="יצירת משימות אוטומטיות לכל ציוד שתוקפו יפוג ≤30 ימים">&#128203; &#8594; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
     <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
@@ -3981,6 +3982,60 @@ function _eqiPrintAll(){
 // CSV export of the equipment list. Same filter pipeline as rEqi/_eqiPrintAll
 // so the user gets exactly the rows currently visible on the page. Output is
 // UTF-8 with BOM (﻿) so Excel opens it with the correct Hebrew encoding.
+// Auto-task generator for expiring equipment. Iterates equip_inspections,
+// finds items whose next inspection is within 30 days (or already overdue),
+// and creates an open task linked back to the equipment via source_table /
+// source_id. Idempotent: skips equipment that already has an open task.
+window._eqiAutoTasksRun=function(){
+  if(!DB.tasks)DB.tasks=[];
+  var today=new Date(); today.setHours(0,0,0,0);
+  // Index existing OPEN tasks by source_id for O(1) lookup.
+  var existing={};
+  (DB.tasks||[]).forEach(function(t){
+    if(t.source_table==='equip_inspections' && t.source_id && t.status!==_TSK_DONE && t.status!==_TSK_CANC){
+      existing[t.source_id]=true;
+    }
+  });
+  var created=0, skipped=0;
+  (DB.equip_inspections||[]).forEach(function(eq){
+    if(!eq.e || !eq.id)return;
+    var dl=du(eq.e);
+    if(dl > 30 || dl < -365){ skipped++; return; }
+    if(existing[eq.id]){ skipped++; return; }
+    var pri = dl<0 ? '\u05d3\u05d7\u05d5\u05e3' : (dl<=7 ? '\u05d2\u05d1\u05d5\u05d4' : '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9');
+    var prefix = dl<0 ? '⚠ \u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3 — \u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3: ' : '📋 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea: ';
+    var title = (prefix + (eq.n||'?')).substring(0,80);
+    var dueDate;
+    if(dl<0){ dueDate = today.toISOString().substring(0,10); }
+    else {
+      var d = new Date(eq.e); d.setDate(d.getDate()-7);
+      dueDate = (d<today ? today : d).toISOString().substring(0,10);
+    }
+    var noteParts=['\u05e0\u05d5\u05e6\u05e8 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05ea\u05d5\u05e7\u05e3 \u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3.'];
+    if(eq.code && eq.code!=='-')noteParts.push('\u05e7\u05d5\u05d3: '+eq.code);
+    if(eq.license_number)noteParts.push('\u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9: '+eq.license_number);
+    else if(eq.internal_number)noteParts.push('\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9: '+eq.internal_number);
+    if(eq.vendor)noteParts.push('\u05e1\u05e4\u05e7: '+eq.vendor);
+    var task={
+      id: gid(),
+      title: title,
+      assignee: null,
+      due: dueDate,
+      status: _TSK_OPEN,
+      priority: pri,
+      source_table: 'equip_inspections',
+      source_id: eq.id,
+      notes: noteParts.join(' · '),
+      ts: new Date().toISOString()
+    };
+    DB.tasks.push(task);
+    sbIns('tasks',task);
+    created++;
+  });
+  if(typeof sdb==='function')sdb();
+  if(typeof rTasks==='function'){try{rTasks();}catch(e){}}
+  toast('✓ '+created+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e0\u05d5\u05e6\u05e8\u05d5 · '+skipped+' \u05d3\u05d5\u05dc\u05d2\u05d5 (\u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea / \u05de\u05d7\u05d5\u05e5 \u05dc\u05d8\u05d5\u05d5\u05d7)');
+};
 window._eqiExportCsv=function(){
   var locF=window._eqiLocFilter||'';
   var typeF=window._eqiTypeFilter||'';
