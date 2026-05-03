@@ -478,6 +478,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
     <select id="eqi-loc-filter" onchange="eqiLocFilter(this.value)" style="padding:8px;max-width:200px"></select>
   </div>
+  <div id="eqi-cat-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;overflow-x:auto"></div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 10px">
     <button class="btn btn-p" id="eqi-tab-all" onclick="eqiFilter('all')">&#1492;&#1499;&#1500;</button>
     <button class="btn btn-s" id="eqi-tab-exp" onclick="eqiFilter('exp')">&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</button>
@@ -3723,10 +3724,47 @@ function rExp(){
 }
 window._eqiFilter='all';
 window._eqiQ='';
+// Equipment-type categorizer for the page chip-bar. Prefers the explicit
+// inspection_type set on the record (added by the PDF-AI flow); falls back
+// to keyword matching on the equipment name so historical rows that
+// pre-date the field also get bucketed sensibly.
+function _eqiCategoryOf(r){
+  var t=String(r.inspection_type||'').trim();
+  if(t)return t;
+  var nm=String(r.n||'').toLowerCase();
+  // Order matters: more specific phrases first.
+  var rules=[
+    {re:/\u05d3\u05d5\u05d3|\u05e6\u05d5\u05d1\u05e8|\u05e7\u05d5\u05dc\u05d8|\u05db\u05dc\u05d9 \u05dc\u05d7\u05e5/, cat:'\u05d3\u05d5\u05d3\u05d9\u05dd \u05d5\u05db\u05dc\u05d9 \u05dc\u05d7\u05e5'},
+    {re:/\u05de\u05dc\u05d2\u05d6\u05d4|\u05de\u05d4\u05e4\u05da/, cat:'\u05de\u05dc\u05d2\u05d6\u05d5\u05ea'},
+    {re:/\u05de\u05e0\u05d5\u05e3|\u05e2\u05d2\u05d5\u05e8\u05df/, cat:'\u05e2\u05d2\u05d5\u05e8\u05e0\u05d9\u05dd \u05d5\u05de\u05e0\u05d5\u05e4\u05d9\u05dd'},
+    {re:/\u05de\u05ea\u05e7\u05df \u05d4\u05e8\u05de\u05d4|\u05e1\u05dc/, cat:'\u05de\u05ea\u05e7\u05e0\u05d9 \u05d4\u05e8\u05de\u05d4'},
+    {re:/\u05e1\u05d2\u05d9\u05e8|\u05d7\u05d2\u05d5\u05e8\u05ea \u05d4\u05e8\u05de\u05d4|\u05e9\u05d0\u05e7\u05dc|\u05e8\u05e6\u05d5\u05e2\u05d4|\u05de\u05d0\u05e8\u05d9\u05da \u05e7\u05dc\u05e9\u05d5\u05e0\u05d9\u05dd|\u05e6\u05dc\u05d1|\u05e4\u05e1\u05d5\u05dc\u05ea\u05d5\u05df/, cat:'\u05d0\u05d1\u05d9\u05d6\u05e8\u05d9 \u05d4\u05e8\u05de\u05d4'}
+  ];
+  for(var i=0;i<rules.length;i++){if(rules[i].re.test(nm))return rules[i].cat;}
+  return '\u05d0\u05d7\u05e8';
+}
+function eqiTypeFilter(t){window._eqiTypeFilter=t||'';rEqi();}
 function eqiFilter(f){window._eqiFilter=f;['all','exp','30','90','ok'].forEach(function(k){var el=g('eqi-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rEqi();}
 function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';rEqi();}
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
+  // Equipment-type chip bar — counts per category, click to filter.
+  try{
+    var cb=g('eqi-cat-chips');
+    if(cb){
+      var counts={},all=DB.equip_inspections||[];
+      all.forEach(function(r){var k=_eqiCategoryOf(r);counts[k]=(counts[k]||0)+1;});
+      var entries=Object.keys(counts).map(function(k){return [k,counts[k]];}).sort(function(a,b){return b[1]-a[1];});
+      var sel=window._eqiTypeFilter||'';
+      var html='<button onclick="eqiTypeFilter(\'\')" style="padding:5px 12px;border:1px solid '+(sel?'#d0d7de':'#1d4ed8')+';background:'+(sel?'#fff':'#dbeafe')+';color:'+(sel?'#374151':'#1d4ed8')+';border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">\u05d4\u05db\u05dc '+all.length+'</button>';
+      entries.forEach(function(e){
+        var k=e[0],n=e[1],active=(sel===k);
+        var safe=esc(k).replace(/\'/g,'&#39;');
+        html+='<button data-cat="'+safe+'" onclick="eqiTypeFilter(this.dataset.cat)" style="padding:5px 12px;border:1px solid '+(active?'#1d4ed8':'#d0d7de')+';background:'+(active?'#dbeafe':'#fff')+';color:'+(active?'#1d4ed8':'#374151')+';border-radius:14px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">'+safe+' '+n+'</button>';
+      });
+      cb.innerHTML=html;
+    }
+  }catch(e){}
   // EQI summary pills
   try{
     var eS=g('eqi-summary');
@@ -3758,10 +3796,13 @@ function rEqi(){
     else if(ef==='ok')chips.push({label:'\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',clear:'eqiFilter(\'all\')'});
     if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'eqiLocFilter(\'\')'});}
     if(eq)chips.push({label:'🔍 '+eq,clear:'(function(){var i=g(\'eqi-q\');if(i)i.value=\'\';eqiSearch();})()'});
+    var tF=window._eqiTypeFilter||'';if(tF)chips.push({label:'🏷️ '+tF,clear:'eqiTypeFilter(\'\')'});
     ec.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
   }
   var rows=(DB.equip_inspections||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
+  var typeF=window._eqiTypeFilter||'';
+  if(typeF)rows=rows.filter(function(r){return _eqiCategoryOf(r)===typeF;});
   var f=window._eqiFilter||'all';
   rows=rows.filter(function(r){
     var x=r.e?du(r.e):9999;
