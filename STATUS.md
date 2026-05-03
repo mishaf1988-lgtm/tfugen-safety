@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-03 (Vercel retired — Cloudflare-only)
+**Last updated**: 2026-05-03 (Vercel retired · Excel intake · בליק ב-eqi-page · Bulk-print report)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
