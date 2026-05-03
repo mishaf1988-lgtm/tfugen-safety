@@ -6631,6 +6631,15 @@ function ncrStatusChange(){
   if(s&&w) w.style.display=(s.value==='\u05e1\u05d2\u05d5\u05e8')?'block':'none';
 }
 
+// ISO 45001 \u00a710.2: severe incidents must be investigated promptly. Surface
+// any severe/critical + open + 7+ days old as "\u05d7\u05e1\u05e8 \u05d7\u05e7\u05d9\u05e8\u05d4" so it does not gather dust.
+window._incStaleAge=function(r){
+  if(!r||r.s!=='\u05e4\u05ea\u05d5\u05d7')return 0;
+  if(r.sv!=='\u05d7\u05de\u05d5\u05e8'&&r.sv!=='\u05e7\u05e8\u05d9\u05d8\u05d9')return 0;
+  var d=new Date(r.dt||r.d);if(isNaN(d))return 0;
+  var age=Math.floor((Date.now()-d.getTime())/86400000);
+  return age>=7?age:0;
+};
 function rInc(){
   var tb=g('tb-inc');if(!tb)return;
   // Inc summary pills
@@ -6642,17 +6651,19 @@ function rInc(){
       var openR=allInc.filter(function(r){return r.s==='\u05e4\u05ea\u05d5\u05d7';}).length;
       var closedR=allInc.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
       var lostDays=allInc.reduce(function(s,r){return s+(parseInt(r.dy)||0);},0);
+      var staleR=allInc.filter(function(r){return _incStaleAge(r)>0;}).length;
       iS.innerHTML=
         '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allInc.length+'</strong></span>'+
         (openR?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">פתוח: <strong>'+openR+'</strong></span>':'')+
         (closedR?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">סגור: <strong>'+closedR+'</strong></span>':'')+
         (sevR?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">חמור: <strong>'+sevR+'</strong></span>':'')+
+        (staleR?'<span style="background:#fde2e2;border:1px solid #b91c1c;border-radius:14px;padding:3px 10px;color:#7f1d1d" title="חמור/קריטי פתוח 7+ ימים">🔍 חסר חקירה: <strong>'+staleR+'</strong></span>':'')+
         (lostDays?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">ימי אבדן: <strong>'+lostDays+'</strong></span>':'');
     }
   }catch(e){}
   if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">✓<span class="et-ic"></span>\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05e8\u05e9\u05d5\u05de\u05d9\u05dd<br><span style="font-size:12px;color:var(--ok);font-weight:700">\u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3 — \u05e8\u05e6\u05e3 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9</span></td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="חמור/קריטי פתוח '+stAge+' ימים — חסרה חקירה" style="background:#fde2e2;border:1px solid #b91c1c;border-radius:10px;padding:1px 6px;color:#7f1d1d;font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+stBadge+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
