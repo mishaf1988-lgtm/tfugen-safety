@@ -899,7 +899,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <th>&#1502;&#1511;&#1493;&#1512;</th>
     <th>&#1505;&#1496;.</th>
     <th></th>
-  </tr></thead><tbody id="tb-tasks"></tbody></table></div></div>
+  </tr></thead><tbody id="tb-tasks"></tbody></table><div id="tb-tasks-cards"></div></div></div>
   <div id="tsk-bulk-bar" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#1a3a5a;border:1px solid #4a9adf;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:50">
     <span style="color:#aaccee;font-size:13px;font-weight:700"><span id="tsk-bulk-count">0</span> &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1504;&#1489;&#1495;&#1512;&#1493;</span>
     <span style="display:flex;gap:6px;flex-wrap:wrap">
@@ -7372,8 +7372,20 @@ function rTasks(){
     if(ap!==bp)return ap-bp;
     return (a.due||'9999-99-99')<(b.due||'9999-99-99')?-1:1;
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label=""><span class="et-ic">✅</span>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openTskModal()">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></td></tr>';if(typeof _tskBulkClear==='function')_tskBulkClear();return;}
-  tb.innerHTML=rows.map(function(r){
+  if(!rows.length){
+    tb.innerHTML='';
+    var _emp=g('tb-tasks-cards');
+    if(_emp)_emp.innerHTML='<div style="text-align:center;padding:36px 20px;color:#64748b;font-size:14px;background:#fafbfc;border:1px dashed #cbd5e1;border-radius:10px;margin-top:8px">✅<br>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button onclick="openTskModal()" style="margin-top:10px;padding:8px 16px;background:#cc1f1f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></div>';
+    if(typeof _tskBulkClear==='function')_tskBulkClear();
+    return;
+  }
+  // Render to a sibling DIV (#tb-tasks-cards) instead of <tbody> so no
+  // table CSS can hide the rows. Empty the legacy tbody to avoid double
+  // rendering. The <table> only carries the header now.
+  var _cardsHost=g('tb-tasks-cards');
+  tb.innerHTML='';
+  if(!_cardsHost){console.warn('tb-tasks-cards missing \u2014 using tbody fallback');_cardsHost=tb;}
+  _cardsHost.innerHTML=rows.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
       var dd=du(r.due);
@@ -7405,17 +7417,18 @@ function rTasks(){
     // Single, well-formed style attribute per cell. The previous version had
     // duplicate `style=` attributes which made browsers drop the cell content
     // (PR #407 attempted this but the HTML was malformed).
-    var CELL='background:#fff;color:#1a1d23;font-size:13px;padding:12px 10px;vertical-align:middle;border-bottom:1px solid #e2e8f0';
-    return '<tr style="background:#fff">'+
-      '<td style="'+CELL+';text-align:center;width:32px">'+cb+'</td>'+
-      '<td style="'+CELL+';max-width:280px;word-break:break-word" data-label="\u05db\u05d5\u05ea\u05e8\u05ea">'+pBadge+'<strong>'+esc(r.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)')+'</strong></td>'+
-      '<td style="'+CELL+'" data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td>'+
-      '<td style="'+CELL+'" data-label="\u05d9\u05e2\u05d3"><span style="font-size:13px'+dueCls+'">'+dueLbl+'</span></td>'+
-      '<td style="'+CELL+'" data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td>'+
-      '<td style="'+CELL+'" data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td>'+
-      '<td style="'+CELL+'" data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td>'+
-      '<td style="'+CELL+';white-space:nowrap">'+actions+'</td>'+
-      '</tr>';
+    // Grid-based row in plain <div> elements. Bypasses every <tr>/<td> CSS
+    // rule. Columns visually align with the table header above.
+    return '<div style="display:grid;grid-template-columns:32px minmax(180px,1fr) 110px 100px 90px 130px 90px 160px;gap:10px;align-items:center;padding:14px 12px;background:#fff;border-bottom:1px solid #e5e7eb;font-size:13px;color:#1a1d23;direction:rtl">'+
+      '<div style="text-align:center">'+cb+'</div>'+
+      '<div style="min-width:0;word-break:break-word">'+pBadge+'<strong style="font-size:14px;color:#0f172a">'+esc(r.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)')+'</strong></div>'+
+      '<div style="color:#1a1d23">'+(r.assignee?esc(r.assignee):'\u2014')+'</div>'+
+      '<div><span style="font-size:13px;color:#1a1d23'+dueCls+'">'+dueLbl+'</span></div>'+
+      '<div>'+_tskPriBadge(r.priority)+'</div>'+
+      '<div>'+src+'</div>'+
+      '<div>'+sb(r.status)+'</div>'+
+      '<div style="white-space:nowrap;text-align:left">'+actions+'</div>'+
+      '</div>';
   }).join('');
   // Diagnostic: surface row count so the user can verify rendering even
   // when something hides the table (e.g. CSS regression).
