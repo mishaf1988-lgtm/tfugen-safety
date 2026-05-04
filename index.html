@@ -9649,19 +9649,22 @@ window._waDiagnose=function(){
       lines.push(dot(env.META_PHONE_NUMBER_ID)+' META_PHONE_NUMBER_ID: '+esc(String(env.META_PHONE_NUMBER_ID||'?'))+'<br>');
       lines.push(dot(env.META_ACCESS_TOKEN)+' META_ACCESS_TOKEN: '+esc(String(env.META_ACCESS_TOKEN||'?'))+'<br>');
       lines.push((/^set/.test(String(env.META_WABA_ID))?'\u2705':'\u26a0\ufe0f')+' META_WABA_ID: '+esc(String(env.META_WABA_ID||'?'))+'<br>');
-      lines.push('<br><strong>Meta API:</strong><br>');
-      if(meta.reachable){
-        lines.push('\u2705 reachable (HTTP '+meta.status+')<br>');
-        lines.push('\ud83d\udcc4 \u05ea\u05d1\u05e0\u05d9\u05d5\u05ea: '+(meta.templates?meta.templates.length:0)+' \u05e1\u05d4"\u05db, '+meta.approved_count+' \u05de\u05d0\u05d5\u05e9\u05e8\u05d5\u05ea<br>');
-        if(meta.templates && meta.templates.length){
-          meta.templates.slice(0,8).forEach(function(t){
-            var icon=t.status==='APPROVED'?'\u2705':(t.status==='REJECTED'?'\u274c':'\u23f3');
-            lines.push('&nbsp;&nbsp;'+icon+' '+esc(t.name)+' ['+esc(t.status)+']<br>');
-          });
-        }
-      }else{
-        lines.push('\u274c not reachable - HTTP '+(meta.status||'?')+'<br>');
-        if(meta.error)lines.push('&nbsp;&nbsp;error: '+esc(JSON.stringify(meta.error).substring(0,200))+'<br>');
+      lines.push('<br><strong>Meta API permissions:</strong><br>');
+      var msg=meta.messaging||{};
+      var mgmt=meta.management||{};
+      var probeIcon=function(p){return p&&p.ok?'\u2705':'\u274c';};
+      lines.push(probeIcon(msg)+' messaging (send): HTTP '+(msg.status||'?'));
+      if(!msg.ok && msg.json && msg.json.error){lines.push(' \u2014 code '+msg.json.error.code+': '+esc(String(msg.json.error.message||'').substring(0,80)));}
+      lines.push('<br>');
+      lines.push(probeIcon(mgmt)+' management (templates): HTTP '+(mgmt.status||'?'));
+      if(!mgmt.ok && mgmt.json && mgmt.json.error){lines.push(' \u2014 code '+mgmt.json.error.code+': '+esc(String(mgmt.json.error.message||'').substring(0,80)));}
+      lines.push('<br>');
+      if(mgmt.ok && meta.templates){
+        lines.push('<br>\ud83d\udcc4 \u05ea\u05d1\u05e0\u05d9\u05d5\u05ea: '+meta.templates.length+' \u05e1\u05d4"\u05db, '+meta.approved_count+' \u05de\u05d0\u05d5\u05e9\u05e8\u05d5\u05ea<br>');
+        meta.templates.slice(0,8).forEach(function(t){
+          var icon=t.status==='APPROVED'?'\u2705':(t.status==='REJECTED'?'\u274c':'\u23f3');
+          lines.push('&nbsp;&nbsp;'+icon+' '+esc(t.name)+' ['+esc(t.status)+']<br>');
+        });
       }
       if(d.next_step){
         lines.push('<br><strong>\u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea:</strong><br>');

@@ -46,45 +46,84 @@ export async function onRequest({ request, env }) {
     return jsonResp(status, 200, cors);
   }
 
-  try {
-    const url = 'https://graph.facebook.com/' + META_API_VERSION + '/' + WABA +
-                '/message_templates?fields=name,status,language,category&limit=50';
-    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
-    const text = await r.text();
-    let parsed;
-    try { parsed = JSON.parse(text); } catch (e) { parsed = { raw: text.substring(0, 500) }; }
+  // Check 1: messaging scope — fetch the phone number metadata. Needs
+  // whatsapp_business_messaging permission. If this works, send will work.
+  status.meta_api.messaging = await probe(
+    'https://graph.facebook.com/' + META_API_VERSION + '/' + PHONE_ID + '?fields=verified_name,display_phone_number',
+    TOKEN
+  );
 
-    status.meta_api.status = r.status;
-    status.meta_api.reachable = r.ok;
+  // Check 2: management scope — list templates. Needs whatsapp_business_management.
+  status.meta_api.management = await probe(
+    'https://graph.facebook.com/' + META_API_VERSION + '/' + WABA + '/message_templates?fields=name,status,language,category&limit=50',
+    TOKEN
+  );
 
-    if (!r.ok) {
-      status.meta_api.error = parsed.error || parsed;
-      const code = parsed.error && parsed.error.code;
-      if (code === 190) {
-        status.next_step = 'META_ACCESS_TOKEN is invalid or expired. Generate a new permanent System User token in Meta Business Settings.';
-      } else if (code === 100) {
-        status.next_step = 'WABA ID may be wrong. Verify META_WABA_ID env var matches your WhatsApp Business Account ID.';
-      } else {
-        status.next_step = 'Meta API error - see meta_api.error for details.';
-      }
-      return jsonResp(status, 200, cors);
-    }
-
-    const tpls = (parsed.data || []).map(function (t) {
+  // Backwards-compat fields the dashboard already reads
+  const mgmt = status.meta_api.management;
+  status.meta_api.reachable = mgmt.ok;
+  status.meta_api.status = mgmt.status;
+  if (mgmt.ok && mgmt.json && Array.isArray(mgmt.json.data)) {
+    const tpls = mgmt.json.data.map(function (t) {
       return { name: t.name, status: t.status, language: t.language, category: t.category };
     });
     status.meta_api.templates = tpls;
     status.meta_api.approved_count = tpls.filter(function (t) { return t.status === 'APPROVED'; }).length;
-
-    if (status.meta_api.approved_count === 0) {
-      status.next_step = 'No APPROVED templates yet. Use template "hello_world" (always works) until your custom templates pass Meta review.';
-    } else {
-      status.next_step = 'OK - ' + status.meta_api.approved_count + ' approved template(s) available. Try the dashboard test send button.';
-    }
-  } catch (e) {
-    status.meta_api.error = String(e && e.message || e);
-    status.next_step = 'Network error reaching Meta API. Check Cloudflare function logs.';
+  } else if (!mgmt.ok) {
+    status.meta_api.error = (mgmt.json && mgmt.json.error) || mgmt.json || mgmt.networkError;
   }
 
+  // Compose next_step from the combination of probe results
+  status.next_step = nextStepFor(status.meta_api);
+
   return jsonResp(status, 200, cors);
+}
+
+async function probe(url, token) {
+  try {
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const text = await r.text();
+    let json;
+    try { json = JSON.parse(text); } catch (e) { json = { raw: text.substring(0, 400) }; }
+    return { ok: r.ok, status: r.status, json: json };
+  } catch (e) {
+    return { ok: false, status: 0, networkError: String(e && e.message || e) };
+  }
+}
+
+function nextStepFor(meta) {
+  const m = meta.messaging || {};
+  const g = meta.management || {};
+
+  if (m.ok && g.ok) {
+    if (meta.approved_count === 0) {
+      return 'OK - permissions valid. No APPROVED templates yet. Use "hello_world" until custom templates pass Meta review.';
+    }
+    return 'OK - permissions valid, ' + meta.approved_count + ' template(s) approved. Try the dashboard test send button.';
+  }
+
+  if (!m.ok && !g.ok) {
+    const err = (g.json && g.json.error) || (m.json && m.json.error) || {};
+    if (err.code === 190) {
+      return 'META_ACCESS_TOKEN is invalid or expired. Regenerate a permanent System User token in Meta Business Settings.';
+    }
+    if (err.code === 200 || err.code === 10 || /access\s*blocked/i.test(err.message || '')) {
+      return 'Token has no permissions on this WABA. Fix in Meta Business Settings: ' +
+        '(1) Business Settings -> Users -> System Users, pick your SU. ' +
+        '(2) Add Assets -> WhatsApp Accounts -> select your WABA with Full control. ' +
+        '(3) Generate New Token, check both whatsapp_business_messaging AND whatsapp_business_management. ' +
+        '(4) Update META_ACCESS_TOKEN in Cloudflare Pages env vars and redeploy.';
+    }
+    return 'Both messaging and management scopes failed. See meta_api.management.json.error / meta_api.messaging.json.error for details.';
+  }
+
+  if (m.ok && !g.ok) {
+    return 'Sending will work, but template listing is blocked. Token is missing whatsapp_business_management scope. ' +
+      'Regenerate the System User token with BOTH scopes (whatsapp_business_messaging AND whatsapp_business_management) ' +
+      'and update META_ACCESS_TOKEN in Cloudflare Pages env vars.';
+  }
+
+  // !m.ok && g.ok — rare
+  return 'Template listing works, but sending is blocked. Token is missing whatsapp_business_messaging scope, ' +
+    'OR META_PHONE_NUMBER_ID is wrong / not connected to your WABA.';
 }
