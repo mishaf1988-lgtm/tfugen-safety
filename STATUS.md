@@ -80,9 +80,9 @@
 
 ### ⚠️ פעולה ידנית נדרשת (חדש)
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_tasks_parent.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `parent_id text` ב-`tasks` + partial index `tasks_parent_id_idx` נוצרו. תומך ב-Sub-tasks. אומת ב-`information_schema.columns`.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_capa_verify.sql` — מוסיף 3 עמודות ל-`ncr` עבור CAPA Verification (`verified_by`, `verified_at`, `verification_notes`). ה-UI כבר מוכן.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_comments.sql` — טבלה חדשה `ncr_comments` (id, ncr_id, author, text, ts) + RLS policy admin/manager. ה-UI כבר מוכן (חלק "💬 הערות" ב-NCR view). בלי הרצה: ה-fetch ייכשל בשקט.
-- [ ] **הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_patterns.sql` — טבלה חדשה `ncr_patterns` (history של ניתוחים מצטברים) + RLS policy `_admin_manager_all`. ה-UI כבר מוכן (auto-save + history list בסוכן). בלי הרצה: ה-POST ייכשל בשקט וההיסטוריה לא תיבנה.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_capa_verify.sql`~~ — **הורץ ידנית 2026-05-04**. 3 עמודות (`verified_by`, `verified_at`, `verification_notes`) נוספו ל-`ncr`. כפתור "✅ אמת אפקטיביות" פעיל ב-NCR סגור עם cd>30 יום.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_ncr_comments.sql`~~ — **הורץ ידנית 2026-05-04**. טבלה חדשה `ncr_comments` עם `id bigserial` + RLS לאדמין/מנהל. חלק "💬 הערות" ב-NCR view מוסיף ומציג הערות.
+- [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_patterns.sql`~~ — **הורץ ידנית 2026-05-04**. טבלה חדשה `ncr_patterns` (id, ts, content, open_count, closed_count, by_area jsonb, by_priority jsonb, by_status jsonb, created_by). ה-Agent שומר היסטוריית ניתוחים.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-04_inc_five_why.sql`~~ — **הורץ ידנית 2026-05-04**. עמודה `five_why text` ב-`inc` נוצרה. תומך ב-ניתוח 5-Why של תקריות (PR #366, ISO 45001 §10.2). שורה אחת ALTER TABLE.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-04-30_ncr_sensitivity.sql`~~ — **הורץ ואומת ידנית ב-2026-04-30**. עמודה `sens boolean DEFAULT false` ב-`ncr` + partial index `ncr_sens_idx WHERE sens=true` נוצרו. תומך ב-Sensitivity flag (UI gating ב-4 נקודות). אומת ב-`information_schema.columns`.
 - [x] ~~**הרץ migration ב-Supabase**: `migrations/2026-05-01_env_aspects_file_url.sql`~~ — **הורץ ואומת ידנית ב-2026-05-01**. הוסיף `file_url text` ל-`env_aspects`. תומך בצירוף קובץ פר-היבט סביבתי (PR #139).
