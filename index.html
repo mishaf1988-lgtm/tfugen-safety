@@ -950,6 +950,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1512;&#1497;&#1513;&#1493;&#1501; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1508;&#1497; ISO 14001 &#1505;&#1506;&#1497;&#1507; 6.1.2 &mdash; &#1497;&#1505;&#1493;&#1491;&#1493;&#1514; &#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1512;&#1490;&#1493;&#1503; &#1513;&#1497;&#1499;&#1493;&#1500;&#1493;&#1514; &#1500;&#1492;&#1513;&#1508;&#1497;&#1506; &#1506;&#1500; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;.</div>
     <div id="easp-pagefile" style="margin:8px 0;padding:10px;background:#f0f7f0;border:1px solid #2d6a4f;border-radius:8px"></div>
+    <details style="margin:8px 0">
+      <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#2d6a4f">&#129518; &#1502;&#1496;&#1512;&#1497;&#1510;&#1514; RPN 4&#215;4 &#8212; &#1492;&#1514;&#1508;&#1500;&#1490;&#1493;&#1514; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501;</summary>
+      <div id="easp-matrix" style="margin-top:8px"></div>
+    </details>
     <div id="easp-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:11px">
       <span style="color:var(--t3);margin-left:4px">&#1505;&#1497;&#1504;&#1493;&#1503; &#1505;&#1511;&#1497;&#1512;&#1492;:</span>
@@ -7463,6 +7467,41 @@ function _rskMatrix(){
   host.innerHTML=html;
 }
 function _easpRpnColor(rpn){if(rpn>=12)return '#cc1f1f';if(rpn>=4)return '#eab308';return '#16a34a';}
+// 4×4 RPN heat map for env_aspects. Counts current-state (p_curr × sv_curr)
+// distribution. ISO 14001:6.1.2 visual companion to the existing risk
+// matrix on pg-rsk.
+function _easpMatrix(){
+  var box=document.getElementById('easp-matrix');if(!box)return;
+  var rows=DB.env_aspects||[];
+  var grid={};
+  rows.forEach(function(r){
+    var p=parseInt(r.p_curr)||0, s=parseInt(r.sv_curr)||0;
+    if(!p||!s)return;
+    var k=p+'x'+s;
+    grid[k]=grid[k]||{count:0,ids:[]};
+    grid[k].count++;
+    grid[k].ids.push(r.id);
+  });
+  var html='<table style="border-collapse:collapse;font-size:11px;margin:0 auto"><thead><tr><th style="padding:4px;color:var(--t3);font-weight:600;text-align:right" colspan="2"></th>';
+  for(var s=1;s<=4;s++)html+='<th style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">S'+s+'</th>';
+  html+='</tr></thead><tbody>';
+  for(var p=4;p>=1;p--){
+    html+='<tr><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700;writing-mode:vertical-rl">'+(p===4?'הסתברות (P)':'')+'</td><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">P'+p+'</td>';
+    for(var s2=1;s2<=4;s2++){
+      var rpn=p*s2;
+      var col=_easpRpnColor(rpn);
+      var cell=grid[p+'x'+s2];
+      var n=cell?cell.count:0;
+      var bg=n?col:'#f5f5f5';
+      var fg=n?(rpn>=12?'#fff':'#1a1d23'):'#bbb';
+      html+='<td style="padding:14px 8px;background:'+bg+';color:'+fg+';text-align:center;font-weight:700;border:1px solid #fff;min-width:42px;font-size:13px" title="P'+p+'×S'+s2+' = RPN '+rpn+(n?(' · '+n+' היבטים'):' · 0')+'">'+(n||'')+'</td>';
+    }
+    html+='</tr>';
+  }
+  html+='<tr><td colspan="2"></td><td colspan="4" style="padding-top:6px;text-align:center;font-weight:700;color:var(--t3);font-size:10px">חומרה (S) →</td></tr></tbody></table>';
+  html+='<div style="margin-top:8px;display:flex;gap:6px;justify-content:center;font-size:10px;color:var(--t3)"><span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:10px">נמוך &lt;4</span><span style="background:#eab308;color:#1a1d23;padding:2px 8px;border-radius:10px">בינוני 4-11</span><span style="background:#cc1f1f;color:#fff;padding:2px 8px;border-radius:10px">גבוה ≥12</span></div>';
+  box.innerHTML=html;
+}
 function _pageFileGet(pageId){return (DB.page_files||[]).find(function(r){return r.id===pageId;});}
 function _pageFileRender(pageId,boxId){
   var box=g(boxId);if(!box)return;
@@ -7517,6 +7556,7 @@ function easpReviewFilter(rv){window._easpReviewFilter=rv;['all','overdue','soon
 function rEasp(){
   var tb=g('tb-easp');if(!tb)return;
   _pageFileRender('env_aspects','easp-pagefile');
+  try{_easpMatrix();}catch(e){}
   var rows=DB.env_aspects||[];
   var rv=window._easpReviewFilter||'all';
   if(rv!=='all')rows=rows.filter(function(r){return _easpReviewMeta(r).state===rv;});
