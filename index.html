@@ -2868,7 +2868,9 @@ function rAgents(){
   var ncrFW=(DB.ncr||[]).filter(function(n){return n.five_why;}).length;
   var incFW=(DB.inc||[]).filter(function(i){return i.five_why;}).length;
   var legTotal=(DB.leg||[]).length;
-  var capCount=(DB.near_miss||[]).filter(function(n){return n.descr;}).length;
+  var easpTotal=(DB.env_aspects||[]).length;
+  var rskTotal=(DB.rsk||[]).length;
+  var nmTotal=(DB.near_miss||[]).filter(function(n){return n.descr;}).length;
   function card(opts){
     return '<div class="card" style="border-right:4px solid '+opts.color+';display:flex;gap:14px;align-items:flex-start;padding:14px">'+
       '<div style="font-size:36px;line-height:1;flex-shrink:0">'+opts.icon+'</div>'+
@@ -2881,6 +2883,8 @@ function rAgents(){
       '</div>';
   }
   var html='';
+  // Section 1: AI Agents (open dedicated UIs)
+  html+='<div style="font-weight:700;font-size:13px;color:var(--t3);margin:6px 0 4px">🤖 כלי AI עם ממשק ייעודי</div>';
   html+=card({
     icon:'🔥',color:'#cc1f1f',title:'NCR/CAPA Agent',
     desc:'ניתוחי AI על אי-התאמות בודדות או מצטברים. זיהוי דפוסים, המלצת סיבות שורש, תיעדוף מקטגוריה (ISO 45001/14001).',
@@ -2890,20 +2894,39 @@ function rAgents(){
   html+=card({
     icon:'✨',color:'#7c3aed',title:'Smart Capture',
     desc:'דיווח בקול, תמונה או טקסט — ה-AI מזהה סוג דיווח (NM/inc/NCR/EQI/PPE/TR) ופותח את הטופס הנכון עם כל השדות מוכנים.',
-    metric:capCount+' דיווחי NM במאגר',
+    metric:nmTotal+' דיווחי NM במאגר',
     actions:'<button class="btn btn-p btn-sm" onclick="capOpen()" style="background:#7c3aed">פתח</button>'
   });
   html+=card({
     icon:'⚖️',color:'#1d4ed8',title:'Legal AI Q&A',
-    desc:'שאל שאלה חופשית על הרגולציה תשמר ב-Tapugan — ה-AI מגיב מתוך החוקים השמורים ב-Legal Register.',
+    desc:'שאל שאלה חופשית על הרגולציה השמורה ב-Tapugan — ה-AI מגיב מתוך החוקים השמורים ב-Legal Register.',
     metric:legTotal+' חוקים במאגר',
     actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'leg\')" style="background:#1d4ed8">עבור לדף חוקים</button>'
   });
+  // Section 2: AI helpers embedded in modals (Suggest-and-edit pattern)
+  html+='<div style="font-weight:700;font-size:13px;color:var(--t3);margin:14px 0 4px">⚡ AI Suggest במודאלים (כפתור 🤖 פר-שדה)</div>';
   html+=card({
-    icon:'🔍',color:'#92400e',title:'5-Why Investigation',
-    desc:'ניתוח שורש מובנה לאי-התאמות ותקריות (ISO 45001:10.2). העורך ממלא ידנית במודאל העריכה של כל רשומה.',
+    icon:'🔍',color:'#92400e',title:'5-Why Investigation (NCR + Inc)',
+    desc:'ניתוח שורש מובנה — Claude haiku-4-5 מציע 5 רמות "למה?" על בסיס תיאור התקרית. המשתמש עורך ושומר. ISO 45001:10.2.',
     metric:ncrFW+' NCRs + '+incFW+' תקריות ניתחו',
     actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'ncr\')" style="background:#92400e">NCRs</button> <button class="btn btn-s btn-sm" onclick="goPage(\'inc\')">תקריות</button>'
+  });
+  html+=card({
+    icon:'⚙️',color:'#7c2d12',title:'NCR Root Cause + Action',
+    desc:'במודאל NCR, כפתור 🤖 ממלא "סיבת שורש" ו-"פעולה מתקנת" על בסיס תיאור + 5-Why (אם קיים). שומר רק שדות ריקים.',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'ncr\')" style="background:#7c2d12">פתח דף NCR</button>'
+  });
+  html+=card({
+    icon:'🌳',color:'#2d6a4f',title:'Environmental Aspects Suggest',
+    desc:'במודאל היבט סביבתי, כפתור 🤖 ממלא "משמעות", "בקרות קיימות" ו-"בקרות נוספות" על בסיס שם ההיבט. ISO 14001:6.1.2.',
+    metric:easpTotal+' היבטים סביבתיים',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'easp\')" style="background:#2d6a4f">עבור לדף</button>'
+  });
+  html+=card({
+    icon:'⚠️',color:'#a16207',title:'Risk Register Suggest',
+    desc:'במודאל סיכון, כפתור 🤖 ממלא דירוגי P (1-4), S (1-4) ופעולות הפחתה על בסיס תיאור הסיכון. ISO 45001:6.1.2 (HIRA).',
+    metric:rskTotal+' סיכונים במאגר',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'rsk\')" style="background:#a16207">פתח דף סיכונים</button>'
   });
   box.innerHTML=html;
 }
