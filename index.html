@@ -2491,6 +2491,8 @@ function _rtApply(tbl,payload){
   }else if(ev==='DELETE'&&or_&&or_.id){
     DB[tbl]=DB[tbl].filter(function(r){return r.id!==or_.id;});
   }else return;
+  // The new/updated row arrived without its _hs cache, so global search
+  // (Ctrl+K) will recompute on next query — automatic invalidation.
   // Cap append-only log tables in memory the same way DB.hist is capped
   // by addLog. The audit page fetches its own larger window from Supabase
   // when opened, so cutting off at 200 here is safe for UI use.
@@ -10596,6 +10598,19 @@ function _srBuild(){
 }
 function openSearch(){_srBuild();g('ov-search').style.display='block';g('m-search').classList.add('on');var q=g('m-search-q');q.value='';q.focus();_srRun('');}
 function closeSearch(){var ov=g('ov-search'),m=g('m-search');if(ov)ov.style.display='none';if(m)m.classList.remove('on');}
+// Memoize the lowercase JSON haystack on each record under a non-enumerable
+// property '_hs', so subsequent searches don't re-stringify every row.
+// Non-enumerable means JSON.stringify(DB) (sdb()) doesn't see it either.
+function _hayFor(x){
+  if(x && x._hs) return x._hs;
+  var s='';
+  try{s=JSON.stringify(x).toLowerCase();}catch(e){s='';}
+  if(x && typeof x==='object'){
+    try{ Object.defineProperty(x,'_hs',{value:s,enumerable:false,writable:true,configurable:true}); }
+    catch(_){ x._hs=s; }
+  }
+  return s;
+}
 function _srRun(q){
   var r=g('m-search-r');if(!r)return;
   q=(q||'').trim().toLowerCase();
@@ -10610,7 +10625,7 @@ function _srRun(q){
     {k:'rsk',l:'\u05e1\u05d9\u05db\u05d5\u05df',a:DB.rsk||[],nm:function(x){return (x.n||'')+' \u2013 '+((x.desc||x.dc||'')+'').substring(0,50);}}
   ];
   var out=[];
-  pools.forEach(function(p){p.a.forEach(function(x){var s=JSON.stringify(x).toLowerCase();if(s.indexOf(q)>=0)out.push({k:p.k,l:p.l,id:x.id,label:p.nm(x)});});});
+  pools.forEach(function(p){p.a.forEach(function(x){if(_hayFor(x).indexOf(q)>=0)out.push({k:p.k,l:p.l,id:x.id,label:p.nm(x)});});});
   if(!out.length){r.innerHTML='<div style="padding:28px;text-align:center;color:var(--t3);font-size:13px">\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>';return;}
   out=out.slice(0,40);
   r.innerHTML=out.map(function(x,i){return '<div class="sr-item'+(i===0?' sel':'')+'" data-k="'+esc(x.k)+'" data-id="'+esc(x.id||'')+'" onclick="_srOpen(this.dataset.k,this.dataset.id)"><span class="sr-tag">'+esc(x.l)+'</span><span class="sr-txt">'+esc(x.label)+'</span></div>';}).join('');
