@@ -2331,7 +2331,15 @@ function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supa
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts'};
-function sbGet(tbl){var ord=(_sbTsCol[tbl]||'created_at')+'.desc';return _sbAuth().then(function(){return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH()});}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});}
+function sbGet(tbl){
+  var ord=(_sbTsCol[tbl]||'created_at')+'.desc';
+  // priority:'low' tells the browser this is a background sync — let
+  // user-triggered writes (sbIns / sbUpd / sbDel) jump the queue. Hint
+  // is silently ignored on browsers that don't support it (Firefox <132).
+  return _sbAuth().then(function(){
+    return fetch(SBU+'/rest/v1/'+tbl+'?select=*&order='+ord,{headers:sbH(),priority:'low'});
+  }).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+}
 var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
 var _obBusy=false;
