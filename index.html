@@ -7402,10 +7402,20 @@ function rTasks(){
       var par=(DB.tasks||[]).find(function(x){return x.id===r.parent_id;});
       if(par){pBadge='<div style="font-size:10px;color:var(--t3);margin-bottom:2px">&#8627; '+esc(String(par.title||'').substring(0,40))+'</div>';}
     }
-    // Inline styles on EVERY td so no external CSS can hide row content.
-    // (User repeatedly reported invisible rows even after CSS-level fixes.)
-    var TDS='style="background:#fff;color:#1a1d23;font-size:13px;padding:12px 8px;vertical-align:middle;border-bottom:1px solid #e2e8f0"';
-    return '<tr style="background:#fff"><td '+TDS+' data-label="" style="text-align:center;width:32px;background:#fff;padding:12px 8px;border-bottom:1px solid #e2e8f0">'+cb+'</td><td '+TDS+' data-label="\u05db\u05d5\u05ea\u05e8\u05ea">'+pBadge+'<strong>'+esc(r.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)')+'</strong></td><td '+TDS+' data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td><td '+TDS+' data-label="\u05d9\u05e2\u05d3"><span style="font-size:13px'+dueCls+'">'+dueLbl+'</span></td><td '+TDS+' data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td><td '+TDS+' data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td><td '+TDS+' data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td><td '+TDS+' data-label="" style="background:#fff;padding:12px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap">'+actions+'</td></tr>';
+    // Single, well-formed style attribute per cell. The previous version had
+    // duplicate `style=` attributes which made browsers drop the cell content
+    // (PR #407 attempted this but the HTML was malformed).
+    var CELL='background:#fff;color:#1a1d23;font-size:13px;padding:12px 10px;vertical-align:middle;border-bottom:1px solid #e2e8f0';
+    return '<tr style="background:#fff">'+
+      '<td style="'+CELL+';text-align:center;width:32px">'+cb+'</td>'+
+      '<td style="'+CELL+';max-width:280px;word-break:break-word" data-label="\u05db\u05d5\u05ea\u05e8\u05ea">'+pBadge+'<strong>'+esc(r.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)')+'</strong></td>'+
+      '<td style="'+CELL+'" data-label="\u05d0\u05d7\u05e8\u05d0\u05d9">'+(r.assignee?esc(r.assignee):'\u2014')+'</td>'+
+      '<td style="'+CELL+'" data-label="\u05d9\u05e2\u05d3"><span style="font-size:13px'+dueCls+'">'+dueLbl+'</span></td>'+
+      '<td style="'+CELL+'" data-label="\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea">'+_tskPriBadge(r.priority)+'</td>'+
+      '<td style="'+CELL+'" data-label="\u05de\u05e7\u05d5\u05e8">'+src+'</td>'+
+      '<td style="'+CELL+'" data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(r.status)+'</td>'+
+      '<td style="'+CELL+';white-space:nowrap">'+actions+'</td>'+
+      '</tr>';
   }).join('');
   // Diagnostic: surface row count so the user can verify rendering even
   // when something hides the table (e.g. CSS regression).
