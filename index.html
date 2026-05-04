@@ -1112,6 +1112,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div class="kpi kpi-b"><div class="kpi-label">שיחות בטיחות (תקופה)</div><div class="kpi-val" id="mr-tlk-q">0</div></div>
     </div>
   </div>
+  <div class="card"><div class="card-title">&#128221; &#1504;&#1512;&#1496;&#1497;&#1489; &#1505;&#1511;&#1497;&#1512;&#1492; AI <span style="font-size:10px;color:var(--t3);font-weight:600">(&#1502;&#1493;&#1499;&#1503; &#1500;&#1492;&#1506;&#1514;&#1511;&#1492; &#1500;&#1508;&#1512;&#1493;&#1496;&#1493;&#1511;&#1493;&#1500;)</span></div>
+    <div id="mr-ai-narrative"><button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1504;&#1512;&#1496;&#1497;&#1489; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
+      <div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1497;&#1497;&#1510;&#1512; &#1502;&#1505;&#1502;&#1498; &#1502;&#1493;&#1499;&#1503; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; (ISO 45001:9.3 / 14001:9.3) &#1506;&#1500; &#1489;&#1505;&#1497;&#1505; &#1499;&#1500; &#1492;-KPIs &#1513;&#1500;&#1502;&#1506;&#1500;&#1492;</div>
+    </div>
+  </div>
   <div class="page-footer">&#169; <strong>מיכאל פרייליך</strong> | סקירת הנהלה — ISO 45001 / 14001</div>
 </div>
 
@@ -9197,6 +9202,104 @@ window._aiWeeklySummary=function(){
       host.innerHTML='<p style="color:var(--bad);font-size:12px">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+esc(String((e&&e.message)||e))+'</p>'+
         '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">\u29ee \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
     });
+};
+// MR (Management Review) AI narrative — generates a paste-ready 4-section
+// summary for the formal quarterly Management Review minutes (ISO
+// 45001:9.3 / 14001:9.3). Reads KPIs already rendered on the page so it
+// stays in sync with whatever filters the manager applied.
+window._mrAINarrative=function(){
+  var host=g('mr-ai-narrative');
+  if(!host)return;
+  if(!_isAdminUser()){toast('רק אדמין');return;}
+  // Read on-page KPIs (already calculated by rMr).
+  function txt(id){var el=g(id);return el?(el.textContent||'').trim():'';}
+  var period=(g('mr-period')&&g('mr-period').textContent)||'';
+  var kpis={
+    ncrOpen:txt('mr-ncr-open'),
+    ncrSub:txt('mr-ncr-sub'),
+    tasksOver:txt('mr-tasks-over'),
+    expSoon:txt('mr-exp-soon'),
+    rounds:txt('mr-rounds'),
+    ncrQNew:txt('mr-ncr-q-new'),
+    ncrQClosed:txt('mr-ncr-q-closed'),
+    incQ:txt('mr-inc-q'),
+    incSub:txt('mr-inc-sub'),
+    nmQ:txt('mr-nm-q'),
+    trPct:txt('mr-tr-pct'),
+    trSub:txt('mr-tr-sub'),
+    docsPct:txt('mr-docs-pct'),
+    docsSub:txt('mr-docs-sub'),
+    eqiPct:txt('mr-eqi-pct'),
+    eqiSub:txt('mr-eqi-sub'),
+    tlkQ:txt('mr-tlk-q')
+  };
+  host.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px"><span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite"></span>⏳ מחשב...</div>';
+  var ctx='תקופה: '+period+'\n\n'+
+    'סיכום נוכחי (snapshot):\n'+
+    '- NCR פתוחים: '+kpis.ncrOpen+' ('+kpis.ncrSub+')\n'+
+    '- משימות בפיגור: '+kpis.tasksOver+'\n'+
+    '- פג תוקף 30 יום: '+kpis.expSoon+'\n'+
+    '- סבבי בוקר החודש: '+kpis.rounds+'/30\n\n'+
+    'אירועי תקופה:\n'+
+    '- NCR שנפתחו: '+kpis.ncrQNew+'\n'+
+    '- NCR שנסגרו: '+kpis.ncrQClosed+'\n'+
+    '- תקריות: '+kpis.incQ+' ('+kpis.incSub+')\n'+
+    '- כמעט-נפגע: '+kpis.nmQ+'\n\n'+
+    'מדדי ציות:\n'+
+    '- הדרכות תקפות: '+kpis.trPct+' ('+kpis.trSub+')\n'+
+    '- מסמכים בתוקף: '+kpis.docsPct+' ('+kpis.docsSub+')\n'+
+    '- בדיקות ציוד תקפות: '+kpis.eqiPct+' ('+kpis.eqiSub+')\n'+
+    '- שיחות בטיחות: '+kpis.tlkQ;
+  var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. בהינתן KPIs של רבעון, כתוב נרטיב סקירה רשמי לישיבת סקירת הנהלה (ISO 45001:9.3 / 14001:9.3), בעברית תקנית, מותאם להעתקה לפרוטוקול. 4 חלקים בדיוק:\n\n'+
+    '## 1. סטטוס כללי\n'+
+    '(2-3 משפטים — מצב ההתאמה הכללי, האם המגמה טובה/קבועה/מדאיגה ביחס לרבעון קודם)\n\n'+
+    '## 2. אירועים משמעותיים בתקופה\n'+
+    '(2-4 שורות — תקריות, NCR קריטיים, אם הייתה התדרדרות במספרים)\n\n'+
+    '## 3. ציות וסטטוס משימות\n'+
+    '(2-3 שורות — מצב ההדרכות/מסמכים/בדיקות, פערים שזוהו, הקשר עם הרגולציה הישראלית)\n\n'+
+    '## 4. החלטות הנדרשות מההנהלה\n'+
+    '(3-4 משימות במספור — מה ההנהלה צריכה להחליט/לאשר/לתקצב לרבעון הבא)\n\n'+
+    'כללים:\n'+
+    '- כתוב בלשון מקצועית-רשמית, לא דיבורית\n'+
+    '- אל תמציא מספרים — השתמש רק בנתונים שהוספקו\n'+
+    '- כל סעיף בכותרת ## משלו\n'+
+    '- בלי הקדמה ובלי "מזל טוב" בסוף\n\n'+
+    'הנתונים:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1500,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(!res.ok){
+        host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאת AI ('+res.status+')</p>'+
+          '<button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">⧮ נסה שוב</button>';
+        console.warn('MR AI:',res.txt);return;
+      }
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאת JSON</p>';return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){host.innerHTML='<p class="et">AI לא החזיר תוכן</p>';return;}
+      var safeContent=esc(content);
+      var generatedAt=new Date().toLocaleString('he-IL');
+      host.innerHTML='<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:14px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--t1);max-height:600px;overflow-y:auto" id="mr-ai-text">'+safeContent+'</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
+          '<button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">⧮ צור מחדש</button>'+
+          '<button class="btn btn-sm" onclick="_mrAICopy()" style="background:#fff;border:1px solid #d4d4d8">📋 העתק</button>'+
+          '<span style="font-size:10px;color:var(--t3);margin-right:auto">נוצר: '+esc(generatedAt)+'</span>'+
+        '</div>';
+      window._mrAIRaw=content;
+    })
+    .catch(function(e){
+      host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאה ברשת: '+esc(String((e&&e.message)||e))+'</p>'+
+        '<button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">⧮ נסה שוב</button>';
+    });
+};
+window._mrAICopy=function(){
+  var txt=window._mrAIRaw||'';
+  if(!txt){toast('אין מה להעתיק');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('הועתק ✓');},function(){toast('העתקה נכשלה');});
+  }else{
+    try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('הועתק ✓');}catch(e){toast('העתקה נכשלה');}
+  }
 };
 // "Today's action plan" — admin-only tactical AI helper. Different from the
 // weekly summary: not a recap. Aggregates the manager's open work
