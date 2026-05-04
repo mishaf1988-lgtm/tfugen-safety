@@ -617,6 +617,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-leg-review-card" style="display:none"><div class="card-title">&#9878;&#65039; &#1495;&#1493;&#1511;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001)</span></div><div id="dash-leg-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-ai-weekly-card" style="display:none"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
+  <div class="card" id="dash-ai-today-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1490;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -9197,6 +9198,122 @@ window._aiWeeklySummary=function(){
         '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">\u29ee \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
     });
 };
+// "Today's action plan" — admin-only tactical AI helper. Different from the
+// weekly summary: not a recap. Aggregates the manager's open work
+// (overdue tasks, new critical NCRs, expiring items, open critical
+// incidents) and asks Claude for THE 3 ACTIONS to do today/tomorrow,
+// ranked by impact-vs-effort. Output is short, scannable, copy-ready.
+window._aiTodayPlan=function(){
+  var host=g('dash-ai-today');
+  if(!host)return;
+  if(!_isAdminUser()){toast('רק אדמין');return;}
+  host.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px"><span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite"></span>⏳ מחשב...</div>';
+  var nowMs=Date.now();
+  var today=new Date().toISOString().split('T')[0];
+  // Gather the open backlog.
+  var overdueTasks=(DB.tasks||[]).filter(function(t){
+    if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;
+    return new Date(t.due).getTime()<nowMs;
+  }).slice(0,10);
+  var openCritNcr=(DB.ncr||[]).filter(function(n){return (n.sv==='קריטי'||n.sv==='גבוה')&&n.s!=='סגור';}).slice(0,10);
+  var openInc=(DB.inc||[]).filter(function(i){return i.st!=='סגור';}).slice(0,5);
+  // Items expiring within 7 days.
+  var endW=nowMs+7*86400000;
+  var expSoon=[];
+  ['ppe','tr','docs','ctr','med'].forEach(function(k){
+    (DB[k]||[]).forEach(function(r){
+      if(!r.e)return;
+      var t=new Date(r.e).getTime();
+      if(isNaN(t))return;
+      if(t<=endW){
+        var label={ppe:'PPE',tr:'הדרכה',docs:'מסמך',ctr:'קבלן',med:'בדיקה רפואית'}[k];
+        expSoon.push(label+' "'+(r.n||r.t||r.full_name||'?').substring(0,40)+'" — '+(t<nowMs?'פג!':r.e));
+      }
+    });
+  });
+  expSoon=expSoon.slice(0,10);
+  if(overdueTasks.length===0 && openCritNcr.length===0 && openInc.length===0 && expSoon.length===0){
+    host.innerHTML='<p class="et">🎉 אין משימות דחופות פתוחות! יום טוב להשקעה במניעה.</p>'+
+      '<button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed;margin-top:6px">⧮ נסה שוב</button>';
+    return;
+  }
+  var ctx='היום: '+today+'\n\n';
+  if(overdueTasks.length){
+    ctx+='משימות בפיגור ('+overdueTasks.length+'):\n';
+    overdueTasks.forEach(function(t){
+      var days=Math.floor((nowMs-new Date(t.due).getTime())/86400000);
+      ctx+='• ['+days+' ימים בפיגור] '+(t.title||'').substring(0,80)+(t.assignee?' ('+t.assignee+')':'')+'\n';
+    });
+    ctx+='\n';
+  }
+  if(openCritNcr.length){
+    ctx+='NCR פתוחים קריטיים/גבוהים ('+openCritNcr.length+'):\n';
+    openCritNcr.forEach(function(n){
+      ctx+='• '+(n.num||'')+' ['+n.sv+'] '+String(n.d||'').substring(0,80)+'\n';
+    });
+    ctx+='\n';
+  }
+  if(openInc.length){
+    ctx+='תקריות פתוחות ('+openInc.length+'):\n';
+    openInc.forEach(function(i){
+      ctx+='• '+(i.sv||'?')+' '+String(i.d||'').substring(0,80)+'\n';
+    });
+    ctx+='\n';
+  }
+  if(expSoon.length){
+    ctx+='פקיעות תוקף בשבוע הקרוב ('+expSoon.length+'):\n'+expSoon.map(function(s){return '• '+s;}).join('\n')+'\n';
+  }
+  var aiPrompt='אתה מנהל בטיחות במפעל. בהינתן הרשימה של עומס עבודה פתוח, הצע **בדיוק 3 פעולות** שצריכות להתבצע היום או מחר ראשונה. דרג לפי impact × urgency × effort.\n\n'+
+    'פורמט תשובה (בעברית, ללא הקדמה):\n\n'+
+    '**1. [שם הפעולה הראשונה]**\n'+
+    'למה דחוף: [משפט אחד]\n'+
+    'איך לבצע: [2-3 שורות מעשיות]\n\n'+
+    '**2. [שם הפעולה השנייה]**\n'+
+    '...\n\n'+
+    '**3. [שם הפעולה השלישית]**\n'+
+    '...\n\n'+
+    'כללים:\n'+
+    '- בחר ב-3 פעולות שיש להן ה-impact הגבוה ביותר על בטיחות\n'+
+    '- אם פגיעה בטוחה (נשק PPE, חומ"ס, אש פעיל) — תמיד #1\n'+
+    '- אל תרשום משימה שכבר בפיגור עמוק (>30 יום) אלא אם היא קריטית\n'+
+    '- כל פעולה חייבת להיות הרצה היום או מחר, לא רעיון מופשט\n\n'+
+    'הנתונים:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:900,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(!res.ok){
+        host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאת AI ('+res.status+')</p>'+
+          '<button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">⧮ נסה שוב</button>';
+        console.warn('Today AI:',res.txt);return;
+      }
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאת JSON</p>';return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){host.innerHTML='<p class="et">AI לא החזיר תוכן</p>';return;}
+      var safeContent=esc(content);
+      var generatedAt=new Date().toLocaleTimeString('he-IL');
+      host.innerHTML='<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--t1);max-height:480px;overflow-y:auto">'+safeContent+'</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
+          '<button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">⧮ עדכן</button>'+
+          '<button class="btn btn-sm" onclick="_aiTodayCopy()" style="background:#fff;border:1px solid #d4d4d8">📋 העתק</button>'+
+          '<span style="font-size:10px;color:var(--t3);margin-right:auto">עודכן: '+esc(generatedAt)+'</span>'+
+        '</div>';
+      window._aiTodayRaw=content;
+    })
+    .catch(function(e){
+      host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאה ברשת: '+esc(String((e&&e.message)||e))+'</p>'+
+        '<button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">⧮ נסה שוב</button>';
+    });
+};
+window._aiTodayCopy=function(){
+  var txt=window._aiTodayRaw||'';
+  if(!txt){toast('אין מה להעתיק');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('הועתק ✓');},function(){toast('העתקה נכשלה');});
+  }else{
+    try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('הועתק ✓');}catch(e){toast('העתקה נכשלה');}
+  }
+};
 window._aiWeeklyCopy=function(){
   var txt=window._aiWeeklyRaw||'';
   if(!txt){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d4\u05e2\u05ea\u05d9\u05e7');return;}
@@ -10205,6 +10322,8 @@ function _applyRoleGates(){
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   var aiWeekCard=g('dash-ai-weekly-card');
   if(aiWeekCard) aiWeekCard.style.display = isAdmin ? '' : 'none';
+  var aiTodayCard=g('dash-ai-today-card');
+  if(aiTodayCard) aiTodayCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
