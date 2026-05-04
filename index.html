@@ -2225,7 +2225,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="leg-last-review"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="leg-o"></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-leg')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svLeg()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-leg')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="leg-ai-btn" onclick="_legAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1504;&#1514;&#1495; &#1493;&#1505;&#1499;&#1501; AI</button><button class="btn btn-p" onclick="svLeg()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <script>
@@ -9210,6 +9210,54 @@ window._aiWeeklyCopy=function(){
 // area + reporter), classify severity + type and propose a short preventive
 // action that goes into the notes field. Empty fields are filled; non-empty
 // fields are not overwritten.
+// AI helper for the Legal Register modal. Reads the law name + full text
+// (or just the name) and proposes a short summary, the topic tag, and
+// applicability area. Empty fields only — never overwrites user input.
+// ISO 14001:6.1.3 / ISO 45001:6.1.3 — "evaluate compliance obligations".
+window._legAI=function(){
+  var btn=g('leg-ai-btn');
+  var lawName=gv('leg-s')||'';
+  var fullText=gv('leg-full-text')||'';
+  if(!lawName){toast('הזן שם / מקור חוק קודם');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ מחשב...';}
+  var ctx='שם / מקור: '+lawName;
+  if(gv('leg-law-num'))ctx+='\nמספר חוק: '+gv('leg-law-num');
+  if(gv('leg-law-type'))ctx+='\nסוג: '+gv('leg-law-type');
+  if(fullText)ctx+='\n\nטקסט מלא:\n'+fullText.substring(0,3000);
+  var aiPrompt='אתה יועץ ISO 14001/45001 לישראל. בהינתן חוק/תקנה ישראלי בתחום הבטיחות/הסביבה, החזר JSON תקין בלבד עם 3 שדות:\n'+
+    '{\n  "summary": "1-3 שורות בעברית — מה החוק מחייב את המפעל לעשות (בלשון פעולה, לא הסבר תיאורטי)",\n'+
+    '  "topic": "תת-נושא קצר (2-4 מילים) — לדוגמה: עבודה בגובה / רעש תעסוקתי / פליטות לאוויר / חומרים מסוכנים / כיבוי אש",\n'+
+    '  "a": "בטיחות בעבודה" או "איכות סביבה" או "כח אדם" או "כללי"\n}\n\n'+
+    'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
+    'החוק:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='🤖 נתח וסכם AI';}
+      if(!res.ok){toast('שגיאת AI ('+res.status+')');console.warn('Leg AI:',res.txt);return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('שגיאת JSON מ-AI');return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){toast('AI לא החזיר תוכן');return;}
+      content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI החזיר טקסט לא JSON');console.warn('AI raw:',content);return;}
+      var changed=[];
+      var sumEl=g('leg-summary'),topicEl=g('leg-topic'),aEl=g('leg-a');
+      var allowedA=['בטיחות בעבודה','איכות סביבה','כח אדם','כללי'];
+      if(sumEl && parsed.summary && !sumEl.value.trim()){sumEl.value=parsed.summary;changed.push('תקציר');}
+      if(topicEl && parsed.topic && !topicEl.value.trim()){topicEl.value=parsed.topic;changed.push('נושא');}
+      if(aEl && parsed.a && allowedA.indexOf(parsed.a)>-1){
+        var cur=aEl.value;
+        if(!cur||cur==='בטיחות בעבודה'){aEl.value=parsed.a;changed.push('תחום ראשי');}
+      }
+      if(changed.length)toast('AI מילא: '+changed.join(' · '));
+      else toast('שדות מלאים — לא נדרס');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='🤖 נתח וסכם AI';}
+      toast('שגיאה ברשת: '+(e&&e.message||e));
+    });
+};
 // AI suggestion for a Toolbox-Talk session. Given the topic, propose a
 // short outline (3-5 talking points) suitable for a 5-10 min stand-up
 // safety briefing. Lands in the notes field. Does not overwrite if the
