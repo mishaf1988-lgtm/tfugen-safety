@@ -662,7 +662,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <input type="file" id="_eqi-pdf-input" accept="application/pdf" multiple style="display:none" onchange="_eqiPdfHandle(event)">
   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:6px">
-    <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="eqiSearch()" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
+    <input type="text" id="eqi-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;/&#1513;&#1501;/&#1505;&#1508;&#1511;/&#1488;&#1494;&#1493;&#1512;..." oninput="_debEqiSearch()" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px">
     <select id="eqi-loc-filter" onchange="eqiLocFilter(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="eqiResetFilters()" title="&#1488;&#1497;&#1508;&#1493;&#1505; &#1499;&#1500; &#1492;&#1502;&#1505;&#1504;&#1504;&#1497;&#1501; (&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; / &#1505;&#1496;&#1496;&#1493;&#1505; / &#1502;&#1497;&#1511;&#1493;&#1501; / &#1495;&#1497;&#1508;&#1493;&#1513;) &#1493;&#1502;&#1497;&#1497;&#1503;" style="padding:8px;background:#64748b">&#8634; &#1488;&#1497;&#1508;&#1493;&#1505;</button>
   </div>
@@ -864,7 +864,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="tsk-tab-done" onclick="tskFilter('done')">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button>
     <select id="tsk-prj-filter" onchange="tskPrjFilter(this.value)" style="padding:8px;max-width:200px"></select>
     <select id="tsk-assignee-filter" onchange="tskAssigneeFilter(this.value)" style="padding:8px;max-width:160px"></select>
-    <input id="tsk-search-q" type="search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513;..." oninput="tskSearch(this.value)" style="padding:8px;max-width:160px;border:1px solid #ddd;border-radius:6px;font-family:inherit">
+    <input id="tsk-search-q" type="search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513;..." oninput="_debTskSearch(this.value)" style="padding:8px;max-width:160px;border:1px solid #ddd;border-radius:6px;font-family:inherit">
     <select id="tsk-sv-select" onchange="svTskApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svTskSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
     <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button>
@@ -1217,7 +1217,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-d" onclick="delAllHearing()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <div class="row">
-    <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="rHearing()" style="flex:1;min-width:200px">
+    <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="_debRHearing()" style="flex:1;min-width:200px">
   </div>
   <div id="hearing-count" style="font-size:13px;color:var(--t2);margin-bottom:8px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th>&#1514;&quot;&#1494;</th><th>&#1490;&#1497;&#1500;</th><th>&#1514;&#1508;&#1511;&#1497;&#1491;</th><th>&#1502;&#1495;&#1500;&#1511;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th>&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th>&#1489;&#1493;&#1491;&#1511;</th><th></th><th></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
@@ -1404,7 +1404,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="close-btn" onclick="closeModal('m-modules-sheet')">&#10005;</button>
   <div class="modal-title">&#128203; &#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
   <button class="btn btn-s" onclick="_modVisOpen()" style="width:100%;margin-bottom:8px;font-size:12px;padding:8px;justify-content:flex-start;gap:8px">&#9881;&#65039; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1514;&#1510;&#1493;&#1490;&#1492;</button>
-  <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_modulesSheetFilter(this.value)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
+  <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_debModFilter(this.value)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
   <div class="sheet-grid">
     <div class="sheet-group-title">ISO &amp; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')"><span class="sic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
@@ -2049,7 +2049,7 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-gsearch')">&#10005;</button>
   <div class="modal-title">&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</div>
   <div class="fgrid">
-    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_gsearchRender()" autocomplete="off"></div>
+    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_debGsearch()" autocomplete="off"></div>
   </div>
   <div id="gsearch-results" style="margin-top:6px;max-height:55vh;overflow-y:auto;border-top:1px solid var(--brd);padding-top:6px"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-gsearch')">&#1505;&#1490;&#1493;&#1512;</button></div>
@@ -2251,6 +2251,31 @@ window.addEventListener('unhandledrejection', function(e){
   } catch(_){}
 });
 // ============ End Phase 0 instrumentation ============
+
+// ============ Phase 2 — Generic debounce helper + search wrappers ============
+// Coalesces bursts of identical calls (search keystrokes, scroll handlers)
+// so a heavy re-render fires once at the end instead of per-event.
+window._deb = function(fn, ms){
+  var t;
+  return function(){
+    var args = arguments, self = this;
+    clearTimeout(t);
+    t = setTimeout(function(){ fn.apply(self, args); }, ms);
+  };
+};
+
+// Pre-built debounced wrappers for the 6 live-search inputs across the app.
+// Wrappers are created ONCE at parse so each subsequent oninput call shares
+// the same timer (re-creating per-keystroke would defeat the purpose).
+// The wrapped functions (eqiSearch / tskSearch / etc.) may not exist yet
+// at this point — they are invoked lazily inside the closure.
+window._debEqiSearch    = _deb(function(){ if(typeof eqiSearch==='function')eqiSearch(); }, 150);
+window._debTskSearch    = _deb(function(v){ if(typeof tskSearch==='function')tskSearch(v); }, 150);
+window._debRHearing     = _deb(function(){ if(typeof rHearing==='function')rHearing(); }, 150);
+window._debModFilter    = _deb(function(v){ if(typeof _modulesSheetFilter==='function')_modulesSheetFilter(v); }, 120);
+window._debGsearch      = _deb(function(){ if(typeof _gsearchRender==='function')_gsearchRender(); }, 150);
+window._debSrRun        = _deb(function(v){ if(typeof _srRun==='function')_srRun(v); }, 120);
+// ============ End Phase 2 debounce wrappers ============
 
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
@@ -10487,7 +10512,7 @@ function _srBuild(){
   var m=document.createElement('div');m.id='m-search';
   m.innerHTML='<input id="m-search-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1489;&#1499;&#1500; &#1492;&#1497;&#1513;&#1493;&#1502;&#1493;&#1503;..." autocomplete="off"><div id="m-search-r"></div><div id="m-search-hint">\u2191\u2193 \u05dc\u05e0\u05d9\u05d5\u05d5\u05d8 \u2022 Enter \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u2022 Esc \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4</div>';
   document.body.appendChild(m);
-  g('m-search-q').addEventListener('input',function(e){_srRun(e.target.value);});
+  g('m-search-q').addEventListener('input',function(e){_debSrRun(e.target.value);});
   g('m-search-q').addEventListener('keydown',_srKey);
 }
 function openSearch(){_srBuild();g('ov-search').style.display='block';g('m-search').classList.add('on');var q=g('m-search-q');q.value='';q.focus();_srRun('');}
