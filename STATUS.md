@@ -233,6 +233,8 @@
 - **OneDrive integration — outbound mirror (PR #424)** — תשתית MSAL.js + OAuth ל-Microsoft. הגדרת Client ID חד-פעמית של Azure App + חיבור ב-popup. כל קובץ שמועלה לאפליקציה מסתנכרן אוטומטית ל-`/Apps/Tapugan Safety/<נושא>/` ב-OneDrive (sandboxed scope `Files.ReadWrite.AppFolder`).
 - **OneDrive integration — inbound flow (PR #425)** — המשתמש זורק קבצים ל-`/Apps/Tapugan Safety/Inbox/` ב-OneDrive, האפליקציה קוראת אותם, מסווגת עם AI (Vision/filename heuristics) ל: tr / ppe / med / docs / ncr / equip_inspections, ויוצרת רישום בטבלה הנכונה. הקובץ עובר ל-`_processed/`. עלות: 0$ (חינם לחלוטין).
 - **Overnight polish (PR #426)** — Widget בדשבורד "⚡ סיכונים לסקירה תקופתית" (משלים את Legal+env_aspects+rsk לעריכה תקופתית ISO). 🔍 OCR למודאל מסמכים (m-doc) — קורא רישיונות/אישורים ומחלץ שדות. הוראות שימוש ברורות יותר ב-OneDrive Inbox modal.
+- **Smart Assistant chat (PR #428)** — כפתור צף ירוק 💬 בצד תחתון. צ'אט בעברית — שואלים שאלות בטקסט חופשי על הנתונים ("כמה NCR קריטיים?", "מי האחראי הכי עמוס?"), AI עונה על בסיס snapshot מצומצם של ה-DB (counts + top items + expirations). Llama 3.3 70B grounded, לא ממציא נתונים.
+- **Annual ISO surveillance report (PR #429)** — כפתור 📊 בדף Management Review (טורקיז, נפרד מה-MR Narrative הסגול הרבעוני). אוגר 12 חודשים של נתונים ומפיק דו"ח 8-חלקי פורמלי לאודיטור חיצוני של ISO 14001/45001. כלל קשיח בpromp: "אל תמציא מספרים". 📋 העתק + ⧮ צור מחדש.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
