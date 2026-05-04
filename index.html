@@ -2455,7 +2455,7 @@ function sbSync(silent){
 window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync(true);});
 window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync(true);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON)sbSync(true);},120*1000);
+setInterval(function(){if(SB_ON)sbSync(true);},600*1000);
 
 // --- Realtime sync (Supabase postgres_changes) ---
 var _sbRT=null,_rtState='off';
