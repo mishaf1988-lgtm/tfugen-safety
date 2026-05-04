@@ -1590,6 +1590,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#127919; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</label><select id="ncr-issue-type-id" class="inp"></select></div>
     <div class="field"><label>&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;</label><input id="ncr-rc" type="text" class="inp" placeholder="&#1502;&#1492; &#1490;&#1512;&#1501; &#1500;&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1492;?"></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
+    <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;" &#1493;-"&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512;.</div><button type="button" id="ncr-ai-rc-btn" onclick="_ncrAIRcAction()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1489;&#1492; &#1493;&#1508;&#1506;&#1493;&#1500;&#1492;</button></div></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
     <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date" class="inp"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ncr-s" class="inp" onchange="ncrStatusChange()"><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option></select></div>
@@ -8956,6 +8957,49 @@ window._easpAI=function(){
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='\u05d4\u05e6\u05e2 \u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d5\u05d1\u05e7\u05e8\u05d5\u05ea';}
+      toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
+    });
+};
+// AI suggest for NCR root cause (rc) + corrective action (c). Reads
+// description + 5-Why (if present) + area + category, sends to Claude.
+// JSON response with { rc, c }. Fills only EMPTY fields \u2014 never overwrites
+// existing user input. ISO 45001/14001 \u00a710.2 (CAPA framing).
+window._ncrAIRcAction=function(){
+  var btn=g('ncr-ai-rc-btn');
+  var d=gv('ncr-d')||'';
+  if(!d){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 NCR \u05e7\u05d5\u05d3\u05dd');return;}
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
+  var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+d+'\n'+
+    '\u05d0\u05d6\u05d5\u05e8: '+(gv('ncr-a')||'?')+'\n'+
+    '\u05de\u05d9\u05e7\u05d5\u05dd: '+(gv('ncr-loc')||'?')+'\n'+
+    '\u05d0\u05d7\u05e8\u05d0\u05d9: '+(gv('ncr-o')||'?');
+  var fw=gv('ncr-five-why')||'';
+  if(fw)ctx+='\n\n\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05e9\u05db\u05d1\u05e8 \u05de\u05d5\u05dc\u05d0:\n'+fw;
+  var aiPrompt='\u05d0\u05ea\u05d4 \u05d9\u05d5\u05e2\u05e5 ISO 45001/14001. \u05d1\u05d4\u05d9\u05e0\u05ea\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 (NCR), \u05d4\u05d7\u05d6\u05e8 JSON \u05e2\u05dd 2 \u05e9\u05d3\u05d5\u05ea:\n'+
+    '{\n  "rc": "1-2 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05e1\u05d9\u05d1\u05ea \u05d4\u05e9\u05d5\u05e8\u05e9 \u05e9\u05de\u05d5\u05e1\u05d1\u05e8\u05ea \u05d1\u05e7\u05e6\u05e8\u05d4",\n'+
+    '  "c": "1-2 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05ea, \u05de\u05d3\u05d9\u05d3\u05d4, \u05e9\u05e0\u05d9\u05ea\u05df \u05dc\u05d9\u05d9\u05e9\u05dd"\n}\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4-NCR:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d1\u05d4 \u05d5\u05e4\u05e2\u05d5\u05dc\u05d4';}
+      if(!res.ok){toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI ('+res.status+')');console.warn('NCR AI rc:',res.txt);return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05ea JSON \u05de-AI');return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
+      content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON \u2014 \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
+      var rcEl=g('ncr-rc'),cEl=g('ncr-c');
+      var changed=[];
+      if(rcEl && parsed.rc && !rcEl.value.trim()){rcEl.value=parsed.rc;changed.push('\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9');}
+      if(cEl && parsed.c && !cEl.value.trim()){cEl.value=parsed.c;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea');}
+      if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' + '));
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd \u2014 \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d1\u05d4 \u05d5\u05e4\u05e2\u05d5\u05dc\u05d4';}
       toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
     });
 };
