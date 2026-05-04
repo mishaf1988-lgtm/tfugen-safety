@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (40+ PRs · Performance phases all shipped · WhatsApp restored · Legal + env_aspects periodic review · Agent Dashboard (now with 2 sections) · Incident edit modal · **5 AI Suggest helpers (5-Why Inc/NCR · NCR rc+c · env_aspects impact+controls · risk P/S/AC)** · 3 dashboard widgets (Compliance Score · Top Risks · env_aspects review) · 4×4 RPN heat-map · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-04 (50+ PRs · Performance phases all shipped · WhatsApp restored · Legal + env_aspects periodic review · Agent Dashboard (now with 2 sections) · Incident edit modal · **8 AI Suggest helpers (5-Why Inc/NCR · NCR rc+c · env_aspects impact+controls · risk P/S/AC · near-miss sev+typ+notes · toolbox content · legal summary+topic+area)** · 4 dashboard widgets (Compliance Score · Top Risks · env_aspects review · Weekly AI Summary) · 4×4 RPN heat-map · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -158,6 +158,10 @@
 - [x] **NCR AI rc + c suggest (PR #379, 2026-05-04)** — כפתור 🤖 במודאל NCR שממלא "סיבת שורש" ו-"פעולה מתקנת" על בסיס תיאור + 5-Why (אם קיים). Claude haiku-4-5, JSON {rc,c}. ממלא רק שדות ריקים.
 - [x] **Risk register AI suggest (PR #380, 2026-05-04)** — כפתור 🤖 במודאל סיכון שממלא P (1-4), S (1-4), ופעולות הפחתה. ISO 45001:6.1.2 (HIRA). Claude haiku-4-5, JSON {p,s,ac}. P/S overwrite-able, AC רק אם ריק.
 - [x] **Agent Dashboard expanded (PR #381, 2026-05-04)** — 2 sections עכשיו: כלי AI עם ממשק ייעודי (NCR Agent / Smart Capture / Legal Q&A) + AI Suggest במודאלים (5-Why / NCR rc+c / env_aspects / risk). מטריקות לכל אחד.
+- [x] **Weekly AI Summary widget בדשבורד (PR #383, 2026-05-04)** — admin-only. מאגד 7 ימים אחרונים (NCR, תקריות + ימי אבדן, near-miss, סיורים, משימות שהושלמו/בפיגור, פקיעות תוקף בשבוע הבא) + עד 5 דוגמאות NCR + 3 תקריות + 3 near-miss, ושולח ל-claude-haiku-4-5 לסיכום בעברית 4 פסקאות מותאם להנהלת מפעל (סטטוס/נקודות תשומת לב/דחופים/החלטות לקבל). כפתורי 📋 העתק + 🔃 צור מחדש. חוסך ~15 דק' בכל יום ראשון לפני ה-status email.
+- [x] **Near-Miss AI Suggest (PR #384, 2026-05-04)** — כפתור 🤖 במודאל near-miss שממלא חומרה (קטין/בינוני/חמור), סוג (פיזי/כימי/חשמלי/שריפה/נפילה/אחר), והמלצת פעולה מונעת לשדה ההערות. ISO 45001:10.1 (near-miss as leading indicator).
+- [x] **Toolbox AI Suggest (PR #385, 2026-05-04)** — כפתור 🤖 במודאל Toolbox-Talk שיוצר 3-5 נקודות לבריפינג בטיחות יומי על בסיס הנושא (PPE / עבודה בגובה / חומרים מסוכנים וכו'). חוסך 5-10 דק' של הכנה לסוכן הבטיחות.
+- [x] **Legal Register AI Suggest (PR #386, 2026-05-04)** — כפתור 🤖 במודאל Legal Register שמסכם, מציע נושא ותחום ראשי על בסיס שם החוק + טקסט מלא (אופציונלי). ממלא רק שדות ריקים. ISO 14001/45001:6.1.3.
 - [x] **Phase 3 lite — hourly update + soft pill (PR #354)** — `setInterval(reg.update, 1h)` מכריח בדיקה שעתית של `/sw.js` (מתקן את 24h של iOS Safari). במקום auto-reload אחרי `sw-updated`, מוצג pill קבוע בתחתית: "🔄 גרסה חדשה זמינה — לחץ לרענון" — המשתמש שולט מתי לרענן, לא מאבד טפסי NCR באמצע מילוי. ה-SW עצמו לא השתנה — רק ה-handler ב-index.html.
 - [x] **Phase 3 part 2 — SW auto-version via CF Pages function (PR #360)** — סטטי `sw.js` הוסר; `functions/sw.js.js` מחזיר את אותו תוכן עם `tfgn-${BUILD}` כש-BUILD = 7 תווים ראשונים של `CF_PAGES_COMMIT_SHA`. `_routes.json` כולל `/sw.js`. **אין יותר עליות גרסה ידניות** ב-PRs.
 - [x] **WhatsApp restored end-to-end (2026-05-04)** — אחרי המעבר ל-Cloudflare ב-3/5, WhatsApp נכשל עם code 200 "API access blocked" על כל endpoint. נבנתה סדרת אבחון ב-`/api/wa-status` (PRs #356-#359) עם 4 probes בלתי-תלויים (reachability, identity, messaging, management) שאיתרו: ה-Meta App "בטיחות" (App ID 2100358170694098) היה ב-**Development Mode**. נבנו `privacy.html` ו-`user-data-deletion.html` (PR #361) למילוי דרישות Meta ל-Live Mode. אחרי מעבר ל-Live, כל ה-probes חזרו ✅ ו-WhatsApp send עובד מ-Cloudflare.
