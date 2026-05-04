@@ -227,6 +227,8 @@
 
 - **iCal/Google Calendar export (PR #416)** — תפריט topbar `📆 ייצא לוח שנה`. מייצר .ics סטנדרטי עם כל המשימות הפתוחות + תוקפים מ-PPE/הדרכה/מסמכים/קבלן/רפואי/בדיקות-ציוד. ייבוא ל-Google Calendar / Outlook / iCloud → התראות על הטלפון בלי שצריכים לפתוח את ה-app.
 - **OCR לתעודות הדרכה (PR #417)** — כפתור 🔍 "קרא תעודה" במודאל הדרכה. בוחרים תמונת תעודה (heb/eng), Workers AI Vision (`@cf/meta/llama-3.2-11b-vision-instruct`) מחלץ אוטומטית: שם הקורס, שם העובד, תאריך הוצאה, תוקף, קטגוריה. ממלא רק שדות ריקים. עלות: 0$ (free tier). Generic helper `_ocrAnalyze(file, prompt)` שניתן להרחיב ל-OCR נוסף בעתיד (PDFs של דוחות בדיקה, מסמכי MSDS וכו').
+- **Bulk AI task creator (PR #420)** — כפתור 🤖 "יצירת משימות AI" בעמוד משימות. הדבקה של רשימת משימות בעברית בטקסט חופשי → AI מנתח כל שורה ויוצר משימה עם title + priority + due date. מסך אישור לפני יצירה בכמות. חוסך 5+ דקות ביצירה ידנית של 5+ משימות.
+- **Risk periodic review (PR #421, ISO 45001:6.1.2)** — שדה `last_review` חדש ב-m-rsk modal + helper `_rskReviewMeta`. Risk list מציג badges: ⚠ סקירה פגה (>365ימ), ⏳ סקירה ב-30 יום (335-365ימ), ⚠ ללא סקירה. **דורש migration ידני**: `migrations/2026-05-04_rsk_last_review.sql`.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
