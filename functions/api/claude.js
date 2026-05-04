@@ -1,5 +1,12 @@
-// Cloudflare Pages Function — Claude AI proxy
-// Mirrors /api/claude.js (Vercel Edge Function).
+// Cloudflare Pages Function — AI proxy.
+// Routes to Cloudflare Workers AI (free tier) by default; routes to Anthropic
+// for legacy claude-* model names if the env.ANTHROPIC_KEY is set.
+//
+// Why two providers: Anthropic's Claude is higher quality but costs money.
+// Workers AI is free up to 10K neurons/day and binds natively to this Pages
+// project. The client doesn't care — we translate Workers AI's response
+// shape into Anthropic's {content:[{text}]} shape so all 14 client call
+// sites keep working unchanged.
 
 import {
   defaultAllowedOrigins,
@@ -9,17 +16,21 @@ import {
   isAllowedCaller
 } from '../_shared.js';
 
-// Anthropic API requires the explicit dated form for Haiku 4.5 — the bare
-// alias 'claude-haiku-4-5' returns 400 "model not found". Sonnet 4.6 still
-// accepts the bare alias. Keep both forms so old client builds keep working
-// during deploy roll-out.
+// Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
+// models are kept for backward-compat — switch the client back any time by
+// re-pointing the model string.
 const ALLOWED_MODELS = [
+  // Cloudflare Workers AI (free tier, default)
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  '@cf/meta/llama-3.1-8b-instruct-fast',
+  '@cf/meta/llama-3.1-70b-instruct',
+  // Anthropic (paid — only if ANTHROPIC_KEY env var is set)
   'claude-sonnet-4-6',
-  'claude-haiku-4-5',           // legacy alias — kept for backward-compat
-  'claude-haiku-4-5-20251001'   // canonical dated ID — what client now sends
+  'claude-haiku-4-5',
+  'claude-haiku-4-5-20251001'
 ];
-const MAX_TOKENS_CAP = 16000;    // 30+ page PDF inspections can extract 50+ items
-const MAX_BODY_BYTES = 25000000; // 25MB — fits ~18MB raw PDFs after base64 inflation
+const MAX_TOKENS_CAP = 16000;
+const MAX_BODY_BYTES = 25000000;
 
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
@@ -38,12 +49,45 @@ export async function onRequest({ request, env }) {
   catch (e) { return jsonResp({ error: 'invalid json' }, 400, cors); }
 
   if (!parsed || !ALLOWED_MODELS.includes(parsed.model)) {
-    return jsonResp({ error: 'model not allowed' }, 400, cors);
+    return jsonResp({ error: 'model not allowed: ' + (parsed && parsed.model) }, 400, cors);
   }
   if (typeof parsed.max_tokens !== 'number' || parsed.max_tokens > MAX_TOKENS_CAP) {
     parsed.max_tokens = Math.min(parsed.max_tokens || MAX_TOKENS_CAP, MAX_TOKENS_CAP);
   }
 
+  // Route to Workers AI (free) for "@cf/..." models.
+  if (parsed.model.startsWith('@cf/')) {
+    if (!env.AI || typeof env.AI.run !== 'function') {
+      return jsonResp({
+        error: 'Workers AI binding not configured',
+        hint: 'In Cloudflare Pages dashboard: Settings → Functions → Bindings → Add Binding → Workers AI. Variable name must be exactly "AI". Then redeploy.'
+      }, 500, cors);
+    }
+    try {
+      const aiResp = await env.AI.run(parsed.model, {
+        messages: parsed.messages,
+        max_tokens: parsed.max_tokens
+      });
+      // Translate Workers AI shape ({response: "..."} or {result: ...}) into
+      // Anthropic shape ({content:[{type:"text",text:"..."}]}) so the 14
+      // client-side handlers don't need to change.
+      const text = (aiResp && (aiResp.response || (aiResp.result && aiResp.result.response))) || '';
+      const out = {
+        id: 'cf_' + Date.now().toString(36),
+        type: 'message',
+        role: 'assistant',
+        model: parsed.model,
+        content: [{ type: 'text', text: text }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 0, output_tokens: 0 }
+      };
+      return jsonResp(out, 200, cors);
+    } catch (err) {
+      return jsonResp({ error: 'Workers AI error: ' + String((err && err.message) || err) }, 500, cors);
+    }
+  }
+
+  // Anthropic flow (legacy / paid).
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
