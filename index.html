@@ -2308,7 +2308,8 @@ function addLog(msg){DB.hist.unshift({tx:msg,ts:new Date().toISOString()});if(DB
 // on demand. Skipping them keeps the localStorage blob small and
 // avoids QuotaExceededError as the system grows.
 window._SDB_SKIP = {audit_log:1, notifications_log:1, hist:1};
-function sdb(){
+window._sdbTimer = null;
+window._sdbFlush = function(){
   try{
     var snap = {};
     for(var k in DB){
@@ -2317,10 +2318,22 @@ function sdb(){
     }
     localStorage.setItem('tfgn2', JSON.stringify(snap));
   }catch(e){
-    // Fallback: if even the trimmed blob fails, try without DB.tasks/ncr_ai history
     try{ localStorage.setItem('tfgn2', JSON.stringify({})); }catch(_){}
   }
+  _sdbTimer = null;
+};
+// Debounce localStorage writes by 250ms. During a realtime burst (many
+// rows arriving in sequence) the dozens of sdb() calls coalesce into one
+// flush instead of N JSON.stringify+setItem cycles. The data is also
+// already on Supabase via sbIns/sbUpd/sbDel — localStorage is a cache.
+function sdb(){
+  if(_sdbTimer) clearTimeout(_sdbTimer);
+  _sdbTimer = setTimeout(_sdbFlush, 250);
 }
+// Make sure pending changes flush before the tab unloads, so the next
+// reload sees the latest snapshot (avoids racing the 250ms timer).
+window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
+window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
 function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
