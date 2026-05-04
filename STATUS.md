@@ -229,6 +229,10 @@
 - **OCR לתעודות הדרכה (PR #417)** — כפתור 🔍 "קרא תעודה" במודאל הדרכה. בוחרים תמונת תעודה (heb/eng), Workers AI Vision (`@cf/meta/llama-3.2-11b-vision-instruct`) מחלץ אוטומטית: שם הקורס, שם העובד, תאריך הוצאה, תוקף, קטגוריה. ממלא רק שדות ריקים. עלות: 0$ (free tier). Generic helper `_ocrAnalyze(file, prompt)` שניתן להרחיב ל-OCR נוסף בעתיד (PDFs של דוחות בדיקה, מסמכי MSDS וכו').
 - **Bulk AI task creator (PR #420)** — כפתור 🤖 "יצירת משימות AI" בעמוד משימות. הדבקה של רשימת משימות בעברית בטקסט חופשי → AI מנתח כל שורה ויוצר משימה עם title + priority + due date. מסך אישור לפני יצירה בכמות. חוסך 5+ דקות ביצירה ידנית של 5+ משימות.
 - **Risk periodic review (PR #421, ISO 45001:6.1.2)** — שדה `last_review` חדש ב-m-rsk modal + helper `_rskReviewMeta`. Risk list מציג badges: ⚠ סקירה פגה (>365ימ), ⏳ סקירה ב-30 יום (335-365ימ), ⚠ ללא סקירה. **דורש migration ידני**: `migrations/2026-05-04_rsk_last_review.sql`.
+- **Excel גיבוי מלא (PR #423)** — תפריט topbar 📗 "גיבוי אקסל מלא". יוצר קובץ `.xlsx` עם גיליון לכל טבלה, שמות עברית, פתיח ב-Excel/OneDrive/Google Sheets.
+- **OneDrive integration — outbound mirror (PR #424)** — תשתית MSAL.js + OAuth ל-Microsoft. הגדרת Client ID חד-פעמית של Azure App + חיבור ב-popup. כל קובץ שמועלה לאפליקציה מסתנכרן אוטומטית ל-`/Apps/Tapugan Safety/<נושא>/` ב-OneDrive (sandboxed scope `Files.ReadWrite.AppFolder`).
+- **OneDrive integration — inbound flow (PR #425)** — המשתמש זורק קבצים ל-`/Apps/Tapugan Safety/Inbox/` ב-OneDrive, האפליקציה קוראת אותם, מסווגת עם AI (Vision/filename heuristics) ל: tr / ppe / med / docs / ncr / equip_inspections, ויוצרת רישום בטבלה הנכונה. הקובץ עובר ל-`_processed/`. עלות: 0$ (חינם לחלוטין).
+- **Overnight polish (PR #426)** — Widget בדשבורד "⚡ סיכונים לסקירה תקופתית" (משלים את Legal+env_aspects+rsk לעריכה תקופתית ISO). 🔍 OCR למודאל מסמכים (m-doc) — קורא רישיונות/אישורים ומחלץ שדות. הוראות שימוש ברורות יותר ב-OneDrive Inbox modal.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
