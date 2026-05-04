@@ -1164,7 +1164,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 </div>
 <div id="pg-inc" class="page">
-  <div class="row"><div class="page-title">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-inc')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="row"><div class="page-title">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openNewIncModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div id="inc-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1514;&#1497;&#1488;&#1493;&#1512;</th><th>&#1505;&#1493;&#1490;</th><th>&#1495;&#1493;&#1502;&#1512;&#1492;</th><th>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
@@ -1612,7 +1612,8 @@ id="m-ncr" style="display:none">
 <div class="overlay" id="ov-inc" onclick="closeModal('m-inc')"></div>
 <div class="modal" id="m-inc" style="display:none">
   <button class="close-btn" onclick="closeModal('m-inc')">&#10005;</button>
-  <div class="modal-title">&#1491;&#1497;&#1493;&#1493;&#1495; &#1514;&#1488;&#1493;&#1504;&#1492; / &#1488;&#1497;&#1512;&#1493;&#1506;</div>
+  <div class="modal-title" id="m-inc-title">&#1491;&#1497;&#1493;&#1493;&#1495; &#1514;&#1488;&#1493;&#1504;&#1492; / &#1488;&#1497;&#1512;&#1493;&#1506;</div>
+  <input type="hidden" id="i-id">
   <div class="fgrid">
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="i-d"></textarea></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1493;&#1513;&#1506;&#1492;</label><input type="datetime-local" id="i-dt"></div>
@@ -3100,15 +3101,53 @@ function svNcr(){
   toast('\u05e0\u05e9\u05de\u05e8 ✓');
 }
 
+function openNewIncModal(){
+  var idEl=g('i-id');if(idEl)idEl.value='';
+  var t=g('m-inc-title');if(t)t.textContent='\u05d3\u05d9\u05d5\u05d5\u05d7 \u05ea\u05d0\u05d5\u05e0\u05d4 / \u05d0\u05d9\u05e8\u05d5\u05e2';
+  ['i-d','i-l','i-r','i-dy','i-dt'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  _attachClear('inc-attach-area');
+  if(typeof _locPopulate==='function')_locPopulate('i-location-id',null);
+  var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(null);
+  var itSel=g('i-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function')itSel.innerHTML=_itypeOptionsHtml(null);
+  openModal('m-inc');
+}
+function editInc(id){
+  var rec=(DB.inc||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var setIf=function(elId,v){var el=g(elId);if(el)el.value=(v==null?'':v);};
+  setIf('i-id',rec.id);
+  setIf('i-d',rec.d);setIf('i-dt',rec.dt);setIf('i-ty',rec.ty);setIf('i-sv',rec.sv);
+  setIf('i-l',rec.l);setIf('i-dy',rec.dy);setIf('i-st',rec.s);setIf('i-r',rec.r);
+  if(typeof _locPopulate==='function')_locPopulate('i-location-id',rec.location_id||null);
+  var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(rec.project_id||null);
+  var itSel=g('i-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function')itSel.innerHTML=_itypeOptionsHtml(rec.issue_type_id||null);
+  if(rec.file_url){_attachUrls['inc-attach-area']=rec.file_url;_attachRender('inc-attach-area',rec.file_url,'');}
+  else{_attachClear('inc-attach-area');}
+  var t=g('m-inc-title');if(t)t.textContent='\u05e2\u05e8\u05d9\u05db\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea';
+  openModal('m-inc');
+}
 function svInc(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
-  var r={id:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,issue_type_id:gv('i-issue-type-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
-  DB.inc.push(r);sbIns('inc',r);addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));sdb();closeModal('m-inc');
-  if(typeof _notifyEvent==='function' && (r.sv==='\u05d7\u05de\u05d5\u05e8'||r.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9')){
+  var existingId=gv('i-id');
+  var isEdit=!!existingId;
+  var r={id:isEdit?existingId:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,issue_type_id:gv('i-issue-type-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
+  if(isEdit){
+    // Preserve fields not in the modal \u2014 five_why is the most notable.
+    var prev=(DB.inc||[]).find(function(x){return x.id===existingId;})||{};
+    if(prev.five_why)r.five_why=prev.five_why;
+    DB.inc=DB.inc.map(function(x){return x.id===existingId?r:x;});
+    sbUpd('inc',r);
+    addLog('\u05ea\u05e7\u05e8\u05d9\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+d.substring(0,30));
+  }else{
+    DB.inc.push(r);sbIns('inc',r);
+    addLog('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d3\u05d5\u05d5\u05d7: '+d.substring(0,30));
+  }
+  sdb();closeModal('m-inc');
+  if(!isEdit && typeof _notifyEvent==='function' && (r.sv==='\u05d7\u05de\u05d5\u05e8'||r.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9')){
     _notifyEvent('incident_critical',{title:(r.l||'\u05ea\u05e7\u05e8\u05d9\u05ea')+' \u2014 '+String(r.r||'').substring(0,40),id:r.id});
   }
-  ['i-d','i-l','i-r'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  ['i-id','i-d','i-l','i-r','i-dy','i-dt'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('inc-attach-area');
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
 }
@@ -7289,7 +7328,7 @@ function rInc(){
   }catch(e){}
   if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">✓<span class="et-ic"></span>\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05e8\u05e9\u05d5\u05de\u05d9\u05dd<br><span style="font-size:12px;color:var(--ok);font-weight:700">\u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3 — \u05e8\u05e6\u05e3 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9</span></td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="חמור/קריטי פתוח '+stAge+' ימים — חסרה חקירה" style="background:#fde2e2;border:1px solid #b91c1c;border-radius:10px;padding:1px 6px;color:#7f1d1d;font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+stBadge+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="חמור/קריטי פתוח '+stAge+' ימים — חסרה חקירה" style="background:#fde2e2;border:1px solid #b91c1c;border-radius:10px;padding:1px 6px;color:#7f1d1d;font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+stBadge+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(i.id)+'" onclick="editInc(this.dataset.eid)" title="ערוך">&#9998;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
