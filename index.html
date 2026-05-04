@@ -33,7 +33,9 @@ body.hc .topbar{border-bottom-width:4px}
 body.hc .bn{color:#000}
 body.hc .bn.on{color:var(--red);border-top-width:4px}
 body.hc .btn,body.hc input,body.hc select,body.hc textarea{border-width:2px!important}
-html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:none}
 
 /* ---- SCROLLBARS (desktop only — mobile already hides them) ---- */
@@ -420,7 +422,21 @@ body.emp-mode #pg-emp-home{display:block!important}
 body.emp-mode #emp-mode-badge{display:inline-block}
 
 /* ---- PRINT ---- */
-@media print{.topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row,#scroll-top-btn,#dash-insights,#dash-health,#dash-round-reminder,#ncr-active-chips,#nm-active-chips,#tsk-active-chips,#eqi-active-chips,#hzm-active-chips,select{display:none!important}.main{padding:0!important;max-width:none!important;height:auto!important}.page{display:none!important}.page.on{display:block!important}#print-header{display:block!important}body{background:#fff!important}.card{box-shadow:none!important;border:1px solid #ccc}@page{margin:10mm;size:A4 landscape}}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .topbar,.bnav,.fab,#ncr-status-widget,#dash-alerts,.btn,.emp-toggle,#emp-toast,.toast,.tfu-exp-row,#scroll-top-btn,#dash-insights,#dash-health,#dash-round-reminder,#ncr-active-chips,#nm-active-chips,#tsk-active-chips,#eqi-active-chips,#hzm-active-chips,select{display:none!important}
+  .main{padding:0!important;max-width:none!important;height:auto!important}
+  .page{display:none!important}
+  .page.on{display:block!important;animation:none!important}
+  #print-header{display:block!important}
+  body{background:#fff!important}
+  .card{box-shadow:none!important;border:1px solid #ccc;break-inside:avoid;page-break-inside:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  thead{display:table-header-group}
+  h1,h2,h3,.page-title,.card-title{break-after:avoid;page-break-after:avoid}
+  @page{margin:10mm;size:A4 landscape}
+}
 </style>
 </head>
 <body>
