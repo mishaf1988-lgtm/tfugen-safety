@@ -1,14 +1,12 @@
-// Shared helpers for Cloudflare Pages Functions
-// Mirrors the Vercel /api logic so the same client code works on both hosts.
+// Shared helpers for Cloudflare Pages Functions.
+// (Vercel constants were removed in 2026-05-04 after the migration to
+// Cloudflare Pages was finalised and the Vercel project was deleted.)
 
-export const VERCEL_PROD = 'https://tfugen-safety.vercel.app';
-// Cloudflare Pages domain — actual project name is "tapugan-safety"
 export const CF_PROD = 'https://tapugan-safety.pages.dev';
-export const VERCEL_PREVIEW_RE = /^https:\/\/tfugen-safety-[a-z0-9-]+-mishaf1988-lgtms-projects\.vercel\.app$/;
 export const CF_PREVIEW_RE = /^https:\/\/[a-z0-9-]+\.tapugan-safety\.pages\.dev$/;
 
 export function defaultAllowedOrigins(env) {
-  const list = [VERCEL_PROD, CF_PROD];
+  const list = [CF_PROD];
   const extra = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   return [...list, ...extra];
 }
@@ -16,7 +14,6 @@ export function defaultAllowedOrigins(env) {
 export function originPasses(origin, allowed) {
   if (!origin) return false;
   if (allowed.includes(origin)) return true;
-  if (VERCEL_PREVIEW_RE.test(origin)) return true;
   if (CF_PREVIEW_RE.test(origin)) return true;
   return false;
 }
