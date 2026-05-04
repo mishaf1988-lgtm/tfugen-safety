@@ -1052,6 +1052,22 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1500;&#1493;&#1495; &#1513;&#1504;&#1492; &#1502;&#1488;&#1493;&#1495;&#1491;</div>
 </div>
 
+<!-- AGENT DASHBOARD — central hub for all AI capabilities (admin only) -->
+<div id="pg-agents" class="page">
+  <div class="row">
+    <div class="page-title">&#129302; &#1499;&#1500;&#1497; <span>&#1489;&#1497;&#1504;&#1492; &#1502;&#1500;&#1488;&#1499;&#1493;&#1514;ית</span></div>
+  </div>
+  <div class="card" style="margin-bottom:12px;background:#1a1d23;color:#fff;border:none">
+    <div style="font-size:13px;line-height:1.7">
+      &#1492;&#1502;&#1506;&#1512;&#1499;&#1514; &#1502;&#1513;&#1500;&#1489;&#1514; &#1502;&#1505;&#1508;&#1512; &#1499;&#1500;&#1497; AI &#1500;&#1506;&#1494;&#1512; &#1500;&#1503; &#1489;&#1492;&#1491;&#1512;&#1499;&#1492;,
+      &#1495;&#1511;&#1497;&#1512;&#1492; &#1493;&#1502;&#1506;&#1504;&#1492; &#1506;&#1500; &#1513;&#1488;&#1500;&#1493;&#1514; &#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;&#1493;&#1514;.
+      &#1499;&#1500; &#1492;&#1499;&#1500;&#1497;&#1501; &#1502;&#1493;&#1488;&#1510;&#1500;&#1497;&#1501; &#1500;&#1488;&#1503;-&#1496;&#1512;&#1493;&#1508;&#1497;&#1499;-&#1505;&#1493;&#1504;&#1496; &#1493;&#1502;&#1503;-&#1502;&#1493;&#1491;&#1497;&#1506;-&#1502;&#1497;&#1497;&#1491;&#1497;.
+    </div>
+  </div>
+  <div id="agents-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | AI &#1488;&#1495;&#1512;&#1488;&#1497; (admin)</div>
+</div>
+
 <!-- MANAGEMENT REVIEW DASHBOARD -->
 <div id="pg-mr" class="page">
   <div class="row">
@@ -1450,6 +1466,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
     <div class="sheet-group-title">&#1492;&#1504;&#1492;&#1500;&#1492;</div>
     <button class="sheet-btn" id="sheet-btn-mr" onclick="_goFromSheet('m-modules-sheet','mr')" style="display:none"><span class="sic">&#128203;</span>&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492;</button>
+    <button class="sheet-btn" id="sheet-btn-agents" onclick="_goFromSheet('m-modules-sheet','agents')" style="display:none"><span class="sic">&#129302;</span>&#1499;&#1500;&#1497; AI</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','cal')"><span class="sic">&#128197;</span>&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')"><span class="sic">&#127811;</span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')"><span class="sic">&#128205;</span>&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501;</button>
@@ -2704,7 +2721,7 @@ var _navGroup={
 // Pages that only the admin account can open. Non-admin users are
 // redirected to the dashboard with a toast, even if they try
 // goPage('users') from devtools or a stale link.
-var _ADMIN_ONLY_PAGES = {users:1,audit:1};
+var _ADMIN_ONLY_PAGES = {users:1,audit:1,agents:1};
 function _isAdminUser(){
   return _currentUser && (_currentUser.username==='admin' || _currentUser.role==='\u05d0\u05d3\u05de\u05d9\u05df');
 }
@@ -2828,8 +2845,54 @@ window._appPrefsLandingPage=function(){
 
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents};
   if(m[CUR])m[CUR]();
+}
+// Agent Dashboard — central hub for AI capabilities. Admin-only.
+function rAgents(){
+  var box=g('agents-cards');if(!box)return;
+  var ncrTotal=(DB.ncr||[]).length;
+  var ncrFW=(DB.ncr||[]).filter(function(n){return n.five_why;}).length;
+  var incFW=(DB.inc||[]).filter(function(i){return i.five_why;}).length;
+  var legTotal=(DB.leg||[]).length;
+  var capCount=(DB.near_miss||[]).filter(function(n){return n.descr;}).length;
+  function card(opts){
+    return '<div class="card" style="border-right:4px solid '+opts.color+';display:flex;gap:14px;align-items:flex-start;padding:14px">'+
+      '<div style="font-size:36px;line-height:1;flex-shrink:0">'+opts.icon+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:700;font-size:15px;margin-bottom:4px">'+esc(opts.title)+'</div>'+
+        '<div style="font-size:12px;color:var(--t3);line-height:1.6;margin-bottom:8px">'+opts.desc+'</div>'+
+        (opts.metric?'<div style="font-size:11px;color:'+opts.color+';font-weight:700;margin-bottom:8px">'+opts.metric+'</div>':'')+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+opts.actions+'</div>'+
+      '</div>'+
+      '</div>';
+  }
+  var html='';
+  html+=card({
+    icon:'🔥',color:'#cc1f1f',title:'NCR/CAPA Agent',
+    desc:'ניתוחי AI על אי-התאמות בודדות או מצטברים. זיהוי דפוסים, המלצת סיבות שורש, תיעדוף מקטגוריה (ISO 45001/14001).',
+    metric:ncrTotal+' NCR זמינים לניתוח',
+    actions:'<button class="btn btn-p btn-sm" onclick="openNCRAgent()">פתח</button>'
+  });
+  html+=card({
+    icon:'✨',color:'#7c3aed',title:'Smart Capture',
+    desc:'דיווח בקול, תמונה או טקסט — ה-AI מזהה סוג דיווח (NM/inc/NCR/EQI/PPE/TR) ופותח את הטופס הנכון עם כל השדות מוכנים.',
+    metric:capCount+' דיווחי NM במאגר',
+    actions:'<button class="btn btn-p btn-sm" onclick="capOpen()" style="background:#7c3aed">פתח</button>'
+  });
+  html+=card({
+    icon:'⚖️',color:'#1d4ed8',title:'Legal AI Q&A',
+    desc:'שאל שאלה חופשית על הרגולציה תשמר ב-Tapugan — ה-AI מגיב מתוך החוקים השמורים ב-Legal Register.',
+    metric:legTotal+' חוקים במאגר',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'leg\')" style="background:#1d4ed8">עבור לדף חוקים</button>'
+  });
+  html+=card({
+    icon:'🔍',color:'#92400e',title:'5-Why Investigation',
+    desc:'ניתוח שורש מובנה לאי-התאמות ותקריות (ISO 45001:10.2). העורך ממלא ידנית במודאל העריכה של כל רשומה.',
+    metric:ncrFW+' NCRs + '+incFW+' תקריות ניתחו',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'ncr\')" style="background:#92400e">NCRs</button> <button class="btn btn-s btn-sm" onclick="goPage(\'inc\')">תקריות</button>'
+  });
+  box.innerHTML=html;
 }
 var _modalLastScrollY=0;
 function _closeAllOpenModals(except){
@@ -9442,6 +9505,8 @@ function _applyRoleGates(){
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
   var mrBtn=g('sheet-btn-mr');
   if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
+  var agentsBtn=g('sheet-btn-agents');
+  if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
