@@ -1,0 +1,33 @@
+# Cloudflare Pages: per-URL HTTP header overrides.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+# Order is important — more specific paths last.
+
+# ---- Defaults applied to every response ----
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(self)
+  X-Frame-Options: SAMEORIGIN
+
+# ---- HTML + Service Worker: never serve a stale copy ----
+# Network-first SW already does this client-side; the header makes
+# the CDN/proxy honour it too, so the SW always sees the latest bytes.
+/
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+
+# ---- PWA manifest: short-cache so we can update install metadata fast ----
+/manifest.webmanifest
+  Cache-Control: public, max-age=300
+
+# ---- Static brand assets: long-cache (rename file if the image changes) ----
+/icon.svg
+  Cache-Control: public, max-age=86400
+
+/logo.jpg
+  Cache-Control: public, max-age=86400
