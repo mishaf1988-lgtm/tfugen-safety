@@ -9,7 +9,15 @@ import {
   isAllowedCaller
 } from '../_shared.js';
 
-const ALLOWED_MODELS = ['claude-sonnet-4-6', 'claude-haiku-4-5'];
+// Anthropic API requires the explicit dated form for Haiku 4.5 — the bare
+// alias 'claude-haiku-4-5' returns 400 "model not found". Sonnet 4.6 still
+// accepts the bare alias. Keep both forms so old client builds keep working
+// during deploy roll-out.
+const ALLOWED_MODELS = [
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5',           // legacy alias — kept for backward-compat
+  'claude-haiku-4-5-20251001'   // canonical dated ID — what client now sends
+];
 const MAX_TOKENS_CAP = 16000;    // 30+ page PDF inspections can extract 50+ items
 const MAX_BODY_BYTES = 25000000; // 25MB — fits ~18MB raw PDFs after base64 inflation
 
