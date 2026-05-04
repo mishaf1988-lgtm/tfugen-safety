@@ -46,6 +46,14 @@ export async function onRequest({ request, env }) {
     return jsonResp(status, 200, cors);
   }
 
+  // Check 0: token sanity — is the token recognized by Meta at all?
+  // /me works for any valid token (user, SU, page). If THIS fails, the
+  // token is dead (revoked or expired) and nothing else can succeed.
+  status.meta_api.identity = await probe(
+    'https://graph.facebook.com/' + META_API_VERSION + '/me?fields=id,name',
+    TOKEN
+  );
+
   // Check 1: messaging scope — fetch the phone number metadata. Needs
   // whatsapp_business_messaging permission. If this works, send will work.
   status.meta_api.messaging = await probe(
@@ -92,8 +100,21 @@ async function probe(url, token) {
 }
 
 function nextStepFor(meta) {
+  const id = meta.identity || {};
   const m = meta.messaging || {};
   const g = meta.management || {};
+
+  // Identity check first — if /me fails, nothing else matters.
+  if (!id.ok) {
+    const err = (id.json && id.json.error) || {};
+    if (err.code === 190) {
+      return 'TOKEN IS DEAD. The token was revoked or expired. Regenerate at Meta Business Settings -> System Users -> [your SU] -> Generate New Token (with both whatsapp_business_messaging + whatsapp_business_management scopes), then update META_ACCESS_TOKEN in Cloudflare Pages env vars.';
+    }
+    if (err.code === 200 || /access\s*blocked/i.test(err.message || '')) {
+      return 'TOKEN BLOCKED at the identity level. The Meta App or Business Account is restricted (under review, suspended, or rate-limited). Check business.facebook.com -> Security Center for any "action required" notices.';
+    }
+    return 'Token rejected by Meta. Error: ' + JSON.stringify(err).substring(0, 200);
+  }
 
   if (m.ok && g.ok) {
     if (meta.approved_count === 0) {
@@ -102,25 +123,22 @@ function nextStepFor(meta) {
     return 'OK - permissions valid, ' + meta.approved_count + ' template(s) approved. Try the dashboard test send button.';
   }
 
+  // Identity OK but WhatsApp endpoints fail — it's specifically the WABA asset access
   if (!m.ok && !g.ok) {
     const err = (g.json && g.json.error) || (m.json && m.json.error) || {};
-    if (err.code === 190) {
-      return 'META_ACCESS_TOKEN is invalid or expired. Regenerate a permanent System User token in Meta Business Settings.';
-    }
     if (err.code === 200 || err.code === 10 || /access\s*blocked/i.test(err.message || '')) {
-      return 'Token has no permissions on this WABA. Fix in Meta Business Settings: ' +
-        '(1) Business Settings -> Users -> System Users, pick your SU. ' +
-        '(2) Add Assets -> WhatsApp Accounts -> select your WABA with Full control. ' +
-        '(3) Generate New Token, check both whatsapp_business_messaging AND whatsapp_business_management. ' +
-        '(4) Update META_ACCESS_TOKEN in Cloudflare Pages env vars and redeploy.';
+      return 'TOKEN VALID but no access to this WABA. Most likely cause: the System User\'s asset assignment to the WABA was removed (or the WABA quality rating dropped). ' +
+        'Fix: (1) business.facebook.com -> Settings -> Users -> System Users -> your SU. ' +
+        '(2) Assigned Assets tab -> Add Assets -> WhatsApp Accounts -> tick your WABA with FULL control. ' +
+        '(3) Generate New Token (both whatsapp_business_messaging + whatsapp_business_management scopes). ' +
+        '(4) Paste new token into Cloudflare META_ACCESS_TOKEN env var and Retry deployment.';
     }
-    return 'Both messaging and management scopes failed. See meta_api.management.json.error / meta_api.messaging.json.error for details.';
+    return 'Both WhatsApp scopes failed but token identity works. See meta_api.management.json.error / meta_api.messaging.json.error.';
   }
 
   if (m.ok && !g.ok) {
     return 'Sending will work, but template listing is blocked. Token is missing whatsapp_business_management scope. ' +
-      'Regenerate the System User token with BOTH scopes (whatsapp_business_messaging AND whatsapp_business_management) ' +
-      'and update META_ACCESS_TOKEN in Cloudflare Pages env vars.';
+      'Regenerate the System User token with BOTH scopes and update META_ACCESS_TOKEN in Cloudflare Pages env vars.';
   }
 
   // !m.ok && g.ok — rare
