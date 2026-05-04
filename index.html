@@ -1298,7 +1298,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div id="leg-q-result"></div>
     </div>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th>&#1502;&#1511;&#1493;&#1512;</th><th>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
+  <div class="card" style="padding:8px 12px;margin-bottom:8px"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:11px;color:var(--t3);margin-left:4px">&#1505;&#1497;&#1504;&#1493;&#1503; &#1505;&#1511;&#1497;&#1512;&#1492;:</span>
+    <button class="btn btn-p btn-sm" id="leg-rv-tab-all" onclick="legReviewFilter('all')">&#1492;&#1499;&#1500;</button>
+    <button class="btn btn-s btn-sm" id="leg-rv-tab-overdue" onclick="legReviewFilter('overdue')">&#1505;&#1511;&#1497;&#1512;&#1492; &#1508;&#1490;&#1492;</button>
+    <button class="btn btn-s btn-sm" id="leg-rv-tab-soon" onclick="legReviewFilter('soon')">&#1505;&#1511;&#1497;&#1512;&#1492; &#1489;-30 &#1497;&#1493;&#1501;</button>
+    <button class="btn btn-s btn-sm" id="leg-rv-tab-never" onclick="legReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
+  </div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505;</th><th>&#1505;&#1511;&#1497;&#1512;&#1492;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th>&#1502;&#1511;&#1493;&#1512;</th><th>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -9256,13 +9263,36 @@ function rEnv(){
   if(!DB.env.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05d3\u05d9\u05d3\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=DB.env.map(function(e){return '<tr><td>'+fd(e.d)+'</td><td>'+e.ty+'</td><td>'+(e.me||'&#8212;')+'</td><td><strong>'+(e.r||'&#8212;')+'</strong> '+(e.u||'')+'</td><td>'+(e.lim||'&#8212;')+'</td><td>'+sb(e.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="env" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
+// ISO 14001 \u00a76.1.3 \u2014 periodic legal-register review.
+// Hardcoded 12-month cycle (typical practice). last_review is the
+// authoritative field; next review = last_review + 365 days.
+var _LEG_REVIEW_CYCLE_DAYS=365;
+function _legReviewMeta(rec){
+  var last=rec&&rec.last_review;
+  if(!last)return{state:'never',days:null,label:'\u05dc\u05dc\u05d0 \u05e1\u05e7\u05d9\u05e8\u05d4'};
+  var t=new Date(last).getTime();
+  if(isNaN(t))return{state:'never',days:null,label:'\u05dc\u05dc\u05d0 \u05e1\u05e7\u05d9\u05e8\u05d4'};
+  var due=t+_LEG_REVIEW_CYCLE_DAYS*86400000;
+  var days=Math.ceil((due-Date.now())/86400000);
+  if(days<0)return{state:'overdue',days:days,label:'\u05e4\u05d2\u05d4 \u05dc\u05e4\u05e0\u05d9 '+(-days)+' \u05d9\u05de\u05d9\u05dd'};
+  if(days<=30)return{state:'soon',days:days,label:'\u05d1\u05e2\u05d5\u05d3 '+days+' \u05d9\u05de\u05d9\u05dd'};
+  return{state:'ok',days:days,label:'\u05d1\u05e2\u05d5\u05d3 '+days+' \u05d9\u05de\u05d9\u05dd'};
+}
+function _legReviewBadge(rec){
+  var m=_legReviewMeta(rec);
+  var col=m.state==='overdue'?'#cc1f1f':(m.state==='soon'?'#e07a00':(m.state==='never'?'#888':'#16a34a'));
+  var ic=m.state==='overdue'?'\ud83d\udd34':(m.state==='soon'?'\u26a0\ufe0f':(m.state==='never'?'\u26ab':'\u2705'));
+  return '<span style="font-size:11px;color:'+col+';font-weight:700;white-space:nowrap">'+ic+' '+m.label+'</span>';
+}
 function rLeg(){
   var tb=g('tb-leg');if(!tb)return;
-  if(!DB.leg.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u2696\ufe0f<br>\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd / \u05ea\u05e7\u05e0\u05d5\u05ea \u05d1\u05de\u05d0\u05d2\u05e8<br><button class="et-cta" onclick="openNewLegModal()">+ \u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
+  if(!DB.leg.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\u2696\ufe0f<br>\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd / \u05ea\u05e7\u05e0\u05d5\u05ea \u05d1\u05de\u05d0\u05d2\u05e8<br><button class="et-cta" onclick="openNewLegModal()">+ \u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var f=window._legFilter||'all';
+  var rv=window._legReviewFilter||'all';
   var rows=DB.leg.slice();
   if(f!=='all')rows=rows.filter(function(l){return (l.a||'')===f;});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05dc\u05d8\u05e8 \u05d4\u05d6\u05d4</td></tr>';return;}
+  if(rv!=='all')rows=rows.filter(function(l){return _legReviewMeta(l).state===rv;});
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05dc\u05d8\u05e8 \u05d4\u05d6\u05d4</td></tr>';return;}
   tb.innerHTML=rows.map(function(l){
     var nameCell=esc(l.s||'')+(l.law_num?' <span style="color:var(--t3);font-size:11px">('+esc(l.law_num)+')</span>':'')+(l.topic?'<br><span style="font-size:11px;color:var(--t3)">'+esc(l.topic)+'</span>':'');
     var lt=l.law_type?'<span class="b bX">'+esc(l.law_type)+'</span>':'\u2014';
@@ -9278,10 +9308,11 @@ function rLeg(){
     var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="leg" data-did="'+esc(l.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
     var hasContent=l.summary||l.full_text;
     var contentBadge=hasContent?'<span style="font-size:9px;color:var(--ok);font-weight:700">✓ \u05ea\u05d5\u05db\u05df</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⚠ \u05dc\u05dc\u05d0 \u05ea\u05d5\u05db\u05df</span>';
-    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e1\u05e7\u05d9\u05e8\u05d4">'+_legReviewBadge(l)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 function legFilter(f){window._legFilter=f;['all','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05db\u05d7 \u05d0\u05d3\u05dd','\u05db\u05dc\u05dc\u05d9'].forEach(function(k){var el=g('leg-tab-'+k.replace(/ /g,'_'));if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rLeg();}
+function legReviewFilter(rv){window._legReviewFilter=rv;['all','overdue','soon','never'].forEach(function(k){var el=g('leg-rv-tab-'+k);if(el)el.className='btn btn-sm '+(rv===k?'btn-p':'btn-s');});rLeg();}
 function rLg(){
   var el=g('log-list');if(!el)return;
   if(!DB.hist.length){el.innerHTML='<p class="et">\u05d0\u05d9\u05df \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea</p>';return;}
