@@ -162,14 +162,15 @@ body.hc .card{box-shadow:var(--sh)!important;transform:none!important}
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 
 /* Dashboard "Today" — actionable list of what needs attention */
-.today-list{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.today-list{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06)}
 .today-header{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-bottom:1px solid #fca5a5;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
 .today-header.ok{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac}
 .today-header .t-title{font-size:15px;font-weight:800;color:#b91c1c}
 .today-header.ok .t-title{color:#15803d}
 .today-header .t-count{font-size:12px;font-weight:800;color:#b91c1c;background:#fff;padding:4px 10px;border-radius:999px;border:1px solid #fca5a5}
 .today-header.ok .t-count{color:#15803d;border-color:#86efac}
-.today-item{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #f0f1f3;min-height:64px;background:#fff}
+.today-item{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;border-bottom:1px solid #f0f1f3;min-height:64px;background:#fff;transition:background .12s ease}
+@media(hover:hover){.today-item:hover{background:#fff5f5}}
 .today-item:last-child{border-bottom:none}
 .today-item:active{background:#f8fafc}
 .today-item .ti-ic{font-size:22px;flex-shrink:0;width:30px;text-align:center;line-height:1}
@@ -529,7 +530,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
   <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
-  <div style="margin:16px 0 6px;font-size:12px;color:var(--t3);font-weight:700;text-align:right;border-bottom:1px solid #ddd;padding-bottom:4px">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
+  <div class="dash-section-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
