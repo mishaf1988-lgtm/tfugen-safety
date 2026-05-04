@@ -10446,7 +10446,7 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     _sbAuth().then(function(){
       if(!_sbToken)throw new Error('no session');
-      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'x-upsert':'true'},body:body});
+      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'x-upsert':'true','cache-control':'max-age=31536000'},body:body});
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
