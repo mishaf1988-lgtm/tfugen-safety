@@ -1878,7 +1878,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="nm-notes" rows="2"></textarea></div>
     <div class="field fw"><label>&#128247; &#1510;&#1497;&#1500;&#1493;&#1501;</label><div id="nm-photo-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_nmPickPhoto()">&#128247; &#1510;&#1500;&#1501; / &#1489;&#1495;&#1512; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="nm-ai-btn" onclick="_nmAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1493;&#1493;&#1490; &#1493;&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- ROUND MODAL (Morning Round) -->
@@ -9205,6 +9205,49 @@ window._aiWeeklyCopy=function(){
   }else{
     try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}catch(e){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');}
   }
+};
+// AI suggestion for a near-miss report. Given the description (and optionally
+// area + reporter), classify severity + type and propose a short preventive
+// action that goes into the notes field. Empty fields are filled; non-empty
+// fields are not overwritten.
+window._nmAI=function(){
+  var btn=g('nm-ai-btn');
+  var descr=gv('nm-desc')||'';
+  if(!descr){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05e7\u05d5\u05d3\u05dd');return;}
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
+  var area=gv('nm-area')||'';
+  var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+descr+(area?'\n\u05d0\u05d6\u05d5\u05e8: '+area:'');
+  var aiPrompt='\u05d0\u05ea\u05d4 \u05d9\u05d5\u05e2\u05e5 ISO 45001. \u05d1\u05d4\u05d9\u05e0\u05ea\u05df \u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 (near-miss), \u05d4\u05d7\u05d6\u05e8 JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3 \u05e2\u05dd \u05d4\u05e9\u05d3\u05d5\u05ea \u05d4\u05d1\u05d0\u05d9\u05dd:\n'+
+    '{\n  "sev": "\u05e7\u05d8\u05d9\u05df" \u05d0\u05d5 "\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9" \u05d0\u05d5 "\u05d7\u05de\u05d5\u05e8" (\u05d7\u05d5\u05de\u05e8\u05ea \u05d4\u05ea\u05e8\u05d7\u05d9\u05e9 \u05d0\u05dd \u05d4\u05d9\u05d4 \u05de\u05ea\u05de\u05de\u05e9 \u05dc\u05ea\u05d0\u05d5\u05e0\u05d4),\n'+
+    '  "typ": "\u05e4\u05d9\u05d6\u05d9" \u05d0\u05d5 "\u05db\u05d9\u05de\u05d9" \u05d0\u05d5 "\u05d7\u05e9\u05de\u05dc\u05d9" \u05d0\u05d5 "\u05e9\u05e8\u05d9\u05e4\u05d4" \u05d0\u05d5 "\u05e0\u05e4\u05d9\u05dc\u05d4" \u05d0\u05d5 "\u05d0\u05d7\u05e8",\n'+
+    '  "notes": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d5\u05e0\u05e2\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05ea \u05dc\u05d4\u05ea\u05e8\u05d7\u05e9\u05d5\u05ea \u05e2\u05ea\u05d9\u05d3\u05d9\u05d5\u05ea \u2014 \u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0?"\n}\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d5\u05d5\u05d2 \u05d5\u05d4\u05de\u05dc\u05e6\u05d5\u05ea';}
+      if(!res.ok){toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI ('+res.status+')');console.warn('NM AI:',res.txt);return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05ea JSON \u05de-AI');return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
+      content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON');console.warn('AI raw:',content);return;}
+      var changed=[];
+      var sevEl=g('nm-sev'),typEl=g('nm-typ'),notesEl=g('nm-notes');
+      var allowedSev=['\u05e7\u05d8\u05d9\u05df','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9','\u05d7\u05de\u05d5\u05e8'];
+      var allowedTyp=['\u05e4\u05d9\u05d6\u05d9','\u05db\u05d9\u05de\u05d9','\u05d7\u05e9\u05de\u05dc\u05d9','\u05e9\u05e8\u05d9\u05e4\u05d4','\u05e0\u05e4\u05d9\u05dc\u05d4','\u05d0\u05d7\u05e8'];
+      if(sevEl && parsed.sev && allowedSev.indexOf(parsed.sev)>-1){sevEl.value=parsed.sev;changed.push('\u05d7\u05d5\u05de\u05e8\u05d4');}
+      if(typEl && parsed.typ && allowedTyp.indexOf(parsed.typ)>-1){typEl.value=parsed.typ;changed.push('\u05e1\u05d5\u05d2');}
+      if(notesEl && parsed.notes && !notesEl.value.trim()){notesEl.value=parsed.notes;changed.push('\u05d4\u05e2\u05e8\u05d5\u05ea');}
+      if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' \u00b7 '));
+      else toast('\u05d4\u05e9\u05d3\u05d5\u05ea \u05de\u05d5\u05dc\u05d0\u05d9\u05dd \u2014 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d5\u05d5\u05d2 \u05d5\u05d4\u05de\u05dc\u05e6\u05d5\u05ea';}
+      toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
+    });
 };
 var _SEARCH_TBLS=[
   {tbl:'ncr',label:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
