@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (Performance Phase 0+1+2+4+5(3/5)+6 shipped · 17 PRs · web-vitals · debounce · memoize · Cache-Control · SSE keepalive · Storage cacheControl · RLS perf wrap (initPlan) · poll 2→10min · per-page render-skip · rAF debounce realtime · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-04 (Performance Phase 0+1+2+3lite+4+5(3/5)+6 shipped · 18 PRs · web-vitals · debounce · memoize · Cache-Control · SSE keepalive · Storage cacheControl · RLS perf wrap (initPlan) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft pill · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -17,10 +17,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `f487298` |
+| Commit | `f59541f` |
 | תאריך | 2026-05-04 |
 | Tag | — (טרם נוצר) |
-| מצב | פאזות 0+1+2+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
+| מצב | פאזות 0+1+2+3lite+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft 'new version' pill · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
 
 ---
 
@@ -144,11 +144,12 @@
 - [x] **Phase 4 — RLS perf wrap migration** — `migrations/2026-05-04_rls_perf_wrap.sql` הורץ ידנית ב-Supabase ב-2026-05-04. עוטף כל קריאה ל-`is_admin_manager()` (ולגרסאות schema-qualified כמו `private.is_admin_manager()`) ב-`(select ...)` כדי שהפונקציה תרוץ פעם אחת לשאילתה (initPlan) במקום לכל row. עד ~100× שיפור על שאילתות RLS-bound. בנוסף: event trigger `pgrst_watch` ל-NOTIFY pgrst אוטומטי אחרי DDL. PR #347 (תוכן) + PR #349 (תיקון regex אחרי שגיאת syntax על schema-qualified call).
 - [x] **Phase 5 part 1 — extend poll 2min → 10min (PR #351)** — `setInterval` של `sbSync` עבר מ-`120*1000` ל-`600*1000`. Realtime כבר תופס שינויים מיידית, ה-polling רק safety net. חוסך ~83% מבקשות REST ברקע. אם Realtime נופל, `online`/`focus` listeners עדיין מפעילים sync מיידי.
 - [x] **Phase 5 parts 2+3 — per-page render-skip + rAF debounce (PR #352)** — מפת `_PAGE_PRIMARY` (page→main table) + `_LOOKUP_TBLS` (locations/projects/issue_types/inspection_types/app_users/emp). כשrealtime event מגיע על טבלה לא רלוונטית בעמוד single-table, `_sbRefresh` מדלג על `rPage()`. בנוסף, `_rtApply` דוחה `sdb()`+`_sbRefresh()` ל-rAF הבא, כך שbursts (35 events) מתקבצים ל-1 write + 1 render. עמודי aggregate (dash/mr/cal/tasks/audit/exp) תמיד מרנדרים.
+- [x] **Phase 3 lite — hourly update + soft pill (PR #354)** — `setInterval(reg.update, 1h)` מכריח בדיקה שעתית של `/sw.js` (מתקן את 24h של iOS Safari). במקום auto-reload אחרי `sw-updated`, מוצג pill קבוע בתחתית: "🔄 גרסה חדשה זמינה — לחץ לרענון" — המשתמש שולט מתי לרענן, לא מאבד טפסי NCR באמצע מילוי. ה-SW עצמו לא השתנה — רק ה-handler ב-index.html. Auto-versioning (build hash injection) נדחה ל-PR נפרד.
 
-**SW: v83 → v99** (16 גרסאות, bumped ידני בכל PR).
+**SW: v83 → v100** (17 גרסאות, bumped ידני בכל PR).
 
 **מה נשאר בתוכנית:**
-- Phase 3: SW rewrite (auto-version, kill manual `tfgn-vNN`, no auto-reload mid-form). דורש בדיקה ב-iOS Safari אמיתי.
+- Phase 3 part 2 (אופציונלי, נדחה): build-hash auto-versioning. דורש Cloudflare Pages function או git hook להחליף `__BUILD__` ב-`sw.js`. שווה PR נפרד עם חלון בדיקה משלו.
 - Phase 5 parts 4+5 (אופציונלי, נדחה): column projection (`_sbCols` map ל-`sbGet`) — דורש אימות ידני שכל עמודה שה-UI נוגע נמצאת ברשימה, טבלה אחת בכל פעם, מתחיל מ-NCR. Server-side filter על `notifications_log` — דורש החלטה אם admin צריך לראות notifications של משתמשים אחרים (כרגע — כן).
 - Phase 7: רק אם המדידות מצביעות.
 
