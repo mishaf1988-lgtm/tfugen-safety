@@ -5891,7 +5891,7 @@ function rNm(){
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
     var sc=sevCls[r.sev]||'bX';
-    var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
+    var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var areaTxt=r.location_id&&typeof _locName==='function'?_locName(r.location_id):'';
@@ -10356,7 +10356,7 @@ function _attachRender(areaId,url,fname){
   var area=g(areaId);if(!area)return;
   var isImg=url&&/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
   var preview=isImg
-    ?'<a data-sign="'+escU(url)+'" target="_blank"><img data-sign="'+escU(url)+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
+    ?'<a data-sign="'+escU(url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(url)+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
     :'<a data-sign="'+escU(url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname?esc(fname):'\u05e7\u05d5\u05d1\u05e5')+'</a>';
   area.innerHTML=preview+'<br><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="_attachClear(\''+areaId+'\')">\u05d4\u05e1\u05e8</button>';_signifyDom(area);
 }
@@ -10622,9 +10622,11 @@ function _expPdf(){window.print();}
   btn.style.cssText='position:fixed;bottom:80px;left:14px;z-index:99;width:42px;height:42px;border-radius:50%;background:#1a1d23;color:#fff;border:none;font-size:20px;cursor:pointer;display:none;box-shadow:0 2px 8px rgba(0,0,0,.3)';
   btn.onclick=function(){window.scrollTo({top:0,behavior:'smooth'});};
   document.body.appendChild(btn);
+  // Passive listener so iOS Safari does not block scroll waiting on the
+  // handler. We only ever read scrollY + toggle a style, never preventDefault.
   window.addEventListener('scroll',function(){
     btn.style.display=window.scrollY>200?'block':'none';
-  });
+  },{passive:true});
 })();
 </script>
 </body>
