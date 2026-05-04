@@ -315,7 +315,7 @@ body.hc .fab:hover{transform:none}
 .cap-fab{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));right:16px;left:auto;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4a9adf);color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 22px rgba(124,58,237,.55);border:none;cursor:pointer;direction:ltr}
 .cap-fab:active{transform:scale(.94)}
 .cap-fab::after{content:'דווח';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#7c3aed;background:#fff;padding:2px 8px;border-radius:999px;border:1px solid #d8b4fe;white-space:nowrap;font-family:inherit;line-height:1.3}
-body.emp-mode .cap-fab{display:none}
+body.emp-mode .cap-fab,body.emp-mode #ask-fab{display:none}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -1370,6 +1370,26 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div><!-- /main -->
 
 <button id="cap-fab" class="cap-fab" onclick="capOpen()" title="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;" aria-label="&#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1499;&#1501;">&#10024;</button>
+<button id="ask-fab" onclick="openModal('m-ask');if(typeof _askInit==='function')_askInit();" title="&#1513;&#1488;&#1500; &#1488;&#1514; &#1492;&#1506;&#1493;&#1494;&#1512;" aria-label="&#1513;&#1488;&#1500;" style="position:fixed;bottom:calc(160px + env(safe-area-inset-bottom));right:16px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#0d9488);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 22px rgba(13,148,136,.45);border:none;cursor:pointer">&#128172;</button>
+
+<!-- SMART ASSISTANT (ASK) MODAL -->
+<div class="overlay" id="ov-ask" onclick="closeModal('m-ask')"></div>
+<div class="modal" id="m-ask" style="display:none;max-width:600px">
+  <button class="close-btn" onclick="closeModal('m-ask')">&#10005;</button>
+  <div class="modal-title">&#128172; &#1513;&#1488;&#1500; &#1488;&#1514; &#1492;&#1506;&#1493;&#1494;&#1512; (AI)</div>
+  <div style="font-size:11px;color:var(--t3);line-height:1.6;margin-bottom:8px">&#1513;&#1488;&#1500; &#1513;&#1488;&#1500;&#1493;&#1514; &#1506;&#1500; &#1492;&#1504;&#1514;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1498;. &#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: "&#1499;&#1502;&#1492; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;?", "&#1502;&#1497; &#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1499;&#1502;&#1492; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;?", "&#1502;&#1492; &#1493;&#1499;&#1502;&#1492; &#1512;&#1497;&#1513;&#1497;&#1493;&#1504;&#1493;&#1514; &#1497;&#1508;&#1493;&#1490; &#1492;&#1495;&#1493;&#1491;&#1513;?"</div>
+  <div id="ask-history" style="max-height:50vh;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.6"></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+    <button class="btn btn-d btn-sm" onclick="_askQuick(this.dataset.q)" data-q="&#1499;&#1502;&#1492; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;?" style="font-size:11px;background:#e2e8f0;color:#1a1d23">NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501;?</button>
+    <button class="btn btn-d btn-sm" onclick="_askQuick(this.dataset.q)" data-q="&#1502;&#1497; &#1492;&#1488;&#1495;&#1512;&#1488;&#1497;&#1501; &#1506;&#1501; &#1499;&#1497; &#1492;&#1499;&#1497; &#1492;&#1512;&#1489;&#1492; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;?" style="font-size:11px;background:#e2e8f0;color:#1a1d23">&#1488;&#1495;&#1512;&#1488;&#1497;&#1501; &#1506;&#1502;&#1493;&#1505;&#1497;&#1501;</button>
+    <button class="btn btn-d btn-sm" onclick="_askQuick(this.dataset.q)" data-q="&#1502;&#1492; &#1493;&#1499;&#1502;&#1492; &#1512;&#1497;&#1513;&#1497;&#1493;&#1504;&#1493;&#1514; &#1497;&#1508;&#1493;&#1490;&#1493; &#1492;&#1495;&#1493;&#1491;&#1513;?" style="font-size:11px;background:#e2e8f0;color:#1a1d23">&#1514;&#1493;&#1511;&#1508;&#1497;&#1501; &#1492;&#1495;&#1493;&#1491;&#1513;</button>
+    <button class="btn btn-d btn-sm" onclick="_askQuick(this.dataset.q)" data-q="&#1499;&#1502;&#1492; &#1505;&#1497;&#1497;&#1493;&#1512;&#1497;&#1501; &#1489;&#1493;&#1511;&#1512; &#1489;&#1493;&#1510;&#1506;&#1493; &#1492;&#1495;&#1493;&#1491;&#1513;?" style="font-size:11px;background:#e2e8f0;color:#1a1d23">&#1505;&#1497;&#1493;&#1512;&#1497;&#1501; &#1489;&#1495;&#1493;&#1491;&#1513;</button>
+  </div>
+  <div style="display:flex;gap:6px">
+    <input id="ask-input" placeholder="&#1513;&#1488;&#1500; &#1513;&#1488;&#1500;&#1492;..." style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px" onkeydown="if(event.key==='Enter'){_askSend();event.preventDefault();}">
+    <button class="btn btn-p" onclick="_askSend()" style="background:#16a34a;border-color:#16a34a">&#128172; &#1513;&#1488;&#1500;</button>
+  </div>
+</div>
 
 <!-- SMART CAPTURE MODAL -->
 <div class="overlay" id="ov-cap" onclick="capClose()"></div>
@@ -9879,6 +9899,90 @@ window._tskBulkAI=function(){
       }
     })
     .catch(function(e){toast('שגיאה: '+(e&&e.message||e));});
+};
+// === Smart Assistant — natural-language Q&A over the safety DB ===
+// User asks questions in Hebrew (or English) about their data. We build a
+// compact aggregate snapshot (counts, top items) and send to Llama 3.3 70B
+// with the question. The AI answers grounded in the snapshot — no DB
+// access from the AI side, no hallucination of records.
+window._askInit=function(){
+  var hist=g('ask-history');
+  if(hist && !hist.dataset.inited){
+    hist.dataset.inited='1';
+    hist.innerHTML='<div style="color:var(--t3);text-align:center;padding:20px;font-size:12px">👋 שלום! שאל אותי כל שאלה על הנתונים שלך — NCRs, משימות, תוקפים, סיורים, וכל דבר אחר. אני יכול לסכם, להשוות, ולסייע בקבלת החלטות.</div>';
+  }
+  var inp=g('ask-input');if(inp)setTimeout(function(){try{inp.focus();}catch(e){}},100);
+};
+window._askQuick=function(q){
+  var inp=g('ask-input');if(inp)inp.value=q;
+  _askSend();
+};
+function _askBuildSnapshot(){
+  var todayDate=new Date().toISOString().split('T')[0];
+  var nowMs=Date.now();
+  var s={today:todayDate};
+  // Counts per main table.
+  s.counts={
+    ncr_total:(DB.ncr||[]).length,
+    ncr_open:(DB.ncr||[]).filter(function(n){return n.s!=='סגור';}).length,
+    ncr_critical:(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&(n.sv==='קריטי'||n.p==='קריטי');}).length,
+    inc_total:(DB.inc||[]).length,
+    inc_open:(DB.inc||[]).filter(function(i){return i.st!=='סגור';}).length,
+    nm_total:(DB.near_miss||[]).length,
+    tasks_total:(DB.tasks||[]).length,
+    tasks_open:(DB.tasks||[]).filter(function(t){return t.status!=='הושלם'&&t.status!=='בוטל';}).length,
+    tasks_overdue:(DB.tasks||[]).filter(function(t){if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;return new Date(t.due).getTime()<nowMs;}).length,
+    rsk_total:(DB.rsk||[]).length,
+    rounds_30d:(DB.rounds||[]).filter(function(r){var t=new Date(r.d).getTime();return !isNaN(t)&&(nowMs-t)/86400000<=30;}).length,
+    toolbox_30d:(DB.toolbox||[]).filter(function(r){var t=new Date(r.d).getTime();return !isNaN(t)&&(nowMs-t)/86400000<=30;}).length
+  };
+  // Top assignees by open task count.
+  var byAss={};(DB.tasks||[]).forEach(function(t){if(t.assignee&&t.status!=='הושלם'&&t.status!=='בוטל')byAss[t.assignee]=(byAss[t.assignee]||0)+1;});
+  s.top_assignees=Object.keys(byAss).map(function(k){return {assignee:k,open_tasks:byAss[k]};}).sort(function(a,b){return b.open_tasks-a.open_tasks;}).slice(0,8);
+  // Top 5 critical/high open NCRs.
+  s.top_ncrs=(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&(n.p==='קריטי'||n.p==='גבוה'||n.sv==='קריטי'||n.sv==='גבוה');}).slice(0,5).map(function(n){
+    return {num:n.num,description:String(n.d||'').substring(0,80),priority:n.p||n.sv,opened:n.sd||n.src_date};
+  });
+  // Expirations within next 30 days.
+  var endW=nowMs+30*86400000;var exp=[];
+  ['ppe','tr','docs','ctr','equip_inspections','med'].forEach(function(k){
+    (DB[k]||[]).forEach(function(r){if(!r.e)return;var t=new Date(r.e).getTime();if(isNaN(t))return;if(t>=nowMs-86400000&&t<=endW){exp.push({type:k,name:String(r.n||r.t||r.full_name||r.code||'').substring(0,40),expiry:r.e,days_left:Math.floor((t-nowMs)/86400000)});}});
+  });
+  exp.sort(function(a,b){return a.days_left-b.days_left;});
+  s.expirations_30d=exp.slice(0,15);
+  return s;
+}
+window._askSend=function(){
+  var inp=g('ask-input');var hist=g('ask-history');
+  var q=inp?String(inp.value||'').trim():'';
+  if(!q)return;
+  if(!hist)return;
+  // Render user question
+  hist.innerHTML+='<div style="background:#dbeafe;border-radius:10px;padding:8px 12px;margin:6px 0 6px auto;max-width:80%;color:#1e40af;font-weight:600">'+esc(q)+'</div>';
+  hist.innerHTML+='<div data-pending="1" style="color:var(--t3);padding:8px 12px;font-size:12px">⏳ חושב...</div>';
+  hist.scrollTop=hist.scrollHeight;
+  inp.value='';
+  var snap=_askBuildSnapshot();
+  var aiPrompt='אתה עוזר AI במערכת ניהול בטיחות תעשייתית בישראל. ענה על השאלה של המשתמש בעברית, **אך ורק על סמך הנתונים שצורפו**. אל תמציא נתונים. אם השאלה לא נכללת בנתונים שצורפו, אמור: "אין לי את הנתון הזה כרגע".\n\n'+
+    'תשובה קצרה ומדויקת (1-3 משפטים, או רשימה אם מתאים). השתמש במספרים מדויקים מתוך הנתונים. אם רלוונטי — צטט שמות אחראים / מספרי NCR / תאריכים.\n\n'+
+    'הנתונים (אצלך לקריאה בלבד):\n'+JSON.stringify(snap,null,2)+'\n\n'+
+    'השאלה:\n'+q;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,
+    messages:[{role:'user',content:aiPrompt}]
+  })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
+    .then(function(res){
+      var pend=hist.querySelector('[data-pending="1"]');if(pend)pend.remove();
+      if(!res.ok){hist.innerHTML+='<div style="color:var(--bad);font-size:12px;padding:8px">שגיאת AI ('+res.status+')</div>';return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){hist.innerHTML+='<div style="color:var(--bad);font-size:12px;padding:8px">שגיאת JSON</div>';return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){hist.innerHTML+='<div class="et" style="padding:8px;font-size:12px">אין תשובה</div>';return;}
+      hist.innerHTML+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:6px auto 6px 0;max-width:90%;color:#1a1d23;white-space:pre-wrap;line-height:1.6">🤖 '+esc(content)+'</div>';
+      hist.scrollTop=hist.scrollHeight;
+    }).catch(function(e){
+      var pend=hist.querySelector('[data-pending="1"]');if(pend)pend.remove();
+      hist.innerHTML+='<div style="color:var(--bad);font-size:12px;padding:8px">שגיאה: '+esc(String(e&&e.message||e))+'</div>';
+    });
 };
 // Generic OCR helper. Reads a File (image), sends to Workers AI Vision
 // (`@cf/meta/llama-3.2-11b-vision-instruct`) with a domain-specific prompt,
