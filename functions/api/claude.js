@@ -83,7 +83,18 @@ export async function onRequest({ request, env }) {
       };
       return jsonResp(out, 200, cors);
     } catch (err) {
-      return jsonResp({ error: 'Workers AI error: ' + String((err && err.message) || err) }, 500, cors);
+      const m = String((err && err.message) || err);
+      // Workers AI free tier = 10K neurons/day. When exceeded, the binding
+      // throws with a "neuron" / "limit" / "rate" mention. Map to 429 so the
+      // client can show a friendly "try again later" message and back off.
+      const looksLikeRate = /neuron|rate.?limit|exceed|quota|too many/i.test(m);
+      const status = looksLikeRate ? 429 : 500;
+      const headers = { ...cors };
+      if (looksLikeRate) headers['Retry-After'] = '3600'; // 1 hour
+      return new Response(JSON.stringify({
+        error: looksLikeRate ? 'Daily AI quota exceeded' : ('Workers AI error: ' + m),
+        retry_after_seconds: looksLikeRate ? 3600 : null
+      }), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
     }
   }
 

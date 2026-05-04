@@ -636,7 +636,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" value="+972547940073" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" value="+972547940073" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
       <button class="btn btn-p" onclick="_waTestSend()" style="font-size:13px;white-space:nowrap">&#128241; &#1513;&#1500;&#1495;</button>
       <button class="btn btn-d" onclick="_waDiagnose()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1488;&#1489;&#1495;&#1503; &#1488;&#1514; &#1492;&#1488;&#1497;&#1504;&#1496;&#1490;&#1512;&#1510;&#1497;&#1492; &#1489;&#1500;&#1497; &#1500;&#1513;&#1500;&#1493;&#1495; &#1492;&#1493;&#1491;&#1506;&#1492;">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
     </div>
@@ -2581,8 +2581,20 @@ function _rtStart(){
         if(pill){pill.title='Realtime: '+st;if(st==='SUBSCRIBED')pill.setAttribute('data-rt','on');}
       });
       _sbRT=c;
+      // Cache the channel object so _rtStop() can unsubscribe cleanly.
+      _sbRTChannel=ch;
     }catch(e){_rtState='err';}
   }).catch(function(){_rtState='err';});
+}
+// Stop realtime subscription. Called on logout to release the websocket
+// instead of leaving a dangling connection (memory leak + unnecessary egress).
+var _sbRTChannel=null;
+function _rtStop(){
+  try{
+    if(_sbRTChannel){_sbRTChannel.unsubscribe();_sbRTChannel=null;}
+    if(_sbRT&&_sbRT.removeAllChannels)_sbRT.removeAllChannels();
+  }catch(e){console.warn('[rt-stop]',e&&e.message);}
+  _sbRT=null;_rtState='off';
 }
 // Realtime event handler — mutates DB synchronously, then defers sdb() and
 // _sbRefresh to a single rAF. Bursts of N events (e.g. 35 INSERTs from a
@@ -10756,7 +10768,7 @@ function doLogin(){
       var u=rows[0];
       var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
       if(!approved){
-        try{_sbClient.auth.signOut();}catch(e){}
+        try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
         _sbToken=null;_sbAuthPromise=null;
         if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
         _loginErr('\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d8\u05e8\u05dd \u05d0\u05d5\u05e9\u05e8 \u05e2\u05f4\u05d9 \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05e0\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df.');
@@ -10766,7 +10778,7 @@ function doLogin(){
       for(var k in u)_currentUser[k]=u[k];
       _finishLogin(lb);
     }).catch(function(err){
-      try{_sbClient.auth.signOut();}catch(e){}
+      try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
       _sbToken=null;_sbAuthPromise=null;
       if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
       _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e8\u05e9\u05d0\u05d4: '+(err&&err.message||err));
@@ -10803,7 +10815,7 @@ function empToggle(on){
       goPage((typeof _appPrefsLandingPage==='function')?_appPrefsLandingPage():'dash');
     }else{
       _isAdmin=false;
-      try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
+      try{_rtStop();}catch(e){}try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
       _sbToken=null;_sbAuthPromise=null;
       var app=g('app');if(app)app.style.display='none';
       var ls=g('login');if(ls)ls.style.display='flex';
@@ -11040,7 +11052,15 @@ window._waTestSend=function(){
   var inp=g('dash-wa-phone');
   var to=inp?String(inp.value||'').trim():'';
   if(!to){var rEl=g('dash-wa-result');if(rEl)rEl.textContent='\u2717 \u05d4\u05d6\u05df \u05de\u05e1\u05e4\u05e8';return;}
-  try{localStorage.setItem('tfgn_wa_last',to);}catch(e){}
+  // Validate Israeli mobile format. Meta WhatsApp accepts +972NXXXXXXXX (9
+  // digits after country code). Without validation, malformed numbers waste
+  // an API call and return a confusing Meta error.
+  if(!/^\+?972[0-9]{9}$/.test(to)){
+    var r2=g('dash-wa-result');
+    if(r2)r2.textContent='\u2717 \u05e4\u05d5\u05e8\u05de\u05d8 \u05e9\u05d2\u05d5\u05d9. \u05d3\u05d5\u05d2\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05ea: \u200e+972547940073';
+    return;
+  }
+  try{localStorage.setItem('tfgn_wa_last',to);}catch(e){console.warn('[wa] last save failed:',e&&e.message);}
   _waSend(to,{template:'hello_world'});
 };
 window._waTestPrompt=window._waTestSend;
