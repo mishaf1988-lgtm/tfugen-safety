@@ -8489,6 +8489,21 @@ function showView(tbl,id){
   if(tbl==='ncr'){
     html+='<div id="ncr-comments-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:13px">&#128172; \u05d4\u05e2\u05e8\u05d5\u05ea (<span id="ncr-comments-count">0</span>)</div></div><div id="ncr-comments-list" style="font-size:12px;color:#888">\u05d8\u05d5\u05e2\u05df...</div><div style="display:flex;gap:6px;margin-top:8px"><input id="ncr-comment-input" placeholder="\u05d4\u05d5\u05e1\u05e3 \u05d4\u05e2\u05e8\u05d4..." style="flex:1;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:8px;font-family:inherit"><button data-cid="'+esc(id)+'" onclick="_ncrCommentAdd(this.dataset.cid)" style="padding:8px 14px;background:#3b82f6;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">\u05e4\u05e8\u05e1\u05dd</button></div></div>';
   }
+  // ISO 45001 \u00a710.2 \u2014 5-Why on incidents. Inline editor since incidents
+  // have no edit modal (m-inc is create-only).
+  if(tbl==='inc'){
+    var fw=rec.five_why||'';
+    var hasFw=!!fw;
+    html+='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px;background:#fef3c7;border-radius:8px;padding:12px;border:1px solid #fcd34d">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:700;font-size:13px;color:#92400e">\ud83d\udd0d \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u2014 \u05e9\u05d5\u05e8\u05e9 \u05ea\u05e7\u05e8\u05d9\u05ea</div>';
+    html+='<button data-iid="'+esc(id)+'" onclick="_incFiveWhyEdit(this.dataset.iid)" style="padding:5px 12px;background:#92400e;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">'+(hasFw?'\u270f\ufe0f \u05e2\u05e8\u05d5\u05da':'+ \u05d4\u05d5\u05e1\u05e3 \u05e0\u05d9\u05ea\u05d5\u05d7')+'</button></div>';
+    if(hasFw){
+      html+='<div style="font-size:12px;color:#1a1d23;white-space:pre-wrap;line-height:1.6">'+esc(fw)+'</div>';
+    }else{
+      html+='<div style="font-size:11px;color:#92400e">\u05dc\u05de\u05d4 \u05e7\u05e8\u05d4 \u05d4\u05d0\u05d9\u05e8\u05d5\u05e2? \u2014 5 \u05e4\u05e2\u05de\u05d9\u05dd "\u05dc\u05de\u05d4?" \u05de\u05d2\u05d9\u05e2\u05d9\u05dd \u05dc\u05e9\u05d5\u05e8\u05e9 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9.</div>';
+    }
+    html+='</div>';
+  }
   if(body){body.innerHTML=html;_signifyDom(body);}
   goPage('view');
   if(tbl==='ncr')_ncrCommentsLoad(id);
@@ -8590,6 +8605,20 @@ window._ncrCommentAdd=function(id){
     inp.value='';toast('\u05e4\u05d5\u05e8\u05e1\u05dd \u2713');
     _ncrCommentsLoad(id);
   }).catch(function(err){toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err));});
+};
+// ISO 45001 \u00a710.2 \u2014 5-Why editor for incidents. Inline (no new modal).
+window._incFiveWhyEdit=function(id){
+  var rec=(DB.inc||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  var template=rec.five_why||
+    '1. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   \n2. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   \n3. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   \n4. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   \n5. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   ';
+  var v=prompt('\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u2014 \u05e9\u05d5\u05e8\u05e9 \u05d4\u05ea\u05e7\u05e8\u05d9\u05ea\n\n\u05de\u05dc\u05d0 5 \u05e9\u05d0\u05dc\u05d5\u05ea "\u05dc\u05de\u05d4?" \u05d5\u05ea\u05e9\u05d5\u05d1\u05d5\u05ea (\u05e9\u05d5\u05e8\u05d4 \u05dc\u05db\u05dc \u05e9\u05d0\u05dc\u05d4):',template);
+  if(v===null)return;
+  rec.five_why=v.trim()||null;
+  if(typeof sbUpd==='function')sbUpd('inc',rec);
+  sdb();
+  toast('5-Why \u05e0\u05e9\u05de\u05e8 \u2713');
+  showView('inc',id);
 };
 var _SEARCH_TBLS=[
   {tbl:'ncr',label:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
