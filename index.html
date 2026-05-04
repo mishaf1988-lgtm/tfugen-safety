@@ -9650,10 +9650,20 @@ window._waDiagnose=function(){
       lines.push(dot(env.META_ACCESS_TOKEN)+' META_ACCESS_TOKEN: '+esc(String(env.META_ACCESS_TOKEN||'?'))+'<br>');
       lines.push((/^set/.test(String(env.META_WABA_ID))?'\u2705':'\u26a0\ufe0f')+' META_WABA_ID: '+esc(String(env.META_WABA_ID||'?'))+'<br>');
       lines.push('<br><strong>Meta API permissions:</strong><br>');
+      var reach=meta.reachability||{};
       var idn=meta.identity||{};
       var msg=meta.messaging||{};
       var mgmt=meta.management||{};
       var probeIcon=function(p){return p&&p.ok?'\u2705':'\u274c';};
+      // Reachability "ok" means we got the EXPECTED bad-token error (code 190).
+      // If it got code 200 instead, that means CF worker IP is blocked.
+      var reachErr=reach.json&&reach.json.error||{};
+      var reachOk=reachErr.code===190;
+      lines.push((reachOk?'\u2705':'\u274c')+' reachability (Meta API from CF): HTTP '+(reach.status||'?'));
+      if(reachOk){lines.push(' \u2014 healthy (rejected bogus token correctly)');}
+      else if(reach.networkError){lines.push(' \u2014 network: '+esc(String(reach.networkError).substring(0,80)));}
+      else if(reachErr.code){lines.push(' \u2014 code '+reachErr.code+': '+esc(String(reachErr.message||'').substring(0,80)));}
+      lines.push('<br>');
       lines.push(probeIcon(idn)+' identity (token alive): HTTP '+(idn.status||'?'));
       if(idn.ok && idn.json){lines.push(' \u2014 '+esc(String(idn.json.name||idn.json.id||'').substring(0,40)));}
       else if(idn.json && idn.json.error){lines.push(' \u2014 code '+idn.json.error.code+': '+esc(String(idn.json.error.message||'').substring(0,80)));}
