@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (36+ PRs · Performance phases all shipped · web-vitals · RLS initPlan · auto-version SW · WhatsApp restored · Legal periodic review · env_aspects periodic review · Agent Dashboard · Incident edit modal · **AI 5-Why on Inc + NCR (Claude haiku 4.5)** · **AI impact+controls suggest on env_aspects** · **Compliance Score widget** · **Top Risks widget** · **4×4 RPN heat-map on env_aspects** · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-04 (40+ PRs · Performance phases all shipped · WhatsApp restored · Legal + env_aspects periodic review · Agent Dashboard (now with 2 sections) · Incident edit modal · **5 AI Suggest helpers (5-Why Inc/NCR · NCR rc+c · env_aspects impact+controls · risk P/S/AC)** · 3 dashboard widgets (Compliance Score · Top Risks · env_aspects review) · 4×4 RPN heat-map · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -17,7 +17,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `43effcf` |
+| Commit | `3e771ac` |
 | תאריך | 2026-05-04 |
 | Tag | — (טרם נוצר) |
 | מצב | פאזות 0+1+2+3+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft 'new version' pill · **SW auto-version via CF function (no more manual bumps)** · **WhatsApp restored — Meta App Switch-to-Live + privacy.html + user-data-deletion.html** · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
@@ -155,6 +155,9 @@
 - [x] **Compliance Score widget בדשבורד (PR #375, 2026-05-04)** — % עמידה ברגולציה. בסיס: חוקים שאינם 'לא רלוונטי'. גוון: ירוק ≥90, כתום 70-89, אדום <70. סרגל progress visual עם 3 פלחים. ISO 14001:9.1.2.
 - [x] **Top Risks by RPN widget בדשבורד (PR #376, 2026-05-04)** — top 5 סיכונים ממאגר rsk לפי RPN (P×S) יורד. badge עם צבע + breakdown. קליק → showView. ISO 45001:6.1.2.
 - [x] **4×4 RPN heat-map ב-env_aspects (PR #377, 2026-05-04)** — מקביל ל-5×5 ב-pg-rsk. `<details>` collapsed by default. כל תא מציג ספירה + צבע לפי RPN. legend בעברית.
+- [x] **NCR AI rc + c suggest (PR #379, 2026-05-04)** — כפתור 🤖 במודאל NCR שממלא "סיבת שורש" ו-"פעולה מתקנת" על בסיס תיאור + 5-Why (אם קיים). Claude haiku-4-5, JSON {rc,c}. ממלא רק שדות ריקים.
+- [x] **Risk register AI suggest (PR #380, 2026-05-04)** — כפתור 🤖 במודאל סיכון שממלא P (1-4), S (1-4), ופעולות הפחתה. ISO 45001:6.1.2 (HIRA). Claude haiku-4-5, JSON {p,s,ac}. P/S overwrite-able, AC רק אם ריק.
+- [x] **Agent Dashboard expanded (PR #381, 2026-05-04)** — 2 sections עכשיו: כלי AI עם ממשק ייעודי (NCR Agent / Smart Capture / Legal Q&A) + AI Suggest במודאלים (5-Why / NCR rc+c / env_aspects / risk). מטריקות לכל אחד.
 - [x] **Phase 3 lite — hourly update + soft pill (PR #354)** — `setInterval(reg.update, 1h)` מכריח בדיקה שעתית של `/sw.js` (מתקן את 24h של iOS Safari). במקום auto-reload אחרי `sw-updated`, מוצג pill קבוע בתחתית: "🔄 גרסה חדשה זמינה — לחץ לרענון" — המשתמש שולט מתי לרענן, לא מאבד טפסי NCR באמצע מילוי. ה-SW עצמו לא השתנה — רק ה-handler ב-index.html.
 - [x] **Phase 3 part 2 — SW auto-version via CF Pages function (PR #360)** — סטטי `sw.js` הוסר; `functions/sw.js.js` מחזיר את אותו תוכן עם `tfgn-${BUILD}` כש-BUILD = 7 תווים ראשונים של `CF_PAGES_COMMIT_SHA`. `_routes.json` כולל `/sw.js`. **אין יותר עליות גרסה ידניות** ב-PRs.
 - [x] **WhatsApp restored end-to-end (2026-05-04)** — אחרי המעבר ל-Cloudflare ב-3/5, WhatsApp נכשל עם code 200 "API access blocked" על כל endpoint. נבנתה סדרת אבחון ב-`/api/wa-status` (PRs #356-#359) עם 4 probes בלתי-תלויים (reachability, identity, messaging, management) שאיתרו: ה-Meta App "בטיחות" (App ID 2100358170694098) היה ב-**Development Mode**. נבנו `privacy.html` ו-`user-data-deletion.html` (PR #361) למילוי דרישות Meta ל-Live Mode. אחרי מעבר ל-Live, כל ה-probes חזרו ✅ ו-WhatsApp send עובד מ-Cloudflare.
