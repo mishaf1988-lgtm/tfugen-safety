@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (Performance Phase 0+1+2+3+4+5(3/5)+6 shipped · 30 PRs · web-vitals · debounce · memoize · Cache-Control · SSE keepalive · Storage cacheControl · RLS perf wrap (initPlan) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft pill · SW auto-version via CF Pages function · WhatsApp restored end-to-end · Legal Register periodic review · Incident 5-Why · **env_aspects periodic review (ISO 14001 §6.1.3)** · **Agent Dashboard** · **Incident edit modal** · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-04 (36+ PRs · Performance phases all shipped · web-vitals · RLS initPlan · auto-version SW · WhatsApp restored · Legal periodic review · env_aspects periodic review · Agent Dashboard · Incident edit modal · **AI 5-Why on Inc + NCR (Claude haiku 4.5)** · **AI impact+controls suggest on env_aspects** · **Compliance Score widget** · **Top Risks widget** · **4×4 RPN heat-map on env_aspects** · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -17,7 +17,7 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `af3c8b4` |
+| Commit | `43effcf` |
 | תאריך | 2026-05-04 |
 | Tag | — (טרם נוצר) |
 | מצב | פאזות 0+1+2+3+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft 'new version' pill · **SW auto-version via CF function (no more manual bumps)** · **WhatsApp restored — Meta App Switch-to-Live + privacy.html + user-data-deletion.html** · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
@@ -150,6 +150,11 @@
 - [x] **env_aspects periodic review (PR #368, 2026-05-04)** — מקבילה ל-Legal Register, על Environmental Aspects. ISO 14001 §6.1.3. עמודה חדשה "סקירה" עם badge state (ok/soon/overdue/never) מבוסס `review_date` הקיים. 4 quick-filter buttons. Dashboard widget "🌳 היבטים סביבתיים לסקירה" — top 5. ללא migration.
 - [x] **Agent Dashboard (PR #369, 2026-05-04)** — דף חדש `pg-agents` admin-only עם 4 כרטיסי AI: NCR Agent, Smart Capture, Legal AI Q&A, 5-Why Investigation. תצוגת metrics (counts) + CTA buttons. בתפריט הצדדי תחת "הנהלה". ללא migration.
 - [x] **Incident edit modal (PR #370, 2026-05-04)** — `m-inc` היה create-only עד אז. נוסף `i-id` hidden + `editInc(id)` + `openNewIncModal()`. svInc ענ branches: insert חדש או update קיים. five_why נשמר בעת update (לא ב-modal). כפתור ✎ נוסף ב-rInc list. ה-incident_critical notification לא מופעל בעת edit (רק בקריאה ראשונה).
+- [x] **AI 5-Why suggestion ל-Inc + NCR (PRs #372 + #373, 2026-05-04)** — Claude haiku-4-5 מציע ניתוח 5-Why מובנה. ב-Inc: כפתור 🤖 ב-callout של showView, התשובה ב-prompt() ערוך-ושמור. ב-NCR: כפתור 🤖 ליד ה-textarea במודאל, התשובה ממלאת את ה-textarea ישירות (משתמש שומר עם 'שמור'). עלות ~$0.001 לקריאה.
+- [x] **AI impact + controls suggest ל-env_aspects (PR #374, 2026-05-04)** — כפתור 🤖 במודאל m-easp שממלא 3 שדות בעת לחיצה (impact, controls, additional_controls) על בסיס aspect+activity. JSON response, רק שדות ריקים מתעדכנים (לא דורסת קלט קיים). ISO 14001:6.1.2.
+- [x] **Compliance Score widget בדשבורד (PR #375, 2026-05-04)** — % עמידה ברגולציה. בסיס: חוקים שאינם 'לא רלוונטי'. גוון: ירוק ≥90, כתום 70-89, אדום <70. סרגל progress visual עם 3 פלחים. ISO 14001:9.1.2.
+- [x] **Top Risks by RPN widget בדשבורד (PR #376, 2026-05-04)** — top 5 סיכונים ממאגר rsk לפי RPN (P×S) יורד. badge עם צבע + breakdown. קליק → showView. ISO 45001:6.1.2.
+- [x] **4×4 RPN heat-map ב-env_aspects (PR #377, 2026-05-04)** — מקביל ל-5×5 ב-pg-rsk. `<details>` collapsed by default. כל תא מציג ספירה + צבע לפי RPN. legend בעברית.
 - [x] **Phase 3 lite — hourly update + soft pill (PR #354)** — `setInterval(reg.update, 1h)` מכריח בדיקה שעתית של `/sw.js` (מתקן את 24h של iOS Safari). במקום auto-reload אחרי `sw-updated`, מוצג pill קבוע בתחתית: "🔄 גרסה חדשה זמינה — לחץ לרענון" — המשתמש שולט מתי לרענן, לא מאבד טפסי NCR באמצע מילוי. ה-SW עצמו לא השתנה — רק ה-handler ב-index.html.
 - [x] **Phase 3 part 2 — SW auto-version via CF Pages function (PR #360)** — סטטי `sw.js` הוסר; `functions/sw.js.js` מחזיר את אותו תוכן עם `tfgn-${BUILD}` כש-BUILD = 7 תווים ראשונים של `CF_PAGES_COMMIT_SHA`. `_routes.json` כולל `/sw.js`. **אין יותר עליות גרסה ידניות** ב-PRs.
 - [x] **WhatsApp restored end-to-end (2026-05-04)** — אחרי המעבר ל-Cloudflare ב-3/5, WhatsApp נכשל עם code 200 "API access blocked" על כל endpoint. נבנתה סדרת אבחון ב-`/api/wa-status` (PRs #356-#359) עם 4 probes בלתי-תלויים (reachability, identity, messaging, management) שאיתרו: ה-Meta App "בטיחות" (App ID 2100358170694098) היה ב-**Development Mode**. נבנו `privacy.html` ו-`user-data-deletion.html` (PR #361) למילוי דרישות Meta ל-Live Mode. אחרי מעבר ל-Live, כל ה-probes חזרו ✅ ו-WhatsApp send עובד מ-Cloudflare.
