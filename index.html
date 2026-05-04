@@ -404,6 +404,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 @media(min-width:1200px){.main{max-width:1200px}}
 @media(min-width:1500px){.main{max-width:1400px}}
 @media(min-width:1800px){.main{max-width:1700px}}
+/* Wide-screen dashboard: flow short widget cards into masonry-like columns
+   so we don't waste vertical real estate on a tall stack of half-empty cards.
+   The wide-format hero blocks (streak, today, monthly, quick-add row,
+   page/section titles, kgrid) stay full width via column-span:all. */
+@media(min-width:1080px){
+  #pg-dash{column-count:2;column-gap:14px}
+  #pg-dash > .streak-hero,#pg-dash > .today-list,#pg-dash > .monthly-strip,#pg-dash > .row,#pg-dash > .kgrid,#pg-dash > .dash-section-title,#pg-dash > .page-title{column-span:all;-webkit-column-span:all}
+  #pg-dash > .card{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
+}
+@media(min-width:1500px){#pg-dash{column-count:3}}
 
 .bn .em{font-size:26px;line-height:1.2;display:block;}
 
