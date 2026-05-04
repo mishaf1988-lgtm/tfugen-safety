@@ -415,6 +415,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   .kgrid{grid-template-columns:repeat(4,1fr)}
   .overlay{align-items:center;justify-content:center}
   .modal{position:relative;border-radius:12px;max-width:600px;margin:0 auto;bottom:auto;left:auto;right:auto}
+  /* Sticky table headers on desktop — long lists keep their column
+     headers visible while scrolling. Mobile uses cardified rows so this
+     is desktop-only. The 56px offset matches the topbar height. */
+  .tbl-wrap thead th{position:sticky;top:56px;z-index:2}
 }
 /* Wider viewports: let the equipment / NCR / similar data tables breathe.
    Small forms/modals still stay readable because max-width applies to .main
