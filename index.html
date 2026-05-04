@@ -1690,6 +1690,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1492;&#1505;&#1514;&#1489;&#1512;&#1493;&#1514; (1-4)</label><select id="r-p"><option value="1">1 - &#1504;&#1502;&#1493;&#1499;&#1492; &#1502;&#1488;&#1493;&#1491; (&#1499;&#1502;&#1506;&#1496; &#1500;&#1488; &#1497;&#1511;&#1512;&#1492;)</option><option value="2">2 - &#1504;&#1502;&#1493;&#1499;&#1492; (&#1500;&#1506;&#1497;&#1514;&#1497;&#1501; &#1512;&#1495;&#1493;&#1511;&#1493;&#1514;)</option><option value="3" selected>3 - &#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514; (&#1502;&#1491;&#1497; &#1508;&#1506;&#1501;)</option><option value="4">4 - &#1490;&#1489;&#1493;&#1492;&#1492; (&#1499;&#1500; &#1497;&#1493;&#1501;)</option></select></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492; (1-4)</label><select id="r-s"><option value="1">1 - &#1513;&#1493;&#1500;&#1497;&#1514; (&#1506;&#1494;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492;)</option><option value="2">2 - &#1511;&#1500;&#1492; (&#1496;&#1497;&#1508;&#1493;&#1500; &#1512;&#1508;&#1493;&#1488;&#1497;)</option><option value="3" selected>3 - &#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514; (&#1508;&#1490;&#1497;&#1506;&#1492;/&#1502;&#1495;&#1500;&#1492; 30+ &#1497;&#1493;&#1501;)</option><option value="4">4 - &#1495;&#1502;&#1493;&#1512;&#1492; (&#1502;&#1493;&#1493;&#1514; &#1488;&#1493; &#1504;&#1499;&#1493;&#1514;)</option></select></div>
     <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492;</label><textarea id="r-ac"></textarea></div>
+    <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; (ISO 45001:6.1.2)</label><input type="date" id="r-last_review"></div>
     <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1492;&#1510;&#1497;&#1506; P, S, &#1493;&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512; &#1493;&#1492;&#1514;&#1495;&#1493;&#1501;.</div><button type="button" id="rsk-ai-btn" onclick="_rskAI()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1491;&#1497;&#1512;&#1493;&#1490; &#1493;&#1502;&#1497;&#1496;&#1497;&#1490;&#1510;&#1497;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-rsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -3378,11 +3379,26 @@ function svTr(){
 }
 function svRsk(){
   var d=gv('r-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
-  var r={id:gid(),d:d,a:gv('r-a'),o:gv('r-o'),p:gi('r-p')||3,sv:gi('r-s')||3,ac:gv('r-ac')};
+  var r={id:gid(),d:d,a:gv('r-a'),o:gv('r-o'),p:gi('r-p')||3,sv:gi('r-s')||3,ac:gv('r-ac'),last_review:gv('r-last_review')||null};
   DB.rsk.push(r);sbIns('rsk',r);addLog('\u05e1\u05d9\u05db\u05d5\u05df \u05e0\u05d5\u05e1\u05e3: '+d.substring(0,30));sdb();closeModal('m-rsk');
-  ['r-d','r-o','r-ac'].forEach(function(i){var el=g(i);if(el)el.value='';});
-  toast('\u05e1\u05d9\u05db\u05d5\u05df \u05e0\u05e9\u05de\u05e8 &#10003;');rRsk();
+  ['r-d','r-o','r-ac','r-last_review'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  toast('\u05e1\u05d9\u05db\u05d5\u05df \u05e0\u05e9\u05de\u05e8 \u2713');rRsk();
 }
+// Risk register periodic review meta \u2014 ISO 45001:6.1.2 / 6.1.4 obliges a
+// periodic review of risk assessments (typically annual). Returns:
+//   {state:'never'|'overdue'|'soon'|'ok', label, days}
+//   state='never'   \u2192 no last_review set (must do baseline)
+//   state='overdue' \u2192 last_review > 365 days ago
+//   state='soon'    \u2192 last_review > 335 days ago (review due within 30d)
+//   state='ok'      \u2192 last_review \u2264 335 days ago
+window._rskReviewMeta=function(r){
+  if(!r||!r.last_review)return {state:'never',label:'\u05de\u05e2\u05d5\u05dc\u05dd',days:null};
+  var d=new Date(r.last_review);if(isNaN(d))return {state:'never',label:'\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df',days:null};
+  var ageDays=Math.floor((Date.now()-d.getTime())/86400000);
+  if(ageDays>=365)return {state:'overdue',label:'\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3 ('+ageDays+' \u05d9\u05de\u05d9\u05dd)',days:ageDays};
+  if(ageDays>=335)return {state:'soon',label:'\u05d1\u05e2\u05d5\u05d3 '+(365-ageDays)+' \u05d9\u05de\u05d9\u05dd',days:ageDays};
+  return {state:'ok',label:'\u05ea\u05e7\u05e3',days:ageDays};
+};
 function svEmp(){
   var n=gv('e-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
   var r={id:gid(),n:n,r:gv('e-r'),dep:gv('e-d'),s:gv('e-s'),ph:gv('e-ph')};
@@ -7707,7 +7723,14 @@ function rTr(){
 function rRsk(){
   var tb=g('tb-rsk');if(!tb)return;
   if(!DB.rsk.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u26a1<br>\u05d0\u05d9\u05df \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-rsk\')">+ \u05e1\u05d9\u05db\u05d5\u05df \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.rsk.map(function(r){var rpn=r.p*r.sv;return '<tr><td>'+r.d.substring(0,25)+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.rsk.map(function(r){
+    var rpn=r.p*r.sv;
+    var rev=(typeof _rskReviewMeta==='function')?_rskReviewMeta(r):{state:'never',label:'\u2014'};
+    var revBadge=rev.state==='overdue'?'<span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #cc1f1f;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8 '+(rev.days||'?')+' \u05d9\u05de\u05d9\u05dd">\u26a0 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05e4\u05d2\u05d4</span>':
+      rev.state==='soon'?'<span style="display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #d97706;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1\u05e2\u05d5\u05d3 \u05d9\u05de\u05d9\u05dd \u05de\u05e2\u05d8\u05d9\u05dd">\u23f3 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1-30 \u05d9\u05d5\u05dd</span>':
+      rev.state==='never'?'<span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #cc1f1f;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05de\u05e2\u05d5\u05dc\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8">\u26a0 \u05dc\u05dc\u05d0 \u05e1\u05e7\u05d9\u05e8\u05d4</span>':'';
+    return '<tr><td>'+r.d.substring(0,25)+revBadge+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+  }).join('');
   _rskMatrix();
 }
 window.rskTab=function(t){
