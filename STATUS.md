@@ -201,6 +201,28 @@
 
 **🎉 כל פאזות הביצועים (0-6) הושלמו ב-100%.** Phase 7 רק אם המדידות יצביעו על צורך.
 
+### 🔍 Internal audit sweep (2026-05-04, PRs #413 + #414)
+
+סקר מקיף אוטומטי על הקוד (Explore agent) שמצא 13 ממצאים. כולם תוקנו:
+
+**P0 (קריטי) — PR #413:**
+- XSS ב-NCR Agent error display — esc()
+- Excel imports שותקים שגיאות sbIns — עכשיו סופר כשלים, מציג "X נשמרו, Y נכשלו"
+- ncr_patterns / ncr_comments 404 שותק — עכשיו מציג hint למשתמש להריץ מיגרציה
+
+**P1 (ראוי לתקן) — PR #413:**
+- forceSync ללא confirm — עכשיו מבקש אישור (לוחי במיוחד אם יש outbox pending)
+- Draft autosave catches ריקים (NCR/Inc/NM) — עכשיו console.warn
+
+**P2 (ליטוש) — PR #414:**
+- ולידציה לטלפון WhatsApp (`pattern + JS guard`)
+- AI rate-limit handling: Workers AI quota exhausted → 429 + Retry-After 3600
+- Realtime cleanup ב-logout — `_rtStop()` מנקה את ה-channel + websocket
+
+**ממצאים שנדחו:** VIEW_CONFIG fallback כבר בטוח, CSV column validation מיותר עבור משתמש יחיד עם templates ידועים.
+
+**עדיין דורש פעולה ידנית** (3 migrations שלא הורצו): `2026-05-01_ncr_comments.sql`, `2026-04-30_ncr_patterns.sql`, `2026-05-01_ncr_capa_verify.sql`.
+
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
 - [x] **Location filters ל-PTW + EQI + Hzm (PR #151)** — משלים את הסינון בכל 5 הטפסים.
