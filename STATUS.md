@@ -223,6 +223,11 @@
 
 **עדיין דורש פעולה ידנית** (3 migrations שלא הורצו): `2026-05-01_ncr_comments.sql`, `2026-04-30_ncr_patterns.sql`, `2026-05-01_ncr_capa_verify.sql`.
 
+### 📆 New features (2026-05-04, PRs #416 + #417)
+
+- **iCal/Google Calendar export (PR #416)** — תפריט topbar `📆 ייצא לוח שנה`. מייצר .ics סטנדרטי עם כל המשימות הפתוחות + תוקפים מ-PPE/הדרכה/מסמכים/קבלן/רפואי/בדיקות-ציוד. ייבוא ל-Google Calendar / Outlook / iCloud → התראות על הטלפון בלי שצריכים לפתוח את ה-app.
+- **OCR לתעודות הדרכה (PR #417)** — כפתור 🔍 "קרא תעודה" במודאל הדרכה. בוחרים תמונת תעודה (heb/eng), Workers AI Vision (`@cf/meta/llama-3.2-11b-vision-instruct`) מחלץ אוטומטית: שם הקורס, שם העובד, תאריך הוצאה, תוקף, קטגוריה. ממלא רק שדות ריקים. עלות: 0$ (free tier). Generic helper `_ocrAnalyze(file, prompt)` שניתן להרחיב ל-OCR נוסף בעתיד (PDFs של דוחות בדיקה, מסמכי MSDS וכו').
+
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
 - [x] **Location filters ל-PTW + EQI + Hzm (PR #151)** — משלים את הסינון בכל 5 הטפסים.
