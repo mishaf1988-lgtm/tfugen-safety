@@ -272,6 +272,15 @@ body.hc .et-cta:hover,body.hc .et-cta:active{transform:none}
 body.hc .btn-p:hover,body.hc .btn-s:hover,body.hc .btn-d:hover{transform:none;box-shadow:none}
 .btn-sm{padding:10px 14px;font-size:17px;min-height:44px;min-width:44px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+/* When a .row contains a .page-title and an action button, give a bit
+   more breathing space between them on wider screens. */
+@media(min-width:600px){.row{gap:10px}}
+/* Summary-pills mount points: animate in their pills as a group so a fresh
+   render does not flash. The pills inside still get inline styles, this just
+   adds a soft fade-in container. */
+[id$="-summary"]{animation:summary-fade .25s ease-out}
+@keyframes summary-fade{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){[id$="-summary"]{animation:none}}
 
 /* ---- FAB ---- */
 .fab{position:fixed;bottom:70px;left:14px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--red),#a01818);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 20px rgba(204,31,31,.45),0 2px 4px rgba(204,31,31,.2);display:none;transition:transform .18s ease,box-shadow .18s ease}
