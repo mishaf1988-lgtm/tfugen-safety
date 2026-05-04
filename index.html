@@ -8647,12 +8647,15 @@ function showView(tbl,id){
     var fw=rec.five_why||'';
     var hasFw=!!fw;
     html+='<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px;background:#fef3c7;border-radius:8px;padding:12px;border:1px solid #fcd34d">';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:700;font-size:13px;color:#92400e">\ud83d\udd0d \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u2014 \u05e9\u05d5\u05e8\u05e9 \u05ea\u05e7\u05e8\u05d9\u05ea</div>';
-    html+='<button data-iid="'+esc(id)+'" onclick="_incFiveWhyEdit(this.dataset.iid)" style="padding:5px 12px;background:#92400e;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">'+(hasFw?'\u270f\ufe0f \u05e2\u05e8\u05d5\u05da':'+ \u05d4\u05d5\u05e1\u05e3 \u05e0\u05d9\u05ea\u05d5\u05d7')+'</button></div>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px"><div style="font-weight:700;font-size:13px;color:#92400e">\ud83d\udd0d \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u2014 \u05e9\u05d5\u05e8\u05e9 \u05ea\u05e7\u05e8\u05d9\u05ea</div>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    html+='<button data-incfiveai="'+esc(id)+'" onclick="_incFiveWhyAI(this.dataset.incfiveai)" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px" title="\u05d1\u05e7\u05e9 \u05de-AI \u05dc\u05d4\u05e6\u05d9\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d1\u05e1\u05d9\u05e1 \u05d4\u05ea\u05d9\u05d0\u05d5\u05e8">\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI</button>';
+    html+='<button data-iid="'+esc(id)+'" onclick="_incFiveWhyEdit(this.dataset.iid)" style="padding:5px 12px;background:#92400e;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">'+(hasFw?'\u270f\ufe0f \u05e2\u05e8\u05d5\u05da':'+ \u05d4\u05d5\u05e1\u05e3 \u05e0\u05d9\u05ea\u05d5\u05d7')+'</button>';
+    html+='</div></div>';
     if(hasFw){
       html+='<div style="font-size:12px;color:#1a1d23;white-space:pre-wrap;line-height:1.6">'+esc(fw)+'</div>';
     }else{
-      html+='<div style="font-size:11px;color:#92400e">\u05dc\u05de\u05d4 \u05e7\u05e8\u05d4 \u05d4\u05d0\u05d9\u05e8\u05d5\u05e2? \u2014 5 \u05e4\u05e2\u05de\u05d9\u05dd "\u05dc\u05de\u05d4?" \u05de\u05d2\u05d9\u05e2\u05d9\u05dd \u05dc\u05e9\u05d5\u05e8\u05e9 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9.</div>';
+      html+='<div style="font-size:11px;color:#92400e">\u05dc\u05de\u05d4 \u05e7\u05e8\u05d4 \u05d4\u05d0\u05d9\u05e8\u05d5\u05e2? \u2014 5 \u05e4\u05e2\u05de\u05d9\u05dd "\u05dc\u05de\u05d4?" \u05de\u05d2\u05d9\u05e2\u05d9\u05dd \u05dc\u05e9\u05d5\u05e8\u05e9 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9. \u05d4\u05e6\u05e2 AI \u05d9\u05de\u05dc\u05d0 \u05ea\u05d1\u05e0\u05d9\u05ea \u05e8\u05d0\u05e9\u05d5\u05e0\u05d9\u05ea \u05e2\u05dd \u05d4\u05e7\u05e9\u05e8 \u05d4\u05ea\u05e7\u05e8\u05d9\u05ea, \u05d5\u05d0\u05ea\u05d4 \u05ea\u05d5\u05db\u05dc \u05dc\u05e2\u05e8\u05d5\u05da.</div>';
     }
     html+='</div>';
   }
@@ -8771,6 +8774,45 @@ window._incFiveWhyEdit=function(id){
   sdb();
   toast('5-Why \u05e0\u05e9\u05de\u05e8 \u2713');
   showView('inc',id);
+};
+// AI-suggested 5-Why for incidents. Sends incident context to Claude,
+// shows the response in a prompt() so the user can review/edit before save.
+window._incFiveWhyAI=function(id){
+  var rec=(DB.inc||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  var btn=document.querySelector('[data-incfiveai="'+id+'"]');
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
+  var ctx='\u05ea\u05d0\u05e8\u05d9\u05da: '+(rec.dt||rec.d||'?')+'\n'+
+    '\u05ea\u05d9\u05d0\u05d5\u05e8: '+(rec.d||'')+'\n'+
+    '\u05e1\u05d5\u05d2: '+(rec.ty||'?')+'\n'+
+    '\u05d7\u05d5\u05de\u05e8\u05d4: '+(rec.sv||'?')+'\n'+
+    '\u05de\u05d9\u05e7\u05d5\u05dd: '+(rec.l||'?')+'\n'+
+    '\u05d2\u05d5\u05e8\u05dd \u05e9\u05d5\u05e8\u05e9 \u05de\u05d5\u05e6\u05e2 (\u05dc\u05e4\u05e0\u05d9 AI): '+(rec.r||'(\u05e8\u05d9\u05e7)');
+  var aiPrompt='\u05d0\u05ea\u05d4 \u05d9\u05d5\u05e2\u05e5 ISO 45001. \u05d1\u05d4\u05d9\u05e0\u05ea\u05df \u05ea\u05e7\u05e8\u05d9\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4, \u05e6\u05d5\u05e8 \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05de\u05d5\u05d1\u05e0\u05d4 \u2014 5 \u05e9\u05d0\u05dc\u05d5\u05ea "\u05dc\u05de\u05d4?" \u05e2\u05dd \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05ea, \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea. \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05d3\u05e4\u05d5\u05e1 \u05d4\u05d6\u05d4:\n\n'+
+    '1. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 1]\n\n'+
+    '2. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 2]\n\n'+
+    '...\n\n'+
+    '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9]\n\n'+
+    '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
+      if(!res.ok){toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI ('+res.status+')');console.warn('AI 5-Why:',res.txt);return;}
+      var d;try{d=JSON.parse(res.txt);}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05ea JSON \u05de-AI');return;}
+      var content=d.content&&d.content[0]?d.content[0].text:'';
+      if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
+      var v=prompt('\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05de-AI \u2014 \u05e2\u05e8\u05d5\u05da \u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05d9\u05e8\u05d4:',content);
+      if(v===null)return;
+      rec.five_why=v.trim()||null;
+      if(typeof sbUpd==='function')sbUpd('inc',rec);
+      sdb();toast('5-Why \u05e0\u05e9\u05de\u05e8 \u2713');showView('inc',id);
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
+      toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
+    });
 };
 var _SEARCH_TBLS=[
   {tbl:'ncr',label:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
