@@ -2454,6 +2454,7 @@ function _rtApply(tbl,payload){
   }else if(ev==='DELETE'&&or_&&or_.id){
     DB[tbl]=DB[tbl].filter(function(r){return r.id!==or_.id;});
   }else return;
+  if(typeof _invalidateNameCache==='function')_invalidateNameCache(tbl);
   sdb();_sbRefresh(true);
 }
 // One-time outbox sanitizer: strip known-bad fields written by older PDF flow
@@ -7330,16 +7331,34 @@ function _locPopulate(selectId,currentId){
   var sel=g(selectId);if(!sel)return;
   sel.innerHTML=_locOptionsHtml(currentId);
 }
+// Memoization caches for the three name lookup helpers. Hot path:
+// every list render calls _locName / _prjName / _itypeName once per row.
+// The DB.<table> arrays change rarely (only when a new project/location
+// is added) so caching the resolved name is a clear win. Invalidated
+// from _rtApply when the relevant table changes, and from the editor
+// save handlers (svLoc / svPrj / svItype).
+window._locNameCache = new Map();
+window._prjNameCache = new Map();
+window._itypeNameCache = new Map();
+window._invalidateNameCache = function(tbl){
+  if(!tbl||tbl==='locations')_locNameCache.clear();
+  if(!tbl||tbl==='projects')_prjNameCache.clear();
+  if(!tbl||tbl==='issue_types')_itypeNameCache.clear();
+};
+
 function _locName(id){
   if(!id)return '';
+  if(_locNameCache.has(id))return _locNameCache.get(id);
   var rec=(DB.locations||[]).find(function(r){return r.id===id;});
-  if(!rec)return '';
+  if(!rec){_locNameCache.set(id,'');return '';}
   var path=[rec.name];
   while(rec&&rec.parent_id){
     rec=(DB.locations||[]).find(function(r){return r.id===rec.parent_id;});
     if(rec)path.unshift(rec.name);
   }
-  return path.join(' / ');
+  var out=path.join(' / ');
+  _locNameCache.set(id,out);
+  return out;
 }
 
 // Saved Views — per-user filter presets
@@ -7904,8 +7923,11 @@ function _itypeOptionsHtml(currentId){
 }
 function _itypeName(id){
   if(!id)return '';
+  if(_itypeNameCache.has(id))return _itypeNameCache.get(id);
   var rec=(DB.issue_types||[]).find(function(r){return r.id===id;});
-  return rec?rec.name:'';
+  var out=rec?rec.name:'';
+  _itypeNameCache.set(id,out);
+  return out;
 }
 
 // Project select helpers (parallel to _loc helpers)
@@ -7921,8 +7943,11 @@ function _prjOptionsHtml(currentId){
 }
 function _prjName(id){
   if(!id)return '';
+  if(_prjNameCache.has(id))return _prjNameCache.get(id);
   var rec=(DB.projects||[]).find(function(r){return r.id===id;});
-  return rec?rec.name:'';
+  var out=rec?rec.name:'';
+  _prjNameCache.set(id,out);
+  return out;
 }
 
 // Projects management (Vitre §16#18)
