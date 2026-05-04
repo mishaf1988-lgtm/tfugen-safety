@@ -9127,7 +9127,7 @@ window._incFiveWhyAI=function(id){
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9]\n\n'+
     '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
@@ -9162,7 +9162,7 @@ window._rskAI=function(){
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'הסיכון:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='🤖 הצע דירוג ומיטיגציה';}
@@ -9201,7 +9201,7 @@ window._easpAI=function(){
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e1\u05d1\u05e8 \u05e0\u05d5\u05e1\u05e3.\n\n'+
     '\u05d4\u05d4\u05d9\u05d1\u05d8: '+aspect+(activity?'\n\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df: '+activity:'');
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\u05d4\u05e6\u05e2 \u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d5\u05d1\u05e7\u05e8\u05d5\u05ea';}
@@ -9244,7 +9244,7 @@ window._ncrAIRcAction=function(){
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
     '\u05d4-NCR:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d1\u05d4 \u05d5\u05e4\u05e2\u05d5\u05dc\u05d4';}
@@ -9290,7 +9290,7 @@ window._ncrFiveWhyAI=function(){
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9 \u05e9\u05de\u05db\u05d5\u05d5\u05df \u05dc-CAPA]\n\n'+
     '\u05d4-NCR:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
@@ -9368,7 +9368,7 @@ window._aiWeeklySummary=function(){
     '4. **\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05de\u05e0\u05d4\u05dc\u05ea** (2-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05e7\u05e6\u05e8\u05d5\u05ea \u05d1\u05de\u05e1\u05e4\u05d5\u05e8) \u2014 \u05d0\u05d9\u05dc\u05d5 \u05d4\u05d7\u05dc\u05d8\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc \u05de\u05d4\u05e0\u05d4\u05dc\u05d4 (\u05ea\u05e7\u05e6\u05d9\u05d1, \u05e0\u05d4\u05dc\u05d9\u05dd, \u05d4\u05e9\u05e7\u05e2\u05d5\u05ea \u05d0\u05dd \u05e0\u05d3\u05e8\u05e9).\n\n'+
     '\u05db\u05ea\u05d5\u05d1 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05ea\u05e7\u05e0\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3, \u05d1\u05dc\u05d9 \u05de\u05d9\u05e0\u05d5\u05d7\u05d9 \u05de\u05e7\u05e6\u05d5\u05e2 \u05de\u05d9\u05d5\u05ea\u05e8\u05d9\u05dd. \u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05d4\u05e7\u05d3\u05de\u05d4 \u05d0\u05d5 \u05d1\u05e1\u05d9\u05d5\u05dd \u05de\u05e2\u05d9\u05df "\u05de\u05d6\u05dc \u05d8\u05d5\u05d1". \u05d4\u05ea\u05d7\u05dc \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05d1\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d4\u05db\u05dc\u05dc\u05d9.\n\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1200,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:1200,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(!res.ok){
@@ -9461,7 +9461,7 @@ window._mrAINarrative=function(){
     '- בלי הקדמה ובלי "מזל טוב" בסוף\n\n'+
     'הנתונים:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1500,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:1500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(!res.ok){
@@ -9577,7 +9577,7 @@ window._aiTodayPlan=function(){
     '- כל פעולה חייבת להיות הרצה היום או מחר, לא רעיון מופשט\n\n'+
     'הנתונים:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:900,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:900,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(!res.ok){
@@ -9651,7 +9651,7 @@ window._tskAI=function(){
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'היום: '+today+'\nהמשימה:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:200,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:200,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='🤖 הצע עדיפות/יעד';}
@@ -9697,7 +9697,7 @@ window._incAI=function(){
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'התקרית:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:300,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='🤖 סווג/חומרה AI';}
@@ -9743,7 +9743,7 @@ window._legAI=function(){
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'החוק:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='🤖 נתח וסכם AI';}
@@ -9783,7 +9783,7 @@ window._toolboxAI=function(){
     'הפק טקסט פשוט (לא JSON), ב-3-5 שורות, ללא הקדמה.\n\n'+
     'הנושא: '+topic;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:400,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='🤖 הצע תוכן';}
@@ -9819,7 +9819,7 @@ window._nmAI=function(){
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
     '\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d5\u05d5\u05d2 \u05d5\u05d4\u05de\u05dc\u05e6\u05d5\u05ea';}
@@ -11067,7 +11067,7 @@ window._waSend=function(to,opts){
     });
 };
 var _AI='/api/claude';
-var _AI_MODEL='claude-sonnet-4-6';
+var _AI_MODEL='@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
 var _SC={'closed':'#00cc55','open':'#ff4444','wip':'#f0a000'};
 function _gpc(p){return _P[p==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'q':p==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'h':p==='\u05e0\u05de\u05d5\u05db\u05d4'?'l':'m']||_P.m;}
@@ -11334,7 +11334,7 @@ window.ncrAgentAnalyzeAll=function(){
     '3. Systemic recommendations / \u05d4\u05de\u05dc\u05e6\u05d5\u05ea \u05de\u05e2\u05e8\u05db\u05ea\u05d9\u05d5\u05ea\n'+
     '4. Urgent alerts / \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:800,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:800,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
     if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
     var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
