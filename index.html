@@ -612,6 +612,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-assignees-card" style="display:none"><div class="card-title">&#128101; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1488;&#1495;&#1512;&#1488;&#1497; (&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;)</div><div id="dash-assignees"></div></div>
   <div class="card" id="dash-easp-card" style="display:none"><div class="card-title">&#127807; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; (RPN &#1490;&#1489;&#1493;&#1492;)</div><div id="dash-easp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-rounds-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1506;&#1502;&#1497;&#1491;&#1492; &#1489;&#1505;&#1489;&#1489;&#1497; &#1489;&#1493;&#1511;&#1512; (30 &#1497;&#1493;&#1501;)</div><div id="dash-rounds"></div></div>
+  <div class="card" id="dash-leg-compliance-card" style="display:none"><div class="card-title">&#128203; &#1510;&#1497;&#1493;&#1503; &#1506;&#1502;&#1497;&#1491;&#1492; &#1489;&#1512;&#1490;&#1493;&#1500;&#1510;&#1497;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(Legal Register)</span></div><div id="dash-leg-compliance"></div></div>
   <div class="card" id="dash-leg-review-card" style="display:none"><div class="card-title">&#9878;&#65039; &#1495;&#1493;&#1511;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001)</span></div><div id="dash-leg-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
@@ -4095,6 +4096,47 @@ function rDash(){
       }else{if(dpc)dpc.style.display='none';}
     }
   }catch(e){console.warn('dash-by-prj failed',e);}
+
+  // Dashboard: legal-register compliance score.
+  // % compliant out of relevant laws (excludes 'לא רלוונטי').
+  try{
+    var lcc=g('dash-leg-compliance-card');
+    var lcb=g('dash-leg-compliance');
+    if(lcb){
+      var laws=DB.leg||[];
+      var IRREL='לא רלוונטי';
+      var YES='מציית';
+      var PART='חלקית';
+      var NO='אינו מציית';
+      var relevant=laws.filter(function(l){return (l.c||YES)!==IRREL;});
+      var n=relevant.length;
+      if(n>0){
+        var ok=relevant.filter(function(l){return (l.c||YES)===YES;}).length;
+        var part=relevant.filter(function(l){return l.c===PART;}).length;
+        var bad=relevant.filter(function(l){return l.c===NO;}).length;
+        var score=Math.round((ok/n)*100);
+        var col=score>=90?'#16a34a':(score>=70?'#e07a00':'#cc1f1f');
+        if(lcc)lcc.style.display='';
+        lcb.innerHTML=
+          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+
+            '<div style="font-size:42px;font-weight:900;color:'+col+';line-height:1">'+score+'<span style="font-size:18px">%</span></div>'+
+            '<div style="flex:1;min-width:140px;font-size:11px;line-height:1.7">'+
+              '<div>✅ מציית: <strong>'+ok+'</strong></div>'+
+              (part?'<div>⚠️ חלקית: <strong style="color:#e07a00">'+part+'</strong></div>':'')+
+              (bad?'<div>❌ אינו מציית: <strong style="color:#cc1f1f">'+bad+'</strong></div>':'')+
+              '<div style="color:var(--t3);margin-top:3px">בסיס: '+n+' חוקים רלוונטיים</div>'+
+            '</div>'+
+          '</div>'+
+          '<div style="margin-top:10px;display:flex;height:8px;border-radius:4px;overflow:hidden;background:#eee">'+
+            '<div style="background:#16a34a;width:'+((ok/n)*100)+'%" title="מציית"></div>'+
+            '<div style="background:#e07a00;width:'+((part/n)*100)+'%" title="חלקית"></div>'+
+            '<div style="background:#cc1f1f;width:'+((bad/n)*100)+'%" title="אינו מציית"></div>'+
+          '</div>';
+      }else{
+        if(lcc)lcc.style.display='none';
+      }
+    }
+  }catch(e){console.warn('dash-leg-compliance failed',e);}
 
   // Dashboard: legal review widget — laws overdue / due within 30 days.
   // Surfaces ISO 14001 §6.1.3 obligation.
