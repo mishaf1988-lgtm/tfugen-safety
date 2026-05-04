@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (Performance Phase 0+1+2 shipped · 12 PRs · web-vitals · debounce · memoize · Cache-Control · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-04 (Performance Phase 0+1+2+4+6 shipped · 14 PRs · web-vitals · debounce · memoize · Cache-Control · SSE keepalive · Storage cacheControl · RLS perf wrap (initPlan) · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -17,10 +17,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `294d64d` |
+| Commit | `ffd752c` |
 | תאריך | 2026-05-04 |
 | Tag | — (טרם נוצר) |
-| מצב | פאזות 0+1+2 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
+| מצב | פאזות 0+1+2+4+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
 
 ---
 
@@ -139,14 +139,15 @@
 - [x] **Phase 2 — fetch priority:low (PR #342)** — `priority:'low'` ב-`sbGet` כדי שכתיבות user-initiated יקדימו את ה-polling.
 - [x] **Phase 2 — debounce sdb (PR #343)** — `setTimeout(_sdbFlush, 250)`, `beforeunload`+`pagehide` flushes. Burst של 35 שמירות ב-sbSync ראשוני → flush אחד.
 - [x] **Phase 2 — `_hayFor` haystack (PR #344)** — `_srRun` (חיפוש Ctrl+K) שומר lowercase JSON על property non-enumerable `_hs`. x10 מהיר בהקלדה.
+- [x] **Phase 6 part 1 — SSE keepalive (PR #346)** — `claude.js` שולח `: keepalive\n\n` כל 5 שניות אם אין chunk כבר 14ש׳, נמנע 524 ב-PDF גדולים.
+- [x] **Phase 6 part 2 — Storage cacheControl (PR #347)** — `cache-control: max-age=31536000` ב-`_fileUpload`. תמונות/PDFs נשמרים ב-cache של הדפדפן לשנה. משפיע על near-miss/incidents/env_aspects/page_files (כולם דרך `_fileUpload`).
+- [x] **Phase 4 — RLS perf wrap migration** — `migrations/2026-05-04_rls_perf_wrap.sql` הורץ ידנית ב-Supabase ב-2026-05-04. עוטף כל קריאה ל-`is_admin_manager()` (ולגרסאות schema-qualified כמו `private.is_admin_manager()`) ב-`(select ...)` כדי שהפונקציה תרוץ פעם אחת לשאילתה (initPlan) במקום לכל row. עד ~100× שיפור על שאילתות RLS-bound. בנוסף: event trigger `pgrst_watch` ל-NOTIFY pgrst אוטומטי אחרי DDL. PR #347 (תוכן) + PR #349 (תיקון regex אחרי שגיאת syntax על schema-qualified call).
 
-**SW: v83 → v95** (12 גרסאות, bumped ידני בכל PR).
+**SW: v83 → v97** (14 גרסאות, bumped ידני בכל PR).
 
 **מה נשאר בתוכנית:**
 - Phase 3: SW rewrite (auto-version, kill manual `tfgn-vNN`, no auto-reload mid-form). דורש בדיקה ב-iOS Safari אמיתי.
-- Phase 4: RLS migration (~100x שיפור). דורש הרצה ידנית ב-Supabase.
 - Phase 5: Sync + Realtime tame (column projection, longer poll, rAF debounce).
-- Phase 6: Edge function hardening (SSE keepalive ל-524, Storage cacheControl).
 - Phase 7: רק אם המדידות מצביעות.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
