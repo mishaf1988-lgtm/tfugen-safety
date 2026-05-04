@@ -28,6 +28,7 @@
 -- =====================================================================
 
 -- 1) עטיפת is_admin_manager() ב-(select ...) בכל ה-policies הקיימות
+--    תומך גם ב-schema-qualified calls כמו public.is_admin_manager() / private.is_admin_manager()
 DO $$
 DECLARE
   r RECORD;
@@ -41,14 +42,18 @@ BEGIN
     FROM pg_policies
     WHERE schemaname = 'public'
       AND (
-        (qual IS NOT NULL AND qual LIKE '%is_admin_manager()%' AND qual NOT LIKE '%( SELECT is_admin_manager())%' AND qual NOT LIKE '%(select is_admin_manager())%')
+        -- מחפש את שם הפונקציה אבל לא בתוך select כבר עטוף
+        (qual ~ 'is_admin_manager\(\)' AND qual !~ '\(\s*select[^\)]*is_admin_manager\(\)')
         OR
-        (with_check IS NOT NULL AND with_check LIKE '%is_admin_manager()%' AND with_check NOT LIKE '%( SELECT is_admin_manager())%' AND with_check NOT LIKE '%(select is_admin_manager())%')
+        (with_check ~ 'is_admin_manager\(\)' AND with_check !~ '\(\s*select[^\)]*is_admin_manager\(\)')
       )
   LOOP
-    -- בנה USING clause חדש (אם יש qual)
+    -- בנה USING clause חדש (אם יש qual) — regex תופס schema prefix אופציונלי
+    -- דוגמאות: is_admin_manager() → (select is_admin_manager())
+    --          public.is_admin_manager() → (select public.is_admin_manager())
+    --          private.is_admin_manager() → (select private.is_admin_manager())
     IF r.qual IS NOT NULL THEN
-      new_qual := replace(r.qual, 'is_admin_manager()', '(select is_admin_manager())');
+      new_qual := regexp_replace(r.qual, '(\m\w+\.)?is_admin_manager\(\)', '(select \1is_admin_manager())', 'g');
       using_clause := format(' USING (%s)', new_qual);
     ELSE
       using_clause := '';
@@ -56,7 +61,7 @@ BEGIN
 
     -- בנה WITH CHECK clause חדש (אם יש with_check)
     IF r.with_check IS NOT NULL THEN
-      new_check := replace(r.with_check, 'is_admin_manager()', '(select is_admin_manager())');
+      new_check := regexp_replace(r.with_check, '(\m\w+\.)?is_admin_manager\(\)', '(select \1is_admin_manager())', 'g');
       check_clause := format(' WITH CHECK (%s)', new_check);
     ELSE
       check_clause := '';
