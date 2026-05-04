@@ -24,6 +24,7 @@ const ALLOWED_MODELS = [
   '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
   '@cf/meta/llama-3.1-8b-instruct-fast',
   '@cf/meta/llama-3.1-70b-instruct',
+  '@cf/meta/llama-3.2-11b-vision-instruct', // OCR / image analysis
   // Anthropic (paid — only if ANTHROPIC_KEY env var is set)
   'claude-sonnet-4-6',
   'claude-haiku-4-5',
@@ -64,10 +65,13 @@ export async function onRequest({ request, env }) {
       }, 500, cors);
     }
     try {
-      const aiResp = await env.AI.run(parsed.model, {
-        messages: parsed.messages,
-        max_tokens: parsed.max_tokens
-      });
+      // Vision model takes a different request shape: {prompt, image} where
+      // image is either an array of byte ints or base64. Client sends base64.
+      const isVision = parsed.model.indexOf('vision') >= 0;
+      const aiInput = isVision
+        ? { prompt: parsed.prompt || '', image: parsed.image || '', max_tokens: parsed.max_tokens }
+        : { messages: parsed.messages, max_tokens: parsed.max_tokens };
+      const aiResp = await env.AI.run(parsed.model, aiInput);
       // Translate Workers AI shape ({response: "..."} or {result: ...}) into
       // Anthropic shape ({content:[{type:"text",text:"..."}]}) so the 14
       // client-side handlers don't need to change.
