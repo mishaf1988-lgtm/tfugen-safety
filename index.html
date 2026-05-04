@@ -1674,7 +1674,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="t-st"><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1514;&#1492;&#1500;&#1497;&#1498;</option><option>&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</option></select></div>
     <div class="field fw"><label>&#128247;&#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</label><div id="tr-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tr-attach-area','tr')">&#128247; &#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</button></div></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTr()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="tr-ocr-btn" onclick="_trOcrCert()" style="background:#7c3aed;border-color:#7c3aed">&#128270; &#1511;&#1512;&#1488; &#1514;&#1506;&#1493;&#1491;&#1492; (OCR)</button><button class="btn btn-p" onclick="svTr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- RSK MODAL -->
@@ -9715,6 +9715,74 @@ window._aiWeeklyCopy=function(){
 // fields are not overwritten.
 // AI suggestion for a Task record. Reads title (and notes if present) and
 // proposes priority + due date estimate. Empty fields only.
+// Generic OCR helper. Reads a File (image), sends to Workers AI Vision
+// (`@cf/meta/llama-3.2-11b-vision-instruct`) with a domain-specific prompt,
+// and returns the parsed JSON response. Caller decides how to use the data.
+window._ocrAnalyze=function(file,prompt){
+  return new Promise(function(resolve,reject){
+    if(!file)return reject(new Error('no file'));
+    if(!/^image\//.test(file.type))return reject(new Error('not an image'));
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      // Strip the data URL prefix → just base64
+      var b64=String(ev.target.result||'').replace(/^data:image\/[^;]+;base64,/,'');
+      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        model:'@cf/meta/llama-3.2-11b-vision-instruct',
+        prompt:prompt,
+        image:b64,
+        max_tokens:600
+      })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
+        .then(function(res){
+          if(!res.ok)return reject(new Error('OCR ('+res.status+'): '+res.txt.substring(0,200)));
+          try{
+            var dj=JSON.parse(res.txt);
+            var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+            resolve(content);
+          }catch(e){reject(new Error('OCR parse: '+e.message));}
+        }).catch(function(e){reject(e);});
+    };
+    rd.onerror=function(){reject(new Error('file read failed'));};
+    rd.readAsDataURL(file);
+  });
+};
+// OCR helper for the training (m-tr) modal — reads a certificate photo and
+// auto-fills course name / employee name / completion date / expiry date.
+window._trOcrCert=function(){
+  var btn=g('tr-ocr-btn');
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];
+    document.body.removeChild(inp);
+    if(!f)return;
+    if(btn){btn.disabled=true;btn.textContent='⏳ קורא תעודה...';}
+    var prompt='זוהי תעודת הדרכה / הסמכה / רישיון בעברית או אנגלית. החזר JSON תקין בלבד עם השדות הבאים (מלא רק את אלה שאת בטוח שזיהית):\n'+
+      '{\n  "course": "שם הקורס / ההדרכה",\n  "employee": "שם מקבל ההדרכה",\n  "date": "YYYY-MM-DD תאריך השלמה / הוצאה",\n  "expiry": "YYYY-MM-DD תוקף עד (אם מצוין)",\n  "category": "בטיחות" או "ISO" או "כיבוי אש" או "ציוד מגן" או "נהלים"\n}\nהקפד על JSON תקין בלבד, ללא הקדמה או מירכאות סביב.';
+    _ocrAnalyze(f,prompt).then(function(content){
+      content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI לא החזיר JSON תקין');console.warn('OCR raw:',content);return;}
+      var changed=[];
+      var setIf=function(elId,v){var el=g(elId);if(el && v && !el.value){el.value=String(v).trim();return true;}return false;};
+      if(setIf('t-n',parsed.course))changed.push('שם הדרכה');
+      if(setIf('t-w',parsed.employee))changed.push('עובד');
+      if(setIf('t-d',parsed.date))changed.push('תאריך');
+      if(setIf('t-e',parsed.expiry))changed.push('תוקף');
+      if(parsed.category){
+        var cEl=g('t-c');var allowed=['בטיחות','ISO','כיבוי אש','ציוד מגן','נהלים'];
+        if(cEl && !cEl.value && allowed.indexOf(parsed.category)>-1){cEl.value=parsed.category;changed.push('קטגוריה');}
+      }
+      if(changed.length)toast('OCR מילא: '+changed.join(' · '));
+      else toast('OCR לא מצא שדות חדשים');
+    }).catch(function(e){
+      toast('שגיאת OCR: '+(e&&e.message||e));
+      console.warn('OCR error:',e);
+    }).finally(function(){
+      if(btn){btn.disabled=false;btn.textContent='🔍 קרא תעודה (OCR)';}
+    });
+  };
+  inp.click();
+};
 window._tskAI=function(){
   var btn=g('tsk-ai-btn');
   var title=gv('tsk-title')||'';
