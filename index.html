@@ -616,6 +616,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-risk-top-card" style="display:none"><div class="card-title">&#9888;&#65039; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; &#1500;&#1508;&#1497; RPN <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001:6.1.2)</span></div><div id="dash-risk-top"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-leg-review-card" style="display:none"><div class="card-title">&#9878;&#65039; &#1495;&#1493;&#1511;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001)</span></div><div id="dash-leg-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-ai-weekly-card" style="display:none"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -9108,6 +9109,103 @@ window._ncrFiveWhyAI=function(){
       toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
     });
 };
+// Weekly AI summary \u2014 admin-only dashboard widget. Aggregates the last 7 days
+// of safety/quality activity (NCR, incidents, near-miss, rounds, tasks,
+// expirations) and asks Claude to write a Hebrew executive summary suitable
+// for forwarding to plant management. Saves the safety manager 15 min/week.
+window._aiWeeklySummary=function(){
+  var host=g('dash-ai-weekly');
+  if(!host)return;
+  if(!_isAdminUser()){toast('\u05e8\u05e7 \u05d0\u05d3\u05de\u05d9\u05df');return;}
+  host.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px"><span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin 0.7s linear infinite"></span>\u23f3 \u05de\u05e8\u05db\u05d6 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d5\u05e9\u05d5\u05dc\u05d7 \u05dc-AI...</div>';
+  // Gather last-7-days stats.
+  var nowMs=Date.now();
+  function inLast7(dStr){
+    if(!dStr)return false;
+    var t=new Date(dStr).getTime();
+    if(isNaN(t))return false;
+    return (nowMs-t)/86400000 < 7;
+  }
+  var CRIT='\u05e7\u05e8\u05d9\u05d8\u05d9',HIGH='\u05d2\u05d1\u05d5\u05d4',CLOS='\u05e1\u05d2\u05d5\u05e8';
+  var ncrLast=(DB.ncr||[]).filter(function(r){return inLast7(r.d);});
+  var ncrCrit=ncrLast.filter(function(r){return r.sv===CRIT;}).length;
+  var ncrHigh=ncrLast.filter(function(r){return r.sv===HIGH;}).length;
+  var ncrSamples=ncrLast.slice(0,5).map(function(r){return '\u2022 '+(r.num||'')+' '+String(r.d||'').substring(0,80)+(r.sv?' ['+r.sv+']':'');}).join('\n');
+  var incLast=(DB.inc||[]).filter(function(r){return inLast7(r.dt||r.d);});
+  var incLD=incLast.reduce(function(a,r){return a+(parseInt(r.lost_days||0,10)||0);},0);
+  var incSamples=incLast.slice(0,3).map(function(r){return '\u2022 '+String(r.d||'(\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8)').substring(0,80)+(r.sv?' ['+r.sv+']':'')+(r.lost_days?' '+r.lost_days+' \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea':'');}).join('\n');
+  var nmLast=(DB.near_miss||[]).filter(function(r){return inLast7(r.d);});
+  var nmSamples=nmLast.slice(0,3).map(function(r){return '\u2022 '+String(r.descr||'').substring(0,80);}).join('\n');
+  var rndLast=(DB.rounds||[]).filter(function(r){return inLast7(r.d);}).length;
+  var tskClosed=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inLast7(r.closed_date||r.cd);}).length;
+  var tskOver=(DB.tasks||[]).filter(function(r){if(r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||r.status==='\u05d1\u05d5\u05d8\u05dc'||!r.due)return false;return new Date(r.due).getTime()<nowMs;}).length;
+  // Expirations within next 7 days.
+  var endW=nowMs+7*86400000;
+  var expSoon=0;
+  ['ppe','tr','docs','ctr','med'].forEach(function(k){
+    (DB[k]||[]).forEach(function(r){if(!r.e)return;var t=new Date(r.e).getTime();if(isNaN(t))return;if(t>=nowMs&&t<=endW)expSoon++;});
+  });
+  var totalEvents=ncrLast.length+incLast.length+nmLast.length+rndLast+tskClosed;
+  if(totalEvents===0 && expSoon===0 && tskOver===0){
+    host.innerHTML='<p class="et">\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u2014 \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e1\u05db\u05dd</p>'+
+      '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed;margin-top:6px">\u29ee \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
+    return;
+  }
+  var ctx='\u05e1\u05d8\u05d8\u05d9\u05e1\u05d8\u05d9\u05e7\u05d4 \u05dc-7 \u05d9\u05de\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd ('+(new Date().toISOString().split('T')[0])+'):\n'+
+    '- NCRs \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5: '+ncrLast.length+' (\u05e7\u05e8\u05d9\u05d8\u05d9: '+ncrCrit+', \u05d2\u05d1\u05d5\u05d4: '+ncrHigh+')\n'+
+    '- \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea: '+incLast.length+(incLD>0?' (\u05e1\u05d4"\u05db '+incLD+' \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea)':'')+'\n'+
+    '- \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2: '+nmLast.length+'\n'+
+    '- \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d5: '+rndLast+'\n'+
+    '- \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05d4\u05d5\u05e9\u05dc\u05de\u05d5: '+tskClosed+'\n'+
+    '- \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8: '+tskOver+'\n'+
+    '- \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05ea\u05d5\u05e7\u05e3 (\u05de\u05d2\u05df/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05db\u05d9\u05dd/\u05e7\u05d1\u05dc\u05df/\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea) \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05e7\u05e8\u05d5\u05d1: '+expSoon+'\n';
+  if(ncrSamples)ctx+='\n\u05d3\u05d5\u05d2\u05de\u05d0\u05d5\u05ea NCR (\u05e2\u05d3 5):\n'+ncrSamples+'\n';
+  if(incSamples)ctx+='\n\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea (\u05e2\u05d3 3):\n'+incSamples+'\n';
+  if(nmSamples)ctx+='\n\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 (\u05e2\u05d3 3):\n'+nmSamples+'\n';
+  var aiPrompt='\u05d0\u05ea\u05d4 \u05de\u05e0\u05d4\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05de\u05e4\u05e2\u05dc \u05ea\u05e2\u05e9\u05d9\u05d9\u05ea\u05d9 \u05d1\u05d9\u05e9\u05e8\u05d0\u05dc. \u05db\u05ea\u05d5\u05d1 \u05e1\u05d9\u05db\u05d5\u05dd \u05e9\u05d1\u05d5\u05e2\u05d9 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05de\u05ea\u05d0\u05d9\u05dd \u05dc\u05d4\u05e0\u05d4\u05dc\u05ea \u05d4\u05de\u05e4\u05e2\u05dc, \u05d1-4 \u05e4\u05e1\u05e7\u05d0\u05d5\u05ea \u05e7\u05e6\u05e8\u05d9\u05dd:\n\n'+
+    '1. **\u05e1\u05d8\u05d8\u05d5\u05e1 \u05db\u05dc\u05dc\u05d9** (2-3 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd) \u2014 \u05de\u05d4 \u05e7\u05e8\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2, \u05d4\u05d0\u05dd \u05d4\u05de\u05d2\u05de\u05d4 \u05d4\u05ea\u05d3\u05e8\u05d3\u05e8\u05d4 \u05d0\u05d5 \u05d4\u05e9\u05ea\u05e4\u05e8\u05d4 \u05d1\u05d4\u05e9\u05d5\u05d5\u05d0\u05d4 \u05dc\u05e9\u05d1\u05d5\u05e2 \u05e7\u05d5\u05d3\u05dd?\n'+
+    '2. **\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05ea\u05e9\u05d5\u05de\u05ea \u05dc\u05d1** (2-4 \u05e0\u05e7\u05d5\u05d3\u05d5\u05ea) \u2014 \u05d0\u05e8\u05d5\u05e2\u05d9\u05dd \u05d7\u05de\u05d5\u05e8\u05d9\u05dd, \u05d3\u05e4\u05d5\u05e1\u05d9\u05dd, \u05d2\u05d5\u05e8\u05de\u05d9\u05dd \u05de\u05d3\u05d0\u05d9\u05d2\u05d9\u05dd.\n'+
+    '3. **\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d3\u05d7\u05d5\u05e4\u05d9\u05dd** (1-2 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd) \u2014 \u05de\u05d4 \u05de\u05d8\u05d5\u05e4\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0?\n'+
+    '4. **\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05de\u05e0\u05d4\u05dc\u05ea** (2-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05e7\u05e6\u05e8\u05d5\u05ea \u05d1\u05de\u05e1\u05e4\u05d5\u05e8) \u2014 \u05d0\u05d9\u05dc\u05d5 \u05d4\u05d7\u05dc\u05d8\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc \u05de\u05d4\u05e0\u05d4\u05dc\u05d4 (\u05ea\u05e7\u05e6\u05d9\u05d1, \u05e0\u05d4\u05dc\u05d9\u05dd, \u05d4\u05e9\u05e7\u05e2\u05d5\u05ea \u05d0\u05dd \u05e0\u05d3\u05e8\u05e9).\n\n'+
+    '\u05db\u05ea\u05d5\u05d1 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05ea\u05e7\u05e0\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3, \u05d1\u05dc\u05d9 \u05de\u05d9\u05e0\u05d5\u05d7\u05d9 \u05de\u05e7\u05e6\u05d5\u05e2 \u05de\u05d9\u05d5\u05ea\u05e8\u05d9\u05dd. \u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05d4\u05e7\u05d3\u05de\u05d4 \u05d0\u05d5 \u05d1\u05e1\u05d9\u05d5\u05dd \u05de\u05e2\u05d9\u05df "\u05de\u05d6\u05dc \u05d8\u05d5\u05d1". \u05d4\u05ea\u05d7\u05dc \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05d1\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d4\u05db\u05dc\u05dc\u05d9.\n\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1200,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(!res.ok){
+        host.innerHTML='<p style="color:var(--bad);font-size:12px">\u05e9\u05d2\u05d9\u05d0\u05ea AI ('+res.status+')</p>'+
+          '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">\u29ee \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
+        console.warn('Weekly AI:',res.txt);return;
+      }
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){host.innerHTML='<p style="color:var(--bad);font-size:12px">\u05e9\u05d2\u05d9\u05d0\u05ea JSON</p>';return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){host.innerHTML='<p class="et">AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df</p>';return;}
+      // Render summary as preformatted text + action buttons.
+      var safeContent=esc(content);
+      var generatedAt=new Date().toLocaleString('he-IL');
+      host.innerHTML='<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--t1);max-height:480px;overflow-y:auto" id="ai-weekly-text">'+safeContent+'</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
+          '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">\u29ee \u05e6\u05d5\u05e8 \u05de\u05d7\u05d3\u05e9</button>'+
+          '<button class="btn btn-sm" onclick="_aiWeeklyCopy()" style="background:#fff;border:1px solid #d4d4d8">\ud83d\udccb \u05d4\u05e2\u05ea\u05e7</button>'+
+          '<span style="font-size:10px;color:var(--t3);margin-right:auto">\u05e0\u05d5\u05e6\u05e8: '+esc(generatedAt)+'</span>'+
+        '</div>';
+      // Stash raw text for copy button (not the escaped HTML).
+      window._aiWeeklyRaw=content;
+    })
+    .catch(function(e){
+      host.innerHTML='<p style="color:var(--bad);font-size:12px">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+esc(String((e&&e.message)||e))+'</p>'+
+        '<button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">\u29ee \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
+    });
+};
+window._aiWeeklyCopy=function(){
+  var txt=window._aiWeeklyRaw||'';
+  if(!txt){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d4\u05e2\u05ea\u05d9\u05e7');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');},function(){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');});
+  }else{
+    try{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}catch(e){toast('\u05d4\u05e2\u05ea\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');}
+  }
+};
 var _SEARCH_TBLS=[
   {tbl:'ncr',label:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'⚠',fields:['num','d','a','loc','notes','rc','c','o'],view:function(r){return (r.num?r.num+': ':'')+String(r.d||'').substring(0,80);}},
   {tbl:'equip_inspections',label:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',icon:'🔧',fields:['code','n','vendor','loc','notes'],view:function(r){return (r.code?r.code+' — ':'')+(r.n||'');}},
@@ -9884,6 +9982,8 @@ function _applyRoleGates(){
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
+  var aiWeekCard=g('dash-ai-weekly-card');
+  if(aiWeekCard) aiWeekCard.style.display = isAdmin ? '' : 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
