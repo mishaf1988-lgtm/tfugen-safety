@@ -627,6 +627,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-risk-top-card" style="display:none"><div class="card-title">&#9888;&#65039; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; &#1500;&#1508;&#1497; RPN <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001:6.1.2)</span></div><div id="dash-risk-top"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-leg-review-card" style="display:none"><div class="card-title">&#9878;&#65039; &#1495;&#1493;&#1511;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001)</span></div><div id="dash-leg-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-rsk-review-card" style="display:none"><div class="card-title">&#9889; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 &#167;6.1.2)</span></div><div id="dash-rsk-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-ai-weekly-card" style="display:none"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
   <div class="card" id="dash-ai-today-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1490;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
@@ -1571,7 +1572,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field"><label>&#1514;&#1511;&#1503; ISO</label><input id="d-i" placeholder="ISO 45001:2018"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="d-nt"></textarea></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-doc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svDoc()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-doc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="doc-ocr-btn" onclick="_docOcrCert()" style="background:#7c3aed;border-color:#7c3aed">&#128270; &#1511;&#1512;&#1488; &#1502;&#1505;&#1502;&#1498; (OCR)</button><button class="btn btn-p" onclick="svDoc()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- AUD MODAL -->
@@ -1716,7 +1717,13 @@ id="m-ncr" style="display:none">
       <div style="font-weight:700;font-size:14px">&#128229; &#1514;&#1497;&#1489;&#1514; &#1491;&#1493;&#1488;&#1512; (Inbox)</div>
       <button class="btn btn-p btn-sm" onclick="_odLoadInbox()" style="background:#7c3aed;border-color:#7c3aed">&#128260; &#1489;&#1491;&#1493;&#1511; &#1511;&#1489;&#1510;&#1497;&#1501; &#1495;&#1491;&#1513;&#1497;&#1501;</button>
     </div>
-    <div style="font-size:11px;color:var(--t3);line-height:1.6;margin-bottom:8px">&#1492;&#1506;&#1500;&#1497; &#1502;&#1505;&#1502;&#1499;&#1497;&#1501; &#1500;-OneDrive &#1488;&#1500; &#1492;&#1514;&#1497;&#1511;&#1497;&#1497;&#1492; <code style="font-size:10px">/Apps/Tapugan Safety/Inbox/</code> &#8212; &#1502;&#1499;&#1500; &#1502;&#1499;&#1513;&#1497;&#1512;. &#1500;&#1495;&#1510;&#1497; &#1491; &#1500;&#1505;&#1497;&#1493;&#1493;&#1490; AI &#1493;&#1497;&#1497;&#1489;&#1493;&#1488; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;.</div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px">
+      <strong>\u05d0\u05d9\u05da \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd:</strong><br>
+      1. \u05d1-OneDrive (\u05d5\u05d1 / \u05d0\u05e4 / \u05de\u05d7\u05e9\u05d1) \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd <code style="font-size:10px">Apps / Tapugan Safety</code><br>
+      2. \u05d9\u05d5\u05e6\u05e8\u05d9\u05dd \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d1\u05e9\u05dd <code style="font-size:10px">Inbox</code> (\u05e4\u05e2\u05dd \u05d0\u05d7\u05ea)<br>
+      3. \u05d2\u05d5\u05e8\u05e8\u05d9\u05dd \u05dc\u05ea\u05d5\u05db\u05d4 \u05ea\u05de\u05d5\u05e0\u05d5\u05ea / PDFs \u05e9\u05dc \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea / \u05d3\u05d5\u05d7\u05d5\u05ea / NCRs<br>
+      4. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e2\u05dc \u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05dc\u05de\u05e2\u05dc\u05d4 \u2014 AI \u05de\u05e1\u05d5\u05d5\u05d2, \u05de\u05d0\u05e9\u05e8\u05d9\u05dd, \u05e0\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4
+    </div>
     <div id="od-inbox-list" style="font-size:13px"></div>
   </div>
   <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
@@ -4470,6 +4477,28 @@ function rDash(){
       }else{if(derc)derc.style.display='none';}
     }
   }catch(e){console.warn('dash-easp-review failed',e);}
+
+  // Dashboard: rsk (risk register) periodic review widget — ISO 45001:6.1.2
+  try{
+    var drrc=g('dash-rsk-review-card');
+    var drr=g('dash-rsk-review');
+    if(drr && typeof _rskReviewMeta==='function'){
+      var rskDue=(DB.rsk||[]).map(function(r){return {r:r,m:_rskReviewMeta(r)};})
+        .filter(function(o){return o.m.state==='overdue'||o.m.state==='soon'||o.m.state==='never'})
+        .sort(function(a,b){return (a.m.days==null?-1:a.m.days)-(b.m.days==null?-1:b.m.days);});
+      if(rskDue.length){
+        if(drrc)drrc.style.display='';
+        drr.innerHTML=rskDue.slice(0,5).map(function(o){
+          var r=o.r, m=o.m;
+          var col=m.state==='overdue'?'#cc1f1f':m.state==='never'?'#cc1f1f':'#e07a00';
+          var ic=m.state==='overdue'?'🔴':m.state==='never'?'⚠️':'⏳';
+          var rpn=(parseInt(r.p)||0)*(parseInt(r.sv)||0);
+          var rpnTxt=rpn?' · RPN '+rpn:'';
+          return '<div data-vid="'+esc(r.id)+'" onclick="showView(\'rsk\',this.dataset.vid)" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;gap:8px" onmouseover="this.style.background=\'#fff5f5\'" onmouseout="this.style.background=\'\'"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>'+esc(String(r.d||'—').substring(0,50))+'</b>'+(r.a?' <span style="color:var(--t3)">('+esc(r.a)+')</span>':'')+'<span style="color:var(--t3)">'+esc(rpnTxt)+'</span></span><span style="font-weight:700;color:'+col+';white-space:nowrap;font-size:11px">'+ic+' '+esc(m.label)+'</span></div>';
+        }).join('');
+      }else{if(drrc)drrc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-rsk-review failed',e);}
 
   // Dashboard: by issue_type widget
   try{
@@ -9883,6 +9912,45 @@ window._ocrAnalyze=function(file,prompt){
 };
 // OCR helper for the training (m-tr) modal — reads a certificate photo and
 // auto-fills course name / employee name / completion date / expiry date.
+// OCR helper for the documents (m-doc) modal — reads any document photo
+// (license / permit / certificate / official letter) and auto-fills:
+// name, version, issue date, expiry, ISO standard reference. Empty fields
+// only — never overwrites manual input.
+window._docOcrCert=function(){
+  var btn=g('doc-ocr-btn');
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];document.body.removeChild(inp);if(!f)return;
+    if(btn){btn.disabled=true;btn.textContent='⏳ קורא מסמך...';}
+    var prompt='זוהי תמונה של מסמך רשמי (רישיון / אישור / נוהל / תקן ISO / מסמך טפסים). החזר JSON תקין בלבד עם השדות (מלא רק את אלה שזיהית):\n'+
+      '{\n  "name": "כותרת / שם המסמך",\n  "version": "מספר גרסה אם מצוין (לדוגמה: 2.1)",\n  "owner": "אחראי / מנפיק / חתום",\n  "issue_date": "YYYY-MM-DD תאריך הוצאה",\n  "expiry": "YYYY-MM-DD תוקף עד",\n  "iso": "תקן ISO רלוונטי (לדוגמה: ISO 45001:2018)",\n  "category": "נהלים" או "הוראות" או "טפסים" או "דוחות" או "תקנים"\n}\nהקפד על JSON תקין בלבד, ללא הקדמה.';
+    _ocrAnalyze(f,prompt).then(function(content){
+      content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI לא החזיר JSON תקין');console.warn('Doc OCR raw:',content);return;}
+      var changed=[];
+      var setIf=function(elId,v){var el=g(elId);if(el && v && !el.value){el.value=String(v).trim();return true;}return false;};
+      if(setIf('d-n',parsed.name))changed.push('שם');
+      if(setIf('d-v',parsed.version))changed.push('גרסה');
+      if(setIf('d-o',parsed.owner))changed.push('אחראי');
+      if(setIf('d-u',parsed.issue_date))changed.push('עדכון');
+      if(setIf('d-e',parsed.expiry))changed.push('תוקף');
+      if(setIf('d-i',parsed.iso))changed.push('תקן');
+      if(parsed.category){
+        var cEl=g('d-c');var allowed=['נהלים','הוראות','טפסים','דוחות','תקנים'];
+        if(cEl && !cEl.value && allowed.indexOf(parsed.category)>-1){cEl.value=parsed.category;changed.push('קטגוריה');}
+      }
+      if(changed.length)toast('OCR מילא: '+changed.join(' · '));
+      else toast('OCR לא מצא שדות חדשים');
+    }).catch(function(e){
+      toast('שגיאת OCR: '+(e&&e.message||e));console.warn('Doc OCR error:',e);
+    }).finally(function(){
+      if(btn){btn.disabled=false;btn.textContent='🔍 קרא מסמך (OCR)';}
+    });
+  };
+  inp.click();
+};
 window._trOcrCert=function(){
   var btn=g('tr-ocr-btn');
   var inp=document.createElement('input');
