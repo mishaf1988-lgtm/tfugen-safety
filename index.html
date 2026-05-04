@@ -1921,7 +1921,7 @@ id="m-ncr" style="display:none">
       <div id="tb-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tb-attach-area','toolbox')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-toolbox')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svToolbox()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-toolbox')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="tb-ai-btn" onclick="_toolboxAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1514;&#1493;&#1499;&#1503;</button><button class="btn btn-p" onclick="svToolbox()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- TASK MODAL -->
@@ -9210,6 +9210,41 @@ window._aiWeeklyCopy=function(){
 // area + reporter), classify severity + type and propose a short preventive
 // action that goes into the notes field. Empty fields are filled; non-empty
 // fields are not overwritten.
+// AI suggestion for a Toolbox-Talk session. Given the topic, propose a
+// short outline (3-5 talking points) suitable for a 5-10 min stand-up
+// safety briefing. Lands in the notes field. Does not overwrite if the
+// user already typed something.
+window._toolboxAI=function(){
+  var btn=g('tb-ai-btn');
+  var topic=gv('tb-topic')||'';
+  if(!topic){toast('הזן נושא Toolbox קודם');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ מחשב...';}
+  var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. בהינתן נושא Toolbox-Talk (שיחת בטיחות יומית של 5-10 דק), צור תוכן קצר ומעשי — 3-5 נקודות שאפשר לדבר עליהן עם הצוות. לא רשימה מופשטת — נקודות קונקרטיות עם דוגמאות מהשטח.\n\n'+
+    'הפק טקסט פשוט (לא JSON), ב-3-5 שורות, ללא הקדמה.\n\n'+
+    'הנושא: '+topic;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:400,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='🤖 הצע תוכן';}
+      if(!res.ok){toast('שגיאת AI ('+res.status+')');console.warn('Toolbox AI:',res.txt);return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('שגיאת JSON מ-AI');return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){toast('AI לא החזיר תוכן');return;}
+      var notesEl=g('tb-notes');
+      if(!notesEl){toast('שדה הערות לא נמצא');return;}
+      if(notesEl.value.trim()){
+        var ok=confirm('שדה ההערות כבר מלא. להחליף בתוכן AI?');
+        if(!ok)return;
+      }
+      notesEl.value=content.trim();
+      toast('AI הציע תוכן — עיין וערוך');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='🤖 הצע תוכן';}
+      toast('שגיאה ברשת: '+(e&&e.message||e));
+    });
+};
 window._nmAI=function(){
   var btn=g('nm-ai-btn');
   var descr=gv('nm-desc')||'';
