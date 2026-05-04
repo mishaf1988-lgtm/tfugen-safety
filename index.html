@@ -256,6 +256,19 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
    short tables (1-3 rows) to render as blank 48px gaps in some browsers
    when innerHTML was set programmatically. The perf gain is real on
    100+ row tables but doesn't justify breaking small tables. */
+/* Defensive: force every body row to be readable. Some browsers (Safari)
+   were leaving rows visually blank — explicit color + bg + min-height
+   guarantees the row content always renders even if other CSS shadows it. */
+.tbl-wrap tbody td{color:var(--tx)!important;background:#fff!important;font-size:13px;line-height:1.5;min-height:48px}
+.tbl-wrap tbody tr:nth-child(even) td{background:#fafbfc!important}
+@media (hover:hover){.tbl-wrap tbody tr:hover td{background:#fff5f5!important}}
+/* Action buttons inside tables — ensure tap targets are 32px+ and icons
+   are large enough to identify. Previously the 4 action buttons looked
+   like tiny red dots from a normal viewing distance. */
+.tbl-wrap tbody td .btn-d{min-width:32px;min-height:32px;padding:6px 8px;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center;margin:1px}
+/* Visual separator between header and body so the header doesn't appear
+   to swallow the row beneath it. */
+.tbl-wrap thead th{border-bottom:3px solid #fff;box-shadow:0 1px 0 rgba(0,0,0,.06)}
 body.hc th{background:var(--red)}
 body.hc tbody tr:nth-child(even) td{background:transparent}
 .et{text-align:center;padding:36px 20px;color:var(--t2);font-size:14px;background:linear-gradient(180deg,#fafbfc 0%,#fff 60%);border-radius:10px}
