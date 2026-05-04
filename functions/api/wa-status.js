@@ -46,6 +46,17 @@ export async function onRequest({ request, env }) {
     return jsonResp(status, 200, cors);
   }
 
+  // Check -1: is Meta Graph API reachable AT ALL from this Cloudflare worker?
+  // Hits /me with a deliberately invalid token. A healthy Meta API responds
+  // with "Invalid OAuth access token" (code 190). If we instead get "API
+  // access blocked" (code 200) on this neutral probe, then Meta is rejecting
+  // requests by IP/origin — not a token issue, but a Cloudflare worker IP
+  // reputation issue.
+  status.meta_api.reachability = await probe(
+    'https://graph.facebook.com/' + META_API_VERSION + '/me?fields=id',
+    'invalid_token_for_probe'
+  );
+
   // Check 0: token sanity — is the token recognized by Meta at all?
   // /me works for any valid token (user, SU, page). If THIS fails, the
   // token is dead (revoked or expired) and nothing else can succeed.
@@ -100,18 +111,38 @@ async function probe(url, token) {
 }
 
 function nextStepFor(meta) {
+  const reach = meta.reachability || {};
   const id = meta.identity || {};
   const m = meta.messaging || {};
   const g = meta.management || {};
 
-  // Identity check first — if /me fails, nothing else matters.
+  // Reachability check FIRST. Neutral probe with bogus token should get a
+  // "bad token" error (code 190). If it gets "API access blocked" (200) or
+  // a network failure, the issue is between Cloudflare worker and Meta.
+  if (reach.networkError) {
+    return 'NETWORK FAILURE reaching Meta from Cloudflare. Cloudflare worker may be unable to egress to graph.facebook.com. Check Cloudflare function logs.';
+  }
+  const reachErr = (reach.json && reach.json.error) || {};
+  if (reachErr.code === 200 || /access\s*blocked/i.test(reachErr.message || '')) {
+    return 'IP BLOCKED. Cloudflare worker IP is rejected by Meta BEFORE any token check. This is independent of your token. Workarounds: ' +
+      '(a) Test the same token from your laptop with curl - if it works, the problem is the CF worker IP. ' +
+      '(b) Move the WhatsApp send endpoint back to Vercel temporarily. ' +
+      '(c) Open a Meta support ticket explaining your CF worker IP is being blocked.';
+  }
+  // Reachability OK if we got code 190 "Invalid OAuth access token" - that's healthy
+
+  // Identity check second.
   if (!id.ok) {
     const err = (id.json && id.json.error) || {};
     if (err.code === 190) {
       return 'TOKEN IS DEAD. The token was revoked or expired. Regenerate at Meta Business Settings -> System Users -> [your SU] -> Generate New Token (with both whatsapp_business_messaging + whatsapp_business_management scopes), then update META_ACCESS_TOKEN in Cloudflare Pages env vars.';
     }
     if (err.code === 200 || /access\s*blocked/i.test(err.message || '')) {
-      return 'TOKEN BLOCKED at the identity level. The Meta App or Business Account is restricted (under review, suspended, or rate-limited). Check business.facebook.com -> Security Center for any "action required" notices.';
+      return 'TOKEN BLOCKED but Meta API is reachable. The Meta App or Business Account itself is restricted. ' +
+        'Check: (1) developers.facebook.com/apps - your App should show status "Live" not "Restricted". ' +
+        '(2) business.facebook.com/security_center - any "Action Required" cards. ' +
+        '(3) business.facebook.com/settings/info - Business Verification valid? ' +
+        '(4) Try regenerating the token entirely - sometimes Meta security rotates tokens silently.';
     }
     return 'Token rejected by Meta. Error: ' + JSON.stringify(err).substring(0, 200);
   }
