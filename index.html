@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
 <script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
 <style>
@@ -252,6 +252,10 @@ td{padding:10px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;transi
 tr:last-child td{border-bottom:none}
 tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 @media (hover:hover){tbody tr:hover td{background:#fff5f5!important}}
+/* content-visibility:auto on scrollable table rows — browser skips
+   layout/paint for off-screen rows. Modern browsers (Chrome/Edge/Safari
+   18+/Firefox 125+); silent no-op on older ones. */
+.tbl-wrap tbody tr{content-visibility:auto;contain-intrinsic-size:0 48px}
 body.hc th{background:var(--red)}
 body.hc tbody tr:nth-child(even) td{background:transparent}
 .et{text-align:center;padding:36px 20px;color:var(--t2);font-size:14px;background:linear-gradient(180deg,#fafbfc 0%,#fff 60%);border-radius:10px}
