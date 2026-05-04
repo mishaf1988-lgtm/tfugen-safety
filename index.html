@@ -543,9 +543,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="emp-grid">
     <button class="emp-btn r" onclick="empReport('nm')"><span class="emi">&#9940;</span>&#1511;&#1512;&#1493;&#1489;<br>&#1500;&#1514;&#1488;&#1493;&#1504;&#1492;</button>
-    <button class="emp-btn o" onclick="empReport('eqi')"><span class="emi">&#128295;</span>&#1514;&#1511;&#1500;&#1492;<br>&#1489;&#1510;&#1497;&#1493;&#1491;</button>
+    <button class="emp-btn o" onclick="empReport('eqi')"><span class="emi">&#128295;</span>&#1514;&#1511;&#1500;&#1492;<br>&#1489;&#1510;&#1497;&#1493;&#1493;&#1491;</button>
     <button class="emp-btn y" onclick="empReport('round')"><span class="emi">&#9728;</span>&#1505;&#1489;&#1489;<br>&#1489;&#1493;&#1511;&#1512;</button>
     <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
+  </div>
+  <div id="emp-recent" style="margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1502;&#1492; &#1513;&#1504;&#1513;&#1502;&#1512; &#1489;&#1502;&#1499;&#1513;&#1497;&#1512; &#1492;&#1494;&#1492;)</span></div>
+    <div id="emp-recent-list" style="font-size:13px;line-height:1.6"></div>
   </div>
   <button class="emp-toggle" onclick="empToggle(false)">&#10140; &#1506;&#1489;&#1493;&#1512; &#1500;&#1502;&#1502;&#1513;&#1511; &#1492;&#1502;&#1500;&#1488;</button>
 </div>
@@ -10694,6 +10698,7 @@ function empToggle(on){
     document.body.classList.add('emp-mode');
     try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
     CUR='emp-home';
+    if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
   }else{
     document.body.classList.remove('emp-mode');
     try{localStorage.removeItem(EMP_KEY);}catch(e){}
@@ -10718,11 +10723,13 @@ function doEmpLogin(){
   _sbAuth().catch(function(){});
   ldb();CUR='emp-home';
   SB_ON=true;_obDrain();
+  if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
 }
 function empToast(msg){
   var t=g('emp-toast');if(!t)return;
   t.textContent=msg;t.style.display='block';
   setTimeout(function(){t.style.display='none';},2200);
+  if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
 }
 function empReport(type){
   var m={nm:'m-nm',eqi:'m-eqi',round:'m-round',tr:'m-tr'};
@@ -10730,6 +10737,31 @@ function empReport(type){
   openModal(mid);
   if(type==='eqi'){var s=g('eqi-s');if(s)s.value='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df';}
 }
+// Worker-mode "my recent reports" panel \u2014 surfaces the last 5 things the
+// device submitted (across nm/eqi/rounds/tr) so the worker can confirm the
+// report actually saved before walking away. Sorted by ts desc.
+function rEmpRecent(){
+  var box=g('emp-recent');var list=g('emp-recent-list');
+  if(!box||!list)return;
+  var items=[];
+  (DB.near_miss||[]).forEach(function(r){items.push({tbl:'nm',icon:'\u26a0',label:'\u05db\u05de\u05e2\u05d8',d:r.descr||'',ts:r.ts||r.d});});
+  (DB.equip_inspections||[]).forEach(function(r){if(r.s==='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df')items.push({tbl:'eqi',icon:'\ud83d\udd27',label:'\u05ea\u05e7\u05dc\u05d4',d:(r.code?r.code+' ':'')+(r.notes||r.n||''),ts:r.ts||r.d});});
+  (DB.rounds||[]).forEach(function(r){items.push({tbl:'round',icon:'\u2600',label:'\u05e1\u05d1\u05d1',d:(r.inspector||'')+(r.notes?' \u2014 '+r.notes:''),ts:r.ts||r.d});});
+  items=items.filter(function(x){return x.ts;}).sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');}).slice(0,5);
+  if(!items.length){box.style.display='none';return;}
+  box.style.display='';
+  list.innerHTML=items.map(function(it){
+    var when='';try{var dt=new Date(it.ts);var now=Date.now();var ageMin=Math.round((now-dt.getTime())/60000);
+      if(ageMin<60)when=ageMin+' \u05d3\u05e7\u05d5\u05ea';
+      else if(ageMin<1440)when=Math.round(ageMin/60)+' \u05e9\u05e2\u05d5\u05ea';
+      else when=Math.round(ageMin/1440)+' \u05d9\u05de\u05d9\u05dd';
+    }catch(e){}
+    var preview=String(it.d||'').substring(0,60);
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0"><span style="flex:1;min-width:0"><span style="font-size:14px">'+it.icon+'</span> <strong>'+esc(it.label)+'</strong>: '+esc(preview)+(preview.length>=60?'...':'')+'</span><span style="font-size:11px;color:#16a34a;white-space:nowrap;font-weight:600">\u2713 '+esc(when)+'</span></div>';
+  }).join('');
+}
+// Refresh recent panel any time the worker home page becomes visible.
+window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIsOn())try{rEmpRecent();}catch(e){}});
 (function(){
   try{
     var qs=window.location.search||'';
