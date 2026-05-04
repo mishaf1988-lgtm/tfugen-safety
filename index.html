@@ -14,6 +14,8 @@
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
+<script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -2170,6 +2172,77 @@ id="m-ncr" style="display:none">
 
 <script>
 'use strict';
+
+// ============ Phase 0 — Performance Instrumentation ============
+// Lightweight, opt-in, non-mutating. Adds visibility into hot paths and
+// surfaces errors that the existing try/catch swallows in many places.
+
+// `?perf=1` in the URL turns on detailed timing. Off by default so the
+// safety manager never sees noise in production.
+window._perfEnabled = /[?&]perf=1\b/.test(location.search);
+window._perfLog = [];
+window._perf = function(label, fn){
+  return function(){
+    if(!_perfEnabled) return fn.apply(this, arguments);
+    var t0 = performance.now();
+    try { return fn.apply(this, arguments); }
+    finally {
+      var dt = performance.now() - t0;
+      _perfLog.push({label: label, ms: Math.round(dt), ts: Date.now()});
+      if (_perfLog.length > 200) _perfLog.shift();
+      if (dt >= 8) console.debug('[perf]', label, dt.toFixed(1) + 'ms');
+    }
+  };
+};
+
+// Web Vitals: LCP / INP / CLS captured on every page load. Stored on
+// window._wv so it can be flushed to audit_log later (a future PR will
+// wire that up). Today, available in console: copy(window._wv).
+window._wv = {};
+window.addEventListener('load', function(){
+  if (!window.webVitals) return; // CDN failed — silent fallback.
+  try {
+    webVitals.onLCP(function(m){ _wv.LCP = Math.round(m.value); });
+    webVitals.onINP(function(m){ _wv.INP = Math.round(m.value); });
+    webVitals.onCLS(function(m){ _wv.CLS = +m.value.toFixed(3); });
+    webVitals.onTTFB(function(m){ _wv.TTFB = Math.round(m.value); });
+    webVitals.onFCP(function(m){ _wv.FCP = Math.round(m.value); });
+  } catch(e){}
+});
+
+// Catch errors that try/catch + .catch(() => {}) swallow elsewhere.
+// Capped buffer so a runaway loop can't blow memory.
+window._errLog = [];
+window.addEventListener('error', function(e){
+  try {
+    var rec = {
+      ts: Date.now(),
+      msg: String(e.message || ''),
+      src: String(e.filename || ''),
+      line: e.lineno || 0,
+      col: e.colno || 0,
+      stack: (e.error && e.error.stack) ? String(e.error.stack).substring(0, 600) : ''
+    };
+    _errLog.push(rec);
+    if (_errLog.length > 50) _errLog.shift();
+    console.error('[err]', rec.msg, rec.src + ':' + rec.line);
+  } catch(_){}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try {
+    var reason = e.reason || {};
+    var rec = {
+      ts: Date.now(),
+      msg: 'unhandled-rejection: ' + String(reason.message || reason || '?'),
+      stack: reason.stack ? String(reason.stack).substring(0, 600) : ''
+    };
+    _errLog.push(rec);
+    if (_errLog.length > 50) _errLog.shift();
+    console.error('[rej]', rec.msg);
+  } catch(_){}
+});
+// ============ End Phase 0 instrumentation ============
+
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
 var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[]};
