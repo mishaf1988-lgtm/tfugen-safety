@@ -1130,6 +1130,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1497;&#1497;&#1510;&#1512; &#1502;&#1505;&#1502;&#1498; &#1502;&#1493;&#1499;&#1503; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; (ISO 45001:9.3 / 14001:9.3) &#1506;&#1500; &#1489;&#1505;&#1497;&#1505; &#1499;&#1500; &#1492;-KPIs &#1513;&#1500;&#1502;&#1506;&#1500;&#1492;</div>
     </div>
   </div>
+  <div class="card"><div class="card-title">&#128202; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1505;&#1502;&#1499;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 / 45001 surveillance)</span></div>
+    <div id="mr-ai-annual"><button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">&#129302; &#1510;&#1493;&#1512; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497;</button>
+      <div style="font-size:10px;color:var(--t3);margin-top:6px">12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#8212; &#1502;&#1492;&#1493;&#1493;&#1492; &#1492;&#1499;&#1504;&#1492; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; &#1504;&#1497;&#1496;&#1493;&#1512; ISO &#1513;&#1504;&#1514;&#1497;</div>
+    </div>
+  </div>
   <div class="page-footer">&#169; <strong>מיכאל פרייליך</strong> | סקירת הנהלה — ISO 45001 / 14001</div>
 </div>
 
@@ -9611,6 +9616,90 @@ window._aiWeeklySummary=function(){
 // summary for the formal quarterly Management Review minutes (ISO
 // 45001:9.3 / 14001:9.3). Reads KPIs already rendered on the page so it
 // stays in sync with whatever filters the manager applied.
+// Annual ISO surveillance report — 12-month review document for the
+// annual ISO 14001/45001 surveillance audit. Different from MR Narrative
+// (quarterly internal review): this is meant for external auditor.
+window._annualISOReport=function(){
+  var host=g('mr-ai-annual');
+  if(!host)return;
+  if(typeof _isAdminUser!=='function'||!_isAdminUser()){toast('רק אדמין');return;}
+  host.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--t2);font-size:12px"><span style="display:inline-block;width:14px;height:14px;border:2px solid #e5e7eb;border-top-color:#0d9488;border-radius:50%;animation:spin 0.7s linear infinite"></span>⏳ מחשב 12 חודשים אחרונים...</div>';
+  var nowMs=Date.now();
+  var year=new Date().getFullYear();
+  var yearAgo=nowMs-365*86400000;
+  function inLastYear(d){if(!d)return false;var t=new Date(d).getTime();return !isNaN(t)&&t>=yearAgo&&t<=nowMs;}
+  var ncrYear=(DB.ncr||[]).filter(function(n){return inLastYear(n.sd||n.src_date||n.ts);});
+  var ncrClosed=(DB.ncr||[]).filter(function(n){return n.s==='סגור'&&inLastYear(n.cd);});
+  var incYear=(DB.inc||[]).filter(function(i){return inLastYear(i.dt||i.d);});
+  var incLD=incYear.reduce(function(a,r){return a+(parseInt(r.dy||0,10)||0);},0);
+  var nmYear=(DB.near_miss||[]).filter(function(r){return inLastYear(r.d||r.ts);});
+  var rndYear=(DB.rounds||[]).filter(function(r){return inLastYear(r.d||r.ts);});
+  var tlkYear=(DB.toolbox||[]).filter(function(r){return inLastYear(r.d||r.ts);});
+  var trYear=(DB.tr||[]).filter(function(r){return inLastYear(r.d);});
+  var tasksDone=(DB.tasks||[]).filter(function(t){return t.status==='הושלם'&&inLastYear(t.closed_date||t.cd);});
+  var critOpen=(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&(n.p==='קריטי'||n.sv==='קריטי');});
+  var openTotal=(DB.ncr||[]).filter(function(n){return n.s!=='סגור';}).length;
+  // Compliance ratios (current snapshot)
+  var today=new Date().toISOString().split('T')[0];
+  function pctValid(t){var rs=DB[t]||[];if(!rs.length)return null;var v=rs.filter(function(r){return r.e&&r.e>=today;}).length;return Math.round(v/rs.length*100);}
+  var data={
+    period:'12 חודשים אחרונים (עד '+today+')',
+    year:year,
+    ncr:{opened:ncrYear.length,closed:ncrClosed.length,still_open:openTotal,critical_open:critOpen.length},
+    incidents:{count:incYear.length,lost_days:incLD},
+    near_miss:nmYear.length,
+    rounds_completed:rndYear.length,
+    toolbox_talks:tlkYear.length,
+    trainings_completed:trYear.length,
+    tasks_completed:tasksDone.length,
+    compliance:{
+      tr_pct:pctValid('tr'),
+      docs_pct:pctValid('docs'),
+      eqi_pct:pctValid('equip_inspections'),
+      ppe_pct:pctValid('ppe'),
+      med_pct:pctValid('med')
+    },
+    risk_register:{total:(DB.rsk||[]).length,critical:(DB.rsk||[]).filter(function(r){return (r.p*r.sv)>=15;}).length},
+    legal_register:{total:(DB.leg||[]).length,compliant:(DB.leg||[]).filter(function(l){return l.c==='מציית';}).length},
+    env_aspects:{total:(DB.env_aspects||[]).length,high_rpn:(DB.env_aspects||[]).filter(function(r){return ((r.p_curr||0)*(r.sv_curr||0))>=15;}).length}
+  };
+  var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. כתוב **דו"ח שנתי לסקירת הנהלה / מבדק surveillance של ISO 14001 + ISO 45001**, המבוסס אך ורק על הנתונים שצורפו. מסמך פורמלי בעברית תקנית, ערוך לפרוטוקול הביקורת.\n\n'+
+    'מבנה הדוח (8 חלקים, כל אחד פתוח בכותרת ## ועם מספר):\n\n'+
+    '## 1. תקופה ונתונים כלליים\n(תקופה, סך אירועים בשנה — NCRs/תקריות/near-miss)\n\n'+
+    '## 2. ביצועי בטיחות (KPIs)\n(LTIF, ימי אבדן, אחוז סגירת NCRs בזמן, מגמות)\n\n'+
+    '## 3. ניהול סיכונים\n(מאגר הסיכונים — מספר, מספר ב-RPN גבוה, פעולות שננקטו)\n\n'+
+    '## 4. סקירה סביבתית (ISO 14001:6.1.2)\n(היבטים סביבתיים מהותיים, מצב תאימות לחוק)\n\n'+
+    '## 5. הדרכות וכשירות (ISO 45001:7.2)\n(הדרכות שבוצעו, אחוז ציות, פערים שזוהו)\n\n'+
+    '## 6. תקריות ולקחים\n(תקריות חמורות, near-miss, חקירת שורש שבוצעה)\n\n'+
+    '## 7. ציות לדרישות החוק (ISO 14001:6.1.3 / 45001:6.1.3)\n(מאגר חוקים, רמת ציות, פערים)\n\n'+
+    '## 8. החלטות והמלצות לשנה הבאה\n(3-5 פעולות עיקריות שההנהלה צריכה להחליט / לתקצב)\n\n'+
+    'כללים:\n- אל תמציא נתונים — השתמש רק במה שצורף\n- אם נתון חסר — אמור "לא נמצא בנתונים"\n- בלי הקדמה כללית, התחל ישירות בחלק 1\n- כתוב בלשון פורמלית-מקצועית, מתאים לאודיטור חיצוני\n\n'+
+    'הנתונים:\n'+JSON.stringify(data,null,2);
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:3000,
+    messages:[{role:'user',content:aiPrompt}]
+  })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
+    .then(function(res){
+      if(!res.ok){host.innerHTML='<p style="color:var(--bad);font-size:12px">שגיאת AI ('+res.status+')</p><button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">⧮ נסה שוב</button>';return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){host.innerHTML='<p style="color:var(--bad)">שגיאת JSON</p>';return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){host.innerHTML='<p class="et">AI לא החזיר תוכן</p>';return;}
+      var safe=esc(content);
+      var when=new Date().toLocaleString('he-IL');
+      host.innerHTML='<div style="background:#f0fdfa;border:1px solid #14b8a6;border-radius:8px;padding:14px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--t1);max-height:600px;overflow-y:auto">'+safe+'</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
+        '<button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">⧮ צור מחדש</button>'+
+        '<button class="btn btn-sm" onclick="_annualISOCopy()" style="background:#fff;border:1px solid #d4d4d8">📋 העתק</button>'+
+        '<span style="font-size:10px;color:var(--t3);margin-right:auto">נוצר: '+esc(when)+'</span>'+
+        '</div>';
+      window._annualISORaw=content;
+    }).catch(function(e){host.innerHTML='<p style="color:var(--bad)">שגיאה: '+esc(String(e&&e.message||e))+'</p>';});
+};
+window._annualISOCopy=function(){
+  var t=window._annualISORaw||'';if(!t){toast('אין מה להעתיק');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast('הועתק ✓');});
+  else{try{var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('הועתק ✓');}catch(e){toast('העתקה נכשלה');}}
+};
 window._mrAINarrative=function(){
   var host=g('mr-ai-narrative');
   if(!host)return;
