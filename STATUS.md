@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-03 (Vercel retired · Excel intake · QR codes · repeat-deficiency · KPI widget · CSV/print)
+**Last updated**: 2026-05-04 (Performance Phase 0+1+2 shipped · 12 PRs · web-vitals · debounce · memoize · Cache-Control · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## 🌐 שרת
@@ -17,10 +17,10 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `265a74c` |
-| תאריך | 2026-05-02 |
+| Commit | `294d64d` |
+| תאריך | 2026-05-04 |
 | Tag | — (טרם נוצר) |
-| מצב | 28 טבלאות · Saved Views ב-NCR/NM/Tasks/EQI · Notifications matrix עם 5/5 triggers פעילים (ncr_critical, task_overdue, expiry_30days, round_missed, incident_critical) · Location filters בכל 5 הטפסים (NCR/NM/PTW/EQI/Hazmat) · Chained forms (near-miss חמור → NCR draft) · Dashboard widget "פתוחים לפי אזור" קליקבילי · showView מציג location path אוטומטית · עמוד מיקומים עם count badges · pelefon 🔔 ב-topbar · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל |
+| מצב | פאזות 0+1+2 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
 
 ---
 
@@ -122,6 +122,32 @@
 - [x] **10 locations נטענו ידנית (2026-05-01)** — ייצור טוגנים, קילופים, מעוצבים, אריזה, שפכים, חומר גלם, חצר, תוצ"ג, תשתיות, מעבדה. כולם level 1 שטוחים אחרי החלטת המשתמש לוותר על היררכיה (UPDATE על LOC-002/003/004 שהיו תחת ייצור טוגנים).
 - [x] **Saved Views per-user (PR #147)** — בהשראת Vitre §16#6. טבלה חדשה `saved_views(id, user_email, page_slug, name, filters jsonb, ts)` עם RLS לפי `auth.jwt()->>'email'`. UI: כפתור 💾 (שמור) + Dropdown ⭐ (טען) + 🗑 (מחק) ליד הטאבים בעמודי NCR ו-Near Miss. helpers `_svUser`/`_svListForPage`/`_svSave`/`_svDelete`/`_svRenderSelect` (גנריים) + per-page glue (`svNcrSave/Apply/Delete`, `svNmSave/Apply/Delete`). Filters jsonb: `{ncrFilter, ncrLocFilter}` ל-NCR, `{nmFilter, nmLocFilter}` ל-NM — extensible לעמודים נוספים בעתיד בלי schema change.
 - [x] **Notifications Matrix (PR #148)** — בהשראת Vitre §11. טבלה חדשה `notification_prefs(id PK = user email, prefs jsonb, ts)` עם RLS לפי email. UI: מודאל 🔔 "הגדרות התראות" (תפריט → ניהול), מטריצה של 5 אירועים (`ncr_critical`, `task_overdue`, `expiry_30days`, `round_missed`, `incident_critical`) × 3 ערוצים (`whatsapp`, `email`, `inapp`) עם checkboxes. Generic dispatcher `_notifyEvent(eventKey, payload)` בודק העדפות ומפעיל ערוצים פעילים. **Trigger ראשון מחובר**: יצירת NCR בעדיפות "קריטי" → `_notifyEvent('ncr_critical', ...)`. Channels: in-app עובד מיידית (toast); WhatsApp — console.log עד שיאושרו ה-templates של Meta; Email — console.log עד שיוגדר SMTP/API. Hooks ל-task_overdue/expiry/round_missed/incident_critical יתווספו ב-PR נפרד.
+
+### 🚀 Performance refresh — Phase 0+1+2 (2026-05-04, PRs #333-#344)
+
+תוכנית מלאה: `project-files/PERFORMANCE-PLAN-2026-05-04.md` (סינתזה של 5 סוכני מחקר במקביל). 12 PRs ברצף, כולם CSS/JS surgical-only, `body.hc` נשמר, `prefers-reduced-motion` מכובד, smoke check עבר.
+
+- [x] **Phase 0 — Instrumentation (PR #333)** — `web-vitals@4` IIFE מ-CDN, `window._perf(label, fn)` wrapper מאחורי `?perf=1`, `window.addEventListener('error'/'unhandledrejection')` עם buffer של 50, `window._wv` מתמלא ב-LCP/INP/CLS/TTFB/FCP בכל טעינה.
+- [x] **Phase 1 — preconnect (PR #334)** — `<link rel="preconnect">` ל-Supabase + fonts.googleapis + fonts.gstatic. -150-300ms בקריאה ראשונה.
+- [x] **Phase 1 — `_headers` + `_routes.json` (PR #335)** — Cache-Control מפורט (HTML+SW=no-cache, SVG/JPG=long-cache), security headers (X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options), `_routes.json` עם `include:["/api/*"]` כדי לחסוך Pages Functions invocations על קבצים סטטיים.
+- [x] **Phase 1 — defer + content-visibility (PR #336)** — `defer` ל-supabase-js SDK (-150ms blocking parse), `content-visibility:auto; contain-intrinsic-size:0 48px` על `.tbl-wrap tbody tr` (INP ↓ ברשימות ארוכות).
+- [x] **Phase 1 — lazy + passive (PR #337)** — `loading="lazy"` על תמונות בטבלאות (NM photo + global search results), `{passive:true}` על scroll listener.
+- [x] **Phase 2 — `_deb` + 6 search debounces (PR #338)** — helper גנרי `window._deb(fn, ms)`, 6 wrappers מוכנים: `_debEqiSearch`, `_debTskSearch`, `_debRHearing`, `_debModFilter`, `_debGsearch`, `_debSrRun`. הקלדה מהירה → רינדור 1 במקום N.
+- [x] **Phase 2 — memoize (PR #339)** — `_locNameCache` / `_prjNameCache` / `_itypeNameCache` ב-Map, invalidate ב-`_rtApply`. חוסך 800+ סריקות לינאריות לרינדור NCR.
+- [x] **Phase 2 — sdb cleanup (PR #340)** — `_SDB_SKIP = {audit_log, notifications_log, hist}` בעת serialize, cap ל-200 שורות ב-`_rtApply`. חוסך 50-80% מ-blob size, מונע QuotaExceededError.
+- [x] **Phase 2 — split badges + guard rDash (PR #341)** — `_dashBadges()` מופרד מ-`rDash`, ה-badges מתעדכנים תמיד, רינדור הדשבורד מדלג כש-`CUR!=='dash'`. חוסך ~30-100ms לכל שמירה מחוץ לדשבורד.
+- [x] **Phase 2 — fetch priority:low (PR #342)** — `priority:'low'` ב-`sbGet` כדי שכתיבות user-initiated יקדימו את ה-polling.
+- [x] **Phase 2 — debounce sdb (PR #343)** — `setTimeout(_sdbFlush, 250)`, `beforeunload`+`pagehide` flushes. Burst של 35 שמירות ב-sbSync ראשוני → flush אחד.
+- [x] **Phase 2 — `_hayFor` haystack (PR #344)** — `_srRun` (חיפוש Ctrl+K) שומר lowercase JSON על property non-enumerable `_hs`. x10 מהיר בהקלדה.
+
+**SW: v83 → v95** (12 גרסאות, bumped ידני בכל PR).
+
+**מה נשאר בתוכנית:**
+- Phase 3: SW rewrite (auto-version, kill manual `tfgn-vNN`, no auto-reload mid-form). דורש בדיקה ב-iOS Safari אמיתי.
+- Phase 4: RLS migration (~100x שיפור). דורש הרצה ידנית ב-Supabase.
+- Phase 5: Sync + Realtime tame (column projection, longer poll, rAF debounce).
+- Phase 6: Edge function hardening (SSE keepalive ל-524, Storage cacheControl).
+- Phase 7: רק אם המדידות מצביעות.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
