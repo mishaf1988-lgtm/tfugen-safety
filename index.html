@@ -621,6 +621,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
       <input type="tel" id="dash-wa-phone" placeholder="+972547940073" value="+972547940073" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
       <button class="btn btn-p" onclick="_waTestSend()" style="font-size:13px;white-space:nowrap">&#128241; &#1513;&#1500;&#1495;</button>
+      <button class="btn btn-d" onclick="_waDiagnose()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1488;&#1489;&#1495;&#1503; &#1488;&#1514; &#1492;&#1488;&#1497;&#1504;&#1496;&#1490;&#1512;&#1510;&#1497;&#1492; &#1489;&#1500;&#1497; &#1500;&#1513;&#1500;&#1493;&#1495; &#1492;&#1493;&#1491;&#1506;&#1492;">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
     </div>
     <div id="dash-wa-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1502;&#1505;&#1508;&#1512; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1502;&#1488;&#1493;&#1502;&#1514; &#1489;-Meta dashboard</div>
@@ -9630,6 +9631,49 @@ window._waTestSend=function(){
   _waSend(to,{template:'hello_world'});
 };
 window._waTestPrompt=window._waTestSend;
+window._waDiagnose=function(){
+  var rEl=g('dash-wa-result');
+  if(rEl)rEl.textContent='\u23f3 \u05de\u05d0\u05d1\u05d7\u05df...';
+  fetch('/api/wa-status',{method:'GET',headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});})
+    .then(function(res){
+      if(!rEl)return;
+      var d=res.data||{};
+      var env=d.env||{};
+      var meta=d.meta_api||{};
+      var ok=function(v){return /^set/.test(String(v));};
+      var dot=function(v){return ok(v)?'\u2705':'\u274c';};
+      var lines=[];
+      lines.push('<div style="font-family:monospace;font-size:11px;line-height:1.6;background:#f8f9fa;border:1px solid #ddd;border-radius:6px;padding:8px;margin-top:4px">');
+      lines.push('<strong>Env vars (Cloudflare Pages):</strong><br>');
+      lines.push(dot(env.META_PHONE_NUMBER_ID)+' META_PHONE_NUMBER_ID: '+esc(String(env.META_PHONE_NUMBER_ID||'?'))+'<br>');
+      lines.push(dot(env.META_ACCESS_TOKEN)+' META_ACCESS_TOKEN: '+esc(String(env.META_ACCESS_TOKEN||'?'))+'<br>');
+      lines.push((/^set/.test(String(env.META_WABA_ID))?'\u2705':'\u26a0\ufe0f')+' META_WABA_ID: '+esc(String(env.META_WABA_ID||'?'))+'<br>');
+      lines.push('<br><strong>Meta API:</strong><br>');
+      if(meta.reachable){
+        lines.push('\u2705 reachable (HTTP '+meta.status+')<br>');
+        lines.push('\ud83d\udcc4 \u05ea\u05d1\u05e0\u05d9\u05d5\u05ea: '+(meta.templates?meta.templates.length:0)+' \u05e1\u05d4"\u05db, '+meta.approved_count+' \u05de\u05d0\u05d5\u05e9\u05e8\u05d5\u05ea<br>');
+        if(meta.templates && meta.templates.length){
+          meta.templates.slice(0,8).forEach(function(t){
+            var icon=t.status==='APPROVED'?'\u2705':(t.status==='REJECTED'?'\u274c':'\u23f3');
+            lines.push('&nbsp;&nbsp;'+icon+' '+esc(t.name)+' ['+esc(t.status)+']<br>');
+          });
+        }
+      }else{
+        lines.push('\u274c not reachable - HTTP '+(meta.status||'?')+'<br>');
+        if(meta.error)lines.push('&nbsp;&nbsp;error: '+esc(JSON.stringify(meta.error).substring(0,200))+'<br>');
+      }
+      if(d.next_step){
+        lines.push('<br><strong>\u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea:</strong><br>');
+        lines.push('<span style="color:#1e40af">'+esc(d.next_step)+'</span><br>');
+      }
+      lines.push('</div>');
+      rEl.innerHTML=lines.join('');
+    })
+    .catch(function(err){
+      if(rEl)rEl.textContent='\u2717 \u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(err&&err.message||err);
+    });
+};
 window._waSend=function(to,opts){
   opts=opts||{};
   var body={to:to};
