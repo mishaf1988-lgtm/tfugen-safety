@@ -1639,7 +1639,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
     <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label><div id="inc-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('inc-attach-area','inc')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-inc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svInc()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-inc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="inc-ai-btn" onclick="_incAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1505;&#1493;&#1493;&#1490;/&#1495;&#1493;&#1502;&#1512;&#1492; AI</button><button class="btn btn-p" onclick="svInc()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- TR MODAL -->
@@ -9210,6 +9210,50 @@ window._aiWeeklyCopy=function(){
 // area + reporter), classify severity + type and propose a short preventive
 // action that goes into the notes field. Empty fields are filled; non-empty
 // fields are not overwritten.
+// AI suggestion for an Incident record. Reads description and proposes
+// type (תאונה עם פציעה / Near Miss / וכו'), severity (קל..קריטי), and an
+// estimate of lost work days. Empty fields only — root cause stays the
+// user's call (or use the dedicated 5-Why AI button on the view page).
+window._incAI=function(){
+  var btn=g('inc-ai-btn');
+  var d=gv('i-d')||'';
+  if(!d){toast('הזן תיאור תקרית קודם');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ מחשב...';}
+  var ctx='תיאור: '+d;
+  var locTxt=g('i-location-id')&&g('i-location-id').selectedOptions[0]?g('i-location-id').selectedOptions[0].text:'';
+  if(locTxt && locTxt!=='—')ctx+='\nמיקום: '+locTxt;
+  var aiPrompt='אתה יועץ ISO 45001. בהינתן דיווח תקרית בטיחות, החזר JSON תקין בלבד עם 3 שדות:\n'+
+    '{\n  "ty": "תאונה עם פציעה" או "תאונה ללא פציעה" או "Near Miss" או "נזק לרכוש" או "אירוע סביבתי",\n'+
+    '  "sv": "קל" או "בינוני" או "חמור" או "קריטי" (חומרת התרחיש בפועל),\n'+
+    '  "dy": מספר שלם של ימי היעדרות צפויים (0 אם אין פציעה, אחרת הערכה גסה: 1-2 חבלה קלה, 3-7 פציעה בינונית, 8-30 חמורה, 30+ קריטית)\n}\n\n'+
+    'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
+    'התקרית:\n'+ctx;
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:aiPrompt}]})})
+    .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
+    .then(function(res){
+      if(btn){btn.disabled=false;btn.textContent='🤖 סווג/חומרה AI';}
+      if(!res.ok){toast('שגיאת AI ('+res.status+')');console.warn('Inc AI:',res.txt);return;}
+      var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('שגיאת JSON מ-AI');return;}
+      var content=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(!content){toast('AI לא החזיר תוכן');return;}
+      content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI החזיר טקסט לא JSON');console.warn('AI raw:',content);return;}
+      var changed=[];
+      var tyEl=g('i-ty'),svEl=g('i-sv'),dyEl=g('i-dy');
+      var allowedTy=['תאונה עם פציעה','תאונה ללא פציעה','Near Miss','נזק לרכוש','אירוע סביבתי'];
+      var allowedSv=['קל','בינוני','חמור','קריטי'];
+      if(tyEl && parsed.ty && allowedTy.indexOf(parsed.ty)>-1){tyEl.value=parsed.ty;changed.push('סוג');}
+      if(svEl && parsed.sv && allowedSv.indexOf(parsed.sv)>-1){svEl.value=parsed.sv;changed.push('חומרה');}
+      if(dyEl && (typeof parsed.dy==='number') && parsed.dy>=0 && !dyEl.value){dyEl.value=String(parsed.dy);changed.push('ימי אבדן');}
+      if(changed.length)toast('AI מילא: '+changed.join(' · '));
+      else toast('שדות מלאים — לא הוחלף כלום');
+    })
+    .catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='🤖 סווג/חומרה AI';}
+      toast('שגיאה ברשת: '+(e&&e.message||e));
+    });
+};
 // AI helper for the Legal Register modal. Reads the law name + full text
 // (or just the name) and proposes a short summary, the topic tag, and
 // applicability area. Empty fields only — never overwrites user input.
