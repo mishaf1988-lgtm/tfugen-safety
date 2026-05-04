@@ -3032,6 +3032,12 @@ function openModal(id){
     var ctx=ctxMap[id];
     if(ctx)try{renderFL(ctx);}catch(e){}
     if(id==='m-train')try{initSig();}catch(e){}
+    // Per-modal draft autosave hooks (only triggered for new entries; the
+    // hooks self-detect edit-mode via their respective hidden id field).
+    if(id==='m-nm'){
+      if(typeof _nmDraftCheck==='function')try{_nmDraftCheck();}catch(e){}
+      if(typeof _nmDraftStart==='function')try{_nmDraftStart();}catch(e){}
+    }
     // Scroll modal to top on open so user always sees the title first
     setTimeout(function(){try{mo.scrollTop=0;}catch(e){}},0);
   }
@@ -6395,12 +6401,63 @@ function rNm(){
     return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');_signifyDom(tb);
 }
+// Near-miss draft autosave. Same pattern as NCR/Inc but the nm modal has
+// no hidden id field \u2014 every open is a "new" report, so we always start
+// the timer. Cleared on successful save.
+var _NM_DRAFT_KEY='tfgn_nm_draft_v1';
+var _NM_DRAFT_TIMER=null;
+var _NM_DRAFT_FIELDS=['nm-d','nm-t','nm-desc','nm-location-id','nm-area','nm-rep','nm-sev','nm-typ','nm-s','nm-notes'];
+function _nmDraftSnapshot(){
+  var snap={};
+  _NM_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el)snap[f]=el.value||'';});
+  return snap;
+}
+function _nmDraftHasContent(snap){
+  return (snap['nm-desc']||'').trim().length>0;
+}
+function _nmDraftStart(){
+  if(_NM_DRAFT_TIMER)clearInterval(_NM_DRAFT_TIMER);
+  _NM_DRAFT_TIMER=setInterval(function(){
+    var modal=g('m-nm');
+    if(!modal||modal.style.display==='none'){_nmDraftStop();return;}
+    var snap=_nmDraftSnapshot();
+    if(_nmDraftHasContent(snap)){
+      try{localStorage.setItem(_NM_DRAFT_KEY,JSON.stringify({snap:snap,ts:Date.now()}));}catch(e){}
+    }
+  },5000);
+}
+function _nmDraftStop(){
+  if(_NM_DRAFT_TIMER){clearInterval(_NM_DRAFT_TIMER);_NM_DRAFT_TIMER=null;}
+}
+function _nmDraftClear(){
+  _nmDraftStop();
+  try{localStorage.removeItem(_NM_DRAFT_KEY);}catch(e){}
+}
+function _nmDraftCheck(){
+  var raw;try{raw=localStorage.getItem(_NM_DRAFT_KEY);}catch(e){return;}
+  if(!raw)return;
+  var d;try{d=JSON.parse(raw);}catch(e){_nmDraftClear();return;}
+  if(!d||!d.snap||!d.ts)return;
+  var ageMin=Math.round((Date.now()-d.ts)/60000);
+  if(ageMin>1440){_nmDraftClear();return;}
+  if(!_nmDraftHasContent(d.snap))return;
+  var ageLabel=ageMin<60?ageMin+' \u05d3\u05e7\u05d5\u05ea':Math.round(ageMin/60)+' \u05e9\u05e2\u05d5\u05ea';
+  var preview=(d.snap['nm-desc']||'').substring(0,60);
+  var ok=confirm('\u05de\u05e6\u05d0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05ea \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05dc\u05d0 \u05e9\u05de\u05d5\u05e8\u05d4 \u05de\u05dc\u05e4\u05e0\u05d9 '+ageLabel+':\n\n"'+preview+'..."\n\n\u05dc\u05e9\u05d7\u05d6\u05e8?');
+  if(ok){
+    Object.keys(d.snap).forEach(function(f){var el=g(f);if(el)el.value=d.snap[f]||'';});
+    toast('\u05d8\u05d9\u05d5\u05d8\u05d4 \u05e9\u05d5\u05d7\u05d6\u05e8\u05d4 \u05de '+ageLabel);
+  }else{
+    _nmDraftClear();
+  }
+}
 function svNm(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var r={id:gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
   DB.near_miss.push(r);sbIns('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
+  if(typeof _nmDraftClear==='function')_nmDraftClear();
   closeModal('m-nm');['nm-desc','nm-area','nm-rep','nm-notes','nm-t'].forEach(function(id){var el=g(id);if(el)el.value='';});_nmClearPhoto();
   toast('\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713');rNm();rDash();
 }
