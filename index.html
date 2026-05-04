@@ -161,6 +161,11 @@ body.hc .card{box-shadow:var(--sh)!important;transform:none!important}
 /* ---- KPI GRID ---- */
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 
+/* Section divider used on the dashboard */
+.dash-section-title{margin:18px 0 6px;font-size:12px;color:var(--t2);font-weight:800;text-align:right;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-direction:row-reverse}
+.dash-section-title::before{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent 0%,#ddd 30%,#ddd 100%)}
+body.hc .dash-section-title::before{background:#000}
+
 /* Dashboard "Today" — actionable list of what needs attention */
 .today-list{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06)}
 .today-header{background:linear-gradient(135deg,#fef2f2,#fee2e2);border-bottom:1px solid #fca5a5;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
