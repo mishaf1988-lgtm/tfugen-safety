@@ -191,9 +191,15 @@
 
 **SW**: גרסה אוטומטית מ-`CF_PAGES_COMMIT_SHA`, אין יותר עליות ידניות.
 
-**מה נשאר בתוכנית:**
-- Phase 5 parts 4+5 (אופציונלי, נדחה): column projection (`_sbCols` map ל-`sbGet`) — דורש אימות ידני שכל עמודה שה-UI נוגע נמצאת ברשימה, טבלה אחת בכל פעם, מתחיל מ-NCR. Server-side filter על `notifications_log` — דורש החלטה אם admin צריך לראות notifications של משתמשים אחרים (כרגע — כן).
-- Phase 7: רק אם המדידות מצביעות.
+**Phase 5 הושלמה במלואה (PR #411, 2026-05-04):**
+- Item 2 — `_sbCols` map ל-`sbGet`: כרגע רק `audit_log` + `notifications_log` (verified). הוספת טבלאות נוספות (NCR וכו') תיעשה בעתיד אחרי audit ידני של כל UI touch-point.
+- Item 5 — server-side filter על Realtime: `audit_log` + `notifications_log` עכשיו מסוננים לפי `user_email=eq.<my_email>` כדי להפחית traffic.
+- Items 3, 4, 6 כבר היו בקוד מ-PRs קודמים (poll 600s, rAF debounce, skip refresh).
+
+**Phase 1 final item (PR #411):**
+- PWA manifest icons 192/512/maskable — Lighthouse PWA installability ✓
+
+**🎉 כל פאזות הביצועים (0-6) הושלמו ב-100%.** Phase 7 רק אם המדידות יצביעו על צורך.
 
 ### 🌙 Overnight autonomous polish (2026-05-02, PRs #150-#160)
 - [x] **Saved Views ל-Tasks (PR #150)** — אותו pattern מ-#147, מרחיב לעמוד משימות.
