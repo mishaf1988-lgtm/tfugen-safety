@@ -9650,9 +9650,14 @@ window._waDiagnose=function(){
       lines.push(dot(env.META_ACCESS_TOKEN)+' META_ACCESS_TOKEN: '+esc(String(env.META_ACCESS_TOKEN||'?'))+'<br>');
       lines.push((/^set/.test(String(env.META_WABA_ID))?'\u2705':'\u26a0\ufe0f')+' META_WABA_ID: '+esc(String(env.META_WABA_ID||'?'))+'<br>');
       lines.push('<br><strong>Meta API permissions:</strong><br>');
+      var idn=meta.identity||{};
       var msg=meta.messaging||{};
       var mgmt=meta.management||{};
       var probeIcon=function(p){return p&&p.ok?'\u2705':'\u274c';};
+      lines.push(probeIcon(idn)+' identity (token alive): HTTP '+(idn.status||'?'));
+      if(idn.ok && idn.json){lines.push(' \u2014 '+esc(String(idn.json.name||idn.json.id||'').substring(0,40)));}
+      else if(idn.json && idn.json.error){lines.push(' \u2014 code '+idn.json.error.code+': '+esc(String(idn.json.error.message||'').substring(0,80)));}
+      lines.push('<br>');
       lines.push(probeIcon(msg)+' messaging (send): HTTP '+(msg.status||'?'));
       if(!msg.ok && msg.json && msg.json.error){lines.push(' \u2014 code '+msg.json.error.code+': '+esc(String(msg.json.error.message||'').substring(0,80)));}
       lines.push('<br>');
