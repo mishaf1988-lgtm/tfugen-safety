@@ -547,7 +547,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="emp-btn y" onclick="empReport('round')"><span class="emi">&#9728;</span>&#1505;&#1489;&#1489;<br>&#1489;&#1493;&#1511;&#1512;</button>
     <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
   </div>
-  <div id="emp-recent" style="margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
+  <div id="emp-sync" style="margin-top:14px;background:#fff7ed;border:1px solid #f59e0b;border-radius:12px;padding:12px;display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1497;&#1488;&#1493;&#1492;&#1500; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1490;&#1500;&#1497;&#1499;&#1492; &#1492;&#1493;&#1492;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
+  </div>
+  <div id="emp-recent" style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
     <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1502;&#1492; &#1513;&#1504;&#1513;&#1502;&#1512; &#1489;&#1502;&#1499;&#1513;&#1497;&#1512; &#1492;&#1494;&#1492;)</span></div>
     <div id="emp-recent-list" style="font-size:13px;line-height:1.6"></div>
   </div>
@@ -2422,9 +2425,15 @@ function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e)
 function _obPush(op){op.ts=op.ts||Date.now();op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));op.tries=op.tries||0;var q=_obGet();q.push(op);_obSet(q);_obBadge();}
 function _obTblsPending(){var s={};_obGet().forEach(function(op){if(op.tbl)s[op.tbl]=1;});return s;}
 function _obBadge(state){
-  var p=document.getElementById('sync-pill');if(!p)return;
-  var ic=document.getElementById('sync-pill-icon'),tx=document.getElementById('sync-pill-txt');
+  var p=document.getElementById('sync-pill');
   var n=_obGet().length;
+  // Worker-mode mirror: show/hide the orange "N pending" pill on the worker
+  // home so they can see whether the device is mid-upload before walking off.
+  var es=document.getElementById('emp-sync'),esc=document.getElementById('emp-sync-count');
+  if(es)es.style.display=n>0?'':'none';
+  if(esc)esc.textContent=String(n);
+  if(!p)return;
+  var ic=document.getElementById('sync-pill-icon'),tx=document.getElementById('sync-pill-txt');
   p.classList.remove('on','ok','err');
   if(state==='err'){p.classList.add('on','err');if(ic)ic.textContent='\u26a0';if(tx)tx.textContent=n+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5 \u2014 \u05d4\u05e7\u05dc\u05e7 \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd';return;}
   if(n===0){if(state==='ok'){p.classList.add('on','ok');if(ic)ic.textContent='\u2713';if(tx)tx.textContent='\u05d1\u05e2\u05e0\u05df';setTimeout(function(){p.classList.remove('on','ok');},2000);}return;}
