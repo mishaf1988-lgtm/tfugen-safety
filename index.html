@@ -9527,17 +9527,36 @@ var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var _pwaPrompt=null;
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW registration failed:',e);});
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      // Hourly background check. iOS Safari otherwise rechecks at most once a
+      // day, which is how users got stuck on stale code for 24h.
+      setInterval(function(){try{reg.update();}catch(e){}},60*60*1000);
+    }).catch(function(e){console.warn('SW registration failed:',e);});
   });
-  // When a new SW activates it broadcasts {type:'sw-updated'} — reload once so
-  // the page actually starts running the fresh index.html instead of the
-  // cached JS that was loaded before the SW finished updating.
+  // When a new SW activates it broadcasts {type:'sw-updated'}. Instead of
+  // reloading automatically (which used to drop NCR forms mid-edit), show a
+  // persistent pill the user clicks when ready.
   navigator.serviceWorker.addEventListener('message',function(ev){
     if(ev.data && ev.data.type==='sw-updated' && !window._swReloaded){
-      window._swReloaded=true;
-      setTimeout(function(){location.reload();},250);
+      _swPromptUpdate();
     }
   });
+}
+function _swPromptUpdate(){
+  if(document.getElementById('sw-update-pill'))return;
+  var pill=document.createElement('div');
+  pill.id='sw-update-pill';
+  pill.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1d4ed8;color:#fff;padding:10px 18px;border-radius:24px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:14px;font-weight:600;z-index:9999;cursor:pointer;display:flex;align-items:center;gap:8px;direction:rtl;font-family:inherit';
+  pill.textContent='\ud83d\udd04 \u05d2\u05e8\u05e1\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u2014 \u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df';
+  pill.onclick=function(){
+    if(window._swReloaded)return;
+    window._swReloaded=true;
+    pill.style.background='#0a4a8a';
+    pill.style.cursor='wait';
+    pill.textContent='\u23f3 \u05de\u05e8\u05e2\u05e0\u05df...';
+    setTimeout(function(){location.reload();},150);
+  };
+  document.body.appendChild(pill);
 }
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
