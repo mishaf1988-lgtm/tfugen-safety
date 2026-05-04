@@ -48,8 +48,45 @@ export async function onRequest({ request, env }) {
 
   // Streaming path: pipe the SSE body straight through. Keeps the connection
   // alive for long PDF analyses (>100s) so Cloudflare doesn't 524.
+  // We wrap upstream.body in a TransformStream that injects `: keepalive`
+  // SSE comments while idle. Anthropic's first-token delay on 30-page PDFs
+  // can exceed Cloudflare's 100-second silent-timeout — the heartbeat keeps
+  // bytes flowing so the connection stays open until real tokens arrive.
   if (parsed.stream && upstream.body) {
-    return new Response(upstream.body, {
+    const enc = new TextEncoder();
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    let lastByteAt = Date.now();
+    let closed = false;
+
+    const ping = setInterval(() => {
+      if (closed) return;
+      if (Date.now() - lastByteAt > 14000) {
+        // SSE comments start with ":" and are silently ignored by clients.
+        writer.write(enc.encode(': keepalive\n\n')).catch(() => {});
+      }
+    }, 5000);
+
+    (async () => {
+      const reader = upstream.body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          lastByteAt = Date.now();
+          await writer.write(value);
+        }
+      } catch (e) {
+        // Surface upstream errors as a final SSE event for the client to log.
+        try { await writer.write(enc.encode(`event: error\ndata: ${JSON.stringify({ message: String(e && e.message || e) })}\n\n`)); } catch (_) {}
+      } finally {
+        closed = true;
+        clearInterval(ping);
+        try { await writer.close(); } catch (_) {}
+      }
+    })();
+
+    return new Response(readable, {
       status: upstream.status,
       headers: {
         ...cors,
