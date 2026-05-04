@@ -6933,6 +6933,7 @@ window._topMoreMenu=function(anchor){
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
   item('\ud83d\udcc6','\u05d9\u05d9\u05e6\u05d0 \u05dc\u05d5\u05d7 \u05e9\u05e0\u05d4 (iCal/Google Calendar)',function(){if(typeof _exportICS==='function')_exportICS();});
+  item('\ud83d\udcd7','\u05d2\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e7\u05e1\u05dc \u05de\u05dc\u05d0 (Excel)',function(){if(typeof _exportXlsx==='function')_exportXlsx();});
   item('\ud83d\udcbe','\u05d2\u05d9\u05d1\u05d5\u05d9 JSON',function(){if(typeof _exportBackup==='function')_exportBackup();});
   sep();
   item('\u25d0','\u05e0\u05d9\u05d2\u05d5\u05d3\u05d9\u05d5\u05ea \u05d2\u05d1\u05d5\u05d4\u05d4',function(){if(typeof hcToggle==='function')hcToggle();});
@@ -10352,6 +10353,75 @@ window._exportBackup=function(){
 // PPE/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05db\u05d9\u05dd/\u05e7\u05d1\u05dc\u05df/\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea-\u05e6\u05d9\u05d5\u05d3/\u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea expirations. Imports cleanly into
 // Google Calendar / Outlook / iCloud Calendar so reminders land in the user's
 // regular calendar app instead of relying on this web UI.
+// Full Excel backup — generates a single .xlsx file containing one sheet
+// per DB table. Uses the same XLSX library that the import already loads
+// (CDN, lazy-loaded on first use). Microsoft Excel / OneDrive / Google
+// Sheets all open the result. The user can then version it in OneDrive
+// for Business or any cloud drive.
+window._exportXlsx=function(){
+  toast('בונה קובץ אקסל...');
+  var ensureXlsx=function(cb){
+    if(typeof XLSX!=='undefined')return cb();
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=function(){cb();};
+    s.onerror=function(){toast('שגיאה בטעינת ספריית Excel');};
+    document.head.appendChild(s);
+  };
+  ensureXlsx(function(){
+    try{
+      var wb=XLSX.utils.book_new();
+      // Order: most-business-relevant first so Excel opens on a useful sheet.
+      var tableOrder=[
+        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox',
+        'equip_inspections','ppe','tr','docs','ctr','med',
+        'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
+        'emp','app_users','locations','projects','inspection_types','issue_types',
+        'audit_log','notifications_log','ncr_ai','ncr_comments','ncr_patterns',
+        'page_files','saved_views','notification_prefs','custom_props'
+      ];
+      // Hebrew sheet names per table — Excel requires <=31 chars, no special chars.
+      var sheetName={
+        ncr:'NCR',inc:'תקריות',near_miss:'כמעט-נפגע',tasks:'משימות',
+        rsk:'סיכונים',rounds:'סיורי בוקר',toolbox:'שיחות בטיחות',
+        equip_inspections:'בדיקות ציוד',ppe:'PPE',tr:'הדרכות',docs:'מסמכים',
+        ctr:'קבלנים',med:'בדיקות רפואיות',env_aspects:'היבטים סביבתיים',
+        leg:'מאגר חוקים',hzm:'חומ"ס',wst:'פסולת',env:'דגימות סביבה',
+        ins:'בידוד',drl:'תרגולים',ptw:'PTW',hearing_tests:'בדיקות שמיעה',
+        emp:'עובדים',app_users:'משתמשי המערכת',locations:'מיקומים',
+        projects:'פרויקטים',inspection_types:'סוגי בדיקה',issue_types:'סוגי אי-התאמות',
+        audit_log:'יומן שינויים',notifications_log:'יומן התראות',
+        ncr_ai:'ניתוחי AI ל-NCR',ncr_comments:'הערות NCR',ncr_patterns:'דפוסי NCR',
+        page_files:'קבצי דפים',saved_views:'תצוגות שמורות',
+        notification_prefs:'העדפות התראות',custom_props:'שדות מותאמים'
+      };
+      var added=0;
+      tableOrder.forEach(function(t){
+        var rows=DB[t];if(!rows||!rows.length)return;
+        // Discover the union of all keys from all rows so jagged data still
+        // exports cleanly (every record's columns appear).
+        var keys={};rows.forEach(function(r){if(r&&typeof r==='object')Object.keys(r).forEach(function(k){keys[k]=1;});});
+        var cols=Object.keys(keys);
+        var data=rows.map(function(r){
+          var o={};cols.forEach(function(k){
+            var v=r&&r[k];
+            if(v===null||v===undefined)o[k]='';
+            else if(typeof v==='object')o[k]=JSON.stringify(v);
+            else o[k]=v;
+          });return o;
+        });
+        var ws=XLSX.utils.json_to_sheet(data,{header:cols});
+        var nm=String(sheetName[t]||t).substring(0,31);
+        XLSX.utils.book_append_sheet(wb,ws,nm);
+        added++;
+      });
+      if(!added){toast('אין נתונים לגיבוי');return;}
+      var fname='tapugan-safety-backup-'+(new Date().toISOString().split('T')[0])+'.xlsx';
+      XLSX.writeFile(wb,fname);
+      toast('גיבוי אקסל: '+added+' גיליונות ✓');
+    }catch(e){console.error('xlsx export:',e);toast('שגיאה: '+(e&&e.message||e));}
+  });
+};
 window._exportICS=function(){
   function pad(n){return n<10?'0'+n:String(n);}
   function icsDate(s){
