@@ -13,6 +13,59 @@
 
 ---
 
+## 2026-05-04 — WhatsApp restored — Meta App must be in Live Mode (not Development)
+
+**החלטה**: ה-Meta App "בטיחות" (App ID `2100358170694098`) חייב להיות ב-**Live Mode**, לא ב-Development Mode. אחרת כל קריאה ל-Meta Graph API מ-Cloudflare Pages Functions נחסמת עם `code 200 OAuthException "API access blocked"` — גם אם ה-token ב-Cloudflare env vars תקין, גם אם ה-System User אסיינד נכון, גם אם Meta API נגיש מהשרת.
+
+**סיבה**: כש-App ב-Development Mode, רק יוצר ה-App (אדמין) יכול לקרוא ל-API. כל IP/identity אחר נחסם אוטומטית. ב-30/4 ה-App פעל מ-Vercel דרך אותו admin → עבר. אחרי המעבר ל-Cloudflare ב-3/5, ה-IP השתנה → Meta דחתה את הקריאות בשקט. הסימפטום היה זהה ל-"token expired" אבל הסיבה שונה לגמרי.
+
+**אבחון שעבד**: סדרת PRs (#356-#359) של `/api/wa-status` שמריץ 4 probes בלתי-תלויים מול Meta:
+1. **reachability** — `/me?access_token=invalid_token_for_probe`. אמור לחזור 190 ("invalid OAuth token") ב-API חי. אם חוזר 200/403 → CF IP חסום.
+2. **identity** — `/me` עם הטוקן האמיתי. אם נכשל ב-200 → ה-App/Business תחת הגבלה (Development Mode, App suspended, Business unverified).
+3. **messaging** — `/{PHONE_ID}` עם הטוקן. בודק `whatsapp_business_messaging` scope.
+4. **management** — `/{WABA_ID}/message_templates` עם הטוקן. בודק `whatsapp_business_management` scope.
+
+המקרה הזה: reachability ✅, identity ❌ → אישר שהטוקן והרשת תקינים, הבעיה ב-Meta App-level.
+
+**דרישות לפני Switch to Live Mode** (מה שחסר ל-App "בטיחות"):
+1. **App domains**: tag עם hostname של ה-deployment, למשל `tapugan-safety.pages.dev` (חייב Enter כדי שירשם כ-tag).
+2. **Privacy policy URL**: דף HTML עם מדיניות פרטיות. נמצא ב-`/privacy.html`.
+3. **User data deletion** → dropdown **"Data deletion instructions URL"** (לא Callback URL — Callback מצפה ל-POST endpoint שמחזיר JSON; Instructions מצפה ל-HTML). URL: `/user-data-deletion.html`.
+4. **App icon** 1024×1024 PNG. logo.jpg הקיים הוא 765×369, לא מתאים. שימוש: favicon.io → resize ל-1024×1024.
+5. **Category**: "Business and pages".
+
+**אלטרנטיבות שנדחו**:
+- **רק לחזור ל-Vercel** — נדחה כי ההחלטה האסטרטגית ב-2026-05-03 הייתה לעבור ל-CF. חזרה הייתה הופכת את כל המעבר.
+- **ליצור System User חדש / Business Verification חדש** — נסיון של "אולי הטוקן חסום" שלא היה הבעיה. ה-token היה תקין כל הזמן.
+- **לעקוף Meta דרך 3rd-party API** (Twilio/Vonage) — תוספת עלות, השאלה הכמסחרית עוד פתוחה.
+
+**קישורים**: PRs #347 (cacheControl + RLS migration), #356 (wa-status v1), #357 (split scopes), #358 (identity probe), #359 (reachability probe), #361 (privacy + deletion HTML pages).
+
+**הערה לעתיד**: אם המסך מ-Meta אומר "App Mode: In development" — זה ברור, מעבר ל-Live ידני. אם זה לא ברור — להריץ /api/wa-status. אם reachability ✅ ו-identity ❌ ב-code 200 → תמיד לחפש את App Mode בעמוד developers.facebook.com/apps.
+
+---
+
+## 2026-05-04 — Auto-version Service Worker via Cloudflare Pages function
+
+**החלטה**: ה-`sw.js` הסטטי הוסר. במקומו, `functions/sw.js.js` מחזיר את אותו תוכן SW אבל עם `tfgn-${BUILD}` כש-BUILD = 7 התווים הראשונים של `CF_PAGES_COMMIT_SHA` (הזרקה אוטומטית ע"י Cloudflare ב-build time). `_routes.json` עודכן לכלול `/sw.js`.
+
+**סיבה**: בכל PR שכלל שינוי כלשהו ב-`index.html` היה צריך לזכור לעלות `tfgn-vNN` ידנית. הסשן של 4/5 לבדו עלה מ-v83 ל-v104 (21 עליות ידניות). פספוס bump = browser לא מזהה SW חדש = משתמשים על קוד ישן עד `reg.update()` הבא. עם CF_PAGES_COMMIT_SHA, ה-bytes של `/sw.js` משתנים אוטומטית בכל deploy.
+
+**מה נפתר**:
+- אין יותר עליות ידניות של גרסת SW
+- אין יותר סיכון של פספוס bump
+- ה-soft pill של PR #354 עדיין עובד (משתמש בוחר מתי לרענן)
+- מעבר חלק: tabs קיימים מקבלים את ה-SW החדש בבדיקה הבאה (אחרי שעה לפי PR #354 או על focus)
+
+**אלטרנטיבות שנדחו**:
+- **git pre-commit hook** שמעלה את הגרסה — דורש workflow change אצל המפתח, גם לא עוזר ב-CI שלא רץ הוקים.
+- **service worker ש-fetches גרסה מ-API** — לא עוזר כי browser לא יזהה גרסה חדשה אם bytes של sw.js לא משתנים.
+- **Workbox** — overkill, נוגד "אין framework / build step".
+
+**קישורים**: PR #360 · `functions/sw.js.js` · `_routes.json`.
+
+---
+
 ## 2026-05-03 — מעבר סופי ל-Cloudflare, סוף החיים של Vercel
 **החלטה**: הסרנו את `/api/*.js` (Edge Functions של Vercel) ואת `vercel.json` מה-repo. כל קוד צד שרת חי רק ב-`/functions/api/*.js` (Cloudflare Pages Functions). הפרודקשן יחיד: `https://tapugan-safety.pages.dev`. הפניית URL ב-`index.html` (טקסט קוֹפי-לקוח עם פרטי כניסה) הוחלף מ-`tfugen-safety.vercel.app` ל-`tapugan-safety.pages.dev`.
 **סיבה**: ה-WhatsApp templates של Meta עודכנו לפני 24+ שעות. אין יותר תלות ב-Vercel. החזקת קוד API כפול בשני המקומות הייתה מקור לטעויות (כל שינוי דורש שני edits, סיכון לסטייה). מחיקה מורידה ~600 שורות קוד מיותר.
