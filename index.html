@@ -3505,9 +3505,10 @@ function _renderKpiCard(){
     tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.')+
   '</div>';
 }
-function rDash(){
-  if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
-  // My open tasks count badge
+// Fast topbar/bnav badges. Extracted from rDash so save handlers can call
+// it without paying for the full dashboard re-render when the user is on
+// some other page.
+window._dashBadges = function(){
   try{
     var u=(typeof _svUser==='function')?_svUser():'';
     var openCount=(DB.tasks||[]).filter(function(t){
@@ -3519,7 +3520,6 @@ function rDash(){
       if(openCount>0){badge.textContent=String(openCount);badge.style.display='';}
       else badge.style.display='none';
     }
-    // Total open tasks badge in bottom nav
     var totalOpen=(DB.tasks||[]).filter(function(t){return t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';}).length;
     var bnBadge=g('bn-tasks-badge');
     if(bnBadge){
@@ -3527,6 +3527,17 @@ function rDash(){
       else bnBadge.style.display='none';
     }
   }catch(e){}
+};
+
+function rDash(){
+  if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Always update the topbar/bnav badges (cheap, user expects them fresh).
+  _dashBadges();
+  // Skip the heavy dashboard widget rendering if the user is on a different
+  // page \u2014 they will not see it. They will see updated dashboard next time
+  // they navigate there (rPage \u2192 rDash). Saves ~30-100ms per save handler
+  // call from sv* / del* helpers across the app.
+  if(CUR!=='dash') return;
   // Safety health score (rough composite)
   try{
     var dh=g('dash-health');
