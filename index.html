@@ -2434,7 +2434,23 @@ function _aud(op,tbl,idOrRow){
 function sbIns(tbl,row){_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
-function _sbRefresh(silent){rDash();if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();}
+// Page CUR -> the one primary table whose changes the page renders.
+// Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
+// re-render on any change because they aggregate across many tables.
+var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types'};
+// Lookup tables — names appear in almost every list, so a change in them
+// can affect any rendered page. Never skip a re-render for these.
+var _LOOKUP_TBLS={locations:1,projects:1,issue_types:1,inspection_types:1,app_users:1,emp:1};
+function _sbRefresh(silent,changedTbl){
+  rDash();
+  if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();
+  // Realtime path: if we know which table fired, and the current page is a
+  // single-table page that doesn't render that table, skip rPage(). Pages
+  // not in _PAGE_PRIMARY (aggregate pages) always render. Lookup tables
+  // always trigger render because their names are reused everywhere.
+  if(silent && changedTbl && _PAGE_PRIMARY[CUR] && !_LOOKUP_TBLS[changedTbl] && _PAGE_PRIMARY[CUR]!==changedTbl) return;
+  if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();
+}
 function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'];
   var pending=_obTblsPending();
@@ -2478,6 +2494,10 @@ function _rtStart(){
     }catch(e){_rtState='err';}
   }).catch(function(){_rtState='err';});
 }
+// Realtime event handler — mutates DB synchronously, then defers sdb() and
+// _sbRefresh to a single rAF. Bursts of N events (e.g. 35 INSERTs from a
+// bulk action elsewhere) collapse into one re-render + one localStorage write.
+var _rtPending=null,_rtChangedTbls={};
 function _rtApply(tbl,payload){
   if(!DB[tbl])DB[tbl]=[];
   var ev=payload.eventType,nr=payload.new,or_=payload.old;
@@ -2491,16 +2511,34 @@ function _rtApply(tbl,payload){
   }else if(ev==='DELETE'&&or_&&or_.id){
     DB[tbl]=DB[tbl].filter(function(r){return r.id!==or_.id;});
   }else return;
-  // The new/updated row arrived without its _hs cache, so global search
-  // (Ctrl+K) will recompute on next query — automatic invalidation.
-  // Cap append-only log tables in memory the same way DB.hist is capped
-  // by addLog. The audit page fetches its own larger window from Supabase
-  // when opened, so cutting off at 200 here is safe for UI use.
+  // Cap append-only log tables in memory the same way DB.hist is capped by
+  // addLog. The audit page fetches its own larger window from Supabase when
+  // opened, so cutting off at 200 here is safe for UI use.
   if((tbl==='audit_log'||tbl==='notifications_log') && DB[tbl].length>200){
     DB[tbl] = DB[tbl].slice(0, 200);
   }
   if(typeof _invalidateNameCache==='function')_invalidateNameCache(tbl);
-  sdb();_sbRefresh(true);
+  _rtChangedTbls[tbl]=1;
+  if(_rtPending)return;
+  _rtPending=(window.requestAnimationFrame||function(f){return setTimeout(f,16);})(function(){
+    _rtPending=null;
+    var tbls=Object.keys(_rtChangedTbls);
+    _rtChangedTbls={};
+    sdb();
+    // Pass a single changed table when only one fired in this frame so the
+    // page-skip optimization in _sbRefresh can engage. When many fired,
+    // check whether ANY of them affect the current page; if none, pass one
+    // non-relevant table to engage skip; otherwise pass null to force render.
+    var primary=_PAGE_PRIMARY[CUR];
+    if(tbls.length===1){
+      _sbRefresh(true,tbls[0]);
+    }else if(primary){
+      var anyRelevant=tbls.some(function(t){return t===primary||_LOOKUP_TBLS[t];});
+      _sbRefresh(true,anyRelevant?null:tbls[0]);
+    }else{
+      _sbRefresh(true,null);
+    }
+  });
 }
 // One-time outbox sanitizer: strip known-bad fields written by older PDF flow
 // before they get sent (otherwise PostgREST returns PGRST204 on every retry).
