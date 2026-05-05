@@ -13223,6 +13223,35 @@ function _ensurePdfLib(){
   });
   return _pdfLibPromise;
 }
+// Lazy-load Heebo Hebrew TTF (~100KB) once per session and convert to
+// base64 for jsPDF.addFileToVFS. jsPDF's bundled fonts don't include
+// Hebrew glyphs — without this, all Hebrew renders as Latin gibberish.
+var _hebFontPromise=null;
+function _ensureHebrewFont(){
+  if(window._hebFontB64)return Promise.resolve(window._hebFontB64);
+  if(_hebFontPromise)return _hebFontPromise;
+  _hebFontPromise=new Promise(function(resolve,reject){
+    fetch('https://cdn.jsdelivr.net/fontsource/fonts/heebo@latest/hebrew-400-normal.ttf')
+      .then(function(r){
+        if(!r.ok)throw new Error('font fetch '+r.status);
+        return r.arrayBuffer();
+      })
+      .then(function(buf){
+        // ArrayBuffer → binary string → base64
+        var bytes=new Uint8Array(buf);
+        var bin='';
+        // Process in chunks to avoid call-stack limits with large buffers
+        for(var i=0;i<bytes.length;i+=8192){
+          bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
+        }
+        window._hebFontB64=btoa(bin);
+        resolve(window._hebFontB64);
+      })
+      .catch(function(e){reject(e);});
+    setTimeout(function(){if(!window._hebFontB64)reject(new Error('font load timeout'));},15000);
+  });
+  return _hebFontPromise;
+}
 // Helper: download an image URL and return a base64 data URL for embedding
 // into jsPDF. Resolves to null on failure (PDF still gets generated, just
 // without the photo).
@@ -13259,60 +13288,84 @@ function _odImgToBase64(url){
 function _odBuildReportPdf(tbl,rec){
   var cfg=window.VIEW_CONFIG&&window.VIEW_CONFIG[tbl];
   if(!cfg)return Promise.reject(new Error('no view config for '+tbl));
-  return _ensurePdfLib().then(function(){
-    // Flip Hebrew + bidi-isolated chars so right-aligned print reads
-    // correctly. jsPDF's standard fonts (Helvetica/Times/Courier) draw
-    // chars left-to-right; for Hebrew display we need to reverse the
-    // string and right-align. ASCII / digits stay LTR within RTL.
-    function flip(s){
+  return Promise.all([_ensurePdfLib(),_ensureHebrewFont()]).then(function(arr){
+    var hebFontB64=arr[1];
+    // Bidi handler — Hebrew characters need to be visually reversed when
+    // mixed with the Heebo font (which draws chars in source order, not
+    // visual RTL). For pure-Hebrew strings we reverse. For mixed
+    // Hebrew+Latin strings we segment and reverse only the Hebrew runs,
+    // keeping Latin/digits in their original order. This isn't full
+    // Unicode bidi but handles 95% of real-world report content.
+    function bidi(s){
       s=String(s==null?'':s);
-      // Reverse only if any Hebrew chars present
       if(!/[֐-׿]/.test(s))return s;
-      return s.split('').reverse().join('');
+      // Walk char-by-char, build segments of [hebrew] vs [other]
+      var out='',buf='',mode=null;
+      function flushBuf(){
+        if(!buf)return;
+        if(mode==='heb')out+=buf.split('').reverse().join('');
+        else out+=buf;
+        buf='';
+      }
+      for(var i=0;i<s.length;i++){
+        var c=s.charCodeAt(i);
+        var isHeb=(c>=0x0590&&c<=0x05FF);
+        var thisMode=isHeb?'heb':'other';
+        if(mode&&thisMode!==mode){flushBuf();}
+        mode=thisMode;buf+=s[i];
+      }
+      flushBuf();
+      // Then reverse the WHOLE string so right-align renders correctly
+      // (since jsPDF draws right-aligned by anchoring the right edge at x).
+      return out.split('').reverse().join('');
     }
     var jsPDF=window.jspdf.jsPDF;
     var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    // Register Heebo font with jsPDF's virtual file system
+    try{
+      doc.addFileToVFS('Heebo.ttf',hebFontB64);
+      doc.addFont('Heebo.ttf','Heebo','normal');
+      doc.setFont('Heebo','normal');
+    }catch(e){console.warn('[od] Hebrew font registration failed:',e&&e.message);}
     var pageW=210,pageH=297,margin=15,rightX=pageW-margin;
     var y=margin+5;
     // Title
-    doc.setFontSize(18);
+    doc.setFontSize(20);
     doc.setTextColor(204,31,31);
-    doc.text(flip(cfg.title||tbl),rightX,y,{align:'right'});
-    y+=2;
+    doc.text(bidi(cfg.title||tbl),rightX,y,{align:'right'});
+    y+=3;
     doc.setDrawColor(204,31,31);
     doc.setLineWidth(0.8);
     doc.line(margin,y+1,rightX,y+1);
     y+=10;
-    // Field rows: label (right-aligned, grey) + value (right of label, dark)
+    // Field rows
     doc.setFontSize(11);
     cfg.fields.forEach(function(f){
       var val=rec[f[1]];
       if(val===true)val='V';else if(val===false)val='X';
       else if(val===undefined||val===null||val==='')val='—';
       if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
-      var label=flip(f[0]+':');
-      var value=flip(String(val).replace(/\n/g,' / '));
+      var label=bidi(f[0]+':');
+      var value=bidi(String(val).replace(/\n/g,' / '));
       doc.setTextColor(120,120,120);
       doc.text(label,rightX,y,{align:'right'});
       doc.setTextColor(20,20,20);
-      // Wrap long values to multiple lines
-      var wrapWidth=pageW-margin-margin-45; // leave 45mm for label
+      var wrapWidth=pageW-margin-margin-45;
       var lines=doc.splitTextToSize(value,wrapWidth);
       doc.text(lines,rightX-45,y,{align:'right'});
       y+=Math.max(7,lines.length*6);
       if(y>pageH-30){doc.addPage();y=margin+10;}
     });
-    // Footer with timestamp
+    // Footer
     var stamp=new Date().toLocaleString('he-IL');
     doc.setFontSize(9);
     doc.setTextColor(150,150,150);
-    doc.text(flip(stamp+' | Tapugan Safety | אוטומטי דוח'),rightX,pageH-10,{align:'right'});
-    // Embed photo if present (after fields)
+    doc.text(bidi('\u05D3\u05D5\u05D7 \u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9 | Tapugan Safety | '+stamp),rightX,pageH-10,{align:'right'});
+    // Embed photo
     if(rec.photo_url){
       return _odImgToBase64(rec.photo_url).then(function(b64){
         if(b64){
           try{
-            // Try to add image; if jsPDF can't detect type, default to JPEG
             var imgW=160,imgH=110;
             var imgY=Math.min(y+5,pageH-imgH-margin-15);
             if(imgY+imgH>pageH-margin-15){doc.addPage();imgY=margin+10;}
