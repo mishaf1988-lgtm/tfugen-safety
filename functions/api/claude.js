@@ -71,7 +71,24 @@ export async function onRequest({ request, env }) {
       const aiInput = isVision
         ? { prompt: parsed.prompt || '', image: parsed.image || '', max_tokens: parsed.max_tokens }
         : { messages: parsed.messages, max_tokens: parsed.max_tokens };
-      const aiResp = await env.AI.run(parsed.model, aiInput);
+      let aiResp;
+      try {
+        aiResp = await env.AI.run(parsed.model, aiInput);
+      } catch (firstErr) {
+        // Llama 3.2 Vision is gated behind a one-time TOS acknowledgement.
+        // Cloudflare returns "5016: Prior to using this model, you must
+        // submit the prompt 'agree'." Auto-accept and retry once. Once
+        // accepted at the account level, future calls succeed without retry.
+        const m = String((firstErr && firstErr.message) || firstErr);
+        if (/5016|must submit the prompt 'agree'|Prior to using this model/i.test(m)) {
+          try {
+            await env.AI.run(parsed.model, { prompt: 'agree' });
+          } catch (_) { /* the agree call itself can also error; ignore */ }
+          aiResp = await env.AI.run(parsed.model, aiInput);
+        } else {
+          throw firstErr;
+        }
+      }
       // Translate Workers AI shape ({response: "..."} or {result: ...}) into
       // Anthropic shape ({content:[{type:"text",text:"..."}]}) so the 14
       // client-side handlers don't need to change.
