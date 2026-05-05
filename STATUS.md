@@ -173,12 +173,14 @@
 - [x] **NCR/Inc/NM/Risk view — quick CAPA spawn (PR #398, 2026-05-04)** — כפתור "➕ פתח משימת מעקב (CAPA)" כחול מתחת לכפתור WhatsApp ב-showView. אדמין/מנהל בלבד. נראה כש-NCR/Inc/NM פתוח, וכש-Risk תמיד. קליק → openTskModal עם title + source_table + source_id pre-filled. חוסך 4 קליקים.
 - [x] **Worker home — sync indicator + manual sync button (PR #399, 2026-05-04)** — מודל סנכרון של ה-topbar מוסתר ב-`emp-mode`. הוספה כרטיס כתום "⏳ N דיווחים ממתינים לסנכרון" שמופיע אוטומטית כשהlocalStorage outbox לא ריק, עם כפתור "↺ סנכרן עכשיו" שמפעיל `_obDrain(true)`. מחובר דרך `_obBadge()` — single source of truth לpill ול-emp indicator.
 - [x] **AI provider migration: Anthropic → Cloudflare Workers AI (PR #404, 2026-05-04)** — Anthropic Claude Haiku 4.5 (paid) הוחלף ב-`@cf/meta/llama-3.3-70b-instruct-fp8-fast` (Workers AI, 10K neurons/day חינם). ה-proxy `functions/api/claude.js` מאתר אוטומטית את הקיפוד: `@cf/...` → `env.AI.run()`, `claude-...` → api.anthropic.com (לאחור). שכבת הproxy מתרגמת את תגובת Workers AI ל-Anthropic shape (`{content:[{type:"text",text:"..."}]}`) כדי ש-14 הקריאות מצד הלקוח לא ידרשו שינוי. **דרושה הגדרה ידנית ב-Cloudflare Pages dashboard** → Settings → Functions → Bindings → Add Workers AI binding בשם `AI` (בוצע 2026-05-04). איכות עברית של Llama 3.3 70B מספקת לכל ה-AI Suggest helpers + dashboard widgets + MR narrative.
-- [x] **Tasks render fix sequence (PRs #402, #406-#409, 2026-05-04)** — דף משימות הציג כותרת אדומה אבל גוף הטבלה ריק (סה"כ 1, בהתקדמות 1, אבל אין שורה). 6 איטרציות תיקון:
-  - #402: הסרת `content-visibility:auto` (חשוד ראשון — placeholder 48px בלי paint)
+- [x] **Tasks render fix sequence (PRs #402, #406-#409, #434, #435 — finalized 2026-05-05)** — דף משימות + Toolbox + שאר טבלאות הציגו רק את הכותרת ללא שורות תוכן. 7 איטרציות:
+  - #402: הסרת `content-visibility:auto` (חשוד ראשון)
   - #406: `!important` על td color/background (לא הספיק)
-  - #407: inline styles על td + diagnostic line "✓ מתרנדר N משימות" (חשף ש-JS עובד אבל CSS מסתיר)
-  - #408: תיקון בעיה אמיתית — `<td>` עם 2 attributes של `style=` (HTML לא חוקי שגרם לדפדפנים שונים להתנהג שונה)
-  - **#409: פתרון אמיתי — רינדור ב-`<div>` נפרד מהטבלה** — לא יותר `<tr>/<td>` בכלל. כל שורה היא `<div style="display:grid">` ב-`#tb-tasks-cards` שיושב מחוץ ל-`<tbody>`. שום CSS שמטרגט table/tr/td לא יכול להגיע. **זה הפתרון הסופי**.
+  - #407: inline styles על td + diagnostic
+  - #408: תיקון `<td>` עם 2 attributes של `style=`
+  - #409: רינדור משימות ב-`<div>` נפרד (תיקון טכני נכון, אבל רק למשימות)
+  - #434: CSS גורף עם `!important` על height/visibility (עבד חלקית)
+  - **#435: פתרון אמיתי וגורף — universal cards layout בכל הטבלאות.** הוסרה ההפרדה בין mobile/desktop. כל `<tr>` נראה כקארד עם `data-label` תוויות, בכל מסך. **אומת ע"י המשתמש 2026-05-05 ✓**
 - [x] **AI 400 fix sequence (PRs #401, #403, #404, 2026-05-04)** — Weekly AI + Today AI החזירו `שגיאת AI (400)`:
   - #401: ניסיון ראשון — `claude-haiku-4-5` → `claude-haiku-4-5-20251001` (לא הספיק)
   - #403: debug UI שחושף את ההודעה המלאה מ-Anthropic
