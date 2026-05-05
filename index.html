@@ -13269,21 +13269,26 @@ function _odMirrorRecord(tbl,rec){
   var sub=_odSubfolderName(tbl,rec);
   var folder=topic+'/'+sub;
   var jobs=[];
-  if(rec.photo_url){
-    jobs.push(_odFetchSigned(rec.photo_url).then(function(blob){
-      if(!blob){console.warn('[od] photo signed-fetch returned null',rec.photo_url);return;}
-      var ext=(String(rec.photo_url).split('?')[0].split('.').pop()||'jpg').substring(0,5).toLowerCase();
-      if(!/^[a-z0-9]{2,5}$/.test(ext))ext='jpg';
-      return _odPushFile(blob,folder,'photo.'+ext);
-    }).catch(function(e){console.warn('[od] photo mirror failed:',e&&e.message);}));
-  }
-  if(rec.file_url && rec.file_url!==rec.photo_url){
-    jobs.push(_odFetchSigned(rec.file_url).then(function(blob){
-      if(!blob){console.warn('[od] file signed-fetch returned null',rec.file_url);return;}
-      var fname=(String(rec.file_url).split('/').pop()||'file').split('?')[0];
+  // Mirror attached file(s) using their original filename from the upload.
+  // Whatever the user uploaded (image / PDF / docx / xlsx / etc.) lands
+  // in OneDrive with the same extension and roughly the same name —
+  // never renamed to "photo.<ext>".
+  function mirrorAttachment(srcUrl,label){
+    return _odFetchSigned(srcUrl).then(function(blob){
+      if(!blob){console.warn('[od] '+label+' signed-fetch returned null',srcUrl);return;}
+      // Use the original filename from the URL last segment (strips query
+      // string). If empty for some reason, derive from blob MIME type.
+      var fname=(String(srcUrl).split('/').pop()||'').split('?')[0];
+      if(!fname){
+        var mime=blob.type||'application/octet-stream';
+        var extByMime={'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx','application/vnd.ms-excel':'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'xlsx'}[mime]||'bin';
+        fname=label+'.'+extByMime;
+      }
       return _odPushFile(blob,folder,fname);
-    }).catch(function(e){console.warn('[od] file mirror failed:',e&&e.message);}));
+    }).catch(function(e){console.warn('[od] '+label+' mirror failed:',e&&e.message);});
   }
+  if(rec.photo_url)jobs.push(mirrorAttachment(rec.photo_url,'photo'));
+  if(rec.file_url && rec.file_url!==rec.photo_url)jobs.push(mirrorAttachment(rec.file_url,'file'));
   // PDF report — preferred over HTML per user request. Falls back to HTML
   // if PDF lib fails to load (offline / CDN issue).
   jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
