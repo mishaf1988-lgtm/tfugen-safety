@@ -13036,27 +13036,147 @@ function _odAutoImport(){
   }).catch(function(e){console.warn('[od] auto-poll error:',e&&e.message);})
     .then(function(){_odPolling=false;});
 }
+// Lazy-load pdf.js for in-browser PDF text extraction. Used to feed
+// inspection-report PDFs into the AI classifier as text (faster + more
+// accurate than rendering pages and using vision OCR).
+var _pdfJsPromise=null;
+function _ensurePdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(_pdfJsPromise)return _pdfJsPromise;
+  _pdfJsPromise=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+    s.onload=function(){
+      if(!window.pdfjsLib)return reject(new Error('pdfjsLib not defined'));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror=function(){reject(new Error('pdf.js CDN failed'));};
+    document.head.appendChild(s);
+    setTimeout(function(){if(!window.pdfjsLib)reject(new Error('pdf.js timeout'));},15000);
+  });
+  return _pdfJsPromise;
+}
+// Extract text from the first 3 pages of a PDF blob. Returns a single
+// string with newlines between pages, or empty string on failure.
+function _extractPdfText(blob){
+  return _ensurePdfJs().then(function(pdfjs){
+    return blob.arrayBuffer();
+  }).then(function(buf){
+    return window.pdfjsLib.getDocument({data:buf}).promise;
+  }).then(function(pdf){
+    var pageCount=Math.min(pdf.numPages,3);
+    var jobs=[];
+    for(var i=1;i<=pageCount;i++){
+      jobs.push(pdf.getPage(i).then(function(p){
+        return p.getTextContent().then(function(tc){
+          return tc.items.map(function(it){return it.str;}).join(' ');
+        });
+      }));
+    }
+    return Promise.all(jobs).then(function(pages){return pages.join('\n');});
+  }).catch(function(e){console.warn('[od auto] pdf text extract failed:',e&&e.message);return '';});
+}
+// Build the AI prompt for full classification + structured field
+// extraction. Used for both image (vision) and text (PDF) inputs.
+function _odBuildClassifyPrompt(name,extractedText){
+  var ctx=extractedText?('\n\nתוכן המסמך (3 עמודים ראשונים):\n'+String(extractedText).substring(0,4000)):'';
+  return 'את עוזרת AI במערכת בטיחות תעשייתית. סווגי קובץ והוציאי שדות. החזירי JSON בלבד (ללא טקסט נוסף, ללא ```):\n'+
+    '{\n'+
+    '  "target": "equip_inspections|tr|ppe|med|docs|ncr|other",\n'+
+    '  "label": "תיאור עברי קצר",\n'+
+    '  "summary": "שורה אחת",\n'+
+    '  "code": "מספר ציוד/רישוי אם קיים, אחרת \\"\\""\,\n'+
+    '  "n": "שם/תיאור הפריט",\n'+
+    '  "manufacturer": "יצרן אם מצוין",\n'+
+    '  "model": "דגם אם מצוין",\n'+
+    '  "serial_number": "מס\' סידורי",\n'+
+    '  "license_number": "מספר רישוי",\n'+
+    '  "d": "תאריך הבדיקה YYYY-MM-DD או \\"\\""\,\n'+
+    '  "e": "תאריך תוקף/בדיקה הבאה YYYY-MM-DD או \\"\\""\,\n'+
+    '  "inspector": "שם הבודק",\n'+
+    '  "s": "תקין|לקוי|ממתין"\n'+
+    '}\n\n'+
+    'מדריך טבלאות:\n'+
+    '- equip_inspections = דוחות בדיקת ציוד (מטף, חשמל, מנופים, סולמות וכו\')\n'+
+    '- tr = תעודת הדרכה לעובד\n'+
+    '- ppe = ציוד מגן אישי\n'+
+    '- med = בדיקה רפואית של עובד\n'+
+    '- docs = רישיון/אישור/מסמך כללי\n'+
+    '- ncr = אי-התאמה / ליקוי שזוהה\n'+
+    '- other = לא בטוח\n\n'+
+    'הוראות תאריכים: רק פורמט YYYY-MM-DD. אם רואה DD/MM/YYYY - המירי. אם לא ברור - החזירי "".\n'+
+    'שם קובץ: '+name+ctx+'\n\nJSON בלבד.';
+}
+// Send a TEXT prompt to Workers AI text model and return the response.
+function _aiTextClassify(prompt){
+  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+    max_tokens:800,
+    messages:[{role:'user',content:prompt}]
+  })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
+    .then(function(res){
+      if(!res.ok)throw new Error('AI '+res.status+': '+res.txt.substring(0,200));
+      var dj=JSON.parse(res.txt);
+      return dj.content&&dj.content[0]?dj.content[0].text:'';
+    });
+}
+// Apply the AI-extracted fields to a new record for the given target.
+// Each target has different field names — map them appropriately.
+function _odApplyExtractedFields(t,p,name,uploadedUrl){
+  var rec={id:gid(),ts:new Date().toISOString()};
+  function clean(v){return v&&v!=='""'?String(v).trim():'';}
+  function dateOk(v){return clean(v)&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:null;}
+  var nm=clean(p.n)||name.replace(/\.[^.]+$/,'').substring(0,80);
+  if(t==='tr'){
+    rec.n=nm;rec.w=clean(p.inspector)||'';rec.c='בטיחות';rec.s='הושלם';
+    rec.d=dateOk(p.d);rec.e=dateOk(p.e);rec.file_url=uploadedUrl;
+    DB.tr=DB.tr||[];DB.tr.push(rec);sbIns('tr',rec);
+  }else if(t==='ppe'){
+    rec.ty=nm.substring(0,40);rec.m=clean(p.manufacturer)||'';rec.w='';
+    rec.e=dateOk(p.e);rec.file_url=uploadedUrl;
+    DB.ppe=DB.ppe||[];DB.ppe.push(rec);sbIns('ppe',rec);
+  }else if(t==='med'){
+    rec.n=clean(p.n)||'';rec.t='בדיקה רפואית';
+    rec.d=dateOk(p.d);rec.e=dateOk(p.e);rec.file_url=uploadedUrl;
+    DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);
+  }else if(t==='ncr'){
+    rec.num='NCR-'+String((DB.ncr||[]).length+1).padStart(4,'0');
+    rec.d=clean(p.summary)||clean(p.label)||nm.substring(0,200);
+    rec.a='בטיחות';rec.s='פתוח';rec.p='בינונית';rec.photo_url=uploadedUrl;
+    DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);
+  }else if(t==='equip_inspections'){
+    rec.code=clean(p.code)||'?';rec.n=nm;
+    rec.manufacturer=clean(p.manufacturer)||'';
+    rec.model=clean(p.model)||'';
+    rec.serial_number=clean(p.serial_number)||'';
+    rec.license_number=clean(p.license_number)||'';
+    rec.inspector=clean(p.inspector)||'';
+    rec.d=dateOk(p.d);rec.e=dateOk(p.e);
+    rec.s=clean(p.s)||'תקין';rec.file_url=uploadedUrl;
+    DB.equip_inspections=DB.equip_inspections||[];DB.equip_inspections.push(rec);
+    sbIns('equip_inspections',rec);
+  }else{
+    rec.n=nm;rec.c='כללי';rec.e=dateOk(p.e);rec.file_url=uploadedUrl;
+    DB.docs=DB.docs||[];DB.docs.push(rec);sbIns('docs',rec);
+  }
+  return rec;
+}
 function _odClassifyAndImport(item){
   var name=item.name||'';
   var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
+  var isPdf=/\.pdf$/i.test(name)||(item.file&&/pdf/i.test(item.file.mimeType||''));
   var dlUrl=item['@microsoft.graph.downloadUrl'];
   if(!dlUrl){
-    // Graph download URL is short-lived (~1h). If missing, we can't fetch
-    // the file. Move to /_review/ so it doesn't keep polling. User can
-    // re-upload to Inbox to retry.
     console.warn('[od auto] no download url for',name,'→ moving to _review');
     return _odMoveToReview(item.id).then(function(){return 'failed';},function(){return 'failed';});
   }
   return new Promise(function(resolve){
     function doImport(suggestion){
-      // Items the AI couldn't confidently classify ('other') → move to
-      // /_review/ folder so the user can drag them out manually after
-      // checking. This keeps the main Inbox clean for the next batch.
       if(!suggestion||suggestion.target==='other'||!suggestion.target){
         console.log('[od auto]',name,'→ _review (target=other)');
         return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
       }
-      // Fetch + upload + create record (mirrors _odImportItem logic).
       fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
         return new Promise(function(resolveUp,rejectUp){
           var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
@@ -13067,25 +13187,35 @@ function _odClassifyAndImport(item){
         });
       }).then(function(uploadedUrl){
         var t=suggestion.target;
-        var rec={id:gid(),ts:new Date().toISOString()};
-        if(t==='tr'){rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.w='';rec.c='בטיחות';rec.s='הושלם';rec.file_url=uploadedUrl;DB.tr=DB.tr||[];DB.tr.push(rec);sbIns('tr',rec);}
-        else if(t==='ppe'){rec.ty='אחר';rec.w='';rec.m=name.substring(0,40);rec.file_url=uploadedUrl;DB.ppe=DB.ppe||[];DB.ppe.push(rec);sbIns('ppe',rec);}
-        else if(t==='med'){rec.n='';rec.t='בדיקה רפואית';rec.file_url=uploadedUrl;DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);}
-        else if(t==='ncr'){rec.num='NCR-'+String((DB.ncr||[]).length+1).padStart(4,'0');rec.d=(suggestion.summary||name).substring(0,200);rec.a='בטיחות';rec.s='פתוח';rec.p='בינונית';rec.photo_url=uploadedUrl;DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);}
-        else if(t==='equip_inspections'){rec.code='?';rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.file_url=uploadedUrl;rec.s='תקין';DB.equip_inspections=DB.equip_inspections||[];DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);}
-        else{rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.c='כללי';rec.file_url=uploadedUrl;DB.docs=DB.docs||[];DB.docs.push(rec);sbIns('docs',rec);}
+        _odApplyExtractedFields(t,suggestion,name,uploadedUrl);
         sdb();
-        try{addLog('OneDrive Auto-Import: '+name+' → '+t);}catch(e){}
-        return _odMoveToTopic(item.id,t);
+        try{addLog('OneDrive Auto-Import: '+name+' → '+t+(suggestion.code?' ('+suggestion.code+')':''));}catch(e){}
+        // The sbIns hook will mirror the new record to its per-equipment
+        // subfolder within ~1.5s. We just need to clear the original from
+        // /Inbox/ — the file already exists in Supabase Storage and will
+        // land in the proper subfolder when the mirror runs.
+        return _odDeleteItemAsync(item.id);
       }).then(function(){resolve('imported');})
         .catch(function(e){
           console.warn('[od auto] item failed:',name,e&&e.message);
-          // Move to _review so we don't retry forever and user knows it
-          // needs manual attention.
           _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
         });
     }
-    if(!isImg){
+    var classifyPromise;
+    if(isImg){
+      classifyPromise=fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+        return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
+      });
+    }else if(isPdf){
+      classifyPromise=fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+        return _extractPdfText(blob).then(function(txt){
+          var prompt=_odBuildClassifyPrompt(name,txt);
+          return _aiTextClassify(prompt);
+        });
+      });
+    }else{
+      // Non-image, non-PDF — fall back to filename-only heuristic (legacy
+      // behaviour). Office docs etc.
       var lower=name.toLowerCase();
       var sug={target:'docs',label:'מסמך'};
       if(/cert|תעוד|הדרכה|train/i.test(lower))sug={target:'tr',label:'תעודת הדרכה'};
@@ -13094,19 +13224,31 @@ function _odClassifyAndImport(item){
       else if(/ncr|אי.התאמ|noncon/i.test(lower))sug={target:'ncr',label:'NCR'};
       return doImport(sug);
     }
-    fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
-      var prompt='סווג תמונה במערכת בטיחות. החזר JSON תקין בלבד:\n{"target":"tr"|"ppe"|"med"|"docs"|"ncr"|"equip_inspections"|"other","label":"תיאור עברי קצר","summary":"שורה אחת"}\nמדריך:\n- tr=תעודת הדרכה\n- ppe=ציוד מגן אישי\n- med=בדיקה רפואית\n- docs=מסמך/רישיון\n- ncr=ליקוי בשטח\n- equip_inspections=דוח בדיקת ציוד\n- other=לא ניתן לסווג בודאות\n\nשם הקובץ: '+name+'\nJSON בלבד.';
-      return _ocrAnalyze(blob,prompt);
-    }).then(function(content){
+    classifyPromise.then(function(content){
       content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
-      var p;try{p=JSON.parse(content);}catch(e){return doImport({target:'other'});}
+      var p;try{p=JSON.parse(content);}catch(e){
+        console.warn('[od auto] JSON parse failed:',content.substring(0,200));
+        return doImport({target:'other'});
+      }
       var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
       if(allowed.indexOf(p.target)<0)p.target='other';
+      console.log('[od auto] classified',name,'→',p);
       doImport(p);
     }).catch(function(e){
       console.warn('[od auto] classify failed:',e&&e.message);
       _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
     });
+  });
+}
+// Promise-returning DELETE wrapper (the existing _odDeleteItem is fire-
+// and-forget with toast; this returns a promise for chaining).
+function _odDeleteItemAsync(itemId){
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+itemId,{
+      method:'DELETE',headers:{'Authorization':'Bearer '+tok}
+    });
+  }).then(function(r){
+    if(r&&!r.ok&&r.status!==204)throw new Error('delete '+r.status);
   });
 }
 // Move file to /Apps/Tapugan Safety/Inbox/_review/ — for items the auto
