@@ -13173,7 +13173,7 @@ function _odSubfolderName(tbl,rec){
 // Build a printable HTML report for a record using VIEW_CONFIG fields.
 // Returns HTML string (not opened in window) so it can be uploaded as
 // report.html into the OneDrive subfolder.
-function _odBuildReportHtml(tbl,rec){
+function _odBuildReportHtml(tbl,rec,photoDataUrl){
   var cfg=window.VIEW_CONFIG&&window.VIEW_CONFIG[tbl];
   if(!cfg)return null;
   var rows='';
@@ -13186,20 +13186,23 @@ function _odBuildReportHtml(tbl,rec){
     rows+='<tr><th>'+f[0]+'</th><td>'+safe+'</td></tr>';
   });
   var stamp=new Date().toLocaleString('he-IL');
-  var photo=rec.photo_url?'<div style="margin:18px 0;text-align:center"><img src="'+rec.photo_url.replace(/"/g,'')+'" style="max-width:100%;max-height:60vh;border:1px solid #ccc;border-radius:6px"></div>':'';
+  var imgSrc=photoDataUrl||(rec&&rec.photo_url?String(rec.photo_url).replace(/"/g,''):'');
+  var photo=imgSrc?'<div style="margin:18px 0;text-align:center"><img src="'+imgSrc+'" style="max-width:100%;max-height:520px;border:1px solid #ccc;border-radius:6px"></div>':'';
   return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+(cfg.title||tbl)+'</title>'+
-    '<style>body{font-family:Arial,sans-serif;margin:24px;color:#111;direction:rtl}'+
-    'h1{color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin-bottom:18px;font-size:22px}'+
+    '<style>html,body{margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;background:#fff}'+
+    '.report{padding:32px;width:730px;box-sizing:border-box}'+
+    'h1{color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin:0 0 18px 0;font-size:24px}'+
     'table{width:100%;border-collapse:collapse;margin-bottom:14px}'+
-    'th,td{border:1px solid #bbb;padding:8px 12px;text-align:right;font-size:13px;vertical-align:top}'+
-    'th{background:#f5f5f5;width:160px;color:#444;font-weight:700}'+
-    '.ftr{margin-top:32px;padding-top:12px;border-top:1px solid #ccc;font-size:11px;color:#888}'+
-    '</style></head><body>'+
+    'th,td{border:1px solid #bbb;padding:8px 12px;text-align:right;font-size:13px;vertical-align:top;line-height:1.4}'+
+    'th{background:#f5f5f5;width:170px;color:#333;font-weight:700}'+
+    'td{color:#111}'+
+    '.ftr{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#777}'+
+    '</style></head><body><div class="report">'+
     '<h1>'+(cfg.title||tbl)+'</h1>'+
     '<table>'+rows+'</table>'+
     photo+
     '<div class="ftr">דו"ח שנוצר אוטומטית | Tapugan Safety | '+stamp+'</div>'+
-    '</body></html>';
+    '</div></body></html>';
 }
 // Per-record OneDrive sync — runs after every save (via sbIns hook below).
 // Creates a per-record subfolder under the topic folder, e.g.:
@@ -13223,162 +13226,118 @@ function _ensurePdfLib(){
   });
   return _pdfLibPromise;
 }
-// Lazy-load full Heebo TTF (~200KB) once per session and convert to
-// base64 for jsPDF.addFileToVFS. The Google Fonts source TTF includes
-// Hebrew + Latin + punctuation in a single file — needed so that field
-// labels (with colons), em-dashes, dates, and ASCII codes all render.
-// Falls back to fontsource Hebrew-only subset if primary URL fails.
-var _hebFontPromise=null;
-function _ensureHebrewFont(){
-  if(window._hebFontB64)return Promise.resolve(window._hebFontB64);
-  if(_hebFontPromise)return _hebFontPromise;
-  function bufToB64(buf){
-    var bytes=new Uint8Array(buf),bin='';
-    for(var i=0;i<bytes.length;i+=8192){
-      bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
-    }
-    return btoa(bin);
-  }
-  function tryFetch(url){
-    return fetch(url).then(function(r){
-      if(!r.ok)throw new Error('font fetch '+r.status+' '+url);
-      return r.arrayBuffer();
-    });
-  }
-  _hebFontPromise=new Promise(function(resolve,reject){
-    var primary='https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/heebo/static/Heebo-Regular.ttf';
-    var fallback='https://cdn.jsdelivr.net/fontsource/fonts/heebo@latest/hebrew-400-normal.ttf';
-    tryFetch(primary)
-      .catch(function(){return tryFetch(fallback);})
-      .then(function(buf){
-        window._hebFontB64=bufToB64(buf);
-        resolve(window._hebFontB64);
-      })
-      .catch(function(e){reject(e);});
-    setTimeout(function(){if(!window._hebFontB64)reject(new Error('font load timeout'));},15000);
+// Lazy-load html2canvas (~200KB). Used to render the HTML report (with
+// proper browser RTL/Hebrew rendering) to a canvas, which we then embed
+// in a jsPDF document. The browser's text shaping is far more reliable
+// for Hebrew than jsPDF's text-drawing API.
+var _h2cLibPromise=null;
+function _ensureH2C(){
+  if(window.html2canvas)return Promise.resolve();
+  if(_h2cLibPromise)return _h2cLibPromise;
+  _h2cLibPromise=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload=function(){window.html2canvas?resolve():reject(new Error('html2canvas not defined'));};
+    s.onerror=function(){reject(new Error('html2canvas CDN failed'));};
+    document.head.appendChild(s);
+    setTimeout(function(){if(!window.html2canvas)reject(new Error('html2canvas timeout'));},15000);
   });
-  return _hebFontPromise;
+  return _h2cLibPromise;
 }
-// Helper: download an image URL and return a base64 data URL for embedding
-// into jsPDF. Resolves to null on failure (PDF still gets generated, just
-// without the photo).
-function _odImgToBase64(url){
+// Convert a Supabase signed-URL photo into a data: URL so it embeds in
+// the report without triggering CORS in html2canvas.
+function _resolvePhotoForReport(rec){
   return new Promise(function(resolve){
+    var url=rec&&rec.photo_url;
     if(!url)return resolve(null);
-    var work=function(srcUrl){
-      fetch(srcUrl).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
-        if(!blob)return resolve(null);
-        var rd=new FileReader();
-        rd.onload=function(){resolve(rd.result);};
-        rd.onerror=function(){resolve(null);};
-        rd.readAsDataURL(blob);
-      }).catch(function(){resolve(null);});
-    };
-    if(typeof _sign==='function'){
-      _sign(url,function(signed){work(signed||url);});
-    }else{
-      work(url);
-    }
+    _odFetchSigned(url).then(function(blob){
+      if(!blob)return resolve(null);
+      var rd=new FileReader();
+      rd.onload=function(){resolve(rd.result);};
+      rd.onerror=function(){resolve(null);};
+      rd.readAsDataURL(blob);
+    }).catch(function(){resolve(null);});
   });
 }
-// Generate a PDF Blob from the HTML report. Renders inside an offscreen
-// container so the browser layout engine has a real DOM to measure.
-// Build a PDF report directly via jsPDF — no html2canvas (was producing
-// blank PDFs because the canvas pipeline doesn't reliably handle Hebrew/
-// RTL text and offscreen rendering). This direct path:
-//   1. Loads jsPDF only (~280KB, no html2canvas dependency)
-//   2. Iterates VIEW_CONFIG fields and writes them as text rows
-//   3. Embeds the photo (if any) as base64 below the field table
-//   4. Since jsPDF's built-in fonts don't include Hebrew glyphs, we
-//      flip each Hebrew string before drawing (RTL workaround) so it
-//      reads correctly from right to left in the rendered PDF.
+// Mount the HTML on-screen-but-invisible, wait for layout + image load,
+// capture with html2canvas, embed into jsPDF (multi-page if needed),
+// resolve to a Blob.
+function _renderHtmlToPdfBlob(html){
+  return new Promise(function(resolve,reject){
+    var host=document.createElement('div');
+    host.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;opacity:0;pointer-events:none;z-index:-9999;overflow:visible';
+    host.innerHTML=html;
+    document.body.appendChild(host);
+    function cleanup(){try{document.body.removeChild(host);}catch(e){}}
+    function capture(){
+      var target=host.firstElementChild||host;
+      window.html2canvas(target,{
+        scale:2,
+        useCORS:true,
+        allowTaint:false,
+        backgroundColor:'#ffffff',
+        logging:false,
+        windowWidth:794
+      }).then(function(canvas){
+        cleanup();
+        try{
+          var jsPDF=window.jspdf.jsPDF;
+          var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+          var pageW=210,pageH=297;
+          var imgW=pageW;
+          var imgH=canvas.height*imgW/canvas.width;
+          var imgData=canvas.toDataURL('image/jpeg',0.85);
+          if(imgH<=pageH){
+            doc.addImage(imgData,'JPEG',0,0,imgW,imgH,undefined,'FAST');
+          }else{
+            var pxPerMm=canvas.width/pageW;
+            var pageHpx=Math.floor(pageH*pxPerMm);
+            var sliced=document.createElement('canvas');
+            sliced.width=canvas.width;
+            var ctx=sliced.getContext('2d');
+            var yPx=0,first=true;
+            while(yPx<canvas.height){
+              var sliceH=Math.min(pageHpx,canvas.height-yPx);
+              sliced.height=sliceH;
+              ctx.fillStyle='#ffffff';ctx.fillRect(0,0,sliced.width,sliceH);
+              ctx.drawImage(canvas,0,yPx,canvas.width,sliceH,0,0,canvas.width,sliceH);
+              if(!first)doc.addPage();
+              first=false;
+              var slicedData=sliced.toDataURL('image/jpeg',0.85);
+              doc.addImage(slicedData,'JPEG',0,0,pageW,sliceH/pxPerMm,undefined,'FAST');
+              yPx+=sliceH;
+            }
+          }
+          resolve(doc.output('blob'));
+        }catch(e){reject(e);}
+      }).catch(function(e){cleanup();reject(e);});
+    }
+    var fontsReady=(document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();
+    fontsReady.then(function(){
+      var img=host.querySelector('img');
+      if(!img){return setTimeout(capture,150);}
+      if(img.complete&&img.naturalWidth>0){return setTimeout(capture,150);}
+      var done=false;
+      function ok(){if(done)return;done=true;setTimeout(capture,150);}
+      img.onload=ok;
+      img.onerror=ok;
+      setTimeout(ok,8000);
+    }).catch(function(){setTimeout(capture,150);});
+  });
+}
+// Generate a PDF Blob by rendering the HTML report into the browser, then
+// screenshotting it via html2canvas and embedding the image into a PDF.
+// This bypasses jsPDF's unreliable Hebrew/RTL text drawing entirely — the
+// browser renders Hebrew natively (correct shaping, proper bidi, all
+// glyphs available), and html2canvas captures whatever the browser shows.
 function _odBuildReportPdf(tbl,rec){
   var cfg=window.VIEW_CONFIG&&window.VIEW_CONFIG[tbl];
   if(!cfg)return Promise.reject(new Error('no view config for '+tbl));
-  return Promise.all([_ensurePdfLib(),_ensureHebrewFont()]).then(function(arr){
-    var hebFontB64=arr[1];
-    // Bidi handler — jsPDF + Heebo draws glyphs strictly left-to-right in
-    // source order. For Hebrew display we need the source string ordered
-    // such that when read right-to-left it reads naturally.
-    // Algorithm:
-    //   1. Tokenize into directional runs (heb vs other).
-    //   2. Reverse RUN ORDER (so word order flips to RTL).
-    //   3. Reverse Hebrew runs internally (so each word's letters flip).
-    //   4. Latin/digit runs stay as-is (they read LTR within RTL flow).
-    function bidi(s){
-      s=String(s==null?'':s);
-      if(!/[֐-׿]/.test(s))return s;
-      var runs=[],buf='',mode=null;
-      for(var i=0;i<s.length;i++){
-        var c=s.charCodeAt(i);
-        var thisMode=(c>=0x0590&&c<=0x05FF)?'heb':'other';
-        if(mode!==null&&thisMode!==mode){runs.push({m:mode,t:buf});buf='';}
-        mode=thisMode;buf+=s[i];
-      }
-      if(buf)runs.push({m:mode,t:buf});
-      runs.reverse();
-      return runs.map(function(r){
-        return r.m==='heb'?r.t.split('').reverse().join(''):r.t;
-      }).join('');
-    }
-    var jsPDF=window.jspdf.jsPDF;
-    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    // Register Heebo font with jsPDF's virtual file system
-    try{
-      doc.addFileToVFS('Heebo.ttf',hebFontB64);
-      doc.addFont('Heebo.ttf','Heebo','normal');
-      doc.setFont('Heebo','normal');
-    }catch(e){console.warn('[od] Hebrew font registration failed:',e&&e.message);}
-    var pageW=210,pageH=297,margin=15,rightX=pageW-margin;
-    var y=margin+5;
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(204,31,31);
-    doc.text(bidi(cfg.title||tbl),rightX,y,{align:'right'});
-    y+=3;
-    doc.setDrawColor(204,31,31);
-    doc.setLineWidth(0.8);
-    doc.line(margin,y+1,rightX,y+1);
-    y+=10;
-    // Field rows
-    doc.setFontSize(11);
-    cfg.fields.forEach(function(f){
-      var val=rec[f[1]];
-      if(val===true)val='V';else if(val===false)val='X';
-      else if(val===undefined||val===null||val==='')val='-';
-      if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
-      var label=bidi(f[0]+':');
-      var value=bidi(String(val).replace(/\n/g,' / '));
-      doc.setTextColor(70,70,70);
-      doc.text(label,rightX,y,{align:'right'});
-      doc.setTextColor(20,20,20);
-      var wrapWidth=pageW-margin-margin-50;
-      var lines=doc.splitTextToSize(value,wrapWidth);
-      doc.text(lines,rightX-50,y,{align:'right'});
-      y+=Math.max(7,lines.length*6);
-      if(y>pageH-30){doc.addPage();y=margin+10;}
+  return Promise.all([_ensurePdfLib(),_ensureH2C()]).then(function(){
+    return _resolvePhotoForReport(rec).then(function(photoDataUrl){
+      var html=_odBuildReportHtml(tbl,rec,photoDataUrl);
+      return _renderHtmlToPdfBlob(html);
     });
-    // Footer
-    var stamp=new Date().toLocaleString('he-IL');
-    doc.setFontSize(9);
-    doc.setTextColor(150,150,150);
-    doc.text(bidi('\u05D3\u05D5\u05D7 \u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9 | Tapugan Safety | '+stamp),rightX,pageH-10,{align:'right'});
-    // Embed photo
-    if(rec.photo_url){
-      return _odImgToBase64(rec.photo_url).then(function(b64){
-        if(b64){
-          try{
-            var imgW=160,imgH=110;
-            var imgY=Math.min(y+5,pageH-imgH-margin-15);
-            if(imgY+imgH>pageH-margin-15){doc.addPage();imgY=margin+10;}
-            var fmt=/data:image\/(png)/i.test(b64)?'PNG':'JPEG';
-            doc.addImage(b64,fmt,(pageW-imgW)/2,imgY,imgW,imgH,undefined,'FAST');
-          }catch(e){console.warn('[od] addImage failed:',e&&e.message);}
-        }
-        return doc.output('blob');
-      });
-    }
-    return Promise.resolve(doc.output('blob'));
   });
 }
 // Fetch a Supabase Storage object using a signed URL (the public URL
