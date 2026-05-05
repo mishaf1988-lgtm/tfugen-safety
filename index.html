@@ -13003,9 +13003,11 @@ window._odRunAutoImportNow=function(){
       return chain.then(function(){
         appendStatus('('+(idx+1)+'/'+total+') 🔍 מסווג: '+item.name);
         return _odClassifyAndImport(item).then(function(res){
-          if(res==='imported'){imported++;appendStatus('   ✅ יובא בהצלחה');}
-          else if(res==='skipped'){skipped++;appendStatus('   ⚠️ AI לא בטוח — הועבר ל-/_review/');}
-          else{failed++;appendStatus('   ❌ נכשל');}
+          var status=(res&&typeof res==='object')?res.status:res;
+          var reason=(res&&typeof res==='object')?res.reason:'';
+          if(status==='imported'){imported++;appendStatus('   ✅ יובא בהצלחה');}
+          else if(status==='skipped'){skipped++;appendStatus('   ⚠️ AI לא בטוח — הועבר ל-/_review/');}
+          else{failed++;appendStatus('   ❌ נכשל'+(reason?': '+reason:''));}
         });
       });
     },Promise.resolve());
@@ -13111,8 +13113,9 @@ function _odAutoImport(opts){
     if(!items.length)return;
     return items.reduce(function(chain,item){
       return chain.then(function(){return _odClassifyAndImport(item).then(function(res){
-        if(res==='imported')imported++;
-        else if(res==='skipped')skipped++;
+        var status=(res&&typeof res==='object')?res.status:res;
+        if(status==='imported')imported++;
+        else if(status==='skipped')skipped++;
         else failed++;
       });});
     },Promise.resolve());
@@ -13261,9 +13264,10 @@ function _odClassifyAndImport(item){
   var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
   var isPdf=/\.pdf$/i.test(name)||(item.file&&/pdf/i.test(item.file.mimeType||''));
   var dlUrl=item['@microsoft.graph.downloadUrl'];
+  function fail(reason){return {status:'failed',reason:String(reason||'').substring(0,140)};}
   if(!dlUrl){
     console.warn('[od auto] no download url for',name,'→ moving to _review');
-    return _odMoveToReview(item.id).then(function(){return 'failed';},function(){return 'failed';});
+    return _odMoveToReview(item.id).then(function(){return fail('הקישור של Microsoft Graph פג תוקף לפני העיבוד');},function(){return fail('הקישור פג תוקף + העברה ל-_review נכשלה');});
   }
   return new Promise(function(resolve){
     function doImport(suggestion){
@@ -13271,11 +13275,14 @@ function _odClassifyAndImport(item){
         console.log('[od auto]',name,'→ _review (target=other)');
         return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
       }
-      fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+      fetch(dlUrl).then(function(r){
+        if(!r.ok)throw new Error('הורדת הקובץ נכשלה ('+r.status+')');
+        return r.blob();
+      }).then(function(blob){
         return new Promise(function(resolveUp,rejectUp){
           var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
           _fileUpload(f,suggestion.target,function(url,err,body){
-            if(err)return rejectUp(new Error('upload '+err+': '+(body||'')));
+            if(err)return rejectUp(new Error('העלאה ל-Supabase נכשלה ('+err+'): '+(String(body||'').substring(0,80))));
             resolveUp(url);
           });
         });
@@ -13284,32 +13291,37 @@ function _odClassifyAndImport(item){
         _odApplyExtractedFields(t,suggestion,name,uploadedUrl);
         sdb();
         try{addLog('OneDrive Auto-Import: '+name+' → '+t+(suggestion.code?' ('+suggestion.code+')':''));}catch(e){}
-        // The sbIns hook will mirror the new record to its per-equipment
-        // subfolder within ~1.5s. We just need to clear the original from
-        // /Inbox/ — the file already exists in Supabase Storage and will
-        // land in the proper subfolder when the mirror runs.
-        return _odDeleteItemAsync(item.id);
+        return _odDeleteItemAsync(item.id).catch(function(e){
+          // Record was created successfully; deleting from /Inbox/ failed.
+          // Don't poison the whole import — log and continue.
+          console.warn('[od auto] inbox delete failed (record was created):',e&&e.message);
+        });
       }).then(function(){resolve('imported');})
         .catch(function(e){
-          console.warn('[od auto] item failed:',name,e&&e.message);
-          _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
+          var msg=(e&&e.message||e).toString();
+          console.warn('[od auto] item failed:',name,msg);
+          _odMoveToReview(item.id).then(function(){resolve(fail(msg));},function(){resolve(fail(msg+' (+_review failed)'));});
         });
     }
     var classifyPromise;
     if(isImg){
-      classifyPromise=fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+      classifyPromise=fetch(dlUrl).then(function(r){
+        if(!r.ok)throw new Error('הורדת התמונה נכשלה ('+r.status+')');
+        return r.blob();
+      }).then(function(blob){
         return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
       });
     }else if(isPdf){
-      classifyPromise=fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+      classifyPromise=fetch(dlUrl).then(function(r){
+        if(!r.ok)throw new Error('הורדת ה-PDF נכשלה ('+r.status+')');
+        return r.blob();
+      }).then(function(blob){
         return _extractPdfText(blob).then(function(txt){
           var prompt=_odBuildClassifyPrompt(name,txt);
           return _aiTextClassify(prompt);
         });
       });
     }else{
-      // Non-image, non-PDF — fall back to filename-only heuristic (legacy
-      // behaviour). Office docs etc.
       var lower=name.toLowerCase();
       var sug={target:'docs',label:'מסמך'};
       if(/cert|תעוד|הדרכה|train/i.test(lower))sug={target:'tr',label:'תעודת הדרכה'};
@@ -13329,8 +13341,9 @@ function _odClassifyAndImport(item){
       console.log('[od auto] classified',name,'→',p);
       doImport(p);
     }).catch(function(e){
-      console.warn('[od auto] classify failed:',e&&e.message);
-      _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
+      var msg=(e&&e.message||e).toString();
+      console.warn('[od auto] classify failed:',msg);
+      _odMoveToReview(item.id).then(function(){resolve(fail('סיווג AI נכשל: '+msg));},function(){resolve(fail('סיווג AI נכשל + _review failed: '+msg));});
     });
   });
 }
