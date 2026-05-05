@@ -12822,32 +12822,97 @@ function _odPushFile(blob,folder,filename){
 // the right table → original moved to /Inbox/_processed/.
 window._odLoadInbox=function(){
   var box=g('od-inbox-list');if(!box)return;
-  // Don't bail on _odIsConnected — _odEnsureToken handles silent refresh
-  // when the access_token has expired (refresh tokens valid 90 days via
-  // offline_access scope).
   var tok0=_odToken();
   if(!tok0||!tok0.account){box.innerHTML='<div style="color:var(--bad);font-size:12px">חבר תחילה ל-OneDrive</div>';return;}
   box.innerHTML='<div style="color:var(--t3);font-size:12px">⏳ טוען...</div>';
   _odEnsureToken().then(function(tok){
-    return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox:/children?$select=id,name,size,file,createdDateTime,@microsoft.graph.downloadUrl',{headers:{Authorization:'Bearer '+tok}});
-  }).then(function(r){
-    if(!r.ok)return r.text().then(function(t){throw new Error('Inbox '+r.status+': '+t.substring(0,150));});
-    return r.json();
-  }).then(function(d){
-    var items=(d&&d.value)||[];
-    items=items.filter(function(it){return it.file;});
-    if(!items.length){box.innerHTML='<div class="et" style="padding:18px;font-size:12px;background:#f8fafc;border-radius:8px">📭 התיבה ריקה. הוסף קבצים ל-/Apps/Tapugan Safety/Inbox/ ב-OneDrive.</div>';return;}
-    box.innerHTML=items.map(function(it){
-      var safeId=esc(it.id);
-      return '<div data-odid="'+safeId+'" data-odname="'+esc(it.name)+'" style="background:#fafbfc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:8px">'+
-        '<div style="display:flex;justify-content:space-between;gap:8px;align-items:start;flex-wrap:wrap"><div style="flex:1;min-width:0"><strong style="font-size:13px">📄 '+esc(it.name)+'</strong><div style="font-size:10px;color:#888">'+esc(String(it.size||0)/1024|0)+' KB · '+esc(String(it.createdDateTime||'').substring(0,10))+'</div></div></div>'+
-        '<div class="od-classify" style="margin-top:8px;font-size:12px;color:var(--t3)">⏳ מסווג...</div>'+
-        '<div class="od-actions" style="display:none;margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"></div>'+
-      '</div>';
-    }).join('');
-    // Classify each file in parallel.
-    items.forEach(function(it){_odClassifyOne(it);});
+    // Fetch both /Inbox/ (waiting for AI classification) and /Inbox/_review/
+    // (AI couldn't classify — needs manual handling) in parallel.
+    return Promise.all([
+      fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox:/children?$select=id,name,size,file,createdDateTime,@microsoft.graph.downloadUrl',{headers:{Authorization:'Bearer '+tok}}).then(function(r){return r.ok?r.json():{value:[]};}),
+      fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox/_review:/children?$select=id,name,size,file,createdDateTime',{headers:{Authorization:'Bearer '+tok}}).then(function(r){return r.ok?r.json():{value:[]};})
+    ]);
+  }).then(function(both){
+    var inboxItems=((both[0]&&both[0].value)||[]).filter(function(it){return it.file;});
+    var reviewItems=((both[1]&&both[1].value)||[]).filter(function(it){return it.file;});
+    if(!inboxItems.length&&!reviewItems.length){
+      box.innerHTML='<div class="et" style="padding:18px;font-size:12px;background:#f8fafc;border-radius:8px">📭 התיבה ריקה. הוסף קבצים ל-/Apps/Tapugan Safety/Inbox/ ב-OneDrive.</div>';
+      return;
+    }
+    var html='';
+    if(inboxItems.length){
+      html+=inboxItems.map(function(it){
+        var safeId=esc(it.id);
+        return '<div data-odid="'+safeId+'" data-odname="'+esc(it.name)+'" style="background:#fafbfc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:8px">'+
+          '<div style="display:flex;justify-content:space-between;gap:8px;align-items:start;flex-wrap:wrap"><div style="flex:1;min-width:0"><strong style="font-size:13px">📄 '+esc(it.name)+'</strong><div style="font-size:10px;color:#888">'+esc(String(it.size||0)/1024|0)+' KB · '+esc(String(it.createdDateTime||'').substring(0,10))+'</div></div></div>'+
+          '<div class="od-classify" style="margin-top:8px;font-size:12px;color:var(--t3)">⏳ מסווג...</div>'+
+          '<div class="od-actions" style="display:none;margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"></div>'+
+        '</div>';
+      }).join('');
+    }
+    if(reviewItems.length){
+      html+='<div style="margin-top:14px;padding:10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:10px"><strong style="font-size:13px;color:#92400e">⚠️ ממתינים לסיווג ידני ('+reviewItems.length+')</strong>'+
+        '<div style="font-size:11px;color:#92400e;margin-top:4px">קבצים שה-AI לא הצליח לסווג. בחרי טבלה ידנית לכל אחד.</div></div>';
+      var targets=[
+        {v:'tr',t:'תעודת הדרכה'},
+        {v:'ppe',t:'ציוד מגן אישי (PPE)'},
+        {v:'med',t:'בדיקה רפואית'},
+        {v:'docs',t:'מסמך / רישיון'},
+        {v:'ncr',t:'אי-התאמה (NCR)'},
+        {v:'equip_inspections',t:'בדיקת ציוד'}
+      ];
+      var optsHtml='<option value="">— בחרי טבלה —</option>'+targets.map(function(t){return '<option value="'+t.v+'">'+t.t+'</option>';}).join('');
+      html+=reviewItems.map(function(it){
+        var safeId=esc(it.id),safeName=esc(it.name);
+        return '<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:10px;margin-bottom:8px">'+
+          '<strong style="font-size:13px">📄 '+safeName+'</strong>'+
+          '<div style="font-size:10px;color:#888;margin-bottom:6px">'+esc(String(it.size||0)/1024|0)+' KB · '+esc(String(it.createdDateTime||'').substring(0,10))+'</div>'+
+          '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
+            '<select id="rev-sel-'+safeId+'" style="flex:1;min-width:140px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px">'+optsHtml+'</select>'+
+            '<button class="btn btn-p btn-sm" onclick="_odManualClassify(\''+safeId.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\',\''+safeName.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\')" style="background:#16a34a;border-color:#16a34a">✓ ייבא</button>'+
+            '<button class="btn btn-d btn-sm" onclick="if(confirm(\'למחוק?\'))_odDeleteItem(\''+safeId.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\',this.parentElement.parentElement)" style="background:#7f1d1d">🗑 מחק</button>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+    }
+    box.innerHTML=html;
+    inboxItems.forEach(function(it){_odClassifyOne(it);});
   }).catch(function(e){box.innerHTML='<div style="color:var(--bad);font-size:12px">'+esc(String(e&&e.message||e))+'</div>';console.warn('[od] inbox',e);});
+};
+// Manual classification handler — user picked a target from the dropdown
+// next to a /_review/ item. Builds a minimal suggestion (target only),
+// runs the same import pipeline used by auto-import, which creates the
+// record + uploads to per-equipment subfolder + deletes from /_review/.
+window._odManualClassify=function(itemId,name){
+  var sel=document.getElementById('rev-sel-'+itemId);
+  if(!sel||!sel.value){toast('בחרי טבלה ראשונה');return;}
+  var target=sel.value;
+  var labels={tr:'תעודת הדרכה',ppe:'PPE',med:'בדיקה רפואית',docs:'מסמך',ncr:'NCR',equip_inspections:'בדיקת ציוד'};
+  var btn=sel.parentElement.querySelector('.btn-p');
+  if(btn){btn.disabled=true;btn.textContent='⏳ מייבא...';}
+  toast('🤖 מעלה את '+name+'…');
+  _odFetchItemBlob(itemId).then(function(blob){
+    return new Promise(function(resolveUp,rejectUp){
+      var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
+      _fileUpload(f,target,function(url,err,body){
+        if(err)return rejectUp(new Error('upload '+err+': '+(body||'')));
+        resolveUp(url);
+      });
+    });
+  }).then(function(uploadedUrl){
+    var sug={target:target,label:labels[target]||target};
+    _odApplyExtractedFields(target,sug,name,uploadedUrl);
+    sdb();
+    try{addLog('OneDrive Manual: יובא '+name+' → '+target);}catch(e){}
+    toast('✓ '+name+' יובא כ-'+(labels[target]||target));
+    return _odDeleteItemAsync(itemId).catch(function(e){console.warn('[od] manual delete failed:',e&&e.message);});
+  }).then(function(){
+    setTimeout(function(){if(typeof window._odLoadInbox==='function')window._odLoadInbox();},800);
+  }).catch(function(e){
+    if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}
+    toast('ייבוא נכשל: '+(e&&e.message||e));
+    console.warn('[od] manual import failed:',e);
+  });
 };
 // Classify a single OneDrive file: fetch contents (if image) → vision AI →
 // suggest target table + fields. Renders the suggestion + an "ייבא" button.
@@ -13226,6 +13291,66 @@ function _aiTextClassify(prompt){
       return dj.content&&dj.content[0]?dj.content[0].text:'';
     });
 }
+// Claude (Anthropic) vision fallback. Used when Workers AI Llama Vision
+// returns target='other' or fails entirely. Higher accuracy on Hebrew /
+// hand-stamped documents — costs ~$0.001/image (Claude Haiku). Requires
+// env.ANTHROPIC_KEY set on the server (Cloudflare Pages → Settings →
+// Environment variables). If not configured, this rejects with a clear
+// error and the caller falls through to manual classification.
+function _aiClaudeVisionClassify(blob,prompt){
+  return new Promise(function(resolve,reject){
+    if(!blob)return reject(new Error('no blob'));
+    var rd=new FileReader();
+    rd.onload=function(ev){
+      var b64=String(ev.target.result||'').replace(/^data:image\/[^;]+;base64,/,'');
+      var mime=blob.type||'image/jpeg';
+      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:600,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mime,data:b64}},
+          {type:'text',text:prompt}
+        ]}]
+      })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
+        .then(function(res){
+          if(!res.ok)return reject(new Error('Claude ('+res.status+'): '+res.txt.substring(0,200)));
+          try{
+            var dj=JSON.parse(res.txt);
+            resolve(dj.content&&dj.content[0]?dj.content[0].text:'');
+          }catch(e){reject(new Error('Claude parse: '+e.message));}
+        }).catch(reject);
+    };
+    rd.onerror=function(){reject(new Error('file read failed'));};
+    rd.readAsDataURL(blob);
+  });
+}
+// Run the classifier with Llama Vision first; if it returns target='other'
+// or fails entirely, fall back to Claude Haiku Vision. Returns the parsed
+// suggestion object {target, label, code, ...} or null if both AIs failed.
+function _odClassifyImageWithFallback(blob,prompt){
+  function parse(content){
+    var s=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+    try{return JSON.parse(s);}catch(e){return null;}
+  }
+  return _ocrAnalyze(blob,prompt).then(function(content){
+    var p=parse(content);
+    if(p&&p.target&&p.target!=='other')return {via:'llama',data:p};
+    console.log('[od auto] Llama uncertain (target=',p&&p.target,') → trying Claude');
+    return _aiClaudeVisionClassify(blob,prompt).then(function(c2){
+      var p2=parse(c2);
+      return p2?{via:'claude',data:p2}:{via:'llama-other',data:p||{target:'other'}};
+    }).catch(function(ec){
+      console.warn('[od auto] Claude fallback failed:',ec&&ec.message);
+      return {via:'llama-only',data:p||{target:'other'}};
+    });
+  }).catch(function(eL){
+    console.warn('[od auto] Llama failed (',eL&&eL.message,') → trying Claude');
+    return _aiClaudeVisionClassify(blob,prompt).then(function(c2){
+      var p2=parse(c2);
+      return p2?{via:'claude-after-llama-error',data:p2}:null;
+    }).catch(function(){return null;});
+  });
+}
 // Apply the AI-extracted fields to a new record for the given target.
 // Each target has different field names — map them appropriately.
 function _odApplyExtractedFields(t,p,name,uploadedUrl){
@@ -13323,8 +13448,13 @@ function _odClassifyAndImport(item){
     }
     var classifyPromise;
     if(isImg){
+      // Image: use Llama Vision first; on 'other' or failure, fall back to
+      // Claude Haiku Vision (more accurate on Hebrew docs, ~$0.001/image).
       classifyPromise=_odFetchItemBlob(item.id).then(function(blob){
-        return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
+        return _odClassifyImageWithFallback(blob,_odBuildClassifyPrompt(name,'')).then(function(result){
+          if(result&&result.via)console.log('[od auto] image classified via',result.via);
+          return result&&result.data?JSON.stringify(result.data):'';
+        });
       });
     }else if(isPdf){
       classifyPromise=_odFetchItemBlob(item.id).then(function(blob){
