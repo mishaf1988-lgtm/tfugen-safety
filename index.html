@@ -12624,7 +12624,13 @@ function _signifyDom(root){
 var _OD_KEY='tfgn_od_clientid_v1';
 var _OD_TOKEN_KEY='tfgn_od_token_v1';
 var _OD_USER_KEY='tfgn_od_user_v1';
-var _OD_SCOPES=['Files.ReadWrite.AppFolder'];
+// offline_access ensures Microsoft issues a refresh token, so MSAL can
+// silently renew the access token without requiring the user to re-login
+// every ~1 hour. User.Read is the minimal Graph profile scope that's
+// already granted by default for personal accounts (lets us pin the
+// account email reliably). Files.ReadWrite.AppFolder = sandboxed write
+// access to /Apps/<appName>/* only.
+var _OD_SCOPES=['Files.ReadWrite.AppFolder','offline_access','User.Read'];
 function _odClientId(){try{return localStorage.getItem(_OD_KEY)||'';}catch(e){return '';}}
 function _odToken(){try{return JSON.parse(localStorage.getItem(_OD_TOKEN_KEY)||'null');}catch(e){return null;}}
 function _odSetToken(t){try{if(t)localStorage.setItem(_OD_TOKEN_KEY,JSON.stringify(t));else localStorage.removeItem(_OD_TOKEN_KEY);}catch(e){}}
@@ -13131,8 +13137,17 @@ function _odMaybeMirror(blob,prefix,filename){
   var folder=_odFolderFor(prefix);
   _odPushFile(blob,folder,filename).then(function(){
     console.log('[od] mirrored',folder,filename);
+    // Visible feedback so the user knows the file actually reached OneDrive
+    // (without this, sync was silent and "did it work?" required DevTools).
+    try{toast('☁️ סונכרן ל-OneDrive: '+folder);}catch(e){}
   }).catch(function(e){
-    console.warn('[od] mirror failed:',e&&e.message);
+    var msg=e&&e.message||String(e);
+    console.warn('[od] mirror failed:',msg);
+    try{toast('⚠ סנכרון OneDrive נכשל: '+msg.substring(0,80));}catch(_){}
+    // If token expired mid-session, surface a hint to reconnect
+    if(/401|invalid_grant|expired|interaction_required/i.test(msg)){
+      try{toast('💡 התנתקת מ-OneDrive. תפריט … → ☁️ חיבור OneDrive → התחבר');}catch(_){}
+    }
   });
 }
 function _fileUpload(file,prefix,cb){
