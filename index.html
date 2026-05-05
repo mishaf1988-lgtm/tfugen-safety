@@ -13264,20 +13264,38 @@ function _resolvePhotoForReport(rec){
 // resolve to a Blob.
 function _renderHtmlToPdfBlob(html){
   return new Promise(function(resolve,reject){
-    var host=document.createElement('div');
-    host.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;opacity:0;pointer-events:none;z-index:-9999;overflow:visible';
-    host.innerHTML=html;
-    document.body.appendChild(host);
-    function cleanup(){try{document.body.removeChild(host);}catch(e){}}
+    // Use an iframe so the full HTML document (doctype + html[dir=rtl] +
+    // head/style + body) renders in its own clean context. innerHTML on a
+    // div would strip <html>/<body> wrappers, breaking RTL inheritance and
+    // leaving <style> as the firstElementChild — which html2canvas then
+    // captured as an empty image (the source of the "empty PDF" bug).
+    var iframe=document.createElement('iframe');
+    iframe.setAttribute('aria-hidden','true');
+    // Visible at 794px wide so layout is real, but positioned far off
+    // screen so the user never sees it. Off-viewport positioning still
+    // lets html2canvas measure and rasterize correctly (we pass
+    // windowWidth/windowHeight explicitly).
+    iframe.style.cssText='position:fixed;top:0;left:-100000px;width:794px;height:1200px;border:0;background:#fff';
+    document.body.appendChild(iframe);
+    function cleanup(){try{document.body.removeChild(iframe);}catch(e){}}
+    iframe.onload=function(){};
+    var doc2=iframe.contentDocument||iframe.contentWindow.document;
+    doc2.open();doc2.write(html);doc2.close();
     function capture(){
-      var target=host.firstElementChild||host;
-      window.html2canvas(target,{
+      // Fit iframe height to actual content height so the capture covers
+      // everything (including the photo at the bottom).
+      var body=doc2.body;
+      var docEl=doc2.documentElement;
+      var contentH=Math.max(body.scrollHeight,body.offsetHeight,docEl.clientHeight,docEl.scrollHeight,docEl.offsetHeight);
+      iframe.style.height=(contentH+40)+'px';
+      window.html2canvas(body,{
         scale:2,
         useCORS:true,
         allowTaint:false,
         backgroundColor:'#ffffff',
         logging:false,
-        windowWidth:794
+        windowWidth:794,
+        windowHeight:contentH+40
       }).then(function(canvas){
         cleanup();
         try{
@@ -13312,17 +13330,22 @@ function _renderHtmlToPdfBlob(html){
         }catch(e){reject(e);}
       }).catch(function(e){cleanup();reject(e);});
     }
-    var fontsReady=(document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();
-    fontsReady.then(function(){
-      var img=host.querySelector('img');
-      if(!img){return setTimeout(capture,150);}
-      if(img.complete&&img.naturalWidth>0){return setTimeout(capture,150);}
-      var done=false;
-      function ok(){if(done)return;done=true;setTimeout(capture,150);}
-      img.onload=ok;
-      img.onerror=ok;
-      setTimeout(ok,8000);
-    }).catch(function(){setTimeout(capture,150);});
+    function waitAndCapture(){
+      var fontsReady=(doc2.fonts&&doc2.fonts.ready)?doc2.fonts.ready:Promise.resolve();
+      fontsReady.then(function(){
+        var img=doc2.querySelector('img');
+        if(!img){return setTimeout(capture,200);}
+        if(img.complete&&img.naturalWidth>0){return setTimeout(capture,200);}
+        var done=false;
+        function ok(){if(done)return;done=true;setTimeout(capture,200);}
+        img.onload=ok;
+        img.onerror=ok;
+        setTimeout(ok,8000);
+      }).catch(function(){setTimeout(capture,200);});
+    }
+    // Give the iframe a tick to fully parse before we start waiting on
+    // fonts/images inside it.
+    setTimeout(waitAndCapture,50);
   });
 }
 // Generate a PDF Blob by rendering the HTML report into the browser, then
