@@ -13358,49 +13358,73 @@ function _odFetchSigned(url){
   });
 }
 function _odMirrorRecord(tbl,rec){
-  if(!_odIsConnected()||!rec)return;
+  if(!rec){console.warn('[od] mirror called with no rec');return;}
+  if(!_odIsConnected()){
+    console.warn('[od] not connected — skipping mirror for',tbl,rec.id);
+    try{toast('⚠ OneDrive לא מחובר — הקובץ לא יסונכרן');}catch(_){}
+    return;
+  }
   var prefix=tbl;if(tbl==='env_aspects')prefix='easp';
   var topic=_odFolderFor(prefix);
   var sub=_odSubfolderName(tbl,rec);
   var folder=topic+'/'+sub;
-  var jobs=[];
-  // Mirror attached file(s) using their original filename from the upload.
-  // Whatever the user uploaded (image / PDF / docx / xlsx / etc.) lands
-  // in OneDrive with the same extension and roughly the same name —
-  // never renamed to "photo.<ext>".
+  console.log('[od] mirror start',tbl,rec.id,'→',folder,'photo:',!!rec.photo_url,'file:',!!rec.file_url);
+  try{toast('☁️ מסנכרן ל-OneDrive…');}catch(_){}
+  var results={photo:null,file:null,report:null};
   function mirrorAttachment(srcUrl,label){
     return _odFetchSigned(srcUrl).then(function(blob){
-      if(!blob){console.warn('[od] '+label+' signed-fetch returned null',srcUrl);return;}
-      // Use the original filename from the URL last segment (strips query
-      // string). If empty for some reason, derive from blob MIME type.
+      if(!blob){
+        console.warn('[od] '+label+' signed-fetch returned null',srcUrl);
+        results[label]='no-blob';
+        return;
+      }
       var fname=(String(srcUrl).split('/').pop()||'').split('?')[0];
       if(!fname){
         var mime=blob.type||'application/octet-stream';
         var extByMime={'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx','application/vnd.ms-excel':'xls','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'xlsx'}[mime]||'bin';
         fname=label+'.'+extByMime;
       }
-      return _odPushFile(blob,folder,fname);
-    }).catch(function(e){console.warn('[od] '+label+' mirror failed:',e&&e.message);});
+      return _odPushFile(blob,folder,fname).then(function(){
+        results[label]='ok';
+        console.log('[od] '+label+' uploaded:',fname);
+      });
+    }).catch(function(e){
+      results[label]='err: '+(e&&e.message||e);
+      console.warn('[od] '+label+' mirror failed:',e&&e.message);
+    });
   }
+  var jobs=[];
   if(rec.photo_url)jobs.push(mirrorAttachment(rec.photo_url,'photo'));
   if(rec.file_url && rec.file_url!==rec.photo_url)jobs.push(mirrorAttachment(rec.file_url,'file'));
-  // PDF report — preferred over HTML per user request. Falls back to HTML
-  // if PDF lib fails to load (offline / CDN issue).
   jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
-    return _odPushFile(blob,folder,'report.pdf');
+    return _odPushFile(blob,folder,'report.pdf').then(function(){
+      results.report='pdf-ok';
+      console.log('[od] report.pdf uploaded');
+    });
   }).catch(function(e){
     console.warn('[od] PDF generation failed, falling back to HTML:',e&&e.message);
+    results.report='pdf-err: '+(e&&e.message||e);
     var html=_odBuildReportHtml(tbl,rec);
     if(!html)return;
     var hb=new Blob([html],{type:'text/html;charset=utf-8'});
-    return _odPushFile(hb,folder,'report.html');
+    return _odPushFile(hb,folder,'report.html').then(function(){
+      results.report='html-fallback-ok';
+      console.log('[od] report.html (fallback) uploaded');
+    }).catch(function(e2){
+      results.report='html-fallback-err: '+(e2&&e2.message||e2);
+    });
   }));
-  if(!jobs.length)return;
+  if(!jobs.length){console.warn('[od] no jobs to run');return;}
   Promise.all(jobs).then(function(){
-    try{toast('☁️ סונכרן ל-OneDrive: '+sub);}catch(e){}
+    var summary=[];
+    if(rec.photo_url)summary.push('תמונה: '+(results.photo||'?'));
+    if(rec.file_url&&rec.file_url!==rec.photo_url)summary.push('קובץ: '+(results.file||'?'));
+    summary.push('דוח: '+(results.report||'?'));
+    console.log('[od] mirror done',tbl,rec.id,results);
+    try{toast('☁️ '+sub+' | '+summary.join(' · '));}catch(e){}
   }).catch(function(e){
     var msg=e&&e.message||String(e);
-    console.warn('[od] mirrorRecord failed:',msg);
+    console.warn('[od] mirrorRecord failed:',msg,results);
     try{toast('⚠ סנכרון OneDrive נכשל: '+msg.substring(0,80));}catch(_){}
     if(/401|invalid_grant|expired|interaction_required/i.test(msg)){
       try{toast('💡 התנתקת מ-OneDrive. תפריט … → ☁️ חיבור OneDrive → התחבר');}catch(_){}
