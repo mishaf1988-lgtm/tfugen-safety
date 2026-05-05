@@ -13229,20 +13229,59 @@ function _odBuildReportPdf(tbl,rec){
   var html=_odBuildReportHtml(tbl,rec);
   if(!html)return Promise.reject(new Error('no view config'));
   return _ensurePdfLib().then(function(){
-    var holder=document.createElement('div');
-    holder.style.cssText='position:fixed;left:-99999px;top:0;width:794px;background:#fff';
-    holder.innerHTML=html.replace(/<!doctype[^>]*>|<\/?html[^>]*>|<\/?head[^>]*>|<\/?body[^>]*>|<title>[^<]*<\/title>|<meta[^>]*>/gi,'');
-    document.body.appendChild(holder);
-    return html2pdf().from(holder).set({
-      margin:[10,10,10,10],
-      filename:'report.pdf',
-      image:{type:'jpeg',quality:0.92},
-      html2canvas:{scale:2,useCORS:true,logging:false},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-    }).outputPdf('blob').then(function(blob){
-      try{document.body.removeChild(holder);}catch(e){}
-      return blob;
-    }).catch(function(e){try{document.body.removeChild(holder);}catch(_){}throw e;});
+    return new Promise(function(resolve,reject){
+      // html2pdf needs a fully-rendered, in-viewport DOM with non-zero
+      // dimensions. Offscreen positioning (left:-99999px) caused empty
+      // PDFs in some browsers because the layout engine skipped paint.
+      // Fix: place the holder ON-SCREEN at top:0 with opacity:0 +
+      // pointer-events:none so it's invisible to the user but the
+      // browser still paints layout for html2canvas to capture.
+      var holder=document.createElement('div');
+      holder.style.cssText='position:fixed;top:0;left:0;width:794px;min-height:200px;background:#fff;opacity:0;pointer-events:none;z-index:-1;overflow:visible;direction:rtl';
+      // Extract just the body content (avoid duplicate <html>/<body>).
+      var bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      var styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+      var bodyContent=bodyMatch?bodyMatch[1]:html;
+      var styleContent=styleMatch?styleMatch[1]:'';
+      holder.innerHTML=(styleContent?'<style>'+styleContent+'</style>':'')+bodyContent;
+      document.body.appendChild(holder);
+      // Wait briefly for any embedded <img> tags to finish loading so
+      // they appear in the PDF (otherwise html2canvas grabs the layout
+      // before the image arrives over the network).
+      var imgs=holder.querySelectorAll('img');
+      var imgPromises=Array.prototype.map.call(imgs,function(img){
+        if(img.complete&&img.naturalWidth>0)return Promise.resolve();
+        return new Promise(function(res){
+          img.onload=function(){res();};
+          img.onerror=function(){res();};
+          // Fallback timeout in case the image hangs.
+          setTimeout(res,8000);
+        });
+      });
+      Promise.all(imgPromises).then(function(){
+        // Slight delay so layout fully settles after images load.
+        setTimeout(function(){
+          html2pdf().set({
+            margin:[10,10,10,10],
+            filename:'report.pdf',
+            image:{type:'jpeg',quality:0.92},
+            html2canvas:{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'},
+            jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+            pagebreak:{mode:['avoid-all','css','legacy']}
+          }).from(holder).outputPdf('blob').then(function(blob){
+            try{document.body.removeChild(holder);}catch(e){}
+            if(!blob||blob.size<500){
+              reject(new Error('PDF generated but blob is empty/tiny ('+(blob?blob.size:0)+'B)'));
+              return;
+            }
+            resolve(blob);
+          }).catch(function(e){
+            try{document.body.removeChild(holder);}catch(_){}
+            reject(e);
+          });
+        },150);
+      });
+    });
   });
 }
 // Fetch a Supabase Storage object using a signed URL (the public URL
