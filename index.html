@@ -260,26 +260,29 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 .tbl-wrap tbody td .btn-d{min-width:30px;min-height:30px;padding:5px 8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin:1px}
 /* Subtle white separator under thead so red header doesn't merge into body. */
 .tbl-wrap thead th{border-bottom:2px solid #fff}
-/* CARDS-EVERYWHERE (2026-05-05) — table rendering had been silently
-   collapsing rows to 0 height in some desktop browsers, leaving only
-   the action buttons visible. PRs #402, #406, #407, #408, #409 (tasks),
-   and #434 all attempted CSS fixes that didn't generalize across every
-   table. Final solution: render every <tr> as a labeled card on all
-   screen sizes — the same layout the mobile media query already used
-   reliably. Visual is column-stacked instead of grid-aligned, but
-   100% guarantees readability. data-label is rendered as a leading
-   pill so the user always sees "Field: Value" pairs. */
+/* CARDS-EVERYWHERE (2026-05-05, refined) — every <tr> renders as a
+   labeled card. Iteration 2: stacked label-above-value layout with
+   responsive 2-column grid on wider screens, so a card showing 6
+   fields fits compactly without forcing each numeric value to wrap
+   character-by-character. */
 .tbl-wrap{overflow-x:visible}
-.tbl-wrap table,.tbl-wrap thead,.tbl-wrap tbody,.tbl-wrap tr,.tbl-wrap th,.tbl-wrap td{display:block;width:auto}
+.tbl-wrap table,.tbl-wrap thead,.tbl-wrap tbody,.tbl-wrap tr{display:block;width:auto}
 .tbl-wrap thead{display:none}
-.tbl-wrap tr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);transition:box-shadow .15s ease}
+.tbl-wrap tr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);transition:box-shadow .15s ease;display:grid;grid-template-columns:1fr;gap:8px 16px}
 .tbl-wrap tr:active{box-shadow:0 1px 2px rgba(15,23,42,.06),0 4px 10px rgba(15,23,42,.10)}
 .tbl-wrap tbody tr:nth-child(even) td{background:transparent}
-.tbl-wrap td{border:none;padding:6px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;white-space:normal;min-height:28px;word-break:break-word;color:#1a1d23}
-.tbl-wrap td::before{content:attr(data-label);color:var(--t3);font-size:11px;font-weight:700;flex-shrink:0;text-align:right}
+.tbl-wrap td{display:block;border:none;padding:0;text-align:right;white-space:normal;word-break:break-word;color:#1a1d23;font-size:14px;line-height:1.5;min-width:0}
+.tbl-wrap td::before{content:attr(data-label);display:block;color:var(--t3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
 .tbl-wrap td:not([data-label])::before,.tbl-wrap td[data-label=""]::before{display:none}
-.tbl-wrap td.et{display:block;text-align:center;padding:20px 0}
-.tbl-wrap tr:last-child td{border:none}
+.tbl-wrap td.et{grid-column:1/-1;display:block;text-align:center;padding:20px 0}
+/* Wider viewports: pack fields into a 2-3 column grid per card so the
+   layout feels efficient on desktop. Each cell still labeled. */
+@media(min-width:600px){
+  .tbl-wrap tr{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:900px){
+  .tbl-wrap tr{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 body.hc th{background:var(--red)}
 body.hc tbody tr:nth-child(even) td{background:transparent}
 .et{text-align:center;padding:36px 20px;color:var(--t2);font-size:14px;background:linear-gradient(180deg,#fafbfc 0%,#fff 60%);border-radius:10px}
