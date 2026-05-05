@@ -1753,14 +1753,17 @@ id="m-ncr" style="display:none">
   <div id="od-inbox-section" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div style="font-weight:700;font-size:14px">&#128229; &#1514;&#1497;&#1489;&#1514; &#1491;&#1493;&#1488;&#1512; (Inbox)</div>
-      <button class="btn btn-p btn-sm" onclick="_odLoadInbox()" style="background:#7c3aed;border-color:#7c3aed">&#128260; &#1489;&#1491;&#1493;&#1511; &#1511;&#1489;&#1510;&#1497;&#1501; &#1495;&#1491;&#1513;&#1497;&#1501;</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-p btn-sm" onclick="_odLoadInbox()" style="background:#7c3aed;border-color:#7c3aed">&#128260; &#1489;&#1491;&#1493;&#1511; &#1511;&#1489;&#1510;&#1497;&#1501; &#1495;&#1491;&#1513;&#1497;&#1501;</button>
+        <button class="btn btn-s btn-sm" onclick="_odRunAutoImportNow()" title="&#1505;&#1512;&#1493;&#1511; &#1493;&#1497;&#1497;&#1489;&#1488; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497; &#1502;&#1497;&#1497;&#1491;&#1497;">&#129302; &#1497;&#1497;&#1489;&#1493;&#1488; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+      </div>
     </div>
     <div style="font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px">
-      <strong>\u05d0\u05d9\u05da \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd:</strong><br>
-      1. \u05d1-OneDrive (\u05d5\u05d1 / \u05d0\u05e4 / \u05de\u05d7\u05e9\u05d1) \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd <code style="font-size:10px">Apps / Tapugan Safety</code><br>
-      2. \u05d9\u05d5\u05e6\u05e8\u05d9\u05dd \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d1\u05e9\u05dd <code style="font-size:10px">Inbox</code> (\u05e4\u05e2\u05dd \u05d0\u05d7\u05ea)<br>
-      3. \u05d2\u05d5\u05e8\u05e8\u05d9\u05dd \u05dc\u05ea\u05d5\u05db\u05d4 \u05ea\u05de\u05d5\u05e0\u05d5\u05ea / PDFs \u05e9\u05dc \u05ea\u05e2\u05d5\u05d3\u05d5\u05ea / \u05d3\u05d5\u05d7\u05d5\u05ea / NCRs<br>
-      4. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e2\u05dc \u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05dc\u05de\u05e2\u05dc\u05d4 \u2014 AI \u05de\u05e1\u05d5\u05d5\u05d2, \u05de\u05d0\u05e9\u05e8\u05d9\u05dd, \u05e0\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4
+      <strong>איך משתמשים:</strong><br>
+      1. ב-OneDrive (וב / אפ / מחשב) פותחים <code style="font-size:10px">Apps / Tapugan Safety</code><br>
+      2. יוצרים תיקייה בשם <code style="font-size:10px">Inbox</code> (פעם אחת)<br>
+      3. גוררים לתוכה תמונות / PDFs של תעודות / דוחות / NCRs<br>
+      4. לחיצה על הכפתור למעלה — AI מסווג, מאשרים, נכנס לאפליקציה
     </div>
     <div id="od-inbox-list" style="font-size:13px"></div>
   </div>
@@ -12844,11 +12847,17 @@ function _odClassifyOne(item){
   var actionsEl=card.querySelector('.od-actions');
   var name=item.name||'';
   var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
+  var isPdf=/\.pdf$/i.test(name)||(item.file&&/pdf/i.test(item.file.mimeType||''));
   var dlUrl=item['@microsoft.graph.downloadUrl'];
   function render(suggestion){
     var label=suggestion.label||'?';
     var color={tr:'#16a34a',ppe:'#1d4ed8',med:'#7c3aed',docs:'#92400e',ctr:'#0d9488',ncr:'#cc1f1f','equip_inspections':'#475569',other:'#64748b'}[suggestion.target]||'#64748b';
-    classifyEl.innerHTML='<span style="display:inline-block;padding:3px 10px;background:'+color+';color:#fff;border-radius:8px;font-size:11px;font-weight:700">🤖 '+esc(label)+'</span>'+(suggestion.summary?'<div style="margin-top:4px;color:var(--t1);font-size:11px">'+esc(suggestion.summary)+'</div>':'');
+    var bits=[];
+    if(suggestion.code)bits.push('קוד: '+suggestion.code);
+    if(suggestion.e)bits.push('תוקף: '+suggestion.e);
+    if(suggestion.inspector)bits.push('בודק: '+suggestion.inspector);
+    var details=bits.length?'<div style="margin-top:3px;color:var(--t2);font-size:10px">'+esc(bits.join(' · '))+'</div>':'';
+    classifyEl.innerHTML='<span style="display:inline-block;padding:3px 10px;background:'+color+';color:#fff;border-radius:8px;font-size:11px;font-weight:700">🤖 '+esc(label)+'</span>'+(suggestion.summary?'<div style="margin-top:4px;color:var(--t1);font-size:11px">'+esc(suggestion.summary)+'</div>':'')+details;
     actionsEl.style.display='';
     actionsEl.innerHTML='<button class="btn btn-p btn-sm" data-act="import" style="background:#16a34a;border-color:#16a34a">✓ ייבא</button>'+
       '<button class="btn btn-d btn-sm" data-act="reclassify" style="background:#7c3aed">⧮ סווג מחדש</button>'+
@@ -12857,8 +12866,7 @@ function _odClassifyOne(item){
     actionsEl.querySelector('[data-act="reclassify"]').onclick=function(){classifyEl.innerHTML='⏳ מסווג מחדש...';_odClassifyOne(item);};
     actionsEl.querySelector('[data-act="delete"]').onclick=function(){if(confirm('למחוק את הקובץ מ-OneDrive?'))_odDeleteItem(item.id,card);};
   }
-  if(!isImg){
-    // For non-image files, classify based on filename only.
+  if(!isImg&&!isPdf){
     var lower=name.toLowerCase();
     var sug={target:'docs',label:'מסמך כללי',summary:'סיווג ראשוני לפי שם הקובץ. ניתן לערוך ידנית בייבוא.'};
     if(/cert|תעוד|הדרכה|train/i.test(lower))sug={target:'tr',label:'תעודת הדרכה'};
@@ -12868,22 +12876,26 @@ function _odClassifyOne(item){
     else if(/ncr|אי.התאמ|noncon/i.test(lower))sug={target:'ncr',label:'מסמך NCR'};
     return render(sug);
   }
-  // For image files, use Workers AI Vision to classify.
   if(!dlUrl){
     classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">⚠ הקישור פג תוקף. רענני את הרשימה (🔃) או העלי את הקובץ שוב ל-Inbox.</span>';
     return;
   }
+  // Use the unified enhanced classifier for both images (vision) and PDFs
+  // (text). Returns full structured suggestion incl. code/dates/inspector,
+  // which the import button will then apply directly to the new record.
   fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
-    var prompt='אתה מנתח תמונות במערכת בטיחות בעבודה. סווג את התמונה הזו לאחת מהקטגוריות הבאות. החזר JSON תקין בלבד:\n'+
-      '{\n  "target": "tr"|"ppe"|"med"|"docs"|"ncr"|"equip_inspections"|"other",\n  "label": "תיאור עברי קצר של מה זה",\n  "summary": "1 שורה — תוכן עיקרי שזיהית"\n}\n'+
-      'מדריך:\n- tr = תעודת הדרכה / הסמכה / רישיון מקצוע\n- ppe = תעודה / קבלה לציוד מגן אישי\n- med = אישור רפואי / בדיקה רפואית\n- docs = מסמך / רישיון / אישור גנרי\n- ncr = תמונת ליקוי / אי-התאמה במפעל\n- equip_inspections = תסקיר בדיקת ציוד / מטף / מערכת בטיחות\n- other = כל דבר אחר\n\nשם הקובץ: '+name+'\n\nהקפד על JSON תקין בלבד, ללא הקדמה.';
-    return _ocrAnalyze(blob,prompt).then(function(content){
-      content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
-      var p;try{p=JSON.parse(content);}catch(e){return {target:'other',label:'לא הצלחתי לזהות',summary:''};}
-      var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
-      if(allowed.indexOf(p.target)<0)p.target='other';
-      return p;
+    if(isImg){
+      return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
+    }
+    return _extractPdfText(blob).then(function(txt){
+      return _aiTextClassify(_odBuildClassifyPrompt(name,txt));
     });
+  }).then(function(content){
+    content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+    var p;try{p=JSON.parse(content);}catch(e){return {target:'other',label:'לא הצלחתי לזהות',summary:''};}
+    var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
+    if(allowed.indexOf(p.target)<0)p.target='other';
+    return p;
   }).then(render).catch(function(e){
     classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">סיווג נכשל: '+esc(String(e&&e.message||e).substring(0,80))+'</span>';
   });
@@ -12894,57 +12906,26 @@ function _odImportItem(item,suggestion,card){
   var btn=card.querySelector('[data-act="import"]');if(btn){btn.disabled=true;btn.textContent='⏳ מייבא...';}
   var dlUrl=item['@microsoft.graph.downloadUrl'];
   if(!dlUrl){toast('⚠ הקישור פג תוקף. רענני את הרשימה ונסי שוב');if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}return;}
+  var name=item.name||'file';
   fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
-    // Upload to Supabase Storage (reuses existing _fileUpload pipeline).
     return new Promise(function(resolve,reject){
-      // Wrap blob with a filename-derived File-like object so _fileUpload's
-      // image-detection works correctly.
-      var f=new File([blob],item.name||'file',{type:blob.type||'application/octet-stream'});
+      var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
       _fileUpload(f,suggestion.target||'docs',function(url,err,body){
         if(err)return reject(new Error('upload '+err+': '+(body||'')));
         resolve(url);
       });
     });
   }).then(function(uploadedUrl){
-    // Create the record in the right table.
-    var t=suggestion.target;
-    var name=item.name||'file';
-    var rec={id:gid(),ts:new Date().toISOString()};
-    if(t==='tr'){
-      rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);
-      rec.w='';rec.c='בטיחות';rec.s='הושלם';rec.file_url=uploadedUrl;
-      DB.tr=DB.tr||[];DB.tr.push(rec);sbIns('tr',rec);
-    }else if(t==='ppe'){
-      rec.ty='אחר';rec.w='';rec.m=name.substring(0,40);rec.file_url=uploadedUrl;
-      DB.ppe=DB.ppe||[];DB.ppe.push(rec);sbIns('ppe',rec);
-    }else if(t==='med'){
-      rec.n='';rec.t='בדיקה רפואית';rec.file_url=uploadedUrl;
-      DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);
-    }else if(t==='ncr'){
-      // Auto-create a draft NCR with the file as photo
-      rec.num='NCR-'+String((DB.ncr||[]).length+1).padStart(4,'0');
-      rec.d=(suggestion.summary||name).substring(0,200);
-      rec.a='בטיחות';rec.s='פתוח';rec.p='בינונית';
-      rec.photo_url=uploadedUrl;
-      DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);
-    }else if(t==='equip_inspections'){
-      rec.code='?';rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);
-      rec.file_url=uploadedUrl;rec.s='תקין';
-      DB.equip_inspections=DB.equip_inspections||[];DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);
-    }else{
-      // docs (default fallback)
-      rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);
-      rec.c='כללי';rec.file_url=uploadedUrl;
-      DB.docs=DB.docs||[];DB.docs.push(rec);sbIns('docs',rec);
-    }
+    // Use the same field-application + delete-from-inbox pipeline as the
+    // auto-import path so manual + auto produce identical results.
+    _odApplyExtractedFields(suggestion.target,suggestion,name,uploadedUrl);
     sdb();
-    addLog('OneDrive Inbox: יובא '+name);
-    toast('יובא בהצלחה ✓ ('+(suggestion.label||t)+')');
-    // Move file in OneDrive to /Inbox/_processed/
-    // Move file in OneDrive to its proper category folder (NOT _processed).
-    return _odMoveToTopic(item.id,suggestion.target);
+    addLog('OneDrive Inbox: יובא '+name+' → '+suggestion.target+(suggestion.code?' ('+suggestion.code+')':''));
+    toast('יובא ✓ '+(suggestion.label||suggestion.target));
+    // Delete original from /Inbox/. The sbIns hook places the file in the
+    // per-equipment subfolder ~1.5s later via _odMirrorRecord.
+    return _odDeleteItemAsync(item.id);
   }).then(function(){
-    // Remove card from inbox UI
     if(card&&card.parentNode)card.parentNode.removeChild(card);
   }).catch(function(e){
     if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}
@@ -12952,6 +12933,12 @@ function _odImportItem(item,suggestion,card){
     console.warn('[od import]',e);
   });
 }
+// Force-run the auto-import scan now (instead of waiting up to 5 min).
+window._odRunAutoImportNow=function(){
+  if(!_odIsConnected()){toast('⚠ לא מחובר ל-OneDrive');return;}
+  toast('🤖 סורק את ה-Inbox עכשיו…');
+  if(typeof _odAutoImport==='function')_odAutoImport();
+};
 // Move an Inbox file to its proper topic folder under /Apps/Tapugan Safety/
 // (the SAME folder structure the outbound mirror uses). Result: regardless
 // of whether a file was uploaded via the app or dropped directly into
