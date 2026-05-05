@@ -13223,28 +13223,35 @@ function _ensurePdfLib(){
   });
   return _pdfLibPromise;
 }
-// Lazy-load Heebo Hebrew TTF (~100KB) once per session and convert to
-// base64 for jsPDF.addFileToVFS. jsPDF's bundled fonts don't include
-// Hebrew glyphs — without this, all Hebrew renders as Latin gibberish.
+// Lazy-load full Heebo TTF (~200KB) once per session and convert to
+// base64 for jsPDF.addFileToVFS. The Google Fonts source TTF includes
+// Hebrew + Latin + punctuation in a single file — needed so that field
+// labels (with colons), em-dashes, dates, and ASCII codes all render.
+// Falls back to fontsource Hebrew-only subset if primary URL fails.
 var _hebFontPromise=null;
 function _ensureHebrewFont(){
   if(window._hebFontB64)return Promise.resolve(window._hebFontB64);
   if(_hebFontPromise)return _hebFontPromise;
+  function bufToB64(buf){
+    var bytes=new Uint8Array(buf),bin='';
+    for(var i=0;i<bytes.length;i+=8192){
+      bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
+    }
+    return btoa(bin);
+  }
+  function tryFetch(url){
+    return fetch(url).then(function(r){
+      if(!r.ok)throw new Error('font fetch '+r.status+' '+url);
+      return r.arrayBuffer();
+    });
+  }
   _hebFontPromise=new Promise(function(resolve,reject){
-    fetch('https://cdn.jsdelivr.net/fontsource/fonts/heebo@latest/hebrew-400-normal.ttf')
-      .then(function(r){
-        if(!r.ok)throw new Error('font fetch '+r.status);
-        return r.arrayBuffer();
-      })
+    var primary='https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/heebo/static/Heebo-Regular.ttf';
+    var fallback='https://cdn.jsdelivr.net/fontsource/fonts/heebo@latest/hebrew-400-normal.ttf';
+    tryFetch(primary)
+      .catch(function(){return tryFetch(fallback);})
       .then(function(buf){
-        // ArrayBuffer → binary string → base64
-        var bytes=new Uint8Array(buf);
-        var bin='';
-        // Process in chunks to avoid call-stack limits with large buffers
-        for(var i=0;i<bytes.length;i+=8192){
-          bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));
-        }
-        window._hebFontB64=btoa(bin);
+        window._hebFontB64=bufToB64(buf);
         resolve(window._hebFontB64);
       })
       .catch(function(e){reject(e);});
@@ -13338,16 +13345,16 @@ function _odBuildReportPdf(tbl,rec){
     cfg.fields.forEach(function(f){
       var val=rec[f[1]];
       if(val===true)val='V';else if(val===false)val='X';
-      else if(val===undefined||val===null||val==='')val='—';
+      else if(val===undefined||val===null||val==='')val='-';
       if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
       var label=bidi(f[0]+':');
       var value=bidi(String(val).replace(/\n/g,' / '));
-      doc.setTextColor(120,120,120);
+      doc.setTextColor(70,70,70);
       doc.text(label,rightX,y,{align:'right'});
       doc.setTextColor(20,20,20);
-      var wrapWidth=pageW-margin-margin-45;
+      var wrapWidth=pageW-margin-margin-50;
       var lines=doc.splitTextToSize(value,wrapWidth);
-      doc.text(lines,rightX-45,y,{align:'right'});
+      doc.text(lines,rightX-50,y,{align:'right'});
       y+=Math.max(7,lines.length*6);
       if(y>pageH-30){doc.addPage();y=margin+10;}
     });
