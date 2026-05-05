@@ -13133,23 +13133,135 @@ function _odDeleteItem(itemId,card){
 // Hook: after every successful Supabase upload, also push to OneDrive (if
 // connected). Failures are logged but do NOT block the main upload flow.
 function _odMaybeMirror(blob,prefix,filename){
-  if(!_odIsConnected())return;
-  var folder=_odFolderFor(prefix);
-  _odPushFile(blob,folder,filename).then(function(){
-    console.log('[od] mirrored',folder,filename);
-    // Visible feedback so the user knows the file actually reached OneDrive
-    // (without this, sync was silent and "did it work?" required DevTools).
-    try{toast('☁️ סונכרן ל-OneDrive: '+folder);}catch(e){}
+  // Topic-folder mirror is now handled by the per-record sync (sbIns hook
+  // → _odMirrorRecord). Skip the immediate upload to avoid duplicates;
+  // the file will land in /<topic>/<record-subfolder>/ a few seconds
+  // after the user saves the form.
+  return;
+}
+// Build a per-record OneDrive subfolder name. OneDrive folder names cannot
+// contain * / \ ? " < > | : — sanitize away. Hebrew is fine.
+function _odSanitizeName(s){return String(s||'').replace(/[\\*\/?"<>|:]/g,'').replace(/\s+/g,' ').trim().substring(0,80);}
+function _odSubfolderName(tbl,rec){
+  if(!rec)return tbl;
+  if(tbl==='equip_inspections')return _odSanitizeName((rec.code||'EQI')+' - '+(rec.n||'ציוד'));
+  if(tbl==='ncr')return _odSanitizeName((rec.num||'NCR')+' - '+String(rec.d||'').substring(0,40));
+  if(tbl==='inc')return _odSanitizeName('INC - '+String(rec.dt||rec.d||'').substring(0,10)+' - '+String(rec.d||'').substring(0,30));
+  if(tbl==='near_miss')return _odSanitizeName('NM - '+(rec.d||'')+' - '+String(rec.descr||'').substring(0,30));
+  if(tbl==='toolbox')return _odSanitizeName('TB - '+(rec.d||'')+' - '+String(rec.topic||'').substring(0,40));
+  if(tbl==='tr')return _odSanitizeName('TR - '+String(rec.n||'').substring(0,40)+(rec.w?' - '+String(rec.w).substring(0,30):''));
+  if(tbl==='env_aspects')return _odSanitizeName('EASP - '+String(rec.aspect||'').substring(0,40));
+  if(tbl==='ppe')return _odSanitizeName('PPE - '+String(rec.ty||'')+(rec.w?' - '+String(rec.w).substring(0,30):''));
+  if(tbl==='med')return _odSanitizeName('MED - '+String(rec.t||'')+(rec.n?' - '+String(rec.n).substring(0,30):''));
+  if(tbl==='docs')return _odSanitizeName('DOC - '+String(rec.n||''));
+  if(tbl==='ctr')return _odSanitizeName('CTR - '+String(rec.n||''));
+  if(tbl==='leg')return _odSanitizeName('LEG - '+String(rec.s||''));
+  if(tbl==='hzm')return _odSanitizeName('HZM - '+String(rec.n||rec.cas||''));
+  if(tbl==='rsk')return _odSanitizeName('RSK - '+String(rec.d||'').substring(0,40));
+  if(tbl==='rounds')return _odSanitizeName('ROUND - '+(rec.d||''));
+  if(tbl==='tasks')return _odSanitizeName('TSK - '+String(rec.title||'').substring(0,40));
+  return _odSanitizeName(tbl+' - '+(rec.id||''));
+}
+// Build a printable HTML report for a record using VIEW_CONFIG fields.
+// Returns HTML string (not opened in window) so it can be uploaded as
+// report.html into the OneDrive subfolder.
+function _odBuildReportHtml(tbl,rec){
+  var cfg=window.VIEW_CONFIG&&window.VIEW_CONFIG[tbl];
+  if(!cfg)return null;
+  var rows='';
+  cfg.fields.forEach(function(f){
+    var val=rec[f[1]];
+    if(val===true)val='✓';else if(val===false)val='✗';
+    else if(val===undefined||val===null||val==='')val='—';
+    if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
+    var safe=String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+    rows+='<tr><th>'+f[0]+'</th><td>'+safe+'</td></tr>';
+  });
+  var stamp=new Date().toLocaleString('he-IL');
+  var photo=rec.photo_url?'<div style="margin:18px 0;text-align:center"><img src="'+rec.photo_url.replace(/"/g,'')+'" style="max-width:100%;max-height:60vh;border:1px solid #ccc;border-radius:6px"></div>':'';
+  return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+(cfg.title||tbl)+'</title>'+
+    '<style>body{font-family:Arial,sans-serif;margin:24px;color:#111;direction:rtl}'+
+    'h1{color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin-bottom:18px;font-size:22px}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:14px}'+
+    'th,td{border:1px solid #bbb;padding:8px 12px;text-align:right;font-size:13px;vertical-align:top}'+
+    'th{background:#f5f5f5;width:160px;color:#444;font-weight:700}'+
+    '.ftr{margin-top:32px;padding-top:12px;border-top:1px solid #ccc;font-size:11px;color:#888}'+
+    '</style></head><body>'+
+    '<h1>'+(cfg.title||tbl)+'</h1>'+
+    '<table>'+rows+'</table>'+
+    photo+
+    '<div class="ftr">דו"ח שנוצר אוטומטית | Tapugan Safety | '+stamp+'</div>'+
+    '</body></html>';
+}
+// Per-record OneDrive sync — runs after every save (via sbIns hook below).
+// Creates a per-record subfolder under the topic folder, e.g.:
+//   /Apps/Tapugan Safety/Equipment Inspections/EQI-005 - מטף 5kg/
+//                                              ├── photo.jpg
+//                                              ├── <original-file>.pdf
+//                                              └── report.html
+function _odMirrorRecord(tbl,rec){
+  if(!_odIsConnected()||!rec)return;
+  var prefix=tbl;if(tbl==='env_aspects')prefix='easp';
+  var topic=_odFolderFor(prefix);
+  var sub=_odSubfolderName(tbl,rec);
+  var folder=topic+'/'+sub;
+  var jobs=[];
+  if(rec.photo_url){
+    jobs.push(fetch(rec.photo_url).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
+      if(!blob)return;
+      var ext=(rec.photo_url.split('?')[0].split('.').pop()||'jpg').substring(0,5);
+      return _odPushFile(blob,folder,'photo.'+ext);
+    }).catch(function(e){console.warn('[od] photo mirror failed:',e&&e.message);}));
+  }
+  if(rec.file_url && rec.file_url!==rec.photo_url){
+    jobs.push(fetch(rec.file_url).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
+      if(!blob)return;
+      var fname=(rec.file_url.split('/').pop()||'file').split('?')[0];
+      return _odPushFile(blob,folder,fname);
+    }).catch(function(e){console.warn('[od] file mirror failed:',e&&e.message);}));
+  }
+  var html=_odBuildReportHtml(tbl,rec);
+  if(html){
+    var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    jobs.push(_odPushFile(blob,folder,'report.html').catch(function(e){console.warn('[od] report mirror failed:',e&&e.message);}));
+  }
+  if(!jobs.length)return;
+  Promise.all(jobs).then(function(){
+    try{toast('☁️ סונכרן ל-OneDrive: '+sub);}catch(e){}
   }).catch(function(e){
     var msg=e&&e.message||String(e);
-    console.warn('[od] mirror failed:',msg);
+    console.warn('[od] mirrorRecord failed:',msg);
     try{toast('⚠ סנכרון OneDrive נכשל: '+msg.substring(0,80));}catch(_){}
-    // If token expired mid-session, surface a hint to reconnect
     if(/401|invalid_grant|expired|interaction_required/i.test(msg)){
       try{toast('💡 התנתקת מ-OneDrive. תפריט … → ☁️ חיבור OneDrive → התחבר');}catch(_){}
     }
   });
 }
+// Hook into sbIns/sbUpd so every save triggers a per-record sync. Wraps
+// the originals so existing call sites don't change. Delays by 1.5s to
+// let DB.<tbl> settle (in case the save handler updates more fields
+// after the sbIns/sbUpd call returns).
+(function(){
+  var TBL_WITH_REPORTS={ncr:1,inc:1,near_miss:1,equip_inspections:1,toolbox:1,tr:1,env_aspects:1,ppe:1,med:1,docs:1,ctr:1,leg:1,hzm:1,rsk:1,rounds:1,tasks:1};
+  function schedule(tbl,id){
+    if(!TBL_WITH_REPORTS[tbl]||!id)return;
+    if(typeof _odIsConnected!=='function'||!_odIsConnected())return;
+    setTimeout(function(){
+      var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
+      if(rec)_odMirrorRecord(tbl,rec);
+    },1500);
+  }
+  if(typeof sbIns==='function'&&!window._sbInsOdHooked){
+    window._sbInsOdHooked=true;
+    var origIns=sbIns;
+    window.sbIns=function(tbl,row){origIns(tbl,row);if(row)schedule(tbl,row.id);};
+  }
+  if(typeof sbUpd==='function'&&!window._sbUpdOdHooked){
+    window._sbUpdOdHooked=true;
+    var origUpd=sbUpd;
+    window.sbUpd=function(tbl,row){origUpd(tbl,row);if(row)schedule(tbl,row.id);};
+  }
+})();
 function _fileUpload(file,prefix,cb){
   var isImg=/^image\//i.test(file.type);
   var fname=prefix+'-'+Date.now()+(isImg?'.jpg':('-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')));
