@@ -1767,6 +1767,14 @@ id="m-ncr" style="display:none">
     </div>
     <div id="od-inbox-list" style="font-size:13px"></div>
   </div>
+  <div id="od-mail-section" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">&#128231; &#1491;&#1493;&#1494;&#1493;&#1503; &#1502;&#1497;&#1497;&#1500;</div>
+    <div style="font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px">
+      &#1513;&#1500;&#1497;&#1495;&#1514; &#1491;&#1493;&#1495; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; + &#1510;&#1497;&#1493;&#1491; &#1513;&#1506;&#1493;&#1502;&#1491; &#1500;&#1508;&#1497;&#1490; &#1502;&#1495;&#1513;&#1489;&#1493;&#1503; ה-Outlook &#1513;&#1500;&#1498;.<br>
+      <strong>&#1492;&#1499;&#1504;&#1492;:</strong> &#1497;&#1513; &#1500;&#1492;&#1493;&#1505;&#1497;&#1507; <code style="font-size:10px">Mail.Send</code> &#1489;-Azure Portal &#1493;&#1500;&#1492;&#1514;&#1495;&#1489;&#1512; &#1502;&#1495;&#1491;&#1513; &#1488;&#1495;&#1512;&#1497; &#1494;&#1492;.
+    </div>
+    <button class="btn btn-p btn-sm" onclick="_sendOpenTasksToSelf()" style="background:#0d9488;border-color:#0d9488">&#128231; &#1513;&#1500;&#1495; &#1491;&#1493;&#1495; &#1500;&#1506;&#1510;&#1502;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+  </div>
   <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
     <button class="btn btn-s" onclick="closeModal('m-od')">&#1505;&#1490;&#1497;&#1512;&#1492;</button>
     <button class="btn btn-d" id="od-disconnect-btn" onclick="_odDisconnect()" style="background:#7f1d1d;display:none">&#1492;&#1514;&#1504;&#1514;&#1511;</button>
@@ -12633,7 +12641,7 @@ var _OD_USER_KEY='tfgn_od_user_v1';
 // already granted by default for personal accounts (lets us pin the
 // account email reliably). Files.ReadWrite.AppFolder = sandboxed write
 // access to /Apps/<appName>/* only.
-var _OD_SCOPES=['Files.ReadWrite.AppFolder','offline_access','User.Read'];
+var _OD_SCOPES=['Files.ReadWrite.AppFolder','offline_access','User.Read','Mail.Send'];
 function _odClientId(){try{return localStorage.getItem(_OD_KEY)||'';}catch(e){return '';}}
 function _odToken(){try{return JSON.parse(localStorage.getItem(_OD_TOKEN_KEY)||'null');}catch(e){return null;}}
 function _odSetToken(t){try{if(t)localStorage.setItem(_OD_TOKEN_KEY,JSON.stringify(t));else localStorage.removeItem(_OD_TOKEN_KEY);}catch(e){}}
@@ -12725,16 +12733,19 @@ window._odRenderStatus=function(){
   var inp=g('od-clientid');if(inp&&!inp.value)inp.value=_odClientId();
   var btn=g('od-disconnect-btn');
   var inboxSec=g('od-inbox-section');
+  var mailSec=g('od-mail-section');
   if(_odIsConnected()){
     var u=_odUser();
     var auto=_odAutoPollEnabled();
     box.innerHTML='<div style="background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:10px;color:#166534"><strong>✓ מחובר</strong> · '+esc(u||'OneDrive')+'<br><span style="font-size:11px">📤 קבצים שאת מעלה באפליקציה — מסונכרנים אוטומטית ל-/Apps/Tapugan Safety/&lt;נושא&gt;/<br>📥 קבצים ב-/Inbox/ — '+(auto?'<strong>סורקים אוטומטית כל 5 דק\' ומייבאים לאפליקציה</strong>':'<strong>ייבוא ידני בלבד</strong>')+'</span><div style="margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:space-between"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" '+(auto?'checked':'')+' onchange="_odToggleAutoPoll()" style="cursor:pointer">🤖 ייבוא אוטומטי כל 5 דקות</label></div></div>';
     if(btn)btn.style.display='';
     if(inboxSec)inboxSec.style.display='';
+    if(mailSec)mailSec.style.display='';
   }else{
     box.innerHTML='<div style="background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:10px;color:#92400e">⚠ לא מחובר. סנכרון אוטומטי כבוי. <span style="font-size:11px;display:block;margin-top:4px">קבצים שיועלו לפני חיבור — ניתן לסנכרן ידנית בעתיד.</span></div>';
     if(btn)btn.style.display='none';
     if(inboxSec)inboxSec.style.display='none';
+    if(mailSec)mailSec.style.display='none';
   }
 };
 window._odConnect=function(){
@@ -12815,6 +12826,148 @@ function _odPushFile(blob,folder,filename){
     });
   });
 }
+// === Microsoft Graph: send mail ===
+// Sends an HTML email from the user's Outlook account via /me/sendMail.
+// Requires the Mail.Send scope (added to _OD_SCOPES). The first call after
+// adding the scope will need a fresh sign-in (silent refresh keeps old
+// scopes only); _odEnsureToken handles that if MSAL prompts.
+function _msSendMail(to,subject,html){
+  if(!to)return Promise.reject(new Error('no recipient'));
+  return _odEnsureToken().then(function(tok){
+    var msg={
+      message:{
+        subject:String(subject||'Tapugan Safety').substring(0,240),
+        body:{contentType:'HTML',content:String(html||'')},
+        toRecipients:(Array.isArray(to)?to:[to]).map(function(addr){
+          return {emailAddress:{address:String(addr).trim()}};
+        })
+      },
+      saveToSentItems:'true'
+    };
+    return fetch('https://graph.microsoft.com/v1.0/me/sendMail',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify(msg)
+    }).then(function(r){
+      // sendMail returns 202 Accepted with empty body.
+      if(r.status===202)return true;
+      return r.text().then(function(t){
+        var hint='';
+        if(r.status===401)hint=' — חסרה הרשאת Mail.Send. הוסיפי באזור Azure ואז התחברי מחדש.';
+        if(r.status===403)hint=' — אין הרשאה לשלוח מהחשבון הזה (admin consent חסר?).';
+        throw new Error('sendMail '+r.status+': '+t.substring(0,160)+hint);
+      });
+    });
+  });
+}
+// Get the signed-in user's email (for self-test and as default sender).
+function _msMyEmail(){
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName',{
+      headers:{'Authorization':'Bearer '+tok}
+    }).then(function(r){
+      if(!r.ok)throw new Error('me '+r.status);
+      return r.json();
+    }).then(function(d){return d.mail||d.userPrincipalName||'';});
+  });
+}
+// Build an HTML digest of items needing attention right now.
+// Sections: overdue tasks · tasks due in next 7 days · equipment expiring
+// in next 30 days · open NCRs · ppe/tr expiring in next 30 days.
+function _buildOpenTasksDigest(){
+  var now=new Date();
+  var nowMs=now.getTime();
+  var d7=nowMs+7*86400000;
+  var d30=nowMs+30*86400000;
+  function dateMs(s){
+    if(!s)return null;
+    var m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(!m)return null;
+    return new Date(m[1]+'-'+m[2]+'-'+m[3]+'T00:00:00').getTime();
+  }
+  function fmt(s){if(!s)return '';try{return fd(s);}catch(e){return s;}}
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var sections=[];
+  // Overdue tasks
+  var overdue=(DB.tasks||[]).filter(function(t){
+    if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;
+    var d=dateMs(t.due);return d&&d<nowMs;
+  });
+  // Due in next 7 days
+  var due7=(DB.tasks||[]).filter(function(t){
+    if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;
+    var d=dateMs(t.due);return d&&d>=nowMs&&d<=d7;
+  });
+  // Equipment expiring in next 30 days
+  var eqi30=(DB.equip_inspections||[]).filter(function(r){
+    var d=dateMs(r.e);return d&&d<=d30;
+  }).sort(function(a,b){return dateMs(a.e)-dateMs(b.e);});
+  // Open NCRs (not closed)
+  var ncrOpen=(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&n.s!=='נסגר';});
+  // PPE & training expiring in next 30 days
+  function expiring30(arr){return (arr||[]).filter(function(r){var d=dateMs(r.e);return d&&d<=d30;}).sort(function(a,b){return dateMs(a.e)-dateMs(b.e);});}
+  var ppe30=expiring30(DB.ppe);
+  var tr30=expiring30(DB.tr);
+  function tableRow(cells){return '<tr>'+cells.map(function(c){return '<td style="border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:right">'+esc(c)+'</td>';}).join('')+'</tr>';}
+  function section(title,items,headers,rowFn,color){
+    if(!items.length)return '';
+    var head='<tr style="background:'+(color||'#f5f5f5')+'">'+headers.map(function(h){return '<th style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right">'+h+'</th>';}).join('')+'</tr>';
+    var rows=items.map(rowFn).join('');
+    return '<h2 style="color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:4px;margin:18px 0 10px;font-size:16px">'+esc(title)+' ('+items.length+')</h2>'+
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'+head+rows+'</table>';
+  }
+  sections.push(section('משימות באיחור',overdue,['כותרת','אחראי','יעד','עדיפות'],function(t){
+    return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);
+  },'#fee2e2'));
+  sections.push(section('משימות עד 7 ימים',due7,['כותרת','אחראי','יעד','עדיפות'],function(t){
+    return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);
+  },'#fef3c7'));
+  sections.push(section('בדיקות ציוד עד 30 יום',eqi30,['קוד','תיאור','תוקף','בודק'],function(r){
+    return tableRow([r.code||'',r.n||'',fmt(r.e),r.inspector||'']);
+  },'#fef3c7'));
+  sections.push(section('PPE עד 30 יום',ppe30,['סוג','עובד','תוקף'],function(r){
+    return tableRow([r.ty||'',r.w||'',fmt(r.e)]);
+  },'#fef3c7'));
+  sections.push(section('הדרכות עד 30 יום',tr30,['שם הדרכה','עובד','תוקף'],function(r){
+    return tableRow([r.n||'',r.w||'',fmt(r.e)]);
+  },'#fef3c7'));
+  sections.push(section('NCRs פתוחים',ncrOpen.slice(0,30),['מספר','תיאור','אזור','עדיפות','סטטוס'],function(n){
+    return tableRow([n.num||'',(n.d||'').substring(0,80),n.a||'',n.p||'',n.s||'']);
+  },'#fee2e2'));
+  var any=overdue.length+due7.length+eqi30.length+ppe30.length+tr30.length+ncrOpen.length;
+  var stamp=new Date().toLocaleString('he-IL');
+  var totals='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px;margin-bottom:14px;font-size:13px">'+
+    '<strong>סיכום:</strong> '+overdue.length+' באיחור · '+due7.length+' עד 7 ימים · '+
+    eqi30.length+' בדיקות ציוד · '+ppe30.length+' PPE · '+tr30.length+' הדרכות · '+ncrOpen.length+' NCRs פתוחים</div>';
+  var body='<!doctype html><html dir="rtl" lang="he"><body style="font-family:Arial,sans-serif;color:#111;direction:rtl;background:#fff;padding:20px;max-width:800px;margin:auto">'+
+    '<h1 style="color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin:0 0 14px;font-size:22px">דוח משימות פתוחות — Tapugan Safety</h1>'+
+    '<div style="font-size:12px;color:#666;margin-bottom:14px">'+esc(stamp)+'</div>'+
+    totals+
+    (any?sections.join(''):'<p style="font-size:14px">🎉 אין פריטים פתוחים שדורשים תשומת לב כרגע.</p>')+
+    '<div style="margin-top:20px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#888">דוח זה נשלח אוטומטית מאפליקציית Tapugan Safety. תוכלי לכבות את הסנכרון בכל עת מתוך התפריט.</div>'+
+    '</body></html>';
+  return {html:body,subject:'דוח משימות פתוחות — '+stamp,counts:{overdue:overdue.length,due7:due7.length,eqi30:eqi30.length,ppe30:ppe30.length,tr30:tr30.length,ncr:ncrOpen.length,total:any}};
+}
+// User-facing: send the digest to the signed-in user's own email.
+window._sendOpenTasksToSelf=function(){
+  if(!confirm('לשלוח דוח משימות פתוחות למייל שלך?'))return;
+  toast('📧 מכין דוח…');
+  _msMyEmail().then(function(addr){
+    if(!addr)throw new Error('לא הצלחנו לזהות את המייל שלך');
+    var d=_buildOpenTasksDigest();
+    toast('📧 שולח ל-'+addr+'…');
+    return _msSendMail(addr,d.subject,d.html).then(function(){
+      toast('✓ הדוח נשלח ל-'+addr+' ('+d.counts.total+' פריטים)');
+    });
+  }).catch(function(e){
+    var msg=(e&&e.message||e).toString();
+    console.warn('[mail] send failed:',msg);
+    toast('⚠ שליחה נכשלה: '+msg.substring(0,140));
+    if(/401|Mail\.Send|invalid_grant/i.test(msg)){
+      toast('💡 הוסיפי Mail.Send ב-Azure Portal ואז התחברי מחדש.');
+    }
+  });
+};
 // === OneDrive INBOUND flow ===
 // User drops files into /Apps/Tapugan Safety/Inbox/ via OneDrive's web/app UI.
 // In the app, they click "בדוק קבצים חדשים" → AI classifies each file →
