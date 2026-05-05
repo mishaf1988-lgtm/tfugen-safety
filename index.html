@@ -12887,14 +12887,13 @@ function _odClassifyOne(item){
     else if(/ncr|אי.התאמ|noncon/i.test(lower))sug={target:'ncr',label:'מסמך NCR'};
     return render(sug);
   }
-  if(!dlUrl){
-    classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">⚠ הקישור פג תוקף. רענני את הרשימה (🔃) או העלי את הקובץ שוב ל-Inbox.</span>';
+  if(!item.id){
+    classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">⚠ פריט חסר id ברשימה.</span>';
     return;
   }
-  // Use the unified enhanced classifier for both images (vision) and PDFs
-  // (text). Returns full structured suggestion incl. code/dates/inspector,
-  // which the import button will then apply directly to the new record.
-  fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+  // Use /items/{id}/content + Bearer token (reliable) instead of the
+  // @microsoft.graph.downloadUrl field which Graph sometimes omits.
+  _odFetchItemBlob(item.id).then(function(blob){
     if(isImg){
       return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
     }
@@ -12915,10 +12914,11 @@ function _odClassifyOne(item){
 // right record → move OneDrive file to _processed/.
 function _odImportItem(item,suggestion,card){
   var btn=card.querySelector('[data-act="import"]');if(btn){btn.disabled=true;btn.textContent='⏳ מייבא...';}
-  var dlUrl=item['@microsoft.graph.downloadUrl'];
-  if(!dlUrl){toast('⚠ הקישור פג תוקף. רענני את הרשימה ונסי שוב');if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}return;}
+  if(!item.id){toast('⚠ פריט חסר id');if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}return;}
   var name=item.name||'file';
-  fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+  // Use /items/{id}/content + Bearer token instead of @microsoft.graph.downloadUrl
+  // — Graph sometimes omits the latter in listings, especially with $select.
+  _odFetchItemBlob(item.id).then(function(blob){
     return new Promise(function(resolve,reject){
       var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
       _fileUpload(f,suggestion.target||'docs',function(url,err,body){
@@ -13267,15 +13267,28 @@ function _odApplyExtractedFields(t,p,name,uploadedUrl){
   }
   return rec;
 }
+// Reliably download an Inbox item's content via the Graph items/<id>/content
+// endpoint with the Bearer token. The @microsoft.graph.downloadUrl field
+// returned in listings is best-effort and Graph sometimes omits it (esp.
+// when $select includes it). The /content endpoint always works as long
+// as the item exists and the user is authenticated.
+function _odFetchItemBlob(itemId){
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+encodeURIComponent(itemId)+'/content',{
+      headers:{'Authorization':'Bearer '+tok}
+    });
+  }).then(function(r){
+    if(!r.ok)throw new Error('הורדת הקובץ מ-OneDrive נכשלה ('+r.status+')');
+    return r.blob();
+  });
+}
 function _odClassifyAndImport(item){
   var name=item.name||'';
   var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
   var isPdf=/\.pdf$/i.test(name)||(item.file&&/pdf/i.test(item.file.mimeType||''));
-  var dlUrl=item['@microsoft.graph.downloadUrl'];
   function fail(reason){return {status:'failed',reason:String(reason||'').substring(0,140)};}
-  if(!dlUrl){
-    console.warn('[od auto] no download url for',name,'→ moving to _review');
-    return _odMoveToReview(item.id).then(function(){return fail('הקישור של Microsoft Graph פג תוקף לפני העיבוד');},function(){return fail('הקישור פג תוקף + העברה ל-_review נכשלה');});
+  if(!item.id){
+    return Promise.resolve(fail('item.id חסר ברשימה'));
   }
   return new Promise(function(resolve){
     function doImport(suggestion){
@@ -13283,10 +13296,7 @@ function _odClassifyAndImport(item){
         console.log('[od auto]',name,'→ _review (target=other)');
         return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
       }
-      fetch(dlUrl).then(function(r){
-        if(!r.ok)throw new Error('הורדת הקובץ נכשלה ('+r.status+')');
-        return r.blob();
-      }).then(function(blob){
+      _odFetchItemBlob(item.id).then(function(blob){
         return new Promise(function(resolveUp,rejectUp){
           var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
           _fileUpload(f,suggestion.target,function(url,err,body){
@@ -13313,17 +13323,11 @@ function _odClassifyAndImport(item){
     }
     var classifyPromise;
     if(isImg){
-      classifyPromise=fetch(dlUrl).then(function(r){
-        if(!r.ok)throw new Error('הורדת התמונה נכשלה ('+r.status+')');
-        return r.blob();
-      }).then(function(blob){
+      classifyPromise=_odFetchItemBlob(item.id).then(function(blob){
         return _ocrAnalyze(blob,_odBuildClassifyPrompt(name,''));
       });
     }else if(isPdf){
-      classifyPromise=fetch(dlUrl).then(function(r){
-        if(!r.ok)throw new Error('הורדת ה-PDF נכשלה ('+r.status+')');
-        return r.blob();
-      }).then(function(blob){
+      classifyPromise=_odFetchItemBlob(item.id).then(function(blob){
         return _extractPdfText(blob).then(function(txt){
           var prompt=_odBuildClassifyPrompt(name,txt);
           return _aiTextClassify(prompt);
