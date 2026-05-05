@@ -12641,14 +12641,40 @@ function _odFolderFor(prefix){
   if(p==='toolbox')return 'Toolbox Talks';
   return 'Other';
 }
-// Lazy-load MSAL.js from CDN.
+// Lazy-load MSAL.js from CDN. The previous URL (alcdn.msauth.net) was
+// returning 404 — Microsoft moved/removed that path. Now uses jsdelivr
+// with a documented fallback to unpkg if the primary CDN fails.
+// Also: dedup load attempts via a single Promise so multiple callers
+// don't inject 3+ <script> tags on a slow network.
+var _odMsalLoadPromise=null;
 function _odEnsureMsal(cb){
-  if(typeof msal!=='undefined')return cb();
-  var s=document.createElement('script');
-  s.src='https://alcdn.msauth.net/browser/3.7.1/js/msal-browser.min.js';
-  s.onload=function(){cb();};
-  s.onerror=function(){toast('שגיאה בטעינת ספריית Microsoft');cb(new Error('msal load failed'));};
-  document.head.appendChild(s);
+  if(typeof msal!=='undefined'&&msal.PublicClientApplication)return cb();
+  if(_odMsalLoadPromise){_odMsalLoadPromise.then(function(){cb();},function(e){cb(e);});return;}
+  _odMsalLoadPromise=new Promise(function(resolve,reject){
+    var primary='https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.20.0/lib/msal-browser.min.js';
+    var fallback='https://unpkg.com/@azure/msal-browser@3.20.0/lib/msal-browser.min.js';
+    function load(url,onFail){
+      var s=document.createElement('script');
+      s.src=url;
+      s.onload=function(){
+        if(typeof msal!=='undefined'&&msal.PublicClientApplication)resolve();
+        else onFail(new Error('script loaded but msal global missing'));
+      };
+      s.onerror=function(){onFail(new Error('script error: '+url));};
+      document.head.appendChild(s);
+      // Hard timeout — slow network or blocked CDN.
+      setTimeout(function(){if(typeof msal==='undefined'||!msal.PublicClientApplication)onFail(new Error('msal load timeout: '+url));},10000);
+    }
+    load(primary,function(e1){
+      console.warn('[od] primary MSAL CDN failed:',e1&&e1.message,'— trying fallback');
+      load(fallback,function(e2){
+        console.error('[od] both MSAL CDNs failed:',e2&&e2.message);
+        toast('❌ טעינת ספריית Microsoft נכשלה. בדקי חיבור אינטרנט.');
+        reject(e2);
+      });
+    });
+  });
+  _odMsalLoadPromise.then(function(){cb();},function(e){cb(e);_odMsalLoadPromise=null;});
 }
 var _odMsalApp=null;
 function _odMsal(){
@@ -12692,19 +12718,31 @@ window._odRenderStatus=function(){
 window._odConnect=function(){
   var cid=_odClientId();
   if(!cid){toast('הזן Azure App Client ID קודם');return;}
+  toast('טוען ספריית Microsoft...');
   _odEnsureMsal(function(err){
-    if(err)return;
-    var app=_odMsal();if(!app){toast('שגיאה ב-MSAL');return;}
+    if(err){
+      // Surface the actual error so the user can debug network/CSP issues
+      // instead of hitting a silent failure (the original bug).
+      toast('❌ טעינת MSAL נכשלה: '+(err&&err.message||err).toString().substring(0,80));
+      console.error('[od] MSAL load failed:',err);
+      return;
+    }
+    var app=_odMsal();
+    if(!app){toast('❌ MSAL לא אותחל — בדקי Client ID');return;}
     app.initialize().then(function(){
-      return app.loginPopup({scopes:_odScopes||_OD_SCOPES,prompt:'select_account'});
+      return app.loginPopup({scopes:_OD_SCOPES,prompt:'select_account'});
     }).then(function(res){
-      if(!res||!res.accessToken){toast('התחברות נכשלה');return;}
+      if(!res||!res.accessToken){toast('התחברות נכשלה — לא התקבל token');return;}
       _odSetToken({access_token:res.accessToken,expires_at:res.expiresOn?res.expiresOn.getTime():(Date.now()+3300000),account:res.account&&res.account.username});
       _odSetUser(res.account&&res.account.username||'');
       toast('מחובר ל-OneDrive: '+(res.account&&res.account.username||''));
       if(typeof _odRenderStatus==='function')_odRenderStatus();
       if(typeof _odAutoPollStart==='function')_odAutoPollStart();
-    }).catch(function(e){toast('התחברות נכשלה: '+(e&&e.message||e));console.warn('[od]',e);});
+    }).catch(function(e){
+      var msg=(e&&e.message||String(e)).substring(0,200);
+      toast('❌ התחברות נכשלה: '+msg);
+      console.error('[od] connect error:',e);
+    });
   });
 };
 window._odDisconnect=function(){
