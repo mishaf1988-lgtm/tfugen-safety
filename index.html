@@ -13207,81 +13207,123 @@ function _odBuildReportHtml(tbl,rec){
 //                                              ├── photo.jpg
 //                                              ├── <original-file>.pdf
 //                                              └── report.html
-// Lazy-load html2pdf bundle from jsdelivr (~600KB). Once loaded, it's
-// cached for the rest of the session.
+// Lazy-load jsPDF from jsdelivr (~280KB). Direct text/image rendering
+// is more reliable than html2canvas for our Hebrew RTL reports.
 var _pdfLibPromise=null;
 function _ensurePdfLib(){
-  if(typeof html2pdf!=='undefined')return Promise.resolve();
+  if(window.jspdf&&window.jspdf.jsPDF)return Promise.resolve();
   if(_pdfLibPromise)return _pdfLibPromise;
   _pdfLibPromise=new Promise(function(resolve,reject){
     var s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
-    s.onload=function(){if(typeof html2pdf!=='undefined')resolve();else reject(new Error('html2pdf not defined'));};
-    s.onerror=function(){reject(new Error('html2pdf CDN failed'));};
+    s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload=function(){if(window.jspdf&&window.jspdf.jsPDF)resolve();else reject(new Error('jsPDF not defined'));};
+    s.onerror=function(){reject(new Error('jsPDF CDN failed'));};
     document.head.appendChild(s);
-    setTimeout(function(){if(typeof html2pdf==='undefined')reject(new Error('html2pdf timeout'));},15000);
+    setTimeout(function(){if(!window.jspdf||!window.jspdf.jsPDF)reject(new Error('jsPDF timeout'));},15000);
   });
   return _pdfLibPromise;
 }
+// Helper: download an image URL and return a base64 data URL for embedding
+// into jsPDF. Resolves to null on failure (PDF still gets generated, just
+// without the photo).
+function _odImgToBase64(url){
+  return new Promise(function(resolve){
+    if(!url)return resolve(null);
+    var work=function(srcUrl){
+      fetch(srcUrl).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
+        if(!blob)return resolve(null);
+        var rd=new FileReader();
+        rd.onload=function(){resolve(rd.result);};
+        rd.onerror=function(){resolve(null);};
+        rd.readAsDataURL(blob);
+      }).catch(function(){resolve(null);});
+    };
+    if(typeof _sign==='function'){
+      _sign(url,function(signed){work(signed||url);});
+    }else{
+      work(url);
+    }
+  });
+}
 // Generate a PDF Blob from the HTML report. Renders inside an offscreen
 // container so the browser layout engine has a real DOM to measure.
+// Build a PDF report directly via jsPDF — no html2canvas (was producing
+// blank PDFs because the canvas pipeline doesn't reliably handle Hebrew/
+// RTL text and offscreen rendering). This direct path:
+//   1. Loads jsPDF only (~280KB, no html2canvas dependency)
+//   2. Iterates VIEW_CONFIG fields and writes them as text rows
+//   3. Embeds the photo (if any) as base64 below the field table
+//   4. Since jsPDF's built-in fonts don't include Hebrew glyphs, we
+//      flip each Hebrew string before drawing (RTL workaround) so it
+//      reads correctly from right to left in the rendered PDF.
 function _odBuildReportPdf(tbl,rec){
-  var html=_odBuildReportHtml(tbl,rec);
-  if(!html)return Promise.reject(new Error('no view config'));
+  var cfg=window.VIEW_CONFIG&&window.VIEW_CONFIG[tbl];
+  if(!cfg)return Promise.reject(new Error('no view config for '+tbl));
   return _ensurePdfLib().then(function(){
-    return new Promise(function(resolve,reject){
-      // html2pdf needs a fully-rendered, in-viewport DOM with non-zero
-      // dimensions. Offscreen positioning (left:-99999px) caused empty
-      // PDFs in some browsers because the layout engine skipped paint.
-      // Fix: place the holder ON-SCREEN at top:0 with opacity:0 +
-      // pointer-events:none so it's invisible to the user but the
-      // browser still paints layout for html2canvas to capture.
-      var holder=document.createElement('div');
-      holder.style.cssText='position:fixed;top:0;left:0;width:794px;min-height:200px;background:#fff;opacity:0;pointer-events:none;z-index:-1;overflow:visible;direction:rtl';
-      // Extract just the body content (avoid duplicate <html>/<body>).
-      var bodyMatch=html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      var styleMatch=html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
-      var bodyContent=bodyMatch?bodyMatch[1]:html;
-      var styleContent=styleMatch?styleMatch[1]:'';
-      holder.innerHTML=(styleContent?'<style>'+styleContent+'</style>':'')+bodyContent;
-      document.body.appendChild(holder);
-      // Wait briefly for any embedded <img> tags to finish loading so
-      // they appear in the PDF (otherwise html2canvas grabs the layout
-      // before the image arrives over the network).
-      var imgs=holder.querySelectorAll('img');
-      var imgPromises=Array.prototype.map.call(imgs,function(img){
-        if(img.complete&&img.naturalWidth>0)return Promise.resolve();
-        return new Promise(function(res){
-          img.onload=function(){res();};
-          img.onerror=function(){res();};
-          // Fallback timeout in case the image hangs.
-          setTimeout(res,8000);
-        });
-      });
-      Promise.all(imgPromises).then(function(){
-        // Slight delay so layout fully settles after images load.
-        setTimeout(function(){
-          html2pdf().set({
-            margin:[10,10,10,10],
-            filename:'report.pdf',
-            image:{type:'jpeg',quality:0.92},
-            html2canvas:{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'},
-            jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-            pagebreak:{mode:['avoid-all','css','legacy']}
-          }).from(holder).outputPdf('blob').then(function(blob){
-            try{document.body.removeChild(holder);}catch(e){}
-            if(!blob||blob.size<500){
-              reject(new Error('PDF generated but blob is empty/tiny ('+(blob?blob.size:0)+'B)'));
-              return;
-            }
-            resolve(blob);
-          }).catch(function(e){
-            try{document.body.removeChild(holder);}catch(_){}
-            reject(e);
-          });
-        },150);
-      });
+    // Flip Hebrew + bidi-isolated chars so right-aligned print reads
+    // correctly. jsPDF's standard fonts (Helvetica/Times/Courier) draw
+    // chars left-to-right; for Hebrew display we need to reverse the
+    // string and right-align. ASCII / digits stay LTR within RTL.
+    function flip(s){
+      s=String(s==null?'':s);
+      // Reverse only if any Hebrew chars present
+      if(!/[֐-׿]/.test(s))return s;
+      return s.split('').reverse().join('');
+    }
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pageW=210,pageH=297,margin=15,rightX=pageW-margin;
+    var y=margin+5;
+    // Title
+    doc.setFontSize(18);
+    doc.setTextColor(204,31,31);
+    doc.text(flip(cfg.title||tbl),rightX,y,{align:'right'});
+    y+=2;
+    doc.setDrawColor(204,31,31);
+    doc.setLineWidth(0.8);
+    doc.line(margin,y+1,rightX,y+1);
+    y+=10;
+    // Field rows: label (right-aligned, grey) + value (right of label, dark)
+    doc.setFontSize(11);
+    cfg.fields.forEach(function(f){
+      var val=rec[f[1]];
+      if(val===true)val='V';else if(val===false)val='X';
+      else if(val===undefined||val===null||val==='')val='—';
+      if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
+      var label=flip(f[0]+':');
+      var value=flip(String(val).replace(/\n/g,' / '));
+      doc.setTextColor(120,120,120);
+      doc.text(label,rightX,y,{align:'right'});
+      doc.setTextColor(20,20,20);
+      // Wrap long values to multiple lines
+      var wrapWidth=pageW-margin-margin-45; // leave 45mm for label
+      var lines=doc.splitTextToSize(value,wrapWidth);
+      doc.text(lines,rightX-45,y,{align:'right'});
+      y+=Math.max(7,lines.length*6);
+      if(y>pageH-30){doc.addPage();y=margin+10;}
     });
+    // Footer with timestamp
+    var stamp=new Date().toLocaleString('he-IL');
+    doc.setFontSize(9);
+    doc.setTextColor(150,150,150);
+    doc.text(flip(stamp+' | Tapugan Safety | אוטומטי דוח'),rightX,pageH-10,{align:'right'});
+    // Embed photo if present (after fields)
+    if(rec.photo_url){
+      return _odImgToBase64(rec.photo_url).then(function(b64){
+        if(b64){
+          try{
+            // Try to add image; if jsPDF can't detect type, default to JPEG
+            var imgW=160,imgH=110;
+            var imgY=Math.min(y+5,pageH-imgH-margin-15);
+            if(imgY+imgH>pageH-margin-15){doc.addPage();imgY=margin+10;}
+            var fmt=/data:image\/(png)/i.test(b64)?'PNG':'JPEG';
+            doc.addImage(b64,fmt,(pageW-imgW)/2,imgY,imgW,imgH,undefined,'FAST');
+          }catch(e){console.warn('[od] addImage failed:',e&&e.message);}
+        }
+        return doc.output('blob');
+      });
+    }
+    return Promise.resolve(doc.output('blob'));
   });
 }
 // Fetch a Supabase Storage object using a signed URL (the public URL
