@@ -12938,13 +12938,79 @@ function _odImportItem(item,suggestion,card){
 // it so a fresh scan can start. Pass verbose:true so the user sees how
 // many items were found / imported / skipped — never silent.
 window._odRunAutoImportNow=function(){
-  if(!_odIsConnected()){toast('⚠ לא מחובר ל-OneDrive');return;}
+  // Render a persistent status panel inside the inbox section so the
+  // user can see exactly what's happening at every step (toasts disappear
+  // after 2.5s and people miss them on mobile).
+  var statusBox=g('od-inbox-list');
+  function setStatus(msg,color){
+    if(!statusBox)return;
+    var c=color||'#1f2937';
+    statusBox.innerHTML='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;font-size:13px;color:'+c+';white-space:pre-line">'+esc(msg)+'</div>';
+  }
+  function appendStatus(msg){
+    if(!statusBox)return;
+    var d=statusBox.querySelector('div');
+    if(d)d.innerHTML+='\n'+esc(msg);
+  }
+  if(!_odIsConnected()){
+    setStatus('⚠ לא מחובר ל-OneDrive. צריך להתחבר מחדש.','#b91c1c');
+    toast('⚠ לא מחובר ל-OneDrive');
+    return;
+  }
   if(_odPolling){
     console.warn('[od] forcing reset of stuck _odPolling flag');
     _odPolling=false;
   }
-  toast('🤖 סורק את ה-Inbox עכשיו…');
-  if(typeof _odAutoImport==='function')_odAutoImport({verbose:true,force:true});
+  setStatus('🤖 סורק את ה-Inbox עכשיו…');
+  toast('🤖 מתחיל סריקה…');
+  // Direct invocation (not through _odAutoImport) so we can stream
+  // progress messages into the status panel and refresh the listing
+  // afterwards. This deliberately bypasses the verbose-toast variant
+  // because the panel is more reliable on mobile.
+  _odPolling=true;
+  var imported=0,skipped=0,failed=0,total=0;
+  _odEnsureToken().then(function(tok){
+    appendStatus('🔑 קיבלנו token טרי');
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox:/children?$select=id,name,size,file,createdDateTime,@microsoft.graph.downloadUrl',{headers:{Authorization:'Bearer '+tok}});
+  }).then(function(r){
+    if(!r||!r.ok)throw new Error('Inbox list '+(r&&r.status));
+    return r.json();
+  }).then(function(d){
+    var items=((d&&d.value)||[]).filter(function(it){return it.file;});
+    total=items.length;
+    appendStatus('📂 נמצאו '+total+' קבצים ב-Inbox');
+    if(!total){
+      setStatus('📭 ה-Inbox ריק. גררי קובץ ל-/Apps/Tapugan Safety/Inbox/ ב-OneDrive.','#1f2937');
+      return;
+    }
+    return items.reduce(function(chain,item,idx){
+      return chain.then(function(){
+        appendStatus('('+(idx+1)+'/'+total+') 🔍 מסווג: '+item.name);
+        return _odClassifyAndImport(item).then(function(res){
+          if(res==='imported'){imported++;appendStatus('   ✅ יובא בהצלחה');}
+          else if(res==='skipped'){skipped++;appendStatus('   ⚠️ AI לא בטוח — הועבר ל-/_review/');}
+          else{failed++;appendStatus('   ❌ נכשל');}
+        });
+      });
+    },Promise.resolve());
+  }).then(function(){
+    if(total===0)return;
+    var summary='✓ סיום:\n  יובאו: '+imported+'\n  נדרש סיווג ידני: '+skipped+'\n  נכשלו: '+failed;
+    setStatus(summary,'#065f46');
+    if(imported>0)toast('☁️ '+imported+' קבצים יובאו');
+    else if(skipped>0)toast('⚠ '+skipped+' קבצים הועברו ל-/_review/ — AI לא בטוח');
+    else if(failed>0)toast('❌ '+failed+' קבצים נכשלו');
+    // Refresh the inbox listing so the user sees the updated state.
+    setTimeout(function(){if(typeof window._odLoadInbox==='function')window._odLoadInbox();},2500);
+  }).catch(function(e){
+    var msg=(e&&e.message||e).toString();
+    console.warn('[od] auto-import error:',msg);
+    setStatus('❌ שגיאה: '+msg,'#b91c1c');
+    toast('⚠ שגיאה: '+msg.substring(0,80));
+    if(/401|invalid_grant|expired|interaction_required/i.test(msg)){
+      appendStatus('💡 נראה שהחיבור פג. סגרי את התפריט והתחברי שוב.');
+    }
+  }).then(function(){_odPolling=false;});
 };
 // Move an Inbox file to its proper topic folder under /Apps/Tapugan Safety/
 // (the SAME folder structure the outbound mirror uses). Result: regardless
