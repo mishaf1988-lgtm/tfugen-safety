@@ -13144,22 +13144,30 @@ function _odMaybeMirror(blob,prefix,filename){
 function _odSanitizeName(s){return String(s||'').replace(/[\\*\/?"<>|:]/g,'').replace(/\s+/g,' ').trim().substring(0,80);}
 function _odSubfolderName(tbl,rec){
   if(!rec)return tbl;
-  if(tbl==='equip_inspections')return _odSanitizeName((rec.code||'EQI')+' - '+(rec.n||'ציוד'));
+  // Suffix for items with an expiry date (rec.e). Format YYYY-MM-DD →
+  // [תוקף DD-MM-YYYY] for readability in OneDrive folder lists.
+  function expSfx(){
+    if(!rec.e)return '';
+    var s=String(rec.e);if(!/^\d{4}-\d{2}-\d{2}/.test(s))return '';
+    var p=s.substring(0,10).split('-');
+    return ' [תוקף '+p[2]+'-'+p[1]+'-'+p[0]+']';
+  }
+  if(tbl==='equip_inspections')return _odSanitizeName((rec.code||'EQI')+' - '+(rec.n||'ציוד')+expSfx());
   if(tbl==='ncr')return _odSanitizeName((rec.num||'NCR')+' - '+String(rec.d||'').substring(0,40));
   if(tbl==='inc')return _odSanitizeName('INC - '+String(rec.dt||rec.d||'').substring(0,10)+' - '+String(rec.d||'').substring(0,30));
   if(tbl==='near_miss')return _odSanitizeName('NM - '+(rec.d||'')+' - '+String(rec.descr||'').substring(0,30));
   if(tbl==='toolbox')return _odSanitizeName('TB - '+(rec.d||'')+' - '+String(rec.topic||'').substring(0,40));
-  if(tbl==='tr')return _odSanitizeName('TR - '+String(rec.n||'').substring(0,40)+(rec.w?' - '+String(rec.w).substring(0,30):''));
+  if(tbl==='tr')return _odSanitizeName('TR - '+String(rec.n||'').substring(0,40)+(rec.w?' - '+String(rec.w).substring(0,30):'')+expSfx());
   if(tbl==='env_aspects')return _odSanitizeName('EASP - '+String(rec.aspect||'').substring(0,40));
-  if(tbl==='ppe')return _odSanitizeName('PPE - '+String(rec.ty||'')+(rec.w?' - '+String(rec.w).substring(0,30):''));
-  if(tbl==='med')return _odSanitizeName('MED - '+String(rec.t||'')+(rec.n?' - '+String(rec.n).substring(0,30):''));
-  if(tbl==='docs')return _odSanitizeName('DOC - '+String(rec.n||''));
-  if(tbl==='ctr')return _odSanitizeName('CTR - '+String(rec.n||''));
+  if(tbl==='ppe')return _odSanitizeName('PPE - '+String(rec.ty||'')+(rec.w?' - '+String(rec.w).substring(0,30):'')+expSfx());
+  if(tbl==='med')return _odSanitizeName('MED - '+String(rec.t||'')+(rec.n?' - '+String(rec.n).substring(0,30):'')+expSfx());
+  if(tbl==='docs')return _odSanitizeName('DOC - '+String(rec.n||'')+expSfx());
+  if(tbl==='ctr')return _odSanitizeName('CTR - '+String(rec.n||'')+expSfx());
   if(tbl==='leg')return _odSanitizeName('LEG - '+String(rec.s||''));
   if(tbl==='hzm')return _odSanitizeName('HZM - '+String(rec.n||rec.cas||''));
   if(tbl==='rsk')return _odSanitizeName('RSK - '+String(rec.d||'').substring(0,40));
   if(tbl==='rounds')return _odSanitizeName('ROUND - '+(rec.d||''));
-  if(tbl==='tasks')return _odSanitizeName('TSK - '+String(rec.title||'').substring(0,40));
+  if(tbl==='tasks')return _odSanitizeName('TSK - '+String(rec.title||'').substring(0,40)+(rec.due?' [יעד '+rec.due.split('-').reverse().join('-')+']':''));
   return _odSanitizeName(tbl+' - '+(rec.id||''));
 }
 // Build a printable HTML report for a record using VIEW_CONFIG fields.
@@ -13199,6 +13207,61 @@ function _odBuildReportHtml(tbl,rec){
 //                                              ├── photo.jpg
 //                                              ├── <original-file>.pdf
 //                                              └── report.html
+// Lazy-load html2pdf bundle from jsdelivr (~600KB). Once loaded, it's
+// cached for the rest of the session.
+var _pdfLibPromise=null;
+function _ensurePdfLib(){
+  if(typeof html2pdf!=='undefined')return Promise.resolve();
+  if(_pdfLibPromise)return _pdfLibPromise;
+  _pdfLibPromise=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+    s.onload=function(){if(typeof html2pdf!=='undefined')resolve();else reject(new Error('html2pdf not defined'));};
+    s.onerror=function(){reject(new Error('html2pdf CDN failed'));};
+    document.head.appendChild(s);
+    setTimeout(function(){if(typeof html2pdf==='undefined')reject(new Error('html2pdf timeout'));},15000);
+  });
+  return _pdfLibPromise;
+}
+// Generate a PDF Blob from the HTML report. Renders inside an offscreen
+// container so the browser layout engine has a real DOM to measure.
+function _odBuildReportPdf(tbl,rec){
+  var html=_odBuildReportHtml(tbl,rec);
+  if(!html)return Promise.reject(new Error('no view config'));
+  return _ensurePdfLib().then(function(){
+    var holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-99999px;top:0;width:794px;background:#fff';
+    holder.innerHTML=html.replace(/<!doctype[^>]*>|<\/?html[^>]*>|<\/?head[^>]*>|<\/?body[^>]*>|<title>[^<]*<\/title>|<meta[^>]*>/gi,'');
+    document.body.appendChild(holder);
+    return html2pdf().from(holder).set({
+      margin:[10,10,10,10],
+      filename:'report.pdf',
+      image:{type:'jpeg',quality:0.92},
+      html2canvas:{scale:2,useCORS:true,logging:false},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    }).outputPdf('blob').then(function(blob){
+      try{document.body.removeChild(holder);}catch(e){}
+      return blob;
+    }).catch(function(e){try{document.body.removeChild(holder);}catch(_){}throw e;});
+  });
+}
+// Fetch a Supabase Storage object using a signed URL (the public URL
+// works only when the bucket is fully public; this app uses signed URLs
+// throughout, so reuse _sign() to be consistent with how the UI itself
+// loads images and files).
+function _odFetchSigned(url){
+  return new Promise(function(resolve){
+    if(!url)return resolve(null);
+    if(typeof _sign==='function'){
+      _sign(url,function(signed){
+        if(!signed)return resolve(null);
+        fetch(signed).then(function(r){return r.ok?r.blob():null;}).then(resolve).catch(function(){resolve(null);});
+      });
+    }else{
+      fetch(url).then(function(r){return r.ok?r.blob():null;}).then(resolve).catch(function(){resolve(null);});
+    }
+  });
+}
 function _odMirrorRecord(tbl,rec){
   if(!_odIsConnected()||!rec)return;
   var prefix=tbl;if(tbl==='env_aspects')prefix='easp';
@@ -13207,24 +13270,31 @@ function _odMirrorRecord(tbl,rec){
   var folder=topic+'/'+sub;
   var jobs=[];
   if(rec.photo_url){
-    jobs.push(fetch(rec.photo_url).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
-      if(!blob)return;
-      var ext=(rec.photo_url.split('?')[0].split('.').pop()||'jpg').substring(0,5);
+    jobs.push(_odFetchSigned(rec.photo_url).then(function(blob){
+      if(!blob){console.warn('[od] photo signed-fetch returned null',rec.photo_url);return;}
+      var ext=(String(rec.photo_url).split('?')[0].split('.').pop()||'jpg').substring(0,5).toLowerCase();
+      if(!/^[a-z0-9]{2,5}$/.test(ext))ext='jpg';
       return _odPushFile(blob,folder,'photo.'+ext);
     }).catch(function(e){console.warn('[od] photo mirror failed:',e&&e.message);}));
   }
   if(rec.file_url && rec.file_url!==rec.photo_url){
-    jobs.push(fetch(rec.file_url).then(function(r){return r.ok?r.blob():null;}).then(function(blob){
-      if(!blob)return;
-      var fname=(rec.file_url.split('/').pop()||'file').split('?')[0];
+    jobs.push(_odFetchSigned(rec.file_url).then(function(blob){
+      if(!blob){console.warn('[od] file signed-fetch returned null',rec.file_url);return;}
+      var fname=(String(rec.file_url).split('/').pop()||'file').split('?')[0];
       return _odPushFile(blob,folder,fname);
     }).catch(function(e){console.warn('[od] file mirror failed:',e&&e.message);}));
   }
-  var html=_odBuildReportHtml(tbl,rec);
-  if(html){
-    var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-    jobs.push(_odPushFile(blob,folder,'report.html').catch(function(e){console.warn('[od] report mirror failed:',e&&e.message);}));
-  }
+  // PDF report — preferred over HTML per user request. Falls back to HTML
+  // if PDF lib fails to load (offline / CDN issue).
+  jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
+    return _odPushFile(blob,folder,'report.pdf');
+  }).catch(function(e){
+    console.warn('[od] PDF generation failed, falling back to HTML:',e&&e.message);
+    var html=_odBuildReportHtml(tbl,rec);
+    if(!html)return;
+    var hb=new Blob([html],{type:'text/html;charset=utf-8'});
+    return _odPushFile(hb,folder,'report.html');
+  }));
   if(!jobs.length)return;
   Promise.all(jobs).then(function(){
     try{toast('☁️ סונכרן ל-OneDrive: '+sub);}catch(e){}
