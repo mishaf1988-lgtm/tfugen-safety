@@ -12797,7 +12797,14 @@ function _odEnsureToken(){
 // dedicated folder and does NOT have access to the rest of the user's drive.
 function _odPushFile(blob,folder,filename){
   return _odEnsureToken().then(function(tok){
-    var path='/me/drive/special/approot:/'+encodeURIComponent(folder)+'/'+encodeURIComponent(filename)+':/content';
+    // Microsoft Graph treats `/` between :/ and :/content as folder
+    // separators. encodeURIComponent on the whole folder string would
+    // turn separator slashes into %2F (literal char in a single folder
+    // name) — files end up in a single weirdly-named folder. Encode each
+    // path segment individually so the slashes stay raw.
+    var segments=String(folder||'').split('/').filter(function(s){return s.length;});
+    var folderPath=segments.map(encodeURIComponent).join('/');
+    var path='/me/drive/special/approot:/'+folderPath+'/'+encodeURIComponent(filename)+':/content';
     return fetch('https://graph.microsoft.com/v1.0'+path,{
       method:'PUT',
       headers:{'Authorization':'Bearer '+tok,'Content-Type':blob.type||'application/octet-stream'},
@@ -12815,7 +12822,11 @@ function _odPushFile(blob,folder,filename){
 // the right table → original moved to /Inbox/_processed/.
 window._odLoadInbox=function(){
   var box=g('od-inbox-list');if(!box)return;
-  if(!_odIsConnected()){box.innerHTML='<div style="color:var(--bad);font-size:12px">חבר תחילה ל-OneDrive</div>';return;}
+  // Don't bail on _odIsConnected — _odEnsureToken handles silent refresh
+  // when the access_token has expired (refresh tokens valid 90 days via
+  // offline_access scope).
+  var tok0=_odToken();
+  if(!tok0||!tok0.account){box.innerHTML='<div style="color:var(--bad);font-size:12px">חבר תחילה ל-OneDrive</div>';return;}
   box.innerHTML='<div style="color:var(--t3);font-size:12px">⏳ טוען...</div>';
   _odEnsureToken().then(function(tok){
     return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox:/children?$select=id,name,size,file,createdDateTime,@microsoft.graph.downloadUrl',{headers:{Authorization:'Bearer '+tok}});
@@ -12952,8 +12963,13 @@ window._odRunAutoImportNow=function(){
     var d=statusBox.querySelector('div');
     if(d)d.innerHTML+='\n'+esc(msg);
   }
-  if(!_odIsConnected()){
-    setStatus('⚠ לא מחובר ל-OneDrive. צריך להתחבר מחדש.','#b91c1c');
+  // Don't bail on _odIsConnected() — that returns false when the access
+  // token has expired (after ~1h) even when a 90-day refresh token is
+  // present. _odEnsureToken handles the silent refresh below. Just check
+  // there's SOME stored credential at all.
+  var tok0=_odToken();
+  if(!tok0||!tok0.account){
+    setStatus('⚠ לא מחובר ל-OneDrive. צריך להתחבר ראשונה ב-"שלב 2: התחברות ל-Microsoft".','#b91c1c');
     toast('⚠ לא מחובר ל-OneDrive');
     return;
   }
