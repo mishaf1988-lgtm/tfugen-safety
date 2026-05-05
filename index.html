@@ -260,6 +260,35 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 .tbl-wrap tbody td .btn-d{min-width:30px;min-height:30px;padding:5px 8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin:1px}
 /* Subtle white separator under thead so red header doesn't merge into body. */
 .tbl-wrap thead th{border-bottom:2px solid #fff}
+/* DEFENSIVE GLOBAL FIX (2026-05-05) — tables across the app were rendering
+   only the action buttons of each row while text columns appeared blank
+   (verified bug across Tasks/Toolbox; suspected on more). Root cause: some
+   browser engines collapse <td> height to 0 in tables fed via innerHTML
+   when no explicit height anchor is set. Forcing height + table-cell
+   display + dark text + white bg below GUARANTEES visibility regardless
+   of any inherited / future rule. Mobile-card layout (max-width:600px)
+   stays untouched — its own rules override via display:block. */
+@media(min-width:601px){
+  .tbl-wrap tbody td{
+    height:44px;
+    background:#fff;
+    color:#1a1d23!important;
+    padding:10px 8px!important;
+    vertical-align:middle!important;
+    display:table-cell!important;
+    visibility:visible!important;
+    opacity:1!important;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .tbl-wrap tbody tr{
+    display:table-row!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  .tbl-wrap tbody tr:nth-child(even) td{background:#fafbfc!important}
+  .tbl-wrap tbody td.et{background:transparent!important;height:auto;padding:36px 20px!important}
+}
 body.hc th{background:var(--red)}
 body.hc tbody tr:nth-child(even) td{background:transparent}
 .et{text-align:center;padding:36px 20px;color:var(--t2);font-size:14px;background:linear-gradient(180deg,#fafbfc 0%,#fff 60%);border-radius:10px}
