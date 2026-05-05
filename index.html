@@ -2735,7 +2735,7 @@ function _obSanitize(){
     if(changed)_obSet(q);
   }catch(e){}
 }
-document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});});
+document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});setTimeout(function(){if(typeof _odIsConnected==='function'&&_odIsConnected()&&typeof _odAutoPollStart==='function')_odAutoPollStart();},2000);});
 // Last-resort cache reset: unregister every Service Worker, delete every
 // Cache Storage entry, then hard-reload. Triggered from syncDiag.
 window._forceFreshLoad=function(){
@@ -12679,7 +12679,8 @@ window._odRenderStatus=function(){
   var inboxSec=g('od-inbox-section');
   if(_odIsConnected()){
     var u=_odUser();
-    box.innerHTML='<div style="background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:10px;color:#166534"><strong>✓ מחובר</strong> · '+esc(u||'OneDrive')+'<br><span style="font-size:11px">📤 קבצים חדשים מסתנכרנים אוטומטית ל-/Apps/Tapugan Safety/&lt;נושא&gt;/<br>📥 קבצים שתעלי ל-/Inbox/ ניתן לזהות עם AI ולייבא לאפליקציה</span></div>';
+    var auto=_odAutoPollEnabled();
+    box.innerHTML='<div style="background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:10px;color:#166534"><strong>✓ מחובר</strong> · '+esc(u||'OneDrive')+'<br><span style="font-size:11px">📤 קבצים שאת מעלה באפליקציה — מסונכרנים אוטומטית ל-/Apps/Tapugan Safety/&lt;נושא&gt;/<br>📥 קבצים ב-/Inbox/ — '+(auto?'<strong>סורקים אוטומטית כל 5 דק\' ומייבאים לאפליקציה</strong>':'<strong>ייבוא ידני בלבד</strong>')+'</span><div style="margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:space-between"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" '+(auto?'checked':'')+' onchange="_odToggleAutoPoll()" style="cursor:pointer">🤖 ייבוא אוטומטי כל 5 דקות</label></div></div>';
     if(btn)btn.style.display='';
     if(inboxSec)inboxSec.style.display='';
   }else{
@@ -12702,6 +12703,7 @@ window._odConnect=function(){
       _odSetUser(res.account&&res.account.username||'');
       toast('מחובר ל-OneDrive: '+(res.account&&res.account.username||''));
       if(typeof _odRenderStatus==='function')_odRenderStatus();
+      if(typeof _odAutoPollStart==='function')_odAutoPollStart();
     }).catch(function(e){toast('התחברות נכשלה: '+(e&&e.message||e));console.warn('[od]',e);});
   });
 };
@@ -12879,7 +12881,8 @@ function _odImportItem(item,suggestion,card){
     addLog('OneDrive Inbox: יובא '+name);
     toast('יובא בהצלחה ✓ ('+(suggestion.label||t)+')');
     // Move file in OneDrive to /Inbox/_processed/
-    return _odMoveToProcessed(item.id);
+    // Move file in OneDrive to its proper category folder (NOT _processed).
+    return _odMoveToTopic(item.id,suggestion.target);
   }).then(function(){
     // Remove card from inbox UI
     if(card&&card.parentNode)card.parentNode.removeChild(card);
@@ -12889,13 +12892,143 @@ function _odImportItem(item,suggestion,card){
     console.warn('[od import]',e);
   });
 }
-function _odMoveToProcessed(itemId){
+// Move an Inbox file to its proper topic folder under /Apps/Tapugan Safety/
+// (the SAME folder structure the outbound mirror uses). Result: regardless
+// of whether a file was uploaded via the app or dropped directly into
+// OneDrive Inbox, the final archive layout is unified.
+function _odMoveToTopic(itemId,target){
+  var folder=_odFolderFor(target||'docs');
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+itemId,{
+      method:'PATCH',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({parentReference:{path:'/drive/special/approot:/'+folder}})
+    }).then(function(r){if(!r.ok)console.warn('[od] move-to-topic failed',r.status,folder);});
+  });
+}
+// Legacy alias kept so existing call sites compile; routes to topic move
+// if a target is passed, otherwise lands in /_processed/ (rare fallback).
+function _odMoveToProcessed(itemId,target){
+  if(target)return _odMoveToTopic(itemId,target);
   return _odEnsureToken().then(function(tok){
     return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+itemId,{
       method:'PATCH',
       headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
       body:JSON.stringify({parentReference:{path:'/drive/special/approot:/Inbox/_processed'}})
     }).then(function(r){if(!r.ok)console.warn('[od] move failed',r.status);});
+  });
+}
+// Auto-poll: while connected to OneDrive and the tab is visible, scan the
+// Inbox every 5 minutes. Auto-import items where AI classification yields
+// a specific target (anything except 'other'). Items classified as 'other'
+// stay in the Inbox for manual review.
+var _OD_POLL_KEY='tfgn_od_autopoll_v1';
+var _odPollTimer=null;
+var _odPolling=false;
+function _odAutoPollEnabled(){
+  // Default: ON when connected (user can toggle via the modal).
+  try{var v=localStorage.getItem(_OD_POLL_KEY);return v==null?true:v==='1';}catch(e){return true;}
+}
+function _odAutoPollSet(on){try{localStorage.setItem(_OD_POLL_KEY,on?'1':'0');}catch(e){}}
+function _odAutoPollStart(){
+  if(_odPollTimer)clearInterval(_odPollTimer);
+  _odPollTimer=setInterval(function(){
+    if(!_odAutoPollEnabled())return;
+    if(!_odIsConnected())return;
+    if(document.hidden)return;
+    if(_odPolling)return;
+    _odAutoImport();
+  },5*60*1000);
+  // Run once shortly after start so user sees fast feedback the 1st time.
+  setTimeout(function(){if(_odAutoPollEnabled()&&_odIsConnected()&&!document.hidden)_odAutoImport();},5000);
+}
+window._odToggleAutoPoll=function(){
+  var v=!_odAutoPollEnabled();
+  _odAutoPollSet(v);
+  toast(v?'ייבוא אוטומטי הופעל ✓':'ייבוא אוטומטי כבוי');
+  if(typeof _odRenderStatus==='function')_odRenderStatus();
+};
+// Auto-classify+import: fetches inbox, processes each file with confidence.
+// Files where AI returns target='other' or fails classification stay in
+// inbox waiting for manual review. Successful imports move to topic folder.
+function _odAutoImport(){
+  if(_odPolling)return;
+  _odPolling=true;
+  var imported=0,skipped=0,failed=0;
+  _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/Inbox:/children?$select=id,name,size,file,createdDateTime,@microsoft.graph.downloadUrl',{headers:{Authorization:'Bearer '+tok}});
+  }).then(function(r){if(!r.ok)return null;return r.json();}).then(function(d){
+    if(!d||!d.value)return;
+    var items=(d.value||[]).filter(function(it){return it.file;});
+    if(!items.length)return;
+    // Process sequentially so we don't burn through the AI free-tier neuron
+    // budget too quickly. 1 file per ~2 seconds is fine in practice.
+    return items.reduce(function(chain,item){
+      return chain.then(function(){return _odClassifyAndImport(item).then(function(res){
+        if(res==='imported')imported++;
+        else if(res==='skipped')skipped++;
+        else failed++;
+      });});
+    },Promise.resolve());
+  }).then(function(){
+    if(imported>0)toast('☁️ '+imported+' קבצים יובאו אוטומטית מ-OneDrive');
+    if(failed>0)console.warn('[od] auto-import failed:',failed);
+  }).catch(function(e){console.warn('[od] auto-poll error:',e&&e.message);})
+    .then(function(){_odPolling=false;});
+}
+function _odClassifyAndImport(item){
+  var name=item.name||'';
+  var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
+  var dlUrl=item['@microsoft.graph.downloadUrl'];
+  if(!dlUrl)return Promise.resolve('failed');
+  return new Promise(function(resolve){
+    function doImport(suggestion){
+      // Skip 'other' — wait for manual review.
+      if(!suggestion||suggestion.target==='other'||!suggestion.target)return resolve('skipped');
+      // Fetch + upload + create record (mirrors _odImportItem logic).
+      fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+        return new Promise(function(resolveUp,rejectUp){
+          var f=new File([blob],name,{type:blob.type||'application/octet-stream'});
+          _fileUpload(f,suggestion.target,function(url,err,body){
+            if(err)return rejectUp(new Error('upload '+err+': '+(body||'')));
+            resolveUp(url);
+          });
+        });
+      }).then(function(uploadedUrl){
+        var t=suggestion.target;
+        var rec={id:gid(),ts:new Date().toISOString()};
+        if(t==='tr'){rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.w='';rec.c='בטיחות';rec.s='הושלם';rec.file_url=uploadedUrl;DB.tr=DB.tr||[];DB.tr.push(rec);sbIns('tr',rec);}
+        else if(t==='ppe'){rec.ty='אחר';rec.w='';rec.m=name.substring(0,40);rec.file_url=uploadedUrl;DB.ppe=DB.ppe||[];DB.ppe.push(rec);sbIns('ppe',rec);}
+        else if(t==='med'){rec.n='';rec.t='בדיקה רפואית';rec.file_url=uploadedUrl;DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);}
+        else if(t==='ncr'){rec.num='NCR-'+String((DB.ncr||[]).length+1).padStart(4,'0');rec.d=(suggestion.summary||name).substring(0,200);rec.a='בטיחות';rec.s='פתוח';rec.p='בינונית';rec.photo_url=uploadedUrl;DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);}
+        else if(t==='equip_inspections'){rec.code='?';rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.file_url=uploadedUrl;rec.s='תקין';DB.equip_inspections=DB.equip_inspections||[];DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);}
+        else{rec.n=name.replace(/\.[^.]+$/,'').substring(0,80);rec.c='כללי';rec.file_url=uploadedUrl;DB.docs=DB.docs||[];DB.docs.push(rec);sbIns('docs',rec);}
+        sdb();
+        try{addLog('OneDrive Auto-Import: '+name+' → '+t);}catch(e){}
+        return _odMoveToTopic(item.id,t);
+      }).then(function(){resolve('imported');})
+        .catch(function(e){console.warn('[od auto] item failed:',name,e&&e.message);resolve('failed');});
+    }
+    if(!isImg){
+      // Filename-only classification for non-images.
+      var lower=name.toLowerCase();
+      var sug={target:'docs',label:'מסמך'};
+      if(/cert|תעוד|הדרכה|train/i.test(lower))sug={target:'tr',label:'תעודת הדרכה'};
+      else if(/inspect|בדיק|תסקיר/i.test(lower))sug={target:'equip_inspections',label:'תסקיר'};
+      else if(/msds|sds|חומ/i.test(lower))sug={target:'docs',label:'MSDS'};
+      else if(/ncr|אי.התאמ|noncon/i.test(lower))sug={target:'ncr',label:'NCR'};
+      return doImport(sug);
+    }
+    fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
+      var prompt='סווג תמונה במערכת בטיחות. החזר JSON תקין בלבד:\n{"target":"tr"|"ppe"|"med"|"docs"|"ncr"|"equip_inspections"|"other","label":"תיאור עברי קצר","summary":"שורה אחת"}\nמדריך:\n- tr=תעודת הדרכה\n- ppe=ציוד מגן אישי\n- med=בדיקה רפואית\n- docs=מסמך/רישיון\n- ncr=ליקוי בשטח\n- equip_inspections=דוח בדיקת ציוד\n- other=לא ניתן לסווג בודאות\n\nשם הקובץ: '+name+'\nJSON בלבד.';
+      return _ocrAnalyze(blob,prompt);
+    }).then(function(content){
+      content=String(content||'').replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      var p;try{p=JSON.parse(content);}catch(e){return doImport({target:'other'});}
+      var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
+      if(allowed.indexOf(p.target)<0)p.target='other';
+      doImport(p);
+    }).catch(function(e){console.warn('[od auto] classify failed:',e&&e.message);resolve('failed');});
   });
 }
 function _odDeleteItem(itemId,card){
