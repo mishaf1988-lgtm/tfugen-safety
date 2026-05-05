@@ -12999,6 +12999,7 @@ window._odRunAutoImportNow=function(){
       setStatus('📭 ה-Inbox ריק. גררי קובץ ל-/Apps/Tapugan Safety/Inbox/ ב-OneDrive.','#1f2937');
       return;
     }
+    var failureReasons=[];
     return items.reduce(function(chain,item,idx){
       return chain.then(function(){
         appendStatus('('+(idx+1)+'/'+total+') 🔍 מסווג: '+item.name);
@@ -13007,14 +13008,21 @@ window._odRunAutoImportNow=function(){
           var reason=(res&&typeof res==='object')?res.reason:'';
           if(status==='imported'){imported++;appendStatus('   ✅ יובא בהצלחה');}
           else if(status==='skipped'){skipped++;appendStatus('   ⚠️ AI לא בטוח — הועבר ל-/_review/');}
-          else{failed++;appendStatus('   ❌ נכשל'+(reason?': '+reason:''));}
+          else{
+            failed++;
+            failureReasons.push(item.name+': '+(reason||'unknown'));
+            appendStatus('   ❌ נכשל'+(reason?': '+reason:''));
+          }
         });
       });
-    },Promise.resolve());
-  }).then(function(){
+    },Promise.resolve()).then(function(){return failureReasons;});
+  }).then(function(failureReasons){
     if(total===0)return;
     var summary='✓ סיום:\n  יובאו: '+imported+'\n  נדרש סיווג ידני: '+skipped+'\n  נכשלו: '+failed;
-    setStatus(summary,'#065f46');
+    if(failureReasons&&failureReasons.length){
+      summary+='\n\nסיבות לכשל:\n• '+failureReasons.join('\n• ');
+    }
+    setStatus(summary,failed>0?'#7f1d1d':'#065f46');
     if(imported>0)toast('☁️ '+imported+' קבצים יובאו');
     else if(skipped>0)toast('⚠ '+skipped+' קבצים הועברו ל-/_review/ — AI לא בטוח');
     else if(failed>0)toast('❌ '+failed+' קבצים נכשלו');
