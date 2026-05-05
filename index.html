@@ -13290,34 +13290,29 @@ function _odBuildReportPdf(tbl,rec){
   if(!cfg)return Promise.reject(new Error('no view config for '+tbl));
   return Promise.all([_ensurePdfLib(),_ensureHebrewFont()]).then(function(arr){
     var hebFontB64=arr[1];
-    // Bidi handler — Hebrew characters need to be visually reversed when
-    // mixed with the Heebo font (which draws chars in source order, not
-    // visual RTL). For pure-Hebrew strings we reverse. For mixed
-    // Hebrew+Latin strings we segment and reverse only the Hebrew runs,
-    // keeping Latin/digits in their original order. This isn't full
-    // Unicode bidi but handles 95% of real-world report content.
+    // Bidi handler — jsPDF + Heebo draws glyphs strictly left-to-right in
+    // source order. For Hebrew display we need the source string ordered
+    // such that when read right-to-left it reads naturally.
+    // Algorithm:
+    //   1. Tokenize into directional runs (heb vs other).
+    //   2. Reverse RUN ORDER (so word order flips to RTL).
+    //   3. Reverse Hebrew runs internally (so each word's letters flip).
+    //   4. Latin/digit runs stay as-is (they read LTR within RTL flow).
     function bidi(s){
       s=String(s==null?'':s);
       if(!/[֐-׿]/.test(s))return s;
-      // Walk char-by-char, build segments of [hebrew] vs [other]
-      var out='',buf='',mode=null;
-      function flushBuf(){
-        if(!buf)return;
-        if(mode==='heb')out+=buf.split('').reverse().join('');
-        else out+=buf;
-        buf='';
-      }
+      var runs=[],buf='',mode=null;
       for(var i=0;i<s.length;i++){
         var c=s.charCodeAt(i);
-        var isHeb=(c>=0x0590&&c<=0x05FF);
-        var thisMode=isHeb?'heb':'other';
-        if(mode&&thisMode!==mode){flushBuf();}
+        var thisMode=(c>=0x0590&&c<=0x05FF)?'heb':'other';
+        if(mode!==null&&thisMode!==mode){runs.push({m:mode,t:buf});buf='';}
         mode=thisMode;buf+=s[i];
       }
-      flushBuf();
-      // Then reverse the WHOLE string so right-align renders correctly
-      // (since jsPDF draws right-aligned by anchoring the right edge at x).
-      return out.split('').reverse().join('');
+      if(buf)runs.push({m:mode,t:buf});
+      runs.reverse();
+      return runs.map(function(r){
+        return r.m==='heb'?r.t.split('').reverse().join(''):r.t;
+      }).join('');
     }
     var jsPDF=window.jspdf.jsPDF;
     var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
