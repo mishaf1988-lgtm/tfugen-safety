@@ -12850,7 +12850,10 @@ function _odClassifyOne(item){
     return render(sug);
   }
   // For image files, use Workers AI Vision to classify.
-  if(!dlUrl){classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">אין URL להורדה</span>';return;}
+  if(!dlUrl){
+    classifyEl.innerHTML='<span style="color:var(--bad);font-size:11px">⚠ הקישור פג תוקף. רענני את הרשימה (🔃) או העלי את הקובץ שוב ל-Inbox.</span>';
+    return;
+  }
   fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
     var prompt='אתה מנתח תמונות במערכת בטיחות בעבודה. סווג את התמונה הזו לאחת מהקטגוריות הבאות. החזר JSON תקין בלבד:\n'+
       '{\n  "target": "tr"|"ppe"|"med"|"docs"|"ncr"|"equip_inspections"|"other",\n  "label": "תיאור עברי קצר של מה זה",\n  "summary": "1 שורה — תוכן עיקרי שזיהית"\n}\n'+
@@ -12871,7 +12874,7 @@ function _odClassifyOne(item){
 function _odImportItem(item,suggestion,card){
   var btn=card.querySelector('[data-act="import"]');if(btn){btn.disabled=true;btn.textContent='⏳ מייבא...';}
   var dlUrl=item['@microsoft.graph.downloadUrl'];
-  if(!dlUrl){toast('אין URL להורדה');if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}return;}
+  if(!dlUrl){toast('⚠ הקישור פג תוקף. רענני את הרשימה ונסי שוב');if(btn){btn.disabled=false;btn.textContent='✓ ייבא';}return;}
   fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
     // Upload to Supabase Storage (reuses existing _fileUpload pipeline).
     return new Promise(function(resolve,reject){
@@ -13018,11 +13021,22 @@ function _odClassifyAndImport(item){
   var name=item.name||'';
   var isImg=/\.(jpg|jpeg|png|gif|webp)$/i.test(name)||(item.file&&/^image\//.test(item.file.mimeType||''));
   var dlUrl=item['@microsoft.graph.downloadUrl'];
-  if(!dlUrl)return Promise.resolve('failed');
+  if(!dlUrl){
+    // Graph download URL is short-lived (~1h). If missing, we can't fetch
+    // the file. Move to /_review/ so it doesn't keep polling. User can
+    // re-upload to Inbox to retry.
+    console.warn('[od auto] no download url for',name,'→ moving to _review');
+    return _odMoveToReview(item.id).then(function(){return 'failed';},function(){return 'failed';});
+  }
   return new Promise(function(resolve){
     function doImport(suggestion){
-      // Skip 'other' — wait for manual review.
-      if(!suggestion||suggestion.target==='other'||!suggestion.target)return resolve('skipped');
+      // Items the AI couldn't confidently classify ('other') → move to
+      // /_review/ folder so the user can drag them out manually after
+      // checking. This keeps the main Inbox clean for the next batch.
+      if(!suggestion||suggestion.target==='other'||!suggestion.target){
+        console.log('[od auto]',name,'→ _review (target=other)');
+        return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
+      }
       // Fetch + upload + create record (mirrors _odImportItem logic).
       fetch(dlUrl).then(function(r){return r.blob();}).then(function(blob){
         return new Promise(function(resolveUp,rejectUp){
@@ -13045,10 +13059,14 @@ function _odClassifyAndImport(item){
         try{addLog('OneDrive Auto-Import: '+name+' → '+t);}catch(e){}
         return _odMoveToTopic(item.id,t);
       }).then(function(){resolve('imported');})
-        .catch(function(e){console.warn('[od auto] item failed:',name,e&&e.message);resolve('failed');});
+        .catch(function(e){
+          console.warn('[od auto] item failed:',name,e&&e.message);
+          // Move to _review so we don't retry forever and user knows it
+          // needs manual attention.
+          _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
+        });
     }
     if(!isImg){
-      // Filename-only classification for non-images.
       var lower=name.toLowerCase();
       var sug={target:'docs',label:'מסמך'};
       if(/cert|תעוד|הדרכה|train/i.test(lower))sug={target:'tr',label:'תעודת הדרכה'};
@@ -13066,7 +13084,22 @@ function _odClassifyAndImport(item){
       var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
       if(allowed.indexOf(p.target)<0)p.target='other';
       doImport(p);
-    }).catch(function(e){console.warn('[od auto] classify failed:',e&&e.message);resolve('failed');});
+    }).catch(function(e){
+      console.warn('[od auto] classify failed:',e&&e.message);
+      _odMoveToReview(item.id).then(function(){resolve('failed');},function(){resolve('failed');});
+    });
+  });
+}
+// Move file to /Apps/Tapugan Safety/Inbox/_review/ — for items the auto
+// flow can't confidently handle. User can drag them out / open the
+// "מחיקה" or "סווג מחדש" actions in the modal manual flow.
+function _odMoveToReview(itemId){
+  return _odEnsureToken().then(function(tok){
+    return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+itemId,{
+      method:'PATCH',
+      headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+      body:JSON.stringify({parentReference:{path:'/drive/special/approot:/Inbox/_review'}})
+    }).then(function(r){if(!r.ok)console.warn('[od] move-to-review failed',r.status);});
   });
 }
 function _odDeleteItem(itemId,card){
