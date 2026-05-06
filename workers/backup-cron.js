@@ -107,6 +107,19 @@ async function runBackup(env) {
   const uploadOk = uploadResp.ok;
   const uploadText = await uploadResp.text();
 
+  // After a successful upload, prune older snapshots so the bucket
+  // doesn't grow unbounded. Keep the latest 15 (≈ 2 weeks of dailies).
+  // Failures here don't fail the backup run — the new snapshot already
+  // landed and that's the critical path.
+  let pruneInfo = null;
+  if (uploadOk) {
+    try {
+      pruneInfo = await pruneOldBackups(env, 15);
+    } catch (e) {
+      pruneInfo = { error: String(e && e.message || e) };
+    }
+  }
+
   return {
     ok: uploadOk && errors.length === 0,
     filename,
@@ -115,7 +128,49 @@ async function runBackup(env) {
     errors,
     upload_status: uploadResp.status,
     upload_body: uploadText.substring(0, 200),
+    prune: pruneInfo,
     duration_ms: Date.now() - start
+  };
+}
+
+// Keep only the latest `keep` snapshot files in the bucket, sorted by
+// filename DESC (filenames embed the ISO timestamp so lexical sort
+// matches chronological sort). Older files are deleted in one batch.
+async function pruneOldBackups(env, keep) {
+  const listResp = await fetch(`${env.SUPABASE_URL}/storage/v1/object/list/backups`, {
+    method: 'POST',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ prefix: '', limit: 200, sortBy: { column: 'name', order: 'desc' } })
+  });
+  if (!listResp.ok) {
+    const t = await listResp.text();
+    return { pruned: 0, error: `list ${listResp.status}: ${t.substring(0, 100)}` };
+  }
+  const items = (await listResp.json()).filter(i => i && i.name && !i.name.endsWith('/'));
+  if (items.length <= keep) {
+    return { pruned: 0, kept: items.length };
+  }
+  const toDelete = items.slice(keep).map(i => i.name);
+  // Supabase Storage delete API: DELETE /storage/v1/object/<bucket>
+  // with body {prefixes: ["file1", "file2"]}
+  const delResp = await fetch(`${env.SUPABASE_URL}/storage/v1/object/backups`, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ prefixes: toDelete })
+  });
+  return {
+    pruned: toDelete.length,
+    kept: keep,
+    deleted_names: toDelete,
+    delete_status: delResp.status
   };
 }
 
