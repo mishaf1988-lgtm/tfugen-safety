@@ -154,8 +154,18 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
 @media(max-width:520px){
   .main>*{max-width:100%}
   .row,.page-title-row,.row-actions{flex-wrap:wrap}
-  table{table-layout:auto;word-break:break-word}
+  table{table-layout:auto;word-break:break-word;font-size:12px}
   pre,code{white-space:pre-wrap;word-break:break-word}
+  /* Tables that are intrinsically wide stay readable via a horizontal
+     scroll INSIDE their wrapper — body is overflow:hidden so without
+     this the user couldn't see the rightmost columns at all. */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  .tbl-wrap table{min-width:max-content}
+  /* Force bnav visibility — some page-level CSS or JS could otherwise
+     occlude it. Bumping z-index above the FABs (49) and any overlay,
+     and setting the bottom slot to env(safe-area) so iOS's home-bar
+     doesn't cover it. */
+  .bnav{z-index:60!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important}
 }
 
 /* ---- PAGES ---- */
@@ -15226,7 +15236,7 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
       try{
         var m=p.match(/^view-([a-z_]+)-(.+)$/);
         if(m&&typeof showView==='function'){
-          // Wait briefly so DB has loaded
+          // Deep-link to a specific record — honor it.
           var attempt=function(tries){
             try{showView(m[1],m[2]);}catch(e){
               if(tries>0)setTimeout(function(){attempt(tries-1);},400);
@@ -15234,10 +15244,24 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
           };
           attempt(8);
         }else{
-          _g(p);
+          // Plain page hash (#tasks, #ncr, ...). Honor it ONLY if the user
+          // navigated within the same session (e.g. clicked a link 2 min
+          // ago). Otherwise — fresh open of a tab — go to the dashboard,
+          // even if the URL has a leftover hash from a previous session.
+          var sessionFresh=false;
+          try{sessionFresh=!!sessionStorage.getItem('tfgn_session_open');}catch(e){}
+          if(sessionFresh){
+            _g(p);
+          }else{
+            try{history.replaceState({page:'dash'},'','#dash');}catch(e){}
+            _g('dash');
+          }
         }
+        try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
       }catch(e){}
     },100);
+  }else{
+    try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
   }
 })();
 window._copyDeepLink=function(tbl,id){
