@@ -7,7 +7,7 @@
 
 ## ⚡ סשן 2026-05-06 — סיכום מהיר
 
-**33 PRs מוזגו ל-main**. תשתיות חדשות שדורשות הקשר לסשן הבא:
+**38+ PRs מוזגו ל-main** (PRs #443-#480). תשתיות חדשות שדורשות הקשר לסשן הבא:
 - 📧 Mail.Send + Microsoft Graph לשליחת דוחות (Client ID: `fb56b67c-2d2d-4146-89ef-f8f77eae2526`)
 - 🤖 Cloudflare Worker `tapugan-backup-cron` יומי 03:00 UTC
 - 📦 Supabase Storage bucket `backups` (Private) + RLS policy
@@ -47,7 +47,8 @@
 - [x] **תיקוני audit** (PRs #462-#463) — 10 באגים אמיתיים מתוך דוח 25 פריטים: natural sort, UUID→קוד קריא, masked phone, history.back, aria-labels (auto for 89 buttons), toast role=alert, WCAG AA chips, FAB padding. 7 false positives זוהו.
 - [x] **ריבוי קבצים בטופס ציוד** (PRs #470-#471) — drag-drop + multi-select. `attachments jsonb`. תמיכה גם בסנכרון ל-OneDrive (תוקן bug שעצר ב-2 קבצים).
 - [x] **גיבוי 3 שכבות** (PRs #472-#475) — Browser (5 triggers) + Cloudflare Worker cron + Storage→OneDrive sync. Prune אוטומטי ל-15 אחרונים בכל המקומות. Coworker הקים את ה-Worker; משתמשת אישרה backup ידני 658 רשומות עובד.
-- [x] **תיעוד לסשן הבא** (זה כאן) — `project-files/INFRA-2026-05-06.md` עם כל ה-IDs/URLs/credentials + עדכוני STATUS/DECISIONS.
+- [x] **תיעוד לסשן הבא** — `project-files/INFRA-2026-05-06.md` עם כל ה-IDs/URLs/credentials + עדכוני STATUS/DECISIONS.
+- [x] **דוח ביקורת — תיקונים מקיפים** (PRs #477-#480) — 12+ שגיאות כתיב (הזדהשת/הייררכיכת/דוזון/וכו׳), אבטחה (CSP+HSTS+password mask), נגישות (`<main>` + `scope=col` ב-244 כותרות + role=button אוטומטי ל-70 div onclicks + Enter/Space + auto aria-label לשדות בלי label + מטרות מגע 36×36 + רצפת גופן 11px), טקסט AI stack מדוייק.
 
 ### היסטוריה (עד 2026-05-04)
 
