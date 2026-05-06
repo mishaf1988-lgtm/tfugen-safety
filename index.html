@@ -2820,10 +2820,26 @@ function _ensureBnavVisible(){
   if(document.body.classList.contains('emp-mode'))return; // intentional kiosk hide
   bnav.style.cssText='position:fixed!important;bottom:0!important;left:0!important;right:0!important;width:100vw!important;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:#fff!important;border-top:2px solid #cc1f1f!important;z-index:9999!important;display:flex!important;visibility:visible!important;opacity:1!important;box-shadow:0 -2px 8px rgba(0,0,0,.08)';
 }
-window.addEventListener('load',_ensureBnavVisible);
+// iOS Safari "viewport kick": temporarily set body overflow:hidden then
+// restore. Forces the engine to recalc the visual viewport, which is
+// the same trick openModal accidentally does (and the only thing the
+// user found that makes the bnav appear). We do it explicitly on load
+// and after a short delay so first paint already has the bnav visible.
+function _iosViewportKick(){
+  var b=document.body;if(!b)return;
+  var orig=b.style.overflow;
+  b.style.overflow='hidden';
+  // Reading offsetHeight forces a sync layout in this microtask.
+  void b.offsetHeight;
+  requestAnimationFrame(function(){
+    b.style.overflow=orig||'';
+    _ensureBnavVisible();
+  });
+}
+window.addEventListener('load',function(){_ensureBnavVisible();_iosViewportKick();setTimeout(_iosViewportKick,400);setTimeout(_iosViewportKick,1500);});
 window.addEventListener('resize',_ensureBnavVisible);
 window.addEventListener('orientationchange',_ensureBnavVisible);
-document.addEventListener('visibilitychange',function(){if(!document.hidden)_ensureBnavVisible();});
+document.addEventListener('visibilitychange',function(){if(!document.hidden){_ensureBnavVisible();_iosViewportKick();}});
 setInterval(_ensureBnavVisible,3000); // last-resort: re-apply every 3s
 function _autoAriaLabels(){
   // Pass 1: button[title] without aria-label → mirror title to aria-label.
