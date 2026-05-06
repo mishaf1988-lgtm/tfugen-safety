@@ -49,6 +49,7 @@
 - [x] **גיבוי 3 שכבות** (PRs #472-#475) — Browser (5 triggers) + Cloudflare Worker cron + Storage→OneDrive sync. Prune אוטומטי ל-15 אחרונים בכל המקומות. Coworker הקים את ה-Worker; משתמשת אישרה backup ידני 658 רשומות עובד.
 - [x] **תיעוד לסשן הבא** — `project-files/INFRA-2026-05-06.md` עם כל ה-IDs/URLs/credentials + עדכוני STATUS/DECISIONS.
 - [x] **דוח ביקורת — תיקונים מקיפים** (PRs #477-#480) — 12+ שגיאות כתיב (הזדהשת/הייררכיכת/דוזון/וכו׳), אבטחה (CSP+HSTS+password mask), נגישות (`<main>` + `scope=col` ב-244 כותרות + role=button אוטומטי ל-70 div onclicks + Enter/Space + auto aria-label לשדות בלי label + מטרות מגע 36×36 + רצפת גופן 11px), טקסט AI stack מדוייק.
+- [x] **תפריט ראשי במקום bnav** — אחרי 7 ניסיונות כושלים להציג את ה-bnav באייפון Safari (bottom invisible מתחת ל-URL bar, top חלקי) — נטשנו את הגישה לחלוטין. נוצר `pg-menu` חדש עם 4 אריחים גדולים (ראשי / משימות / דיווחים / מודולים) שגוללים כתוכן רגיל. ה-bnav מוסתר ב-CSS. כפתור ☰ בסרגל העליון מחזיר לתפריט מכל עמוד. ברירת מחדל של landing page = 'menu' (ניתן לשנות בהגדרות מודולים).
 
 ### היסטוריה (עד 2026-05-04)
 
