@@ -1785,7 +1785,10 @@ id="m-ncr" style="display:none">
       &#1492;&#1490;&#1497;&#1489;&#1493;&#1497; &#1512;&#1510; &#1499;&#1513;&#1488;&#1514; &#1508;&#1493;&#1514;&#1495;&#1514; &#1488;&#1514; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; (&#1493;&#1490;&#1501; &#1499;&#1513;&#1492;&#1494;&#1497; &#1492;&#1488;&#1493;&#1497;&#1512; &#1499;&#1499;&#1493;&#1500;&#1492; &#1488;&#1493; &#1502;&#1502;&#1493;&#1511;&#1491; &#1500;&#1502;&#1505;&#1498;).
     </div>
     <div id="od-backup-status" style="font-size:11px;color:var(--t3);margin-bottom:8px"></div>
-    <button class="btn btn-p btn-sm" onclick="_backupRunNow().catch(function(){})" style="background:#7c3aed;border-color:#7c3aed">&#128190; &#1490;&#1489;&#1493;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-p btn-sm" onclick="_backupRunNow().catch(function(){})" style="background:#7c3aed;border-color:#7c3aed">&#128190; &#1490;&#1489;&#1493;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+      <button class="btn btn-d btn-sm" onclick="_backupSyncNow()" style="background:#0d9488;border-color:#0d9488" title="&#1502;&#1506;&#1514;&#1497;&#1511; &#1490;&#1497;&#1489;&#1493;&#1497;&#1497;&#1501; &#1497;&#1493;&#1502;&#1497;&#1497;&#1501; &#1502;&#1492;&#1506;&#1504;&#1503; &#1500;-OneDrive">&#128257; &#1505;&#1504;&#1499;&#1512;&#1503; &#1502;&#1492;&#1506;&#1504;&#1503;</button>
+    </div>
   </div>
   <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
     <button class="btn btn-s" onclick="closeModal('m-od')">&#1505;&#1490;&#1497;&#1512;&#1492;</button>
@@ -13130,17 +13133,105 @@ function _backupAutoDailyTick(){
   console.log('[backup] auto-daily: running silent backup');
   window._backupRunNow({silent:true}).catch(function(e){console.warn('[backup] auto failed:',e&&e.message);});
 }
+// === Phase 3: mirror Supabase Storage backups → OneDrive ===
+// The Cloudflare Worker cron writes a daily snapshot to the private
+// `backups` bucket regardless of whether the app is open. When the user
+// next opens the app, this function lists those snapshots, compares
+// against what's already in /Apps/Tapugan Safety/_Backups/cron/ on
+// OneDrive, and copies anything missing. Result: every backup ends up
+// in three independent places (Supabase DB live + Supabase Storage
+// archive + OneDrive personal/org copy).
+var _BACKUP_SYNC_RUNNING=false;
+function _backupSyncFromStorage(){
+  if(_BACKUP_SYNC_RUNNING)return Promise.resolve({skipped:'already-running'});
+  if(!_sbToken){console.log('[backup-sync] no _sbToken yet, skipping');return Promise.resolve({skipped:'no-supabase-token'});}
+  var tok=_odToken();
+  if(!tok||!tok.account){console.log('[backup-sync] not connected to OneDrive, skipping');return Promise.resolve({skipped:'no-onedrive'});}
+  _BACKUP_SYNC_RUNNING=true;
+  // 1. List backups in the private bucket. Requires the RLS policy added
+  //    in 2026-05-06_backups_rls.sql. POST /storage/v1/object/list/<bucket>
+  //    with body {prefix, limit, sortBy} — returns array of {name, ...}.
+  var supabaseFiles=[];
+  return fetch(SBU+'/storage/v1/object/list/backups',{
+    method:'POST',
+    headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},
+    body:JSON.stringify({prefix:'',limit:200,sortBy:{column:'name',order:'desc'}})
+  }).then(function(r){
+    if(!r.ok)return r.text().then(function(t){throw new Error('list backups '+r.status+': '+t.substring(0,160));});
+    return r.json();
+  }).then(function(rows){
+    supabaseFiles=(rows||[]).filter(function(it){return it&&it.name&&!it.name.endsWith('/');});
+    if(!supabaseFiles.length)return {value:[]};
+    // 2. List existing copies in OneDrive. 404 just means folder hasn't
+    //    been created yet — treat as empty.
+    return _odEnsureToken().then(function(tok2){
+      return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:/_Backups/cron:/children?$select=name,size&$top=200',{
+        headers:{'Authorization':'Bearer '+tok2}
+      });
+    }).then(function(r){
+      if(r.status===404)return {value:[]};
+      if(!r.ok)return r.text().then(function(t){throw new Error('OD list '+r.status+': '+t.substring(0,160));});
+      return r.json();
+    });
+  }).then(function(odList){
+    var odNames={};
+    ((odList&&odList.value)||[]).forEach(function(it){if(it&&it.name)odNames[it.name]=1;});
+    var missing=supabaseFiles.filter(function(f){return !odNames[f.name];});
+    console.log('[backup-sync] supabase:',supabaseFiles.length,'OneDrive:',Object.keys(odNames).length,'missing:',missing.length);
+    if(!missing.length)return {synced:0,total:supabaseFiles.length,already:Object.keys(odNames).length};
+    // 3. Copy each missing one. Sequential to keep the request graph
+    //    light — typically only 0-1 missing per session.
+    return missing.reduce(function(chain,file){
+      return chain.then(function(){
+        return fetch(SBU+'/storage/v1/object/authenticated/backups/'+encodeURIComponent(file.name),{
+          headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken}
+        }).then(function(r){
+          if(!r.ok)throw new Error('SB fetch '+r.status+' for '+file.name);
+          return r.blob();
+        }).then(function(blob){
+          return _odPushFile(blob,'_Backups/cron',file.name);
+        });
+      });
+    },Promise.resolve()).then(function(){
+      try{addLog('סנכרון גיבויים: '+missing.length+' קבצים מ-Supabase ל-OneDrive');}catch(e){}
+      return {synced:missing.length,total:supabaseFiles.length};
+    });
+  }).catch(function(e){
+    console.warn('[backup-sync] failed:',e&&e.message);
+    return {error:String(e&&e.message||e)};
+  }).then(function(result){_BACKUP_SYNC_RUNNING=false;return result;});
+}
+window._backupSyncNow=function(){
+  toast('🔄 מסנכרן גיבויים מהענן ל-OneDrive…');
+  _backupSyncFromStorage().then(function(r){
+    if(r.error){toast('⚠ סנכרון נכשל: '+r.error.substring(0,120));return;}
+    if(r.skipped){toast('⏭ דולג ('+r.skipped+')');return;}
+    if(r.synced===0)toast('✓ הכל מסונכרן ('+r.total+' קבצים ב-OneDrive)');
+    else toast('✅ '+r.synced+' קבצים חדשים סונכרנו ל-OneDrive');
+  });
+};
 document.addEventListener('DOMContentLoaded',function(){
   setTimeout(_backupAutoDailyTick,12000);
+  // Run the cron-mirror sync ~15s after load — after auth + DB fetch
+  // but staggered from the auto-daily backup so the network isn't
+  // pounded twice.
+  setTimeout(function(){_backupSyncFromStorage().catch(function(){});},15000);
 });
 // Re-check on tab focus / visibility change (catches the case where the
 // tab was opened before midnight and is now Monday morning) plus every
 // 30 minutes while tab stays open.
 document.addEventListener('visibilitychange',function(){
-  if(!document.hidden)setTimeout(_backupAutoDailyTick,500);
+  if(!document.hidden){
+    setTimeout(_backupAutoDailyTick,500);
+    setTimeout(function(){_backupSyncFromStorage().catch(function(){});},2000);
+  }
 });
-window.addEventListener('focus',function(){setTimeout(_backupAutoDailyTick,500);});
+window.addEventListener('focus',function(){
+  setTimeout(_backupAutoDailyTick,500);
+  setTimeout(function(){_backupSyncFromStorage().catch(function(){});},2000);
+});
 setInterval(_backupAutoDailyTick,30*60*1000);
+setInterval(function(){_backupSyncFromStorage().catch(function(){});},60*60*1000);
 // === Mail preferences ===
 // Stored in localStorage as JSON. Lets the user define roles (e.g. "מנהל
 // בטיחות", "מנהל טכני") with email lists, and rules that map automations
