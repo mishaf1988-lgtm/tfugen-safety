@@ -689,7 +689,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" style="background:#16a34a;margin-left:8px" onclick="_eqiExportCsv()" title="&#1497;&#1497;&#1510;&#1493;&#1488; CSV (&#1500;&#1488;&#1511;&#1505;&#1500; / &#1502;&#1497;&#1497;&#1500;)">&#128202; CSV</button>
     <button class="btn btn-s" style="background:#0d9488;margin-left:8px" onclick="_eqiPrintQrSheet()" title="&#1490;&#1497;&#1500;&#1497;&#1493;&#1503; QR &#1500;&#1499;&#1500; &#1492;&#1510;&#1497;&#1493;&#1491; (&#1500;&#1492;&#1491;&#1508;&#1505;&#1492; &#1500;&#1502;&#1491;&#1489;&#1511;&#1493;&#1514; &#1492;&#1502;&#1500;&#1490;&#1494;&#1493;&#1514;)">&#128290; QR &#1490;&#1497;&#1500;&#1497;&#1493;&#1503;</button>
     <button class="btn btn-s" style="background:#ea580c;margin-left:8px" onclick="_eqiAutoTasksRun()" title="יצירת משימות אוטומטיות לכל ציוד שתוקפו יפוג ≤30 ימים">&#128203; &#8594; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
-    <button class="btn btn-p" onclick="openModal('m-eqi')">+ &#1492;&#1493;&#1505;&#1507;</button>
+    <button class="btn btn-p" onclick="_eqiOpenNew()">+ &#1492;&#1493;&#1505;&#1507;</button>
     <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <input type="file" id="_eqi-pdf-input" accept="application/pdf" multiple style="display:none" onchange="_eqiPdfHandle(event)">
@@ -1946,7 +1946,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-e"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="eqi-s"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1495;&#1497;&#1497;&#1489; &#1489;&#1491;&#1497;&#1511;&#1492;</option><option>&#1500;&#1488; &#1514;&#1511;&#1497;&#1503;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="eqi-notes"></textarea></div>
-    <div class="field fw"><label>&#128247; &#1510;&#1497;&#1500;&#1493;&#1501;</label><div id="eqi-photo-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_eqiPickPhoto()">&#128247; &#1510;&#1500;&#1501; / &#1489;&#1495;&#1512; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div></div>
+    <div class="field fw"><label>📎 קבצים מצורפים <span style="font-size:11px;color:var(--t3);font-weight:400">(גררי או בחרי כמה)</span></label><div id="eqi-photo-area" ondragover="event.preventDefault();this.style.background='#f0f9ff'" ondragleave="this.style.background=''" ondrop="event.preventDefault();this.style.background='';_eqiHandleDrop(event)" style="border:2px dashed #cbd5e1;border-radius:10px;padding:10px;transition:background 0.2s"></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-eqi')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svEqi()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -5519,9 +5519,7 @@ window._eqiClone=function(id){
     g('eqi-e').value='';
     g('eqi-s').value=r.s||'תקין';
     g('eqi-notes').value='';
-    _eqiPhotoUrl=null;
-    var pa=g('eqi-photo-area');
-    if(pa)pa.innerHTML=_photoPickBtn('_eqiPickPhoto');
+    _eqiFiles=[];_eqiRenderFiles();
     toast('שכופל. מלא קוד / מס׳ סידורי / תאריכים חדשים');
   },30);
 };
@@ -5540,9 +5538,14 @@ function eqiEdit(id){
     g('eqi-e').value=r.e||'';
     g('eqi-s').value=r.s||'\u05ea\u05e7\u05d9\u05df';
     g('eqi-notes').value=r.notes||'';
-    _eqiPhotoUrl=r.photo_url||null;
-    var pa=g('eqi-photo-area');
-    if(pa){pa.innerHTML=r.photo_url?_photoPreview(r.photo_url,'_eqiClearPhoto'):_photoPickBtn('_eqiPickPhoto');if(r.photo_url)_signifyDom(pa);}
+    // Load attachments. Prefer the new `attachments` array; fall back to
+    // legacy single `photo_url` for records created before the migration.
+    if(Array.isArray(r.attachments)&&r.attachments.length){
+      _eqiFiles=r.attachments.map(function(a){return (typeof a==='string')?{url:a,name:(a.split('/').pop()||'').split('?')[0],mime:''}:a;});
+    }else if(r.photo_url){
+      _eqiFiles=[{url:r.photo_url,name:(r.photo_url.split('/').pop()||'').split('?')[0],mime:''}];
+    }else{_eqiFiles=[];}
+    _eqiRenderFiles();
   },30);
 }
 function svEqi(){
@@ -5550,6 +5553,12 @@ function svEqi(){
   var id=g('eqi-id')&&g('eqi-id').value;
   var n=gv('eqi-n');
   if(!n){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  // Multi-file: keep photo_url for backward compat (= first file URL),
+  // and store the full list in `attachments` (jsonb column added by the
+  // 2026-05-06 migration). Records loaded before that migration ran will
+  // simply not have an attachments column \u2014 the .attachments property
+  // gets dropped silently on save and only photo_url persists, which
+  // matches the pre-multi-file behavior.
   var rec={
     id:id||gid(),
     code:gv('eqi-code')||null,
@@ -5561,7 +5570,8 @@ function svEqi(){
     e:gv('eqi-e')||null,
     s:gv('eqi-s')||'\u05ea\u05e7\u05d9\u05df',
     notes:gv('eqi-notes')||null,
-    photo_url:_attachUrls['eqi-photo-area']||null,
+    photo_url:(_eqiFiles[0]&&_eqiFiles[0].url)||null,
+    attachments:_eqiFiles.slice(),
     ts:new Date().toISOString()
   };
   if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?rec:r;});sbUpd('equip_inspections',rec);}
@@ -14444,8 +14454,76 @@ function _attachBtn(areaId){return '<button type="button" class="btn btn-s" styl
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
 function _nmPickPhoto(){_attachPick('nm-photo-area','nm');}
 function _nmClearPhoto(){_nmPhotoUrl=null;_attachClear('nm-photo-area');}
-function _eqiPickPhoto(){_attachPick('eqi-photo-area','eqi');}
-function _eqiClearPhoto(){_eqiPhotoUrl=null;_attachClear('eqi-photo-area');}
+// Multi-file attachments for the equip-inspections form.
+// _eqiFiles is the current state: array of {url, name, mime}.
+// Render shows each file as a thumbnail / icon row with an × remove btn,
+// plus a "+ הוסיפי קובץ" button at the end. Supports both file-picker
+// multi-select and drag-and-drop into eqi-photo-area.
+var _eqiFiles=[];
+window._eqiPickPhoto=function(){_eqiAddFiles();};
+window._eqiClearPhoto=function(){_eqiFiles=[];_eqiRenderFiles();};
+// Open the eqi modal for a new record — reset every field including the
+// attachments list. Without this the form shows stale data from the last
+// edit/clone session.
+window._eqiOpenNew=function(){
+  openModal('m-eqi');
+  setTimeout(function(){
+    var f=g('eqi-id');if(f)f.value='';
+    ['eqi-code','eqi-n','eqi-vendor','eqi-loc','eqi-d','eqi-e','eqi-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
+    var s=g('eqi-s');if(s)s.value='תקין';
+    if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',null);
+    _eqiFiles=[];_eqiRenderFiles();
+  },30);
+};
+function _eqiAddFiles(){
+  var inp=g('_eqi_files_inp');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_eqi_files_inp';inp.multiple=true;inp.accept='image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.csv';inp.style.display='none';document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=function(){_eqiUploadFiles(Array.from(inp.files||[]));};
+  inp.click();
+}
+window._eqiHandleDrop=function(ev){
+  var files=Array.from((ev.dataTransfer&&ev.dataTransfer.files)||[]);
+  if(files.length)_eqiUploadFiles(files);
+};
+window._eqiRemoveFile=function(idx){
+  _eqiFiles.splice(idx,1);
+  _eqiRenderFiles();
+};
+function _eqiUploadFiles(files){
+  if(!files.length)return;
+  var area=g('eqi-photo-area');
+  if(area){
+    var pending=document.createElement('div');pending.id='eqi-upl-status';pending.style.cssText='font-size:12px;color:var(--t3);margin-top:6px';pending.textContent='⏳ מעלה '+files.length+' קבצים…';
+    area.appendChild(pending);
+  }
+  var done=0,total=files.length;
+  function maybeFinish(){if(done>=total){var s=g('eqi-upl-status');if(s&&s.parentNode)s.parentNode.removeChild(s);_eqiRenderFiles();}}
+  files.forEach(function(file){
+    _fileUpload(file,'eqi',function(url,errStatus,errBody){
+      done++;
+      if(url){_eqiFiles.push({url:url,name:file.name,mime:file.type||''});}
+      else{toast('⚠ '+file.name+' לא הועלה ('+(errStatus||'?')+')');}
+      maybeFinish();
+    });
+  });
+}
+function _eqiRenderFiles(){
+  var area=g('eqi-photo-area');if(!area)return;
+  var listHtml=_eqiFiles.map(function(f,i){
+    var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)||/^image\//i.test(f.mime||'');
+    var preview=isImg
+      ?'<a data-sign="'+escU(f.url)+'" target="_blank" style="flex-shrink:0"><img loading="lazy" data-sign="'+escU(f.url)+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;display:block"></a>'
+      :'<a data-sign="'+escU(f.url)+'" target="_blank" style="flex-shrink:0;width:48px;height:48px;background:#f0f4f8;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;text-decoration:none">📄</a>';
+    return '<div style="display:flex;gap:8px;align-items:center;padding:6px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:4px">'+
+      preview+
+      '<div style="flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(f.name||'')+'</div>'+
+      '<button type="button" class="btn btn-d btn-sm" onclick="_eqiRemoveFile('+i+')" style="background:#7f1d1d;font-size:11px;flex-shrink:0">×</button>'+
+    '</div>';
+  }).join('');
+  area.innerHTML=listHtml+'<button type="button" class="btn btn-s" style="width:100%;margin-top:4px" onclick="_eqiAddFiles()">📎 + הוסיפי קובץ</button>';
+  if(_eqiFiles.length)_signifyDom(area);
+}
 function _photoPreview(src,clearFn){
   var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(src)||src.startsWith('data:image');
   return isImg?'<a data-sign="'+escU(src)+'" target="_blank"><img data-sign="'+escU(src)+'" style="max-width:100%;max-height:160px;border-radius:8px;display:block"></a><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="'+clearFn+'()">\u05d4\u05e1\u05e8</button>'
