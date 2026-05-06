@@ -650,7 +650,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" value="+972547940073" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
       <button class="btn btn-p" onclick="_waTestSend()" style="font-size:13px;white-space:nowrap">&#128241; &#1513;&#1500;&#1495;</button>
       <button class="btn btn-d" onclick="_waDiagnose()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1488;&#1489;&#1495;&#1503; &#1488;&#1514; &#1492;&#1488;&#1497;&#1504;&#1496;&#1490;&#1512;&#1510;&#1497;&#1492; &#1489;&#1500;&#1497; &#1500;&#1513;&#1500;&#1493;&#1495; &#1492;&#1493;&#1491;&#1506;&#1492;">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
     </div>
@@ -7221,7 +7221,7 @@ function _collectVirtualTasks(){
 // ---- APP USERS (admin-only) ----
 function rUsers(){
   var tb=g('tb-users'); if(!tb)return;
-  var users=(DB.app_users||[]).slice().sort(function(a,b){return (a.username||'')<(b.username||'')?-1:1;});
+  var users=(DB.app_users||[]).slice().sort(function(a,b){return String(a.username||'').localeCompare(String(b.username||''),undefined,{numeric:true,sensitivity:'base'});});
   if(!users.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd. \u05d4\u05e8\u05e5 \u05d0\u05ea \u05d4-migration \u05e9\u05dc app_users.</td></tr>';return;}
   tb.innerHTML = users.map(function(u){
     var status = u.active?'<span class="b bG">\u05e4\u05e2\u05d9\u05dc</span>':'<span class="b bX">\u05dc\u05d0 \u05e9\u05d5\u05d9\u05da</span>';
@@ -9110,6 +9110,13 @@ function showView(tbl,id){
     if(val===true)val='\u2713';
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='-';
+    // If this is a source_id linked to another table, look up the source
+    // record and show its human-readable identifier (NCR-0357, EQI-005,
+    // etc.) instead of the internal Supabase UUID.
+    if(f[1]==='source_id'&&rec.source_table&&val&&val!=='-'){
+      var srcRec=(DB[rec.source_table]||[]).find(function(r){return r.id===val;});
+      if(srcRec)val=srcRec.num||srcRec.code||srcRec.title||srcRec.n||val;
+    }
     html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+esc(f[0])+'</span><strong>'+(val==='\u2713'||val==='\u2717'||val==='-'?val:esc(val))+'</strong></div>';
   });
   // Auto-render location_id (if record has it and config didn't include it)
@@ -11628,7 +11635,7 @@ window._pwaInstall=function(){
   _pwaPrompt.userChoice.then(function(){_pwaPrompt=null;var btn=document.getElementById('pwa-install-btn');if(btn)btn.style.display='none';});
 };
 /* ---- WhatsApp test ---- */
-function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'+972547940073';}
+function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'';}
 function _waResolvePhone(name){
   if(!name)return null;
   var n=String(name).trim();if(!n)return null;
