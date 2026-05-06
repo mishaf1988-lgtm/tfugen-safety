@@ -940,7 +940,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-round" class="page">
   <div class="row">
     <div class="page-title">&#1505;&#1489;&#1489; <span>&#1489;&#1493;&#1511;&#1512;</span></div>
-    <button class="btn btn-p" onclick="openModal('m-round')">+ &#1491;&#1493;&#1495; &#1497;&#1493;&#1502;&#1497;</button>
+    <button class="btn btn-p" onclick="_roundOpenNew()">+ &#1491;&#1493;&#1495; &#1497;&#1493;&#1502;&#1497;</button>
   </div>
   <div class="card" id="round-today-card" style="border-right:4px solid var(--ok);margin-bottom:12px">
     <div class="card-title">&#9728; &#1505;&#1497;&#1493;&#1512; &#1492;&#1497;&#1493;&#1501;</div>
@@ -2029,24 +2029,23 @@ id="m-ncr" style="display:none">
 
 <!-- ROUND MODAL (Morning Round) -->
 <div class="overlay" id="ov-round" onclick="closeModal('m-round')"></div>
-<div class="modal" id="m-round" style="display:none;max-width:380px">
+<div class="modal" id="m-round" style="display:none;max-width:520px">
   <button class="close-btn" onclick="closeModal('m-round')">&#10005;</button>
   <div class="modal-title">&#9728; &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
+  <input type="hidden" id="round-id">
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="round-d"></div>
     <div class="field"><label>&#1502;&#1508;&#1511;&#1495;</label><input id="round-inspector" placeholder="&#1513;&#1501; &#1502;&#1489;&#1510;&#1506; &#1492;&#1505;&#1497;&#1493;&#1512;"></div>
+    <div class="field fw"><label>&#1514;&#1502;&#1514; &#1492;&#1505;&#1489;&#1489;</label><select id="round-theme" onchange="_roundRenderItems()" class="inp"></select></div>
   </div>
-  <div style="margin:12px 0 8px;font-size:12px;font-weight:700;color:var(--t3)">&#1512;&#1513;&#1497;&#1502;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-fire" style="width:16px;height:16px"> &#128293; &#1490;&#1500;&#1488;&#1497; &#1488;&#1513; &#1493;&#1499;&#1497;&#1489;&#1493;&#1497; &#1514;&#1511;&#1497;&#1504;&#1497;&#1501;</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-corridors" style="width:16px;height:16px"> &#128682; &#1502;&#1506;&#1489;&#1512;&#1497; &#1495;&#1497;&#1512;&#1493;&#1501; &#1508;&#1504;&#1493;&#1497;&#1497;&#1501;</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-ppe" style="width:16px;height:16px"> &#9939; PPE &#1489;&#1506;&#1502;&#1491;&#1493;&#1514;</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-samples" style="width:16px;height:16px"> &#127774; &#1491;&#1490;&#1497;&#1502;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492; &#1489;&#1493;&#1510;&#1506;&#1493;</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-chemicals" style="width:16px;height:16px"> &#9762; &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501; &#1502;&#1493;&#1490;&#1504;&#1497;&#1501;</label>
-    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-firstaid" style="width:16px;height:16px"> &#128138; &#1506;&#1494;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492; &#1494;&#1502;&#1497;&#1504;&#1492;</label>
+  <div style="margin:12px 0 4px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:12px;font-weight:700;color:var(--t3)">&#1512;&#1513;&#1497;&#1502;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</div>
+    <div style="font-size:10px;color:var(--t3)">&#9989; &#1514;&#1511;&#1497;&#1503; &#1495; &#9888;&#65039; &#1488;&#1494;&#1492;&#1512;&#1492; &#1495; &#10060; &#1511;&#1512;&#1497;&#1496;&#1497; &#1495; &#10134; &#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</div>
   </div>
+  <div id="round-items-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:400px;overflow-y:auto"></div>
+  <button type="button" class="btn btn-s btn-sm" onclick="_roundAddCustomItem()" style="width:100%;margin-bottom:10px;font-size:11px">&#43; &#1492;&#1493;&#1505;&#1497;&#1508;&#1497; &#1508;&#1512;&#1497;&#1496; &#1502;&#1493;&#1514;&#1488;&#1501;</button>
   <div class="fgrid">
-    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; / &#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="round-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; / &#1492;&#1506;&#1512;&#1493;&#1514; &#1499;&#1500;&#1500;&#1497;&#1493;&#1514;</label><textarea id="round-notes" rows="2"></textarea></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-round')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRound()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -6763,36 +6762,263 @@ function rRound(){
       stEl.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+checks.map(function(c){var ok=todayRound[c.k];return '<span class="b '+(ok?'bG':'bR')+'">'+(ok?'\u2713 ':'\u2717 ')+c.l+'</span>';}).join('')+'</div><div style="font-size:11px;color:var(--t3)">\u05de\u05e4\u05e7\u05d7: '+(todayRound.inspector?esc(todayRound.inspector):'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df')+'</div>'+(todayRound.notes?'<div style="font-size:12px;margin-top:6px;color:var(--t2)">'+esc(todayRound.notes)+'</div>':'');
       var tc=g('round-today-card');if(tc)tc.style.borderRightColor='var(--ok)';
     }else{
-      stEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="color:var(--warn);font-size:13px">\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2</span><button class="btn btn-p" onclick="openModal(\'m-round\')" style="font-size:12px">+ \u05d1\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8</button></div>';
+      stEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="color:var(--warn);font-size:13px">\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2</span><button class="btn btn-p" onclick="_roundOpenNew()" style="font-size:12px">+ \u05d1\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8</button></div>';
       var tc=g('round-today-card');if(tc)tc.style.borderRightColor='var(--warn)';
     }
   }
   var tb=g('tb-round');if(!tb)return;
   var rows=(DB.rounds||[]).slice().sort(function(a,b){return (b.d||'')>(a.d||'')?1:-1;});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">☀<span class="et-ic"></span>\u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8<br><button class="et-cta" onclick="openModal(\'m-round\')">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">☀<span class="et-ic"></span>\u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8<br><button class="et-cta" onclick="_roundOpenNew()">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
+  function _rThemeLabel(t){var th=window.ROUND_THEMES&&window.ROUND_THEMES[t];return th?th.label:(t||'☀️ \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8');}
+  function _rSummarize(r){
+    if(Array.isArray(r.items)&&r.items.length){
+      var ok=0,warn=0,crit=0,total=r.items.length;
+      r.items.forEach(function(it){if(it.status==='ok')ok++;else if(it.status==='warn')warn++;else if(it.status==='critical')crit++;});
+      return '<span style="font-size:11px">\u2705 '+ok+' &nbsp; \u26a0\ufe0f '+warn+' &nbsp; \u274c '+crit+' &nbsp; <span style="color:var(--t3)">/ '+total+'</span></span>';
+    }
+    var legacyOk=[r.fire,r.corridors,r.ppe,r.samples,r.chemicals,r.firstaid].filter(Boolean).length;
+    return '<span style="font-size:11px">\u2705 '+legacyOk+'/6 (\u05e4\u05d5\u05e8\u05de\u05d8 \u05d9\u05e9\u05df)</span>';
+  }
   tb.innerHTML=rows.map(function(r){
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" aria-label="\u05e6\u05e4\u05d4">&#128065;</button>';
+    var editBtn='<button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_roundEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">&#9998;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="rounds" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td colspan="4" style="text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">'+esc(_rThemeLabel(r.theme))+'</div>'+_rSummarize(r)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+editBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" aria-label="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
   }).join('');
+}
+// === Round themes (\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u2014 \u05ea\u05de\u05d5\u05ea) ===
+// Each theme is a preset checklist of items. The user picks a theme on
+// open, then the form renders the theme's items as 4-state buttons:
+// \u2705 ok / \u26a0\ufe0f warning / \u274c critical / \u2796 N/A. Each item also accepts a
+// short note. A "+ \u05d4\u05d5\u05e1\u05d9\u05e4\u05d9 \u05e4\u05e8\u05d9\u05d8 \u05de\u05d5\u05ea\u05d0\u05dd" lets the user append ad-hoc items.
+window.ROUND_THEMES={
+  morning:{label:'\u2600\ufe0f \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e1\u05d8\u05e0\u05d3\u05e8\u05d8\u05d9',items:[
+    {id:'fire',icon:'\ud83d\udd25',label:'\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9 \u05d5\u05db\u05d9\u05d1\u05d5\u05d9 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
+    {id:'corridors',icon:'\ud83d\udeaa',label:'\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd \u05e4\u05e0\u05d5\u05d9\u05d9\u05dd'},
+    {id:'ppe',icon:'\ud83e\uddba',label:'PPE \u05d1\u05e2\u05de\u05d3\u05d5\u05ea'},
+    {id:'samples',icon:'\u2600\ufe0f',label:'\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea'},
+    {id:'chemicals',icon:'\u2623\ufe0f',label:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05de\u05d5\u05d2\u05e0\u05d9\u05dd'},
+    {id:'firstaid',icon:'\ud83d\udc8a',label:'\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4'},
+    {id:'lighting',icon:'\ud83d\udca1',label:'\u05ea\u05d0\u05d5\u05e8\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d4 \u05d1\u05de\u05e2\u05d1\u05e8\u05d9\u05dd'},
+    {id:'signage',icon:'\ud83e\udea7',label:'\u05e9\u05d9\u05dc\u05d5\u05d8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05ea\u05e7\u05d9\u05df'},
+    {id:'guards',icon:'\ud83d\udee1\ufe0f',label:'\u05de\u05d2\u05d9\u05e0\u05d9 \u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'cleanliness',icon:'\ud83e\uddf9',label:'\u05d0\u05d6\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05e7\u05d9 \u05d5\u05de\u05e1\u05d5\u05d3\u05e8'}
+  ]},
+  fire:{label:'\ud83d\udd25 \u05e1\u05d1\u05d1 \u05d0\u05e9 \u05d5\u05db\u05d9\u05d1\u05d5\u05d9',items:[
+    {id:'extinguishers',icon:'\ud83e\uddef',label:'\u05de\u05d8\u05e4\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05d5\u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'hoses',icon:'\ud83d\ude92',label:'\u05d2\u05dc\u05d9\u05dc\u05d9 \u05db\u05d9\u05d1\u05d5\u05d9 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
+    {id:'sprinklers',icon:'\ud83d\udca6',label:'\u05e1\u05e4\u05e8\u05d9\u05e0\u05e7\u05dc\u05e8\u05d9\u05dd \u05e0\u05e8\u05d0\u05d9\u05dd \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
+    {id:'detectors',icon:'\ud83d\udea8',label:'\u05d2\u05dc\u05d0\u05d9 \u05e2\u05e9\u05df/\u05d7\u05d5\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd'},
+    {id:'doors',icon:'\ud83d\udeaa',label:'\u05d3\u05dc\u05ea\u05d5\u05ea \u05d0\u05e9 \u05e1\u05d2\u05d5\u05e8\u05d5\u05ea \u05d5\u05dc\u05d0 \u05d7\u05e1\u05d5\u05de\u05d5\u05ea'},
+    {id:'exits',icon:'\u27a1\ufe0f',label:'\u05d9\u05e6\u05d9\u05d0\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05e4\u05e0\u05d5\u05d9\u05d5\u05ea \u05d5\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea'},
+    {id:'emergency-light',icon:'\ud83d\udca1',label:'\u05ea\u05d0\u05d5\u05e8\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05ea\u05e7\u05d9\u05e0\u05d4'},
+    {id:'flammable',icon:'\ud83d\udce6',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d3\u05dc\u05d9\u05e7\u05d9\u05dd \u05ea\u05e7\u05e0\u05d9'},
+    {id:'electric',icon:'\u26a1',label:'\u05dc\u05d5\u05d7\u05d5\u05ea \u05d7\u05e9\u05de\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd'},
+    {id:'meeting',icon:'\ud83d\udc65',label:'\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05d4\u05ea\u05db\u05e0\u05e1\u05d5\u05ea \u05e0\u05d2\u05d9\u05e9\u05d5\u05ea'}
+  ]},
+  chemicals:{label:'\u2697\ufe0f \u05e1\u05d1\u05d1 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',items:[
+    {id:'msds',icon:'\ud83d\udcc4',label:'\u05d3\u05e4\u05d9 MSDS \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
+    {id:'storage',icon:'\ud83d\uddc4\ufe0f',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05ea\u05d0\u05d9\u05dd (\u05d0\u05d5\u05d5\u05e8\u05d5\u05e8 / \u05d4\u05e4\u05e8\u05d3\u05d4)'},
+    {id:'labels',icon:'\ud83c\udff7\ufe0f',label:'\u05ea\u05d9\u05d5\u05d2 GHS \u05ea\u05e7\u05d9\u05df \u05e2\u05dc \u05de\u05db\u05dc\u05d9\u05dd'},
+    {id:'spillkit',icon:'\ud83e\udea3',label:'\u05e2\u05e8\u05db\u05ea \u05e1\u05e4\u05d9\u05d2\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'shower',icon:'\ud83d\udebf',label:'\u05de\u05e7\u05dc\u05d7\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05ea\u05e7\u05d9\u05e0\u05d4'},
+    {id:'eyewash',icon:'\ud83d\udc41\ufe0f',label:'\u05e9\u05d8\u05d9\u05e4\u05ea \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd \u05e4\u05d5\u05e2\u05dc\u05ea'},
+    {id:'ventilation',icon:'\ud83d\udca8',label:'\u05d0\u05d5\u05d5\u05e8\u05d5\u05e8 \u05e4\u05e2\u05d9\u05dc'},
+    {id:'ppe-chem',icon:'\ud83e\uddba',label:'PPE \u05d9\u05d9\u05e2\u05d5\u05d3\u05d9 \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'expiry',icon:'\ud83d\udcc5',label:'\u05ea\u05d5\u05e7\u05e3 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3'},
+    {id:'incompatible',icon:'\u26a0\ufe0f',label:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05d9\u05dd \u05de\u05d5\u05e4\u05e8\u05d3\u05d9\u05dd'}
+  ]},
+  ergonomics:{label:'\ud83e\uddba \u05e1\u05d1\u05d1 \u05d0\u05e8\u05d2\u05d5\u05e0\u05d5\u05de\u05d9\u05d4 \u05d5-PPE',items:[
+    {id:'chairs',icon:'\ud83e\ude91',label:'\u05db\u05d9\u05e1\u05d0\u05d5\u05ea \u05de\u05ea\u05db\u05d5\u05d5\u05e0\u05e0\u05d9\u05dd'},
+    {id:'screens',icon:'\ud83d\udda5\ufe0f',label:'\u05de\u05e1\u05db\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd'},
+    {id:'lifting',icon:'\ud83d\udce6',label:'\u05e2\u05de\u05d3\u05d5\u05ea \u05d4\u05e8\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'},
+    {id:'mats',icon:'\ud83e\uddf1',label:'\u05de\u05e9\u05d8\u05d7\u05d9 \u05e2\u05de\u05d9\u05d3\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
+    {id:'ppe-helmet',icon:'\u26d1\ufe0f',label:'\u05e7\u05e1\u05d3\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'ppe-gloves',icon:'\ud83e\udde4',label:'\u05db\u05e4\u05e4\u05d5\u05ea \u05d6\u05de\u05d9\u05e0\u05d5\u05ea'},
+    {id:'ppe-eye',icon:'\ud83e\udd7d',label:'\u05de\u05e9\u05e7\u05e4\u05d9 \u05de\u05d2\u05df \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
+    {id:'ppe-ear',icon:'\ud83c\udfa7',label:'\u05d0\u05d8\u05de\u05d9 \u05d0\u05d5\u05d6\u05e0\u05d9\u05d9\u05dd \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
+    {id:'ppe-foot',icon:'\ud83e\udd7e',label:'\u05e0\u05e2\u05dc\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05de\u05d3\u05d5\u05ea'},
+    {id:'ppe-resp',icon:'\ud83d\ude37',label:'\u05de\u05e1\u05db\u05d5\u05ea \u05e0\u05e9\u05d9\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'}
+  ]},
+  environment:{label:'\ud83c\udf31 \u05e1\u05d1\u05d1 \u05e1\u05d1\u05d9\u05d1\u05d4',items:[
+    {id:'waste',icon:'\ud83d\uddd1\ufe0f',label:'\u05d4\u05e4\u05e8\u05d3\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea \u05ea\u05e7\u05d9\u05e0\u05d4'},
+    {id:'recycle',icon:'\u267b\ufe0f',label:'\u05de\u05db\u05dc\u05d9 \u05de\u05d7\u05d6\u05d5\u05e8 \u05e4\u05e0\u05d5\u05d9\u05d9\u05dd'},
+    {id:'spills-env',icon:'\ud83d\udca7',label:'\u05d0\u05d9\u05df \u05d6\u05d9\u05d4\u05d5\u05dd \u05e7\u05e8\u05e7\u05e2 / \u05de\u05d9\u05dd'},
+    {id:'emissions',icon:'\ud83c\udfed',label:'\u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05dc\u05d0\u05d5\u05d5\u05d9\u05e8 \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea (\u05d7\u05d6\u05d5\u05ea\u05d9\u05ea)'},
+    {id:'noise',icon:'\ud83d\udd0a',label:'\u05e8\u05e2\u05e9 \u05d1\u05d8\u05d5\u05d5\u05d7\u05d9\u05dd \u05de\u05e7\u05d5\u05d1\u05dc\u05d9\u05dd'},
+    {id:'effluent',icon:'\ud83d\udeb0',label:'\u05e9\u05e4\u05db\u05d9\u05dd \u05de\u05d8\u05d5\u05e4\u05dc\u05d9\u05dd'},
+    {id:'leaks',icon:'\ud83d\udca6',label:'\u05d0\u05d9\u05df \u05d3\u05dc\u05d9\u05e4\u05d5\u05ea \u05de\u05e6\u05e0\u05e8\u05ea'},
+    {id:'storage-env',icon:'\ud83d\udce6',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd \u05ea\u05e7\u05e0\u05d9'},
+    {id:'meters',icon:'\ud83d\udcca',label:'\u05de\u05d3-\u05d6\u05e8\u05d9\u05de\u05d4 / \u05d7\u05e9\u05de\u05dc \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd'},
+    {id:'vegetation',icon:'\ud83c\udf3f',label:'\u05e9\u05d8\u05d7\u05d9 \u05d2\u05d9\u05e0\u05d5\u05df \u05de\u05d8\u05d5\u05e4\u05dc\u05d9\u05dd'}
+  ]},
+  production:{label:'\ud83c\udfed \u05e1\u05d1\u05d1 \u05d0\u05d6\u05d5\u05e8 \u05d9\u05d9\u05e6\u05d5\u05e8',items:[
+    {id:'machines',icon:'\u2699\ufe0f',label:'\u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea'},
+    {id:'guards',icon:'\ud83d\udee1\ufe0f',label:'\u05de\u05d2\u05d9\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'estop',icon:'\ud83d\uded1',label:'\u05dc\u05d7\u05e6\u05e0\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd \u05e0\u05d2\u05d9\u05e9\u05d9\u05dd'},
+    {id:'lockout',icon:'\ud83d\udd12',label:'LOTO \u05d1\u05de\u05e7\u05d5\u05dd \u05d1\u05de\u05e7\u05e8\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd'},
+    {id:'cleanliness',icon:'\ud83e\uddf9',label:'\u05d0\u05d6\u05d5\u05e8 \u05e0\u05e7\u05d9 \u05d5\u05de\u05e1\u05d5\u05d3\u05e8'},
+    {id:'tools',icon:'\ud83d\udd27',label:'\u05db\u05dc\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd'},
+    {id:'workstation',icon:'\ud83e\ude91',label:'\u05ea\u05d7\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'},
+    {id:'forklift',icon:'\ud83d\ude9c',label:'\u05de\u05dc\u05d2\u05d6\u05d5\u05ea \u05d1\u05e0\u05ea\u05d9\u05d1\u05d9\u05dd \u05de\u05e1\u05d5\u05de\u05e0\u05d9\u05dd'},
+    {id:'chargers',icon:'\ud83d\udd0b',label:'\u05ea\u05d7\u05e0\u05d5\u05ea \u05d8\u05e2\u05d9\u05e0\u05d4 \u05dc\u05dc\u05d0 \u05d1\u05e2\u05d9\u05d4'},
+    {id:'pallets',icon:'\ud83d\udce6',label:'\u05de\u05e9\u05d8\u05d7\u05d9\u05dd \u05de\u05e1\u05d5\u05d3\u05e8\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 \u05ea\u05e7\u05d9\u05df'}
+  ]}
+};
+// In-memory state for the modal: items currently being edited.
+// Format: [{id, icon, label, status: 'ok'|'warn'|'critical'|'na'|null, notes, custom?:true}]
+window._roundDraft={items:[]};
+function _roundPopulateThemeSelect(){
+  var sel=g('round-theme');if(!sel)return;
+  var keys=Object.keys(window.ROUND_THEMES);
+  sel.innerHTML=keys.map(function(k){
+    return '<option value="'+esc(k)+'">'+esc(window.ROUND_THEMES[k].label)+'</option>';
+  }).join('');
+}
+window._roundRenderItems=function(){
+  var sel=g('round-theme'),host=g('round-items-list');
+  if(!sel||!host)return;
+  // If user changed theme, reset draft to that theme's items.
+  // Preserve already-set status when items are the same id (rare but
+  // avoids losing work on accidental theme switch).
+  var theme=window.ROUND_THEMES[sel.value]||window.ROUND_THEMES.morning;
+  var prev={};
+  (window._roundDraft.items||[]).forEach(function(it){if(it.id)prev[it.id]={status:it.status,notes:it.notes};});
+  // Keep custom items (those marked custom:true) across theme changes.
+  var customItems=(window._roundDraft.items||[]).filter(function(it){return it.custom;});
+  window._roundDraft.items=theme.items.map(function(it){
+    return {id:it.id,icon:it.icon,label:it.label,status:(prev[it.id]&&prev[it.id].status)||null,notes:(prev[it.id]&&prev[it.id].notes)||''};
+  }).concat(customItems);
+  _roundPaintItems();
+};
+function _roundPaintItems(){
+  var host=g('round-items-list');if(!host)return;
+  host.innerHTML=window._roundDraft.items.map(function(it,idx){
+    function btn(stat,emoji,color){
+      var on=it.status===stat;
+      var bg=on?color:'#f3f4f6',c=on?'#fff':'#374151',br=on?color:'#d1d5db';
+      return '<button type="button" data-roundstat="'+idx+':'+stat+'" style="background:'+bg+';color:'+c+';border:1px solid '+br+';border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;min-width:32px;font-family:inherit" aria-pressed="'+on+'">'+emoji+'</button>';
+    }
+    var rmBtn=it.custom?'<button type="button" data-roundrm="'+idx+'" style="background:transparent;border:none;color:#9ca3af;font-size:14px;cursor:pointer;padding:2px 6px" aria-label="\u05d4\u05e1\u05e8 \u05e4\u05e8\u05d9\u05d8">\u2715</button>':'';
+    return '<div style="background:#fafbfc;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px">'+
+      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+esc(it.icon||'\u2022')+'</span><span style="font-size:13px;flex:1">'+esc(it.label||'')+'</span>'+rmBtn+'</div>'+
+      '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+        btn('ok','\u2705','#16a34a')+
+        btn('warn','\u26a0\ufe0f','#d97706')+
+        btn('critical','\u274c','#dc2626')+
+        btn('na','\u2796','#6b7280')+
+        '<input type="text" data-roundnotes="'+idx+'" placeholder="\u05d4\u05e2\u05e8\u05d4 (\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05e0\u05dc\u05d9)" value="'+esc(it.notes||'')+'" style="flex:1;min-width:120px;font-size:11px;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px">'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  // Wire up buttons (delegated handler)
+  host.querySelectorAll('[data-roundstat]').forEach(function(btn){
+    btn.onclick=function(){
+      var p=btn.dataset.roundstat.split(':'),idx=parseInt(p[0],10),stat=p[1];
+      var it=window._roundDraft.items[idx];if(!it)return;
+      it.status=(it.status===stat)?null:stat;// toggle off if clicked same
+      _roundPaintItems();
+    };
+  });
+  host.querySelectorAll('[data-roundnotes]').forEach(function(inp){
+    inp.oninput=function(){
+      var idx=parseInt(inp.dataset.roundnotes,10);
+      if(window._roundDraft.items[idx])window._roundDraft.items[idx].notes=inp.value;
+    };
+  });
+  host.querySelectorAll('[data-roundrm]').forEach(function(btn){
+    btn.onclick=function(){
+      var idx=parseInt(btn.dataset.roundrm,10);
+      window._roundDraft.items.splice(idx,1);_roundPaintItems();
+    };
+  });
+}
+window._roundAddCustomItem=function(){
+  var label=prompt('\u05e9\u05dd \u05e4\u05e8\u05d9\u05d8 \u05de\u05d5\u05ea\u05d0\u05dd:');
+  if(!label||!label.trim())return;
+  window._roundDraft.items.push({id:'custom-'+Date.now(),icon:'\u2022',label:label.trim(),status:null,notes:'',custom:true});
+  _roundPaintItems();
+};
+// Compute legacy boolean flags from new items[] for backward-compat.
+function _roundLegacyFlags(items){
+  var flags={fire:false,corridors:false,ppe:false,samples:false,chemicals:false,firstaid:false};
+  (items||[]).forEach(function(it){
+    if(flags.hasOwnProperty(it.id))flags[it.id]=(it.status==='ok');
+  });
+  return flags;
 }
 function svRound(){
   var d=gv('round-d');if(!d){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var fire=g('round-fire')&&g('round-fire').checked;
-  var corridors=g('round-corridors')&&g('round-corridors').checked;
-  var ppe=g('round-ppe')&&g('round-ppe').checked;
-  var samples=g('round-samples')&&g('round-samples').checked;
-  var chemicals=g('round-chemicals')&&g('round-chemicals').checked;
-  var firstaid=g('round-firstaid')&&g('round-firstaid').checked;
-  var allOk=fire&&corridors&&ppe&&samples&&chemicals&&firstaid;
-  var r={id:gid(),d:d,inspector:gv('round-inspector'),fire:fire,corridors:corridors,ppe:ppe,samples:samples,chemicals:chemicals,firstaid:firstaid,notes:gv('round-notes'),s:allOk?'\u05d4\u05d5\u05e9\u05dc\u05dd':'\u05d7\u05dc\u05e7\u05d9',ts:new Date().toISOString()};
+  var theme=gv('round-theme')||'morning';
+  var items=(window._roundDraft.items||[]).slice();
+  // Status summary: any 'critical' \u2192 \u05dc\u05d9\u05e7\u05d5\u05d9. All 'ok' \u2192 \u05d4\u05d5\u05e9\u05dc\u05dd. Else \u05d7\u05dc\u05e7\u05d9.
+  var anyCrit=items.some(function(it){return it.status==='critical';});
+  var anyWarn=items.some(function(it){return it.status==='warn';});
+  var allDone=items.length>0&&items.every(function(it){return it.status==='ok'||it.status==='na';});
+  var status=anyCrit?'\u05dc\u05d9\u05e7\u05d5\u05d9':(anyWarn?'\u05d0\u05d6\u05d4\u05e8\u05d4':(allDone?'\u05d4\u05d5\u05e9\u05dc\u05dd':'\u05d7\u05dc\u05e7\u05d9'));
+  var legacy=_roundLegacyFlags(items);
+  var id=g('round-id')&&g('round-id').value;
+  var r={
+    id:id||gid(),d:d,inspector:gv('round-inspector')||null,
+    theme:theme,items:items,
+    notes:gv('round-notes')||null,
+    s:status,
+    fire:legacy.fire,corridors:legacy.corridors,ppe:legacy.ppe,
+    samples:legacy.samples,chemicals:legacy.chemicals,firstaid:legacy.firstaid,
+    ts:new Date().toISOString()
+  };
   if(!DB.rounds)DB.rounds=[];
-  DB.rounds.push(r);sbIns('rounds',r);addLog('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8: '+d);sdb();
-  closeModal('m-round');['round-inspector','round-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
-  ['round-fire','round-corridors','round-ppe','round-samples','round-chemicals','round-firstaid'].forEach(function(id){var el=g(id);if(el)el.checked=false;});
-  toast('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
+  if(id){DB.rounds=DB.rounds.map(function(x){return x.id===id?r:x;});sbUpd('rounds',r);}
+  else{DB.rounds.push(r);sbIns('rounds',r);}
+  addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 ('+theme+'): '+d);sdb();
+  closeModal('m-round');
+  ['round-inspector','round-notes'].forEach(function(id2){var el=g(id2);if(el)el.value='';});
+  if(g('round-id'))g('round-id').value='';
+  window._roundDraft={items:[]};
+  toast('\u05e1\u05d1\u05d1 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
 }
+// Reset state when opening modal for a new round.
+window._roundOpenNew=function(){
+  openModal('m-round');
+  setTimeout(function(){
+    if(g('round-id'))g('round-id').value='';
+    var dEl=g('round-d');if(dEl&&!dEl.value)dEl.value=new Date().toISOString().split('T')[0];
+    var insp=g('round-inspector');if(insp)insp.value='';
+    var nt=g('round-notes');if(nt)nt.value='';
+    _roundPopulateThemeSelect();
+    var sel=g('round-theme');if(sel)sel.value='morning';
+    window._roundDraft={items:[]};
+    _roundRenderItems();
+  },30);
+};
+// Edit an existing round \u2014 load its theme + items into the modal.
+window._roundEdit=function(id){
+  var r=(DB.rounds||[]).find(function(x){return x.id===id;});if(!r)return;
+  openModal('m-round');
+  setTimeout(function(){
+    if(g('round-id'))g('round-id').value=r.id;
+    var dEl=g('round-d');if(dEl)dEl.value=r.d||'';
+    var insp=g('round-inspector');if(insp)insp.value=r.inspector||'';
+    var nt=g('round-notes');if(nt)nt.value=r.notes||'';
+    _roundPopulateThemeSelect();
+    var theme=r.theme||'morning';
+    var sel=g('round-theme');if(sel)sel.value=theme;
+    // Prefer the new items array; fall back to legacy boolean flags.
+    if(Array.isArray(r.items)&&r.items.length){
+      window._roundDraft={items:r.items.slice()};
+      _roundPaintItems();
+    }else{
+      // Build items from theme + legacy flags
+      window._roundDraft={items:[]};
+      _roundRenderItems();
+      var legacy={fire:r.fire,corridors:r.corridors,ppe:r.ppe,samples:r.samples,chemicals:r.chemicals,firstaid:r.firstaid};
+      window._roundDraft.items.forEach(function(it){
+        if(legacy.hasOwnProperty(it.id)&&legacy[it.id]===true)it.status='ok';
+      });
+      _roundPaintItems();
+    }
+  },30);
+};
 // ---- END NEAR-MISS + ROUND ----
 
 // ---- TOOLBOX TALKS ----
