@@ -123,7 +123,10 @@ body.hc .bell:hover,body.hc .bell:active{transform:none}
 body.hc #my-tasks-badge,body.hc #bn-tasks-badge{animation:none;box-shadow:0 0 0 2px #000!important}
 
 /* ---- BOTTOM NAV ---- */
-.bnav{position:fixed!important;bottom:0!important;left:0!important;right:0!important;width:100vw!important;height:auto;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:#fff!important;border-top:2px solid var(--red);z-index:60!important;display:flex!important;box-shadow:0 -2px 8px rgba(0,0,0,.08);visibility:visible!important;opacity:1!important}
+/* bnav moved from bottom to TOP (just below the 60px topbar) — iOS
+   Safari's URL bar makes position:fixed bottom:0 unreliable. Top
+   placement sidesteps the entire visual-viewport issue. */
+.bnav{position:fixed!important;top:60px!important;left:0!important;right:0!important;width:100vw!important;height:auto;min-height:56px;background:#fff!important;border-bottom:2px solid var(--red);border-top:1px solid var(--border);z-index:60!important;display:flex!important;box-shadow:0 2px 8px rgba(0,0,0,.08);visibility:visible!important;opacity:1!important}
 .bnav::-webkit-scrollbar{display:none}
 .bn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;font-size:12px;font-weight:700;color:var(--t3);background:none;border:none;border-top:3px solid transparent;min-height:66px;position:relative;transition:color .18s ease,background .18s ease}
 .bn.on{color:var(--red);border-top-color:var(--red)}
@@ -153,7 +156,9 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
    bottom:0 is correct in layout coordinates. The user reported that
    tapping anything makes the bnav reappear — that's Safari recalc'ing
    the viewport. Fix: let .main flow naturally and use document scroll. */
-.main{padding:76px 12px calc(170px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
+/* Top padding now accounts for: 60px topbar + 56px bnav + 14px spacing
+   = 130px. Bottom padding is safe-area only (no fixed bnav at bottom). */
+.main{padding:130px 12px calc(40px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
 /* Mobile: ensure cards/page-title rows wrap instead of overflowing.
    Catches pages whose toolbar (page-title + action buttons) was wider
    than the phone viewport — content was visually shifting right and
@@ -2826,72 +2831,10 @@ function _obSanitize(){
 // layout and visual viewports, and shift the bnav up by that amount.
 // Always keeps the bnav at the bottom of the VISIBLE area regardless
 // of URL-bar state.
-// Hidden probe — measures CSS 100vh (== layout viewport height) which
-// JS otherwise has no reliable way to read (window.innerHeight returns
-// the VISUAL viewport in iOS Safari, not the layout one).
-function _layoutViewportHeight(){
-  var probe=document.getElementById('__vh_probe');
-  if(!probe){
-    probe=document.createElement('div');
-    probe.id='__vh_probe';
-    probe.setAttribute('aria-hidden','true');
-    probe.style.cssText='position:fixed;top:0;left:-9999px;width:1px;height:100vh;visibility:hidden;pointer-events:none;contain:strict';
-    (document.body||document.documentElement).appendChild(probe);
-  }
-  return probe.offsetHeight;
-}
-function _bnavPosition(){
-  var bnav=document.getElementById('bnav');
-  if(!bnav)return;
-  if(document.body.classList.contains('emp-mode'))return; // intentional kiosk hide
-  // Base styles — keep these so even browsers without visualViewport
-  // (older Android, desktop) get the same look.
-  bnav.style.position='fixed';
-  bnav.style.left='0';
-  bnav.style.right='0';
-  bnav.style.zIndex='9999';
-  bnav.style.display='flex';
-  bnav.style.visibility='visible';
-  bnav.style.opacity='1';
-  // Compute gap between LAYOUT viewport (CSS 100vh) and VISUAL viewport.
-  // window.innerHeight == visual viewport in iOS Safari (the value
-  // returned changes as the URL bar shows/hides). The probe gives us
-  // the actual 100vh layout-viewport height, regardless of URL-bar
-  // state. The gap is what we shift the bnav up by, so it sits at the
-  // bottom of the VISIBLE area instead of behind Safari's URL bar.
-  var layoutH=_layoutViewportHeight();
-  var visualH=(window.visualViewport&&window.visualViewport.height)||window.innerHeight||layoutH;
-  var visualOffsetTop=(window.visualViewport&&window.visualViewport.offsetTop)||0;
-  var visualBottom=visualOffsetTop+visualH;
-  var gap=Math.max(0,Math.round(layoutH-visualBottom));
-  bnav.style.bottom=gap+'px';
-}
-// Wire to every event that could change visual-viewport state:
-// VisualViewport.resize/scroll cover URL-bar collapse/expand and
-// pinch-zoom on iOS. window.resize/orientationchange cover everything
-// else. Page load + DOMContentLoaded cover first paint.
-function _bnavBindViewportEvents(){
-  if(window.visualViewport){
-    window.visualViewport.addEventListener('resize',_bnavPosition);
-    window.visualViewport.addEventListener('scroll',_bnavPosition);
-  }
-  window.addEventListener('resize',_bnavPosition);
-  window.addEventListener('orientationchange',_bnavPosition);
-  window.addEventListener('load',_bnavPosition);
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)_bnavPosition();});
-  // Run once now (in case load already fired) and once shortly after
-  // (in case visual viewport hasn't stabilized yet).
-  _bnavPosition();
-  setTimeout(_bnavPosition,200);
-  setTimeout(_bnavPosition,1000);
-}
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',_bnavBindViewportEvents);
-}else{
-  _bnavBindViewportEvents();
-}
-// Keep _ensureBnavVisible as an alias for any legacy callers.
-function _ensureBnavVisible(){_bnavPosition();}
+// Bnav now sits at the TOP (just below the topbar) — sidesteps iOS
+// Safari's URL-bar position:fixed bottom problem entirely. CSS at
+// line ~126 handles all positioning; no JS gymnastics needed.
+function _ensureBnavVisible(){/* no-op kept for legacy callers */}
 function _autoAriaLabels(){
   // Pass 1: button[title] without aria-label → mirror title to aria-label.
   var btns=document.querySelectorAll('button[title]:not([aria-label])');
