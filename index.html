@@ -146,7 +146,14 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
 .bn .ic{font-size:22px;margin-bottom:2px}
 
 /* ---- MAIN ---- */
-.main{padding:76px 12px calc(170px + env(safe-area-inset-bottom));overflow-y:auto;overflow-x:hidden;height:100vh;height:100dvh;max-width:100vw;box-sizing:border-box}
+/* `.main` previously had `height:100dvh; overflow-y:auto` which makes it
+   its own scroll container. On iOS Safari with URL+tab bars showing
+   that creates a stacking context that visually clips the position:fixed
+   bnav (sibling of .main) below the visual viewport, even though
+   bottom:0 is correct in layout coordinates. The user reported that
+   tapping anything makes the bnav reappear — that's Safari recalc'ing
+   the viewport. Fix: let .main flow naturally and use document scroll. */
+.main{padding:76px 12px calc(170px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
 /* Mobile: ensure cards/page-title rows wrap instead of overflowing.
    Catches pages whose toolbar (page-title + action buttons) was wider
    than the phone viewport — content was visually shifting right and
