@@ -1773,7 +1773,10 @@ id="m-ncr" style="display:none">
       &#1513;&#1500;&#1497;&#1495;&#1514; &#1491;&#1493;&#1495; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; + &#1510;&#1497;&#1493;&#1491; &#1513;&#1506;&#1493;&#1502;&#1491; &#1500;&#1508;&#1497;&#1490; &#1502;&#1495;&#1513;&#1489;&#1493;&#1503; ה-Outlook &#1513;&#1500;&#1498;.<br>
       <strong>&#1492;&#1499;&#1504;&#1492;:</strong> &#1497;&#1513; &#1500;&#1492;&#1493;&#1505;&#1497;&#1507; <code style="font-size:10px">Mail.Send</code> &#1489;-Azure Portal &#1493;&#1500;&#1492;&#1514;&#1495;&#1489;&#1512; &#1502;&#1495;&#1491;&#1513; &#1488;&#1495;&#1512;&#1497; &#1494;&#1492;.
     </div>
-    <button class="btn btn-p btn-sm" onclick="_sendOpenTasksToSelf()" style="background:#0d9488;border-color:#0d9488">&#128231; &#1513;&#1500;&#1495; &#1491;&#1493;&#1495; &#1500;&#1506;&#1510;&#1502;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-p btn-sm" onclick="_sendOpenTasksToSelf()" style="background:#0d9488;border-color:#0d9488">&#128231; &#1513;&#1500;&#1495; &#1491;&#1493;&#1495; &#1500;&#1506;&#1510;&#1502;&#1497; &#1506;&#1499;&#1513;&#1497;&#1493;</button>
+      <button class="btn btn-d btn-sm" onclick="_mailPrefsOpen()" style="background:#475569;border-color:#475569">&#9881;&#65039; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1502;&#1497;&#1497;&#1500;&#1497;&#1501;</button>
+    </div>
   </div>
   <div class="modal-footer" style="flex-wrap:wrap;gap:6px">
     <button class="btn btn-s" onclick="closeModal('m-od')">&#1505;&#1490;&#1497;&#1512;&#1492;</button>
@@ -12968,18 +12971,107 @@ function _buildOpenTasksDigest(){
     '</body></html>';
   return {html:body,subject:'דוח משימות פתוחות — '+stamp,counts:{overdue:overdue.length,due7:due7.length,eqi30:eqi30.length,ppe30:ppe30.length,tr30:tr30.length,ncr:ncrOpen.length,total:any}};
 }
-// User-facing: send the digest to the signed-in user's own email.
+// === Mail preferences ===
+// Stored in localStorage as JSON. Lets the user define roles (e.g. "מנהל
+// בטיחות", "מנהל טכני") with email lists, and rules that map automations
+// (daily digest, overdue task, equipment expiry, etc.) to those roles.
+// Phase-2/3 (per-task assignee, scheduled cron) read from the same store.
+var _MAIL_PREFS_KEY='tfgn_mail_prefs_v1';
+function _mailPrefsDefault(){
+  return {
+    self_email:'sviva@tapugan.co.il',
+    roles:[
+      {id:'safety_mgr',label:'מנהל בטיחות',emails:['sviva@tapugan.co.il']},
+      {id:'tech_mgr',label:'מנהל טכני',emails:[]},
+      {id:'factory_eng',label:'מהנדס מפעל',emails:[]},
+      {id:'quality_mgr',label:'מנהל איכות',emails:[]}
+    ],
+    rules:[
+      {id:'daily_digest',label:'דוח יומי מלא',enabled:false,to:['safety_mgr'],schedule:'07:00',sections:'all'},
+      {id:'overdue_task',label:'משימה באיחור',enabled:false,to:['safety_mgr']},
+      {id:'equipment_30d',label:'בדיקת ציוד — 30 יום לתפוגה',enabled:false,to:['tech_mgr','safety_mgr']},
+      {id:'ppe_30d',label:'PPE — 30 יום לתפוגה',enabled:false,to:['safety_mgr']},
+      {id:'tr_30d',label:'הדרכה — 30 יום לתפוגה',enabled:false,to:['safety_mgr']},
+      {id:'ncr_critical',label:'NCR חדש בעדיפות גבוהה',enabled:false,to:['safety_mgr','factory_eng','quality_mgr']}
+    ]
+  };
+}
+function _mailPrefs(){
+  try{
+    var raw=localStorage.getItem(_MAIL_PREFS_KEY);
+    if(!raw)return _mailPrefsDefault();
+    var p=JSON.parse(raw);
+    // Merge with defaults so new rules added later show up.
+    var def=_mailPrefsDefault();
+    if(!p.roles)p.roles=def.roles;
+    if(!p.rules)p.rules=def.rules;
+    if(!p.self_email)p.self_email=def.self_email;
+    return p;
+  }catch(e){return _mailPrefsDefault();}
+}
+function _mailPrefsSave(p){try{localStorage.setItem(_MAIL_PREFS_KEY,JSON.stringify(p));}catch(e){console.warn('[mail prefs] save failed:',e);}}
+// Resolve role IDs → flat list of unique email addresses.
+function _mailResolveRecipients(roleIds){
+  var prefs=_mailPrefs();
+  var seen={},out=[];
+  (roleIds||[]).forEach(function(rid){
+    var role=(prefs.roles||[]).find(function(r){return r.id===rid;});
+    if(!role)return;
+    (role.emails||[]).forEach(function(e){
+      var addr=String(e||'').trim();
+      if(addr&&!seen[addr.toLowerCase()]){seen[addr.toLowerCase()]=1;out.push(addr);}
+    });
+  });
+  return out;
+}
+// Send a mail rule. Looks up the rule + its recipients in prefs and sends
+// the digest. ruleId='daily_digest' is the canonical comprehensive one;
+// per-event rules (overdue_task, equipment_30d, ...) reuse the same digest
+// for now and will be filtered to a single section in phase-2.
+window._sendMailRule=function(ruleId){
+  var prefs=_mailPrefs();
+  var rule=(prefs.rules||[]).find(function(r){return r.id===ruleId;});
+  if(!rule){toast('כלל לא נמצא: '+ruleId);return Promise.reject(new Error('rule '+ruleId));}
+  var recipients=_mailResolveRecipients(rule.to);
+  if(!recipients.length){
+    toast('⚠ אין נמענים לכלל "'+rule.label+'". הוסיפי באזור הגדרות מיילים.');
+    return Promise.reject(new Error('no recipients'));
+  }
+  toast('📧 מכין דוח לכלל "'+rule.label+'"…');
+  var d=_buildOpenTasksDigest();
+  return _msSendMail(recipients,d.subject+' · '+rule.label,d.html).then(function(){
+    toast('✓ נשלח ל-'+recipients.length+' נמענים ('+d.counts.total+' פריטים)');
+  }).catch(function(e){
+    var msg=(e&&e.message||e).toString();
+    console.warn('[mail] rule send failed:',msg);
+    toast('⚠ שליחה נכשלה: '+msg.substring(0,140));
+    if(/401|Mail\.Send|invalid_grant/i.test(msg)){
+      toast('💡 הוסיפי Mail.Send ב-Azure Portal ואז התחברי מחדש.');
+    }
+    throw e;
+  });
+};
+// Legacy "send to self" — kept for the existing button. If user has
+// configured prefs (and at least one role has emails), prefers those;
+// otherwise falls back to /me lookup.
 window._sendOpenTasksToSelf=function(){
   if(!confirm('לשלוח דוח משימות פתוחות למייל שלך?'))return;
+  var prefs=_mailPrefs();
+  var selfRole=(prefs.roles||[]).find(function(r){return r.id==='safety_mgr';});
+  var selfEmails=(selfRole&&selfRole.emails)||[];
   toast('📧 מכין דוח…');
-  _msMyEmail().then(function(addr){
-    if(!addr)throw new Error('לא הצלחנו לזהות את המייל שלך');
+  var sendTo=function(addrs){
     var d=_buildOpenTasksDigest();
-    toast('📧 שולח ל-'+addr+'…');
-    return _msSendMail(addr,d.subject,d.html).then(function(){
-      toast('✓ הדוח נשלח ל-'+addr+' ('+d.counts.total+' פריטים)');
+    toast('📧 שולח ל-'+addrs.join(', ')+'…');
+    return _msSendMail(addrs,d.subject,d.html).then(function(){
+      toast('✓ הדוח נשלח ל-'+addrs.length+' נמענים ('+d.counts.total+' פריטים)');
     });
-  }).catch(function(e){
+  };
+  var p=selfEmails.length?Promise.resolve(selfEmails):_msMyEmail().then(function(addr){
+    if(!addr)throw new Error('לא הצלחנו לזהות את המייל שלך');
+    return [addr];
+  });
+  p.then(sendTo).catch(function(e){
     var msg=(e&&e.message||e).toString();
     console.warn('[mail] send failed:',msg);
     toast('⚠ שליחה נכשלה: '+msg.substring(0,140));
@@ -12987,6 +13079,118 @@ window._sendOpenTasksToSelf=function(){
       toast('💡 הוסיפי Mail.Send ב-Azure Portal ואז התחברי מחדש.');
     }
   });
+};
+// === Mail preferences modal ===
+window._mailPrefsOpen=function(){
+  var modal=g('m-mail-prefs');
+  if(!modal){_mailPrefsBuild();modal=g('m-mail-prefs');}
+  _mailPrefsRender();
+  if(typeof openModal==='function')openModal('m-mail-prefs');
+};
+function _mailPrefsBuild(){
+  var ov=document.createElement('div');ov.className='overlay';ov.id='ov-mail-prefs';ov.setAttribute('onclick',"closeModal('m-mail-prefs')");
+  var m=document.createElement('div');m.className='modal';m.id='m-mail-prefs';m.style.display='none';
+  m.innerHTML='<button class="close-btn" onclick="closeModal(\'m-mail-prefs\')">&#10005;</button>'+
+    '<div class="modal-title">📧 הגדרות מיילים אוטומטיים</div>'+
+    '<div id="mail-prefs-body" style="font-size:13px"></div>'+
+    '<div class="modal-footer" style="flex-wrap:wrap;gap:6px">'+
+      '<button class="btn btn-s" onclick="closeModal(\'m-mail-prefs\')">סגירה</button>'+
+      '<button class="btn btn-p" onclick="_mailPrefsSaveFromUI()" style="background:#16a34a;border-color:#16a34a">💾 שמור</button>'+
+    '</div>';
+  document.body.appendChild(ov);document.body.appendChild(m);
+}
+function _mailPrefsRender(){
+  var body=g('mail-prefs-body');if(!body)return;
+  var p=_mailPrefs();
+  var rolesHtml=p.roles.map(function(role,idx){
+    var emailsList=(role.emails||[]).map(function(e,j){
+      return '<div style="display:flex;gap:4px;margin:3px 0"><input type="email" class="inp" data-role-idx="'+idx+'" data-email-idx="'+j+'" value="'+esc(e)+'" style="flex:1;font-size:12px;padding:4px 6px;direction:ltr;text-align:left"><button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveEmail('+idx+','+j+')" style="background:#7f1d1d;font-size:11px">×</button></div>';
+    }).join('');
+    return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">'+esc(role.label)+'</div>'+
+      emailsList+
+      '<button type="button" class="btn btn-s btn-sm" onclick="_mailPrefsAddEmail('+idx+')" style="margin-top:4px;font-size:11px">+ הוסיפי כתובת</button>'+
+    '</div>';
+  }).join('');
+  var rulesHtml=p.rules.map(function(rule,idx){
+    var rolesOpts=p.roles.map(function(role){
+      var checked=(rule.to||[]).indexOf(role.id)>=0?'checked':'';
+      return '<label style="display:inline-flex;align-items:center;gap:4px;margin-left:10px;font-size:12px;cursor:pointer"><input type="checkbox" data-rule-idx="'+idx+'" data-role-id="'+role.id+'" '+checked+'> '+esc(role.label)+'</label>';
+    }).join('');
+    return '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;margin-bottom:8px">'+
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:13px;margin-bottom:6px">'+
+        '<input type="checkbox" data-rule-enabled="'+idx+'" '+(rule.enabled?'checked':'')+'> '+esc(rule.label)+
+      '</label>'+
+      '<div style="margin-top:4px;font-size:11px;color:var(--t3)">תפקידים שמקבלים:</div>'+
+      '<div style="margin-top:4px">'+rolesOpts+'</div>'+
+    '</div>';
+  }).join('');
+  body.innerHTML=
+    '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 10px;font-size:11px;color:#92400e;margin-bottom:12px">'+
+      '⚙️ <strong>איך זה עובד:</strong> הגדירי תפקידים עם מיילים, ואז לכל אוטומציה בחרי איזה תפקידים מקבלים מייל. אפשר להוסיף תפקידים מותאמים בעתיד.'+
+    '</div>'+
+    '<h3 style="font-size:14px;margin:12px 0 8px;color:var(--red)">תפקידים וכתובות</h3>'+
+    rolesHtml+
+    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">אוטומציות</h3>'+
+    rulesHtml+
+    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">בדיקה</h3>'+
+    '<div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:10px">'+
+      '<div style="font-size:12px;color:#166534;margin-bottom:6px">שלחי דוח עכשיו לפי כלל מסוים — לבדיקות:</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
+        '<select id="mail-prefs-test-rule" style="padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px">'+
+          p.rules.map(function(r){return '<option value="'+r.id+'">'+esc(r.label)+'</option>';}).join('')+
+        '</select>'+
+        '<button class="btn btn-p btn-sm" onclick="_mailPrefsTestSend()" style="background:#0d9488;border-color:#0d9488">📤 שלחי עכשיו</button>'+
+      '</div>'+
+    '</div>';
+}
+window._mailPrefsAddEmail=function(roleIdx){
+  _mailPrefsCollect();
+  var p=_mailPrefs();if(!p.roles[roleIdx])return;
+  p.roles[roleIdx].emails.push('');
+  _mailPrefsSave(p);_mailPrefsRender();
+};
+window._mailPrefsRemoveEmail=function(roleIdx,emailIdx){
+  _mailPrefsCollect();
+  var p=_mailPrefs();if(!p.roles[roleIdx])return;
+  p.roles[roleIdx].emails.splice(emailIdx,1);
+  _mailPrefsSave(p);_mailPrefsRender();
+};
+function _mailPrefsCollect(){
+  var p=_mailPrefs();
+  document.querySelectorAll('#mail-prefs-body input[data-role-idx]').forEach(function(inp){
+    var ri=parseInt(inp.dataset.roleIdx,10),ei=parseInt(inp.dataset.emailIdx,10);
+    if(p.roles[ri])p.roles[ri].emails[ei]=inp.value.trim();
+  });
+  document.querySelectorAll('#mail-prefs-body input[data-rule-enabled]').forEach(function(inp){
+    var i=parseInt(inp.dataset.ruleEnabled,10);
+    if(p.rules[i])p.rules[i].enabled=inp.checked;
+  });
+  document.querySelectorAll('#mail-prefs-body input[data-rule-idx][data-role-id]').forEach(function(inp){
+    var i=parseInt(inp.dataset.ruleIdx,10),rid=inp.dataset.roleId;
+    if(!p.rules[i])return;
+    var to=p.rules[i].to||[];
+    var has=to.indexOf(rid)>=0;
+    if(inp.checked&&!has)to.push(rid);
+    if(!inp.checked&&has)to.splice(to.indexOf(rid),1);
+    p.rules[i].to=to;
+  });
+  _mailPrefsSave(p);
+  return p;
+}
+window._mailPrefsSaveFromUI=function(){
+  var p=_mailPrefsCollect();
+  // Drop empty email entries (cleanup).
+  p.roles.forEach(function(r){r.emails=(r.emails||[]).filter(function(e){return e&&e.trim();});});
+  _mailPrefsSave(p);
+  toast('💾 הגדרות נשמרו');
+  if(typeof closeModal==='function')closeModal('m-mail-prefs');
+};
+window._mailPrefsTestSend=function(){
+  _mailPrefsCollect();
+  var sel=g('mail-prefs-test-rule');
+  if(!sel||!sel.value)return;
+  _sendMailRule(sel.value);
 };
 // === OneDrive INBOUND flow ===
 // User drops files into /Apps/Tapugan Safety/Inbox/ via OneDrive's web/app UI.

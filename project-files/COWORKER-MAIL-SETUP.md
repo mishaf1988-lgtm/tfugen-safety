@@ -7,7 +7,7 @@
 
 ### 1️⃣ כניסה ל-Azure Portal
 - URL: **https://portal.azure.com**
-- כניסה עם החשבון `viva@tapugan.co.il` (או החשבון Microsoft של המשתמשת)
+- כניסה עם החשבון `sviva@tapugan.co.il` (או החשבון Microsoft של המשתמשת)
 
 ### 2️⃣ מציאת האפליקציה
 - בחיפוש למעלה: **"App registrations"** ולחיצה על התוצאה
@@ -52,4 +52,4 @@
 - **"Mail.Send לא מופיע ברשימה"** → בטוחים ש-Microsoft Graph נבחר ולא Microsoft Graph (legacy) או SharePoint?
 
 ## מי לעדכן
-לחזור עם דיווח ל**מנהלת הבטיחות בתפוגן (viva@tapugan.co.il)** ולכתוב לה בעברית פשוטה: "ההרשאה Mail.Send נוספה. את יכולה להתחבר מחדש ולנסות את הכפתור."
+לחזור עם דיווח ל**מנהלת הבטיחות בתפוגן (sviva@tapugan.co.il)** ולכתוב לה בעברית פשוטה: "ההרשאה Mail.Send נוספה. את יכולה להתחבר מחדש ולנסות את הכפתור."
