@@ -12897,7 +12897,20 @@ function _msMyEmail(){
 // Build an HTML digest of items needing attention right now.
 // Sections: overdue tasks · tasks due in next 7 days · equipment expiring
 // in next 30 days · open NCRs · ppe/tr expiring in next 30 days.
-function _buildOpenTasksDigest(){
+// Section IDs (used by mail rules to pick which slices to include).
+var _MAIL_SECTIONS=[
+  {id:'overdue',label:'משימות באיחור'},
+  {id:'due7',label:'משימות עד 7 ימים'},
+  {id:'eqi30',label:'בדיקות ציוד עד 30 יום'},
+  {id:'ppe30',label:'PPE עד 30 יום'},
+  {id:'tr30',label:'הדרכה עד 30 יום'},
+  {id:'ncr',label:'NCRs פתוחים'}
+];
+// Build the digest, optionally filtered to a subset of sections.
+// `wantSections` = 'all' (default) | array of section IDs to include.
+function _buildOpenTasksDigest(wantSections){
+  var want=(!wantSections||wantSections==='all')?null:wantSections;
+  function inc(id){return !want||want.indexOf(id)>=0;}
   var now=new Date();
   var nowMs=now.getTime();
   var d7=nowMs+7*86400000;
@@ -12910,27 +12923,19 @@ function _buildOpenTasksDigest(){
   }
   function fmt(s){if(!s)return '';try{return fd(s);}catch(e){return s;}}
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  var sections=[];
-  // Overdue tasks
-  var overdue=(DB.tasks||[]).filter(function(t){
+  var overdue=inc('overdue')?(DB.tasks||[]).filter(function(t){
     if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;
     var d=dateMs(t.due);return d&&d<nowMs;
-  });
-  // Due in next 7 days
-  var due7=(DB.tasks||[]).filter(function(t){
+  }):[];
+  var due7=inc('due7')?(DB.tasks||[]).filter(function(t){
     if(t.status==='הושלם'||t.status==='בוטל'||!t.due)return false;
     var d=dateMs(t.due);return d&&d>=nowMs&&d<=d7;
-  });
-  // Equipment expiring in next 30 days
-  var eqi30=(DB.equip_inspections||[]).filter(function(r){
-    var d=dateMs(r.e);return d&&d<=d30;
-  }).sort(function(a,b){return dateMs(a.e)-dateMs(b.e);});
-  // Open NCRs (not closed)
-  var ncrOpen=(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&n.s!=='נסגר';});
-  // PPE & training expiring in next 30 days
-  function expiring30(arr){return (arr||[]).filter(function(r){var d=dateMs(r.e);return d&&d<=d30;}).sort(function(a,b){return dateMs(a.e)-dateMs(b.e);});}
-  var ppe30=expiring30(DB.ppe);
-  var tr30=expiring30(DB.tr);
+  }):[];
+  function expiring30(arr){return (arr||[]).filter(function(r){var d=dateMs(r.e);return d&&d>=nowMs&&d<=d30;}).sort(function(a,b){return dateMs(a.e)-dateMs(b.e);});}
+  var eqi30=inc('eqi30')?expiring30(DB.equip_inspections):[];
+  var ppe30=inc('ppe30')?expiring30(DB.ppe):[];
+  var tr30=inc('tr30')?expiring30(DB.tr):[];
+  var ncrOpen=inc('ncr')?(DB.ncr||[]).filter(function(n){return n.s!=='סגור'&&n.s!=='נסגר';}):[];
   function tableRow(cells){return '<tr>'+cells.map(function(c){return '<td style="border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:right">'+esc(c)+'</td>';}).join('')+'</tr>';}
   function section(title,items,headers,rowFn,color){
     if(!items.length)return '';
@@ -12939,35 +12944,29 @@ function _buildOpenTasksDigest(){
     return '<h2 style="color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:4px;margin:18px 0 10px;font-size:16px">'+esc(title)+' ('+items.length+')</h2>'+
       '<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'+head+rows+'</table>';
   }
-  sections.push(section('משימות באיחור',overdue,['כותרת','אחראי','יעד','עדיפות'],function(t){
-    return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);
-  },'#fee2e2'));
-  sections.push(section('משימות עד 7 ימים',due7,['כותרת','אחראי','יעד','עדיפות'],function(t){
-    return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);
-  },'#fef3c7'));
-  sections.push(section('בדיקות ציוד עד 30 יום',eqi30,['קוד','תיאור','תוקף','בודק'],function(r){
-    return tableRow([r.code||'',r.n||'',fmt(r.e),r.inspector||'']);
-  },'#fef3c7'));
-  sections.push(section('PPE עד 30 יום',ppe30,['סוג','עובד','תוקף'],function(r){
-    return tableRow([r.ty||'',r.w||'',fmt(r.e)]);
-  },'#fef3c7'));
-  sections.push(section('הדרכות עד 30 יום',tr30,['שם הדרכה','עובד','תוקף'],function(r){
-    return tableRow([r.n||'',r.w||'',fmt(r.e)]);
-  },'#fef3c7'));
-  sections.push(section('NCRs פתוחים',ncrOpen.slice(0,30),['מספר','תיאור','אזור','עדיפות','סטטוס'],function(n){
-    return tableRow([n.num||'',(n.d||'').substring(0,80),n.a||'',n.p||'',n.s||'']);
-  },'#fee2e2'));
+  var sections=[];
+  if(inc('overdue'))sections.push(section('משימות באיחור',overdue,['כותרת','אחראי','יעד','עדיפות'],function(t){return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);},'#fee2e2'));
+  if(inc('due7'))sections.push(section('משימות עד 7 ימים',due7,['כותרת','אחראי','יעד','עדיפות'],function(t){return tableRow([t.title||'',t.assignee||'',fmt(t.due),t.priority||'']);},'#fef3c7'));
+  if(inc('eqi30'))sections.push(section('בדיקות ציוד עד 30 יום',eqi30,['קוד','תיאור','תוקף','בודק'],function(r){return tableRow([r.code||'',r.n||'',fmt(r.e),r.inspector||'']);},'#fef3c7'));
+  if(inc('ppe30'))sections.push(section('PPE עד 30 יום',ppe30,['סוג','עובד','תוקף'],function(r){return tableRow([r.ty||'',r.w||'',fmt(r.e)]);},'#fef3c7'));
+  if(inc('tr30'))sections.push(section('הדרכה עד 30 יום',tr30,['שם הדרכה','עובד','תוקף'],function(r){return tableRow([r.n||'',r.w||'',fmt(r.e)]);},'#fef3c7'));
+  if(inc('ncr'))sections.push(section('NCRs פתוחים',ncrOpen.slice(0,30),['מספר','תיאור','אזור','עדיפות','סטטוס'],function(n){return tableRow([n.num||'',(n.d||'').substring(0,80),n.a||'',n.p||'',n.s||'']);},'#fee2e2'));
   var any=overdue.length+due7.length+eqi30.length+ppe30.length+tr30.length+ncrOpen.length;
   var stamp=new Date().toLocaleString('he-IL');
-  var totals='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px;margin-bottom:14px;font-size:13px">'+
-    '<strong>סיכום:</strong> '+overdue.length+' באיחור · '+due7.length+' עד 7 ימים · '+
-    eqi30.length+' בדיקות ציוד · '+ppe30.length+' PPE · '+tr30.length+' הדרכות · '+ncrOpen.length+' NCRs פתוחים</div>';
+  var totalsBits=[];
+  if(inc('overdue'))totalsBits.push(overdue.length+' באיחור');
+  if(inc('due7'))totalsBits.push(due7.length+' עד 7 ימים');
+  if(inc('eqi30'))totalsBits.push(eqi30.length+' בדיקות ציוד');
+  if(inc('ppe30'))totalsBits.push(ppe30.length+' PPE');
+  if(inc('tr30'))totalsBits.push(tr30.length+' הדרכות');
+  if(inc('ncr'))totalsBits.push(ncrOpen.length+' NCRs');
+  var totals='<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px;margin-bottom:14px;font-size:13px"><strong>סיכום:</strong> '+totalsBits.join(' · ')+'</div>';
   var body='<!doctype html><html dir="rtl" lang="he"><body style="font-family:Arial,sans-serif;color:#111;direction:rtl;background:#fff;padding:20px;max-width:800px;margin:auto">'+
     '<h1 style="color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin:0 0 14px;font-size:22px">דוח משימות פתוחות — Tapugan Safety</h1>'+
     '<div style="font-size:12px;color:#666;margin-bottom:14px">'+esc(stamp)+'</div>'+
     totals+
     (any?sections.join(''):'<p style="font-size:14px">🎉 אין פריטים פתוחים שדורשים תשומת לב כרגע.</p>')+
-    '<div style="margin-top:20px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#888">דוח זה נשלח אוטומטית מאפליקציית Tapugan Safety. תוכלי לכבות את הסנכרון בכל עת מתוך התפריט.</div>'+
+    '<div style="margin-top:20px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;color:#888">דוח זה נשלח אוטומטית מאפליקציית Tapugan Safety. תוכלי לכבות את הסנכרון בכל עת מתוך הגדרות מיילים.</div>'+
     '</body></html>';
   return {html:body,subject:'דוח משימות פתוחות — '+stamp,counts:{overdue:overdue.length,due7:due7.length,eqi30:eqi30.length,ppe30:ppe30.length,tr30:tr30.length,ncr:ncrOpen.length,total:any}};
 }
@@ -12977,6 +12976,11 @@ function _buildOpenTasksDigest(){
 // (daily digest, overdue task, equipment expiry, etc.) to those roles.
 // Phase-2/3 (per-task assignee, scheduled cron) read from the same store.
 var _MAIL_PREFS_KEY='tfgn_mail_prefs_v1';
+// Mail-rule schema (per item in `rules`):
+//   { id, label, enabled, to: [roleId], freq: 'manual'|'daily'|'weekly'|'monthly',
+//     time: 'HH:MM', dow: 0-6 (sunday=0, used for weekly), dom: 1-31 (used for
+//     monthly), sections: ['overdue','due7','eqi30','ppe30','tr30','ncr'] | 'all',
+//     last_sent: ISO timestamp (set by the on-app-open dispatcher) }
 function _mailPrefsDefault(){
   return {
     self_email:'sviva@tapugan.co.il',
@@ -12987,12 +12991,12 @@ function _mailPrefsDefault(){
       {id:'quality_mgr',label:'מנהל איכות',emails:[]}
     ],
     rules:[
-      {id:'daily_digest',label:'דוח יומי מלא',enabled:false,to:['safety_mgr'],schedule:'07:00',sections:'all'},
-      {id:'overdue_task',label:'משימה באיחור',enabled:false,to:['safety_mgr']},
-      {id:'equipment_30d',label:'בדיקת ציוד — 30 יום לתפוגה',enabled:false,to:['tech_mgr','safety_mgr']},
-      {id:'ppe_30d',label:'PPE — 30 יום לתפוגה',enabled:false,to:['safety_mgr']},
-      {id:'tr_30d',label:'הדרכה — 30 יום לתפוגה',enabled:false,to:['safety_mgr']},
-      {id:'ncr_critical',label:'NCR חדש בעדיפות גבוהה',enabled:false,to:['safety_mgr','factory_eng','quality_mgr']}
+      {id:'daily_digest',label:'דוח יומי מלא',enabled:false,to:['safety_mgr'],freq:'daily',time:'07:00',sections:'all'},
+      {id:'overdue_task',label:'משימה באיחור',enabled:false,to:['safety_mgr'],freq:'daily',time:'08:00',sections:['overdue']},
+      {id:'equipment_30d',label:'בדיקת ציוד — 30 יום לתפוגה',enabled:false,to:['tech_mgr','safety_mgr'],freq:'weekly',dow:0,time:'07:00',sections:['eqi30']},
+      {id:'ppe_30d',label:'PPE — 30 יום לתפוגה',enabled:false,to:['safety_mgr'],freq:'weekly',dow:0,time:'07:00',sections:['ppe30']},
+      {id:'tr_30d',label:'הדרכה — 30 יום לתפוגה',enabled:false,to:['safety_mgr'],freq:'weekly',dow:0,time:'07:00',sections:['tr30']},
+      {id:'ncr_critical',label:'NCR חדש בעדיפות גבוהה',enabled:false,to:['safety_mgr','factory_eng','quality_mgr'],freq:'manual',sections:['ncr']}
     ]
   };
 }
@@ -13038,8 +13042,12 @@ window._sendMailRule=function(ruleId){
     return Promise.reject(new Error('no recipients'));
   }
   toast('📧 מכין דוח לכלל "'+rule.label+'"…');
-  var d=_buildOpenTasksDigest();
+  var d=_buildOpenTasksDigest(rule.sections||'all');
   return _msSendMail(recipients,d.subject+' · '+rule.label,d.html).then(function(){
+    // Record last_sent so the on-app-open scheduler doesn't re-send the
+    // same rule within its frequency window.
+    rule.last_sent=new Date().toISOString();
+    _mailPrefsSave(prefs);
     toast('✓ נשלח ל-'+recipients.length+' נמענים ('+d.counts.total+' פריטים)');
   }).catch(function(e){
     var msg=(e&&e.message||e).toString();
@@ -13051,6 +13059,51 @@ window._sendMailRule=function(ruleId){
     throw e;
   });
 };
+// On-app-open scheduler. Once a session, scan all enabled rules and send
+// any whose schedule says they're due NOW based on freq + time + last_sent.
+// Browser-side cron requires the app tab to be open at trigger time, but
+// it's a stepping stone to a real Cloudflare Worker cron.
+var _mailDispatcherRan=false;
+function _mailDispatcherTick(){
+  if(_mailDispatcherRan)return;_mailDispatcherRan=true;
+  var prefs=_mailPrefs();
+  var now=new Date();
+  var todayY=now.getFullYear(),todayM=now.getMonth(),todayD=now.getDate();
+  function startOfToday(){return new Date(todayY,todayM,todayD,0,0,0).getTime();}
+  function isDueToday(rule){
+    if(!rule.enabled||rule.freq==='manual'||!rule.freq)return false;
+    var t=(rule.time||'07:00').split(':');
+    var trig=new Date(todayY,todayM,todayD,parseInt(t[0],10)||0,parseInt(t[1],10)||0).getTime();
+    if(now.getTime()<trig)return false;
+    if(rule.freq==='daily'){
+      // due if not sent since today's trigger
+    }else if(rule.freq==='weekly'){
+      if(now.getDay()!==(rule.dow!==undefined?rule.dow:0))return false;
+    }else if(rule.freq==='monthly'){
+      if(now.getDate()!==(rule.dom!==undefined?rule.dom:1))return false;
+    }
+    if(rule.last_sent){
+      var last=new Date(rule.last_sent).getTime();
+      if(last>=trig)return false;
+    }
+    return true;
+  }
+  var due=(prefs.rules||[]).filter(isDueToday);
+  if(!due.length)return;
+  console.log('[mail] dispatcher: '+due.length+' rules due now',due.map(function(r){return r.id;}));
+  // Run sequentially so each updates last_sent before the next.
+  due.reduce(function(chain,rule){
+    return chain.then(function(){
+      return window._sendMailRule(rule.id).catch(function(e){
+        console.warn('[mail] dispatcher rule failed:',rule.id,e&&e.message);
+      });
+    });
+  },Promise.resolve());
+}
+// Trigger a few seconds after page load, once token + state are settled.
+document.addEventListener('DOMContentLoaded',function(){
+  setTimeout(_mailDispatcherTick,8000);
+});
 // Legacy "send to self" — kept for the existing button. If user has
 // configured prefs (and at least one role has emails), prefers those;
 // otherwise falls back to /me lookup.
@@ -13102,40 +13155,71 @@ function _mailPrefsBuild(){
 function _mailPrefsRender(){
   var body=g('mail-prefs-body');if(!body)return;
   var p=_mailPrefs();
+  var DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
   var rolesHtml=p.roles.map(function(role,idx){
     var emailsList=(role.emails||[]).map(function(e,j){
       return '<div style="display:flex;gap:4px;margin:3px 0"><input type="email" class="inp" data-role-idx="'+idx+'" data-email-idx="'+j+'" value="'+esc(e)+'" style="flex:1;font-size:12px;padding:4px 6px;direction:ltr;text-align:left"><button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveEmail('+idx+','+j+')" style="background:#7f1d1d;font-size:11px">×</button></div>';
     }).join('');
+    var removeBtn=role.custom?'<button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveRole('+idx+')" style="background:#7f1d1d;font-size:10px;margin-right:6px">🗑 הסירי תפקיד</button>':'';
     return '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:8px">'+
-      '<div style="font-weight:700;font-size:13px;margin-bottom:6px">'+esc(role.label)+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:700;font-size:13px">'+esc(role.label)+'</div>'+removeBtn+'</div>'+
       emailsList+
       '<button type="button" class="btn btn-s btn-sm" onclick="_mailPrefsAddEmail('+idx+')" style="margin-top:4px;font-size:11px">+ הוסיפי כתובת</button>'+
     '</div>';
   }).join('');
+  var addRoleHtml='<div style="background:#f0fdf4;border:1px dashed #16a34a;border-radius:8px;padding:10px;margin-bottom:8px"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="text" id="mail-new-role-label" placeholder="שם תפקיד חדש (למשל: ראש משמרת)" style="flex:1;min-width:160px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px"><button type="button" class="btn btn-p btn-sm" onclick="_mailPrefsAddRole()" style="background:#16a34a;border-color:#16a34a;font-size:11px">+ הוסיפי תפקיד</button></div></div>';
   var rulesHtml=p.rules.map(function(rule,idx){
     var rolesOpts=p.roles.map(function(role){
       var checked=(rule.to||[]).indexOf(role.id)>=0?'checked':'';
-      return '<label style="display:inline-flex;align-items:center;gap:4px;margin-left:10px;font-size:12px;cursor:pointer"><input type="checkbox" data-rule-idx="'+idx+'" data-role-id="'+role.id+'" '+checked+'> '+esc(role.label)+'</label>';
+      return '<label style="display:inline-flex;align-items:center;gap:4px;margin-left:10px;margin-bottom:3px;font-size:12px;cursor:pointer"><input type="checkbox" data-rule-idx="'+idx+'" data-role-id="'+role.id+'" '+checked+'> '+esc(role.label)+'</label>';
+    }).join('');
+    var freq=rule.freq||'manual';
+    var time=rule.time||'07:00';
+    var dow=rule.dow!==undefined?rule.dow:0;
+    var dom=rule.dom!==undefined?rule.dom:1;
+    var freqOpts=[
+      ['manual','ידני בלבד (כפתור)'],
+      ['daily','יומי'],
+      ['weekly','שבועי'],
+      ['monthly','חודשי']
+    ].map(function(f){return '<option value="'+f[0]+'"'+(freq===f[0]?' selected':'')+'>'+f[1]+'</option>';}).join('');
+    var dayOpts=DAYS.map(function(d,i){return '<option value="'+i+'"'+(dow===i?' selected':'')+'>'+d+'</option>';}).join('');
+    var domOpts='';for(var di=1;di<=31;di++)domOpts+='<option value="'+di+'"'+(dom===di?' selected':'')+'>'+di+'</option>';
+    var weeklyVis=freq==='weekly'?'':'display:none';
+    var monthlyVis=freq==='monthly'?'':'display:none';
+    var timeVis=(freq==='daily'||freq==='weekly'||freq==='monthly')?'':'display:none';
+    var ruleSections=Array.isArray(rule.sections)?rule.sections:_MAIL_SECTIONS.map(function(s){return s.id;});
+    var sectionsHtml=_MAIL_SECTIONS.map(function(s){
+      var checked=(rule.sections==='all'||(Array.isArray(rule.sections)&&rule.sections.indexOf(s.id)>=0))?'checked':'';
+      return '<label style="display:inline-flex;align-items:center;gap:4px;margin-left:10px;margin-bottom:3px;font-size:11px;cursor:pointer"><input type="checkbox" data-rule-section-idx="'+idx+'" data-section-id="'+s.id+'" '+checked+'> '+esc(s.label)+'</label>';
     }).join('');
     return '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;margin-bottom:8px">'+
-      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:13px;margin-bottom:6px">'+
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700;font-size:13px;margin-bottom:8px">'+
         '<input type="checkbox" data-rule-enabled="'+idx+'" '+(rule.enabled?'checked':'')+'> '+esc(rule.label)+
       '</label>'+
-      '<div style="margin-top:4px;font-size:11px;color:var(--t3)">תפקידים שמקבלים:</div>'+
-      '<div style="margin-top:4px">'+rolesOpts+'</div>'+
+      '<div style="margin-bottom:6px"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">תפקידים שמקבלים:</div>'+rolesOpts+'</div>'+
+      '<div style="margin-bottom:6px"><div style="font-size:11px;color:var(--t3);margin-bottom:3px">תוכן הדוח:</div>'+sectionsHtml+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px">'+
+        '<label style="font-size:11px;color:var(--t3)">תדירות:</label>'+
+        '<select data-rule-freq="'+idx+'" onchange="_mailPrefsCollect();_mailPrefsRender()" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:11px">'+freqOpts+'</select>'+
+        '<span data-rule-weekly="'+idx+'" style="'+weeklyVis+'"><label style="font-size:11px;color:var(--t3);margin-left:4px">יום:</label><select data-rule-dow="'+idx+'" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:11px">'+dayOpts+'</select></span>'+
+        '<span data-rule-monthly="'+idx+'" style="'+monthlyVis+'"><label style="font-size:11px;color:var(--t3);margin-left:4px">בחודש:</label><select data-rule-dom="'+idx+'" style="padding:4px;border:1px solid #ccc;border-radius:4px;font-size:11px">'+domOpts+'</select></span>'+
+        '<span data-rule-time-wrap="'+idx+'" style="'+timeVis+'"><label style="font-size:11px;color:var(--t3);margin-left:4px">בשעה:</label><input type="time" data-rule-time="'+idx+'" value="'+esc(time)+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:11px;direction:ltr"></span>'+
+      '</div>'+
+      (rule.last_sent?'<div style="font-size:10px;color:var(--t3);margin-top:4px">נשלח לאחרונה: '+esc(new Date(rule.last_sent).toLocaleString('he-IL'))+'</div>':'')+
     '</div>';
   }).join('');
   body.innerHTML=
     '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 10px;font-size:11px;color:#92400e;margin-bottom:12px">'+
-      '⚙️ <strong>איך זה עובד:</strong> הגדירי תפקידים עם מיילים, ואז לכל אוטומציה בחרי איזה תפקידים מקבלים מייל. אפשר להוסיף תפקידים מותאמים בעתיד.'+
+      '⚙️ <strong>שליטה מלאה דרך האפליקציה:</strong> הגדירי תפקידים, מיילים, תוכן הדוח, תדירות וזמן — הכל כאן. ה-cron האוטומטי פועל כשהאפליקציה פתוחה (פאזה הבאה: cron בענן Cloudflare).'+
     '</div>'+
-    '<h3 style="font-size:14px;margin:12px 0 8px;color:var(--red)">תפקידים וכתובות</h3>'+
-    rolesHtml+
-    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">אוטומציות</h3>'+
+    '<h3 style="font-size:14px;margin:12px 0 8px;color:var(--red)">👥 תפקידים וכתובות</h3>'+
+    rolesHtml+addRoleHtml+
+    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">📨 אוטומציות (תוכן + תדירות + שעה)</h3>'+
     rulesHtml+
-    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">בדיקה</h3>'+
+    '<h3 style="font-size:14px;margin:14px 0 8px;color:var(--red)">🧪 בדיקה ידנית</h3>'+
     '<div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:10px">'+
-      '<div style="font-size:12px;color:#166534;margin-bottom:6px">שלחי דוח עכשיו לפי כלל מסוים — לבדיקות:</div>'+
+      '<div style="font-size:12px;color:#166534;margin-bottom:6px">שלחי דוח עכשיו לפי כלל מסוים:</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
         '<select id="mail-prefs-test-rule" style="padding:6px;border:1px solid #ccc;border-radius:6px;font-size:12px">'+
           p.rules.map(function(r){return '<option value="'+r.id+'">'+esc(r.label)+'</option>';}).join('')+
@@ -13144,6 +13228,28 @@ function _mailPrefsRender(){
       '</div>'+
     '</div>';
 }
+window._mailPrefsAddRole=function(){
+  var inp=g('mail-new-role-label');
+  if(!inp)return;
+  var label=String(inp.value||'').trim();
+  if(!label){toast('הזיני שם תפקיד');return;}
+  _mailPrefsCollect();
+  var p=_mailPrefs();
+  var id='custom_'+Date.now().toString(36);
+  p.roles.push({id:id,label:label,emails:[],custom:true});
+  _mailPrefsSave(p);_mailPrefsRender();
+};
+window._mailPrefsRemoveRole=function(idx){
+  if(!confirm('להסיר את התפקיד? הוא יוסר גם מכל הכללים.'))return;
+  _mailPrefsCollect();
+  var p=_mailPrefs();
+  var role=p.roles[idx];if(!role)return;
+  if(!role.custom){toast('לא ניתן להסיר תפקיד מערכת');return;}
+  p.roles.splice(idx,1);
+  // Strip the role id from any rule's `to`.
+  p.rules.forEach(function(r){r.to=(r.to||[]).filter(function(x){return x!==role.id;});});
+  _mailPrefsSave(p);_mailPrefsRender();
+};
 window._mailPrefsAddEmail=function(roleIdx){
   _mailPrefsCollect();
   var p=_mailPrefs();if(!p.roles[roleIdx])return;
@@ -13174,6 +13280,32 @@ function _mailPrefsCollect(){
     if(inp.checked&&!has)to.push(rid);
     if(!inp.checked&&has)to.splice(to.indexOf(rid),1);
     p.rules[i].to=to;
+  });
+  // Schedule controls: freq, time, dow, dom
+  document.querySelectorAll('#mail-prefs-body select[data-rule-freq]').forEach(function(sel){
+    var i=parseInt(sel.dataset.ruleFreq,10);if(p.rules[i])p.rules[i].freq=sel.value;
+  });
+  document.querySelectorAll('#mail-prefs-body input[data-rule-time]').forEach(function(inp){
+    var i=parseInt(inp.dataset.ruleTime,10);if(p.rules[i])p.rules[i].time=inp.value||'07:00';
+  });
+  document.querySelectorAll('#mail-prefs-body select[data-rule-dow]').forEach(function(sel){
+    var i=parseInt(sel.dataset.ruleDow,10);if(p.rules[i])p.rules[i].dow=parseInt(sel.value,10);
+  });
+  document.querySelectorAll('#mail-prefs-body select[data-rule-dom]').forEach(function(sel){
+    var i=parseInt(sel.dataset.ruleDom,10);if(p.rules[i])p.rules[i].dom=parseInt(sel.value,10);
+  });
+  // Section selection per rule
+  var sectionsByRule={};
+  document.querySelectorAll('#mail-prefs-body input[data-rule-section-idx]').forEach(function(inp){
+    var i=parseInt(inp.dataset.ruleSectionIdx,10),sid=inp.dataset.sectionId;
+    if(!sectionsByRule[i])sectionsByRule[i]=[];
+    if(inp.checked)sectionsByRule[i].push(sid);
+  });
+  Object.keys(sectionsByRule).forEach(function(i){
+    if(!p.rules[i])return;
+    var sel=sectionsByRule[i];
+    // Store as 'all' if every section is selected (cleaner than full array).
+    p.rules[i].sections=(sel.length===_MAIL_SECTIONS.length)?'all':sel;
   });
   _mailPrefsSave(p);
   return p;
