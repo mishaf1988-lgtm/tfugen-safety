@@ -122,18 +122,29 @@ body.hc .bell:hover,body.hc .bell:active{transform:none}
 @media(prefers-reduced-motion:reduce){#my-tasks-badge,#bn-tasks-badge{animation:none}}
 body.hc #my-tasks-badge,body.hc #bn-tasks-badge{animation:none;box-shadow:0 0 0 2px #000!important}
 
-/* ---- BOTTOM NAV ---- */
-/* bnav moved from bottom to TOP (just below the 60px topbar) — iOS
-   Safari's URL bar makes position:fixed bottom:0 unreliable. Top
-   placement sidesteps the entire visual-viewport issue. */
-.bnav{position:fixed!important;top:60px!important;left:0!important;right:0!important;width:100vw!important;height:auto;min-height:56px;background:#fff!important;border-bottom:2px solid var(--red);border-top:1px solid var(--border);z-index:60!important;display:flex!important;box-shadow:0 2px 8px rgba(0,0,0,.08);visibility:visible!important;opacity:1!important}
-.bnav::-webkit-scrollbar{display:none}
-.bn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;font-size:12px;font-weight:700;color:var(--t3);background:none;border:none;border-top:3px solid transparent;min-height:66px;position:relative;transition:color .18s ease,background .18s ease}
-.bn.on{color:var(--red);border-top-color:var(--red)}
-.bn.on::after{content:"";position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:18px;height:3px;border-radius:2px;background:var(--red);opacity:.7}
-@media(hover:hover){.bn:hover{background:#fafafa;color:var(--t2)}.bn.on:hover{color:var(--red);background:rgba(204,31,31,.04)}}
-body.hc .bn.on::after{opacity:1}
-.bn .ic{font-size:22px;line-height:1}
+/* ---- BOTTOM NAV — DEPRECATED ---- */
+/* The bnav (4-button bottom navigation bar) was unreliable on iOS Safari
+   regardless of position (bottom URL-bar issue, top positioning showed
+   intermittently). Replaced by a dedicated `pg-menu` launcher page that
+   shows on app entry. The bnav HTML is kept only because some legacy code
+   paths reference its `.bn` buttons for active-state highlighting; the
+   element itself is hidden so it never paints. */
+.bnav{display:none!important}
+.bn{display:none!important}
+
+/* ---- MENU PAGE — primary launcher (replaces bnav) ---- */
+.menu-grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:680px;margin:0 auto;padding:8px 0}
+@media(min-width:640px){.menu-grid{grid-template-columns:1fr 1fr;gap:16px}}
+.menu-tile{display:flex;align-items:center;gap:14px;padding:20px 18px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 2px 6px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);cursor:pointer;text-align:right;font-family:inherit;color:var(--tx);min-height:120px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;width:100%}
+.menu-tile:active{transform:scale(.985);background:#fafafa}
+@media(hover:hover){.menu-tile:hover{border-color:rgba(204,31,31,.4);box-shadow:0 8px 22px rgba(15,23,42,.08);transform:translateY(-2px)}}
+body.hc .menu-tile:hover,body.hc .menu-tile:active{transform:none;box-shadow:var(--sh)}
+.menu-tile .mt-ic{font-size:38px;line-height:1;flex-shrink:0;width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:14px;border:1px solid #fecaca}
+.menu-tile .mt-body{flex:1;min-width:0}
+.menu-tile .mt-title{font-size:20px;font-weight:800;color:var(--tx);line-height:1.2;margin-bottom:4px}
+.menu-tile .mt-sub{font-size:12px;color:var(--t3);line-height:1.4}
+.menu-tile .mt-arrow{font-size:32px;color:var(--t3);flex-shrink:0;font-weight:300;line-height:1}
+body.hc .menu-tile .mt-ic{background:#fff;border:2px solid #cc1f1f}
 
 /* Bottom sheet modal (slides up from bottom, big tap targets) */
 .modal.sheet-modal{position:fixed!important;bottom:0!important;top:auto!important;left:0!important;right:0!important;transform:none!important;width:100vw!important;max-width:none!important;max-height:85vh!important;border-radius:18px 18px 0 0!important;padding:18px!important;padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;margin:0!important}
@@ -149,16 +160,9 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
 .bn .ic{font-size:22px;margin-bottom:2px}
 
 /* ---- MAIN ---- */
-/* `.main` previously had `height:100dvh; overflow-y:auto` which makes it
-   its own scroll container. On iOS Safari with URL+tab bars showing
-   that creates a stacking context that visually clips the position:fixed
-   bnav (sibling of .main) below the visual viewport, even though
-   bottom:0 is correct in layout coordinates. The user reported that
-   tapping anything makes the bnav reappear — that's Safari recalc'ing
-   the viewport. Fix: let .main flow naturally and use document scroll. */
-/* Top padding now accounts for: 60px topbar + 56px bnav + 14px spacing
-   = 130px. Bottom padding is safe-area only (no fixed bnav at bottom). */
-.main{padding:130px 12px calc(40px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
+/* No fixed bnav anymore (replaced by `pg-menu` launcher). Top padding only
+   needs to clear the 60px topbar + a small visual gap. */
+.main{padding:74px 12px calc(40px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
 /* Mobile: ensure cards/page-title rows wrap instead of overflowing.
    Catches pages whose toolbar (page-title + action buttons) was wider
    than the phone viewport — content was visually shifting right and
@@ -173,11 +177,6 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
      this the user couldn't see the rightmost columns at all. */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
   .tbl-wrap table{min-width:max-content}
-  /* Force bnav visibility — some page-level CSS or JS could otherwise
-     occlude it. Bumping z-index above the FABs (49) and any overlay,
-     and setting the bottom slot to env(safe-area) so iOS's home-bar
-     doesn't cover it. */
-  .bnav{z-index:60!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important}
 }
 
 /* ---- PAGES ---- */
@@ -571,6 +570,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="topbar">
   <div class="topbar-actions">
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
+    <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;" onclick="goPage('menu')" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;">&#9776;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
     <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
@@ -591,6 +591,44 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <main class="main" id="main" role="main">
 
 <!-- PAGES -->
+<!-- MENU — primary launcher (replaces bnav). 4 big tiles, no fixed positioning, scrolls naturally with the page. -->
+<div id="pg-menu" class="page">
+  <div class="menu-grid">
+    <button class="menu-tile" onclick="goPage('dash')" aria-label="&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; &#1512;&#1488;&#1513;&#1497;">
+      <div class="mt-ic">&#127968;</div>
+      <div class="mt-body">
+        <div class="mt-title">&#1512;&#1488;&#1513;&#1497;</div>
+        <div class="mt-sub">&#1505;&#1496;&#1496;&#1493;&#1505; &#1493;&#1505;&#1511;&#1497;&#1512;&#1492; &#1499;&#1500;&#1500;&#1497;&#1514; &#1513;&#1500; &#1492;&#1502;&#1506;&#1512;&#1499;&#1514;</div>
+      </div>
+      <div class="mt-arrow">&#8249;</div>
+    </button>
+    <button class="menu-tile" onclick="goPage('tasks')" aria-label="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;">
+      <div class="mt-ic">&#9989;</div>
+      <div class="mt-body">
+        <div class="mt-title">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</div>
+        <div class="mt-sub">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;, &#1497;&#1510;&#1497;&#1512;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
+      </div>
+      <div class="mt-arrow">&#8249;</div>
+    </button>
+    <button class="menu-tile" onclick="openModal('m-reports-sheet')" aria-label="&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;">
+      <div class="mt-ic">&#9888;</div>
+      <div class="mt-body">
+        <div class="mt-title">&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</div>
+        <div class="mt-sub">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;, &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;, &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;, &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
+      </div>
+      <div class="mt-arrow">&#8249;</div>
+    </button>
+    <button class="menu-tile" onclick="openModal('m-modules-sheet')" aria-label="&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;">
+      <div class="mt-ic">&#128203;</div>
+      <div class="mt-body">
+        <div class="mt-title">&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
+        <div class="mt-sub">PPE, &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;, &#1495;&#1493;&#1511;&#1497;&#1501;, &#1492;&#1491;&#1512;&#1499;&#1493;&#1514; &#1493;&#1499;&#1500; &#1492;&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
+      </div>
+      <div class="mt-arrow">&#8249;</div>
+    </button>
+  </div>
+</div>
+
 <!-- EMPLOYEE HOME (Stage A — quick report buttons) -->
 <div id="pg-emp-home" class="page">
   <div class="emp-hero">
@@ -1601,7 +1639,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="field" style="margin-bottom:10px">
     <label style="font-size:11px;color:var(--t3);font-weight:600">&#1500;&#1488;&#1497;&#1494;&#1492; &#1506;&#1502;&#1493;&#1491; &#1500;&#1492;&#1490;&#1497;&#1506; &#1500;&#1488;&#1495;&#1512; &#1499;&#1504;&#1497;&#1505;&#1492;</label>
-    <select id="mvis-default-page" style="font-size:14px"><option value="dash">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</option><option value="ncr">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</option><option value="tasks">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</option><option value="eqi">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</option><option value="nm">&#1499;&#1502;&#1506;&#1496;-&#1504;&#1508;&#1490;&#1506;</option><option value="cal">&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</option></select>
+    <select id="mvis-default-page" style="font-size:14px"><option value="menu">&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;</option><option value="dash">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</option><option value="ncr">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</option><option value="tasks">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</option><option value="eqi">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</option><option value="nm">&#1499;&#1502;&#1506;&#1496;-&#1504;&#1508;&#1490;&#1506;</option><option value="cal">&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</option></select>
   </div>
   <label class="chk-item" style="margin-bottom:10px">
     <input type="checkbox" id="mvis-hc" style="margin:0">
@@ -3123,7 +3161,7 @@ window._modVisOpen=function(){
     return '<label class="chk-item" style="cursor:pointer"><input type="checkbox" data-modkey="'+esc(it.key)+'"'+(on?' checked':'')+' style="margin:0"><span style="flex:1;font-size:12px">'+esc(it.label)+'</span></label>';
   }).join('');
   // Default landing page + hc
-  var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'dash';
+  var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'menu';
   var hc=document.getElementById('mvis-hc');if(hc)hc.checked=document.body.classList.contains('hc');
   openModal('m-modules-vis');
 };
@@ -3139,7 +3177,7 @@ window._modVisSaveFromUI=function(){
   });
   p.modulesHidden=hidden;
   // Default page
-  var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'dash';
+  var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'menu';
   // High contrast
   var hc=document.getElementById('mvis-hc');if(hc)p.hc=!!hc.checked;
   _appPrefsSet(p);
@@ -3149,9 +3187,12 @@ window._modVisSaveFromUI=function(){
 // Apply on first paint and after role gates run.
 document.addEventListener('DOMContentLoaded',function(){setTimeout(_appPrefsApply,120);setTimeout(_appPrefsApply,800);});
 
-// Default landing page hook — wraps goPage('dash') call on initial app load.
+// Default landing page hook — wraps the initial goPage call. Defaults to
+// 'menu' (the launcher) so users land on a stable, scroll-only screen
+// instead of fighting iOS Safari fixed-positioning. Users who prefer the
+// dashboard can change this in settings (Modules → Visibility).
 window._appPrefsLandingPage=function(){
-  var p=_appPrefs();return p.defaultPage||'dash';
+  var p=_appPrefs();return p.defaultPage||'menu';
 };
 
 function rPage(){
@@ -15292,8 +15333,9 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
           if(sessionFresh){
             _g(p);
           }else{
-            try{history.replaceState({page:'dash'},'','#dash');}catch(e){}
-            _g('dash');
+            var landing=(typeof _appPrefsLandingPage==='function')?_appPrefsLandingPage():'menu';
+            try{history.replaceState({page:landing},'','#'+landing);}catch(e){}
+            _g(landing);
           }
         }
         // Critical: do NOT set tfgn_session_open here. The flag must
