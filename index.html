@@ -13199,8 +13199,73 @@ function _backupSyncFromStorage(){
   }).catch(function(e){
     console.warn('[backup-sync] failed:',e&&e.message);
     return {error:String(e&&e.message||e)};
+  }).then(function(syncResult){
+    // Prune OneDrive after every sync so that even if the Worker hasn't
+    // pruned (or isn't deployed yet), the OneDrive folder stays small.
+    return _backupPruneOneDrive(15).then(function(prune){
+      if(prune&&prune.pruned)console.log('[backup-prune] removed '+prune.pruned+' old OneDrive backups');
+      syncResult.pruned=prune;
+      return syncResult;
+    },function(){return syncResult;});
   }).then(function(result){_BACKUP_SYNC_RUNNING=false;return result;});
 }
+// Prune OneDrive backup folders. Keeps the latest `keep` items in
+// /_Backups/cron/ (cron-side files) AND in /_Backups/ (browser-side
+// timestamp folders). Items are sorted by name desc — names embed the
+// ISO timestamp so lexical = chronological. Deletes oldest beyond N.
+function _backupPruneOneDrive(keep){
+  if(typeof keep!=='number'||keep<1)keep=15;
+  return _odEnsureToken().then(function(tok){
+    function listFolder(path){
+      return fetch('https://graph.microsoft.com/v1.0/me/drive/special/approot:'+path+':/children?$select=id,name,folder,file&$top=200',{
+        headers:{'Authorization':'Bearer '+tok}
+      }).then(function(r){
+        if(r.status===404)return {value:[]};
+        if(!r.ok)return {value:[]};
+        return r.json();
+      });
+    }
+    function deleteItem(id){
+      return fetch('https://graph.microsoft.com/v1.0/me/drive/items/'+id,{
+        method:'DELETE',
+        headers:{'Authorization':'Bearer '+tok}
+      });
+    }
+    return Promise.all([listFolder('/_Backups/cron'),listFolder('/_Backups')]).then(function(both){
+      var cronFiles=((both[0]&&both[0].value)||[]).filter(function(it){return it.file&&it.name;});
+      // Top-level _Backups contains: timestamp folders (browser-side) +
+      // the `cron` subfolder (don't touch). Filter for folders only.
+      var browserFolders=((both[1]&&both[1].value)||[]).filter(function(it){return it.folder&&it.name&&it.name!=='cron';});
+      cronFiles.sort(function(a,b){return b.name.localeCompare(a.name);});
+      browserFolders.sort(function(a,b){return b.name.localeCompare(a.name);});
+      var cronToDelete=cronFiles.slice(keep);
+      var browserToDelete=browserFolders.slice(keep);
+      var totalDeleted=0;
+      function deleteAll(items){
+        return items.reduce(function(chain,it){
+          return chain.then(function(){
+            return deleteItem(it.id).then(function(){totalDeleted++;}).catch(function(e){console.warn('[prune] delete failed for',it.name,e&&e.message);});
+          });
+        },Promise.resolve());
+      }
+      return deleteAll(cronToDelete).then(function(){return deleteAll(browserToDelete);}).then(function(){
+        return {pruned:totalDeleted,cron_kept:Math.min(cronFiles.length,keep),browser_kept:Math.min(browserFolders.length,keep)};
+      });
+    });
+  });
+}
+// After the manual/auto local backup we also want to prune. Wrap the
+// existing _backupRunNow promise.
+(function(){
+  var orig=window._backupRunNow;
+  if(!orig)return;
+  window._backupRunNow=function(opts){
+    return orig(opts).then(function(r){
+      _backupPruneOneDrive(15).catch(function(){});
+      return r;
+    });
+  };
+})();
 window._backupSyncNow=function(){
   toast('🔄 מסנכרן גיבויים מהענן ל-OneDrive…');
   _backupSyncFromStorage().then(function(r){
