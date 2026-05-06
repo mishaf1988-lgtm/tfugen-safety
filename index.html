@@ -2826,6 +2826,20 @@ function _obSanitize(){
 // layout and visual viewports, and shift the bnav up by that amount.
 // Always keeps the bnav at the bottom of the VISIBLE area regardless
 // of URL-bar state.
+// Hidden probe — measures CSS 100vh (== layout viewport height) which
+// JS otherwise has no reliable way to read (window.innerHeight returns
+// the VISUAL viewport in iOS Safari, not the layout one).
+function _layoutViewportHeight(){
+  var probe=document.getElementById('__vh_probe');
+  if(!probe){
+    probe=document.createElement('div');
+    probe.id='__vh_probe';
+    probe.setAttribute('aria-hidden','true');
+    probe.style.cssText='position:fixed;top:0;left:-9999px;width:1px;height:100vh;visibility:hidden;pointer-events:none;contain:strict';
+    (document.body||document.documentElement).appendChild(probe);
+  }
+  return probe.offsetHeight;
+}
 function _bnavPosition(){
   var bnav=document.getElementById('bnav');
   if(!bnav)return;
@@ -2839,12 +2853,16 @@ function _bnavPosition(){
   bnav.style.display='flex';
   bnav.style.visibility='visible';
   bnav.style.opacity='1';
-  // Compute the gap between layout-viewport bottom and visual-viewport
-  // bottom. If the user is on iOS Safari with URL bar showing, this is
-  // the URL-bar's height. Browsers without VisualViewport: gap = 0.
-  var vv=window.visualViewport;
-  var layoutH=window.innerHeight||document.documentElement.clientHeight;
-  var visualBottom=vv?(vv.offsetTop+vv.height):layoutH;
+  // Compute gap between LAYOUT viewport (CSS 100vh) and VISUAL viewport.
+  // window.innerHeight == visual viewport in iOS Safari (the value
+  // returned changes as the URL bar shows/hides). The probe gives us
+  // the actual 100vh layout-viewport height, regardless of URL-bar
+  // state. The gap is what we shift the bnav up by, so it sits at the
+  // bottom of the VISIBLE area instead of behind Safari's URL bar.
+  var layoutH=_layoutViewportHeight();
+  var visualH=(window.visualViewport&&window.visualViewport.height)||window.innerHeight||layoutH;
+  var visualOffsetTop=(window.visualViewport&&window.visualViewport.offsetTop)||0;
+  var visualBottom=visualOffsetTop+visualH;
   var gap=Math.max(0,Math.round(layoutH-visualBottom));
   bnav.style.bottom=gap+'px';
 }
