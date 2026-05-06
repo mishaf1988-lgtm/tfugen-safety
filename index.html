@@ -29,6 +29,13 @@
   --blue:#2176ae;--sh:0 1px 4px rgba(0,0,0,.08);
   --ac:var(--red);--su:#f9fafb
 }
+/* a11y: enforce minimum touch target size for icon-only close buttons.
+   WCAG 2.5.5 recommends 44×44 but 32×32 is the agreed minimum. */
+.close-btn,button.close-btn{min-width:36px;min-height:36px;padding:6px}
+/* a11y: lift "very small" text (10-11px) to a readable floor. The
+   audit found 91 elements <11px. Most are intentional for chip/badge
+   labels but at least give them 11px minimum so they're not unreadable. */
+.b,.kpi-sub,small,.muted-xs{font-size:max(11px,inherit)}
 /* High-contrast mode — for outdoor factory light. Toggled via body.hc */
 body.hc{
   --bg:#fff;--card:#fff;--border:#555;--su:#f0f0f0;
@@ -676,7 +683,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="exp-tab-30" onclick="expFilter('30')">&le;30&#1497;</button>
     <button class="btn btn-s" id="exp-tab-90" onclick="expFilter('90')">&le;90&#1497;</button>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1508;&#1512;&#1497;&#1496;</th><th>&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th>&#1502;&#1493;&#1491;&#1493;&#1500;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1496;.</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1508;&#1512;&#1497;&#1496;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1493;&#1491;&#1493;&#1500;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1496;.</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1493;&#1499;&#1503; &#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</div>
 </div>
 
@@ -712,27 +719,27 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="eqi-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th onclick="eqiSort('code')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;">&#1511;&#1493;&#1491; <span id="eqi-sort-code"></span></th>
-    <th onclick="eqiSort('n')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1513;&#1501;">&#1514;&#1497;&#1488;&#1493;&#1512; <span id="eqi-sort-n"></span></th>
-    <th onclick="eqiSort('vendor')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1508;&#1511;">&#1505;&#1508;&#1511; <span id="eqi-sort-vendor"></span></th>
-    <th onclick="eqiSort('loc')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;">&#1488;&#1494;&#1493;&#1512; <span id="eqi-sort-loc"></span></th>
-    <th onclick="eqiSort('d')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;">&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; <span id="eqi-sort-d"></span></th>
-    <th onclick="eqiSort('e')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1514;&#1493;&#1511;&#1507;">&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488; <span id="eqi-sort-e">&#8593;</span></th>
-    <th onclick="eqiSort('s')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;">&#1505;&#1496;. <span id="eqi-sort-s"></span></th>
-    <th></th>
+    <th onclick="eqiSort('code')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;" scope="col">&#1511;&#1493;&#1491; <span id="eqi-sort-code"></span></th>
+    <th onclick="eqiSort('n')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1513;&#1501;" scope="col">&#1514;&#1497;&#1488;&#1493;&#1512; <span id="eqi-sort-n"></span></th>
+    <th onclick="eqiSort('vendor')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1508;&#1511;" scope="col">&#1505;&#1508;&#1511; <span id="eqi-sort-vendor"></span></th>
+    <th onclick="eqiSort('loc')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;" scope="col">&#1488;&#1494;&#1493;&#1512; <span id="eqi-sort-loc"></span></th>
+    <th onclick="eqiSort('d')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;" scope="col">&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; <span id="eqi-sort-d"></span></th>
+    <th onclick="eqiSort('e')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1514;&#1493;&#1511;&#1507;" scope="col">&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488; <span id="eqi-sort-e">&#8593;</span></th>
+    <th onclick="eqiSort('s')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;" scope="col">&#1505;&#1496;. <span id="eqi-sort-s"></span></th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-eqi"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</div>
 </div>
 
 <div id="pg-docs" class="page">
   <div class="row"><div class="page-title">&#1502;&#1505;&#1502;&#1499;&#1497; <span>ISO</span></div><button class="btn btn-p" onclick="openModal('m-doc')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1511;&#1496;&#1490;.</th><th>&#1490;&#1512;&#1505;&#1492;</th><th>&#1488;&#1495;&#1512;&#1488;&#1497;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-docs"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1511;&#1496;&#1490;.</th><th scope="col">&#1490;&#1512;&#1505;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-docs"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-aud" class="page">
   <div class="row"><div class="page-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; <span>&#1508;&#1504;&#1497;&#1502;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-aud')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1504;&#1493;&#1513;&#1488;</th><th>&#1502;&#1489;&#1511;&#1512;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-aud"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1502;&#1489;&#1511;&#1512;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-aud"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -756,13 +763,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="nm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="nm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th>&#1488;&#1494;&#1493;&#1512;</th>
-    <th>&#1514;&#1497;&#1488;&#1493;&#1512;</th>
-    <th>&#1502;&#1491;&#1493;&#1493;&#1495;</th>
-    <th>&#1495;&#1493;&#1502;&#1512;&#1492;</th>
-    <th>&#1505;&#1496;.</th>
-    <th>&#128247;</th><th></th>
+    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th scope="col">&#1488;&#1494;&#1493;&#1512;</th>
+    <th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
+    <th scope="col">&#1502;&#1491;&#1493;&#1493;&#1495;</th>
+    <th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th>
+    <th scope="col">&#1505;&#1496;.</th>
+    <th scope="col">&#128247;</th><th scope="col"></th>
   </tr></thead><tbody id="tb-nm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
 </div>
@@ -775,13 +782,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
-    <th>&#1513;&#1501; &#1502;&#1500;&#1488;</th>
-    <th>&#1514;&#1508;&#1511;&#1497;&#1491;</th>
-    <th>&#1502;&#1495;&#1500;&#1511;&#1492;</th>
-    <th>&#1496;&#1500;&#1508;&#1493;&#1503;</th>
-    <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-    <th></th>
+    <th scope="col">&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th scope="col">&#1513;&#1501; &#1502;&#1500;&#1488;</th>
+    <th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th>
+    <th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th>
+    <th scope="col">&#1496;&#1500;&#1508;&#1493;&#1503;</th>
+    <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-users"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
 </div>
@@ -909,14 +916,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="tsk-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="tsk-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
-    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
-    <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-    <th>&#1497;&#1506;&#1491;</th>
-    <th>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</th>
-    <th>&#1502;&#1511;&#1493;&#1512;</th>
-    <th>&#1505;&#1496;.</th>
-    <th></th>
+    <th style="width:32px;text-align:center" scope="col"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
+    <th scope="col">&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+    <th scope="col">&#1497;&#1506;&#1491;</th>
+    <th scope="col">&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</th>
+    <th scope="col">&#1502;&#1511;&#1493;&#1512;</th>
+    <th scope="col">&#1505;&#1496;.</th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-tasks"></tbody></table><div id="tb-tasks-cards"></div></div></div>
   <div id="tsk-bulk-bar" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#1a3a5a;border:1px solid #4a9adf;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:50">
     <span style="color:#aaccee;font-size:13px;font-weight:700"><span id="tsk-bulk-count">0</span> &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1504;&#1489;&#1495;&#1512;&#1493;</span>
@@ -942,14 +949,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title">&#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;</div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-      <th>&#1502;&#1508;&#1511;&#1495;</th>
-      <th>&#1488;&#1513;</th>
-      <th>&#1495;&#1497;&#1512;&#1493;&#1501;</th>
-      <th>PPE</th>
-      <th>&#1505;&#1489;&#1497;&#1489;&#1492;</th>
-      <th>&#1505;&#1496;.</th>
-      <th></th>
+      <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+      <th scope="col">&#1502;&#1508;&#1511;&#1495;</th>
+      <th scope="col">&#1488;&#1513;</th>
+      <th scope="col">&#1495;&#1497;&#1512;&#1493;&#1501;</th>
+      <th scope="col">PPE</th>
+      <th scope="col">&#1505;&#1489;&#1497;&#1489;&#1492;</th>
+      <th scope="col">&#1505;&#1496;.</th>
+      <th scope="col"></th>
     </tr></thead><tbody id="tb-round"></tbody></table></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
@@ -962,12 +969,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th>&#1504;&#1493;&#1513;&#1488;</th>
-    <th>&#1502;&#1506;&#1489;&#1497;&#1512;</th>
-    <th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
-    <th>&#1505;&#1496;.</th>
-    <th></th>
+    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th scope="col">&#1504;&#1493;&#1513;&#1488;</th>
+    <th scope="col">&#1502;&#1506;&#1489;&#1497;&#1512;</th>
+    <th scope="col">&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
+    <th scope="col">&#1505;&#1496;.</th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-toolbox"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
 </div>
@@ -994,15 +1001,15 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-s btn-sm" id="easp-rv-tab-never" onclick="easpReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
-      <th>&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
-      <th>RPN &#1489;&#1508;&#1493;&#1506;&#1500;</th>
-      <th>RPN &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</th>
-      <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-      <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-      <th>&#1505;&#1511;&#1497;&#1512;&#1492;</th>
-      <th></th>
-      <th></th>
+      <th scope="col">&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
+      <th scope="col">&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
+      <th scope="col">RPN &#1489;&#1508;&#1493;&#1506;&#1500;</th>
+      <th scope="col">RPN &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</th>
+      <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+      <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+      <th scope="col">&#1505;&#1511;&#1497;&#1512;&#1492;</th>
+      <th scope="col"></th>
+      <th scope="col"></th>
     </tr></thead><tbody id="tb-easp"></tbody></table></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | ISO 14001:6.1.2</div>
@@ -1161,12 +1168,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="rAudit()" style="background:#3b82f6">&#8635; &#1512;&#1506;&#1504;&#1503;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th>&#1494;&#1502;&#1503;</th>
-    <th>&#1502;&#1513;&#1514;&#1502;&#1513;</th>
-    <th>&#1508;&#1506;&#1493;&#1500;&#1492;</th>
-    <th>&#1496;&#1489;&#1500;&#1492;</th>
-    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
-    <th></th>
+    <th scope="col">&#1494;&#1502;&#1503;</th>
+    <th scope="col">&#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th scope="col">&#1508;&#1506;&#1493;&#1500;&#1492;</th>
+    <th scope="col">&#1496;&#1489;&#1500;&#1492;</th>
+    <th scope="col">&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-audit"><tr><td colspan="6" class="et">&#1496;&#1493;&#1506;&#1503;...</td></tr></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1497;&#1493;&#1502;&#1503; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</div>
 </div>
@@ -1198,28 +1205,28 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="ncr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
-    <th>&#1502;&#1505;&#1508;&#1512;</th>
-    <th>&#1505;&#1493;&#1490;</th>
-    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th>&#1502;&#1497;&#1511;&#1493;&#1501;</th>
-    <th style="min-width:200px">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
-    <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-    <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-    <th>&#1497;&#1506;&#1491; &#1505;&#1490;&#1497;&#1512;&#1492;</th>
-    <th></th>
+    <th scope="col">&#1502;&#1505;&#1508;&#1512;</th>
+    <th scope="col">&#1505;&#1493;&#1490;</th>
+    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th>
+    <th style="min-width:200px" scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
+    <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+    <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+    <th scope="col">&#1497;&#1506;&#1491; &#1505;&#1490;&#1497;&#1512;&#1492;</th>
+    <th scope="col"></th>
   </tr></thead><tbody id="tb-ncr"></tbody></table></div>
 
 </div>
 <div id="pg-inc" class="page">
   <div class="row"><div class="page-title">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openNewIncModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div id="inc-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1514;&#1497;&#1488;&#1493;&#1512;</th><th>&#1505;&#1493;&#1490;</th><th>&#1495;&#1493;&#1502;&#1512;&#1492;</th><th>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-tr" class="page">
   <div class="row"><div class="page-title">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-tr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1506;&#1493;&#1489;&#1491;</th><th>&#1492;&#1491;&#1512;&#1499;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1233,7 +1240,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </div>
   <div id="rsk-view-list">
-    <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>P</th><th>S</th><th>RPN</th><th>&#1512;&#1502;&#1492;</th><th></th><th></th></tr></thead><tbody id="tb-rsk"></tbody></table></div></div>
+    <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1514;&#1495;&#1493;&#1501;</th><th scope="col">P</th><th scope="col">S</th><th scope="col">RPN</th><th scope="col">&#1512;&#1502;&#1492;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-rsk"></tbody></table></div></div>
   </div>
   <div id="rsk-view-mat" style="display:none">
     <div class="card">
@@ -1246,7 +1253,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-emp" class="page">
   <div class="row"><div class="page-title">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><button class="btn btn-p" onclick="openModal('m-emp')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1514;&#1508;&#1511;&#1497;&#1491;</th><th>&#1502;&#1495;&#1500;&#1511;&#1492;</th><th>&#1496;&#1500;&#1508;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-emp"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1496;&#1500;&#1508;&#1493;&#1503;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-emp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1254,7 +1261,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1511;&#1489;&#1500;&#1503;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1513;&#1506;&#1493;&#1514;</th><th>&#1502;&#1511;&#1493;&#1501;</th><th>&#1505;&#1496;.</th><th></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1502;&#1505;'</th><th scope="col">&#1511;&#1489;&#1500;&#1503;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1513;&#1506;&#1493;&#1514;</th><th scope="col">&#1502;&#1511;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1279,7 +1286,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ppe" class="page">
   <div class="row"><div class="page-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; <span>PPE</span></div><button class="btn btn-p" onclick="openModal('m-ppe')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1493;&#1490;</th><th>&#1506;&#1493;&#1489;&#1491;</th><th>&#1502;&#1508;&#1512;&#1496;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1502;&#1510;&#1489;</th><th></th><th></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1508;&#1512;&#1496;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1502;&#1510;&#1489;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1294,7 +1301,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="_debRHearing()" style="flex:1;min-width:200px">
   </div>
   <div id="hearing-count" style="font-size:13px;color:var(--t2);margin-bottom:8px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th>&#1514;&quot;&#1494;</th><th>&#1490;&#1497;&#1500;</th><th>&#1514;&#1508;&#1511;&#1497;&#1491;</th><th>&#1502;&#1495;&#1500;&#1511;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th>&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th>&#1489;&#1493;&#1491;&#1511;</th><th></th><th></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1514;&quot;&#1494;</th><th scope="col">&#1490;&#1497;&#1500;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th scope="col">&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th scope="col">&#1489;&#1493;&#1491;&#1511;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1321,25 +1328,25 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ins" class="page">
   <div class="row"><div class="page-title">&#1505;&#1497;&#1493;&#1512;&#1497; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ins')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1488;&#1494;&#1493;&#1512;</th><th>&#1502;&#1489;&#1510;&#1506;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-ins"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1488;&#1494;&#1493;&#1512;</th><th scope="col">&#1502;&#1489;&#1510;&#1506;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ins"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-drl" class="page">
   <div class="row"><div class="page-title">&#1514;&#1512;&#1490;&#1497;&#1500;&#1497; <span>&#1495;&#1497;&#1512;&#1493;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-drl')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th><th>&#1502;&#1513;&#1498;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-drl"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th><th scope="col">&#1502;&#1513;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-drl"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-ctr" class="page">
   <div class="row"><div class="page-title">&#1511;&#1489;&#1500;&#1504;&#1497;&#1501; <span>&#1493;&#1505;&#1508;&#1511;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-ctr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</th><th>&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</th><th>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-ctr"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</th><th scope="col">&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ctr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-wst" class="page">
   <div class="row"><div class="page-title">&#1497;&#1493;&#1502;&#1503; <span>&#1508;&#1505;&#1493;&#1500;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-wst')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1493;&#1490; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1511;')</th><th>&#1511;&#1493;&#1491; &#1488;&#1513;&#1508;&#1492;</th><th>&#1499;&#1500;&#1500; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th></th><th></th></tr></thead><tbody id="tb-wst"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1511;')</th><th scope="col">&#1511;&#1493;&#1491; &#1488;&#1513;&#1508;&#1492;</th><th scope="col">&#1499;&#1500;&#1500; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-wst"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1348,13 +1355,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="hzm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="hzm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th>UN</th><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th>&#1502;&#1497;&#1511;&#1493;&#1501;</th><th>MSDS</th><th></th><th></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th scope="col">UN</th><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">MSDS</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-env" class="page">
   <div class="row"><div class="page-title">&#1504;&#1497;&#1496;&#1493;&#1512; <span>&#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</span></div><button class="btn btn-p" onclick="openModal('m-env')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</th><th>&#1502;&#1491;&#1491;</th><th>&#1514;&#1493;&#1510;&#1488;&#1492;</th><th>&#1504;&#1493;&#1512;&#1502;&#1492;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-env"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</th><th scope="col">&#1502;&#1491;&#1491;</th><th scope="col">&#1514;&#1493;&#1510;&#1488;&#1492;</th><th scope="col">&#1504;&#1493;&#1512;&#1502;&#1492;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-env"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1378,7 +1385,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s btn-sm" id="leg-rv-tab-soon" onclick="legReviewFilter('soon')">&#1505;&#1511;&#1497;&#1512;&#1492; &#1489;-30 &#1497;&#1493;&#1501;</button>
     <button class="btn btn-s btn-sm" id="leg-rv-tab-never" onclick="legReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
   </div></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505;</th><th>&#1505;&#1511;&#1497;&#1512;&#1492;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th>&#1502;&#1511;&#1493;&#1512;</th><th>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1495;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1505;&#1511;&#1497;&#1512;&#1492;</th><th scope="col">&#1506;&#1491;&#1499;&#1493;&#1503;</th><th scope="col">&#1502;&#1511;&#1493;&#1512;</th><th scope="col">&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -3902,7 +3909,7 @@ function ptwPrint(){
   parts.push('<tr><td colspan="4">\u05d0\u05de\u05e6\u05e2\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+(p.safety||'-')+'</td></tr>');
   parts.push('</table>');
   parts.push('<table>');
-  parts.push('<tr><th colspan="4">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd</th></tr>');
+  parts.push('<tr><th colspan="4" scope="col">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd</th></tr>');
   parts.push('<tr><td>\u05de\u05d1\u05e6\u05e2: '+p.sg1n+'</td><td>'+p.sg1d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('<tr><td>\u05de\u05e4\u05e7\u05d7: '+p.sg2n+'</td><td>'+p.sg2d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('<tr><td>\u05de\u05e0\u05d4\u05dc: '+p.sg3n+'</td><td>'+p.sg3d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
@@ -5124,7 +5131,7 @@ function _eqiPrintAll(){
     filterChips.map(function(c){return '<span class="filt">'+esc(c)+'</span>';}).join('')+
   '</div>'+
   '<table>'+
-    '<thead><tr><th>#</th><th>קוד</th><th>תיאור הציוד</th><th>ספק</th><th>מיקום</th><th>בדיקה אחרונה</th><th>בדיקה הבאה</th><th>מצב</th><th>סטטוס</th></tr></thead>'+
+    '<thead><tr><th scope="col">#</th><th scope="col">קוד</th><th scope="col">תיאור הציוד</th><th scope="col">ספק</th><th scope="col">מיקום</th><th scope="col">בדיקה אחרונה</th><th scope="col">בדיקה הבאה</th><th scope="col">מצב</th><th scope="col">סטטוס</th></tr></thead>'+
     '<tbody>'+bodyHtml+'</tbody>'+
   '</table>'+
   '<div class="foot">'+
@@ -6249,7 +6256,7 @@ function _eqiPdfItemRow(it,i,data){
   var noteLine=it.notes?'<div style="font-size:11px;color:#666;margin-top:2px">'+esc(it.notes)+'</div>':'';
   var candHtml='';
   if(nCands>0){
-    var thead='<tr style="background:#f1f5f9"><th style="padding:4px;text-align:right;font-size:10px;width:24px"></th><th style="padding:4px;text-align:right;font-size:10px">\u05e1\u05e4\u05e7</th><th style="padding:4px;text-align:right;font-size:10px">\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9</th><th style="padding:4px;text-align:right;font-size:10px">→ \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d3\u05e9</th></tr>';
+    var thead='<tr style="background:#f1f5f9"><th style="padding:4px;text-align:right;font-size:10px;width:24px" scope="col"></th><th style="padding:4px;text-align:right;font-size:10px" scope="col">\u05e1\u05e4\u05e7</th><th style="padding:4px;text-align:right;font-size:10px" scope="col">\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9</th><th style="padding:4px;text-align:right;font-size:10px" scope="col">→ \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d3\u05e9</th></tr>';
     var tbody=it._candidates.map(function(cnd,ci){
       var diff=_eqiPdfComputeRecDiff(cnd.rec,meta);
       var diffMark=diff.length?'<span style="color:#1d4ed8;font-weight:700"> ✱</span>':'';
@@ -6815,7 +6822,7 @@ function rCal(){
   var thisMonthStr=String(_calY)+'-'+String(_calM+1).padStart(2,'0');
   var dowNames=['\u05d0','\u05d1','\u05d2','\u05d3','\u05d4','\u05d5','\u05e9'];
   var html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px"><thead><tr>';
-  dowNames.forEach(function(n){html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;color:var(--t2)">'+n+'</th>';});
+  dowNames.forEach(function(n){html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;color:var(--t2)" scope="col">'+n+'</th>';});
   html+='</tr></thead><tbody>';
   var d=1;
   for(var w=0;w<6;w++){
@@ -7944,9 +7951,9 @@ function _rskMatrix(){
   var SEV_LBL={4:'\u05d7\u05de\u05d5\u05e8\u05d4 \u2014 \u05de\u05d5\u05d5\u05ea/\u05e0\u05db\u05d5\u05ea \u05ea\u05de\u05d9\u05d3\u05d9\u05ea',3:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea \u2014 \u05e4\u05d2\u05d9\u05e2\u05d4 \u05e8\u05e6\u05d9\u05e0\u05d9\u05ea \u05d0\u05d5 30+ \u05d9\u05de\u05d9 \u05de\u05d7\u05dc\u05d4',2:'\u05e7\u05dc\u05d4 \u2014 \u05d8\u05d9\u05e4\u05d5\u05dc \u05e8\u05e4\u05d5\u05d0\u05d9 + \u05d9\u05de\u05d9 \u05db\u05d5\u05e9\u05e8',1:'\u05e9\u05d5\u05dc\u05d9\u05ea \u2014 \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4'};
   var PRB_LBL={1:'\u05e0\u05de\u05d5\u05db\u05d4 \u05de\u05d0\u05d5\u05d3',2:'\u05e0\u05de\u05d5\u05db\u05d4',3:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',4:'\u05d2\u05d1\u05d5\u05d4\u05d4'};
   var html='<table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed"><thead><tr>';
-  html+='<th style="width:170px;padding:6px;background:#f5f7fa;color:var(--t3);font-size:10px;text-align:center">\u05d7\u05d5\u05de\u05e8\u05d4 \u2193 / \u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u2192</th>';
+  html+='<th style="width:170px;padding:6px;background:#f5f7fa;color:var(--t3);font-size:10px;text-align:center" scope="col">\u05d7\u05d5\u05de\u05e8\u05d4 \u2193 / \u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u2192</th>';
   for(var P=1;P<=4;P++){
-    html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;text-align:center;color:#1a1d23"><div>'+P+'</div><div style="font-size:9px;font-weight:400;color:var(--t3)">'+esc(PRB_LBL[P])+'</div></th>';
+    html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;text-align:center;color:#1a1d23" scope="col"><div>'+P+'</div><div style="font-size:9px;font-weight:400;color:var(--t3)">'+esc(PRB_LBL[P])+'</div></th>';
   }
   html+='</tr></thead><tbody>';
   for(var S=4;S>=1;S--){
@@ -7992,8 +7999,8 @@ function _easpMatrix(){
     grid[k].count++;
     grid[k].ids.push(r.id);
   });
-  var html='<table style="border-collapse:collapse;font-size:11px;margin:0 auto"><thead><tr><th style="padding:4px;color:var(--t3);font-weight:600;text-align:right" colspan="2"></th>';
-  for(var s=1;s<=4;s++)html+='<th style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">S'+s+'</th>';
+  var html='<table style="border-collapse:collapse;font-size:11px;margin:0 auto"><thead><tr><th style="padding:4px;color:var(--t3);font-weight:600;text-align:right" colspan="2" scope="col"></th>';
+  for(var s=1;s<=4;s++)html+='<th style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700" scope="col">S'+s+'</th>';
   html+='</tr></thead><tbody>';
   for(var p=4;p>=1;p--){
     html+='<tr><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700;writing-mode:vertical-rl">'+(p===4?'הסתברות (P)':'')+'</td><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">P'+p+'</td>';
@@ -8469,8 +8476,8 @@ function _notifEnabled(eventKey,channelKey){
 function openNotifSettings(){
   var modal=g('m-notif');if(!modal)return;
   var prefs=_notifPrefs();
-  var hdr='<tr><th style="text-align:right;padding:6px">\u05d0\u05d9\u05e8\u05d5\u05e2</th>';
-  NOTIF_CHANNELS.forEach(function(c){hdr+='<th style="padding:6px">'+c.icon+'<br>'+c.label+'</th>';});
+  var hdr='<tr><th style="text-align:right;padding:6px" scope="col">\u05d0\u05d9\u05e8\u05d5\u05e2</th>';
+  NOTIF_CHANNELS.forEach(function(c){hdr+='<th style="padding:6px" scope="col">'+c.icon+'<br>'+c.label+'</th>';});
   hdr+='</tr>';
   var body='';
   NOTIF_EVENTS.forEach(function(ev){
@@ -10696,7 +10703,7 @@ window._auditPack=function(){
       (stats.d30?'<span class="pill warn">'+'≤30\u05d9'+': <b>'+stats.d30+'</b></span>':'')+
       (stats.ok?'<span class="pill ok">'+'\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'+': <b>'+stats.ok+'</b></span>':'')+
     '</div>'+
-    (eq.length?'<table><thead><tr><th>#</th><th>'+'\u05e7\u05d5\u05d3 / \u05d6\u05d9\u05d4\u05d5\u05d9'+'</th><th>'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th>'+'\u05e1\u05e4\u05e7'+'</th><th>'+'\u05de\u05d9\u05e7\u05d5\u05dd'+'</th><th>'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05de\u05d0\u05d2\u05e8'+'</div>')+
+    (eq.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05e7\u05d5\u05d3 / \u05d6\u05d9\u05d4\u05d5\u05d9'+'</th><th scope="col">'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th scope="col">'+'\u05e1\u05e4\u05e7'+'</th><th scope="col">'+'\u05de\u05d9\u05e7\u05d5\u05dd'+'</th><th scope="col">'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05de\u05d0\u05d2\u05e8'+'</div>')+
   '</div>'+
   // -------- Section 2: NCRs --------
   '<div class="section">'+
@@ -10707,13 +10714,13 @@ window._auditPack=function(){
       (ncrOpen?'<span class="pill bad">'+'\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'+': <b>'+ncrOpen+'</b></span>':'')+
       (ncrClosed30?'<span class="pill ok">'+'\u05e0\u05e1\u05d2\u05e8\u05d5'+': <b>'+ncrClosed30+'</b></span>':'')+
     '</div>'+
-    (ncrScope.length?'<table><thead><tr><th>#</th><th>'+'\u05de\u05e1\u05f3'+'</th><th>'+'\u05ea\u05d9\u05d0\u05d5\u05e8'+'</th><th>'+'\u05d0\u05d6\u05d5\u05e8'+'</th><th>'+'CAPA'+'</th><th>'+'\u05e0\u05e4\u05ea\u05d7'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th><th>'+'\u05d2\u05d9\u05dc'+'</th></tr></thead><tbody>'+ncrRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df NCR \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 — \u05de\u05e6\u05d5\u05d9\u05df!'+'</div>')+
+    (ncrScope.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05de\u05e1\u05f3'+'</th><th scope="col">'+'\u05ea\u05d9\u05d0\u05d5\u05e8'+'</th><th scope="col">'+'\u05d0\u05d6\u05d5\u05e8'+'</th><th scope="col">'+'CAPA'+'</th><th scope="col">'+'\u05e0\u05e4\u05ea\u05d7'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th><th scope="col">'+'\u05d2\u05d9\u05dc'+'</th></tr></thead><tbody>'+ncrRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df NCR \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 — \u05de\u05e6\u05d5\u05d9\u05df!'+'</div>')+
   '</div>'+
   // -------- Section 3: Recent inspections --------
   '<div class="section">'+
     '<h2>3. '+'\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d5 (90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd)'+'</h2>'+
     '<div class="sub">'+'\u05e2\u05d3 50 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05dc\u05e6\u05d5\u05e8\u05da \u05de\u05e2\u05e7\u05d1 CAPA \u05d5\u05d4\u05d5\u05db\u05d7\u05ea \u05e6\u05d9\u05d5\u05ea'+'</div>'+
-    (inspections.length?'<table><thead><tr><th>#</th><th>'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th>'+'\u05e1\u05e4\u05e7'+'</th><th>'+'\u05d1\u05d5\u05d3\u05e7'+'</th><th>'+'\u05ea\u05d0\u05e8\u05d9\u05da'+'</th><th>'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+insRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d1-90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd'+'</div>')+
+    (inspections.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th scope="col">'+'\u05e1\u05e4\u05e7'+'</th><th scope="col">'+'\u05d1\u05d5\u05d3\u05e7'+'</th><th scope="col">'+'\u05ea\u05d0\u05e8\u05d9\u05da'+'</th><th scope="col">'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+insRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d1-90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd'+'</div>')+
   '</div>'+
   // -------- Section 4: Acknowledgement --------
   '<div class="section">'+
@@ -11056,7 +11063,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='\u2014';
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))val=fd(val);
-    rows+='<tr><th>'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
+    rows+='<tr><th scope="col">'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
   });
   var fileSafe=escU(fileSigned||'');
   var photoSafe=escU(pUrl||'');
@@ -13008,7 +13015,7 @@ function _buildOpenTasksDigest(wantSections){
   function tableRow(cells){return '<tr>'+cells.map(function(c){return '<td style="border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:right">'+esc(c)+'</td>';}).join('')+'</tr>';}
   function section(title,items,headers,rowFn,color){
     if(!items.length)return '';
-    var head='<tr style="background:'+(color||'#f5f5f5')+'">'+headers.map(function(h){return '<th style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right">'+h+'</th>';}).join('')+'</tr>';
+    var head='<tr style="background:'+(color||'#f5f5f5')+'">'+headers.map(function(h){return '<th style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right" scope="col">'+h+'</th>';}).join('')+'</tr>';
     var rows=items.map(rowFn).join('');
     return '<h2 style="color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:4px;margin:18px 0 10px;font-size:16px">'+esc(title)+' ('+items.length+')</h2>'+
       '<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'+head+rows+'</table>';
@@ -14439,7 +14446,7 @@ function _odBuildReportHtml(tbl,rec,photoDataUrl){
     else if(val===undefined||val===null||val==='')val='—';
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
     var safe=String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-    rows+='<tr><th>'+f[0]+'</th><td>'+safe+'</td></tr>';
+    rows+='<tr><th scope="col">'+f[0]+'</th><td>'+safe+'</td></tr>';
   });
   var stamp=new Date().toLocaleString('he-IL');
   var imgSrc=photoDataUrl||(rec&&rec.photo_url?String(rec.photo_url).replace(/"/g,''):'');
