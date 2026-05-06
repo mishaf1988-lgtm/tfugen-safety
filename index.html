@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tapugan Safety &#8212; &#1504;&#1497;&#1492;&#1493;&#1500; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#cc1f1f">
@@ -29,13 +29,6 @@
   --blue:#2176ae;--sh:0 1px 4px rgba(0,0,0,.08);
   --ac:var(--red);--su:#f9fafb
 }
-/* a11y: enforce minimum touch target size for icon-only close buttons.
-   WCAG 2.5.5 recommends 44×44 but 32×32 is the agreed minimum. */
-.close-btn,button.close-btn{min-width:36px;min-height:36px;padding:6px}
-/* a11y: lift "very small" text (10-11px) to a readable floor. The
-   audit found 91 elements <11px. Most are intentional for chip/badge
-   labels but at least give them 11px minimum so they're not unreadable. */
-.b,.kpi-sub,small,.muted-xs{font-size:max(11px,inherit)}
 /* High-contrast mode — for outdoor factory light. Toggled via body.hc */
 body.hc{
   --bg:#fff;--card:#fff;--border:#555;--su:#f0f0f0;
@@ -47,7 +40,7 @@ body.hc .topbar{border-bottom-width:4px}
 body.hc .bn{color:#000}
 body.hc .bn.on{color:var(--red);border-top-width:4px}
 body.hc .btn,body.hc input,body.hc select,body.hc textarea{border-width:2px!important}
-html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;overflow-x:hidden;max-width:100vw}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 html{scroll-behavior:smooth}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 button{cursor:pointer;font-family:'Heebo',Arial,sans-serif;border:none;outline:none}
@@ -122,29 +115,15 @@ body.hc .bell:hover,body.hc .bell:active{transform:none}
 @media(prefers-reduced-motion:reduce){#my-tasks-badge,#bn-tasks-badge{animation:none}}
 body.hc #my-tasks-badge,body.hc #bn-tasks-badge{animation:none;box-shadow:0 0 0 2px #000!important}
 
-/* ---- BOTTOM NAV — DEPRECATED ---- */
-/* The bnav (4-button bottom navigation bar) was unreliable on iOS Safari
-   regardless of position (bottom URL-bar issue, top positioning showed
-   intermittently). Replaced by a dedicated `pg-menu` launcher page that
-   shows on app entry. The bnav HTML is kept only because some legacy code
-   paths reference its `.bn` buttons for active-state highlighting; the
-   element itself is hidden so it never paints. */
-.bnav{display:none!important}
-.bn{display:none!important}
-
-/* ---- MENU PAGE — primary launcher (replaces bnav) ---- */
-.menu-grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:680px;margin:0 auto;padding:8px 0}
-@media(min-width:640px){.menu-grid{grid-template-columns:1fr 1fr;gap:16px}}
-.menu-tile{display:flex;align-items:center;gap:14px;padding:20px 18px;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 2px 6px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);cursor:pointer;text-align:right;font-family:inherit;color:var(--tx);min-height:120px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;width:100%}
-.menu-tile:active{transform:scale(.985);background:#fafafa}
-@media(hover:hover){.menu-tile:hover{border-color:rgba(204,31,31,.4);box-shadow:0 8px 22px rgba(15,23,42,.08);transform:translateY(-2px)}}
-body.hc .menu-tile:hover,body.hc .menu-tile:active{transform:none;box-shadow:var(--sh)}
-.menu-tile .mt-ic{font-size:38px;line-height:1;flex-shrink:0;width:62px;height:62px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:14px;border:1px solid #fecaca}
-.menu-tile .mt-body{flex:1;min-width:0}
-.menu-tile .mt-title{font-size:20px;font-weight:800;color:var(--tx);line-height:1.2;margin-bottom:4px}
-.menu-tile .mt-sub{font-size:12px;color:var(--t3);line-height:1.4}
-.menu-tile .mt-arrow{font-size:32px;color:var(--t3);flex-shrink:0;font-weight:300;line-height:1}
-body.hc .menu-tile .mt-ic{background:#fff;border:2px solid #cc1f1f}
+/* ---- BOTTOM NAV ---- */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:auto;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:2px solid var(--red);z-index:50;display:flex;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.bnav::-webkit-scrollbar{display:none}
+.bn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:10px 4px;font-size:12px;font-weight:700;color:var(--t3);background:none;border:none;border-top:3px solid transparent;min-height:66px;position:relative;transition:color .18s ease,background .18s ease}
+.bn.on{color:var(--red);border-top-color:var(--red)}
+.bn.on::after{content:"";position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:18px;height:3px;border-radius:2px;background:var(--red);opacity:.7}
+@media(hover:hover){.bn:hover{background:#fafafa;color:var(--t2)}.bn.on:hover{color:var(--red);background:rgba(204,31,31,.04)}}
+body.hc .bn.on::after{opacity:1}
+.bn .ic{font-size:22px;line-height:1}
 
 /* Bottom sheet modal (slides up from bottom, big tap targets) */
 .modal.sheet-modal{position:fixed!important;bottom:0!important;top:auto!important;left:0!important;right:0!important;transform:none!important;width:100vw!important;max-width:none!important;max-height:85vh!important;border-radius:18px 18px 0 0!important;padding:18px!important;padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;margin:0!important}
@@ -160,24 +139,7 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
 .bn .ic{font-size:22px;margin-bottom:2px}
 
 /* ---- MAIN ---- */
-/* No fixed bnav anymore (replaced by `pg-menu` launcher). Top padding only
-   needs to clear the 60px topbar + a small visual gap. */
-.main{padding:74px 12px calc(40px + env(safe-area-inset-bottom));overflow-x:hidden;min-height:100vh;max-width:100vw;box-sizing:border-box}
-/* Mobile: ensure cards/page-title rows wrap instead of overflowing.
-   Catches pages whose toolbar (page-title + action buttons) was wider
-   than the phone viewport — content was visually shifting right and
-   pushing the bnav off-screen. */
-@media(max-width:520px){
-  .main>*{max-width:100%}
-  .row,.page-title-row,.row-actions{flex-wrap:wrap}
-  table{table-layout:auto;word-break:break-word;font-size:12px}
-  pre,code{white-space:pre-wrap;word-break:break-word}
-  /* Tables that are intrinsically wide stay readable via a horizontal
-     scroll INSIDE their wrapper — body is overflow:hidden so without
-     this the user couldn't see the rightmost columns at all. */
-  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-  .tbl-wrap table{min-width:max-content}
-}
+.main{padding:76px 12px calc(170px + env(safe-area-inset-bottom));overflow-y:auto;height:100vh}
 
 /* ---- PAGES ---- */
 .page{display:none}
@@ -570,7 +532,6 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="topbar">
   <div class="topbar-actions">
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
-    <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;" onclick="goPage('menu')" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;">&#9776;</button>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
     <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
@@ -588,47 +549,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <!-- MAIN CONTENT -->
-<main class="main" id="main" role="main">
+<div class="main" id="main">
 
 <!-- PAGES -->
-<!-- MENU — primary launcher (replaces bnav). 4 big tiles, no fixed positioning, scrolls naturally with the page. -->
-<div id="pg-menu" class="page">
-  <div class="menu-grid">
-    <button class="menu-tile" onclick="goPage('dash')" aria-label="&#1491;&#1513;&#1489;&#1493;&#1512;&#1491; &#1512;&#1488;&#1513;&#1497;">
-      <div class="mt-ic">&#127968;</div>
-      <div class="mt-body">
-        <div class="mt-title">&#1512;&#1488;&#1513;&#1497;</div>
-        <div class="mt-sub">&#1505;&#1496;&#1496;&#1493;&#1505; &#1493;&#1505;&#1511;&#1497;&#1512;&#1492; &#1499;&#1500;&#1500;&#1497;&#1514; &#1513;&#1500; &#1492;&#1502;&#1506;&#1512;&#1499;&#1514;</div>
-      </div>
-      <div class="mt-arrow">&#8249;</div>
-    </button>
-    <button class="menu-tile" onclick="goPage('tasks')" aria-label="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;">
-      <div class="mt-ic">&#9989;</div>
-      <div class="mt-body">
-        <div class="mt-title">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</div>
-        <div class="mt-sub">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;, &#1497;&#1510;&#1497;&#1512;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
-      </div>
-      <div class="mt-arrow">&#8249;</div>
-    </button>
-    <button class="menu-tile" onclick="openModal('m-reports-sheet')" aria-label="&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;">
-      <div class="mt-ic">&#9888;</div>
-      <div class="mt-body">
-        <div class="mt-title">&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</div>
-        <div class="mt-sub">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;, &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;, &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;, &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
-      </div>
-      <div class="mt-arrow">&#8249;</div>
-    </button>
-    <button class="menu-tile" onclick="openModal('m-modules-sheet')" aria-label="&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;">
-      <div class="mt-ic">&#128203;</div>
-      <div class="mt-body">
-        <div class="mt-title">&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
-        <div class="mt-sub">PPE, &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;, &#1495;&#1493;&#1511;&#1497;&#1501;, &#1492;&#1491;&#1512;&#1499;&#1493;&#1514; &#1493;&#1499;&#1500; &#1492;&#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
-      </div>
-      <div class="mt-arrow">&#8249;</div>
-    </button>
-  </div>
-</div>
-
 <!-- EMPLOYEE HOME (Stage A — quick report buttons) -->
 <div id="pg-emp-home" class="page">
   <div class="emp-hero">
@@ -642,7 +565,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
   </div>
   <div id="emp-sync" style="margin-top:14px;background:#fff7ed;border:1px solid #f59e0b;border-radius:12px;padding:12px;display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1505;&#1493;&#1504;&#1499;&#1512;&#1503; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1490;&#1500;&#1497;&#1499;&#1492; &#1492;&#1493;&#1492;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1497;&#1488;&#1493;&#1492;&#1500; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1490;&#1500;&#1497;&#1499;&#1492; &#1492;&#1493;&#1492;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
   </div>
   <div id="emp-recent" style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
     <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1502;&#1492; &#1513;&#1504;&#1513;&#1502;&#1512; &#1489;&#1502;&#1499;&#1513;&#1497;&#1512; &#1492;&#1494;&#1492;)</span></div>
@@ -719,7 +642,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-rsk-review-card" style="display:none"><div class="card-title">&#9889; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 &#167;6.1.2)</span></div><div id="dash-rsk-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-ai-weekly-card" style="display:none"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
-  <div class="card" id="dash-ai-today-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1495;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
+  <div class="card" id="dash-ai-today-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1490;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -753,7 +676,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="exp-tab-30" onclick="expFilter('30')">&le;30&#1497;</button>
     <button class="btn btn-s" id="exp-tab-90" onclick="expFilter('90')">&le;90&#1497;</button>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1508;&#1512;&#1497;&#1496;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1493;&#1491;&#1493;&#1500;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1496;.</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1508;&#1512;&#1497;&#1496;</th><th>&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th>&#1502;&#1493;&#1491;&#1493;&#1500;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1496;.</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1493;&#1499;&#1503; &#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</div>
 </div>
 
@@ -789,27 +712,27 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="eqi-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th onclick="eqiSort('code')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;" scope="col">&#1511;&#1493;&#1491; <span id="eqi-sort-code"></span></th>
-    <th onclick="eqiSort('n')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1513;&#1501;" scope="col">&#1514;&#1497;&#1488;&#1493;&#1512; <span id="eqi-sort-n"></span></th>
-    <th onclick="eqiSort('vendor')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1508;&#1511;" scope="col">&#1505;&#1508;&#1511; <span id="eqi-sort-vendor"></span></th>
-    <th onclick="eqiSort('loc')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;" scope="col">&#1488;&#1494;&#1493;&#1512; <span id="eqi-sort-loc"></span></th>
-    <th onclick="eqiSort('d')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;" scope="col">&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; <span id="eqi-sort-d"></span></th>
-    <th onclick="eqiSort('e')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1514;&#1493;&#1511;&#1507;" scope="col">&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488; <span id="eqi-sort-e">&#8593;</span></th>
-    <th onclick="eqiSort('s')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;" scope="col">&#1505;&#1496;. <span id="eqi-sort-s"></span></th>
-    <th scope="col"></th>
+    <th onclick="eqiSort('code')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1511;&#1493;&#1491;">&#1511;&#1493;&#1491; <span id="eqi-sort-code"></span></th>
+    <th onclick="eqiSort('n')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1513;&#1501;">&#1514;&#1497;&#1488;&#1493;&#1512; <span id="eqi-sort-n"></span></th>
+    <th onclick="eqiSort('vendor')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1508;&#1511;">&#1505;&#1508;&#1511; <span id="eqi-sort-vendor"></span></th>
+    <th onclick="eqiSort('loc')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;">&#1488;&#1494;&#1493;&#1512; <span id="eqi-sort-loc"></span></th>
+    <th onclick="eqiSort('d')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;">&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; <span id="eqi-sort-d"></span></th>
+    <th onclick="eqiSort('e')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1514;&#1493;&#1511;&#1507;">&#1514;&#1493;&#1511;&#1507; &#1492;&#1489;&#1488; <span id="eqi-sort-e">&#8593;</span></th>
+    <th onclick="eqiSort('s')" style="cursor:pointer;user-select:none" title="&#1502;&#1497;&#1497;&#1503; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;">&#1505;&#1496;. <span id="eqi-sort-s"></span></th>
+    <th></th>
   </tr></thead><tbody id="tb-eqi"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</div>
 </div>
 
 <div id="pg-docs" class="page">
   <div class="row"><div class="page-title">&#1502;&#1505;&#1502;&#1499;&#1497; <span>ISO</span></div><button class="btn btn-p" onclick="openModal('m-doc')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1511;&#1496;&#1490;.</th><th scope="col">&#1490;&#1512;&#1505;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-docs"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1511;&#1496;&#1490;.</th><th>&#1490;&#1512;&#1505;&#1492;</th><th>&#1488;&#1495;&#1512;&#1488;&#1497;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-docs"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-aud" class="page">
   <div class="row"><div class="page-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; <span>&#1508;&#1504;&#1497;&#1502;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-aud')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1502;&#1489;&#1511;&#1512;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-aud"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1504;&#1493;&#1513;&#1488;</th><th>&#1502;&#1489;&#1511;&#1512;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-aud"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -833,13 +756,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="nm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="nm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th scope="col">&#1488;&#1494;&#1493;&#1512;</th>
-    <th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
-    <th scope="col">&#1502;&#1491;&#1493;&#1493;&#1495;</th>
-    <th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th>
-    <th scope="col">&#1505;&#1496;.</th>
-    <th scope="col">&#128247;</th><th scope="col"></th>
+    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th>&#1488;&#1494;&#1493;&#1512;</th>
+    <th>&#1514;&#1497;&#1488;&#1493;&#1512;</th>
+    <th>&#1502;&#1491;&#1493;&#1493;&#1495;</th>
+    <th>&#1495;&#1493;&#1502;&#1512;&#1492;</th>
+    <th>&#1505;&#1496;.</th>
+    <th>&#128247;</th><th></th>
   </tr></thead><tbody id="tb-nm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
 </div>
@@ -852,13 +775,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th scope="col">&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
-    <th scope="col">&#1513;&#1501; &#1502;&#1500;&#1488;</th>
-    <th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th>
-    <th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th>
-    <th scope="col">&#1496;&#1500;&#1508;&#1493;&#1503;</th>
-    <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-    <th scope="col"></th>
+    <th>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th>&#1513;&#1501; &#1502;&#1500;&#1488;</th>
+    <th>&#1514;&#1508;&#1511;&#1497;&#1491;</th>
+    <th>&#1502;&#1495;&#1500;&#1511;&#1492;</th>
+    <th>&#1496;&#1500;&#1508;&#1493;&#1503;</th>
+    <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+    <th></th>
   </tr></thead><tbody id="tb-users"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
 </div>
@@ -897,10 +820,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div style="color:var(--t3);font-size:11px;margin-bottom:4px">USERNAME</div>
     <div id="cr-username" style="font-weight:700;font-size:18px;color:var(--ac);margin-bottom:12px;user-select:all">—</div>
     <div style="color:var(--t3);font-size:11px;margin-bottom:4px">PASSWORD</div>
-    <div style="display:flex;gap:6px;align-items:center">
-      <div id="cr-password" data-masked="1" style="font-weight:700;font-size:18px;color:var(--ac);user-select:all;flex:1">••••••••</div>
-      <button id="cr-password-toggle" type="button" onclick="_credToggle()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0">&#128065;&#65039; &#1492;&#1510;&#1490;</button>
-    </div>
+    <div id="cr-password" style="font-weight:700;font-size:18px;color:var(--ac);user-select:all">—</div>
   </div>
   <button class="btn btn-s" style="width:100%;margin-top:12px" onclick="copyCredentials()">&#128203; &#1492;&#1506;&#1514;&#1511; &#1500;&#1500;&#1493;&#1495;</button>
   <div class="modal-footer">
@@ -986,14 +906,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="tsk-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="tsk-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th style="width:32px;text-align:center" scope="col"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
-    <th scope="col">&#1499;&#1493;&#1514;&#1512;&#1514;</th>
-    <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-    <th scope="col">&#1497;&#1506;&#1491;</th>
-    <th scope="col">&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</th>
-    <th scope="col">&#1502;&#1511;&#1493;&#1512;</th>
-    <th scope="col">&#1505;&#1496;.</th>
-    <th scope="col"></th>
+    <th style="width:32px;text-align:center"><input type="checkbox" id="tsk-bulk-all" onclick="_tskBulkSelectAll(this.checked)" title="בחר הכל" style="cursor:pointer"></th>
+    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+    <th>&#1497;&#1506;&#1491;</th>
+    <th>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</th>
+    <th>&#1502;&#1511;&#1493;&#1512;</th>
+    <th>&#1505;&#1496;.</th>
+    <th></th>
   </tr></thead><tbody id="tb-tasks"></tbody></table><div id="tb-tasks-cards"></div></div></div>
   <div id="tsk-bulk-bar" style="display:none;position:sticky;bottom:8px;margin-top:10px;background:#1a3a5a;border:1px solid #4a9adf;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:50">
     <span style="color:#aaccee;font-size:13px;font-weight:700"><span id="tsk-bulk-count">0</span> &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1504;&#1489;&#1495;&#1512;&#1493;</span>
@@ -1010,7 +930,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-round" class="page">
   <div class="row">
     <div class="page-title">&#1505;&#1489;&#1489; <span>&#1489;&#1493;&#1511;&#1512;</span></div>
-    <button class="btn btn-p" onclick="_roundOpenNew()">+ &#1491;&#1493;&#1495; &#1497;&#1493;&#1502;&#1497;</button>
+    <button class="btn btn-p" onclick="openModal('m-round')">+ &#1491;&#1493;&#1495; &#1497;&#1493;&#1502;&#1497;</button>
   </div>
   <div class="card" id="round-today-card" style="border-right:4px solid var(--ok);margin-bottom:12px">
     <div class="card-title">&#9728; &#1505;&#1497;&#1493;&#1512; &#1492;&#1497;&#1493;&#1501;</div>
@@ -1019,14 +939,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title">&#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;</div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-      <th scope="col">&#1502;&#1508;&#1511;&#1495;</th>
-      <th scope="col">&#1488;&#1513;</th>
-      <th scope="col">&#1495;&#1497;&#1512;&#1493;&#1501;</th>
-      <th scope="col">PPE</th>
-      <th scope="col">&#1505;&#1489;&#1497;&#1489;&#1492;</th>
-      <th scope="col">&#1505;&#1496;.</th>
-      <th scope="col"></th>
+      <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+      <th>&#1502;&#1508;&#1511;&#1495;</th>
+      <th>&#1488;&#1513;</th>
+      <th>&#1495;&#1497;&#1512;&#1493;&#1501;</th>
+      <th>PPE</th>
+      <th>&#1505;&#1489;&#1497;&#1489;&#1492;</th>
+      <th>&#1505;&#1496;.</th>
+      <th></th>
     </tr></thead><tbody id="tb-round"></tbody></table></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
@@ -1039,12 +959,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th scope="col">&#1504;&#1493;&#1513;&#1488;</th>
-    <th scope="col">&#1502;&#1506;&#1489;&#1497;&#1512;</th>
-    <th scope="col">&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
-    <th scope="col">&#1505;&#1496;.</th>
-    <th scope="col"></th>
+    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th>&#1504;&#1493;&#1513;&#1488;</th>
+    <th>&#1502;&#1506;&#1489;&#1497;&#1512;</th>
+    <th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th>
+    <th>&#1505;&#1496;.</th>
+    <th></th>
   </tr></thead><tbody id="tb-toolbox"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
 </div>
@@ -1071,15 +991,15 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-s btn-sm" id="easp-rv-tab-never" onclick="easpReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th scope="col">&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
-      <th scope="col">&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
-      <th scope="col">RPN &#1489;&#1508;&#1493;&#1506;&#1500;</th>
-      <th scope="col">RPN &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</th>
-      <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-      <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-      <th scope="col">&#1505;&#1511;&#1497;&#1512;&#1492;</th>
-      <th scope="col"></th>
-      <th scope="col"></th>
+      <th>&#1492;&#1497;&#1489;&#1496; / &#1502;&#1514;&#1511;&#1503;</th>
+      <th>&#1513;&#1500;&#1489; &#1495;&#1497;&#1497;&#1501;</th>
+      <th>RPN &#1489;&#1508;&#1493;&#1506;&#1500;</th>
+      <th>RPN &#1508;&#1493;&#1496;&#1504;&#1510;&#1497;&#1488;&#1500;&#1497;</th>
+      <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+      <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+      <th>&#1505;&#1511;&#1497;&#1512;&#1492;</th>
+      <th></th>
+      <th></th>
     </tr></thead><tbody id="tb-easp"></tbody></table></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | ISO 14001:6.1.2</div>
@@ -1092,7 +1012,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" onclick="_locOpenAdd(1,null)">+ &#1488;&#1494;&#1493;&#1512; &#1495;&#1491;&#1513;</button>
   </div>
   <div class="card">
-    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1497;&#1512;&#1512;&#1499;&#1497;&#1497;&#1514; &#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501; &#1489;&#1502;&#1508;&#1506;&#1500;: &#1488;&#1494;&#1493;&#1512; &#8592; &#1511;&#1493; &#1497;&#1497;&#1510;&#1493;&#1512; &#8592; &#1514;&#1495;&#1504;&#1492;. &#1492;&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501; &#1497;&#1513;&#1502;&#1513;&#1493; &#1499;&#1500;&#1497;&#1505;&#1496;&#1493;&#1514; &#1488;&#1493;&#1496;&#1493;&#1511;&#1493;&#1502;&#1508;&#1500;&#1497;&#1496; &#1489;-NCR, &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;, &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;, &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;.</div>
+    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1497;&#1497;&#1512;&#1512;&#1499;&#1497;&#1499;&#1514; &#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501; &#1489;&#1502;&#1508;&#1506;&#1500;: &#1488;&#1494;&#1493;&#1512; &#8592; &#1511;&#1493; &#1497;&#1497;&#1510;&#1493;&#1512; &#8592; &#1514;&#1495;&#1504;&#1492;. &#1492;&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501; &#1497;&#1513;&#1502;&#1513;&#1493; &#1499;&#1500;&#1497;&#1505;&#1496;&#1493;&#1514; &#1488;&#1493;&#1496;&#1493;&#1511;&#1493;&#1502;&#1508;&#1500;&#1497;&#1496; &#1489;-NCR, &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;, &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;, &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;.</div>
     <div id="loc-tree"></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
@@ -1105,7 +1025,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" onclick="_itypeOpenAdd(1,null)">+ &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; &#1512;&#1488;&#1513;&#1497;&#1514;</button>
   </div>
   <div class="card">
-    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1497;&#1512;&#1512;&#1499;&#1497;&#1497;&#1514; &#1505;&#1497;&#1493;&#1493;&#1490;&#1497;&#1501; &#1500;&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; &#1493;&#1514;&#1511;&#1512;&#1497;&#1493;&#1514;. &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; &#8592; &#1514;&#1514;-&#1505;&#1493;&#1490; &#8592; &#1493;&#1493;&#1512;&#1497;&#1488;&#1504;&#1496;.</div>
+    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1492;&#1497;&#1497;&#1512;&#1512;&#1499;&#1497;&#1499;&#1514; &#1505;&#1497;&#1493;&#1493;&#1490;&#1497;&#1501; &#1500;&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; &#1493;&#1514;&#1511;&#1512;&#1497;&#1493;&#1514;. &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492; &#8592; &#1514;&#1514;-&#1505;&#1493;&#1490; &#8592; &#1493;&#1493;&#1512;&#1497;&#1488;&#1504;&#1496;.</div>
     <div id="itype-tree"></div>
   </div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong></div>
@@ -1114,11 +1034,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <!-- PROJECTS PAGE -->
 <div id="pg-prj" class="page">
   <div class="row">
-    <div class="page-title">&#127959;&#65039; <span>&#1508;&#1512;&#1493;&#1497;&#1511;&#1496;&#1497;&#1501;</span></div>
+    <div class="page-title">&#127959;&#65039; <span>&#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;&#1497;&#1501;</span></div>
     <button class="btn btn-p" onclick="_prjOpenAdd()">+ &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496; &#1495;&#1491;&#1513;</button>
   </div>
   <div class="card">
-    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1504;&#1497;&#1492;&#1493;&#1500; &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1493;&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1512;&#1493;&#1497;&#1511;&#1496;&#1497;&#1501; &#1500;&#1502;&#1506;&#1511;&#1489; &#1502;&#1503; &#1492;&#1497;&#1493;&#1494;&#1502;&#1492; &#1492;&#1495;&#1493;&#1510;&#1492; &#1500;&#1488;&#1497;&#1492; &#1493;&#1505;&#1492;&#1505; &#1488;&#1497;&#1500;&#1497;&#1497;&#1501;.</div>
+    <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1490;&#1497;&#1497;&#1502;&#1493;&#1503; &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1493;&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1505; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;&#1497;&#1501; &#1500;&#1502;&#1506;&#1511;&#1489; &#1502;&#1503; &#1492;&#1497;&#1493;&#1494;&#1502;&#1492; &#1492;&#1495;&#1493;&#1510;&#1492; &#1500;&#1488;&#1497;&#1492; &#1493;&#1505;&#1492;&#1505; &#1488;&#1497;&#1500;&#1497;&#1497;&#1501;.</div>
     <div style="display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap"><button id="prj-tab-all" class="btn btn-p" onclick="prjFilter('all')" style="padding:6px 12px;font-size:12px">&#1492;&#1499;&#1500;</button><button id="prj-tab-active" class="btn btn-s" onclick="prjFilter('\u05e4\u05e2\u05d9\u05dc')" style="padding:6px 12px;font-size:12px">&#1508;&#1506;&#1497;&#1500;&#1497;&#1501;</button><button id="prj-tab-done" class="btn btn-s" onclick="prjFilter('\u05d4\u05d5\u05e9\u05dc\u05dd')" style="padding:6px 12px;font-size:12px">&#1492;&#1493;&#1513;&#1500;&#1502;&#1493;</button></div>
     <div id="prj-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
     <div id="prj-list"></div>
@@ -1175,7 +1095,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div style="font-size:13px;line-height:1.7">
       &#1492;&#1502;&#1506;&#1512;&#1499;&#1514; &#1502;&#1513;&#1500;&#1489;&#1514; &#1502;&#1505;&#1508;&#1512; &#1499;&#1500;&#1497; AI &#1500;&#1506;&#1494;&#1512; &#1500;&#1503; &#1489;&#1492;&#1491;&#1512;&#1499;&#1492;,
       &#1495;&#1511;&#1497;&#1512;&#1492; &#1493;&#1502;&#1506;&#1504;&#1492; &#1506;&#1500; &#1513;&#1488;&#1500;&#1493;&#1514; &#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;&#1493;&#1514;.
-      &#1499;&#1500; &#1492;&#1499;&#1500;&#1497;&#1501; &#1502;&#1489;&#1493;&#1505;&#1505;&#1497;&#1501; &#1506;&#1500; Cloudflare Workers AI (Llama) &#1493;-Anthropic Claude.
+      &#1499;&#1500; &#1492;&#1499;&#1500;&#1497;&#1501; &#1502;&#1493;&#1488;&#1510;&#1500;&#1497;&#1501; &#1500;&#1488;&#1503;-&#1496;&#1512;&#1493;&#1508;&#1497;&#1499;-&#1505;&#1493;&#1504;&#1496; &#1493;&#1502;&#1503;-&#1502;&#1493;&#1491;&#1497;&#1506;-&#1502;&#1497;&#1497;&#1491;&#1497;.
     </div>
   </div>
   <div id="agents-cards" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -1238,12 +1158,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="rAudit()" style="background:#3b82f6">&#8635; &#1512;&#1506;&#1504;&#1503;</button>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
-    <th scope="col">&#1494;&#1502;&#1503;</th>
-    <th scope="col">&#1502;&#1513;&#1514;&#1502;&#1513;</th>
-    <th scope="col">&#1508;&#1506;&#1493;&#1500;&#1492;</th>
-    <th scope="col">&#1496;&#1489;&#1500;&#1492;</th>
-    <th scope="col">&#1499;&#1493;&#1514;&#1512;&#1514;</th>
-    <th scope="col"></th>
+    <th>&#1494;&#1502;&#1503;</th>
+    <th>&#1502;&#1513;&#1514;&#1502;&#1513;</th>
+    <th>&#1508;&#1506;&#1493;&#1500;&#1492;</th>
+    <th>&#1496;&#1489;&#1500;&#1492;</th>
+    <th>&#1499;&#1493;&#1514;&#1512;&#1514;</th>
+    <th></th>
   </tr></thead><tbody id="tb-audit"><tr><td colspan="6" class="et">&#1496;&#1493;&#1506;&#1503;...</td></tr></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1497;&#1493;&#1502;&#1503; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</div>
 </div>
@@ -1275,28 +1195,28 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="ncr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
-    <th scope="col">&#1502;&#1505;&#1508;&#1512;</th>
-    <th scope="col">&#1505;&#1493;&#1490;</th>
-    <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
-    <th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th>
-    <th style="min-width:200px" scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
-    <th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th>
-    <th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th>
-    <th scope="col">&#1497;&#1506;&#1491; &#1505;&#1490;&#1497;&#1512;&#1492;</th>
-    <th scope="col"></th>
+    <th>&#1502;&#1505;&#1508;&#1512;</th>
+    <th>&#1505;&#1493;&#1490;</th>
+    <th>&#1514;&#1488;&#1512;&#1497;&#1498;</th>
+    <th>&#1502;&#1497;&#1511;&#1493;&#1501;</th>
+    <th style="min-width:200px">&#1514;&#1497;&#1488;&#1493;&#1512;</th>
+    <th>&#1505;&#1496;&#1496;&#1493;&#1505;</th>
+    <th>&#1488;&#1495;&#1512;&#1488;&#1497;</th>
+    <th>&#1497;&#1506;&#1491; &#1505;&#1490;&#1497;&#1512;&#1492;</th>
+    <th></th>
   </tr></thead><tbody id="tb-ncr"></tbody></table></div>
 
 </div>
 <div id="pg-inc" class="page">
   <div class="row"><div class="page-title">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openNewIncModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div id="inc-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1514;&#1497;&#1488;&#1493;&#1512;</th><th>&#1505;&#1493;&#1490;</th><th>&#1495;&#1493;&#1502;&#1512;&#1492;</th><th>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-tr" class="page">
   <div class="row"><div class="page-title">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-tr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1506;&#1493;&#1489;&#1491;</th><th>&#1492;&#1491;&#1512;&#1499;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1310,7 +1230,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </div>
   <div id="rsk-view-list">
-    <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1514;&#1495;&#1493;&#1501;</th><th scope="col">P</th><th scope="col">S</th><th scope="col">RPN</th><th scope="col">&#1512;&#1502;&#1492;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-rsk"></tbody></table></div></div>
+    <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>P</th><th>S</th><th>RPN</th><th>&#1512;&#1502;&#1492;</th><th></th><th></th></tr></thead><tbody id="tb-rsk"></tbody></table></div></div>
   </div>
   <div id="rsk-view-mat" style="display:none">
     <div class="card">
@@ -1323,7 +1243,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-emp" class="page">
   <div class="row"><div class="page-title">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><button class="btn btn-p" onclick="openModal('m-emp')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1496;&#1500;&#1508;&#1493;&#1503;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-emp"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1514;&#1508;&#1511;&#1497;&#1491;</th><th>&#1502;&#1495;&#1500;&#1511;&#1492;</th><th>&#1496;&#1500;&#1508;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-emp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1331,7 +1251,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1502;&#1505;'</th><th scope="col">&#1511;&#1489;&#1500;&#1503;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1513;&#1506;&#1493;&#1514;</th><th scope="col">&#1502;&#1511;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1502;&#1505;'</th><th>&#1511;&#1489;&#1500;&#1503;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1513;&#1506;&#1493;&#1514;</th><th>&#1502;&#1511;&#1493;&#1501;</th><th>&#1505;&#1496;.</th><th></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1356,7 +1276,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ppe" class="page">
   <div class="row"><div class="page-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; <span>PPE</span></div><button class="btn btn-p" onclick="openModal('m-ppe')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1508;&#1512;&#1496;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1502;&#1510;&#1489;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1493;&#1490;</th><th>&#1506;&#1493;&#1489;&#1491;</th><th>&#1502;&#1508;&#1512;&#1496;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th>&#1514;&#1493;&#1511;&#1507;</th><th>&#1502;&#1510;&#1489;</th><th></th><th></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1371,7 +1291,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="_debRHearing()" style="flex:1;min-width:200px">
   </div>
   <div id="hearing-count" style="font-size:13px;color:var(--t2);margin-bottom:8px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1514;&quot;&#1494;</th><th scope="col">&#1490;&#1497;&#1500;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th scope="col">&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th scope="col">&#1489;&#1493;&#1491;&#1511;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th>&#1514;&quot;&#1494;</th><th>&#1490;&#1497;&#1500;</th><th>&#1514;&#1508;&#1511;&#1497;&#1491;</th><th>&#1502;&#1495;&#1500;&#1511;&#1492;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th>&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th>&#1489;&#1493;&#1491;&#1511;</th><th></th><th></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1398,25 +1318,25 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ins" class="page">
   <div class="row"><div class="page-title">&#1505;&#1497;&#1493;&#1512;&#1497; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ins')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1488;&#1494;&#1493;&#1512;</th><th scope="col">&#1502;&#1489;&#1510;&#1506;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ins"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1488;&#1494;&#1493;&#1512;</th><th>&#1502;&#1489;&#1510;&#1506;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-ins"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-drl" class="page">
   <div class="row"><div class="page-title">&#1514;&#1512;&#1490;&#1497;&#1500;&#1497; <span>&#1495;&#1497;&#1512;&#1493;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-drl')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th><th scope="col">&#1502;&#1513;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-drl"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th><th>&#1502;&#1513;&#1498;</th><th>&#1510;&#1497;&#1493;&#1503;</th><th></th><th></th></tr></thead><tbody id="tb-drl"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-ctr" class="page">
   <div class="row"><div class="page-title">&#1511;&#1489;&#1500;&#1504;&#1497;&#1501; <span>&#1493;&#1505;&#1508;&#1511;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-ctr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</th><th scope="col">&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ctr"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501;</th><th>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th>&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</th><th>&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</th><th>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-ctr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-wst" class="page">
   <div class="row"><div class="page-title">&#1497;&#1493;&#1502;&#1503; <span>&#1508;&#1505;&#1493;&#1500;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-wst')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1511;')</th><th scope="col">&#1511;&#1493;&#1491; &#1488;&#1513;&#1508;&#1492;</th><th scope="col">&#1499;&#1500;&#1500; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-wst"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1493;&#1490; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1511;')</th><th>&#1511;&#1493;&#1491; &#1488;&#1513;&#1508;&#1492;</th><th>&#1499;&#1500;&#1500; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th></th><th></th></tr></thead><tbody id="tb-wst"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1425,13 +1345,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="hzm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="hzm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th scope="col">UN</th><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">MSDS</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th>UN</th><th>&#1505;&#1497;&#1499;&#1493;&#1503;</th><th>&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th>&#1502;&#1497;&#1511;&#1493;&#1501;</th><th>MSDS</th><th></th><th></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
 <div id="pg-env" class="page">
   <div class="row"><div class="page-title">&#1504;&#1497;&#1496;&#1493;&#1512; <span>&#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</span></div><button class="btn btn-p" onclick="openModal('m-env')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</th><th scope="col">&#1502;&#1491;&#1491;</th><th scope="col">&#1514;&#1493;&#1510;&#1488;&#1492;</th><th scope="col">&#1504;&#1493;&#1512;&#1502;&#1492;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-env"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1514;&#1488;&#1512;&#1497;&#1498;</th><th>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</th><th>&#1502;&#1491;&#1491;</th><th>&#1514;&#1493;&#1510;&#1488;&#1492;</th><th>&#1504;&#1493;&#1512;&#1502;&#1492;</th><th>&#1505;&#1496;.</th><th></th><th></th></tr></thead><tbody id="tb-env"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1455,7 +1375,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s btn-sm" id="leg-rv-tab-soon" onclick="legReviewFilter('soon')">&#1505;&#1511;&#1497;&#1512;&#1492; &#1489;-30 &#1497;&#1493;&#1501;</button>
     <button class="btn btn-s btn-sm" id="leg-rv-tab-never" onclick="legReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
   </div></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1495;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1505;&#1511;&#1497;&#1512;&#1492;</th><th scope="col">&#1506;&#1491;&#1499;&#1493;&#1503;</th><th scope="col">&#1502;&#1511;&#1493;&#1512;</th><th scope="col">&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th>&#1505;&#1493;&#1490;</th><th>&#1514;&#1495;&#1493;&#1501;</th><th>&#1505;&#1496;&#1496;&#1493;&#1505;</th><th>&#1505;&#1511;&#1497;&#1512;&#1492;</th><th>&#1506;&#1491;&#1499;&#1493;&#1503;</th><th>&#1502;&#1511;&#1493;&#1512;</th><th>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -1550,7 +1470,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-p" id="cap-confirm-btn" onclick="capConfirm()" style="display:none;white-space:nowrap">&#9989; &#1492;&#1502;&#1513;&#1498;</button>
     <button class="btn btn-p" id="cap-submit" onclick="capSubmit()" style="white-space:nowrap" disabled>&#128302; &#1504;&#1514;&#1495;</button>
   </div>
-</main>
+</div>
 
 <!-- BOTTOM NAV -->
 <nav class="bnav" id="bnav">
@@ -1614,7 +1534,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','cal')"><span class="sic">&#128197;</span>&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')"><span class="sic">&#127811;</span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')"><span class="sic">&#128205;</span>&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>&#1508;&#1512;&#1493;&#1497;&#1511;&#1496;&#1497;&#1501;</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>&#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itp')"><span class="sic">&#128270;</span>&#1505;&#1493;&#1490;&#1497; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1493;&#1494;&#1512;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itype')"><span class="sic">&#127919;</span>&#1505;&#1493;&#1490;&#1497; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()"><span class="sic">&#128276;</span>&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</button>
@@ -1639,7 +1559,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="field" style="margin-bottom:10px">
     <label style="font-size:11px;color:var(--t3);font-weight:600">&#1500;&#1488;&#1497;&#1494;&#1492; &#1506;&#1502;&#1493;&#1491; &#1500;&#1492;&#1490;&#1497;&#1506; &#1500;&#1488;&#1495;&#1512; &#1499;&#1504;&#1497;&#1505;&#1492;</label>
-    <select id="mvis-default-page" style="font-size:14px"><option value="menu">&#1514;&#1508;&#1512;&#1497;&#1496; &#1512;&#1488;&#1513;&#1497;</option><option value="dash">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</option><option value="ncr">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</option><option value="tasks">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</option><option value="eqi">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</option><option value="nm">&#1499;&#1502;&#1506;&#1496;-&#1504;&#1508;&#1490;&#1506;</option><option value="cal">&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</option></select>
+    <select id="mvis-default-page" style="font-size:14px"><option value="dash">&#1491;&#1513;&#1489;&#1493;&#1512;&#1491;</option><option value="ncr">&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</option><option value="tasks">&#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</option><option value="eqi">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</option><option value="nm">&#1499;&#1502;&#1506;&#1496;-&#1504;&#1508;&#1490;&#1506;</option><option value="cal">&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</option></select>
   </div>
   <label class="chk-item" style="margin-bottom:10px">
     <input type="checkbox" id="mvis-hc" style="margin:0">
@@ -1743,7 +1663,7 @@ id="m-ncr" style="display:none">
 2. &#1500;&#1502;&#1492;? (&#1514;&#1493;&#1510;&#1488;&#1492; &#1500;-1) ...
 3. &#1500;&#1502;&#1492;? ...
 4. &#1500;&#1502;&#1492;? ...
-5. &#1500;&#1502;&#1492;? (&#1505;&#1497;&#1489;&#1514; &#1492;&#1513;&#1493;&#1512;&#1513; &#1492;&#1488;&#1502;&#1497;&#1514;&#1497;&#1514; &#8212; &#1502;&#1492;&#1503; &#1497;&#1497;&#1490;&#1494;&#1512;&#1493; &#1492;-CAPA)"></textarea>
+5. &#1500;&#1502;&#1492;? (&#1505;&#1497;&#1489;&#1514; &#1492;&#1513;&#1493;&#1512;&#1513; &#1492;&#1488;&#1502;&#1497;&#1514;&#1497;&#1514; &#8212; &#1502;&#1488;&#1494;&#1492; &#1497;&#1492;&#1497;&#1493; &#1492;-CAPA)"></textarea>
           <div style="display:flex;justify-content:flex-end;margin-top:6px">
             <button type="button" id="ncr-five-why-ai-btn" onclick="_ncrFiveWhyAI()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px" title="&#1489;&#1511;&#1513; &#1502;-AI &#1492;&#1510;&#1506;&#1492; &#1506;&#1500; &#1489;&#1505;&#1497;&#1505; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512;">&#129302; &#1492;&#1510;&#1506; &#1504;&#1497;&#1514;&#1493;&#1495; AI</button>
           </div>
@@ -1848,7 +1768,7 @@ id="m-ncr" style="display:none">
     <div id="od-inbox-list" style="font-size:13px"></div>
   </div>
   <div id="od-mail-section" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-    <div style="font-weight:700;font-size:14px;margin-bottom:8px">&#128231; &#1491;&#1497;&#1493;&#1493;&#1512; &#1502;&#1497;&#1497;&#1500;</div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px">&#128231; &#1491;&#1493;&#1494;&#1493;&#1503; &#1502;&#1497;&#1497;&#1500;</div>
     <div style="font-size:11px;color:var(--t3);line-height:1.7;margin-bottom:8px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:8px 10px">
       &#1513;&#1500;&#1497;&#1495;&#1514; &#1491;&#1493;&#1495; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; + &#1510;&#1497;&#1493;&#1491; &#1513;&#1506;&#1493;&#1502;&#1491; &#1500;&#1508;&#1497;&#1490; &#1502;&#1495;&#1513;&#1489;&#1493;&#1503; ה-Outlook &#1513;&#1500;&#1498;.<br>
       <strong>&#1492;&#1499;&#1504;&#1492;:</strong> &#1497;&#1513; &#1500;&#1492;&#1493;&#1505;&#1497;&#1507; <code style="font-size:10px">Mail.Send</code> &#1489;-Azure Portal &#1493;&#1500;&#1492;&#1514;&#1495;&#1489;&#1512; &#1502;&#1495;&#1491;&#1513; &#1488;&#1495;&#1512;&#1497; &#1494;&#1492;.
@@ -1981,7 +1901,7 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-ppe')">&#10005;</button>
   <div class="modal-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; &#1488;&#1497;&#1513;&#1497;</div>
   <div class="fgrid">
-    <div class="field"><label>&#1505;&#1493;&#1490; &#1510;&#1497;&#1493;&#1491; *</label><select id="ppe-ty"><option>&#1511;&#1505;&#1491;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1513;&#1511;&#1508;&#1497; &#1506;&#1497;&#1504;&#1497;&#1497;&#1501;</option><option>&#1488;&#1496;&#1502;&#1497; &#1488;&#1493;&#1494;&#1504;&#1497;&#1497;&#1501;</option><option>&#1499;&#1508;&#1508;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</option><option>&#1504;&#1506;&#1500;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1488;&#1508;&#1493;&#1491; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1505;&#1499;&#1514; &#1504;&#1513;&#1497;&#1502;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
+    <div class="field"><label>&#1505;&#1493;&#1490; &#1510;&#1497;&#1493;&#1491; *</label><select id="ppe-ty"><option>&#1511;&#1505;&#1491;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1513;&#1511;&#1508;&#1497; &#1506;&#1497;&#1504;&#1497;&#1497;&#1501;</option><option>&#1499;&#1493;&#1493;&#1504;&#1497;&#1514; &#1488;&#1493;&#1494;&#1504;&#1497;&#1497;&#1501;</option><option>&#1499;&#1508;&#1508;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</option><option>&#1504;&#1506;&#1500;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1488;&#1508;&#1493;&#1491; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1505;&#1499;&#1514; &#1504;&#1513;&#1497;&#1502;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
     <div class="field"><label>&#1506;&#1493;&#1489;&#1491;</label><input id="ppe-w"></div>
     <div class="field"><label>&#1497;&#1510;&#1512;&#1503;/&#1502;&#1508;&#1512;&#1496;</label><input id="ppe-m"></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</label><input type="date" id="ppe-d"></div>
@@ -2003,7 +1923,7 @@ id="m-ncr" style="display:none">
   <div id="eqi-pdf-status" style="font-size:12px;color:var(--t3);margin-bottom:10px">&#1502;&#1493;&#1499;&#1503; &#1500;&#1492;&#1506;&#1500;&#1488;&#1492;...</div>
   <div id="eqi-pdf-result" style="display:none">
     <div style="background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px">
-      &#10003; <strong>Claude AI &#1494;&#1497;&#1492;&#1492; &#1488;&#1514; &#1492;&#1514;&#1505;&#1511;&#1497;&#1512;</strong>. &#1489;&#1491;&#1493;&#1511; &#1493;&#1488;&#1513;&#1512; &#1488;&#1497;&#1500;&#1493; &#1508;&#1512;&#1497;&#1496;&#1497;&#1501; &#1500;&#1506;&#1491;&#1499;&#1503;:
+      &#10003; <strong>Claude AI &#1494;&#1497;&#1492;&#1492; &#1488;&#1514; &#1492;&#1514;&#1505;&#1511;&#1497;&#1512;</strong>. &#1489;&#1491;&#1493;&#1511; &#1493;&#1488;&#1513;&#1512; &#1488;&#1497;&#1494;&#1493; &#1488;&#1489;&#1497;&#1494;&#1512;&#1497;&#1501; &#1500;&#1506;&#1491;&#1499;&#1503;:
     </div>
     <div class="fgrid" style="background:#f8fafc;border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:10px">
       <div class="field"><label>&#1505;&#1508;&#1511; / &#1489;&#1493;&#1491;&#1511;</label><input id="eqi-pdf-vendor" class="inp"></div>
@@ -2099,23 +2019,24 @@ id="m-ncr" style="display:none">
 
 <!-- ROUND MODAL (Morning Round) -->
 <div class="overlay" id="ov-round" onclick="closeModal('m-round')"></div>
-<div class="modal" id="m-round" style="display:none;max-width:520px">
+<div class="modal" id="m-round" style="display:none;max-width:380px">
   <button class="close-btn" onclick="closeModal('m-round')">&#10005;</button>
   <div class="modal-title">&#9728; &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
-  <input type="hidden" id="round-id">
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="round-d"></div>
     <div class="field"><label>&#1502;&#1508;&#1511;&#1495;</label><input id="round-inspector" placeholder="&#1513;&#1501; &#1502;&#1489;&#1510;&#1506; &#1492;&#1505;&#1497;&#1493;&#1512;"></div>
-    <div class="field fw"><label>&#1514;&#1502;&#1514; &#1492;&#1505;&#1489;&#1489;</label><select id="round-theme" onchange="_roundRenderItems()" class="inp"></select></div>
   </div>
-  <div style="margin:12px 0 4px;display:flex;align-items:center;justify-content:space-between">
-    <div style="font-size:12px;font-weight:700;color:var(--t3)">&#1512;&#1513;&#1497;&#1502;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</div>
-    <div style="font-size:10px;color:var(--t3)">&#9989; &#1514;&#1511;&#1497;&#1503; &#1495; &#9888;&#65039; &#1488;&#1494;&#1492;&#1512;&#1492; &#1495; &#10060; &#1511;&#1512;&#1497;&#1496;&#1497; &#1495; &#10134; &#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</div>
+  <div style="margin:12px 0 8px;font-size:12px;font-weight:700;color:var(--t3)">&#1512;&#1513;&#1497;&#1502;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-fire" style="width:16px;height:16px"> &#128293; &#1490;&#1500;&#1488;&#1497; &#1488;&#1513; &#1493;&#1499;&#1497;&#1489;&#1493;&#1497; &#1514;&#1511;&#1497;&#1504;&#1497;&#1501;</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-corridors" style="width:16px;height:16px"> &#128682; &#1502;&#1506;&#1489;&#1512;&#1497; &#1495;&#1497;&#1512;&#1493;&#1501; &#1508;&#1504;&#1493;&#1497;&#1497;&#1501;</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-ppe" style="width:16px;height:16px"> &#9939; PPE &#1489;&#1506;&#1502;&#1491;&#1493;&#1514;</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-samples" style="width:16px;height:16px"> &#127774; &#1491;&#1490;&#1497;&#1502;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492; &#1489;&#1493;&#1510;&#1506;&#1493;</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-chemicals" style="width:16px;height:16px"> &#9762; &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501; &#1502;&#1493;&#1490;&#1504;&#1497;&#1501;</label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="round-firstaid" style="width:16px;height:16px"> &#128138; &#1506;&#1494;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492; &#1494;&#1502;&#1497;&#1504;&#1492;</label>
   </div>
-  <div id="round-items-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:400px;overflow-y:auto"></div>
-  <button type="button" class="btn btn-s btn-sm" onclick="_roundAddCustomItem()" style="width:100%;margin-bottom:10px;font-size:11px">&#43; &#1492;&#1493;&#1505;&#1497;&#1508;&#1497; &#1508;&#1512;&#1497;&#1496; &#1502;&#1493;&#1514;&#1488;&#1501;</button>
   <div class="fgrid">
-    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; / &#1492;&#1506;&#1512;&#1493;&#1514; &#1499;&#1500;&#1500;&#1497;&#1493;&#1514;</label><textarea id="round-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; / &#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="round-notes" rows="2"></textarea></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-round')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRound()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -2342,7 +2263,7 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-drl')">&#10005;</button>
   <div class="modal-title">&#1514;&#1512;&#1490;&#1497;&#1500; &#1495;&#1497;&#1512;&#1493;&#1501;</div>
   <div class="fgrid">
-    <div class="field"><label>&#1505;&#1493;&#1490; &#1514;&#1512;&#1490;&#1497;&#1500; *</label><select id="drl-ty"><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1491;&#1500;&#1497;&#1508;&#1514; &#1499;&#1497;&#1502;&#1497;&#1511;&#1500;&#1497;&#1501;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1492;&#1494;&#1491;&#1492;&#1493;&#1514; &#1506;&#1493;&#1489;&#1491;</option><option>&#1514;&#1512;&#1490;&#1497;&#1500; &#1508;&#1497;&#1504;&#1493;&#1497; &#1499;&#1493;&#1500;&#1500;</option><option>&#1492;&#1514;&#1512;&#1506;&#1493;&#1514; &#1495;&#1497;&#1512;&#1493;&#1501;</option></select></div>
+    <div class="field"><label>&#1505;&#1493;&#1490; &#1514;&#1512;&#1490;&#1497;&#1500; *</label><select id="drl-ty"><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1491;&#1500;&#1497;&#1508;&#1514; &#1499;&#1497;&#1502;&#1497;&#1511;&#1500;&#1497;&#1501;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1492;&#1494;&#1491;&#1492;&#1513;&#1514; &#1506;&#1493;&#1489;&#1491;</option><option>&#1514;&#1512;&#1490;&#1497;&#1500; &#1508;&#1497;&#1504;&#1493;&#1497; &#1499;&#1493;&#1500;&#1500;</option><option>&#1492;&#1514;&#1512;&#1506;&#1493;&#1514; &#1495;&#1497;&#1512;&#1493;&#1501;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="drl-d"></div>
     <div class="field"><label>&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</label><input type="number" id="drl-p" placeholder="0" min="0"></div>
     <div class="field"><label>&#1502;&#1513;&#1498; (&#1491;&#1511;')</label><input type="number" id="drl-dur" placeholder="30" min="0"></div>
@@ -2410,7 +2331,7 @@ id="m-ncr" style="display:none">
   <div class="modal-title">&#1502;&#1491;&#1497;&#1491;&#1492; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="env-d"></div>
-    <div class="field"><label>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</label><select id="env-ty"><option>&#1508;&#1500;&#1497;&#1496;&#1514; &#1502;&#1494;&#1492;&#1502;&#1497;&#1501;</option><option>&#1510;&#1500;&#1497;&#1500; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514; &#1488;&#1493;&#1493;&#1497;&#1512;</option><option>&#1499;&#1502;&#1493;&#1514; &#1508;&#1505;&#1493;&#1500;&#1514;</option><option>&#1510;&#1512;&#1497;&#1499;&#1514; &#1502;&#1497;&#1501;</option><option>&#1488;&#1495;&#1512;</option></select></div>
+    <div class="field"><label>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</label><select id="env-ty"><option>&#1508;&#1500;&#1497;&#1496;&#1514; &#1502;&#1494;&#1492;&#1502;&#1497;&#1501;</option><option>&#1510;&#1500;&#1497;&#1500; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514; &#1488;&#1493;&#1493;&#1497;&#1512;</option><option>&#1489;&#1512;&#1494;&#1514; &#1508;&#1505;&#1493;&#1500;&#1514;</option><option>&#1510;&#1512;&#1497;&#1499;&#1514; &#1502;&#1497;&#1501;</option><option>&#1488;&#1495;&#1512;</option></select></div>
     <div class="field"><label>&#1502;&#1491;&#1491;</label><input id="env-me"></div>
     <div class="field"><label>&#1514;&#1493;&#1510;&#1488;&#1492;</label><input id="env-r" placeholder="0.0"></div>
     <div class="field"><label>&#1497;&#1495;&#1497;&#1491;&#1492;</label><input id="env-u" placeholder="mg/l"></div>
@@ -2855,80 +2776,13 @@ function _obSanitize(){
 }
 // Copy title=... → aria-label=... for any button without explicit aria-label.
 // Improves screen-reader UX without touching the 89 individual button tags.
-// Bnav positioning — root-cause fix for "bnav invisible until modal opens"
-// reported on iPhone Safari.
-//
-// Diagnosis (full investigation in conversation): iOS Safari positions
-// position:fixed children relative to the LAYOUT viewport (== 100vh,
-// the height with URL bar collapsed). When the URL bar is visible, the
-// VISUAL viewport is shorter by ~84px, so `bottom:0` lands BEHIND the
-// URL bar. The cap-fab at `bottom:84px+safe-area` lands just inside —
-// which matches exactly what the user can see.
-//
-// Fix: use the VisualViewport API to read the actual difference between
-// layout and visual viewports, and shift the bnav up by that amount.
-// Always keeps the bnav at the bottom of the VISIBLE area regardless
-// of URL-bar state.
-// Bnav now sits at the TOP (just below the topbar) — sidesteps iOS
-// Safari's URL-bar position:fixed bottom problem entirely. CSS at
-// line ~126 handles all positioning; no JS gymnastics needed.
-function _ensureBnavVisible(){/* no-op kept for legacy callers */}
 function _autoAriaLabels(){
-  // Pass 1: button[title] without aria-label → mirror title to aria-label.
   var btns=document.querySelectorAll('button[title]:not([aria-label])');
   for(var i=0;i<btns.length;i++){
     var b=btns[i],t=b.getAttribute('title');
     if(t&&t.trim())b.setAttribute('aria-label',t);
   }
-  // Pass 2: div[onclick] / span[onclick] without role — make them keyboard-
-  // accessible. Adds role="button" + tabindex=0 + Enter/Space handler.
-  // Audit reported 70 such elements; this is a one-liner safety net so the
-  // existing markup keeps working while we slowly migrate to <button>.
-  var clickables=document.querySelectorAll('[onclick]:not(button):not(a):not(input):not(select):not(textarea):not([role])');
-  for(var j=0;j<clickables.length;j++){
-    var el=clickables[j];
-    el.setAttribute('role','button');
-    if(!el.hasAttribute('tabindex'))el.setAttribute('tabindex','0');
-    // If element has a title but no aria-label, mirror it.
-    var ttl=el.getAttribute('title');
-    if(ttl&&ttl.trim()&&!el.getAttribute('aria-label'))el.setAttribute('aria-label',ttl);
-  }
-  // Pass 3: form fields without an accessible name. Inputs/selects/
-  // textareas missing both <label> and aria-label get aria-label set
-  // from their placeholder OR from the previous-sibling label-like text.
-  // Audit reported 224 such fields. This is a fallback — the proper fix
-  // is real <label for> / wrapping, which is a manual task per field.
-  var fields=document.querySelectorAll('input:not([type="hidden"]):not([aria-label]):not([aria-labelledby]),select:not([aria-label]):not([aria-labelledby]),textarea:not([aria-label]):not([aria-labelledby])');
-  for(var k=0;k<fields.length;k++){
-    var fl=fields[k];
-    // Skip if a real <label for=ID> already points here.
-    if(fl.id&&document.querySelector('label[for="'+CSS.escape(fl.id)+'"]'))continue;
-    var ph=fl.getAttribute('placeholder');
-    var lblText='';
-    if(ph&&ph.trim()){lblText=ph;}
-    else{
-      // Walk up to the parent and look for a sibling label.
-      var p=fl.parentElement;
-      if(p){
-        var lab=p.querySelector('label');
-        if(lab&&lab.textContent)lblText=lab.textContent.replace(/[*\s]+$/,'').trim();
-      }
-    }
-    if(lblText)fl.setAttribute('aria-label',lblText.substring(0,80));
-  }
 }
-// Keyboard activation for div/span[role=button]: Enter and Space should
-// trigger the click handler, just like a real button. Single global
-// listener — works for elements added later (delegation).
-document.addEventListener('keydown',function(ev){
-  if(ev.key!=='Enter'&&ev.key!==' ')return;
-  var t=ev.target;
-  if(!t||(t.tagName==='BUTTON'||t.tagName==='A'||t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'))return;
-  if(t.getAttribute('role')==='button'&&t.hasAttribute('onclick')){
-    ev.preventDefault();
-    t.click();
-  }
-});
 document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});_autoAriaLabels();setTimeout(_autoAriaLabels,1500);setTimeout(function(){if(typeof _odIsConnected==='function'&&_odIsConnected()&&typeof _odAutoPollStart==='function')_odAutoPollStart();},2000);});
 // Last-resort cache reset: unregister every Service Worker, delete every
 // Cache Storage entry, then hard-reload. Triggered from syncDiag.
@@ -3085,7 +2939,6 @@ function goPage(id){
   var bn=g('bn-'+navId);if(bn)bn.classList.add('on');
   CUR=id;
   rPage();
-  if(typeof _ensureBnavVisible==='function')_ensureBnavVisible();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function _modulesSheetFilter(q){
@@ -3161,7 +3014,7 @@ window._modVisOpen=function(){
     return '<label class="chk-item" style="cursor:pointer"><input type="checkbox" data-modkey="'+esc(it.key)+'"'+(on?' checked':'')+' style="margin:0"><span style="flex:1;font-size:12px">'+esc(it.label)+'</span></label>';
   }).join('');
   // Default landing page + hc
-  var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'menu';
+  var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'dash';
   var hc=document.getElementById('mvis-hc');if(hc)hc.checked=document.body.classList.contains('hc');
   openModal('m-modules-vis');
 };
@@ -3177,7 +3030,7 @@ window._modVisSaveFromUI=function(){
   });
   p.modulesHidden=hidden;
   // Default page
-  var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'menu';
+  var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'dash';
   // High contrast
   var hc=document.getElementById('mvis-hc');if(hc)p.hc=!!hc.checked;
   _appPrefsSet(p);
@@ -3187,12 +3040,9 @@ window._modVisSaveFromUI=function(){
 // Apply on first paint and after role gates run.
 document.addEventListener('DOMContentLoaded',function(){setTimeout(_appPrefsApply,120);setTimeout(_appPrefsApply,800);});
 
-// Default landing page hook — wraps the initial goPage call. Defaults to
-// 'menu' (the launcher) so users land on a stable, scroll-only screen
-// instead of fighting iOS Safari fixed-positioning. Users who prefer the
-// dashboard can change this in settings (Modules → Visibility).
+// Default landing page hook — wraps goPage('dash') call on initial app load.
 window._appPrefsLandingPage=function(){
-  var p=_appPrefs();return p.defaultPage||'menu';
+  var p=_appPrefs();return p.defaultPage||'dash';
 };
 
 function rPage(){
@@ -4049,7 +3899,7 @@ function ptwPrint(){
   parts.push('<tr><td colspan="4">\u05d0\u05de\u05e6\u05e2\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+(p.safety||'-')+'</td></tr>');
   parts.push('</table>');
   parts.push('<table>');
-  parts.push('<tr><th colspan="4" scope="col">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd</th></tr>');
+  parts.push('<tr><th colspan="4">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd</th></tr>');
   parts.push('<tr><td>\u05de\u05d1\u05e6\u05e2: '+p.sg1n+'</td><td>'+p.sg1d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('<tr><td>\u05de\u05e4\u05e7\u05d7: '+p.sg2n+'</td><td>'+p.sg2d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('<tr><td>\u05de\u05e0\u05d4\u05dc: '+p.sg3n+'</td><td>'+p.sg3d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
@@ -4243,7 +4093,7 @@ function rDash(){
       var color=score>=80?'#16a34a':(score>=60?'#eab308':'#cc1f1f');
       var emoji=score>=80?'✅':(score>=60?'⚠️':'🚨');
       var label=score>=80?'\u05ea\u05e7\u05d9\u05df':(score>=60?'\u05e9\u05de\u05d5\u05e8 \u05d2\u05d5\u05e8\u05dd':'\u05d3\u05d5\u05e8\u05e9 \u05d8\u05d9\u05e4\u05d5\u05dc');
-      var details='\u05e4\u05d9\u05e8\u05d5\u05d8 \u05e0\u05d9\u05e7\u05d5\u05d3: NCRs \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd: '+openNcr+' (-'+Math.min(openNcr*2,30)+'), \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8: '+overdueT2+' (-'+Math.min(overdueT2*3,20)+'), \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3: '+expSoon+' (-'+Math.min(expSoon*2,20)+'). \u05d4\u05e6\u05d9\u05d5\u05df \u05de\u05ea\u05d7\u05d9\u05dc \u05d1-100 \u05d5\u05de\u05ea\u05e7\u05d6\u05d6 \u05dc\u05e4\u05d9 \u05d4\u05e4\u05d7\u05ea\u05d5\u05ea \u05dc\u05e2\u05d9\u05dc.';
+      var details='\u05e4\u05d9\u05e8\u05d5\u05d8 \u05e0\u05d9\u05e7\u05d5\u05d3: NCRs \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd: '+openNcr+' (-'+Math.min(openNcr*2,30)+'), \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8: '+overdueT2+' (-'+Math.min(overdueT2*3,20)+'), \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3: '+expSoon+' (-'+Math.min(expSoon*2,20)+'). \u05d4\u05e6\u05d9\u05d5\u05df: 100 - \u05d4\u05e4\u05d7\u05ea\u05d5\u05ea.';
       dh.innerHTML='<div title="'+esc(details)+'" style="background:'+color+';color:#fff;padding:10px 14px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:700;cursor:help"><span>'+emoji+' \u05e6\u05d9\u05d5\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+score+'/100</span><span style="font-size:12px;font-weight:400">'+label+'</span></div>';
     }
   }catch(e){console.warn('health failed',e);}
@@ -5271,7 +5121,7 @@ function _eqiPrintAll(){
     filterChips.map(function(c){return '<span class="filt">'+esc(c)+'</span>';}).join('')+
   '</div>'+
   '<table>'+
-    '<thead><tr><th scope="col">#</th><th scope="col">קוד</th><th scope="col">תיאור הציוד</th><th scope="col">ספק</th><th scope="col">מיקום</th><th scope="col">בדיקה אחרונה</th><th scope="col">בדיקה הבאה</th><th scope="col">מצב</th><th scope="col">סטטוס</th></tr></thead>'+
+    '<thead><tr><th>#</th><th>קוד</th><th>תיאור הציוד</th><th>ספק</th><th>מיקום</th><th>בדיקה אחרונה</th><th>בדיקה הבאה</th><th>מצב</th><th>סטטוס</th></tr></thead>'+
     '<tbody>'+bodyHtml+'</tbody>'+
   '</table>'+
   '<div class="foot">'+
@@ -6396,7 +6246,7 @@ function _eqiPdfItemRow(it,i,data){
   var noteLine=it.notes?'<div style="font-size:11px;color:#666;margin-top:2px">'+esc(it.notes)+'</div>':'';
   var candHtml='';
   if(nCands>0){
-    var thead='<tr style="background:#f1f5f9"><th style="padding:4px;text-align:right;font-size:10px;width:24px" scope="col"></th><th style="padding:4px;text-align:right;font-size:10px" scope="col">\u05e1\u05e4\u05e7</th><th style="padding:4px;text-align:right;font-size:10px" scope="col">\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9</th><th style="padding:4px;text-align:right;font-size:10px" scope="col">→ \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d3\u05e9</th></tr>';
+    var thead='<tr style="background:#f1f5f9"><th style="padding:4px;text-align:right;font-size:10px;width:24px"></th><th style="padding:4px;text-align:right;font-size:10px">\u05e1\u05e4\u05e7</th><th style="padding:4px;text-align:right;font-size:10px">\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9</th><th style="padding:4px;text-align:right;font-size:10px">→ \u05ea\u05d5\u05e7\u05e3 \u05d7\u05d3\u05e9</th></tr>';
     var tbody=it._candidates.map(function(cnd,ci){
       var diff=_eqiPdfComputeRecDiff(cnd.rec,meta);
       var diffMark=diff.length?'<span style="color:#1d4ed8;font-weight:700"> ✱</span>':'';
@@ -6854,263 +6704,36 @@ function rRound(){
       stEl.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+checks.map(function(c){var ok=todayRound[c.k];return '<span class="b '+(ok?'bG':'bR')+'">'+(ok?'\u2713 ':'\u2717 ')+c.l+'</span>';}).join('')+'</div><div style="font-size:11px;color:var(--t3)">\u05de\u05e4\u05e7\u05d7: '+(todayRound.inspector?esc(todayRound.inspector):'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df')+'</div>'+(todayRound.notes?'<div style="font-size:12px;margin-top:6px;color:var(--t2)">'+esc(todayRound.notes)+'</div>':'');
       var tc=g('round-today-card');if(tc)tc.style.borderRightColor='var(--ok)';
     }else{
-      stEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="color:var(--warn);font-size:13px">\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2</span><button class="btn btn-p" onclick="_roundOpenNew()" style="font-size:12px">+ \u05d1\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8</button></div>';
+      stEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="color:var(--warn);font-size:13px">\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2</span><button class="btn btn-p" onclick="openModal(\'m-round\')" style="font-size:12px">+ \u05d1\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8</button></div>';
       var tc=g('round-today-card');if(tc)tc.style.borderRightColor='var(--warn)';
     }
   }
   var tb=g('tb-round');if(!tb)return;
   var rows=(DB.rounds||[]).slice().sort(function(a,b){return (b.d||'')>(a.d||'')?1:-1;});
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">☀<span class="et-ic"></span>\u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8<br><button class="et-cta" onclick="_roundOpenNew()">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  function _rThemeLabel(t){var th=window.ROUND_THEMES&&window.ROUND_THEMES[t];return th?th.label:(t||'☀️ \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8');}
-  function _rSummarize(r){
-    if(Array.isArray(r.items)&&r.items.length){
-      var ok=0,warn=0,crit=0,total=r.items.length;
-      r.items.forEach(function(it){if(it.status==='ok')ok++;else if(it.status==='warn')warn++;else if(it.status==='critical')crit++;});
-      return '<span style="font-size:11px">\u2705 '+ok+' &nbsp; \u26a0\ufe0f '+warn+' &nbsp; \u274c '+crit+' &nbsp; <span style="color:var(--t3)">/ '+total+'</span></span>';
-    }
-    var legacyOk=[r.fire,r.corridors,r.ppe,r.samples,r.chemicals,r.firstaid].filter(Boolean).length;
-    return '<span style="font-size:11px">\u2705 '+legacyOk+'/6 (\u05e4\u05d5\u05e8\u05de\u05d8 \u05d9\u05e9\u05df)</span>';
-  }
+  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">☀<span class="et-ic"></span>\u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2\u05d5 \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8<br><button class="et-cta" onclick="openModal(\'m-round\')">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
+  function ck(v){return v?'<span style="color:var(--ok)">\u2713</span>':'<span style="color:var(--bad)">\u2717</span>';}
   tb.innerHTML=rows.map(function(r){
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" aria-label="\u05e6\u05e4\u05d4">&#128065;</button>';
-    var editBtn='<button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_roundEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">&#9998;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="rounds" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td colspan="4" style="text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">'+esc(_rThemeLabel(r.theme))+'</div>'+_rSummarize(r)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+editBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" aria-label="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+ck(r.fire)+'</td><td>'+ck(r.corridors)+'</td><td>'+ck(r.ppe)+'</td><td>'+ck(r.samples)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
-}
-// === Round themes (\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u2014 \u05ea\u05de\u05d5\u05ea) ===
-// Each theme is a preset checklist of items. The user picks a theme on
-// open, then the form renders the theme's items as 4-state buttons:
-// \u2705 ok / \u26a0\ufe0f warning / \u274c critical / \u2796 N/A. Each item also accepts a
-// short note. A "+ \u05d4\u05d5\u05e1\u05d9\u05e4\u05d9 \u05e4\u05e8\u05d9\u05d8 \u05de\u05d5\u05ea\u05d0\u05dd" lets the user append ad-hoc items.
-window.ROUND_THEMES={
-  morning:{label:'\u2600\ufe0f \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e1\u05d8\u05e0\u05d3\u05e8\u05d8\u05d9',items:[
-    {id:'fire',icon:'\ud83d\udd25',label:'\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9 \u05d5\u05db\u05d9\u05d1\u05d5\u05d9 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
-    {id:'corridors',icon:'\ud83d\udeaa',label:'\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd \u05e4\u05e0\u05d5\u05d9\u05d9\u05dd'},
-    {id:'ppe',icon:'\ud83e\uddba',label:'PPE \u05d1\u05e2\u05de\u05d3\u05d5\u05ea'},
-    {id:'samples',icon:'\u2600\ufe0f',label:'\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea'},
-    {id:'chemicals',icon:'\u2623\ufe0f',label:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05de\u05d5\u05d2\u05e0\u05d9\u05dd'},
-    {id:'firstaid',icon:'\ud83d\udc8a',label:'\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4'},
-    {id:'lighting',icon:'\ud83d\udca1',label:'\u05ea\u05d0\u05d5\u05e8\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d4 \u05d1\u05de\u05e2\u05d1\u05e8\u05d9\u05dd'},
-    {id:'signage',icon:'\ud83e\udea7',label:'\u05e9\u05d9\u05dc\u05d5\u05d8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05ea\u05e7\u05d9\u05df'},
-    {id:'guards',icon:'\ud83d\udee1\ufe0f',label:'\u05de\u05d2\u05d9\u05e0\u05d9 \u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'cleanliness',icon:'\ud83e\uddf9',label:'\u05d0\u05d6\u05d5\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05e7\u05d9 \u05d5\u05de\u05e1\u05d5\u05d3\u05e8'}
-  ]},
-  fire:{label:'\ud83d\udd25 \u05e1\u05d1\u05d1 \u05d0\u05e9 \u05d5\u05db\u05d9\u05d1\u05d5\u05d9',items:[
-    {id:'extinguishers',icon:'\ud83e\uddef',label:'\u05de\u05d8\u05e4\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05d5\u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'hoses',icon:'\ud83d\ude92',label:'\u05d2\u05dc\u05d9\u05dc\u05d9 \u05db\u05d9\u05d1\u05d5\u05d9 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
-    {id:'sprinklers',icon:'\ud83d\udca6',label:'\u05e1\u05e4\u05e8\u05d9\u05e0\u05e7\u05dc\u05e8\u05d9\u05dd \u05e0\u05e8\u05d0\u05d9\u05dd \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
-    {id:'detectors',icon:'\ud83d\udea8',label:'\u05d2\u05dc\u05d0\u05d9 \u05e2\u05e9\u05df/\u05d7\u05d5\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd'},
-    {id:'doors',icon:'\ud83d\udeaa',label:'\u05d3\u05dc\u05ea\u05d5\u05ea \u05d0\u05e9 \u05e1\u05d2\u05d5\u05e8\u05d5\u05ea \u05d5\u05dc\u05d0 \u05d7\u05e1\u05d5\u05de\u05d5\u05ea'},
-    {id:'exits',icon:'\u27a1\ufe0f',label:'\u05d9\u05e6\u05d9\u05d0\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05e4\u05e0\u05d5\u05d9\u05d5\u05ea \u05d5\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea'},
-    {id:'emergency-light',icon:'\ud83d\udca1',label:'\u05ea\u05d0\u05d5\u05e8\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05ea\u05e7\u05d9\u05e0\u05d4'},
-    {id:'flammable',icon:'\ud83d\udce6',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d3\u05dc\u05d9\u05e7\u05d9\u05dd \u05ea\u05e7\u05e0\u05d9'},
-    {id:'electric',icon:'\u26a1',label:'\u05dc\u05d5\u05d7\u05d5\u05ea \u05d7\u05e9\u05de\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd'},
-    {id:'meeting',icon:'\ud83d\udc65',label:'\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05d4\u05ea\u05db\u05e0\u05e1\u05d5\u05ea \u05e0\u05d2\u05d9\u05e9\u05d5\u05ea'}
-  ]},
-  chemicals:{label:'\u2697\ufe0f \u05e1\u05d1\u05d1 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',items:[
-    {id:'msds',icon:'\ud83d\udcc4',label:'\u05d3\u05e4\u05d9 MSDS \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
-    {id:'storage',icon:'\ud83d\uddc4\ufe0f',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05ea\u05d0\u05d9\u05dd (\u05d0\u05d5\u05d5\u05e8\u05d5\u05e8 / \u05d4\u05e4\u05e8\u05d3\u05d4)'},
-    {id:'labels',icon:'\ud83c\udff7\ufe0f',label:'\u05ea\u05d9\u05d5\u05d2 GHS \u05ea\u05e7\u05d9\u05df \u05e2\u05dc \u05de\u05db\u05dc\u05d9\u05dd'},
-    {id:'spillkit',icon:'\ud83e\udea3',label:'\u05e2\u05e8\u05db\u05ea \u05e1\u05e4\u05d9\u05d2\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'shower',icon:'\ud83d\udebf',label:'\u05de\u05e7\u05dc\u05d7\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05ea\u05e7\u05d9\u05e0\u05d4'},
-    {id:'eyewash',icon:'\ud83d\udc41\ufe0f',label:'\u05e9\u05d8\u05d9\u05e4\u05ea \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd \u05e4\u05d5\u05e2\u05dc\u05ea'},
-    {id:'ventilation',icon:'\ud83d\udca8',label:'\u05d0\u05d5\u05d5\u05e8\u05d5\u05e8 \u05e4\u05e2\u05d9\u05dc'},
-    {id:'ppe-chem',icon:'\ud83e\uddba',label:'PPE \u05d9\u05d9\u05e2\u05d5\u05d3\u05d9 \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'expiry',icon:'\ud83d\udcc5',label:'\u05ea\u05d5\u05e7\u05e3 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3'},
-    {id:'incompatible',icon:'\u26a0\ufe0f',label:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05d9\u05dd \u05de\u05d5\u05e4\u05e8\u05d3\u05d9\u05dd'}
-  ]},
-  ergonomics:{label:'\ud83e\uddba \u05e1\u05d1\u05d1 \u05d0\u05e8\u05d2\u05d5\u05e0\u05d5\u05de\u05d9\u05d4 \u05d5-PPE',items:[
-    {id:'chairs',icon:'\ud83e\ude91',label:'\u05db\u05d9\u05e1\u05d0\u05d5\u05ea \u05de\u05ea\u05db\u05d5\u05d5\u05e0\u05e0\u05d9\u05dd'},
-    {id:'screens',icon:'\ud83d\udda5\ufe0f',label:'\u05de\u05e1\u05db\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd'},
-    {id:'lifting',icon:'\ud83d\udce6',label:'\u05e2\u05de\u05d3\u05d5\u05ea \u05d4\u05e8\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'},
-    {id:'mats',icon:'\ud83e\uddf1',label:'\u05de\u05e9\u05d8\u05d7\u05d9 \u05e2\u05de\u05d9\u05d3\u05d4 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'},
-    {id:'ppe-helmet',icon:'\u26d1\ufe0f',label:'\u05e7\u05e1\u05d3\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'ppe-gloves',icon:'\ud83e\udde4',label:'\u05db\u05e4\u05e4\u05d5\u05ea \u05d6\u05de\u05d9\u05e0\u05d5\u05ea'},
-    {id:'ppe-eye',icon:'\ud83e\udd7d',label:'\u05de\u05e9\u05e7\u05e4\u05d9 \u05de\u05d2\u05df \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
-    {id:'ppe-ear',icon:'\ud83c\udfa7',label:'\u05d0\u05d8\u05de\u05d9 \u05d0\u05d5\u05d6\u05e0\u05d9\u05d9\u05dd \u05d6\u05de\u05d9\u05e0\u05d9\u05dd'},
-    {id:'ppe-foot',icon:'\ud83e\udd7e',label:'\u05e0\u05e2\u05dc\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05de\u05d3\u05d5\u05ea'},
-    {id:'ppe-resp',icon:'\ud83d\ude37',label:'\u05de\u05e1\u05db\u05d5\u05ea \u05e0\u05e9\u05d9\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'}
-  ]},
-  environment:{label:'\ud83c\udf31 \u05e1\u05d1\u05d1 \u05e1\u05d1\u05d9\u05d1\u05d4',items:[
-    {id:'waste',icon:'\ud83d\uddd1\ufe0f',label:'\u05d4\u05e4\u05e8\u05d3\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea \u05ea\u05e7\u05d9\u05e0\u05d4'},
-    {id:'recycle',icon:'\u267b\ufe0f',label:'\u05de\u05db\u05dc\u05d9 \u05de\u05d7\u05d6\u05d5\u05e8 \u05e4\u05e0\u05d5\u05d9\u05d9\u05dd'},
-    {id:'spills-env',icon:'\ud83d\udca7',label:'\u05d0\u05d9\u05df \u05d6\u05d9\u05d4\u05d5\u05dd \u05e7\u05e8\u05e7\u05e2 / \u05de\u05d9\u05dd'},
-    {id:'emissions',icon:'\ud83c\udfed',label:'\u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05dc\u05d0\u05d5\u05d5\u05d9\u05e8 \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea (\u05d7\u05d6\u05d5\u05ea\u05d9\u05ea)'},
-    {id:'noise',icon:'\ud83d\udd0a',label:'\u05e8\u05e2\u05e9 \u05d1\u05d8\u05d5\u05d5\u05d7\u05d9\u05dd \u05de\u05e7\u05d5\u05d1\u05dc\u05d9\u05dd'},
-    {id:'effluent',icon:'\ud83d\udeb0',label:'\u05e9\u05e4\u05db\u05d9\u05dd \u05de\u05d8\u05d5\u05e4\u05dc\u05d9\u05dd'},
-    {id:'leaks',icon:'\ud83d\udca6',label:'\u05d0\u05d9\u05df \u05d3\u05dc\u05d9\u05e4\u05d5\u05ea \u05de\u05e6\u05e0\u05e8\u05ea'},
-    {id:'storage-env',icon:'\ud83d\udce6',label:'\u05d0\u05d7\u05e1\u05d5\u05df \u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd \u05ea\u05e7\u05e0\u05d9'},
-    {id:'meters',icon:'\ud83d\udcca',label:'\u05de\u05d3-\u05d6\u05e8\u05d9\u05de\u05d4 / \u05d7\u05e9\u05de\u05dc \u05de\u05ea\u05d5\u05e2\u05d3\u05d9\u05dd'},
-    {id:'vegetation',icon:'\ud83c\udf3f',label:'\u05e9\u05d8\u05d7\u05d9 \u05d2\u05d9\u05e0\u05d5\u05df \u05de\u05d8\u05d5\u05e4\u05dc\u05d9\u05dd'}
-  ]},
-  production:{label:'\ud83c\udfed \u05e1\u05d1\u05d1 \u05d0\u05d6\u05d5\u05e8 \u05d9\u05d9\u05e6\u05d5\u05e8',items:[
-    {id:'machines',icon:'\u2699\ufe0f',label:'\u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05ea\u05e7\u05d9\u05e0\u05d5\u05ea'},
-    {id:'guards',icon:'\ud83d\udee1\ufe0f',label:'\u05de\u05d2\u05d9\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'estop',icon:'\ud83d\uded1',label:'\u05dc\u05d7\u05e6\u05e0\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd \u05e0\u05d2\u05d9\u05e9\u05d9\u05dd'},
-    {id:'lockout',icon:'\ud83d\udd12',label:'LOTO \u05d1\u05de\u05e7\u05d5\u05dd \u05d1\u05de\u05e7\u05e8\u05d9\u05dd \u05e0\u05d3\u05e8\u05e9\u05d9\u05dd'},
-    {id:'cleanliness',icon:'\ud83e\uddf9',label:'\u05d0\u05d6\u05d5\u05e8 \u05e0\u05e7\u05d9 \u05d5\u05de\u05e1\u05d5\u05d3\u05e8'},
-    {id:'tools',icon:'\ud83d\udd27',label:'\u05db\u05dc\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd'},
-    {id:'workstation',icon:'\ud83e\ude91',label:'\u05ea\u05d7\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05ea\u05e7\u05e0\u05d9\u05d5\u05ea'},
-    {id:'forklift',icon:'\ud83d\ude9c',label:'\u05de\u05dc\u05d2\u05d6\u05d5\u05ea \u05d1\u05e0\u05ea\u05d9\u05d1\u05d9\u05dd \u05de\u05e1\u05d5\u05de\u05e0\u05d9\u05dd'},
-    {id:'chargers',icon:'\ud83d\udd0b',label:'\u05ea\u05d7\u05e0\u05d5\u05ea \u05d8\u05e2\u05d9\u05e0\u05d4 \u05dc\u05dc\u05d0 \u05d1\u05e2\u05d9\u05d4'},
-    {id:'pallets',icon:'\ud83d\udce6',label:'\u05de\u05e9\u05d8\u05d7\u05d9\u05dd \u05de\u05e1\u05d5\u05d3\u05e8\u05d9\u05dd \u05d1\u05d2\u05d5\u05d1\u05d4 \u05ea\u05e7\u05d9\u05df'}
-  ]}
-};
-// In-memory state for the modal: items currently being edited.
-// Format: [{id, icon, label, status: 'ok'|'warn'|'critical'|'na'|null, notes, custom?:true}]
-window._roundDraft={items:[]};
-function _roundPopulateThemeSelect(){
-  var sel=g('round-theme');if(!sel)return;
-  var keys=Object.keys(window.ROUND_THEMES);
-  sel.innerHTML=keys.map(function(k){
-    return '<option value="'+esc(k)+'">'+esc(window.ROUND_THEMES[k].label)+'</option>';
-  }).join('');
-}
-window._roundRenderItems=function(){
-  var sel=g('round-theme'),host=g('round-items-list');
-  if(!sel||!host)return;
-  // If user changed theme, reset draft to that theme's items.
-  // Preserve already-set status when items are the same id (rare but
-  // avoids losing work on accidental theme switch).
-  var theme=window.ROUND_THEMES[sel.value]||window.ROUND_THEMES.morning;
-  var prev={};
-  (window._roundDraft.items||[]).forEach(function(it){if(it.id)prev[it.id]={status:it.status,notes:it.notes};});
-  // Keep custom items (those marked custom:true) across theme changes.
-  var customItems=(window._roundDraft.items||[]).filter(function(it){return it.custom;});
-  window._roundDraft.items=theme.items.map(function(it){
-    return {id:it.id,icon:it.icon,label:it.label,status:(prev[it.id]&&prev[it.id].status)||null,notes:(prev[it.id]&&prev[it.id].notes)||''};
-  }).concat(customItems);
-  _roundPaintItems();
-};
-function _roundPaintItems(){
-  var host=g('round-items-list');if(!host)return;
-  host.innerHTML=window._roundDraft.items.map(function(it,idx){
-    function btn(stat,emoji,color){
-      var on=it.status===stat;
-      var bg=on?color:'#f3f4f6',c=on?'#fff':'#374151',br=on?color:'#d1d5db';
-      return '<button type="button" data-roundstat="'+idx+':'+stat+'" style="background:'+bg+';color:'+c+';border:1px solid '+br+';border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;min-width:32px;font-family:inherit" aria-pressed="'+on+'">'+emoji+'</button>';
-    }
-    var rmBtn=it.custom?'<button type="button" data-roundrm="'+idx+'" style="background:transparent;border:none;color:#9ca3af;font-size:14px;cursor:pointer;padding:2px 6px" aria-label="\u05d4\u05e1\u05e8 \u05e4\u05e8\u05d9\u05d8">\u2715</button>':'';
-    return '<div style="background:#fafbfc;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px">'+
-      '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+esc(it.icon||'\u2022')+'</span><span style="font-size:13px;flex:1">'+esc(it.label||'')+'</span>'+rmBtn+'</div>'+
-      '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
-        btn('ok','\u2705','#16a34a')+
-        btn('warn','\u26a0\ufe0f','#d97706')+
-        btn('critical','\u274c','#dc2626')+
-        btn('na','\u2796','#6b7280')+
-        '<input type="text" data-roundnotes="'+idx+'" placeholder="\u05d4\u05e2\u05e8\u05d4 (\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05e0\u05dc\u05d9)" value="'+esc(it.notes||'')+'" style="flex:1;min-width:120px;font-size:11px;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px">'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  // Wire up buttons (delegated handler)
-  host.querySelectorAll('[data-roundstat]').forEach(function(btn){
-    btn.onclick=function(){
-      var p=btn.dataset.roundstat.split(':'),idx=parseInt(p[0],10),stat=p[1];
-      var it=window._roundDraft.items[idx];if(!it)return;
-      it.status=(it.status===stat)?null:stat;// toggle off if clicked same
-      _roundPaintItems();
-    };
-  });
-  host.querySelectorAll('[data-roundnotes]').forEach(function(inp){
-    inp.oninput=function(){
-      var idx=parseInt(inp.dataset.roundnotes,10);
-      if(window._roundDraft.items[idx])window._roundDraft.items[idx].notes=inp.value;
-    };
-  });
-  host.querySelectorAll('[data-roundrm]').forEach(function(btn){
-    btn.onclick=function(){
-      var idx=parseInt(btn.dataset.roundrm,10);
-      window._roundDraft.items.splice(idx,1);_roundPaintItems();
-    };
-  });
-}
-window._roundAddCustomItem=function(){
-  var label=prompt('\u05e9\u05dd \u05e4\u05e8\u05d9\u05d8 \u05de\u05d5\u05ea\u05d0\u05dd:');
-  if(!label||!label.trim())return;
-  window._roundDraft.items.push({id:'custom-'+Date.now(),icon:'\u2022',label:label.trim(),status:null,notes:'',custom:true});
-  _roundPaintItems();
-};
-// Compute legacy boolean flags from new items[] for backward-compat.
-function _roundLegacyFlags(items){
-  var flags={fire:false,corridors:false,ppe:false,samples:false,chemicals:false,firstaid:false};
-  (items||[]).forEach(function(it){
-    if(flags.hasOwnProperty(it.id))flags[it.id]=(it.status==='ok');
-  });
-  return flags;
 }
 function svRound(){
   var d=gv('round-d');if(!d){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var theme=gv('round-theme')||'morning';
-  var items=(window._roundDraft.items||[]).slice();
-  // Status summary: any 'critical' \u2192 \u05dc\u05d9\u05e7\u05d5\u05d9. All 'ok' \u2192 \u05d4\u05d5\u05e9\u05dc\u05dd. Else \u05d7\u05dc\u05e7\u05d9.
-  var anyCrit=items.some(function(it){return it.status==='critical';});
-  var anyWarn=items.some(function(it){return it.status==='warn';});
-  var allDone=items.length>0&&items.every(function(it){return it.status==='ok'||it.status==='na';});
-  var status=anyCrit?'\u05dc\u05d9\u05e7\u05d5\u05d9':(anyWarn?'\u05d0\u05d6\u05d4\u05e8\u05d4':(allDone?'\u05d4\u05d5\u05e9\u05dc\u05dd':'\u05d7\u05dc\u05e7\u05d9'));
-  var legacy=_roundLegacyFlags(items);
-  var id=g('round-id')&&g('round-id').value;
-  var r={
-    id:id||gid(),d:d,inspector:gv('round-inspector')||null,
-    theme:theme,items:items,
-    notes:gv('round-notes')||null,
-    s:status,
-    fire:legacy.fire,corridors:legacy.corridors,ppe:legacy.ppe,
-    samples:legacy.samples,chemicals:legacy.chemicals,firstaid:legacy.firstaid,
-    ts:new Date().toISOString()
-  };
+  var fire=g('round-fire')&&g('round-fire').checked;
+  var corridors=g('round-corridors')&&g('round-corridors').checked;
+  var ppe=g('round-ppe')&&g('round-ppe').checked;
+  var samples=g('round-samples')&&g('round-samples').checked;
+  var chemicals=g('round-chemicals')&&g('round-chemicals').checked;
+  var firstaid=g('round-firstaid')&&g('round-firstaid').checked;
+  var allOk=fire&&corridors&&ppe&&samples&&chemicals&&firstaid;
+  var r={id:gid(),d:d,inspector:gv('round-inspector'),fire:fire,corridors:corridors,ppe:ppe,samples:samples,chemicals:chemicals,firstaid:firstaid,notes:gv('round-notes'),s:allOk?'\u05d4\u05d5\u05e9\u05dc\u05dd':'\u05d7\u05dc\u05e7\u05d9',ts:new Date().toISOString()};
   if(!DB.rounds)DB.rounds=[];
-  if(id){DB.rounds=DB.rounds.map(function(x){return x.id===id?r:x;});sbUpd('rounds',r);}
-  else{DB.rounds.push(r);sbIns('rounds',r);}
-  addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 ('+theme+'): '+d);sdb();
-  closeModal('m-round');
-  ['round-inspector','round-notes'].forEach(function(id2){var el=g(id2);if(el)el.value='';});
-  if(g('round-id'))g('round-id').value='';
-  window._roundDraft={items:[]};
-  toast('\u05e1\u05d1\u05d1 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
+  DB.rounds.push(r);sbIns('rounds',r);addLog('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8: '+d);sdb();
+  closeModal('m-round');['round-inspector','round-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  ['round-fire','round-corridors','round-ppe','round-samples','round-chemicals','round-firstaid'].forEach(function(id){var el=g(id);if(el)el.checked=false;});
+  toast('\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05e0\u05e9\u05de\u05e8 \u2713');rRound();rDash();
 }
-// Reset state when opening modal for a new round.
-window._roundOpenNew=function(){
-  openModal('m-round');
-  setTimeout(function(){
-    if(g('round-id'))g('round-id').value='';
-    var dEl=g('round-d');if(dEl&&!dEl.value)dEl.value=new Date().toISOString().split('T')[0];
-    var insp=g('round-inspector');if(insp)insp.value='';
-    var nt=g('round-notes');if(nt)nt.value='';
-    _roundPopulateThemeSelect();
-    var sel=g('round-theme');if(sel)sel.value='morning';
-    window._roundDraft={items:[]};
-    _roundRenderItems();
-  },30);
-};
-// Edit an existing round \u2014 load its theme + items into the modal.
-window._roundEdit=function(id){
-  var r=(DB.rounds||[]).find(function(x){return x.id===id;});if(!r)return;
-  openModal('m-round');
-  setTimeout(function(){
-    if(g('round-id'))g('round-id').value=r.id;
-    var dEl=g('round-d');if(dEl)dEl.value=r.d||'';
-    var insp=g('round-inspector');if(insp)insp.value=r.inspector||'';
-    var nt=g('round-notes');if(nt)nt.value=r.notes||'';
-    _roundPopulateThemeSelect();
-    var theme=r.theme||'morning';
-    var sel=g('round-theme');if(sel)sel.value=theme;
-    // Prefer the new items array; fall back to legacy boolean flags.
-    if(Array.isArray(r.items)&&r.items.length){
-      window._roundDraft={items:r.items.slice()};
-      _roundPaintItems();
-    }else{
-      // Build items from theme + legacy flags
-      window._roundDraft={items:[]};
-      _roundRenderItems();
-      var legacy={fire:r.fire,corridors:r.corridors,ppe:r.ppe,samples:r.samples,chemicals:r.chemicals,firstaid:r.firstaid};
-      window._roundDraft.items.forEach(function(it){
-        if(legacy.hasOwnProperty(it.id)&&legacy[it.id]===true)it.status='ok';
-      });
-      _roundPaintItems();
-    }
-  },30);
-};
 // ---- END NEAR-MISS + ROUND ----
 
 // ---- TOOLBOX TALKS ----
@@ -7189,7 +6812,7 @@ function rCal(){
   var thisMonthStr=String(_calY)+'-'+String(_calM+1).padStart(2,'0');
   var dowNames=['\u05d0','\u05d1','\u05d2','\u05d3','\u05d4','\u05d5','\u05e9'];
   var html='<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px"><thead><tr>';
-  dowNames.forEach(function(n){html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;color:var(--t2)" scope="col">'+n+'</th>';});
+  dowNames.forEach(function(n){html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;color:var(--t2)">'+n+'</th>';});
   html+='</tr></thead><tbody>';
   var d=1;
   for(var w=0;w<6;w++){
@@ -7741,15 +7364,9 @@ function createNewUser(){
       st.textContent='\u05d4\u05e6\u05dc\u05d9\u05d7 \u05d7\u05dc\u05e7\u05d9\u05ea: '+res.j.warning;
     }
     closeModal('m-newuser');
-    // Show credentials modal — password starts masked, real value stored
-    // in dataset.real and revealed via _credToggle() on demand. Reduces
-    // shoulder-surf risk if the user opens the modal in public.
+    // Show credentials modal
     g('cr-username').textContent=res.j.username;
-    var pwEl=g('cr-password');
-    pwEl.dataset.real=res.j.password||'';
-    pwEl.dataset.masked='1';
-    pwEl.textContent='••••••••';
-    var tgl=g('cr-password-toggle');if(tgl)tgl.textContent='👁️ הצג';
+    g('cr-password').textContent=res.j.password;
     openModal('m-credentials');
     // Refresh local data
     sbSync();
@@ -7760,25 +7377,9 @@ function createNewUser(){
     st.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err);
   });
 }
-// Toggle the password between masked dots and the real value stored in
-// dataset.real. Used by the eye button in the credentials modal.
-window._credToggle=function(){
-  var el=g('cr-password');if(!el)return;
-  var tgl=g('cr-password-toggle');
-  if(el.dataset.masked==='1'){
-    el.textContent=el.dataset.real||'';
-    el.dataset.masked='0';
-    if(tgl)tgl.textContent='🙈 הסתר';
-  }else{
-    el.textContent='••••••••';
-    el.dataset.masked='1';
-    if(tgl)tgl.textContent='👁️ הצג';
-  }
-};
 function copyCredentials(){
   var u=g('cr-username').textContent;
-  var pwEl=g('cr-password');
-  var p=pwEl.dataset.real||pwEl.textContent;
+  var p=g('cr-password').textContent;
   var txt='\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9: '+u+'\n\u05e1\u05d9\u05e1\u05de\u05d4: '+p+'\n\u05db\u05e0\u05d9\u05e1\u05d4: https://tapugan-safety.pages.dev';
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 ✓',{ok:true});}).catch(function(){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05e2\u05ea\u05e7\u05d4');});
@@ -7855,11 +7456,7 @@ function openResetPwDialog(){
     }
     closeModal('m-user');
     g('cr-username').textContent=res.j.username;
-    var pwEl2=g('cr-password');
-    pwEl2.dataset.real=res.j.password||'';
-    pwEl2.dataset.masked='1';
-    pwEl2.textContent='••••••••';
-    var tgl2=g('cr-password-toggle');if(tgl2)tgl2.textContent='👁️ הצג';
+    g('cr-password').textContent=res.j.password;
     openModal('m-credentials');
   }).catch(function(err){
     alert('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err));
@@ -8318,9 +7915,9 @@ function _rskMatrix(){
   var SEV_LBL={4:'\u05d7\u05de\u05d5\u05e8\u05d4 \u2014 \u05de\u05d5\u05d5\u05ea/\u05e0\u05db\u05d5\u05ea \u05ea\u05de\u05d9\u05d3\u05d9\u05ea',3:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea \u2014 \u05e4\u05d2\u05d9\u05e2\u05d4 \u05e8\u05e6\u05d9\u05e0\u05d9\u05ea \u05d0\u05d5 30+ \u05d9\u05de\u05d9 \u05de\u05d7\u05dc\u05d4',2:'\u05e7\u05dc\u05d4 \u2014 \u05d8\u05d9\u05e4\u05d5\u05dc \u05e8\u05e4\u05d5\u05d0\u05d9 + \u05d9\u05de\u05d9 \u05db\u05d5\u05e9\u05e8',1:'\u05e9\u05d5\u05dc\u05d9\u05ea \u2014 \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4'};
   var PRB_LBL={1:'\u05e0\u05de\u05d5\u05db\u05d4 \u05de\u05d0\u05d5\u05d3',2:'\u05e0\u05de\u05d5\u05db\u05d4',3:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',4:'\u05d2\u05d1\u05d5\u05d4\u05d4'};
   var html='<table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed"><thead><tr>';
-  html+='<th style="width:170px;padding:6px;background:#f5f7fa;color:var(--t3);font-size:10px;text-align:center" scope="col">\u05d7\u05d5\u05de\u05e8\u05d4 \u2193 / \u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u2192</th>';
+  html+='<th style="width:170px;padding:6px;background:#f5f7fa;color:var(--t3);font-size:10px;text-align:center">\u05d7\u05d5\u05de\u05e8\u05d4 \u2193 / \u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u2192</th>';
   for(var P=1;P<=4;P++){
-    html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;text-align:center;color:#1a1d23" scope="col"><div>'+P+'</div><div style="font-size:9px;font-weight:400;color:var(--t3)">'+esc(PRB_LBL[P])+'</div></th>';
+    html+='<th style="padding:6px;background:#f5f7fa;font-weight:700;text-align:center;color:#1a1d23"><div>'+P+'</div><div style="font-size:9px;font-weight:400;color:var(--t3)">'+esc(PRB_LBL[P])+'</div></th>';
   }
   html+='</tr></thead><tbody>';
   for(var S=4;S>=1;S--){
@@ -8366,8 +7963,8 @@ function _easpMatrix(){
     grid[k].count++;
     grid[k].ids.push(r.id);
   });
-  var html='<table style="border-collapse:collapse;font-size:11px;margin:0 auto"><thead><tr><th style="padding:4px;color:var(--t3);font-weight:600;text-align:right" colspan="2" scope="col"></th>';
-  for(var s=1;s<=4;s++)html+='<th style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700" scope="col">S'+s+'</th>';
+  var html='<table style="border-collapse:collapse;font-size:11px;margin:0 auto"><thead><tr><th style="padding:4px;color:var(--t3);font-weight:600;text-align:right" colspan="2"></th>';
+  for(var s=1;s<=4;s++)html+='<th style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">S'+s+'</th>';
   html+='</tr></thead><tbody>';
   for(var p=4;p>=1;p--){
     html+='<tr><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700;writing-mode:vertical-rl">'+(p===4?'הסתברות (P)':'')+'</td><td style="padding:4px 8px;background:#1a1d23;color:#fff;font-weight:700">P'+p+'</td>';
@@ -8843,8 +8440,8 @@ function _notifEnabled(eventKey,channelKey){
 function openNotifSettings(){
   var modal=g('m-notif');if(!modal)return;
   var prefs=_notifPrefs();
-  var hdr='<tr><th style="text-align:right;padding:6px" scope="col">\u05d0\u05d9\u05e8\u05d5\u05e2</th>';
-  NOTIF_CHANNELS.forEach(function(c){hdr+='<th style="padding:6px" scope="col">'+c.icon+'<br>'+c.label+'</th>';});
+  var hdr='<tr><th style="text-align:right;padding:6px">\u05d0\u05d9\u05e8\u05d5\u05e2</th>';
+  NOTIF_CHANNELS.forEach(function(c){hdr+='<th style="padding:6px">'+c.icon+'<br>'+c.label+'</th>';});
   hdr+='</tr>';
   var body='';
   NOTIF_EVENTS.forEach(function(ev){
@@ -11070,7 +10667,7 @@ window._auditPack=function(){
       (stats.d30?'<span class="pill warn">'+'≤30\u05d9'+': <b>'+stats.d30+'</b></span>':'')+
       (stats.ok?'<span class="pill ok">'+'\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd'+': <b>'+stats.ok+'</b></span>':'')+
     '</div>'+
-    (eq.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05e7\u05d5\u05d3 / \u05d6\u05d9\u05d4\u05d5\u05d9'+'</th><th scope="col">'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th scope="col">'+'\u05e1\u05e4\u05e7'+'</th><th scope="col">'+'\u05de\u05d9\u05e7\u05d5\u05dd'+'</th><th scope="col">'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05de\u05d0\u05d2\u05e8'+'</div>')+
+    (eq.length?'<table><thead><tr><th>#</th><th>'+'\u05e7\u05d5\u05d3 / \u05d6\u05d9\u05d4\u05d5\u05d9'+'</th><th>'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th>'+'\u05e1\u05e4\u05e7'+'</th><th>'+'\u05de\u05d9\u05e7\u05d5\u05dd'+'</th><th>'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+eqRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05de\u05d0\u05d2\u05e8'+'</div>')+
   '</div>'+
   // -------- Section 2: NCRs --------
   '<div class="section">'+
@@ -11081,13 +10678,13 @@ window._auditPack=function(){
       (ncrOpen?'<span class="pill bad">'+'\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'+': <b>'+ncrOpen+'</b></span>':'')+
       (ncrClosed30?'<span class="pill ok">'+'\u05e0\u05e1\u05d2\u05e8\u05d5'+': <b>'+ncrClosed30+'</b></span>':'')+
     '</div>'+
-    (ncrScope.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05de\u05e1\u05f3'+'</th><th scope="col">'+'\u05ea\u05d9\u05d0\u05d5\u05e8'+'</th><th scope="col">'+'\u05d0\u05d6\u05d5\u05e8'+'</th><th scope="col">'+'CAPA'+'</th><th scope="col">'+'\u05e0\u05e4\u05ea\u05d7'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th><th scope="col">'+'\u05d2\u05d9\u05dc'+'</th></tr></thead><tbody>'+ncrRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df NCR \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 — \u05de\u05e6\u05d5\u05d9\u05df!'+'</div>')+
+    (ncrScope.length?'<table><thead><tr><th>#</th><th>'+'\u05de\u05e1\u05f3'+'</th><th>'+'\u05ea\u05d9\u05d0\u05d5\u05e8'+'</th><th>'+'\u05d0\u05d6\u05d5\u05e8'+'</th><th>'+'CAPA'+'</th><th>'+'\u05e0\u05e4\u05ea\u05d7'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th><th>'+'\u05d2\u05d9\u05dc'+'</th></tr></thead><tbody>'+ncrRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df NCR \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 — \u05de\u05e6\u05d5\u05d9\u05df!'+'</div>')+
   '</div>'+
   // -------- Section 3: Recent inspections --------
   '<div class="section">'+
     '<h2>3. '+'\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d5 (90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd)'+'</h2>'+
     '<div class="sub">'+'\u05e2\u05d3 50 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea \u05dc\u05e6\u05d5\u05e8\u05da \u05de\u05e2\u05e7\u05d1 CAPA \u05d5\u05d4\u05d5\u05db\u05d7\u05ea \u05e6\u05d9\u05d5\u05ea'+'</div>'+
-    (inspections.length?'<table><thead><tr><th scope="col">#</th><th scope="col">'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th scope="col">'+'\u05e1\u05e4\u05e7'+'</th><th scope="col">'+'\u05d1\u05d5\u05d3\u05e7'+'</th><th scope="col">'+'\u05ea\u05d0\u05e8\u05d9\u05da'+'</th><th scope="col">'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th scope="col">'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+insRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d1-90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd'+'</div>')+
+    (inspections.length?'<table><thead><tr><th>#</th><th>'+'\u05e9\u05dd \u05d4\u05e6\u05d9\u05d5\u05d3'+'</th><th>'+'\u05e1\u05e4\u05e7'+'</th><th>'+'\u05d1\u05d5\u05d3\u05e7'+'</th><th>'+'\u05ea\u05d0\u05e8\u05d9\u05da'+'</th><th>'+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d1\u05d0\u05d4'+'</th><th>'+'\u05e1\u05d8\u05d8\u05d5\u05e1'+'</th></tr></thead><tbody>'+insRows+'</tbody></table>':'<div class="empty">'+'\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d1-90 \u05d9\u05d5\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd'+'</div>')+
   '</div>'+
   // -------- Section 4: Acknowledgement --------
   '<div class="section">'+
@@ -11430,7 +11027,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='\u2014';
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))val=fd(val);
-    rows+='<tr><th scope="col">'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
+    rows+='<tr><th>'+f[0]+'</th><td>'+String(val).replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</td></tr>';
   });
   var fileSafe=escU(fileSigned||'');
   var photoSafe=escU(pUrl||'');
@@ -13382,7 +12979,7 @@ function _buildOpenTasksDigest(wantSections){
   function tableRow(cells){return '<tr>'+cells.map(function(c){return '<td style="border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:right">'+esc(c)+'</td>';}).join('')+'</tr>';}
   function section(title,items,headers,rowFn,color){
     if(!items.length)return '';
-    var head='<tr style="background:'+(color||'#f5f5f5')+'">'+headers.map(function(h){return '<th style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right" scope="col">'+h+'</th>';}).join('')+'</tr>';
+    var head='<tr style="background:'+(color||'#f5f5f5')+'">'+headers.map(function(h){return '<th style="border:1px solid #ddd;padding:6px 10px;font-size:12px;text-align:right">'+h+'</th>';}).join('')+'</tr>';
     var rows=items.map(rowFn).join('');
     return '<h2 style="color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:4px;margin:18px 0 10px;font-size:16px">'+esc(title)+' ('+items.length+')</h2>'+
       '<table style="width:100%;border-collapse:collapse;margin-bottom:14px">'+head+rows+'</table>';
@@ -14813,7 +14410,7 @@ function _odBuildReportHtml(tbl,rec,photoDataUrl){
     else if(val===undefined||val===null||val==='')val='—';
     if(f[1]==='d'||f[1]==='e'||f[1]==='dt'||f[1]==='due')if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))try{val=fd(val);}catch(e){}
     var safe=String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
-    rows+='<tr><th scope="col">'+f[0]+'</th><td>'+safe+'</td></tr>';
+    rows+='<tr><th>'+f[0]+'</th><td>'+safe+'</td></tr>';
   });
   var stamp=new Date().toLocaleString('he-IL');
   var imgSrc=photoDataUrl||(rec&&rec.photo_url?String(rec.photo_url).replace(/"/g,''):'');
@@ -15296,12 +14893,6 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
   var _g=goPage;
   window.goPage=function(id){
     _g(id);
-    // Mark "in-session" only on actual user navigation. The initial
-    // hash router checks this flag — if NOT set, it forces dash on
-    // load even if the URL has a leftover hash. Setting it here
-    // (after the user clicked a nav button) means subsequent reloads
-    // within the same tab WILL preserve their page.
-    try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
     try{if(history.state&&history.state.page===id)return;history.pushState({page:id},'','#'+id);}catch(e){}
   };
   window.addEventListener('popstate',function(e){
@@ -15314,7 +14905,7 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
       try{
         var m=p.match(/^view-([a-z_]+)-(.+)$/);
         if(m&&typeof showView==='function'){
-          // Deep-link to a specific record — honor it.
+          // Wait briefly so DB has loaded
           var attempt=function(tries){
             try{showView(m[1],m[2]);}catch(e){
               if(tries>0)setTimeout(function(){attempt(tries-1);},400);
@@ -15322,27 +14913,8 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
           };
           attempt(8);
         }else{
-          // Plain page hash (#tasks, #ncr, ...). Honor it ONLY if the
-          // user navigated within the same session — meaning they
-          // explicitly clicked a nav button, which writes the flag.
-          // Pure reload of a hash URL with NO prior in-app navigation
-          // → go to dash. Bookmark with hash → go to dash. New tab
-          // pasted with #tasks URL → go to dash.
-          var sessionFresh=false;
-          try{sessionFresh=!!sessionStorage.getItem('tfgn_session_open');}catch(e){}
-          if(sessionFresh){
-            _g(p);
-          }else{
-            var landing=(typeof _appPrefsLandingPage==='function')?_appPrefsLandingPage():'menu';
-            try{history.replaceState({page:landing},'','#'+landing);}catch(e){}
-            _g(landing);
-          }
+          _g(p);
         }
-        // Critical: do NOT set tfgn_session_open here. The flag must
-        // ONLY be set by a USER-driven navigation (the wrapped goPage
-        // below), not by the act of opening the page. Otherwise every
-        // initial load self-promotes to "in-session" and every
-        // subsequent reload preserves whatever hash the URL had.
       }catch(e){}
     },100);
   }
