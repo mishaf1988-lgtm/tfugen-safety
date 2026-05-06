@@ -14327,8 +14327,25 @@ function _odMirrorRecord(tbl,rec){
     });
   }
   var jobs=[];
-  if(rec.photo_url)jobs.push(mirrorAttachment(rec.photo_url,'photo'));
-  if(rec.file_url && rec.file_url!==rec.photo_url)jobs.push(mirrorAttachment(rec.file_url,'file'));
+  // Collect every URL the record has into a deduped list. photo_url and
+  // file_url are kept for legacy compatibility; attachments[] is the new
+  // multi-file array (eqi form, possibly others later). Without this
+  // expansion, items 3+ in the attachments list would never be mirrored
+  // to OneDrive.
+  var seenUrls={},urlsToMirror=[];
+  function pushUrl(u,label){
+    if(!u||seenUrls[u])return;
+    seenUrls[u]=1;urlsToMirror.push({url:u,label:label});
+  }
+  pushUrl(rec.photo_url,'photo');
+  pushUrl(rec.file_url,'file');
+  if(Array.isArray(rec.attachments)){
+    rec.attachments.forEach(function(a,i){
+      var u=(typeof a==='string')?a:(a&&a.url);
+      pushUrl(u,'attachment-'+(i+1));
+    });
+  }
+  urlsToMirror.forEach(function(item){jobs.push(mirrorAttachment(item.url,item.label));});
   jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
     return _odPushFile(blob,folder,'report.pdf').then(function(){
       results.report='pdf-ok';
