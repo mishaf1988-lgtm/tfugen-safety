@@ -13,6 +13,113 @@
 
 ---
 
+## 2026-05-06 — מערכת מיילים אוטומטית דרך Microsoft Graph (לא SMTP/Anthropic)
+
+**החלטה**: מיילים נשלחים דרך `POST /me/sendMail` של Microsoft Graph, באמצעות אותו OAuth token של OneDrive (עם הוספת scope `Mail.Send`). אין SMTP, אין שירות צד-שלישי. השליחה מהחשבון Outlook של המשתמשת ישירות.
+
+**סיבה**: 
+- אין שרת אמיתי באפליקציה (Pages Functions stateless, אין דרך לשמור state בטוחה)
+- שילוב עם תיבת Outlook קיימת = ארכוב טבעי, אין צורך בלקוח נוסף
+- אותו OAuth קיים כבר עבור OneDrive — רק צריך להוסיף scope אחד
+
+**אלטרנטיבות שנדחו**:
+- **SMTP/Resend/Postmark**: דורש שירות חיצוני, עלות חודשית, ועוד אחד שיכול ליפול.
+- **שליחה דרך Anthropic Claude**: לא תפקידו, יקר מיותרת.
+- **MailerLite/SendGrid**: עלות, התקנה, חוקי DNS.
+
+**קישורים**: PRs #460, #464, #466
+
+---
+
+## 2026-05-06 — מערכת גיבוי 3-שכבות עצמאיות (DB + Storage + OneDrive)
+
+**החלטה**: גיבוי הפרויקט מתחלק ל-3 שכבות עצמאיות לחלוטין:
+1. **Supabase DB (Live)** — ה-source of truth
+2. **Supabase Storage `backups/`** — Cloudflare Worker מריץ daily 03:00 UTC ושומר JSON snapshot. בודד ועצמאי לחלוטין מהדפדפן.
+3. **OneDrive `/Apps/Tapugan Safety/_Backups/`** — ה-browser מסנכרן מ-Supabase Storage כשהמשתמשת פותחת את האפליקציה. עובר אוטומטית גם ב-cron/ (לקבצים מהענן) וגם בתיקיות timestamp (לגיבויים שנעשו מהדפדפן).
+
+**סיבה**: 
+- שכבה 1 לבד מסוכן מדי — אם Supabase יורד, הכל נעלם.
+- שכבה 2 מספיקה לקריסה של Supabase, אבל המשתמשת לא רואה אותה ב-UI שלה.
+- שכבה 3 נותנת backup בתשתית הארגונית של תפוגן (Microsoft 365), שגם ככה מנוטרת ע"י IT.
+
+**אלטרנטיבות שנדחו**:
+- **MOAR ל-S3/R2 בלבד**: עוד תשלום, עוד IAM, עוד מקום לשבור.
+- **DB primary ב-OneDrive**: אבסורד — OneDrive זה storage, לא DB. לא יכול לעשות שאילתות.
+- **שכבה אחת בלבד (רק OneDrive)**: דורש שמירת refresh_token בServer-side, לא מאובטח.
+
+**קישורים**: PRs #472, #473, #474, #475
+
+---
+
+## 2026-05-06 — Prune ל-15 גיבויים אחרונים (≈ שבועיים)
+
+**החלטה**: בכל אחת מ-3 שכבות הגיבוי, נשמרים אך ורק 15 הגיבויים האחרונים. ישנים יותר נמחקים אוטומטית. ה-Worker מנקה את Supabase Storage; הדפדפן מנקה את OneDrive.
+
+**סיבה**: גיבוי יומי × 15 = שבועיים אחורה. מספיק כדי לזהות בעיה ולהחזיר. מעבר לזה — בזבוז שטח ופחות יעיל לחיפוש.
+
+**אלטרנטיבות שנדחו**:
+- **30 ימים**: יותר שטח, השיפור בכיסוי הסיכון מינימלי.
+- **שמירה לתמיד**: ה-bucket יגדל ללא הגבלה. גיבוי שאי אפשר למצוא בו = לא גיבוי.
+- **שמירה לפי גיל (DELETE WHERE created_at < now() - 30 days)**: מסובך יותר ב-Storage; שמירה לפי count פשוטה ועובדת.
+
+**קישורים**: PR #475
+
+---
+
+## 2026-05-06 — PDF generation: html2canvas על iframe (NOT jsPDF text)
+
+**החלטה**: דוחות PDF נבנים על ידי רינדור HTML ב-iframe נסתר → צילום מסך עם html2canvas → embed כתמונה ב-jsPDF. **לא** משתמשים ב-jsPDF text/font APIs ישירות.
+
+**סיבה**: jsPDF text + עברית + custom font + RTL הוא שילוב שבור. עברנו 5 איטרציות לפני שעבר (gibberish → reversed words → missing labels → empty PDF → ...). הדפדפן מרנדר עברית מושלם — אז למה להילחם?
+
+**אלטרנטיבות שנדחו**:
+- **jsPDF text directly**: 5 ניסיונות, 5 כשלונות.
+- **PDFKit / pdfmake**: ספריות אחרות, אותה בעיה. RTL זה כאב.
+- **שירות PDF חיצוני (PDFShift)**: עלות, dependency.
+- **`window.print()`**: דורש פעולת משתמש, לא אוטומטי.
+
+**קישורים**: PRs #443, #447, #449
+
+---
+
+## 2026-05-06 — OneDrive Inbox auto-classify: Llama (Cloudflare Workers AI) + Claude fallback
+
+**החלטה**: לקבצים ב-`/Apps/Tapugan Safety/Inbox/`:
+1. **תמונות** → Llama 3.2 Vision 11B (חינם, Cloudflare Workers AI)
+2. **PDFs** → pdf.js לטקסט + Llama 3.3 70B Text (חינם)
+3. **fallback אם Llama מחזיר 'other' או נכשל** → Claude Haiku Vision (~$0.001/קריאה)
+4. **fallback אחרון** → קובץ עובר ל-`/Inbox/_review/`, משתמשת בוחרת ידנית
+
+**סיבה**: Llama חינמי ומספיק טוב לרוב המקרים. Claude מדויק יותר אבל עולה — שימוש רק כשבאמת צריך. שמירה בtopologie של 3 שלבי גיבוי גם בסיווג.
+
+**אלטרנטיבות שנדחו**:
+- **רק Claude**: יקר במצטבר.
+- **רק Llama**: דיוק נמוך מדי על מסמכי בטיחות בעברית.
+- **OCR מקומי (Tesseract)**: רע על עברית כתב יד / חותמות.
+
+**קישורים**: PRs #459, #458 (TOS auto-accept)
+
+---
+
+## 2026-05-06 — Mail prefs ב-localStorage (לא ב-Supabase) לעת עתה
+
+**החלטה**: הגדרות המיילים (`tfgn_mail_prefs_v1`) נשמרות ב-localStorage של הדפדפן, לא ב-DB. Phase 2/3 (cron בענן + delivery לאחראים) יעברו ל-Supabase כשנצטרך.
+
+**סיבה**: 
+- שימוש single-user כרגע (מנהלת הבטיחות בלבד)
+- אין צורך בסנכרון בין מכשירים בשלב הזה
+- מהיר, פשוט, לא דורש migration
+
+**אלטרנטיבות שנדחו**:
+- **טבלת `notification_prefs` קיימת**: דורש שינוי schema, ב-Supabase RLS וכו'. תוספת מורכבות בלי ערך מיידי.
+
+**מתי לעבור ל-Supabase**: כשמוסיפים cron בענן (אז ה-Worker צריך לקרוא את ההעדפות) או כשיש > 1 משתמשים שמעדיפים שונה.
+
+**קישורים**: PR #466
+
+---
+
 ## 2026-05-04 — WhatsApp restored — Meta App must be in Live Mode (not Development)
 
 **החלטה**: ה-Meta App "בטיחות" (App ID `2100358170694098`) חייב להיות ב-**Live Mode**, לא ב-Development Mode. אחרת כל קריאה ל-Meta Graph API מ-Cloudflare Pages Functions נחסמת עם `code 200 OAuthException "API access blocked"` — גם אם ה-token ב-Cloudflare env vars תקין, גם אם ה-System User אסיינד נכון, גם אם Meta API נגיש מהשרת.
