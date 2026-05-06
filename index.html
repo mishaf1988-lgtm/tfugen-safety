@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Tapugan Safety &#8212; &#1504;&#1497;&#1492;&#1493;&#1500; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1493;&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492; | &#1514;&#1508;&#1493;&#1490;&#1503;</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#cc1f1f">
@@ -2812,35 +2812,68 @@ function _obSanitize(){
 }
 // Copy title=... → aria-label=... for any button without explicit aria-label.
 // Improves screen-reader UX without touching the 89 individual button tags.
-// Belt-and-suspenders bnav visibility: every page change + load + resize
-// re-applies the inline styles so nothing can knock it out of place.
-function _ensureBnavVisible(){
+// Bnav positioning — root-cause fix for "bnav invisible until modal opens"
+// reported on iPhone Safari.
+//
+// Diagnosis (full investigation in conversation): iOS Safari positions
+// position:fixed children relative to the LAYOUT viewport (== 100vh,
+// the height with URL bar collapsed). When the URL bar is visible, the
+// VISUAL viewport is shorter by ~84px, so `bottom:0` lands BEHIND the
+// URL bar. The cap-fab at `bottom:84px+safe-area` lands just inside —
+// which matches exactly what the user can see.
+//
+// Fix: use the VisualViewport API to read the actual difference between
+// layout and visual viewports, and shift the bnav up by that amount.
+// Always keeps the bnav at the bottom of the VISIBLE area regardless
+// of URL-bar state.
+function _bnavPosition(){
   var bnav=document.getElementById('bnav');
   if(!bnav)return;
   if(document.body.classList.contains('emp-mode'))return; // intentional kiosk hide
-  bnav.style.cssText='position:fixed!important;bottom:0!important;left:0!important;right:0!important;width:100vw!important;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:#fff!important;border-top:2px solid #cc1f1f!important;z-index:9999!important;display:flex!important;visibility:visible!important;opacity:1!important;box-shadow:0 -2px 8px rgba(0,0,0,.08)';
+  // Base styles — keep these so even browsers without visualViewport
+  // (older Android, desktop) get the same look.
+  bnav.style.position='fixed';
+  bnav.style.left='0';
+  bnav.style.right='0';
+  bnav.style.zIndex='9999';
+  bnav.style.display='flex';
+  bnav.style.visibility='visible';
+  bnav.style.opacity='1';
+  // Compute the gap between layout-viewport bottom and visual-viewport
+  // bottom. If the user is on iOS Safari with URL bar showing, this is
+  // the URL-bar's height. Browsers without VisualViewport: gap = 0.
+  var vv=window.visualViewport;
+  var layoutH=window.innerHeight||document.documentElement.clientHeight;
+  var visualBottom=vv?(vv.offsetTop+vv.height):layoutH;
+  var gap=Math.max(0,Math.round(layoutH-visualBottom));
+  bnav.style.bottom=gap+'px';
 }
-// iOS Safari "viewport kick": temporarily set body overflow:hidden then
-// restore. Forces the engine to recalc the visual viewport, which is
-// the same trick openModal accidentally does (and the only thing the
-// user found that makes the bnav appear). We do it explicitly on load
-// and after a short delay so first paint already has the bnav visible.
-function _iosViewportKick(){
-  var b=document.body;if(!b)return;
-  var orig=b.style.overflow;
-  b.style.overflow='hidden';
-  // Reading offsetHeight forces a sync layout in this microtask.
-  void b.offsetHeight;
-  requestAnimationFrame(function(){
-    b.style.overflow=orig||'';
-    _ensureBnavVisible();
-  });
+// Wire to every event that could change visual-viewport state:
+// VisualViewport.resize/scroll cover URL-bar collapse/expand and
+// pinch-zoom on iOS. window.resize/orientationchange cover everything
+// else. Page load + DOMContentLoaded cover first paint.
+function _bnavBindViewportEvents(){
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',_bnavPosition);
+    window.visualViewport.addEventListener('scroll',_bnavPosition);
+  }
+  window.addEventListener('resize',_bnavPosition);
+  window.addEventListener('orientationchange',_bnavPosition);
+  window.addEventListener('load',_bnavPosition);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)_bnavPosition();});
+  // Run once now (in case load already fired) and once shortly after
+  // (in case visual viewport hasn't stabilized yet).
+  _bnavPosition();
+  setTimeout(_bnavPosition,200);
+  setTimeout(_bnavPosition,1000);
 }
-window.addEventListener('load',function(){_ensureBnavVisible();_iosViewportKick();setTimeout(_iosViewportKick,400);setTimeout(_iosViewportKick,1500);});
-window.addEventListener('resize',_ensureBnavVisible);
-window.addEventListener('orientationchange',_ensureBnavVisible);
-document.addEventListener('visibilitychange',function(){if(!document.hidden){_ensureBnavVisible();_iosViewportKick();}});
-setInterval(_ensureBnavVisible,3000); // last-resort: re-apply every 3s
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',_bnavBindViewportEvents);
+}else{
+  _bnavBindViewportEvents();
+}
+// Keep _ensureBnavVisible as an alias for any legacy callers.
+function _ensureBnavVisible(){_bnavPosition();}
 function _autoAriaLabels(){
   // Pass 1: button[title] without aria-label → mirror title to aria-label.
   var btns=document.querySelectorAll('button[title]:not([aria-label])');
@@ -15261,6 +15294,12 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
   var _g=goPage;
   window.goPage=function(id){
     _g(id);
+    // Mark "in-session" only on actual user navigation. The initial
+    // hash router checks this flag — if NOT set, it forces dash on
+    // load even if the URL has a leftover hash. Setting it here
+    // (after the user clicked a nav button) means subsequent reloads
+    // within the same tab WILL preserve their page.
+    try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
     try{if(history.state&&history.state.page===id)return;history.pushState({page:id},'','#'+id);}catch(e){}
   };
   window.addEventListener('popstate',function(e){
@@ -15281,10 +15320,12 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
           };
           attempt(8);
         }else{
-          // Plain page hash (#tasks, #ncr, ...). Honor it ONLY if the user
-          // navigated within the same session (e.g. clicked a link 2 min
-          // ago). Otherwise — fresh open of a tab — go to the dashboard,
-          // even if the URL has a leftover hash from a previous session.
+          // Plain page hash (#tasks, #ncr, ...). Honor it ONLY if the
+          // user navigated within the same session — meaning they
+          // explicitly clicked a nav button, which writes the flag.
+          // Pure reload of a hash URL with NO prior in-app navigation
+          // → go to dash. Bookmark with hash → go to dash. New tab
+          // pasted with #tasks URL → go to dash.
           var sessionFresh=false;
           try{sessionFresh=!!sessionStorage.getItem('tfgn_session_open');}catch(e){}
           if(sessionFresh){
@@ -15294,11 +15335,13 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
             _g('dash');
           }
         }
-        try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
+        // Critical: do NOT set tfgn_session_open here. The flag must
+        // ONLY be set by a USER-driven navigation (the wrapped goPage
+        // below), not by the act of opening the page. Otherwise every
+        // initial load self-promotes to "in-session" and every
+        // subsequent reload preserves whatever hash the URL had.
       }catch(e){}
     },100);
-  }else{
-    try{sessionStorage.setItem('tfgn_session_open','1');}catch(e){}
   }
 })();
 window._copyDeepLink=function(tbl,id){
