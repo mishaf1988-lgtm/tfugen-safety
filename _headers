@@ -8,6 +8,13 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self)
   X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # CSP intentionally permissive — the app has 478 inline onclicks and
+  # 767 inline styles. The policy still adds real protection against:
+  # (a) script injection from unknown origins, (b) plugin objects,
+  # (c) <base> tag injection, (d) form posts to evil sites, (e) framing.
+  # Tighter protection later requires migrating inline handlers to event listeners.
+  Content-Security-Policy: default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://alcdn.msauth.net https://alcdn.msftauth.net https://login.microsoftonline.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https: wss:; frame-src 'self' https://login.microsoftonline.com https://login.live.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
 
 # ---- HTML + Service Worker: never serve a stale copy ----
 # Network-first SW already does this client-side; the header makes
