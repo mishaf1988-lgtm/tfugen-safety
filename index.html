@@ -2805,6 +2805,19 @@ function _obSanitize(){
 }
 // Copy title=... → aria-label=... for any button without explicit aria-label.
 // Improves screen-reader UX without touching the 89 individual button tags.
+// Belt-and-suspenders bnav visibility: every page change + load + resize
+// re-applies the inline styles so nothing can knock it out of place.
+function _ensureBnavVisible(){
+  var bnav=document.getElementById('bnav');
+  if(!bnav)return;
+  if(document.body.classList.contains('emp-mode'))return; // intentional kiosk hide
+  bnav.style.cssText='position:fixed!important;bottom:0!important;left:0!important;right:0!important;width:100vw!important;min-height:66px;padding-bottom:env(safe-area-inset-bottom);background:#fff!important;border-top:2px solid #cc1f1f!important;z-index:9999!important;display:flex!important;visibility:visible!important;opacity:1!important;box-shadow:0 -2px 8px rgba(0,0,0,.08)';
+}
+window.addEventListener('load',_ensureBnavVisible);
+window.addEventListener('resize',_ensureBnavVisible);
+window.addEventListener('orientationchange',_ensureBnavVisible);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)_ensureBnavVisible();});
+setInterval(_ensureBnavVisible,3000); // last-resort: re-apply every 3s
 function _autoAriaLabels(){
   // Pass 1: button[title] without aria-label → mirror title to aria-label.
   var btns=document.querySelectorAll('button[title]:not([aria-label])');
@@ -3017,6 +3030,7 @@ function goPage(id){
   var bn=g('bn-'+navId);if(bn)bn.classList.add('on');
   CUR=id;
   rPage();
+  if(typeof _ensureBnavVisible==='function')_ensureBnavVisible();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 function _modulesSheetFilter(q){
