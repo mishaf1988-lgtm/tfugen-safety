@@ -1,0 +1,20 @@
+# Cloudflare Worker config — daily Tapugan Safety backup.
+#
+# Deploy via Cloudflare dashboard (paste the contents of backup-cron.js
+# into a new Worker) — wrangler is optional but documented here for
+# reference / future automation.
+#
+# Cron is "0 3 * * *" → every day at 03:00 UTC = 06:00 Israel time
+# (summer DST) / 05:00 (winter). Adjust to taste.
+#
+# Required environment variables (set in dashboard, marked secret):
+#   SUPABASE_URL          — e.g. https://znhjtpcltrxxyfjczgvw.supabase.co
+#   SUPABASE_SERVICE_KEY  — the service-role key (NOT the anon key)
+#   MANUAL_KEY            — a random shared secret for /run testing
+
+name = "tapugan-backup-cron"
+main = "backup-cron.js"
+compatibility_date = "2026-05-06"
+
+[triggers]
+crons = ["0 3 * * *"]
