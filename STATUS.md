@@ -2,14 +2,27 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-04 (65+ PRs · Performance phases all shipped · WhatsApp restored · Legal + env_aspects periodic review · Agent Dashboard (now with 2 sections) · Incident edit modal · **10 AI Suggest helpers (5-Why Inc/NCR · NCR rc+c · env_aspects impact+controls · risk P/S/AC · near-miss sev+typ+notes · toolbox content · legal summary+topic+area · inc type+sv+lost-days · tasks priority+due)** · 5 dashboard widgets (Compliance Score · Top Risks · env_aspects review · Weekly AI Summary · Today's AI Plan) · MR AI narrative · **draft autosave on NCR + Inc + NM modals** · 4×4 RPN heat-map · plan in project-files/PERFORMANCE-PLAN-2026-05-04.md)
+**Last updated**: 2026-05-06 (אחרי סשן ארוך, PRs #443-#475: PDF עברי תקין · OneDrive Inbox AI אוטומטי · ריבוי קבצים בטופס ציוד · מערכת מיילים מלאה דרך Microsoft Graph · גיבוי 3-שכבות (browser + Cloudflare Worker cron + sync) עם prune ל-15 · audit fixes · raise: see project-files/INFRA-2026-05-06.md)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
+
+## ⚡ סשן 2026-05-06 — סיכום מהיר
+
+**33 PRs מוזגו ל-main**. תשתיות חדשות שדורשות הקשר לסשן הבא:
+- 📧 Mail.Send + Microsoft Graph לשליחת דוחות (Client ID: `fb56b67c-2d2d-4146-89ef-f8f77eae2526`)
+- 🤖 Cloudflare Worker `tapugan-backup-cron` יומי 03:00 UTC
+- 📦 Supabase Storage bucket `backups` (Private) + RLS policy
+- 📋 ⚙️ "הגדרות מיילים" modal עם תזמון מלא ו-roles
+- 📁 ריבוי קבצים בטופס ציוד (`attachments jsonb`)
+- 🛡️ 3 שכבות גיבוי + prune ל-15 אחרונים
+
+**📌 קובץ חובה לקרוא:** `project-files/INFRA-2026-05-06.md` — מכיל את כל ה-IDs, URLs, MANUAL_KEYs, migrations, ופונקציות חשובות שנוספו.
 
 ## 🌐 שרת
 
 | תפקיד | URL | סטטוס |
 |---|---|---|
 | **Production (Cloudflare Pages, sole)** | 🟢 https://tapugan-safety.pages.dev | פעיל יחיד. WhatsApp templates עודכנו, `/api/*` של Vercel נמחק מה-repo, vercel.json הוסר. ניתן למחוק את פרוייקט ה-Vercel מה-dashboard ידנית. |
+| **Backup Cron Worker (Cloudflare)** | 🟢 https://tapugan-backup-cron.mishaf1988.workers.dev | פעיל. cron `0 3 * * *`. health check ב-`/health`. |
 
 ---
 
@@ -25,6 +38,18 @@
 ---
 
 ## ✅ הושלם
+
+### 🆕 סשן 2026-05-06 (PRs #443-#475)
+
+- [x] **PDF עברי תקין** (PRs #443-#449) — לאחר 5+ ניסיונות עם jsPDF text שנכשלו, עברנו ל-html2canvas על iframe נסתר. הדפדפן מרנדר → צילום → embed ב-PDF. מושלם.
+- [x] **OneDrive Inbox auto-import** (PRs #450-#459) — Llama Vision/Text + pdf.js + Claude Haiku fallback. מסווג, מחלץ שדות, יוצר רשומה, מעביר לתת-תיקיה של ציוד. סיווג ידני לקבצים שה-AI לא בטוח (`/_review/`).
+- [x] **Mail.Send + Microsoft Graph** (PRs #460-#469) — שליחת דוחות מהחשבון Outlook של המשתמשת. modal "הגדרות מיילים" עם 4 תפקידים, 6 כללי אוטומציה, תזמון יומי/שבועי/חודשי, בחירת sections, custom roles, on-app-open dispatcher. ✓ אומת בפועל ע"י המשתמשת — מייל הגיע.
+- [x] **תיקוני audit** (PRs #462-#463) — 10 באגים אמיתיים מתוך דוח 25 פריטים: natural sort, UUID→קוד קריא, masked phone, history.back, aria-labels (auto for 89 buttons), toast role=alert, WCAG AA chips, FAB padding. 7 false positives זוהו.
+- [x] **ריבוי קבצים בטופס ציוד** (PRs #470-#471) — drag-drop + multi-select. `attachments jsonb`. תמיכה גם בסנכרון ל-OneDrive (תוקן bug שעצר ב-2 קבצים).
+- [x] **גיבוי 3 שכבות** (PRs #472-#475) — Browser (5 triggers) + Cloudflare Worker cron + Storage→OneDrive sync. Prune אוטומטי ל-15 אחרונים בכל המקומות. Coworker הקים את ה-Worker; משתמשת אישרה backup ידני 658 רשומות עובד.
+- [x] **תיעוד לסשן הבא** (זה כאן) — `project-files/INFRA-2026-05-06.md` עם כל ה-IDs/URLs/credentials + עדכוני STATUS/DECISIONS.
+
+### היסטוריה (עד 2026-05-04)
 
 - [x] Supabase sync — 17 טבלאות מחזירות 200 OK (+ `ncr_ai` טבלה 18)
 - [x] 375 רשומות NCR הועלו
