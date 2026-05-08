@@ -526,9 +526,35 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <a onclick="_openForgotPwModal()" style="display:block;margin-top:8px;font-size:12px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
     <div class="login-sep">&#1488;&#1493;</div>
     <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">&#128119;</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1502;&#1492;&#1497;&#1512; (&#1500;&#1500;&#1488; &#1505;&#1497;&#1505;&#1502;&#1492;)</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL — accessible from the login screen, before auth.
+     The user enters their username and gets a pre-filled WhatsApp message
+     they can send to their admin/safety manager. Admin then runs the
+     existing reset-password flow on their side. Both modals live OUTSIDE
+     #app for the same reason as the force-change modal. -->
+<div class="overlay" id="ov-forgot-pw" style="display:none;z-index:1999" onclick="_closeForgotPwModal()"></div>
+<div class="modal" id="m-forgot-pw" style="display:none;max-width:400px;z-index:2000">
+  <button class="close-btn" onclick="_closeForgotPwModal()">&#10005;</button>
+  <div class="modal-title">&#128273; &#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;</div>
+  <div style="background:#dbeafe;border:1px solid #2563eb;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#1e40af;line-height:1.6">
+    &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492; &#1502;&#1514;&#1489;&#1510;&#1506; &#1506;&#1500; &#1497;&#1491;&#1497; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.
+    &#1492;&#1494;&#1504;&#1497; &#1488;&#1514; &#1513;&#1501; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513; &#1513;&#1500;&#1498; &#1493;&#1488;&#1504;&#1497; &#1488;&#1488;&#1502;&#1503; &#1500;&#1498; &#1492;&#1493;&#1491;&#1506;&#1492; &#1502;&#1493;&#1499;&#1504;&#1492; &#1500;&#1502;&#1504;&#1492;&#1500; &#1489;-WhatsApp.
+  </div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</label>
+      <input id="fp-username" type="text" placeholder="yossi" autocapitalize="off" autocomplete="username">
+    </div>
+  </div>
+  <div id="fp-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer" style="display:flex;flex-direction:column;gap:8px">
+    <button class="btn btn-p" onclick="_forgotPwSendWa()" style="background:#25D366;border-color:#25D366;width:100%">📱 שלח למנהל ב-WhatsApp</button>
+    <button class="btn btn-s" onclick="_closeForgotPwModal()" style="width:100%">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
   </div>
 </div>
 
@@ -11973,6 +11999,41 @@ function _fetchCurrentUserProfile(){
     if(name){toast('\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd, '+name+' ✨',{ok:true});}
   }catch(e){}
 }
+// Forgot-password flow (pre-auth, accessible from the login screen).
+// We can't query the DB before login, so this just composes a WhatsApp
+// message the user can fire off to whichever contact is their admin.
+// The admin runs the existing /api/reset-password flow on their side
+// and the password reset arrives via the credentials → WA send button.
+window._openForgotPwModal=function(){
+  var inp=g('fp-username');if(inp){inp.value=(g('uname')||{}).value||'';}
+  var err=g('fp-err');if(err)err.textContent='';
+  try{document.getElementById('ov-forgot-pw').style.display='block';document.getElementById('m-forgot-pw').style.display='block';}catch(e){}
+  if(inp)setTimeout(function(){inp.focus();},50);
+};
+window._closeForgotPwModal=function(){
+  try{document.getElementById('ov-forgot-pw').style.display='none';document.getElementById('m-forgot-pw').style.display='none';}catch(e){}
+};
+window._forgotPwSendWa=function(){
+  var unameEl=g('fp-username');
+  var uname=unameEl?String(unameEl.value||'').trim():'';
+  var errEl=g('fp-err');
+  if(!uname){if(errEl)errEl.textContent='יש להזין שם משתמש';return;}
+  if(errEl)errEl.textContent='';
+  var lines=[
+    'שלום, אני זקוק/ה לאיפוס סיסמה לתפוגן בטיחות.',
+    '',
+    'שם משתמש: '+uname,
+    '',
+    'תודה!'
+  ];
+  // No `to` segment → WhatsApp opens its contact picker so the user
+  // chooses their admin themselves. Works on iOS app, Android, and
+  // WhatsApp Web on desktop without needing the admin's number stored.
+  var url='https://wa.me/?text='+encodeURIComponent(lines.join('\n'));
+  window.open(url,'_blank');
+  _closeForgotPwModal();
+};
+
 function doLogin(){
   var pw=g('pw');if(!pw)return;
   var unameEl=g('uname');
