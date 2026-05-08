@@ -6819,16 +6819,15 @@ function _roundPopulateThemeSelect(){
 window._roundRenderItems=function(){
   var sel=g('round-theme'),host=g('round-items-list');
   if(!sel||!host)return;
-  // If user changed theme, reset draft to that theme's items.
-  // Preserve already-set status when items are the same id (rare but
-  // avoids losing work on accidental theme switch).
   var theme=window.ROUND_THEMES[sel.value]||window.ROUND_THEMES.morning;
   var prev={};
-  (window._roundDraft.items||[]).forEach(function(it){if(it.id)prev[it.id]={status:it.status,notes:it.notes};});
-  // Keep custom items (those marked custom:true) across theme changes.
+  (window._roundDraft.items||[]).forEach(function(it){
+    if(it.id)prev[it.id]={status:it.status,notes:it.notes,category:it.category,attachments:it.attachments};
+  });
   var customItems=(window._roundDraft.items||[]).filter(function(it){return it.custom;});
   window._roundDraft.items=theme.items.map(function(it){
-    return {id:it.id,icon:it.icon,label:it.label,status:(prev[it.id]&&prev[it.id].status)||null,notes:(prev[it.id]&&prev[it.id].notes)||''};
+    var p=prev[it.id]||{};
+    return {id:it.id,icon:it.icon,label:it.label,status:p.status||null,notes:p.notes||'',category:p.category||'',attachments:Array.isArray(p.attachments)?p.attachments.slice():[]};
   }).concat(customItems);
   _roundPaintItems();
 };
@@ -6841,15 +6840,35 @@ function _roundPaintItems(){
       return '<button type="button" data-roundstat="'+idx+':'+stat+'" style="background:'+bg+';color:'+c+';border:1px solid '+br+';border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;min-width:32px;font-family:inherit" aria-pressed="'+on+'">'+emoji+'</button>';
     }
     var rmBtn=it.custom?'<button type="button" data-roundrm="'+idx+'" style="background:transparent;border:none;color:#9ca3af;font-size:14px;cursor:pointer;padding:2px 6px" aria-label="\u05d4\u05e1\u05e8 \u05e4\u05e8\u05d9\u05d8">\u2715</button>':'';
+    var atts=it.attachments||[];
+    var photosHtml='';
+    if(atts.length){
+      photosHtml='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+atts.map(function(a,fi){
+        var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(a.url||'')||/^image\//i.test(a.mime||'');
+        var preview=isImg
+          ?'<a data-sign="'+escU(a.url)+'" target="_blank" style="display:inline-block;line-height:0"><img loading="lazy" data-sign="'+escU(a.url)+'" style="width:48px;height:48px;object-fit:cover;border-radius:6px;display:block;border:1px solid #e5e7eb"></a>'
+          :'<a data-sign="'+escU(a.url)+'" target="_blank" style="display:inline-flex;width:48px;height:48px;background:#f0f4f8;border-radius:6px;align-items:center;justify-content:center;font-size:22px;text-decoration:none">\ud83d\udcc4</a>';
+        return '<div style="position:relative;display:inline-block">'+preview+'<button type="button" data-roundphrm="'+idx+':'+fi+'" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#dc2626;color:#fff;border:1px solid #fff;font-size:10px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700" aria-label="\u05d4\u05e1\u05e8">\u2715</button></div>';
+      }).join('')+'</div>';
+    }
+    var cats=['','\u26a1 \u05d7\u05e9\u05de\u05dc','\ud83d\udd25 \u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9','\ud83c\udfd7\ufe0f \u05de\u05d1\u05e0\u05d4','\ud83e\uddf9 \u05e0\u05d9\u05e7\u05d9\u05d5\u05df','\ud83d\udd27 \u05e6\u05d9\u05d5\u05d3','\u2623\ufe0f \u05d7\u05d5\u05de\"\u05e1','\ud83c\udf3f \u05e1\u05d1\u05d9\u05d1\u05d4','\ud83d\udcdd \u05d0\u05d7\u05e8'];
+    var catSel='<select data-roundcat="'+idx+'" style="font-size:11px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-family:inherit;max-width:120px">'+cats.map(function(c){
+      var v=c||'';var label=c||'\u05ea\u05d9\u05d5\u05d2 \u05dc\u05d9\u05e7\u05d5\u05d9';
+      var sel=(it.category||'')===v?' selected':'';
+      return '<option value="'+esc(v)+'"'+sel+'>'+esc(label)+'</option>';
+    }).join('')+'</select>';
     return '<div style="background:#fafbfc;border:1px solid #e5e7eb;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px">'+
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+esc(it.icon||'\u2022')+'</span><span style="font-size:13px;flex:1">'+esc(it.label||'')+'</span>'+rmBtn+'</div>'+
-      '<div style="display:flex;gap:4px;flex-wrap:wrap">'+
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">'+
         btn('ok','\u2705','#16a34a')+
         btn('warn','\u26a0\ufe0f','#d97706')+
         btn('critical','\u274c','#dc2626')+
         btn('na','\u2796','#6b7280')+
         '<input type="text" data-roundnotes="'+idx+'" placeholder="\u05d4\u05e2\u05e8\u05d4 (\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05e0\u05dc\u05d9)" value="'+esc(it.notes||'')+'" style="flex:1;min-width:120px;font-size:11px;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px">'+
+        catSel+
+        '<button type="button" data-roundphadd="'+idx+'" style="background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;font-family:inherit" aria-label="\u05e6\u05e8\u05e4\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d5 \u05e7\u05d5\u05d1\u05e5">\ud83d\udcf7</button>'+
       '</div>'+
+      photosHtml+
     '</div>';
   }).join('');
   // Wire up buttons (delegated handler)
@@ -6873,11 +6892,55 @@ function _roundPaintItems(){
       window._roundDraft.items.splice(idx,1);_roundPaintItems();
     };
   });
+  host.querySelectorAll('[data-roundcat]').forEach(function(sel){
+    sel.onchange=function(){
+      var idx=parseInt(sel.dataset.roundcat,10);
+      if(window._roundDraft.items[idx])window._roundDraft.items[idx].category=sel.value||'';
+    };
+  });
+  host.querySelectorAll('[data-roundphadd]').forEach(function(btn){
+    btn.onclick=function(){
+      var idx=parseInt(btn.dataset.roundphadd,10);
+      _roundAddItemPhoto(idx);
+    };
+  });
+  host.querySelectorAll('[data-roundphrm]').forEach(function(btn){
+    btn.onclick=function(){
+      var p=btn.dataset.roundphrm.split(':'),idx=parseInt(p[0],10),fi=parseInt(p[1],10);
+      var it=window._roundDraft.items[idx];if(!it||!it.attachments)return;
+      it.attachments.splice(fi,1);
+      _roundPaintItems();
+    };
+  });
+  if(typeof _signifyDom==='function')_signifyDom(host);
+}
+function _roundAddItemPhoto(idx){
+  var it=window._roundDraft.items[idx];if(!it)return;
+  var inp=g('_round_ph_inp');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_round_ph_inp';inp.multiple=true;inp.accept='image/*';inp.style.display='none';document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=function(){
+    var files=Array.from(inp.files||[]);if(!files.length)return;
+    if(!it.attachments)it.attachments=[];
+    var done=0,total=files.length,ok=0;
+    if(typeof toast==='function')toast('\u23f3 \u05de\u05e2\u05dc\u05d4 '+total+' \u05ea\u05de\u05d5\u05e0\u05d4'+(total>1?'\u05d5\u05ea':'')+'\u2026');
+    files.forEach(function(file){
+      _fileUpload(file,'round',function(url){
+        done++;
+        if(url){it.attachments.push({url:url,name:file.name,mime:file.type||''});ok++;}
+        if(done>=total){
+          if(typeof toast==='function')toast(ok===total?('\u2713 '+ok+' \u05ea\u05de\u05d5\u05e0'+(ok>1?'\u05d5\u05ea':'\u05d4')+' \u05d4\u05d5\u05e2\u05dc'+(ok>1?'\u05d5':'\u05ea\u05d4')):('\u26a0 '+ok+'/'+total+' \u05d4\u05d5\u05e2\u05dc\u05d5'));
+          _roundPaintItems();
+        }
+      });
+    });
+  };
+  inp.click();
 }
 window._roundAddCustomItem=function(){
   var label=prompt('\u05e9\u05dd \u05e4\u05e8\u05d9\u05d8 \u05de\u05d5\u05ea\u05d0\u05dd:');
   if(!label||!label.trim())return;
-  window._roundDraft.items.push({id:'custom-'+Date.now(),icon:'\u2022',label:label.trim(),status:null,notes:'',custom:true});
+  window._roundDraft.items.push({id:'custom-'+Date.now(),icon:'\u2022',label:label.trim(),status:null,notes:'',category:'',attachments:[],custom:true});
   _roundPaintItems();
 };
 // Compute legacy boolean flags from new items[] for backward-compat.
