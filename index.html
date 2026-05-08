@@ -653,7 +653,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
-  <div class="card"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <!-- "פקיעות ב-30 יום" card hidden — same items appear in the unified Tasks page (virtual tasks). Kept in DOM for compatibility (rDash still writes to #dash-exp), just visually hidden. -->
+  <div class="card" id="dash-exp-card" style="display:none"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
@@ -901,6 +902,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 10px">
     <button class="btn btn-p" id="tsk-tab-all" onclick="tskFilter('all')">&#1492;&#1499;&#1500;</button>
+    <button class="btn btn-s" id="tsk-tab-today" onclick="tskFilter('today')">&#1492;&#1497;&#1493;&#1501;</button>
     <button class="btn btn-s" id="tsk-tab-open" onclick="tskFilter('open')">&#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</button>
     <button class="btn btn-s" id="tsk-tab-prog" onclick="tskFilter('prog')">&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</button>
     <button class="btn btn-s" id="tsk-tab-over" onclick="tskFilter('over')">&#1508;&#1497;&#1490;&#1493;&#1512; &#1497;&#1506;&#1491;</button>
@@ -1495,6 +1497,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="modal sheet-modal" id="m-reports-sheet" style="display:none">
   <button class="close-btn" onclick="closeModal('m-reports-sheet')">&#10005;</button>
   <div class="modal-title">&#9888; &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</div>
+  <!-- Banner: clarifies that the reports modules are entry points for creating/editing records — for the unified open-items list, send the user to the Tasks page. -->
+  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin:6px 0 10px;font-size:12px;color:#92400e;line-height:1.5">
+    &#128161; <strong>&#1500;&#1512;&#1513;&#1497;&#1502;&#1492; &#1502;&#1488;&#1493;&#1495;&#1491;&#1514; &#1513;&#1500; &#1499;&#1500; &#1492;&#1508;&#1512;&#1497;&#1496;&#1497;&#1501; &#1492;&#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</strong> (NCR, &#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;, &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;, &#1514;&#1493;&#1511;&#1508;&#1497;&#1501;) &#8212;
+    <a onclick="closeModal('m-reports-sheet');goPage('tasks');" style="color:#92400e;font-weight:700;cursor:pointer;text-decoration:underline">&#1506;&#1489;&#1512;&#1497; &#1500;&#1506;&#1502;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#8594;</a>.
+    &#1492;&#1499;&#1508;&#1514;&#1493;&#1512;&#1497;&#1501; &#1499;&#1488;&#1503; &#1492;&#1501; &#1500;&#1497;&#1510;&#1497;&#1512;&#1492; &#1493;&#1506;&#1512;&#1497;&#1499;&#1492; &#1513;&#1500; &#1512;&#1513;&#1493;&#1502;&#1493;&#1514; &#1495;&#1491;&#1513;&#1493;&#1514;.
+  </div>
   <div class="sheet-grid">
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','nm')"><span class="sic">&#9940;</span>&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','inc')"><span class="sic">&#9888;</span>&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</button>
@@ -4293,7 +4301,8 @@ function rDash(){
   // Dashboard: tasks due today
   try{
     var dttc=g('dash-today-tasks-card');
-    var dtt=g('dash-today-tasks');
+    if(dttc)dttc.style.display='none';
+    var dtt=null;
     if(dtt){
       var todayDD=new Date().toISOString().split('T')[0];
       var todayTasks=(DB.tasks||[]).filter(function(t){return t.due===todayDD&&t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';});
@@ -7465,7 +7474,7 @@ function _tskDuplicate(id){
   sbIns('tasks',copy);sdb();
   toast('\u05e9\u05d5\u05db\u05e4\u05dc \u2713');rTasks();rDash();
 }
-function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
+function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','today','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
 function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
@@ -7941,6 +7950,7 @@ function rTasks(){
     else if(f==='prog')tchips.push({label:'\u05d1\u05d4\u05ea\u05e7\u05d3\u05de\u05d5\u05ea',clear:'tskFilter(\'all\')'});
     else if(f==='over')tchips.push({label:'\u05e4\u05d9\u05d2\u05d5\u05e8 \u05d9\u05e2\u05d3',clear:'tskFilter(\'all\')'});
     else if(f==='done')tchips.push({label:'\u05d4\u05d5\u05e9\u05dc\u05de\u05d5',clear:'tskFilter(\'all\')'});
+    else if(f==='today')tchips.push({label:'\u05d4\u05d9\u05d5\u05dd',clear:'tskFilter(\'all\')'});
     if(tprjF){var tpn=(typeof _prjName==='function')?_prjName(tprjF):tprjF;tchips.push({label:'🏗️ '+tpn,clear:'tskPrjFilter(\'\')'});}
     if(tassF)tchips.push({label:'\ud83d\udc64 '+tassF,clear:'tskAssigneeFilter(\'\')'});
     if(window._tskSearchQ)tchips.push({label:'\ud83d\udd0d '+window._tskSearchQ,clear:'tskSearch(\'\')'});
@@ -7951,6 +7961,7 @@ function rTasks(){
   else if(f==='prog')rows=rows.filter(function(r){return r.status===_TSK_PROG;});
   else if(f==='done')rows=rows.filter(isDone);
   else if(f==='over')rows=rows.filter(function(r){return r.due&&r.due<today&&!isDone(r);});
+  else if(f==='today')rows=rows.filter(function(r){return r.due===today&&!isDone(r);});
   var _tskPriW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05e8\u05d2\u05d9\u05dc':2,'\u05e0\u05de\u05d5\u05da':3};
   rows.sort(function(a,b){
     var an=isDone(a)?1:0,bn=isDone(b)?1:0;
