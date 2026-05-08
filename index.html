@@ -11331,9 +11331,27 @@ function printReport(tbl,id){
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var pUrlRaw=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
-  _sign(pUrlRaw,function(signedPhoto){_sign(rec.file_url,function(signedFile){_printReportDo(tbl,id,cfg,rec,signedPhoto,signedFile);});});
+  // Collect URLs that need signing: the top-level photo/file plus every
+  // per-item attachment (rounds). Signing them all up-front lets the print
+  // window render <img src="..."> directly without runtime fetches.
+  var urlsToSign=[];
+  if(pUrlRaw)urlsToSign.push(pUrlRaw);
+  if(rec.file_url)urlsToSign.push(rec.file_url);
+  if(tbl==='rounds' && Array.isArray(rec.items)){
+    rec.items.forEach(function(it){
+      if(Array.isArray(it.attachments))it.attachments.forEach(function(a){if(a&&a.url)urlsToSign.push(a.url);});
+    });
+  }
+  var signed={};
+  function done(){_printReportDo(tbl,id,cfg,rec,signed[pUrlRaw]||'',signed[rec.file_url]||'',signed);}
+  if(!urlsToSign.length){done();return;}
+  var pending=urlsToSign.length;
+  urlsToSign.forEach(function(u){
+    _sign(u,function(s){signed[u]=s||'';pending--;if(!pending)done();});
+  });
 }
-function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
+function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
+  signedUrls=signedUrls||{};
   var ref=_reportRef(tbl,rec);
   var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
   var rows='';
@@ -11349,6 +11367,35 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
   var photoSafe=escU(pUrl||'');
   var fileBlock=rec.file_url&&fileSafe?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+fileSafe+'">'+esc(rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
   var photoBlock=photoSafe?'<div class="photo"><img src="'+photoSafe+'" alt="photo"></div>':'';
+  // Rounds: per-item card list with status, category, notes, photos.
+  // Each item card avoids splitting across pages so a finding stays
+  // visually intact when the user prints.
+  var itemsBlock='';
+  if(tbl==='rounds' && Array.isArray(rec.items) && rec.items.length){
+    itemsBlock='<div class="round-items"><h2 style="font-size:16px;color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:6px;margin:18px 0 10px">\u05e4\u05e8\u05d9\u05d8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d4 ('+rec.items.length+')</h2>';
+    rec.items.forEach(function(it){
+      var statColor={ok:'#16a34a',warn:'#d97706',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
+      var statSymbol={ok:'\u2713',warn:'\u26a0',critical:'\u2717',na:'\u2014'}[it.status]||'\u25cb';
+      itemsBlock+='<div class="round-item" style="border:1px solid #ccc;border-right:5px solid '+statColor+';border-radius:6px;padding:10px;margin-bottom:8px;page-break-inside:avoid">';
+      itemsBlock+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;font-weight:700;color:'+statColor+'">'+statSymbol+'</span><span style="font-size:16px">'+esc(it.icon||'')+'</span><strong style="flex:1;font-size:14px;min-width:140px">'+esc(it.label||'')+'</strong>'+(it.category?'<span style="font-size:11px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:2px 8px;color:#475569">'+esc(it.category)+'</span>':'')+'</div>';
+      if(it.notes)itemsBlock+='<div style="font-size:12px;color:#475569;margin-right:30px;margin-bottom:6px;line-height:1.5">'+esc(it.notes).replace(/\n/g,'<br>')+'</div>';
+      if(Array.isArray(it.attachments)&&it.attachments.length){
+        var photoHtml='';
+        it.attachments.forEach(function(a){
+          var su=signedUrls[a.url]||'';
+          var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(a.url||'')||/^image\//i.test(a.mime||'');
+          if(isImg && su){
+            photoHtml+='<img src="'+escU(su)+'" style="width:160px;height:160px;object-fit:cover;border-radius:6px;border:1px solid #ccc;display:inline-block;margin:0 0 4px 4px">';
+          }else if(su){
+            photoHtml+='<a href="'+escU(su)+'" style="display:inline-flex;width:160px;height:160px;background:#f0f4f8;border-radius:6px;align-items:center;justify-content:center;font-size:48px;text-decoration:none;color:#888;margin:0 0 4px 4px">\ud83d\udcc4</a>';
+          }
+        });
+        if(photoHtml)itemsBlock+='<div style="margin-right:30px;margin-top:6px">'+photoHtml+'</div>';
+      }
+      itemsBlock+='</div>';
+    });
+    itemsBlock+='</div>';
+  }
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
   var logoImg=logoSrc?'<img class="doc-logo" src="'+logoSrc+'" alt="TFUGEN">':'<span style="font-size:28px;font-weight:900;color:#cc1f1f">TFUGEN</span>';
@@ -11393,7 +11440,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned){
         '<span class="doc-date">\u05d4\u05d5\u05e4\u05e7: '+stamp+'</span>'+
       '</div>'+
     '</div>'+
-    '<table>'+rows+'</table>'+photoBlock+fileBlock+
+    '<table>'+rows+'</table>'+photoBlock+fileBlock+itemsBlock+
     '<div class="ftr"><span>ISO 45001 / ISO 14001 \u2014 Tapugan</span><span>'+ref+'</span></div>'+
     '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'+
     '</body></html>';
