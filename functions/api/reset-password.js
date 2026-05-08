@@ -8,13 +8,14 @@ const ADMIN_EMAIL = 'admin@tfugen.local';
 const MAX_BODY_BYTES = 1000;
 
 function genPassword() {
-  // 13-char password (Aa + 10 random + !) — see create-user.js for rationale.
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  const bytes = new Uint8Array(10);
+  // 8-char temp password — see create-user.js for the rationale.
+  // Easy to dictate; user must replace on next login (must_change_password).
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
-  let suffix = '';
-  for (let i = 0; i < 10; i++) suffix += chars[bytes[i] % chars.length];
-  return 'Aa' + suffix + '!';
+  let pw = '';
+  for (let i = 0; i < 8; i++) pw += chars[bytes[i] % chars.length];
+  return pw;
 }
 
 export async function onRequest({ request, env }) {

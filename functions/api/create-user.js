@@ -8,16 +8,18 @@ const ADMIN_EMAIL = 'admin@tfugen.local';
 const MAX_BODY_BYTES = 5000;
 
 function genPassword() {
-  // Random 13-char password (Aa + 10 random + !) — ~57^10 ≈ 3.6e17 combos.
-  // The previous 9-char generator (~24M) was within brute-force reach
-  // for an attacker with a leaked auth backend. Length is the cheapest
-  // fix and matches NIST 2024 guidance (10+ admin-set, force change).
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  const bytes = new Uint8Array(10);
+  // 8-char temp password from a no-confusion alphabet (no 0/O/1/l/I,
+  // no upper/lower mix, no special chars). Easy to dictate over phone
+  // or copy from a WhatsApp message. Entropy ~31^8 ≈ 8.5e11 — plenty
+  // because the user is forced to replace it on first login by the
+  // must_change_password=true flag we set below. Supabase's per-IP
+  // login rate limit makes brute-force impractical even at this length.
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
-  let suffix = '';
-  for (let i = 0; i < 10; i++) suffix += chars[bytes[i] % chars.length];
-  return 'Aa' + suffix + '!';
+  let pw = '';
+  for (let i = 0; i < 8; i++) pw += chars[bytes[i] % chars.length];
+  return pw;
 }
 
 export async function onRequest({ request, env }) {
