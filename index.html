@@ -2805,6 +2805,29 @@ function _autoAriaLabels(){
     var ttl=el.getAttribute('title');
     if(ttl&&ttl.trim()&&!el.getAttribute('aria-label'))el.setAttribute('aria-label',ttl);
   }
+  // Pass 3: form fields without an accessible name. Inputs/selects/
+  // textareas missing both <label> and aria-label get aria-label set
+  // from their placeholder OR from the previous-sibling label-like text.
+  // Audit reported 224 such fields. This is a fallback — the proper fix
+  // is real <label for> / wrapping, which is a manual task per field.
+  var fields=document.querySelectorAll('input:not([type="hidden"]):not([aria-label]):not([aria-labelledby]),select:not([aria-label]):not([aria-labelledby]),textarea:not([aria-label]):not([aria-labelledby])');
+  for(var k=0;k<fields.length;k++){
+    var fl=fields[k];
+    // Skip if a real <label for=ID> already points here.
+    if(fl.id&&document.querySelector('label[for="'+CSS.escape(fl.id)+'"]'))continue;
+    var ph=fl.getAttribute('placeholder');
+    var lblText='';
+    if(ph&&ph.trim()){lblText=ph;}
+    else{
+      // Walk up to the parent and look for a sibling label.
+      var p=fl.parentElement;
+      if(p){
+        var lab=p.querySelector('label');
+        if(lab&&lab.textContent)lblText=lab.textContent.replace(/[*\s]+$/,'').trim();
+      }
+    }
+    if(lblText)fl.setAttribute('aria-label',lblText.substring(0,80));
+  }
 }
 // Keyboard activation for div/span[role=button]: Enter and Space should
 // trigger the click handler, just like a real button. Single global
