@@ -9396,8 +9396,7 @@ var VIEW_CONFIG={
     ['\u05de\u05e1\u05e4\u05e8 \u05ea\u05e1\u05e7\u05d9\u05e8','report_number'],['\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd','deficiencies'],
     ['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url',extra:'_eqiHistorySection'},
   rounds:{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',back:'round',fields:[
-    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e4\u05e7\u05d7','inspector'],['\u05d2\u05dc\u05d0\u05d9 \u05d0\u05e9','fire'],['\u05de\u05e2\u05d1\u05e8\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd','corridors'],
-    ['PPE','ppe'],['\u05d3\u05d2\u05d9\u05de\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','samples'],['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd','chemicals'],['\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4','firstaid'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e4\u05e7\u05d7','inspector'],['\u05ea\u05de\u05ea \u05d4\u05e1\u05d1\u05d1','theme'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   hearing_tests:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',back:'hearing',fields:[
     ['\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3','emp_name'],['\u05ea"\u05d6','emp_id'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d9\u05d3\u05d4','dob'],['\u05d2\u05d9\u05dc','age'],['\u05de\u05d9\u05df','gender'],
     ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],['\u05e7\u05d5\u05e4\u05d4/\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],['\u05e9\u05e0\u05d4','year'],
@@ -9487,6 +9486,34 @@ function showView(tbl,id){
       html+='</div>';
     }
     html+='<div style="margin-top:8px"><button onclick="_cpAddPrompt(\''+esc(tbl)+'\',\''+esc(id)+'\')" style="font-size:11px;background:#f0f1f3;border:1px dashed #aaa;border-radius:6px;color:#444;padding:6px 12px;cursor:pointer;width:100%;font-family:inherit">+ \u05d4\u05d5\u05e1\u05e3 \u05e9\u05d3\u05d4 \u05de\u05d5\u05ea\u05d0\u05dd</button></div>';
+  }
+  // Rounds: render per-item details (status, category, notes, photos).
+  // items[] is the new format from PR #482; legacy boolean fields stay
+  // visible for old records that pre-date items[].
+  if(tbl==='rounds' && Array.isArray(rec.items) && rec.items.length){
+    html+='<div style="margin-top:14px;border-top:2px solid #dde0e6;padding-top:10px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:8px">📋 פריטי בדיקה ('+rec.items.length+')</div>';
+    rec.items.forEach(function(it){
+      var statColor={ok:'#16a34a',warn:'#d97706',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
+      var statEmoji={ok:'✅',warn:'⚠️',critical:'❌',na:'➖'}[it.status]||'⚪';
+      var hasExtra=it.notes||it.category||(it.attachments&&it.attachments.length);
+      html+='<div style="background:#fafbfc;border:1px solid #e5e7eb;border-right:4px solid '+statColor+';border-radius:8px;padding:8px;margin-bottom:6px">';
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(hasExtra?'4px':'0')+';flex-wrap:wrap"><span style="font-size:18px">'+statEmoji+'</span><span style="font-size:14px">'+esc(it.icon||'')+'</span><strong style="flex:1;min-width:120px;font-size:13px">'+esc(it.label||'')+'</strong>'+(it.category?'<span style="font-size:11px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;padding:2px 8px;color:#475569">'+esc(it.category)+'</span>':'')+'</div>';
+      if(it.notes)html+='<div style="font-size:12px;color:#475569;margin-right:26px;margin-bottom:4px">'+esc(it.notes)+'</div>';
+      if(Array.isArray(it.attachments) && it.attachments.length){
+        html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-right:26px;margin-top:6px">';
+        it.attachments.forEach(function(a){
+          var isImg=/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(a.url||'')||/^image\//i.test(a.mime||'');
+          if(isImg){
+            html+='<a data-sign="'+escU(a.url)+'" target="_blank" style="display:inline-block;line-height:0"><img loading="lazy" data-sign="'+escU(a.url)+'" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block"></a>';
+          }else{
+            html+='<a data-sign="'+escU(a.url)+'" target="_blank" style="display:inline-flex;width:96px;height:96px;background:#f0f4f8;border-radius:8px;align-items:center;justify-content:center;font-size:36px;text-decoration:none">📄</a>';
+          }
+        });
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+    html+='</div>';
   }
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   if(pUrl){
