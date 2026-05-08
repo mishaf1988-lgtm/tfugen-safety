@@ -631,7 +631,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-tsk-bd-card" style="display:none"><div class="card-title">&#128218; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;</div><div id="dash-tsk-bd" style="font-size:12px"></div></div>
   <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
-  <div class="card" id="dash-recent-card"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <!-- "פעילות אחרונה" hidden — clutters the home screen; activity log is still in audit_log table. -->
+  <div class="card" id="dash-recent-card" style="display:none"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="dash-section-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -11835,10 +11836,12 @@ function _applyRoleGates(){
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
+  // AI cards (weekly summary + today plan) hidden — clutter the home
+  // screen and the same data is available on the agents page on demand.
   var aiWeekCard=g('dash-ai-weekly-card');
-  if(aiWeekCard) aiWeekCard.style.display = isAdmin ? '' : 'none';
+  if(aiWeekCard) aiWeekCard.style.display = 'none';
   var aiTodayCard=g('dash-ai-today-card');
-  if(aiTodayCard) aiTodayCard.style.display = isAdmin ? '' : 'none';
+  if(aiTodayCard) aiTodayCard.style.display = 'none';
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
