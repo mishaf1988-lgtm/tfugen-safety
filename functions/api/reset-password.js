@@ -8,11 +8,12 @@ const ADMIN_EMAIL = 'admin@tfugen.local';
 const MAX_BODY_BYTES = 1000;
 
 function genPassword() {
+  // 13-char password (Aa + 10 random + !) — see create-user.js for rationale.
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  const bytes = new Uint8Array(6);
+  const bytes = new Uint8Array(10);
   crypto.getRandomValues(bytes);
   let suffix = '';
-  for (let i = 0; i < 6; i++) suffix += chars[bytes[i] % chars.length];
+  for (let i = 0; i < 10; i++) suffix += chars[bytes[i] % chars.length];
   return 'Aa' + suffix + '!';
 }
 
@@ -75,6 +76,11 @@ export async function onRequest({ request, env }) {
   if (!targetUser) return jsonResp({ error: 'auth user not found for ' + targetEmail }, 404, cors);
 
   const newPassword = genPassword();
+  // Preserve any existing user_metadata (e.g., username, full_name) and
+  // mark must_change_password=true so the browser forces a self-set
+  // password modal on the next successful login.
+  const existingMeta = (targetUser && targetUser.user_metadata) || {};
+  const newMeta = Object.assign({}, existingMeta, { must_change_password: true });
   const updResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
     method: 'PUT',
     headers: {
@@ -82,7 +88,7 @@ export async function onRequest({ request, env }) {
       Authorization: 'Bearer ' + serviceKey,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ password: newPassword })
+    body: JSON.stringify({ password: newPassword, user_metadata: newMeta })
   });
 
   if (!updResp.ok) {

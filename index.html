@@ -840,6 +840,30 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 </div>
 
+<!-- FORCE PASSWORD CHANGE MODAL — appears on first login after admin-set password.
+     Triggered when r.data.user.user_metadata.must_change_password === true.
+     The user cannot proceed to the app until they choose a new password. -->
+<div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
+<div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
+  <div class="modal-title">&#128274; &#1492;&#1490;&#1491;&#1512;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
+  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#92400e;line-height:1.5">
+    &#9888; &#1494;&#1493; &#1492;&#1499;&#1504;&#1497;&#1505;&#1492; &#1492;&#1512;&#1488;&#1513;&#1493;&#1504;&#1492; &#1513;&#1500;&#1499;&#1501; &#1488;&#1493; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492;.
+    &#1488;&#1504;&#1488; &#1489;&#1495;&#1512;&#1493; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; (&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;) &#1500;&#1508;&#1504;&#1497; &#1492;&#1502;&#1513;&#1498;.
+  </div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; *</label>
+      <input id="fpc-new" type="password" placeholder="&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;" autocomplete="new-password" minlength="10">
+    </div>
+    <div class="field fw"><label>&#1488;&#1497;&#1502;&#1493;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; *</label>
+      <input id="fpc-confirm" type="password" placeholder="&#1492;&#1511;&#1500;&#1497;&#1491;&#1497; &#1488;&#1493;&#1514;&#1492; &#1513;&#1493;&#1489;" autocomplete="new-password" minlength="10">
+    </div>
+  </div>
+  <div id="fpc-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-p" id="fpc-submit" onclick="_pwChangeSubmit()" style="width:100%">&#9989; &#1488;&#1497;&#1513;&#1493;&#1512; &#1493;&#1492;&#1502;&#1513;&#1498;</button>
+  </div>
+</div>
+
 <!-- RENAME USERNAME MODAL -->
 <div class="overlay" id="ov-rename" onclick="closeModal('m-rename')"></div>
 <div class="modal" id="m-rename" style="display:none;max-width:400px">
@@ -11888,6 +11912,21 @@ function doLogin(){
     _sbToken=r.data.session.access_token;
     _sbAuthPromise=Promise.resolve(r.data.session);
 
+    // First-login gate: if the admin set/reset this user's password, the
+    // server marked user_metadata.must_change_password=true. Force the
+    // user to pick a new password BEFORE entering the app. The pending
+    // login state is captured in window._pendingLogin so _pwChangeSubmit
+    // can resume the flow after the password is updated.
+    var meta=(r.data.user&&r.data.user.user_metadata)||{};
+    if(meta.must_change_password===true){
+      window._pendingLogin={lb:lb,email:email,uname:uname};
+      var fpc=g('fpc-new');if(fpc)fpc.value='';
+      var fpc2=g('fpc-confirm');if(fpc2)fpc2.value='';
+      var fpcErr=g('fpc-err');if(fpcErr)fpcErr.textContent='';
+      try{document.getElementById('ov-force-pw').style.display='block';document.getElementById('m-force-pw-change').style.display='block';}catch(e){}
+      return;
+    }
+
     // Admin bypasses the approval gate
     if(email===ADMIN_EMAIL){
       _currentUser={username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'};
@@ -11921,6 +11960,55 @@ function doLogin(){
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
   });
 }
+
+// Submit handler for the force-password-change modal. Updates the user's
+// password via supabase.auth.updateUser AND clears the must_change_password
+// flag in user_metadata, then resumes the login flow that was paused in
+// doLogin (admin → _finishLogin directly; non-admin → app_users approval check).
+window._pwChangeSubmit=function(){
+  var pending=window._pendingLogin;
+  if(!pending){return;}
+  var newPw=(g('fpc-new')||{}).value||'';
+  var confirmPw=(g('fpc-confirm')||{}).value||'';
+  var errEl=g('fpc-err');
+  function showErr(msg){if(errEl)errEl.textContent=msg;}
+  if(newPw.length<10){showErr('הסיסמה צריכה להכיל לפחות 10 תווים');return;}
+  if(newPw!==confirmPw){showErr('הסיסמאות אינן זהות');return;}
+  showErr('');
+  var btn=g('fpc-submit');if(btn){btn.disabled=true;btn.textContent='⏳ מעדכן...';}
+  if(!_sbClient){showErr('Supabase אינו זמין');if(btn){btn.disabled=false;btn.textContent='✅ אישור והמשך';}return;}
+  _sbClient.auth.updateUser({password:newPw,data:{must_change_password:false}}).then(function(r){
+    if(r.error){showErr('שגיאה: '+(r.error.message||'לא ניתן לעדכן'));if(btn){btn.disabled=false;btn.textContent='✅ אישור והמשך';}return;}
+    try{document.getElementById('ov-force-pw').style.display='none';document.getElementById('m-force-pw-change').style.display='none';}catch(e){}
+    if(btn){btn.disabled=false;btn.textContent='✅ אישור והמשך';}
+    window._pendingLogin=null;
+    if(typeof toast==='function')toast('✓ הסיסמה עודכנה');
+    // Resume the login path that was paused. Admin → _finishLogin; otherwise
+    // do the app_users approval check (mirrors the original doLogin code).
+    if(pending.email===ADMIN_EMAIL){
+      _currentUser={username:'admin',role:'אדמין',full_name:'אדמין'};
+      _finishLogin(pending.lb);return;
+    }
+    fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(pending.uname.toLowerCase())+'&select=*',{
+      headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
+    }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
+      var u=rows[0];
+      var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
+      if(!approved){
+        try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
+        _sbToken=null;_sbAuthPromise=null;
+        if(pending.lb){pending.lb.disabled=false;pending.lb.textContent=pending.lb.dataset.txt||'כניסה';}
+        _loginErr('המשתמש טרם אושר ע״י מנהל המערכת. פנה לאדמין.');return;
+      }
+      _currentUser={username:pending.uname.toLowerCase()};
+      for(var k in u)_currentUser[k]=u[k];
+      _finishLogin(pending.lb);
+    });
+  }).catch(function(err){
+    showErr('שגיאה: '+(err&&err.message||err));
+    if(btn){btn.disabled=false;btn.textContent='✅ אישור והמשך';}
+  });
+};
 
 function _finishLogin(lb){
   if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}

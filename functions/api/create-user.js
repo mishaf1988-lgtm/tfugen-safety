@@ -8,11 +8,15 @@ const ADMIN_EMAIL = 'admin@tfugen.local';
 const MAX_BODY_BYTES = 5000;
 
 function genPassword() {
+  // Random 13-char password (Aa + 10 random + !) — ~57^10 ≈ 3.6e17 combos.
+  // The previous 9-char generator (~24M) was within brute-force reach
+  // for an attacker with a leaked auth backend. Length is the cheapest
+  // fix and matches NIST 2024 guidance (10+ admin-set, force change).
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let suffix = '';
-  const bytes = new Uint8Array(6);
+  const bytes = new Uint8Array(10);
   crypto.getRandomValues(bytes);
-  for (let i = 0; i < 6; i++) suffix += chars[bytes[i] % chars.length];
+  let suffix = '';
+  for (let i = 0; i < 10; i++) suffix += chars[bytes[i] % chars.length];
   return 'Aa' + suffix + '!';
 }
 
@@ -74,7 +78,10 @@ export async function onRequest({ request, env }) {
       email: authEmail,
       password,
       email_confirm: true,
-      user_metadata: { username, full_name }
+      // must_change_password: forces the user to set their own password on
+      // the first successful login. The browser checks this flag after
+      // signIn and shows the m-force-pw-change modal before continuing.
+      user_metadata: { username, full_name, must_change_password: true }
     })
   });
 
