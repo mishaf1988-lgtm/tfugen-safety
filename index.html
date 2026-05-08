@@ -532,6 +532,33 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 </div>
 
+<!-- FORCE PASSWORD CHANGE MODAL — appears on first login after admin-set password.
+     Triggered when r.data.user.user_metadata.must_change_password === true.
+     The user cannot proceed to the app until they choose a new password.
+     MUST live OUTSIDE #app — that container is display:none until login
+     completes, so anything inside it can't render before the modal needs
+     to fire. -->
+<div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
+<div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
+  <div class="modal-title">&#128274; &#1492;&#1490;&#1491;&#1512;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
+  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#92400e;line-height:1.5">
+    &#9888; &#1494;&#1493; &#1492;&#1499;&#1504;&#1497;&#1505;&#1492; &#1492;&#1512;&#1488;&#1513;&#1493;&#1504;&#1492; &#1513;&#1500;&#1499;&#1501; &#1488;&#1493; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492;.
+    &#1488;&#1504;&#1488; &#1489;&#1495;&#1512;&#1493; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; (&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;) &#1500;&#1508;&#1504;&#1497; &#1492;&#1502;&#1513;&#1498;.
+  </div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; *</label>
+      <input id="fpc-new" type="password" placeholder="&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;" autocomplete="new-password" minlength="10">
+    </div>
+    <div class="field fw"><label>&#1488;&#1497;&#1502;&#1493;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; *</label>
+      <input id="fpc-confirm" type="password" placeholder="&#1492;&#1511;&#1500;&#1497;&#1491;&#1497; &#1488;&#1493;&#1514;&#1492; &#1513;&#1493;&#1489;" autocomplete="new-password" minlength="10">
+    </div>
+  </div>
+  <div id="fpc-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-p" id="fpc-submit" onclick="_pwChangeSubmit()" style="width:100%">&#9989; &#1488;&#1497;&#1513;&#1493;&#1512; &#1493;&#1492;&#1502;&#1513;&#1498;</button>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app">
 
@@ -837,30 +864,6 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="btn btn-s" style="width:100%;margin-top:12px" onclick="copyCredentials()">&#128203; &#1492;&#1506;&#1514;&#1511; &#1500;&#1500;&#1493;&#1495;</button>
   <div class="modal-footer">
     <button class="btn btn-p" onclick="closeModal('m-credentials')">&#1505;&#1497;&#1497;&#1502;&#1514;&#1497; &#1500;&#1492;&#1506;&#1514;&#1497;&#1511;</button>
-  </div>
-</div>
-
-<!-- FORCE PASSWORD CHANGE MODAL — appears on first login after admin-set password.
-     Triggered when r.data.user.user_metadata.must_change_password === true.
-     The user cannot proceed to the app until they choose a new password. -->
-<div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
-<div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
-  <div class="modal-title">&#128274; &#1492;&#1490;&#1491;&#1512;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
-  <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#92400e;line-height:1.5">
-    &#9888; &#1494;&#1493; &#1492;&#1499;&#1504;&#1497;&#1505;&#1492; &#1492;&#1512;&#1488;&#1513;&#1493;&#1504;&#1492; &#1513;&#1500;&#1499;&#1501; &#1488;&#1493; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492;.
-    &#1488;&#1504;&#1488; &#1489;&#1495;&#1512;&#1493; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; (&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;) &#1500;&#1508;&#1504;&#1497; &#1492;&#1502;&#1513;&#1498;.
-  </div>
-  <div class="fgrid">
-    <div class="field fw"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; *</label>
-      <input id="fpc-new" type="password" placeholder="&#1500;&#1508;&#1495;&#1493;&#1514; 10 &#1514;&#1493;&#1493;&#1497;&#1501;" autocomplete="new-password" minlength="10">
-    </div>
-    <div class="field fw"><label>&#1488;&#1497;&#1502;&#1493;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; *</label>
-      <input id="fpc-confirm" type="password" placeholder="&#1492;&#1511;&#1500;&#1497;&#1491;&#1497; &#1488;&#1493;&#1514;&#1492; &#1513;&#1493;&#1489;" autocomplete="new-password" minlength="10">
-    </div>
-  </div>
-  <div id="fpc-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
-  <div class="modal-footer">
-    <button class="btn btn-p" id="fpc-submit" onclick="_pwChangeSubmit()" style="width:100%">&#9989; &#1488;&#1497;&#1513;&#1493;&#1512; &#1493;&#1492;&#1502;&#1513;&#1498;</button>
   </div>
 </div>
 
@@ -11920,6 +11923,9 @@ function doLogin(){
     var meta=(r.data.user&&r.data.user.user_metadata)||{};
     if(meta.must_change_password===true){
       window._pendingLogin={lb:lb,email:email,uname:uname};
+      // Reset the login button so the user doesn't see "מתחבר..." stuck.
+      // The modal takes focus from here.
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'כניסה';}
       var fpc=g('fpc-new');if(fpc)fpc.value='';
       var fpc2=g('fpc-confirm');if(fpc2)fpc2.value='';
       var fpcErr=g('fpc-err');if(fpcErr)fpcErr.textContent='';
