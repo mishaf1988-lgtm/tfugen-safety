@@ -862,6 +862,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </div>
   <button class="btn btn-s" style="width:100%;margin-top:12px" onclick="copyCredentials()">&#128203; &#1492;&#1506;&#1514;&#1511; &#1500;&#1500;&#1493;&#1495;</button>
+  <button id="cr-wa-btn" class="btn btn-p" style="width:100%;margin-top:8px;background:#25D366;border-color:#25D366" onclick="_credSendWhatsApp()">&#128241; &#1513;&#1500;&#1495; &#1489;-WhatsApp &#1500;&#1506;&#1493;&#1489;&#1491;</button>
+  <div id="cr-wa-hint" style="font-size:11px;color:var(--t3);margin-top:4px;text-align:center"></div>
   <div class="modal-footer">
     <button class="btn btn-p" onclick="closeModal('m-credentials')">&#1505;&#1497;&#1497;&#1502;&#1514;&#1497; &#1500;&#1492;&#1506;&#1514;&#1497;&#1511;</button>
   </div>
@@ -7758,6 +7760,12 @@ function createNewUser(){
     pwEl.dataset.masked='1';
     pwEl.textContent='••••••••';
     var tgl=g('cr-password-toggle');if(tgl)tgl.textContent='👁️ הצג';
+    // Stash phone + display name so the WhatsApp button (cr-wa-btn) can
+    // build a wa.me link without re-prompting. body.phone was captured
+    // from the form above.
+    var crModal=g('m-credentials');
+    if(crModal){crModal.dataset.phone=body.phone||'';crModal.dataset.fullName=body.full_name||'';}
+    _credSyncWaButton();
     openModal('m-credentials');
     // Refresh local data
     sbSync();
@@ -7782,6 +7790,67 @@ window._credToggle=function(){
     el.dataset.masked='1';
     if(tgl)tgl.textContent='👁️ הצג';
   }
+};
+// Normalize an Israeli phone (or already-international) into E.164 digits
+// without the + sign — wa.me accepts that form. Returns '' if input
+// can't be massaged into something plausible.
+function _phoneToWa(raw){
+  if(!raw)return '';
+  var d=String(raw).replace(/[^0-9]/g,'');
+  if(!d)return '';
+  if(d.indexOf('972')===0)return d;
+  if(d.charAt(0)==='0')return '972'+d.substring(1);
+  // 9-10 digits without leading 0 → assume Israeli mobile and prepend
+  if(d.length>=8&&d.length<=10)return '972'+d;
+  return d;
+}
+// Toggle the WhatsApp send button visibility/hint based on whether the
+// credentials modal has a phone number on its dataset. Called both from
+// createNewUser and from openResetPwDialog after they stash dataset.phone.
+window._credSyncWaButton=function(){
+  var btn=g('cr-wa-btn');var hint=g('cr-wa-hint');
+  if(!btn)return;
+  var modal=g('m-credentials');
+  var phone=(modal&&modal.dataset.phone)||'';
+  var wa=_phoneToWa(phone);
+  if(wa){
+    btn.style.display='';
+    if(hint)hint.textContent='ייפתח WhatsApp עם הודעה מוכנה — לחצי שלח';
+  }else{
+    btn.style.display='none';
+    if(hint)hint.textContent='לא הוזן טלפון — העתיקי ידנית או הוסיפי טלפון לפרופיל';
+  }
+};
+// Build a wa.me link with the credentials pre-filled and open it in a
+// new tab. Works on iOS/Android (opens WhatsApp app) and desktop (opens
+// web.whatsapp.com). Doesn't depend on Meta's 24h conversation window
+// or template approval — admin's own WhatsApp account does the send.
+window._credSendWhatsApp=function(){
+  var modal=g('m-credentials');
+  if(!modal){return;}
+  var phone=modal.dataset.phone||'';
+  var wa=_phoneToWa(phone);
+  if(!wa){toast('לא הוזן טלפון לעובד. הוסיפי טלפון בפרופיל המשתמש.');return;}
+  var uname=(g('cr-username')||{}).textContent||'';
+  var pwEl=g('cr-password');
+  var pw=(pwEl&&pwEl.dataset&&pwEl.dataset.real)||(pwEl&&pwEl.textContent)||'';
+  var fullName=modal.dataset.fullName||'';
+  // Plain-text body, line-broken. Hebrew and English mix is fine; wa.me
+  // URL-encodes everything via encodeURIComponent below.
+  var lines=[
+    (fullName?'שלום '+fullName+',':'שלום,'),
+    'נוצר עבורך חשבון בתפוגן בטיחות.',
+    '',
+    'שם משתמש: '+uname,
+    'סיסמה זמנית: '+pw,
+    '',
+    'קישור: https://tapugan-safety.pages.dev',
+    '',
+    'בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.'
+  ];
+  var text=lines.join('\n');
+  var url='https://wa.me/'+wa+'?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
 };
 function copyCredentials(){
   var u=g('cr-username').textContent;
@@ -7868,6 +7937,14 @@ function openResetPwDialog(){
     pwEl2.dataset.masked='1';
     pwEl2.textContent='••••••••';
     var tgl2=g('cr-password-toggle');if(tgl2)tgl2.textContent='👁️ הצג';
+    // Lookup the user's phone from app_users so the WhatsApp button can
+    // send without re-prompting the admin. The reset flow only has the
+    // username so we have to pull the row.
+    var resetUname=String(res.j.username||'').toLowerCase();
+    var resetU=(DB.app_users||[]).find(function(x){return String(x.username||'').toLowerCase()===resetUname;});
+    var crModalR=g('m-credentials');
+    if(crModalR){crModalR.dataset.phone=(resetU&&resetU.phone)||'';crModalR.dataset.fullName=(resetU&&resetU.full_name)||'';}
+    _credSyncWaButton();
     openModal('m-credentials');
   }).catch(function(err){
     alert('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err));
