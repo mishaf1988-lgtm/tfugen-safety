@@ -3049,9 +3049,54 @@ var _ADMIN_ONLY_PAGES = {users:1,audit:1,agents:1};
 function _isAdminUser(){
   return _currentUser && (_currentUser.username==='admin' || _currentUser.role==='\u05d0\u05d3\u05de\u05d9\u05df');
 }
+// Returns 'admin' | 'manager' | 'reporter' for the current user. Defaults
+// to 'reporter' when no app_users row is loaded yet (safest assumption \u2014
+// the lowest-privilege role until we know better).
+function _role(){
+  if(!_currentUser)return 'reporter';
+  if(_currentUser.username==='admin')return 'admin';
+  var r=_currentUser.role||'';
+  if(r==='\u05d0\u05d3\u05de\u05d9\u05df')return 'admin';   // \u05d0\u05d3\u05de\u05d9\u05df
+  if(r==='\u05de\u05e0\u05d4\u05dc')return 'manager';       // \u05de\u05e0\u05d4\u05dc
+  return 'reporter';                                        // \u05de\u05d3\u05d5\u05d5\u05d7 (default)
+}
+// Pages that managers can see (admin sees everything, reporter sees a
+// subset). The reporter list is intentionally narrow: the home dash, the
+// task queue, and the four creation flows that an employee actually files.
+var _MANAGER_PAGES = {dash:1,tasks:1,ncr:1,inc:1,nm:1,round:1,toolbox:1,eqi:1,exp:1,
+  ppe:1,tr:1,docs:1,ctr:1,med:1,ins:1,drl:1,wst:1,hzm:1,env:1,leg:1,easp:1,rsk:1,emp:1,
+  ptw:1,'ptw-view':1,hearing:1,view:1,cal:1,loc:1,prj:1,itp:1,itype:1,'emp-home':1,menu:1,lg:1};
+var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,
+  // Creation flows \u2014 reporter can OPEN these pages, but per-action filters
+  // (rTasks, rNcr, etc.) limit what they see inside.
+  nm:1,inc:1,round:1,toolbox:1,ncr:1,view:1};
+// Central permission check. Returns true if the current user is allowed to
+// see/use `feature`. Use this everywhere instead of duplicating role
+// strings \u2014 easier to audit and change.
+function _can(feature){
+  var r=_role();
+  if(r==='admin')return true;
+  switch(feature){
+    case 'manage-users':case 'view-audit':case 'use-agents':case 'manage-backups':
+    case 'manage-mail-rules':case 'see-wa-test':
+      return false;                              // admin only
+    case 'edit-records':case 'view-all-tasks':case 'view-all-modules':
+    case 'see-modules-sheet':
+      return r==='manager';
+    case 'create-report':case 'view-own-tasks':case 'see-dashboard':
+      return true;                               // everyone
+    default:
+      return r==='manager';
+  }
+}
 function goPage(id){
   if(_ADMIN_ONLY_PAGES[id] && !_isAdminUser()){
     try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 — \u05e2\u05de\u05d5\u05d3 \u05d6\u05d4 \u05e0\u05d2\u05d9\u05e9 \u05e8\u05e7 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea');}catch(e){}
+    id='dash';
+  }
+  // Reporter trying to open a manager/admin-only page: kick to dash.
+  if(_role()==='reporter' && id && !_REPORTER_PAGES[id]){
+    try{toast('אין הרשאה — פנה למנהל הבטיחות');}catch(e){}
     id='dash';
   }
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -8050,6 +8095,16 @@ function rTasks(){
     tassSel.innerHTML=aopts;
   }
   var rows=(DB.tasks||[]).slice().concat(_collectVirtualTasks());
+  // Reporter sees only their own tasks (assignee = their full_name OR
+  // their username). Manager + admin see everything.
+  if(_role()==='reporter'){
+    var me=(_currentUser&&(_currentUser.full_name||_currentUser.username))||'';
+    var meLow=String(me).toLowerCase();
+    rows=rows.filter(function(r){
+      var a=String(r.assignee||'').toLowerCase();
+      return a===meLow;
+    });
+  }
   if(tprjF)rows=rows.filter(function(r){return r.project_id===tprjF;});
   if(tassF)rows=rows.filter(function(r){return r.assignee===tassF;});
   var tQ=window._tskSearchQ||'';
@@ -11955,7 +12010,10 @@ function _resolveEmail(unameOrEmail){
   return v.toLowerCase()+'@tfugen.local';
 }
 function _applyRoleGates(){
-  var isAdmin = _isAdminUser();
+  var role = _role();
+  var isAdmin = role==='admin';
+  var isManagerOrUp = role==='admin'||role==='manager';
+  // Admin-only modules sheet buttons
   var usersBtn=g('sheet-btn-users');
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
   var auditBtn=g('sheet-btn-audit');
@@ -11966,6 +12024,24 @@ function _applyRoleGates(){
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
+  // Hide the bnav "modules" entry from reporters — none of the
+  // operational data (equipment, PPE, training, ...) is theirs to view.
+  var bnModules=g('bn-modules');
+  if(bnModules) bnModules.style.display = isManagerOrUp ? '' : 'none';
+  // Hide operational view buttons in the reports sheet from reporters.
+  // Creation entries (NCR, incident, near-miss, round, toolbox) stay
+  // visible so the reporter can file new reports.
+  var reportsSheet=g('m-reports-sheet');
+  if(reportsSheet){
+    reportsSheet.querySelectorAll('.sheet-btn').forEach(function(b){
+      var oc=b.getAttribute('onclick')||'';
+      var m=oc.match(/_goFromSheet\(['"]m-reports-sheet['"]\s*,\s*['"]([^'"]+)['"]/);
+      if(!m)return;
+      var page=m[1];
+      var managerOnly=(page==='exp'||page==='eqi');
+      b.style.display=(managerOnly && !isManagerOrUp)?'none':'';
+    });
+  }
   // AI cards (weekly summary + today plan) hidden — clutter the home
   // screen and the same data is available on the agents page on demand.
   var aiWeekCard=g('dash-ai-weekly-card');
@@ -11975,6 +12051,11 @@ function _applyRoleGates(){
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
+    goPage('dash');
+  }
+  // Reporter sitting on a manager-only page (direct nav, stale hash) →
+  // kick to dash. Allowed pages list lives in _REPORTER_PAGES.
+  if(role==='reporter' && CUR && !_REPORTER_PAGES[CUR] && !_ADMIN_ONLY_PAGES[CUR]){
     goPage('dash');
   }
   _refreshUsersDatalist();
