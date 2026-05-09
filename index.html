@@ -653,6 +653,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
+  <!-- Phase 2 Agent 2: pending password reset requests inbox.
+       Visible only to admin AND only when there are pending rows.
+       Populated by _pwReqLoad(); each row has a one-click approve. -->
+  <div class="card" id="dash-pwreq-card" style="display:none;margin:0 0 10px;background:#fef3c7;border:1px solid #f59e0b">
+    <div class="card-title" style="color:#92400e">&#128274; &#1489;&#1511;&#1513;&#1493;&#1514; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492; (<span id="dash-pwreq-count">0</span>)</div>
+    <div id="dash-pwreq-list" style="font-size:12px"></div>
+  </div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
   <div id="dash-health" style="margin:0 0 10px"></div>
   <div class="card" id="dash-kpi-card" style="margin:0 0 10px"><div class="card-title">&#128202; &#1488;&#1497;&#1504;&#1491;&#1497;&#1511;&#1496;&#1493;&#1512;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; (Leading Indicators)</div><div id="dash-kpi"></div></div>
@@ -4236,6 +4243,9 @@ window._dashBadges = function(){
 
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Phase 2 Agent 2 — refresh password reset request inbox on every
+  // dashboard render. Cheap (1 SELECT, hidden if no rows / non-admin).
+  if(typeof _pwReqLoad==='function')_pwReqLoad();
   // Always update the topbar/bnav badges (cheap, user expects them fresh).
   _dashBadges();
   // Skip the heavy dashboard widget rendering if the user is on a different
@@ -7835,9 +7845,13 @@ function createNewUser(){
     // build a wa.me link without re-prompting. body.phone was captured
     // from the form above.
     var crModal=g('m-credentials');
-    if(crModal){crModal.dataset.phone=body.phone||'';crModal.dataset.fullName=body.full_name||'';}
+    if(crModal){crModal.dataset.phone=body.phone||'';crModal.dataset.fullName=body.full_name||'';crModal.dataset.email=body.email||'';}
     _credSyncWaButton();
     openModal('m-credentials');
+    // Auto-deliver agent: fires email + opens WhatsApp tab in parallel.
+    // Slight delay to let the modal paint first so the toasts feel
+    // tied to a visible action.
+    setTimeout(function(){_credAutoDeliver();},500);
     // Refresh local data
     sbSync();
     setTimeout(function(){if(typeof rUsers==='function')rUsers();_refreshUsersDatalist();},800);
@@ -7922,6 +7936,140 @@ window._credSendWhatsApp=function(){
   var text=lines.join('\n');
   var url='https://wa.me/'+wa+'?text='+encodeURIComponent(text);
   window.open(url,'_blank');
+};
+// Auto-deliver agent: given the credentials currently in m-credentials,
+// fire BOTH delivery channels in parallel — email via Microsoft Graph
+// (if admin signed into MS + recipient has real email) and a wa.me tab
+// (if recipient has phone). Each toast is independent. Failures are
+// non-fatal — admin can still hand-copy the credentials manually.
+// Phase 2 Agent 2 — Password Reset Request inbox.
+//
+// _pwReqLoad: pulls pending rows from password_reset_requests, renders
+// the dashboard card, hides if zero or if current user isn't admin.
+// _pwReqApprove: 1-click — calls /api/reset-password, opens credentials
+// modal so _credAutoDeliver fires email+WhatsApp, then marks the row
+// completed.
+window._pwReqLoad=function(){
+  var card=g('dash-pwreq-card');if(!card)return;
+  if(!_isAdminUser()){card.style.display='none';return;}
+  if(!_sbToken){card.style.display='none';return;}
+  fetch(SBU+'/rest/v1/password_reset_requests?status=eq.pending&order=ts.desc&limit=20',{
+    headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
+  }).then(function(r){return r.ok?r.json():[];}).then(function(rows){
+    var cnt=g('dash-pwreq-count');
+    var list=g('dash-pwreq-list');
+    if(!rows.length){card.style.display='none';return;}
+    card.style.display='';
+    if(cnt)cnt.textContent=rows.length;
+    if(list){
+      list.innerHTML=rows.map(function(r){
+        var when='';try{when=new Date(r.ts).toLocaleString('he-IL');}catch(e){}
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #fde68a">'+
+          '<div style="flex:1;min-width:0"><strong>'+esc(r.username||'?')+'</strong><div style="font-size:10px;color:#92400e">'+esc(when)+'</div></div>'+
+          '<button class="btn btn-p btn-sm" data-prid="'+esc(r.id)+'" data-pruname="'+esc(r.username||'')+'" onclick="_pwReqApprove(this.dataset.prid,this.dataset.pruname)" style="padding:6px 12px;background:#16a34a;border-color:#16a34a;font-size:12px;white-space:nowrap">✅ אשר ושלח</button>'+
+          '<button class="btn btn-d btn-sm" data-pdid="'+esc(r.id)+'" onclick="_pwReqDeny(this.dataset.pdid)" style="padding:6px 10px;font-size:12px" title="דחה">✕</button>'+
+        '</div>';
+      }).join('');
+    }
+  }).catch(function(){
+    // Table doesn't exist yet (migration not run) — silently hide.
+    card.style.display='none';
+  });
+};
+window._pwReqApprove=function(reqId,uname){
+  if(!uname){toast('שם משתמש חסר');return;}
+  if(!confirm('לייצר סיסמה חדשה ל-"'+uname+'" ולשלוח אליו אוטומטית?'))return;
+  if(!_sbToken){toast('לא מחובר');return;}
+  toast('⏳ מאפס סיסמה...');
+  fetch('/api/reset-password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
+    body:JSON.stringify({username:uname})
+  }).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+  .then(function(res){
+    if(!res.ok||res.j.error){toast('שגיאה: '+(res.j.error||'reset failed'));return;}
+    // Open credentials modal — auto-deliver kicks in there (PR #509+).
+    g('cr-username').textContent=res.j.username;
+    var pwEl=g('cr-password');
+    pwEl.dataset.real=res.j.password||'';
+    pwEl.dataset.masked='1';
+    pwEl.textContent='••••••••';
+    var tgl=g('cr-password-toggle');if(tgl)tgl.textContent='👁️ הצג';
+    var u=(DB.app_users||[]).find(function(x){return String(x.username||'').toLowerCase()===String(uname).toLowerCase();});
+    var modal=g('m-credentials');
+    if(modal){modal.dataset.phone=(u&&u.phone)||'';modal.dataset.fullName=(u&&u.full_name)||'';modal.dataset.email=(u&&u.email)||'';}
+    _credSyncWaButton();
+    openModal('m-credentials');
+    setTimeout(function(){_credAutoDeliver();},500);
+    // Mark the request completed.
+    var who=(_currentUser&&_currentUser.username)||'admin';
+    fetch(SBU+'/rest/v1/password_reset_requests?id=eq.'+encodeURIComponent(reqId),{
+      method:'PATCH',
+      headers:{apikey:SBK,Authorization:'Bearer '+_sbToken,'Content-Type':'application/json',Prefer:'return=minimal'},
+      body:JSON.stringify({status:'completed',approved_by:who,approved_at:new Date().toISOString()})
+    }).finally(function(){_pwReqLoad();});
+  });
+};
+window._pwReqDeny=function(reqId){
+  if(!confirm('לדחות את הבקשה?'))return;
+  if(!_sbToken)return;
+  var who=(_currentUser&&_currentUser.username)||'admin';
+  fetch(SBU+'/rest/v1/password_reset_requests?id=eq.'+encodeURIComponent(reqId),{
+    method:'PATCH',
+    headers:{apikey:SBK,Authorization:'Bearer '+_sbToken,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify({status:'denied',approved_by:who,approved_at:new Date().toISOString()})
+  }).then(function(){toast('הבקשה נדחתה');_pwReqLoad();});
+};
+
+window._credAutoDeliver=function(){
+  var modal=g('m-credentials');
+  if(!modal)return;
+  var uname=(g('cr-username')||{}).textContent||'';
+  var pwEl=g('cr-password');
+  var pw=(pwEl&&pwEl.dataset&&pwEl.dataset.real)||(pwEl&&pwEl.textContent)||'';
+  var fullName=modal.dataset.fullName||'';
+  var phone=modal.dataset.phone||'';
+  var email=modal.dataset.email||'';
+  // 1. Email via Microsoft Graph (admin's session). HTML body so Outlook
+  // renders it nicely; URLs are clickable.
+  if(email && typeof _msSendMail==='function'){
+    var subject='פרטי כניסה — Tapugan Safety';
+    var html='<div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;font-size:14px;line-height:1.7;color:#1a1d23">'+
+      '<p>'+(fullName?'שלום '+fullName+',':'שלום,')+'</p>'+
+      '<p>נוצר עבורך חשבון במערכת ניהול הבטיחות של תפוגן.</p>'+
+      '<table style="border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0;margin:14px 0">'+
+        '<tr><td style="padding:8px 14px;color:#64748b">שם משתמש</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px">'+uname+'</td></tr>'+
+        '<tr><td style="padding:8px 14px;color:#64748b;border-top:1px solid #e2e8f0">סיסמה זמנית</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px;border-top:1px solid #e2e8f0">'+pw+'</td></tr>'+
+      '</table>'+
+      '<p><a href="https://tapugan-safety.pages.dev" style="background:#cc1f1f;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-weight:700">כניסה למערכת</a></p>'+
+      '<p style="color:#64748b;font-size:12px">בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.</p>'+
+      '<p style="color:#94a3b8;font-size:11px;margin-top:24px">תפוגן בטיחות · מערכת ניהול בטיחות ואיכות סביבה</p>'+
+      '</div>';
+    _msSendMail(email,subject,html).then(function(){
+      if(typeof toast==='function')toast('✓ מייל נשלח אוטומטית ל-'+email);
+    }).catch(function(err){
+      if(typeof toast==='function')toast('⚠ שליחת מייל נכשלה — '+(err&&err.message||'').substring(0,40));
+    });
+  }
+  // 2. WhatsApp via wa.me — opens in a new tab (admin clicks "send" once
+  // there). True auto-send needs an approved Meta template, deferred.
+  var wa=_phoneToWa(phone);
+  if(wa){
+    var lines=[
+      (fullName?'שלום '+fullName+',':'שלום,'),
+      'נוצר עבורך חשבון בתפוגן בטיחות.',
+      '',
+      'שם משתמש: '+uname,
+      'סיסמה זמנית: '+pw,
+      '',
+      'קישור: https://tapugan-safety.pages.dev',
+      '',
+      'בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.'
+    ];
+    var url='https://wa.me/'+wa+'?text='+encodeURIComponent(lines.join('\n'));
+    // Slight delay so the email toast has time to render before tab steals focus.
+    setTimeout(function(){window.open(url,'_blank');},400);
+  }
 };
 function copyCredentials(){
   var u=g('cr-username').textContent;
@@ -8014,9 +8162,10 @@ function openResetPwDialog(){
     var resetUname=String(res.j.username||'').toLowerCase();
     var resetU=(DB.app_users||[]).find(function(x){return String(x.username||'').toLowerCase()===resetUname;});
     var crModalR=g('m-credentials');
-    if(crModalR){crModalR.dataset.phone=(resetU&&resetU.phone)||'';crModalR.dataset.fullName=(resetU&&resetU.full_name)||'';}
+    if(crModalR){crModalR.dataset.phone=(resetU&&resetU.phone)||'';crModalR.dataset.fullName=(resetU&&resetU.full_name)||'';crModalR.dataset.email=(resetU&&resetU.email)||'';}
     _credSyncWaButton();
     openModal('m-credentials');
+    setTimeout(function(){_credAutoDeliver();},500);
   }).catch(function(err){
     alert('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea: '+(err&&err.message||err));
   });
@@ -12096,23 +12245,45 @@ window._closeForgotPwModal=function(){
 };
 window._forgotPwSendWa=function(){
   var unameEl=g('fp-username');
-  var uname=unameEl?String(unameEl.value||'').trim():'';
+  var uname=unameEl?String(unameEl.value||'').trim().toLowerCase():'';
   var errEl=g('fp-err');
   if(!uname){if(errEl)errEl.textContent='יש להזין שם משתמש';return;}
   if(errEl)errEl.textContent='';
-  var lines=[
-    'שלום, אני זקוק/ה לאיפוס סיסמה לתפוגן בטיחות.',
-    '',
-    'שם משתמש: '+uname,
-    '',
-    'תודה!'
-  ];
-  // No `to` segment → WhatsApp opens its contact picker so the user
-  // chooses their admin themselves. Works on iOS app, Android, and
-  // WhatsApp Web on desktop without needing the admin's number stored.
-  var url='https://wa.me/?text='+encodeURIComponent(lines.join('\n'));
-  window.open(url,'_blank');
-  _closeForgotPwModal();
+  var btn=document.querySelector('#m-forgot-pw .btn-p');
+  if(btn){btn.disabled=true;btn.textContent='⏳ שולח...';}
+  // 1. Persist the request to password_reset_requests so the admin sees
+  // it in their dashboard inbox. Anonymous insert is allowed (RLS).
+  // If the table doesn't exist yet (migration not run), this gracefully
+  // continues to the wa.me fallback below.
+  var insertPromise = (typeof SBU!=='undefined' && typeof SBK!=='undefined')
+    ? fetch(SBU+'/rest/v1/password_reset_requests',{
+        method:'POST',
+        headers:{apikey:SBK,'Content-Type':'application/json',Prefer:'return=minimal'},
+        body:JSON.stringify({username:uname,status:'pending'})
+      }).then(function(r){return r.ok;}).catch(function(){return false;})
+    : Promise.resolve(false);
+  insertPromise.then(function(stored){
+    if(btn){btn.disabled=false;btn.textContent='📱 שלח למנהל ב-WhatsApp';}
+    // 2. ALWAYS open wa.me as a backup channel. If the inbox table
+    // exists, the admin will see the request there next time they open
+    // the app — but the WhatsApp message gives them an instant ping.
+    var lines=[
+      'שלום, אני זקוק/ה לאיפוס סיסמה לתפוגן בטיחות.',
+      '',
+      'שם משתמש: '+uname,
+      stored?'(הבקשה כבר רשומה במערכת — מספיק לאשר)':'',
+      '',
+      'תודה!'
+    ].filter(function(l){return l!==undefined;});
+    var url='https://wa.me/?text='+encodeURIComponent(lines.join('\n'));
+    window.open(url,'_blank');
+    _closeForgotPwModal();
+    if(typeof toast==='function'){
+      toast(stored
+        ? '✓ הבקשה נשלחה למנהל. תקבל/י סיסמה חדשה תוך מספר דקות'
+        : '📱 פתחי שיחה ב-WhatsApp עם המנהל');
+    }
+  });
 };
 
 function doLogin(){
