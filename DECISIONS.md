@@ -13,6 +13,37 @@
 
 ---
 
+## 2026-05-10 — היפוך חלקי של 2026-05-06: Delegated + refresh_token לזרם credentials (לא client_credentials)
+
+**החלטה**: זרם המיילים האוטונומי של credentials/reset (`/api/self-recovery`, `/api/send-credentials`) עובר מ-Microsoft Graph **CLIENT_CREDENTIALS** (Application permission) ל-**Delegated + refresh_token** (`offline_access` + `Mail.Send` Delegated). sviva מתחברת פעם אחת interactively דרך `/api/auth/microsoft-start` → `_msConnect()` בקונסול, ה-refresh_token נשמר ב-`public.oauth_tokens` (service-role only), והשרת מרענן access token בכל שליחה. זרם הדוחות הקיים (browser-side MSAL Delegated, PRs #460-#469) **לא משתנה** — הוא ממשיך לעבוד כפי שהיה.
+
+**סיבה**:
+- `Mail.Send` Application permission דורשת **admin consent** ב-tenant `tapugan.co.il`. sviva היא Member רגיל בלי role ניהולי (אומת ב-Coworker session 2026-05-10: 0 directory roles, "Add assignments" disabled). Grant admin consent כפתור disabled.
+- ה-tenant admin הוא KakadoTech (MSP חיצוני). הסלמה רשמית = ימים+סירוב אפשרי.
+- Delegated permission הוא scope ש-sviva יכולה לאשר לעצמה ב-runtime — אין צורך ב-admin.
+- `offline_access` נותן refresh_token שמתחדש בכל שימוש (rolling 90-day) → אוטונומי בפועל כל עוד המערכת בשימוש.
+
+**אלטרנטיבות שנדחו**:
+- **Resend / SendGrid (transactional email service)**: הצריך אימות domain ב-DNS, מייל יוצא מ-`noreply@tapugan.co.il` במקום `sviva@tapugan.co.il`, וסתר את החלטה 2026-05-06 לחלוטין. sviva ביקשה במפורש "מהמייל שלי, בלי הרבה אישורים".
+- **המתנה ל-admin consent מ-KakadoTech**: לא ידוע מתי ואם יאושר.
+- **Static long-lived access token**: לא קיים בארכיטקטורה הזו של Microsoft (access token מוגבל ל-60 דק׳).
+
+**שינויים בארכיטקטורה**:
+- חדש: טבלה `public.oauth_tokens` (provider, user_email, refresh_token) — service-role בלבד.
+- חדש: `/api/auth/microsoft-start` (admin-gated, מחזיר authorize URL).
+- חדש: `/api/auth/microsoft-callback` (state cookie + UPN sanity check + storage).
+- שכתוב: `functions/_msApp.js` — מ-`grant_type=client_credentials` ל-`grant_type=refresh_token`. שם הפונקציה `getMsAppToken` נשמר לתאימות לאחור עם call sites קיימים.
+- שינוי: `/me/sendMail` במקום `/users/{from}/sendMail` (Delegated → "אני").
+
+**שינוי משני ב-WhatsApp** (כתוצאה מתגובת Meta):
+- 2 הטמפלייטים החדשים שונו מ-3 פרמטרים (full_name + username + password) ל-1 פרמטר (full_name) — Meta classifier סיווג כל טמפלייט עם "סיסמה" + value-shaped param כ-Authentication, מה שדרש פורמט OTP. ה-Notice pattern: ה-WhatsApp רק מודיע "פרטים נשלחו למייל", המייל נושא את ה-credentials.
+- שמות חדשים: `tfugen_password_reset_notice`, `tfugen_new_user_notice` (Utility, Hebrew, 1 פרמטר). הוגשו ל-Meta ב-2026-05-10, status: Pending Review.
+- security bonus: סיסמאות לא נושאות ב-WhatsApp (chat history, screenshots, forwarding) — רק במייל.
+
+**קישורים**: PR #516 (the rewrite), migration `2026-05-10_oauth_tokens.sql`, `project-files/HANDOFF-2026-05-09.md` (state of previous session).
+
+---
+
 ## 2026-05-06 — מערכת מיילים אוטומטית דרך Microsoft Graph (לא SMTP/Anthropic)
 
 **החלטה**: מיילים נשלחים דרך `POST /me/sendMail` של Microsoft Graph, באמצעות אותו OAuth token של OneDrive (עם הוספת scope `Mail.Send`). אין SMTP, אין שירות צד-שלישי. השליחה מהחשבון Outlook של המשתמשת ישירות.
