@@ -54,15 +54,16 @@ function phoneToE164(raw) {
   return d;
 }
 
-async function sendWhatsApp(env, { phone, fullName, username, password }) {
+async function sendWhatsApp(env, { phone, fullName }) {
   const PHONE_ID = env.META_PHONE_NUMBER_ID;
   const TOKEN = env.META_ACCESS_TOKEN;
   if (!PHONE_ID || !TOKEN) throw new Error('whatsapp not configured');
   const to = phoneToE164(phone);
   if (!to) throw new Error('invalid phone');
-  const tplName = env.WA_NEW_USER_TEMPLATE || 'tfugen_new_user';
+  // Notice-only template — see self-recovery.js for the rationale.
+  const tplName = env.WA_NEW_USER_TEMPLATE || 'tfugen_new_user_notice';
   const lang = env.WA_NEW_USER_TEMPLATE_LANG || 'he';
-  const params = [fullName || 'משתמש', username, password];
+  const params = [fullName || 'משתמש'];
   const payload = {
     messaging_product: 'whatsapp',
     to,
@@ -154,7 +155,7 @@ export async function onRequest({ request, env }) {
   }
   if (phone) {
     tasks.push(
-      sendWhatsApp(env, { phone, fullName, username, password })
+      sendWhatsApp(env, { phone, fullName })
         .then(() => channels.push('whatsapp'))
         .catch(e => errors.push({ channel: 'whatsapp', error: String(e.message || e).substring(0, 200) }))
     );

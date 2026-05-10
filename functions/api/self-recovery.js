@@ -67,7 +67,7 @@ function phoneToE164(raw) {
   return d;
 }
 
-async function sendWhatsApp(env, { phone, fullName, username, password }) {
+async function sendWhatsApp(env, { phone, fullName }) {
   const PHONE_ID = env.META_PHONE_NUMBER_ID;
   const TOKEN = env.META_ACCESS_TOKEN;
   if (!PHONE_ID || !TOKEN) throw new Error('whatsapp not configured');
@@ -75,16 +75,15 @@ async function sendWhatsApp(env, { phone, fullName, username, password }) {
   const to = phoneToE164(phone);
   if (!to) throw new Error('invalid phone');
 
-  // Try the approved template first. Template name must match exactly
-  // what was approved in Meta Business Manager — see Coworker doc.
-  // Fallback is a free-text message which only works inside an open
-  // 24h conversation window with this number.
-  const tplName = env.WA_PASSWORD_TEMPLATE || 'tfugen_password_reset';
+  // Notice-only template — credentials never travel via WhatsApp
+  // (chat history, screenshots). Meta also auto-classifies any
+  // template containing "password" + a value-shaped param as
+  // Authentication, which has rigid OTP rules. The notice tells
+  // the user to check their email; the email carries the credentials.
+  const tplName = env.WA_PASSWORD_TEMPLATE || 'tfugen_password_reset_notice';
   const lang = env.WA_PASSWORD_TEMPLATE_LANG || 'he';
   const params = [
-    fullName || 'משתמש',
-    username,
-    password
+    fullName || 'משתמש'
   ];
   const payload = {
     messaging_product: 'whatsapp',
@@ -230,9 +229,7 @@ export async function onRequest({ request, env }) {
     tasks.push(
       sendWhatsApp(env, {
         phone: user.phone,
-        fullName: user.full_name,
-        username,
-        password: newPassword
+        fullName: user.full_name
       })
         .then(() => channels.push('whatsapp'))
         .catch(e => errors.push({ channel: 'whatsapp', error: String(e.message || e).substring(0, 200) }))

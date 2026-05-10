@@ -8056,6 +8056,58 @@ window._credAutoDeliver=function(){
     if(typeof toast==='function')toast('⚠ שגיאת רשת — העתיקי ידנית');
   });
 };
+
+// One-time Microsoft sign-in for the autonomous mail delivery flow.
+// Admin opens DevTools console and types: _msConnect()
+// Browser navigates to login.microsoftonline.com, sviva consents,
+// Microsoft redirects to /api/auth/microsoft-callback which stores
+// the refresh_token. From then on the server sends mail silently.
+window._msConnect=function(){
+  if(typeof _isAdminUser==='function' && !_isAdminUser()){
+    if(typeof toast==='function')toast('רק אדמין');
+    return;
+  }
+  if(!_sbToken){
+    if(typeof toast==='function')toast('לא מחובר — התחברי מחדש');
+    return;
+  }
+  fetch('/api/auth/microsoft-start',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},
+    credentials:'include'
+  }).then(function(r){return r.json().catch(function(){return {};});}).then(function(j){
+    if(j&&j.authorize_url){
+      window.location.href=j.authorize_url;
+    }else{
+      if(typeof toast==='function')toast('⚠ שגיאה: '+(j&&j.error||'unknown'));
+    }
+  }).catch(function(){
+    if(typeof toast==='function')toast('⚠ שגיאת רשת');
+  });
+};
+
+// Pick up the result of the Microsoft OAuth callback when it lands on
+// the home page with ?ms=connected or ?ms=failed. Shows a toast and
+// cleans the URL so a refresh doesn't re-trigger.
+(function(){
+  try{
+    var sp=new URLSearchParams(window.location.search);
+    var ms=sp.get('ms');
+    if(ms==='connected'){
+      setTimeout(function(){
+        if(typeof toast==='function')toast('✓ Microsoft מחובר — מיילים אוטונומיים פעילים',{ok:true});
+      },800);
+      try{history.replaceState(null,'',window.location.pathname+window.location.hash);}catch(e){}
+    }else if(ms==='failed'){
+      var reason=sp.get('reason')||'';
+      setTimeout(function(){
+        if(typeof toast==='function')toast('⚠ Microsoft לא התחבר: '+reason);
+      },800);
+      try{history.replaceState(null,'',window.location.pathname+window.location.hash);}catch(e){}
+    }
+  }catch(e){}
+})();
+
 function copyCredentials(){
   var u=g('cr-username').textContent;
   var pwEl=g('cr-password');
