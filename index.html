@@ -543,8 +543,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="close-btn" onclick="_closeForgotPwModal()">&#10005;</button>
   <div class="modal-title">&#128273; &#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;</div>
   <div style="background:#dbeafe;border:1px solid #2563eb;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#1e40af;line-height:1.6">
-    &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492; &#1502;&#1514;&#1489;&#1510;&#1506; &#1506;&#1500; &#1497;&#1491;&#1497; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.
-    &#1492;&#1494;&#1504;&#1497; &#1488;&#1514; &#1513;&#1501; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513; &#1513;&#1500;&#1498; &#1493;&#1488;&#1504;&#1497; &#1488;&#1488;&#1502;&#1503; &#1500;&#1498; &#1492;&#1493;&#1491;&#1506;&#1492; &#1502;&#1493;&#1499;&#1504;&#1492; &#1500;&#1502;&#1504;&#1492;&#1500; &#1489;-WhatsApp.
+    הזיני את שם המשתמש. סיסמה חדשה תישלח אוטומטית למייל ול-WhatsApp הרשומים שלך תוך שניות.
   </div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</label>
@@ -553,7 +552,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="fp-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
   <div class="modal-footer" style="display:flex;flex-direction:column;gap:8px">
-    <button class="btn btn-p" onclick="_forgotPwSendWa()" style="background:#25D366;border-color:#25D366;width:100%">📱 שלח למנהל ב-WhatsApp</button>
+    <button class="btn btn-p" onclick="_forgotPwSendWa()" style="background:#25D366;border-color:#25D366;width:100%">📱 שלח סיסמה חדשה</button>
     <button class="btn btn-s" onclick="_closeForgotPwModal()" style="width:100%">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
   </div>
 </div>
@@ -8030,46 +8029,32 @@ window._credAutoDeliver=function(){
   var fullName=modal.dataset.fullName||'';
   var phone=modal.dataset.phone||'';
   var email=modal.dataset.email||'';
-  // 1. Email via Microsoft Graph (admin's session). HTML body so Outlook
-  // renders it nicely; URLs are clickable.
-  if(email && typeof _msSendMail==='function'){
-    var subject='פרטי כניסה — Tapugan Safety';
-    var html='<div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;font-size:14px;line-height:1.7;color:#1a1d23">'+
-      '<p>'+(fullName?'שלום '+fullName+',':'שלום,')+'</p>'+
-      '<p>נוצר עבורך חשבון במערכת ניהול הבטיחות של תפוגן.</p>'+
-      '<table style="border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0;margin:14px 0">'+
-        '<tr><td style="padding:8px 14px;color:#64748b">שם משתמש</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px">'+uname+'</td></tr>'+
-        '<tr><td style="padding:8px 14px;color:#64748b;border-top:1px solid #e2e8f0">סיסמה זמנית</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px;border-top:1px solid #e2e8f0">'+pw+'</td></tr>'+
-      '</table>'+
-      '<p><a href="https://tapugan-safety.pages.dev" style="background:#cc1f1f;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-weight:700">כניסה למערכת</a></p>'+
-      '<p style="color:#64748b;font-size:12px">בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.</p>'+
-      '<p style="color:#94a3b8;font-size:11px;margin-top:24px">תפוגן בטיחות · מערכת ניהול בטיחות ואיכות סביבה</p>'+
-      '</div>';
-    _msSendMail(email,subject,html).then(function(){
-      if(typeof toast==='function')toast('✓ מייל נשלח אוטומטית ל-'+email);
-    }).catch(function(err){
-      if(typeof toast==='function')toast('⚠ שליחת מייל נכשלה — '+(err&&err.message||'').substring(0,40));
-    });
-  }
-  // 2. WhatsApp via wa.me — opens in a new tab (admin clicks "send" once
-  // there). True auto-send needs an approved Meta template, deferred.
-  var wa=_phoneToWa(phone);
-  if(wa){
-    var lines=[
-      (fullName?'שלום '+fullName+',':'שלום,'),
-      'נוצר עבורך חשבון בתפוגן בטיחות.',
-      '',
-      'שם משתמש: '+uname,
-      'סיסמה זמנית: '+pw,
-      '',
-      'קישור: https://tapugan-safety.pages.dev',
-      '',
-      'בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.'
-    ];
-    var url='https://wa.me/'+wa+'?text='+encodeURIComponent(lines.join('\n'));
-    // Slight delay so the email toast has time to render before tab steals focus.
-    setTimeout(function(){window.open(url,'_blank');},400);
-  }
+  if(!email && !phone){return;}// nothing to deliver — modal stays for manual copy
+  if(!_sbToken){if(typeof toast==='function')toast('⚠ לא מחובר — לא ניתן לשלוח אוטומטית');return;}
+  // Phase 3 — server-side autonomous delivery via Microsoft Graph
+  // CLIENT_CREDENTIALS + WhatsApp Business API templates. The
+  // server endpoint /api/send-credentials does both channels in
+  // parallel and returns which succeeded. Replaces the old browser-
+  // side _msSendMail + wa.me-tab approach (which required admin to
+  // be signed into MS and required a manual click in WhatsApp).
+  fetch('/api/send-credentials',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
+    body:JSON.stringify({username:uname,password:pw,full_name:fullName,email:email,phone:phone})
+  }).then(function(r){return r.json().catch(function(){return {};});}).then(function(j){
+    if(j && j.ok){
+      var ch=(j.channels||[]).join(' + ');
+      if(ch){
+        if(typeof toast==='function')toast('✓ נשלח אוטומטית ב-'+ch);
+      }else if((j.errors||[]).length){
+        if(typeof toast==='function')toast('⚠ שליחה נכשלה — העתיקי ידנית');
+      }
+    }else{
+      if(typeof toast==='function')toast('⚠ שליחה אוטומטית נכשלה — העתיקי ידנית');
+    }
+  }).catch(function(err){
+    if(typeof toast==='function')toast('⚠ שגיאת רשת — העתיקי ידנית');
+  });
 };
 function copyCredentials(){
   var u=g('cr-username').textContent;
@@ -12251,38 +12236,28 @@ window._forgotPwSendWa=function(){
   if(errEl)errEl.textContent='';
   var btn=document.querySelector('#m-forgot-pw .btn-p');
   if(btn){btn.disabled=true;btn.textContent='⏳ שולח...';}
-  // 1. Persist the request to password_reset_requests so the admin sees
-  // it in their dashboard inbox. Anonymous insert is allowed (RLS).
-  // If the table doesn't exist yet (migration not run), this gracefully
-  // continues to the wa.me fallback below.
-  var insertPromise = (typeof SBU!=='undefined' && typeof SBK!=='undefined')
-    ? fetch(SBU+'/rest/v1/password_reset_requests',{
-        method:'POST',
-        headers:{apikey:SBK,'Content-Type':'application/json',Prefer:'return=minimal'},
-        body:JSON.stringify({username:uname,status:'pending'})
-      }).then(function(r){return r.ok;}).catch(function(){return false;})
-    : Promise.resolve(false);
-  insertPromise.then(function(stored){
-    if(btn){btn.disabled=false;btn.textContent='📱 שלח למנהל ב-WhatsApp';}
-    // 2. ALWAYS open wa.me as a backup channel. If the inbox table
-    // exists, the admin will see the request there next time they open
-    // the app — but the WhatsApp message gives them an instant ping.
-    var lines=[
-      'שלום, אני זקוק/ה לאיפוס סיסמה לתפוגן בטיחות.',
-      '',
-      'שם משתמש: '+uname,
-      stored?'(הבקשה כבר רשומה במערכת — מספיק לאשר)':'',
-      '',
-      'תודה!'
-    ].filter(function(l){return l!==undefined;});
-    var url='https://wa.me/?text='+encodeURIComponent(lines.join('\n'));
-    window.open(url,'_blank');
+  // Phase 3 — autonomous flow. Server (/api/self-recovery) generates a
+  // new password, updates Supabase Auth, and dispatches it directly to
+  // the user's registered email + WhatsApp via Microsoft Graph
+  // CLIENT_CREDENTIALS + WhatsApp Business API templates. No admin in
+  // the loop. The endpoint always returns 200 to avoid leaking which
+  // usernames exist.
+  fetch('/api/self-recovery',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:uname})
+  }).then(function(r){return r.json().catch(function(){return {};});}).then(function(j){
+    if(btn){btn.disabled=false;btn.textContent='📱 שלח סיסמה חדשה';}
     _closeForgotPwModal();
     if(typeof toast==='function'){
-      toast(stored
-        ? '✓ הבקשה נשלחה למנהל. תקבל/י סיסמה חדשה תוך מספר דקות'
-        : '📱 פתחי שיחה ב-WhatsApp עם המנהל');
+      // Generic message (no enumeration). User who actually exists will
+      // get their email/WhatsApp shortly; user who doesn't sees the same
+      // toast and can't tell.
+      toast('✓ אם המשתמש קיים, סיסמה חדשה נשלחה למייל ולטלפון הרשומים שלך');
     }
+  }).catch(function(err){
+    if(btn){btn.disabled=false;btn.textContent='📱 שלח סיסמה חדשה';}
+    if(errEl)errEl.textContent='שגיאת רשת — נסה שוב';
   });
 };
 
