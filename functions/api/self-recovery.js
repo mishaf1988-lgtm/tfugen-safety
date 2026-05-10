@@ -21,7 +21,7 @@ import {
   jsonResp,
   isAllowedCaller
 } from '../_shared.js';
-import { sendMailAsApp } from '../_msApp.js';
+import { sendMailAsApp } from '../_sendgrid.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const RATE_LIMIT_SECONDS = 300; // one successful reset per username per 5 min

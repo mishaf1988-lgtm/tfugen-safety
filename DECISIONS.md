@@ -13,7 +13,46 @@
 
 ---
 
-## 2026-05-10 — היפוך חלקי של 2026-05-06: Delegated + refresh_token לזרם credentials (לא client_credentials)
+## 2026-05-10 (מאוחר יותר באותו יום) — נטישה מלאה של Microsoft Graph לזרם credentials → SendGrid Single Sender Verification
+
+**החלטה**: הזרם האוטונומי של מיילים (`/api/self-recovery`, `/api/send-credentials`) נוטש את Microsoft Graph לחלוטין ועובר ל-SendGrid עם Single Sender Verification. SendGrid שולחים מ-`sviva@tapugan.co.il` בלי DNS records ובלי admin consent.
+
+**סיבה**: גם הניסיון ה-Delegated + refresh_token (החלטה קודמת מאותו יום) נכשל. ה-tenant `tapugan.co.il` חוסם user consent עבור scopes חדשים (כמו `offline_access`), בנוסף לחסימת admin consent עבור Application permissions. שני הזרמים של Microsoft Graph חסומים בלי admin של ה-tenant. sviva העדיפה לא לערב את KakadoTech כלל.
+
+**מה עבד ב-flow:** OAuth authorization code הגיע ל-`/api/auth/microsoft-callback`, אבל החלפת ה-code ב-token החזירה `AADSTS65001: user has not consented`. אומת בפעולה — sviva לא ראתה מסך Consent כלל בזמן sign-in (Microsoft השתיקה אותו לפי tenant policy). זה לא bug בקוד שלנו — זו policy של ה-tenant.
+
+**אלטרנטיבות שנשקלו ונדחו**:
+- **Resend עם custom domain (tapugan.co.il)**: דורש 4 DNS records, ש-DNS של תפוגן יושב אצל KakadoTech. כדי להוסיף records נצטרך לפנות אליהם — סותר את הדרישה לעצמאות מלאה.
+- **Resend עם onboarding@resend.dev**: מוגבל לשליחה רק לכתובת בעלי החשבון (sviva), לא לכל user — לא מתאים לאיפוס סיסמה של כל משתמש.
+- **לחזור לדרישת admin consent מ-KakadoTech**: 30 שניות אצלם, אבל sviva העדיפה במפורש להישאר בלתי-תלויה.
+- **Gmail SMTP App Password**: deliverability גרוע, נראה לא-מקצועי, מוגבל ל-500/יום.
+
+**למה SendGrid עם Single Sender ספציפית**:
+- אימות by-email-address במקום by-domain — sviva פשוט לוחצת על לינק במייל שמגיע ל-Outlook שלה
+- אין שום צורך ב-DNS, KakadoTech, domain ownership, or admin role
+- 100 מיילים/יום בחינם — מספיק בעשרות מונים לזרם הזה
+- מייל יוצא **מ-`sviva@tapugan.co.il`** (במחיר שב-headers יראה "via sendgrid.net")
+
+**שינויים בארכיטקטורה**:
+- חדש: `functions/_sendgrid.js` (helper פשוט — POST ל-SendGrid API)
+- מעודכן: `self-recovery.js` ו-`send-credentials.js` — מייבאים מ-_sendgrid במקום _msApp
+- נמחק: `functions/_msApp.js` (לא נשאר call site)
+- נמחק: `functions/api/auth/microsoft-start.js`
+- נמחק: `functions/api/auth/microsoft-callback.js`
+- נמחק (מ-index.html): `_msConnect()` והפונקציה הקטנה ל-?ms= URL params
+- טבלת `oauth_tokens` נשארת ריקה ב-Supabase (לא חוסמת — אם מאוחר יותר נחזור ל-Microsoft, היא שם)
+- env vars ב-Cloudflare: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_REDIRECT_URI אפשר למחוק (ניקוי בלבד, לא חוסמים)
+- env vars חדשים ב-Cloudflare: SENDGRID_API_KEY (Encrypted), MAIL_FROM=sviva@tapugan.co.il
+
+**WhatsApp**: לא משתנה. Notice templates ש-Meta אישרה ב-2026-05-10 עדיין בשימוש (1 פרמטר לכל אחת, full_name בלבד).
+
+**ה-flow הקיים של דוחות (browser-side MSAL Delegated, PRs #460-#469)**: לא מושפע. הוא פועל מ-תוך index.html עם MSAL.js, לא מהשרת, ולא תלוי ב-_msApp.js שנמחק.
+
+**קישורים**: PR #517 (the SendGrid pivot). מבטל את ההשפעה של PR #516 על הקוד (שהושאר ב-git history).
+
+---
+
+## 2026-05-10 (מוקדם באותו יום, **בוטל בהמשך**) — היפוך חלקי של 2026-05-06: Delegated + refresh_token לזרם credentials (לא client_credentials)
 
 **החלטה**: זרם המיילים האוטונומי של credentials/reset (`/api/self-recovery`, `/api/send-credentials`) עובר מ-Microsoft Graph **CLIENT_CREDENTIALS** (Application permission) ל-**Delegated + refresh_token** (`offline_access` + `Mail.Send` Delegated). sviva מתחברת פעם אחת interactively דרך `/api/auth/microsoft-start` → `_msConnect()` בקונסול, ה-refresh_token נשמר ב-`public.oauth_tokens` (service-role only), והשרת מרענן access token בכל שליחה. זרם הדוחות הקיים (browser-side MSAL Delegated, PRs #460-#469) **לא משתנה** — הוא ממשיך לעבוד כפי שהיה.
 

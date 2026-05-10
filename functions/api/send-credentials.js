@@ -18,7 +18,7 @@ import {
   jsonResp,
   isAllowedCaller
 } from '../_shared.js';
-import { sendMailAsApp } from '../_msApp.js';
+import { sendMailAsApp } from '../_sendgrid.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const ADMIN_EMAIL = 'admin@tfugen.local';
