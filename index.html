@@ -13577,6 +13577,10 @@ var _signCache={};
 function _sign(u,cb){
   if(!u){cb('');return;}
   if(/^data:/i.test(u)){cb(u);return;}
+  // Pass-through for absolute http(s) URLs that aren't Supabase Storage —
+  // e.g. SharePoint/OneDrive links. Without this they'd silently lose their
+  // href and become unclickable.
+  if(/^https?:\/\//i.test(u) && !/\/storage\/v1\/object\//.test(u)){cb(u);return;}
   var m=String(u).match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/]+)\/([^?]+)/);
   if(!m){cb('');return;}
   var bucket=m[1],path=m[2],key=bucket+'/'+path,c=_signCache[key];
