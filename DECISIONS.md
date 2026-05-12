@@ -13,7 +13,41 @@
 
 ---
 
-## 2026-05-10 (מאוחר יותר באותו יום) — נטישה מלאה של Microsoft Graph לזרם credentials → SendGrid Single Sender Verification
+## 2026-05-10 (סוף היום) — נטישה מלאה של זרם server-side לחלוטין: חזרה ל-browser MSAL ידני
+
+**החלטה**: כל זרם ה-mail server-side האוטונומי (PR #514 + PR #516 + ניסיון PR #517 ל-SendGrid) **נמחק**. הזרם חוזר למודל הפשוט הקיים: admin (sviva) מחוברת ל-MSAL (אותו זרם של דוחות OneDrive שעובד יומית). בכניסה למודאל הקרדנציאלים, `_credAutoDeliver` קורא ל-`_msSendMail` הקיים ב-index.html → מייל יוצא מ-Outlook של sviva. WhatsApp נשאר כפתור ידני (PR #509).
+
+**סיבה**: SendGrid Single Sender Verification דרש מ-sviva ליצור חשבון חדש, לאמת sender, ולנהל API key — סיבוך לא-מוצדק כאשר ה-browser MSAL כבר עובד יומית לדוחות. sviva העדיפה את הפשוט.
+
+**מה השתנה לעומת ה-flow המקורי לפני PR #514**:
+- `password_reset_requests` (PR Phase 2, 2026-05-09) נשאר — User submits "שכחתי סיסמה" → row נכנס ל-inbox עם status='pending' → admin רואה הודעה → מאשר ידנית → /api/reset-password רץ → modal credentials → _credAutoDeliver שולח מייל דרך browser MSAL.
+- אין יותר server-side mail. אין יותר server-side WhatsApp. אין יותר רישום אוטומטי מצד שרת.
+- אין צורך ב-env vars חדשים. AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET/REDIRECT_URI/MAIL_FROM_USER שנוספו ב-Cloudflare → לא בשימוש, אפשר למחוק כניקיון (לא חוסם).
+
+**אלטרנטיבות שנדחו (סופית, היום)**:
+- Microsoft Graph Application permission → admin consent חסום
+- Microsoft Graph Delegated + offline_access → user consent חסום ע"י tenant policy
+- SendGrid Single Sender → כתב סיבוך לא-נחוץ של הקמת חשבון, sender verification, API key
+- Resend עם domain verification → דורש DNS records, ה-DNS אצל KakadoTech
+
+**מה נמחק מ-codebase ב-PR #518**:
+- `functions/_msApp.js` (כבר היה ב-PR #517)
+- `functions/_sendgrid.js` (נוצר ב-PR #517, מחיקה חוזרת)
+- `functions/api/auth/microsoft-start.js` ו-`microsoft-callback.js` (PR #517)
+- `functions/api/send-credentials.js` — לא יותר נחוץ (browser שולח עצמאית)
+- `_msConnect()` + URL ms= handler ב-index.html (PR #517)
+
+**מה השתנה ב-PR #518**:
+- `functions/api/self-recovery.js` — פושטה ל-inbox-only (queue ל-password_reset_requests, בלי איפוס auto, בלי שליחה).
+- `index.html` — `_credAutoDeliver` משתמש עכשיו ב-`_msSendMail` הקיים (browser MSAL) במקום `/api/send-credentials`.
+
+**טבלת `oauth_tokens`** נשארת ב-Supabase (ריקה, RLS פעיל). לא חוסמת. אם בעתיד נחזור ל-Microsoft Graph autonomous — היא שם.
+
+**קישורים**: PR #518.
+
+---
+
+## 2026-05-10 (אחה"צ, **בוטל בעקבות PR #518**) — נטישה מלאה של Microsoft Graph לזרם credentials → SendGrid Single Sender Verification
 
 **החלטה**: הזרם האוטונומי של מיילים (`/api/self-recovery`, `/api/send-credentials`) נוטש את Microsoft Graph לחלוטין ועובר ל-SendGrid עם Single Sender Verification. SendGrid שולחים מ-`sviva@tapugan.co.il` בלי DNS records ובלי admin consent.
 

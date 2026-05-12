@@ -8027,33 +8027,37 @@ window._credAutoDeliver=function(){
   var pwEl=g('cr-password');
   var pw=(pwEl&&pwEl.dataset&&pwEl.dataset.real)||(pwEl&&pwEl.textContent)||'';
   var fullName=modal.dataset.fullName||'';
-  var phone=modal.dataset.phone||'';
   var email=modal.dataset.email||'';
-  if(!email && !phone){return;}// nothing to deliver — modal stays for manual copy
-  if(!_sbToken){if(typeof toast==='function')toast('⚠ לא מחובר — לא ניתן לשלוח אוטומטית');return;}
-  // Phase 3 — server-side autonomous delivery via Microsoft Graph
-  // CLIENT_CREDENTIALS + WhatsApp Business API templates. The
-  // server endpoint /api/send-credentials does both channels in
-  // parallel and returns which succeeded. Replaces the old browser-
-  // side _msSendMail + wa.me-tab approach (which required admin to
-  // be signed into MS and required a manual click in WhatsApp).
-  fetch('/api/send-credentials',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},
-    body:JSON.stringify({username:uname,password:pw,full_name:fullName,email:email,phone:phone})
-  }).then(function(r){return r.json().catch(function(){return {};});}).then(function(j){
-    if(j && j.ok){
-      var ch=(j.channels||[]).join(' + ');
-      if(ch){
-        if(typeof toast==='function')toast('✓ נשלח אוטומטית ב-'+ch);
-      }else if((j.errors||[]).length){
-        if(typeof toast==='function')toast('⚠ שליחה נכשלה — העתיקי ידנית');
-      }
-    }else{
-      if(typeof toast==='function')toast('⚠ שליחה אוטומטית נכשלה — העתיקי ידנית');
-    }
+  if(!email){return;}// no email = nothing to send; admin uses copy + WhatsApp button
+  // Browser-side delivery via the existing OneDrive/reports MSAL token.
+  // The 2026-05-10 server-side autonomous flow (Graph client_credentials,
+  // then Delegated+refresh_token, then SendGrid) was abandoned — the
+  // tapugan.co.il tenant blocks the consent we'd need, and KakadoTech
+  // isn't being involved. WhatsApp delivery remains a separate manual
+  // click in the same modal.
+  if(typeof _msSendMail!=='function'){
+    if(typeof toast==='function')toast('⚠ מייל לא זמין — העתיקי ידנית');
+    return;
+  }
+  var hi='שלום';// שלום
+  var greeting=fullName?(hi+' '+fullName+','):(hi+',');
+  var subj='פרטי כניסה — Tapugan Safety';// פרטי כניסה — Tapugan Safety
+  var html=[
+    '<div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;font-size:14px;line-height:1.7;color:#1a1d23">',
+    '<p>'+greeting+'</p>',
+    '<p>נוצר עבורך חשבון במערכת ניהול הבטיחות של תפוגן.</p>',
+    '<table style="border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0;margin:14px 0">',
+    '<tr><td style="padding:8px 14px;color:#64748b">שם משתמש</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px">'+uname+'</td></tr>',
+    '<tr><td style="padding:8px 14px;color:#64748b;border-top:1px solid #e2e8f0">סיסמה זמנית</td><td style="padding:8px 14px;font-weight:700;font-family:monospace;font-size:16px;border-top:1px solid #e2e8f0">'+pw+'</td></tr>',
+    '</table>',
+    '<p><a href="https://tapugan-safety.pages.dev" style="background:#cc1f1f;color:#fff;padding:10px 22px;border-radius:6px;text-decoration:none;font-weight:700">כניסה למערכת</a></p>',
+    '<p style="color:#64748b;font-size:12px">בכניסה הראשונה תתבקש/י לקבוע סיסמה משלך.</p>',
+    '</div>'
+  ].join('');
+  _msSendMail(email,subj,html).then(function(){
+    if(typeof toast==='function')toast('✓ המייל נשלח',{ok:true});// ✓ המייל נשלח
   }).catch(function(err){
-    if(typeof toast==='function')toast('⚠ שגיאת רשת — העתיקי ידנית');
+    if(typeof toast==='function')toast('⚠ שליחה נכשלה — העתיקי ידנית');// ⚠ שליחה נכשלה — העתיקי ידנית
   });
 };
 
