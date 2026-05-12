@@ -13,7 +13,80 @@
 
 ---
 
-## 2026-05-10 — היפוך חלקי של 2026-05-06: Delegated + refresh_token לזרם credentials (לא client_credentials)
+## 2026-05-10 (סוף היום) — נטישה מלאה של זרם server-side לחלוטין: חזרה ל-browser MSAL ידני
+
+**החלטה**: כל זרם ה-mail server-side האוטונומי (PR #514 + PR #516 + ניסיון PR #517 ל-SendGrid) **נמחק**. הזרם חוזר למודל הפשוט הקיים: admin (sviva) מחוברת ל-MSAL (אותו זרם של דוחות OneDrive שעובד יומית). בכניסה למודאל הקרדנציאלים, `_credAutoDeliver` קורא ל-`_msSendMail` הקיים ב-index.html → מייל יוצא מ-Outlook של sviva. WhatsApp נשאר כפתור ידני (PR #509).
+
+**סיבה**: SendGrid Single Sender Verification דרש מ-sviva ליצור חשבון חדש, לאמת sender, ולנהל API key — סיבוך לא-מוצדק כאשר ה-browser MSAL כבר עובד יומית לדוחות. sviva העדיפה את הפשוט.
+
+**מה השתנה לעומת ה-flow המקורי לפני PR #514**:
+- `password_reset_requests` (PR Phase 2, 2026-05-09) נשאר — User submits "שכחתי סיסמה" → row נכנס ל-inbox עם status='pending' → admin רואה הודעה → מאשר ידנית → /api/reset-password רץ → modal credentials → _credAutoDeliver שולח מייל דרך browser MSAL.
+- אין יותר server-side mail. אין יותר server-side WhatsApp. אין יותר רישום אוטומטי מצד שרת.
+- אין צורך ב-env vars חדשים. AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET/REDIRECT_URI/MAIL_FROM_USER שנוספו ב-Cloudflare → לא בשימוש, אפשר למחוק כניקיון (לא חוסם).
+
+**אלטרנטיבות שנדחו (סופית, היום)**:
+- Microsoft Graph Application permission → admin consent חסום
+- Microsoft Graph Delegated + offline_access → user consent חסום ע"י tenant policy
+- SendGrid Single Sender → כתב סיבוך לא-נחוץ של הקמת חשבון, sender verification, API key
+- Resend עם domain verification → דורש DNS records, ה-DNS אצל KakadoTech
+
+**מה נמחק מ-codebase ב-PR #518**:
+- `functions/_msApp.js` (כבר היה ב-PR #517)
+- `functions/_sendgrid.js` (נוצר ב-PR #517, מחיקה חוזרת)
+- `functions/api/auth/microsoft-start.js` ו-`microsoft-callback.js` (PR #517)
+- `functions/api/send-credentials.js` — לא יותר נחוץ (browser שולח עצמאית)
+- `_msConnect()` + URL ms= handler ב-index.html (PR #517)
+
+**מה השתנה ב-PR #518**:
+- `functions/api/self-recovery.js` — פושטה ל-inbox-only (queue ל-password_reset_requests, בלי איפוס auto, בלי שליחה).
+- `index.html` — `_credAutoDeliver` משתמש עכשיו ב-`_msSendMail` הקיים (browser MSAL) במקום `/api/send-credentials`.
+
+**טבלת `oauth_tokens`** נשארת ב-Supabase (ריקה, RLS פעיל). לא חוסמת. אם בעתיד נחזור ל-Microsoft Graph autonomous — היא שם.
+
+**קישורים**: PR #518.
+
+---
+
+## 2026-05-10 (אחה"צ, **בוטל בעקבות PR #518**) — נטישה מלאה של Microsoft Graph לזרם credentials → SendGrid Single Sender Verification
+
+**החלטה**: הזרם האוטונומי של מיילים (`/api/self-recovery`, `/api/send-credentials`) נוטש את Microsoft Graph לחלוטין ועובר ל-SendGrid עם Single Sender Verification. SendGrid שולחים מ-`sviva@tapugan.co.il` בלי DNS records ובלי admin consent.
+
+**סיבה**: גם הניסיון ה-Delegated + refresh_token (החלטה קודמת מאותו יום) נכשל. ה-tenant `tapugan.co.il` חוסם user consent עבור scopes חדשים (כמו `offline_access`), בנוסף לחסימת admin consent עבור Application permissions. שני הזרמים של Microsoft Graph חסומים בלי admin של ה-tenant. sviva העדיפה לא לערב את KakadoTech כלל.
+
+**מה עבד ב-flow:** OAuth authorization code הגיע ל-`/api/auth/microsoft-callback`, אבל החלפת ה-code ב-token החזירה `AADSTS65001: user has not consented`. אומת בפעולה — sviva לא ראתה מסך Consent כלל בזמן sign-in (Microsoft השתיקה אותו לפי tenant policy). זה לא bug בקוד שלנו — זו policy של ה-tenant.
+
+**אלטרנטיבות שנשקלו ונדחו**:
+- **Resend עם custom domain (tapugan.co.il)**: דורש 4 DNS records, ש-DNS של תפוגן יושב אצל KakadoTech. כדי להוסיף records נצטרך לפנות אליהם — סותר את הדרישה לעצמאות מלאה.
+- **Resend עם onboarding@resend.dev**: מוגבל לשליחה רק לכתובת בעלי החשבון (sviva), לא לכל user — לא מתאים לאיפוס סיסמה של כל משתמש.
+- **לחזור לדרישת admin consent מ-KakadoTech**: 30 שניות אצלם, אבל sviva העדיפה במפורש להישאר בלתי-תלויה.
+- **Gmail SMTP App Password**: deliverability גרוע, נראה לא-מקצועי, מוגבל ל-500/יום.
+
+**למה SendGrid עם Single Sender ספציפית**:
+- אימות by-email-address במקום by-domain — sviva פשוט לוחצת על לינק במייל שמגיע ל-Outlook שלה
+- אין שום צורך ב-DNS, KakadoTech, domain ownership, or admin role
+- 100 מיילים/יום בחינם — מספיק בעשרות מונים לזרם הזה
+- מייל יוצא **מ-`sviva@tapugan.co.il`** (במחיר שב-headers יראה "via sendgrid.net")
+
+**שינויים בארכיטקטורה**:
+- חדש: `functions/_sendgrid.js` (helper פשוט — POST ל-SendGrid API)
+- מעודכן: `self-recovery.js` ו-`send-credentials.js` — מייבאים מ-_sendgrid במקום _msApp
+- נמחק: `functions/_msApp.js` (לא נשאר call site)
+- נמחק: `functions/api/auth/microsoft-start.js`
+- נמחק: `functions/api/auth/microsoft-callback.js`
+- נמחק (מ-index.html): `_msConnect()` והפונקציה הקטנה ל-?ms= URL params
+- טבלת `oauth_tokens` נשארת ריקה ב-Supabase (לא חוסמת — אם מאוחר יותר נחזור ל-Microsoft, היא שם)
+- env vars ב-Cloudflare: AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_REDIRECT_URI אפשר למחוק (ניקוי בלבד, לא חוסמים)
+- env vars חדשים ב-Cloudflare: SENDGRID_API_KEY (Encrypted), MAIL_FROM=sviva@tapugan.co.il
+
+**WhatsApp**: לא משתנה. Notice templates ש-Meta אישרה ב-2026-05-10 עדיין בשימוש (1 פרמטר לכל אחת, full_name בלבד).
+
+**ה-flow הקיים של דוחות (browser-side MSAL Delegated, PRs #460-#469)**: לא מושפע. הוא פועל מ-תוך index.html עם MSAL.js, לא מהשרת, ולא תלוי ב-_msApp.js שנמחק.
+
+**קישורים**: PR #517 (the SendGrid pivot). מבטל את ההשפעה של PR #516 על הקוד (שהושאר ב-git history).
+
+---
+
+## 2026-05-10 (מוקדם באותו יום, **בוטל בהמשך**) — היפוך חלקי של 2026-05-06: Delegated + refresh_token לזרם credentials (לא client_credentials)
 
 **החלטה**: זרם המיילים האוטונומי של credentials/reset (`/api/self-recovery`, `/api/send-credentials`) עובר מ-Microsoft Graph **CLIENT_CREDENTIALS** (Application permission) ל-**Delegated + refresh_token** (`offline_access` + `Mail.Send` Delegated). sviva מתחברת פעם אחת interactively דרך `/api/auth/microsoft-start` → `_msConnect()` בקונסול, ה-refresh_token נשמר ב-`public.oauth_tokens` (service-role only), והשרת מרענן access token בכל שליחה. זרם הדוחות הקיים (browser-side MSAL Delegated, PRs #460-#469) **לא משתנה** — הוא ממשיך לעבוד כפי שהיה.
 
