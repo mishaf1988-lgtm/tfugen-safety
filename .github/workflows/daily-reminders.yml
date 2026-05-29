@@ -18,8 +18,13 @@ jobs:
         run: pip install requests
       - name: Send daily reminders
         env:
+          # SUPABASE_URL + publishable key are safe to keep inline (the
+          # publishable/anon key is designed for client exposure).
           SUPABASE_URL: https://znhjtpcltrxxyfjczgvw.supabase.co
           SUPABASE_KEY: sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M
-          RESEND_KEY: re_5ePLmABG_4DBKoj96KJNNzrdy98L9wJZ6
+          # RESEND_KEY is a LIVE secret — must come from GitHub Actions
+          # Secrets, never inline. Set it at: repo → Settings → Secrets and
+          # variables → Actions → New repository secret → name "RESEND_KEY".
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
           TO_EMAIL: sviva@tapugan.co.il
         run: python3 .github/scripts/send_reminders.py
