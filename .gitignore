@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+.dev.vars
+
+# Local backups — operational data, keep out of version control
+backups/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+node_modules/
