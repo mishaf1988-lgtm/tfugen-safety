@@ -2,20 +2,22 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-06 (אחרי סשן ארוך, PRs #443-#475: PDF עברי תקין · OneDrive Inbox AI אוטומטי · ריבוי קבצים בטופס ציוד · מערכת מיילים מלאה דרך Microsoft Graph · גיבוי 3-שכבות (browser + Cloudflare Worker cron + sync) עם prune ל-15 · audit fixes · raise: see project-files/INFRA-2026-05-06.md)
+**Last updated**: 2026-05-12 (HEAD = `e74417c`, PR #519 — סנכרון מלא של STATUS למצב ה-git האמיתי. הוסיף תיעוד ל-PRs #481-#519 שלא היו מתועדים: AI pivot ל-Workers AI · סאגת bnav→top-nav · auth + self-recovery · מסע 4 פיבוטים של מייל)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
-## ⚡ סשן 2026-05-06 — סיכום מהיר
+## ⚡ מצב נוכחי — סיכום מהיר (HEAD #519)
 
-**38+ PRs מוזגו ל-main** (PRs #443-#480). תשתיות חדשות שדורשות הקשר לסשן הבא:
-- 📧 Mail.Send + Microsoft Graph לשליחת דוחות (Client ID: `fb56b67c-2d2d-4146-89ef-f8f77eae2526`)
-- 🤖 Cloudflare Worker `tapugan-backup-cron` יומי 03:00 UTC
-- 📦 Supabase Storage bucket `backups` (Private) + RLS policy
-- 📋 ⚙️ "הגדרות מיילים" modal עם תזמון מלא ו-roles
-- 📁 ריבוי קבצים בטופס ציוד (`attachments jsonb`)
-- 🛡️ 3 שכבות גיבוי + prune ל-15 אחרונים
+**שינויים ארכיטקטוניים מהותיים שקרו אחרי 2026-05-06 — הקשר חובה:**
 
-**📌 קובץ חובה לקרוא:** `project-files/INFRA-2026-05-06.md` — מכיל את כל ה-IDs, URLs, MANUAL_KEYs, migrations, ופונקציות חשובות שנוספו.
+1. **🤖 AI עבר ל-Cloudflare Workers AI (חינם)** — `functions/api/claude.js` מנתב כברירת מחדל ל-`@cf/meta/llama-3.3-70b-instruct-fp8-fast` (חינם, ~10K neurons/יום) + Llama Vision ל-OCR. Anthropic (`claude-*`) נשמר רק כ-fallback אם `ANTHROPIC_KEY` מוגדר. index.html קורא 19× ל-Llama 3.3, 2× ל-Vision, ורק 1 קריאה שנותרה ל-Claude Haiku. ה-endpoint מתרגם את תגובת Workers AI לצורת Anthropic כדי שכל 14 ה-call sites לא ישתנו.
+
+2. **📧 מסע 4 פיבוטים של מייל** — Microsoft Graph (Application perms) → Graph (Delegated + refresh_token) → SendGrid → **MSAL בדפדפן**. כל ה-3 הראשונים ננטשו כי tenant של `tapugan.co.il` חוסם admin consent וגם user consent (דורש מעורבות IT שהמשתמשת לא רוצה). **המצב הסופי:** מייל נשלח דרך ה-MSAL token של המשתמשת בדפדפן (דורש שהאפליקציה פתוחה) + WhatsApp דרך Meta. `self-recovery` הוא inbox-based.
+
+3. **📱 תפריט עליון במקום bnav** — אחרי 7+ ניסיונות כושלים + revert חירום (PRs #483-#499), ה-bnav התחתון נזנח לטובת `pg-menu` (4 אריחים) + סרגל עליון. 🛑 **אסור לחזור ל-`<main>` semantic** — זה החשוד שגרם לבאג ה-iOS.
+
+4. **🔐 מערכת Auth + self-recovery** — שינוי סיסמה חובה בכניסה ראשונה, סיסמה זמנית 8 תווים, "שכחתי סיסמה?" עם WhatsApp self-service, role-gating (מדווח/מנהל/אדמין), `/api/self-recovery` עם rate-limit + no-enumeration + audit.
+
+**📌 קבצים חובה לקרוא:** `project-files/HANDOFF-2026-05-09.md` (auth/autonomy) · `project-files/INFRA-2026-05-06.md` (mail/backup/IDs). ⚠️ שניהם נכתבו לפני פיבוט ה-SendGrid/MSAL — קרא אותם עם הידיעה שמנגנון המייל הסופי הוא MSAL בדפדפן.
 
 ## 🌐 שרת
 
@@ -30,14 +32,29 @@
 
 | שדה | ערך |
 |---|---|
-| Commit | `3e771ac` |
-| תאריך | 2026-05-04 |
+| Commit | `e74417c` (PR #519) |
+| תאריך | 2026-05-12 |
 | Tag | — (טרם נוצר) |
-| מצב | פאזות 0+1+2+3+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft 'new version' pill · **SW auto-version via CF function (no more manual bumps)** · **WhatsApp restored — Meta App Switch-to-Live + privacy.html + user-data-deletion.html** · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
+| מצב (תשתית) | AI = Cloudflare Workers AI (Llama 3.3, חינם) · מייל = MSAL בדפדפן · ניווט = top-nav + pg-menu · auth + self-recovery + role-gating · backup 3-שכבות + cron Worker · SW auto-version דרך CF function (`functions/sw.js.js`) · 9 API functions ב-`functions/api/` · privacy.html + user-data-deletion.html (Meta app review) |
+| מצב (ביצועים — בסיס #346) | פאזות 0+1+2+3+4+5(3/5)+6 של תוכנית הביצועים שלמות · web-vitals + `_perf` + error capture · preconnect ל-Supabase/Fonts · `_headers` + `_routes.json` · `defer` SDK + `content-visibility` · `loading="lazy"` + `{passive:true}` · `_deb` + 6 search debounces · memoize שמות · `sdb` cleanup + cap log tables · split `_dashBadges` + guard `rDash` · `priority:'low'` ב-fetch · debounce `sdb` עם flush ב-unload · `_hayFor` haystack ב-`_srRun` · SSE keepalive ב-claude.js · Storage `cache-control: max-age=31536000` · RLS perf wrap (initPlan, ~100×) · poll 2→10min · per-page render-skip · rAF debounce realtime · hourly SW update + soft 'new version' pill · **SW auto-version via CF function (no more manual bumps)** · **WhatsApp restored — Meta App Switch-to-Live + privacy.html + user-data-deletion.html** · 28 טבלאות · Saved Views · Notifications matrix · Location filters · Chained forms · Dashboard widgets · NCR Agent feedback loop · Reopen flow · Smart Capture · RLS Stage 1+2 פעיל · m-modules-vis settings panel |
 
 ---
 
 ## ✅ הושלם
+
+### 🆕 סשן 2026-05-07 → 2026-05-12 (PRs #481-#519) — לא היה מתועד עד 2026-05-29
+
+- [x] **סאגת bnav → top-nav** (PRs #481-#499) — 7+ ניסיונות לתקן bnav תחתון ב-iOS Safari (#483-#491) כשלו → revert חירום (#492) → selective re-apply ב-cherry-pick של תיקוני audit (#493-#503). 🛑 `<main>` semantic נחשד כשורש הבאג — אסור לחזור אליו.
+- [x] **Rounds theme system** (PRs #482, #493-#496) — 6 presets + custom, תמונות פר-פריט, קטגוריות לממצאים, הצגה ב-record view + PDF.
+- [x] **Unified view** (PR #504) — איחוד כפילויות דשבורד לעמוד משימות + filter "היום".
+- [x] **Dashboard נקי** (PR #505) — הסרת "פעילות אחרונה" + 2 כרטיסי AI מהבית.
+- [x] **Auth Phase 1a** (PRs #500, #506-#508) — סיסמה זמנית 8 תווים alphanumeric + force-change בכניסה ראשונה (modal מחוץ ל-#app).
+- [x] **Auth Phase 1b/1c** (PRs #509-#510) — "שכחתי סיסמה?" במסך login + WhatsApp self-service לשליחת credentials.
+- [x] **Roles Phase A** (PR #511) — soft-hide UI לפי תפקיד (מדווח/מנהל/אדמין). Phase B (הסתרת ✎/🗑) עדיין פתוח.
+- [x] **Autonomous agents Phase 2/3** (PRs #512, #514) — auto-deliver agent + password-reset inbox agent + server-side credential delivery. ⚠️ מנגנון השליחה הוחלף מאז (ראו פיבוט מייל).
+- [x] **🔑 פיבוט מייל סופי (4 שלבים)** (PRs #516-#519) — Graph CLIENT_CREDENTIALS → Graph Delegated+refresh_token → SendGrid → **MSAL בדפדפן**. ה-tenant של tapugan.co.il חוסם consent בכל המסלולים האוטומטיים. סופי: מייל דרך ה-token של המשתמשת בדפדפן (דורש אפליקציה פתוחה), WhatsApp דרך Meta, self-recovery הוא inbox-based. הוסרו `functions/_msApp.js`, `functions/_sendgrid.js`, `microsoft-start/callback.js`.
+- [x] **fix(_sign)** (PR #518) — `_sign()` לא הפיל יותר href לקישורי SharePoint שאינם Supabase.
+- [x] **Tasks 'הכל'** (#519) — ברירת מחדל לא מציגה יותר משימות שהושלמו.
 
 ### 🆕 סשן 2026-05-06 (PRs #443-#475)
 
