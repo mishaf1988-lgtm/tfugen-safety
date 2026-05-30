@@ -1,7 +1,7 @@
 // Cloudflare Pages Function — list WhatsApp templates with status
 // Mirrors /api/wa-templates.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, isAllowedCaller } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = '4400035656982783';
@@ -15,6 +15,15 @@ export async function onRequest({ request, env }) {
   if (request.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'method not allowed' }), {
       status: 405,
+      headers: { ...cors, 'Content-Type': 'application/json' }
+    });
+  }
+  // Origin/Referer gate. Returns the WhatsApp template list (operational
+  // recon if unprotected). The client doesn't actually call this endpoint
+  // (only used by ad-hoc admin debugging), so gating won't break the UI.
+  if (!isAllowedCaller(request, allowed)) {
+    return new Response(JSON.stringify({ error: 'origin not allowed' }), {
+      status: 403,
       headers: { ...cors, 'Content-Type': 'application/json' }
     });
   }
