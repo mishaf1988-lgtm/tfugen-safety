@@ -7,7 +7,7 @@
 //
 // This endpoint never sends a WhatsApp message — read-only.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = '4400035656982783';
@@ -19,6 +19,12 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'GET') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  // Origin/Referer gate. This is a diagnostics endpoint that leaks operational
+  // metadata (token length, last-4 of WABA/phone-number IDs, approved template
+  // names). Only callers from a trusted origin (production or a CF preview)
+  // should reach it. Note: this is the only gate — the in-browser caller is
+  // already further restricted by the admin-only "dash-wa-test" UI block.
+  if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
 
   const PHONE_ID = env.META_PHONE_NUMBER_ID;
   const TOKEN = env.META_ACCESS_TOKEN;
