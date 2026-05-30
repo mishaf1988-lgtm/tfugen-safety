@@ -9237,7 +9237,7 @@ function testNotif(){
     if(!to){toast('\ud83e\uddea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05de\u05e1\u05e4\u05e8 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4');return;}
     if(!confirm('\u05e9\u05dc\u05d9\u05d7\u05ea WhatsApp \u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc-'+to+'?\n(template: hello_world)'))return;
     toast('\ud83e\uddea \u05e9\u05d5\u05dc\u05d7...');
-    fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:to,template:'hello_world',language:'en_US'})})
+    fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:JSON.stringify({to:to,template:'hello_world',language:'en_US'})})
       .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
       .then(function(res){
         if(res.ok){
@@ -9280,7 +9280,7 @@ function testAllTriggers(){
     toast('\ud83c\udfaf \u05e9\u05d5\u05dc\u05d7 '+(i+1)+'/'+triggers.length+': '+t.template+'...');
     fetch('/api/wa-send',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},
       body:JSON.stringify({to:to,template:t.template,language:'he',params:t.params})
     }).then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
       .then(function(res){
@@ -12732,7 +12732,7 @@ window._waSend=function(to,opts){
   else{body.template=opts.template||'hello_world';if(opts.params)body.params=opts.params;if(opts.language)body.language=opts.language;}
   var rEl=document.getElementById('dash-wa-result');
   if(rEl)rEl.textContent='\u05e9\u05d5\u05dc\u05d7...';
-  return fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  return fetch('/api/wa-send',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});})
     .then(function(res){
       if(res.ok){

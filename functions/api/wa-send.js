@@ -1,5 +1,13 @@
 // Cloudflare Pages Function — WhatsApp send via Meta Cloud API
-// Mirrors /api/wa-send.js (Vercel Edge Function).
+//
+// AuthN: requires a valid Supabase session JWT in `Authorization: Bearer`.
+// Without it, the previous version exposed an anonymous WhatsApp relay
+// (spam/phishing from the company's verified Meta number; brand-damaging,
+// possible Meta quality-rating hit / number ban). The origin gate alone
+// was bypassable by any allowed preview deployment / XSS payload.
+// Now we additionally validate the Bearer token against /auth/v1/user
+// (same pattern used by create/delete/reset/rename-user). Any logged-in
+// user can still send — the gate just rejects anonymous callers.
 
 import {
   defaultAllowedOrigins,
@@ -8,6 +16,7 @@ import {
   jsonResp
 } from '../_shared.js';
 
+const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
 
 export async function onRequest({ request, env }) {
@@ -18,6 +27,18 @@ export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (!originPasses(origin, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
+
+  // Auth gate (H1). Must come BEFORE body parse — that's what makes the
+  // self-test's negative checks observable as 401 instead of 400.
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return jsonResp({ error: 'server misconfigured: missing SUPABASE_SERVICE_ROLE_KEY' }, 500, cors);
+  const authHeader = request.headers.get('authorization') || '';
+  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!userToken) return jsonResp({ error: 'missing bearer token' }, 401, cors);
+  const verifyResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
+    headers: { apikey: serviceKey, Authorization: 'Bearer ' + userToken }
+  });
+  if (!verifyResp.ok) return jsonResp({ error: 'invalid session token' }, 401, cors);
 
   const PHONE_ID = env.META_PHONE_NUMBER_ID;
   const TOKEN = env.META_ACCESS_TOKEN;
