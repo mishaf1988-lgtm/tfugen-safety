@@ -160,6 +160,51 @@ export async function onRequest({ request }) {
     pushCheck({ id: 'no_secrets_in_html', got: 'fetch failed', verdict: '⚠' });
   }
 
+  // ----- 5b. H1 — wa-send must require a valid JWT -----
+  // Two negative tests. Send a body that is rejected at the *recipient*
+  // validation step (400) — this guarantees no real Meta API call is made
+  // even if the auth gate is missing. We send POST with no Authorization,
+  // then with a bogus Bearer.
+  //
+  // BEFORE H1 lands: wa-send only checks origin, so a same-origin POST
+  // with no auth reaches the body parser and returns 400. Verdict ✗.
+  // AFTER H1 lands: wa-send checks auth before parsing body. Returns 401.
+  // Verdict ✓.
+  try {
+    const r = await fetch(origin + '/api/wa-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Origin': origin },
+      body: '{}'
+    });
+    pushCheck({
+      id: 'wa_send_requires_auth_no_bearer',
+      expected: '401 (means H1 JWT-gate is active)',
+      got: String(r.status) + ((r.status === 400) ? ' (H1 not yet deployed)' : ''),
+      verdict: verdict(r.status === 401 || r.status === 403)
+    });
+  } catch (e) {
+    pushCheck({ id: 'wa_send_requires_auth_no_bearer', got: 'fetch failed: ' + e.message, verdict: '⚠' });
+  }
+  try {
+    const r = await fetch(origin + '/api/wa-send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': origin,
+        'Authorization': 'Bearer bogus.invalid.token'
+      },
+      body: '{}'
+    });
+    pushCheck({
+      id: 'wa_send_requires_auth_bogus_bearer',
+      expected: '401 (bogus token must be rejected)',
+      got: String(r.status) + ((r.status === 400) ? ' (H1 not yet deployed)' : ''),
+      verdict: verdict(r.status === 401 || r.status === 403)
+    });
+  } catch (e) {
+    pushCheck({ id: 'wa_send_requires_auth_bogus_bearer', got: 'fetch failed: ' + e.message, verdict: '⚠' });
+  }
+
   // ----- 6+. RLS checks (need caller's JWT). Skip gracefully if anonymous. -----
   if (!userToken) {
     pushCheck({
