@@ -2,10 +2,32 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-05-12 (HEAD = `e74417c`, PR #519 — סנכרון מלא של STATUS למצב ה-git האמיתי. הוסיף תיעוד ל-PRs #481-#519 שלא היו מתועדים: AI pivot ל-Workers AI · סאגת bnav→top-nav · auth + self-recovery · מסע 4 פיבוטים של מייל)
+**Last updated**: 2026-05-29 (HEAD = `ab1d620`, PR #532 — סבב סקירת אבטחה מקיף + תיקונים. 12 PRs (#521-#532): סגירת 5 ממצאי advisor חיים של Supabase, JWT-gate ל-wa-send, מניעת prompt-injection ב-OneDrive auto-import, self-test endpoint לבדיקה מהמובייל, כפתור "🔒 בדיקת אבטחה" בדשבורד admin)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
-## ⚡ מצב נוכחי — סיכום מהיר (HEAD #519)
+## ⚡ מצב נוכחי — סיכום מהיר (HEAD #532)
+
+### 🔒 סבב סקירת אבטחה 2026-05-29 (PRs #521-#532)
+
+סקירה עם 4 סוכני מחקר במקביל + Supabase advisor חי + אימותים end-to-end. **תיקנו 9 ממצאים, אומתו ב-self-test חי**. אסור לפגוע במנגנונים שנוספו:
+
+| תיקון | מה | אימות |
+|---|---|---|
+| **C1** | מפתח Resend חי הוסר מ-`.github/workflows/daily-reminders.yml` → `${{ secrets.RESEND_KEY }}` + `.gitignore` חדש | self-test: `no_secrets_in_html: clean` ✓ |
+| **M2** | `password_reset_requests` RLS — SELECT+UPDATE מוגבלים ל-`is_admin_manager()` (היה `USING(true)` לכל authenticated) | advisor: 2 אזהרות `always_true` נוקו |
+| **harden** | `search_path` מקובע ב-3 פונקציות trigger (`cancel_orphan_tasks_on_equip_delete`, `equip_inspections_alias_sync`, `pgrst_watch`) | proconfig חי מאשר |
+| **M4** | `wa-status` + `wa-templates` עם origin-gate (היו ללא **שום** gate) | self-test: 403/403 ✓ |
+| **C1-gov** | `private.is_admin_manager()` עוגן ב-`migrations/2026-05-29_canonical_is_admin_manager_function.sql` (היה רק ב-DB, לא ב-repo → restore היה נכשל) | byte-for-byte מ-`pg_get_functiondef` |
+| **M1** | sens NCR — פוצל ל-`ncr_admin_all` (admin) + `ncr_manager_non_sens` (manager). הוסף `private.is_admin_only()`. היה: כל manager יכל לקרוא NCR רגיש דרך REST למרות הסתרת UI | 4 בדיקות SQL חיות בכל role |
+| **H2** | `app_users` PII — policy חדש `is_admin_manager() OR id=split_part(jwt.email,'@',1)`. מדווח רואה רק את עצמו. **בלי שינוי לקוח** (login fetch של own row עדיין עובד) | 6 בדיקות SQL בכל role |
+| **self-test** | `/api/_securityselftest` — endpoint לבדיקה מהמובייל. JSON עם 12 בדיקות (headers + origin gates + RLS עם token + no secrets) | PR #528 |
+| **H1** | `wa-send` דורש JWT (היה origin בלבד → relay אנונימי). שרת: אימות מול `/auth/v1/user`. לקוח: `Authorization: Bearer +(_sbToken||'')` ב-3 fetch sites | self-test: 401/401 ✓ |
+| **M5** | OneDrive auto-import דורש אישור אנושי. AI ממשיך לסווג, אבל ALL items עוברים ל-`/_review/` למאשר. + עטיפת טקסט לא-מהימן ב-`<UNTRUSTED_DOC_CONTENT>`. flag `localStorage.tfgn_od_auto_create_unsafe='1'` להחזרת ההתנהגות הישנה | Manual paths (`_odImportItem`, `_odManualClassify`) לא נפגעו |
+| **UI** | כפתור "🔒 בדיקת אבטחה" בדשבורד admin (`#dash-secaudit`) — קורא ל-self-test עם token, מציג ✓/✗/⚠ לכל בדיקה | PR #532 |
+
+**ממצאים שדורשים אותך (אין לי גישה ל-dashboards):**
+- 🔴 **לסובב את מפתח Resend** ב-Resend dashboard + להוסיף `RESEND_KEY` כ-GitHub Actions secret. ההסרה מ-HEAD לא מנקה history.
+- 🟡 **להפעיל Leaked-Password Protection** ב-Supabase Auth (קליק יחיד — HaveIBeenPwned).
 
 **שינויים ארכיטקטוניים מהותיים שקרו אחרי 2026-05-06 — הקשר חובה:**
 
