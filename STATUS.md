@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-04-19
+**Last updated**: 2026-09-07
 **Repo**: `mishaf1988-lgtm/tfugen-safety` · **Live**: https://tfugen-safety.vercel.app
 
 ---
@@ -32,6 +32,7 @@
 - [x] **Equipment Inspections** — דף `pg-eqi` + טבלה `equip_inspections` + ייבוא Excel/CSV + אינטגרציה עם Expiries Agent
 - [x] **Near-Miss capture** — דף `pg-nm` + טבלה `near_miss` + KPI בdashboard + פילטר לפי סטטוס
 - [x] **Morning Round** — דף `pg-round` + טבלה `rounds` + checklist יומי (6 פריטים) + התראה בdashboard + KPI
+- [x] **Hearing Test Excel Import** — כפתור "ייבוא Excel" בדף כשירות רפואית (`pg-med`) + modal + `medXlRead/medXlOk` — מייבא רשימות עובדים לבדיקת שמיעה ישירות לטבלת `med` עם `ty='בדיקת שמיעה'`
 
 ---
 
