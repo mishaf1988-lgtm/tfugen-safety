@@ -1628,6 +1628,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
     <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')"><span class="sic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()"><span class="sic">&#128273;</span>&#1513;&#1504;&#1492; &#1505;&#1497;&#1505;&#1502;&#1492;</button>
 
     <div class="sheet-group-title">&#1504;&#1497;&#1492;&#1493;&#1500;</div>
     <button class="sheet-btn" id="sheet-btn-users" onclick="_goFromSheet('m-modules-sheet','users')" style="display:none"><span class="sic">&#128100;</span>&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</button>
@@ -1664,6 +1665,20 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="_modVisAll(true)" style="font-size:12px">&#10003; &#1499;&#1493;&#1500;</button>
     <button class="btn btn-s" onclick="closeModal('m-modules-vis')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-p" onclick="_modVisSaveFromUI()">&#128190; &#1513;&#1502;&#1493;&#1512;</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov-changepw" onclick="closeModal('m-changepw')"></div>
+<div class="modal" id="m-changepw" style="display:none;max-width:380px">
+  <button class="close-btn" onclick="closeModal('m-changepw')">&#10005;</button>
+  <div class="modal-title">&#128273; &#1513;&#1504;&#1492; &#1505;&#1497;&#1505;&#1502;&#1492;</div>
+  <div class="field"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1504;&#1493;&#1499;&#1495;&#1497;&#1514;</label><input id="cpw-current" type="password" autocomplete="current-password"></div>
+  <div class="field" style="margin-top:8px"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; (8+ &#1514;&#1493;&#1493;&#1497;&#1501;)</label><input id="cpw-new" type="password" autocomplete="new-password"></div>
+  <div class="field" style="margin-top:8px"><label>&#1488;&#1497;&#1502;&#1493;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</label><input id="cpw-confirm" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')_changePwSubmit()"></div>
+  <div id="cpw-err" style="color:#cc1f1f;font-size:12px;min-height:18px;margin-top:6px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-changepw')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" id="cpw-submit" onclick="_changePwSubmit()">&#128190; &#1506;&#1491;&#1499;&#1503; &#1505;&#1497;&#1505;&#1502;&#1492;</button>
   </div>
 </div>
 
@@ -12158,6 +12173,53 @@ function _resolveEmail(unameOrEmail){
   if(v==='admin')return ADMIN_EMAIL;
   return v.toLowerCase()+'@tfugen.local';
 }
+
+// Self-service password change — works for every logged-in user INCLUDING
+// admin. Uses the official supabase-js updateUser({password}) flow (never
+// touches auth.users directly). Verifies the current password first by
+// re-authenticating, so an unlocked session can't be hijacked into a
+// password change.
+window._changePwOpen=function(){
+  ['cpw-current','cpw-new','cpw-confirm'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var err=g('cpw-err');if(err)err.textContent='';
+  if(!_currentUser||!_currentUser.username){toast('לא מחובר — התחבר מחדש');return;}
+  openModal('m-changepw');
+};
+window._changePwSubmit=function(){
+  var err=g('cpw-err');
+  function fail(m){if(err)err.textContent=m;}
+  var cur=((g('cpw-current')||{}).value)||'';
+  var nw=((g('cpw-new')||{}).value)||'';
+  var cf=((g('cpw-confirm')||{}).value)||'';
+  if(!cur)return fail('הזן סיסמה נוכחית');
+  if(nw.length<8)return fail('סיסמה חדשה — לפחות 8 תווים');
+  if(nw!==cf)return fail('הסיסמאות אינן תואמות');
+  if(nw===cur)return fail('הסיסמה החדשה זהה לנוכחית');
+  if(!_sbClient||!_currentUser||!_currentUser.username)return fail('לא מחובר — התחבר מחדש');
+  var email=_resolveEmail(_currentUser.username);
+  if(!email)return fail('לא ניתן לזהות את המשתמש');
+  var btn=g('cpw-submit');if(btn){btn.disabled=true;btn.textContent='מעדכן...';}
+  // Verify current password, then update.
+  _sbClient.auth.signInWithPassword({email:email,password:cur}).then(function(r){
+    if(r.error||!r.data||!r.data.session)throw new Error('bad-current');
+    _sbToken=r.data.session.access_token;
+    return _sbClient.auth.updateUser({password:nw});
+  }).then(function(r2){
+    if(r2&&r2.error)throw r2.error;
+    if(btn){btn.disabled=false;btn.textContent='💾 עדכן סיסמה';}
+    closeModal('m-changepw');
+    try{toast('✓ הסיסמה עודכנה',{ok:true});}catch(e){}
+  }).catch(function(e){
+    if(btn){btn.disabled=false;btn.textContent='💾 עדכן סיסמה';}
+    var msg=((e&&e.message)||'').toString();
+    if(msg==='bad-current')fail('הסיסמה הנוכחית שגויה');
+    else if(/different|same/i.test(msg))fail('הסיסמה החדשה חייבת להיות שונה');
+    else if(/pwned|compromised|breach|leaked/i.test(msg))fail('הסיסמה זוהתה בדליפה ידועה — בחר אחרת');
+    else if(/weak|at least|length|characters|short/i.test(msg))fail('הסיסמה חלשה מדי');
+    else fail('העדכון נכשל: '+msg.substring(0,80));
+  });
+};
+
 function _applyRoleGates(){
   var role = _role();
   var isAdmin = role==='admin';
