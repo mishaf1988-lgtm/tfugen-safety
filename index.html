@@ -13570,7 +13570,8 @@ window._ncrSel=function(id){
   var an=_naf[id];
   if(an&&!an.err)h+=_ncrFmt(an,pc,n);
   else if(!an)h+='<button data-nid="'+esc(id)+'" onclick="_ncrAI(this.dataset.nid)" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
-  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+esc((an&&an.msg)||'unknown')+'</div>';
+  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+esc((an&&an.msg)||'unknown')+'</div>'+
+    '<button data-nid="'+esc(id)+'" onclick="_ncrAI(this.dataset.nid)" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u21bb \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
   P.innerHTML=h;
 };
 function _ncrFmt(an,pc,n){
@@ -13656,7 +13657,10 @@ window._ncrFb=function(id,val){
 };
 window._ncrAI=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
-  document.getElementById('ncr-agent-panel').innerHTML+='<div style="text-align:center;padding:20px;color:#4a6a8a">Analyzing...</div>';
+  // E2: one busy marker, replaced on repeated clicks instead of stacking.
+  var Pp=document.getElementById('ncr-agent-panel');
+  var oldBusy=document.getElementById('ncr-ai-busy');if(oldBusy)oldBusy.remove();
+  Pp.insertAdjacentHTML('beforeend','<div id="ncr-ai-busy" style="text-align:center;padding:20px;color:#4a6a8a">Analyzing...</div>');
   var prompt=
     'You are a safety expert at Tfugen Industries, certified in ISO 45001 (occupational health & safety) and ISO 14001 (environmental management).\n\n'+
     'Analyze the following NCR using the 5 Whys method and ISO risk framework, then respond with a HEBREW JSON object only.\n\n'+
@@ -13682,7 +13686,12 @@ window._ncrAI=function(id){
     body:JSON.stringify({model:_AI_MODEL,max_tokens:1200,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.json();}).then(function(d){
     var t=d.content&&d.content[0]?d.content[0].text:'';
-    var obj=JSON.parse(t.replace(/```json|```/g,'').trim());
+    // E2: Llama sometimes wraps the object in prose or code fences — take the
+    // outermost {...} instead of failing on the first stray character.
+    var raw=String(t||'').replace(/```json|```/g,'').trim();
+    var ja=raw.indexOf('{'),jb=raw.lastIndexOf('}');
+    if(ja<0||jb<ja)throw new Error('AI returned no JSON: '+raw.substring(0,120));
+    var obj=JSON.parse(raw.substring(ja,jb+1));
     var nextVer=(_naVer[id]||0)+1;
     var dueDate=null;
     if(typeof obj.due_days==='number'&&obj.due_days>0){
@@ -13729,6 +13738,8 @@ window.ncrAgentAnalyzeAll=function(){
   P.style.display='block';
   var open=_nad.filter(function(n){return n.s==='\u05e4\u05ea\u05d5\u05d7'||n.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   var closed=_nad.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
+  // E2: nothing open → say so instead of sending an empty list to the model.
+  if(!open.length){P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">\u05d0\u05d9\u05df NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7'+(closed?' ('+closed+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd)':'')+'</div>';return;}
   var byA={},byP={},byS={};
   open.forEach(function(n){byA[n.a]=(byA[n.a]||0)+1;byP[n.p]=(byP[n.p]||0)+1;byS[n.s]=(byS[n.s]||0)+1;});
   var line=function(n){return n.num+' ['+(n.p||'')+'] '+(n.a||'')+': '+(n.d||'').substring(0,120);};
