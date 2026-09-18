@@ -9995,9 +9995,19 @@ var VIEW_CONFIG={
   env_aspects:{title:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'easp',fields:[['\u05d4\u05d9\u05d1\u05d8','aspect'],['\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df','activity'],['\u05e9\u05dc\u05d1 \u05d7\u05d9\u05d9\u05dd','lifecycle'],['\u05e9\u05dc\u05d9\u05d8\u05d4/\u05d4\u05e9\u05e4\u05e2\u05d4','control_type'],['\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e9\u05e4\u05e2\u05d4','direction'],['\u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d4\u05d4\u05d9\u05d1\u05d8','impact'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','p_curr'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05e4\u05d5\u05e2\u05dc','sv_curr'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea','additional_controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','p_pot'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','sv_pot'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],['\u05d0\u05d7\u05e8\u05d0\u05d9','owner'],['\u05dc\u05d5\u05d6','review_date'],['\u05d4\u05e1\u05d1\u05e8 \u05dc\u05d0\u05d9 \u05d1\u05d9\u05e6\u05d5\u05e2','explanation'],['\u05d4\u05e4\u05e0\u05d9\u05d4 \u05dc\u05d7\u05d5\u05e7','legal_ref'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   projects:{title:'\u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8',back:'prj',fields:[['\u05e9\u05dd','name'],['\u05ea\u05d9\u05d0\u05d5\u05e8','description'],['\u05d4\u05ea\u05d7\u05dc\u05d4','start_date'],['\u05e1\u05d9\u05d5\u05dd','end_date'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status']]}
 };
+// Catalog tables have no read-only view page \u2014 they are managed through
+// their edit modal. Virtual tasks (dashboard "today", tasks list \ud83d\udc41) still
+// reach them via showView(source_table, id), so route those to the editor
+// instead of toasting "table not supported". The modals are global, so this
+// works from any page without navigating away.
+var _VIEW_EDITOR_FALLBACK={inspection_types:'editItp',issue_types:'editItype',locations:'editLoc',projects:'editPrj'};
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
-  if(!cfg){console.warn('showView: no VIEW_CONFIG for',tbl);toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e6\u05d9\u05d2 \u2014 \u05d8\u05d1\u05dc\u05d4 "'+tbl+'" \u05d0\u05d9\u05e0\u05d4 \u05e0\u05ea\u05de\u05db\u05ea');return;}
+  if(!cfg){
+    var ed=_VIEW_EDITOR_FALLBACK[tbl];
+    if(ed&&typeof window[ed]==='function'){window[ed](id);return;}
+    console.warn('showView: no VIEW_CONFIG for',tbl);toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e6\u05d9\u05d2 \u2014 \u05d8\u05d1\u05dc\u05d4 "'+tbl+'" \u05d0\u05d9\u05e0\u05d4 \u05e0\u05ea\u05de\u05db\u05ea');return;
+  }
   var db=DB[tbl]||[];
   var rec=db.find(function(r){return r.id===id;});
   if(!rec){console.warn('showView: record not found',tbl,id);toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05dc\u05e8\u05e2\u05e0\u05df');return;}
