@@ -381,7 +381,8 @@ body.role-reporter [onclick^="_eqiClone("],
 body.role-reporter [onclick^="_eqiRemoveFile("],
 body.role-reporter [onclick^="_tskMenu("],
 body.role-reporter [onclick^="_legRowMenu("],
-body.role-reporter [onclick^="_itypeRowMenu("]{display:none !important}
+body.role-reporter [onclick^="_itypeRowMenu("],
+body.role-reporter [onclick^="_invOpen("]{display:none !important}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -1717,6 +1718,28 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="_modVisAll(true)" style="font-size:12px">&#10003; &#1499;&#1493;&#1500;</button>
     <button class="btn btn-s" onclick="closeModal('m-modules-vis')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-p" onclick="_modVisSaveFromUI()">&#128190; &#1513;&#1502;&#1493;&#1512;</button>
+  </div>
+</div>
+
+<!-- Incident Investigation Agent (B1, 2026-09-18): intake → 5-Why → save to the
+     existing fields inc.five_why (+ root cause inc.r) → optional CAPA task / NCR. -->
+<div class="overlay" id="ov-inv" onclick="closeModal('m-inv')"></div>
+<div class="modal" id="m-inv" style="display:none;max-width:560px">
+  <button class="close-btn" onclick="closeModal('m-inv')">&#10005;</button>
+  <div class="modal-title">&#128373;&#65039; חקירת תקרית <span style="font-size:11px;color:var(--t3);font-weight:600">(ISO 45001 &#167;10.2)</span></div>
+  <div class="field"><label>תקרית</label><select id="inv-inc" class="inp" onchange="_invPick(this.value)"></select></div>
+  <div id="inv-facts" style="font-size:12px;line-height:1.7;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0 10px"></div>
+  <div class="field"><label>ניתוח 5-Why</label><textarea id="inv-fw" rows="9" style="width:100%;font-family:inherit;font-size:13px;line-height:1.5;box-sizing:border-box" placeholder="1. למה זה קרה?&#10;   …&#10;2. למה …?&#10;   …"></textarea></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px">
+    <button class="btn btn-s" id="inv-ai-btn" onclick="_invAI()" style="background:#7c3aed;color:#fff">&#129302; הצע 5-Why (AI)</button>
+  </div>
+  <div class="field"><label>סיבת שורש — סיכום <span style="color:var(--t3);font-weight:400">(נשמר בשדה «גורם שורש» של התקרית)</span></label><input id="inv-rc" class="inp" placeholder="השורש המערכתי — שורה אחת"></div>
+  <div id="inv-err" style="color:#cc1f1f;font-size:12px;min-height:18px;margin-top:6px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" onclick="closeModal('m-inv')">סגור</button>
+    <button class="btn btn-s" onclick="_invCapa()" title="משימת CAPA מקושרת לתקרית">&#10133; משימת CAPA</button>
+    <button class="btn btn-s" onclick="_invNcr()" title="פתח NCR עם הפרטים מהחקירה">&#128295; פתח NCR</button>
+    <button class="btn btn-p" id="inv-save" onclick="_invSave()">&#128190; שמור חקירה</button>
   </div>
 </div>
 
@@ -3450,9 +3473,9 @@ function rAgents(){
   // that page's data); nothing AI-related lives on the home screen (#544).
   html+=card({
     icon:'🕵️',color:'#0f766e',title:'Incident Investigation Agent',
-    desc:'\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea \u05de\u05d5\u05d1\u05e0\u05d9\u05ea: intake → 5-Why → CAPA. \u05e9\u05de\u05d9\u05e8\u05d4 \u05dc-<code>inc.five_why</code> \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc-NCR / \u05de\u05e9\u05d9\u05de\u05d4. <span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:1px 7px;font-weight:700">\u05d1\u05d1\u05e0\u05d9\u05d9\u05d4 — PR-7</span>',
+    desc:'\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea \u05de\u05d5\u05d1\u05e0\u05d9\u05ea: intake → 5-Why → CAPA. \u05e9\u05de\u05d9\u05e8\u05d4 \u05dc-<code>inc.five_why</code> \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc-NCR / \u05de\u05e9\u05d9\u05de\u05d4.',
     metric:incFW+' \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05e2\u05dd 5-Why',
-    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'inc\')" style="background:#0f766e">\u05e2\u05d1\u05d5\u05e8 \u05dc\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea</button>'
+    actions:'<button class="btn btn-p btn-sm" onclick="_invOpen()" style="background:#0f766e">\u05e4\u05ea\u05d7 \u05d7\u05e7\u05d9\u05e8\u05d4</button> <button class="btn btn-s btn-sm" onclick="goPage(\'inc\')">\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea</button>'
   });
   html+=card({
     icon:'💬',color:'#16a34a',title:'\u05e9\u05d0\u05dc \u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8',
@@ -10452,6 +10475,7 @@ function showView(tbl,id){
     html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
     html+='<button data-incfiveai="'+esc(id)+'" onclick="_incFiveWhyAI(this.dataset.incfiveai)" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px" title="\u05d1\u05e7\u05e9 \u05de-AI \u05dc\u05d4\u05e6\u05d9\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d1\u05e1\u05d9\u05e1 \u05d4\u05ea\u05d9\u05d0\u05d5\u05e8">\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI</button>';
     html+='<button data-iid="'+esc(id)+'" onclick="_incFiveWhyEdit(this.dataset.iid)" style="padding:5px 12px;background:#92400e;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">'+(hasFw?'\u270f\ufe0f \u05e2\u05e8\u05d5\u05da':'+ \u05d4\u05d5\u05e1\u05e3 \u05e0\u05d9\u05ea\u05d5\u05d7')+'</button>';
+    html+='<button data-iid="'+esc(id)+'" onclick="_invOpen(this.dataset.iid)" style="padding:5px 12px;background:#0f766e;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px" title="intake → 5-Why → CAPA / NCR">🕵️ \u05d7\u05e7\u05d9\u05e8\u05d4 \u05de\u05dc\u05d0\u05d4</button>';
     html+='</div></div>';
     if(hasFw){
       html+='<div style="font-size:12px;color:#1a1d23;white-space:pre-wrap;line-height:1.6">'+esc(fw)+'</div>';
@@ -10585,11 +10609,11 @@ window._incFiveWhyEdit=function(id){
 };
 // AI-suggested 5-Why for incidents. Sends incident context to Claude,
 // shows the response in a prompt() so the user can review/edit before save.
-window._incFiveWhyAI=function(id){
-  var rec=(DB.inc||[]).find(function(r){return r.id===id;});
-  if(!rec){toast('\u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
-  var btn=document.querySelector('[data-incfiveai="'+id+'"]');
-  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
+// ---- Incident Investigation Agent (B1, 2026-09-18) ----
+// intake (pick an incident) → 5-Why (typed or AI-suggested) → save to the
+// EXISTING fields inc.five_why + inc.r → optional CAPA task / NCR.
+// The AI request is shared with the 5-Why button on the incident view.
+window._incFiveWhyGenerate=function(rec){
   var ctx='\u05ea\u05d0\u05e8\u05d9\u05da: '+(rec.dt||rec.d||'?')+'\n'+
     '\u05ea\u05d9\u05d0\u05d5\u05e8: '+(rec.d||'')+'\n'+
     '\u05e1\u05d5\u05d2: '+(rec.ty||'?')+'\n'+
@@ -10602,25 +10626,108 @@ window._incFiveWhyAI=function(id){
     '...\n\n'+
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9]\n\n'+
     '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
-      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
-      if(!res.ok){toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI ('+res.status+')');console.warn('AI 5-Why:',res.txt);return;}
-      var d;try{d=JSON.parse(res.txt);}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05ea JSON \u05de-AI');return;}
+      if(!res.ok){console.warn('AI 5-Why:',res.txt);throw new Error('AI '+res.status);}
+      var d;try{d=JSON.parse(res.txt);}catch(e){throw new Error('JSON');}
       var content=d.content&&d.content[0]?d.content[0].text:'';
-      if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
-      var v=prompt('\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05de-AI \u2014 \u05e2\u05e8\u05d5\u05da \u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05d9\u05e8\u05d4:',content);
-      if(v===null)return;
-      rec.five_why=v.trim()||null;
-      if(typeof sbUpd==='function')sbUpd('inc',rec);
-      sdb();toast('5-Why \u05e0\u05e9\u05de\u05e8 \u2713');showView('inc',id);
-    })
-    .catch(function(e){
-      if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
-      toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e8\u05e9\u05ea: '+(e&&e.message||e));
+      if(!content)throw new Error('empty');
+      return content;
     });
+};
+window._incFiveWhyAI=function(id){
+  var rec=(DB.inc||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05ea\u05e7\u05e8\u05d9\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  var btn=document.querySelector('[data-incfiveai="'+id+'"]');
+  if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05d7\u05e9\u05d1...';}
+  var restore=function(){if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}};
+  _incFiveWhyGenerate(rec).then(function(content){
+    restore();
+    var v=prompt('\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05de-AI — \u05e2\u05e8\u05d5\u05da \u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05d9\u05e8\u05d4:',content);
+    if(v===null)return;
+    rec.five_why=v.trim()||null;
+    if(typeof sbUpd==='function')sbUpd('inc',rec);
+    sdb();toast('5-Why \u05e0\u05e9\u05de\u05e8 ✓');showView('inc',id);
+  }).catch(function(e){restore();toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e));});
+};
+window._invCur=null;
+window._invOpen=function(id){
+  var sel=g('inv-inc');if(!sel)return;
+  var incs=(DB.inc||[]).slice().sort(function(a,b){return String(b.dt||b.d||'').localeCompare(String(a.dt||a.d||''));});
+  sel.innerHTML='<option value="">\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea...</option>'+incs.map(function(i){return '<option value="'+esc(i.id)+'">'+esc(String(i.dt||'').substring(0,10)+' · '+String(i.d||'').substring(0,60))+'</option>';}).join('');
+  var pick=id||(incs[0]&&incs[0].id)||'';
+  sel.value=pick;
+  _invPick(pick);
+  var err=g('inv-err');if(err)err.textContent='';
+  openModal('m-inv');
+};
+window._invPick=function(id){
+  var rec=(DB.inc||[]).find(function(r){return r.id===id;})||null;
+  window._invCur=rec;
+  var facts=g('inv-facts'),fw=g('inv-fw'),rc=g('inv-rc');
+  if(!rec){
+    if(facts)facts.innerHTML='<span style="color:var(--t3)">\u05d0\u05d9\u05df \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea — \u05d3\u05d5\u05d5\u05d7 \u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05d5\u05d3\u05dd</span>';
+    if(fw)fw.value='';if(rc)rc.value='';
+    return;
+  }
+  var row=function(l,v){return '<div><span style="color:var(--t3)">'+l+':</span> '+esc(v||'—')+'</div>';};
+  var locTxt=(rec.location_id&&typeof _locName==='function'?_locName(rec.location_id):'')||rec.l||'';
+  if(facts)facts.innerHTML=row('\u05ea\u05d0\u05e8\u05d9\u05da',fd(String(rec.dt||rec.d||'').substring(0,10)))+row('\u05e1\u05d5\u05d2',rec.ty)+row('\u05d7\u05d5\u05de\u05e8\u05d4',rec.sv)+row('\u05de\u05d9\u05e7\u05d5\u05dd',locTxt)+row('\u05ea\u05d9\u05d0\u05d5\u05e8',rec.d);
+  if(fw)fw.value=rec.five_why||'';
+  if(rc)rc.value=rec.r||'';
+};
+window._invAI=function(){
+  var rec=window._invCur;if(!rec){toast('\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea');return;}
+  var btn=g('inv-ai-btn');if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05d7\u05e9\u05d1...';}
+  var err=g('inv-err');if(err)err.textContent='';
+  _incFiveWhyGenerate(rec).then(function(txt){
+    var fw=g('inv-fw');if(fw)fw.value=txt.trim();
+    // The last "why" answer is the systemic root — offer it as the summary
+    // when that field is still empty.
+    var rc=g('inv-rc');
+    if(rc&&!rc.value.trim()){
+      var lines=txt.trim().split('\n').map(function(x){return x.trim();}).filter(Boolean);
+      var last=lines[lines.length-1]||'';
+      rc.value=last.replace(/^\[|\]$/g,'').replace(/^\d+\.\s*/,'').substring(0,160);
+    }
+    toast('AI \u05d4\u05e6\u05d9\u05e2 5-Why — \u05e2\u05e8\u05d5\u05da \u05d5\u05e9\u05de\u05d5\u05e8');
+  }).catch(function(e){if(err)err.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e);})
+  .then(function(){if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 5-Why (AI)';}});
+};
+window._invSave=function(){
+  var rec=window._invCur;
+  var err=g('inv-err');
+  if(!rec){if(err)err.textContent='\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea';return;}
+  var fw=(gv('inv-fw')||'').trim(),rc=(gv('inv-rc')||'').trim();
+  if(!fw){if(err)err.textContent='\u05d0\u05d9\u05df \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05dc\u05e9\u05de\u05d5\u05e8';return;}
+  rec.five_why=fw;
+  if(rc)rec.r=rc;
+  if(typeof sbUpd==='function')sbUpd('inc',rec);
+  sdb();
+  addLog('\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea \u05e0\u05e9\u05de\u05e8\u05d4: '+String(rec.d||'').substring(0,30));
+  toast('\u05d7\u05e7\u05d9\u05e8\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 ✓');
+  if(CUR==='inc'&&typeof rInc==='function')rInc();
+  if(CUR==='view')showView('inc',rec.id);
+};
+window._invCapa=function(){
+  var rec=window._invCur;if(!rec){toast('\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea');return;}
+  closeModal('m-inv');
+  openTskModal('inc',rec.id);
+};
+window._invNcr=function(){
+  var rec=window._invCur;if(!rec){toast('\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea');return;}
+  var fw=(gv('inv-fw')||'').trim(),rc=(gv('inv-rc')||'').trim()||rec.r||'';
+  closeModal('m-inv');
+  openNewNcrModal();
+  var set=function(id,v){var el=g(id);if(el&&!el.value)el.value=v;};
+  set('ncr-d',String(rec.d||''));
+  set('ncr-rc',rc);
+  var sdEl=g('ncr-sd');if(sdEl)sdEl.value=String(rec.dt||rec.d||'').substring(0,10);  // the modal pre-fills today; the incident date wins
+  set('ncr-notes','\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea '+fd(String(rec.dt||rec.d||'').substring(0,10))+(fw?'\n\n5-Why:\n'+fw:''));
+  if(rec.location_id&&typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id);
+  toast('\u05d8\u05d5\u05e4\u05e1 NCR \u05de\u05d5\u05dc\u05d0 \u05de\u05d4\u05d7\u05e7\u05d9\u05e8\u05d4 — \u05d1\u05d3\u05d5\u05e7 \u05d5\u05e9\u05de\u05d5\u05e8');
 };
 // AI suggestion for risk register entry. Fills probability (1-4),
 // severity (1-4) and mitigation actions based on description + topic.
