@@ -3770,7 +3770,16 @@ function svPpe(){
 }
 function svIns(){
   var d=gv('ins-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da');return;}
-  var r={id:gid(),d:d,a:gv('ins-a'),i:gv('ins-i'),sc:gi('ins-sc'),fn:gv('ins-fn'),ac:gv('ins-ac'),s:gv('ins-s')};
+  // Score is optional, but if entered it must be a real 0-100 percentage.
+  // gi() used to coerce anything (including an empty field) to a number, which
+  // is how rows like 111 / 345 / -6 got in. Empty now stores null, not 0.
+  var _scRaw=gv('ins-sc');
+  var _sc=null;
+  if(String(_scRaw||'').trim()!==''){
+    _sc=_insScoreNum(_scRaw);
+    if(_sc===null){alert('\u05e6\u05d9\u05d5\u05df \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05e1\u05e4\u05e8 \u05d1\u05d9\u05df 0 \u05dc-100');return;}
+  }
+  var r={id:gid(),d:d,a:gv('ins-a'),i:gv('ins-i'),sc:_sc,fn:gv('ins-fn'),ac:gv('ins-ac'),s:gv('ins-s')};
   DB.ins.push(r);sbIns('ins',r);addLog('\u05e1\u05d9\u05d5\u05e8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05d5\u05e1\u05e3');sdb();closeModal('m-ins');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rIns();
 }
@@ -9938,6 +9947,10 @@ function showView(tbl,id){
   var html='';
   cfg.fields.forEach(function(f){
     var val=rec[f[1]];
+    // Safety-tour score goes through the same 0-100 guard the list uses, so a
+    // legacy out-of-range value renders as "\u2014" here too, not as "345".
+    var valHtml=null;
+    if(tbl==='ins'&&f[1]==='sc'&&typeof _insScore==='function')valHtml=_insScore(val);
     if(val===true)val='\u2713';
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='-';
@@ -9948,7 +9961,7 @@ function showView(tbl,id){
       var srcRec=(DB[rec.source_table]||[]).find(function(r){return r.id===val;});
       if(srcRec)val=srcRec.num||srcRec.code||srcRec.title||srcRec.n||val;
     }
-    html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+esc(f[0])+'</span><strong>'+(val==='\u2713'||val==='\u2717'||val==='-'?val:esc(val))+'</strong></div>';
+    html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+esc(f[0])+'</span><strong>'+(valHtml!==null?valHtml:(val==='\u2713'||val==='\u2717'||val==='-'?val:esc(val)))+'</strong></div>';
   });
   // Auto-render location_id (if record has it and config didn't include it)
   if(rec.location_id && typeof _locName==='function'){
@@ -11747,6 +11760,12 @@ window._viewCopy=function(tbl,id){
     cfg.fields.forEach(function(f){
       var v=rec[f[1]];
       if(v===undefined||v===null||v==='')return;
+      // Same 0-100 guard as the list/view: never copy out a bogus score.
+      if(tbl==='ins'&&f[1]==='sc'&&typeof _insScoreNum==='function'){
+        var sn=_insScoreNum(v);
+        if(sn===null)return;
+        v=sn+'%';
+      }
       if(v===true)v='✓';else if(v===false)v='✗';
       lines.push(f[0]+': '+v);
     });
@@ -12105,17 +12124,33 @@ function _insDate(v){
   if(/^\d{1,2}[./]\d{1,2}[./]\d{2,4}$/.test(v))return esc(v);   // already a display date
   return esc(v);                                                // anything else \u2014 show raw, never 'undefined'
 }
+// Single source of truth for "is this a valid 0-100 score?".
+// `ins.sc` is a TEXT column and production holds junk from an old import
+// (111 x21, 345, 334, 1736, -6 ...), so every read has to be validated.
+// Returns the integer when valid, or null for empty / non-numeric / out of
+// range. Used by the list, the record view, the clipboard copy and svIns.
+function _insScoreNum(sc){
+  if(sc===null||sc===undefined)return null;
+  var s=String(sc).trim().replace(/%$/,'').trim();
+  if(s==='')return null;
+  var n=Number(s);
+  if(!isFinite(n))return null;
+  n=Math.round(n);
+  if(n<0||n>100)return null;
+  return n;
+}
 function _insScore(sc){
-  if(sc===null||sc===undefined||sc==='')return '&#8212;';
-  var n=parseInt(sc,10);
-  if(isNaN(n))return '&#8212;';
-  if(n>=0&&n<=100){
-    var c=n>=80?'var(--ok)':n>=60?'var(--warn)':'var(--bad)';
-    return '<span style="font-weight:700;color:'+c+'">'+n+'%</span>';
+  var n=_insScoreNum(sc);
+  if(n===null){
+    // Empty, non-numeric, or out of range (e.g. the legacy 345 / 1736 / -6
+    // rows). Never print the raw number \u2014 QA read "345" as a real score.
+    // It stays reachable as a tooltip for whoever cleans the data up.
+    var had=(sc!==null&&sc!==undefined&&String(sc).trim()!=='');
+    var tip=had?'\u05e2\u05e8\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df \u05dc\u05e6\u05d9\u05d5\u05df 0-100: '+String(sc):'\u05dc\u05d0 \u05d4\u05d5\u05d6\u05df \u05e6\u05d9\u05d5\u05df';
+    return '<span style="color:var(--t3)" title="'+esc(tip)+'">&#8212;</span>';
   }
-  // Out-of-range value (e.g. legacy 345) \u2014 not a valid 0-100 score. Show the
-  // raw number muted so it never masquerades as a percentage.
-  return '<span style="color:var(--t3)" title="\u05e2\u05e8\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df \u05dc\u05e6\u05d9\u05d5\u05df 0-100">'+esc(String(sc))+'</span>';
+  var c=n>=80?'var(--ok)':n>=60?'var(--warn)':'var(--bad)';
+  return '<span style="font-weight:700;color:'+c+'">'+n+'%</span>';
 }
 function rIns(){
   var tb=g('tb-ins');if(!tb)return;
