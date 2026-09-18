@@ -545,6 +545,28 @@ body.emp-mode #pg-emp-home{display:block!important}
 #emp-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none}
 #emp-mode-badge{display:none;background:#ecfdf5;color:#166534;border:1px solid #16a34a;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
 body.emp-mode #emp-mode-badge{display:inline-block}
+/* Trustees (T2, 2026-09-18): the trustee screen lives inside the employee
+   home; #pg-emp-home.tru-open swaps it in for the report grid. */
+.emp-btn.g{border-color:#16a34a;background:#f0fdf4}
+.emp-btn.wide{grid-column:1/-1;flex-direction:row;gap:14px;min-height:84px;padding:14px 12px;text-align:right}
+.emp-btn.wide .emi{margin-bottom:0;font-size:34px}
+#emp-trustee{display:none}
+#pg-emp-home.tru-open>:not(#emp-trustee){display:none!important}
+#pg-emp-home.tru-open #emp-trustee{display:block}
+.tru-score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.tru-score>div{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center}
+.tru-score .n{font-size:22px;font-weight:900;line-height:1.1}
+.tru-score .l{font-size:11px;color:var(--t2);margin-top:2px}
+.tru-task{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.tru-task.done{border-color:#16a34a;background:#f0fdf4}
+.tru-task .ti{font-size:24px;line-height:1;width:32px;text-align:center;flex:none}
+.tru-task .tt{flex:1;min-width:0}
+.tru-task .tt strong{display:block;font-size:14px;line-height:1.3}
+.tru-task details{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
+.tru-task details summary{cursor:pointer;color:var(--blue);font-weight:700;list-style:none}
+.tru-task .btn{padding:8px 12px;min-height:40px;font-size:13px;white-space:nowrap;flex:none}
+.tru-rep{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px;line-height:1.5}
+.tru-danger{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:10px 12px;font-size:13px;color:#991b1b;margin-top:14px;line-height:1.5}
 
 /* ---- PRINT ---- */
 @media print{
@@ -700,6 +722,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="emp-btn o" onclick="empReport('eqi')"><span class="emi">&#128295;</span>&#1514;&#1511;&#1500;&#1492;<br>&#1489;&#1510;&#1497;&#1493;&#1493;&#1491;</button>
     <button class="emp-btn y" onclick="empReport('round')"><span class="emi">&#9728;</span>&#1505;&#1489;&#1489;<br>&#1489;&#1493;&#1511;&#1512;</button>
     <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
+    <button class="emp-btn g wide" id="emp-trustee-btn" onclick="_truOpen()"><span class="emi">&#129466;</span><span>נאמן בטיחות<br><small style="font-weight:400;font-size:12px;color:var(--t2)">8 המשימות החודשיות · דיווח · ניקוד</small></span></button>
   </div>
   <div id="emp-sync" style="margin-top:14px;background:#fff7ed;border:1px solid #f59e0b;border-radius:12px;padding:12px;display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1505;&#1493;&#1504;&#1499;&#1512;&#1503; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1490;&#1500;&#1497;&#1499;&#1492; &#1492;&#1493;&#1492;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
@@ -707,6 +730,17 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="emp-recent" style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
     <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1502;&#1492; &#1513;&#1504;&#1513;&#1502;&#1512; &#1489;&#1502;&#1499;&#1513;&#1497;&#1512; &#1492;&#1494;&#1492;)</span></div>
     <div id="emp-recent-list" style="font-size:13px;line-height:1.6"></div>
+  </div>
+  <!-- TRUSTEE SCREEN (T2): shown instead of the report grid when #pg-emp-home has .tru-open -->
+  <div id="emp-trustee">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+      <button class="btn btn-s btn-sm" onclick="_truBack()">&#8594; חזרה</button>
+      <div style="font-weight:900;font-size:18px">&#129466; נאמן בטיחות</div>
+      <button class="btn btn-s btn-sm" onclick="_truPull(true)" title="רענון מהשרת">&#8635;</button>
+    </div>
+    <div class="field" style="margin-bottom:8px"><label>השם שלי</label><input id="tru-me" list="tru-names" placeholder="בחר או הקלד את שמך" onchange="_truSetMe(this.value)"></div>
+    <datalist id="tru-names"></datalist>
+    <div id="tru-body"></div>
   </div>
   <button class="emp-toggle" onclick="empToggle(false)">&#10140; &#1506;&#1489;&#1493;&#1512; &#1500;&#1502;&#1502;&#1513;&#1511; &#1492;&#1502;&#1500;&#1488;</button>
 </div>
@@ -2227,6 +2261,26 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="nm-ai-btn" onclick="_nmAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1493;&#1493;&#1490; &#1493;&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
+<!-- TRUSTEE REPORT MODAL (T2) — the WhatsApp format, structured -->
+<div class="overlay" id="ov-tru" onclick="closeModal('m-tru')"></div>
+<div class="modal" id="m-tru" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru')">&#10005;</button>
+  <div class="modal-title">&#129466; דיווח נאמן בטיחות</div>
+  <input type="hidden" id="tru-ref"><input type="hidden" id="tru-ok" value="">
+  <div id="tru-ref-note" style="display:none;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 10px;font-size:12px;color:#1e40af;margin-bottom:10px;line-height:1.5"></div>
+  <div class="fgrid">
+    <div class="field fw"><label>משימה *</label><select id="tru-t" class="inp" onchange="_truTaskHint()"></select><div id="tru-how" style="font-size:12px;color:var(--t2);line-height:1.5"></div></div>
+    <div class="field"><label>נאמן *</label><input id="tru-u" list="tru-names" placeholder="שם הנאמן"></div>
+    <div class="field"><label>תאריך *</label><input type="date" id="tru-d"></div>
+    <div class="field fw"><label>אזור / מיקום *</label><input id="tru-loc" list="tru-loc-list" placeholder="למשל: אולם טיגון, יציאת חירום מערבית"><datalist id="tru-loc-list"></datalist></div>
+    <div class="field fw"><label>ממצא *</label><div style="display:flex;gap:8px"><button type="button" class="btn btn-s" id="tru-ok-btn" style="flex:1" onclick="_truSetOk(true)">&#9989; תקין</button><button type="button" class="btn btn-s" id="tru-bad-btn" style="flex:1" onclick="_truSetOk(false)">&#9888;&#65039; ליקוי</button></div></div>
+    <div class="field fw"><label>תיאור <span id="tru-f-req"></span></label><textarea id="tru-f" rows="3" placeholder="מה נמצא? לליקוי — חובה"></textarea></div>
+    <div class="field fw"><label>&#128247; תמונה <span id="tru-photo-req"></span></label><div id="tru-photo-area"></div></div>
+  </div>
+  <div class="tru-danger">&#128680; <strong>סכנה מיידית?</strong> מתקשרים לממונה הבטיחות מיד — לא ממתינים לדיווח. מגן מכונה שהוסר או נוטרל ו"כמעט ונפגע" נכנסים לכאן.</div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru')">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
+</div>
+
 <!-- ROUND MODAL (Morning Round) -->
 <div class="overlay" id="ov-round" onclick="closeModal('m-round')"></div>
 <div class="modal" id="m-round" style="display:none;max-width:520px">
@@ -2899,6 +2953,33 @@ function _sbRefresh(silent,changedTbl){
   if(silent && changedTbl && _PAGE_PRIMARY[CUR] && !_LOOKUP_TBLS[changedTbl] && _PAGE_PRIMARY[CUR]!==changedTbl) return;
   if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();
 }
+// Merge one table's server answer into DB[t]. Shared by sbSync and the
+// single-table pulls (trustee screen in employee mode). obBefore is the
+// outbox view taken before the request left; merged with the view at
+// response time so an op uploaded mid-flight still counts as "ours".
+function _sbMergePull(t,rows,obBefore){
+  var ob=obBefore||{},obNow=_obLocalState(t);
+  Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
+  var local={};
+  (DB[t]||[]).forEach(function(r){if(r&&r.id)local[r.id]=r;});
+  var merged=[],seen={};
+  rows.forEach(function(r){
+    if(!r||!r.id){merged.push(r);return;}
+    seen[r.id]=1;
+    var o=ob[r.id];
+    if(o==='del')return;                                                   // deleted here, upload pending
+    if((o==='ins'||o==='upd')&&local[r.id]){merged.push(local[r.id]);return;} // edited here, newer than cloud
+    merged.push(r);
+  });
+  // Rows that exist only on this device AND are still waiting to be
+  // uploaded. Any other local-only row is gone from the server (e.g. a
+  // reset) and must not be resurrected from the cache.
+  Object.keys(ob).forEach(function(id){
+    if(ob[id]==='del'||seen[id]||!local[id])return;
+    merged.push(local[id]);
+  });
+  DB[t]=merged;
+}
 function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'];
   var done=0;
@@ -2920,27 +3001,7 @@ function sbSync(silent){
       // so the app keeps working offline. Only a real answer from the server
       // — including an empty one — may replace it.
       if(rows===null){finish();return;}
-      var ob=obBefore,obNow=_obLocalState(t);
-      Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
-      var local={};
-      (DB[t]||[]).forEach(function(r){if(r&&r.id)local[r.id]=r;});
-      var merged=[],seen={};
-      rows.forEach(function(r){
-        if(!r||!r.id){merged.push(r);return;}
-        seen[r.id]=1;
-        var o=ob[r.id];
-        if(o==='del')return;                                                   // deleted here, upload pending
-        if((o==='ins'||o==='upd')&&local[r.id]){merged.push(local[r.id]);return;} // edited here, newer than cloud
-        merged.push(r);
-      });
-      // Rows that exist only on this device AND are still waiting to be
-      // uploaded. Any other local-only row is gone from the server (e.g. a
-      // reset) and must not be resurrected from the cache.
-      Object.keys(ob).forEach(function(id){
-        if(ob[id]==='del'||seen[id]||!local[id])return;
-        merged.push(local[id]);
-      });
-      DB[t]=merged;
+      _sbMergePull(t,rows,obBefore);
       finish();
     });
   });
@@ -13148,6 +13209,177 @@ function _truBoard(m){
   var names={};_truRows(m).forEach(function(r){if(r.u)names[r.u]=1;});
   return Object.keys(names).map(function(u){return _truScore(u,m);}).sort(function(a,b){return (b.total-a.total)||(b.closed-a.closed)||a.u.localeCompare(b.u);});
 }
+// ---- SAFETY TRUSTEES (T2): trustee screen inside the employee home + report form ----
+var TRU_ME_KEY='tfgn_trustee_name';
+// A photo is mandatory for a \u05dc\u05d9\u05e7\u05d5\u05d9 ("\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8"); for a \u05ea\u05e7\u05d9\u05df
+// report it is only nudged. One flag if the committee wants it mandatory too.
+var TRUSTEE_PHOTO_REQUIRED_OK=false;
+function _truMe(){try{return localStorage.getItem(TRU_ME_KEY)||'';}catch(e){return '';}}
+function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}var me=g('tru-me');if(me&&me.value!==v)me.value=v;_truRender();}
+function _truIsOpen(){var home=g('pg-emp-home');return !!(home&&home.classList.contains('tru-open'));}
+function _truNames(){
+  var s={};
+  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u)s[r.u]=1;});
+  (DB.app_users||[]).forEach(function(u){if(u.active&&u.full_name)s[u.full_name]=1;});
+  (DB.emp||[]).forEach(function(e){if(e.n)s[e.n]=1;});
+  return Object.keys(s).sort(function(a,b){return a.localeCompare(b,'he');});
+}
+// Area suggestions: the locations catalogue when this device has it (the
+// anonymous employee session cannot read it \u2014 RLS unchanged), plus every
+// location already used in a trustee report.
+function _truLocs(){
+  var s={};
+  (typeof _locFlatList==='function'?_locFlatList():[]).forEach(function(l){var n=l.depth?_locName(l.id):l.name;if(n)s[n]=1;});
+  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.loc)s[r.loc]=1;});
+  return Object.keys(s).sort(function(a,b){return a.localeCompare(b,'he');});
+}
+function _truFillLists(){
+  var n=g('tru-names');if(n)n.innerHTML=_truNames().map(function(x){return '<option value="'+esc(x)+'">';}).join('');
+  var l=g('tru-loc-list');if(l)l.innerHTML=_truLocs().map(function(x){return '<option value="'+esc(x)+'">';}).join('');
+}
+// Server pull for this one table. Employee mode never runs sbSync (the
+// session is anonymous and most tables are not readable), but
+// trustee_reports is readable by everyone, so the screen pulls it itself
+// with the same merge rules as sbSync (null = unreachable \u2192 keep cache).
+function _truPull(manual){
+  if(typeof sbGet!=='function')return Promise.resolve(false);
+  var obBefore=_obLocalState('trustee_reports');
+  return sbGet('trustee_reports').then(function(rows){
+    if(rows===null){if(manual)toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u2014 \u05de\u05d5\u05e6\u05d2 \u05de\u05d4 \u05e9\u05e0\u05e9\u05de\u05e8 \u05d1\u05de\u05db\u05e9\u05d9\u05e8');return false;}
+    _sbMergePull('trustee_reports',rows,obBefore);
+    sdb();_truRender();
+    if(manual)toast('\u05e2\u05d5\u05d3\u05db\u05df \u2713');
+    return true;
+  });
+}
+function _truOpen(){
+  var home=g('pg-emp-home');if(!home)return;
+  home.classList.add('tru-open');
+  var me=g('tru-me');if(me)me.value=_truMe();
+  _truFillLists();_truRender();
+  _truPull(false);
+  try{window.scrollTo(0,0);}catch(e){}
+}
+function _truBack(){
+  var home=g('pg-emp-home');if(home)home.classList.remove('tru-open');
+  if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
+}
+function _truMonthLabel(m){try{var p=String(m).split('-');return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,1).toLocaleDateString('he-IL',{month:'long',year:'numeric'});}catch(e){return m;}}
+function _truStatusBadge(r){
+  if(r.ok!==false)return '<span class="b bG">\u05ea\u05e7\u05d9\u05df</span>';
+  return r.s===TRUSTEE_S_CLOSED?'<span class="b bG">\u05e0\u05e1\u05d2\u05e8</span>':'<span class="b bR">\u05e4\u05ea\u05d5\u05d7</span>';
+}
+function _truRender(){
+  var box=g('tru-body');if(!box)return;
+  var me=_truMe(),m=_truThisMonth();
+  if(!me){box.innerHTML='<div class="card" style="text-align:center;color:var(--t2)">\u05d1\u05d7\u05e8 \u05d0\u05d5 \u05d4\u05e7\u05dc\u05d3 \u05d0\u05ea \u05e9\u05de\u05da \u05dc\u05de\u05e2\u05dc\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05e9\u05dc\u05da \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';return;}
+  var sc=_truScore(me,m);
+  var mine=_truRows(m).filter(function(r){return r.u===me;}).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
+  var h='<div style="font-weight:900;font-size:16px;margin:4px 0 2px">'+esc(_truMonthLabel(m))+'</div>';
+  h+='<div class="tru-score" id="tru-score">'
+    +'<div><div class="n">'+sc.total+'<span style="font-size:12px;color:var(--t2)">/100</span></div><div class="l">\u05e0\u05d9\u05e7\u05d5\u05d3</div></div>'
+    +'<div><div class="n">'+sc.nTasks+'<span style="font-size:12px;color:var(--t2)">/8</span></div><div class="l">\u05de\u05e9\u05d9\u05de\u05d5\u05ea</div></div>'
+    +'<div><div class="n">'+sc.closed+'</div><div class="l">\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5</div></div>'
+    +'</div>';
+  h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
+    +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(TRUSTEE_MIN_TASKS-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+')</span>')
+    +(sc.open?'<span class="b bR">'+sc.open+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>':'')+'</div>';
+  h+=TRUSTEE_TASKS.map(function(t){
+    var done=!!sc.tasks[t.n];
+    return '<div class="tru-task'+(done?' done':'')+'" data-tru-task="'+t.n+'"><div class="ti">'+(done?'\u2705':t.icon)+'</div><div class="tt"><strong>'+t.n+'. '+esc(t.t)+'</strong><details><summary>\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details></div><button class="btn '+(done?'btn-s':'btn-p')+'" onclick="_truReport('+t.n+')">'+(done?'+ \u05e2\u05d5\u05d3':'\u05d3\u05d5\u05d5\u05d7')+'</button></div>';
+  }).join('');
+  h+='<div style="font-weight:700;font-size:14px;margin:14px 0 6px">\ud83d\udcdd \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+mine.length+')</div>';
+  if(!mine.length)h+='<div style="font-size:13px;color:var(--t2)" id="tru-mine-empty">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';
+  else h+='<div id="tru-mine">'+mine.map(function(r){
+    var t=_truTask(r.t);
+    var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
+    var photo=r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'';
+    return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
+  }).join('')+'</div>';
+  h+='<div class="tru-danger">\ud83d\udea8 <strong>\u05e1\u05db\u05e0\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea?</strong> \u05de\u05ea\u05e7\u05e9\u05e8\u05d9\u05dd \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d3. \u05de\u05d2\u05df \u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u05d5"\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05db\u05d0\u05df.<button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="empReport(\'nm\')">\u26d4 \u05d3\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2</button></div>';
+  box.innerHTML=h;
+  if(typeof _signifyDom==='function')try{_signifyDom(box);}catch(e){}
+}
+// ---- report form ----
+function _truPhotoReset(){
+  _attachUrls['tru-photo-area']=null;
+  var a=g('tru-photo-area');
+  if(a)a.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\'tru-photo-area\',\'trustee\')">\ud83d\udcf7 \u05e6\u05dc\u05dd / \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';
+}
+function _truSetOk(ok){
+  var hid=g('tru-ok');if(hid)hid.value=(ok===true)?'1':(ok===false?'0':'');
+  var a=g('tru-ok-btn'),b=g('tru-bad-btn');
+  if(a){a.className='btn '+(ok===true?'btn-p':'btn-s');a.style.background=ok===true?'#16a34a':'';a.style.boxShadow=ok===true?'none':'';}
+  if(b){b.className='btn '+(ok===false?'btn-p':'btn-s');}
+  var fr=g('tru-f-req'),pr=g('tru-photo-req');
+  if(fr)fr.textContent=ok===false?'*':'';
+  if(pr)pr.textContent=(ok===false||TRUSTEE_PHOTO_REQUIRED_OK)?'*':'(\u05de\u05d5\u05de\u05dc\u05e5)';
+}
+function _truTaskHint(){var t=_truTask(gv('tru-t'));var h=g('tru-how');if(h)h.textContent=t?t.how:'';}
+function _truFillTaskSelect(n){
+  var sel=g('tru-t');if(!sel)return;
+  sel.innerHTML=TRUSTEE_TASKS.map(function(t){return '<option value="'+t.n+'"'+(t.n===n?' selected':'')+'>'+t.n+'. '+esc(t.t)+'</option>';}).join('');
+  _truTaskHint();
+}
+// Open the report form for task n (1..8). ref = the finding a task-8
+// "after" report closes (task and \u05ea\u05e7\u05d9\u05df are then fixed).
+function _truReport(n,ref){
+  _truFillLists();
+  _truFillTaskSelect(parseInt(n,10)||1);
+  var u=g('tru-u');if(u&&!u.value)u.value=_truMe()||'';
+  var d=g('tru-d');if(d)d.value=new Date().toISOString().split('T')[0];
+  var loc=g('tru-loc');if(loc)loc.value='';
+  var f=g('tru-f');if(f)f.value='';
+  var rf=g('tru-ref');if(rf)rf.value=ref||'';
+  var note=g('tru-ref-note'),sel=g('tru-t');
+  _truPhotoReset();
+  if(ref){
+    var orig=(DB.trustee_reports||[]).find(function(r){return r.id===ref;});
+    if(loc&&orig)loc.value=orig.loc||'';
+    if(f&&orig)f.value='\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+String(orig.f||'').substring(0,120);
+    if(note){note.style.display='';note.textContent='\u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0: '+(orig?String(orig.f||'').substring(0,80):ref)+'. \u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 \u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05e1\u05d5\u05de\u05df "\u05e0\u05e1\u05d2\u05e8".';}
+    _truSetOk(true);
+    var pr=g('tru-photo-req');if(pr)pr.textContent='*';
+    if(sel)sel.disabled=true;
+  }else{
+    if(note)note.style.display='none';
+    _truSetOk(null);
+    if(sel)sel.disabled=false;
+  }
+  openModal('m-tru');
+}
+function _truCloseReport(id){_truReport(8,id);}
+function svTru(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
+  var u=gv('tru-u');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var t=parseInt(gv('tru-t'),10);if(!(t>=1&&t<=8)){toast('\u05d1\u05d7\u05e8 \u05de\u05e9\u05d9\u05de\u05d4');return;}
+  var d=gv('tru-d')||new Date().toISOString().split('T')[0];
+  var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
+  var okv=gv('tru-ok');if(okv!=='1'&&okv!=='0'){toast('\u05e1\u05de\u05df: \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9');return;}
+  var ok=okv==='1';
+  var f=gv('tru-f');if(!ok&&!f){toast('\u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05dc\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0');return;}
+  var photo=_attachUrls['tru-photo-area']||null;
+  // An "after" report (task 8 closing a finding) is nothing without its photo.
+  if(!photo&&(!ok||TRUSTEE_PHOTO_REQUIRED_OK||(t===8&&gv('tru-ref')))){toast('\u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05dc\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
+  var ref=(t===8&&gv('tru-ref'))||null;
+  var locId=null;
+  (typeof _locFlatList==='function'?_locFlatList():[]).forEach(function(l){if(!locId&&(l.name===loc||_locName(l.id)===loc))locId=l.id;});
+  var r={id:gid(),u:u,m:_truMonthKey(d),t:t,d:d,location_id:locId,loc:loc,ok:ok,f:f||null,photo_url:photo,s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN,ref:ref,mgr_note:null,ts:new Date().toISOString()};
+  if(!DB.trustee_reports)DB.trustee_reports=[];
+  DB.trustee_reports.push(r);sbIns('trustee_reports',r);
+  // The server trigger closes the referenced finding; mirror it locally so
+  // the screen updates now instead of after the next pull.
+  if(ref)(DB.trustee_reports||[]).forEach(function(x){if(x.id===ref&&_truIsHazard(x)&&x.s!==TRUSTEE_S_CLOSED)x.s=TRUSTEE_S_CLOSED;});
+  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' \u2014 \u05de\u05e9\u05d9\u05de\u05d4 '+t);}catch(e){}
+  sdb();
+  if(empIsOn())_truSetMe(u);else _truRender();   // remember the name on the trustee's own device only
+  closeModal('m-tru');_truPhotoReset();
+  var msg=ok?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713 (\u05ea\u05e7\u05d9\u05df)':'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713 \u2014 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1';
+  if(empIsOn())empToast(msg);else toast(msg);
+  if(typeof rTrustees==='function'&&CUR==='trustees')try{rTrustees();}catch(e){}
+}
+// The trustee screen refreshes from the server whenever the app regains focus.
+window.addEventListener('focus',function(){if(typeof _truIsOpen==='function'&&_truIsOpen())try{_truPull(false);}catch(e){}});
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
 function empIsOn(){return document.body.classList.contains('emp-mode');}
