@@ -379,7 +379,9 @@ body.role-reporter [onclick^="editItype("],
 body.role-reporter [onclick^="editItp("],
 body.role-reporter [onclick^="_eqiClone("],
 body.role-reporter [onclick^="_eqiRemoveFile("],
-body.role-reporter [onclick^="_tskMenu("]{display:none !important}
+body.role-reporter [onclick^="_tskMenu("],
+body.role-reporter [onclick^="_legRowMenu("],
+body.role-reporter [onclick^="_itypeRowMenu("]{display:none !important}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -7873,6 +7875,28 @@ window._popMenu=function(anchor,menuId,fill){
   else if(mr.right>window.innerWidth-8){menu.style.right='8px';}
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 };
+// A3: per-row menus for the dense lists. Edit / delete are skipped for
+// reporters (Phase B) even though the ⋯ button itself is hidden for them.
+window._legRowMenu=function(id,anchor){
+  var rep=(typeof _role==='function'&&_role()==='reporter');
+  _popMenu(anchor,'leg-row-menu',function(item,sep){
+    item('👁','\u05e6\u05e4\u05d9\u05d9\u05d4',function(){showView('leg',id);});
+    if(rep)return;
+    sep();
+    item('✎','\u05e2\u05e8\u05d9\u05db\u05d4',function(){editLeg(id);});
+    item('🗑','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('leg',id);},true);
+  });
+};
+window._itypeRowMenu=function(id,level,anchor){
+  var rep=(typeof _role==='function'&&_role()==='reporter');
+  _popMenu(anchor,'itype-row-menu',function(item,sep){
+    if(rep)return;
+    if(level<3)item('＋','\u05d4\u05d5\u05e1\u05e3 \u05ea\u05ea-\u05e1\u05d5\u05d2',function(){_itypeOpenAdd(level+1,id);});
+    item('✎','\u05e2\u05e8\u05d9\u05db\u05d4',function(){editItype(id);});
+    sep();
+    item('🗑','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('issue_types',id);},true);
+  });
+};
 // A2: the equipment page's secondary actions, formerly nine header buttons.
 window._eqiMoreMenu=function(anchor){
   _popMenu(anchor,'eqi-more-menu',function(item,sep){
@@ -9799,8 +9823,9 @@ function _itypeRenderNode(node,allRows){
   var levelLabel={1:'\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4',2:'\u05ea\u05ea-\u05e1\u05d5\u05d2',3:'\u05d5\u05e8\u05d9\u05d0\u05e0\u05d8'}[node.level]||'';
   var bgColor={1:'#dcecff',2:'#fef3c7',3:'#dcfce7'}[node.level]||'#f0f1f3';
   var indent=(node.level-1)*18;
-  var addBtn=node.level<3?'<button class="btn btn-d btn-sm" onclick="_itypeOpenAdd('+(node.level+1)+',\''+esc(node.id)+'\')" title="\u05d4\u05d5\u05e1\u05e3 \u05d1\u05df">＋</button>':'';
   var safeId=esc(node.id);
+  // A3: add-child / edit / delete live behind one row menu (_itypeRowMenu) — one icon per node.
+  var moreBtn='<button class="btn btn-d btn-sm" data-iid="'+safeId+'" data-ilvl="'+node.level+'" onclick="_itypeRowMenu(this.dataset.iid,parseInt(this.dataset.ilvl,10),this)" title="\u05d4\u05d5\u05e1\u05e3 \u05d1\u05df / \u05e2\u05e8\u05d5\u05da / \u05de\u05d7\u05e7">&#8943;</button>';
   var descendants=_itypeDescendantIds(node.id,allRows);
   var ncrAgg=(DB.ncr||[]).filter(function(r){return r.issue_type_id&&descendants[r.issue_type_id];}).length;
   var incAgg=(DB.inc||[]).filter(function(r){return r.issue_type_id&&descendants[r.issue_type_id];}).length;
@@ -9809,7 +9834,7 @@ function _itypeRenderNode(node,allRows){
   if(incAgg)counts+=' <span class="b bY" style="font-size:9px" title="\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05db\u05d5\u05dc\u05dc \u05ea\u05ea-\u05e1\u05d5\u05d2\u05d9\u05dd">\u05ea\u05e7\u05e8 '+incAgg+'</span>';
   var catBadge=node.category?' <span style="background:#fff;color:#666;padding:1px 6px;border-radius:8px;font-size:9px">'+esc(node.category)+'</span>':'';
   var nameLnk=ncrAgg?'<a onclick="ncrItypeFilter(\''+safeId+'\');goPage(\'ncr\')" style="cursor:pointer;color:#1d4ed8;text-decoration:none;flex:1;font-weight:600" title="\u05e1\u05e0\u05df NCR \u05dc\u05e4\u05d9 \u05e1\u05d5\u05d2 \u05d6\u05d4">'+esc(node.name)+counts+catBadge+'</a>':'<strong style="flex:1">'+esc(node.name)+counts+catBadge+'</strong>';
-  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:42px;font-weight:600">'+levelLabel+'</span>'+nameLnk+addBtn+'<button class="btn btn-d btn-sm" onclick="editItype(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'issue_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:42px;font-weight:600">'+levelLabel+'</span>'+nameLnk+moreBtn+'</div>';
   children.forEach(function(c){html+=_itypeRenderNode(c,allRows);});
   return html;
 }
@@ -12567,11 +12592,11 @@ function rLeg(){
       srcBtn='<a href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener" class="btn btn-d btn-sm" title="&#1495;&#1508;&#1513; &#1489;&#1504;&#1489;&#1493;" style="text-decoration:none">\ud83d\udd0d</a>';
     }else{srcBtn='\u2014';}
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+esc(l.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;</button>';
-    var editBtn='<button class="btn btn-d btn-sm" data-lid="'+esc(l.id)+'" onclick="editLeg(this.dataset.lid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
-    var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="leg" data-did="'+esc(l.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
+    // A3: edit + delete live behind one row menu (_legRowMenu) — two icons per row, not four.
+    var moreBtn='<button class="btn btn-d btn-sm" data-lid="'+esc(l.id)+'" onclick="_legRowMenu(this.dataset.lid,this)" title="&#1506;&#1512;&#1497;&#1499;&#1492; / &#1502;&#1495;&#1497;&#1511;&#1492;">&#8943;</button>';
     var hasContent=l.summary||l.full_text;
     var contentBadge=hasContent?'<span style="font-size:9px;color:var(--ok);font-weight:700">✓ \u05ea\u05d5\u05db\u05df</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⚠ \u05dc\u05dc\u05d0 \u05ea\u05d5\u05db\u05df</span>';
-    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e1\u05e7\u05d9\u05e8\u05d4">'+_legReviewBadge(l)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+viewBtn+' '+editBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e1\u05e7\u05d9\u05e8\u05d4">'+_legReviewBadge(l)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea" style="white-space:nowrap">'+viewBtn+' '+moreBtn+'</td></tr>';
   }).join('');
 }
 function legFilter(f){window._legFilter=f;['all','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05db\u05d7 \u05d0\u05d3\u05dd','\u05db\u05dc\u05dc\u05d9'].forEach(function(k){var el=g('leg-tab-'+k.replace(/ /g,'_'));if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rLeg();}
