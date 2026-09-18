@@ -8479,7 +8479,27 @@ rows.sort(function(a,b){
   if(ap!==bp)return ap-bp;
   return (b.d||'').localeCompare(a.d||'');
 });
-// Summary stats above table
+// P0 (QA regression #536): apply the open-only default BEFORE computing the
+// summary, so the pills always describe exactly what the list shows. The
+// previous order computed the summary from the full set, so it read
+// "\u05e1\u05d4\u05f4\u05db: 375" while the list showed 4 \u2014 looking like nothing was filtered.
+var _ncrHiding=(window._ncrHideClosed!==false);
+var _ncrClosedHidden=0;
+(function(){
+  var b=g('ncr-tab-status');
+  if(b){
+    b.innerHTML=_ncrHiding?'\ud83d\udc41 \u05db\u05d5\u05dc\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd':'\ud83d\udc41 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3';
+    b.className='btn '+(_ncrHiding?'btn-s':'btn-p');
+  }
+})();
+if(_ncrHiding){
+  var _beforeHide=rows.length;
+  rows=rows.filter(function(r){return r.s!=='\u05e1\u05d2\u05d5\u05e8';});
+  _ncrClosedHidden=_beforeHide-rows.length;
+}
+// Summary stats above table \u2014 computed from the DISPLAYED rows so the
+// counts and the list always agree. When closed rows are hidden, a separate
+// clickable pill reports how many are out of view.
 try{
   var summaryEl=g('ncr-summary');
   if(summaryEl){
@@ -8496,26 +8516,10 @@ try{
       (closedN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">\u05e1\u05d2\u05d5\u05e8: <strong>'+closedN+'</strong></span>':'')+
       (critN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05e7\u05e8\u05d9\u05d8\u05d9: <strong>'+critN+'</strong></span>':'')+
       (highN?'<span style="background:#ffedd5;border:1px solid #ea580c;border-radius:14px;padding:3px 10px;color:#9a3412">\u05d2\u05d1\u05d5\u05d4 \u05e4\u05ea\u05d5\u05d7: <strong>'+highN+'</strong></span>':'')+
-      (staleN?'<span style="background:#f1f5f9;border:1px solid #475569;border-radius:14px;padding:3px 10px;color:#1e293b">\u23f3 \u05e4\u05ea\u05d5\u05d7 30+ \u05d9\u05de\u05d9\u05dd: <strong>'+staleN+'</strong></span>':'');
+      (staleN?'<span style="background:#f1f5f9;border:1px solid #475569;border-radius:14px;padding:3px 10px;color:#1e293b">\u23f3 \u05e4\u05ea\u05d5\u05d7 30+ \u05d9\u05de\u05d9\u05dd: <strong>'+staleN+'</strong></span>':'')+
+      (_ncrClosedHidden?'<span onclick="_ncrToggleClosed()" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e6\u05d2\u05ea \u05d4\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:14px;padding:3px 10px;color:#64748b;cursor:pointer">\ud83d\udd12 '+_ncrClosedHidden+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd \u05de\u05d5\u05e1\u05ea\u05e8\u05d9\u05dd</span>':'');
   }
 }catch(e){}
-// P1: default view shows OPEN (non-closed) NCRs only. The status toggle
-// (#ncr-tab-status) flips window._ncrHideClosed. Summary above was computed
-// from the full set so the "\u05e1\u05d2\u05d5\u05e8" pill still reflects reality.
-var _ncrHiding=(window._ncrHideClosed!==false);
-var _ncrClosedHidden=0;
-(function(){
-  var b=g('ncr-tab-status');
-  if(b){
-    b.innerHTML=_ncrHiding?'\ud83d\udc41 \u05db\u05d5\u05dc\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd':'\ud83d\udc41 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3';
-    b.className='btn '+(_ncrHiding?'btn-s':'btn-p');
-  }
-})();
-if(_ncrHiding){
-  var _beforeHide=rows.length;
-  rows=rows.filter(function(r){return r.s!=='\u05e1\u05d2\u05d5\u05e8';});
-  _ncrClosedHidden=_beforeHide-rows.length;
-}
 if(!rows.length){
   var emptyMsg='\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
   if(_ncrClosedHidden>0){emptyMsg='\u05d0\u05d9\u05df NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u00b7 '+_ncrClosedHidden+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd \u05de\u05d5\u05e1\u05ea\u05e8\u05d9\u05dd. <a onclick="_ncrToggleClosed()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05d4\u05e6\u05d2 \u05d4\u05db\u05dc</a>';}
