@@ -568,6 +568,15 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   #cap-fab,.cap-fab,#ask-fab,#sw-update-pill,#scroll-top-btn,#emp-toast,.toast,.sync-pill,#sync-pill,
   #ncr-agent-modal,#m-search,#ov-search,#tsk-render-diag,
   [style*="position:fixed"],[style*="position: fixed"]{display:none!important}
+  /* P0 v2 (2026-09-18, QA after #557 still saw floaters): structural net that does
+     not depend on any id or class — on paper only the page container prints.
+     Everything else at body level (login, modals, popup menus, SW update pill,
+     toasts, scroll-to-top, NCR agent overlay) and everything in #app except the
+     page container (top bar, both FABs, bottom nav, sheets, modals) is gone.
+     The print header is injected INSIDE the active page, so it survives. */
+  body > :not(#app){display:none!important}
+  #app > :not(#main){display:none!important}
+  [class*="fab"],[id*="fab"],[id*="pill"],[id*="toast"]{display:none!important}
   /* The wide-screen masonry columns of the home page make no sense on paper. */
   #pg-dash{column-count:1!important}
   .more-accordion summary::after{display:none!important}
@@ -2721,6 +2730,8 @@ function sdb(){
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
 function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+// Shown in the print header (and nowhere else) so a printout tells which build it came from.
+var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -12234,7 +12245,7 @@ window._printPage=function(){
   var hdr=document.createElement('div');
   hdr.id='print-header';
   hdr.style.cssText='display:none;border-bottom:3px solid #cc1f1f;padding:0 0 12px;margin-bottom:16px;position:relative';
-  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">\u05ea\u05e4\u05d5\u05d2\u05df · \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'+filterLine+'</div><div style="font-size:11px;color:#555;text-align:left">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e4\u05e7\u05d4: '+d+(u?'<br>'+esc(u):'')+'</div></div>';
+  hdr.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:20px;font-weight:900;color:#000">'+esc(title)+'</div><div style="font-size:11px;color:#555;margin-top:2px">\u05ea\u05e4\u05d5\u05d2\u05df · \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'+filterLine+'</div><div style="font-size:11px;color:#555;text-align:left">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e4\u05e7\u05d4: '+d+(u?'<br>'+esc(u):'')+'<br><span style="color:#999">\u05d1\u05e0\u05d9\u05d9\u05d4 '+(typeof _APP_BUILD!=='undefined'?_APP_BUILD:'?')+'</span></div></div>';
   on.insertBefore(hdr,on.firstChild);
   var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
   window.addEventListener('afterprint',cleanup);
