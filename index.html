@@ -358,6 +358,28 @@ body.emp-mode .cap-fab,body.emp-mode #ask-fab{display:none}
    page; the only floating button is the report (Smart Capture) one. !important because
    the button carries an inline display:flex. Supersedes the P1#1 home-only rule. */
 #ask-fab{display:none !important}
+/* Roles Phase B (A4, 2026-09-18): a reporter can file reports but never edit or delete
+   records, so the ✎ / 🗑 / clone / row-menu affordances are hidden for that role.
+   body.role-reporter is set by _applyRoleGates. UI-only — RLS already blocks the writes;
+   this just stops them from failing silently. Creation (+) buttons are untouched. */
+body.role-reporter [onclick^="askDel("],
+body.role-reporter [onclick^="delById("],
+body.role-reporter [onclick^="delAll"],
+body.role-reporter [onclick^="editTsk("],
+body.role-reporter [onclick^="editNcr("],
+body.role-reporter [onclick^="editInc("],
+body.role-reporter [onclick^="_roundEdit("],
+body.role-reporter [onclick^="eqiEdit("],
+body.role-reporter [onclick^="editLeg("],
+body.role-reporter [onclick^="editEasp("],
+body.role-reporter [onclick^="editUser("],
+body.role-reporter [onclick^="editPrj("],
+body.role-reporter [onclick^="editLoc("],
+body.role-reporter [onclick^="editItype("],
+body.role-reporter [onclick^="editItp("],
+body.role-reporter [onclick^="_eqiClone("],
+body.role-reporter [onclick^="_eqiRemoveFile("],
+body.role-reporter [onclick^="_tskMenu("]{display:none !important}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -12625,6 +12647,14 @@ function _applyRoleGates(){
   var role = _role();
   var isAdmin = role==='admin';
   var isManagerOrUp = role==='admin'||role==='manager';
+  // Roles Phase B (A4): expose the role to CSS. body.role-reporter hides every
+  // edit / delete affordance (see the stylesheet); creation stays. UI-only —
+  // RLS is what actually blocks the writes.
+  try{
+    document.body.classList.toggle('role-reporter',role==='reporter');
+    document.body.classList.toggle('role-manager',role==='manager');
+    document.body.classList.toggle('role-admin',role==='admin');
+  }catch(e){}
   // Admin-only modules sheet buttons
   var usersBtn=g('sheet-btn-users');
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
