@@ -553,6 +553,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 #emp-trustee{display:none}
 #pg-emp-home.tru-open>:not(#emp-trustee){display:none!important}
 #pg-emp-home.tru-open #emp-trustee{display:block}
+/* Michael, 2026-09-18: the employee home is the trustee screen only. The four
+   generic report tiles stay in the markup, hidden; EMP_HOME_TRUSTEES_ONLY in JS
+   brings the tile grid (and the 🦺 button) back. */
+#pg-emp-home.tru-only .emp-hero,#pg-emp-home.tru-only .emp-grid,#pg-emp-home.tru-only #emp-recent,#pg-emp-home.tru-only #tru-back-btn{display:none!important}
+#pg-emp-home.tru-only #emp-trustee{display:block}
 .tru-score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
 .tru-score>div{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center}
 .tru-score .n{font-size:22px;font-weight:900;line-height:1.1}
@@ -734,7 +739,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <!-- TRUSTEE SCREEN (T2): shown instead of the report grid when #pg-emp-home has .tru-open -->
   <div id="emp-trustee">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-      <button class="btn btn-s btn-sm" onclick="_truBack()">&#8594; חזרה</button>
+      <button class="btn btn-s btn-sm" id="tru-back-btn" onclick="_truBack()">&#8594; חזרה</button>
       <div style="font-weight:900;font-size:18px">&#129466; נאמן בטיחות</div>
       <button class="btn btn-s btn-sm" onclick="_truPull(true)" title="רענון מהשרת">&#8635;</button>
     </div>
@@ -13196,7 +13201,7 @@ function _finishLogin(lb){
   document.body.classList.remove('emp-mode');
   var ls=g('login');if(ls)ls.style.display='none';
   var app=g('app');if(app)app.style.display='block';
-  ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
+  ldb();if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
   setTimeout(_fetchCurrentUserProfile,900);
 }
 // ---- SAFETY TRUSTEES (\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) \u2014 catalogue + scoring ----
@@ -13249,7 +13254,20 @@ var TRU_ME_KEY='tfgn_trustee_name';
 var TRUSTEE_PHOTO_REQUIRED_OK=false;
 function _truMe(){try{return localStorage.getItem(TRU_ME_KEY)||'';}catch(e){return '';}}
 function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}var me=g('tru-me');if(me&&me.value!==v)me.value=v;_truRender();}
-function _truIsOpen(){var home=g('pg-emp-home');return !!(home&&home.classList.contains('tru-open'));}
+// Michael (2026-09-18): the employee home IS the trustee screen — no tile grid,
+// no extra tap. The tiles stay in the markup; flip this to bring them back.
+var EMP_HOME_TRUSTEES_ONLY=true;
+function _truIsOpen(){var home=g('pg-emp-home');return !!(home&&(home.classList.contains('tru-open')||(EMP_HOME_TRUSTEES_ONLY&&home.classList.contains('tru-only')&&empIsOn())));}
+// Runs on every way into employee mode (login button, toggle, reload with the
+// mode remembered). Renders the panel inline; pull = also refresh from the server.
+function _truEmpHome(pull){
+  var home=g('pg-emp-home');if(!home)return;
+  if(!EMP_HOME_TRUSTEES_ONLY){home.classList.remove('tru-only');return;}
+  home.classList.add('tru-only');
+  var me=g('tru-me');if(me)me.value=_truMe();
+  _truFillLists();_truRender();
+  if(pull)_truPull(false);
+}
 function _truNames(){
   var s={};
   (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u)s[r.u]=1;});
@@ -13286,6 +13304,7 @@ function _truPull(manual){
   });
 }
 function _truOpen(){
+  if(EMP_HOME_TRUSTEES_ONLY){_truEmpHome(true);try{window.scrollTo(0,0);}catch(e){}return;}
   var home=g('pg-emp-home');if(!home)return;
   home.classList.add('tru-open');
   var me=g('tru-me');if(me)me.value=_truMe();
@@ -13294,6 +13313,7 @@ function _truOpen(){
   try{window.scrollTo(0,0);}catch(e){}
 }
 function _truBack(){
+  if(EMP_HOME_TRUSTEES_ONLY)return;   // nothing to go back to
   var home=g('pg-emp-home');if(home)home.classList.remove('tru-open');
   if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
 }
@@ -13551,6 +13571,7 @@ function empToggle(on){
     document.body.classList.add('emp-mode');
     try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
     CUR='emp-home';
+    if(typeof _truEmpHome==='function')_truEmpHome(true);
     if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
   }else{
     document.body.classList.remove('emp-mode');
@@ -13575,6 +13596,7 @@ function doEmpLogin(){
   var app=g('app');if(app)app.style.display='block';
   _sbAuth().catch(function(){});
   ldb();CUR='emp-home';
+  if(typeof _truEmpHome==='function')_truEmpHome(true);
   SB_ON=true;_obDrain();
   if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
 }
@@ -13637,7 +13659,7 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       _sbToken=session.access_token;
       _sbAuthPromise=Promise.resolve(session);
       var app=g('app');if(app)app.style.display='block';
-      ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
+      ldb();if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
     }else if(emp){
       document.body.classList.add('emp-mode');
       var app=g('app');if(app)app.style.display='block';
