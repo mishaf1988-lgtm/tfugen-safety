@@ -3445,6 +3445,32 @@ function rAgents(){
     metric:legTotal+' חוקים במאגר',
     actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'leg\')" style="background:#1d4ed8">עבור לדף חוקים</button>'
   });
+  // B2 (2026-09-18): this page is THE hub — every AI capability is listed
+  // here with a launcher. Contextual buttons stay on their pages (they act on
+  // that page's data); nothing AI-related lives on the home screen (#544).
+  html+=card({
+    icon:'🕵️',color:'#0f766e',title:'Incident Investigation Agent',
+    desc:'\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea \u05de\u05d5\u05d1\u05e0\u05d9\u05ea: intake → 5-Why → CAPA. \u05e9\u05de\u05d9\u05e8\u05d4 \u05dc-<code>inc.five_why</code> \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc-NCR / \u05de\u05e9\u05d9\u05de\u05d4. <span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:1px 7px;font-weight:700">\u05d1\u05d1\u05e0\u05d9\u05d9\u05d4 — PR-7</span>',
+    metric:incFW+' \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05e2\u05dd 5-Why',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'inc\')" style="background:#0f766e">\u05e2\u05d1\u05d5\u05e8 \u05dc\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea</button>'
+  });
+  html+=card({
+    icon:'💬',color:'#16a34a',title:'\u05e9\u05d0\u05dc \u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8',
+    desc:'\u05e9\u05d0\u05dc\u05d5\u05ea \u05d7\u05d5\u05e4\u05e9\u05d9\u05d5\u05ea \u05e2\u05dc \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd (NCR \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd, \u05d0\u05d7\u05e8\u05d0\u05d9\u05dd, \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd…). \u05e0\u05d2\u05d9\u05e9 \u05d2\u05dd \u05de\u05ea\u05e4\u05e8\u05d9\u05d8 ⋯ \u05d1\u05db\u05dc \u05d3\u05e3.',
+    actions:'<button class="btn btn-p btn-sm" onclick="openModal(\'m-ask\');if(typeof _askInit===\'function\')_askInit();" style="background:#16a34a">\u05e4\u05ea\u05d7</button>'
+  });
+  // Section: AI reports that live on other pages (the hub only points there).
+  html+='<div style="font-weight:700;font-size:13px;color:var(--t3);margin:14px 0 4px">📊 \u05d3\u05d5\u05d7\u05d5\u05ea AI</div>';
+  html+=card({
+    icon:'📋',color:'#3b82f6',title:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 — \u05e0\u05e8\u05d8\u05d9\u05d1 AI + \u05d3\u05d5\u05d7 ISO \u05e9\u05e0\u05ea\u05d9',
+    desc:'\u05d1\u05d3\u05e3 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4: \u05e0\u05e8\u05d8\u05d9\u05d1 \u05dc\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d5\u05d3\u05d5\u05d7 ISO 14001/45001 \u05e9\u05e0\u05ea\u05d9 \u05de\u05d5\u05e4\u05e7\u05d9\u05dd \u05e2\u05dc \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d4\u05d7\u05d9\u05d9\u05dd.',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'mr\')" style="background:#3b82f6">\u05e2\u05d1\u05d5\u05e8 \u05dc\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4</button>'
+  });
+  html+=card({
+    icon:'✅',color:'#7c3aed',title:'\u05d9\u05e6\u05d9\u05e8\u05ea \u05de\u05e9\u05d9\u05de\u05d5\u05ea AI',
+    desc:'\u05d1\u05d3\u05e3 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea: \u05d4-AI \u05de\u05e6\u05d9\u05e2 \u05de\u05e9\u05d9\u05de\u05d5\u05ea CAPA \u05de\u05ea\u05d5\u05da NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05d5\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea.',
+    actions:'<button class="btn btn-p btn-sm" onclick="goPage(\'tasks\')" style="background:#7c3aed">\u05e2\u05d1\u05d5\u05e8 \u05dc\u05de\u05e9\u05d9\u05de\u05d5\u05ea</button>'
+  });
   // Section 2: AI helpers embedded in modals (Suggest-and-edit pattern)
   html+='<div style="font-weight:700;font-size:13px;color:var(--t3);margin:14px 0 4px">⚡ AI Suggest במודאלים (כפתור 🤖 פר-שדה)</div>';
   html+=card({
