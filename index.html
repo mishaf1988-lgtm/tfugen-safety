@@ -175,6 +175,13 @@ body.hc .card{box-shadow:var(--sh)!important;transform:none!important}
 .card-title::before{content:"";position:absolute;right:0;top:2px;bottom:2px;width:3px;border-radius:2px;background:var(--red)}
 
 /* ---- KPI GRID ---- */
+/* P1#1 home quick actions: 3 columns at every width, so the three mandatory
+   tiles (emergency / today's tasks / morning round) always form the first row. */
+.dash-qa{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 12px}
+.qa-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;padding:8px 4px;background:#fff;border:1px solid var(--border);border-radius:12px;font-family:inherit;font-size:12px;font-weight:700;color:var(--tx);cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06)}
+.qa-btn:active{background:#f8fafc}
+.qa-btn .qa-ic{font-size:22px;line-height:1}
+.qa-btn.qa-hot{background:#cc1f1f;border-color:#cc1f1f;color:#fff}
 .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 @media(min-width:720px){.kgrid{grid-template-columns:repeat(4,1fr);gap:12px}}
 @media(min-width:1080px){.kgrid{gap:14px}}
@@ -346,6 +353,9 @@ body.hc .fab:hover{transform:none}
 .cap-fab:active{transform:scale(.94)}
 .cap-fab::after{content:'דווח';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#7c3aed;background:#fff;padding:2px 8px;border-radius:999px;border:1px solid #d8b4fe;white-space:nowrap;font-family:inherit;line-height:1.3}
 body.emp-mode .cap-fab,body.emp-mode #ask-fab{display:none}
+/* P1#1: no floating AI button on the home screen — it is reachable from the header ⋯ menu
+   and the agents page. !important because the button carries an inline display:flex. */
+body.on-dash #ask-fab{display:none !important}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -467,7 +477,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
    page/section titles, kgrid) stay full width via column-span:all. */
 @media(min-width:1080px){
   #pg-dash{column-count:2;column-gap:14px}
-  #pg-dash > .streak-hero,#pg-dash > .today-list,#pg-dash > .monthly-strip,#pg-dash > .row,#pg-dash > .kgrid,#pg-dash > .dash-section-title,#pg-dash > .page-title{column-span:all;-webkit-column-span:all}
+  #pg-dash > .streak-hero,#pg-dash > .today-list,#pg-dash > .dash-qa,#pg-dash > .more-accordion,#pg-dash > .monthly-strip,#pg-dash > .row,#pg-dash > .kgrid,#pg-dash > .dash-section-title,#pg-dash > .page-title{column-span:all;-webkit-column-span:all}
   #pg-dash > .card{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid}
 }
 @media(min-width:1500px){#pg-dash{column-count:3}}
@@ -646,9 +656,16 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="today-items"></div>
   </div>
 
-  <div style="margin:0 0 10px;display:flex;justify-content:flex-end;gap:6px">
-    <button onclick="_auditPack()" style="background:#0d9488;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO &#8212; &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;">&#128230; &#1514;&#1497;&#1511; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</button>
-    <button onclick="_emergencyReport()" style="background:#cc1f1f;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">&#127111; &#1491;&#1497;&#1493;&#1493;&#1495; &#1495;&#1497;&#1512;&#1493;&#1501; &#1502;&#1492;&#1497;&#1512;</button>
+  <!-- QUICK ACTIONS (P1#1): the three mandatory ones first — emergency report,
+       today's tasks, morning round — then up to three more. Tiles marked
+       data-qa-mgr are manager-only and are hidden for reporters by the role gate. -->
+  <div class="dash-qa" id="dash-qa">
+    <button class="qa-btn qa-hot" onclick="_emergencyReport()"><span class="qa-ic">&#127111;</span><span>דיווח חירום</span></button>
+    <button class="qa-btn" onclick="goPage('tasks');if(typeof tskFilter==='function')tskFilter('today')"><span class="qa-ic">&#9203;</span><span>משימות להיום</span></button>
+    <button class="qa-btn" onclick="goPage('round')"><span class="qa-ic">&#9728;&#65039;</span><span>סבב בוקר</span></button>
+    <button class="qa-btn" data-qa-mgr="1" onclick="openNewNcrModal()"><span class="qa-ic">&#9888;&#65039;</span><span>NCR חדש</span></button>
+    <button class="qa-btn" onclick="openModal('m-nm')"><span class="qa-ic">&#9889;</span><span>כמעט ונפגע</span></button>
+    <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO &#8212; &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
@@ -661,39 +678,24 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
   <div id="dash-health" style="margin:0 0 10px"></div>
-  <div class="card" id="dash-kpi-card" style="margin:0 0 10px"><div class="card-title">&#128202; &#1488;&#1497;&#1504;&#1491;&#1497;&#1511;&#1496;&#1493;&#1512;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; (Leading Indicators)</div><div id="dash-kpi"></div></div>
   <div id="dash-alerts"></div>
 
-  <!-- MONTHLY METRICS: 4-tile strip (KPI over time) -->
-  <div class="monthly-strip">
-    <div class="ms-tile"><div class="ms-val" id="ms-inc">0</div><div class="ms-lbl">&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; (&#1513;&#1504;&#1492;)</div></div>
-    <div class="ms-tile"><div class="ms-val" id="ms-nm">0</div><div class="ms-lbl">&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506; (&#1495;&#1493;&#1491;&#1513;)</div></div>
-    <div class="ms-tile"><div class="ms-val" id="ms-ltif">0</div><div class="ms-lbl">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503; (LTIF)</div></div>
-    <div class="ms-tile"><div class="ms-val" id="ms-streak">&#8212;</div><div class="ms-lbl">&#1497;&#1502;&#1497; &#1512;&#1510;&#1507; &#1489;&#1496;&#1493;&#1495;&#1497;&#1501;</div></div>
-  </div>
-
-  <!-- COLLAPSIBLE: other metrics -->
-  <details class="more-accordion">
-    <summary>&#128202; &#1502;&#1491;&#1491;&#1497;&#1501; &#1504;&#1493;&#1505;&#1508;&#1497;&#1501;</summary>
-    <div class="kgrid">
-      <div class="kpi kpi-r" style="cursor:pointer" onclick="goPage('docs')"><div class="kpi-label">&#1502;&#1505;&#1502;&#1499;&#1497; ISO</div><div class="kpi-val" id="k1">0</div><div class="kpi-sub" id="k1s">-</div></div>
-      <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('tr')"><div class="kpi-label">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div><div class="kpi-val" id="k3">0%</div><div class="kpi-sub" id="k3s">-</div></div>
-      <div class="kpi kpi-b" style="cursor:pointer" onclick="goPage('ncr')"><div class="kpi-label">אי התאמות &#1508;&#1514;&#1493;&#1495;&#1493;&#1514;</div><div class="kpi-val" id="k4">0</div><div class="kpi-sub" id="k4s">-</div></div>
-      <div class="kpi kpi-r" style="cursor:pointer" onclick="goPage('rsk')"><div class="kpi-label">&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501;</div><div class="kpi-val" id="k6">0</div><div class="kpi-sub">RPN&ge;15</div></div>
-      <div class="kpi kpi-g" style="cursor:pointer" onclick="goPage('ptw')"><div class="kpi-label">&#1492;&#1512;&#1513;&#1488;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</div><div class="kpi-val" id="k8">0</div><div class="kpi-sub">PTW</div></div>
-      <div class="kpi kpi-o" style="cursor:pointer" onclick="goPage('emp')"><div class="kpi-label">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><div class="kpi-val" id="k5">0</div><div class="kpi-sub">-</div></div>
-    </div>
-  </details>
+  <!-- KPI STRIP (P1#1): one strip, rendered by _renderDashKpis — at most 6
+       tiles, and only tiles whose value is > 0. Replaces the old 4-tile monthly
+       strip and the 6-tile "more metrics" accordion, which showed rows of zeros. -->
+  <div id="dash-kpis" class="kgrid" style="display:none"></div>
+  <!-- Leading indicators: collapsed by default, hidden entirely until there is data behind at least one tile (P1#1). -->
+  <details class="more-accordion" id="dash-kpi-acc" style="display:none"><summary>&#128202; &#1488;&#1497;&#1504;&#1491;&#1497;&#1511;&#1496;&#1493;&#1512;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; (Leading Indicators)</summary><div id="dash-kpi" style="padding:4px 10px 12px"></div></details>
 
   <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-today-tasks-card" style="display:none"><div class="card-title">&#9203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1492;&#1494;&#1492;</div><div id="dash-today-tasks"></div></div>
-  <div class="card"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
+  <div class="card" id="dash-month-card" style="display:none"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-tsk-bd-card" style="display:none"><div class="card-title">&#128218; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;</div><div id="dash-tsk-bd" style="font-size:12px"></div></div>
   <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
   <!-- "פעילות אחרונה" hidden — clutters the home screen; activity log is still in audit_log table. -->
   <div class="card" id="dash-recent-card" style="display:none"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
-  <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
-  <div class="dash-section-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
+  <div class="card" id="dash-totals-card" style="display:none"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
+  <div class="dash-section-title" id="dash-stats-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -708,14 +710,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-leg-review-card" style="display:none"><div class="card-title">&#9878;&#65039; &#1495;&#1493;&#1511;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001)</span></div><div id="dash-leg-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-easp-review-card" style="display:none"><div class="card-title">&#127811; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 &#167;6.1.3)</span></div><div id="dash-easp-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-rsk-review-card" style="display:none"><div class="card-title">&#9889; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 &#167;6.1.2)</span></div><div id="dash-rsk-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
-  <div class="card" id="dash-ai-weekly-card" style="display:none"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
-  <div class="card" id="dash-ai-today-card" style="display:none"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1495;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
+  <!-- The two AI cards (weekly summary / today plan) moved to the agents page (P1#1). -->
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
   <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <!-- "פקיעות ב-30 יום" card hidden — same items appear in the unified Tasks page (virtual tasks). Kept in DOM for compatibility (rDash still writes to #dash-exp), just visually hidden. -->
   <div class="card" id="dash-exp-card" style="display:none"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
-  <div class="card"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <div class="card" id="dash-auds-card" style="display:none"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
       <input type="tel" id="dash-wa-phone" placeholder="+972547940073" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
@@ -1180,6 +1181,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     </div>
   </div>
   <div id="agents-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+  <!-- On-demand AI summaries. Moved here from the home screen (P1#1) — the
+       host ids are unchanged so _aiWeeklySummary / _aiTodayPlan keep working. -->
+  <div style="font-weight:700;font-size:13px;color:var(--t3);margin:14px 0 4px">&#128203; &#1505;&#1497;&#1499;&#1493;&#1502;&#1497; AI &#1500;&#1508;&#1497; &#1491;&#1512;&#1497;&#1513;&#1492;</div>
+  <div class="card" id="dash-ai-weekly-card"><div class="card-title">&#128221; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497; <span style="font-size:10px;color:var(--t3);font-weight:600">(7 &#1497;&#1502;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;)</span></div><div id="dash-ai-weekly"><button class="btn btn-p btn-sm" onclick="_aiWeeklySummary()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1510;&#1493;&#1512; &#1505;&#1497;&#1499;&#1493;&#1501; AI &#1513;&#1489;&#1493;&#1506;&#1497;</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1505;&#1499;&#1501; &#1488;&#1514; &#1492;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501; &#1502;&#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#8212; NCR, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514;, &#1505;&#1497;&#1493;&#1512;&#1497;&#1501;, &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</div></div></div>
+  <div class="card" id="dash-ai-today-card"><div class="card-title">&#9728;&#65039; &#1514;&#1493;&#1499;&#1504;&#1497;&#1514; &#1492;&#1497;&#1493;&#1501; - AI <span style="font-size:10px;color:var(--t3);font-weight:600">(3 &#1492;&#1502;&#1500;&#1510;&#1493;&#1514; &#1500;&#1492;&#1497;&#1493;&#1501;)</span></div><div id="dash-ai-today"><button class="btn btn-p btn-sm" onclick="_aiTodayPlan()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1502;&#1492; &#1500;&#1506;&#1513;&#1493;&#1514; &#1492;&#1497;&#1493;&#1501;?</button><div style="font-size:10px;color:var(--t3);margin-top:6px">&#1488;&#1497;&#1495;&#1493;&#1491; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1489;&#1508;&#1497;&#1490;&#1493;&#1512;, NCR &#1495;&#1502;&#1493;&#1512;&#1497;&#1501;, &#1514;&#1511;&#1512;&#1497;&#1493;&#1514; &#1508;&#1514;&#1493;&#1495;&#1493;&#1514; &#1493;&#1502;&#1493;&#1510;&#1493;&#1514; 3 &#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1500;&#1489;&#1510;&#1506; &#1492;&#1497;&#1493;&#1501;</div></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | AI &#1488;&#1495;&#1512;&#1488;&#1497; (admin)</div>
 </div>
 
@@ -3198,6 +3204,8 @@ function goPage(id){
   var navId = (_navGroup.hasOwnProperty(id) ? _navGroup[id] : id) || id;
   var bn=g('bn-'+navId);if(bn)bn.classList.add('on');
   CUR=id;
+  // Lets CSS hide home-only clutter (e.g. the floating AI button) — P1#1.
+  document.body.classList.toggle('on-dash',id==='dash');
   rPage();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
@@ -4305,12 +4313,19 @@ function _renderKpiCard(){
   var ratioColor = ratioVal>=10?'#16a34a':ratioVal>=5?'#eab308':ratioVal<0?'#94a3b8':'#cc1f1f';
   var fastColor  = pctFastNcr>=70?'#16a34a':pctFastNcr>=40?'#eab308':'#cc1f1f';
   var avgColor   = avgNcrDays===0?'#94a3b8':avgNcrDays<=14?'#16a34a':avgNcrDays<=30?'#eab308':'#cc1f1f';
-  box.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-    tile(pctValid+'%', '\u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05d5\u05e7\u05e3', allEq.length+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd', validColor, '\u05d0\u05d7\u05d5\u05d6 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05ea\u05d5\u05e7\u05e4\u05dd \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e4\u05d2. \u05d9\u05e2\u05d3: 85% \u05d5\u05de\u05e2\u05dc\u05d4.')+
-    tile(ratioStr,    '\u05d9\u05d7\u05e1 Near-Miss : Incident (30 \u05d9\u05d5\u05dd)', nm30+' / '+inc30,                ratioColor, '\u05e4\u05d9\u05e8\u05de\u05d9\u05d3\u05ea Heinrich — \u05d9\u05d7\u05e1 \u05d1\u05e8\u05d9\u05d0 \u05d4\u05d5\u05d0 10:1 \u05d5\u05de\u05e2\u05dc\u05d4. \u05e2\u05e8\u05da \u05e0\u05de\u05d5\u05da \u05de\u05e6\u05d1\u05d9\u05e2 \u05e2\u05dc \u05ea\u05ea-\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05dc \u05db\u05de\u05e2\u05d8\u05d9\u05dd.')+
-    tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.')+
-    tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.')+
-  '</div>';
+  // P1#1: a tile only renders when there is data behind it (no "0%" / "\u2014"
+  // rows), and the whole accordion hides when no tile has data.
+  var tiles=[];
+  if(allEq.length)tiles.push(tile(pctValid+'%', '\u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05d5\u05e7\u05e3', allEq.length+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd', validColor, '\u05d0\u05d7\u05d5\u05d6 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05ea\u05d5\u05e7\u05e4\u05dd \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e4\u05d2. \u05d9\u05e2\u05d3: 85% \u05d5\u05de\u05e2\u05dc\u05d4.'));
+  if(nm30||inc30)tiles.push(tile(ratioStr,    '\u05d9\u05d7\u05e1 Near-Miss : Incident (30 \u05d9\u05d5\u05dd)', nm30+' / '+inc30,                ratioColor, '\u05e4\u05d9\u05e8\u05de\u05d9\u05d3\u05ea Heinrich — \u05d9\u05d7\u05e1 \u05d1\u05e8\u05d9\u05d0 \u05d4\u05d5\u05d0 10:1 \u05d5\u05de\u05e2\u05dc\u05d4. \u05e2\u05e8\u05da \u05e0\u05de\u05d5\u05da \u05de\u05e6\u05d1\u05d9\u05e2 \u05e2\u05dc \u05ea\u05ea-\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05dc \u05db\u05de\u05e2\u05d8\u05d9\u05dd.'));
+  if(ncrClosed.length){
+    tiles.push(tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.'));
+    tiles.push(tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.'));
+  }
+  var acc=g('dash-kpi-acc');
+  if(!tiles.length){if(acc)acc.style.display='none';box.innerHTML='';return;}
+  if(acc)acc.style.display='';
+  box.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+tiles.join('')+'</div>';
 }
 // Fast topbar/bnav badges. Extracted from rDash so save handlers can call
 // it without paying for the full dashboard re-render when the user is on
@@ -4336,6 +4351,46 @@ window._dashBadges = function(){
   }catch(e){}
 };
 
+// P1#1 home declutter: ONE KPI strip, at most 6 tiles, and a tile is only
+// rendered when its value is > 0. Candidates are ordered by how actionable
+// they are, so when a lot is going on the strip shows the urgent counts
+// first. Replaces the old 4-tile monthly strip + the 6-tile "more metrics"
+// accordion, both of which mostly showed rows of zeros.
+window._renderDashKpis=function(c){
+  var host=g('dash-kpis');if(!host)return;
+  var cands=[
+    {v:c.ncrOpen,   cls:'kpi-b',label:'NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',go:"goPage('ncr')"},
+    {v:c.tasksOver, cls:'kpi-r',label:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',go:"goPage('tasks');if(typeof tskFilter==='function')tskFilter('over')"},
+    {v:c.expired,   cls:'kpi-r',label:'\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3',sub:'\u05e6\u05d9\u05d5\u05d3/\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/\u05de\u05e1\u05de\u05db\u05d9\u05dd',go:"goPage('exp')"},
+    {v:c.critRisks, cls:'kpi-r',label:'\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',sub:'RPN≥15',go:"goPage('rsk')"},
+    {v:c.incYear,   cls:'kpi-o',label:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05d4\u05e9\u05e0\u05d4',go:"goPage('inc')"},
+    {v:c.nmMonth,   cls:'kpi-o',label:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d7\u05d5\u05d3\u05e9',go:"goPage('nm')"},
+    {v:c.ptwOpen,   cls:'kpi-g',label:'\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea',sub:'PTW',go:"goPage('ptw')"},
+    {v:c.lostDays,  cls:'kpi-r',label:'\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',sub:'LTIF',go:"goPage('inc')"},
+    {v:c.trPct,     cls:'kpi-g',label:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05ea\u05d5\u05e7\u05e3',fmt:'%',go:"goPage('tr')"},
+    {v:c.docsValid, cls:'kpi-g',label:'\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3',go:"goPage('docs')"},
+    {v:c.emps,      cls:'kpi-b',label:'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',go:"goPage('emp')"}
+  ];
+  var tiles=cands.filter(function(k){return (+k.v||0)>0;}).slice(0,6);
+  if(!tiles.length){host.style.display='none';host.innerHTML='';return;}
+  host.style.display='';
+  host.innerHTML=tiles.map(function(k){
+    return '<div class="kpi '+k.cls+'" style="cursor:pointer" onclick="'+k.go+'"><div class="kpi-label">'+k.label+'</div><div class="kpi-val">'+k.v+(k.fmt||'')+'</div>'+(k.sub?'<div class="kpi-sub">'+k.sub+'</div>':'')+'</div>';
+  }).join('');
+};
+// Hide the "statistics & trends" section title when every card under it is
+// hidden (each of those cards hides itself when it has nothing to show).
+// The two admin tool cards at the bottom are not statistics — skipped.
+window._dashHideEmptySection=function(){
+  var t=g('dash-stats-title');if(!t)return;
+  var skip={'dash-wa-test':1,'dash-secaudit':1};
+  var any=false,el=t.nextElementSibling;
+  while(el&&el.classList&&el.classList.contains('card')){
+    if(!skip[el.id]&&el.style.display!=='none')any=true;
+    el=el.nextElementSibling;
+  }
+  t.style.display=any?'':'none';
+};
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
   // Phase 2 Agent 2 — refresh password reset request inbox on every
@@ -4343,6 +4398,8 @@ function rDash(){
   if(typeof _pwReqLoad==='function')_pwReqLoad();
   // Always update the topbar/bnav badges (cheap, user expects them fresh).
   _dashBadges();
+  // Home-only CSS hooks (floating AI button hidden on home) — P1#1.
+  try{document.body.classList.toggle('on-dash',CUR==='dash');}catch(e){}
   // Skip the heavy dashboard widget rendering if the user is on a different
   // page \u2014 they will not see it. They will see updated dashboard next time
   // they navigate there (rPage \u2192 rDash). Saves ~30-100ms per save handler
@@ -4370,26 +4427,10 @@ function rDash(){
     }
   }catch(e){console.warn('health failed',e);}
 
-  // Round-of-day reminder banner
-  try{
-    var todayStr=new Date().toISOString().split('T')[0];
-    var lastRound=(DB.rounds||[]).reduce(function(m,r){return r.d>m?r.d:m;},'');
-    var dh2=g('dash-health');
-    if(lastRound<todayStr && new Date().getHours()<14){
-      var existing=g('dash-round-reminder');
-      if(!existing && dh2){
-        var rmd=document.createElement('div');
-        rmd.id='dash-round-reminder';
-        rmd.style.cssText='background:#fef3c7;border-right:3px solid #b45309;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:10px;cursor:pointer';
-        rmd.onclick=function(){goPage('round');};
-        rmd.innerHTML='⏰ <strong>\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2 \u05d4\u05d9\u05d5\u05dd</strong> — \u05dc\u05d7\u05e5 \u05db\u05d3\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7';
-        dh2.parentNode.insertBefore(rmd, dh2);
-      }
-    }else{
-      var existing2=g('dash-round-reminder');
-      if(existing2)existing2.remove();
-    }
-  }catch(e){}
+  // Round-of-day reminder banner removed (P1#1): the Today list already
+  // carries "morning round not done" as its first item, so the banner was a
+  // duplicate. Clean up any banner left over from an earlier render.
+  try{var _oldRmd=g('dash-round-reminder');if(_oldRmd)_oldRmd.remove();}catch(e){}
 
   // Auto-insights (3 signals max)
   try{
@@ -4444,9 +4485,7 @@ function rDash(){
   var kc=rsk.filter(function(r){return r.p*r.sv>=15;}).length;
   var kl=inc.reduce(function(s,i){return s+(i.dy||0);},0);
   var kp=DB.ptw.filter(function(p){return p.s==='\u05e4\u05ea\u05d5\u05d7'||p.s==='\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2';}).length;
-  var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
-  set('k1',kd);set('k2',ki);set('k3',(tt>0?Math.round(tv/tt*100):0)+'%');
-  set('k4',kn);set('k5',ke);set('k6',kc);set('k7',kl);set('k8',kp);
+  // (the old k1..k8 accordion tiles are gone — see _renderDashKpis at the end)
   var alerts='',exp=[];
   docs.forEach(function(d){if(!d.e)return;var x=du(d.e);if(x<=30)exp.push({n:d.n,x:x,t:'\u05de\u05e1\u05de\u05da'});});
   tr.forEach(function(t){if(!t.e)return;var x=du(t.e);if(x<=30)exp.push({n:t.n+' ('+t.w+')',x:x,t:'\u05d4\u05d3\u05e8\u05db\u05d4'});});
@@ -4464,6 +4503,7 @@ function rDash(){
   if(de)de.innerHTML=exp.length?exp.slice(0,5).map(function(e){var cls=e.x<0?'bR':(e.x<=7?'bR':'bY');var lbl=e.x<0?'\u05e4\u05d2':(e.x+'\u05d9');return '<div onclick="goPage(\'exp\')" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span>'+esc(String(e.n).substring(0,35))+' <span style="color:var(--t3);font-size:10px">'+esc(e.t)+'</span></span><span class="b '+cls+'">'+lbl+'</span></div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</p>';
   var da=g('dash-auds');
   var ra=DB.auds.slice().sort(function(a,b){return new Date(b.d)-new Date(a.d);}).slice(0,4);
+  var daCard=g('dash-auds-card');if(daCard)daCard.style.display=ra.length?'':'none';  // P1#1: empty panel hidden
   if(da)da.innerHTML=ra.length?ra.map(function(a){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+esc(a.n)+'</span>'+sb(a.s)+'</div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea</p>';
 
   // Dashboard: weekly comparison (this week vs last week)
@@ -4498,9 +4538,13 @@ function rDash(){
         {label:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',a:incThis,b:incLast},
         {label:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d4\u05d5\u05e9\u05dc\u05de\u05d5',a:tskDoneThis,b:tskDoneLast}
       ];
-      dw.innerHTML=rows.map(function(r){
+      // P1#1: an all-zero comparison is an empty panel \u2014 hide the card.
+      var dwCard=g('dash-weekly-card');
+      var anyW=rows.some(function(r){return r.a||r.b;});
+      if(dwCard)dwCard.style.display=anyW?'':'none';
+      dw.innerHTML=anyW?rows.map(function(r){
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:13px"><span style="flex:1">'+r.label+'</span><strong style="margin-left:8px">'+r.a+'</strong>'+delta(r.a,r.b)+' <span style="color:var(--t3);font-size:10px">(\u05e9\u05e2\u05d1\u05e8: '+r.b+')</span></div>';
-      }).join('');
+      }).join(''):'';
     }
   }catch(e){console.warn('dash-weekly failed',e);}
 
@@ -4532,12 +4576,17 @@ function rDash(){
       var nmM=(DB.near_miss||[]).filter(function(r){return inMonth(r.d||r.ts);}).length;
       var tskDoneM=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inMonth(r.closed_date||r.cd||r.ts);}).length;
       var rndM=(DB.rounds||[]).filter(function(r){return inMonth(r.d);}).length;
-      dm.innerHTML=
-        '<span style="background:#fff;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#cc1f1f">NCR: <strong>'+ncrM+'</strong></span>'+
-        '<span style="background:#fff;border:1px solid #b91c1c;border-radius:14px;padding:3px 10px;color:#b91c1c">\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea: <strong>'+incM+'</strong></span>'+
-        '<span style="background:#fff;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#b45309">\u05db\u05de\u05e2\u05d8: <strong>'+nmM+'</strong></span>'+
-        '<span style="background:#fff;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#16a34a">\u05de\u05e9\u05d9\u05de\u05d5\u05ea: <strong>'+tskDoneM+'</strong></span>'+
-        '<span style="background:#fff;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#2563eb">\u05e1\u05d1\u05d1\u05d9\u05dd: <strong>'+rndM+'</strong></span>';
+      // P1#1: only chips with a value, and no card at all when the month is empty.
+      var mChips=[
+        {l:'NCR',n:ncrM,c:'#cc1f1f'},
+        {l:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',n:incM,c:'#b91c1c'},
+        {l:'\u05db\u05de\u05e2\u05d8',n:nmM,c:'#b45309'},
+        {l:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea',n:tskDoneM,c:'#16a34a'},
+        {l:'\u05e1\u05d1\u05d1\u05d9\u05dd',n:rndM,c:'#2563eb'}
+      ].filter(function(x){return x.n>0;});
+      var dmCard=g('dash-month-card');
+      if(dmCard)dmCard.style.display=mChips.length?'':'none';
+      dm.innerHTML=mChips.map(function(x){return '<span style="background:#fff;border:1px solid '+x.c+';border-radius:14px;padding:3px 10px;color:'+x.c+'">'+x.l+': <strong>'+x.n+'</strong></span>';}).join('');
     }
   }catch(e){}
 
@@ -4629,7 +4678,11 @@ function rDash(){
         {label:'\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd',n:(DB.projects||[]).length,color:'#a855f7'},
         {label:'\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd',n:(DB.locations||[]).length,color:'#f59e0b'}
       ];
-      dt2.innerHTML=totals.map(function(t){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:1px solid '+t.color+';border-radius:14px;color:'+t.color+';font-weight:600">'+esc(t.label)+': '+t.n+'</span>';}).join('');
+      // P1#1: zero-count chips are noise; no card at all when everything is zero.
+      var tShown=totals.filter(function(t){return t.n>0;});
+      var dtCard=g('dash-totals-card');
+      if(dtCard)dtCard.style.display=tShown.length?'':'none';
+      dt2.innerHTML=tShown.map(function(t){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border:1px solid '+t.color+';border-radius:14px;color:'+t.color+';font-weight:600">'+esc(t.label)+': '+t.n+'</span>';}).join('');
     }
   }catch(e){}
 
@@ -5001,7 +5054,8 @@ function rDash(){
   try{
     var drcCard=g('dash-rounds-card');
     var drc=g('dash-rounds');
-    if(drc){
+    if(drc&&!(DB.rounds||[]).length){if(drcCard)drcCard.style.display='none';}  // P1#1: rounds never used — no 0% panel
+    else if(drc){
       var dates={};
       var nowR=new Date();
       var fromR=new Date();fromR.setDate(fromR.getDate()-29);
@@ -5019,7 +5073,7 @@ function rDash(){
       }
       var pct=tot?Math.round(100*done/tot):0;
       var pctCol=pct>=90?'#16a34a':(pct>=70?'#eab308':'#cc1f1f');
-      drcCard.style.display='';
+      if(drcCard)drcCard.style.display='';
       drc.innerHTML='<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="font-size:32px;font-weight:800;color:'+pctCol+';line-height:1">'+pct+'%</div><div style="flex:1;min-width:140px"><div style="font-size:12px;color:#444;font-weight:600;margin-bottom:4px">'+done+' \u05de\u05ea\u05d5\u05da '+tot+' \u05d9\u05de\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4</div><div style="direction:ltr;text-align:right;line-height:0">'+strip+'</div><div style="font-size:10px;color:var(--t3);margin-top:4px;direction:rtl">\u05d9\u05e8\u05d5\u05e7=\u05d1\u05d5\u05e6\u05e2 \u00b7 \u05d0\u05d3\u05d5\u05dd=\u05d7\u05e1\u05e8 \u00b7 \u05d0\u05e4\u05d5\u05e8=\u05e1\u05d5\u05e4\u05f4\u05e9</div></div></div>';
     }
   }catch(e){console.warn('dash-rounds failed',e);}
@@ -5153,14 +5207,15 @@ function rDash(){
   try{_renderKpiCard();}catch(_){console.warn(_);}
 
   try{_renderToday();}catch(err){console.warn('today render err:',err);}
-  // MONTHLY STRIP
-  var incMonth = (inc||[]).filter(function(i){return (i.dt||'').startsWith(ym);}).length;
-  var _s=function(id,v){var el=g(id); if(el)el.textContent=v;};
-  _s('ms-inc', incMonth);
-  _s('ms-nm', nmMonth);
-  _s('ms-ltif', kl);
-  if(!_lastInc) _s('ms-streak','∞');
-  else { _s('ms-streak', Math.max(0,Math.floor((Date.now()-_lastInc)/86400000))); }
+  // KPI STRIP (P1#1) — one strip, max 6 tiles, only values > 0.
+  try{
+    _renderDashKpis({
+      ncrOpen:kn, tasksOver:tOver, expired:expd, critRisks:kc, incYear:ki,
+      nmMonth:nmMonth, ptwOpen:kp, lostDays:kl,
+      trPct:(tt>0?Math.round(tv/tt*100):0), docsValid:kd, emps:ke
+    });
+  }catch(e){console.warn('dash-kpis failed',e);}
+  try{_dashHideEmptySection();}catch(e){}
 }
 function _expCollect(){
   var items=[];
@@ -7650,6 +7705,10 @@ window._topMoreMenu=function(anchor){
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
   item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0',function(){if(typeof forceSync==='function')forceSync();});
   item('\ud83d\udc77','\u05de\u05e6\u05d1 \u05e2\u05d5\u05d1\u05d3',function(){if(typeof empToggle==='function')empToggle(true);});
+  sep();
+  // AI entry from the header (P1#1) \u2014 the floating button is hidden on home.
+  item('\ud83e\udd16','\u05e9\u05d0\u05dc \u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8 (AI)',function(){openModal('m-ask');if(typeof _askInit==='function')_askInit();});
+  if(typeof _isAdminUser==='function'&&_isAdminUser())item('\ud83e\udde0','\u05db\u05dc\u05d9 AI (Agents)',function(){goPage('agents');});
   sep();
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
@@ -12454,12 +12513,9 @@ function _applyRoleGates(){
       b.style.display=(managerOnly && !isManagerOrUp)?'none':'';
     });
   }
-  // AI cards (weekly summary + today plan) hidden — clutter the home
-  // screen and the same data is available on the agents page on demand.
-  var aiWeekCard=g('dash-ai-weekly-card');
-  if(aiWeekCard) aiWeekCard.style.display = 'none';
-  var aiTodayCard=g('dash-ai-today-card');
-  if(aiTodayCard) aiTodayCard.style.display = 'none';
+  // P1#1: the two AI cards now live on the agents page (admin-only), not on
+  // the home screen. Home quick actions: manager-only tiles hide for reporters.
+  document.querySelectorAll('#dash-qa [data-qa-mgr]').forEach(function(b){b.style.display=isManagerOrUp?'':'none';});
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){
