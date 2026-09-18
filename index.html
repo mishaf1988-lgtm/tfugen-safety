@@ -1257,6 +1257,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:14px;padding:10px 16px;min-height:44px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button id="ncr-tab-env" class="btn btn-s" onclick="ncrTab('env')" style="font-size:14px;padding:10px 16px;min-height:44px">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</button>
+    <button id="ncr-tab-status" class="btn btn-s" onclick="_ncrToggleClosed()" title="&#1492;&#1510;&#1490;/&#1492;&#1505;&#1514;&#1512; NCR &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;" style="font-size:14px;padding:10px 16px;min-height:44px">&#128065; &#1499;&#1493;&#1500;&#1500; &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;</button>
     <select id="ncr-loc-filter" onchange="ncrLocFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-prj-filter" onchange="ncrPrjFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-itype-filter" onchange="ncrItypeFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
@@ -8497,9 +8498,27 @@ try{
       (staleN?'<span style="background:#f1f5f9;border:1px solid #475569;border-radius:14px;padding:3px 10px;color:#1e293b">\u23f3 \u05e4\u05ea\u05d5\u05d7 30+ \u05d9\u05de\u05d9\u05dd: <strong>'+staleN+'</strong></span>':'');
   }
 }catch(e){}
+// P1: default view shows OPEN (non-closed) NCRs only. The status toggle
+// (#ncr-tab-status) flips window._ncrHideClosed. Summary above was computed
+// from the full set so the "\u05e1\u05d2\u05d5\u05e8" pill still reflects reality.
+var _ncrHiding=(window._ncrHideClosed!==false);
+var _ncrClosedHidden=0;
+(function(){
+  var b=g('ncr-tab-status');
+  if(b){
+    b.innerHTML=_ncrHiding?'\ud83d\udc41 \u05db\u05d5\u05dc\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd':'\ud83d\udc41 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3';
+    b.className='btn '+(_ncrHiding?'btn-s':'btn-p');
+  }
+})();
+if(_ncrHiding){
+  var _beforeHide=rows.length;
+  rows=rows.filter(function(r){return r.s!=='\u05e1\u05d2\u05d5\u05e8';});
+  _ncrClosedHidden=_beforeHide-rows.length;
+}
 if(!rows.length){
   var emptyMsg='\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
-  if(locF||filter!=='all'){emptyMsg+=' \u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05e1\u05d9\u05e0\u05d5\u05df. <a onclick="ncrClearAll()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05e0\u05e7\u05d4 \u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd</a>';}
+  if(_ncrClosedHidden>0){emptyMsg='\u05d0\u05d9\u05df NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u00b7 '+_ncrClosedHidden+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd \u05de\u05d5\u05e1\u05ea\u05e8\u05d9\u05dd. <a onclick="_ncrToggleClosed()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05d4\u05e6\u05d2 \u05d4\u05db\u05dc</a>';}
+  else if(locF||filter!=='all'){emptyMsg+=' \u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05e1\u05d9\u05e0\u05d5\u05df. <a onclick="ncrClearAll()" style="color:#4d9fff;cursor:pointer;text-decoration:underline">\u05e0\u05e7\u05d4 \u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd</a>';}
   tb.innerHTML='<tr><td colspan="9" class="et">'+emptyMsg+'</td></tr>';return;
 }
 tb.innerHTML=rows.map(function(n){
@@ -8571,6 +8590,14 @@ function ncrTab(t){
   });
   rNcr();
 }
+// P1: toggle between "open only" (default) and "include closed".
+window._ncrToggleClosed=function(){
+  var hiding=(window._ncrHideClosed!==false);
+  window._ncrHideClosed = hiding ? false : true;
+  var b=g('ncr-tab-status');
+  if(b)b.className='btn '+((window._ncrHideClosed!==false)?'btn-s':'btn-p');
+  rNcr();
+};
 function ncrStatusChange(){
   var s=g('ncr-s');var w=g('ncr-close-wrap');
   if(s&&w) w.style.display=(s.value==='\u05e1\u05d2\u05d5\u05e8')?'block':'none';
