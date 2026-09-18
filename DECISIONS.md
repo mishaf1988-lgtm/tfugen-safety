@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-09-18 — נאמני בטיחות: טבלה אחת, סגירה דרך דיווח, ניתוב ידני
+
+**החלטה**:
+1. **טבלה אחת** `public.trustee_reports` (שורה = דיווח של נאמן על משימה 1–8), במקום להעמיס על `near_miss`/`tasks`. הקטלוג של 8 המשימות והניקוד — בקוד (`TRUSTEE_TASKS`, `_truScore`), לא בטבלה, עד שיהיה צורך לערוך בלי קוד (שלב 2).
+2. **RLS — policy אחד לכל פעולה**: `emp_insert` (INSERT) + `emp_select` (SELECT) לכל authenticated (מצב עובד = session אנונימי), UPDATE/DELETE רק `private.is_admin_manager()`. SELECT פתוח כי המסך של הנאמן צריך את הניקוד והסטטוס שלו, ואין זהות ל-session אנונימי; קבוצת הוואטסאפ הייתה גלויה לכל הנאמנים ממילא. לא נוסף אף `multiple_permissive_policies`.
+3. **סגירה ע"י הנאמן = דיווח, לא UPDATE**: «צלם אחרי» יוצר שורה `t=8` עם `ref`; טריגר `AFTER INSERT` (security definer, `search_path=''`) מסמן את הממצא `נסגר`. כך הנאמן "סוגר משימה שהוא פתח" (בקשת מיכאל) בלי הרשאת UPDATE, גם offline דרך ה-outbox. המנהל יכול לפתוח מחדש.
+4. **ניתוב ידני** (החלטת מיכאל): ליקוי לא הופך למשימה אוטומטית; המנהל מנתב מהמסך שלו (משימה / הערת ניתוב). שורת «היום» בבית מציגה רק ליקויים שטרם נותבו.
+5. **מיקום = טקסט חופשי חובה** עם datalist מהקטלוג/דיווחים קודמים; `location_id` נקבע רק בהתאמה מדויקת. הסיבה: `locations` לא קריא ל-session אנונימי ו-RLS שלו לא משתנה.
+6. **כללי המסמך בקוד**: מיקום תמיד; ליקוי = תיאור + תמונה; "אחרי" = תמונה; תקין = תמונה מומלצת (`TRUSTEE_PHOTO_REQUIRED_OK`).
+**אלטרנטיבות שנדחו**: UPDATE לנאמנים (אין זהות, אי אפשר להגביל ל"שלו"); RPC סגירה (לא עובד offline, קוד נוסף); שימוש ב-`near_miss` לממצאים (ערבוב KPI); SELECT policy על `locations` (שינוי RLS קיים — דורש אישור נפרד).
+**קישורים**: SPEC `project-files/SPEC-trustees-2026-09-18.md` · מיגרציה `migrations/2026-09-18_trustee_reports.sql` (הוחלה חי + 9 בדיקות persona) · #559 (T1) · #560 (T2) · #561 (T3).
+
 ## 2026-09-18 — advisor `multiple_permissive_policies` (10 ממצאים) = accepted risk
 
 **החלטה**: לא מאחדים policies. 10 ממצאי ה-WARN של Supabase Performance Advisor (`multiple_permissive_policies`) נשארים כפי שהם ומסומנים כסיכון מקובל ומתועד.
