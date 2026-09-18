@@ -2632,6 +2632,10 @@ function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supa
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts'};
+// Resolves to the row array on success — an EMPTY array means the table
+// really is empty on the server. Resolves to null on any failure (auth,
+// offline, non-2xx, bad JSON) so the caller can tell "empty" from
+// "unreachable". Never rejects.
 function sbGet(tbl){
   var ord=(_sbTsCol[tbl]||'created_at')+'.desc';
   // Column projection: noisy log tables fetch only the columns the UI uses,
@@ -2643,7 +2647,9 @@ function sbGet(tbl){
   // is silently ignored on browsers that don't support it (Firefox <132).
   return _sbAuth().then(function(){
     return fetch(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord,{headers:sbH(),priority:'low'});
-  }).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];});
+  }).then(function(r){return r.ok?r.json():null;})
+    .then(function(j){return Array.isArray(j)?j:null;})
+    .catch(function(){return null;});
 }
 // Per-table column projection map. Only includes tables verified against
 // every UI render path. Adding a table here when its render code is unsure
@@ -2661,6 +2667,34 @@ function _obLastErr(){try{return JSON.parse(localStorage.getItem(OB_ERR_KEY)||'n
 function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e));else localStorage.removeItem(OB_ERR_KEY);}catch(x){}}
 function _obPush(op){op.ts=op.ts||Date.now();op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));op.tries=op.tries||0;var q=_obGet();q.push(op);_obSet(q);_obBadge();}
 function _obTblsPending(){var s={};_obGet().forEach(function(op){if(op.tbl)s[op.tbl]=1;});return s;}
+// Ops uploaded in the last two minutes, keyed tbl|id. A pull that left the
+// device before an upload landed would otherwise drop that row until the
+// next sync (realtime usually repairs it, but not on every device).
+var _obSentRecently={};
+var _OB_SENT_TTL=120000;
+function _obMarkSent(op){
+  if(!op||op.tbl==='audit_log')return;
+  var id=(op.op==='del')?op.id:(op.row&&op.row.id);
+  if(op.tbl&&id)_obSentRecently[op.tbl+'|'+id]={tbl:op.tbl,id:id,op:op.op,ts:Date.now()};
+}
+// Outbox view of one table: id -> 'ins'|'upd'|'del' for ops the cloud has
+// not received yet (last op per id wins), plus the recently-sent ones above.
+// sbSync uses this to decide which local rows may survive a pull.
+function _obLocalState(t){
+  var m={};
+  _obGet().forEach(function(op){
+    if(op.tbl!==t)return;
+    var id=(op.op==='del')?op.id:(op.row&&op.row.id);
+    if(id)m[id]=op.op;
+  });
+  var now=Date.now();
+  Object.keys(_obSentRecently).forEach(function(k){
+    var s=_obSentRecently[k];
+    if(now-s.ts>_OB_SENT_TTL){delete _obSentRecently[k];return;}
+    if(s.tbl===t&&!m[s.id])m[s.id]=s.op;
+  });
+  return m;
+}
 function _obBadge(state){
   var p=document.getElementById('sync-pill');
   var n=_obGet().length;
@@ -2712,7 +2746,7 @@ function _obDrain(){
   var p=Promise.resolve();
   q.forEach(function(op){
     p=p.then(function(){
-      return _obSend(op).then(function(){}).catch(function(err){
+      return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
         op.lastError=(err&&err.status?('HTTP '+err.status):'net')+(err&&err.body?(' '+String(err.body).slice(0,200)):'');
@@ -2758,18 +2792,47 @@ function _sbRefresh(silent,changedTbl){
 }
 function sbSync(silent){
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'];
-  var pending=_obTblsPending();
   var done=0;
+  function finish(){
+    done++;
+    if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}
+  }
+  // P0 (2026-09-18): the server is the source of truth for every table,
+  // every pull — including tables with queued outbox ops (they used to be
+  // skipped entirely) and including an EMPTY answer (it used to be ignored,
+  // so a server-side reset left zombie rows in localStorage forever).
   tbls.forEach(function(t){
-    if(pending[t]){done++;if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}return;}
+    // Snapshot the outbox before the request leaves; merged with the
+    // snapshot at response time so an op uploaded mid-flight still counts
+    // as "ours" for this pull.
+    var obBefore=_obLocalState(t);
     sbGet(t).then(function(rows){
-      if(rows&&rows.length){
-        var cloudIds={};rows.forEach(function(r){if(r.id)cloudIds[r.id]=r;});
-        var localOnly=(DB[t]||[]).filter(function(r){return r.id&&!cloudIds[r.id];});
-        DB[t]=rows.concat(localOnly);
-      }
-      done++;
-      if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}
+      // null = the fetch failed (offline, 401, 5xx…). Leave the cache alone
+      // so the app keeps working offline. Only a real answer from the server
+      // — including an empty one — may replace it.
+      if(rows===null){finish();return;}
+      var ob=obBefore,obNow=_obLocalState(t);
+      Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
+      var local={};
+      (DB[t]||[]).forEach(function(r){if(r&&r.id)local[r.id]=r;});
+      var merged=[],seen={};
+      rows.forEach(function(r){
+        if(!r||!r.id){merged.push(r);return;}
+        seen[r.id]=1;
+        var o=ob[r.id];
+        if(o==='del')return;                                                   // deleted here, upload pending
+        if((o==='ins'||o==='upd')&&local[r.id]){merged.push(local[r.id]);return;} // edited here, newer than cloud
+        merged.push(r);
+      });
+      // Rows that exist only on this device AND are still waiting to be
+      // uploaded. Any other local-only row is gone from the server (e.g. a
+      // reset) and must not be resurrected from the cache.
+      Object.keys(ob).forEach(function(id){
+        if(ob[id]==='del'||seen[id]||!local[id])return;
+        merged.push(local[id]);
+      });
+      DB[t]=merged;
+      finish();
     });
   });
 }
