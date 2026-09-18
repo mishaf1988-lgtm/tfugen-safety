@@ -2295,6 +2295,7 @@ id="m-ncr" style="display:none">
   <div class="card-title">&#128276; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">&#1500;&#1499;&#1500; &#1505;&#1493;&#1490; &#1488;&#1497;&#1512;&#1493;&#1506; &#1489;&#1495;&#1512; &#1489;&#1488;&#1497;&#1494;&#1493; &#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1500;&#1511;&#1489;&#1500; &#1492;&#1514;&#1512;&#1488;&#1492;. WhatsApp/Email &#1497;&#1497;&#1499;&#1504;&#1505;&#1493; &#1500;&#1514;&#1493;&#1511;&#1507; &#1488;&#1495;&#1512;&#1497; &#1488;&#1497;&#1513;&#1493;&#1512; ה-templates &#1492;&#1502;&#1514;&#1488;&#1497;&#1502;&#1497;&#1501;.</div>
   <div class="modal-body">
+    <div id="notif-alloff-banner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e;line-height:1.5">&#9888; &#1499;&#1500; &#1492;&#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1499;&#1489;&#1493;&#1497;&#1497;&#1501; &#8212; &#1500;&#1488; &#1497;&#1497;&#1513;&#1500;&#1495;&#1493; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;. &#1505;&#1502;&#1503; &#1514;&#1497;&#1489;&#1493;&#1514; &#1493;&#1513;&#1502;&#1493;&#1512;, &#1488;&#1493;: <button onclick="_notifEnableRecommended()" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;margin-right:4px">&#10003; &#1492;&#1508;&#1506;&#1500; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; &#1489;&#1514;&#1493;&#1498; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</button></div>
     <table id="notif-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
     <details style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--t2)">&#128203; &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; (20 &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;)</summary>
@@ -9188,6 +9189,13 @@ function openNotifSettings(){
     body+='</tr>';
   });
   g('notif-table').innerHTML='<thead>'+hdr+'</thead><tbody>'+body+'</tbody>';
+  // P0/#6: surface the "everything off" state — otherwise all-unchecked
+  // boxes look like a bug when they actually mean "no notifications will
+  // ever fire". Show a banner + one-click enable when nothing is on.
+  var _allOff=true;
+  NOTIF_EVENTS.forEach(function(ev){NOTIF_CHANNELS.forEach(function(c){if(prefs[ev.key]&&prefs[ev.key][c.key])_allOff=false;});});
+  var _offBanner=g('notif-alloff-banner');
+  if(_offBanner)_offBanner.style.display=_allOff?'':'none';
   // Render last 20 log entries
   var logBox=g('notif-log-list');
   if(logBox){
@@ -9323,6 +9331,26 @@ function testAllTriggers(){
   }
   runOne(0);
 }
+// P0/#6: one-click enable of the safest channel (in-app) for all events.
+// In-app has no external dependency and no cost, so it's a sane default.
+// Preserves any email/whatsapp toggles that happen to be set.
+window._notifEnableRecommended=function(){
+  var u=_svUser();
+  var cur=_notifPrefs();
+  var newPrefs={};
+  NOTIF_EVENTS.forEach(function(ev){
+    var e=cur[ev.key]||{};
+    newPrefs[ev.key]={inapp:true,email:!!e.email,whatsapp:!!e.whatsapp};
+  });
+  if(!DB.notification_prefs)DB.notification_prefs=[];
+  var existing=_notifPrefsRow();
+  var rec={id:u,prefs:newPrefs,ts:new Date().toISOString()};
+  if(existing){var idx=DB.notification_prefs.findIndex(function(r){return r.id===u;});DB.notification_prefs[idx]=rec;sbUpd('notification_prefs',rec);}
+  else{DB.notification_prefs.push(rec);sbIns('notification_prefs',rec);}
+  sdb();
+  try{toast('✓ התראות בתוך האפליקציה הופעלו',{ok:true});}catch(e){}
+  openNotifSettings();
+};
 function saveNotifSettings(){
   var u=_svUser();
   var newPrefs={};
