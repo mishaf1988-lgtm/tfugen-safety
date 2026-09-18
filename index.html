@@ -12035,10 +12035,33 @@ function rPpe(){
   if(!DB.ppe.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u26d1\ufe0f<br>\u05d0\u05d9\u05df \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="openModal(\'m-ppe\')">+ \u05e4\u05e8\u05d9\u05d8 PPE \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   tb.innerHTML=DB.ppe.map(function(p){var cm={'\u05ea\u05e7\u05d9\u05df':'bG','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05d7\u05dc\u05e4\u05d4':'bY','\u05e4\u05d2\u05d5\u05dd':'bR'};return '<tr><td>'+esc(p.ty)+'</td><td>'+(p.w?esc(p.w):'&#8212;')+'</td><td>'+(p.m?esc(p.m):'&#8212;')+'</td><td>'+fd(p.d)+'</td><td>'+eb(p.e)+'</td><td><span class="b '+(cm[p.c]||'bX')+'">'+esc(p.c)+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="ppe" data-vid="'+esc(p.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ppe" data-did="'+esc(p.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
+// Robust display helpers for the Safety Tours (ins) list. Legacy rows hold
+// dates as DD.MM.YYYY strings (not ISO) and non-percentage values in the
+// score column, so a naive fd()/`sc+'%'` render produced "undefined" dates
+// and impossible ">100%" scores. These never emit those.
+function _insDate(v){
+  if(!v)return '&#8212;';
+  v=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(v))return fd(v);                 // ISO \u2192 DD/MM/YYYY
+  if(/^\d{1,2}[./]\d{1,2}[./]\d{2,4}$/.test(v))return esc(v);   // already a display date
+  return esc(v);                                                // anything else \u2014 show raw, never 'undefined'
+}
+function _insScore(sc){
+  if(sc===null||sc===undefined||sc==='')return '&#8212;';
+  var n=parseInt(sc,10);
+  if(isNaN(n))return '&#8212;';
+  if(n>=0&&n<=100){
+    var c=n>=80?'var(--ok)':n>=60?'var(--warn)':'var(--bad)';
+    return '<span style="font-weight:700;color:'+c+'">'+n+'%</span>';
+  }
+  // Out-of-range value (e.g. legacy 345) \u2014 not a valid 0-100 score. Show the
+  // raw number muted so it never masquerades as a percentage.
+  return '<span style="color:var(--t3)" title="\u05e2\u05e8\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df \u05dc\u05e6\u05d9\u05d5\u05df 0-100">'+esc(String(sc))+'</span>';
+}
 function rIns(){
   var tb=g('tb-ins');if(!tb)return;
   if(!DB.ins.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83d\udeb6<br>\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-ins\')">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+fd(i.d)+'</td><td>'+i.a+'</td><td>'+(i.i||'&#8212;')+'</td><td>'+(i.sc?'<span style="font-weight:700;color:'+(i.sc>=80?'var(--ok)':i.sc>=60?'var(--warn)':'var(--bad)')+'">'+i.sc+'%</span>':'&#8212;')+'</td><td>'+(i.fn||'').substring(0,30)+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+_insDate(i.d)+'</td><td>'+esc(i.a||'&#8212;')+'</td><td>'+esc(i.i||'&#8212;')+'</td><td>'+_insScore(i.sc)+'</td><td>'+esc((i.fn||'').substring(0,30))+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rDrl(){
   var tb=g('tb-drl');if(!tb)return;
