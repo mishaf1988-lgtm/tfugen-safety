@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-09-18 (HEAD = PR #558 — סבב handoffs 2026-09-18: 24 PRs #535-#558. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
+**Last updated**: 2026-09-18 (HEAD = PR #559 — סבב handoffs 2026-09-18: 25 PRs #535-#559 + נאמני בטיחות T1. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## ⚡ מצב נוכחי — סיכום מהיר (HEAD #532)
@@ -90,6 +90,7 @@
 - [x] **E1+E2 באגי NCR** (#556) — E1 לא משוחזר (ולידציה ב-`svNcr`), E2 תוקן (0 פתוחים, JSON עטוף, retry, סמן יחיד). **E3 (PR-11) כבר נסגר ב-#542** (`_VIEW_EDITOR_FALLBACK`) — לא נדרש PR.
 - [x] **P0 הדפסה — צפים** (#557) — QA ראה FAB/`#sw-update-pill` בהדפסה (build ישן במטמון). `@media print` מסתיר עכשיו כל צף במפורש + רשת ביטחון `[style*="position:fixed"]`. רק print.
 - [x] **P0 הדפסה v2** (#558) — QA עדיין ראה צפים אחרי #557. רשת מבנית: `body > :not(#app)` + `#app > :not(#main)` (רק מכולת הדפים מודפסת) + wildcards; **חותמת build בכותרת ההדפסה** (`_APP_BUILD`) כדי לזהות build ישן במטמון — `#sw-update-pill` בתדפיס = גרסה ממתינה שלא הופעלה.
+- [x] **נאמני בטיחות — T1** (#559) — טבלה `trustee_reports` + RLS (policy אחד לכל פעולה; INSERT/SELECT לכל authenticated, UPDATE/DELETE admin/manager) + טריגרים (גזירת `m`, נרמול `s`, סגירת ממצא דרך דיווח `t=8`+`ref`) — **הוחל חי + 9 בדיקות persona עברו**. חיווט sync/cache/realtime/backup, `TRUSTEE_TASKS` (8 משימות מהמסמך), `_truScore`/`_truBoard` (10/משימה ≤80, 2/מפגע-שנסגר ≤20, זכאות ≥5). SPEC: `project-files/SPEC-trustees-2026-09-18.md`. T2 (מסך הנאמן) ו-T3 (מסך המנהל) — בהמשך.
 - [x] **תוכנית שדרוגים 2026-09-18** — הושלמה: PR-1 #547 · PR-2 #548 · PR-3 #549 · PR-4 #550 · PR-5 #551 · PR-6 #552 · PR-7 #553 · PR-8 #554 · PR-9 #555 · PR-10 #556 · PR-11 (E3) = נסגר ב-#542.
 - **תפעול (לא קוד):** איפוס נתוני תפעול ב-Supabase (גיבוי schema `backup_ops_20260918`), Storage buckets רוקנו (209→0) דרך Edge Function חד-פעמית (`empty-ops-buckets`, נוטרלה ל-410; ניתן למחוק בדשבורד). `pg_net` הופעל והוסר.
 - **accepted risk:** advisor `multiple_permissive_policies` (10) — נשאר כמו שהוא לפי החלטת מיכאל (אין מנהלים ב-production, רווח אפס). מתועד ב-DECISIONS.md (#551).
