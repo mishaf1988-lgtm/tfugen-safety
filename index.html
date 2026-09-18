@@ -1605,55 +1605,68 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="modal sheet-modal" id="m-modules-sheet" style="display:none">
   <button class="close-btn" onclick="closeModal('m-modules-sheet')">&#10005;</button>
   <div class="modal-title">&#128203; &#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
-  <button class="btn btn-s" onclick="_modVisOpen()" style="width:100%;margin-bottom:8px;font-size:12px;padding:8px;justify-content:flex-start;gap:8px">&#9881;&#65039; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1514;&#1510;&#1493;&#1490;&#1492;</button>
-  <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_debModFilter(this.value)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
+  <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_debModFilter(this.value)" onkeydown="_modulesSheetKey(event)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
+  <!-- A1 (2026-09-18): six groups + a "frequent" row, so a manager finds any
+       module in two taps. A module may appear twice (frequent + its group);
+       _modList dedupes by key so the visibility prefs still list it once and
+       hide every copy. data-kw feeds the search with synonyms. -->
   <div class="sheet-grid">
-    <!-- P1#2: with the bottom nav gone, the reports sheet is reached from here too.
-         Deliberately not a _goFromSheet module, so it stays out of the visibility prefs. -->
-    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openModal('m-reports-sheet')"><span class="sic">&#9888;</span>&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</button>
-    <div class="sheet-group-title">ISO &amp; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')"><span class="sic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','aud')"><span class="sic">&#128269;</span>&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','tr')"><span class="sic">&#127891;</span>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hearing')"><span class="sic">&#128066;</span>&#1513;&#1502;&#1497;&#1506;&#1492;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','leg')"><span class="sic">&#9878;</span>&#1495;&#1493;&#1511;&#1497;&#1501;<br>&#1493;&#1514;&#1511;&#1504;&#1493;&#1514;</button>
+    <div class="sheet-group-title">&#11088; נפוצים</div>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openModal('m-reports-sheet')" data-kw="דיווח חדש טופס"><span class="sic">&#9888;</span>דיווחים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ncr')" data-kw="ncr capa אי-התאמה"><span class="sic">&#128295;</span>אי התאמות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')" data-kw="ציוד מלגזה דוד קיטור תקופתית"><span class="sic">&#128295;</span>בדיקות ציוד</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','exp')" data-kw="פג תוקף פקיעות"><span class="sic">&#9200;</span>תוקפים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','tasks')" data-kw="capa מטלות"><span class="sic">&#9989;</span>משימות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','nm')" data-kw="near miss"><span class="sic">&#9940;</span>כמעט ונפגע</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','inc')" data-kw="תקרית תאונה"><span class="sic">&#9888;</span>אירועים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','round')" data-kw="סיור יומי"><span class="sic">&#9728;</span>סבב בוקר</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')" data-kw="נהלים iso"><span class="sic">&#128196;</span>מסמכים</button>
 
-    <div class="sheet-group-title">&#1514;&#1508;&#1506;&#1493;&#1500; &#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','rsk')"><span class="sic">&#9889;</span>&#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ptw')"><span class="sic">&#128274;</span>&#1492;&#1512;&#1513;&#1488;&#1492;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ppe')"><span class="sic">&#9939;</span>PPE</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')"><span class="sic">&#128295;</span>&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ctr')"><span class="sic">&#129309;</span>&#1511;&#1489;&#1500;&#1504;&#1497;&#1501;</button>
+    <div class="sheet-group-title">&#129466; בטיחות</div>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','rsk')" data-kw="hira rpn"><span class="sic">&#9889;</span>סיכונים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ptw')" data-kw="ptw עבודה בגובה אש"><span class="sic">&#128274;</span>הרשאה</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ppe')" data-kw="מגן אישי ציוד מגן"><span class="sic">&#9939;</span>PPE</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')" data-kw="ציוד מלגזה דוד קיטור תקופתית"><span class="sic">&#128295;</span>בדיקות ציוד</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ctr')" data-kw="ספקים"><span class="sic">&#129309;</span>קבלנים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ins')" data-kw="סיור"><span class="sic">&#128270;</span>סיורי בטיחות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;</span>שיחות בטיחות</button>
 
-    <div class="sheet-group-title">&#1505;&#1489;&#1497;&#1489;&#1492;</div>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','wst')"><span class="sic">&#9851;</span>&#1508;&#1505;&#1493;&#1500;&#1514;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hzm')"><span class="sic">&#9762;</span>&#1495;&#1493;&#1502;&#1512;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','env')"><span class="sic">&#127807;</span>&#1504;&#1497;&#1496;&#1493;&#1512;</button>
+    <div class="sheet-group-title">&#128203; איכות / NCR</div>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ncr')" data-kw="ncr capa אי-התאמה"><span class="sic">&#128295;</span>אי התאמות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','aud')" data-kw="audit מבדק"><span class="sic">&#128269;</span>ביקורות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')" data-kw="נהלים iso"><span class="sic">&#128196;</span>מסמכים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itype')" data-kw="קטגוריות"><span class="sic">&#127919;</span>סוגי אי-התאמות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itp')" data-kw="תדירות"><span class="sic">&#128270;</span>סוגי בדיקות חוזרות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','leg')" data-kw="רגולציה legal"><span class="sic">&#9878;</span>חוקים<br>ותקנות</button>
 
-    <div class="sheet-group-title">&#1488;&#1504;&#1513;&#1497;&#1501;</div>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','emp')"><span class="sic">&#128100;</span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')"><span class="sic">&#128680;</span>&#1514;&#1512;&#1490;&#1497;&#1500;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ins')"><span class="sic">&#128270;</span>&#1505;&#1497;&#1493;&#1512;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
+    <div class="sheet-group-title">&#128101; HR</div>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','emp')" data-kw="אנשים"><span class="sic">&#128100;</span>עובדים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','tr')" data-kw="קורס הסמכה"><span class="sic">&#127891;</span>הדרכות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hearing')" data-kw="אודיומטריה"><span class="sic">&#128066;</span>שמיעה</button>
 
-    <div class="sheet-group-title">&#1492;&#1504;&#1492;&#1500;&#1492;</div>
-    <button class="sheet-btn" id="sheet-btn-mr" onclick="_goFromSheet('m-modules-sheet','mr')" style="display:none"><span class="sic">&#128203;</span>&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492;</button>
-    <button class="sheet-btn" id="sheet-btn-agents" onclick="_goFromSheet('m-modules-sheet','agents')" style="display:none"><span class="sic">&#129302;</span>&#1499;&#1500;&#1497; AI</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','cal')"><span class="sic">&#128197;</span>&#1500;&#1493;&#1495; &#1513;&#1504;&#1492;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')"><span class="sic">&#127811;</span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')"><span class="sic">&#128205;</span>&#1502;&#1497;&#1511;&#1493;&#1502;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>&#1508;&#1512;&#1493;&#1497;&#1511;&#1496;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itp')"><span class="sic">&#128270;</span>&#1505;&#1493;&#1490;&#1497; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1493;&#1494;&#1512;&#1497;&#1501;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','itype')"><span class="sic">&#127919;</span>&#1505;&#1493;&#1490;&#1497; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</button>
-    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()"><span class="sic">&#128276;</span>&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</button>
+    <div class="sheet-group-title">&#127807; סביבה</div>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','wst')" data-kw="waste"><span class="sic">&#9851;</span>פסולת</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hzm')" data-kw="חומרים מסוכנים msds"><span class="sic">&#9762;</span>חומרים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','env')" data-kw="סביבה מדידות"><span class="sic">&#127807;</span>ניטור</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','easp')" data-kw="iso 14001"><span class="sic">&#127811;</span>היבטים סביבתיים</button>
 
-    <div class="sheet-group-title">&#1488;&#1495;&#1512;</div>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')"><span class="sic">&#128203;</span>&#1497;&#1493;&#1502;&#1503;</button>
-    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()"><span class="sic">&#128273;</span>&#1513;&#1504;&#1492; &#1505;&#1497;&#1505;&#1502;&#1492;</button>
+    <div class="sheet-group-title">&#127970; ניהול</div>
+    <button class="sheet-btn" id="sheet-btn-mr" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','mr')" data-kw="management review"><span class="sic">&#128203;</span>סקירת הנהלה</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','cal')" data-kw="יומן תאריכים"><span class="sic">&#128197;</span>לוח שנה</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')" data-kw="אזורים"><span class="sic">&#128205;</span>מיקומים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>פרויקטים</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')" data-kw="log"><span class="sic">&#128203;</span>יומן פעולות</button>
+    <button class="sheet-btn" id="sheet-btn-users" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','users')" data-kw="הרשאות"><span class="sic">&#128100;</span>משתמשים</button>
+    <button class="sheet-btn" id="sheet-btn-audit" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','audit')" data-kw="audit log"><span class="sic">&#128279;</span>יומן ביקורת</button>
 
-    <div class="sheet-group-title">&#1504;&#1497;&#1492;&#1493;&#1500;</div>
-    <button class="sheet-btn" id="sheet-btn-users" onclick="_goFromSheet('m-modules-sheet','users')" style="display:none"><span class="sic">&#128100;</span>&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</button>
-    <button class="sheet-btn" id="sheet-btn-audit" onclick="_goFromSheet('m-modules-sheet','audit')" style="display:none"><span class="sic">&#128279;</span>&#1497;&#1493;&#1502;&#1503; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514;</button>
+    <div class="sheet-group-title">&#129302; AI / הגדרות</div>
+    <button class="sheet-btn" id="sheet-btn-agents" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','agents')" data-kw="סוכנים"><span class="sic">&#129302;</span>כלי AI</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()" data-kw="whatsapp מייל"><span class="sic">&#128276;</span>הגדרות התראות</button>
+    <button class="sheet-btn" onclick="_modVisOpen()" data-kw="מודולים ניגודיות"><span class="sic">&#9881;&#65039;</span>הגדרות תצוגה</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()" data-kw="סיסמה"><span class="sic">&#128273;</span>שנה סיסמה</button>
   </div>
+  <div id="m-modules-empty" style="display:none;text-align:center;color:var(--t3);font-size:13px;padding:18px 0">אין מודול שמתאים לחיפוש</div>
 </div>
 
 <div class="overlay" id="ov-modules-vis" onclick="closeModal('m-modules-vis')"></div>
@@ -3226,29 +3239,57 @@ function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 // sheet; reporters get the reports sheet (the only entries they may use —
 // the same split the retired bottom nav enforced by hiding bn-modules).
 window._menuOpen=function(){
-  openModal(_role()==='reporter'?'m-reports-sheet':'m-modules-sheet');
+  if(_role()==='reporter'){openModal('m-reports-sheet');return;}
+  if(typeof _modulesSheetReset==='function')_modulesSheetReset();
+  openModal('m-modules-sheet');
 };
+// A1: a button is "available" unless the user hid it in prefs or the role
+// gate hid it. Search must never re-show those, and clearing the search
+// must restore only the available ones.
+function _modBtnAvailable(b){return b.dataset.modUserHidden!=='1'&&b.dataset.roleHidden!=='1';}
 function _modulesSheetFilter(q){
   q=String(q||'').trim().toLowerCase();
   var sheet=g('m-modules-sheet');if(!sheet)return;
   var btns=sheet.querySelectorAll('.sheet-btn');
   var groups=sheet.querySelectorAll('.sheet-group-title');
-  if(!q){btns.forEach(function(b){b.style.display='';});groups.forEach(function(g){g.style.display='';});return;}
-  // Hide non-matching buttons
-  var visGroup={};
+  var empty=g('m-modules-empty');
+  // Admin-only buttons (data-role-gated) stay hidden unless the role gate
+  // allowed them (data-role-allowed) — clearing a search must not re-show them.
+  function gateOk(b){return !b.dataset.roleGated||b.dataset.roleAllowed==='1';}
+  if(!q){
+    btns.forEach(function(b){if(_modBtnAvailable(b))b.style.display=gateOk(b)?'':'none';});
+    groups.forEach(function(g){g.style.display='';});
+    if(empty)empty.style.display='none';
+    return;
+  }
+  // Match on the label plus data-kw synonyms (e.g. "NCR" finds the NCR module).
+  var visGroup={},any=false;
   btns.forEach(function(b){
-    var txt=String(b.textContent||'').toLowerCase();
-    var match=txt.indexOf(q)>=0;
+    var txt=(String(b.textContent||'')+' '+String(b.dataset.kw||'')).toLowerCase();
+    var match=_modBtnAvailable(b)&&gateOk(b)&&txt.indexOf(q)>=0;
     b.style.display=match?'':'none';
     if(match){
-      // Find prev group title
+      any=true;
       var prev=b.previousElementSibling;
       while(prev&&!prev.classList.contains('sheet-group-title'))prev=prev.previousElementSibling;
       if(prev)visGroup[prev.textContent]=prev;
     }
   });
   groups.forEach(function(g){g.style.display=visGroup[g.textContent]?'':'none';});
+  if(empty)empty.style.display=any?'none':'';
 }
+// Enter in the search box opens the first visible match — two taps to any module.
+window._modulesSheetKey=function(ev){
+  if(!ev||ev.key!=='Enter')return;
+  var sheet=g('m-modules-sheet');if(!sheet)return;
+  var first=Array.prototype.find.call(sheet.querySelectorAll('.sheet-btn'),function(b){return b.style.display!=='none';});
+  if(first){ev.preventDefault();first.click();}
+};
+// Reset the search every time the sheet opens, so it never starts filtered.
+window._modulesSheetReset=function(){
+  var i=g('m-modules-search');if(i)i.value='';
+  _modulesSheetFilter('');
+};
 
 // ---- App-display settings: which modules show, hc mode, default landing ----
 window._APP_PREFS_KEY='tfgn_app_prefs';
@@ -3261,15 +3302,19 @@ window._appPrefsSet=function(p){
 };
 // Build [{key,btn,label}] from .sheet-btn elements that are not currently
 // role-gated hidden. Skips buttons we already user-hid (display:none + flag).
+// A1: one entry per module KEY. A module can sit in the "frequent" row and in
+// its group, so `btns` carries every copy and prefs hide all of them together.
 window._modList=function(){
-  var out=[];
+  var out=[],byKey={};
   var sheet=document.getElementById('m-modules-sheet');if(!sheet)return out;
   sheet.querySelectorAll('.sheet-btn').forEach(function(b){
     if(b.style.display==='none' && b.dataset.modUserHidden!=='1') return;
     var oc=b.getAttribute('onclick')||'';
     var m=oc.match(/_goFromSheet\(['"]m-modules-sheet['"]\s*,\s*['"]([^'"]+)['"]/);
     if(!m)return;
-    out.push({key:m[1],btn:b,label:(b.textContent||'').replace(/^\s+|\s+$/g,'')});
+    if(byKey[m[1]]){byKey[m[1]].btns.push(b);return;}
+    var it={key:m[1],btn:b,btns:[b],label:(b.textContent||'').replace(/^\s+|\s+$/g,'')};
+    byKey[m[1]]=it;out.push(it);
   });
   return out;
 };
@@ -3282,13 +3327,15 @@ window._appPrefsApply=function(){
   // (which writes display:'') does not accidentally re-show hidden modules.
   var hidden=p.modulesHidden||{};
   _modList().forEach(function(it){
-    if(hidden[it.key]){
-      it.btn.dataset.modUserHidden='1';
-      it.btn.style.display='none';
-    } else if(it.btn.dataset.modUserHidden==='1'){
-      it.btn.dataset.modUserHidden='';
-      it.btn.style.display='';
-    }
+    it.btns.forEach(function(b){
+      if(hidden[it.key]){
+        b.dataset.modUserHidden='1';
+        b.style.display='none';
+      } else if(b.dataset.modUserHidden==='1'){
+        b.dataset.modUserHidden='';
+        if(b.dataset.roleHidden!=='1')b.style.display='';
+      }
+    });
   });
 };
 window._modVisOpen=function(){
@@ -12551,6 +12598,20 @@ function _applyRoleGates(){
   // operational data (equipment, PPE, training, ...) is theirs to view.
   var bnModules=g('bn-modules');
   if(bnModules) bnModules.style.display = isManagerOrUp ? '' : 'none';
+  // A1: inside the modules sheet, a reporter only ever sees reporter pages
+  // (☰ routes them to the reports sheet anyway; this keeps the sheet itself
+  // consistent). Symmetric, so a later admin login on the same page restores.
+  try{
+    var msheet=g('m-modules-sheet');
+    // Remember what the admin-only gates above decided, for the search filter.
+    if(msheet)msheet.querySelectorAll('.sheet-btn[data-role-gated]').forEach(function(b){b.dataset.roleAllowed=(b.style.display!=='none')?'1':'';});
+    if(msheet)msheet.querySelectorAll('.sheet-btn').forEach(function(b){
+      var mm=(b.getAttribute('onclick')||'').match(/_goFromSheet\(['"]m-modules-sheet['"]\s*,\s*['"]([^'"]+)['"]/);
+      if(!mm)return;
+      if(role==='reporter' && !_REPORTER_PAGES[mm[1]]){b.dataset.roleHidden='1';b.style.display='none';}
+      else if(b.dataset.roleHidden==='1'){b.dataset.roleHidden='';if(b.dataset.modUserHidden!=='1')b.style.display='';}
+    });
+  }catch(e){}
   // Hide operational view buttons in the reports sheet from reporters.
   // Creation entries (NCR, incident, near-miss, round, toolbox) stay
   // visible so the reporter can file new reports.
