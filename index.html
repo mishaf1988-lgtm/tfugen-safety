@@ -1106,6 +1106,31 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <!-- MORNING ROUND PAGE -->
+<!-- SAFETY TRUSTEES — manager screen (T3, 2026-09-18): leaderboard, findings, routing, CSV -->
+<div id="pg-trustees" class="page">
+  <div class="row">
+    <div class="page-title">נאמני <span>בטיחות</span></div>
+    <button class="btn btn-s" id="tru-mgr-more-btn" onclick="_truMgrMenu(this)" title="עוד פעולות: ייצוא CSV / הדפסה / מסך נאמן">&#8943;</button>
+    <button class="btn btn-p" onclick="_truReport(1)">+ דיווח</button>
+  </div>
+  <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center">
+    <button class="btn btn-s btn-sm" onclick="_truMgrShift(1)" aria-label="חודש הבא">&#8249;</button>
+    <div id="tru-mgr-month" style="font-weight:900;font-size:16px;min-width:150px;text-align:center"></div>
+    <button class="btn btn-s btn-sm" onclick="_truMgrShift(-1)" aria-label="חודש קודם">&#8250;</button>
+    <button class="btn btn-s btn-sm" onclick="_truMgrShift(0)">החודש</button>
+  </div>
+  <div id="tru-mgr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
+  <div class="card">
+    <div class="card-title">&#127942; לוח ניקוד <span style="font-weight:400;font-size:11px;color:var(--t2)">10 לכל משימה (מקס׳ 80) · 2 לכל מפגע שנסגר (מקס׳ 20) · זכאות לפרס מ-5 משימות</span></div>
+    <div id="tru-mgr-board"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128203; ממצאים ודיווחים</div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th scope="col">נאמן</th><th scope="col">משימה</th><th scope="col">תאריך</th><th scope="col">אזור</th><th scope="col">ממצא</th><th scope="col">סטטוס</th><th scope="col"></th>
+    </tr></thead><tbody id="tb-trustees"></tbody></table></div>
+  </div>
+</div>
 <div id="pg-round" class="page">
   <div class="row">
     <div class="page-title">&#1505;&#1489;&#1489; <span>&#1489;&#1493;&#1511;&#1512;</span></div>
@@ -1718,6 +1743,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ins')" data-kw="סיור"><span class="sic">&#128270;</span>סיורי בטיחות</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;</span>שיחות בטיחות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','trustees')" data-kw="נאמן נאמני trustees ניקוד פרס משימות חודשיות"><span class="sic">&#129466;</span>נאמני בטיחות</button>
 
     <div class="sheet-group-title">&#128203; איכות / NCR</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ncr')" data-kw="ncr capa אי-התאמה"><span class="sic">&#128295;</span>אי התאמות</button>
@@ -3291,7 +3317,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees};
 
   delRow(tbl,id,fn[tbl]||function(){});
 }
@@ -3328,7 +3354,7 @@ function _role(){
 // task queue, and the four creation flows that an employee actually files.
 var _MANAGER_PAGES = {dash:1,tasks:1,ncr:1,inc:1,nm:1,round:1,toolbox:1,eqi:1,exp:1,
   ppe:1,tr:1,docs:1,ctr:1,med:1,ins:1,drl:1,wst:1,hzm:1,env:1,leg:1,easp:1,rsk:1,emp:1,
-  ptw:1,'ptw-view':1,hearing:1,view:1,cal:1,loc:1,prj:1,itp:1,itype:1,'emp-home':1,menu:1,lg:1};
+  ptw:1,'ptw-view':1,hearing:1,view:1,cal:1,loc:1,prj:1,itp:1,itype:1,'emp-home':1,menu:1,lg:1,trustees:1};
 var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,
   // Creation flows \u2014 reporter can OPEN these pages, but per-action filters
   // (rTasks, rNcr, etc.) limit what they see inside.
@@ -3519,7 +3545,7 @@ window._appPrefsLandingPage=function(){
 
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents,trustees:rTrustees};
   if(m[CUR])m[CUR]();
 }
 // Agent Dashboard — central hub for AI capabilities. Admin-only.
@@ -4433,6 +4459,7 @@ function _sourceIcon(tbl){
   return m[tbl]||'✅';
 }
 function _todayClick(fn,a1,a2){
+  if(fn==='page'){goPage(a1);return;}
   if(fn==='round'){openModal('m-round');return;}
   if(fn==='view'){showView(a1,a2);return;}
   if(fn==='edit'){editTsk(a1);return;}
@@ -4447,6 +4474,11 @@ function _renderToday(){
   var todayRound=(DB.rounds||[]).find(function(r){return r.d===today;});
   if(!todayRound){
     items.push({priority:0,icon:'☀',title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 — \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',sub:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d9\u05d5\u05de\u05d9\u05ea',badge:'\u05e2\u05e9\u05d4',badgeCls:'amber',fn:'round',a1:'',a2:''});
+  }
+  // 1b. Trustee hazards nobody has routed yet (no task, no routing note) — one line, managers only.
+  if(typeof _truAwaitingRouting==='function'&&typeof _role==='function'&&_role()!=='reporter'){
+    var trAwait=_truAwaitingRouting().length;
+    if(trAwait)items.push({priority:2,icon:'\ud83e\uddba',title:trAwait+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1',sub:'\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',badge:'\u05e0\u05ea\u05d1',badgeCls:'amber',fn:'page',a1:'trustees',a2:''});
   }
   // 2. Tasks aggregated (manual + virtual)
   var allTasks=(DB.tasks||[]).slice();
@@ -8134,6 +8166,7 @@ function svTsk(){
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
   sdb();closeModal('m-tsk');toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTasks();rDash();
+  if(CUR==='trustees'&&typeof rTrustees==='function')rTrustees();   // task spawned from a trustee finding: show the link on the row
 }
 function editTsk(id){
   var rec=(DB.tasks||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -13380,6 +13413,136 @@ function svTru(){
 }
 // The trustee screen refreshes from the server whenever the app regains focus.
 window.addEventListener('focus',function(){if(typeof _truIsOpen==='function'&&_truIsOpen())try{_truPull(false);}catch(e){}});
+// ---- SAFETY TRUSTEES (T3): manager screen \u2014 leaderboard, findings, routing, CSV ----
+var _truMgrM=null;      // month shown ('YYYY-MM'); null = this month
+var _truMgrF='open';    // open | closed | ok | all
+function _truMgrMonth(){return _truMgrM||_truThisMonth();}
+function _truMgrShift(dir){
+  if(dir===0){_truMgrM=null;}
+  else{var p=_truMgrMonth().split('-');var d=new Date(parseInt(p[0],10),parseInt(p[1],10)-1+dir,1);_truMgrM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  rTrustees();
+}
+function _truMgrSetFilter(f){_truMgrF=f;rTrustees();}
+function _truFind(id){return (DB.trustee_reports||[]).find(function(x){return x.id===id;});}
+function _truTaskFor(id){return (DB.tasks||[]).find(function(x){return x.source_table==='trustee_reports'&&x.source_id===id;});}
+// Open hazards nobody has routed yet: no task spawned and no routing note.
+// Any month \u2014 an old finding still waiting is still waiting.
+function _truAwaitingRouting(){
+  return (DB.trustee_reports||[]).filter(function(r){return r&&_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED&&!r.mgr_note&&!_truTaskFor(r.id);});
+}
+function rTrustees(){
+  var m=_truMgrMonth();
+  var mEl=g('tru-mgr-month');if(mEl)mEl.textContent=_truMonthLabel(m);
+  var rows=_truRows(m);
+  var open=0,closed=0,okN=0;
+  rows.forEach(function(r){if(_truIsHazard(r)){if(r.s===TRUSTEE_S_CLOSED)closed++;else open++;}else okN++;});
+  var sum=g('tru-mgr-summary');
+  if(sum){
+    function pill(key,label,n,color,bg,txt){var on=(_truMgrF===key);return '<button onclick="_truMgrSetFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';}
+    sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
+  }
+  var board=_truBoard(m);
+  var bEl=g('tru-mgr-board');
+  if(bEl){
+    if(!board.length)bEl.innerHTML='<div class="et" style="text-align:center;padding:14px;color:var(--t2)">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</div>';
+    else bEl.innerHTML=board.map(function(x,i){
+      var medal=i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':i===2?'\ud83e\udd49':(i+1)+'.';
+      var chips=TRUSTEE_TASKS.map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
+      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+TRUSTEE_MIN_TASKS+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
+    }).join('');
+  }
+  var tb=g('tb-trustees');if(!tb)return;
+  var list=rows.filter(function(r){
+    if(_truMgrF==='open')return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;
+    if(_truMgrF==='closed')return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;
+    if(_truMgrF==='ok')return !_truIsHazard(r);
+    return true;
+  }).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
+  if(!list.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">'+(_truMgrF==='open'?'\u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea')+'</td></tr>';return;}
+  tb.innerHTML=list.map(function(r){
+    var t=_truTask(r.t);
+    var photo=r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" title="\u05ea\u05de\u05d5\u05e0\u05d4">\ud83d\udcf7</a>':'';
+    var after=(DB.trustee_reports||[]).find(function(x){return x.t===8&&x.ref===r.id;});
+    var afterHtml=after?'<div style="font-size:11px;color:#15803d">\u2713 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" '+fd(after.d)+' ('+esc(after.u)+')'+(after.photo_url?' <a data-sign="'+escU(after.photo_url)+'" target="_blank">\ud83d\udcf7</a>':'')+'</div>':'';
+    var note=r.mgr_note?'<div style="font-size:11px;color:var(--t2)">\ud83d\udccc '+esc(r.mgr_note)+'</div>':'';
+    var tsk=_truTaskFor(r.id);
+    var tskHtml=tsk?'<div style="font-size:11px"><a onclick="goPage(\'tasks\')" style="cursor:pointer;color:var(--blue)">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d4: '+esc(String(tsk.title||'').substring(0,50))+'</a></div>':'';
+    var refHtml=(r.t===8&&r.ref)?'<div style="font-size:11px;color:var(--t2)">\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0: '+esc(String((_truFind(r.ref)||{}).f||r.ref).substring(0,50))+'</div>':'';
+    return '<tr data-tru-row="'+esc(r.id)+'">'
+      +'<td data-label="\u05e0\u05d0\u05de\u05df"><strong>'+esc(r.u)+'</strong></td>'
+      +'<td data-label="\u05de\u05e9\u05d9\u05de\u05d4">'+esc(r.t)+'. '+esc(t?t.t:'')+'</td>'
+      +'<td data-label="\u05ea\u05d0\u05e8\u05d9\u05da">'+fd(r.d)+'</td>'
+      +'<td data-label="\u05d0\u05d6\u05d5\u05e8">'+esc(r.loc||(r.location_id?_locName(r.location_id):'')||'\u2014')+'</td>'
+      +'<td data-label="\u05de\u05de\u05e6\u05d0">'+(r.f?esc(r.f):'<span style="color:var(--t3)">\u2014</span>')+photo+afterHtml+refHtml+note+tskHtml+'</td>'
+      +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+'</td>'
+      +'<td data-label=""><button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_truRowMenu(this,this.dataset.rid)" aria-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">\u22ef</button></td>'
+      +'</tr>';
+  }).join('');
+  if(typeof _signifyDom==='function')try{_signifyDom(tb);}catch(e){}
+}
+function _truRowMenu(anchor,id){
+  var r=_truFind(id);if(!r)return;
+  _popMenu(anchor,'tru-row-menu',function(item,sep){
+    if(_truIsHazard(r)){
+      if(r.s!==TRUSTEE_S_CLOSED)item('\u2705','\u05e1\u05de\u05df \u05e0\u05e1\u05d2\u05e8 (\u05ea\u05d5\u05e7\u05df \u05d1\u05e9\u05d8\u05d7)',function(){_truMgrSetStatus(id,TRUSTEE_S_CLOSED);});
+      else item('\u21a9','\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9',function(){_truMgrSetStatus(id,TRUSTEE_S_OPEN);});
+      item('\ud83d\udcdd',_truTaskFor(id)?'\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d4':'\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4 (\u05e0\u05d9\u05ea\u05d5\u05d1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d4)',function(){if(_truTaskFor(id))goPage('tasks');else _truMgrSpawnTask(id);});
+      item('\ud83d\udccc','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',function(){_truMgrNote(id);});
+      sep();
+    }
+    item('\ud83d\uddd1','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
+  });
+}
+function _truMgrSetStatus(id,st){
+  var r=_truFind(id);if(!r)return;
+  r.s=st;sbUpd('trustee_reports',r);sdb();
+  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05de\u05e6\u05d0 '+(st===TRUSTEE_S_CLOSED?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.f||'').substring(0,30));}catch(e){}
+  toast(st===TRUSTEE_S_CLOSED?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');
+  rTrustees();rDash();
+}
+function _truMgrNote(id){
+  var r=_truFind(id);if(!r)return;
+  var v=prompt('\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1 (\u05dc\u05de\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 / \u05de\u05d4 \u05e1\u05d5\u05db\u05dd):',r.mgr_note||'');
+  if(v===null)return;
+  r.mgr_note=String(v).trim()||null;sbUpd('trustee_reports',r);sdb();
+  toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
+}
+// Manual routing (decision 2): the manager turns a finding into a task for
+// the responsible department through the normal task module.
+function _truMgrSpawnTask(id){
+  var r=_truFind(id);if(!r||typeof openTskModal!=='function')return;
+  openTskModal('trustee_reports',id);
+  var t=_truTask(r.t);
+  var title=g('tsk-title');if(title)title.value='\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 '+(r.loc?r.loc+': ':'')+String(r.f||(t?t.t:'')).substring(0,80);
+  var notes=g('tsk-notes');if(notes&&!notes.value)notes.value='\u05d3\u05d5\u05d5\u05d7 \u05e2"\u05d9 '+r.u+' \u05d1-'+fd(r.d)+' (\u05de\u05e9\u05d9\u05de\u05d4 '+r.t+(t?' \u2014 '+t.t:'')+')'+(r.photo_url?'\n\u05ea\u05de\u05d5\u05e0\u05d4: '+r.photo_url:'');
+  var due=g('tsk-due');if(due)due.value='';
+}
+function _truExportCsv(){
+  var m=_truMgrMonth();
+  var rows=_truRows(m).slice().sort(function(a,b){return (a.u||'').localeCompare(b.u||'','he')||String(a.d||'').localeCompare(String(b.d||''));});
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4 \u2014 \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0');return;}
+  function q2(v){if(v===null||v===undefined)return '';var x=String(v);return '"'+x.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
+  var lines=[];
+  lines.push(['\u05dc\u05d5\u05d7 \u05e0\u05d9\u05e7\u05d5\u05d3 '+m].map(q2).join(','));
+  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d5\u05ea (\u05de\u05ea\u05d5\u05da 8)','\u05e0\u05e7\u05f3 \u05de\u05e9\u05d9\u05de\u05d5\u05ea','\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5','\u05e0\u05e7\u05f3 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05e1\u05d4\u05f4\u05db','\u05d6\u05db\u05d0\u05d5\u05ea (\u22655)','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'].map(q2).join(','));
+  _truBoard(m).forEach(function(x){lines.push([x.u,x.nTasks,x.ptsTasks,x.closed,x.ptsClosed,x.total,x.eligible?'\u05db\u05df':'\u05dc\u05d0',x.open].map(q2).join(','));});
+  lines.push('');
+  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d4','\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4','\u05ea\u05d0\u05e8\u05d9\u05da','\u05d0\u05d6\u05d5\u05e8','\u05ea\u05e7\u05d9\u05df/\u05dc\u05d9\u05e7\u05d5\u05d9','\u05de\u05de\u05e6\u05d0','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05de\u05d5\u05e0\u05d4','\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1'].map(q2).join(','));
+  rows.forEach(function(r){var t=_truTask(r.t);lines.push([r.u,r.t,t?t.t:'',r.d,r.loc||(r.location_id?_locName(r.location_id):''),r.ok===false?'\u05dc\u05d9\u05e7\u05d5\u05d9':'\u05ea\u05e7\u05d9\u05df',r.f,r.s,r.photo_url,r.ref,r.mgr_note].map(q2).join(','));});
+  var csv='\ufeff'+lines.join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tapugan-trustees-'+m+'.csv';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+  toast('\u05d9\u05d5\u05e6\u05d0 \u2713 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');
+}
+function _truMgrMenu(anchor){
+  _popMenu(anchor,'tru-mgr-menu',function(item,sep){
+    item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
+    item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
+    sep();
+    item('\ud83e\uddba','\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df (\u05de\u05e6\u05d1 \u05e2\u05d5\u05d1\u05d3)',function(){empToggle(true);_truOpen();});
+  });
+}
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
 function empIsOn(){return document.body.classList.contains('emp-mode');}
