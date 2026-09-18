@@ -5541,10 +5541,12 @@ window._eqiAutoTasksRun=function(){
   if(typeof rTasks==='function'){try{rTasks();}catch(e){}}
   toast('✓ '+created+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e0\u05d5\u05e6\u05e8\u05d5 · '+skipped+' \u05d3\u05d5\u05dc\u05d2\u05d5 (\u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea / \u05de\u05d7\u05d5\u05e5 \u05dc\u05d8\u05d5\u05d5\u05d7)');
 };
-window._eqiExportCsv=function(){
+// forceFilter (optional): export with a given validity filter without
+// touching the tab the user is looking at. Used by the "export expired" button.
+window._eqiExportCsv=function(forceFilter){
   var locF=window._eqiLocFilter||'';
   var typeF=window._eqiTypeFilter||'';
-  var f=window._eqiFilter||'all';
+  var f=forceFilter||window._eqiFilter||'all';
   var q=window._eqiQ||'';
   var rows=(DB.equip_inspections||[]).slice();
   if(locF)rows=rows.filter(function(r){return r.location_id===locF;});
@@ -5558,8 +5560,10 @@ window._eqiExportCsv=function(){
     return true;
   });
   if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
+  // Ascending "days until" — for the expired set that is most-overdue first.
   rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
-  if(!rows.length){toast('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  // Empty set is a clear message, never a failure.
+  if(!rows.length){toast(f==='exp'?'\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 \u2014 \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
   // Quote a single CSV field — wrap in "..." and escape internal quotes.
   function q2(v){if(v===null||v===undefined)return '';var s=String(v);return '"'+s.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
   var headers=[
@@ -5594,7 +5598,7 @@ window._eqiExportCsv=function(){
   var csv='﻿'+lines.join('\r\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var stamp=new Date().toISOString().substring(0,10);
-  var fname='tapugan-equipment'+'-'+stamp+'.csv';
+  var fname='tapugan-equipment'+(f==='exp'?'-expired':'')+'-'+stamp+'.csv';
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download=fname;
@@ -5603,6 +5607,10 @@ window._eqiExportCsv=function(){
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
   toast('\u05d9\u05d5\u05e6\u05d0 ✓ '+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea');
 };
+// "Export expired" — one tap from the EQI summary strip. Same CSV, same
+// columns, only rows whose validity date is in the past, most-overdue first.
+// Does not change the tab the user is on.
+window._eqiExportExpiredCsv=function(){_eqiExportCsv('exp');};
 // ========== QR CODES FOR EQUIPMENT ==========
 // Each equipment record gets a stickerable QR. Scan with phone camera →
 // browser opens app at `?eqi=ID` → showView opens that record. Lets a
@@ -5759,19 +5767,35 @@ function rEqi(){
       cb.innerHTML=html;
     }
   }catch(e){}
-  // EQI summary pills
+  // EQI summary strip (expired-equipment widget, 2026-09-18). Counts use the
+  // SAME predicates as the filter tabs, so tapping a pill always shows exactly
+  // the number it advertised. "Expired" is always shown, even at 0 — this is
+  // an operational widget, and a visible 0 is the reassurance. No alerts are
+  // involved here; _notifDailyScan is untouched.
   try{
     var eS=g('eqi-summary');
     if(eS){
       var allEqi=DB.equip_inspections||[];
-      var todayE=new Date();todayE.setHours(0,0,0,0);
       var expN=0,soonN=0,okN=0;
-      allEqi.forEach(function(r){if(!r.e)return;var d=new Date(r.e);var dd=(d-todayE)/86400000;if(dd<0)expN++;else if(dd<=30)soonN++;else okN++;});
+      allEqi.forEach(function(r){
+        var x=r.e?du(r.e):null;
+        if(x!==null&&x<0)expN++;
+        if(x!==null&&x>=0&&x<=30)soonN++;
+        if(r.s==='\u05ea\u05e7\u05d9\u05df')okN++;
+      });
+      var curF=window._eqiFilter||'all';
+      function pill(key,label,n,color,bg,txt){
+        var on=(curF===key);
+        return '<button onclick="eqiFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';
+      }
+      var exportBtn='<button onclick="_eqiExportExpiredCsv()" title="CSV \u05e9\u05dc \u05db\u05dc \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5 — \u05d4\u05db\u05d9 \u05d9\u05e9\u05df \u05e7\u05d5\u05d3\u05dd" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;border:1px solid #cc1f1f;background:#fff;color:#cc1f1f;opacity:'+(expN?'1':'.55')+'">⬇ \u05d9\u05d9\u05e6\u05d5\u05d0 \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 ('+expN+')</button>';
       eS.innerHTML=
-        '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">סה״כ: <strong>'+allEqi.length+'</strong></span>'+
-        (expN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">פג: <strong>'+expN+'</strong></span>':'')+
-        (soonN?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">≤30י: <strong>'+soonN+'</strong></span>':'')+
-        (okN?'<span style="background:#dcfce7;border:1px solid #16a34a;border-radius:14px;padding:3px 10px;color:#15803d">תקינים: <strong>'+okN+'</strong></span>':'');
+        pill('exp','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3',expN,'#cc1f1f','#fce4e4','#991b1b')+
+        pill('30','≤30 \u05d9\u05d5\u05dd',soonN,'#b45309','#fef3c7','#92400e')+
+        pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#16a34a','#dcfce7','#15803d')+
+        pill('all','\u05e1\u05d4\u05f4\u05db',allEqi.length,'#64748b','#fff','#334155')+
+        exportBtn+
+        (allEqi.length?'':'<span style="align-self:center;color:var(--t3);font-size:12px">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 — \u05d9\u05d9\u05d1\u05d0/\u05d4\u05d5\u05e1\u05e3 \u05e6\u05d9\u05d5\u05d3 \u05d5\u05d4\u05de\u05e1\u05e4\u05e8\u05d9\u05dd \u05d9\u05ea\u05e2\u05d3\u05db\u05e0\u05d5</span>');
     }
   }catch(e){}
   var locF=window._eqiLocFilter||'';
@@ -5829,7 +5853,16 @@ function rEqi(){
     var el=g('eqi-sort-'+c);if(!el)return;
     el.textContent=(c===sortCol)?(sortDir==='asc'?'\u2191':'\u2193'):'';
   });
-  if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\u26a0\ufe0f<br>\u05d0\u05d9\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea<br><button class="et-cta" onclick="openNewNcrModal()">+ \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  // Empty state (was a copy-paste of the NCR one: "no non-conformities").
+  // Expired filter with nothing in it is good news, say so.
+  if(!rows.length){
+    var _emptyEqi=(f==='exp')
+      ?'\u2705<br>\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3'
+      :((DB.equip_inspections||[]).length
+        ?'\ud83d\udd0d<br>\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05ea\u05d5\u05d0\u05de\u05d9\u05dd \u05dc\u05e1\u05d9\u05e0\u05d5\u05df'
+        :'\ud83d\udd27<br>\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="_eqiOpenNew()">+ \u05d4\u05d5\u05e1\u05e3 \u05e6\u05d9\u05d5\u05d3</button>');
+    tb.innerHTML='<tr><td colspan="8" class="et" data-label="">'+_emptyEqi+'</td></tr>';return;
+  }
   tb.innerHTML=rows.map(function(r){
     var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
