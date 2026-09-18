@@ -560,6 +560,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
      summary pills on the EQI page DO print (they carry the counts). */
   .cap-fab,#ask-fab,#menu-btn,.dash-qa,#eqi-more-btn,#eqi-summary button[onclick^="_eqiExportExpiredCsv"],
   .overlay,.modal,#top-more-menu,#eqi-more-menu,#leg-row-menu,#itype-row-menu,#tsk-action-menu{display:none!important}
+  /* P0 (2026-09-18, QA after #556): nothing that floats over the screen goes on
+     paper — the report / chat FABs, the service-worker update pill, toasts, the
+     sync pill, the scroll-to-top button, popup menus, the NCR agent overlay, and
+     as a safety net ANY element positioned fixed inline (that is how every
+     dynamically created floater in this app is styled). */
+  #cap-fab,.cap-fab,#ask-fab,#sw-update-pill,#scroll-top-btn,#emp-toast,.toast,.sync-pill,#sync-pill,
+  #ncr-agent-modal,#m-search,#ov-search,#tsk-render-diag,
+  [style*="position:fixed"],[style*="position: fixed"]{display:none!important}
   /* The wide-screen masonry columns of the home page make no sense on paper. */
   #pg-dash{column-count:1!important}
   .more-accordion summary::after{display:none!important}
