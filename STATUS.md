@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-09-18 (HEAD = PR #552 — סבב handoffs 2026-09-18: 18 PRs #535-#552. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
+**Last updated**: 2026-09-18 (HEAD = PR #553 — סבב handoffs 2026-09-18: 19 PRs #535-#553. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## ⚡ מצב נוכחי — סיכום מהיר (HEAD #532)
@@ -84,7 +84,8 @@
 - [x] **A3 צפיפות רשימות** (#550) — חוקים: 👁 + ⋯ (צפייה/עריכה/מחיקה) במקום 4 אייקונים; עץ סוגי NCR: ⋯ אחד (הוסף תת-סוג/עריכה/מחיקה). יומן ביקורת כבר מינימלי. Phase B מכובד בתפריטים.
 - [x] **C2 DECISIONS** (#551) — `multiple_permissive_policies` (10) מתועד כ-accepted risk + רשומת החלטות הסבב (bnav/☰, בית, sbSync, Phase B, ⋯). בלי קוד, בלי DB.
 - [x] **B2 Agents hub** (#552) — `pg-agents` = ההאב היחיד: 5 סוכנים (כולל מקום ל-Incident Investigation «בבנייה — PR-7» + שאל את העוזר), קבוצת «דוחות AI» (סקירת הנהלה, משימות AI), 4 עוזרי מודאל, סיכומים לפי דרישה. כפתורי AI קונטקסטואליים בדפים נשארו; הבית נקי.
-- [ ] **תוכנית שדרוגים 2026-09-18** — PR-7 B1 (Investigation Agent) · PR-8 B3 (NCR Agent) · PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
+- [x] **B1 Incident Investigation Agent** (#553) — מודאל `m-inv`: תקרית → 5-Why (ידני/AI דרך `_incFiveWhyGenerate` המשותף) → שמירה ל-`inc.five_why`+`inc.r` → משימת CAPA (`openTskModal`) / NCR ממולא. launchers ב-Agents ובכרטיס התקרית; מוסתר למדווח.
+- [ ] **תוכנית שדרוגים 2026-09-18** — PR-8 B3 (NCR Agent) · PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
 - **תפעול (לא קוד):** איפוס נתוני תפעול ב-Supabase (גיבוי schema `backup_ops_20260918`), Storage buckets רוקנו (209→0) דרך Edge Function חד-פעמית (`empty-ops-buckets`, נוטרלה ל-410; ניתן למחוק בדשבורד). `pg_net` הופעל והוסר.
 - **accepted risk:** advisor `multiple_permissive_policies` (10) — נשאר כמו שהוא לפי החלטת מיכאל (אין מנהלים ב-production, רווח אפס). מתועד ב-DECISIONS.md (#551).
 
