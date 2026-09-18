@@ -13,6 +13,25 @@
 
 ---
 
+## 2026-09-18 — advisor `multiple_permissive_policies` (10 ממצאים) = accepted risk
+
+**החלטה**: לא מאחדים policies. 10 ממצאי ה-WARN של Supabase Performance Advisor (`multiple_permissive_policies`) נשארים כפי שהם ומסומנים כסיכון מקובל ומתועד.
+**סיבה**: זו אזהרת ביצועים, לא אבטחה. כל זוג policies הוא כוונה: `emp_insert` (INSERT פתוח ל-authenticated — דיווח עובדים) לצד `*_admin_manager_all` (equip_inspections / near_miss / rounds / tr); `ncr_admin_all` + `ncr_manager_non_sens` (פיצול sens מ-M1, 2026-05-29); `app_users_admin_write` + `app_users_read` (PII, H2); `audit_log_authenticated_insert` + `audit_log_admin_manager_all`. מיזוג שגוי = דליפת NCR רגישים / PII. ובייצור אין אף משתמש בתפקיד `מנהל` (12/12 `מדווח`, נבדק 2026-09-18) — הרווח הביצועי הוא אפס.
+**אלטרנטיבות שנדחו**: מיזוג OR ל-`ncr` (אפשרי עם 4 תרחישי הבדיקה החיים מ-M1 — נדחה עד שיהיה מנהל בפועל); פיצול `ALL` ל-SELECT/UPDATE/DELETE כדי להשאיר INSERT יחיד (נדחה — INSERT שולי); צמצום `emp_insert` לפי תפקיד (נדחה עד spam).
+**קישורים**: סקירת מתכנן `REVIEW-P2-multiple-permissive-policies.md` (2026-09-18, אצל מיכאל) · Supabase lint 0006 · #543 (RLS initPlan — הושלם, נושא אחר) · PR-5 C2.
+**חוק**: לא לגעת ב-policies האלה בלי אישור מפורש של מיכאל + בדיקות תפקיד חיות (`SET LOCAL ROLE authenticated` + `request.jwt.claims`).
+
+## 2026-09-18 — סבב handoffs: ניווט ללא bnav, בית ≤6 KPI, sync מקור-אמת, Phase B
+
+**החלטה**:
+1. **bnav מוסתר ב-CSS בלבד** (`.bnav{display:none !important}`), ה-HTML נשאר. ניווט = טופ-בר: ☰ (`_menuOpen` — גיליון מודולים למנהל/אדמין, גיליון דיווחים למדווח), לוגו → בית, 📝 משימות, ⋯. FAB יחיד: ✨ דיווח; FAB צ׳אט מוסתר בכל מקום (`#ask-fab{display:none !important}`), העוזר בתפריט ⋯. (#545)
+2. **בית**: פעולות מהירות (3 חובה ראשונות: דיווח חירום · משימות להיום · סבב בוקר), רצועת KPI אחת ≤6 אריחים ורק ערך >0 (`_renderDashKpis`), פאנל ריק = מוסתר, AI רק ב-Agents. (#544)
+3. **sbSync**: השרת מקור אמת — תשובה ריקה מנקה מטמון; `sbGet` מחזיר `null` על כשל ואז המטמון נשמר (offline); שורה local-only שורדת רק עם outbox ממתין; הגנת מרוץ 2 דק׳ (`_obSentRecently`). (#541)
+4. **תפקידים ורשימות**: `body.role-*` + כלל CSS לפי קידומת `onclick` מסתיר ✎/🗑 למדווח (Phase B, #549). תפריטי ⋯ (`_popMenu`) במקום קירות כפתורים — כותרת EQI (#548), שורות חוקים / עץ סוגי NCR (#550). גיליון מודולים: 6 קבוצות + «נפוצים», חיפוש עם מילים נרדפות (#547).
+**סיבה**: היסטוריית ה-revert של bnav ב-iOS (#483–#499) — לא לחזור לניסויים מבניים; מסך בית של מנהל בטיחות צריך להיסרק במסך אחד; אחרי איפוס נתונים המטמון הישן הציג זומבים.
+**אלטרנטיבות שנדחו**: בניית `pg-menu` מחדש (הוחזר ב-#492); מחיקת ה-HTML של bnav; אירוע `expired_overdue` / הרחבת `expiry_30days` לימים שליליים (נעול — ווידג׳ט EQI במקום, #546).
+**קישורים**: #535–#550 · STATUS.md «סשן 2026-09-18».
+
 ## 2026-05-10 (סוף היום) — נטישה מלאה של זרם server-side לחלוטין: חזרה ל-browser MSAL ידני
 
 **החלטה**: כל זרם ה-mail server-side האוטונומי (PR #514 + PR #516 + ניסיון PR #517 ל-SendGrid) **נמחק**. הזרם חוזר למודל הפשוט הקיים: admin (sviva) מחוברת ל-MSAL (אותו זרם של דוחות OneDrive שעובד יומית). בכניסה למודאל הקרדנציאלים, `_credAutoDeliver` קורא ל-`_msSendMail` הקיים ב-index.html → מייל יוצא מ-Outlook של sviva. WhatsApp נשאר כפתור ידני (PR #509).
