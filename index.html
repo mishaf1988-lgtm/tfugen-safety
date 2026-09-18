@@ -383,6 +383,13 @@ body.role-reporter [onclick^="_tskMenu("],
 body.role-reporter [onclick^="_legRowMenu("],
 body.role-reporter [onclick^="_itypeRowMenu("],
 body.role-reporter [onclick^="_invOpen("]{display:none !important}
+/* B3 (2026-09-18): on phones the NCR agent's two columns stack — the analysis panel on top,
+   the list below — instead of a 360px panel squeezing the list to a sliver. */
+@media(max-width:640px){
+  #ncr-agent-cols{flex-direction:column !important}
+  #ncr-agent-panel{order:-1;width:auto !important;max-height:55% !important;border-right:none !important;border-bottom:1px solid #1e3a5f;flex-shrink:0 !important}
+  #ncr-agent-list{min-height:0}
+}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -13212,7 +13219,7 @@ function loadFromSupabase(){
     }).catch(function(e){console.warn('[TFUGEN] Sync error:',e);});
 }
 </script>
-<div id="ncr-agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;direction:rtl;font-family:Heebo,Arial,sans-serif"><div style="background:#0a0c0e;border:1px solid #1e3a5f;border-radius:12px;width:min(95vw,900px);height:min(90vh,700px);margin:3vh auto;display:flex;flex-direction:column;overflow:hidden"><div style="background:#111416;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3a5f;flex-shrink:0"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">&#129302;</span><div style="font-size:15px;font-weight:700;color:#fff">&#1505;&#1493;&#1499;&#1503; NCR/CAPA &middot; <span id="ncr-agent-count" style="color:#4a9adf">0</span> &#1512;&#1513;&#1493;&#1502;&#1493;&#1514;</div></div><div style="display:flex;gap:8px"><button onclick="ncrAgentAnalyzeAll()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1504;&#1497;&#1514;&#1493;&#1495; &#1488;&#1497;&#1514;&#1493;&#1512; &#1513;&#1500; &#1499;&#1500; &#1492;-NCR &#1492;&#1508;&#1514;&#1493;&#1495;&#1497;&#1501;">&#10024; &#1504;&#1497;&#1514;&#1493;&#1495; &#1499;&#1500;&#1500;&#1497;</button><button onclick="_ncrShowTrend()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1490;&#1512;&#1507; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;">&#128200; &#1502;&#1490;&#1502;&#1493;&#1514;</button><button onclick="document.getElementById('ncr-agent-modal').style.display='none'" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 14px;font-size:14px;cursor:pointer">&times;</button></div></div><div style="display:flex;flex:1;overflow:hidden"><div id="ncr-agent-list" style="flex:1;overflow-y:auto;padding:10px"></div><div id="ncr-agent-panel" style="display:none;width:360px;border-right:1px solid #1e3a5f;background:#0d1014;overflow-y:auto;padding:12px;flex-shrink:0"></div></div><div style="background:#0d1014;border-top:1px solid #1e3a5f;padding:6px 16px;font-size:10px;color:#3a5a7a">&#127981; &#1514;&#1508;&#1493;&#1490;&#1503; | &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | NCR Agent v4</div></div></div>
+<div id="ncr-agent-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;direction:rtl;font-family:Heebo,Arial,sans-serif"><div style="background:#0a0c0e;border:1px solid #1e3a5f;border-radius:12px;width:min(95vw,900px);height:min(90vh,700px);margin:3vh auto;display:flex;flex-direction:column;overflow:hidden"><div style="background:#111416;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e3a5f;flex-shrink:0"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">&#129302;</span><div style="font-size:15px;font-weight:700;color:#fff">&#1505;&#1493;&#1499;&#1503; NCR/CAPA &middot; <span id="ncr-agent-count" style="color:#4a9adf">0</span> &#1512;&#1513;&#1493;&#1502;&#1493;&#1514;</div></div><div style="display:flex;gap:8px"><button onclick="ncrAgentAnalyzeAll()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1504;&#1497;&#1514;&#1493;&#1495; &#1488;&#1497;&#1514;&#1493;&#1512; &#1513;&#1500; &#1499;&#1500; &#1492;-NCR &#1492;&#1508;&#1514;&#1493;&#1495;&#1497;&#1501;">&#10024; &#1504;&#1497;&#1514;&#1493;&#1495; &#1499;&#1500;&#1500;&#1497;</button><button onclick="_ncrShowTrend()" style="background:#1a2a3a;border:1px solid #2a5a8a;border-radius:8px;color:#4a9adf;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" title="&#1490;&#1512;&#1507; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;">&#128200; &#1502;&#1490;&#1502;&#1493;&#1514;</button><button onclick="document.getElementById('ncr-agent-modal').style.display='none'" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 14px;font-size:14px;cursor:pointer">&times;</button></div></div><div id="ncr-agent-cols" style="display:flex;flex:1;overflow:hidden"><div id="ncr-agent-list" style="flex:1;overflow-y:auto;padding:10px"></div><div id="ncr-agent-panel" style="display:none;width:360px;border-right:1px solid #1e3a5f;background:#0d1014;overflow-y:auto;padding:12px;flex-shrink:0"></div></div><div style="background:#0d1014;border-top:1px solid #1e3a5f;padding:6px 16px;font-size:10px;color:#3a5a7a">&#127981; &#1514;&#1508;&#1493;&#1490;&#1503; | &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | NCR Agent v4</div></div></div>
 <script>
 /* NCR AI Agent TFUGEN SAFETY v4 — persisted analyses + ISO 45001/14001 prompt */
 var _nad=[];
@@ -13701,34 +13708,60 @@ window._ncrAI=function(id){
     _ncrRender();window._ncrSel(id);
   }).catch(function(err){console.error('_ncrAI err:',err);_naf[id]={err:true,msg:(err&&err.message||String(err))};window._ncrSel(id);});
 };
+// B3 (2026-09-18): the aggregate analysis covers ALL open NCRs, not a
+// 40-row sample. Small sets go in one request; larger sets are analysed
+// in parts of 60 (each part summarised on its own) and a final request
+// merges the partial summaries into the usual 4-section report. Closed
+// NCRs stay out (DECISIONS 2026-04-18). The result is still saved to
+// ncr_patterns with the same shape.
+window._NCR_AGG_CHUNK=60;
 window.ncrAgentAnalyzeAll=function(){
   var P=document.getElementById('ncr-agent-panel');
   P.style.display='block';
   var open=_nad.filter(function(n){return n.s==='\u05e4\u05ea\u05d5\u05d7'||n.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';});
   var closed=_nad.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
-  P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">Analyzing '+open.length+' open NCRs...</div>';
   var byA={},byP={},byS={};
   open.forEach(function(n){byA[n.a]=(byA[n.a]||0)+1;byP[n.p]=(byP[n.p]||0)+1;byS[n.s]=(byS[n.s]||0)+1;});
-  var sample=open.slice(0,40).map(function(n){return n.num+' ['+(n.p||'')+'] '+(n.a||'')+': '+(n.d||'').substring(0,120);}).join('\n');
-  var prompt=
-    'You are a safety analyst at Tfugen Industries, certified in ISO 45001 and ISO 14001.\n'+
-    'Analyze the OPEN NCRs below and respond in Hebrew only.\n\n'+
-    'Total open: '+open.length+' (sample: '+Math.min(open.length,40)+').\n'+
-    'By area: '+JSON.stringify(byA)+'\n'+
-    'By priority: '+JSON.stringify(byP)+'\n'+
-    'By status: '+JSON.stringify(byS)+'\n\n'+
-    'Sample:\n'+sample+'\n\n'+
-    'Respond in Hebrew, in 4 clearly separated sections with headers:\n'+
+  var line=function(n){return n.num+' ['+(n.p||'')+'] '+(n.a||'')+': '+(n.d||'').substring(0,120);};
+  var CH=window._NCR_AGG_CHUNK||60;
+  var chunks=[];for(var i=0;i<open.length;i+=CH)chunks.push(open.slice(i,i+CH));
+  if(!chunks.length)chunks=[[]];
+  var single=(chunks.length===1);
+  var HEAD='You are a safety analyst at Tfugen Industries, certified in ISO 45001 and ISO 14001.\n';
+  var STATS='Total open: '+open.length+'.\nBy area: '+JSON.stringify(byA)+'\nBy priority: '+JSON.stringify(byP)+'\nBy status: '+JSON.stringify(byS)+'\n\n';
+  var SECTIONS='Respond in Hebrew, in 4 clearly separated sections with headers:\n'+
     '1. Patterns / \u05d3\u05e4\u05d5\u05e1\u05d9\u05dd \u05d7\u05d5\u05d6\u05e8\u05d9\u05dd\n'+
     '2. Risk areas / \u05d0\u05d6\u05d5\u05e8\u05d9 \u05e1\u05d9\u05db\u05d5\u05df \u05d2\u05d1\u05d5\u05d4\n'+
     '3. Systemic recommendations / \u05d4\u05de\u05dc\u05e6\u05d5\u05ea \u05de\u05e2\u05e8\u05db\u05ea\u05d9\u05d5\u05ea\n'+
     '4. Urgent alerts / \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea';
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:800,messages:[{role:'user',content:prompt}]})
-  }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
-    if(!res.ok){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">API '+res.status+':<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
-    var d;try{d=JSON.parse(res.txt);}catch(e){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px">Parse error:<br>'+esc((res.txt||'').substring(0,500))+'</div>';return;}
-    var content=d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500);
+  function status(msg){P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">'+esc(msg)+'</div>';}
+  function ask(prompt,maxTok){
+    return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:maxTok,messages:[{role:'user',content:prompt}]})
+    }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
+      if(!res.ok)throw new Error('API '+res.status+': '+(res.txt||'').substring(0,300));
+      var d;try{d=JSON.parse(res.txt);}catch(e){throw new Error('Parse error: '+(res.txt||'').substring(0,300));}
+      return d.content&&d.content[0]?d.content[0].text:JSON.stringify(d).substring(0,500);
+    });
+  }
+  var partials=[];
+  var seq=Promise.resolve();
+  chunks.forEach(function(ch,idx){
+    seq=seq.then(function(){
+      status(single?'Analyzing '+open.length+' open NCRs...':'Analyzing part '+(idx+1)+'/'+chunks.length+' ('+ch.length+' NCRs)...');
+      var prompt=single
+        ? HEAD+'Analyze the OPEN NCRs below and respond in Hebrew only.\n\n'+STATS+'NCRs:\n'+ch.map(line).join('\n')+'\n\n'+SECTIONS
+        : HEAD+'This is part '+(idx+1)+' of '+chunks.length+' of the OPEN NCR list ('+open.length+' in total). Summarize THIS PART only, in Hebrew: recurring patterns, high-risk areas, notable urgent items. Be concise (max 12 lines) and keep the NCR numbers.\n\nNCRs:\n'+ch.map(line).join('\n');
+      return ask(prompt,single?800:500).then(function(t){partials.push(t);});
+    });
+  });
+  seq.then(function(){
+    if(single)return partials[0];
+    status('Merging '+chunks.length+' partial analyses of '+open.length+' NCRs...');
+    var prompt=HEAD+'Below are '+chunks.length+' partial analyses that together cover ALL '+open.length+' open NCRs (analysed in parts). Merge them into ONE final analysis in Hebrew only. Do not repeat the same finding twice.\n\n'+STATS+
+      partials.map(function(t,i){return '--- Part '+(i+1)+' ---\n'+t;}).join('\n\n')+'\n\n'+SECTIONS;
+    return ask(prompt,900);
+  }).then(function(content){
     _ncrRenderAggregate(content);
     var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
     fetch(_SB+'/rest/v1/ncr_patterns',{
@@ -13740,7 +13773,7 @@ window.ncrAgentAnalyzeAll=function(){
       if(_ncrPatternsCache.length>10)_ncrPatternsCache=_ncrPatternsCache.slice(0,10);
       _ncrRenderAggregate(content);
     }).catch(function(){});
-  }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">Network: '+esc(err&&err.message||String(err))+'</div>';});
+  }).catch(function(err){P.innerHTML='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">'+esc(err&&err.message||String(err))+'</div>';});
 };
 var _ncrPatternsCache=[];
 function _ncrPatternsLoad(){
