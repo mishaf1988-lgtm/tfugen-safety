@@ -767,16 +767,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <div id="pg-eqi" class="page">
+  <!-- A2 (2026-09-18): the 9-button wall moved behind one ⋯ menu (_eqiMoreMenu) so
+       the expired-equipment strip (#546) sits near the top. Only "add" stays visible. -->
   <div class="row"><div class="page-title">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; <span>&#1510;&#1497;&#1493;&#1491; &#1500;&#1508;&#1497; &#1508;&#1511;&#1493;&#1491;&#1492;</span></div>
-    <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPdfPick()" title="&#1492;&#1506;&#1500;&#1492; PDF &#1513;&#1500; &#1514;&#1505;&#1511;&#1497;&#1512; &#1489;&#1491;&#1497;&#1511;&#1492;">&#128196; PDF AI</button>
-    <button class="btn btn-s" style="background:#1d4ed8;margin-left:8px" onclick="openEqiXl()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
-    <button class="btn btn-s" style="background:#0891b2;margin-left:8px" onclick="openEqiXl2()" title="&#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512; &#1502;&#1500;&#1488; (&#1506;&#1491;&#1499;&#1504;&#1497; + &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1492;)">&#128190; &#1497;&#1497;&#1489;&#1493;&#1488; &#1502;&#1488;&#1490;&#1512;</button>
-    <button class="btn btn-s" style="background:#7c3aed;margin-left:8px" onclick="_eqiPrintAll()" title="&#1492;&#1491;&#1508;&#1505; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501; (&#1502;&#1505;&#1504;&#1503; &#1500;&#1508;&#1497; &#1504;&#1493;&#1499;&#1495;&#1497;&#1493;&#1514; &#1505;&#1497;&#1504;&#1503;)">&#128424; &#1491;&#1493;&#1495; &#1502;&#1505;&#1499;&#1501;</button>
-    <button class="btn btn-s" style="background:#16a34a;margin-left:8px" onclick="_eqiExportCsv()" title="&#1497;&#1497;&#1510;&#1493;&#1488; CSV (&#1500;&#1488;&#1511;&#1505;&#1500; / &#1502;&#1497;&#1497;&#1500;)">&#128202; CSV</button>
-    <button class="btn btn-s" style="background:#0d9488;margin-left:8px" onclick="_eqiPrintQrSheet()" title="&#1490;&#1497;&#1500;&#1497;&#1493;&#1503; QR &#1500;&#1499;&#1500; &#1492;&#1510;&#1497;&#1493;&#1491; (&#1500;&#1492;&#1491;&#1508;&#1505;&#1492; &#1500;&#1502;&#1491;&#1489;&#1511;&#1493;&#1514; &#1492;&#1502;&#1500;&#1490;&#1494;&#1493;&#1514;)">&#128290; QR &#1490;&#1497;&#1500;&#1497;&#1493;&#1503;</button>
-    <button class="btn btn-s" style="background:#ea580c;margin-left:8px" onclick="_eqiAutoTasksRun()" title="יצירת משימות אוטומטיות לכל ציוד שתוקפו יפוג ≤30 ימים">&#128203; &#8594; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
+    <button class="btn btn-s" id="eqi-more-btn" onclick="_eqiMoreMenu(this)" title="&#1506;&#1493;&#1491; &#1508;&#1506;&#1493;&#1500;&#1493;&#1514;: &#1497;&#1497;&#1489;&#1493;&#1488; / &#1497;&#1497;&#1510;&#1493;&#1488; / &#1492;&#1491;&#1508;&#1505;&#1492; / QR / &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;">&#8943; &#1506;&#1493;&#1491;</button>
     <button class="btn btn-p" onclick="_eqiOpenNew()">+ &#1492;&#1493;&#1505;&#1507;</button>
-    <button class="btn btn-d" style="margin-right:8px" onclick="delAllEqi()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <input type="file" id="_eqi-pdf-input" accept="application/pdf" multiple style="display:none" onchange="_eqiPdfHandle(event)">
   <div class="row" style="margin:8px 0;flex-wrap:wrap;gap:6px">
@@ -7822,6 +7817,55 @@ window._topMoreMenu=function(anchor){
   item('\u2139','\u05d0\u05d5\u05d3\u05d5\u05ea (v2026.05.02)',function(){if(typeof _showAbout==='function')_showAbout();});
   document.body.appendChild(menu);
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
+};
+// Generic anchored dropdown (same look as the header ⋯ menu). `fill(item,sep)`
+// adds entries; clicking an item, Escape, or clicking outside closes it.
+window._popMenu=function(anchor,menuId,fill){
+  var existing=document.getElementById(menuId);if(existing){existing.remove();return;}
+  var menu=document.createElement('div');
+  menu.id=menuId;
+  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:220px;max-width:min(92vw,320px);font-family:inherit;direction:rtl';
+  var rect=anchor.getBoundingClientRect();
+  menu.style.top=(rect.bottom+4)+'px';
+  menu.style.right=Math.max(8,window.innerWidth-rect.right)+'px';
+  function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
+  function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
+  function keyEsc(e){if(e.key==='Escape')closeMenu();}
+  function item(emoji,label,fn,danger){
+    var b=document.createElement('button');
+    b.type='button';
+    b.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;text-align:right;cursor:pointer;font-size:13px;font-family:inherit;color:'+(danger?'#b91c1c':'#222');
+    b.innerHTML='<span style="font-size:15px;width:20px;text-align:center">'+emoji+'</span><span>'+label+'</span>';
+    b.onmouseover=function(){b.style.background=danger?'#fef2f2':'#f5f7fa';};
+    b.onmouseout=function(){b.style.background='';};
+    b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
+    menu.appendChild(b);
+  }
+  function sep(){var d=document.createElement('div');d.style.cssText='height:1px;background:#eee;margin:4px 8px';menu.appendChild(d);}
+  fill(item,sep);
+  document.body.appendChild(menu);
+  // Keep the menu inside the viewport: an anchor near the left edge (RTL rows
+  // put secondary buttons there) would otherwise push it off-screen.
+  var mr=menu.getBoundingClientRect();
+  if(mr.left<8){menu.style.right='auto';menu.style.left='8px';}
+  else if(mr.right>window.innerWidth-8){menu.style.right='8px';}
+  setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
+};
+// A2: the equipment page's secondary actions, formerly nine header buttons.
+window._eqiMoreMenu=function(anchor){
+  _popMenu(anchor,'eqi-more-menu',function(item,sep){
+    item('📄','\u05d4\u05e2\u05dc\u05d0\u05ea \u05ea\u05e1\u05e7\u05d9\u05e8 PDF (AI)',function(){_eqiPdfPick();});
+    item('📄','\u05d9\u05d9\u05d1\u05d5\u05d0 Excel',function(){openEqiXl();});
+    item('💾','\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de\u05d0\u05d2\u05e8 \u05de\u05dc\u05d0',function(){openEqiXl2();});
+    sep();
+    item('🖨','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05d5\u05d7 \u05de\u05e1\u05db\u05dd',function(){_eqiPrintAll();});
+    item('📊','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV',function(){_eqiExportCsv();});
+    item('🔢','\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4',function(){_eqiPrintQrSheet();});
+    sep();
+    item('📋','\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05e6\u05d9\u05d5\u05d3 ≤30 \u05d9\u05d5\u05dd',function(){_eqiAutoTasksRun();});
+    sep();
+    item('🗑','\u05de\u05d7\u05e7 \u05d4\u05db\u05dc',function(){delAllEqi();},true);
+  });
 };
 function _tskDuplicate(id){
   var orig=(DB.tasks||[]).find(function(r){return r.id===id;});
