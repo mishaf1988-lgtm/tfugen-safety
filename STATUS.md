@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-09-18 (HEAD = PR #548 — סבב handoffs 2026-09-18: 14 PRs #535-#548. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד. ראה סעיף "סשן 2026-09-18" למטה)
+**Last updated**: 2026-09-18 (HEAD = PR #549 — סבב handoffs 2026-09-18: 15 PRs #535-#549. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B. ראה סעיף "סשן 2026-09-18" למטה)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## ⚡ מצב נוכחי — סיכום מהיר (HEAD #532)
@@ -80,7 +80,8 @@
 - [x] **EQI פג-תוקף** (#546) — פס פילים לחיצים (פג/≤30/תקינים/סה״כ, אותו כלל כמו הטאבים), «ייצוא פגי תוקף» CSV `-expired`, מצבים ריקים. בלי התראות.
 - [x] **A1 מודולים** (#547) — 6 קבוצות + «נפוצים», חיפוש עם מילים נרדפות + Enter + מצב ריק + איפוס בפתיחה, dedupe בהעדפות, מדווח רואה רק עמודי מדווח.
 - [x] **A2 קיר כפתורים EQI** (#548) — 9 כפתורי כותרת → «⋯ עוד» (תפריט מעוגן, `_popMenu` גנרי עם הצמדה ל-viewport) + «+ הוסף». פס הפג עלה למעלה. פס/ייצוא/טאבים ללא שינוי.
-- [ ] **תוכנית שדרוגים 2026-09-18** — PR-3 A4 (Roles Phase B) · PR-4 A3 (צפיפות רשימות) · PR-5 C2 (DECISIONS) · PR-6 B2 (Agents) · PR-7 B1 (Investigation Agent) · PR-8 B3 (NCR Agent) · PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
+- [x] **A4 Roles Phase B** (#549) — `body.role-reporter` + כלל CSS לפי קידומת `onclick` מסתיר למדווח כל ✎/🗑/שכפול/תפריט-שורה; (+) נשאר; מנהל/אדמין ללא שינוי. UI בלבד, בלי RLS. סוגר את "Phase B פתוח" מ-#511.
+- [ ] **תוכנית שדרוגים 2026-09-18** — PR-4 A3 (צפיפות רשימות) · PR-5 C2 (DECISIONS) · PR-6 B2 (Agents) · PR-7 B1 (Investigation Agent) · PR-8 B3 (NCR Agent) · PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
 - **תפעול (לא קוד):** איפוס נתוני תפעול ב-Supabase (גיבוי schema `backup_ops_20260918`), Storage buckets רוקנו (209→0) דרך Edge Function חד-פעמית (`empty-ops-buckets`, נוטרלה ל-410; ניתן למחוק בדשבורד). `pg_net` הופעל והוסר.
 - **accepted risk:** advisor `multiple_permissive_policies` (10) — נשאר כמו שהוא לפי החלטת מיכאל (אין מנהלים ב-production, רווח אפס). תיעוד ב-DECISIONS — PR-5.
 
@@ -92,7 +93,7 @@
 - [x] **Dashboard נקי** (PR #505) — הסרת "פעילות אחרונה" + 2 כרטיסי AI מהבית.
 - [x] **Auth Phase 1a** (PRs #500, #506-#508) — סיסמה זמנית 8 תווים alphanumeric + force-change בכניסה ראשונה (modal מחוץ ל-#app).
 - [x] **Auth Phase 1b/1c** (PRs #509-#510) — "שכחתי סיסמה?" במסך login + WhatsApp self-service לשליחת credentials.
-- [x] **Roles Phase A** (PR #511) — soft-hide UI לפי תפקיד (מדווח/מנהל/אדמין). Phase B (הסתרת ✎/🗑) עדיין פתוח.
+- [x] **Roles Phase A** (PR #511) — soft-hide UI לפי תפקיד (מדווח/מנהל/אדמין). Phase B (הסתרת ✎/🗑) נסגר ב-#549.
 - [x] **Autonomous agents Phase 2/3** (PRs #512, #514) — auto-deliver agent + password-reset inbox agent + server-side credential delivery. ⚠️ מנגנון השליחה הוחלף מאז (ראו פיבוט מייל).
 - [x] **🔑 פיבוט מייל סופי (4 שלבים)** (PRs #516-#519) — Graph CLIENT_CREDENTIALS → Graph Delegated+refresh_token → SendGrid → **MSAL בדפדפן**. ה-tenant של tapugan.co.il חוסם consent בכל המסלולים האוטומטיים. סופי: מייל דרך ה-token של המשתמשת בדפדפן (דורש אפליקציה פתוחה), WhatsApp דרך Meta, self-recovery הוא inbox-based. הוסרו `functions/_msApp.js`, `functions/_sendgrid.js`, `microsoft-start/callback.js`.
 - [x] **fix(_sign)** (PR #518) — `_sign()` לא הפיל יותר href לקישורי SharePoint שאינם Supabase.
