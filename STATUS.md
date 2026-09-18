@@ -2,7 +2,7 @@
 
 > מצב הפרויקט. מתעדכן אחרי כל משימה. Claude: קרא **קודם** את `CLAUDE.md`, ואז את הקובץ הזה.
 
-**Last updated**: 2026-09-18 (HEAD = PR #553 — סבב handoffs 2026-09-18: 19 PRs #535-#553. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
+**Last updated**: 2026-09-18 (HEAD = PR #554 — סבב handoffs 2026-09-18: 20 PRs #535-#554. תיקוני P0 (סיורים/NCR/התראות/sync/view), RLS initPlan, בית מנוקה, ניווט iPhone בלי bnav, ווידג׳ט פג-תוקף EQI, קיבוץ מודולים, תפריט ⋯ בדף ציוד, Roles Phase B, תפריטי ⋯ לשורה. ראה סעיף "סשן 2026-09-18" למטה)
 **Repo**: `mishaf1988-lgtm/tfugen-safety`
 
 ## ⚡ מצב נוכחי — סיכום מהיר (HEAD #532)
@@ -85,7 +85,8 @@
 - [x] **C2 DECISIONS** (#551) — `multiple_permissive_policies` (10) מתועד כ-accepted risk + רשומת החלטות הסבב (bnav/☰, בית, sbSync, Phase B, ⋯). בלי קוד, בלי DB.
 - [x] **B2 Agents hub** (#552) — `pg-agents` = ההאב היחיד: 5 סוכנים (כולל מקום ל-Incident Investigation «בבנייה — PR-7» + שאל את העוזר), קבוצת «דוחות AI» (סקירת הנהלה, משימות AI), 4 עוזרי מודאל, סיכומים לפי דרישה. כפתורי AI קונטקסטואליים בדפים נשארו; הבית נקי.
 - [x] **B1 Incident Investigation Agent** (#553) — מודאל `m-inv`: תקרית → 5-Why (ידני/AI דרך `_incFiveWhyGenerate` המשותף) → שמירה ל-`inc.five_why`+`inc.r` → משימת CAPA (`openTskModal`) / NCR ממולא. launchers ב-Agents ובכרטיס התקרית; מוסתר למדווח.
-- [ ] **תוכנית שדרוגים 2026-09-18** — PR-8 B3 (NCR Agent) · PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
+- [x] **B3 NCR Agent** (#554) — «ניתוח כללי» על **כל** הפתוחים (לא 40): עד 60 בבקשה אחת, מעל — חלקים של 60 + בקשת מיזוג; שגיאות מוצגות; סגורים בחוץ. הפילטר לסגורים במודאל כבר היה קיים. בטלפון העמודות נערמות. סוגר את 2c/5c.
+- [ ] **תוכנית שדרוגים 2026-09-18** — PR-9 C1 (PDF) · PR-10 E1+E2 · PR-11 E3.
 - **תפעול (לא קוד):** איפוס נתוני תפעול ב-Supabase (גיבוי schema `backup_ops_20260918`), Storage buckets רוקנו (209→0) דרך Edge Function חד-פעמית (`empty-ops-buckets`, נוטרלה ל-410; ניתן למחוק בדשבורד). `pg_net` הופעל והוסר.
 - **accepted risk:** advisor `multiple_permissive_policies` (10) — נשאר כמו שהוא לפי החלטת מיכאל (אין מנהלים ב-production, רווח אפס). מתועד ב-DECISIONS.md (#551).
 
@@ -157,7 +158,7 @@
 - [x] ~~**🚨 אבטחה — RLS Stage 1: סגירת anonymous access**~~ — **הורץ ואומת ידנית ב-2026-04-24**. הוסרו 9 פוליסות `open USING true` (auds/docs/emp/files/hist/inc/ncr/rsk/tr), נוספה `public.is_admin_manager()` helper, הוגדרו policies ל-`files`+`hist`, ו-`app_users_read` הוגבל ל-`TO authenticated`. אומת ב-4 שאילתות Supabase (0 open, רק authenticated USING true, פונקציה קיימת, files/hist מוגנות) ובבדיקות UI (admin עם 375 NCRs, 7 דפים, emp-mode + דיווח near_miss, אין 401/403). PR #84. תוכנן לפי חוות דעת יועץ חיצוני — גישה בשלבים (לא all-in-one).
 - [x] ~~**🚨 אבטחה — RLS Stage 2: החלפת 22 פוליסות `admin_all`**~~ — **הורץ ואומת ידנית ב-2026-04-24**. כל 22 הפוליסות `admin_all` (`is_anonymous=false`) נמחקו והוחלפו ב-`<table>_admin_manager_all` עם `public.is_admin_manager()`. אומת ב-3 שאילתות Supabase: (1) `COUNT admin_all = 0`, (2) 25 שורות `_admin_manager_all` (22 חדשות + tasks + files + hist), (3) `0 leftover_is_anonymous`. user1..user10 עם role=מדווח כעת חסומים מ-REST על 22 הטבלאות; admin + role=אדמין/מנהל יש להם CRUD מלא. emp_insert על 4 טבלאות עדיין פעיל (יוקשח בשלב 3). PR #85.
 - [x] ~~**🚨 אבטחה — RLS Stage 3: הקשחת `emp_insert`**~~ — **נדחה ב-2026-04-24, לא נדרש כרגע**. המצב הנוכחי: `emp_insert` עם `WITH CHECK (true)` על 4 טבלאות — מאפשר INSERT חופשי לאנונימי. הסיכון נמוך: (1) רק INSERT (אין SELECT/UPDATE/DELETE), (2) admin יכול לנקות spam ב-CRUD, (3) הטבלאות מיועדות לדיווח חופשי. אם יזוהה spam בפועל — לפתוח שלב 3 אז עם `WITH CHECK` ספציפי לכל טבלה.
-- [ ] **2c. NCR Agent — UX/Filter** (PR 5c) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
+- [x] **2c. NCR Agent — UX/Filter** (PR 5c → #554) — filter לסגורים ברשימת ה-modal, הגדלת sample, aggregate על הכל עם chunking
 - [ ] **3. Incident Investigation Agent** — 5 Whys אוטומטי + סיווג TRIR
 
 ### ⚠️ פעולה ידנית נדרשת
