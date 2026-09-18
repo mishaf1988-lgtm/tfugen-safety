@@ -9192,7 +9192,7 @@ function svHzmDelete(){
 var NOTIF_EVENTS=[
   {key:'ncr_critical',     label:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05e0\u05e4\u05ea\u05d7'},
   {key:'task_overdue',     label:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 3+ \u05d9\u05de\u05d9\u05dd'},
-  {key:'expiry_30days',    label:'\u05ea\u05e4\u05d5\u05d2\u05d4 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd (PPE/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05da)'},
+  {key:'expiry_30days',    label:'\u05ea\u05e4\u05d5\u05d2\u05d4 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd (\u05e6\u05d9\u05d5\u05d3/PPE/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05da)'},
   {key:'round_missed',     label:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d7\u05e1\u05e8'},
   {key:'incident_critical',label:'\u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea'}
 ];
@@ -9734,16 +9734,25 @@ function _notifDailyScan(){
     overdueTasks.forEach(function(t){
       _notifyEvent('task_overdue',{title:t.title||'\u05de\u05e9\u05d9\u05de\u05d4',id:t.id});
     });
-    // expiry_30days: items expiring within 0-30 days
+    // expiry_30days: items expiring within 0-30 days.
+    // P0#2: equip_inspections was missing from this list even though
+    // _expCollect, the EQI page and _eqiAutoTasksRun all scan it. It is in
+    // fact the only table that currently holds expiry dates at all, so this
+    // event had never fired once. _notifBuildWaArgs already reads
+    // r.n / r.code / r.vendor, so the message side needed no change.
     var expSoon=[];
-    ['ppe','tr','docs','ctr','drl','ins','med'].forEach(function(k){
+    ['ppe','tr','docs','ctr','drl','ins','med','equip_inspections'].forEach(function(k){
       (DB[k]||[]).forEach(function(r){
         if(!r.e)return;
         var d=new Date(r.e);
+        if(isNaN(d.getTime()))return;
         var days=Math.floor((d-today)/86400000);
-        if(days>=0&&days<=30)expSoon.push({tbl:k,id:r.id,name:r.n||r.t||'\u05e4\u05e8\u05d9\u05d8',days:days});
+        if(days>=0&&days<=30)expSoon.push({tbl:k,id:r.id,name:r.n||r.code||r.t||'\u05e4\u05e8\u05d9\u05d8',days:days});
       });
     });
+    // Most urgent first, so the 3-item cap can never hide something expiring
+    // tomorrow behind something expiring in 29 days.
+    expSoon.sort(function(a,b){return a.days-b.days;});
     expSoon.slice(0,3).forEach(function(it){
       _notifyEvent('expiry_30days',{title:it.name+' ('+it.days+' \u05d9\u05de\u05d9\u05dd)',id:it.id,table:it.tbl});
     });
