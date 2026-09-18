@@ -743,8 +743,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div style="font-weight:900;font-size:18px">&#129466; נאמן בטיחות</div>
       <button class="btn btn-s btn-sm" onclick="_truPull(true)" title="רענון מהשרת">&#8635;</button>
     </div>
-    <div class="field" style="margin-bottom:8px"><label>השם שלי</label><input id="tru-me" list="tru-names" placeholder="בחר או הקלד את שמך" onchange="_truSetMe(this.value)"></div>
-    <datalist id="tru-names"></datalist>
+    <div class="field" style="margin-bottom:8px"><label>השם שלי</label><select id="tru-me" class="inp" onchange="_truMeChanged(this.value)"></select><input id="tru-me-other" placeholder="הקלד את שמך" style="display:none;margin-top:6px" onchange="_truSetMe(this.value)"></div>
     <div id="tru-body"></div>
   </div>
   <button class="emp-toggle" onclick="empToggle(false)">&#10140; &#1506;&#1489;&#1493;&#1512; &#1500;&#1502;&#1502;&#1513;&#1511; &#1492;&#1502;&#1500;&#1488;</button>
@@ -2301,7 +2300,7 @@ id="m-ncr" style="display:none">
   <div id="tru-ref-note" style="display:none;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 10px;font-size:12px;color:#1e40af;margin-bottom:10px;line-height:1.5"></div>
   <div class="fgrid">
     <div class="field fw"><label>משימה *</label><select id="tru-t" class="inp" onchange="_truTaskHint()"></select><div id="tru-how" style="font-size:12px;color:var(--t2);line-height:1.5"></div></div>
-    <div class="field"><label>נאמן *</label><input id="tru-u" list="tru-names" placeholder="שם הנאמן"></div>
+    <div class="field"><label>נאמן *</label><select id="tru-u" class="inp" onchange="_truUChanged(this.value)"></select><input id="tru-u-other" placeholder="הקלד שם" style="display:none;margin-top:6px"></div>
     <div class="field"><label>תאריך *</label><input type="date" id="tru-d"></div>
     <div class="field fw"><label>אזור / מיקום *</label><input id="tru-loc" list="tru-loc-list" placeholder="למשל: אולם טיגון, יציאת חירום מערבית"><datalist id="tru-loc-list"></datalist></div>
     <div class="field fw"><label>ממצא *</label><div style="display:flex;gap:8px"><button type="button" class="btn btn-s" id="tru-ok-btn" style="flex:1" onclick="_truSetOk(true)">&#9989; תקין</button><button type="button" class="btn btn-s" id="tru-bad-btn" style="flex:1" onclick="_truSetOk(false)">&#9888;&#65039; ליקוי</button></div></div>
@@ -2310,6 +2309,20 @@ id="m-ncr" style="display:none">
   </div>
   <div class="tru-danger">&#128680; <strong>סכנה מיידית?</strong> מתקשרים לממונה הבטיחות מיד — לא ממתינים לדיווח. מגן מכונה שהוסר או נוטרל ו"כמעט ונפגע" נכנסים לכאן.</div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru')">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
+</div>
+
+<!-- TRUSTEES ROSTER (manager): who may report — maintained here, no code change -->
+<div class="overlay" id="ov-tru-roster" onclick="closeModal('m-tru-roster')"></div>
+<div class="modal" id="m-tru-roster" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru-roster')">&#10005;</button>
+  <div class="modal-title">&#128101; רשימת הנאמנים</div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">הנאמנים שמוצעים לבחירה בדיווח. נאמן מושבת נשאר בהיסטוריה ובלוח, אבל לא מוצע לבחירה.</div>
+  <div id="tru-roster-list"></div>
+  <div class="fgrid" style="margin-top:12px">
+    <div class="field"><label>שם *</label><input id="tru-roster-n" placeholder="שם הנאמן"></div>
+    <div class="field"><label>מחלקה / אזור אחריות</label><input id="tru-roster-dep" placeholder="למשל: ייצור ואריזה"></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-roster')">סגור</button><button class="btn btn-p" onclick="_truRosterAdd()">+ הוסף נאמן</button></div>
 </div>
 
 <!-- ROUND MODAL (Morning Round) -->
@@ -2814,7 +2827,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -2825,7 +2838,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -2973,7 +2986,7 @@ function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(S
 var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types',trustees:'trustee_reports'};
 // Lookup tables — names appear in almost every list, so a change in them
 // can affect any rendered page. Never skip a re-render for these.
-var _LOOKUP_TBLS={locations:1,projects:1,issue_types:1,inspection_types:1,app_users:1,emp:1};
+var _LOOKUP_TBLS={locations:1,projects:1,issue_types:1,inspection_types:1,app_users:1,emp:1,trustees:1};
 function _sbRefresh(silent,changedTbl){
   rDash();
   if(typeof _refreshUsersDatalist==='function')_refreshUsersDatalist();
@@ -3012,7 +3025,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'];
   var done=0;
   function finish(){
     done++;
@@ -3049,7 +3062,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -3322,7 +3335,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();}};
 
   delRow(tbl,id,fn[tbl]||function(){});
 }
@@ -12182,7 +12195,7 @@ window._exportXlsx=function(){
       var wb=XLSX.utils.book_new();
       // Order: most-business-relevant first so Excel opens on a useful sheet.
       var tableOrder=[
-        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports',
+        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports','trustees',
         'equip_inspections','ppe','tr','docs','ctr','med',
         'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
         'emp','app_users','locations','projects','inspection_types','issue_types',
@@ -13244,7 +13257,9 @@ function _truScore(u,m){
 // Leaderboard for a month: score desc, then hazards closed desc (the
 // document's tie-break), then name. "Who hasn't won yet" is phase 2.
 function _truBoard(m){
-  var names={};_truRows(m).forEach(function(r){if(r.u)names[r.u]=1;});
+  var names={};
+  if(typeof _truRoster==='function')_truRoster().forEach(function(t){names[t.n]=1;});
+  _truRows(m).forEach(function(r){if(r.u)names[r.u]=1;});
   return Object.keys(names).map(function(u){return _truScore(u,m);}).sort(function(a,b){return (b.total-a.total)||(b.closed-a.closed)||a.u.localeCompare(b.u);});
 }
 // ---- SAFETY TRUSTEES (T2): trustee screen inside the employee home + report form ----
@@ -13253,7 +13268,7 @@ var TRU_ME_KEY='tfgn_trustee_name';
 // report it is only nudged. One flag if the committee wants it mandatory too.
 var TRUSTEE_PHOTO_REQUIRED_OK=false;
 function _truMe(){try{return localStorage.getItem(TRU_ME_KEY)||'';}catch(e){return '';}}
-function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}var me=g('tru-me');if(me&&me.value!==v)me.value=v;_truRender();}
+function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}_truNamePairSync('tru-me','tru-me-other',v);_truRender();}
 // Michael (2026-09-18): the employee home IS the trustee screen — no tile grid,
 // no extra tap. The tiles stay in the markup; flip this to bring them back.
 var EMP_HOME_TRUSTEES_ONLY=true;
@@ -13264,17 +13279,30 @@ function _truEmpHome(pull){
   var home=g('pg-emp-home');if(!home)return;
   if(!EMP_HOME_TRUSTEES_ONLY){home.classList.remove('tru-only');return;}
   home.classList.add('tru-only');
-  var me=g('tru-me');if(me)me.value=_truMe();
   _truFillLists();_truRender();
   if(pull)_truPull(false);
 }
-function _truNames(){
-  var s={};
-  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u)s[r.u]=1;});
-  (DB.app_users||[]).forEach(function(u){if(u.active&&u.full_name)s[u.full_name]=1;});
-  (DB.emp||[]).forEach(function(e){if(e.n)s[e.n]=1;});
-  return Object.keys(s).sort(function(a,b){return a.localeCompare(b,'he');});
+// Roster (public.trustees, maintained by the manager): the names offered in
+// the pickers. Past reporters missing from it are still offered, plus "\u05d0\u05d7\u05e8".
+var TRU_OTHER='__other__';
+function _truRoster(){return (DB.trustees||[]).filter(function(t){return t&&t.n&&t.active!==false;}).slice().sort(function(a,b){return String(a.n).localeCompare(String(b.n),'he');});}
+function _truNameOptionsHtml(current){
+  var seen={},h='<option value="">\u2014 \u05d1\u05d7\u05e8 \u05e0\u05d0\u05de\u05df \u2014</option>';
+  _truRoster().forEach(function(t){seen[t.n]=1;h+='<option value="'+esc(t.n)+'"'+(t.n===current?' selected':'')+'>'+esc(t.n)+(t.dep?' \u00b7 '+esc(t.dep):'')+'</option>';});
+  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u&&!seen[r.u]){seen[r.u]=1;h+='<option value="'+esc(r.u)+'"'+(r.u===current?' selected':'')+'>'+esc(r.u)+'</option>';}});
+  h+='<option value="'+TRU_OTHER+'"'+(current&&!seen[current]?' selected':'')+'>\u05d0\u05d7\u05e8 (\u05d4\u05e7\u05dc\u05d3 \u05e9\u05dd)</option>';
+  return h;
 }
+// A picker is a <select> + a free-text input shown only for "\u05d0\u05d7\u05e8".
+function _truNameVal(selId,otherId){var v=gv(selId);return v===TRU_OTHER?gv(otherId):v;}
+function _truNamePairSync(selId,otherId,current){
+  var sel=g(selId),oth=g(otherId);if(!sel)return;
+  sel.innerHTML=_truNameOptionsHtml(current||'');
+  var isOther=sel.value===TRU_OTHER;
+  if(oth){oth.style.display=isOther?'':'none';oth.value=isOther?(current||''):'';}
+}
+function _truMeChanged(v){var oth=g('tru-me-other');if(v===TRU_OTHER){if(oth){oth.style.display='';oth.value='';oth.focus();}return;}if(oth)oth.style.display='none';_truSetMe(v);}
+function _truUChanged(v){var oth=g('tru-u-other');if(oth){oth.style.display=v===TRU_OTHER?'':'none';if(v===TRU_OTHER)oth.focus();}}
 // Area suggestions: the locations catalogue when this device has it (the
 // anonymous employee session cannot read it \u2014 RLS unchanged), plus every
 // location already used in a trustee report.
@@ -13285,7 +13313,7 @@ function _truLocs(){
   return Object.keys(s).sort(function(a,b){return a.localeCompare(b,'he');});
 }
 function _truFillLists(){
-  var n=g('tru-names');if(n)n.innerHTML=_truNames().map(function(x){return '<option value="'+esc(x)+'">';}).join('');
+  _truNamePairSync('tru-me','tru-me-other',_truMe());
   var l=g('tru-loc-list');if(l)l.innerHTML=_truLocs().map(function(x){return '<option value="'+esc(x)+'">';}).join('');
 }
 // Server pull for this one table. Employee mode never runs sbSync (the
@@ -13294,11 +13322,13 @@ function _truFillLists(){
 // with the same merge rules as sbSync (null = unreachable \u2192 keep cache).
 function _truPull(manual){
   if(typeof sbGet!=='function')return Promise.resolve(false);
-  var obBefore=_obLocalState('trustee_reports');
-  return sbGet('trustee_reports').then(function(rows){
-    if(rows===null){if(manual)toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u2014 \u05de\u05d5\u05e6\u05d2 \u05de\u05d4 \u05e9\u05e0\u05e9\u05de\u05e8 \u05d1\u05de\u05db\u05e9\u05d9\u05e8');return false;}
-    _sbMergePull('trustee_reports',rows,obBefore);
-    sdb();_truRender();
+  var tbls=['trustee_reports','trustees'],obBefore={};
+  tbls.forEach(function(t){obBefore[t]=_obLocalState(t);});
+  return Promise.all(tbls.map(function(t){return sbGet(t);})).then(function(res){
+    var any=false;
+    res.forEach(function(rows,i){if(rows===null)return;any=true;_sbMergePull(tbls[i],rows,obBefore[tbls[i]]);});
+    if(!any){if(manual)toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u2014 \u05de\u05d5\u05e6\u05d2 \u05de\u05d4 \u05e9\u05e0\u05e9\u05de\u05e8 \u05d1\u05de\u05db\u05e9\u05d9\u05e8');return false;}
+    sdb();_truFillLists();_truRender();
     if(manual)toast('\u05e2\u05d5\u05d3\u05db\u05df \u2713');
     return true;
   });
@@ -13307,7 +13337,6 @@ function _truOpen(){
   if(EMP_HOME_TRUSTEES_ONLY){_truEmpHome(true);try{window.scrollTo(0,0);}catch(e){}return;}
   var home=g('pg-emp-home');if(!home)return;
   home.classList.add('tru-open');
-  var me=g('tru-me');if(me)me.value=_truMe();
   _truFillLists();_truRender();
   _truPull(false);
   try{window.scrollTo(0,0);}catch(e){}
@@ -13379,7 +13408,7 @@ function _truFillTaskSelect(n){
 function _truReport(n,ref){
   _truFillLists();
   _truFillTaskSelect(parseInt(n,10)||1);
-  var u=g('tru-u');if(u&&!u.value)u.value=_truMe()||'';
+  _truNamePairSync('tru-u','tru-u-other',_truNameVal('tru-u','tru-u-other')||_truMe()||'');
   var d=g('tru-d');if(d)d.value=new Date().toISOString().split('T')[0];
   var loc=g('tru-loc');if(loc)loc.value='';
   var f=g('tru-f');if(f)f.value='';
@@ -13404,7 +13433,7 @@ function _truReport(n,ref){
 function _truCloseReport(id){_truReport(8,id);}
 function svTru(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
-  var u=gv('tru-u');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var u=_truNameVal('tru-u','tru-u-other');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var t=parseInt(gv('tru-t'),10);if(!(t>=1&&t<=8)){toast('\u05d1\u05d7\u05e8 \u05de\u05e9\u05d9\u05de\u05d4');return;}
   var d=gv('tru-d')||new Date().toISOString().split('T')[0];
   var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
@@ -13555,8 +13584,35 @@ function _truExportCsv(){
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
   toast('\u05d9\u05d5\u05e6\u05d0 \u2713 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');
 }
+// ---- roster editor (manager): public.trustees ----
+function _truRosterOpen(){_truRosterRender();openModal('m-tru-roster');}
+function _truRosterRender(){
+  var box=g('tru-roster-list');if(!box)return;
+  var rows=(DB.trustees||[]).slice().sort(function(a,b){return ((a.active===false)?1:0)-((b.active===false)?1:0)||String(a.n||'').localeCompare(String(b.n||''),'he');});
+  if(!rows.length){box.innerHTML='<div style="font-size:13px;color:var(--t2);text-align:center;padding:10px">\u05d0\u05d9\u05df \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 \u2014 \u05d4\u05d5\u05e1\u05e3 \u05dc\u05de\u05d8\u05d4.</div>';return;}
+  box.innerHTML=rows.map(function(t){
+    var off=t.active===false;
+    return '<div class="tru-rep" data-tru-roster="'+esc(t.id)+'"><span style="flex:1;min-width:0"><strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.n)+'</strong>'+(t.dep?' <span style="color:var(--t2)">\u00b7 '+esc(t.dep)+'</span>':'')+(t.notes?'<div style="font-size:11px;color:var(--t2)">'+esc(t.notes)+'</div>':'')+'</span>'
+      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+  }).join('');
+}
+function _truRosterAdd(){
+  var n=gv('tru-roster-n');if(!n){toast('\u05e9\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  if((DB.trustees||[]).some(function(t){return t.n===n;})){toast('\u05d4\u05e9\u05dd \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4');return;}
+  var r={id:gid(),n:n,dep:gv('tru-roster-dep')||null,ph:null,active:true,notes:null,ts:new Date().toISOString()};
+  if(!DB.trustees)DB.trustees=[];
+  DB.trustees.push(r);sbIns('trustees',r);sdb();
+  var a=g('tru-roster-n');if(a)a.value='';var b=g('tru-roster-dep');if(b)b.value='';
+  toast('\u05e0\u05d5\u05e1\u05e3 \u2713');_truRosterRender();_truFillLists();rTrustees();
+}
+function _truRosterToggle(id){
+  var t=(DB.trustees||[]).find(function(x){return x.id===id;});if(!t)return;
+  t.active=(t.active===false);sbUpd('trustees',t);sdb();
+  _truRosterRender();_truFillLists();rTrustees();
+}
 function _truMgrMenu(anchor){
   _popMenu(anchor,'tru-mgr-menu',function(item,sep){
+    item('\ud83d\udc65','\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',_truRosterOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
     item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
     sep();
@@ -15177,7 +15233,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();
