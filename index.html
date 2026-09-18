@@ -146,7 +146,8 @@ body.hc .sheet-btn:hover{transform:none;box-shadow:none}
 .bn .ic{font-size:22px;margin-bottom:2px}
 
 /* ---- MAIN ---- */
-.main{padding:76px 12px calc(170px + env(safe-area-inset-bottom));overflow-y:auto;height:100vh}
+/* P1#2: bottom padding only has to clear the report FAB now (64px + its label + 24px offset), not a bottom nav. */
+.main{padding:76px 12px calc(112px + env(safe-area-inset-bottom));overflow-y:auto;height:100vh}
 
 /* ---- PAGES ---- */
 .page{display:none}
@@ -349,13 +350,14 @@ body.hc .fab{background:var(--red)!important;box-shadow:0 0 0 3px #000!important
 body.hc .fab:hover{transform:none}
 
 /* ---- Smart Capture FAB + modal ---- */
-.cap-fab{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));right:16px;left:auto;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4a9adf);color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 22px rgba(124,58,237,.55);border:none;cursor:pointer;direction:ltr}
+.cap-fab{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:16px;left:auto;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4a9adf);color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 22px rgba(124,58,237,.55);border:none;cursor:pointer;direction:ltr}
 .cap-fab:active{transform:scale(.94)}
 .cap-fab::after{content:'דווח';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#7c3aed;background:#fff;padding:2px 8px;border-radius:999px;border:1px solid #d8b4fe;white-space:nowrap;font-family:inherit;line-height:1.3}
 body.emp-mode .cap-fab,body.emp-mode #ask-fab{display:none}
-/* P1#1: no floating AI button on the home screen — it is reachable from the header ⋯ menu
-   and the agents page. !important because the button carries an inline display:flex. */
-body.on-dash #ask-fab{display:none !important}
+/* P1#2: no chat FAB anywhere — the assistant lives in the header ⋯ menu and the agents
+   page; the only floating button is the report (Smart Capture) one. !important because
+   the button carries an inline display:flex. Supersedes the P1#1 home-only rule. */
+#ask-fab{display:none !important}
 /* fullscreen override — applied by capOpen after openModal runs */
 .modal.cap-fullscreen{top:0!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;height:100vh!important;height:100svh!important;max-width:none!important;max-height:100vh!important;max-height:100svh!important;border-radius:0!important;margin:0!important;padding:16px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;display:flex!important;flex-direction:column;box-sizing:border-box}
 .modal.cap-fullscreen .modal-title{font-size:20px;margin-bottom:10px}
@@ -486,6 +488,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
 /* ---- EMPLOYEE MODE (Stage A) ---- */
 body.emp-mode .bnav{display:none}
+/* P1#2 (2026-09-18): the bottom nav is retired on EVERY screen — it was the
+   iOS Safari culprit (#348 → #492 revert history). Hidden with CSS only; the
+   markup stays so the badge / `bn.on` bookkeeping in JS keeps working
+   harmlessly. Navigation is the top bar (☰ menu, tasks, ⋯) + home quick
+   actions. !important so no inline style or later rule can bring it back. */
+.bnav{display:none !important}
 body.emp-mode .topbar-title,body.emp-mode #sync-pill,body.emp-mode #force-sync-btn,body.emp-mode #emp-mode-btn,body.emp-mode #bell,body.emp-mode #ncr-status-widget{display:none!important}
 body.emp-mode .main{padding:76px 12px 20px}
 body.emp-mode .page{display:none!important}
@@ -600,6 +608,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="topbar-actions">
+    <!-- P1#2: ☰ replaces the retired bottom nav as the way into the modules / reports sheets from every page. -->
+    <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496;" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496;" onclick="_menuOpen()">&#9776;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
@@ -608,7 +618,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
-  <div class="topbar-left">
+  <div class="topbar-left" onclick="goPage('dash')" role="button" title="&#1512;&#1488;&#1513;&#1497;" style="cursor:pointer">
     <img src="/logo.jpg" alt="Tapugan Safety">
     <div class="topbar-title">
       <div class="t1">&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
@@ -1598,6 +1608,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="btn btn-s" onclick="_modVisOpen()" style="width:100%;margin-bottom:8px;font-size:12px;padding:8px;justify-content:flex-start;gap:8px">&#9881;&#65039; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1514;&#1510;&#1493;&#1490;&#1492;</button>
   <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_debModFilter(this.value)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid #ddd;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
   <div class="sheet-grid">
+    <!-- P1#2: with the bottom nav gone, the reports sheet is reached from here too.
+         Deliberately not a _goFromSheet module, so it stays out of the visibility prefs. -->
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openModal('m-reports-sheet')"><span class="sic">&#9888;</span>&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</button>
     <div class="sheet-group-title">ISO &amp; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','docs')"><span class="sic">&#128196;</span>&#1502;&#1505;&#1502;&#1499;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','aud')"><span class="sic">&#128269;</span>&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514;</button>
@@ -3209,6 +3222,12 @@ function goPage(id){
   rPage();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
+// P1#2: the ☰ button in the top bar. Managers/admin get the full modules
+// sheet; reporters get the reports sheet (the only entries they may use —
+// the same split the retired bottom nav enforced by hiding bn-modules).
+window._menuOpen=function(){
+  openModal(_role()==='reporter'?'m-reports-sheet':'m-modules-sheet');
+};
 function _modulesSheetFilter(q){
   q=String(q||'').trim().toLowerCase();
   var sheet=g('m-modules-sheet');if(!sheet)return;
