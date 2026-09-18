@@ -2729,7 +2729,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -2740,7 +2740,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -2885,7 +2885,7 @@ function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(S
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
 // re-render on any change because they aggregate across many tables.
-var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types'};
+var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types',trustees:'trustee_reports'};
 // Lookup tables — names appear in almost every list, so a change in them
 // can affect any rendered page. Never skip a re-render for these.
 var _LOOKUP_TBLS={locations:1,projects:1,issue_types:1,inspection_types:1,app_users:1,emp:1};
@@ -2900,7 +2900,7 @@ function _sbRefresh(silent,changedTbl){
   if(!silent||!document.querySelector('.modal[style*="block"]'))rPage();
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'];
   var done=0;
   function finish(){
     done++;
@@ -2957,7 +2957,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -8014,7 +8014,7 @@ function _tskDuplicate(id){
 }
 function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','today','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
-function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea'};return m[tbl]||tbl;}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
@@ -12083,7 +12083,7 @@ window._exportXlsx=function(){
       var wb=XLSX.utils.book_new();
       // Order: most-business-relevant first so Excel opens on a useful sheet.
       var tableOrder=[
-        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox',
+        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports',
         'equip_inspections','ppe','tr','docs','ctr','med',
         'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
         'emp','app_users','locations','projects','inspection_types','issue_types',
@@ -13104,6 +13104,49 @@ function _finishLogin(lb){
   var app=g('app');if(app)app.style.display='block';
   ldb();if(empIsOn())CUR='emp-home';else rDash();sbSync();_rtStart();
   setTimeout(_fetchCurrentUserProfile,900);
+}
+// ---- SAFETY TRUSTEES (\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) \u2014 catalogue + scoring ----
+// Source: "\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05d5\u05ea" (16.09.2026). One row in
+// DB.trustee_reports per report; see project-files/SPEC-trustees-2026-09-18.md.
+// t = task number 1..8; task 8 is the "after" photo that closes an earlier
+// finding (r.ref = that finding's id \u2014 the DB trigger flips it to '\u05e0\u05e1\u05d2\u05e8').
+var TRUSTEE_TASKS=[
+  {n:1,icon:'\ud83d\udd0d',t:'\u05e1\u05d9\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8',how:'\u05e1\u05d9\u05d5\u05e8 \u05d0\u05d7\u05d3 \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05d4\u05d5\u05e7\u05e6\u05d4 \u05dc\u05da. \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05e2\u05dc \u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05de\u05e6\u05dc\u05de\u05d9\u05dd \u05db\u05dc \u05de\u05e4\u05d2\u05e2. \u05d2\u05dd \u05d0\u05dd \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05db\u05dc\u05d5\u05dd \u2014 \u05de\u05d3\u05d5\u05d5\u05d7\u05d9\u05dd "\u05e1\u05d9\u05d5\u05e8 \u05d1\u05d5\u05e6\u05e2, \u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd".'},
+  {n:2,icon:'\ud83d\udebf',t:'\u05de\u05e7\u05dc\u05d7\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05d5\u05e9\u05d8\u05d9\u05e4\u05d5\u05ea \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd',how:'\u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05d0\u05ea \u05d4\u05de\u05e7\u05dc\u05d7\u05ea \u05d5\u05d0\u05ea \u05e9\u05d8\u05d9\u05e4\u05ea \u05d4\u05e2\u05d9\u05e0\u05d9\u05d9\u05dd \u05e2\u05d3 \u05e9\u05d4\u05de\u05d9\u05dd \u05e6\u05dc\u05d5\u05dc\u05d9\u05dd. \u05d1\u05d5\u05d3\u05e7\u05d9\u05dd \u05dc\u05d7\u05e5, \u05d2\u05d9\u05e9\u05d4 \u05e4\u05e0\u05d5\u05d9\u05d4 \u05d1\u05de\u05d8\u05e8 \u05de\u05e1\u05d1\u05d9\u05d1, \u05e9\u05d9\u05dc\u05d5\u05d8 \u05e7\u05d9\u05d9\u05dd \u05d5\u05e0\u05d9\u05e7\u05d5\u05d6 \u05e2\u05d5\u05d1\u05d3.'},
+  {n:3,icon:'\ud83d\udeaa',t:'\u05d3\u05e8\u05db\u05d9 \u05de\u05d9\u05dc\u05d5\u05d8 \u05d5\u05d9\u05e6\u05d9\u05d0\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd',how:'\u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05d1\u05db\u05dc \u05de\u05e2\u05d1\u05e8 \u05d5\u05d3\u05dc\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8: \u05e4\u05e0\u05d5\u05d9 \u05dc\u05d2\u05de\u05e8\u05d9, \u05d4\u05d3\u05dc\u05ea \u05e0\u05e4\u05ea\u05d7\u05ea \u05d1\u05d3\u05d7\u05d9\u05e4\u05d4 \u05d0\u05d7\u05ea, \u05e9\u05d9\u05dc\u05d5\u05d8 \u05d4\u05de\u05d9\u05dc\u05d5\u05d8 \u05d5\u05ea\u05d0\u05d5\u05e8\u05ea \u05d4\u05d7\u05d9\u05e8\u05d5\u05dd \u05d3\u05d5\u05dc\u05e7\u05d9\u05dd.'},
+  {n:4,icon:'\ud83e\ude9c',t:'\u05ea\u05e7\u05d9\u05e0\u05d5\u05ea \u05e1\u05d5\u05dc\u05de\u05d5\u05ea \u05d5\u05d2\u05d9\u05e9\u05d4 \u05dc\u05d2\u05d5\u05d1\u05d4',how:'\u05db\u05dc \u05e1\u05d5\u05dc\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8: \u05e9\u05dc\u05d1\u05d9\u05dd \u05e9\u05dc\u05de\u05d9\u05dd, \u05e8\u05d2\u05dc\u05d9\u05d5\u05ea \u05d2\u05d5\u05de\u05d9, \u05de\u05e2\u05e6\u05d5\u05e8 \u05e4\u05ea\u05d9\u05d7\u05d4, \u05d1\u05e8\u05d2\u05d9\u05dd \u05de\u05d4\u05d5\u05d3\u05e7\u05d9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05e1\u05d5\u05dc\u05dd \u05de\u05e1\u05d5\u05de\u05df. \u05e1\u05d5\u05dc\u05dd \u05e4\u05d2\u05d5\u05dd \u2014 \u05ea\u05d2 \u05d0\u05d3\u05d5\u05dd \u05d5\u05d4\u05d5\u05e6\u05d0\u05d4 \u05de\u05d4\u05e9\u05d8\u05d7 \u05de\u05d9\u05d3. \u05d1\u05d5\u05d3\u05e7\u05d9\u05dd \u05e9\u05e2\u05dc\u05d9\u05d9\u05d4 \u05dc\u05de\u05db\u05dc\u05d9\u05dd \u05d5\u05dc\u05d0\u05d6\u05d5\u05e8\u05d9 \u05d2\u05d5\u05d1\u05d4 \u05e0\u05e2\u05d5\u05dc\u05d4 \u05d5\u05d4\u05de\u05e4\u05ea\u05d7\u05d5\u05ea \u05d0\u05e6\u05dc \u05d4\u05e9\u05d5\u05de\u05e8.'},
+  {n:5,icon:'\ud83e\uddef',t:'\u05e2\u05de\u05d3\u05d5\u05ea \u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9',how:'\u05de\u05d8\u05e4\u05d9\u05dd, \u05d2\u05dc\u05d2\u05dc\u05d5\u05e0\u05d9\u05dd \u05d5\u05d4\u05d9\u05d3\u05e8\u05e0\u05d8\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8: \u05d2\u05d9\u05e9\u05d4 \u05e4\u05e0\u05d5\u05d9\u05d4, \u05e9\u05d9\u05dc\u05d5\u05d8, \u05e4\u05dc\u05d5\u05de\u05d1\u05d4 \u05e9\u05dc\u05de\u05d4, \u05de\u05d3 \u05d4\u05dc\u05d7\u05e5 \u05d1\u05d8\u05d5\u05d5\u05d7 \u05d4\u05d9\u05e8\u05d5\u05e7, \u05de\u05d3\u05d1\u05e7\u05ea \u05ea\u05d5\u05e7\u05e3 \u05dc\u05d0 \u05e4\u05d2\u05d4.'},
+  {n:6,icon:'\u2699\ufe0f',t:'\u05de\u05d2\u05d9\u05e0\u05d9 \u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05d5\u05dc\u05d7\u05e6\u05e0\u05d9 \u05e2\u05e6\u05d9\u05e8\u05d4',how:'\u05db\u05dc \u05d4\u05de\u05d2\u05e0\u05d9\u05dd \u05d1\u05de\u05e7\u05d5\u05de\u05dd \u05d5\u05dc\u05d0 \u05de\u05e0\u05d5\u05d8\u05e8\u05dc\u05d9\u05dd, \u05dc\u05d7\u05e6\u05e0\u05d9 \u05e2\u05e6\u05d9\u05e8\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05e0\u05d2\u05d9\u05e9\u05d9\u05dd \u05d5\u05de\u05e1\u05d5\u05de\u05e0\u05d9\u05dd. \u05de\u05d2\u05df \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d3\u05d7\u05d5\u05e3 \u05de\u05d9\u05d3, \u05dc\u05d0 \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e1\u05d5\u05e3 \u05d4\u05d7\u05d5\u05d3\u05e9.'},
+  {n:7,icon:'\ud83e\ude79',t:'\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d5\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df',how:'\u05e2\u05de\u05d3\u05ea \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4 \u05d5\u05d1\u05ea\u05d5\u05e7\u05e3, \u05de\u05dc\u05d0\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d6\u05de\u05d9\u05df \u05d1\u05e2\u05de\u05d3\u05d4, \u05d5\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8 \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d1\u05e4\u05d5\u05e2\u05dc \u05d1\u05de\u05d4 \u05e9\u05e0\u05d3\u05e8\u05e9.'},
+  {n:8,icon:'\u2705',t:'\u05de\u05e2\u05e7\u05d1 \u05e1\u05d2\u05d9\u05e8\u05d4',how:'\u05d1\u05d5\u05d3\u05e7\u05d9\u05dd \u05d1\u05e9\u05d8\u05d7 \u05e9\u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05d3\u05d9\u05d5\u05d5\u05d7\u05ea\u05dd \u05e2\u05dc\u05d9\u05d4\u05dd \u05d5\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05e7\u05e0\u05d5 \u05d1\u05d0\u05de\u05ea. \u05de\u05e6\u05dc\u05de\u05d9\u05dd \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u05dc\u05db\u05dc \u05de\u05e4\u05d2\u05e2 \u05e9\u05e0\u05e1\u05d2\u05e8.'}
+];
+var TRUSTEE_PTS_TASK=10,TRUSTEE_MAX_TASK_PTS=80,TRUSTEE_PTS_CLOSED=2,TRUSTEE_MAX_CLOSED_PTS=20,TRUSTEE_MIN_TASKS=5;
+var TRUSTEE_S_OK='\u05ea\u05e7\u05d9\u05df',TRUSTEE_S_OPEN='\u05e4\u05ea\u05d5\u05d7',TRUSTEE_S_CLOSED='\u05e0\u05e1\u05d2\u05e8';
+function _truTask(n){n=parseInt(n,10);return TRUSTEE_TASKS.filter(function(t){return t.n===n;})[0]||null;}
+function _truMonthKey(d){return String(d||'').substring(0,7);}
+function _truThisMonth(){return new Date().toISOString().substring(0,7);}
+function _truRowMonth(r){return r.m||_truMonthKey(r.d);}
+function _truIsHazard(r){var t=parseInt(r.t,10);return r.ok===false&&t>=1&&t<=7;}
+// All reports of one month (any trustee).
+function _truRows(m){return (DB.trustee_reports||[]).filter(function(r){return r&&_truRowMonth(r)===m;});}
+// Score card for one trustee in one month \u2014 exactly the rules in the document:
+// 10 per distinct task reported (max 80), 2 per hazard reported that month
+// and closed (max 20), eligible for the prize from 5 tasks.
+function _truScore(u,m){
+  var rows=_truRows(m).filter(function(r){return (r.u||'')===u;});
+  var tasks={};rows.forEach(function(r){var t=parseInt(r.t,10);if(t>=1&&t<=8)tasks[t]=1;});
+  var nTasks=Object.keys(tasks).length;
+  var closed=rows.filter(function(r){return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;}).length;
+  var open=rows.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
+  var ptsTasks=Math.min(nTasks*TRUSTEE_PTS_TASK,TRUSTEE_MAX_TASK_PTS);
+  var ptsClosed=Math.min(closed*TRUSTEE_PTS_CLOSED,TRUSTEE_MAX_CLOSED_PTS);
+  return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=TRUSTEE_MIN_TASKS,reports:rows.length};
+}
+// Leaderboard for a month: score desc, then hazards closed desc (the
+// document's tie-break), then name. "Who hasn't won yet" is phase 2.
+function _truBoard(m){
+  var names={};_truRows(m).forEach(function(r){if(r.u)names[r.u]=1;});
+  return Object.keys(names).map(function(u){return _truScore(u,m);}).sort(function(a,b){return (b.total-a.total)||(b.closed-a.closed)||a.u.localeCompare(b.u);});
 }
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
@@ -14717,7 +14760,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();
