@@ -122,7 +122,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const mo = await page.evaluate(() => { _truMgrShift(-1); const a = { month: document.getElementById('tru-mgr-month').textContent, rows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length, all: Array.from(document.querySelectorAll('#tru-mgr-summary button')).slice(-1)[0].textContent.trim() }; _truExportCsv(); a.toastPrev = window.__toasts.slice(-1)[0]; _truMgrShift(0); a.back = document.getElementById('tru-mgr-month').textContent; return a; });
   check('previous month: 1 row (old1 open), all: 1; CSV still exports; "החודש" returns', mo.rows === 1 && mo.all === 'הכל: 1' && /יוצא/.test(mo.toastPrev) && /2026/.test(mo.back) && mo.month !== mo.back, mo);
   const hm = await page.evaluate(() => { document.getElementById('tru-mgr-more-btn').click(); const items = Array.from(document.querySelectorAll('#tru-mgr-menu button')).map(b => b.textContent.trim()); document.body.click(); return items; });
-  check('header ⋯: roster · CSV export · print · open the trustee screen', hm.length === 4 && /רשימת הנאמנים/.test(hm[0]) && /CSV/.test(hm[1]) && /הדפס/.test(hm[2]) && /מסך הנאמן/.test(hm[3]), hm);
+  check('header ⋯: roster · winner · CSV export · print · open the trustee screen', hm.length === 5 && /רשימת הנאמנים/.test(hm[0]) && /זוכה החודש/.test(hm[1]) && /CSV/.test(hm[2]) && /הדפס/.test(hm[3]) && /מסך הנאמן/.test(hm[4]), hm);
   await page.waitForTimeout(300);
   await page.screenshot({ path: OUT + '/trustees-mgr-375.png', fullPage: true });
 
@@ -137,6 +137,56 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('Today: one line for hazards awaiting routing — only old1 (d1 has a task+note, y6 has a note)', /1 ממצאי נאמני בטיחות ממתינים לניתוב/.test(td.tru || '') && td.await0.join() === 'old1' && td.sheet, td);
   const tc = await page.evaluate(() => { const it = Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /נאמני בטיחות/.test(x.textContent)); it.click(); return CUR; });
   check('clicking it opens the trustees page', tc === 'trustees', tc);
+
+  console.log('\n6. Phase 2: announce the winner, history, "who has not won yet" tie-break');
+  const w1 = await page.evaluate(() => {
+    DB.trustee_winners = [];
+    goPage('trustees'); _truMgrShift(0); rTrustees();
+    window.__ins = []; const oi = window.sbIns; window.sbIns = function (t, r) { window.__ins.push({ t, r }); return oi(t, r); };
+    const btn = document.querySelector('#tru-mgr-board button[onclick*="_truWinnerOpen"]');
+    const label = btn ? btn.textContent.trim() : null;
+    if (btn) btn.click();
+    const sel = document.getElementById('tru-win-u');
+    return { label, month: document.getElementById('tru-win-month').textContent, opts: Array.from(sel.options).map(o => o.textContent.trim()), picked: sel.value, hint: document.getElementById('tru-win-hint').textContent, hist: document.getElementById('tru-win-hist').textContent };
+  });
+  check('no winner yet: board offers "הכרז זוכה"; modal opens on the shown month with the eligible leader preselected', /הכרז זוכה/.test(w1.label || '') && /2026/.test(w1.month) && w1.picked === 'דנה' && w1.opts.length === 3 && /62/.test(w1.opts[0]) && /3 נאמנים זכאים/.test(w1.hint) && /לא הוכרז אף זוכה/.test(w1.hist), w1);
+
+  const w2 = await page.evaluate(() => {
+    document.getElementById('tru-win-note').value = 'סגרה מפגע אחד';
+    _truWinnerSave();
+    const strip = document.getElementById('tru-mgr-winner');
+    return { n: DB.trustee_winners.length, row: DB.trustee_winners[0], ins: window.__ins.filter(x => x.t === 'trustee_winners').length, strip: strip ? strip.textContent.replace(/\s+/g, ' ').trim() : null, toast: window.__toasts.slice(-1)[0], hist: document.getElementById('tru-win-hist').textContent.replace(/\s+/g, ' ').trim() };
+  });
+  check('announce: one row id win_<month>, score frozen at 62, sent to Supabase, strip + history show it', w2.n === 1 && w2.row.id === 'win_' + M && w2.row.u === 'דנה' && w2.row.pts === 62 && w2.row.note === 'סגרה מפגע אחד' && w2.ins === 1 && /זוכה החודש: דנה/.test(w2.strip || '') && /62/.test(w2.strip || '') && /דנה/.test(w2.hist), w2);
+
+  const w3 = await page.evaluate(() => {
+    window.__wupd = []; const ou = window.sbUpd; window.sbUpd = function (t, r) { if (t === 'trustee_winners') window.__wupd.push(r.u); return ou(t, r); };
+    _truWinnerOpen();
+    document.getElementById('tru-win-u').value = 'רון';
+    _truWinnerSave();
+    return { n: DB.trustee_winners.length, u: DB.trustee_winners[0].u, pts: DB.trustee_winners[0].pts, upd: window.__wupd, hint: document.getElementById('tru-win-hint').textContent };
+  });
+  check('re-announcing the same month updates that one row (no second winner) and re-freezes the score', w3.n === 1 && w3.u === 'רון' && w3.pts === 60 && w3.upd.join() === 'רון' && /כבר הוכרז/.test(w3.hint), w3);
+
+  const w4 = await page.evaluate(({ M, D, prev }) => {
+    // Strip רון's closures so he ties יוסי on points AND on hazards closed:
+    // the only thing left to separate them is who has already won.
+    DB.trustee_reports = DB.trustee_reports.filter(r => !/^r[1-5]$/.test(r.id))
+      .concat([1, 2, 3, 4, 5, 6].map(t => ({ id: 'n' + t, u: 'רון', t, ok: true, s: 'תקין', d: D, m: M })));
+    DB.trustee_winners = [{ id: 'win_' + prev, m: prev, u: 'רון', pts: 70, note: null, ts: '2026-08-01T00:00:00Z' }];
+    rTrustees();
+    return { board: _truBoard(M).map(x => x.u + ':' + x.total + ':' + x.closed + ':' + x.wins), names: Array.from(document.querySelectorAll('#tru-mgr-board .tru-board-row')).map(r => r.getAttribute('data-tru-u')), txt: document.getElementById('tru-mgr-board').textContent };
+  }, { M, D, prev });
+  check('tie on points AND on closures: whoever has not won yet ranks first, and the board shows "טרם זכה"', w4.board[1] === 'יוסי:60:0:0' && w4.board[2] === 'רון:60:0:1' && w4.names.indexOf('יוסי') < w4.names.indexOf('רון') && /טרם זכה/.test(w4.txt), w4);
+
+  const w5 = await page.evaluate(({ prev }) => {
+    DB.trustee_winners = [{ id: 'win_' + prev, m: prev, u: 'רון', pts: 70, note: 'סגר 9 מפגעים', ts: '2026-08-01T00:00:00Z' }];
+    _truSetMe('רון'); _truRender();
+    const b = document.getElementById('tru-winner'), body = document.getElementById('tru-body');
+    return { txt: b ? b.textContent.replace(/\s+/g, ' ').trim() : null, beforeLead: b && document.getElementById('tru-lead') ? (Array.prototype.indexOf.call(body.children, b) < Array.prototype.indexOf.call(body.children, document.getElementById('tru-lead'))) : false };
+  }, { prev });
+  check('trustee screen: banner for the announced winner, above "מי מוביל החודש"', /זוכה/.test(w5.txt || '') && /רון/.test(w5.txt || '') && /70 נק/.test(w5.txt || '') && /כל הכבוד/.test(w5.txt || '') && /סגר 9 מפגעים/.test(w5.txt || '') && w5.beforeLead, w5);
+
   const rep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('trustees'); const cur = CUR; rDash(); const tru = Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /נאמני בטיחות/.test(x.textContent)); const sheetBtn = document.querySelector('#m-modules-sheet [onclick*="\'trustees\'"]'); return { cur, tru, hidden: sheetBtn && getComputedStyle(sheetBtn).display === 'none' }; });
   check('reporter: kicked to the dashboard, no Today line, sheet entry hidden', rep.cur === 'dash' && !rep.tru && rep.hidden, rep);
 
