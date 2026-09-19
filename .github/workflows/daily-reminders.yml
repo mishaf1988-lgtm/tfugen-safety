@@ -1,9 +1,22 @@
 name: Daily Safety Reminders
 
+# OFF by Michael's decision, 2026-09-19: "לא צריך כרגע שליחה, בטל את זה כרגע".
+#
+# The daily 09:00 digest had not actually sent since at least 2026-05-22: every
+# run failed with 401 "API key is invalid" because the RESEND_KEY repository
+# secret was never added, and GitHub then disabled the workflow for inactivity
+# on 2026-07-29. So nothing is being lost here — the schedule is removed so it
+# cannot quietly start sending again if that secret ever appears.
+#
+# TO TURN IT BACK ON, both steps are needed:
+#   1. restore the two `schedule:` lines below
+#   2. add the RESEND_KEY secret: repo -> Settings -> Secrets and variables ->
+#      Actions -> New repository secret (same key as the Cloudflare env var)
+# The script and its email template are untouched and still work.
 on:
-  schedule:
-    - cron: '0 6 * * *'  # 9:00 AM Israel time (UTC+3)
-  workflow_dispatch:      # Allow manual trigger
+  # schedule:
+  #   - cron: '0 6 * * *'  # 09:00 Israel time (UTC+3)
+  workflow_dispatch:      # manual run only, for testing after a re-enable
 
 jobs:
   send-reminders:
