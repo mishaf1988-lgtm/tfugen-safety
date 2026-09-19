@@ -572,6 +572,22 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 .tru-task .btn{padding:8px 12px;min-height:40px;font-size:13px;white-space:nowrap;flex:none}
 .tru-rep{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px;line-height:1.5}
 .tru-danger{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:10px 12px;font-size:13px;color:#991b1b;margin-top:14px;line-height:1.5}
+/* tour form: task chips + one block per task, several findings per block */
+.tru-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tru-chip{font-family:inherit;cursor:pointer;border-radius:16px;padding:7px 12px;font-size:13px;font-weight:700;border:2px solid var(--border);background:#fff;color:var(--t2);min-height:40px}
+.tru-chip.on{border-color:#16a34a;background:#16a34a;color:#fff}
+.tru-chip:disabled{opacity:.5;cursor:default}
+.tru-blk{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:10px;background:#fff}
+.tru-blk.bad{border-color:#fca5a5;background:#fff7f7}
+.tru-blk.good{border-color:#86efac;background:#f0fdf4}
+.tru-vd{display:flex;gap:8px;margin:8px 0}
+.tru-vd .btn{flex:1}
+.tru-vd .btn.on-ok{background:#16a34a;color:#fff;border-color:#16a34a;box-shadow:none}
+.tru-vd .btn.on-bad{background:var(--red);color:#fff;border-color:var(--red)}
+.tru-find{border-top:1px dashed var(--border);padding-top:8px;margin-top:8px}
+.tru-lead{display:flex;flex-direction:column;gap:4px;margin:6px 0 8px}
+.tru-lead>div{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 6px;border-radius:8px}
+.tru-lead>div.me{background:#eff6ff}
 
 /* ---- PRINT ---- */
 @media print{
@@ -743,6 +759,17 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div style="font-weight:900;font-size:18px">&#129466; נאמן בטיחות</div>
       <button class="btn btn-s btn-sm" onclick="_truPull(true)" title="רענון מהשרת">&#8635;</button>
     </div>
+    <details id="tru-intro" class="card" style="padding:10px 12px;margin-bottom:10px">
+      <summary style="cursor:pointer;font-weight:700;font-size:14px">&#8505;&#65039; איך זה עובד? — כמה מילים על התהליך</summary>
+      <div style="font-size:13px;line-height:1.6;margin-top:8px">
+        <div>1. <strong>8 משימות בחודש</strong> (הרשימה למטה). כל משימה פעם אחת בחודש, בזמן שנוח לך.</div>
+        <div>2. <strong>מדווחים כאן במקום בוואטסאפ.</strong> בסיור אחד אפשר לסמן כמה משימות ולהוסיף כמה ממצאים. לכל דיווח מיקום, ולכל ליקוי תמונה.</div>
+        <div>3. <strong>ליקוי עובר לממונה הבטיחות לניתוב.</strong> אתם לא אחראים לתקן — לאתר, לדווח, ולבדוק שתוקן («צלם אחרי»).</div>
+        <div>4. <strong>ניקוד:</strong> 10 לכל משימה (עד 80) + 2 לכל מפגע שדיווחתם ונסגר (עד 20). מועמדות לפרס מ-5 משימות.</div>
+        <div>5. <strong>התחרות חודשית</strong> — ב-1 לחודש הניקוד מתאפס ומתחילים מחדש. כאן רואים את ההתקדמות שלכם ומי מוביל.</div>
+        <div style="color:#991b1b">&#128680; סכנה מיידית — מתקשרים לממונה הבטיחות מיד, לא ממתינים לדיווח.</div>
+      </div>
+    </details>
     <div class="field" style="margin-bottom:8px"><label>השם שלי</label><select id="tru-me" class="inp" onchange="_truMeChanged(this.value)"></select><input id="tru-me-other" placeholder="הקלד את שמך" style="display:none;margin-top:6px" onchange="_truSetMe(this.value)"></div>
     <div id="tru-body"></div>
   </div>
@@ -2291,22 +2318,20 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="nm-ai-btn" onclick="_nmAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1493;&#1493;&#1490; &#1493;&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
-<!-- TRUSTEE REPORT MODAL (T2) — the WhatsApp format, structured -->
+<!-- TRUSTEE REPORT MODAL — one tour: several tasks, several findings (point 2) -->
 <div class="overlay" id="ov-tru" onclick="closeModal('m-tru')"></div>
 <div class="modal" id="m-tru" style="display:none">
   <button class="close-btn" onclick="closeModal('m-tru')">&#10005;</button>
-  <div class="modal-title">&#129466; דיווח נאמן בטיחות</div>
-  <input type="hidden" id="tru-ref"><input type="hidden" id="tru-ok" value="">
+  <div class="modal-title">&#129466; דיווח סיור נאמן בטיחות</div>
+  <input type="hidden" id="tru-ref">
   <div id="tru-ref-note" style="display:none;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 10px;font-size:12px;color:#1e40af;margin-bottom:10px;line-height:1.5"></div>
   <div class="fgrid">
-    <div class="field fw"><label>משימה *</label><select id="tru-t" class="inp" onchange="_truTaskHint()"></select><div id="tru-how" style="font-size:12px;color:var(--t2);line-height:1.5"></div></div>
     <div class="field"><label>נאמן *</label><select id="tru-u" class="inp" onchange="_truUChanged(this.value)"></select><input id="tru-u-other" placeholder="הקלד שם" style="display:none;margin-top:6px"></div>
     <div class="field"><label>תאריך *</label><input type="date" id="tru-d"></div>
     <div class="field fw"><label>אזור / מיקום *</label><input id="tru-loc" list="tru-loc-list" placeholder="למשל: אולם טיגון, יציאת חירום מערבית"><datalist id="tru-loc-list"></datalist></div>
-    <div class="field fw"><label>ממצא *</label><div style="display:flex;gap:8px"><button type="button" class="btn btn-s" id="tru-ok-btn" style="flex:1" onclick="_truSetOk(true)">&#9989; תקין</button><button type="button" class="btn btn-s" id="tru-bad-btn" style="flex:1" onclick="_truSetOk(false)">&#9888;&#65039; ליקוי</button></div></div>
-    <div class="field fw"><label>תיאור <span id="tru-f-req"></span></label><textarea id="tru-f" rows="3" placeholder="מה נמצא? לליקוי — חובה"></textarea></div>
-    <div class="field fw"><label>&#128247; תמונה <span id="tru-photo-req"></span></label><div id="tru-photo-area"></div></div>
+    <div class="field fw"><label>משימות שבוצעו בסיור * <span style="font-weight:400;color:var(--t2)">— אפשר לסמן כמה</span></label><div id="tru-chips" class="tru-chips"></div></div>
   </div>
+  <div id="tru-tasks"></div>
   <div class="tru-danger">&#128680; <strong>סכנה מיידית?</strong> מתקשרים לממונה הבטיחות מיד — לא ממתינים לדיווח. מגן מכונה שהוסר או נוטרל ו"כמעט ונפגע" נכנסים לכאן.</div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru')">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
 </div>
@@ -2963,7 +2988,20 @@ function _obDrain(){
       });
     });
   });
-  return p.then(function(){_obSet(remaining);_obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':(remaining.length?null:'ok'));});
+  return p.then(function(){
+    // Ops pushed while this drain was in flight live only in localStorage.
+    // Never overwrite them with the pre-drain snapshot: drop what was sent,
+    // keep the failed ones (with their updated tries) AND everything queued
+    // since. Two saves within one upload round-trip used to lose the second.
+    var keep={},sent={};
+    remaining.forEach(function(op){if(op.oid)keep[op.oid]=op;});
+    q.forEach(function(op){if(op.oid&&!keep[op.oid])sent[op.oid]=1;});
+    var merged=_obGet().filter(function(op){return op.oid&&!sent[op.oid];}).map(function(op){return keep[op.oid]||op;});
+    remaining.forEach(function(op){if(!op.oid)merged.push(op);});
+    _obSet(merged);_obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':(merged.length?null:'ok'));
+    // Anything that arrived mid-flight is still waiting — send it now.
+    if(merged.length>remaining.length&&!hadErr)_obDrain();
+  });
 }
 function _audTitle(row){if(!row||typeof row!=='object')return null;var v=row.title||row.topic||row.d||row.descr||row.n||row.num||'';return String(v).substring(0,80)||null;}
 function _aud(op,tbl,idOrRow){
@@ -13268,7 +13306,7 @@ var TRU_ME_KEY='tfgn_trustee_name';
 // report it is only nudged. One flag if the committee wants it mandatory too.
 var TRUSTEE_PHOTO_REQUIRED_OK=false;
 function _truMe(){try{return localStorage.getItem(TRU_ME_KEY)||'';}catch(e){return '';}}
-function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}_truNamePairSync('tru-me','tru-me-other',v);_truRender();}
+function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}_truNamePairSync('tru-me','tru-me-other',v);_truIntroSync();_truRender();}
 // Michael (2026-09-18): the employee home IS the trustee screen — no tile grid,
 // no extra tap. The tiles stay in the markup; flip this to bring them back.
 var EMP_HOME_TRUSTEES_ONLY=true;
@@ -13279,7 +13317,7 @@ function _truEmpHome(pull){
   var home=g('pg-emp-home');if(!home)return;
   if(!EMP_HOME_TRUSTEES_ONLY){home.classList.remove('tru-only');return;}
   home.classList.add('tru-only');
-  _truFillLists();_truRender();
+  _truIntroSync();_truFillLists();_truRender();
   if(pull)_truPull(false);
 }
 // Roster (public.trustees, maintained by the manager): the names offered in
@@ -13337,7 +13375,7 @@ function _truOpen(){
   if(EMP_HOME_TRUSTEES_ONLY){_truEmpHome(true);try{window.scrollTo(0,0);}catch(e){}return;}
   var home=g('pg-emp-home');if(!home)return;
   home.classList.add('tru-open');
-  _truFillLists();_truRender();
+  _truIntroSync();_truFillLists();_truRender();
   _truPull(false);
   try{window.scrollTo(0,0);}catch(e){}
 }
@@ -13351,13 +13389,17 @@ function _truStatusBadge(r){
   if(r.ok!==false)return '<span class="b bG">\u05ea\u05e7\u05d9\u05df</span>';
   return r.s===TRUSTEE_S_CLOSED?'<span class="b bG">\u05e0\u05e1\u05d2\u05e8</span>':'<span class="b bR">\u05e4\u05ea\u05d5\u05d7</span>';
 }
+function _truDaysLeft(){var d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate();}
+function _truIntroSync(){var it=g('tru-intro');if(it)it.open=!_truMe();}
 function _truRender(){
   var box=g('tru-body');if(!box)return;
   var me=_truMe(),m=_truThisMonth();
-  if(!me){box.innerHTML='<div class="card" style="text-align:center;color:var(--t2)">\u05d1\u05d7\u05e8 \u05d0\u05d5 \u05d4\u05e7\u05dc\u05d3 \u05d0\u05ea \u05e9\u05de\u05da \u05dc\u05de\u05e2\u05dc\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05e9\u05dc\u05da \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';return;}
+  if(!me){box.innerHTML='<div class="card" style="text-align:center;color:var(--t2)">\u05d1\u05d7\u05e8 \u05d0\u05ea \u05e9\u05de\u05da \u05dc\u05de\u05e2\u05dc\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea, \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05e9\u05dc\u05da \u05d5\u05de\u05d9 \u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';return;}
   var sc=_truScore(me,m);
   var mine=_truRows(m).filter(function(r){return r.u===me;}).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
-  var h='<div style="font-weight:900;font-size:16px;margin:4px 0 2px">'+esc(_truMonthLabel(m))+'</div>';
+  var left=_truDaysLeft();
+  var h='<div style="font-weight:900;font-size:16px;margin:4px 0 0">'+esc(_truMonthLabel(m))+'</div>';
+  h+='<div id="tru-month-note" style="font-size:12px;color:var(--t2);margin-bottom:6px">\ud83d\udd04 \u05d4\u05ea\u05d7\u05e8\u05d5\u05ea \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea \u2014 \u05d1-1 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05de\u05ea\u05d0\u05e4\u05e1 \u00b7 '+(left===0?'\u05d4\u05d9\u05d5\u05dd \u05d4\u05d9\u05d5\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05e9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9':'\u05e0\u05d5\u05ea\u05e8\u05d5 '+left+' \u05d9\u05de\u05d9\u05dd \u05dc\u05d7\u05d5\u05d3\u05e9')+'</div>';
   h+='<div class="tru-score" id="tru-score">'
     +'<div><div class="n">'+sc.total+'<span style="font-size:12px;color:var(--t2)">/100</span></div><div class="l">\u05e0\u05d9\u05e7\u05d5\u05d3</div></div>'
     +'<div><div class="n">'+sc.nTasks+'<span style="font-size:12px;color:var(--t2)">/8</span></div><div class="l">\u05de\u05e9\u05d9\u05de\u05d5\u05ea</div></div>'
@@ -13366,6 +13408,17 @@ function _truRender(){
   h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
     +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(TRUSTEE_MIN_TASKS-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+')</span>')
     +(sc.open?'<span class="b bR">'+sc.open+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>':'')+'</div>';
+  // Who leads this month (point 3): top 3 + my place.
+  var board=_truBoard(m),myIdx=-1;board.forEach(function(x,i){if(x.u===me)myIdx=i;});
+  h+='<div class="card" id="tru-lead" style="padding:10px 12px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">\ud83c\udfc6 \u05de\u05d9 \u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9</div>';
+  if(!board.length)h+='<div style="font-size:12px;color:var(--t2)">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9 \u2014 \u05d4\u05e8\u05d0\u05e9\u05d5\u05df \u05e9\u05de\u05d3\u05d5\u05d5\u05d7 \u05de\u05d5\u05d1\u05d9\u05dc.</div>';
+  else{
+    h+='<div class="tru-lead">'+board.slice(0,3).map(function(x,i){return '<div'+(x.u===me?' class="me"':'')+'><span style="width:24px;text-align:center">'+(i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':'\ud83e\udd49')+'</span><span style="flex:1">'+esc(x.u)+'</span><strong>'+x.total+'</strong></div>';}).join('')+'</div>';
+    var mine2=myIdx>=0?board[myIdx]:null;
+    h+='<div id="tru-my-rank" style="font-size:12px;color:var(--t2)">'+(mine2?('\u05d0\u05ea/\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd '+(myIdx+1)+' \u05de\u05ea\u05d5\u05da '+board.length+(myIdx===0?' \u2014 \u05de\u05d5\u05d1\u05d9\u05dc/\u05d4! \ud83d\udcaa':(board[0].total>mine2.total?' \u2014 '+(board[0].total-mine2.total)+' \u05e0\u05e7\u05f3 \u05de\u05d4\u05de\u05d5\u05d1\u05d9\u05dc/\u05d4':' \u2014 \u05e9\u05d5\u05d5\u05d9\u05d5\u05df \u05d1\u05e8\u05d0\u05e9, \u05e0\u05e7\u05d1\u05e2 \u05dc\u05e4\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5'))):'\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d1\u05dc\u05d5\u05d7 \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05df \u05d9\u05db\u05e0\u05d9\u05e1 \u05d0\u05d5\u05ea\u05da')+'</div>';
+  }
+  h+='</div>';
+  h+='<button class="btn btn-p" id="tru-tour-btn" style="width:100%;margin:4px 0 10px" onclick="_truReport()">\ud83e\udded \u05d3\u05d5\u05d5\u05d7 \u05e1\u05d9\u05d5\u05e8 \u2014 \u05db\u05de\u05d4 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05d1\u05ea \u05d0\u05d7\u05ea</button>';
   h+=TRUSTEE_TASKS.map(function(t){
     var done=!!sc.tasks[t.n];
     return '<div class="tru-task'+(done?' done':'')+'" data-tru-task="'+t.n+'"><div class="ti">'+(done?'\u2705':t.icon)+'</div><div class="tt"><strong>'+t.n+'. '+esc(t.t)+'</strong><details><summary>\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details></div><button class="btn '+(done?'btn-s':'btn-p')+'" onclick="_truReport('+t.n+')">'+(done?'+ \u05e2\u05d5\u05d3':'\u05d3\u05d5\u05d5\u05d7')+'</button></div>';
@@ -13382,81 +13435,121 @@ function _truRender(){
   box.innerHTML=h;
   if(typeof _signifyDom==='function')try{_signifyDom(box);}catch(e){}
 }
-// ---- report form ----
-function _truPhotoReset(){
-  _attachUrls['tru-photo-area']=null;
-  var a=g('tru-photo-area');
-  if(a)a.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\'tru-photo-area\',\'trustee\')">\ud83d\udcf7 \u05e6\u05dc\u05dd / \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4</button>';
+// ---- report form: one tour = several tasks \u00d7 several findings (point 2) ----
+var _truForm={sel:{},tasks:{},lock:false,ref:null,k:0};
+function _truFormReset(){
+  _truForm={sel:{},tasks:{},lock:false,ref:null,k:0};
+  Object.keys(_attachUrls).forEach(function(k){if(k.indexOf('tru-ph-')===0)delete _attachUrls[k];});
 }
-function _truSetOk(ok){
-  var hid=g('tru-ok');if(hid)hid.value=(ok===true)?'1':(ok===false?'0':'');
-  var a=g('tru-ok-btn'),b=g('tru-bad-btn');
-  if(a){a.className='btn '+(ok===true?'btn-p':'btn-s');a.style.background=ok===true?'#16a34a':'';a.style.boxShadow=ok===true?'none':'';}
-  if(b){b.className='btn '+(ok===false?'btn-p':'btn-s');}
-  var fr=g('tru-f-req'),pr=g('tru-photo-req');
-  if(fr)fr.textContent=ok===false?'*':'';
-  if(pr)pr.textContent=(ok===false||TRUSTEE_PHOTO_REQUIRED_OK)?'*':'(\u05de\u05d5\u05de\u05dc\u05e5)';
+function _truFormTask(n){if(!_truForm.tasks[n])_truForm.tasks[n]={ok:null,findings:[]};return _truForm.tasks[n];}
+function _truFormNewFinding(){return {k:(++_truForm.k),f:''};}
+function _truPhId(n,k){return 'tru-ph-'+n+'-'+k;}
+// Pull what the user typed back into the state before any re-render.
+function _truFormSync(){
+  var box=g('tru-tasks');if(!box)return;
+  Array.prototype.forEach.call(box.querySelectorAll('[data-tru-f]'),function(ta){
+    var t=_truForm.tasks[ta.dataset.n];if(!t)return;
+    t.findings.forEach(function(fd){if(String(fd.k)===ta.dataset.k)fd.f=ta.value;});
+  });
 }
-function _truTaskHint(){var t=_truTask(gv('tru-t'));var h=g('tru-how');if(h)h.textContent=t?t.how:'';}
-function _truFillTaskSelect(n){
-  var sel=g('tru-t');if(!sel)return;
-  sel.innerHTML=TRUSTEE_TASKS.map(function(t){return '<option value="'+t.n+'"'+(t.n===n?' selected':'')+'>'+t.n+'. '+esc(t.t)+'</option>';}).join('');
-  _truTaskHint();
+function _truFormRender(){
+  var chips=g('tru-chips'),box=g('tru-tasks');if(!chips||!box)return;
+  chips.innerHTML=TRUSTEE_TASKS.map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
+  var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
+  if(!ns.length){box.innerHTML='<div style="font-size:12px;color:var(--t2);padding:6px 0" id="tru-tasks-empty">\u05e1\u05de\u05df \u05dc\u05de\u05e2\u05dc\u05d4 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea \u05d1\u05e1\u05d9\u05d5\u05e8 \u2014 \u05dc\u05db\u05dc \u05d0\u05d7\u05ea \u05ea\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9.</div>';return;}
+  var areas=[];
+  box.innerHTML=ns.map(function(n){
+    var t=_truTask(n),st=_truFormTask(n);
+    var cls=st.ok===true?' good':(st.ok===false?' bad':'');
+    var h='<div class="tru-blk'+cls+'" data-tru-blk="'+n+'"><div style="font-weight:700;font-size:14px">'+t.icon+' '+n+'. '+esc(t.t)+'</div><details style="font-size:12px;color:var(--t2);margin-top:2px"><summary style="cursor:pointer;color:var(--blue);font-weight:700;list-style:none">\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details>';
+    if(_truForm.lock){
+      var aId=_truPhId(n,'ok');areas.push(aId);
+      h+='<div style="font-size:12px;color:#15803d;margin:6px 0">\u2705 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u05e9\u05dc \u05d4\u05de\u05de\u05e6\u05d0 \u05e9\u05e0\u05e1\u05d2\u05e8 \u2014 \u05d7\u05d5\u05d1\u05d4</div><div id="'+aId+'"></div>';
+    }else{
+      h+='<div class="tru-vd"><button type="button" class="btn btn-s'+(st.ok===true?' on-ok':'')+'" data-tru-ok="'+n+'" onclick="_truFormSetOk('+n+',true)">\u2705 \u05ea\u05e7\u05d9\u05df</button><button type="button" class="btn btn-s'+(st.ok===false?' on-bad':'')+'" data-tru-bad="'+n+'" onclick="_truFormSetOk('+n+',false)">\u26a0\ufe0f \u05dc\u05d9\u05e7\u05d5\u05d9</button></div>';
+      if(st.ok===true){
+        var okId=_truPhId(n,'ok');areas.push(okId);
+        h+='<div style="font-size:12px;color:var(--t2);margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05d4 '+(TRUSTEE_PHOTO_REQUIRED_OK?'*':'(\u05de\u05d5\u05de\u05dc\u05e5)')+'</div><div id="'+okId+'"></div>';
+      }else if(st.ok===false){
+        h+=st.findings.map(function(fd,i){
+          var phId=_truPhId(n,fd.k);areas.push(phId);
+          return '<div class="tru-find" data-tru-find="'+fd.k+'"><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700"><span>\u05dc\u05d9\u05e7\u05d5\u05d9 '+(i+1)+'</span>'+(st.findings.length>1?'<button type="button" class="btn btn-d btn-sm" style="padding:4px 8px;min-height:30px;font-size:11px" onclick="_truFormRmFinding('+n+','+fd.k+')">\u05d4\u05e1\u05e8</button>':'')+'</div><textarea data-tru-f data-n="'+n+'" data-k="'+fd.k+'" rows="2" placeholder="\u05de\u05d4 \u05e0\u05de\u05e6\u05d0? *" style="width:100%;margin:4px 0">'+esc(fd.f)+'</textarea><div style="font-size:12px;color:var(--t2);margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05d4 *</div><div id="'+phId+'"></div></div>';
+        }).join('');
+        h+='<button type="button" class="btn btn-s btn-sm" style="width:100%;margin-top:8px" data-tru-add="'+n+'" onclick="_truFormAddFinding('+n+')">+ \u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d5\u05e1\u05e3 \u05d1\u05d0\u05d5\u05ea\u05d4 \u05de\u05e9\u05d9\u05de\u05d4</button>';
+      }
+    }
+    return h+'</div>';
+  }).join('');
+  areas.forEach(function(id){_attachLoad(id,_attachUrls[id]||null);});
 }
-// Open the report form for task n (1..8). ref = the finding a task-8
-// "after" report closes (task and \u05ea\u05e7\u05d9\u05df are then fixed).
+function _truFormToggle(n){if(_truForm.lock)return;_truFormSync();if(_truForm.sel[n]){delete _truForm.sel[n];}else{_truForm.sel[n]=1;_truFormTask(n);}_truFormRender();}
+function _truFormSetOk(n,ok){_truFormSync();var t=_truFormTask(n);t.ok=ok;if(ok===false&&!t.findings.length)t.findings.push(_truFormNewFinding());_truFormRender();}
+function _truFormAddFinding(n){_truFormSync();_truFormTask(n).findings.push(_truFormNewFinding());_truFormRender();}
+function _truFormRmFinding(n,k){_truFormSync();var t=_truFormTask(n);t.findings=t.findings.filter(function(fd){return fd.k!==k;});delete _attachUrls[_truPhId(n,k)];_truFormRender();}
+// Open the tour form. n = preselected task (optional); ref = the finding a
+// task-8 "after" report closes (then task 8 is fixed and the photo mandatory).
 function _truReport(n,ref){
-  _truFillLists();
-  _truFillTaskSelect(parseInt(n,10)||1);
-  _truNamePairSync('tru-u','tru-u-other',_truNameVal('tru-u','tru-u-other')||_truMe()||'');
+  _truFormReset();_truFillLists();
+  _truNamePairSync('tru-u','tru-u-other',_truMe()||'');
   var d=g('tru-d');if(d)d.value=new Date().toISOString().split('T')[0];
   var loc=g('tru-loc');if(loc)loc.value='';
-  var f=g('tru-f');if(f)f.value='';
   var rf=g('tru-ref');if(rf)rf.value=ref||'';
-  var note=g('tru-ref-note'),sel=g('tru-t');
-  _truPhotoReset();
+  var note=g('tru-ref-note');
   if(ref){
     var orig=(DB.trustee_reports||[]).find(function(r){return r.id===ref;});
+    _truForm.lock=true;_truForm.ref=ref;_truForm.sel={8:1};_truFormTask(8).ok=true;
     if(loc&&orig)loc.value=orig.loc||'';
-    if(f&&orig)f.value='\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+String(orig.f||'').substring(0,120);
     if(note){note.style.display='';note.textContent='\u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0: '+(orig?String(orig.f||'').substring(0,80):ref)+'. \u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 \u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05e1\u05d5\u05de\u05df "\u05e0\u05e1\u05d2\u05e8".';}
-    _truSetOk(true);
-    var pr=g('tru-photo-req');if(pr)pr.textContent='*';
-    if(sel)sel.disabled=true;
   }else{
     if(note)note.style.display='none';
-    _truSetOk(null);
-    if(sel)sel.disabled=false;
+    n=parseInt(n,10);if(n>=1&&n<=8){_truForm.sel[n]=1;_truFormTask(n);}
   }
+  _truFormRender();
   openModal('m-tru');
 }
 function _truCloseReport(id){_truReport(8,id);}
 function svTru(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
+  _truFormSync();
   var u=_truNameVal('tru-u','tru-u-other');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var t=parseInt(gv('tru-t'),10);if(!(t>=1&&t<=8)){toast('\u05d1\u05d7\u05e8 \u05de\u05e9\u05d9\u05de\u05d4');return;}
   var d=gv('tru-d')||new Date().toISOString().split('T')[0];
   var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
-  var okv=gv('tru-ok');if(okv!=='1'&&okv!=='0'){toast('\u05e1\u05de\u05df: \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9');return;}
-  var ok=okv==='1';
-  var f=gv('tru-f');if(!ok&&!f){toast('\u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05dc\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0');return;}
-  var photo=_attachUrls['tru-photo-area']||null;
-  // An "after" report (task 8 closing a finding) is nothing without its photo.
-  if(!photo&&(!ok||TRUSTEE_PHOTO_REQUIRED_OK||(t===8&&gv('tru-ref')))){toast('\u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05dc\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
-  var ref=(t===8&&gv('tru-ref'))||null;
-  var locId=null;
-  (typeof _locFlatList==='function'?_locFlatList():[]).forEach(function(l){if(!locId&&(l.name===loc||_locName(l.id)===loc))locId=l.id;});
-  var r={id:gid(),u:u,m:_truMonthKey(d),t:t,d:d,location_id:locId,loc:loc,ok:ok,f:f||null,photo_url:photo,s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN,ref:ref,mgr_note:null,ts:new Date().toISOString()};
+  var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
+  if(!ns.length){toast('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea \u05d1\u05e1\u05d9\u05d5\u05e8');return;}
+  var ref=_truForm.lock?_truForm.ref:null;
+  var locId=null;(typeof _locFlatList==='function'?_locFlatList():[]).forEach(function(l){if(!locId&&(l.name===loc||_locName(l.id)===loc))locId=l.id;});
+  var rows=[],tour=gid(),ts=new Date().toISOString();
+  function row(n,ok,f,photo){return {id:gid(),u:u,m:_truMonthKey(d),t:n,d:d,location_id:locId,loc:loc,ok:ok,f:f||null,photo_url:photo||null,s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN,ref:(n===8?ref:null),mgr_note:null,tour:tour,ts:ts};}
+  for(var i=0;i<ns.length;i++){
+    var n=ns[i],st=_truFormTask(n),tt=_truTask(n),okPh=_attachUrls[_truPhId(n,'ok')]||null;
+    if(_truForm.lock){
+      if(!okPh){toast('\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u05d4\u05d9\u05d0 \u05d7\u05d5\u05d1\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05de\u05de\u05e6\u05d0');return;}
+      var orig=(DB.trustee_reports||[]).find(function(r){return r.id===ref;});
+      rows.push(row(8,true,'\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+String(orig&&orig.f||'').substring(0,120),okPh));continue;
+    }
+    if(st.ok!==true&&st.ok!==false){toast('\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d1\u05de\u05e9\u05d9\u05de\u05d4 '+n+(tt?' ('+tt.t+')':''));return;}
+    if(st.ok===true){
+      if(TRUSTEE_PHOTO_REQUIRED_OK&&!okPh){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05de\u05e9\u05d9\u05de\u05d4 '+n);return;}
+      rows.push(row(n,true,null,okPh));continue;
+    }
+    for(var j=0;j<st.findings.length;j++){
+      var fd=st.findings[j],ph=_attachUrls[_truPhId(n,fd.k)]||null;
+      if(!String(fd.f||'').trim()){toast('\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 '+(j+1)+' \u05d1\u05de\u05e9\u05d9\u05de\u05d4 '+n);return;}
+      if(!ph){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 '+(j+1)+' \u05d1\u05de\u05e9\u05d9\u05de\u05d4 '+n+' \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
+      rows.push(row(n,false,String(fd.f).trim(),ph));
+    }
+  }
   if(!DB.trustee_reports)DB.trustee_reports=[];
-  DB.trustee_reports.push(r);sbIns('trustee_reports',r);
+  rows.forEach(function(r){DB.trustee_reports.push(r);sbIns('trustee_reports',r);});
   // The server trigger closes the referenced finding; mirror it locally so
   // the screen updates now instead of after the next pull.
   if(ref)(DB.trustee_reports||[]).forEach(function(x){if(x.id===ref&&_truIsHazard(x)&&x.s!==TRUSTEE_S_CLOSED)x.s=TRUSTEE_S_CLOSED;});
-  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' \u2014 \u05de\u05e9\u05d9\u05de\u05d4 '+t);}catch(e){}
+  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' \u2014 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');}catch(e){}
   sdb();
   if(empIsOn())_truSetMe(u);else _truRender();   // remember the name on the trustee's own device only
-  closeModal('m-tru');_truPhotoReset();
-  var msg=ok?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713 (\u05ea\u05e7\u05d9\u05df)':'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713 \u2014 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1';
+  closeModal('m-tru');_truFormReset();
+  var bad=rows.filter(function(r){return r.ok===false;}).length;
+  var msg=ref?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713 \u2014 \u05ea\u05d5\u05d3\u05d4':((rows.length===1?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713':'\u05e0\u05e9\u05de\u05e8\u05d5 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u2713')+(bad?' \u2014 '+bad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1':''));
   if(empIsOn())empToast(msg);else toast(msg);
   if(typeof rTrustees==='function'&&CUR==='trustees')try{rTrustees();}catch(e){}
 }
@@ -13576,8 +13669,8 @@ function _truExportCsv(){
   lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d5\u05ea (\u05de\u05ea\u05d5\u05da 8)','\u05e0\u05e7\u05f3 \u05de\u05e9\u05d9\u05de\u05d5\u05ea','\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5','\u05e0\u05e7\u05f3 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05e1\u05d4\u05f4\u05db','\u05d6\u05db\u05d0\u05d5\u05ea (\u22655)','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'].map(q2).join(','));
   _truBoard(m).forEach(function(x){lines.push([x.u,x.nTasks,x.ptsTasks,x.closed,x.ptsClosed,x.total,x.eligible?'\u05db\u05df':'\u05dc\u05d0',x.open].map(q2).join(','));});
   lines.push('');
-  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d4','\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4','\u05ea\u05d0\u05e8\u05d9\u05da','\u05d0\u05d6\u05d5\u05e8','\u05ea\u05e7\u05d9\u05df/\u05dc\u05d9\u05e7\u05d5\u05d9','\u05de\u05de\u05e6\u05d0','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05de\u05d5\u05e0\u05d4','\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1'].map(q2).join(','));
-  rows.forEach(function(r){var t=_truTask(r.t);lines.push([r.u,r.t,t?t.t:'',r.d,r.loc||(r.location_id?_locName(r.location_id):''),r.ok===false?'\u05dc\u05d9\u05e7\u05d5\u05d9':'\u05ea\u05e7\u05d9\u05df',r.f,r.s,r.photo_url,r.ref,r.mgr_note].map(q2).join(','));});
+  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d4','\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4','\u05ea\u05d0\u05e8\u05d9\u05da','\u05d0\u05d6\u05d5\u05e8','\u05ea\u05e7\u05d9\u05df/\u05dc\u05d9\u05e7\u05d5\u05d9','\u05de\u05de\u05e6\u05d0','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05de\u05d5\u05e0\u05d4','\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1','\u05e1\u05d9\u05d5\u05e8'].map(q2).join(','));
+  rows.forEach(function(r){var t=_truTask(r.t);lines.push([r.u,r.t,t?t.t:'',r.d,r.loc||(r.location_id?_locName(r.location_id):''),r.ok===false?'\u05dc\u05d9\u05e7\u05d5\u05d9':'\u05ea\u05e7\u05d9\u05df',r.f,r.s,r.photo_url,r.ref,r.mgr_note,r.tour].map(q2).join(','));});
   var csv='\ufeff'+lines.join('\r\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tapugan-trustees-'+m+'.csv';
