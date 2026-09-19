@@ -172,6 +172,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.evaluate(() => { DB.trustee_reports = DB.trustee_reports.filter(r => r.id !== 'qw1'); _truRender(); });
   await page.screenshot({ path: '/tmp/claude-0/-home-user-tfugen-safety/e2c89c7c-32b0-5a3d-b89d-178d2be903b8/scratchpad/ux/after-trustee-home-375.png', fullPage: false });
 
+  console.log('\n10. Chips fold when the form opened for one task (2026-09-19)');
+  const cf = await page.evaluate(() => {
+    _truReport(2);
+    const d = document.getElementById('tru-chips-more');
+    const one = { folded: !!d && !d.open, chips: d ? d.querySelectorAll('.tru-chip').length : 0, blk: !!document.querySelector('#tru-tasks .tru-blk[data-tru-blk="2"]'), summary: d ? d.querySelector('summary').textContent.trim() : '' };
+    closeModal('m-tru'); _truReport();
+    const none = { details: !!document.getElementById('tru-chips-more'), chips: document.querySelectorAll('#tru-chips .tru-chip').length };
+    closeModal('m-tru');
+    return { one, none };
+  });
+  check('opened from task card 2: 8 chips folded under «+ הוסף משימה נוספת», task-2 block already on screen', cf.one.folded && cf.one.chips === 8 && cf.one.blk && /הוסף משימה נוספת/.test(cf.one.summary), cf.one);
+  check('opened from «דווח סיור» (no task): all 8 chips shown, nothing folded', !cf.none.details && cf.none.chips === 8, cf.none);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();

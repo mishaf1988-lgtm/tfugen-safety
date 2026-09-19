@@ -85,13 +85,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const items = Array.from(document.querySelectorAll('#tru-row-menu button')).map(b => b.textContent.trim());
     Array.from(document.querySelectorAll('#tru-row-menu button')).find(b => /פתח מחדש/.test(b.textContent)).click();
     _truMgrSetFilter('open');
-    window.prompt = () => 'הועבר למנהל הייצור';
     document.querySelector('#tb-trustees tr[data-tru-row="d1"] [onclick^="_truRowMenu("]').click();
     Array.from(document.querySelectorAll('#tru-row-menu button')).find(b => /הערת ניתוב/.test(b.textContent)).click();
+    const ta = document.getElementById('tru-note-ta'); const inline = !!ta && !!ta.closest('tr[data-tru-row="d1"]');
+    if (ta) { ta.value = 'הועבר למנהל הייצור'; } _truMgrNoteSave('d1');
     const r = DB.trustee_reports.find(x => x.id === 'd1');
-    return { items, s: r.s, note: r.mgr_note, upd: window.__upd.length, shown: /הועבר למנהל הייצור/.test(document.querySelector('#tb-trustees tr[data-tru-row="d1"]').textContent) };
+    return { items, inline, s: r.s, note: r.mgr_note, upd: window.__upd.length, shown: /הועבר למנהל הייצור/.test(document.querySelector('#tb-trustees tr[data-tru-row="d1"]').textContent) };
   });
-  check('closed row offers פתח מחדש; reopen → פתוח; routing note saved (sbUpd) and shown on the row', /פתח מחדש/.test(m2.items[0]) && m2.s === 'פתוח' && m2.note === 'הועבר למנהל הייצור' && m2.upd === 3 && m2.shown, m2);
+  check('closed row offers פתח מחדש; reopen → פתוח; routing note edited INLINE in the row (no prompt), saved (sbUpd) and shown', /פתח מחדש/.test(m2.items[0]) && m2.inline && m2.s === 'פתוח' && m2.note === 'הועבר למנהל הייצור' && m2.upd === 3 && m2.shown, m2);
   const m3 = await page.evaluate(() => {
     document.querySelector('#tb-trustees tr[data-tru-row="d1"] [onclick^="_truRowMenu("]').click();
     Array.from(document.querySelectorAll('#tru-row-menu button')).find(b => /צור משימה/.test(b.textContent)).click();
@@ -204,6 +205,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   }, { prev });
   check('month with reports but no eligible trustee: no «הכרז זוכה» button, grey «אין עדיין זכאים» line instead', !el.prevBtn && el.prevHint && el.prevRows >= 1, el);
   check('month with eligible trustees: the button is offered again', el.nowBtn === true, el);
+
+  console.log('\n8. Compact findings card (2026-09-19)');
+  const cc = await page.evaluate(() => {
+    window._currentUser = { username: 'admin', full_name: 'מיכאל' }; _applyRoleGates(); goPage('trustees'); _truMgrShift(0); _truMgrSetFilter('all');
+    const tr = document.querySelector('#tb-trustees tr[data-tru-row="d1"]');
+    const head = tr && tr.querySelector('td.tru-head');
+    return { tds: tr ? tr.querySelectorAll('td').length : 0, head: head ? head.textContent.replace(/\s+/g, ' ').trim() : null, ths: document.querySelectorAll('#tb-trustees').length ? document.querySelector('#tb-trustees').closest('table').querySelectorAll('th').length : 0 };
+  });
+  check('finding row is 5 cells: one head line «נאמן · N. משימה · תאריך» + אזור, ממצא, סטטוס, ⋯', cc.tds === 5 && cc.ths === 5 && /דנה/.test(cc.head || '') && /1\. /.test(cc.head || '') && /\d{2}\/\d{2}\/\d{4}/.test(cc.head || ''), cc);
 
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
