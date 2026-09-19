@@ -26,19 +26,30 @@ systemctl enable tapugan-notifier >/dev/null
 if [ -t 0 ] && [ "${NO_WIZARD:-}" != "1" ]; then
   echo
   echo "=== Setup (press Enter to keep a default) ==="
-  read -r -p "Gmail address that SENDS (e.g. mishaf1988@gmail.com): " SENDER
-  read -r -s -p "Gmail APP password (16 chars, from Google Account > App passwords): " APPPW; echo
+  echo "Send FROM which kind of mailbox?"
+  echo "  1) Gmail / Google Workspace   (needs an APP password: Google Account > App passwords)"
+  echo "  2) Microsoft 365 / Outlook    (the mailbox password; IT may need to enable SMTP AUTH)"
+  read -r -p "Choose 1 or 2 [1]: " PROVIDER; PROVIDER="${PROVIDER:-1}"
+  read -r -p "Address that SENDS (e.g. sviva@tapugan.co.il): " SENDER
+  if [ "$PROVIDER" = "2" ]; then
+    read -r -s -p "Password of that mailbox: " APPPW; echo
+  else
+    read -r -s -p "Gmail APP password (16 chars): " APPPW; echo
+  fi
   read -r -p "Send TO [sviva@tapugan.co.il]: " TO; TO="${TO:-sviva@tapugan.co.il}"
   if [ -n "$SENDER" ] && [ -n "$APPPW" ]; then
-    python3 - "$DIR/config.json" "$SENDER" "$APPPW" "$TO" <<'PY'
+    python3 - "$DIR/config.json" "$SENDER" "$APPPW" "$TO" "$PROVIDER" <<'PY'
 import json, sys
-path, sender, pw, to = sys.argv[1:5]
+path, sender, pw, to, provider = sys.argv[1:6]
+if provider == "2":
+    smtp = {"host": "smtp.office365.com", "port": 587, "user": sender, "password": pw, "from": sender}
+else:
+    smtp = {"host": "smtp.gmail.com", "port": 465, "user": sender, "password": pw.replace(" ", ""), "from": sender}
 cfg = {
   "supabase_url": "https://znhjtpcltrxxyfjczgvw.supabase.co",
   "supabase_key": "sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M",
   "app_url": "https://tapugan-safety.pages.dev",
-  "to": to, "mode": "smtp",
-  "smtp": {"host": "smtp.gmail.com", "port": 465, "user": sender, "password": pw.replace(" ", ""), "from": sender},
+  "to": to, "mode": "smtp", "smtp": smtp,
   "poll_seconds": 60
 }
 json.dump(cfg, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
@@ -53,7 +64,8 @@ PY
       exit 0
     else
       echo
-      echo "The test e-mail FAILED — check the app password (Gmail > App passwords) and run:"
+      echo "The test e-mail FAILED. Gmail: check the APP password. Microsoft 365: 'SMTP AUTH disabled' means IT must"
+      echo "enable Authenticated SMTP for this mailbox (admin.microsoft.com > Users > Mail > Manage email apps). Then run:"
       echo "  sudo bash $SRC/install-linux.sh     (to answer the questions again)"
       exit 1
     fi

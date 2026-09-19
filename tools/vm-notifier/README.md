@@ -50,7 +50,7 @@ apt-get install -y git
 git clone https://github.com/mishaf1988-lgtm/tfugen-safety.git
 bash tfugen-safety/tools/vm-notifier/install-linux.sh
 ```
-השאלות: כתובת ה-Gmail ששולחת · **סיסמת אפליקציה** של Gmail (Google Account → Security → 2-Step Verification → App passwords) · לאן לשלוח (ברירת מחדל sviva@tapugan.co.il).
+השאלות: סוג התיבה ששולחת (1 = Gmail / Google Workspace עם **סיסמת אפליקציה** מ-Google Account → Security → App passwords; 2 = Microsoft 365 / Outlook עם סיסמת התיבה — ייתכן שמנהל ה-IT יצטרך להפעיל SMTP AUTH) · הכתובת ששולחת · הסיסמה · לאן לשלוח (ברירת מחדל sviva@tapugan.co.il). להחליף הגדרות: להריץ שוב את אותה פקודה.
 
 הגדרה ידנית (למשל שליחה מ-Microsoft 365 במקום Gmail): `nano /opt/tapugan-notifier/config.json`, `"mode": "smtp"` ופרטי SMTP של תיבת הדואר ששולחת (בלינוקס אין Outlook):
 - **Gmail:** host `smtp.gmail.com`, port `465`, user = הכתובת, password = **סיסמת אפליקציה** (Google Account → Security → 2-Step Verification → App passwords).
