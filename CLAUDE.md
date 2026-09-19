@@ -93,7 +93,8 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 ## Supabase MCP — גישה ישירה ל-DB (מ-2026-09-19)
 
-מחובר כ-**Connector ב-claude.ai** (OAuth — אין טוקן, אין מפתח בקוד): `https://mcp.supabase.com/mcp`
+מוגדר ב-**`.mcp.json`** בשורש ה-repo (OAuth — אין טוקן, אין מפתח בקוד): `https://mcp.supabase.com/mcp`
+בסשן ראשון שרואה את הקובץ Claude Code מבקש **אישור חד-פעמי** לשרת MCP של הפרויקט, ואז נפתחת התחברות ל-Supabase — שני הקליקים האלה של המשתמש בלבד. אפשר גם להוסיף כ-Connector ב-claude.ai (Customize → Connectors → + → Add custom connector) — אותה כתובת.
 הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref` בכתובת** — בכוונה, כי הוא מכבה את ה-`get_advisors` שבהם השתמשנו בסבב האבטחה.
 
 **ההרשאה היא קריאה + כתיבה.** לכן:
