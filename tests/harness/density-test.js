@@ -84,6 +84,25 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('reporter: ⋯ hidden on laws and types, 👁 stays, forced menu has view only', rep.legMore === 0 && rep.legView === 2 && rep.itMore === 0 && rep.items.length === 1, rep);
 
+  console.log('\n4. tasks rows on a phone (QA 2026-09-19): every cell on-screen, no sideways scroll, debug line hidden');
+  const tk = await page.evaluate(() => {
+    window._currentUser = { username: 'admin' }; _applyRoleGates();
+    const today = new Date().toISOString().substring(0, 10);
+    DB.tasks = [{ id: 't1', title: 'משימת בדיקה', status: 'פתוח', due: today, assignee: 'דנה', priority: 'גבוה' }];
+    goPage('tasks'); rTasks();
+    const row = document.querySelector('#tb-tasks-cards .tsk-row');
+    if (!row) return { row: false };
+    const cells = Array.from(row.children).map(c => { const b = c.getBoundingClientRect(); return { l: Math.round(b.left), r: Math.round(b.right), w: Math.round(b.width) }; });
+    const act = row.querySelector('.tsk-act'); const ab = act ? act.getBoundingClientRect() : null;
+    const diag = document.getElementById('tsk-render-diag');
+    return { row: true, n: cells.length, cells, actOn: !!ab && ab.left >= 0 && ab.right <= 376 && ab.width > 0, btns: act ? act.querySelectorAll('button').length : 0, mainW: document.getElementById('main').scrollWidth, docW: document.documentElement.scrollWidth, diagHidden: !diag || getComputedStyle(diag).display === 'none' };
+  });
+  check('task row renders 8 cells and every cell sits inside the 375px viewport', tk.row && tk.n === 8 && tk.cells.every(c => c.l >= 0 && c.r <= 376), tk);
+  check('action buttons are on-screen (they sat at x<0 before) and the page has no sideways scroll', tk.actOn && tk.btns >= 2 && tk.mainW <= 375 && tk.docW <= 375, tk);
+  check('the «מתרנדר N משימות» debug line is not visible to users', tk.diagHidden, tk);
+  const sync = await page.evaluate(() => ((document.getElementById('emp-sync') || {}).textContent || '').replace(/\s+/g, ' ').trim());
+  check('offline banner reads «כשיהיה חיבור», not the garbled «כשגליכה הוה»', /כשיהיה חיבור/.test(sync) && !/כשגליכה/.test(sync), sync);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
