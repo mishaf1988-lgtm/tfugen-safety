@@ -530,6 +530,11 @@ body.emp-mode .bnav{display:none}
    actions. !important so no inline style or later rule can bring it back. */
 .bnav{display:none !important}
 body.emp-mode .topbar-title,body.emp-mode #sync-pill,body.emp-mode #force-sync-btn,body.emp-mode #emp-mode-btn,body.emp-mode #bell,body.emp-mode #ncr-status-widget{display:none!important}
+/* Michael 2026-09-19: while a trustee reports, the top-bar actions (menu, search,
+   notifications, my tasks, ⋯) are noise — hide them all; the bar is the logo, bigger. */
+body.emp-mode .topbar-actions{display:none!important}
+body.emp-mode .topbar-left{justify-content:center}
+body.emp-mode .topbar-left img{height:54px}
 body.emp-mode .main{padding:76px 12px 20px}
 body.emp-mode .page{display:none!important}
 body.emp-mode #pg-emp-home{display:block!important}
@@ -722,7 +727,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
-  <div class="topbar-left" onclick="goPage('dash')" role="button" title="&#1512;&#1488;&#1513;&#1497;" style="cursor:pointer">
+  <div class="topbar-left" onclick="if(typeof empIsOn==='function'&&empIsOn()){window.scrollTo(0,0);return;}goPage('dash')" role="button" title="&#1512;&#1488;&#1513;&#1497;" style="cursor:pointer">
     <img src="/logo.jpg" alt="Tapugan Safety">
     <div class="topbar-title">
       <div class="t1">&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
