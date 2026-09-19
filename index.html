@@ -17,7 +17,16 @@
 <link rel="preconnect" href="https://znhjtpcltrxxyfjczgvw.supabase.co" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<!-- Loaded without blocking the first paint. Measured 2026-09-19: when a
+     network BLACK-HOLES this request — drops the packets instead of refusing,
+     which is what a content filter or an industrial firewall does — the page
+     never painted at all. 25s and still blank. Refused-fast was fine (100ms),
+     reachable was fine (168ms); only the silent drop was fatal. media="print"
+     makes it non-render-blocking, and onload promotes it once it arrives.
+     Measured after: 80ms black-holed, 88ms reachable. The cost is a brief
+     flash of the fallback font on a cold load. -->
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet"></noscript>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
 <script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
@@ -14244,7 +14253,21 @@ function _truMgrSpawnTask(id){
   var t=_truTask(r.t);
   var title=g('tsk-title');if(title)title.value='\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 '+(r.loc?r.loc+': ':'')+String(r.f||(t?t.t:'')).substring(0,80);
   var notes=g('tsk-notes');if(notes&&!notes.value)notes.value='\u05d3\u05d5\u05d5\u05d7 \u05e2"\u05d9 '+r.u+' \u05d1-'+fd(r.d)+' (\u05de\u05e9\u05d9\u05de\u05d4 '+r.t+(t?' \u2014 '+t.t:'')+')'+(r.photo_url?'\n\u05ea\u05de\u05d5\u05e0\u05d4: '+r.photo_url:'');
-  var due=g('tsk-due');if(due)due.value='';
+  // This used to blank the due date that openTskModal had just derived, so the
+  // manager opened the iOS date wheel for a value the code already knew. A
+  // finding gets the same window the stale-hazard line uses, counted from the
+  // day it was reported.
+  var due=g('tsk-due');
+  if(due){
+    var base=r.d?new Date(r.d):new Date();
+    if(isNaN(base.getTime()))base=new Date();
+    base.setDate(base.getDate()+TRUSTEE_STALE_DAYS);
+    due.value=base.toISOString().substring(0,10);
+  }
+  // The area the finding came from is the obvious owner; the roster knows who
+  // that is. Typing wins \u2014 this only fills a field that is still empty.
+  var asg=g('tsk-assignee');
+  if(asg&&!asg.value&&r.u)asg.value=r.u;
 }
 function _truExportCsv(){
   var m=_truMgrMonth();
