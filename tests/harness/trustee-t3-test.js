@@ -253,6 +253,54 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const ndRep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('dash'); rDash(); return Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /טרם השל/.test(x.textContent)); });
   check('a reporter never sees it', ndRep === false, ndRep);
 
+  console.log('\n10. Hazards reported, routed, and still not fixed (2026-09-19)');
+  const st = await page.evaluate(() => {
+    const ago = (d) => new Date(Date.now() - d * 86400000).toISOString();
+    const M = new Date().toISOString().substring(0, 7);
+    DB.trustees = []; DB.trustee_reports = DB.trustee_reports.filter((r) => !/^(nd_|st_)/.test(r.id));
+    // two long-open hazards (45 and 60 days), one young (3), one closed at 90,
+    // one תקין at 90 — only the first two may ever count as stale.
+    [['st_a', 60, false, 'פתוח', 'מחסן · הידרנט', 'ללא פלומבה'], ['st_b', 45, false, 'פתוח', 'אולם טיגון', 'דלת חסומה'],
+     ['st_c', 3, false, 'פתוח', 'מעבדה', 'טרי'], ['st_d', 90, false, 'נסגר', 'ישן', 'תוקן'],
+     ['st_e', 90, true, 'תקין', 'מעוצבים', null]].forEach((x) => {
+      DB.trustee_reports.push({ id: x[0], u: 'דנה', t: 5, ok: x[2], s: x[3], loc: x[4], f: x[5], d: ago(x[1]).substring(0, 10), m: M, ts: ago(x[1]) });
+    });
+    const out = { stale: _truStale().map((r) => r.id), ages: _truStale().map((r) => _truAgeDays(r)), none: _truStale(365).length, limit: TRUSTEE_STALE_DAYS };
+    window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); rDash();
+    const line = Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /פתוח.* מעל |פתוחים מעל /.test(x.textContent));
+    out.title = line ? line.querySelector('.ti-title').textContent : null;
+    out.sub = line ? line.querySelector('.ti-sub').textContent : null;
+    out.badge = line ? line.querySelector('.ti-badge').textContent : null;
+    out.cls = line ? line.querySelector('.ti-badge').className : null;
+    return out;
+  });
+  check('helper: only open hazards past the limit, oldest first (60 then 45); young, closed and תקין rows never count', st.stale.join() === 'st_a,st_b' && st.ages.join() === '60,45' && st.none === 0, st);
+  check('home line: counts them, names the oldest with its age, red badge', new RegExp('2 ליקויי נאמנים פתוחים מעל ' + st.limit + ' יום').test(st.title || '') && /מחסן · הידרנט/.test(st.sub || '') && /ללא פלומבה/.test(st.sub || '') && /\(60 יום\)/.test(st.sub || '') && st.badge === '60י' && /red/.test(st.cls || ''), st);
+  const st1 = await page.evaluate(() => {
+    DB.trustee_reports = DB.trustee_reports.filter((r) => r.id !== 'st_a'); rDash();
+    const line = Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /פתוח.* מעל /.test(x.textContent));
+    const one = line ? line.querySelector('.ti-title').textContent : null;
+    DB.trustee_reports = DB.trustee_reports.filter((r) => !/^st_/.test(r.id)); rDash();
+    const gone = !Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /פתוח.* מעל |פתוחים מעל /.test(x.textContent));
+    return { one, gone };
+  });
+  check('one left reads in the singular; none left hides the line', /^ליקוי נאמן פתוח מעל /.test(st1.one || '') && st1.gone, st1);
+  const ch = await page.evaluate(() => {
+    const ago = (d) => new Date(Date.now() - d * 86400000).toISOString();
+    const M = new Date().toISOString().substring(0, 7);
+    [['ag_old', 40, false, 'פתוח'], ['ag_new', 5, false, 'פתוח'], ['ag_cl', 40, false, 'נסגר'], ['ag_ok', 40, true, 'תקין']].forEach((x) => {
+      DB.trustee_reports.push({ id: x[0], u: 'דנה', t: 5, ok: x[2], s: x[3], loc: 'x', f: 'y', d: ago(x[1]).substring(0, 10), m: M, ts: ago(x[1]) });
+    });
+    goPage('trustees'); _truMgrShift(0); _truMgrSetFilter('all'); rTrustees();
+    const cell = (id) => { const tr = document.querySelector('#tb-trustees tr[data-tru-row="' + id + '"]'); return tr ? tr.querySelector('[data-tru-age]') : null; };
+    const old = cell('ag_old'), fresh = cell('ag_new');
+    return { oldTxt: old && old.textContent, oldRed: old && /bR/.test(old.className), newTxt: fresh && fresh.textContent, newRed: fresh && /bR/.test(fresh.className), closed: !cell('ag_cl'), ok: !cell('ag_ok'), status: document.querySelector('#tb-trustees tr[data-tru-row="ag_old"] .b').textContent };
+  });
+  check('findings row: age chip on open hazards — red past the limit, grey while young, none on closed or תקין rows', ch.oldTxt === '40 ימים' && ch.oldRed && ch.newTxt === '5 ימים' && !ch.newRed && ch.closed && ch.ok, ch);
+  check('the status badge itself is unchanged — the chip sits beside it', ch.status === 'פתוח', ch.status);
+  const stRep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('dash'); rDash(); return Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /פתוח.* מעל |פתוחים מעל /.test(x.textContent)); });
+  check('a reporter never sees the stale line', stRep === false, stRep);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();

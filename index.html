@@ -4611,6 +4611,18 @@ function _renderToday(){
   if(!todayRound){
     items.push({priority:0,icon:'☀',title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 — \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',sub:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d9\u05d5\u05de\u05d9\u05ea',badge:'\u05e2\u05e9\u05d4',badgeCls:'amber',fn:'round',a1:'',a2:''});
   }
+  // 1a. Hazards reported, routed, and still not fixed. Priority 1 \u2014 the same
+  // rank as an overdue task, because that is exactly what this is.
+  if(typeof _truStale==='function'&&typeof _role==='function'&&_role()!=='reporter'){
+    var trStale=_truStale();
+    if(trStale.length){
+      var oldest=trStale[0],oldAge=_truAgeDays(oldest);
+      items.push({priority:1,icon:'\ud83e\uddba',
+        title:(trStale.length===1?'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e4\u05ea\u05d5\u05d7 \u05de\u05e2\u05dc ':trStale.length+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e2\u05dc ')+TRUSTEE_STALE_DAYS+' \u05d9\u05d5\u05dd',
+        sub:'\u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: '+String(oldest.loc||'').substring(0,40)+(oldest.f?' \u2014 '+String(oldest.f).substring(0,50):'')+' ('+oldAge+' \u05d9\u05d5\u05dd)',
+        badge:oldAge+'\u05d9',badgeCls:'red',fn:'page',a1:'trustees',a2:''});
+    }
+  }
   // 1b. Trustee hazards nobody has routed yet (no task, no routing note) — one line, managers only.
   if(typeof _truAwaitingRouting==='function'&&typeof _role==='function'&&_role()!=='reporter'){
     var trAwait=_truAwaitingRouting().length;
@@ -13740,10 +13752,33 @@ function _truBehind(m){
     .filter(function(sc){return sc.nTasks<TRUSTEE_MIN_TASKS;})
     .sort(function(a,b){return (a.nTasks-b.nTasks)||a.u.localeCompare(b.u,'he');});
 }
+// How long a hazard has been open, and the ones past the limit \u2014 any month.
+// _truAwaitingRouting drops a finding the moment it gets a task or a note, so
+// without this nothing tracks whether it was ever actually fixed: the record
+// shows the manager knew, and not that he acted.
+var TRUSTEE_STALE_DAYS=30;
+function _truAgeDays(r){var t=Date.parse((r&&(r.ts||r.d))||'');return isNaN(t)?null:Math.floor((Date.now()-t)/86400000);}
+function _truStale(days){
+  days=(days===undefined||days===null)?TRUSTEE_STALE_DAYS:days;
+  return (DB.trustee_reports||[]).filter(function(r){
+    if(!r||!_truIsHazard(r)||r.s===TRUSTEE_S_CLOSED)return false;
+    var age=_truAgeDays(r);
+    return age!==null&&age>=days;
+  }).sort(function(a,b){return (_truAgeDays(b)||0)-(_truAgeDays(a)||0);});
+}
 // Open hazards nobody has routed yet: no task spawned and no routing note.
 // Any month \u2014 an old finding still waiting is still waiting.
 function _truAwaitingRouting(){
   return (DB.trustee_reports||[]).filter(function(r){return r&&_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED&&!r.mgr_note&&!_truTaskFor(r.id);});
+}
+// Age chip beside the status of an open hazard: grey while it is young, red
+// once it passes the limit. Shown only where the manager can act on it.
+function _truAgeChip(r){
+  if(!r||!_truIsHazard(r)||r.s===TRUSTEE_S_CLOSED)return '';
+  var age=_truAgeDays(r);
+  if(age===null)return '';
+  var late=age>=TRUSTEE_STALE_DAYS;
+  return ' <span class="b '+(late?'bR':'')+'" data-tru-age="'+age+'"'+(late?'':' style="background:#f1f5f9;color:var(--t2);border:1px solid var(--border)"')+'>'+age+' \u05d9\u05de\u05d9\u05dd</span>';
 }
 function rTrustees(){
   var m=_truMgrMonth();
@@ -13795,7 +13830,7 @@ function rTrustees(){
       +'<td data-label="" class="tru-head"><strong>'+esc(r.u)+'</strong> <span style="color:var(--t2)">\u00b7 '+esc(r.t)+'. '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+'</span></td>'
       +'<td data-label="\u05d0\u05d6\u05d5\u05e8">'+esc(r.loc||(r.location_id?_locName(r.location_id):'')||'\u2014')+'</td>'
       +'<td data-label="\u05de\u05de\u05e6\u05d0">'+(r.f?esc(r.f):'<span style="color:var(--t3)">\u2014</span>')+photo+afterHtml+refHtml+note+tskHtml+'</td>'
-      +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+'</td>'
+      +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+_truAgeChip(r)+'</td>'
       +'<td data-label=""><button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_truRowMenu(this,this.dataset.rid)" aria-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">\u22ef</button></td>'
       +'</tr>';
   }).join('');
