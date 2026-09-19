@@ -13946,6 +13946,70 @@ function _truFormSync(){
     if(el.hasAttribute('data-tru-f'))it.f=el.value;else it.loc=el.value;
   });
 }
+// ---- the tour survives a mis-tap ----
+// _truForm lived only in memory. A 3-station tour with photos died on one tap
+// outside the sheet, one incoming call, or one backgrounded tab \u2014 and the
+// queued photo blobs stayed in IndexedDB, orphaned. This mirrors the existing
+// NCR / near-miss draft pattern: a 5s autosave, restored on the next open.
+var _TRU_DRAFT_KEY='tfgn_tru_draft_v1';
+var _TRU_DRAFT_TIMER=null;
+var _TRU_DRAFT_FIELDS=['tru-u','tru-u-other','tru-d','tru-loc'];
+function _truDraftSnapshot(){
+  _truFormSync();
+  var fields={};
+  _TRU_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el)fields[f]=el.value||'';});
+  var photos={};
+  Object.keys(_attachUrls||{}).forEach(function(k){
+    if(k.indexOf('tru-ph-')===0&&_attachUrls[k])photos[k]=_attachUrls[k];
+  });
+  return {fields:fields,form:{sel:_truForm.sel,tasks:_truForm.tasks,k:_truForm.k},photos:photos};
+}
+// Worth restoring only if a station was actually filled in \u2014 a name and a
+// date are prefilled for everyone and mean nothing on their own.
+function _truDraftHasContent(sn){
+  if(!sn||!sn.form)return false;
+  var t=sn.form.tasks||{};
+  return Object.keys(t).some(function(nn){
+    return (t[nn].items||[]).some(function(it){
+      return (it&&((it.f||'').trim()||(it.loc||'').trim()||it.ok!==null&&it.ok!==undefined));
+    });
+  })||Object.keys(sn.photos||{}).length>0;
+}
+function _truDraftStart(){
+  _truDraftStop();
+  _TRU_DRAFT_TIMER=setInterval(function(){
+    var modal=g('m-tru');
+    if(!modal||modal.style.display==='none'){_truDraftStop();return;}
+    if(_truForm.lock){_truDraftStop();return;}   // a closure report, not a tour
+    var sn=_truDraftSnapshot();
+    if(_truDraftHasContent(sn)){
+      try{localStorage.setItem(_TRU_DRAFT_KEY,JSON.stringify({snap:sn,ts:Date.now()}));}catch(e){}
+    }
+  },5000);
+}
+function _truDraftStop(){if(_TRU_DRAFT_TIMER){clearInterval(_TRU_DRAFT_TIMER);_TRU_DRAFT_TIMER=null;}}
+function _truDraftClear(){_truDraftStop();try{localStorage.removeItem(_TRU_DRAFT_KEY);}catch(e){}}
+function _truDraftCheck(){
+  var raw;try{raw=localStorage.getItem(_TRU_DRAFT_KEY);}catch(e){return false;}
+  if(!raw)return false;
+  var d;try{d=JSON.parse(raw);}catch(e){_truDraftClear();return false;}
+  if(!d||!d.snap||!d.ts||!_truDraftHasContent(d.snap)){_truDraftClear();return false;}
+  var ageMin=Math.round((Date.now()-d.ts)/60000);
+  if(ageMin>1440){_truDraftClear();return false;}
+  var ageLabel=ageMin<1?'\u05e4\u05d7\u05d5\u05ea \u05de\u05d3\u05e7\u05d4':(ageMin<60?ageMin+' \u05d3\u05e7\u05d5\u05ea':Math.round(ageMin/60)+' \u05e9\u05e2\u05d5\u05ea');
+  var nTasks=Object.keys(d.snap.form.tasks||{}).length;
+  var nPhotos=Object.keys(d.snap.photos||{}).length;
+  var ok=confirm('\u05e0\u05de\u05e6\u05d0 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05de\u05dc\u05e4\u05e0\u05d9 '+ageLabel+':\n\n'
+    +nTasks+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea'+(nPhotos?(' \u00b7 '+nPhotos+' \u05ea\u05de\u05d5\u05e0\u05d5\u05ea'):'')+'\n\n\u05dc\u05e9\u05d7\u05d6\u05e8 \u05d0\u05d5\u05ea\u05d5?');
+  if(!ok){_truDraftClear();return false;}
+  _truForm.sel=d.snap.form.sel||{};
+  _truForm.tasks=d.snap.form.tasks||{};
+  _truForm.k=d.snap.form.k||0;
+  Object.keys(d.snap.photos||{}).forEach(function(k){_attachUrls[k]=d.snap.photos[k];});
+  _TRU_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el&&d.snap.fields[f]!==undefined)el.value=d.snap.fields[f];});
+  toast('\u05d4\u05e1\u05d9\u05d5\u05e8 \u05e9\u05d5\u05d7\u05d6\u05e8 \u05de'+ageLabel);
+  return true;
+}
 function _truFormRender(){
   var chips=g('tru-chips'),box=g('tru-tasks');if(!chips||!box)return;
   var chipHtml=_truTasksActive().map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
@@ -14005,8 +14069,10 @@ function _truReport(n,ref){
     n=parseInt(n,10);if(_truTask(n)){_truForm.sel[n]=1;_truFormTask(n);}
     _truLocPrefill();          // the area of whoever is reporting; typing wins
   }
+  if(!ref)_truDraftCheck();
   _truFormRender();
   openModal('m-tru');
+  if(!ref)_truDraftStart();
 }
 function _truCloseReport(id){_truReport(TRUSTEE_TASK_CLOSE,id);}
 function svTru(){
@@ -14050,6 +14116,7 @@ function svTru(){
   try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' \u2014 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');}catch(e){}
   sdb();
   if(empIsOn())_truSetMe(u);else _truRender();   // remember the name on the trustee's own device only
+  _truDraftClear();
   closeModal('m-tru');_truFormReset();
   var bad=rows.filter(function(r){return r.ok===false;}).length;
   var msg=ref?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713 \u2014 \u05ea\u05d5\u05d3\u05d4':((rows.length===1?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713':'\u05e0\u05e9\u05de\u05e8\u05d5 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u2713')+(bad?' \u2014 '+bad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1':''));
