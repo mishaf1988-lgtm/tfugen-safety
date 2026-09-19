@@ -917,6 +917,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="kpi kpi-r"><div class="kpi-label">&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</div><div class="kpi-val" id="exp-k-exp">0</div><div class="kpi-sub">-</div></div>
     <div class="kpi kpi-r"><div class="kpi-label">&#1513;&#1489;&#1493;&#1506; &#1511;&#1512;&#1493;&#1489;</div><div class="kpi-val" id="exp-k-7">0</div><div class="kpi-sub">&le;7 &#1497;&#1493;&#1501;</div></div>
     <div class="kpi kpi-o"><div class="kpi-label">&#1495;&#1493;&#1491;&#1513;</div><div class="kpi-val" id="exp-k-30">0</div><div class="kpi-sub">&le;30 &#1497;&#1493;&#1501;</div></div>
+    <div class="kpi"><div class="kpi-label">&#1500;&#1500;&#1488; &#1514;&#1488;&#1512;&#1497;&#1498;</div><div class="kpi-val" id="exp-k-none">0</div><div class="kpi-sub">&#1500;&#1488; &#1504;&#1497;&#1514;&#1503; &#1500;&#1502;&#1506;&#1511;&#1489;</div></div>
     <div class="kpi kpi-b"><div class="kpi-label">&#1512;&#1489;&#1506;&#1493;&#1503;</div><div class="kpi-val" id="exp-k-90">0</div><div class="kpi-sub">&le;90 &#1497;&#1493;&#1501;</div></div>
   </div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:10px 0">
@@ -925,8 +926,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="exp-tab-7" onclick="expFilter('7')">&le;7&#1497;</button>
     <button class="btn btn-s" id="exp-tab-30" onclick="expFilter('30')">&le;30&#1497;</button>
     <button class="btn btn-s" id="exp-tab-90" onclick="expFilter('90')">&le;90&#1497;</button>
+    <button class="btn btn-s" id="exp-tab-none" onclick="expFilter('none')">&#8212; &#1500;&#1500;&#1488; &#1514;&#1488;&#1512;&#1497;&#1498;</button>
   </div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1508;&#1512;&#1497;&#1496;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1493;&#1491;&#1493;&#1500;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1496;.</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1508;&#1512;&#1497;&#1496;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1493;&#1491;&#1493;&#1500;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1496;.</th><th scope="col">פעולות</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1493;&#1499;&#1503; &#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</div>
 </div>
 
@@ -2919,7 +2921,9 @@ function esc(s){if(s===undefined||s===null)return '';return String(s).replace(/&
 function escU(u){if(!u)return '';var s=String(u).trim();if(/^(https?:|mailto:|tel:)/i.test(s))return esc(s);if(/^data:image\//i.test(s))return esc(s);return '';}
 function fd(d){if(!d)return '&#8212;';try{var p=d.split('T')[0].split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return esc(d);}}
 function du(d){if(!d)return 9999;try{return Math.ceil((new Date(d)-new Date())/86400000);}catch(e){return 9999;}}
-function eb(d){var x=du(d);if(x>60)return '<span class="b bG">'+fd(d)+'</span>';if(x>=0&&x<=30)return '<span class="b bY">'+x+'\u05d9</span>';if(x<0)return '<span class="b bR">\u05e4\u05d2</span>';return '<span class="b bG">'+fd(d)+'</span>';}
+function eb(d){
+  if(!d)return '<span class="b bX" title="\u05dc\u05dc\u05d0 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4 \u2014 \u05d4\u05e4\u05e8\u05d9\u05d8 \u05d0\u05d9\u05e0\u05d5 \u05e0\u05d9\u05ea\u05df \u05dc\u05de\u05e2\u05e7\u05d1">\u2014 \u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da</span>';
+  var x=du(d);if(x>60)return '<span class="b bG">'+fd(d)+'</span>';if(x>=0&&x<=30)return '<span class="b bY">'+x+'\u05d9</span>';if(x<0)return '<span class="b bR">\u05e4\u05d2</span>';return '<span class="b bG">'+fd(d)+'</span>';}
 function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\u05dc\u05dd':'bG','\u05e1\u05d2\u05d5\u05e8':'bG','\u05e4\u05e2\u05d9\u05dc':'bG','\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2':'bY','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'bY','\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'bY','\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05de\u05ea\u05d5\u05db\u05e0\u05df':'bB','\u05de\u05e6\u05d9\u05d9\u05ea':'bG','\u05e4\u05ea\u05d5\u05d7':'bR','\u05dc\u05d0 \u05de\u05e6\u05d9\u05d9\u05ea':'bR','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3':'bR','\u05de\u05d1\u05d5\u05d8\u05dc':'bR','\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc':'bR'};return '<span class="b '+(m[s]||'bX')+'">'+(s?esc(s):'&#8212;')+'</span>';}
 function toast(msg,opts){var t=document.createElement('div');t.className='toast'+((opts&&opts.ok)||/✓|✅/.test(msg||'')?' ok':'');t.setAttribute('role','alert');t.setAttribute('aria-live','assertive');t.setAttribute('aria-atomic','true');t.textContent=msg;document.body.appendChild(t);if(t.classList.contains('ok')&&navigator.vibrate){try{navigator.vibrate(35);}catch(e){}}setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
 
@@ -5734,9 +5738,27 @@ function _expCollect(){
   (DB.equip_inspections||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.code||'',owner:r.vendor||r.loc||'',mod:'eqi',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',e:r.e,id:r.id});});
   return items;
 }
+// The same five sources, but the rows every scanner skips: no expiry date at
+// all. They used to be invisible here AND green in their own list, so a
+// forklift with a blank inspection date looked compliant from every angle.
+function _expNoDate(){
+  var out=[];
+  function take(tbl,mod,label,nameOf,ownerOf){
+    (DB[tbl]||[]).forEach(function(r){
+      if(r.e)return;
+      out.push({name:nameOf(r)||'',owner:ownerOf(r)||'',mod:mod,modLabel:label,e:null,id:r.id});
+    });
+  }
+  take('docs','docs','\u05de\u05e1\u05de\u05da',function(r){return r.n;},function(r){return r.o;});
+  take('tr','tr','\u05d4\u05d3\u05e8\u05db\u05d4',function(r){return r.n;},function(r){return r.w;});
+  take('ppe','ppe','\u05e6\u05de\u05d2',function(r){return r.ty;},function(r){return r.w;});
+  take('ctr','ctr','\u05e7\u05d1\u05dc\u05df',function(r){return r.n;},function(r){return r.c;});
+  take('equip_inspections','eqi','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',function(r){return r.n||r.code;},function(r){return r.vendor||r.loc;});
+  return out;
+}
 function expFilter(f){
   window._expFilter=f;
-  ['all','exp','7','30','90'].forEach(function(k){
+  ['all','exp','7','30','90','none'].forEach(function(k){
     var el=g('exp-tab-'+k);
     if(el)el.className='btn '+(f===k?'btn-p':'btn-s');
   });
@@ -5744,30 +5766,47 @@ function expFilter(f){
 }
 function rExp(){
   var items=_expCollect();
+  var noDate=_expNoDate();
   var cExp=0,c7=0,c30=0,c90=0;
   items.forEach(function(i){
     var x=du(i.e);
     if(x<0)cExp++;
-    if(x>=0&&x<=7)c7++;
-    if(x>=0&&x<=30)c30++;
-    if(x>=0&&x<=90)c90++;
+    if(x<=7)c7++;                // same windows as the tabs below, expired included
+    if(x<=30)c30++;
+    if(x<=90)c90++;
   });
   var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
   set('exp-k-exp',cExp);set('exp-k-7',c7);set('exp-k-30',c30);set('exp-k-90',c90);
+  set('exp-k-none',noDate.length);
   var f=window._expFilter||'all';
   var rows=items.filter(function(i){
     var x=du(i.e);
     if(f==='exp')return x<0;
-    if(f==='7')return x>=0&&x<=7;
-    if(f==='30')return x>=0&&x<=30;
-    if(f==='90')return x>=0&&x<=90;
+    if(f==='7')return x<=7;      // already expired belongs in "\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05e7\u05e8\u05d5\u05d1" too
+    if(f==='30')return x<=30;
+    if(f==='90')return x<=90;
+    if(f==='none')return false;  // handled separately \u2014 those rows have no x
     return true;
   });
-  rows.sort(function(a,b){return du(a.e)-du(b.e);});
+  if(f==='none')rows=noDate.slice();
+  else if(f==='all')rows=rows.concat(noDate);
+  rows.sort(function(a,b){
+    if(!a.e&&!b.e)return String(a.name||'').localeCompare(String(b.name||''),'he');
+    if(!a.e)return 1;            // undated last, so the urgent stay on top
+    if(!b.e)return -1;
+    return du(a.e)-du(b.e);
+  });
   var tb=g('tb-exp');if(!tb)return;
-  if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="et" data-label="">\ud83d\udd27<br>\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="openModal(\'m-eqi\')">+ \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udd27<br>\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="openModal(\'m-eqi\')">+ \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  // Seeing an expiry used to be the end of the road: no view, no task, nothing.
+  // _expCollect already carries mod + id, and openTskModal prefills from exactly
+  // these five tables, so the trip back through the module was pure navigation.
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections'};
   tb.innerHTML=rows.map(function(i){
-    return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+fd(i.e)+'</td><td>'+eb(i.e)+'</td></tr>';
+    var t=_tbl[i.mod]||'';
+    var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
+      +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'&#8212;';
+    return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'&#8212;')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('');
 }
 window._eqiFilter='all';
