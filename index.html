@@ -306,6 +306,10 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 .tbl-wrap td::before{content:attr(data-label);display:block;color:var(--t3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
 .tbl-wrap td:not([data-label])::before,.tbl-wrap td[data-label=""]::before{display:none}
 .tbl-wrap td.et{grid-column:1/-1;display:block;text-align:center;padding:20px 0}
+/* trustees findings (rTrustees): the first cell is a compact head line, no label; tighter block spacing */
+#tb-trustees td.tru-head{font-size:14px;line-height:1.4;margin-bottom:6px}
+#tb-trustees td{margin-bottom:4px}
+#tb-trustees td::before{margin-bottom:0}
 /* Wider viewports: pack fields into a 2-3 column grid per card so the
    layout feels efficient on desktop. Each cell still labeled. */
 @media(min-width:600px){
@@ -1179,7 +1183,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card">
     <div class="card-title">&#128203; ממצאים ודיווחים</div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th scope="col">נאמן</th><th scope="col">משימה</th><th scope="col">תאריך</th><th scope="col">אזור</th><th scope="col">ממצא</th><th scope="col">סטטוס</th><th scope="col"></th>
+      <th scope="col">נאמן · משימה · תאריך</th><th scope="col">אזור</th><th scope="col">ממצא</th><th scope="col">סטטוס</th><th scope="col"></th>
     </tr></thead><tbody id="tb-trustees"></tbody></table></div>
   </div>
 </div>
@@ -13563,7 +13567,12 @@ function _truFormSync(){
 }
 function _truFormRender(){
   var chips=g('tru-chips'),box=g('tru-tasks');if(!chips||!box)return;
-  chips.innerHTML=TRUSTEE_TASKS.map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
+  var chipHtml=TRUSTEE_TASKS.map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
+  var selN=Object.keys(_truForm.sel).length;
+  // Opened from one task card: the other seven chips fold under one line so the
+  // item block (\u05ea\u05e7\u05d9\u05df / \u05dc\u05d9\u05e7\u05d5\u05d9, photo) is on screen instead of below the fold.
+  var fold=(selN===1&&!_truForm.lock);chips.style.display=fold?'block':'';
+  chips.innerHTML=fold?'<details id="tru-chips-more"><summary style="cursor:pointer;color:var(--blue);font-weight:700;font-size:13px;list-style:none;padding:8px 0;min-height:44px;display:flex;align-items:center">+ \u05d4\u05d5\u05e1\u05e3 \u05de\u05e9\u05d9\u05de\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05dc\u05e1\u05d9\u05d5\u05e8</summary><div class="tru-chips" style="margin-top:6px">'+chipHtml+'</div></details>':chipHtml;
   var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
   if(!ns.length){box.innerHTML='<div style="font-size:12px;color:var(--t2);padding:6px 0" id="tru-tasks-empty">\u05e1\u05de\u05df \u05dc\u05de\u05e2\u05dc\u05d4 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea \u05d1\u05e1\u05d9\u05d5\u05e8. \u05d1\u05db\u05dc \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e8\u05e9\u05d5\u05dd \u05db\u05de\u05d4 \u05e2\u05de\u05d3\u05d5\u05ea \u05d0\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u2014 \u05dc\u05db\u05dc \u05d0\u05d7\u05d3 \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9.</div>';return;}
   var areas=[];
@@ -13731,9 +13740,7 @@ function rTrustees(){
     var tskHtml=tsk?'<div style="font-size:11px"><a onclick="goPage(\'tasks\')" style="cursor:pointer;color:var(--blue)">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d4: '+esc(String(tsk.title||'').substring(0,50))+'</a></div>':'';
     var refHtml=(r.t===8&&r.ref)?'<div style="font-size:11px;color:var(--t2)">\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0: '+esc(String((_truFind(r.ref)||{}).f||r.ref).substring(0,50))+'</div>':'';
     return '<tr data-tru-row="'+esc(r.id)+'">'
-      +'<td data-label="\u05e0\u05d0\u05de\u05df"><strong>'+esc(r.u)+'</strong></td>'
-      +'<td data-label="\u05de\u05e9\u05d9\u05de\u05d4">'+esc(r.t)+'. '+esc(t?t.t:'')+'</td>'
-      +'<td data-label="\u05ea\u05d0\u05e8\u05d9\u05da">'+fd(r.d)+'</td>'
+      +'<td data-label="" class="tru-head"><strong>'+esc(r.u)+'</strong> <span style="color:var(--t2)">\u00b7 '+esc(r.t)+'. '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+'</span></td>'
       +'<td data-label="\u05d0\u05d6\u05d5\u05e8">'+esc(r.loc||(r.location_id?_locName(r.location_id):'')||'\u2014')+'</td>'
       +'<td data-label="\u05de\u05de\u05e6\u05d0">'+(r.f?esc(r.f):'<span style="color:var(--t3)">\u2014</span>')+photo+afterHtml+refHtml+note+tskHtml+'</td>'
       +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+'</td>'
@@ -13762,13 +13769,28 @@ function _truMgrSetStatus(id,st){
   toast(st===TRUSTEE_S_CLOSED?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');
   rTrustees();rDash();
 }
+// Routing note: an inline textarea inside the finding's own row. window.prompt on
+// iPhone is a tiny LTR dialog with no RTL and no keyboard suggestions, and this is
+// the manager's most frequent routing action. prompt() stays only as a fallback
+// when the row is not rendered (e.g. called from somewhere else).
 function _truMgrNote(id){
   var r=_truFind(id);if(!r)return;
-  var v=prompt('\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1 (\u05dc\u05de\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 / \u05de\u05d4 \u05e1\u05d5\u05db\u05dd):',r.mgr_note||'');
-  if(v===null)return;
-  r.mgr_note=String(v).trim()||null;sbUpd('trustee_reports',r);sdb();
-  toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
+  var row=document.querySelector('tr[data-tru-row="'+id+'"]');
+  if(!row){var v=prompt('\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1 (\u05dc\u05de\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 / \u05de\u05d4 \u05e1\u05d5\u05db\u05dd):',r.mgr_note||'');if(v===null)return;r.mgr_note=String(v).trim()||null;sbUpd('trustee_reports',r);sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();return;}
+  _truMgrNoteCancel();
+  var td=document.createElement('td');td.id='tru-note-ed';td.setAttribute('data-label','');
+  td.innerHTML='<div style="font-size:12px;color:var(--t2);margin:6px 0 4px">\ud83d\udccc \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1 \u2014 \u05dc\u05de\u05d9 \u05d4\u05d5\u05e2\u05d1\u05e8 / \u05de\u05d4 \u05e1\u05d5\u05db\u05dd</div>'
+    +'<textarea id="tru-note-ta" rows="2" style="width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--border);border-radius:8px;resize:vertical"></textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-p" style="flex:1;min-height:44px" data-rid="'+esc(id)+'" onclick="_truMgrNoteSave(this.dataset.rid)">\u05e9\u05de\u05d5\u05e8</button><button class="btn btn-s" style="min-height:44px" onclick="_truMgrNoteCancel()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div>';
+  row.appendChild(td);
+  var ta=g('tru-note-ta');if(ta){ta.value=r.mgr_note||'';try{ta.focus();}catch(e){}}
 }
+function _truMgrNoteSave(id){
+  var r=_truFind(id);if(!r)return;
+  var ta=g('tru-note-ta');r.mgr_note=String(ta?ta.value:'').trim()||null;
+  sbUpd('trustee_reports',r);sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
+}
+function _truMgrNoteCancel(){var ed=g('tru-note-ed');if(ed)ed.remove();}
 // Manual routing (decision 2): the manager turns a finding into a task for
 // the responsible department through the normal task module.
 function _truMgrSpawnTask(id){
