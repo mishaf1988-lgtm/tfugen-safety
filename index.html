@@ -99,6 +99,20 @@ body.hc .topbar{box-shadow:0 2px 10px rgba(0,0,0,.1)}
 .topbar-title .t1{font-size:15px;font-weight:900;color:var(--red);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-title .t2{font-size:10px;color:var(--t3);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+/* Michael 2026-09-19 — the 🏠 button needs a slot in a top bar that was already
+   full at 375px (logo 127px + 5 buttons + padding, to the pixel). The logo stays
+   big (his call, #567), so 📝 "my tasks" steps aside on a phone: it is in the ☰
+   sheet anyway, and its count moves onto ☰ so nothing goes unnoticed. */
+@media(max-width:430px){#my-tasks-btn{display:none!important}}
+@media(min-width:431px){#menu-tasks-badge{display:none!important}}
+/* The logo has always gone home when tapped, but under 480px the title text
+   beside it is hidden and nothing said so. A hairline frame marks it as
+   tappable, and it drops away once you are on the home page. */
+.topbar-left img{border-radius:8px;transition:box-shadow .18s ease,transform .12s ease}
+body:not(.on-dash) .topbar-left img{box-shadow:0 0 0 1px var(--border)}
+body:not(.on-dash) .topbar-left:active img{transform:scale(.96);box-shadow:0 0 0 2px var(--red)}
+body.emp-mode .topbar-left img{box-shadow:none!important;transform:none!important}
+@media(prefers-reduced-motion:reduce){.topbar-left img{transition:none}body:not(.on-dash) .topbar-left:active img{transform:none}}
 @media(max-width:380px){.topbar-title .t2{display:none}}
 @media(min-width:480px){.topbar-title .t1{font-size:18px}.topbar-title .t2{font-size:12px}.topbar-left img{height:52px}}
 /* Michael 2026-09-19: the factory logo is the brand — bigger everywhere; on a phone it
@@ -735,7 +749,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="topbar">
   <div class="topbar-actions">
     <!-- P1#2: ☰ replaces the retired bottom nav as the way into the modules / reports sheets from every page. -->
-    <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496;" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496;" onclick="_menuOpen()">&#9776;</button>
+    <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496;" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496;" onclick="_menuOpen()" style="position:relative">&#9776;<span id="menu-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
+    <!-- Michael 2026-09-19: one tap back to the home page from any page. The logo
+         did this already, but on a phone nothing said so. -->
+    <button class="bell" id="home-btn" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" aria-label="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" onclick="goHome()">&#127968;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <button class="bell" id="gsearch-btn" title="&#1495;&#1497;&#1508;&#1493;&#1513; (Ctrl+K)" onclick="openGlobalSearch()">&#128269;</button>
     <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
@@ -744,7 +761,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
     <button class="bell" id="bell" style="display:none">&#128276;</button>
   </div>
-  <div class="topbar-left" onclick="if(typeof empIsOn==='function'&&empIsOn()){window.scrollTo(0,0);return;}goPage('dash')" role="button" title="&#1512;&#1488;&#1513;&#1497;" style="cursor:pointer">
+  <div class="topbar-left" onclick="goHome()" role="button" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" style="cursor:pointer">
     <img src="/logo.jpg" alt="Tapugan Safety">
     <div class="topbar-title">
       <div class="t1">&#1504;&#1497;&#1492;&#1493;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
@@ -3557,6 +3574,19 @@ function goPage(id){
   rPage();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
+// The 🏠 button in the top bar and the logo both land here. "Home" is the
+// dashboard for a manager and the employee screen in employee mode; a reporter
+// is sent to dash by goPage's own gate. Any open modal is closed first — the
+// top bar sits under the modal overlay so the button itself is never reachable
+// from inside a form, but this keeps goHome() correct for any other caller.
+window.goHome=function(){
+  document.querySelectorAll('.modal').forEach(function(m){
+    if(m.id&&(m.style.display==='block'||m.style.display==='flex')){try{closeModal(m.id);}catch(e){}}
+  });
+  var home=(typeof empIsOn==='function'&&empIsOn())?'emp-home':'dash';
+  if(CUR!==home)goPage(home);
+  try{window.scrollTo(0,0);}catch(e){}
+};
 // P1#2: the ☰ button in the top bar. Managers/admin get the full modules
 // sheet; reporters get the reports sheet (the only entries they may use —
 // the same split the retired bottom nav enforced by hiding bn-modules).
@@ -4785,11 +4815,14 @@ window._dashBadges = function(){
       if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;
       return t.assignee && (t.assignee===u || (u && u.indexOf(t.assignee)>=0) || (t.assignee.indexOf((u||'').split('@')[0])>=0));
     }).length;
-    var badge=g('my-tasks-badge');
-    if(badge){
+    // Both badges carry the same count: 📝 on a wide screen, ☰ on a phone
+    // where 📝 stepped aside for the 🏠 button. CSS decides which one shows.
+    ['my-tasks-badge','menu-tasks-badge'].forEach(function(id){
+      var badge=g(id);
+      if(!badge)return;
       if(openCount>0){badge.textContent=String(openCount);badge.style.display='';}
       else badge.style.display='none';
-    }
+    });
     var totalOpen=(DB.tasks||[]).filter(function(t){return t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';}).length;
     var bnBadge=g('bn-tasks-badge');
     if(bnBadge){
