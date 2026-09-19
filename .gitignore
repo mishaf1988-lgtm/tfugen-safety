@@ -19,3 +19,5 @@ node_modules/
 tools/vm-notifier/config.json
 tools/vm-notifier/state.json
 tools/vm-notifier/notifier.log
+__pycache__/
+*.pyc
