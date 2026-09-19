@@ -10,6 +10,9 @@ bash tests/harness/run.sh      # הכל
 bash tests/harness/run.sh trustee   # רק הנאמנים
 ```
 
+חבילה שלא מדפיסה שורת סיכום = **כשלון** (קרסה או עברה את הזמן). שתי היוצאות היחידות — `sc-test.js` ו-`notif-scan-test.js` — מודעות ב-`NO_ASSERTIONS` בתוך `run.sh`; **אין בהן אף בדיקה**, הן מדפיסות דוח בלבד.
+
+
 | קובץ | מה מוכיח |
 |---|---|
 | trustee-t1-test.js | חיווט `trustee_reports`, קטלוג 8 המשימות, ניקוד לפי המסמך |
