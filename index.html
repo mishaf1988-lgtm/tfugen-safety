@@ -1933,9 +1933,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="overlay" id="ov-del-confirm" onclick="cancelDel()"></div>
 <div class="modal" id="m-del-confirm" style="display:none;max-width:300px">
   <div class="modal-title">&#1502;&#1495;&#1497;&#1511;&#1492;</div>
+  <div id="del-what" style="font-size:13px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:9px 10px;margin-bottom:10px;line-height:1.5"></div>
+  <div id="del-warn" style="display:none;font-size:12px;background:#fef2f2;border:1px solid #fca5a5;color:#9c1313;border-radius:8px;padding:9px 10px;margin-bottom:10px;line-height:1.5"></div>
   <p style="font-size:13px;color:#666;margin-bottom:12px">&#1492;&#1494;&#1503; &#1505;&#1497;&#1505;&#1502;&#1492; &#1500;&#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1495;&#1497;&#1511;&#1492;</p>
   <input id="del-pw" type="password" inputmode="numeric" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" onkeydown="if(event.key==='Enter')confirmDel()" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;text-align:center;box-sizing:border-box">
   <div id="del-pw-err" style="color:#cc1f1f;font-size:12px;min-height:18px;margin-top:4px;text-align:center"></div>
+  <div id="del-pw-hint" style="display:none;font-size:11px;color:var(--t3);margin-top:2px;text-align:center;line-height:1.5"></div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="cancelDel()">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-p" onclick="confirmDel()">&#1502;&#1495;&#1511;</button>
@@ -3186,7 +3189,14 @@ function _aud(op,tbl,idOrRow){
   if(tbl==='audit_log')return;
   try{
     var record_id,title=null;
-    if(op==='del'){record_id=String(idOrRow||'');}
+    if(op==='del'){
+      record_id=String(idOrRow||'');
+      // The row is still in DB at this point \u2014 sbDel calls _aud before the
+      // outbox op goes out. Without this the log read "del | ncr | <uuid> | \u2014"
+      // and an auditor could see that something was destroyed but never what.
+      var gone=(DB[tbl]||[]).filter(function(r){return r&&String(r.id)===record_id;})[0];
+      title=gone?_audTitle(gone):null;
+    }
     else{record_id=(idOrRow&&idOrRow.id)?String(idOrRow.id):null;title=_audTitle(idOrRow);}
     var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?_currentUser.username+'@tfugen.local':null;
     var entry={user_email:u,table_name:tbl,record_id:record_id,op:op,title:title};
@@ -3523,15 +3533,64 @@ function _forceUpload(){
   });
 }
 function delRow(tbl,id,fn){DB[tbl]=DB[tbl].filter(function(r){return r.id!==id;});sbDel(tbl,id);addLog('\u05e4\u05e8\u05d9\u05d8 \u05e0\u05de\u05d7\u05e7 \u05de'+tbl);sdb();toast('\u05e0\u05de\u05d7\u05e7 &#10003;');fn();}
-var DEL_PW='123456';
+// The delete gate. This is friction against a mis-tap or a borrowed phone, not
+// security \u2014 the real boundary is RLS on the server. It used to be a literal
+// in the source that every visitor downloads; it can now be changed per device,
+// and the app says so while the shipped default is still in use.
+var DEL_PW_DEFAULT='123456';
+function _delPw(){try{return localStorage.getItem('tfgn_del_pw')||DEL_PW_DEFAULT;}catch(e){return DEL_PW_DEFAULT;}}
+function _delPwIsDefault(){return _delPw()===DEL_PW_DEFAULT;}
+window.setDeletePassword=function(pw){
+  pw=String(pw||'').trim();
+  if(pw.length<4){toast('\u05dc\u05e4\u05d7\u05d5\u05ea 4 \u05ea\u05d5\u05d5\u05d9\u05dd');return false;}
+  try{localStorage.setItem('tfgn_del_pw',pw);}catch(e){return false;}
+  toast('\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u2713');
+  return true;
+};
 var _delPending={tbl:null,id:null};
+// Tables CLAUDE.md says must not casually lose rows: ncr is 375 production
+// records, ncr_ai and trustee_reports are history keyed by version / month.
+var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea'};
+var _DEL_TBL_LABEL={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea'};
+// What the user is about to destroy, in words. A red trash on the tasks page
+// deletes the NCR behind the row, not the row \u2014 that is deliberate, but it
+// must not be a surprise.
+function _delDescribe(tbl,id){
+  var row=(DB[tbl]||[]).filter(function(r){return r&&String(r.id)===String(id);})[0];
+  var label=_DEL_TBL_LABEL[tbl]||tbl;
+  var title=row?(_audTitle(row)||''):'';
+  return {label:label,title:title,found:!!row};
+}
 function askDel(tbl,id){
   _delPending={tbl:tbl,id:id};
+  var d=_delDescribe(tbl,id);
+  var what=g('del-what');
+  if(what){
+    what.innerHTML='<strong>'+esc(d.label)+'</strong>'+(d.title?('<br><span style="color:var(--t2)">'+esc(d.title)+'</span>'):'')
+      +(d.found?'':'<br><span style="color:var(--t3)">'+esc(String(id)).substring(0,40)+'</span>');
+  }
+  var warn=g('del-warn');
+  if(warn){
+    if(_DEL_PROTECTED[tbl]){
+      warn.style.display='';
+      warn.innerHTML='\u26a0 \u05d6\u05d5 \u05e8\u05e9\u05d5\u05de\u05ea <strong>'+esc(_DEL_PROTECTED[tbl])+'</strong> \u2014 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4 \u05d5\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d9\u05d5\u05e8\u05d3\u05ea \u05d2\u05dd \u05de\u05d4\u05e9\u05e8\u05ea.';
+    }else warn.style.display='none';
+  }
   var pw=g('del-pw');if(pw)pw.value='';
   var err=g('del-pw-err');if(err)err.textContent='';
+  _delPwHint();
   g('ov-del-confirm').style.display='block';
   g('m-del-confirm').style.display='block';
   setTimeout(function(){var p=g('del-pw');if(p)p.focus();},100);
+}
+// Say it out loud while the shipped default is still in use — it is in the page
+// source that every visitor downloads.
+function _delPwHint(){
+  var h=g('del-pw-hint');if(!h)return;
+  if(_delPwIsDefault()){
+    h.style.display='';
+    h.innerHTML='\u05e1\u05d9\u05e1\u05de\u05ea \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e9\u05d9\u05de\u05d5\u05e9. \u05dc\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4: <code>setDeletePassword(\'...\')</code>';
+  }else h.style.display='none';
 }
 function cancelDel(){
   g('ov-del-confirm').style.display='none';
@@ -3541,9 +3600,10 @@ function cancelDel(){
 function confirmDel(){
   var pw=g('del-pw');
   if(!pw)return;
-  if(pw.value===DEL_PW){
+  if(pw.value===_delPw()){
     var t=_delPending.tbl,i=_delPending.id;
     cancelDel();
+    if(t==='__all_hearing__'){_delAllHearingGo();return;}
     if(t&&i)delById(t,i);
   }else{
     var err=g('del-pw-err');
@@ -13027,11 +13087,47 @@ function rHearing(){
     return '<tr><td><strong>'+(r.emp_name?esc(r.emp_name):'\u2014')+'</strong></td><td>'+(r.emp_id?esc(r.emp_id):'\u2014')+'</td><td>'+(r.age?esc(r.age):'\u2014')+'</td><td>'+(r.role?esc(r.role):'\u2014')+'</td><td>'+(r.dept?esc(r.dept):'\u2014')+'</td><td>'+fd(r.test_date)+'</td><td style="max-width:200px">'+notes+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+view+' '+pdf+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
+// The audiometric register is statutory health-surveillance data. This used to
+// wipe all of it behind one confirm() \u2014 no password, no export first \u2014 while
+// deleting a single row needed the password gate. Now it needs both, and it
+// hands the user a CSV before anything is destroyed.
 function delAllHearing(){
-  if(!(DB.hearing_tests||[]).length){toast('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea');return;}
-  if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05db\u05dc '+DB.hearing_tests.length+' \u05d4\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea?'))return;
-  DB.hearing_tests.forEach(function(r){sbDel('hearing_tests',r.id);});
-  DB.hearing_tests=[];sdb();rHearing();toast('\u05e0\u05de\u05d7\u05e7 \u2713');
+  var rows=(DB.hearing_tests||[]);
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea');return;}
+  if(!confirm('\u26a0 \u05de\u05d7\u05d9\u05e7\u05ea \u05db\u05dc \u05de\u05e8\u05e9\u05dd \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d4\u05e9\u05de\u05d9\u05e2\u05d4\n\n'
+    +rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d9\u05d9\u05de\u05d7\u05e7\u05d5 \u05dc\u05e6\u05de\u05d9\u05ea\u05d5\u05ea, \u05d2\u05dd \u05de\u05d4\u05e9\u05e8\u05ea.\n'
+    +'\u05d0\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9 \u05de\u05e2\u05e7\u05d1 \u05e8\u05e4\u05d5\u05d0\u05d9 \u05e9\u05d7\u05dc\u05d4 \u05e2\u05dc\u05d9\u05d4\u05dd \u05d7\u05d5\u05d1\u05ea \u05e9\u05de\u05d9\u05e8\u05d4.\n\n'
+    +'\u05d9\u05d5\u05e8\u05d3 \u05e7\u05d5\u05d1\u05e5 \u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05e4\u05e0\u05d9 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4. \u05dc\u05d4\u05de\u05e9\u05d9\u05da?'))return;
+  try{_hearingBackupCsv(rows);}catch(e){console.warn('hearing backup failed',e);}
+  _delPending={tbl:'__all_hearing__',id:null};
+  var what=g('del-what');
+  if(what)what.innerHTML='<strong>\u05de\u05e8\u05e9\u05dd \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d4\u05e9\u05de\u05d9\u05e2\u05d4</strong><br><span style="color:var(--t2)">'+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u2014 \u05d4\u05db\u05dc</span>';
+  var warn=g('del-warn');
+  if(warn){warn.style.display='';warn.innerHTML='\u26a0 \u05de\u05e2\u05e7\u05d1 \u05e8\u05e4\u05d5\u05d0\u05d9 \u05e1\u05d8\u05d8\u05d5\u05d8\u05d5\u05e8\u05d9 \u2014 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4.';}
+  var pw=g('del-pw');if(pw)pw.value='';
+  var err=g('del-pw-err');if(err)err.textContent='';
+  g('ov-del-confirm').style.display='block';
+  g('m-del-confirm').style.display='block';
+  setTimeout(function(){var e2=g('del-pw');if(e2)e2.focus();},100);
+}
+function _hearingBackupCsv(rows){
+  var hdr=['id','\u05e2\u05d5\u05d1\u05d3','\u05ea\u05d0\u05e8\u05d9\u05da','\u05ea\u05d5\u05e6\u05d0\u05d4','\u05ea\u05e4\u05d5\u05d2\u05d4','\u05d4\u05e2\u05e8\u05d5\u05ea'];
+  var q=function(v){v=(v===null||v===undefined)?'':String(v);return '"'+v.replace(/"/g,'""')+'"';};
+  var lines=[hdr.map(q).join(',')];
+  rows.forEach(function(r){lines.push([r.id,r.n||r.emp||'',r.d||'',r.res||r.result||'',r.e||'',r.notes||''].map(q).join(','));});
+  var blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='hearing-backup-'+new Date().toISOString().substring(0,10)+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){try{URL.revokeObjectURL(a.href);a.remove();}catch(e){}},1000);
+}
+function _delAllHearingGo(){
+  var rows=(DB.hearing_tests||[]).slice();
+  rows.forEach(function(r){sbDel('hearing_tests',r.id);});
+  DB.hearing_tests=[];sdb();
+  if(typeof rHearing==='function')rHearing();
+  toast('\u05e0\u05de\u05d7\u05e7 \u2713');
 }
 
 function rPtwView(id){
