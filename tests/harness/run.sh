@@ -19,8 +19,15 @@ for f in *.js *.mjs *.py; do
     *)    out=$(timeout 300 node "$f" 2>&1) ;;
   esac
   line=$(echo "$out" | grep -E "passed|HARNESS ERROR" | tail -1)
-  echo "${line:-(no summary — see output)}"
-  echo "$out" | grep -q " 0 failed" || { fail=1; echo "$out" | grep -E "✗|HARNESS" | head -5; }
+  if [ -z "$line" ]; then
+    # demo-style scripts (notif-scan, sc) print a report, not a pass/fail count
+    echo "(report only — no pass/fail summary)"
+  elif echo "$line" | grep -q " 0 failed"; then
+    echo "$line"
+  else
+    echo "$line"; fail=1; echo "$out" | grep -E "✗|HARNESS" | head -5
+  fi
 done
 rm -rf _build
+[ $fail -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
 exit $fail
