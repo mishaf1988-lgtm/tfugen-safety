@@ -1,0 +1,21 @@
+{
+  "_comment": "העתק ל-config.json ומלא. supabase_key הוא המפתח הציבורי של האפליקציה (לא סודי).",
+  "supabase_url": "https://znhjtpcltrxxyfjczgvw.supabase.co",
+  "supabase_key": "sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M",
+  "app_url": "https://tapugan-safety.pages.dev",
+
+  "to": "sviva@tapugan.co.il",
+
+  "mode": "outlook",
+
+  "smtp": {
+    "_comment": "רק אם mode = smtp. Gmail: smtp.gmail.com / 465 / סיסמת אפליקציה. Microsoft 365: smtp.office365.com / 587.",
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "user": "mishaf1988@gmail.com",
+    "password": "APP-PASSWORD-HERE",
+    "from": "mishaf1988@gmail.com"
+  },
+
+  "poll_seconds": 60
+}
