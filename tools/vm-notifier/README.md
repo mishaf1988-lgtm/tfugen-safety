@@ -42,14 +42,17 @@ Win+R → `shell:startup` → Enter → שים בתיקייה שנפתחה **ק�
 
 שרת לינוקס קטן (VPS) בעלות של כ-4–6 דולר לחודש מספיק: למשל Hetzner (CX22), DigitalOcean (Basic) או Vultr. בוחרים Ubuntu, מקבלים כתובת IP וסיסמה, ומתחברים ב-SSH (ב-Windows: אפליקציית Terminal, הפקודה `ssh root@<IP>`).
 
-על השרת:
+**אפשר גם מהטלפון בלבד**, בלי מחשב: אפליקציית **Termius** (חינם, iPhone/Android) → New Host → כתובת ה-IP, משתמש `root`, הסיסמה מהמייל → Connect.
+
+על השרת (3 פקודות; האחרונה שואלת 3 שאלות וכותבת את ההגדרות לבד, שולחת מייל בדיקה ומפעילה את השירות):
 ```
 apt-get install -y git
 git clone https://github.com/mishaf1988-lgtm/tfugen-safety.git
-sudo bash tfugen-safety/tools/vm-notifier/install-linux.sh
-nano /opt/tapugan-notifier/config.json
+bash tfugen-safety/tools/vm-notifier/install-linux.sh
 ```
-ב-`config.json`: `"mode": "smtp"` ופרטי SMTP של תיבת הדואר ששולחת (בלינוקס אין Outlook):
+השאלות: כתובת ה-Gmail ששולחת · **סיסמת אפליקציה** של Gmail (Google Account → Security → 2-Step Verification → App passwords) · לאן לשלוח (ברירת מחדל sviva@tapugan.co.il).
+
+הגדרה ידנית (למשל שליחה מ-Microsoft 365 במקום Gmail): `nano /opt/tapugan-notifier/config.json`, `"mode": "smtp"` ופרטי SMTP של תיבת הדואר ששולחת (בלינוקס אין Outlook):
 - **Gmail:** host `smtp.gmail.com`, port `465`, user = הכתובת, password = **סיסמת אפליקציה** (Google Account → Security → 2-Step Verification → App passwords).
 - **Microsoft 365 (למשל sviva@tapugan.co.il):** host `smtp.office365.com`, port `587`, user = הכתובת, password = סיסמת התיבה. אם השליחה נכשלת ב-"SMTP AUTH disabled", מנהל ה-IT צריך להפעיל SMTP AUTH לתיבה הזו (Microsoft 365 admin → Users → Mail → Manage email apps → Authenticated SMTP).
 
