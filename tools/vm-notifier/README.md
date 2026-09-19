@@ -38,6 +38,31 @@
 
 Win+R → `shell:startup` → Enter → שים בתיקייה שנפתחה **קיצור דרך** ל-`start.bat`. מעכשיו הסקריפט עולה עם ההתחברות למחשב. (במצב Outlook — גם Outlook צריך לעלות; אפשר לשים גם לו קיצור באותה תיקייה.)
 
+## שרת בענן במקום מחשב (מומלץ אם רוצים "דלוק תמיד" בלי תלות במחשב)
+
+שרת לינוקס קטן (VPS) בעלות של כ-4–6 דולר לחודש מספיק: למשל Hetzner (CX22), DigitalOcean (Basic) או Vultr. בוחרים Ubuntu, מקבלים כתובת IP וסיסמה, ומתחברים ב-SSH (ב-Windows: אפליקציית Terminal, הפקודה `ssh root@<IP>`).
+
+על השרת:
+```
+apt-get install -y git
+git clone https://github.com/mishaf1988-lgtm/tfugen-safety.git
+sudo bash tfugen-safety/tools/vm-notifier/install-linux.sh
+nano /opt/tapugan-notifier/config.json
+```
+ב-`config.json`: `"mode": "smtp"` ופרטי SMTP של תיבת הדואר ששולחת (בלינוקס אין Outlook):
+- **Gmail:** host `smtp.gmail.com`, port `465`, user = הכתובת, password = **סיסמת אפליקציה** (Google Account → Security → 2-Step Verification → App passwords).
+- **Microsoft 365 (למשל sviva@tapugan.co.il):** host `smtp.office365.com`, port `587`, user = הכתובת, password = סיסמת התיבה. אם השליחה נכשלת ב-"SMTP AUTH disabled", מנהל ה-IT צריך להפעיל SMTP AUTH לתיבה הזו (Microsoft 365 admin → Users → Mail → Manage email apps → Authenticated SMTP).
+
+בדיקה והפעלה:
+```
+sudo -u notifier python3 /opt/tapugan-notifier/notify.py --test-email
+sudo systemctl restart tapugan-notifier
+sudo journalctl -u tapugan-notifier -f
+```
+השירות עולה לבד אחרי אתחול ומופעל מחדש אם נפל. עדכון גרסה: `git pull` בתיקיית הקוד ואז להריץ שוב את `install-linux.sh` (ה-config נשמר).
+
+לחלופין, שרת **Windows** בענן (Azure / AWS Lightsail, כ-15–30 דולר לחודש) מאפשר את מצב `outlook` בדיוק כמו מחשב רגיל — ההוראות למעלה.
+
 ## באפליקציה
 
 בהגדרות ההתראות (🔔) בשורה «ליקוי מנאמן בטיחות»:
