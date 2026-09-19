@@ -288,6 +288,18 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
    100+ row tables but doesn't justify breaking small tables. */
 /* Larger action buttons inside tables — was: micro-dots, now: tappable. */
 .tbl-wrap tbody td .btn-d{min-width:30px;min-height:30px;padding:5px 8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin:1px}
+/* Phone QA sweep, 2026-09-19: the row above is sized for desktop density, and
+   at 30x30 the 👁 ✎ 🗑 🖨 ⋯ buttons sit well under what a thumb reliably hits —
+   they came up on ten different pages. On a touch screen they get 44px back.
+   Pointer-coarse is the real signal; the width query catches a narrow window. */
+@media (pointer:coarse),(max-width:768px){
+  .tbl-wrap tbody td .btn-d{min-width:44px;min-height:44px;padding:8px 10px;font-size:15px}
+  /* Same for the two small inline controls the sweep turned up: the equipment
+     category chips (24px) and the alert dismiss × (22px). Both carry inline
+     padding, so only min-height/min-width can reach them from here. */
+  .chip-tap{min-height:44px!important}
+  [data-dism]{min-height:44px!important;min-width:44px!important}
+}
 /* Subtle white separator under thead so red header doesn't merge into body. */
 .tbl-wrap thead th{border-bottom:2px solid #fff}
 /* CARDS-EVERYWHERE (2026-05-05, refined) — every <tr> renders as a
@@ -4983,7 +4995,7 @@ function rDash(){
   // Critical risks is the one high-level warning we surface here, with dismiss-for-today.
   var _dismKey='tfgn_alert_dism_'+today;
   var _dism={};try{_dism=JSON.parse(localStorage.getItem(_dismKey)||'{}');}catch(e){}
-  if(kc>0&&!_dism['risks'])alerts+='<div class="alert alert-r" style="display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer" onclick="if(event.target.dataset.dism){_dismissAlert(\'risks\');event.stopPropagation();}else{goPage(\'rsk\');}"><span>\u26a1 '+kc+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc</span><button data-dism="1" style="background:transparent;border:none;color:#b91c1c;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1;min-height:auto" aria-label="\u05e1\u05d2\u05d5\u05e8 \u05d4\u05ea\u05e8\u05d0\u05d4">\u00d7</button></div>';
+  if(kc>0&&!_dism['risks'])alerts+='<div class="alert alert-r" style="display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer" onclick="if(event.target.dataset.dism){_dismissAlert(\'risks\');event.stopPropagation();}else{goPage(\'rsk\');}"><span>\u26a1 '+kc+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc</span><button data-dism="1" style="background:transparent;border:none;color:#b91c1c;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1" aria-label="\u05e1\u05d2\u05d5\u05e8 \u05d4\u05ea\u05e8\u05d0\u05d4">\u00d7</button></div>';
   var de=g('dash-exp');
   if(de)de.innerHTML=exp.length?exp.slice(0,5).map(function(e){var cls=e.x<0?'bR':(e.x<=7?'bR':'bY');var lbl=e.x<0?'\u05e4\u05d2':(e.x+'\u05d9');return '<div onclick="goPage(\'exp\')" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span>'+esc(String(e.n).substring(0,35))+' <span style="color:var(--t3);font-size:10px">'+esc(e.t)+'</span></span><span class="b '+cls+'">'+lbl+'</span></div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</p>';
   var da=g('dash-auds');
@@ -6224,11 +6236,11 @@ function rEqi(){
       all.forEach(function(r){var k=_eqiCategoryOf(r);counts[k]=(counts[k]||0)+1;});
       var entries=Object.keys(counts).map(function(k){return [k,counts[k]];}).sort(function(a,b){return b[1]-a[1];});
       var sel=window._eqiTypeFilter||'';
-      var html='<button onclick="eqiTypeFilter(\'\')" style="padding:5px 12px;border:1px solid '+(sel?'#d0d7de':'#1d4ed8')+';background:'+(sel?'#fff':'#dbeafe')+';color:'+(sel?'#374151':'#1d4ed8')+';border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">\u05d4\u05db\u05dc '+all.length+'</button>';
+      var html='<button class="chip-tap" onclick="eqiTypeFilter(\'\')" style="padding:5px 12px;border:1px solid '+(sel?'#d0d7de':'#1d4ed8')+';background:'+(sel?'#fff':'#dbeafe')+';color:'+(sel?'#374151':'#1d4ed8')+';border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">\u05d4\u05db\u05dc '+all.length+'</button>';
       entries.forEach(function(e){
         var k=e[0],n=e[1],active=(sel===k);
         var safe=esc(k).replace(/\'/g,'&#39;');
-        html+='<button data-cat="'+safe+'" onclick="eqiTypeFilter(this.dataset.cat)" style="padding:5px 12px;border:1px solid '+(active?'#1d4ed8':'#d0d7de')+';background:'+(active?'#dbeafe':'#fff')+';color:'+(active?'#1d4ed8':'#374151')+';border-radius:14px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">'+safe+' '+n+'</button>';
+        html+='<button class="chip-tap" data-cat="'+safe+'" onclick="eqiTypeFilter(this.dataset.cat)" style="padding:5px 12px;border:1px solid '+(active?'#1d4ed8':'#d0d7de')+';background:'+(active?'#dbeafe':'#fff')+';color:'+(active?'#1d4ed8':'#374151')+';border-radius:14px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit">'+safe+' '+n+'</button>';
       });
       cb.innerHTML=html;
     }
