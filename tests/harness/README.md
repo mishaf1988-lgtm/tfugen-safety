@@ -19,6 +19,7 @@ bash tests/harness/run.sh trustee   # רק הנאמנים
 | notif-trustee-test.js | הגדרות התראות: שורת «ליקוי מנאמן», יעדים, «שלח בדיקה», toast ב-realtime |
 | trustee-notify-test.mjs | הפונקציה `functions/api/trustee-notify.js` עם fetch מדומה (24 בדיקות) |
 | vm-notifier-test.py | `tools/vm-notifier/notify.py` עם requests/מיילר מדומים |
+| offline-photo-test.js | תור תמונות אופליין: תמונה שנכשלה נשמרת ב-IndexedDB, הדיווח נשמר עם סימון `pending:`, ובחיבור הבא התמונה עולה והסימון מוחלף בכל מקום |
 | outbox-race-test.js | `_obDrain` האמיתי: פעולות שנכנסו בזמן העלאה שורדות |
 | sbsync-test.js | `sbSync`/`_sbMergePull` האמיתי: שרת = מקור אמת, outbox שורד |
 | emp-topbar-test.js, login-label-test.js | טופ-בר נקי במצב נאמן, תווית הכניסה |
