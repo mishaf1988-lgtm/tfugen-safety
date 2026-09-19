@@ -18,8 +18,10 @@ export async function onRequest({ env }) {
   const BUILD = String(sha).substring(0, 7);
 
   const SW = `// TFUGEN Service Worker — minimal shell cache.
-// Strategy: network-first for our static assets (so deploys are instant),
-// fall back to cache when offline. API/REST calls bypass entirely.
+// Strategy:
+//   shell (index.html & friends) — cache-first, refreshed in the background
+//   everything else of ours      — network-first, cache as offline fallback
+//   API / REST / fonts           — bypassed entirely
 // Build: ${BUILD} (auto-injected from CF_PAGES_COMMIT_SHA)
 
 const CACHE = 'tfgn-${BUILD}';
@@ -44,6 +46,16 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+function isShell(req) {
+  if (req.mode === 'navigate') return true;
+  try {
+    const u = new URL(req.url);
+    return u.origin === self.location.origin && SHELL.indexOf(u.pathname) >= 0;
+  } catch (err) {
+    return false;
+  }
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -59,15 +71,37 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
+  // Keep the freshest copy around, but never let a cache error break the page.
+  const store = (resp) => {
+    if (resp && resp.ok && resp.type === 'basic') {
+      const copy = resp.clone();
+      caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+    }
+    return resp;
+  };
+
+  // index.html is ~1.4MB (250KB over the wire). Network-first made every
+  // single open wait for that download, even though the bytes only change on
+  // a deploy. Serve the cached shell straight away and refresh it in the
+  // background instead — a deploy still reaches the user, because /sw.js is
+  // no-cache, the new worker re-fills SHELL on install, and the page shows
+  // the "new version" pill the moment that worker activates.
+  if (isShell(req)) {
+    e.respondWith(
+      caches.match(req, { cacheName: CACHE, ignoreSearch: true }).then((hit) => {
+        if (hit) {
+          e.waitUntil(fetch(req).then(store).catch(() => {}));
+          return hit;
+        }
+        return fetch(req).then(store).catch(() => caches.match('/'));
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     fetch(req)
-      .then((resp) => {
-        if (resp && resp.ok && resp.type === 'basic') {
-          const copy = resp.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return resp;
-      })
+      .then(store)
       .catch(() => caches.match(req).then((r) => r || caches.match('/')))
   );
 });
