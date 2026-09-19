@@ -3471,24 +3471,33 @@ function _forceSyncPerRow(t,rows){
   });
   return p.then(function(){return {table:t,ok:ok,bad:bad};});
 }
+// \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0 \u2014 PULL. The prompt always said "\u05d9\u05d8\u05e2\u05df \u05de\u05d7\u05d3\u05e9 \u05d0\u05ea \u05db\u05dc
+// \u05d4\u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05de\u05d4\u05e2\u05e0\u05df", and the code did the exact opposite: it upserted every
+// locally cached row to the server first. A tablet that had been in a drawer
+// for three days would overwrite three days of everyone else's edits, from a
+// button whose own text describes a read. The upload path still exists, as
+// _forceUpload(), but it is a separate entry now and it says what it does.
 function forceSync(){
-  // Confirm before potentially overwriting unsaved local changes with cloud state.
-  // (User reported losing in-progress work after accidental "force sync" clicks.)
   var pending=(typeof _obGet==='function')?_obGet().length:0;
+  if(typeof _obMem!=='undefined'&&_obMem)pending+=_obMem.length;
   var msg=pending>0
-    ? 'יש '+pending+' פעולות בתור הסנכרון שעדיין לא הועלו. סנכרון מחדש עשוי לדרוס שינויים מקומיים שלא נשמרו. להמשיך?'
-    : 'סנכרון מחדש יטען מחדש את כל הטבלאות מהענן. להמשיך?';
+    ? '\u05d9\u05e9 '+pending+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e9\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05e2\u05dc\u05d5. \u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d4\u05e2\u05e0\u05df \u05e2\u05e9\u05d5\u05d9\u05d4 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05d0\u05d5\u05ea\u05df.\n\u05dc\u05d4\u05de\u05e9\u05d9\u05da \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'
+    : '\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d7\u05d3\u05e9 \u05e9\u05dc \u05db\u05dc \u05d4\u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05de\u05d4\u05e2\u05e0\u05df.\n\u05dc\u05d0 \u05de\u05e2\u05dc\u05d4 \u05e9\u05d5\u05dd \u05d3\u05d1\u05e8 \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4.\n\u05dc\u05d4\u05de\u05e9\u05d9\u05da?';
   if(!confirm(msg))return;
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox'];
-  var btn=g('force-sync-btn');if(btn){btn.style.opacity='0.4';btn.disabled=true;}
+  toast('\u05d8\u05d5\u05e2\u05df \u05de\u05d4\u05e2\u05e0\u05df...');
+  try{sbSync();}catch(e){console.warn('forceSync pull failed',e);}
+}
+// The old behaviour, kept because it is the only way to recover a device whose
+// rows never reached the server \u2014 but named for what it does, and warning in
+// the direction that can actually lose someone else's work.
+function _forceUpload(){
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
   var totalRowsToPush=0;
   syncTbls.forEach(function(t){var r=DB[t];if(r&&r.length)totalRowsToPush+=r.length;});
-  if(totalRowsToPush===0){
-    sbSync();
-    if(btn){btn.style.opacity='';btn.disabled=false;}
-    toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');
-    return;
-  }
+  if(totalRowsToPush===0){toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');return;}
+  if(!confirm('\u26a0 \u05d4\u05e2\u05dc\u05d0\u05d4 \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05e9\u05e8\u05ea\n\n'
+    +totalRowsToPush+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05de\u05d4\u05e2\u05d5\u05ea\u05e7 \u05d4\u05de\u05e7\u05d5\u05de\u05d9 \u05d9\u05d9\u05db\u05ea\u05d1\u05d5 \u05e2\u05dc \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.\n\n'
+    +'\u05d0\u05dd \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d9\u05d4 \u05de\u05e0\u05d5\u05ea\u05e7 \u2014 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e9\u05d0\u05d7\u05e8\u05d9\u05dd \u05e2\u05e9\u05d5 \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d9\u05d0\u05d1\u05d3\u05d5.\n\n\u05dc\u05d4\u05de\u05e9\u05d9\u05da?'))return;
   toast('\u05de\u05e2\u05dc\u05d4 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd... ('+totalRowsToPush+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea)');
   var allOk=0,allBad=[];
   var p=Promise.resolve();
@@ -3496,13 +3505,8 @@ function forceSync(){
     var rows=DB[t];
     if(!rows||!rows.length)return;
     p=p.then(function(){return _sbAuth();}).then(function(){
-      // Try batch first (fast path)
       return fetch(SBU+'/rest/v1/'+t,{method:'POST',headers:sbHUpsert(),body:JSON.stringify(rows)})
-        .then(function(r){
-          if(r.ok){return {table:t,ok:rows.length,bad:[]};}
-          // Batch failed \u2014 fall back to per-row
-          return _forceSyncPerRow(t,rows);
-        })
+        .then(function(r){ if(r.ok)return {table:t,ok:rows.length,bad:[]}; return _forceSyncPerRow(t,rows); })
         .catch(function(){return _forceSyncPerRow(t,rows);})
         .then(function(res){
           allOk+=res.ok;
@@ -3512,14 +3516,10 @@ function forceSync(){
   });
   p.then(function(){
     sbSync();
-    if(btn){btn.style.opacity='';btn.disabled=false;}
-    var msg=allOk+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e1\u05d5\u05e0\u05db\u05e8\u05e0\u05d5';
-    if(allBad.length)msg+=' \u00b7 '+allBad.length+' \u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05e2\u05dd \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea (\u05dc\u05d7\u05e5 \u05e2\u05dc \u05d4\u05e2\u05e0\u05df \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd)';
+    var msg=allOk+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d4\u05d5\u05e2\u05dc\u05d5';
+    if(allBad.length)msg+=' \u00b7 '+allBad.length+' \u05d8\u05d1\u05dc\u05d0\u05d5\u05ea \u05e2\u05dd \u05e9\u05d2\u05d9\u05d0\u05d5\u05ea';
     toast(msg);
-    if(allBad.length){
-      console.warn('forceSync issues:',allBad);
-      try{localStorage.setItem('tfgn_lastForceSyncIssues',JSON.stringify({ts:new Date().toISOString(),issues:allBad}));}catch(e){}
-    }
+    if(allBad.length)console.warn('forceUpload issues:',allBad);
   });
 }
 function delRow(tbl,id,fn){DB[tbl]=DB[tbl].filter(function(r){return r.id!==id;});sbDel(tbl,id);addLog('\u05e4\u05e8\u05d9\u05d8 \u05e0\u05de\u05d7\u05e7 \u05de'+tbl);sdb();toast('\u05e0\u05de\u05d7\u05e7 &#10003;');fn();}
@@ -8324,7 +8324,8 @@ window._topMoreMenu=function(anchor){
   function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
   function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
-  item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0',function(){if(typeof forceSync==='function')forceSync();});
+  item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0 (\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d4\u05e2\u05e0\u05df)',function(){if(typeof forceSync==='function')forceSync();});
+  if(typeof _isAdminUser==='function'&&_isAdminUser())item('\u2b06','\u05d4\u05e2\u05dc\u05d4 \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05e9\u05e8\u05ea',function(){if(typeof _forceUpload==='function')_forceUpload();});
   item('\ud83e\uddba','\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',function(){if(typeof empToggle==='function')empToggle(true);});
   sep();
   // AI entry from the header (P1#1) \u2014 the floating button is hidden on home.
