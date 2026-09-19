@@ -99,6 +99,7 @@ body.hc .topbar{box-shadow:0 2px 10px rgba(0,0,0,.1)}
 .topbar-title .t1{font-size:15px;font-weight:900;color:var(--red);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-title .t2{font-size:10px;color:var(--t3);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-actions{display:flex;align-items:center;gap:2px;flex-shrink:0}
+#gsearch-results .gs-item:hover,#gsearch-results .gs-item.sel{background:#f3f5f8}
 /* Michael 2026-09-19 — 🔍 left the top bar (he never used it; it lives in the
    ☰ sheet now), which freed exactly the slot 📝 had given up for 🏠. Five
    buttons again, and the logo never had to shrink. */
@@ -488,16 +489,6 @@ button:focus-visible,.btn:focus-visible,a:focus-visible,.bn:focus-visible,.bell:
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--red);outline-offset:1px}
 
 /* ---- SEARCH MODAL (Ctrl+K) ---- */
-#ov-search{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1001;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-#m-search{display:none;flex-direction:column;position:fixed;top:8vh;left:50%;transform:translateX(-50%);background:#fff;width:min(560px,92vw);max-height:80vh;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.35);z-index:1002;overflow:hidden}
-#m-search.on{display:flex}
-#m-search-q{width:100%;padding:18px 20px;font-size:18px;border:none;border-bottom:2px solid var(--border);outline:none;direction:rtl;background:#fff;color:var(--tx)}
-#m-search-r{overflow-y:auto;flex:1;padding:6px;max-height:56vh}
-.sr-item{padding:9px 10px;border-radius:8px;cursor:pointer;display:flex;gap:9px;align-items:center;margin-bottom:2px}
-.sr-item:hover,.sr-item.sel{background:#f3f5f8}
-.sr-item .sr-tag{font-size:10px;background:var(--red);color:#fff;border-radius:5px;padding:2px 7px;font-weight:700;flex-shrink:0;white-space:nowrap}
-.sr-item .sr-txt{flex:1;font-size:13px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
-#m-search-hint{padding:8px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);background:#fafbfc;text-align:right}
 
 /* ---- ALERTS ---- */
 .alert{padding:10px 13px;border-radius:7px;font-size:12px;margin-bottom:10px;border-left:3px solid}
@@ -645,7 +636,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
      as a safety net ANY element positioned fixed inline (that is how every
      dynamically created floater in this app is styled). */
   #cap-fab,.cap-fab,#ask-fab,#sw-update-pill,#scroll-top-btn,#emp-toast,.toast,.sync-pill,#sync-pill,
-  #ncr-agent-modal,#m-search,#ov-search,#tsk-render-diag,
+  #ncr-agent-modal,#tsk-render-diag,
   [style*="position:fixed"],[style*="position: fixed"]{display:none!important}
   /* P0 v2 (2026-09-18, QA after #557 still saw floaters): structural net that does
      not depend on any id or class — on paper only the page container prints.
@@ -2638,9 +2629,10 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-gsearch')">&#10005;</button>
   <div class="modal-title">&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</div>
   <div class="fgrid">
-    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_debGsearch()" autocomplete="off"></div>
+    <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_debGsearch()" onkeydown="_gsKey(event)" autocomplete="off"></div>
   </div>
   <div id="gsearch-results" style="margin-top:6px;max-height:55vh;overflow-y:auto;border-top:1px solid var(--brd);padding-top:6px"></div>
+  <div style="padding:8px 2px 0;font-size:11px;color:var(--t3);text-align:right">&#8593;&#8595; &#1500;&#1504;&#1497;&#1493;&#1493;&#1496; &#8226; Enter &#1500;&#1508;&#1514;&#1497;&#1495;&#1492; &#8226; Esc &#1500;&#1505;&#1490;&#1497;&#1512;&#1492; &#8226; Ctrl+K &#1488;&#1493; / &#1500;&#1508;&#1514;&#1497;&#1495;&#1492;</div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-gsearch')">&#1505;&#1490;&#1493;&#1512;</button></div>
 </div>
 
@@ -2881,7 +2873,6 @@ window._debTskSearch    = _deb(function(v){ if(typeof tskSearch==='function')tsk
 window._debRHearing     = _deb(function(){ if(typeof rHearing==='function')rHearing(); }, 150);
 window._debModFilter    = _deb(function(v){ if(typeof _modulesSheetFilter==='function')_modulesSheetFilter(v); }, 120);
 window._debGsearch      = _deb(function(){ if(typeof _gsearchRender==='function')_gsearchRender(); }, 150);
-window._debSrRun        = _deb(function(v){ if(typeof _srRun==='function')_srRun(v); }, 120);
 // ============ End Phase 2 debounce wrappers ============
 
 var ADMIN_EMAIL='admin@tfugen.local';
@@ -12145,7 +12136,10 @@ var _SEARCH_TBLS=[
   {tbl:'leg',label:'\u05d7\u05d5\u05e7',icon:'⚖',fields:['s','topic','law_num','summary'],view:function(r){return r.s||r.topic||'';}},
   {tbl:'projects',label:'\u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8',icon:'🏗️',fields:['name','description','status'],view:function(r){return (r.name||'')+(r.status?' — '+r.status:'');}},
   {tbl:'inspection_types',label:'\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4',icon:'🔍',fields:['name','responsible','notes'],view:function(r){return r.name||'';}},
-  {tbl:'issue_types',label:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'🎯',fields:['name','category','notes'],view:function(r){return (r.name||'')+(r.category?' — '+r.category:'');}}
+  {tbl:'issue_types',label:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'🎯',fields:['name','category','notes'],view:function(r){return (r.name||'')+(r.category?' — '+r.category:'');}},
+  // Risks were only searchable from the Ctrl+K search removed here — carried over
+  // so that consolidating the two did not quietly drop a whole table.
+  {tbl:'rsk',label:'\u05e1\u05d9\u05db\u05d5\u05df',icon:'⚠️',fields:['d','a','o','ac'],view:function(r){return String(r.d||'').substring(0,80)+(r.a?' — '+r.a:'');}}
 ];
 function _globalSearch(q){
   q=String(q||'').trim().toLowerCase();
@@ -12185,8 +12179,8 @@ function _gsearchRender(){
   if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d4\u05e7\u05dc\u05d3 2+ \u05ea\u05d5\u05d5\u05d9\u05dd</div>';return;}
   var rs=_globalSearch(q);
   if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>';return;}
-  box.innerHTML=rs.map(function(r){
-    return '<div data-stbl="'+esc(r.tbl)+'" data-sid="'+esc(r.id)+'" onclick="closeModal(\'m-gsearch\');showView(this.dataset.stbl,this.dataset.sid)" style="display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer">'+
+  box.innerHTML=rs.map(function(r,i){
+    return '<div class="gs-item'+(i===0?' sel':'')+'" data-stbl="'+esc(r.tbl)+'" data-sid="'+esc(r.id)+'" onclick="_gsOpen(this)" style="display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer">'+
       '<span style="font-size:18px;width:30px;text-align:center;flex-shrink:0">'+r.icon+'</span>'+
       '<div style="flex:1;min-width:0;overflow:hidden">'+
         '<div style="font-size:10px;color:#888">'+esc(r.label)+'</div>'+
@@ -12195,6 +12189,29 @@ function _gsearchRender(){
     '</div>';
   }).join('');
 }
+window._gsOpen=function(el){
+  if(!el)return;
+  closeModal('m-gsearch');
+  showView(el.dataset.stbl,el.dataset.sid);
+};
+// ↑↓ and Enter in the search box. The Ctrl+K search removed here had keyboard
+// navigation and this one did not; on a desktop it is most of the point.
+window._gsKey=function(e){
+  var items=document.querySelectorAll('#gsearch-results .gs-item');
+  if(!items.length)return;
+  var idx=-1,i;
+  for(i=0;i<items.length;i++)if(items[i].classList.contains('sel'))idx=i;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    var nx=e.key==='ArrowDown'?Math.min(idx+1,items.length-1):Math.max(idx-1,0);
+    if(idx>=0)items[idx].classList.remove('sel');
+    items[nx].classList.add('sel');
+    try{items[nx].scrollIntoView({block:'nearest'});}catch(err){}
+  }else if(e.key==='Enter'){
+    e.preventDefault();
+    _gsOpen(document.querySelector('#gsearch-results .gs-item.sel')||items[0]);
+  }
+};
 window.openGlobalSearch=function(){
   openModal('m-gsearch');
   setTimeout(function(){var i=g('gsearch-q');if(i){i.value='';i.focus();}_gsearchRender();},50);
@@ -17791,72 +17808,13 @@ window._copyDeepLink=function(tbl,id){
   }catch(e){}
 })();
 
-/* ---- SEARCH (Ctrl+K) ---- */
-function _srBuild(){
-  if(g('m-search'))return;
-  var ov=document.createElement('div');ov.id='ov-search';ov.onclick=closeSearch;document.body.appendChild(ov);
-  var m=document.createElement('div');m.id='m-search';
-  m.innerHTML='<input id="m-search-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1489;&#1499;&#1500; &#1492;&#1497;&#1513;&#1493;&#1502;&#1493;&#1503;..." autocomplete="off"><div id="m-search-r"></div><div id="m-search-hint">\u2191\u2193 \u05dc\u05e0\u05d9\u05d5\u05d5\u05d8 \u2022 Enter \u05dc\u05e4\u05ea\u05d9\u05d7\u05d4 \u2022 Esc \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4</div>';
-  document.body.appendChild(m);
-  g('m-search-q').addEventListener('input',function(e){_debSrRun(e.target.value);});
-  g('m-search-q').addEventListener('keydown',_srKey);
-}
-function openSearch(){_srBuild();g('ov-search').style.display='block';g('m-search').classList.add('on');var q=g('m-search-q');q.value='';q.focus();_srRun('');}
-function closeSearch(){var ov=g('ov-search'),m=g('m-search');if(ov)ov.style.display='none';if(m)m.classList.remove('on');}
-// Memoize the lowercase JSON haystack on each record under a non-enumerable
-// property '_hs', so subsequent searches don't re-stringify every row.
-// Non-enumerable means JSON.stringify(DB) (sdb()) doesn't see it either.
-function _hayFor(x){
-  if(x && x._hs) return x._hs;
-  var s='';
-  try{s=JSON.stringify(x).toLowerCase();}catch(e){s='';}
-  if(x && typeof x==='object'){
-    try{ Object.defineProperty(x,'_hs',{value:s,enumerable:false,writable:true,configurable:true}); }
-    catch(_){ x._hs=s; }
-  }
-  return s;
-}
-function _srRun(q){
-  var r=g('m-search-r');if(!r)return;
-  q=(q||'').trim().toLowerCase();
-  if(!q){r.innerHTML='<div style="padding:28px;text-align:center;color:var(--t3);font-size:13px">\u05d4\u05ea\u05d7\u05dc \u05d4\u05e7\u05dc\u05d3\u05d4...</div>';return;}
-  var pools=[
-    {k:'ncr',l:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',a:DB.ncr||[],nm:function(x){return (x.num||x.id||'')+' \u2013 '+((x.d||x.desc||'')+'').substring(0,60);}},
-    {k:'inc',l:'\u05d0\u05d9\u05e8\u05d5\u05e2',a:DB.inc||[],nm:function(x){return (x.dt||'')+' \u2013 '+((x.ds||x.desc||x.a||'')+'').substring(0,60);}},
-    {k:'emp',l:'\u05e2\u05d5\u05d1\u05d3',a:DB.emp||[],nm:function(x){return (x.n||'')+' \u2013 '+(x.i||x.tp||'');}},
-    {k:'tr',l:'\u05d4\u05d3\u05e8\u05db\u05d4',a:DB.tr||[],nm:function(x){return (x.w||'')+' \u2013 '+(x.n||'');}},
-    {k:'nm',l:'\u05e7\u05e8\u05d5\u05d1 \u05dc\u05ea\u05d0\u05d5\u05e0\u05d4',a:DB.near_miss||[],nm:function(x){return (x.d||'')+' \u2013 '+((x.desc||x.a||'')+'').substring(0,60);}},
-    {k:'docs',l:'\u05de\u05e1\u05de\u05da',a:DB.docs||[],nm:function(x){return (x.n||'')+' \u2013 '+(x.c||'');}},
-    {k:'rsk',l:'\u05e1\u05d9\u05db\u05d5\u05df',a:DB.rsk||[],nm:function(x){return (x.n||'')+' \u2013 '+((x.desc||x.dc||'')+'').substring(0,50);}}
-  ];
-  var out=[];
-  pools.forEach(function(p){p.a.forEach(function(x){if(_hayFor(x).indexOf(q)>=0)out.push({k:p.k,l:p.l,id:x.id,label:p.nm(x)});});});
-  if(!out.length){r.innerHTML='<div style="padding:28px;text-align:center;color:var(--t3);font-size:13px">\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>';return;}
-  out=out.slice(0,40);
-  r.innerHTML=out.map(function(x,i){return '<div class="sr-item'+(i===0?' sel':'')+'" data-k="'+esc(x.k)+'" data-id="'+esc(x.id||'')+'" onclick="_srOpen(this.dataset.k,this.dataset.id)"><span class="sr-tag">'+esc(x.l)+'</span><span class="sr-txt">'+esc(x.label)+'</span></div>';}).join('');
-}
-function _srKey(e){
-  var items=document.querySelectorAll('.sr-item');if(!items.length)return;
-  var idx=-1;items.forEach(function(el,i){if(el.classList.contains('sel'))idx=i;});
-  if(e.key==='ArrowDown'){e.preventDefault();if(idx>=0)items[idx].classList.remove('sel');items[Math.min(idx+1,items.length-1)].classList.add('sel');items[Math.min(idx+1,items.length-1)].scrollIntoView({block:'nearest'});}
-  else if(e.key==='ArrowUp'){e.preventDefault();if(idx>=0)items[idx].classList.remove('sel');items[Math.max(idx-1,0)].classList.add('sel');items[Math.max(idx-1,0)].scrollIntoView({block:'nearest'});}
-  else if(e.key==='Enter'){e.preventDefault();var sel=document.querySelector('.sr-item.sel')||items[0];if(sel)_srOpen(sel.dataset.k,sel.dataset.id);}
-}
-function _srOpen(k,id){
-  var pm={ncr:'ncr',inc:'inc',emp:'emp',tr:'tr',nm:'nm',docs:'docs',rsk:'rsk'};
-  var tm={ncr:'ncr',inc:'inc',emp:'emp',tr:'tr',nm:'near_miss',docs:'docs',rsk:'rsk'};
-  var pg=pm[k];if(!pg)return;closeSearch();goPage(pg);
-  if(id&&typeof showView==='function'){try{showView(tm[k],id);}catch(e){}}
-}
-
 /* ---- GLOBAL SHORTCUTS (Esc, n, Ctrl+K, ?, g+x chord) ---- */
 window._gChordTs=0;
 document.addEventListener('keydown',function(e){
   var tag=(e.target&&e.target.tagName||'').toUpperCase();
   var typing=(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||(e.target&&e.target.isContentEditable));
-  if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault();openSearch();return;}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault();openGlobalSearch();return;}
   if(e.key==='Escape'){
-    var sm=g('m-search');if(sm&&sm.classList.contains('on')){closeSearch();e.preventDefault();return;}
     var ovs=document.querySelectorAll('.overlay');var openMid=null;ovs.forEach(function(ov){if(ov.style.display==='block'&&ov.id){var mid='m-'+ov.id.substr(3);var mo=g(mid);if(mo&&mo.style.display!=='none'&&mo.style.display!=='')openMid=mid;}});
     if(openMid){closeModal(openMid);e.preventDefault();}
     window._gChordTs=0;
@@ -17864,7 +17822,7 @@ document.addEventListener('keydown',function(e){
   }
   if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
   if(e.key==='?'){e.preventDefault();if(typeof openModal==='function')openModal('m-help');return;}
-  if(e.key==='/'){e.preventDefault();if(typeof openSearch==='function')openSearch();return;}
+  if(e.key==='/'){e.preventDefault();if(typeof openGlobalSearch==='function')openGlobalSearch();return;}
   if(e.key==='g'||e.key==='G'){window._gChordTs=Date.now();e.preventDefault();return;}
   if(window._gChordTs&&(Date.now()-window._gChordTs)<1500){
     var k=(e.key||'').toLowerCase();
