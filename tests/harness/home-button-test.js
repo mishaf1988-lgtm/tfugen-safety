@@ -61,33 +61,50 @@ const TASKS = [{ status: 'פתוח', assignee: 'admin' }, { status: 'פתוח', 
     await ctx.close();
   }
 
-  console.log('\n3. room was made without shrinking the logo or losing the task count');
+  console.log('\n3. five buttons at every width — 🔍 left, 📝 came back, the logo never shrank');
   {
-    for (const w of [360, 375, 390, 414, 430]) {
+    for (const w of [360, 375, 390, 414, 430, 431, 768]) {
       const { ctx, page } = await open(w, 'admin');
       const r = await page.evaluate(`((v)=>{DB.tasks=${JSON.stringify(TASKS)};_dashBadges();
         const tb=document.querySelector('.topbar');
         const img=tb.querySelector('.topbar-left img').getBoundingClientRect();
         const act=tb.querySelector('.topbar-actions').getBoundingClientRect();
-        return {home:v(document.getElementById('home-btn')),tasksBtn:v(document.getElementById('my-tasks-btn')),
-          menuBadge:v(document.getElementById('menu-tasks-badge'))?document.getElementById('menu-tasks-badge').textContent:null,
+        return {btns:Array.from(tb.querySelectorAll('button')).filter(v).map(e=>e.id),
+          search:!!document.getElementById('gsearch-btn'),
           tasksBadge:v(document.getElementById('my-tasks-badge'))?document.getElementById('my-tasks-badge').textContent:null,
           logoH:Math.round(img.height),gap:Math.round(act.left-img.right),overflow:tb.scrollWidth-tb.clientWidth};})(${vis})`);
-      check(w + 'px: 🏠 shown, 📝 stepped aside, ☰ carries the count "3", logo still ' + r.logoH + 'px, nothing overflows',
-        r.home && !r.tasksBtn && r.menuBadge === '3' && r.tasksBadge === null && r.logoH >= 48 && r.gap >= 0 && r.overflow === 0, r);
+      check(w + 'px: ☰ 🏠 🔔 📝 ⋯ with the count "3", no 🔍, logo ' + r.logoH + 'px, nothing overflows',
+        r.btns.join() === 'menu-btn,home-btn,notif-btn,my-tasks-btn,more-menu-btn' && !r.search && r.tasksBadge === '3' && r.logoH >= 48 && r.gap >= 0 && r.overflow === 0, r);
       await ctx.close();
     }
-    for (const w of [431, 768]) {
-      const { ctx, page } = await open(w, 'admin');
-      const r = await page.evaluate(`((v)=>{DB.tasks=${JSON.stringify(TASKS)};_dashBadges();
-        const tb=document.querySelector('.topbar');
-        return {home:v(document.getElementById('home-btn')),tasksBtn:v(document.getElementById('my-tasks-btn')),
-          menuBadge:v(document.getElementById('menu-tasks-badge')),
-          tasksBadge:v(document.getElementById('my-tasks-badge'))?document.getElementById('my-tasks-badge').textContent:null,
-          overflow:tb.scrollWidth-tb.clientWidth};})(${vis})`);
-      check(w + 'px: there is room for both — 📝 is back with its own count, ☰ badge stays off', r.home && r.tasksBtn && r.tasksBadge === '3' && !r.menuBadge && r.overflow === 0, r);
-      await ctx.close();
-    }
+  }
+
+  console.log('\n3b. search is still reachable, from both role menus');
+  {
+    const { ctx, page } = await open(375, 'admin');
+    const r = await page.evaluate(() => {
+      _menuOpen();
+      const sheet = document.getElementById('m-modules-sheet');
+      const btn = Array.from(sheet.querySelectorAll('.sheet-btn')).find((b) => /\u05d7\u05d9\u05e4\u05d5\u05e9/.test(b.textContent));
+      if (!btn) return { found: false };
+      btn.click();
+      return { found: true, sheetClosed: getComputedStyle(sheet).display === 'none', searchOpen: getComputedStyle(document.getElementById('m-gsearch')).display !== 'none' };
+    });
+    check('a manager finds 🔍 in the ☰ sheet, and it opens the record search', r.found && r.sheetClosed && r.searchOpen, r);
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(375, 'reporter');
+    const r = await page.evaluate(() => {
+      _menuOpen();
+      const sheet = document.getElementById('m-reports-sheet');
+      const btn = Array.from(sheet.querySelectorAll('.sheet-btn')).find((b) => /\u05d7\u05d9\u05e4\u05d5\u05e9/.test(b.textContent));
+      if (!btn) return { found: false };
+      btn.click();
+      return { found: true, searchOpen: getComputedStyle(document.getElementById('m-gsearch')).display !== 'none' };
+    });
+    check('a reporter gets it too — their ☰ opens a different sheet, so it was added there as well', r.found && r.searchOpen, r);
+    await ctx.close();
   }
 
   console.log('\n4. the edges');
