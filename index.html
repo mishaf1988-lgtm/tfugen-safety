@@ -2358,6 +2358,23 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-roster')">סגור</button><button class="btn btn-p" onclick="_truRosterAdd()">+ הוסף נאמן</button></div>
 </div>
 
+<!-- TRUSTEE WINNER (phase 2) — announce the month's winner + winners history -->
+<div class="overlay" id="ov-tru-winner" onclick="closeModal('m-tru-winner')"></div>
+<div class="modal" id="m-tru-winner" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru-winner')">&#10005;</button>
+  <div class="modal-title">&#127942; זוכה החודש</div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">הזוכה מוצג לנאמנים במסך שלהם. בתיקו, מי שטרם זכה מקבל עדיפות — כדי שהפרס יתגלגל.</div>
+  <div style="font-weight:900;font-size:15px;margin-bottom:8px" id="tru-win-month"></div>
+  <div class="fgrid">
+    <div class="field"><label>הזוכה</label><select id="tru-win-u"></select></div>
+    <div class="field"><label>הערה (לא חובה)</label><input id="tru-win-note" placeholder="למשל: סגר 6 מפגעים"></div>
+  </div>
+  <div id="tru-win-hint" style="font-size:12px;color:var(--t2);margin:6px 0 12px"></div>
+  <div style="font-weight:700;font-size:14px;margin:6px 0">היסטוריית זוכים</div>
+  <div id="tru-win-hist"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-winner')">סגור</button><button class="btn btn-p" onclick="_truWinnerSave()">&#127942; הכרז זוכה</button></div>
+</div>
+
 <!-- ROUND MODAL (Morning Round) -->
 <div class="overlay" id="ov-round" onclick="closeModal('m-round')"></div>
 <div class="modal" id="m-round" style="display:none;max-width:520px">
@@ -2870,7 +2887,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -2881,7 +2898,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -3081,7 +3098,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
   var done=0;
   function finish(){
     done++;
@@ -3118,7 +3135,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -3393,7 +3410,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();}};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();}};
 
   delRow(tbl,id,fn[tbl]||function(){});
 }
@@ -12281,7 +12298,7 @@ window._exportXlsx=function(){
       var wb=XLSX.utils.book_new();
       // Order: most-business-relevant first so Excel opens on a useful sheet.
       var tableOrder=[
-        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports','trustees',
+        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports','trustees','trustee_winners',
         'equip_inspections','ppe','tr','docs','ctr','med',
         'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
         'emp','app_users','locations','projects','inspection_types','issue_types',
@@ -13340,13 +13357,33 @@ function _truScore(u,m){
   var ptsClosed=Math.min(closed*TRUSTEE_PTS_CLOSED,TRUSTEE_MAX_CLOSED_PTS);
   return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=TRUSTEE_MIN_TASKS,reports:rows.length};
 }
+// ---- phase 2: the announced monthly winner ----
+// One row per month in DB.trustee_winners, id 'win_YYYY-MM' so re-announcing
+// the same month updates that row instead of adding a second one.
+function _truWinnerOf(m){return (DB.trustee_winners||[]).filter(function(w){return w&&w.m===m;})[0]||null;}
+function _truWinnersDesc(){return (DB.trustee_winners||[]).filter(function(w){return w&&w.m;}).slice().sort(function(a,b){return String(b.m).localeCompare(String(a.m));});}
+function _truLatestWinner(){return _truWinnersDesc()[0]||null;}
+// Wins strictly BEFORE month m. Counting only earlier months means announcing
+// a month's winner can never reorder that same month's board.
+function _truWinsBefore(u,m){
+  var n=0,last='';
+  (DB.trustee_winners||[]).forEach(function(w){
+    if(!w||!w.m||w.u!==u||String(w.m)>=String(m))return;
+    n++;if(String(w.m)>last)last=String(w.m);
+  });
+  return {n:n,last:last};
+}
 // Leaderboard for a month: score desc, then hazards closed desc (the
-// document's tie-break), then name. "Who hasn't won yet" is phase 2.
+// document's tie-break), then who hasn't won yet / won longest ago, then name.
 function _truBoard(m){
   var names={};
   if(typeof _truRoster==='function')_truRoster().forEach(function(t){names[t.n]=1;});
   _truRows(m).forEach(function(r){if(r.u)names[r.u]=1;});
-  return Object.keys(names).map(function(u){return _truScore(u,m);}).sort(function(a,b){return (b.total-a.total)||(b.closed-a.closed)||a.u.localeCompare(b.u);});
+  return Object.keys(names).map(function(u){
+    var s=_truScore(u,m),w=_truWinsBefore(u,m);s.wins=w.n;s.lastWin=w.last;return s;
+  }).sort(function(a,b){
+    return (b.total-a.total)||(b.closed-a.closed)||(a.wins-b.wins)||String(a.lastWin).localeCompare(String(b.lastWin))||a.u.localeCompare(b.u);
+  });
 }
 // ---- SAFETY TRUSTEES (T2): trustee screen inside the employee home + report form ----
 var TRU_ME_KEY='tfgn_trustee_name';
@@ -13408,7 +13445,7 @@ function _truFillLists(){
 // with the same merge rules as sbSync (null = unreachable \u2192 keep cache).
 function _truPull(manual){
   if(typeof sbGet!=='function')return Promise.resolve(false);
-  var tbls=['trustee_reports','trustees'],obBefore={};
+  var tbls=['trustee_reports','trustees','trustee_winners'],obBefore={};
   tbls.forEach(function(t){obBefore[t]=_obLocalState(t);});
   return Promise.all(tbls.map(function(t){return sbGet(t);})).then(function(res){
     var any=false;
@@ -13456,6 +13493,15 @@ function _truRender(){
   h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
     +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(TRUSTEE_MIN_TASKS-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+')</span>')
     +(sc.open?'<span class="b bR">'+sc.open+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>':'')+'</div>';
+  // Phase 2: the announced winner is celebrated on the trustee's own screen.
+  var win=_truLatestWinner();
+  if(win){
+    h+='<div class="card" id="tru-winner" style="padding:10px 12px;background:#fef9c3;border:2px solid #f59e0b">'
+      +'<div style="font-weight:900;font-size:15px">\ud83c\udfc6 \u05d6\u05d5\u05db\u05d4 '+esc(_truMonthLabel(win.m))+': '+esc(win.u)+'</div>'
+      +(win.pts!=null?'<div style="font-size:12px;color:#92400e">'+win.pts+' \u05e0\u05e7\u05f3'+(win.u===me?' \u2014 \u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3!':'')+'</div>':'')
+      +(win.note?'<div style="font-size:12px;color:#92400e;margin-top:3px">'+esc(win.note)+'</div>':'')
+      +'</div>';
+  }
   // Who leads this month (point 3): top 3 + my place.
   var board=_truBoard(m),myIdx=-1;board.forEach(function(x,i){if(x.u===me)myIdx=i;});
   h+='<div class="card" id="tru-lead" style="padding:10px 12px"><div style="font-weight:700;font-size:14px;margin-bottom:4px">\ud83c\udfc6 \u05de\u05d9 \u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9</div>';
@@ -13639,11 +13685,18 @@ function rTrustees(){
   var board=_truBoard(m);
   var bEl=g('tru-mgr-board');
   if(bEl){
-    if(!board.length)bEl.innerHTML='<div class="et" style="text-align:center;padding:14px;color:var(--t2)">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</div>';
-    else bEl.innerHTML=board.map(function(x,i){
+    // Phase 2: the month's winner strip sits above the leaderboard and is
+    // also where the manager announces one.
+    var win=_truWinnerOf(m),winHtml='';
+    if(win)winHtml='<div id="tru-mgr-winner" style="display:flex;align-items:center;gap:8px;background:#fef9c3;border:2px solid #f59e0b;border-radius:10px;padding:8px 10px;margin-bottom:10px">'
+      +'<span style="flex:1;min-width:0">\ud83c\udfc6 <strong>\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9: '+esc(win.u)+'</strong>'+(win.pts!=null?' \u00b7 '+win.pts+' \u05e0\u05e7\u05f3':'')+(win.note?'<div style="font-size:11px;color:#92400e">'+esc(win.note)+'</div>':'')+'</span>'
+      +'<button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" onclick="_truWinnerOpen()">\u05e9\u05e0\u05d4</button></div>';
+    else if(board.length)winHtml='<button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="_truWinnerOpen()">\ud83c\udfc6 \u05d4\u05db\u05e8\u05d6 \u05d6\u05d5\u05db\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</button>';
+    if(!board.length)bEl.innerHTML=winHtml+'<div class="et" style="text-align:center;padding:14px;color:var(--t2)">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</div>';
+    else bEl.innerHTML=winHtml+board.map(function(x,i){
       var medal=i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':i===2?'\ud83e\udd49':(i+1)+'.';
       var chips=TRUSTEE_TASKS.map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
-      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+TRUSTEE_MIN_TASKS+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
+      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+TRUSTEE_MIN_TASKS+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
     }).join('');
   }
   var tb=g('tb-trustees');if(!tb)return;
@@ -13756,9 +13809,49 @@ function _truRosterToggle(id){
   t.active=(t.active===false);sbUpd('trustees',t);sdb();
   _truRosterRender();_truFillLists();rTrustees();
 }
+// ---- phase 2: announce the month's winner + winners history (manager) ----
+function _truWinnerOpen(){_truWinnerRender();openModal('m-tru-winner');}
+function _truWinnerRender(){
+  if(!g('m-tru-winner'))return;
+  var m=_truMgrMonth(),board=_truBoard(m),cur=_truWinnerOf(m);
+  var lb=g('tru-win-month');if(lb)lb.textContent=_truMonthLabel(m);
+  var elig=board.filter(function(x){return x.eligible;});
+  var sel=g('tru-win-u');
+  if(sel){
+    var pick=cur?cur.u:(elig.length?elig[0].u:'');
+    sel.innerHTML=board.length?board.map(function(x){
+      return '<option value="'+esc(x.u)+'"'+(x.u===pick?' selected':'')+'>'+esc(x.u)+' \u00b7 '+x.total+' \u05e0\u05e7\u05f3'+(x.eligible?'':' (\u05dc\u05d0 \u05d6\u05db\u05d0\u05d9/\u05ea)')+'</option>';
+    }).join(''):'<option value="">\u05d0\u05d9\u05df \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</option>';
+  }
+  var nt=g('tru-win-note');if(nt)nt.value=(cur&&cur.note)?cur.note:'';
+  var hint=g('tru-win-hint');
+  if(hint)hint.innerHTML=cur?('\u05d4\u05d7\u05d5\u05d3\u05e9 \u05db\u05d1\u05e8 \u05d4\u05d5\u05db\u05e8\u05d6: <strong>'+esc(cur.u)+'</strong> \u2014 \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05d6\u05d5\u05db\u05d4.')
+    :(elig.length?(elig.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d6\u05db\u05d0\u05d9\u05dd (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea). \u05d4\u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d6\u05db\u05d0\u05d9 \u05e0\u05d1\u05d7\u05e8 \u05de\u05e8\u05d0\u05e9.')
+      :('\u26a0 \u05d0\u05e3 \u05e0\u05d0\u05de\u05df \u05dc\u05d0 \u05e2\u05d1\u05e8 \u05d0\u05ea \u05e1\u05e3 \u05d4\u05d6\u05db\u05d0\u05d5\u05ea (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea) \u05d4\u05d7\u05d5\u05d3\u05e9.'));
+  var hist=g('tru-win-hist');
+  if(hist){
+    var ws=_truWinnersDesc();
+    hist.innerHTML=ws.length?ws.map(function(w){
+      return '<div class="tru-rep" data-tru-win="'+esc(w.m)+'"><span style="flex:1;min-width:0">\ud83c\udfc6 <strong>'+esc(w.u)+'</strong> \u00b7 '+esc(_truMonthLabel(w.m))+(w.pts!=null?' \u00b7 '+w.pts+' \u05e0\u05e7\u05f3':'')+(w.note?'<div style="font-size:11px;color:var(--t2)">'+esc(w.note)+'</div>':'')+'</span>'
+        +'<span style="white-space:nowrap"><button class="btn btn-d btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-wid="'+esc(w.id)+'" onclick="askDel(\'trustee_winners\',this.dataset.wid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+    }).join(''):'<div style="font-size:13px;color:var(--t2);text-align:center;padding:10px">\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05db\u05e8\u05d6 \u05d0\u05e3 \u05d6\u05d5\u05db\u05d4.</div>';
+  }
+}
+function _truWinnerSave(){
+  var m=_truMgrMonth(),u=gv('tru-win-u');
+  if(!u){toast('\u05d0\u05d9\u05df \u05de\u05d5\u05e2\u05de\u05d3 \u05dc\u05d1\u05d7\u05d9\u05e8\u05d4');return;}
+  var sc=_truScore(u,m),note=gv('tru-win-note')||null,cur=_truWinnerOf(m);
+  if(!DB.trustee_winners)DB.trustee_winners=[];
+  if(cur){cur.u=u;cur.pts=sc.total;cur.note=note;sbUpd('trustee_winners',cur);}
+  else{var r={id:'win_'+m,m:m,u:u,pts:sc.total,note:note,ts:new Date().toISOString()};DB.trustee_winners.push(r);sbIns('trustee_winners',r);}
+  addLog('\u05d6\u05d5\u05db\u05d4 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' ('+m+')');
+  sdb();toast('\ud83c\udfc6 \u05d4\u05d6\u05d5\u05db\u05d4 \u05d4\u05d5\u05db\u05e8\u05d6 \u2713');
+  _truWinnerRender();rTrustees();if(typeof _truRender==='function')_truRender();
+}
 function _truMgrMenu(anchor){
   _popMenu(anchor,'tru-mgr-menu',function(item,sep){
     item('\ud83d\udc65','\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',_truRosterOpen);
+    item('\ud83c\udfc6','\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9 + \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4',_truWinnerOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
     item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
     sep();
@@ -15379,7 +15472,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();
