@@ -14,3 +14,8 @@ backups/
 Thumbs.db
 *.swp
 node_modules/
+
+# VM notifier (tools/vm-notifier) — local config with mail password, state and log
+tools/vm-notifier/config.json
+tools/vm-notifier/state.json
+tools/vm-notifier/notifier.log
