@@ -143,6 +143,35 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('manager files a report on behalf of רון: saved, device name stays דנה, normal toast', m1.u === 'רון' && m1.t === 2 && m1.stored === 'דנה' && /נשמר/.test(m1.toast) && m1.modal === 'none', m1);
 
+
+  console.log('\n9. Quick wins 2026-09-19: note on my report, action above stats, image-only picker, toasts wrap');
+  const qw = await page.evaluate(() => {
+    try { closeModal('m-tru'); } catch (e) {}
+    const me = _truMe() || 'לב'; _truSetMe(me);
+    const M = _truThisMonth(), D = new Date().toISOString().substring(0, 10);
+    DB.trustee_reports = (DB.trustee_reports || []).filter(r => r.id !== 'qw1');
+    DB.trustee_reports.push({ id: 'qw1', u: me, t: 3, d: D, m: M, loc: 'מחסן', ok: false, f: 'דלת חירום נעולה', s: 'פתוח', mgr_note: 'הועבר לאחזקה, יטופל עד יום ה׳', ts: new Date().toISOString() });
+    _truRender();
+    const body = document.getElementById('tru-body'), kids = Array.from(body.children);
+    const idx = (sel) => kids.findIndex(k => k.matches(sel) || k.querySelector(sel));
+    const mine = (document.getElementById('tru-mine') || {}).textContent || '';
+    _attachPick('tru-ph-3-1', 'tru-ph-3-1'); _attachPick('qw-generic-area', 'qw-generic-area');
+    const acc = (id) => (document.getElementById('_att_inp_' + id) || {}).accept || '';
+    const probe = document.createElement('div'); probe.className = 'toast'; document.body.appendChild(probe);
+    const ws = getComputedStyle(probe).whiteSpace; probe.remove();
+    const et = document.getElementById('emp-toast');
+    return { iTour: idx('#tru-tour-btn'), iTask: idx('.tru-task'), iWin: idx('#tru-winner'), iLead: idx('#tru-lead'), iScore: idx('#tru-score'),
+      note: /📌/.test(mine) && /הועבר לאחזקה/.test(mine), accTru: acc('tru-ph-3-1'), accGen: acc('qw-generic-area'), ws, empWs: et ? getComputedStyle(et).whiteSpace : null,
+      btnH: (() => { const b = document.querySelector('.tru-task .btn'); if (!b) return 0; return Math.max(Math.round(b.getBoundingClientRect().height), parseInt(getComputedStyle(b).minHeight) || 0); })() };
+  });
+  check('my report shows the manager\'s routing note (📌 …)', qw.note, qw);
+  check('trustee home: score → tour button → task cards → then winner/leaderboard (action above stats)', qw.iScore >= 0 && qw.iTour > qw.iScore && qw.iTask > qw.iTour && qw.iLead > qw.iTask && (qw.iWin < 0 || qw.iWin > qw.iTask), qw);
+  check('photo picker for trustee items is image-only; other areas keep documents', qw.accTru === 'image/*' && /pdf/.test(qw.accGen), { accTru: qw.accTru, accGen: qw.accGen });
+  check('toasts wrap instead of clipping (white-space normal on .toast and #emp-toast)', qw.ws === 'normal' && qw.empWs === 'normal', { ws: qw.ws, empWs: qw.empWs });
+  check('task card button is at least 44px tall (rendered height, or declared min-height when the panel is hidden)', qw.btnH >= 44, qw.btnH);
+  await page.evaluate(() => { DB.trustee_reports = DB.trustee_reports.filter(r => r.id !== 'qw1'); _truRender(); });
+  await page.screenshot({ path: '/tmp/claude-0/-home-user-tfugen-safety/e2c89c7c-32b0-5a3d-b89d-178d2be903b8/scratchpad/ux/after-trustee-home-375.png', fullPage: false });
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
