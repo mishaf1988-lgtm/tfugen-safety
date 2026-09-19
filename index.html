@@ -1180,6 +1180,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="card-title">&#127942; לוח ניקוד <span style="font-weight:400;font-size:11px;color:var(--t2)">10 לכל משימה (מקס׳ 80) · 2 לכל מפגע שנסגר (מקס׳ 20) · זכאות לפרס מ-5 משימות</span></div>
     <div id="tru-mgr-board"></div>
   </div>
+  <div class="card" id="tru-mgr-cov-card">
+    <div class="card-title">&#128205; כיסוי אזורים <span style="font-weight:400;font-size:11px;color:var(--t2)">אילו אזורים סוירו החודש, לפי אזור האחריות שברשימת הנאמנים</span></div>
+    <div id="tru-mgr-cov"></div>
+  </div>
   <div class="card">
     <div class="card-title">&#128203; ממצאים ודיווחים</div>
     <div class="tbl-wrap"><table><thead><tr>
@@ -13496,7 +13500,7 @@ function _truNamePairSync(selId,otherId,current){
   if(oth){oth.style.display=isOther?'':'none';oth.value=isOther?(current||''):'';}
 }
 function _truMeChanged(v){var oth=g('tru-me-other');if(v===TRU_OTHER){if(oth){oth.style.display='';oth.value='';oth.focus();}return;}if(oth)oth.style.display='none';_truSetMe(v);}
-function _truUChanged(v){var oth=g('tru-u-other');if(oth){oth.style.display=v===TRU_OTHER?'':'none';if(v===TRU_OTHER)oth.focus();}}
+function _truUChanged(v){var oth=g('tru-u-other');if(oth){oth.style.display=v===TRU_OTHER?'':'none';if(v===TRU_OTHER)oth.focus();}if(typeof _truLocPrefill==='function')_truLocPrefill();}
 // Area suggestions: the locations catalogue when this device has it (the
 // anonymous employee session cannot read it \u2014 RLS unchanged), plus every
 // location already used in a trustee report.
@@ -13676,6 +13680,7 @@ function _truReport(n,ref){
   }else{
     if(note)note.style.display='none';
     n=parseInt(n,10);if(n>=1&&n<=8){_truForm.sel[n]=1;_truFormTask(n);}
+    _truLocPrefill();          // the area of whoever is reporting; typing wins
   }
   _truFormRender();
   openModal('m-tru');
@@ -13766,6 +13771,34 @@ function _truStale(days){
     return age!==null&&age>=days;
   }).sort(function(a,b){return (_truAgeDays(b)||0)-(_truAgeDays(a)||0);});
 }
+// The assigned area of a trustee, and the set of areas the plant is split into.
+function _truAreaOf(n){var t=_truRoster().filter(function(x){return x.n===n;})[0];return (t&&t.dep)||'';}
+function _truAreas(){var a={};_truRoster().forEach(function(t){if(t.dep)a[t.dep]=1;});return Object.keys(a).sort(function(x,y){return x.localeCompare(y,'he');});}
+// Which areas were toured this month. The leaderboard answers "who is doing
+// well"; the safety committee asks "was \u05d0\u05d5\u05dc\u05dd \u05d8\u05d9\u05d2\u05d5\u05df covered at all". Two
+// trustees can share an area \u2014 then either one covers it.
+function _truCoverage(m){
+  m=m||_truThisMonth();
+  var byName={};_truRows(m).forEach(function(r){if(r.u)byName[r.u]=(byName[r.u]||0)+1;});
+  var areas={};
+  _truRoster().forEach(function(t){
+    var a=t.dep||'\u05dc\u05dc\u05d0 \u05d0\u05d6\u05d5\u05e8';
+    if(!areas[a])areas[a]={area:a,trustees:[],reports:0};
+    areas[a].trustees.push(t.n);
+    areas[a].reports+=(byName[t.n]||0);
+  });
+  return Object.keys(areas).sort(function(x,y){return x.localeCompare(y,'he');}).map(function(k){return areas[k];});
+}
+// Prefill the tour location from the reporting trustee's area. Never over
+// something typed: only when the field is empty or still holds another
+// trustee's area, so switching the name in the picker follows along.
+function _truLocPrefill(){
+  var el=g('tru-loc');if(!el)return;
+  var cur=String(el.value||'').trim();
+  if(cur&&_truAreas().indexOf(cur)<0)return;
+  var area=_truAreaOf(_truNameVal('tru-u','tru-u-other'));
+  if(area)el.value=area;
+}
 // Open hazards nobody has routed yet: no task spawned and no routing note.
 // Any month \u2014 an old finding still waiting is still waiting.
 function _truAwaitingRouting(){
@@ -13808,6 +13841,17 @@ function rTrustees(){
       var chips=TRUSTEE_TASKS.map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
       return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+TRUSTEE_MIN_TASKS+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
     }).join('');
+  }
+  var cov=g('tru-mgr-cov'),covCard=g('tru-mgr-cov-card');
+  if(cov){
+    var cv=_truCoverage(m),covered=cv.filter(function(c){return c.reports>0;}).length;
+    // Nothing to show before the roster has areas \u2014 hide rather than show an empty card.
+    if(covCard)covCard.style.display=cv.length?'':'none';
+    cov.innerHTML=cv.length?('<div style="font-size:12px;color:var(--t2);margin-bottom:6px">'+covered+' \u05de\u05ea\u05d5\u05da '+cv.length+' \u05d0\u05d6\u05d5\u05e8\u05d9\u05dd \u05e1\u05d5\u05d9\u05e8\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9</div><div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +cv.map(function(c){
+        var on=c.reports>0;
+        return '<span class="b '+(on?'bG':'bR')+'" data-tru-area="'+esc(c.area)+'" title="'+esc(c.trustees.join(', '))+'">'+(on?'\u2713 ':'\u2717 ')+esc(c.area)+(on?' ('+c.reports+')':'')+'</span>';
+      }).join('')+'</div>'):'';
   }
   var tb=g('tb-trustees');if(!tb)return;
   var list=rows.filter(function(r){
@@ -13897,6 +13941,15 @@ function _truExportCsv(){
   lines.push(['\u05dc\u05d5\u05d7 \u05e0\u05d9\u05e7\u05d5\u05d3 '+m].map(q2).join(','));
   lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d5\u05ea (\u05de\u05ea\u05d5\u05da 8)','\u05e0\u05e7\u05f3 \u05de\u05e9\u05d9\u05de\u05d5\u05ea','\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5','\u05e0\u05e7\u05f3 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05e1\u05d4\u05f4\u05db','\u05d6\u05db\u05d0\u05d5\u05ea (\u22655)','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'].map(q2).join(','));
   _truBoard(m).forEach(function(x){lines.push([x.u,x.nTasks,x.ptsTasks,x.closed,x.ptsClosed,x.total,x.eligible?'\u05db\u05df':'\u05dc\u05d0',x.open].map(q2).join(','));});
+  // Area coverage — only when the roster actually carries areas, so a plant
+  // that never assigned them gets the same CSV it got before.
+  var cvRows=_truCoverage(m);
+  if(cvRows.length){
+    lines.push('');
+    lines.push(['\u05db\u05d9\u05e1\u05d5\u05d9 \u05d0\u05d6\u05d5\u05e8\u05d9\u05dd'].map(q2).join(','));
+    lines.push(['\u05d0\u05d6\u05d5\u05e8','\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8','\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9','\u05e1\u05d5\u05d9\u05d9\u05e8'].map(q2).join(','));
+    cvRows.forEach(function(c){lines.push([c.area,c.trustees.join(' / '),c.reports,c.reports>0?'\u05db\u05df':'\u05dc\u05d0'].map(q2).join(','));});
+  }
   lines.push('');
   lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d4','\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4','\u05ea\u05d0\u05e8\u05d9\u05da','\u05d0\u05d6\u05d5\u05e8','\u05ea\u05e7\u05d9\u05df/\u05dc\u05d9\u05e7\u05d5\u05d9','\u05de\u05de\u05e6\u05d0','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05de\u05d5\u05e0\u05d4','\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1','\u05e1\u05d9\u05d5\u05e8'].map(q2).join(','));
   rows.forEach(function(r){var t=_truTask(r.t);lines.push([r.u,r.t,t?t.t:'',r.d,r.loc||(r.location_id?_locName(r.location_id):''),r.ok===false?'\u05dc\u05d9\u05e7\u05d5\u05d9':'\u05ea\u05e7\u05d9\u05df',r.f,r.s,r.photo_url,r.ref,r.mgr_note,r.tour].map(q2).join(','));});
