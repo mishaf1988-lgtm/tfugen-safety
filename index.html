@@ -4616,6 +4616,22 @@ function _renderToday(){
     var trAwait=_truAwaitingRouting().length;
     if(trAwait)items.push({priority:2,icon:'\ud83e\uddba',title:trAwait+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1',sub:'\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',badge:'\u05e0\u05ea\u05d1',badgeCls:'amber',fn:'page',a1:'trustees',a2:''});
   }
+  // 1c. Trustees short of the threshold, from mid-month on \u2014 managers only.
+  // Hidden when everyone is on track, like every other panel on this screen.
+  if(typeof _truBehind==='function'&&typeof _truDaysLeft==='function'&&typeof _role==='function'&&_role()!=='reporter'){
+    var trLeft=_truDaysLeft();
+    if(trLeft<=TRUSTEE_NUDGE_DAYS){
+      var behind=_truBehind();
+      if(behind.length){
+        var trNames=behind.slice(0,3).map(function(sc){return sc.u+' ('+sc.nTasks+'/8)';}).join(' \u00b7 ');
+        if(behind.length>3)trNames+=' \u05d5\u05e2\u05d5\u05d3 '+(behind.length-3);
+        items.push({priority:3,icon:'\ud83e\uddba',
+          title:(behind.length===1?'\u05e0\u05d0\u05de\u05df \u05d0\u05d7\u05d3 \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05dd ':behind.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05de\u05d5 ')+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea',
+          sub:trNames+' \u00b7 '+(trLeft===0?'\u05d4\u05d9\u05d5\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05dc\u05d7\u05d5\u05d3\u05e9':'\u05e0\u05d5\u05ea\u05e8\u05d5 '+trLeft+' \u05d9\u05de\u05d9\u05dd'),
+          badge:(trLeft===0?'\u05d4\u05d9\u05d5\u05dd':trLeft+'\u05d9'),badgeCls:(trLeft<=7?'amber':'blue'),fn:'page',a1:'trustees',a2:''});
+      }
+    }
+  }
   // 2. Tasks aggregated (manual + virtual)
   var allTasks=(DB.tasks||[]).slice();
   if(typeof _collectVirtualTasks==='function'){ allTasks = allTasks.concat(_collectVirtualTasks()); }
@@ -13714,6 +13730,16 @@ function _truMgrShift(dir){
 function _truMgrSetFilter(f){_truMgrF=f;rTrustees();}
 function _truFind(id){return (DB.trustee_reports||[]).find(function(x){return x.id===id;});}
 function _truTaskFor(id){return (DB.tasks||[]).find(function(x){return x.source_table==='trustee_reports'&&x.source_id===id;});}
+// Active trustees still short of the prize threshold this month, most behind
+// first. This is what replaces the WhatsApp group: there, everyone saw who had
+// posted; here nobody would know until the month ended.
+var TRUSTEE_NUDGE_DAYS=16;   // the home line appears from mid-month on
+function _truBehind(m){
+  m=m||_truThisMonth();
+  return _truRoster().map(function(t){return _truScore(t.n,m);})
+    .filter(function(sc){return sc.nTasks<TRUSTEE_MIN_TASKS;})
+    .sort(function(a,b){return (a.nTasks-b.nTasks)||a.u.localeCompare(b.u,'he');});
+}
 // Open hazards nobody has routed yet: no task spawned and no routing note.
 // Any month \u2014 an old finding still waiting is still waiting.
 function _truAwaitingRouting(){

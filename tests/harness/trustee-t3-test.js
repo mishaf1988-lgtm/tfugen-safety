@@ -215,6 +215,44 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('finding row is 5 cells: one head line «נאמן · N. משימה · תאריך» + אזור, ממצא, סטטוס, ⋯', cc.tds === 5 && cc.ths === 5 && /דנה/.test(cc.head || '') && /1\. /.test(cc.head || '') && /\d{2}\/\d{2}\/\d{4}/.test(cc.head || ''), cc);
 
+  console.log('\n9. Mid-month nudge: trustees still short of the threshold (2026-09-19)');
+  const nd = await page.evaluate(() => {
+    const M = new Date().toISOString().substring(0, 7), D = new Date().toISOString().substring(0, 10);
+    // דנה / יוסי / רון already have 5+ tasks from the seed; לב has none;
+    // גלינה 2, טטינה 1; עזב is inactive and must never be counted or named.
+    DB.trustees = ['דנה', 'יוסי', 'רון', 'לב', 'גלינה', 'טטינה'].map((n, i) => ({ id: 'n' + i, n, active: true }))
+      .concat([{ id: 'nx', n: 'עזב', active: false }]);
+    [['g1', 'גלינה', 1], ['g2', 'גלינה', 2], ['t1', 'טטינה', 1], ['z1', 'עזב', 1]].forEach((x) => {
+      DB.trustee_reports.push({ id: 'nd_' + x[0], u: x[1], t: x[2], ok: true, s: 'תקין', d: D, m: M, loc: 'x', ts: D + 'T09:00:00Z' });
+    });
+    const out = { behind: _truBehind().map(s => s.u + ':' + s.nTasks), left: _truDaysLeft(), window: TRUSTEE_NUDGE_DAYS };
+    window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); rDash();
+    const find = () => Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /טרם השל/.test(x.textContent));
+    const line = find();
+    out.title = line ? line.querySelector('.ti-title').textContent : null;
+    out.sub = line ? line.querySelector('.ti-sub').textContent : null;
+    out.badge = line ? line.querySelector('.ti-badge').textContent : null;
+    // a fourth trustee behind → the sub truncates to three names + "ועוד N"
+    DB.trustees.push({ id: 'n9', n: 'מוסא', active: true }); rDash();
+    out.sub4 = find() ? find().querySelector('.ti-sub').textContent : null;
+    out.title4 = find() ? find().querySelector('.ti-title').textContent : null;
+    // everyone on track → the line disappears, like every other empty panel
+    DB.trustees = ['דנה', 'יוסי', 'רון'].map((n, i) => ({ id: 'ok' + i, n, active: true })); rDash();
+    out.onTrack = !find();
+    // outside the mid-month window → hidden even when someone is behind
+    DB.trustees.push({ id: 'nb', n: 'לב', active: true }); rDash(); out.inWindow = !!find();
+    TRUSTEE_NUDGE_DAYS = -1; rDash(); out.outOfWindow = !find(); TRUSTEE_NUDGE_DAYS = out.window; rDash();
+    return out;
+  });
+  check('helper: active trustees under 5 tasks, most behind first (לב 0 · טטינה 1 · גלינה 2); the inactive one is excluded', nd.behind.join(' ') === 'לב:0 טטינה:1 גלינה:2', nd.behind);
+  check('home line: counts them, names each with its task count, and says how long is left', /3 נאמנים טרם השלימו 5 משימות/.test(nd.title || '') && /לב \(0\/8\)/.test(nd.sub || '') && /טטינה \(1\/8\)/.test(nd.sub || '') && /גלינה \(2\/8\)/.test(nd.sub || '') && (nd.left === 0 ? /היום האחרון/.test(nd.sub) : new RegExp('נותרו ' + nd.left + ' ימים').test(nd.sub || '')) && nd.badge === (nd.left === 0 ? 'היום' : nd.left + 'י'), nd);
+  check('a fourth one behind: three names then «ועוד 1», title follows the count', /4 נאמנים טרם השלימו/.test(nd.title4 || '') && /ועוד 1/.test(nd.sub4 || '') && (nd.sub4.match(/\(\d\/8\)/g) || []).length === 3, { title4: nd.title4, sub4: nd.sub4 });
+  check('hidden when everyone is on track, shown again when one falls behind, hidden outside the mid-month window', nd.onTrack && nd.inWindow && nd.outOfWindow, nd);
+  const ndClick = await page.evaluate(() => { const it = Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /טרם השל/.test(x.textContent)); it.click(); return CUR; });
+  check('clicking the line opens the trustees page', ndClick === 'trustees', ndClick);
+  const ndRep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('dash'); rDash(); return Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /טרם השל/.test(x.textContent)); });
+  check('a reporter never sees it', ndRep === false, ndRep);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
