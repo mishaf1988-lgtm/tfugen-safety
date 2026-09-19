@@ -4079,6 +4079,17 @@ function editNcr(id){
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   openModal('m-ncr');
 }
+// The next free NCR number. Was String(DB.ncr.length+1): delete one row and
+// the next new NCR is issued a number that a live record already holds — and
+// the number is the audit identifier.
+function _ncrNextNum(){
+  var mx=0;
+  (DB.ncr||[]).forEach(function(r){
+    var m=/^NCR-(\d+)$/.exec(String(r.num||''));
+    if(m){var v=parseInt(m[1],10);if(v>mx)mx=v;}
+  });
+  return 'NCR-'+String(mx+1).padStart(4,'0');
+}
 function svNcr(){
   var id=g('ncr-id')&&g('ncr-id').value;
   var d=gv('ncr-d'),a=gv('ncr-a')||gv('ncr-sel-a')||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
@@ -4087,7 +4098,7 @@ function svNcr(){
   var cat = (a==='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4') ? 'env' : 'saf';
   var rec={
     id:id||(NCRI++).toString(36)+Date.now().toString(36),
-    num:id?DB.ncr.find(function(r){return r.id===id;})||{} && (DB.ncr.find(function(r){return r.id===id;})||{num:''}).num:'NCR-'+String(DB.ncr.length+1).padStart(4,'0'),
+    num:id?DB.ncr.find(function(r){return r.id===id;})||{} && (DB.ncr.find(function(r){return r.id===id;})||{num:''}).num:_ncrNextNum(),
     d:d, a:a, category:cat,
     loc:gv('ncr-loc')||'',
     location_id:gv('ncr-location-id')||null,
@@ -4096,7 +4107,7 @@ function svNcr(){
     rc:gv('ncr-rc')||'',
     c:gv('ncr-c')||'',
     o:gv('ncr-o')||'',
-    u:gv('ncr-u')||'',
+    u:gv('ncr-u')||null,
     s:s,
     sd:gv('ncr-sd')||null,
     cd:s==='\u05e1\u05d2\u05d5\u05e8'?(gv('ncr-cd')||new Date().toISOString().split('T')[0]):null,
@@ -9196,21 +9207,30 @@ var rows=DB.ncr.filter(function(n){
 var _ncrQF=window._ncrQuickFilter||'';
 if(_ncrQF){
   var todayQ=new Date();todayQ.setHours(0,0,0,0);
+  // The date an NCR belongs to. NOT r.d — that is the description.
+  function _ncrWhen(r){
+    var v=r.sd||r.ts||null;
+    if(!v)return null;
+    var t=new Date(v);
+    return isNaN(t.getTime())?null:t;
+  }
+  function _ncrAgeDays(r){var t=_ncrWhen(r);return t===null?null:(todayQ-t)/86400000;}
   if(_ncrQF==='critical')rows=rows.filter(function(r){return r.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'&&r.s!=='\u05e1\u05d2\u05d5\u05e8';});
-  else if(_ncrQF==='week')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=7;});
-  else if(_ncrQF==='m1')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=30;});
-  else if(_ncrQF==='m3')rows=rows.filter(function(r){if(!r.d)return false;var dd=(todayQ-new Date(r.d))/86400000;return dd>=0&&dd<=90;});
+  else if(_ncrQF==='week')rows=rows.filter(function(r){var dd=_ncrAgeDays(r);return dd!==null&&dd>=-1&&dd<=7;});
+  else if(_ncrQF==='m1')rows=rows.filter(function(r){var dd=_ncrAgeDays(r);return dd!==null&&dd>=-1&&dd<=30;});
+  else if(_ncrQF==='m3')rows=rows.filter(function(r){var dd=_ncrAgeDays(r);return dd!==null&&dd>=-1&&dd<=90;});
   else if(_ncrQF==='stale')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.ts)return false;return (Date.now()-new Date(r.ts).getTime())/86400000>=30;});
   else if(_ncrQF==='overdue')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.u)return false;return new Date(r.u)<todayQ;});
 }
-// Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then by date desc
+// Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then newest first
+// by sd (\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9) \u2014 this used to localeCompare r.d, which is the description text.
 var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
 rows.sort(function(a,b){
   var ac=a.s==='\u05e1\u05d2\u05d5\u05e8'?1:0, bc=b.s==='\u05e1\u05d2\u05d5\u05e8'?1:0;
   if(ac!==bc)return ac-bc;
   var ap=_pW[a.p]!==undefined?_pW[a.p]:4, bp=_pW[b.p]!==undefined?_pW[b.p]:4;
   if(ap!==bp)return ap-bp;
-  return (b.d||'').localeCompare(a.d||'');
+  return String(b.sd||b.ts||'').localeCompare(String(a.sd||a.ts||''));
 });
 // P0 (QA regression #536): apply the open-only default BEFORE computing the
 // summary, so the pills always describe exactly what the list shows. The
