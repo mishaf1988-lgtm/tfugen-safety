@@ -29,10 +29,14 @@ if [ -t 0 ] && [ "${NO_WIZARD:-}" != "1" ]; then
   echo "Send FROM which kind of mailbox?"
   echo "  1) Gmail / Google Workspace   (needs an APP password: Google Account > App passwords)"
   echo "  2) Microsoft 365 / Outlook    (the mailbox password; IT may need to enable SMTP AUTH)"
-  read -r -p "Choose 1 or 2 [1]: " PROVIDER; PROVIDER="${PROVIDER:-1}"
+  echo "  3) Brevo API over HTTPS       (for cloud servers where SMTP ports are blocked, e.g. DigitalOcean;"
+  echo "                                 free account at brevo.com, verify the sender address by e-mail link)"
+  read -r -p "Choose 1, 2 or 3 [1]: " PROVIDER; PROVIDER="${PROVIDER:-1}"
   read -r -p "Address that SENDS (e.g. sviva@tapugan.co.il): " SENDER
   if [ "$PROVIDER" = "2" ]; then
     read -r -s -p "Password of that mailbox: " APPPW; echo
+  elif [ "$PROVIDER" = "3" ]; then
+    read -r -s -p "Brevo API key (brevo.com > SMTP & API > API Keys): " APPPW; echo
   else
     read -r -s -p "Gmail APP password (16 chars): " APPPW; echo
   fi
@@ -41,17 +45,21 @@ if [ -t 0 ] && [ "${NO_WIZARD:-}" != "1" ]; then
     python3 - "$DIR/config.json" "$SENDER" "$APPPW" "$TO" "$PROVIDER" <<'PY'
 import json, sys
 path, sender, pw, to, provider = sys.argv[1:6]
-if provider == "2":
-    smtp = {"host": "smtp.office365.com", "port": 587, "user": sender, "password": pw, "from": sender}
-else:
-    smtp = {"host": "smtp.gmail.com", "port": 465, "user": sender, "password": pw.replace(" ", ""), "from": sender}
 cfg = {
   "supabase_url": "https://znhjtpcltrxxyfjczgvw.supabase.co",
   "supabase_key": "sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M",
   "app_url": "https://tapugan-safety.pages.dev",
-  "to": to, "mode": "smtp", "smtp": smtp,
-  "poll_seconds": 60
+  "to": to, "poll_seconds": 60
 }
+if provider == "3":
+    cfg["mode"] = "brevo"
+    cfg["brevo"] = {"api_key": pw.strip(), "from": sender, "name": "Tapugan Safety"}
+elif provider == "2":
+    cfg["mode"] = "smtp"
+    cfg["smtp"] = {"host": "smtp.office365.com", "port": 587, "user": sender, "password": pw, "from": sender}
+else:
+    cfg["mode"] = "smtp"
+    cfg["smtp"] = {"host": "smtp.gmail.com", "port": 465, "user": sender, "password": pw.replace(" ", ""), "from": sender}
 json.dump(cfg, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PY
     chown notifier:notifier "$DIR/config.json"; chmod 600 "$DIR/config.json"
@@ -64,8 +72,9 @@ PY
       exit 0
     else
       echo
-      echo "The test e-mail FAILED. Gmail: check the APP password. Microsoft 365: 'SMTP AUTH disabled' means IT must"
-      echo "enable Authenticated SMTP for this mailbox (admin.microsoft.com > Users > Mail > Manage email apps). Then run:"
+      echo "The test e-mail FAILED. 'timed out' = this cloud blocks SMTP ports -> run again and choose 3 (Brevo)."
+      echo "Gmail: check the APP password. Microsoft 365: 'SMTP AUTH disabled' means IT must enable Authenticated SMTP"
+      echo "for this mailbox (admin.microsoft.com > Users > Mail > Manage email apps). Brevo: verify the sender first. Then run:"
       echo "  sudo bash $SRC/install-linux.sh     (to answer the questions again)"
       exit 1
     fi

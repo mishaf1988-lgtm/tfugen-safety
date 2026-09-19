@@ -21,8 +21,10 @@ Usage
 
 Config: config.json next to this file (copy config.example.json).
 Sending: "mode": "outlook" — through the Outlook that is open on the machine
-(Windows, pip install pywin32; no password needed) — or "smtp" (Gmail app
-password / Microsoft 365 / any SMTP).
+(Windows, pip install pywin32; no password needed) — "smtp" (Gmail app
+password / Microsoft 365 / any SMTP) — or "brevo" (Brevo's HTTPS API, for
+cloud servers where the SMTP ports are blocked; the sender address is
+verified once by a link Brevo e-mails to it).
 """
 import json
 import logging
@@ -69,13 +71,18 @@ def load_config(path=None):
             raise SystemExit('config.json: "%s" is required' % k)
     cfg.setdefault('app_url', 'https://tapugan-safety.pages.dev')
     cfg.setdefault('poll_seconds', 60)
-    if cfg['mode'] not in ('outlook', 'smtp'):
-        raise SystemExit('config.json: "mode" must be "outlook" or "smtp"')
+    if cfg['mode'] not in ('outlook', 'smtp', 'brevo'):
+        raise SystemExit('config.json: "mode" must be "outlook", "smtp" or "brevo"')
     if cfg['mode'] == 'smtp':
         s = cfg.get('smtp') or {}
         for k in ('host', 'port', 'user', 'password'):
             if not s.get(k):
                 raise SystemExit('config.json: smtp.%s is required in smtp mode' % k)
+    if cfg['mode'] == 'brevo':
+        b = cfg.get('brevo') or {}
+        for k in ('api_key', 'from'):
+            if not b.get(k):
+                raise SystemExit('config.json: brevo.%s is required in brevo mode' % k)
     return cfg
 
 
@@ -226,9 +233,22 @@ def send_smtp(smtp_cfg, to, subject, html_body, text):
             s.sendmail(sender, [to], msg.as_string())
 
 
+def send_brevo(brevo_cfg, to, subject, html_body, text):
+    """Brevo transactional API over HTTPS (port 443) — works where SMTP is blocked."""
+    r = requests.post('https://api.brevo.com/v3/smtp/email',
+                      headers={'api-key': brevo_cfg['api_key'], 'Content-Type': 'application/json', 'Accept': 'application/json'},
+                      json={'sender': {'name': brevo_cfg.get('name') or 'Tapugan Safety', 'email': brevo_cfg['from']},
+                            'to': [{'email': to}], 'subject': subject, 'htmlContent': html_body, 'textContent': text},
+                      timeout=30)
+    if not r.ok:
+        raise RuntimeError('Brevo %s %s' % (r.status_code, r.text[:300]))
+
+
 def send_email(cfg, subject, html_body, text):
     if cfg['mode'] == 'outlook':
         send_outlook(cfg['to'], subject, html_body)
+    elif cfg['mode'] == 'brevo':
+        send_brevo(cfg['brevo'], cfg['to'], subject, html_body, text)
     else:
         send_smtp(cfg['smtp'], cfg['to'], subject, html_body, text)
 
