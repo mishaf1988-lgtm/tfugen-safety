@@ -190,6 +190,21 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const rep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('trustees'); const cur = CUR; rDash(); const tru = Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /נאמני בטיחות/.test(x.textContent)); const sheetBtn = document.querySelector('#m-modules-sheet [onclick*="\'trustees\'"]'); return { cur, tru, hidden: sheetBtn && getComputedStyle(sheetBtn).display === 'none' }; });
   check('reporter: kicked to the dashboard, no Today line, sheet entry hidden', rep.cur === 'dash' && !rep.tru && rep.hidden, rep);
 
+
+  console.log('\n7. Quick win 2026-09-19: «הכרז זוכה» only when someone is eligible');
+  const el = await page.evaluate(({ prev }) => {
+    window._currentUser = { username: 'admin', full_name: 'מיכאל' }; _applyRoleGates(); goPage('trustees');
+    DB.trustee_winners = [];
+    _truMgrShift(-1); rTrustees();                      // previous month: דנה has 1 task → nobody eligible
+    const b = document.getElementById('tru-mgr-board');
+    const out = { prevBtn: !!b.querySelector('button[onclick*="_truWinnerOpen"]'), prevHint: /אין עדיין זכאים/.test(b.textContent), prevRows: b.querySelectorAll('.tru-board-row').length };
+    _truMgrShift(0); rTrustees();                       // this month: 3 eligible → button back
+    out.nowBtn = !!document.getElementById('tru-mgr-board').querySelector('button[onclick*="_truWinnerOpen"]');
+    return out;
+  }, { prev });
+  check('month with reports but no eligible trustee: no «הכרז זוכה» button, grey «אין עדיין זכאים» line instead', !el.prevBtn && el.prevHint && el.prevRows >= 1, el);
+  check('month with eligible trustees: the button is offered again', el.nowBtn === true, el);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();

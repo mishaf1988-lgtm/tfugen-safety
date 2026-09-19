@@ -490,7 +490,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .alert-r{background:#fff1f1;border-color:var(--red);color:#991515}
 
 /* ---- TOAST ---- */
-.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;z-index:999;pointer-events:none;white-space:nowrap;animation:toast-in .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;z-index:999;pointer-events:none;white-space:normal;max-width:calc(100vw - 32px);text-align:center;line-height:1.4;animation:toast-in .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 24px rgba(0,0,0,.3)}
 .toast.ok{background:linear-gradient(135deg,#15803d,#22c55e)}
 .toast.err{background:linear-gradient(135deg,#991515,#dc2626)}
 .toast.warn{background:linear-gradient(135deg,#92400e,#d97706);color:#fff}
@@ -563,7 +563,7 @@ body.emp-mode #pg-emp-home{display:block!important}
 .emp-btn.y{border-color:#eab308;background:#fefce8}
 .emp-btn.b{border-color:var(--blue);background:#eff6ff}
 .emp-toggle{display:block;width:100%;margin-top:22px;padding:11px;background:#f0f1f3;color:var(--t2);border:1px solid var(--border);border-radius:8px;font-family:'Heebo',Arial,sans-serif;font-size:12px;font-weight:700}
-#emp-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none}
+#emp-toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none;max-width:calc(100vw - 32px);white-space:normal;text-align:center;line-height:1.4}
 #emp-mode-badge{display:none;background:#ecfdf5;color:#166534;border:1px solid #16a34a;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
 body.emp-mode #emp-mode-badge{display:inline-block}
 /* Trustees (T2, 2026-09-18): the trustee screen lives inside the employee
@@ -589,8 +589,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 .tru-task .tt{flex:1;min-width:0}
 .tru-task .tt strong{display:block;font-size:14px;line-height:1.3}
 .tru-task details{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
-.tru-task details summary{cursor:pointer;color:var(--blue);font-weight:700;list-style:none}
-.tru-task .btn{padding:8px 12px;min-height:40px;font-size:13px;white-space:nowrap;flex:none}
+.tru-task details summary{cursor:pointer;color:var(--blue);font-weight:700;list-style:none;padding:6px 0}
+.tru-task .btn{padding:8px 12px;min-height:44px;font-size:13px;white-space:nowrap;flex:none}
 .tru-rep{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:13px;line-height:1.5}
 .tru-danger{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:10px 12px;font-size:13px;color:#991b1b;margin-top:14px;line-height:1.5}
 /* tour form: task chips + one block per task, several findings per block */
@@ -6135,7 +6135,7 @@ function rEqi(){
       var curF=window._eqiFilter||'all';
       function pill(key,label,n,color,bg,txt){
         var on=(curF===key);
-        return '<button onclick="eqiFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';
+        return '<button onclick="eqiFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:10px 12px;min-height:44px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';
       }
       var exportBtn='<button onclick="_eqiExportExpiredCsv()" title="CSV \u05e9\u05dc \u05db\u05dc \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5 — \u05d4\u05db\u05d9 \u05d9\u05e9\u05df \u05e7\u05d5\u05d3\u05dd" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;border:1px solid #cc1f1f;background:#fff;color:#cc1f1f;opacity:'+(expN?'1':'.55')+'">⬇ \u05d9\u05d9\u05e6\u05d5\u05d0 \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 ('+expN+')</button>';
       eS.innerHTML=
@@ -13506,6 +13506,11 @@ function _truRender(){
   h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
     +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(TRUSTEE_MIN_TASKS-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+')</span>')
     +(sc.open?'<span class="b bR">'+sc.open+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>':'')+'</div>';
+  h+='<button class="btn btn-p" id="tru-tour-btn" style="width:100%;margin:4px 0 10px" onclick="_truReport()">\ud83e\udded \u05d3\u05d5\u05d5\u05d7 \u05e1\u05d9\u05d5\u05e8 \u2014 \u05db\u05de\u05d4 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05d1\u05ea \u05d0\u05d7\u05ea</button>';
+  h+=TRUSTEE_TASKS.map(function(t){
+    var done=!!sc.tasks[t.n];
+    return '<div class="tru-task'+(done?' done':'')+'" data-tru-task="'+t.n+'"><div class="ti">'+(done?'\u2705':t.icon)+'</div><div class="tt"><strong>'+t.n+'. '+esc(t.t)+'</strong><details><summary>\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details></div><button class="btn '+(done?'btn-s':'btn-p')+'" onclick="_truReport('+t.n+')">'+(done?'+ \u05e2\u05d5\u05d3':'\u05d3\u05d5\u05d5\u05d7')+'</button></div>';
+  }).join('');
   // Phase 2: the announced winner is celebrated on the trustee's own screen.
   var win=_truLatestWinner();
   if(win){
@@ -13525,18 +13530,13 @@ function _truRender(){
     h+='<div id="tru-my-rank" style="font-size:12px;color:var(--t2)">'+(mine2?('\u05d0\u05ea/\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd '+(myIdx+1)+' \u05de\u05ea\u05d5\u05da '+board.length+(myIdx===0?' \u2014 \u05de\u05d5\u05d1\u05d9\u05dc/\u05d4! \ud83d\udcaa':(board[0].total>mine2.total?' \u2014 '+(board[0].total-mine2.total)+' \u05e0\u05e7\u05f3 \u05de\u05d4\u05de\u05d5\u05d1\u05d9\u05dc/\u05d4':' \u2014 \u05e9\u05d5\u05d5\u05d9\u05d5\u05df \u05d1\u05e8\u05d0\u05e9, \u05e0\u05e7\u05d1\u05e2 \u05dc\u05e4\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5'))):'\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d1\u05dc\u05d5\u05d7 \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05df \u05d9\u05db\u05e0\u05d9\u05e1 \u05d0\u05d5\u05ea\u05da')+'</div>';
   }
   h+='</div>';
-  h+='<button class="btn btn-p" id="tru-tour-btn" style="width:100%;margin:4px 0 10px" onclick="_truReport()">\ud83e\udded \u05d3\u05d5\u05d5\u05d7 \u05e1\u05d9\u05d5\u05e8 \u2014 \u05db\u05de\u05d4 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05d1\u05ea \u05d0\u05d7\u05ea</button>';
-  h+=TRUSTEE_TASKS.map(function(t){
-    var done=!!sc.tasks[t.n];
-    return '<div class="tru-task'+(done?' done':'')+'" data-tru-task="'+t.n+'"><div class="ti">'+(done?'\u2705':t.icon)+'</div><div class="tt"><strong>'+t.n+'. '+esc(t.t)+'</strong><details><summary>\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details></div><button class="btn '+(done?'btn-s':'btn-p')+'" onclick="_truReport('+t.n+')">'+(done?'+ \u05e2\u05d5\u05d3':'\u05d3\u05d5\u05d5\u05d7')+'</button></div>';
-  }).join('');
   h+='<div style="font-weight:700;font-size:14px;margin:14px 0 6px">\ud83d\udcdd \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+mine.length+')</div>';
   if(!mine.length)h+='<div style="font-size:13px;color:var(--t2)" id="tru-mine-empty">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';
   else h+='<div id="tru-mine">'+mine.map(function(r){
     var t=_truTask(r.t);
-    var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
+    var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
     var photo=r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'';
-    return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
+    return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
   }).join('')+'</div>';
   h+='<div class="tru-danger">\ud83d\udea8 <strong>\u05e1\u05db\u05e0\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea?</strong> \u05de\u05ea\u05e7\u05e9\u05e8\u05d9\u05dd \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d3. \u05de\u05d2\u05df \u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u05d5"\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05db\u05d0\u05df.<button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="empReport(\'nm\')">\u26d4 \u05d3\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2</button></div>';
   box.innerHTML=h;
@@ -13647,7 +13647,7 @@ function svTru(){
         rows.push(row(n,true,null,ph,detail));continue;
       }
       if(!String(it.f||'').trim()){toast('\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
-      if(!ph){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl+' (\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8)');return;}
+      if(!ph){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
       rows.push(row(n,false,String(it.f).trim(),ph,detail));
     }
   }
@@ -13692,7 +13692,7 @@ function rTrustees(){
   rows.forEach(function(r){if(_truIsHazard(r)){if(r.s===TRUSTEE_S_CLOSED)closed++;else open++;}else okN++;});
   var sum=g('tru-mgr-summary');
   if(sum){
-    function pill(key,label,n,color,bg,txt){var on=(_truMgrF===key);return '<button onclick="_truMgrSetFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';}
+    function pill(key,label,n,color,bg,txt){var on=(_truMgrF===key);return '<button onclick="_truMgrSetFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:10px 12px;min-height:44px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';}
     sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
   }
   var board=_truBoard(m);
@@ -13703,8 +13703,9 @@ function rTrustees(){
     var win=_truWinnerOf(m),winHtml='';
     if(win)winHtml='<div id="tru-mgr-winner" style="display:flex;align-items:center;gap:8px;background:#fef9c3;border:2px solid #f59e0b;border-radius:10px;padding:8px 10px;margin-bottom:10px">'
       +'<span style="flex:1;min-width:0">\ud83c\udfc6 <strong>\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9: '+esc(win.u)+'</strong>'+(win.pts!=null?' \u00b7 '+win.pts+' \u05e0\u05e7\u05f3':'')+(win.note?'<div style="font-size:11px;color:#92400e">'+esc(win.note)+'</div>':'')+'</span>'
-      +'<button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" onclick="_truWinnerOpen()">\u05e9\u05e0\u05d4</button></div>';
-    else if(board.length)winHtml='<button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="_truWinnerOpen()">\ud83c\udfc6 \u05d4\u05db\u05e8\u05d6 \u05d6\u05d5\u05db\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</button>';
+      +'<button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truWinnerOpen()">\u05e9\u05e0\u05d4</button></div>';
+    else if(board.some(function(x){return x.eligible;}))winHtml='<button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="_truWinnerOpen()">\ud83c\udfc6 \u05d4\u05db\u05e8\u05d6 \u05d6\u05d5\u05db\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</button>';
+    else if(board.length)winHtml='<div style="font-size:12px;color:var(--t2);text-align:center;margin-bottom:10px">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d6\u05db\u05d0\u05d9\u05dd \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea)</div>';
     if(!board.length)bEl.innerHTML=winHtml+'<div class="et" style="text-align:center;padding:14px;color:var(--t2)">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</div>';
     else bEl.innerHTML=winHtml+board.map(function(x,i){
       var medal=i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':i===2?'\ud83e\udd49':(i+1)+'.';
@@ -13805,7 +13806,7 @@ function _truRosterRender(){
   box.innerHTML=rows.map(function(t){
     var off=t.active===false;
     return '<div class="tru-rep" data-tru-roster="'+esc(t.id)+'"><span style="flex:1;min-width:0"><strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.n)+'</strong>'+(t.dep?' <span style="color:var(--t2)">\u00b7 '+esc(t.dep)+'</span>':'')+(t.notes?'<div style="font-size:11px;color:var(--t2)">'+esc(t.notes)+'</div>':'')+'</span>'
-      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
   }).join('');
 }
 function _truRosterAdd(){
@@ -13846,7 +13847,7 @@ function _truWinnerRender(){
     var ws=_truWinnersDesc();
     hist.innerHTML=ws.length?ws.map(function(w){
       return '<div class="tru-rep" data-tru-win="'+esc(w.m)+'"><span style="flex:1;min-width:0">\ud83c\udfc6 <strong>'+esc(w.u)+'</strong> \u00b7 '+esc(_truMonthLabel(w.m))+(w.pts!=null?' \u00b7 '+w.pts+' \u05e0\u05e7\u05f3':'')+(w.note?'<div style="font-size:11px;color:var(--t2)">'+esc(w.note)+'</div>':'')+'</span>'
-        +'<span style="white-space:nowrap"><button class="btn btn-d btn-sm" style="padding:6px 10px;min-height:34px;font-size:12px" data-wid="'+esc(w.id)+'" onclick="askDel(\'trustee_winners\',this.dataset.wid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+        +'<span style="white-space:nowrap"><button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-wid="'+esc(w.id)+'" onclick="askDel(\'trustee_winners\',this.dataset.wid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
     }).join(''):'<div style="font-size:13px;color:var(--t2);text-align:center;padding:10px">\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05db\u05e8\u05d6 \u05d0\u05e3 \u05d6\u05d5\u05db\u05d4.</div>';
   }
 }
@@ -17267,7 +17268,7 @@ function _attachRender(areaId,url,fname){
 
 function _attachPick(areaId,prefix){
   var inp=g('_att_inp_'+areaId);
-  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_att_inp_'+areaId;inp.accept='image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx';inp.style.display='none';document.body.appendChild(inp);}
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_att_inp_'+areaId;inp.accept=areaId.indexOf('tru-ph-')===0?'image/*':'image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx';inp.style.display='none';document.body.appendChild(inp);}
   inp.value='';
   inp.onchange=function(){
     var file=inp.files&&inp.files[0];if(!file)return;
@@ -17285,7 +17286,7 @@ function _attachPick(areaId,prefix){
 function _attachClear(areaId){
   _attachUrls[areaId]=null;
   var area=g(areaId);
-  if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5</button>';
+  if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';
 }
 
 function _attachLoad(areaId,url,prefix){
@@ -17293,7 +17294,7 @@ function _attachLoad(areaId,url,prefix){
   else _attachClear(areaId);
 }
 
-function _attachBtn(areaId){return '<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5</button>';}
+function _attachBtn(areaId){return '<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';}
 
 // Legacy aliases for nm/eqi (keep backward compat)
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
