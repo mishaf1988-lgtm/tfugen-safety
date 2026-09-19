@@ -185,6 +185,32 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('opened from task card 2: 8 chips folded under «+ הוסף משימה נוספת», task-2 block already on screen', cf.one.folded && cf.one.chips === 8 && cf.one.blk && /הוסף משימה נוספת/.test(cf.one.summary), cf.one);
   check('opened from «דווח סיור» (no task): all 8 chips shown, nothing folded', !cf.none.details && cf.none.chips === 8, cf.none);
 
+  console.log('\n8. Location prefilled from the reporting trustee\'s area (2026-09-19)');
+  const pf = await page.evaluate(() => {
+    DB.trustees = [
+      { id: 'a1', n: 'לב', dep: 'ייצור ואריזה', active: true },
+      { id: 'a2', n: 'גלינה', dep: 'מעבדה', active: true },
+      { id: 'a3', n: 'בלי', active: true },
+    ];
+    const loc = () => document.getElementById('tru-loc').value;
+    const pick = (n) => { document.getElementById('tru-u').value = n; _truUChanged(n); };
+    const out = {};
+    _truSetMe('לב'); _truReport(1); out.open = loc();          // my own area, on open
+    pick('גלינה'); out.switched = loc();                        // follows the picker
+    pick('בלי'); out.noArea = loc();                            // no area → left as it was
+    document.getElementById('tru-loc').value = 'אולם טיגון, ליד המשאבה';
+    pick('לב'); out.typed = loc();                              // typing is never overwritten
+    closeModal('m-tru');
+    // closing a finding: the location comes from the original, not from the area
+    const haz = DB.trustee_reports.filter(r => r.ok === false && r.s !== 'נסגר')[0];
+    out.hazLoc = haz ? haz.loc : null;
+    if (haz) { _truCloseReport(haz.id); out.closure = loc(); closeModal('m-tru'); }
+    return out;
+  });
+  check('opening the form fills the location with the reporting trustee\'s area, and switching the name in the picker follows', pf.open === 'ייצור ואריזה' && pf.switched === 'מעבדה', pf);
+  check('a trustee with no assigned area leaves whatever was there; something typed is never overwritten by a name change', pf.noArea === 'מעבדה' && pf.typed === 'אולם טיגון, ליד המשאבה', pf);
+  check('closing a finding still takes the location from that finding, not from the area', pf.closure === pf.hazLoc && !!pf.hazLoc, pf);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();

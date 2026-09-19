@@ -301,6 +301,45 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const stRep = await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); goPage('dash'); rDash(); return Array.from(document.querySelectorAll('#today-items .today-item')).some(x => /פתוח.* מעל |פתוחים מעל /.test(x.textContent)); });
   check('a reporter never sees the stale line', stRep === false, stRep);
 
+  console.log('\n11. Area coverage — which parts of the plant were toured (2026-09-19)');
+  const cv = await page.evaluate(async () => {
+    const M = new Date().toISOString().substring(0, 7), D = new Date().toISOString().substring(0, 10);
+    DB.trustee_reports = DB.trustee_reports.filter((r) => !/^(ag_|st_|nd_)/.test(r.id));
+    // מוסא and יוני share "חומר גלם" — either one covers it. רנט has no reports.
+    // עזב is inactive; "בלי" has no area at all and falls into the catch-all.
+    DB.trustees = [
+      { id: 'c1', n: 'דנה', dep: 'ייצור ואריזה', active: true }, { id: 'c2', n: 'מוסא', dep: 'חומר גלם', active: true },
+      { id: 'c3', n: 'יוני', dep: 'חומר גלם', active: true }, { id: 'c4', n: 'רנט', dep: 'מט"ש וסביבה', active: true },
+      { id: 'c5', n: 'בלי', active: true }, { id: 'c6', n: 'עזב', dep: 'אזור נטוש', active: false },
+    ];
+    [['cv1', 'יוני'], ['cv2', 'עזב']].forEach((x) => {
+      DB.trustee_reports.push({ id: x[0], u: x[1], t: 5, ok: true, s: 'תקין', loc: 'x', d: D, m: M, ts: D + 'T09:00:00Z' });
+    });
+    window._currentUser = { username: 'admin', full_name: 'מיכאל' }; _applyRoleGates();
+    goPage('trustees'); _truMgrShift(0); rTrustees();
+    const out = {
+      areas: _truAreas(), areaOf: [_truAreaOf('מוסא'), _truAreaOf('בלי'), _truAreaOf('לא קיים')],
+      cov: _truCoverage().map((c) => c.area + ':' + c.reports + ':' + c.trustees.join('+')),
+      chips: Array.from(document.querySelectorAll('#tru-mgr-cov [data-tru-area]')).map((x) => ({ a: x.dataset.truArea, on: /bG/.test(x.className), txt: x.textContent.trim(), tip: x.title })),
+      summary: (document.getElementById('tru-mgr-cov').textContent.match(/\d+ מתוך \d+/) || [])[0],
+      cardShown: getComputedStyle(document.getElementById('tru-mgr-cov-card')).display !== 'none',
+    };
+    // CSV gains a coverage block; with no areas on the roster it is left out entirely
+    window.__blob = null; URL.createObjectURL = (b) => { window.__blob = b; return 'blob:x'; }; URL.revokeObjectURL = () => {};
+    HTMLAnchorElement.prototype.click = function () {};
+    _truExportCsv();
+    out.csv = await window.__blob.text();
+    DB.trustees = []; rTrustees();
+    out.cardHidden = getComputedStyle(document.getElementById('tru-mgr-cov-card')).display === 'none';
+    _truExportCsv(); out.csvNoRoster = await window.__blob.text();
+    return out;
+  });
+  check('helpers: the area set skips the one with none and the inactive trustee; _truAreaOf resolves a name and returns empty for unknown', cv.areas.join() === 'חומר גלם,ייצור ואריזה,מט"ש וסביבה' && cv.areaOf[0] === 'חומר גלם' && cv.areaOf[1] === '' && cv.areaOf[2] === '', cv);
+  check('coverage groups by area, sorted in Hebrew: shared "חומר גלם" counts יוני\'s report for both its trustees, דנה\'s six from the seed cover hers, unreported areas sit at 0, and the trustee with no area falls into a catch-all', cv.cov.join(' | ') === 'חומר גלם:1:יוני+מוסא | ייצור ואריזה:6:דנה | ללא אזור:0:בלי | מט"ש וסביבה:0:רנט', cv.cov);
+  check('card: ✓ chips with counts for the two covered areas, ✗ for the two that were not toured, trustees in the tooltip, "2 מתוך 4" summary', cv.chips.length === 4 && cv.chips.filter(c => c.on).map(c => c.a).join() === 'חומר גלם,ייצור ואריזה' && /✓ חומר גלם \(1\)/.test(cv.chips[0].txt) && cv.chips[0].tip === 'יוני, מוסא' && /^✗ ללא אזור$/.test(cv.chips[2].txt) && cv.summary === '2 מתוך 4' && cv.cardShown, cv.chips);
+  check('CSV carries the coverage block with a כן/לא column, escapes the quote inside מט"ש, and still ends with the reports block', /"כיסוי אזורים"/.test(cv.csv) && /"חומר גלם","יוני \/ מוסא","1","כן"/.test(cv.csv) && /"ללא אזור","בלי","0","לא"/.test(cv.csv) && /"מט""ש וסביבה","רנט","0","לא"/.test(cv.csv) && /"נאמן","משימה","שם המשימה"/.test(cv.csv), (cv.csv || '').split('\r\n').slice(10, 17));
+  check('a roster with no areas: the card hides and the CSV goes back to exactly what it was', cv.cardHidden && !/כיסוי אזורים/.test(cv.csvNoRoster), { hidden: cv.cardHidden });
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
