@@ -11,19 +11,31 @@ mkdir -p _build
 cp ../../functions/_shared.js _build/_shared.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/trustee-notify.js > _build/trustee-notify.mjs
 filter="${1:-}"; fail=0
+# The only two scripts that legitimately print a report instead of a pass/fail
+# count. Anything ELSE that prints no summary has crashed or timed out, and that
+# is a failure — it used to be reported as "(report only)" and ALL GREEN still
+# printed, which made a broken suite indistinguishable from a passing one.
+NO_ASSERTIONS="notif-scan-test.js sc-test.js"
 for f in *.js *.mjs *.py; do
   [ -n "$filter" ] && [[ "$f" != *"$filter"* ]] && continue
   printf '%-28s ' "$f"
   case "$f" in
-    *.py) out=$(timeout 300 python3 "$f" 2>&1) ;;
-    *)    out=$(timeout 300 node "$f" 2>&1) ;;
+    *.py) out=$(timeout 300 python3 "$f" 2>&1); rc=$? ;;
+    *)    out=$(timeout 300 node "$f" 2>&1); rc=$? ;;
   esac
   line=$(echo "$out" | grep -E "passed|HARNESS ERROR" | tail -1)
   if [ -z "$line" ]; then
-    # demo-style scripts (notif-scan, sc) print a report, not a pass/fail count
-    echo "(report only — no pass/fail summary)"
+    if [[ " $NO_ASSERTIONS " == *" $f "* ]] && [ $rc -eq 0 ]; then
+      echo "(report only — no assertions by design)"
+    else
+      fail=1
+      [ $rc -eq 124 ] && echo "TIMED OUT after 300s" || echo "NO SUMMARY — crashed (exit $rc)"
+      echo "$out" | tail -5 | sed 's/^/    /'
+    fi
   elif echo "$line" | grep -q " 0 failed"; then
     echo "$line"
+    # a suite that passes every check but still exits non-zero is broken too
+    [ $rc -ne 0 ] && { echo "    ...but exited $rc"; fail=1; }
   else
     echo "$line"; fail=1; echo "$out" | grep -E "✗|HARNESS" | head -5
   fi
