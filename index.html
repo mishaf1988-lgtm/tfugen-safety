@@ -2949,8 +2949,13 @@ window._sdbFlush = function(){
       snap[k] = DB[k];
     }
     localStorage.setItem('tfgn2', JSON.stringify(snap));
+    window._sdbFull=false;
   }catch(e){
-    try{ localStorage.setItem('tfgn2', JSON.stringify({})); }catch(_){}
+    // This used to write {} — so a full device threw away the whole local
+    // mirror, and the next ldb() loaded an app with no data in it. A stale
+    // mirror is far better than none; keep what is there and say so.
+    window._sdbFull=true;
+    try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05de\u05dc\u05d0 \u2014 \u05d4\u05e2\u05d5\u05ea\u05e7 \u05d4\u05de\u05e7\u05d5\u05de\u05d9 \u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df');}catch(_){}
   }
   _sdbTimer = null;
 };
@@ -3008,10 +3013,36 @@ var OB_KEY='tfgn_outbox';
 var OB_ERR_KEY='tfgn_outbox_lasterr';
 var _obBusy=false;
 function _obGet(){try{return JSON.parse(localStorage.getItem(OB_KEY)||'[]');}catch(e){return [];}}
-function _obSet(q){try{localStorage.setItem(OB_KEY,JSON.stringify(q||[]));}catch(e){}}
+// Ops that localStorage would not take (quota). They live in memory for this
+// session so a drain can still send them; the user is told loudly, because the
+// alternative — what this code used to do — was to swallow the error and let
+// the save silently not exist.
+var _obMem=[];
+var _obFull=false;
+function _obSet(q){
+  try{localStorage.setItem(OB_KEY,JSON.stringify(q||[]));_obFull=false;return true;}
+  catch(e){_obFull=true;return false;}
+}
+function _obWarnFull(){
+  if(_obWarnFull._shown)return;
+  _obWarnFull._shown=true;
+  var msg='\u05d0\u05d7\u05e1\u05d5\u05df \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05de\u05dc\u05d0.\n\n'
+    +'\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e0\u05e9\u05de\u05e8\u05d9\u05dd \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d5\u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05db\u05e9\u05ea\u05d4\u05d9\u05d4 \u05e8\u05e9\u05ea \u2014 \u05d0\u05d1\u05dc \u05d0\u05dd \u05ea\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05dc\u05e4\u05e0\u05d9 \u05db\u05df, \u05d4\u05dd \u05d9\u05d0\u05d1\u05d3\u05d5.\n\n'
+    +'\u05d4\u05ea\u05d7\u05d1\u05e8 \u05dc\u05e8\u05e9\u05ea \u05d5\u05d4\u05de\u05ea\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df.';
+  try{alert(msg);}catch(e){}
+  try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05dc\u05d0 \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d1\u05dc\u05d1\u05d3');}catch(e){}
+}
 function _obLastErr(){try{return JSON.parse(localStorage.getItem(OB_ERR_KEY)||'null');}catch(e){return null;}}
 function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e));else localStorage.removeItem(OB_ERR_KEY);}catch(x){}}
-function _obPush(op){op.ts=op.ts||Date.now();op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));op.tries=op.tries||0;var q=_obGet();q.push(op);_obSet(q);_obBadge();}
+function _obPush(op){
+  op.ts=op.ts||Date.now();
+  op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  op.tries=op.tries||0;
+  var q=_obGet();q.push(op);
+  if(!_obSet(q)){_obMem.push(op);_obWarnFull();}
+  _obBadge();
+  return !_obFull;
+}
 function _obTblsPending(){var s={};_obGet().forEach(function(op){if(op.tbl)s[op.tbl]=1;});return s;}
 // Ops uploaded in the last two minutes, keyed tbl|id. A pull that left the
 // device before an upload landed would otherwise drop that row until the
@@ -3058,7 +3089,7 @@ function _phIs(u){return typeof u==='string'&&u.indexOf(_PH_PREFIX)===0;}
 function _phChip(sz){return '<span title="\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e9\u05de\u05d5\u05e8\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d5\u05ea\u05d9\u05e9\u05dc\u05d7 \u05db\u05e9\u05d9\u05d4\u05d9\u05d4 \u05d7\u05d9\u05d1\u05d5\u05e8" style="font-size:'+(sz||12)+'px;color:#92400e">\u23f3 \u05de\u05de\u05ea\u05d9\u05e0\u05d4</span>';}
 function _obBadge(state){
   var p=document.getElementById('sync-pill');
-  var n=_obGet().length+_phN;
+  var n=_obGet().length+_obMem.length+_phN;
   // Worker-mode mirror: show/hide the orange "N pending" pill on the worker
   // home so they can see whether the device is mid-upload before walking off.
   var es=document.getElementById('emp-sync'),esc=document.getElementById('emp-sync-count');
@@ -3109,7 +3140,10 @@ function _obDrain(){
 function _obDrainOps(){
   if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   _obSanitize();  // strip known-bad fields from any ops queued since last drain
-  var q=_obGet();if(!q.length){_obBadge('ok');_obSetErr(null);return Promise.resolve();}
+  var mem=_obMem.slice(),memIds={};
+  mem.forEach(function(op){if(op.oid)memIds[op.oid]=1;});
+  var q=_obGet().concat(mem);
+  if(!q.length){_obBadge('ok');_obSetErr(null);return Promise.resolve();}
   _obBusy=true;_obBadge();
   var remaining=[];var hadErr=false;var lastErr=null;
   var p=Promise.resolve();
@@ -3130,14 +3164,21 @@ function _obDrainOps(){
     // Never overwrite them with the pre-drain snapshot: drop what was sent,
     // keep the failed ones (with their updated tries) AND everything queued
     // since. Two saves within one upload round-trip used to lose the second.
+    // Ops that came from the in-memory overflow go back there if they failed,
+    // and simply disappear if they were sent — they were never on disk.
+    _obMem=remaining.filter(function(op){return op.oid&&memIds[op.oid];});
+    var onDisk=remaining.filter(function(op){return !(op.oid&&memIds[op.oid]);});
     var keep={},sent={};
-    remaining.forEach(function(op){if(op.oid)keep[op.oid]=op;});
-    q.forEach(function(op){if(op.oid&&!keep[op.oid])sent[op.oid]=1;});
+    onDisk.forEach(function(op){if(op.oid)keep[op.oid]=op;});
+    q.forEach(function(op){if(op.oid&&!keep[op.oid]&&!memIds[op.oid])sent[op.oid]=1;});
     var merged=_obGet().filter(function(op){return op.oid&&!sent[op.oid];}).map(function(op){return keep[op.oid]||op;});
-    remaining.forEach(function(op){if(!op.oid)merged.push(op);});
-    _obSet(merged);_obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':(merged.length?null:'ok'));
+    onDisk.forEach(function(op){if(!op.oid)merged.push(op);});
+    // If the queue itself will not fit any more, hold it in memory rather than
+    // letting _obSet drop it on the floor.
+    if(!_obSet(merged)){_obMem=_obMem.concat(merged);_obWarnFull();}
+    _obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':((merged.length+_obMem.length)?null:'ok'));
     // Anything that arrived mid-flight is still waiting — send it now.
-    if(merged.length>remaining.length&&!hadErr)_obDrain();
+    if(merged.length>onDisk.length&&!hadErr)_obDrain();
   });
 }
 function _audTitle(row){if(!row||typeof row!=='object')return null;var v=row.title||row.topic||row.d||row.descr||row.n||row.num||'';return String(v).substring(0,80)||null;}
