@@ -2979,9 +2979,24 @@ function _obLocalState(t){
   });
   return m;
 }
+// ---- offline photo queue (2026-09-19) ----
+// A photo upload is a live fetch. With no signal it failed, the attachment was
+// lost, and because a trustee hazard needs a photo the whole report was
+// blocked \u2014 the one thing the app exists for, on the floor, where signal is
+// worst. Failed uploads are now kept on the device (IndexedDB, see _phQueue)
+// and sent when the connection returns. Until then the row carries the
+// sentinel below in place of a URL. The machinery lives next to the attach
+// helpers; these three are here because the badge and the list renderers
+// (earlier in this block) need them.
+var _PH_PREFIX='pending:';
+var _phN=0;  // queued photos; kept in step by _phQueue/_phDel so the badge stays synchronous
+function _phIs(u){return typeof u==='string'&&u.indexOf(_PH_PREFIX)===0;}
+// A photo that has not been uploaded yet has no URL to open, so show that it
+// is waiting rather than a link that resolves to nothing.
+function _phChip(sz){return '<span title="\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e9\u05de\u05d5\u05e8\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d5\u05ea\u05d9\u05e9\u05dc\u05d7 \u05db\u05e9\u05d9\u05d4\u05d9\u05d4 \u05d7\u05d9\u05d1\u05d5\u05e8" style="font-size:'+(sz||12)+'px;color:#92400e">\u23f3 \u05de\u05de\u05ea\u05d9\u05e0\u05d4</span>';}
 function _obBadge(state){
   var p=document.getElementById('sync-pill');
-  var n=_obGet().length;
+  var n=_obGet().length+_phN;
   // Worker-mode mirror: show/hide the orange "N pending" pill on the worker
   // home so they can see whether the device is mid-upload before walking off.
   var es=document.getElementById('emp-sync'),esc=document.getElementById('emp-sync-count');
@@ -3022,6 +3037,14 @@ function _obSend(op){
   });
 }
 function _obDrain(){
+  if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  // Queued photos go first: a row then reaches the server already carrying a
+  // real URL, so the hazard webhook sends a link that opens. A row that had
+  // already been sent is repaired by _phResolve with an update instead.
+  if(typeof _phDrain==='function')return _phDrain().then(_obDrainOps);
+  return _obDrainOps();
+}
+function _obDrainOps(){
   if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   _obSanitize();  // strip known-bad fields from any ops queued since last drain
   var q=_obGet();if(!q.length){_obBadge('ok');_obSetErr(null);return Promise.resolve();}
@@ -3140,6 +3163,9 @@ function sbSync(silent){
     });
   });
 }
+// Learn how many photos are already waiting from an earlier visit, so the
+// badge tells the truth from the first paint.
+try{setTimeout(function(){if(typeof _phSync==='function')_phSync();},0);}catch(e){}
 window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync(true);});
 window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync(true);});
 setInterval(function(){_obDrain();},30000);
@@ -13539,7 +13565,7 @@ function _truRender(){
   else h+='<div id="tru-mine">'+mine.map(function(r){
     var t=_truTask(r.t);
     var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
-    var photo=r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'';
+    var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'');
     return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
   }).join('')+'</div>';
   h+='<div class="tru-danger">\ud83d\udea8 <strong>\u05e1\u05db\u05e0\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea?</strong> \u05de\u05ea\u05e7\u05e9\u05e8\u05d9\u05dd \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d3. \u05de\u05d2\u05df \u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u05d5"\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05db\u05d0\u05df.<button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="empReport(\'nm\')">\u26d4 \u05d3\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2</button></div>';
@@ -13732,7 +13758,7 @@ function rTrustees(){
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">'+(_truMgrF==='open'?'\u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea')+'</td></tr>';return;}
   tb.innerHTML=list.map(function(r){
     var t=_truTask(r.t);
-    var photo=r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" title="\u05ea\u05de\u05d5\u05e0\u05d4">\ud83d\udcf7</a>':'';
+    var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" title="\u05ea\u05de\u05d5\u05e0\u05d4">\ud83d\udcf7</a>':'');
     var after=(DB.trustee_reports||[]).find(function(x){return x.t===8&&x.ref===r.id;});
     var afterHtml=after?'<div style="font-size:11px;color:#15803d">\u2713 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" '+fd(after.d)+' ('+esc(after.u)+')'+(after.photo_url?' <a data-sign="'+escU(after.photo_url)+'" target="_blank">\ud83d\udcf7</a>':'')+'</div>':'';
     var note=r.mgr_note?'<div style="font-size:11px;color:var(--t2)">\ud83d\udccc '+esc(r.mgr_note)+'</div>':'';
@@ -15110,12 +15136,131 @@ function _imgCompress(file,maxPx,q,cb){
 }
 // --- Generic file/photo attach system ---
 // Supports: images (compressed), PDF, Word, Excel
+// ---- offline photo queue: the store ----
+// IndexedDB, not localStorage: a compressed photo is 100-300KB and
+// localStorage (5MB, already shared with the outbox and the whole data cache)
+// would overflow after a couple of them. Every call degrades to a no-op if
+// IndexedDB is missing or blocked (private mode), and the caller then falls
+// back to today's behaviour \u2014 an upload is never reported as saved when it
+// was not. This is the only IndexedDB use in the app.
+var _PH_DBN='tfgn-photos',_PH_STORE='q',_PH_MAX=30,_PHDB=null,_phBusy=false;
+function _phDb(cb){
+  if(_PHDB){cb(_PHDB);return;}
+  try{
+    if(typeof indexedDB==='undefined'||!indexedDB){cb(null);return;}
+    var rq=indexedDB.open(_PH_DBN,1);
+    rq.onupgradeneeded=function(e){var d=e.target.result;if(!d.objectStoreNames.contains(_PH_STORE))d.createObjectStore(_PH_STORE,{keyPath:'pid'});};
+    rq.onsuccess=function(){_PHDB=rq.result;cb(_PHDB);};
+    rq.onerror=function(){cb(null);};
+    rq.onblocked=function(){cb(null);};
+  }catch(e){cb(null);}
+}
+function _phTx(mode,fn,cb){
+  _phDb(function(db){
+    if(!db){cb(null);return;}
+    try{fn(db.transaction(_PH_STORE,mode).objectStore(_PH_STORE),cb);}catch(e){cb(null);}
+  });
+}
+function _phPut(rec,cb){_phTx('readwrite',function(st,done){var r=st.put(rec);r.onsuccess=function(){done(rec);};r.onerror=function(){done(null);};},cb);}
+function _phAll(cb){_phTx('readonly',function(st,done){var r=st.getAll();r.onsuccess=function(){done(r.result||[]);};r.onerror=function(){done([]);};},function(x){cb(x||[]);});}
+function _phDel(pid,cb){_phTx('readwrite',function(st,done){var r=st['delete'](pid);r.onsuccess=function(){done(1);};r.onerror=function(){done(null);};},function(ok){if(ok&&_phN>0)_phN--;_obBadge();if(cb)cb(ok);});}
+// Keep the badge honest across reloads: the count is read once at startup.
+function _phSync(cb){_phAll(function(l){_phN=l.length;_obBadge();if(cb)cb(l);});}
+
+// ---- offline photo queue: capture ----
+// Called from _attachPick only when the upload failed for network reasons.
+function _phQueue(areaId,file,prefix,cb){
+  var store=function(blob){
+    _phAll(function(list){
+      if(list.length>=_PH_MAX){cb(false,'full');return;}
+      var pid='ph'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      _phPut({pid:pid,blob:blob,name:file.name||'photo.jpg',prefix:prefix,ts:Date.now()},function(ok){
+        if(!ok){cb(false,'idb');return;}
+        _phN=list.length+1;_obBadge();
+        _attachUrls[areaId]=_PH_PREFIX+pid;
+        _attachRenderPending(areaId,blob,pid);
+        cb(true);
+      });
+    });
+  };
+  // Store it already compressed: smaller on a phone, and the send path does
+  // not have to re-read the original.
+  if(/^image\//i.test(file.type||''))_imgCompress(file,1200,0.85,function(b){store(b||file);});
+  else store(file);
+}
+function _attachRenderPending(areaId,blob,pid){
+  var area=g(areaId);if(!area)return;
+  var src='';try{src=URL.createObjectURL(blob);}catch(e){}
+  area.innerHTML=(src?'<img src="'+src+'" alt="" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block">':'')
+    +'<div style="margin-top:6px;padding:8px 10px;background:#fef9c3;border:1px solid #f59e0b;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5">\u23f3 <strong>\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8</strong><br>\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u2014 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05ea\u05e2\u05dc\u05d4 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05d9\u05d4\u05d9\u05d4 \u05d7\u05d9\u05d1\u05d5\u05e8.</div>'
+    +'<button type="button" class="btn btn-d btn-sm" style="margin-top:6px;min-height:44px" data-pid="'+esc(pid)+'" data-aid="'+esc(areaId)+'" onclick="_attachClear(this.dataset.aid)">\u05d4\u05e1\u05e8</button>';
+}
+
+// ---- offline photo queue: send ----
+// Runs at the head of every outbox drain.
+function _phDrain(){
+  if(_phBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  return new Promise(function(res){
+    _phAll(function(list){
+      _phN=list.length;
+      if(!list.length){res();return;}
+      _phBusy=true;
+      var p=Promise.resolve();
+      list.forEach(function(rec){
+        p=p.then(function(){
+          return new Promise(function(done){
+            try{
+              _fileUpload(rec.blob,rec.prefix,function(url){
+                // No url means the connection is still down: leave it queued.
+                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);}
+                done();
+              });
+            }catch(e){done();}
+          });
+        });
+      });
+      p.then(function(){_phBusy=false;_phSync();res();}, function(){_phBusy=false;res();});
+    });
+  });
+}
+// Swap the sentinel for the real URL everywhere it can still be hiding.
+function _phResolve(pid,url){
+  var token=_PH_PREFIX+pid,touched=[];
+  try{
+    Object.keys(DB).forEach(function(t){
+      var arr=DB[t];if(!arr||!arr.forEach)return;
+      arr.forEach(function(r){
+        if(!r||typeof r!=='object')return;
+        Object.keys(r).forEach(function(k){if(r[k]===token){r[k]=url;touched.push({tbl:t,row:r});}});
+      });
+    });
+  }catch(e){}
+  // Ops still waiting in the outbox: patch them in place, so they go up once,
+  // already correct.
+  var q=_obGet(),changed=false,queued={};
+  q.forEach(function(op){
+    if(op.tbl&&op.row&&op.row.id)queued[op.tbl+'|'+op.row.id]=1;
+    if(!op.row)return;
+    Object.keys(op.row).forEach(function(k){if(op.row[k]===token){op.row[k]=url;changed=true;}});
+  });
+  if(changed)_obSet(q);
+  // A row that already reached the server still holds the sentinel there.
+  touched.forEach(function(t){
+    if(queued[t.tbl+'|'+t.row.id])return;
+    try{_aud('upd',t.tbl,t.row);}catch(e){}
+    _obPush({op:'upd',tbl:t.tbl,row:t.row});
+  });
+  // And a form may still be open with this area attached.
+  try{Object.keys(_attachUrls).forEach(function(a){if(_attachUrls[a]===token)_attachUrls[a]=url;});}catch(e){}
+  try{sdb();}catch(e){}
+}
 var _attachUrls={};  // keyed by areaId
 var _attachPending={};  // areaId -> true while uploading
 
 function _attachBusy(){for(var k in _attachPending){if(_attachPending[k])return true;}return false;}
 
 function _uploadErrMsg(status){
+  if(status==='phfull')return '\u05d9\u05e9 \u05db\u05d1\u05e8 30 \u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05e9\u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4 \u2014 \u05d4\u05ea\u05d7\u05d1\u05e8 \u05dc\u05e8\u05e9\u05ea \u05db\u05d3\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05d5\u05ea\u05df';
   var msg='\u05e9\u05d2\u05d9\u05d0\u05d4 '+status;
   if(status===404)msg+=' \u2014 bucket "incidents-photos" \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd \u05d1-Supabase';
   else if(status===403)msg+=' \u2014 \u05d7\u05e1\u05e8\u05d4 \u05d4\u05e8\u05e9\u05d0\u05ea INSERT \u05dc-anon \u05d1-bucket';
@@ -17297,15 +17442,29 @@ function _attachPick(areaId,prefix){
     var area=g(areaId);if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05dc\u05d4...</div>';
     _attachPending[areaId]=true;
     _fileUpload(file,prefix,function(url,errStatus,errBody){
+      if(url){_attachPending[areaId]=false;_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);return;}
+      // Network failure: keep the photo on the device rather than lose it.
+      // Anything else (403, file too large) is a real answer from the server
+      // and waiting will not change it, so it is still shown as an error.
+      if(errStatus==='net'&&typeof _phQueue==='function'){
+        _phQueue(areaId,file,prefix,function(ok,why){
+          _attachPending[areaId]=false;
+          if(ok)return;
+          _attachUrls[areaId]=null;
+          _attachShowErr(areaId,why==='full'?'phfull':'net',errBody);
+        });
+        return;
+      }
       _attachPending[areaId]=false;
-      if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);}
-      else{_attachUrls[areaId]=null;_attachShowErr(areaId,errStatus,errBody);}
+      _attachUrls[areaId]=null;_attachShowErr(areaId,errStatus,errBody);
     });
   };
   inp.click();
 }
 
 function _attachClear(areaId){
+  // Drop the queued file too, or it would upload with nothing pointing at it.
+  try{if(_phIs(_attachUrls[areaId])&&typeof _phDel==='function')_phDel(String(_attachUrls[areaId]).slice(_PH_PREFIX.length));}catch(e){}
   _attachUrls[areaId]=null;
   var area=g(areaId);
   if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';
