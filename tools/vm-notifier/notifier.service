@@ -1,0 +1,16 @@
+[Unit]
+Description=Tapugan Safety - VM notifier (e-mail on a trustee hazard)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=notifier
+WorkingDirectory=/opt/tapugan-notifier
+ExecStart=/usr/bin/python3 /opt/tapugan-notifier/notify.py
+Restart=always
+RestartSec=30
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
