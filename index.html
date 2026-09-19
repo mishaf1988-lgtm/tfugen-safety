@@ -2756,6 +2756,24 @@ id="m-ncr" style="display:none">
 <script>
 'use strict';
 
+// ============ Debug log ============
+// Background jobs (daily backup, mail dispatcher, OneDrive import + mirror)
+// printed their whole trace with console.log on every run. That buried the
+// console.warn lines that actually mean something, and a few of them printed
+// record payloads. They go through dlog() now — silent unless `?debug=1` is in
+// the URL, or tfgnDebug(true) was run once on this device. Same idea as
+// `?perf=1` below: the safety manager never sees noise in production.
+window._dbgOn = (function(){
+  var q = /[?&]debug=1\b/.test(location.search);
+  try{ return q || localStorage.getItem('tfgn_debug')==='1'; }catch(e){ return q; }
+})();
+window.tfgnDebug = function(on){
+  window._dbgOn = on!==false;
+  try{ if(window._dbgOn) localStorage.setItem('tfgn_debug','1'); else localStorage.removeItem('tfgn_debug'); }catch(e){}
+  return window._dbgOn;
+};
+function dlog(){ if(window._dbgOn){ try{ console.log.apply(console, arguments); }catch(e){} } }
+
 // ============ Phase 0 — Performance Instrumentation ============
 // Lightweight, opt-in, non-mutating. Adds visibility into hot paths and
 // surfaces errors that the existing try/catch swallows in many places.
@@ -10520,14 +10538,14 @@ function _notifyEvent(eventKey,payload){
         fired.push('whatsapp');
       }else{
         // Couldn't resolve phone — fall back to log (no spam to default number)
-        console.info('[notif] WhatsApp skipped (no phone) for',eventKey,payload);
+        dlog('[notif] WhatsApp skipped (no phone) for',eventKey,payload);
         _notifLog(eventKey,'whatsapp_skipped',payload);
         fired.push('whatsapp_skipped');
       }
     }catch(e){console.warn('[notif] wa fail',e);_notifLog(eventKey,'whatsapp_error',payload);}
   }
   if(p[eventKey].email){
-    console.info('[notif] would send Email for',eventKey,payload);
+    dlog('[notif] would send Email for',eventKey,payload);
     _notifLog(eventKey,'email_pending',payload);
     fired.push('email_pending');
   }
@@ -14173,7 +14191,6 @@ function loadFromSupabase(){
       if(newRows.length>0){
         DB.ncr=(DB.ncr||[]).concat(newRows);
         sdb();rNcr();rDash();
-        console.log('[TFUGEN] Synced '+newRows.length+' NCR from Supabase');
       }
     }).catch(function(e){console.warn('[TFUGEN] Sync error:',e);});
 }
@@ -14833,7 +14850,6 @@ window._ncrShowTrend=function(){
   var summary='<div style="display:flex;gap:8px;margin-top:10px;font-size:11px;flex-wrap:wrap"><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#cc1f1f;font-size:14px;font-weight:700">'+totals.saf+'</div><div style="color:#7a9ab8">\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#16a34a;font-size:14px;font-weight:700">'+totals.env+'</div><div style="color:#7a9ab8">\u05e1\u05d1\u05d9\u05d1\u05d4</div></div><div style="background:#1a2a3a;border-radius:6px;padding:6px 10px;flex:1;min-width:90px;text-align:center"><div style="color:#5a7a9a;font-size:14px;font-weight:700">'+totals.closed+'</div><div style="color:#7a9ab8">\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd</div></div></div>';
   P.innerHTML=_ncrTrendSvg()+legend+summary;
 };
-console.log('NCR Agent v4 ready, '+(_nad?_nad.length:0)+' items');
 
 /* ---- Smart Capture: voice + photo + text -> AI triage -> pre-filled modal ---- */
 var _capMode=null, _capTranscript='', _capPhotoB64=null, _capPhotoUrl=null, _capVideoFrames=null, _capAiResult=null;
@@ -15222,7 +15238,6 @@ function capDispatch(j){
   }
   try{toast('✨ \u05d6\u05d5\u05d4\u05d4: '+capTypeLabel(j.type));}catch(e){}
 }
-console.log('Smart Capture ready');
 </script>
 
 
@@ -15881,8 +15896,8 @@ function _backupAutoDailyTick(){
   // Skip if total rows is 0 (e.g., DB hasn't loaded yet) — avoid empty
   // backups on tabs that opened before sb fetch finished.
   var any=_BACKUP_TABLES.some(function(t){return Array.isArray(DB[t])&&DB[t].length>0;});
-  if(!any){console.log('[backup] auto: no data to back up yet, skipping');return;}
-  console.log('[backup] auto-daily: running silent backup');
+  if(!any){dlog('[backup] auto: no data to back up yet, skipping');return;}
+  dlog('[backup] auto-daily: running silent backup');
   window._backupRunNow({silent:true}).catch(function(e){console.warn('[backup] auto failed:',e&&e.message);});
 }
 // === Phase 3: mirror Supabase Storage backups → OneDrive ===
@@ -15896,9 +15911,9 @@ function _backupAutoDailyTick(){
 var _BACKUP_SYNC_RUNNING=false;
 function _backupSyncFromStorage(){
   if(_BACKUP_SYNC_RUNNING)return Promise.resolve({skipped:'already-running'});
-  if(!_sbToken){console.log('[backup-sync] no _sbToken yet, skipping');return Promise.resolve({skipped:'no-supabase-token'});}
+  if(!_sbToken){dlog('[backup-sync] no _sbToken yet, skipping');return Promise.resolve({skipped:'no-supabase-token'});}
   var tok=_odToken();
-  if(!tok||!tok.account){console.log('[backup-sync] not connected to OneDrive, skipping');return Promise.resolve({skipped:'no-onedrive'});}
+  if(!tok||!tok.account){dlog('[backup-sync] not connected to OneDrive, skipping');return Promise.resolve({skipped:'no-onedrive'});}
   _BACKUP_SYNC_RUNNING=true;
   // 1. List backups in the private bucket. Requires the RLS policy added
   //    in 2026-05-06_backups_rls.sql. POST /storage/v1/object/list/<bucket>
@@ -15929,7 +15944,7 @@ function _backupSyncFromStorage(){
     var odNames={};
     ((odList&&odList.value)||[]).forEach(function(it){if(it&&it.name)odNames[it.name]=1;});
     var missing=supabaseFiles.filter(function(f){return !odNames[f.name];});
-    console.log('[backup-sync] supabase:',supabaseFiles.length,'OneDrive:',Object.keys(odNames).length,'missing:',missing.length);
+    dlog('[backup-sync] supabase:',supabaseFiles.length,'OneDrive:',Object.keys(odNames).length,'missing:',missing.length);
     if(!missing.length)return {synced:0,total:supabaseFiles.length,already:Object.keys(odNames).length};
     // 3. Copy each missing one. Sequential to keep the request graph
     //    light — typically only 0-1 missing per session.
@@ -15955,7 +15970,7 @@ function _backupSyncFromStorage(){
     // Prune OneDrive after every sync so that even if the Worker hasn't
     // pruned (or isn't deployed yet), the OneDrive folder stays small.
     return _backupPruneOneDrive(15).then(function(prune){
-      if(prune&&prune.pruned)console.log('[backup-prune] removed '+prune.pruned+' old OneDrive backups');
+      if(prune&&prune.pruned)dlog('[backup-prune] removed '+prune.pruned+' old OneDrive backups');
       syncResult.pruned=prune;
       return syncResult;
     },function(){return syncResult;});
@@ -16169,7 +16184,7 @@ function _mailDispatcherTick(){
   }
   var due=(prefs.rules||[]).filter(isDueToday);
   if(!due.length)return;
-  console.log('[mail] dispatcher: '+due.length+' rules due now',due.map(function(r){return r.id;}));
+  dlog('[mail] dispatcher: '+due.length+' rules due now',due.map(function(r){return r.id;}));
   // Run sequentially so each updates last_sent before the next.
   due.reduce(function(chain,rule){
     return chain.then(function(){
@@ -16754,7 +16769,7 @@ function _odAutoImport(opts){
   var force=opts&&opts.force;
   if(_odPolling&&!force){
     if(force===false)return; // legacy path
-    console.log('[od] auto-import already running');
+    dlog('[od] auto-import already running');
     if(opts&&opts.toastOnBusy)try{toast('⚠ סריקה כבר רצה — נסי שוב בעוד כמה שניות');}catch(_){}
     return;
   }
@@ -16767,7 +16782,7 @@ function _odAutoImport(opts){
     return r.json();
   }).then(function(d){
     var items=((d&&d.value)||[]).filter(function(it){return it.file;});
-    console.log('[od] auto-import found',items.length,'items');
+    dlog('[od] auto-import found',items.length,'items');
     if(opts&&opts.verbose){
       try{toast(items.length?('🔎 נמצאו '+items.length+' קבצים — מעבדים…'):'📭 אין קבצים ב-Inbox');}catch(_){}
     }
@@ -16781,7 +16796,7 @@ function _odAutoImport(opts){
       });});
     },Promise.resolve());
   }).then(function(){
-    console.log('[od] auto-import done',{imported:imported,skipped:skipped,failed:failed});
+    dlog('[od] auto-import done',{imported:imported,skipped:skipped,failed:failed});
     if(imported>0)try{toast('☁️ '+imported+' קבצים יובאו מ-OneDrive');}catch(_){}
     if(opts&&opts.verbose&&imported===0){
       var msg='לא יובאו קבצים';
@@ -16935,7 +16950,7 @@ function _odClassifyImageWithFallback(blob,prompt){
   return _ocrAnalyze(blob,prompt).then(function(content){
     var p=parse(content);
     if(p&&p.target&&p.target!=='other')return {via:'llama',data:p};
-    console.log('[od auto] Llama uncertain (target=',p&&p.target,') → trying Claude');
+    dlog('[od auto] Llama uncertain (target=',p&&p.target,') → trying Claude');
     return _aiClaudeVisionClassify(blob,prompt).then(function(c2){
       var p2=parse(c2);
       return p2?{via:'claude',data:p2}:{via:'llama-other',data:p||{target:'other'}};
@@ -17042,12 +17057,12 @@ function _odClassifyAndImport(item){
   return new Promise(function(resolve){
     function doImport(suggestion){
       if(!suggestion||suggestion.target==='other'||!suggestion.target){
-        console.log('[od auto]',name,'→ _review (target=other)');
+        dlog('[od auto]',name,'→ _review (target=other)');
         return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
       }
       // M5: route to /_review/ unless the explicit unsafe flag is set.
       if(!_odAutoCreateUnsafeEnabled()){
-        console.log('[od auto]',name,'→ _review (M5: human approval required, target was '+suggestion.target+')');
+        dlog('[od auto]',name,'→ _review (M5: human approval required, target was '+suggestion.target+')');
         return _odMoveToReview(item.id).then(function(){resolve('skipped');},function(){resolve('skipped');});
       }
       _odFetchItemBlob(item.id).then(function(blob){
@@ -17081,7 +17096,7 @@ function _odClassifyAndImport(item){
       // Claude Haiku Vision (more accurate on Hebrew docs, ~$0.001/image).
       classifyPromise=_odFetchItemBlob(item.id).then(function(blob){
         return _odClassifyImageWithFallback(blob,_odBuildClassifyPrompt(name,'')).then(function(result){
-          if(result&&result.via)console.log('[od auto] image classified via',result.via);
+          if(result&&result.via)dlog('[od auto] image classified via',result.via);
           return result&&result.data?JSON.stringify(result.data):'';
         });
       });
@@ -17109,7 +17124,7 @@ function _odClassifyAndImport(item){
       }
       var allowed=['tr','ppe','med','docs','ncr','equip_inspections','other'];
       if(allowed.indexOf(p.target)<0)p.target='other';
-      console.log('[od auto] classified',name,'→',p);
+      dlog('[od auto] classified',name,'→',p);
       doImport(p);
     }).catch(function(e){
       var msg=(e&&e.message||e).toString();
@@ -17411,7 +17426,7 @@ function _odMirrorRecord(tbl,rec){
   var topic=_odFolderFor(prefix);
   var sub=_odSubfolderName(tbl,rec);
   var folder=topic+'/'+sub;
-  console.log('[od] mirror start',tbl,rec.id,'→',folder,'photo:',!!rec.photo_url,'file:',!!rec.file_url);
+  dlog('[od] mirror start',tbl,rec.id,'→',folder,'photo:',!!rec.photo_url,'file:',!!rec.file_url);
   try{toast('☁️ מסנכרן ל-OneDrive…');}catch(_){}
   var results={photo:null,file:null,report:null};
   function mirrorAttachment(srcUrl,label){
@@ -17429,7 +17444,7 @@ function _odMirrorRecord(tbl,rec){
       }
       return _odPushFile(blob,folder,fname).then(function(){
         results[label]='ok';
-        console.log('[od] '+label+' uploaded:',fname);
+        dlog('[od] '+label+' uploaded:',fname);
       });
     }).catch(function(e){
       results[label]='err: '+(e&&e.message||e);
@@ -17459,7 +17474,7 @@ function _odMirrorRecord(tbl,rec){
   jobs.push(_odBuildReportPdf(tbl,rec).then(function(blob){
     return _odPushFile(blob,folder,'report.pdf').then(function(){
       results.report='pdf-ok';
-      console.log('[od] report.pdf uploaded');
+      dlog('[od] report.pdf uploaded');
     });
   }).catch(function(e){
     console.warn('[od] PDF generation failed, falling back to HTML:',e&&e.message);
@@ -17469,7 +17484,7 @@ function _odMirrorRecord(tbl,rec){
     var hb=new Blob([html],{type:'text/html;charset=utf-8'});
     return _odPushFile(hb,folder,'report.html').then(function(){
       results.report='html-fallback-ok';
-      console.log('[od] report.html (fallback) uploaded');
+      dlog('[od] report.html (fallback) uploaded');
     }).catch(function(e2){
       results.report='html-fallback-err: '+(e2&&e2.message||e2);
     });
@@ -17480,7 +17495,7 @@ function _odMirrorRecord(tbl,rec){
     if(rec.photo_url)summary.push('תמונה: '+(results.photo||'?'));
     if(rec.file_url&&rec.file_url!==rec.photo_url)summary.push('קובץ: '+(results.file||'?'));
     summary.push('דוח: '+(results.report||'?'));
-    console.log('[od] mirror done',tbl,rec.id,results);
+    dlog('[od] mirror done',tbl,rec.id,results);
     try{toast('☁️ '+sub+' | '+summary.join(' · '));}catch(e){}
   }).catch(function(e){
     var msg=e&&e.message||String(e);

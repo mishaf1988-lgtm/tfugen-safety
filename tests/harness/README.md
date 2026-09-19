@@ -19,6 +19,7 @@ bash tests/harness/run.sh trustee   # רק הנאמנים
 | notif-trustee-test.js | הגדרות התראות: שורת «ליקוי מנאמן», יעדים, «שלח בדיקה», toast ב-realtime |
 | trustee-notify-test.mjs | הפונקציה `functions/api/trustee-notify.js` עם fetch מדומה (24 בדיקות) |
 | sw-cache-test.mjs | ה-service worker האמיתי מ-`functions/sw.js.js`, רץ ב-global מדומה: install/activate, מעטפת מהמטמון בלי להמתין לרשת, אופליין, מה שלא נוגעים בו, ודיפלוי שמגיע למשתמש |
+| console-quiet-test.js | הקונסול שקט: אין `console.log`/`console.info` חשופים, `dlog()` כבוי כברירת מחדל, `tfgnDebug(true)` / `?debug=1` מדליקים, והדשבורד נטען בלי חריגות בשני המצבים |
 | vm-notifier-test.py | `tools/vm-notifier/notify.py` עם requests/מיילר מדומים |
 | offline-photo-test.js | תור תמונות אופליין: תמונה שנכשלה נשמרת ב-IndexedDB, הדיווח נשמר עם סימון `pending:`, ובחיבור הבא התמונה עולה והסימון מוחלף בכל מקום |
 | outbox-race-test.js | `_obDrain` האמיתי: פעולות שנכנסו בזמן העלאה שורדות |
