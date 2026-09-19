@@ -93,9 +93,16 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 ## Supabase MCP — גישה ישירה ל-DB (מ-2026-09-19)
 
-מוגדר ב-**`.mcp.json`** בשורש ה-repo (OAuth — אין טוקן, אין מפתח בקוד): `https://mcp.supabase.com/mcp`
-בסשן ראשון שרואה את הקובץ Claude Code מבקש **אישור חד-פעמי** לשרת MCP של הפרויקט, ואז נפתחת התחברות ל-Supabase — שני הקליקים האלה של המשתמש בלבד. אפשר גם להוסיף כ-Connector ב-claude.ai (Customize → Connectors → + → Add custom connector) — אותה כתובת.
-הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref` בכתובת** — בכוונה, כי הוא מכבה את ה-`get_advisors` שבהם השתמשנו בסבב האבטחה.
+**מצב אמיתי (נבדק 2026-09-19 מתוך סשן ענן):** סביבת הענן «Default» של Claude Code היא ברמת רשת **Trusted** — מגיעה רק ל-package registries ולדומיינים מאושרים. **כל הדומיינים של Supabase חסומים בה**: `mcp.supabase.com`, `api.supabase.com`, `*.supabase.co` → 403 מפרוקסי ה-egress ("policy denial"). לכן:
+- `.mcp.json` בשורש ה-repo (`https://mcp.supabase.com/mcp`, OAuth, בלי טוקן) **לא מתחבר בסביבה הזו כמו שהיא** — הוא נכון, הרשת חוסמת אותו.
+- גם `curl` ל-REST של Supabase נכשל — **אי אפשר לאמת מיגרציות מתוך הסשן**; האימות הוא צילום מסך של מיכאל מ-SQL Editor (כמו ב-#582).
+
+**שני מסלולים שעובדים — צריך אחד מהם, פעם אחת:**
+- **A. Connector ב-claude.ai** (המסלול המוכח): Customize → Connectors → **+** → Add custom connector → Name `Supabase`, URL `https://mcp.supabase.com/mcp` → התחברות ל-Supabase. עובר דרך `api.anthropic.com` שמותר ברשת — בדיוק כמו שמחבר GitHub עובד. נטען **רק בתחילת שיחה**.
+- **B. לפתוח את הרשת של הסביבה**: claude.ai/code → Environments → Default → **Network access → Custom** → להוסיף `mcp.supabase.com`, `api.supabase.com`, `*.supabase.co`. אז גם `.mcp.json` מתחבר (אישור חד-פעמי לשרת הפרויקט + OAuth) **וגם אימות REST עובד מהסשן**. ⚠ יש דיווחים פתוחים (claude-code #19087, #34690) שהרשימה לא תמיד מגיעה לפרוקסי — בסשן חדש לבדוק `curl -sI https://mcp.supabase.com/mcp`; אם עדיין 403 → מסלול A.
+- ב-checkout **מקומי** (Claude Code על מחשב, בלי פרוקסי) `.mcp.json` עובד כמו שהוא.
+
+הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref`** בכתובת — בכוונה, כי הוא מכבה את `get_advisors` שבהם השתמשנו בסבב האבטחה.
 
 **ההרשאה היא קריאה + כתיבה.** לכן:
 
