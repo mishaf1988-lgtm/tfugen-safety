@@ -2536,6 +2536,16 @@ id="m-ncr" style="display:none">
   <div class="modal-body">
     <div id="notif-alloff-banner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e;line-height:1.5">&#9888; &#1499;&#1500; &#1492;&#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1499;&#1489;&#1493;&#1497;&#1497;&#1501; &#8212; &#1500;&#1488; &#1497;&#1497;&#1513;&#1500;&#1495;&#1493; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;. &#1505;&#1502;&#1503; &#1514;&#1497;&#1489;&#1493;&#1514; &#1493;&#1513;&#1502;&#1493;&#1512;, &#1488;&#1493;: <button onclick="_notifEnableRecommended()" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;margin-right:4px">&#10003; &#1492;&#1508;&#1506;&#1500; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; &#1489;&#1514;&#1493;&#1498; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</button></div>
     <table id="notif-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+    <!-- Trustee hazards are sent by the server; these are its recipients (saved with the matrix). -->
+    <div id="notif-trustee-box" style="margin-top:12px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5">
+      <div style="font-weight:700;margin-bottom:6px">&#129466; ליקוי מנאמן בטיחות — לאן לשלוח (נשלח מהשרת, גם כשהאפליקציה סגורה)</div>
+      <div class="fgrid">
+        <div class="field"><label>&#128241; WhatsApp למספר</label><input id="notif-tru-wa" placeholder="9725XXXXXXXX" inputmode="tel" dir="ltr"></div>
+        <div class="field"><label>&#128231; מייל לכתובת</label><input id="notif-tru-email" placeholder="name@tapugan.co.il" inputmode="email" dir="ltr"></div>
+      </div>
+      <div style="color:var(--t2);margin-top:6px">סמן WhatsApp / Email בשורה «ליקוי מנאמן בטיחות» למעלה ולחץ «שמור». «שלח בדיקה» משתמש במה שכתוב כאן עכשיו.</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-s btn-sm" onclick="_truNotifyTest()">&#128232; שלח הודעת בדיקה</button><span id="notif-tru-test-res" style="font-size:12px"></span></div>
+    </div>
     <details style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--t2)">&#128203; &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; (20 &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;)</summary>
       <div id="notif-log-list" style="max-height:240px;overflow-y:auto;margin-top:8px;font-size:11px"></div>
@@ -3151,6 +3161,8 @@ function _rtApply(tbl,payload){
   if(ev==='INSERT'&&nr&&nr.id){
     if(DB[tbl].some(function(r){return r.id===nr.id;}))return;
     DB[tbl].unshift(nr);
+    // A trustee's hazard while the manager is in the app: in-app channel only (WhatsApp/email go out from the server).
+    if(tbl==='trustee_reports'&&nr.ok===false&&typeof _notifEnabled==='function'&&_notifEnabled('trustee_hazard','inapp')){try{toast('\ud83e\uddba \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d3\u05e9 \u05de\u05e0\u05d0\u05de\u05df: '+String(nr.u||'')+(nr.f?' — '+String(nr.f).substring(0,60):''));}catch(e){}}
   }else if(ev==='UPDATE'&&nr&&nr.id){
     var found=false;
     DB[tbl]=DB[tbl].map(function(r){if(r.id===nr.id){found=true;return nr;}return r;});
@@ -9747,7 +9759,9 @@ var NOTIF_EVENTS=[
   {key:'task_overdue',     label:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 3+ \u05d9\u05de\u05d9\u05dd'},
   {key:'expiry_30days',    label:'\u05ea\u05e4\u05d5\u05d2\u05d4 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd (\u05e6\u05d9\u05d5\u05d3/PPE/\u05d4\u05d3\u05e8\u05db\u05d4/\u05de\u05e1\u05de\u05da)'},
   {key:'round_missed',     label:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d7\u05e1\u05e8'},
-  {key:'incident_critical',label:'\u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea'}
+  {key:'incident_critical',label:'\u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea'},
+  // Sent by the SERVER (Supabase trigger → /api/trustee-notify), so it lands with the app closed.
+  {key:'trustee_hazard',   label:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05de\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05d9\u05d9\u05d3\u05d9, \u05de\u05d4\u05e9\u05e8\u05ea'}
 ];
 var NOTIF_CHANNELS=[
   {key:'whatsapp',label:'WhatsApp',icon:'\ud83d\udcf1'},
@@ -9782,6 +9796,10 @@ function openNotifSettings(){
     body+='</tr>';
   });
   g('notif-table').innerHTML='<thead>'+hdr+'</thead><tbody>'+body+'</tbody>';
+  var _th=prefs.trustee_hazard||{};
+  var _wa=g('notif-tru-wa');if(_wa)_wa.value=_th.whatsapp_to||'';
+  var _em=g('notif-tru-email');if(_em)_em.value=_th.email_to||'';
+  var _tr=g('notif-tru-test-res');if(_tr)_tr.textContent='';
   // P0/#6: surface the "everything off" state — otherwise all-unchecked
   // boxes look like a bug when they actually mean "no notifications will
   // ever fire". Show a banner + one-click enable when nothing is on.
@@ -9798,8 +9816,8 @@ function openNotifSettings(){
     if(!logs.length){
       logBox.innerHTML='<div style="color:var(--t3);font-style:italic">— \u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df —</div>';
     }else{
-      var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea'};
-      var chLbl={whatsapp:'📱 \u05e0\u05e9\u05dc\u05d7',whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',whatsapp_skipped:'📱 \u05d3\u05d5\u05dc\u05d2 (\u05d0\u05d9\u05df \u05e1\u05dc\u05d5\u05dc\u05e8\u05d9)',whatsapp_error:'📱 \u05e9\u05d2\u05d9\u05d0\u05d4',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',inapp:'🔔'};
+      var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea',trustee_hazard:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df'};
+      var chLbl={whatsapp:'📱 \u05e0\u05e9\u05dc\u05d7',whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',whatsapp_skipped:'📱 \u05d3\u05d5\u05dc\u05d2 (\u05d0\u05d9\u05df \u05e1\u05dc\u05d5\u05dc\u05e8\u05d9)',whatsapp_error:'📱 \u05e9\u05d2\u05d9\u05d0\u05d4',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',email:'\ud83d\udce7 \u05e0\u05e9\u05dc\u05d7',email_error:'\ud83d\udce7 \u05e9\u05d2\u05d9\u05d0\u05d4',inapp:'🔔'};
       var _logHtml=logs.map(function(l){
         var dt=new Date(l.ts);
         var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
@@ -9934,6 +9952,7 @@ window._notifEnableRecommended=function(){
   NOTIF_EVENTS.forEach(function(ev){
     var e=cur[ev.key]||{};
     newPrefs[ev.key]={inapp:true,email:!!e.email,whatsapp:!!e.whatsapp};
+    if(ev.key==='trustee_hazard'){newPrefs[ev.key].whatsapp_to=e.whatsapp_to||'';newPrefs[ev.key].email_to=e.email_to||'';}
   });
   if(!DB.notification_prefs)DB.notification_prefs=[];
   var existing=_notifPrefsRow();
@@ -9944,6 +9963,24 @@ window._notifEnableRecommended=function(){
   try{toast('✓ התראות בתוך האפליקציה הופעלו',{ok:true});}catch(e){}
   openNotifSettings();
 };
+// "\u05e9\u05dc\u05d7 \u05d1\u05d3\u05d9\u05e7\u05d4" for the server-side trustee notification: posts what the screen
+// holds right now (the prefs row may still be in the outbox) with the session.
+function _truNotifyTest(){
+  var res=g('notif-tru-test-res');
+  var wa=gv('notif-tru-wa').replace(/[^0-9]/g,''),em=gv('notif-tru-email');
+  if(!wa&&!em){if(res)res.textContent='\u05de\u05dc\u05d0 \u05de\u05e1\u05e4\u05e8 WhatsApp \u05d0\u05d5 \u05de\u05d9\u05d9\u05dc';return;}
+  if(res)res.textContent='\u05e9\u05d5\u05dc\u05d7\u2026';
+  _sbAuth().then(function(){
+    return fetch('/api/trustee-notify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:JSON.stringify({test:true,whatsapp:!!wa,whatsapp_to:wa,email:!!em,email_to:em})});
+  }).then(function(r){return r.json().then(function(j){return {status:r.status,j:j};});}).then(function(x){
+    var j=x.j||{};
+    if(x.status!==200){if(res)res.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(j.error||x.status);return;}
+    var parts=[];
+    if(j.whatsapp)parts.push('WhatsApp: '+(j.whatsapp==='sent'?'\u05e0\u05e9\u05dc\u05d7 \u2713':j.whatsapp));
+    if(j.email)parts.push('\u05de\u05d9\u05d9\u05dc: '+(j.email==='sent'?'\u05e0\u05e9\u05dc\u05d7 \u2713':j.email));
+    if(res)res.textContent=parts.join(' \u00b7 ')||'\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05d3\u05d1\u05e8';
+  }).catch(function(e){if(res)res.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+(e&&e.message||e);});
+}
 function saveNotifSettings(){
   var u=_svUser();
   var newPrefs={};
@@ -9952,6 +9989,9 @@ function saveNotifSettings(){
     if(!newPrefs[ev])newPrefs[ev]={};
     newPrefs[ev][ch]=cb.checked;
   });
+  if(!newPrefs.trustee_hazard)newPrefs.trustee_hazard={};
+  newPrefs.trustee_hazard.whatsapp_to=gv('notif-tru-wa').replace(/[^0-9]/g,'');
+  newPrefs.trustee_hazard.email_to=gv('notif-tru-email');
   if(!DB.notification_prefs)DB.notification_prefs=[];
   var existing=_notifPrefsRow();
   var rec={id:u,prefs:newPrefs,ts:new Date().toISOString()};
