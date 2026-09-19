@@ -2385,6 +2385,24 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-roster')">סגור</button><button class="btn btn-p" onclick="_truRosterAdd()">+ הוסף נאמן</button></div>
 </div>
 
+<!-- TRUSTEE TASK CATALOGUE (manager) -->
+<div class="overlay" id="ov-tru-tasks" onclick="closeModal('m-tru-tasks')"></div>
+<div class="modal" id="m-tru-tasks" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru-tasks')">&#10005;</button>
+  <div class="modal-title">&#128203; קטלוג המשימות החודשיות</div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">המשימות שהנאמן רואה בטופס הדיווח. משימה מושבתת נשארת בהיסטוריה ובניקוד, אבל לא מוצעת לדיווח חדש.</div>
+  <div id="tru-tasks-warn" style="display:none;font-size:12px;background:#fff7ed;border:1px solid #f59e0b;color:#92400e;border-radius:10px;padding:10px;margin-bottom:10px;line-height:1.5"></div>
+  <div id="tru-tasks-list"></div>
+  <div style="font-size:12px;color:var(--t2);font-weight:800;margin:14px 0 6px" id="tru-tasks-formtitle">&#10133; משימה חדשה</div>
+  <input type="hidden" id="tru-tasks-edit">
+  <div class="fgrid">
+    <div class="field"><label>איקון</label><input id="tru-tasks-icon" placeholder="&#128269;" maxlength="4"></div>
+    <div class="field"><label>שם המשימה *</label><input id="tru-tasks-t" placeholder="למשל: בדיקת גלאי חירום"></div>
+    <div class="field fw"><label>מה עושים בפועל</label><textarea id="tru-tasks-how" rows="3" placeholder="ההסבר שהנאמן רואה כשהוא בוחר את המשימה"></textarea></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-tasks')">סגור</button><button class="btn btn-s" id="tru-tasks-cancel" style="display:none" onclick="_truTasksEditCancel()">בטל עריכה</button><button class="btn btn-p" id="tru-tasks-save" onclick="_truTasksSave()">+ הוסף משימה</button></div>
+</div>
+
 <!-- TRUSTEE WINNER (phase 2) — announce the month's winner + winners history -->
 <div class="overlay" id="ov-tru-winner" onclick="closeModal('m-tru-winner')"></div>
 <div class="modal" id="m-tru-winner" style="display:none">
@@ -2877,7 +2895,7 @@ window._debGsearch      = _deb(function(){ if(typeof _gsearchRender==='function'
 
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[]};
+var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -2932,7 +2950,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -2943,7 +2961,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -3166,7 +3184,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
   var done=0;
   function finish(){
     done++;
@@ -3206,7 +3224,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -3481,7 +3499,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();}};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();},trustee_tasks:function(){if(typeof _truTasksRender==='function')_truTasksRender();if(typeof _truRender==='function')_truRender();if(typeof rTrustees==='function')rTrustees();}};
 
   delRow(tbl,id,fn[tbl]||function(){});
 }
@@ -4679,7 +4697,7 @@ function _renderToday(){
         var trNames=behind.slice(0,3).map(function(sc){return sc.u+' ('+sc.nTasks+'/8)';}).join(' \u00b7 ');
         if(behind.length>3)trNames+=' \u05d5\u05e2\u05d5\u05d3 '+(behind.length-3);
         items.push({priority:3,icon:'\ud83e\uddba',
-          title:(behind.length===1?'\u05e0\u05d0\u05de\u05df \u05d0\u05d7\u05d3 \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05dd ':behind.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05de\u05d5 ')+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea',
+          title:(behind.length===1?'\u05e0\u05d0\u05de\u05df \u05d0\u05d7\u05d3 \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05dd ':behind.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05de\u05d5 ')+_truMinTasks()+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea',
           sub:trNames+' \u00b7 '+(trLeft===0?'\u05d4\u05d9\u05d5\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05dc\u05d7\u05d5\u05d3\u05e9':'\u05e0\u05d5\u05ea\u05e8\u05d5 '+trLeft+' \u05d9\u05de\u05d9\u05dd'),
           badge:(trLeft===0?'\u05d4\u05d9\u05d5\u05dd':trLeft+'\u05d9'),badgeCls:(trLeft<=7?'amber':'blue'),fn:'page',a1:'trustees',a2:''});
       }
@@ -13473,13 +13491,37 @@ var TRUSTEE_TASKS=[
   {n:7,icon:'\ud83e\ude79',t:'\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d5\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df',how:'\u05e2\u05de\u05d3\u05ea \u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4 \u05d5\u05d1\u05ea\u05d5\u05e7\u05e3, \u05de\u05dc\u05d0\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d6\u05de\u05d9\u05df \u05d1\u05e2\u05de\u05d3\u05d4, \u05d5\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8 \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d1\u05e4\u05d5\u05e2\u05dc \u05d1\u05de\u05d4 \u05e9\u05e0\u05d3\u05e8\u05e9.'},
   {n:8,icon:'\u2705',t:'\u05de\u05e2\u05e7\u05d1 \u05e1\u05d2\u05d9\u05e8\u05d4',how:'\u05d1\u05d5\u05d3\u05e7\u05d9\u05dd \u05d1\u05e9\u05d8\u05d7 \u05e9\u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05d3\u05d9\u05d5\u05d5\u05d7\u05ea\u05dd \u05e2\u05dc\u05d9\u05d4\u05dd \u05d5\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05e7\u05e0\u05d5 \u05d1\u05d0\u05de\u05ea. \u05de\u05e6\u05dc\u05de\u05d9\u05dd \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u05dc\u05db\u05dc \u05de\u05e4\u05d2\u05e2 \u05e9\u05e0\u05e1\u05d2\u05e8.'}
 ];
-var TRUSTEE_PTS_TASK=10,TRUSTEE_MAX_TASK_PTS=80,TRUSTEE_PTS_CLOSED=2,TRUSTEE_MAX_CLOSED_PTS=20,TRUSTEE_MIN_TASKS=5;
+var TRUSTEE_PTS_TASK=10,TRUSTEE_PTS_CLOSED=2,TRUSTEE_MAX_CLOSED_PTS=20,TRUSTEE_MIN_TASKS=5;
+// Task 8 is not an ordinary catalogue entry: a report with t=8 and a ref is how
+// a trustee closes a finding, and the trustee_reports trigger keys on exactly
+// that. Its wording is editable, its number is not, and it never counts as a
+// hazard of its own.
+var TRUSTEE_TASK_CLOSE=8;
 var TRUSTEE_S_OK='\u05ea\u05e7\u05d9\u05df',TRUSTEE_S_OPEN='\u05e4\u05ea\u05d5\u05d7',TRUSTEE_S_CLOSED='\u05e0\u05e1\u05d2\u05e8';
-function _truTask(n){n=parseInt(n,10);return TRUSTEE_TASKS.filter(function(t){return t.n===n;})[0]||null;}
+// The catalogue comes from the trustee_tasks table once the 2026-09-19
+// migration has run, and from the array above until then — so the app behaves
+// the same either way and nothing breaks while the table does not exist.
+function _truTasks(){
+  var rows=(DB.trustee_tasks||[]).filter(function(t){return t&&t.n;});
+  if(!rows.length)return TRUSTEE_TASKS;
+  return rows.slice().sort(function(a,b){return a.n-b.n;});
+}
+// What the report form offers. History and scoring still resolve a task that
+// was switched off, which is why switching off is the alternative to deleting.
+function _truTasksActive(){return _truTasks().filter(function(t){return t.active!==false;});}
+// Everything except the closure task. Task 8 is always on, so counting it would
+// let the catalogue be emptied down to "you may close findings, never report one".
+function _truTasksReportable(){return _truTasksActive().filter(function(t){return t.n!==TRUSTEE_TASK_CLOSE;});}
+function _truTask(n){n=parseInt(n,10);var a=_truTasks();for(var i=0;i<a.length;i++)if(a[i].n===n)return a[i];return null;}
+// 10 points per task, so the ceiling follows the catalogue instead of a fixed 80.
+function _truMaxTaskPts(){return _truTasksActive().length*TRUSTEE_PTS_TASK;}
+// Eligibility can never exceed what there is to do — otherwise switching tasks
+// off below the threshold would make the month unwinnable for everyone.
+function _truMinTasks(){return Math.min(TRUSTEE_MIN_TASKS,_truTasksActive().length);}
 function _truMonthKey(d){return String(d||'').substring(0,7);}
 function _truThisMonth(){return new Date().toISOString().substring(0,7);}
 function _truRowMonth(r){return r.m||_truMonthKey(r.d);}
-function _truIsHazard(r){var t=parseInt(r.t,10);return r.ok===false&&t>=1&&t<=7;}
+function _truIsHazard(r){var t=parseInt(r.t,10);return r.ok===false&&!!_truTask(t)&&t!==TRUSTEE_TASK_CLOSE;}
 // All reports of one month (any trustee).
 function _truRows(m){return (DB.trustee_reports||[]).filter(function(r){return r&&_truRowMonth(r)===m;});}
 // Score card for one trustee in one month \u2014 exactly the rules in the document:
@@ -13487,13 +13529,13 @@ function _truRows(m){return (DB.trustee_reports||[]).filter(function(r){return r
 // and closed (max 20), eligible for the prize from 5 tasks.
 function _truScore(u,m){
   var rows=_truRows(m).filter(function(r){return (r.u||'')===u;});
-  var tasks={};rows.forEach(function(r){var t=parseInt(r.t,10);if(t>=1&&t<=8)tasks[t]=1;});
+  var tasks={};rows.forEach(function(r){var t=parseInt(r.t,10);if(_truTask(t))tasks[t]=1;});
   var nTasks=Object.keys(tasks).length;
   var closed=rows.filter(function(r){return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;}).length;
   var open=rows.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
-  var ptsTasks=Math.min(nTasks*TRUSTEE_PTS_TASK,TRUSTEE_MAX_TASK_PTS);
+  var ptsTasks=Math.min(nTasks*TRUSTEE_PTS_TASK,_truMaxTaskPts());
   var ptsClosed=Math.min(closed*TRUSTEE_PTS_CLOSED,TRUSTEE_MAX_CLOSED_PTS);
-  return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=TRUSTEE_MIN_TASKS,reports:rows.length};
+  return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=_truMinTasks(),reports:rows.length};
 }
 // ---- phase 2: the announced monthly winner ----
 // One row per month in DB.trustee_winners, id 'win_YYYY-MM' so re-announcing
@@ -13629,10 +13671,10 @@ function _truRender(){
     +'<div><div class="n">'+sc.closed+'</div><div class="l">\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5</div></div>'
     +'</div>';
   h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
-    +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(TRUSTEE_MIN_TASKS-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+')</span>')
+    +(sc.eligible?'<span class="b bG">\u2713 \u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1 \u05d4\u05d7\u05d5\u05d3\u05e9</span>':'<span class="b bY">\u05e2\u05d5\u05d3 '+(_truMinTasks()-sc.nTasks)+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 (\u2265'+_truMinTasks()+')</span>')
     +(sc.open?'<span class="b bR">'+sc.open+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>':'')+'</div>';
   h+='<button class="btn btn-p" id="tru-tour-btn" style="width:100%;margin:4px 0 10px" onclick="_truReport()">\ud83e\udded \u05d3\u05d5\u05d5\u05d7 \u05e1\u05d9\u05d5\u05e8 \u2014 \u05db\u05de\u05d4 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1\u05d1\u05ea \u05d0\u05d7\u05ea</button>';
-  h+=TRUSTEE_TASKS.map(function(t){
+  h+=_truTasksActive().map(function(t){
     var done=!!sc.tasks[t.n];
     return '<div class="tru-task'+(done?' done':'')+'" data-tru-task="'+t.n+'"><div class="ti">'+(done?'\u2705':t.icon)+'</div><div class="tt"><strong>'+t.n+'. '+esc(t.t)+'</strong><details><summary>\u05de\u05d4 \u05e2\u05d5\u05e9\u05d9\u05dd?</summary>'+esc(t.how)+'</details></div><button class="btn '+(done?'btn-s':'btn-p')+'" onclick="_truReport('+t.n+')">'+(done?'+ \u05e2\u05d5\u05d3':'\u05d3\u05d5\u05d5\u05d7')+'</button></div>';
   }).join('');
@@ -13688,7 +13730,7 @@ function _truFormSync(){
 }
 function _truFormRender(){
   var chips=g('tru-chips'),box=g('tru-tasks');if(!chips||!box)return;
-  var chipHtml=TRUSTEE_TASKS.map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
+  var chipHtml=_truTasksActive().map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
   var selN=Object.keys(_truForm.sel).length;
   // Opened from one task card: the other seven chips fold under one line so the
   // item block (\u05ea\u05e7\u05d9\u05df / \u05dc\u05d9\u05e7\u05d5\u05d9, photo) is on screen instead of below the fold.
@@ -13742,13 +13784,13 @@ function _truReport(n,ref){
     if(note){note.style.display='';note.textContent='\u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0: '+(orig?String(orig.f||'').substring(0,80):ref)+'. \u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 \u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05e1\u05d5\u05de\u05df "\u05e0\u05e1\u05d2\u05e8".';}
   }else{
     if(note)note.style.display='none';
-    n=parseInt(n,10);if(n>=1&&n<=8){_truForm.sel[n]=1;_truFormTask(n);}
+    n=parseInt(n,10);if(_truTask(n)){_truForm.sel[n]=1;_truFormTask(n);}
     _truLocPrefill();          // the area of whoever is reporting; typing wins
   }
   _truFormRender();
   openModal('m-tru');
 }
-function _truCloseReport(id){_truReport(8,id);}
+function _truCloseReport(id){_truReport(TRUSTEE_TASK_CLOSE,id);}
 function svTru(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   _truFormSync();
@@ -13760,7 +13802,7 @@ function svTru(){
   var ref=_truForm.lock?_truForm.ref:null;
   var locId=null;(typeof _locFlatList==='function'?_locFlatList():[]).forEach(function(l){if(!locId&&(l.name===loc||_locName(l.id)===loc))locId=l.id;});
   var rows=[],tour=gid(),ts=new Date().toISOString();
-  function row(n,ok,f,photo,detail){return {id:gid(),u:u,m:_truMonthKey(d),t:n,d:d,location_id:locId,loc:loc+(detail?' \u00b7 '+detail:''),ok:ok,f:f||null,photo_url:photo||null,s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN,ref:(n===8?ref:null),mgr_note:null,tour:tour,ts:ts};}
+  function row(n,ok,f,photo,detail){return {id:gid(),u:u,m:_truMonthKey(d),t:n,d:d,location_id:locId,loc:loc+(detail?' \u00b7 '+detail:''),ok:ok,f:f||null,photo_url:photo||null,s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN,ref:(n===TRUSTEE_TASK_CLOSE?ref:null),mgr_note:null,tour:tour,ts:ts};}
   for(var i=0;i<ns.length;i++){
     var n=ns[i],st=_truFormTask(n),tt=_truTask(n);
     if(_truForm.lock){
@@ -13817,7 +13859,7 @@ var TRUSTEE_NUDGE_DAYS=16;   // the home line appears from mid-month on
 function _truBehind(m){
   m=m||_truThisMonth();
   return _truRoster().map(function(t){return _truScore(t.n,m);})
-    .filter(function(sc){return sc.nTasks<TRUSTEE_MIN_TASKS;})
+    .filter(function(sc){return sc.nTasks<_truMinTasks();})
     .sort(function(a,b){return (a.nTasks-b.nTasks)||a.u.localeCompare(b.u,'he');});
 }
 // How long a hazard has been open, and the ones past the limit \u2014 any month.
@@ -13897,12 +13939,12 @@ function rTrustees(){
       +'<span style="flex:1;min-width:0">\ud83c\udfc6 <strong>\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9: '+esc(win.u)+'</strong>'+(win.pts!=null?' \u00b7 '+win.pts+' \u05e0\u05e7\u05f3':'')+(win.note?'<div style="font-size:11px;color:#92400e">'+esc(win.note)+'</div>':'')+'</span>'
       +'<button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truWinnerOpen()">\u05e9\u05e0\u05d4</button></div>';
     else if(board.some(function(x){return x.eligible;}))winHtml='<button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="_truWinnerOpen()">\ud83c\udfc6 \u05d4\u05db\u05e8\u05d6 \u05d6\u05d5\u05db\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</button>';
-    else if(board.length)winHtml='<div style="font-size:12px;color:var(--t2);text-align:center;margin-bottom:10px">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d6\u05db\u05d0\u05d9\u05dd \u05dc\u05e4\u05e8\u05e1 (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea)</div>';
+    else if(board.length)winHtml='<div style="font-size:12px;color:var(--t2);text-align:center;margin-bottom:10px">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d6\u05db\u05d0\u05d9\u05dd \u05dc\u05e4\u05e8\u05e1 (\u2265'+_truMinTasks()+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea)</div>';
     if(!board.length)bEl.innerHTML=winHtml+'<div class="et" style="text-align:center;padding:14px;color:var(--t2)">\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4</div>';
     else bEl.innerHTML=winHtml+board.map(function(x,i){
       var medal=i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':i===2?'\ud83e\udd49':(i+1)+'.';
-      var chips=TRUSTEE_TASKS.map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
-      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+TRUSTEE_MIN_TASKS+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
+      var chips=_truTasksActive().map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
+      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+_truMinTasks()+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
     }).join('');
   }
   var cov=g('tru-mgr-cov'),covCard=g('tru-mgr-cov-card');
@@ -14048,6 +14090,101 @@ function _truRosterToggle(id){
   t.active=(t.active===false);sbUpd('trustees',t);sdb();
   _truRosterRender();_truFillLists();rTrustees();
 }
+// ---- the monthly task catalogue (manager) ----
+// Editing the wording of a task is always safe: reports point at the NUMBER.
+// Reusing a number for a different task is not, so the editor never renumbers,
+// deactivates instead of deleting, and refuses to delete a task any report
+// still references. Task 8 is the closure mechanism and is protected further.
+function _truTasksUsed(n){return (DB.trustee_reports||[]).filter(function(r){return r&&parseInt(r.t,10)===n;}).length;}
+function _truTasksSeeded(){return ((DB.trustee_tasks||[]).filter(function(t){return t&&t.n;})).length>0;}
+function _truTasksOpen(){_truTasksEditCancel();_truTasksRender();openModal('m-tru-tasks');}
+function _truTasksRender(){
+  var box=g('tru-tasks-list');if(!box)return;
+  var warn=g('tru-tasks-warn');
+  if(warn){
+    if(!_truTasksSeeded()){
+      warn.style.display='';
+      warn.innerHTML='\u26a0 \u05d4\u05d8\u05d1\u05dc\u05d4 <code>trustee_tasks</code> \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1-Supabase, \u05dc\u05db\u05df \u05de\u05d5\u05e6\u05d2\u05d5\u05ea \u05db\u05d0\u05df 8 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d4\u05de\u05d5\u05d1\u05e0\u05d5\u05ea \u05d1\u05e7\u05d5\u05d3 \u05d5\u05d0\u05d9-\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e2\u05e8\u05d5\u05da \u05d0\u05d5\u05ea\u05df. \u05d4\u05e8\u05e5 \u05d0\u05ea <code>migrations/2026-09-19_trustee_tasks.sql</code> \u05d5\u05e8\u05e2\u05e0\u05df.';
+    }else warn.style.display='none';
+  }
+  var rows=_truTasks();
+  box.innerHTML=rows.map(function(t){
+    var off=t.active===false,lock=(t.n===TRUSTEE_TASK_CLOSE),used=_truTasksUsed(t.n);
+    var edit=_truTasksSeeded()
+      ? '<button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksEdit(this.dataset.tn)">\u05e2\u05e8\u05d5\u05da</button>'
+        +(lock?'':' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksToggle(this.dataset.tn)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button>'
+          +' <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksDel(this.dataset.tn)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button>')
+      : '';
+    return '<div class="tru-rep" data-tru-task="'+t.n+'"><span style="flex:1;min-width:0">'
+      +'<strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.icon||'')+' '+t.n+'. '+esc(t.t)+'</strong>'
+      +(lock?' <span class="b bB">\ud83d\udd12 \u05de\u05e9\u05d9\u05de\u05ea \u05d4\u05e1\u05d2\u05d9\u05e8\u05d4</span>':'')
+      +(used?' <span class="b bY">'+used+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd</span>':'')
+      +(t.how?'<div style="font-size:11px;color:var(--t2);margin-top:2px">'+esc(String(t.how).substring(0,110))+(String(t.how).length>110?'\u2026':'')+'</div>':'')
+      +'</span><span style="white-space:nowrap">'+edit+'</span></div>';
+  }).join('');
+}
+function _truTasksEditCancel(){
+  ['tru-tasks-edit','tru-tasks-icon','tru-tasks-t','tru-tasks-how'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  var ttl=g('tru-tasks-formtitle');if(ttl)ttl.innerHTML='\u2795 \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4';
+  var sv=g('tru-tasks-save');if(sv)sv.textContent='+ \u05d4\u05d5\u05e1\u05e3 \u05de\u05e9\u05d9\u05de\u05d4';
+  var cx=g('tru-tasks-cancel');if(cx)cx.style.display='none';
+}
+function _truTasksEdit(n){
+  n=parseInt(n,10);var t=_truTask(n);if(!t)return;
+  g('tru-tasks-edit').value=String(n);
+  g('tru-tasks-icon').value=t.icon||'';
+  g('tru-tasks-t').value=t.t||'';
+  g('tru-tasks-how').value=t.how||'';
+  g('tru-tasks-formtitle').innerHTML='\u270f\ufe0f \u05e2\u05e8\u05d9\u05db\u05ea \u05de\u05e9\u05d9\u05de\u05d4 '+n;
+  g('tru-tasks-save').textContent='\u05e9\u05de\u05d5\u05e8 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd';
+  g('tru-tasks-cancel').style.display='';
+  try{g('tru-tasks-t').focus();}catch(e){}
+}
+function _truTasksSave(){
+  if(!_truTasksSeeded()){toast('\u05d4\u05e8\u05e5 \u05e7\u05d5\u05d3\u05dd \u05d0\u05ea \u05d4\u05de\u05d9\u05d2\u05e8\u05e6\u05d9\u05d4');return;}
+  var title=gv('tru-tasks-t');
+  if(!title){toast('\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var icon=gv('tru-tasks-icon')||null,how=gv('tru-tasks-how')||null;
+  var editN=parseInt(gv('tru-tasks-edit'),10);
+  if(editN){
+    var row=(DB.trustee_tasks||[]).filter(function(x){return x.n===editN;})[0];
+    if(!row){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+    row.icon=icon;row.t=title;row.how=how;
+    sbUpd('trustee_tasks',row);sdb();
+    toast('\u05e2\u05d5\u05d3\u05db\u05df \u2713');
+  }else{
+    var ns=_truTasks().map(function(x){return x.n;});
+    var next=Math.max.apply(null,ns.concat([0]))+1;
+    var r={id:gid(),n:next,icon:icon,t:title,how:how,active:true,ts:new Date().toISOString()};
+    if(!DB.trustee_tasks)DB.trustee_tasks=[];
+    DB.trustee_tasks.push(r);sbIns('trustee_tasks',r);sdb();
+    toast('\u05de\u05e9\u05d9\u05de\u05d4 '+next+' \u05e0\u05d5\u05e1\u05e4\u05d4 ✓');
+  }
+  _truTasksEditCancel();_truTasksRender();_truRender();rTrustees();
+}
+function _truTasksToggle(n){
+  n=parseInt(n,10);
+  if(n===TRUSTEE_TASK_CLOSE)return;
+  var row=(DB.trustee_tasks||[]).filter(function(x){return x.n===n;})[0];if(!row)return;
+  var turningOff=(row.active!==false);
+  if(turningOff&&_truTasksReportable().length<=1){toast('\u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05dc\u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea \u05e4\u05e2\u05d9\u05dc\u05d4');return;}
+  row.active=!turningOff;
+  sbUpd('trustee_tasks',row);sdb();
+  _truTasksRender();_truRender();rTrustees();
+}
+function _truTasksDel(n){
+  n=parseInt(n,10);
+  if(n===TRUSTEE_TASK_CLOSE){toast('\u05de\u05e9\u05d9\u05de\u05ea \u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05d9\u05e9\u05d0\u05e8');return;}
+  var row=(DB.trustee_tasks||[]).filter(function(x){return x.n===n;})[0];if(!row)return;
+  var used=_truTasksUsed(n);
+  if(used){
+    alert('\u05d0\u05d9-\u05d0\u05e4\u05e9\u05e8 \u05dc\u05de\u05d7\u05d5\u05e7 \u2014 '+used+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05de\u05e6\u05d1\u05d9\u05e2\u05d9\u05dd \u05e2\u05dc \u05de\u05e9\u05d9\u05de\u05d4 '+n+'. \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u00ab\u05d4\u05e9\u05d1\u05ea\u00bb: \u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05dc\u05d0 \u05ea\u05d5\u05e6\u05e2 \u05dc\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d7\u05d3\u05e9, \u05d5\u05d4\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4 \u05e0\u05e9\u05d0\u05e8\u05ea \u05e7\u05e8\u05d9\u05d0\u05d4.');
+    return;
+  }
+  if(_truTasksReportable().length<=1&&row.active!==false){toast('\u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05dc\u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea \u05e4\u05e2\u05d9\u05dc\u05d4');return;}
+  askDel('trustee_tasks',row.id);
+}
+
 // ---- phase 2: announce the month's winner + winners history (manager) ----
 function _truWinnerOpen(){_truWinnerRender();openModal('m-tru-winner');}
 function _truWinnerRender(){
@@ -14065,8 +14202,8 @@ function _truWinnerRender(){
   var nt=g('tru-win-note');if(nt)nt.value=(cur&&cur.note)?cur.note:'';
   var hint=g('tru-win-hint');
   if(hint)hint.innerHTML=cur?('\u05d4\u05d7\u05d5\u05d3\u05e9 \u05db\u05d1\u05e8 \u05d4\u05d5\u05db\u05e8\u05d6: <strong>'+esc(cur.u)+'</strong> \u2014 \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05d6\u05d5\u05db\u05d4.')
-    :(elig.length?(elig.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d6\u05db\u05d0\u05d9\u05dd (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea). \u05d4\u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d6\u05db\u05d0\u05d9 \u05e0\u05d1\u05d7\u05e8 \u05de\u05e8\u05d0\u05e9.')
-      :('\u26a0 \u05d0\u05e3 \u05e0\u05d0\u05de\u05df \u05dc\u05d0 \u05e2\u05d1\u05e8 \u05d0\u05ea \u05e1\u05e3 \u05d4\u05d6\u05db\u05d0\u05d5\u05ea (\u2265'+TRUSTEE_MIN_TASKS+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea) \u05d4\u05d7\u05d5\u05d3\u05e9.'));
+    :(elig.length?(elig.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d6\u05db\u05d0\u05d9\u05dd (\u2265'+_truMinTasks()+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea). \u05d4\u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d6\u05db\u05d0\u05d9 \u05e0\u05d1\u05d7\u05e8 \u05de\u05e8\u05d0\u05e9.')
+      :('\u26a0 \u05d0\u05e3 \u05e0\u05d0\u05de\u05df \u05dc\u05d0 \u05e2\u05d1\u05e8 \u05d0\u05ea \u05e1\u05e3 \u05d4\u05d6\u05db\u05d0\u05d5\u05ea (\u2265'+_truMinTasks()+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea) \u05d4\u05d7\u05d5\u05d3\u05e9.'));
   var hist=g('tru-win-hist');
   if(hist){
     var ws=_truWinnersDesc();
@@ -14080,7 +14217,7 @@ function _truWinnerSave(){
   var m=_truMgrMonth(),u=gv('tru-win-u');
   if(!u){toast('\u05d0\u05d9\u05df \u05de\u05d5\u05e2\u05de\u05d3 \u05dc\u05d1\u05d7\u05d9\u05e8\u05d4');return;}
   var sc=_truScore(u,m),note=gv('tru-win-note')||null,cur=_truWinnerOf(m);
-  if(!DB.trustee_winners)DB.trustee_winners=[];
+  if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];
   if(cur){cur.u=u;cur.pts=sc.total;cur.note=note;sbUpd('trustee_winners',cur);}
   else{var r={id:'win_'+m,m:m,u:u,pts:sc.total,note:note,ts:new Date().toISOString()};DB.trustee_winners.push(r);sbIns('trustee_winners',r);}
   addLog('\u05d6\u05d5\u05db\u05d4 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' ('+m+')');
@@ -14090,6 +14227,7 @@ function _truWinnerSave(){
 function _truMgrMenu(anchor){
   _popMenu(anchor,'tru-mgr-menu',function(item,sep){
     item('\ud83d\udc65','\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',_truRosterOpen);
+    item('\ud83d\udccb','\u05e7\u05d8\u05dc\u05d5\u05d2 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea',_truTasksOpen);
     item('\ud83c\udfc6','\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9 + \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4',_truWinnerOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
     item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
@@ -15827,7 +15965,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();
