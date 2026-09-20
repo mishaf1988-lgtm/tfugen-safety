@@ -2396,6 +2396,7 @@ id="m-ncr" style="display:none">
   </div>
   <div id="tru-tasks"></div>
   <div class="tru-danger">&#128680; <strong>סכנה מיידית?</strong> מתקשרים לממונה הבטיחות מיד — לא ממתינים לדיווח. מגן מכונה שהוסר או נוטרל ו"כמעט ונפגע" נכנסים לכאן.</div>
+  <div id="tru-form-status" style="font-size:12px;line-height:1.5;margin-top:10px;min-height:18px"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru')">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
 </div>
 
@@ -2411,6 +2412,16 @@ id="m-ncr" style="display:none">
     <div class="field"><label>מחלקה / אזור אחריות</label><input id="tru-roster-dep" placeholder="למשל: ייצור ואריזה"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-roster')">סגור</button><button class="btn btn-p" onclick="_truRosterAdd()">+ הוסף נאמן</button></div>
+</div>
+
+<!-- TRUSTEE LINK (2026-09-20) — the ?emp=1 deep link, ready to paste into WhatsApp -->
+<div class="overlay" id="ov-tru-link" onclick="closeModal('m-tru-link')"></div>
+<div class="modal" id="m-tru-link" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru-link')">&#10005;</button>
+  <div class="modal-title">&#128279; קישור לנאמנים</div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">שלח את הקישור הזה לנאמנים. מי שפותח אותו נוחת ישר במסך הדיווח — בלי סיסמה ובלי מסך כניסה. כדאי שכל נאמן ישמור אותו במסך הבית של הטלפון.</div>
+  <input id="tru-link-url" readonly onclick="this.select()" style="width:100%;font:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;direction:ltr;text-align:left">
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-link')">סגור</button><button class="btn btn-s" style="min-height:44px" onclick="_truLinkCopy()">&#128203; העתק</button><button class="btn btn-p" style="min-height:44px;background:#25D366;border-color:#25D366" onclick="_truLinkShare()">&#128241; שתף</button></div>
 </div>
 
 <!-- TRUSTEE TASK CATALOGUE (manager) -->
@@ -14205,6 +14216,52 @@ function _truDraftCheck(){
   toast('\u05d4\u05e1\u05d9\u05d5\u05e8 \u05e9\u05d5\u05d7\u05d6\u05e8 \u05de'+ageLabel);
   return true;
 }
+// ---- what is still missing, before the worker taps send (2026-09-20) ----
+// svTru rejects on the first problem with a toast, so a worker learned what
+// was wrong one item at a time, after tapping. The same checks, in the same
+// order, now run as the form is filled.
+function _truFormBlocker(){
+  if(_attachBusy())return {wait:1,msg:'\u05de\u05e2\u05dc\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4\u2026'};
+  if(!_truNameVal('tru-u','tru-u-other'))return {msg:'\u05d7\u05e1\u05e8 \u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df'};
+  if(!gv('tru-loc'))return {msg:'\u05d7\u05e1\u05e8 \u05de\u05d9\u05e7\u05d5\u05dd'};
+  var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
+  if(!ns.length)return {msg:'\u05e1\u05de\u05df \u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea'};
+  for(var i=0;i<ns.length;i++){
+    var n=ns[i],st=_truFormTask(n);
+    if(_truForm.lock){
+      if(!_attachUrls[_truPhId(n,'ok')])return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9"'};
+      continue;
+    }
+    for(var j=0;j<st.items.length;j++){
+      var it=st.items[j],ph=_attachUrls[_truPhId(n,it.k)],lbl=' \u2014 \u05de\u05e9\u05d9\u05de\u05d4 '+n+(st.items.length>1?', \u05e4\u05e8\u05d9\u05d8 '+(j+1):'');
+      if(it.ok!==true&&it.ok!==false)return {msg:'\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
+      if(it.ok===true){if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4'+lbl};continue;}
+      if(!String(it.f||'').trim())return {msg:'\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
+      if(!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
+    }
+  }
+  return null;
+}
+function _truFormStatus(){
+  var el=g('tru-form-status');if(!el)return;
+  var mo=g('m-tru');
+  if(!mo||mo.style.display!=='block'){el.innerHTML='';return;}
+  _truFormSync();
+  var ns=Object.keys(_truForm.sel).map(Number),nItems=0,nBad=0;
+  ns.forEach(function(n){
+    _truFormTask(n).items.forEach(function(it){nItems++;if(it.ok===false)nBad++;});
+  });
+  var sum=ns.length?(ns.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u00b7 '+nItems+' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd'+(nBad?' \u00b7 '+nBad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd':'')):'';
+  var b=_truFormBlocker();
+  if(b)el.innerHTML='<span style="color:'+(b.wait?'#92400e':'#cc1f1f')+';font-weight:700">'+(b.wait?'\u23f3 ':'\u26a0 ')+esc(b.msg)+'</span>'+(sum?'<span style="color:var(--t2)"> \u00b7 '+esc(sum)+'</span>':'');
+  else el.innerHTML='<span style="color:#15803d;font-weight:700">\u2713 \u05de\u05d5\u05db\u05df \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4</span>'+(sum?'<span style="color:var(--t2)"> \u00b7 '+esc(sum)+'</span>':'');
+}
+// One delegated listener: the fields are rebuilt on every render.
+function _truFormStatusBind(){
+  var mo=g('m-tru');if(!mo||mo._truBound)return;
+  mo._truBound=1;
+  ['input','change'].forEach(function(ev){mo.addEventListener(ev,function(){_truFormStatus();});});
+}
 function _truFormRender(){
   var chips=g('tru-chips'),box=g('tru-tasks');if(!chips||!box)return;
   var chipHtml=_truTasksActive().map(function(t){return '<button type="button" class="tru-chip'+(_truForm.sel[t.n]?' on':'')+'"'+(_truForm.lock?' disabled':'')+' data-tru-chip="'+t.n+'" onclick="_truFormToggle('+t.n+')">'+t.icon+' '+t.n+'. '+esc(t.t)+'</button>';}).join('');
@@ -14240,6 +14297,7 @@ function _truFormRender(){
     return h+'</div>';
   }).join('');
   areas.forEach(function(id){if(g(id))_attachLoad(id,_attachUrls[id]||null);});
+  _truFormStatusBind();_truFormStatus();
 }
 function _truFormToggle(n){if(_truForm.lock)return;_truFormSync();if(_truForm.sel[n]){delete _truForm.sel[n];}else{_truForm.sel[n]=1;_truFormTask(n);}_truFormRender();}
 function _truFormSetOk(n,k,ok){_truFormSync();var it=_truFormItem(n,k);if(it)it.ok=ok;_truFormRender();}
@@ -14718,9 +14776,36 @@ function _truWinnerSave(){
   sdb();toast('\ud83c\udfc6 \u05d4\u05d6\u05d5\u05db\u05d4 \u05d4\u05d5\u05db\u05e8\u05d6 \u2713');
   _truWinnerRender();rTrustees();if(typeof _truRender==='function')_truRender();
 }
+// ---- the trustee link (2026-09-20) ----
+// ?emp=1 already lands straight on the report screen (see the boot block), but
+// the manager had no way to get that address. Sent once in the group, a worker
+// never meets the login screen again.
+function _truLinkUrl(){try{return location.origin+location.pathname+'?emp=1';}catch(e){return '';}}
+function _truLinkOpen(){var i=g('tru-link-url');if(i)i.value=_truLinkUrl();openModal('m-tru-link');}
+function _truLinkCopied(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7 \u2713');}
+function _truLinkCopy(){
+  var u=_truLinkUrl();
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(_truLinkCopied,_truLinkCopyFallback);return;}
+  }catch(e){}
+  _truLinkCopyFallback();
+}
+// Safari refuses the async clipboard outside a user gesture chain; selecting
+// the field and using execCommand still works there.
+function _truLinkCopyFallback(){
+  var i=g('tru-link-url');if(!i){toast('\u05e1\u05de\u05df \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05e2\u05ea\u05e7 \u05d9\u05d3\u05e0\u05d9\u05ea');return;}
+  try{i.focus();i.select();i.setSelectionRange(0,999);document.execCommand('copy');_truLinkCopied();}
+  catch(e){toast('\u05e1\u05de\u05df \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05e2\u05ea\u05e7 \u05d9\u05d3\u05e0\u05d9\u05ea');}
+}
+function _truLinkShare(){
+  var u=_truLinkUrl(),txt='\ud83e\uddba \u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05ea\u05e4\u05d5\u05d2\u05df: '+u;
+  try{if(navigator.share){navigator.share({title:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',text:txt,url:u})['catch'](function(){});return;}}catch(e){}
+  try{window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');}catch(e){toast('\u05d4\u05e2\u05ea\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d9\u05d3\u05e0\u05d9\u05ea');}
+}
 function _truMgrMenu(anchor){
   _popMenu(anchor,'tru-mgr-menu',function(item,sep){
     item('\ud83d\udc65','\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',_truRosterOpen);
+    item('\ud83d\udd17','\u05e9\u05dc\u05d7 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',_truLinkOpen);
     item('\ud83d\udccb','\u05e7\u05d8\u05dc\u05d5\u05d2 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea',_truTasksOpen);
     item('\ud83c\udfc6','\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9 + \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4',_truWinnerOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
@@ -16010,6 +16095,7 @@ function _attachRenderPending(areaId,blob,pid){
   area.innerHTML=(src?'<img src="'+src+'" alt="" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block">':'')
     +'<div style="margin-top:6px;padding:8px 10px;background:#fef9c3;border:1px solid #f59e0b;border-radius:8px;font-size:12px;color:#92400e;line-height:1.5">\u23f3 <strong>\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8</strong><br>\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u2014 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05ea\u05e2\u05dc\u05d4 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05d9\u05d4\u05d9\u05d4 \u05d7\u05d9\u05d1\u05d5\u05e8.</div>'
     +'<button type="button" class="btn btn-d btn-sm" style="margin-top:6px;min-height:44px" data-pid="'+esc(pid)+'" data-aid="'+esc(areaId)+'" onclick="_attachClear(this.dataset.aid)">\u05d4\u05e1\u05e8</button>';
+  if(typeof _truFormStatus==='function')_truFormStatus();
 }
 
 // ---- offline photo queue: send ----
@@ -18249,6 +18335,7 @@ function _attachRender(areaId,url,fname){
     ?'<a data-sign="'+escU(url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(url)+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
     :'<a data-sign="'+escU(url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname?esc(fname):'\u05e7\u05d5\u05d1\u05e5')+'</a>';
   area.innerHTML=preview+'<br><button class="btn btn-d btn-sm" style="margin-top:6px" onclick="_attachClear(\''+areaId+'\')">\u05d4\u05e1\u05e8</button>';_signifyDom(area);
+  if(typeof _truFormStatus==='function')_truFormStatus();
 }
 
 function _attachPick(areaId,prefix){
@@ -18286,6 +18373,7 @@ function _attachClear(areaId){
   _attachUrls[areaId]=null;
   var area=g(areaId);
   if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';
+  if(typeof _truFormStatus==='function')_truFormStatus();
 }
 
 function _attachLoad(areaId,url,prefix){

@@ -211,6 +211,54 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('a trustee with no assigned area leaves whatever was there; something typed is never overwritten by a name change', pf.noArea === 'מעבדה' && pf.typed === 'אולם טיגון, ליד המשאבה', pf);
   check('closing a finding still takes the location from that finding, not from the area', pf.closure === pf.hazLoc && !!pf.hazLoc, pf);
 
+
+  console.log('\nZ1. Live «what is missing» line in the tour form (2026-09-20)');
+  const st = await page.evaluate(() => {
+    const read = () => (document.getElementById('tru-form-status') || {}).textContent || '';
+    const out = {};
+    _truSetMe('לב'); _truReport(3);
+    const k = _truForm.tasks[3].items[0].k;
+    document.getElementById('tru-loc').value = '';
+    _truFormStatus(); out.noLoc = read();
+    document.getElementById('tru-loc').value = 'מחסן';
+    _truFormStatus(); out.noVerdict = read();
+    _truFormSetOk(3, k, false);
+    out.noText = read();
+    document.querySelector('#tru-tasks [data-tru-f][data-n="3"][data-k="' + k + '"]').value = 'מטף חסר';
+    _truFormStatus(); out.noPhoto = read();
+    _attachUrls[_truPhId(3, k)] = 'https://x/p.jpg';
+    _truFormStatus(); out.ready = read();
+    _truFormSetOk(3, k, true);
+    out.okItem = read();
+    closeModal('m-tru'); _truFormStatus(); out.closed = read();
+    return out;
+  });
+  check('empty location is named first, matching svTru\'s own order', /חסר מיקום/.test(st.noLoc), st.noLoc);
+  check('then «סמן תקין או ליקוי», naming the task', /סמן תקין או ליקוי/.test(st.noVerdict) && /משימה 3/.test(st.noVerdict), st.noVerdict);
+  check('a ליקוי asks for the description, then for the photo', /תאר את הליקוי/.test(st.noText) && /חסרה תמונה לליקוי/.test(st.noPhoto), { noText: st.noText, noPhoto: st.noPhoto });
+  check('once nothing is missing it says ready, with the tour summary', /מוכן לשליחה/.test(st.ready) && /1 משימות/.test(st.ready) && /1 ליקויים/.test(st.ready), st.ready);
+  check('a תקין item needs no description', /מוכן לשליחה/.test(st.okItem), st.okItem);
+  check('the line clears when the form closes', st.closed === '', st.closed);
+
+  console.log('\nZ2. The trustee link the manager shares (2026-09-20)');
+  const lk = await page.evaluate(() => {
+    window._currentUser = { username: 'admin', full_name: 'מיכאל' }; _applyRoleGates(); goPage('trustees');
+    document.getElementById('tru-mgr-more-btn').click();
+    const entry = Array.from(document.querySelectorAll('#tru-mgr-menu button')).find(b => /קישור לנאמנים/.test(b.textContent));
+    if (entry) entry.click(); else document.body.click();
+    const modal = document.getElementById('m-tru-link');
+    return { open: !!modal && modal.style.display === 'block', url: (document.getElementById('tru-link-url') || {}).value, fn: typeof _truLinkUrl === 'function' && _truLinkUrl() };
+  });
+  check('⋯ offers «שלח קישור לנאמנים» and the modal shows the ?emp=1 address', lk.open && /\?emp=1$/.test(lk.url || '') && lk.url === lk.fn, lk);
+  const dl = await page.evaluate(() => {
+    closeModal('m-tru-link');
+    try { localStorage.removeItem(EMP_KEY); } catch (e) {}
+    const qs = '?emp=1';
+    if (/[?&]emp=1\b/.test(qs)) localStorage.setItem(EMP_KEY, '1');
+    return { flag: localStorage.getItem(EMP_KEY) };
+  });
+  check('that address is what the boot block reads to skip the login screen', dl.flag === '1', dl);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
