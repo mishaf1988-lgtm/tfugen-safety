@@ -6,7 +6,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 function world(opts) {
   const calls = [];
-  const st = { row: opts.row, prefs: opts.prefs, signOk: opts.signOk, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false };
+  const st = { row: opts.row, prefs: opts.prefs, signOk: opts.signOk, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
   globalThis.fetch = async (url, init) => {
     const u = String(url); const method = (init && init.method) || 'GET'; const body = init && init.body ? JSON.parse(init.body) : null;
     calls.push({ u, method, body, headers: init && init.headers });
@@ -14,6 +14,14 @@ function world(opts) {
     if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false } : { error: 'bad' }, st.authOk ? 200 : 401);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'GET') return json(st.row ? [st.row] : []);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; return json([{ id: st.row.id }]); }
+    // The catalogue table. undefined = the 2026-09-19 migration has not run,
+    // which is the state production is in today.
+    if (u.startsWith(SB + '/rest/v1/trustee_tasks')) {
+      if (st.tasksStatus) return new Response('{"message":"relation does not exist"}', { status: st.tasksStatus });
+      const n = parseInt((u.match(/n=eq\.(\d+)/) || [])[1], 10);
+      const t = st.tasks && st.tasks[n];
+      return json(t ? [{ t }] : []);
+    }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json(st.prefs ? [{ prefs: st.prefs }] : []);
     if (u.startsWith(SB + '/rest/v1/notifications_log')) return new Response('', { status: 201 });
     if (u.includes('graph.facebook.com')) {
@@ -57,6 +65,36 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('signing fails → the mail still goes out', !!resend, w.calls.map((c) => c.u));
     check('...with no photo link at all, rather than one that answers 400', resend && !/incidents-photos/.test(resend.body.html), resend && resend.body.html.slice(0, 200));
     check('...and the finding itself is still there', resend && /ללא פלומבה/.test(resend.body.html));
+  }
+
+  console.log('\n1b. the task name comes from the catalogue the manager edits');
+  {
+    // Once migrations/2026-09-19_trustee_tasks.sql has run, renaming a task in
+    // the app is the whole point of that table. The notification still went
+    // out in the wording frozen into this file.
+    const w = world({ row: fresh(), prefs: prefsOn, tasks: { 5: 'עמדות כיבוי אש ומטפים' } });
+    await onRequest({ request: req({ id: 'r1' }), env });
+    const meta = w.calls.filter((c) => c.u.includes('graph.facebook.com'));
+    const resend = w.calls.find((c) => c.u.includes('resend'));
+    const log = w.calls.find((c) => c.u.includes('notifications_log'));
+    check('the function reads trustee_tasks for the row\u2019s number', w.calls.some((c) => /trustee_tasks\?n=eq\.5/.test(c.u)), w.calls.map((c) => c.u));
+    check('WhatsApp carries the renamed task, not the frozen wording', meta.length && /עמדות כיבוי אש ומטפים/.test(meta[meta.length - 1].body.template.components[0].parameters.map((p) => p.text).join('|')), meta.map((m) => m.body.template.components[0].parameters));
+    check('...and so does the email subject', resend && /עמדות כיבוי אש ומטפים/.test(resend.body.subject + resend.body.html), resend && resend.body.subject);
+    check('...and the log line, which is what the manager reads back later', log && /עמדות כיבוי אש ומטפים/.test(JSON.stringify(log.body)), log && log.body[0]);
+  }
+  {
+    // Today, and for any row the table does not carry: the built-in map.
+    const w = world({ row: fresh(), prefs: prefsOn, tasksStatus: 404 });
+    const r = await onRequest({ request: req({ id: 'r1' }), env });
+    const meta = w.calls.filter((c) => c.u.includes('graph.facebook.com'));
+    check('the table missing does not stop the notification', r.status === 200 && meta.length > 0, r.status);
+    check('...it falls back to the built-in name', /עמדות כיבוי אש/.test(meta[meta.length - 1].body.template.components[0].parameters.map((p) => p.text).join('|')), meta[meta.length - 1].body.template.components[0].parameters);
+  }
+  {
+    const w = world({ row: Object.assign(fresh(), { t: 11 }), prefs: prefsOn, tasks: { 5: 'x' } });
+    await onRequest({ request: req({ id: 'r1' }), env });
+    const meta = w.calls.filter((c) => c.u.includes('graph.facebook.com'));
+    check('a number nobody has named still gets a readable subject', /משימה 11/.test(meta[meta.length - 1].body.template.components[0].parameters.map((p) => p.text).join('|')), meta[meta.length - 1].body.template.components[0].parameters);
   }
 
   console.log('\n2. once only, and the guards');

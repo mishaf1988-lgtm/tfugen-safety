@@ -793,7 +793,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="emp-btn o" onclick="empReport('eqi')"><span class="emi">&#128295;</span>&#1514;&#1511;&#1500;&#1492;<br>&#1489;&#1510;&#1497;&#1493;&#1493;&#1491;</button>
     <button class="emp-btn y" onclick="empReport('round')"><span class="emi">&#9728;</span>&#1505;&#1489;&#1489;<br>&#1489;&#1493;&#1511;&#1512;</button>
     <button class="emp-btn b" onclick="empReport('tr')"><span class="emi">&#127891;</span>&#1491;&#1497;&#1493;&#1493;&#1495;<br>&#1492;&#1491;&#1512;&#1499;&#1492;</button>
-    <button class="emp-btn g wide" id="emp-trustee-btn" onclick="_truOpen()"><span class="emi">&#129466;</span><span>נאמן בטיחות<br><small style="font-weight:400;font-size:12px;color:var(--t2)">8 המשימות החודשיות · דיווח · ניקוד</small></span></button>
+    <button class="emp-btn g wide" id="emp-trustee-btn" onclick="_truOpen()"><span class="emi">&#129466;</span><span>נאמן בטיחות<br><small style="font-weight:400;font-size:12px;color:var(--t2)"><span id="tru-n-btn">8</span> המשימות החודשיות · דיווח · ניקוד</small></span></button>
   </div>
   <div id="emp-sync" style="margin-top:14px;background:#fff7ed;border:1px solid #f59e0b;border-radius:12px;padding:12px;display:none">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1505;&#1493;&#1504;&#1499;&#1512;&#1503; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1497;&#1492;&#1497;&#1492; &#1495;&#1497;&#1489;&#1493;&#1512;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
@@ -812,10 +812,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <details id="tru-intro" class="card" style="padding:10px 12px;margin-bottom:10px">
       <summary style="cursor:pointer;font-weight:700;font-size:14px">&#8505;&#65039; איך זה עובד? — כמה מילים על התהליך</summary>
       <div style="font-size:13px;line-height:1.6;margin-top:8px">
-        <div>1. <strong>8 משימות בחודש</strong> (הרשימה למטה). כל משימה פעם אחת בחודש, בזמן שנוח לך.</div>
+        <div>1. <strong><span id="tru-n-intro">8</span> משימות בחודש</strong> (הרשימה למטה). כל משימה פעם אחת בחודש, בזמן שנוח לך.</div>
         <div>2. <strong>מדווחים כאן במקום בוואטסאפ.</strong> בסיור אחד אפשר לסמן כמה משימות, ובכל משימה כמה עמדות או מפגעים (למשל 3 מטפים — 2 תקינים ואחד לא). לכל דיווח מיקום, ולכל ליקוי תמונה.</div>
         <div>3. <strong>ליקוי עובר לממונה הבטיחות לניתוב.</strong> אתם לא אחראים לתקן — לאתר, לדווח, ולבדוק שתוקן («צלם אחרי»).</div>
-        <div>4. <strong>ניקוד:</strong> 10 לכל משימה (עד 80) + 2 לכל מפגע שדיווחתם ונסגר (עד 20). מועמדות לפרס מ-5 משימות.</div>
+        <div>4. <strong>ניקוד:</strong> <span id="tru-score-rules">10 לכל משימה (עד 80) + 2 לכל מפגע שדיווחתם ונסגר (עד 20). מועמדות לפרס מ-5 משימות.</span></div>
         <div>5. <strong>התחרות חודשית</strong> — ב-1 לחודש הניקוד מתאפס ומתחילים מחדש. כאן רואים את ההתקדמות שלכם ומי מוביל.</div>
         <div style="color:#991b1b">&#128680; סכנה מיידית — מתקשרים לממונה הבטיחות מיד, לא ממתינים לדיווח.</div>
       </div>
@@ -1204,7 +1204,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="tru-mgr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card">
-    <div class="card-title">&#127942; לוח ניקוד <span style="font-weight:400;font-size:11px;color:var(--t2)">10 לכל משימה (מקס׳ 80) · 2 לכל מפגע שנסגר (מקס׳ 20) · זכאות לפרס מ-5 משימות</span></div>
+    <div class="card-title">&#127942; לוח ניקוד <span id="tru-mgr-scorenote" style="font-weight:400;font-size:11px;color:var(--t2)">10 לכל משימה (מקס׳ 80) · 2 לכל מפגע שנסגר (מקס׳ 20) · זכאות לפרס מ-5 משימות</span></div>
     <div id="tru-mgr-board"></div>
   </div>
   <div class="card" id="tru-mgr-cov-card">
@@ -2408,6 +2408,7 @@ id="m-ncr" style="display:none">
   <div class="modal-title">&#128101; רשימת הנאמנים</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">הנאמנים שמוצעים לבחירה בדיווח. נאמן מושבת נשאר בהיסטוריה ובלוח, אבל לא מוצע לבחירה.</div>
   <div id="tru-roster-list"></div>
+  <div id="tru-roster-ghosts" style="margin-top:12px"></div>
   <div class="fgrid" style="margin-top:12px">
     <div class="field"><label>שם *</label><input id="tru-roster-n" placeholder="שם הנאמן"></div>
     <div class="field"><label>מחלקה / אזור אחריות</label><input id="tru-roster-dep" placeholder="למשל: ייצור ואריזה"></div>
@@ -4932,6 +4933,7 @@ function _todayClick(fn,a1,a2){
   if(fn==='tasks'){goPage('tasks');if(typeof tskFilter==='function')tskFilter(a1||'all');return;}
   if(fn==='ncrcapa'){goPage('ncr');if(typeof ncrQuickFilter==='function')ncrQuickFilter('capa');return;}
   if(fn==='trustee'){if(typeof _truGo==='function')_truGo(a1,a2);else goPage('trustees');return;}
+  if(fn==='truwinner'){if(typeof _truGoMonth==='function')_truGoMonth(a1);else goPage('trustees');return;}
 }
 function _renderToday(){
   var listEl=g('today-items'), hdr=g('today-header'), cnt=g('today-count');
@@ -4972,6 +4974,20 @@ function _renderToday(){
     var trAwait=_truAwaitingRouting().length;
     if(trAwait)items.push({priority:2,icon:'\ud83e\uddba',title:trAwait+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1',sub:'\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',badge:'\u05e0\u05ea\u05d1',badgeCls:'amber',fn:'trustee',a1:(_truAwaitingRouting()[0]||{}).id||'',a2:'open'});
   }
+  // 1b2. A month ended with an eligible trustee and no prize announced. The
+  // page opens on the calendar month, so on the 1st the finished month is one
+  // click back and nothing says it is still waiting \u2014 and from the trustees'
+  // side the gold banner still shows LAST announcement, so everyone assumes
+  // it was handled. A whole month of their work went unrewarded in silence.
+  if(typeof _truWinnerDue==='function'&&typeof _role==='function'&&_role()!=='reporter'){
+    var due=_truWinnerDue();
+    if(due){
+      items.push({priority:3,icon:'\ud83c\udfc6',
+        title:'\u05d8\u05e8\u05dd \u05d4\u05d5\u05db\u05e8\u05d6 \u05d6\u05d5\u05db\u05d4 \u05dc'+_truMonthLabel(due.m),
+        sub:(due.n===1?'\u05d6\u05db\u05d0\u05d9 \u05d0\u05d7\u05d3: ':due.n+' \u05d6\u05db\u05d0\u05d9\u05dd \u00b7 \u05d1\u05e8\u05d0\u05e9: ')+due.top.u+' ('+due.top.total+' \u05e0\u05e7\u05f3)',
+        badge:'\u05d4\u05db\u05e8\u05d6',badgeCls:'amber',fn:'truwinner',a1:due.m,a2:''});
+    }
+  }
   // 1c. Trustees short of the threshold, from mid-month on \u2014 managers only.
   // Hidden when everyone is on track, like every other panel on this screen.
   if(typeof _truBehind==='function'&&typeof _truDaysLeft==='function'&&typeof _role==='function'&&_role()!=='reporter'){
@@ -4979,7 +4995,7 @@ function _renderToday(){
     if(trLeft<=TRUSTEE_NUDGE_DAYS){
       var behind=_truBehind();
       if(behind.length){
-        var trNames=behind.slice(0,3).map(function(sc){return sc.u+' ('+sc.nTasks+'/8)';}).join(' \u00b7 ');
+        var trNames=behind.slice(0,3).map(function(sc){return sc.u+' ('+sc.nTasks+'/'+_truMinTasks()+')';}).join(' \u00b7 ');
         if(behind.length>3)trNames+=' \u05d5\u05e2\u05d5\u05d3 '+(behind.length-3);
         items.push({priority:3,icon:'\ud83e\uddba',
           title:(behind.length===1?'\u05e0\u05d0\u05de\u05df \u05d0\u05d7\u05d3 \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05dd ':behind.length+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d8\u05e8\u05dd \u05d4\u05e9\u05dc\u05d9\u05de\u05d5 ')+_truMinTasks()+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea',
@@ -8725,6 +8741,7 @@ window._tskBulkAction=function(action){
   sdb();window._tskSel={};
   toast(n+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u2713');
   rTasks();rDash();
+  if(status===_TSK_DONE&&typeof _truAskCloseFor==='function')_truAskCloseFor(ids);
 };
 function _tskQuickStatus(id,newStatus){
   var idx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
@@ -8736,6 +8753,7 @@ function _tskQuickStatus(id,newStatus){
   }
   sbUpd('tasks',DB.tasks[idx]);
   sdb();toast('\u05e1\u05d8\u05d8\u05d5\u05e1: '+newStatus+' \u2713');rTasks();rDash();
+  if(newStatus===_TSK_DONE&&typeof _truAskCloseFor==='function')_truAskCloseFor([id]);
 }
 function _tskMenu(taskId,anchor){
   var existing=document.getElementById('tsk-action-menu');if(existing)existing.remove();
@@ -8954,6 +8972,9 @@ function _populateTskParent(currentId){
 function svTsk(){
   var t=gv('tsk-title');if(!t){toast('\u05db\u05d5\u05ea\u05e8\u05ea \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('tsk-id')||gid();
+  // only when this save is what closed it \u2014 editing an already-done task must
+  // not re-ask about a finding the manager already declined to close.
+  var _wasDone=((DB.tasks||[]).find(function(r){return r.id===id;})||{}).status===_TSK_DONE;
   var pid=gv('tsk-parent')||null;
   if(pid===id)pid=null;
   var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
@@ -8963,6 +8984,7 @@ function svTsk(){
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
   sdb();closeModal('m-tsk');toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTasks();rDash();
   if(CUR==='trustees'&&typeof rTrustees==='function')rTrustees();   // task spawned from a trustee finding: show the link on the row
+  if(!_wasDone&&r.status===_TSK_DONE&&typeof _truAskCloseFor==='function')_truAskCloseFor([r.id]);
 }
 function editTsk(id){
   var rec=(DB.tasks||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -14285,6 +14307,18 @@ function _truMaxTaskPts(){return _truTasksActive().length*TRUSTEE_PTS_TASK;}
 // Eligibility can never exceed what there is to do — otherwise switching tasks
 // off below the threshold would make the month unwinnable for everyone.
 function _truMinTasks(){return Math.min(TRUSTEE_MIN_TASKS,_truTasksActive().length);}
+// The real ceiling, which follows the catalogue: 10 per active task plus the
+// cap on hazard points. Everything on screen used to say 100 and /8 and \u226515
+// in plain text, so the day Michael switches a task off or adds a ninth, the
+// same screen would state two different truths at once.
+function _truMaxTotal(){return _truMaxTaskPts()+TRUSTEE_MAX_CLOSED_PTS;}
+function _truSyncNumbers(){
+  var n=_truTasksActive().length,minT=_truMinTasks();
+  function set(id,txt){var el=g(id);if(el)el.textContent=txt;}
+  set('tru-n-btn',n);set('tru-n-intro',n);
+  set('tru-score-rules',TRUSTEE_PTS_TASK+' \u05dc\u05db\u05dc \u05de\u05e9\u05d9\u05de\u05d4 (\u05e2\u05d3 '+_truMaxTaskPts()+') + '+TRUSTEE_PTS_CLOSED+' \u05dc\u05db\u05dc \u05de\u05e4\u05d2\u05e2 \u05e9\u05d3\u05d9\u05d5\u05d5\u05d7\u05ea\u05dd \u05d5\u05e0\u05e1\u05d2\u05e8 (\u05e2\u05d3 '+TRUSTEE_MAX_CLOSED_PTS+'). \u05de\u05d5\u05e2\u05de\u05d3\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 \u05de-'+minT+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea.');
+  set('tru-mgr-scorenote',TRUSTEE_PTS_TASK+' \u05dc\u05db\u05dc \u05de\u05e9\u05d9\u05de\u05d4 (\u05de\u05e7\u05e1\u05f3 '+_truMaxTaskPts()+') \u00b7 '+TRUSTEE_PTS_CLOSED+' \u05dc\u05db\u05dc \u05de\u05e4\u05d2\u05e2 \u05e9\u05e0\u05e1\u05d2\u05e8 (\u05de\u05e7\u05e1\u05f3 '+TRUSTEE_MAX_CLOSED_PTS+') \u00b7 \u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 \u05de-'+minT+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea');
+}
 function _truMonthKey(d){return String(d||'').substring(0,7);}
 function _truThisMonth(){return new Date().toISOString().substring(0,7);}
 function _truRowMonth(r){return r.m||_truMonthKey(r.d);}
@@ -14431,17 +14465,36 @@ function _truIntroSync(){var it=g('tru-intro');if(it)it.open=!_truMe();}
 // One line in "my reports". Shared by the current month and by the block of
 // still-open findings from earlier months, because closing a finding is the
 // same action whichever month it was opened in.
-function _truMineRowHtml(r,showAge){
+function _truMineRowHtml(r,showAge,noClose){
   var t=_truTask(r.t);
-  var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
+  var closeBtn=(!noClose&&_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
   var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'');
   var age=null;if(showAge&&typeof _truAgeDays==='function')age=_truAgeDays(r);
   var ageHtml=(age===null||age===undefined)?'':' <span class="b bY">'+age+' \u05d9\u05d5\u05dd</span>';
-  return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+ageHtml+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
+  var who=noClose?(' \u00b7 '+esc(r.u||'')):'';
+  return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+who+ageHtml+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
 }
 // My hazards from BEFORE the month being shown that nobody has closed yet,
 // oldest first. The monthly reset is the competition's rule, not the
 // finding's \u2014 a hole in the floor does not stop existing on the 1st.
+// Open findings in MY area that somebody ELSE reported. The code already
+// knows two trustees can share an area (_truCoverage), and until now the
+// screen showed them nothing about each other but a points total \u2014 so a
+// trustee back from sick leave could not see what was open on his own patch,
+// and task 8, \u05de\u05e2\u05e7\u05d1 \u05e1\u05d2\u05d9\u05e8\u05d4, was possible only on what he filed himself.
+//
+// Read-only on purpose. 2026-09-20_trustee_close_ownership.sql makes the
+// server keep a finding open unless the closing report comes from the same
+// reporter, while svTru already flips it to \u05e0\u05e1\u05d2\u05e8 locally \u2014 so offering
+// \u00ab\u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9\u00bb here would make the screen lie until the next pull.
+// indexOf, not ===, because row() writes loc as 'area \u00b7 detail'.
+function _truAreaOpen(me){
+  var area=(typeof _truAreaOf==='function')?_truAreaOf(me):'';
+  if(!area)return [];
+  return (DB.trustee_reports||[]).filter(function(r){
+    return r&&r.u!==me&&_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED&&String(r.loc||'').indexOf(area)===0;
+  }).sort(function(a,b){return String(a.ts||a.d||'').localeCompare(String(b.ts||b.d||''));});
+}
 function _truMyOpenOlder(me,m){
   m=m||_truThisMonth();
   if(!me)return [];
@@ -14451,6 +14504,7 @@ function _truMyOpenOlder(me,m){
 }
 function _truRender(){
   var box=g('tru-body');if(!box)return;
+  _truSyncNumbers();
   var me=_truMe(),m=_truThisMonth();
   if(!me){box.innerHTML='<div class="card" style="text-align:center;color:var(--t2)">\u05d1\u05d7\u05e8 \u05d0\u05ea \u05e9\u05de\u05da \u05dc\u05de\u05e2\u05dc\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea, \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05e9\u05dc\u05da \u05d5\u05de\u05d9 \u05de\u05d5\u05d1\u05d9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';return;}
   var sc=_truScore(me,m);
@@ -14459,8 +14513,8 @@ function _truRender(){
   var h='<div style="font-weight:900;font-size:16px;margin:4px 0 0">'+esc(_truMonthLabel(m))+'</div>';
   h+='<div id="tru-month-note" style="font-size:12px;color:var(--t2);margin-bottom:6px">\ud83d\udd04 \u05d4\u05ea\u05d7\u05e8\u05d5\u05ea \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea \u2014 \u05d1-1 \u05dc\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3 \u05de\u05ea\u05d0\u05e4\u05e1 \u00b7 '+(left===0?'\u05d4\u05d9\u05d5\u05dd \u05d4\u05d9\u05d5\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05e9\u05dc \u05d4\u05d7\u05d5\u05d3\u05e9':'\u05e0\u05d5\u05ea\u05e8\u05d5 '+left+' \u05d9\u05de\u05d9\u05dd \u05dc\u05d7\u05d5\u05d3\u05e9')+'</div>';
   h+='<div class="tru-score" id="tru-score">'
-    +'<div><div class="n">'+sc.total+'<span style="font-size:12px;color:var(--t2)">/100</span></div><div class="l">\u05e0\u05d9\u05e7\u05d5\u05d3</div></div>'
-    +'<div><div class="n">'+sc.nTasks+'<span style="font-size:12px;color:var(--t2)">/8</span></div><div class="l">\u05de\u05e9\u05d9\u05de\u05d5\u05ea</div></div>'
+    +'<div><div class="n">'+sc.total+'<span style="font-size:12px;color:var(--t2)">/'+_truMaxTotal()+'</span></div><div class="l">\u05e0\u05d9\u05e7\u05d5\u05d3</div></div>'
+    +'<div><div class="n">'+sc.nTasks+'<span style="font-size:12px;color:var(--t2)">/'+_truTasksActive().length+'</span></div><div class="l">\u05de\u05e9\u05d9\u05de\u05d5\u05ea</div></div>'
     +'<div><div class="n">'+sc.closed+'</div><div class="l">\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5</div></div>'
     +'</div>';
   h+='<div style="font-size:12px;margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap">'
@@ -14505,6 +14559,14 @@ function _truRender(){
   h+='<div style="font-weight:700;font-size:14px;margin:14px 0 6px">\ud83d\udcdd \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+mine.length+')</div>';
   if(!mine.length)h+='<div style="font-size:13px;color:var(--t2)" id="tru-mine-empty">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';
   else h+='<div id="tru-mine">'+mine.map(function(r){return _truMineRowHtml(r,false);}).join('')+'</div>';
+  var area=(typeof _truAreaOf==='function')?_truAreaOf(me):'';
+  var areaOpen=_truAreaOpen(me);
+  if(areaOpen.length){
+    h+='<div class="card" id="tru-area" style="padding:10px 12px">'
+      +'<div style="font-weight:700;font-size:14px">\ud83d\uddfa \u05e4\u05ea\u05d5\u05d7 \u05d1\u05d0\u05d6\u05d5\u05e8 \u05e9\u05dc\u05d9 \u2014 '+esc(area)+' ('+areaOpen.length+')</div>'
+      +'<div style="font-size:12px;color:var(--t2);margin-bottom:6px">\u05de\u05d4 \u05e9\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d0\u05d7\u05e8\u05d9\u05dd \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d1\u05d0\u05d6\u05d5\u05e8 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05dc\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3 \u2014 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0 \u05de\u05d9 \u05e9\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e2\u05dc\u05d9\u05d5.</div>'
+      +'<div id="tru-area-list">'+areaOpen.map(function(r){return _truMineRowHtml(r,true,true);}).join('')+'</div></div>';
+  }
   h+='<div class="tru-danger">\ud83d\udea8 <strong>\u05e1\u05db\u05e0\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea?</strong> \u05de\u05ea\u05e7\u05e9\u05e8\u05d9\u05dd \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d3. \u05de\u05d2\u05df \u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u05d5"\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05db\u05d0\u05df.<button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="empReport(\'nm\')">\u26d4 \u05d3\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2</button></div>';
   box.innerHTML=h;
   if(typeof _signifyDom==='function')try{_signifyDom(box);}catch(e){}
@@ -14838,12 +14900,31 @@ function _truAgeChip(r){
 // and led to a month that did not contain it: \u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d.
 // Jump to the month the finding was actually filed in, with the filter that
 // shows it, and mark the row so it is obvious which one was meant.
+// The one way to open pg-trustees on a given month. 4.11 (follow a finding)
+// and 4.8 (announce last month's winner) both need exactly this.
+function _truGoMonth(m){
+  _truMgrM=(m&&m!==_truThisMonth())?m:null;
+  goPage('trustees');
+}
+function _truPrevMonth(){
+  var d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+// A month that ended with somebody eligible and nobody announced. Not before
+// the month is over, and never when there was nobody to give it to \u2014 either
+// would put a line on the home screen every single day and turn it into noise.
+function _truWinnerDue(){
+  if(typeof _truWinnerOf!=='function')return null;
+  var prev=_truPrevMonth();
+  if(_truWinnerOf(prev))return null;
+  var board=_truBoard(prev).filter(function(x){return x.eligible;});
+  return board.length?{m:prev,top:board[0],n:board.length}:null;
+}
 function _truGo(id,filter){
   var r=id?_truFind(id):null;
   var m=r?_truRowMonth(r):null;
-  _truMgrM=(m&&m!==_truThisMonth())?m:null;
   _truMgrF=filter||'open';
-  goPage('trustees');
+  _truGoMonth(m);
   if(!r)return;
   setTimeout(function(){
     var row=document.querySelector('tr[data-tru-row="'+id+'"]');if(!row)return;
@@ -14854,6 +14935,7 @@ function _truGo(id,filter){
 }
 function rTrustees(){
   var m=_truMgrMonth();
+  _truSyncNumbers();
   var mEl=g('tru-mgr-month');if(mEl)mEl.textContent=_truMonthLabel(m);
   var rows=_truRows(m);
   var open=0,closed=0,okN=0;
@@ -14907,7 +14989,12 @@ function rTrustees(){
     var afterHtml=after?'<div style="font-size:11px;color:#15803d">\u2713 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" '+fd(after.d)+' ('+esc(after.u)+')'+(after.photo_url?' <a data-sign="'+escU(after.photo_url)+'" target="_blank">\ud83d\udcf7</a>':'')+'</div>':'';
     var note=r.mgr_note?'<div style="font-size:11px;color:var(--t2)">\ud83d\udccc '+esc(r.mgr_note)+'</div>':'';
     var tsk=_truTaskFor(r.id);
-    var tskHtml=tsk?'<div style="font-size:11px"><a onclick="goPage(\'tasks\')" style="cursor:pointer;color:var(--blue)">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d4: '+esc(String(tsk.title||'').substring(0,50))+'</a></div>':'';
+    // ...and what happened to it. A finding whose task is \u05d4\u05d5\u05e9\u05dc\u05dd but which is
+    // still \u05e4\u05ea\u05d5\u05d7 is exactly the state 4.4 was about, so it is named here.
+    var tskDone=tsk&&tsk.status===_TSK_DONE;
+    var tskHtml=tsk?('<div style="font-size:11px"><a onclick="goPage(\'tasks\')" style="cursor:pointer;color:var(--blue)">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d4: '+esc(String(tsk.title||'').substring(0,50))+'</a> <span style="color:'+(tskDone?'#15803d':'var(--t2)')+'">\u00b7 '+esc(tsk.status||'')+'</span>'
+      +((tskDone&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:6px 10px;min-height:36px;font-size:12px" data-rid="'+esc(r.id)+'" onclick="_truMgrSetStatus(this.dataset.rid,TRUSTEE_S_CLOSED)">\u05e1\u05de\u05df \u05e0\u05e1\u05d2\u05e8</button>':'')
+      +'</div>'):'';
     var refHtml=(r.t===8&&r.ref)?'<div style="font-size:11px;color:var(--t2)">\u05e1\u05d5\u05d2\u05e8 \u05de\u05de\u05e6\u05d0: '+esc(String((_truFind(r.ref)||{}).f||r.ref).substring(0,50))+'</div>':'';
     return '<tr data-tru-row="'+esc(r.id)+'">'
       +'<td data-label="" class="tru-head"><strong>'+esc(r.u)+'</strong> <span style="color:var(--t2)">\u00b7 '+esc(r.t)+'. '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+'</span></td>'
@@ -14932,12 +15019,55 @@ function _truRowMenu(anchor,id){
     item('\ud83d\uddd1','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
   });
 }
-function _truMgrSetStatus(id,st){
+// quiet: the caller is closing several at once and will toast and re-render
+// itself \u2014 same single write path either way.
+function _truMgrSetStatus(id,st,quiet){
   var r=_truFind(id);if(!r)return;
   r.s=st;sbUpd('trustee_reports',r);sdb();
   try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05de\u05e6\u05d0 '+(st===TRUSTEE_S_CLOSED?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.f||'').substring(0,30));}catch(e){}
+  if(quiet)return;
   toast(st===TRUSTEE_S_CLOSED?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');
   rTrustees();rDash();
+}
+// ---- a task closes; the finding it came from does not ----
+// Marking the routed task \u05d4\u05d5\u05e9\u05dc\u05dd wrote nothing back to trustee_reports. The
+// finding stayed red \u05e4\u05ea\u05d5\u05d7, the age chip kept counting, after 30 days it
+// joined the \u00ab\u05d3\u05d5\u05d5\u05d7, \u05e0\u05d5\u05ea\u05d1, \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05ea\u05d5\u05e7\u05df\u00bb line on the home screen \u2014 about
+// something already fixed \u2014 and the trustee never got the 2 points, so the
+// monthly score was lower than what actually happened in the plant.
+//
+// It does NOT close by itself. DECISIONS.md 2026-09-18 \u00a73 makes closure a t=8
+// report with an "after" photo, and a closed task is no proof that anyone
+// photographed anything. So the manager is asked, once, and answering yes
+// goes through the same _truMgrSetStatus the row menu already uses.
+function _truFindingsOf(ids){
+  if(typeof _truFind!=='function')return [];
+  var seen={},out=[];
+  (ids||[]).forEach(function(id){
+    var t=(DB.tasks||[]).find(function(x){return x.id===id;});
+    if(!t||t.source_table!=='trustee_reports'||!t.source_id||seen[t.source_id])return;
+    var r=_truFind(t.source_id);
+    if(!r||!_truIsHazard(r)||r.s===TRUSTEE_S_CLOSED)return;
+    seen[t.source_id]=1;out.push(r);
+  });
+  return out;
+}
+function _truAskCloseFor(ids){
+  var rows=_truFindingsOf(ids);
+  if(!rows.length)return 0;
+  var q=rows.length===1
+    ?('\u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05e1\u05d5\u05de\u05e0\u05d4 \u05db\u05d4\u05d5\u05e9\u05dc\u05de\u05d4.\n\u05dc\u05e1\u05de\u05df \u05d2\u05dd \u05d0\u05ea \u05de\u05de\u05e6\u05d0 \u05d4\u05e0\u05d0\u05de\u05df \u05db\u05e0\u05e1\u05d2\u05e8?\n\n'
+      +String(rows[0].u||'')+' \u00b7 '+String(rows[0].loc||'')+'\n'+String(rows[0].f||'').substring(0,120)
+      +'\n\n\u05db\u05df = \u05d4\u05e0\u05d0\u05de\u05df \u05de\u05e7\u05d1\u05dc '+TRUSTEE_PTS_CLOSED+' \u05e0\u05e7\u05f3 \u05d5\u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05d5\u05e6\u05d0 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.')
+    :('\u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e1\u05d5\u05de\u05e0\u05d5 \u05db\u05d4\u05d5\u05e9\u05dc\u05de\u05d5.\n\u05dc\u05e1\u05de\u05df \u05d2\u05dd '+rows.length+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05db\u05e0\u05e1\u05d2\u05e8\u05d9\u05dd?\n\n'
+      +rows.slice(0,5).map(function(r){return '\u00b7 '+String(r.loc||'')+' \u2014 '+String(r.f||'').substring(0,60);}).join('\n')
+      +(rows.length>5?'\n\u05d5\u05e2\u05d5\u05d3 '+(rows.length-5):''));
+  if(!confirm(q))return 0;
+  rows.forEach(function(r){_truMgrSetStatus(r.id,TRUSTEE_S_CLOSED,true);});
+  toast(rows.length===1?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':rows.length+' \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e1\u05d5\u05de\u05e0\u05d5 \u05e0\u05e1\u05d2\u05e8\u05d9\u05dd \u2713');
+  if(typeof rTrustees==='function')rTrustees();
+  if(typeof rDash==='function')rDash();
+  return rows.length;
 }
 // Routing note: an inline textarea inside the finding's own row. window.prompt on
 // iPhone is a tiny LTR dialog with no RTL and no keyboard suggestions, and this is
@@ -14995,7 +15125,7 @@ function _truExportCsv(){
   function q2(v){if(v===null||v===undefined)return '';var x=String(v);return '"'+x.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
   var lines=[];
   lines.push(['\u05dc\u05d5\u05d7 \u05e0\u05d9\u05e7\u05d5\u05d3 '+m].map(q2).join(','));
-  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d5\u05ea (\u05de\u05ea\u05d5\u05da 8)','\u05e0\u05e7\u05f3 \u05de\u05e9\u05d9\u05de\u05d5\u05ea','\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5','\u05e0\u05e7\u05f3 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05e1\u05d4\u05f4\u05db','\u05d6\u05db\u05d0\u05d5\u05ea (\u22655)','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'].map(q2).join(','));
+  lines.push(['\u05e0\u05d0\u05de\u05df','\u05de\u05e9\u05d9\u05de\u05d5\u05ea (\u05de\u05ea\u05d5\u05da '+_truTasksActive().length+')','\u05e0\u05e7\u05f3 \u05de\u05e9\u05d9\u05de\u05d5\u05ea','\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5','\u05e0\u05e7\u05f3 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd','\u05e1\u05d4\u05f4\u05db','\u05d6\u05db\u05d0\u05d5\u05ea (\u2265'+_truMinTasks()+')','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'].map(q2).join(','));
   _truBoard(m).forEach(function(x){lines.push([x.u,x.nTasks,x.ptsTasks,x.closed,x.ptsClosed,x.total,x.eligible?'\u05db\u05df':'\u05dc\u05d0',x.open].map(q2).join(','));});
   // Area coverage — only when the roster actually carries areas, so a plant
   // that never assigned them gets the same CSV it got before.
@@ -15024,12 +15154,100 @@ function _truRosterRender(){
   box.innerHTML=rows.map(function(t){
     var off=t.active===false;
     return '<div class="tru-rep" data-tru-roster="'+esc(t.id)+'"><span style="flex:1;min-width:0"><strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.n)+'</strong>'+(t.dep?' <span style="color:var(--t2)">\u00b7 '+esc(t.dep)+'</span>':'')+(t.notes?'<div style="font-size:11px;color:var(--t2)">'+esc(t.notes)+'</div>':'')+'</span>'
-      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">\u270e</button> <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
   }).join('');
+  _truRosterGhosts();
+}
+// ---- ghost trustees ----
+// A name typed into \u00ab\u05d0\u05d7\u05e8 (\u05d4\u05e7\u05dc\u05d3 \u05e9\u05dd)\u00bb is saved as `u` on the report and then
+// offered as a permanent option by _truNameOptionsHtml on EVERY device, and
+// _truBoard opens it a row of its own on the leaderboard. \u00ab\u05de\u05e9\u05d4 \u05db\u05d4\u05df\u00bb and
+// \u00ab\u05de. \u05db\u05d4\u05df\u00bb become two competitors, neither reaches the threshold, and the
+// CSV that goes to the safety committee lists a trustee who does not exist.
+// Deleting the roster row does not help \u2014 the name comes from the report.
+// Merging is therefore an UPDATE of `u`, never a delete: trustee_reports is
+// protected history.
+function _truNameKey(n){return String(n||'').replace(/[\s.\u05f3'"\u2019-]+/g,'').toLowerCase();}
+function _truGhostNames(){
+  var known={};(DB.trustees||[]).forEach(function(t){if(t&&t.n)known[t.n]=1;});
+  var out={};
+  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u&&!known[r.u])out[r.u]=(out[r.u]||0)+1;});
+  return Object.keys(out).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(n){return {n:n,count:out[n]};});
+}
+function _truRosterGhosts(){
+  var box=g('tru-roster-ghosts');if(!box)return;
+  var gh=_truGhostNames();
+  if(!gh.length){box.innerHTML='';return;}
+  var opts='<option value="">\u2014 \u05de\u05d6\u05d2 \u05d0\u05dc \u2014</option>'+_truRoster().map(function(t){return '<option value="'+esc(t.n)+'">'+esc(t.n)+'</option>';}).join('');
+  box.innerHTML='<div style="font-weight:700;font-size:13px;margin-bottom:4px">\u05e9\u05de\u05d5\u05ea \u05e9\u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d0\u05d1\u05dc \u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 ('+gh.length+')</div>'
+    +'<div style="font-size:12px;color:var(--t2);margin-bottom:6px">\u05de\u05d9 \u05e9\u05d4\u05e7\u05dc\u05d9\u05d3 \u05e9\u05dd \u05d1\u00ab\u05d0\u05d7\u05e8\u00bb. \u05de\u05d6\u05d2 \u05dc\u05e0\u05d0\u05de\u05df \u05d4\u05e0\u05db\u05d5\u05df \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d5\u05d4\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05d0\u05dc\u05d9\u05d5, \u05d5\u05e9\u05d5\u05dd \u05d3\u05d9\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05d7\u05e7.</div>'
+    +gh.map(function(x){
+      return '<div class="tru-rep" data-tru-ghost="'+esc(x.n)+'"><span style="flex:1;min-width:0"><strong>'+esc(x.n)+'</strong> <span style="color:var(--t2)">\u00b7 '+x.count+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd</span></span>'
+        +'<span style="white-space:nowrap;display:flex;gap:6px"><select data-ghost="'+esc(x.n)+'" style="font:inherit;font-size:13px;min-height:44px;border:1px solid var(--border);border-radius:8px;padding:0 6px">'+opts+'</select>'
+        +'<button class="btn btn-p btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-gn="'+esc(x.n)+'" onclick="_truGhostMerge(this.dataset.gn)">\u05de\u05d6\u05d2</button></span></div>';
+    }).join('');
+}
+// The one write both the \u270e and the merge go through. Returns how many rows moved.
+function _truRenameReporter(oldN,newN){
+  if(!oldN||!newN||oldN===newN)return 0;
+  var n=0;
+  (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u===oldN){r.u=newN;sbUpd('trustee_reports',r);n++;}});
+  (DB.trustee_winners||[]).forEach(function(w){if(w&&w.u===oldN){w.u=newN;sbUpd('trustee_winners',w);n++;}});
+  return n;
+}
+function _truGhostMerge(ghost){
+  var sel=document.querySelector('select[data-ghost="'+ghost+'"]');
+  var target=sel&&sel.value;
+  if(!target){toast('\u05d1\u05d7\u05e8 \u05dc\u05de\u05d9 \u05dc\u05de\u05d6\u05d2');return;}
+  var cnt=(DB.trustee_reports||[]).filter(function(r){return r&&r.u===ghost;}).length;
+  if(!confirm('\u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 '+cnt+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05de\u00ab'+ghost+'\u00bb \u05d0\u05dc \u00ab'+target+'\u00bb?\n\n\u05e9\u05d5\u05dd \u05d3\u05d9\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05d7\u05e7 \u2014 \u05e8\u05e7 \u05e9\u05dd \u05d4\u05de\u05d3\u05d5\u05d5\u05d7 \u05de\u05ea\u05e2\u05d3\u05db\u05df.'))return;
+  var moved=_truRenameReporter(ghost,target);
+  sdb();try{addLog('\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u2014 \u05de\u05d9\u05d6\u05d5\u05d2 \u05e9\u05dd: '+ghost+' \u2190 '+target+' ('+moved+')');}catch(e){}
+  toast(moved+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u2713');
+  _truRosterRender();_truFillLists();rTrustees();rDash();
+}
+// Inline edit of one roster entry \u2014 same shape as _truMgrNote, because a
+// window.prompt on an iPhone is a tiny LTR box with no RTL.
+function _truRosterEditCancel(){var e=g('tru-roster-ed');if(e)e.remove();}
+function _truRosterEdit(id){
+  var t=(DB.trustees||[]).find(function(x){return x.id===id;});if(!t)return;
+  var row=document.querySelector('[data-tru-roster="'+id+'"]');if(!row)return;
+  _truRosterEditCancel();
+  var box=document.createElement('div');box.id='tru-roster-ed';
+  box.style.cssText='border:1px solid var(--border);border-radius:10px;padding:8px;margin:0 0 8px';
+  box.innerHTML='<div class="field"><label>\u05e9\u05dd</label><input id="tru-roster-en" style="font:inherit"></div>'
+    +'<div class="field"><label>\u05de\u05d7\u05dc\u05e7\u05d4 / \u05d0\u05d6\u05d5\u05e8 \u05d0\u05d7\u05e8\u05d9\u05d5\u05ea</label><input id="tru-roster-ed-dep" style="font:inherit"></div>'
+    +'<div style="font-size:11px;color:var(--t2);margin:4px 0">\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05e9\u05dd \u05de\u05e2\u05d3\u05db\u05df \u05d2\u05dd \u05d0\u05ea \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05e9\u05dc\u05d5 \u2014 \u05d0\u05d7\u05e8\u05ea \u05d4\u05e9\u05dd \u05d4\u05d9\u05e9\u05df \u05d9\u05d9\u05e9\u05d0\u05e8 \u05d1\u05dc\u05d5\u05d7 \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3.</div>'
+    +'<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1;min-height:44px" data-rid="'+esc(id)+'" onclick="_truRosterEditSave(this.dataset.rid)">\u05e9\u05de\u05d5\u05e8</button><button class="btn btn-s" style="min-height:44px" onclick="_truRosterEditCancel()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div>';
+  row.parentNode.insertBefore(box,row);
+  var a=g('tru-roster-en');if(a){a.value=t.n||'';try{a.focus();}catch(e){}}
+  var b=g('tru-roster-ed-dep');if(b)b.value=t.dep||'';
+}
+function _truRosterEditSave(id){
+  var t=(DB.trustees||[]).find(function(x){return x.id===id;});if(!t)return;
+  var nw=String(gv('tru-roster-en')||'').trim();
+  if(!nw){toast('\u05e9\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var clash=(DB.trustees||[]).filter(function(x){return x.id!==id&&x.n===nw;})[0];
+  if(clash){toast('\u05d4\u05e9\u05dd \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 \u2014 \u05de\u05d6\u05d2 \u05d1\u05de\u05e7\u05d5\u05dd \u05dc\u05e9\u05e0\u05d5\u05ea \u05e9\u05dd');return;}
+  var old=t.n,moved=0;
+  if(old!==nw){
+    var cnt=(DB.trustee_reports||[]).filter(function(r){return r&&r.u===old;}).length;
+    if(cnt&&!confirm('\u05dc\u05e9\u05e0\u05d5\u05ea \u00ab'+old+'\u00bb \u05dc\u00ab'+nw+'\u00bb \u05d2\u05dd \u05d1-'+cnt+' \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05e7\u05d9\u05d9\u05de\u05d9\u05dd?\n\n\u05e9\u05d5\u05dd \u05d3\u05d9\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05d7\u05e7.'))return;
+    moved=_truRenameReporter(old,nw);
+  }
+  t.n=nw;t.dep=String(gv('tru-roster-ed-dep')||'').trim()||null;
+  sbUpd('trustees',t);sdb();
+  try{addLog('\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u2014 \u05e2\u05d3\u05db\u05d5\u05df \u05e8\u05e9\u05d5\u05de\u05d4: '+old+(old!==nw?(' \u2190 '+nw+' ('+moved+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea)'):''));}catch(e){}
+  _truRosterEditCancel();toast('\u05e0\u05e9\u05de\u05e8 \u2713');
+  _truRosterRender();_truFillLists();rTrustees();rDash();
 }
 function _truRosterAdd(){
   var n=gv('tru-roster-n');if(!n){toast('\u05e9\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   if((DB.trustees||[]).some(function(t){return t.n===n;})){toast('\u05d4\u05e9\u05dd \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4');return;}
+  // \u00ab\u05de\u05e9\u05d4 \u05db\u05d4\u05df \u00bb and \u00ab\u05de.\u05db\u05d4\u05df\u00bb are not the same string and would become two
+  // competitors. Ask before creating the second one.
+  var near=(DB.trustees||[]).filter(function(t){return t&&t.n&&_truNameKey(t.n)===_truNameKey(n);})[0];
+  if(near&&!confirm('\u00ab'+near.n+'\u00bb \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4, \u05d5\u05d4\u05e9\u05dd \u05d4\u05d7\u05d3\u05e9 \u05e0\u05d1\u05d3\u05dc \u05de\u05de\u05e0\u05d5 \u05e8\u05e7 \u05d1\u05e8\u05d5\u05d5\u05d7 \u05d0\u05d5 \u05d1\u05e0\u05d9\u05e7\u05d5\u05d3.\n\u05e9\u05e0\u05d9 \u05e9\u05de\u05d5\u05ea = \u05e9\u05e0\u05d9 \u05de\u05ea\u05d7\u05e8\u05d9\u05dd \u05e0\u05e4\u05e8\u05d3\u05d9\u05dd \u05d1\u05dc\u05d5\u05d7 \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3.\n\n\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
   var r={id:gid(),n:n,dep:gv('tru-roster-dep')||null,ph:null,active:true,notes:null,ts:new Date().toISOString()};
   if(!DB.trustees)DB.trustees=[];
   DB.trustees.push(r);sbIns('trustees',r);sdb();

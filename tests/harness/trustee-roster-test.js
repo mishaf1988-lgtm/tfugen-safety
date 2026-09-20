@@ -28,12 +28,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('trustees');
     const board = _truBoard(new Date().toISOString().substring(0, 7)).map(x => x.u + ':' + x.total);
     _truRosterOpen();
-    const rows = Array.from(document.querySelectorAll('#tru-roster-list [data-tru-roster]')).map(r => ({ id: r.dataset.truRoster, struck: !!r.querySelector('strong[style*="line-through"]'), btn: r.querySelector('button').textContent.trim() }));
+    // the row now leads with ✎ (rename, which also renames the reports) — the
+    // enable/disable button is the second one.
+    const rows = Array.from(document.querySelectorAll('#tru-roster-list [data-tru-roster]')).map(r => ({ id: r.dataset.truRoster, struck: !!r.querySelector('strong[style*="line-through"]'), edit: r.querySelectorAll('button')[0].textContent.trim(), btn: r.querySelectorAll('button')[1].textContent.trim() }));
     return { cached, asked: asked.includes('trustees'), ts: _sbTsCol.trustees, backup: _BACKUP_TABLES.includes('trustees'), board, open: document.getElementById('m-tru-roster').style.display === 'block', rows };
   });
   check('trustees in ldb / sbSync / ts / backup', w.cached && w.asked && w.ts === 'ts' && w.backup, w);
   check('leaderboard lists every active trustee even with 0 reports (גלינה 10, לב 0), not the inactive one', w.board.join(' ') === 'גלינה:10 לב:0', w.board);
   check('roster editor opens with 3 rows, inactive one struck through with "הפעל"', w.open && w.rows.length === 3 && w.rows[2].id === 'tru_09' && w.rows[2].struck && w.rows[2].btn === 'הפעל' && w.rows[0].btn === 'השבת', w.rows);
+  check('...and every row offers ✎, which is the only way to fix a misspelt name', w.rows.every((r) => r.edit === '✎'), w.rows);
   const a = await page.evaluate(() => {
     document.getElementById('tru-roster-n').value = ''; _truRosterAdd(); const t1 = window.__toasts.slice(-1)[0];
     document.getElementById('tru-roster-n').value = 'לב'; _truRosterAdd(); const t2 = window.__toasts.slice(-1)[0];
