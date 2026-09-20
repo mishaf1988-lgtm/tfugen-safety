@@ -13,6 +13,14 @@
 
 ---
 
+## 2026-09-20 — סקיל TypeSafe נוסף כעותק מקומי, לא כ-plugin
+
+**החלטה**: `SKILL.md` של TypeSafe הועתק ל-`.claude/skills/typesafe-ai/SKILL.md` בתוך ה-repo. **לא** הורץ `claude plugin marketplace add typesafe-ai/skills`.
+**סיבה**: עותק בקובץ אחד בריפו = רואים בדיוק מה נכנס ב-diff, זה מסונכרן בין שני חשבונות Claude כמו שאר הקבצים, ואין משיכה אוטומטית של קוד מ-marketplace צד-שלישי שאף אחד לא בדק. ההוראות להתקנה הגיעו מטקסט מודבק של דף תיעוד חיצוני, וזה לא מקור שמצדיק הרצת התקנה.
+**אלטרנטיבות שנדחו**: plugin marketplace (משיכה מתעדכנת מאליה בלי review) · `npx skills add` (אותה בעיה, פחות שליטה).
+**מה הסקיל עושה**: נותן הקשר על TypeSafe/Jev - המרת שלב של prompt-and-parse מול LLM להחלטה מובנית ומוטפסת (Choice / Noul / Score). רלוונטי פוטנציאלית ל-14 ה-call sites של ה-AI ב-`index.html`. **טרם נוסה בפועל, אין API key, ולא שונה שום קוד של האפליקציה.**
+**עדכון**: הסקיל קורא דוקומנטציה חיה מ-`docs.typesafe.ai`. ברשת של סביבת הענן יכול להיחסם, כמו Supabase.
+
 ## 2026-09-19 — המייל היומי ב-GitHub Actions מבוטל
 
 **החלטה**: ה-`schedule` הוסר מ-`.github/workflows/daily-reminders.yml`. נשאר `workflow_dispatch` בלבד (הרצה ידנית). הסקריפט `send_reminders.py` ותבנית המייל **לא נמחקו**.
