@@ -4917,7 +4917,10 @@ function _sourceIcon(tbl){
 }
 function _todayClick(fn,a1,a2){
   if(fn==='page'){goPage(a1);return;}
-  if(fn==='round'){openModal('m-round');return;}
+  // _roundOpenNew is the ONLY path that calls _roundPopulateThemeSelect and
+  // _roundRenderItems. Going straight to openModal left the theme select and
+  // the checklist empty, so the round opened from here could not be filled in.
+  if(fn==='round'){if(typeof _roundOpenNew==='function')_roundOpenNew();else openModal('m-round');return;}
   if(fn==='view'){showView(a1,a2);return;}
   if(fn==='edit'){editTsk(a1);return;}
   if(fn==='tasks'){goPage('tasks');if(typeof tskFilter==='function')tskFilter(a1||'all');return;}
@@ -5092,10 +5095,14 @@ function _renderKpiCard(){
 // some other page.
 window._dashBadges = function(){
   try{
-    var u=(typeof _svUser==='function')?_svUser():'';
+    // All three old comparisons measured a Hebrew name against an email
+    // ('admin@tfugen.local'), so the badge was always 0 unless a task had
+    // literally been assigned to "admin". _meNames() is the same identity set
+    // rTasks already uses to filter «המשימות שלי» for a reporter.
+    var mine=(typeof _meNames==='function')?_meNames():[];
     var openCount=(DB.tasks||[]).filter(function(t){
       if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;
-      return t.assignee && (t.assignee===u || (u && u.indexOf(t.assignee)>=0) || (t.assignee.indexOf((u||'').split('@')[0])>=0));
+      return _isMine(t.assignee,mine);
     }).length;
     var badge=g('my-tasks-badge');
     if(badge){
@@ -5851,12 +5858,15 @@ function rDash(){
         var d=new Date(t.due);if(isNaN(d))return;
         if(d>=nowW&&d<=endW)items.push({d:d,icon:'\u2705',label:'\u05de\u05e9\u05d9\u05de\u05d4',title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',tbl:'tasks',id:t.id});
       });
-      ['ppe','tr','docs','ctr'].forEach(function(k){
+      // equip_inspections was missing. It is the statutory table — a forklift or
+      // an extinguisher whose inspection lapses is a legal exposure, and it was
+      // the one register this card did not look at.
+      ['ppe','tr','docs','ctr','equip_inspections'].forEach(function(k){
         (DB[k]||[]).forEach(function(r){
           if(!r.e)return;var d=new Date(r.e);if(isNaN(d))return;
           if(d>=nowW&&d<=endW){
-            var lblM={ppe:'\u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df'}[k];
-            items.push({d:d,icon:'\u23f3',label:lblM,title:(r.n||r.t||r.full_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)'),tbl:k,id:r.id});
+            var lblM={ppe:'\u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3'}[k];
+            items.push({d:d,icon:'\u23f3',label:lblM,title:(r.n||r.code||r.t||r.full_name||'(\u05dc\u05dc\u05d0 \u05e9\u05dd)'),tbl:k,id:r.id});
           }
         });
       });
@@ -9587,7 +9597,10 @@ function rTasks(){
   else if(f==='prog')rows=rows.filter(function(r){return r.status===_TSK_PROG;});
   else if(f==='done')rows=rows.filter(isDone);
   else if(f==='over')rows=rows.filter(function(r){return r.due&&r.due<today&&!isDone(r);});
-  else if(f==='today')rows=rows.filter(function(r){return r.due===today&&!isDone(r);});
+  // r.due===today hid every task already overdue, which is the opposite of
+  // what a manager opening «משימות להיום» wants to see. The sort below
+  // already puts overdue first.
+  else if(f==='today')rows=rows.filter(function(r){return r.due&&r.due<=today&&!isDone(r);});
   // Default ('all') = all *active* tasks. Completed/cancelled go to their
   // own "הושלמו" tab — not shown in the main list per user request.
   else rows=rows.filter(function(r){return !isDone(r);});
@@ -10307,6 +10320,23 @@ function _locName(id){
 }
 
 // Saved Views — per-user filter presets
+// Every name this person answers to: their full name, their username, and the
+// local part of their email. A task's assignee is a NAME; _svUser() is an
+// EMAIL, and comparing the two was why the לי badge never left 0.
+function _meNames(){
+  var u=(typeof _currentUser!=='undefined'&&_currentUser)||{};
+  var em=(typeof _svUser==='function')?String(_svUser()||''):'';
+  return [u.full_name,u.username,em.split('@')[0]]
+    .map(function(x){return String(x||'').trim();})
+    .filter(function(x){return x.length>1;});
+}
+function _isMine(assignee,names){
+  var a=String(assignee||'').trim();
+  if(!a)return false;
+  names=names||_meNames();
+  for(var i=0;i<names.length;i++){if(a===names[i])return true;}
+  return false;
+}
 function _svUser(){var el=g('user-email');return (el&&el.textContent)||'admin@tfugen.local';}
 function _svListForPage(slug){
   var u=_svUser();
@@ -11066,9 +11096,12 @@ window._cpDelete=function(cpId,tbl,recId){
 // Daily notification scan — fires once per session via sessionStorage flag
 function _notifDailyScan(){
   try{
+    // sessionStorage meant "once per session". In a PWA on an iPhone every cold
+    // open is a new session, so the same toasts and the same log rows repeated
+    // all day. localStorage, keyed by date, means once per DAY.
     var flag='tfgn_notif_'+new Date().toISOString().substring(0,10);
-    if(sessionStorage.getItem(flag))return;
-    sessionStorage.setItem(flag,'1');
+    if(_scanSeen(flag))return;
+    _scanMark(flag);
     var today=new Date();today.setHours(0,0,0,0);
     var todayStr=today.toISOString().split('T')[0];
     // task_overdue: open/in-progress tasks with due < today - 3 days
@@ -11104,15 +11137,41 @@ function _notifDailyScan(){
     expSoon.slice(0,3).forEach(function(it){
       _notifyEvent('expiry_30days',{title:it.name+' ('+it.days+' \u05d9\u05de\u05d9\u05dd)',id:it.id,table:it.tbl});
     });
-    // round_missed: today's round not done yet and time > 11:00
-    var now=new Date();
-    if(now.getHours()>=11){
-      var lastRound=(DB.rounds||[]).reduce(function(m,r){return r.d>m?r.d:m;},'');
-      if(lastRound<todayStr){
-        _notifyEvent('round_missed',{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d9\u05d5\u05dd \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',id:todayStr});
-      }
-    }
   }catch(e){console.warn('_notifDailyScan failed',e);}
+  _roundMissedScan();
+}
+// Its own flag and its own call. Inside the scan above it could never fire on a
+// day the app was first opened before 11:00: the scan marked itself done, and
+// the hour test failed. This runs on every call and marks itself separately.
+function _roundMissedScan(){
+  try{
+    if(new Date().getHours()<11)return;
+    var todayStr=new Date().toISOString().split('T')[0];
+    var flag='tfgn_round_missed_'+todayStr;
+    if(_scanSeen(flag))return;
+    var lastRound=(DB.rounds||[]).reduce(function(m,r){return r.d>m?r.d:m;},'');
+    if(lastRound>=todayStr)return;
+    _scanMark(flag);
+    _notifyEvent('round_missed',{title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d9\u05d5\u05dd \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',id:todayStr});
+  }catch(e){console.warn('_roundMissedScan failed',e);}
+}
+// One flag store for both, on localStorage so it survives a cold open, with
+// yesterday's keys swept so they cannot pile up. Falls back to sessionStorage
+// if localStorage is unavailable (private mode, blocked site data).
+function _scanSeen(k){
+  try{if(localStorage.getItem(k))return true;}catch(e){}
+  try{return !!sessionStorage.getItem(k);}catch(e){return false;}
+}
+function _scanMark(k){
+  try{
+    localStorage.setItem(k,'1');
+    var today=new Date().toISOString().split('T')[0];
+    for(var i=localStorage.length-1;i>=0;i--){
+      var key=localStorage.key(i);
+      if(!key)continue;
+      if((key.indexOf('tfgn_notif_')===0||key.indexOf('tfgn_round_missed_')===0)&&key.indexOf(today)<0)localStorage.removeItem(key);
+    }
+  }catch(e){try{sessionStorage.setItem(k,'1');}catch(e2){}}
 }
 
 // Generic notification dispatcher
