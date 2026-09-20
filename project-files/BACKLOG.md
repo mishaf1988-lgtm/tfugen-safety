@@ -4,6 +4,25 @@
 > פריט שנעשה: לסמן ~~קו חוצה~~ ולציין את מספר ה-PR.
 
 > **כל 75 אומתו בקוד** (2026-09-20, סבב אימות של 13 מאמתים).
+>
+> ## מצב (2026-09-20, סוף הסשן)
+>
+> **לכל 75 הפריטים נכתב קוד.** 65 גמורים לגמרי (~~קו חוצה~~).
+> **10 ממתינים למיכאל בלבד** — הקוד על `main` ועובד, המיגרציה טרם הורצה,
+> ולפי **כלל 7** ב-`CLAUDE.md` אסור לסמן אותם בלי הוכחת הרצה:
+>
+> | פריטים | Issue | קובץ | חומרה |
+> |---|---|---|---|
+> | 5.11 | [#642](../../issues/642) | `storage_trustee_scope.sql` | 🔴 **הכי דחוף** |
+> | 5.10 | [#643](../../issues/643) | `trustee_close_ownership.sql` | 🔴 |
+> | 5.8 | [#658](../../issues/658) | `audit_log_append_only.sql` | 🟠 |
+> | — | [#655](../../issues/655) | `register_attachments.sql` | 🟠 |
+> | 1.7 · 1.11 | [#679](../../issues/679) | `capa_result_and_cause.sql` | 🟠 |
+> | 3.5 · 3.7 | [#682](../../issues/682) | `hearing_expiry_and_leg_compliance.sql` | 🟠 |
+> | 3.3 · 4.5 · 6.11 | [#685](../../issues/685) | `history_review_verify.sql` | 🟠 |
+>
+> הן בלתי תלויות — אפשר להדביק את כולן ברצף באותו SQL Editor.
+> **#642 קודמת לכולן**: כל השאר זה תכונות, זו דליפה שפתוחה בייצור.
 > **64 מאושרים** (✅) · **11 חלקית** (🟨 — אמיתי, אבל הניסוח מגזים) · **0 שגויים**.
 > עמודת המאמץ עודכנה להערכה של מי שקרא את הקוד, לא של מי שהציע.
 
@@ -69,7 +88,7 @@
 |---|---|---|---|---|
 | 3.1 | ~~**עריכת הדרכה מוחקת את התעודה.** `svTr` כותב `file_url` תמיד; `_genEdit('tr')` לא משחזר אותו. עדכנת תוקף → התעודה נעלמה~~ **#648** | 🔴 | S | ✅ |
 | 3.2 | ~~**גיבוי מרשם השמיעה כותב עמודות ריקות.** הקוד מייצא `r.n/r.d/r.res/r.e`; הרשומות מכילות `emp_name/test_date/...`. זה ה-CSV ש-`delAllHearing` מייצא **לפני מחיקת כל המרשם**~~ **#648** | 🔴 | S | ✅ |
-| 3.3 | **אין פעולת «חידוש» באף מרשם.** הדרך היחידה היא לערוך ולדרוס — ההיסטוריה נמחקת | 🟠 | M | 🟨 |
+| 3.3 | **אין פעולת «חידוש» באף מרשם.** הדרך היחידה היא לערוך ולדרוס — ההיסטוריה נמחקת — הקוד נכתב (**#684**), המיגרציה טרם הורצה: [#685](../../issues/685) | 🟠 | M | ✅👤 |
 | 3.4 | ~~**`med` (בדיקות רפואיות) לא בעמוד התפוגות ולא ב-VIEW_CONFIG** — אבל כן בלוח השנה, בסקירת ההנהלה ובהתראות~~ **#654** | 🟠 | S | ✅ |
 | 3.5 | **ל-`hearing_tests` אין שדה תפוגה בכלל** — לא נסרק, לא מתריע, לא מופיע בתפוגות — הקוד נכתב (**#681**), המיגרציה טרם הורצה: [#682](../../issues/682) | 🟠 | M | ✅👤 |
 | 3.6 | ~~**בדיקה חוזרת: `next_due` ידני** — שום דבר לא מקדם אותו לפי המחזור~~ **#654** | 🟠 | S | ✅ |
@@ -88,7 +107,7 @@
 | 4.2 | ~~**משימה מליקוי נוחתת על הנאמן שדיווח** כאחראי לתיקון~~ **#650** | 🟠 | S | ✅ |
 | 4.3 | ~~**חזרה לקישור לא נוחתת על מסך הנאמן** — ענף ה-boot לא קורא ל-`_truEmpHome`~~ **#650** | 🟠 | S | ✅ |
 | 4.4 | ~~**השלמת המשימה לא משנה את הממצא** — הוא נשאר «פתוח», וצריך לסמן «נסגר» גם בדף הנאמנים~~ **#652** | 🟠 | S | ✅ |
-| 4.5 | **סגירה עם תמונת «אחרי» מיידית** — אין תור «סגירות לאישור» למנהל, וכל סגירה = +2 נקודות | 🟠 | M | 🟨 |
+| 4.5 | **סגירה עם תמונת «אחרי» מיידית** — אין תור «סגירות לאישור» למנהל, וכל סגירה = +2 נקודות — הקוד נכתב (**#684**), המיגרציה טרם הורצה: [#685](../../issues/685) | 🟠 | M | ✅👤 |
 | 4.6 | ~~**שם עם שגיאת כתיב הופך לנאמן-רפאים** בלוח הניקוד לנצח. אין ✎ ואין מיזוג~~ **#652** | 🟠 | S | ✅ |
 | 4.7 | ~~**הנאמן לא רואה מה פתוח באזור שלו** — רק את הדיווחים של עצמו~~ **#652** | 🟡 | S | ✅ |
 | 4.8 | ~~**אין תזכורת להכריז זוכה** לחודש שהסתיים — ב-1 לחודש הדף קופץ לחודש הריק~~ **#652** | 🟡 | S | ✅ |
@@ -127,7 +146,7 @@
 | 6.8 | ~~**פס חום 6 חודשים לכל אזור** — CSS בלבד~~ **#668** | 🟡 | M | ✅ |
 | 6.9 | ~~**כשירות הדרכות לפי מחלקה** — קישור `tr.w` ל-`emp.n`~~ **#668** | 🟡 | M | ✅ |
 | 6.10 | ~~**אחוז משימות שנסגרו בזמן, לפי חודש** — דורש `closed_date` ב-`svTsk`~~ **#666** | 🟡 | M | ✅ |
-| 6.11 | **פרוטוקול סקירת הנהלה שנשמר כרשומה.** §9.3 | 🟠 | M | ✅ |
+| 6.11 | **פרוטוקול סקירת הנהלה שנשמר כרשומה.** §9.3 — הקוד נכתב (**#684**), המיגרציה טרם הורצה: [#685](../../issues/685) | 🟠 | M | ✅👤 |
 | 6.12 | ~~**אריח «ימי אבדן» מתויג LTIF** ומציג ימים גולמיים — זה לא LTIF~~ **#660** | 🟡 | S | ✅ |
 | 6.13 | ~~**דף אחד להנהלה: «האם אנחנו נהיים בטוחים יותר?»** באותו דפוס של דוח ה-ISO~~ **#676** | 🟠 | L | ✅ |
 
@@ -447,7 +466,11 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: Reuse, do not duplicate: `window._popMenu` (index.html:8790-8889) is the generic anchored dropdown the rest of the app already standardised on — `_eqiMoreMenu`, `_truMgrMenu` (index.html:15029), `_legRowMenu`, `_itypeRowMenu` all use it, and it already has the viewport clamp `if(mr.left<8){...}else if(mr.right>window.innerWidth-8){...}`. `_topMoreMenu` predates it and is a copy-paste of the same 40 lines. The clean fix is to reimplement `_topMoreMenu` on top of `_popMenu` — its `item(emoji,label,fn,danger)` signature is call-compatible — but **keep the menu id `'top-more-menu'`**, because the print stylesheet at index.html:653 hides it by that exact id (`.overlay,.modal,#top-more-menu,#eqi-more-menu,...{display:none!important}`) and PR #555 relies on that so the menu does not leak onto printed pages. Risk if you reorder or nest items: STATUS.md records five separate sessions that added entries here (#563 renamed the trustee entry, #597 moved search into ☰ not here, #622 added the ISO readiness report, #619/#599 added entries to the *trustees* ⋯ which is a different menu at index.html:15029) — check none of those labels is the one Michael was told to look for. For the version, introduce one `var APP_VER='2026.09.20'` near the top and read it in all three sites; changing only the menu label would leave `_showAbout` contradicting it.
 
 
-### 3.3 — 🟨 partly · מאמץ M
+### 3.3 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+
+> לא מסומן כבוצע — **כלל 7**.
+> **נבחרה טבלה גנרית `record_history`** ולא שכפול של `equip_inspection_history`
+> לכל טבלה — בדיוק השאלה שההערה בסעיף העלתה. ה-RLS הוא **SELECT + INSERT בלבד**.
 
 **ראיה**: אין שום כפתור «חידוש» ידני — grep ל-renew/חידוש מחזיר רק את זרימת ה-PDF של הציוד. עריכה אכן דורסת: `_svPut` (index.html:4029-4042) — `arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k]);` — ו-`svEqi` (6931, שורה 6956) — `if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?rec:r;});sbUpd('equip_inspections',rec);}`. אבל הטענה מגזימה בשלוש נקודות: (א) ל-equip_inspections *יש* מסלול חידוש עם היסטוריה שמורה — `_eqiPdfClassify` (7479-7489) `return {tier:'renewal',candidates:byPrev.map(_eqiPdfWrapCand)};`, הבאדג' ב-7612 `badge='♻ חידוש (לפי תסקיר קודם)'`, ו-`_eqiHistoryWrite` (7893) כותב שורה ל-`equip_inspection_history`; היא נקראת מ-7861 ומ-7889 בלבד (מסלול ה-PDF), לעולם לא מ-`svEqi`. ההיסטוריה מוצגת ב-`_eqiHistoryLoad` (11489) דרך `extra:'_eqiHistorySection'` ב-VIEW_CONFIG (11248). (ב) ל-`docs` אין בכלל מסלול עריכה: `svDoc` (4199-4202) תמיד `var r={id:gid(),...};DB.docs.push(r);sbIns('docs',r);` — חידוש מסמך יוצר שורה שנייה, והשורה הפגה נשארת ומתריעה לנצח (זה פריט 3.8). (ג) `_aud('upd',tbl,row)` (3219-3235, דרך `sbUpd` ב-3238) כן רושם ל-`audit_log` מי עדכן מה ומתי — `var entry={user_email:u,table_name:tbl,record_id:record_id,op:op,title:title};` — אבל בלי ערכי השדות הישנים.
 
@@ -594,7 +617,12 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: הטענה מעריכה M; בפועל S. **לא** לסגור אוטומטית בשקט: DECISIONS.md 2026-09-18 §3 קובע שסגירה = דיווח t=8 עם תמונת «אחרי», ומשימה שנסגרה אינה הוכחה שמישהו צילם. הכיוון הבטוח — לשאול את המנהל «לסמן גם את הממצא נסגר?» ולקרוא ל-`_truMgrSetStatus(id,TRUSTEE_S_CLOSED)` הקיים (הוא כבר עושה `sbUpd`+`addLog`+`rTrustees`+`rDash`). RLS בסדר: UPDATE על `trustee_reports` מותר ל-admin/manager, והמנהל הוא זה שסוגר משימות. שווה גם להציג את סטטוס המשימה על שורת הממצא — כרגע `tskHtml` (14738) מציג רק את הכותרת כקישור, בלי סטטוס. שים לב: +2 ייזקפו לחודש שבו **דווח** הליקוי (14179), לא לחודש הסגירה.
 
 
-### 4.5 — 🟨 partly · מאמץ M
+### 4.5 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+
+> לא מסומן כבוצע — **כלל 7**.
+> **ההחלטה שלך לא שונתה**: הנאמן עדיין סוגר ממצא שהוא פתח, והנקודות
+> עדיין ניתנות על הסגירה ולא על האישור (`DECISIONS.md` 2026-09-18 §3).
+> מה שנוסף הוא שכבה שנייה בלבד: המנהל יכול לאשר שהסגירה נבדקה.
 
 **ראיה**: העובדות נכונות. `svTru` 14566 `function row(...)` קובע `s:ok?TRUSTEE_S_OK:TRUSTEE_S_OPEN`; בסגירה נדחפת שורת t=8 עם `ref`, ומיד אחריה 14592: `if(ref)(DB.trustee_reports||[]).forEach(function(x){if(x.id===ref&&_truIsHazard(x)&&x.s!==TRUSTEE_S_CLOSED)x.s=TRUSTEE_S_CLOSED;});` — והטריגר בשרת (`migrations/2026-09-18_trustee_reports.sql`, AFTER INSERT → `SET s='נסגר'`) עושה את אותו הדבר. הניקוד: 14182 `closed=...r.s===TRUSTEE_S_CLOSED` ו-14185 `ptsClosed=Math.min(closed*TRUSTEE_PTS_CLOSED,TRUSTEE_MAX_CLOSED_PTS)`. בסכמה (אותה מיגרציה, שורות 40-55) אין שום שדה אישור: id,u,m,t,d,location_id,loc,ok,f,photo_url,s,ref,mgr_note,ts.
 מה שהטענה מחמיצה: (א) DECISIONS.md 2026-09-18 §3 — זו החלטה מפורשת של מיכאל («הנאמן סוגר משימה שהוא פתח»), במכוון בלי UPDATE ובלי RPC כדי שתעבוד אופליין דרך ה-outbox, ושם כתוב במפורש «המנהל יכול לפתוח מחדש». (ב) הכפתור הזה קיים: `_truRowMenu` 14755 `item('↩','פתח מחדש',...)`. (ג) המנהל רואה את הראיה על השורה — `afterHtml` 14733 מציג «✓ תמונת "אחרי" DD/MM/YYYY (שם)» עם קישור לתמונה, ויש פילטר «נסגרו» (14727). (ד) תמונת «אחרי» היא חובה: `svTru` 14574 `if(!okPh){toast('תמונת "אחרי" היא חובה כדי לסגור ממצא');return;}`. (ה) התקרה 20 נק' (TRUSTEE_MAX_CLOSED_PTS) = 10 סגירות, לא אינסוף.
@@ -918,7 +946,11 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שני דברים שמשנים את התמונה. (1) `svTsk` מפיל גם את `ext_id` באותה דרך, ו-`_sbMergePull` מעדיף את העותק המקומי כל עוד הפעולה בתור — שורה 3272: `if((o==='ins'||o==='upd')&&local[r.id]){merged.push(local[r.id]);return;}` — כך שהאיבוד מורגש עד המשיכה הבאה. (2) **האלמוני החשוב**: `closed_date` לא מופיע באף מיגרציה. `migrations/2026-04-21_tasks.sql` יוצר את `tasks` בלעדיו, וה-ALTER-ים המאוחרים מוסיפים רק `ext_id`, `parent_id`, `project_id`. STATUS.md שורה 203 מצהיר «ללא migration — משתמש בעמודות קיימות», אבל תיקיית המיגרציות לא מגבה את זה. אם העמודה לא נוספה ידנית, כל PATCH שנושא `closed_date` נכשל ב-PGRST204 ונתקע בתור בניסיונות חוזרים — התרחיש הזה כבר קרה פעם אחת כאן והשאיר מנקה קשיח: `_obSanitize()` שורה 3425 `var BAD={equip_inspections:['last_inspection_date','status']};`. לא יכולתי לאמת מול Supabase — הרשת של סביבת הענן חוסמת את `*.supabase.co` (מתועד ב-CLAUDE.md). לפני כל עבודה על 6.10, שאילתה אחת ב-SQL Editor: `select column_name from information_schema.columns where table_name='tasks';`. אם `closed_date` חסר — מיגרציה של שורה אחת קודמת, ולפי כלל 7 היא לא מסומנת `[x]` עד שמיכאל מאשר שהיא רצה.
 
 
-### 6.11 — ✅ confirmed · מאמץ M
+### 6.11 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+
+> לא מסומן כבוצע — **כלל 7**.
+> שתי הטבלאות החדשות נכנסו גם לגיבוי **וגם ל-cron** — בדיקה קיימת
+> (`backup-coverage-test.mjs`) תפסה ששכחתי את ה-cron.
 
 **ראיה**: `_mrAINarrative` (index.html:12041) builds the full ISO 45001/14001 §9.3 four-part narrative and, on success, does exactly one thing with it — index.html:12119: `window._mrAIRaw=content;`. That is a page-lifetime JS variable. The only two buttons rendered beside the text (12114-12117) are `⧮ צור מחדש` (regenerate) and `📋 העתק` → `_mrAICopy` (12123), which only writes to the clipboard. There is no `fetch(SBU+'/rest/v1/...')` anywhere in the function. `_annualISOReport` (11960) has the identical shape — index.html:12033: `window._annualISORaw=content;`. `rMr()` (8547-8625) writes only into DOM ids (`g('mr-ncr-open').textContent=...`), nothing is stored. There is no review table anywhere: `_BACKUP_TABLES` (index.html:16780) — the app's own full table list — has no management-review entry, and none of the 78 files in migrations/ creates one (grep for mgmt/review/protocol returns only the two AI prompt strings at 12004 and 12084). Separately, STATUS.md:291 claims the page can be printed "דרך כפתור 🖨 הקיים בtopbar" — that button no longer exists; the topbar (index.html:758-778) holds ☰ · 🏠 · sync-pill · 🔔 · 📝 · ⋯ · 📱 and no printer.
 
