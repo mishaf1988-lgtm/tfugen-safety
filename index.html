@@ -3268,9 +3268,20 @@ function _obSend(op){
     // tries put it back as an upsert rather than let the op sit in the queue
     // for ever \u2014 if RLS is what is refusing, the upsert is refused too and the
     // op stays queued and visible, which is the point.
-    var asUpsert=(op.op==='upd'&&(op.tries||0)>=3&&op.row&&op.row.id);
+    // A conflict is not a transport failure, so it is never \u05e9\u05d5\u05e0\u05d4 away by the
+    // upsert fallback: that would be the silent overwrite this fix exists to
+    // stop. Only the user, through \u00ab\u05d4\u05e9\u05d0\u05e8 \u05d0\u05ea \u05e9\u05dc\u05d9\u00bb, clears a guard.
+    var asUpsert=(op.op==='upd'&&(op.tries||0)>=3&&!op.conflict&&op.row&&op.row.id);
     if(op.op==='ins'||asUpsert){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
-    else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}
+    else if(op.op==='upd'){
+      url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);
+      // Guard on the version the server last gave us. A row we have never
+      // pulled (created offline, never synced) has none, and then this
+      // behaves exactly as it did before.
+      var _v=_verOf(op.tbl,op.row.id);
+      if(_v){url+='&'+_verCol()+'=eq.'+encodeURIComponent(_v);op._guarded=1;}
+      opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);
+    }
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
     return fetch(url,opts).then(function(r){
@@ -3284,11 +3295,24 @@ function _obSend(op){
       // gets 0 rows and a 200 on every UPDATE.
       if(r.ok&&(op.op==='upd'||op.op==='del')){
         return r.json().then(function(j){
-          if(!Array.isArray(j)||j.length)return r;                 // rows really changed
+          if(Array.isArray(j)&&j.length){
+            // the server tells us the new version; guard against it next time
+            if(op.op==='upd')try{_verSet(op.tbl,op.row.id,j[0][_verCol()]||null);}catch(e){}
+            return r;
+          }
+          if(!Array.isArray(j))return r;
           // A DELETE that matched nothing is done: the row is already gone.
           if(op.op==='del')return r;
           var z=new Error('0 rows');z.status=r.status;z.zeroRows=true;
-          z.body='\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4 (\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea)';
+          // With a version guard on, 0 rows means the row CHANGED under us,
+          // not that we lack permission. Saying \u00abno permission\u00bb there would
+          // send Michael looking in the wrong place.
+          if(op._guarded){
+            z.conflict=true;
+            z.body='\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05e8 \u05de\u05d0\u05d6 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05db\u05d0\u05df \u2014 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d0 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05e9\u05d9\u05e0\u05d5\u05d9 \u05e9\u05dc \u05de\u05d9\u05e9\u05d4\u05d5 \u05d0\u05d7\u05e8';
+          }else{
+            z.body='\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4 (\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea)';
+          }
           throw z;
         },function(){return r;});                                   // unreadable body: leave as before
       }
@@ -3346,7 +3370,8 @@ function _obDrainOps(){
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
-        op.lastError=(err&&err.status?('HTTP '+err.status):'net')+(err&&err.body?(' '+String(err.body).slice(0,200)):'');
+        op.conflict=!!(err&&err.conflict);
+        op.lastError=(err&&err.conflict?'\u05d4\u05ea\u05e0\u05d2\u05e9\u05d5\u05ea':(err&&err.status?('HTTP '+err.status):'net'))+(err&&err.body?(' '+String(err.body).slice(0,200)):'');
         op.lastTs=Date.now();
         lastErr={tbl:op.tbl,op:op.op,status:err&&err.status,body:err&&err.body?String(err.body).slice(0,300):'',ts:Date.now()};
         remaining.push(op);
@@ -3418,7 +3443,36 @@ function _sbRefresh(silent,changedTbl){
 // single-table pulls (trustee screen in employee mode). obBefore is the
 // outbox view taken before the request left; merged with the view at
 // response time so an op uploaded mid-flight still counts as "ours".
+// ---- 5.7 ----
+// Every PATCH went out as `?id=eq.<id>` with the whole row in the body and
+// no condition at all: no If-Match, no version, nothing. Last writer wins,
+// silently. Two real cases, both of them Michael's own:
+//   (a) two devices \u2014 the NCR modal open on the phone while the desktop
+//       changed the status; saving on the phone puts the old status back.
+//   (b) worse, the offline queue \u2014 an edit made in the plant with no signal
+//       sits in the outbox, and when the signal returns the PATCH goes out
+//       carrying two-hour-old values over everything done since. On an NCR
+//       that means a closed finding reopening, or a target date moving
+//       backwards, in a record an auditor reads.
+//
+// No migration needed: `ts` already exists and already changes on every
+// save. The version we guard against is the one the SERVER last gave us,
+// recorded here \u2014 the one place rows arrive from the server.
+var _rowVer={};
+// The guard must be a column the save actually MOVES. Every sv* writes a
+// fresh `ts`; `created_at` never changes, so a guard on it would match for
+// ever and prove nothing \u2014 which is exactly what it did on `ncr`, the table
+// this whole thing exists for: `ncr` is absent from _sbTsCol, which is an
+// ORDERING map, so it fell back to created_at. A table whose rows carry no
+// `ts` records no version on pull and is therefore sent unguarded, as before.
+function _verCol(){return 'ts';}
+function _verOf(t,id){return (_rowVer[t]&&_rowVer[t][id])||null;}
+function _verSet(t,id,v){if(!id)return;if(!_rowVer[t])_rowVer[t]={};if(v)_rowVer[t][id]=v;else delete _rowVer[t][id];}
+// The user chose \u00abmine wins\u00bb: drop the guard for this row so the retry lands.
+window._verForce=function(t,id){_verSet(t,id,null);if(typeof _obDrain==='function')_obDrain();};
 function _sbMergePull(t,rows,obBefore){
+  var _vc=_verCol();
+  (rows||[]).forEach(function(r){if(r&&r.id)_verSet(t,r.id,r[_vc]||null);});
   var ob=obBefore||{},obNow=_obLocalState(t);
   Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
   var local={};
@@ -3678,6 +3732,31 @@ window._forceFreshLoad=function(){
 };
 function syncDiag(){
   var q=_obGet();var le=_obLastErr();
+  // A version conflict is not a network problem and \u00ab\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1\u00bb will never
+  // clear it \u2014 somebody else really did change the record. It gets its own
+  // question, naming the record, with the choice made by the person rather
+  // than by whoever happened to press save last.
+  var conf=q.filter(function(op){return op&&op.conflict&&op.row&&op.row.id;});
+  if(conf.length){
+    var c=conf[0];
+    var label=(c.row.num||c.row.n||c.row.name||c.row.title||c.row.d||c.row.id);
+    var msg='\u26a0 \u05d4\u05ea\u05e0\u05d2\u05e9\u05d5\u05ea \u05e2\u05e8\u05d9\u05db\u05d4'+(conf.length>1?(' ('+conf.length+')'):'')+'\n\n'
+      +'\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u00ab'+String(label).substring(0,60)+'\u00bb \u05e9\u05d5\u05e0\u05ea\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05e8 \u05d0\u05d7\u05e8\u05d9 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05db\u05d0\u05df.\n'
+      +'\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e9\u05dc\u05da \u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4, \u05db\u05d3\u05d9 \u05dc\u05d0 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05d0\u05d7\u05e8.\n\n'
+      +'\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05dc\u05da (\u05d3\u05d5\u05e8\u05e1 \u05d0\u05ea \u05d4\u05e9\u05e0\u05d9\u05d9\u05d4).\n'
+      +'\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e9\u05dc\u05da \u05d5\u05dc\u05e7\u05d1\u05dc \u05d0\u05ea \u05de\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.';
+    if(confirm(msg)){
+      conf.forEach(function(op){op.conflict=false;_verSet(op.tbl,op.row.id,null);});
+      _obSet(q);_obDrain();
+    }else{
+      var keep=q.filter(function(op){return conf.indexOf(op)<0;});
+      _obSet(keep);
+      if(typeof sbSync==='function')sbSync(true);
+      toast('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4 \u2014 \u05de\u05d5\u05e6\u05d2\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea');
+    }
+    if(typeof _obBadge==='function')_obBadge();
+    return;
+  }
   var lines=['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e1\u05e0\u05db\u05e8\u05d5\u05df:','','SB_ON: '+SB_ON,'Realtime: '+_rtState,'\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8: '+q.length];
   if(le){lines.push('','\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4:','  \u05d8\u05d1\u05dc\u05d4: '+(le.tbl||'?'),'  \u05e4\u05e2\u05d5\u05dc\u05d4: '+(le.op||'?'),'  \u05e1\u05d8\u05d8\u05d5\u05e1: '+(le.status||'net'));if(le.body)lines.push('  \u05e4\u05e8\u05d8\u05d9\u05dd: '+le.body);}
   if(q.length){lines.push('','\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8:');q.slice(0,10).forEach(function(op){lines.push('  '+op.op+' '+op.tbl+(op.tries?(' \u00d7'+op.tries):'')+(op.lastError?(' \u2014 '+op.lastError):''));});if(q.length>10)lines.push('  ...\u05d5\u05e2\u05d5\u05d3 '+(q.length-10));}
@@ -12022,6 +12101,37 @@ function rEmp(){
 
 // Every task spawned from one record, newest first. The link has always been
 // stored; until now only the trustee screen read it back.
+// ---- 3.11 ----
+// Not one of the 46 sv* functions writes who saved the record. Opening a PPE
+// or contractor row with an expiry date that looks wrong, there is nothing on
+// the sheet saying who entered it or when \u2014 and \u00a77.5.3 says a controlled
+// document carries that. Finding out meant the audit page, which pulls the
+// last 200 rows across ALL tables (a day or two of history) with no search.
+//
+// _aud already records exactly this, on every sbIns/sbUpd/sbDel, and the
+// rows are already synced into DB.audit_log. Reading them back per record
+// answers the question with no new column on 46 tables.
+function _auditFor(tbl,id){
+  if(!tbl||!id)return [];
+  return (DB.audit_log||[]).filter(function(a){return a&&a.table_name===tbl&&a.record_id===id;})
+    .sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+}
+function _auditStampHtml(tbl,id,rec){
+  var rows=_auditFor(tbl,id);
+  var last=rows[0],first=rows[rows.length-1];
+  // A record whose history has aged out of the local log still has its own
+  // ts; saying \u00ab\u05e2\u05d5\u05d3\u05db\u05df\u00bb without a name is better than saying nothing.
+  if(!last&&!(rec&&rec.ts))return '';
+  function who(a){return (a&&a.user_email)?String(a.user_email).split('@')[0]:'';}
+  function when(v){try{var d=new Date(v);if(isNaN(d))return '';return fd(d.toISOString().split('T')[0])+' '+d.toTimeString().substring(0,5);}catch(e){return '';}}
+  var parts=[];
+  if(last)parts.push('\u05e2\u05d5\u05d3\u05db\u05df: '+esc(who(last)||'?')+' \u00b7 '+esc(when(last.ts)));
+  else if(rec&&rec.ts)parts.push('\u05e2\u05d5\u05d3\u05db\u05df: '+esc(when(rec.ts)));
+  if(first&&first!==last&&first.op==='INSERT')parts.push('\u05e0\u05d5\u05e6\u05e8: '+esc(who(first)||'?')+' \u00b7 '+esc(when(first.ts)));
+  if(!parts.length)return '';
+  var more=rows.length>1?(' \u00b7 '+rows.length+' \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd'):'';
+  return '<div id="view-stamp" style="margin-top:10px;font-size:11px;color:var(--t3);border-top:1px solid #f0f0f0;padding-top:6px">\u270e '+parts.join(' \u00b7 ')+more+'</div>';
+}
 function _tasksFor(tbl,id){
   if(!tbl||!id)return [];
   return (DB.tasks||[]).filter(function(t){return t&&t.source_table===tbl&&t.source_id===id;})
@@ -12278,6 +12388,9 @@ function showView(tbl,id){
   else if(tbl==='inc'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canSpawnTsk=true;
   else if(tbl==='near_miss'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canSpawnTsk=true;
   else if(tbl==='rsk')canSpawnTsk=true;
+  // Who last touched this record, and when. From audit_log, which already
+  // carries it \u2014 the sv* functions do not.
+  try{html+=_auditStampHtml(tbl,id,rec);}catch(e){}
   // Both of these describe what ALREADY happened, so they belong on a closed
   // record too \u2014 that is the one an auditor opens. Only the button that
   // creates a new task stays behind canSpawnTsk.

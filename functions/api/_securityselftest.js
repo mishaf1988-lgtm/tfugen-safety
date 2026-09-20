@@ -273,6 +273,44 @@ export async function onRequest({ request }) {
       pushCheck({ id: 'password_reset_visible_to_caller', got: 'fetch failed', verdict: '✗' });
     }
 
+    // ----- Storage -----
+    // The gap 5.9 is about: this endpoint tested RLS on three tables and
+    // nothing at all on Storage — which is where the hole actually was. Four
+    // policies granted to `authenticated`, and the day the trustee kiosk
+    // started signing in anonymously, "authenticated" came to include every
+    // visitor. Nothing in the project noticed for weeks.
+    //
+    // A named user should see the bucket; that is all this can assert from
+    // the caller's own token. What it CANNOT do is prove the anonymous case,
+    // because it would have to hold an anonymous token — so it says so
+    // rather than implying coverage it does not have.
+    try {
+      const r = await fetch(SBU + '/storage/v1/object/list/incidents-photos', {
+        method: 'POST',
+        headers: { ...sbHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 1, prefix: '' })
+      });
+      const named = callerEmail && callerEmail.indexOf('@') > 0;
+      pushCheck({
+        id: 'storage_list_for_caller',
+        expected: named ? 'named user: can list the bucket' : 'no email claim: should be refused',
+        got: 'HTTP ' + r.status + ' (caller: ' + (callerEmail || 'anonymous') + ')',
+        verdict: verdict(named ? r.ok : !r.ok)
+      });
+    } catch (e) {
+      pushCheck({ id: 'storage_list_for_caller', got: 'fetch failed', verdict: '⚠' });
+    }
+
+    // Whether the anonymous kiosk is scoped to tru-ph-* can only be proved
+    // with an anonymous token, which this endpoint does not hold. Reported
+    // as a known gap so nobody reads a green board as full coverage.
+    pushCheck({
+      id: 'storage_anon_scope',
+      expected: 'anonymous session limited to tru-ph-* (migrations/2026-09-20_storage_trustee_scope.sql)',
+      got: 'not testable from this endpoint — needs an anonymous token',
+      verdict: '⚠'
+    });
+
     // Information: caller's identity (no PII beyond the JWT email which the
     // caller already knows about themselves).
     pushCheck({
