@@ -9,12 +9,7 @@
 // (same pattern used by create/delete/reset/rename-user). Any logged-in
 // user can still send — the gate just rejects anonymous callers.
 
-import {
-  defaultAllowedOrigins,
-  originPasses,
-  corsHeaders,
-  jsonResp
-} from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, requireUser } from '../_shared.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -30,15 +25,12 @@ export async function onRequest({ request, env }) {
 
   // Auth gate (H1). Must come BEFORE body parse — that's what makes the
   // self-test's negative checks observable as 401 instead of 400.
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) return jsonResp({ error: 'server misconfigured: missing SUPABASE_SERVICE_ROLE_KEY' }, 500, cors);
-  const authHeader = request.headers.get('authorization') || '';
-  const userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!userToken) return jsonResp({ error: 'missing bearer token' }, 401, cors);
-  const verifyResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + userToken }
-  });
-  if (!verifyResp.ok) return jsonResp({ error: 'invalid session token' }, 401, cors);
+  // H1 (May) required a JWT. It was not enough once the no-password trustee
+  // screen started handing every visitor an anonymous one: this endpoint sends
+  // from the factory's verified Meta number, so an anonymous caller here is an
+  // open relay. Security review 2026-09-20.
+  const who = await requireUser(request, env);
+  if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
 
   const PHONE_ID = env.META_PHONE_NUMBER_ID;
   const TOKEN = env.META_ACCESS_TOKEN;

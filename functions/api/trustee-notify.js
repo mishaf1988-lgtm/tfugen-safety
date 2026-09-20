@@ -19,7 +19,7 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireUser } from '../_shared.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -64,10 +64,10 @@ export async function onRequest({ request, env }) {
 
   // ---- (2) test message from the settings screen: needs a logged-in session ----
   if (body.test === true) {
-    const userToken = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
-    if (!userToken) return jsonResp({ error: 'missing bearer token' }, 401, cors);
-    const verifyResp = await fetch(SUPABASE_URL + '/auth/v1/user', { headers: { apikey: serviceKey, Authorization: 'Bearer ' + userToken } });
-    if (!verifyResp.ok) return jsonResp({ error: 'invalid session token' }, 401, cors);
+    // Same hole as wa-send: this path takes an attacker-chosen recipient and
+    // sends through Meta AND Resend. An anonymous kiosk token must not reach it.
+    const who = await requireUser(request, env);
+    if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     // The test uses what the screen holds right now (the prefs row may not be saved yet).
     const prefs = {
       whatsapp: body.whatsapp !== false, whatsapp_to: clean(body.whatsapp_to, 20).replace(/[^0-9]/g, ''),
