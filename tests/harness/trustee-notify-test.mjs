@@ -11,7 +11,7 @@ function world(opts) {
     const u = String(url); const method = (init && init.method) || 'GET'; const body = init && init.body ? JSON.parse(init.body) : null;
     calls.push({ u, method, body, headers: init && init.headers });
     const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
-    if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1' } : { error: 'bad' }, st.authOk ? 200 : 401);
+    if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false } : { error: 'bad' }, st.authOk ? 200 : 401);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'GET') return json(st.row ? [st.row] : []);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; return json([{ id: st.row.id }]); }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json(st.prefs ? [{ prefs: st.prefs }] : []);

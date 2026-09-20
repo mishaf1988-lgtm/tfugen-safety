@@ -4784,7 +4784,7 @@ function legAskAI(){
     '3. \u05d0\u05dd \u05d0\u05e3 \u05d7\u05d5\u05e7 \u05d1\u05de\u05d0\u05d2\u05e8 \u05dc\u05d0 \u05e0\u05e8\u05d0\u05d4 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9 \u2192 "\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05d7\u05d5\u05e7 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9 \u05d1\u05de\u05d0\u05d2\u05e8. \u05d1\u05d3\u05d5\u05e7 \u05d1\u05e0\u05d1\u05d5 \u05d0\u05d5 \u05d4\u05d5\u05e1\u05e3 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7."\n'+
     '4. \u05d4\u05e1\u05d1\u05e8 \u05de\u05d5\u05e9\u05d2\u05d9\u05dd \u05de\u05d5\u05e8 (\u05de\u05d4 \u05d6\u05d4 \u05d3\u05d5\u05d3 \u05e7\u05d9\u05d8\u05d5\u05e8, \u05de\u05d4 \u05d6\u05d4 PPE \u05d5\u05db\u05d5\u05f3). \u05d4\u05de\u05e6\u05d0\u05ea \u05ea\u05d3\u05d9\u05e8\u05d5\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05d5\u05ea \u05de\u05d4\u05e8\u05d0\u05e9 \u2014 \u05d0\u05e1\u05d5\u05e8 \u05d1\u05d4\u05d7\u05dc\u05d8.\n'+
     '5. \u05de\u05d2\u05d1\u05dc\u05d4: 250 \u05de\u05d9\u05dc\u05d9\u05dd. \u05e2\u05d1\u05e8\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3.';
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:_AI_MODEL,max_tokens:1200,messages:[{role:'user',content:userMsg}],system:sys})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.error){throw new Error(d.error.message||JSON.stringify(d.error));}
@@ -7103,7 +7103,7 @@ function _eqiPdfAnalyzeOne(base64,srcIdx){
   };
   // Stream mode: keeps the connection alive for long PDFs (Cloudflare 524 fix).
   // Server pipes Anthropic's SSE through; we accumulate text_delta events.
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body)})
     .then(function(r){
       if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.substring(0,160));});}
       if(!r.body)return r.text().then(function(t){throw new Error('no stream body: '+t.substring(0,160));});
@@ -11261,7 +11261,7 @@ window._incFiveWhyGenerate=function(rec){
     '...\n\n'+
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9]\n\n'+
     '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
-  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11379,7 +11379,7 @@ window._rskAI=function(){
     '  "ac": "1-3 שורות בעברית — פעולות הפחתה ספציפיות שניתן ליישם"\n}\n\n'+
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'הסיכון:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11418,7 +11418,7 @@ window._easpAI=function(){
     '  "additional_controls": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05e9\u05d9\u05db\u05d5\u05dc\u05d5\u05ea \u05dc\u05d7\u05d6\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05d9\u05de\u05d5\u05ea"\n}\n\n'+
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e1\u05d1\u05e8 \u05e0\u05d5\u05e1\u05e3.\n\n'+
     '\u05d4\u05d4\u05d9\u05d1\u05d8: '+aspect+(activity?'\n\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df: '+activity:'');
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11461,7 +11461,7 @@ window._ncrAIRcAction=function(){
     '  "c": "1-2 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05ea, \u05de\u05d3\u05d9\u05d3\u05d4, \u05e9\u05e0\u05d9\u05ea\u05df \u05dc\u05d9\u05d9\u05e9\u05dd"\n}\n\n'+
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
     '\u05d4-NCR:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11507,7 +11507,7 @@ window._ncrFiveWhyAI=function(){
     '...\n\n'+
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 \u2014 \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9 \u05e9\u05de\u05db\u05d5\u05d5\u05df \u05dc-CAPA]\n\n'+
     '\u05d4-NCR:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11585,7 +11585,7 @@ window._aiWeeklySummary=function(){
     '3. **\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d3\u05d7\u05d5\u05e4\u05d9\u05dd** (1-2 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd) \u2014 \u05de\u05d4 \u05de\u05d8\u05d5\u05e4\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0?\n'+
     '4. **\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05de\u05e0\u05d4\u05dc\u05ea** (2-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05e7\u05e6\u05e8\u05d5\u05ea \u05d1\u05de\u05e1\u05e4\u05d5\u05e8) \u2014 \u05d0\u05d9\u05dc\u05d5 \u05d4\u05d7\u05dc\u05d8\u05d5\u05ea \u05dc\u05e7\u05d1\u05dc \u05de\u05d4\u05e0\u05d4\u05dc\u05d4 (\u05ea\u05e7\u05e6\u05d9\u05d1, \u05e0\u05d4\u05dc\u05d9\u05dd, \u05d4\u05e9\u05e7\u05e2\u05d5\u05ea \u05d0\u05dd \u05e0\u05d3\u05e8\u05e9).\n\n'+
     '\u05db\u05ea\u05d5\u05d1 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05ea\u05e7\u05e0\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3, \u05d1\u05dc\u05d9 \u05de\u05d9\u05e0\u05d5\u05d7\u05d9 \u05de\u05e7\u05e6\u05d5\u05e2 \u05de\u05d9\u05d5\u05ea\u05e8\u05d9\u05dd. \u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05d4\u05e7\u05d3\u05de\u05d4 \u05d0\u05d5 \u05d1\u05e1\u05d9\u05d5\u05dd \u05de\u05e2\u05d9\u05df "\u05de\u05d6\u05dc \u05d8\u05d5\u05d1". \u05d4\u05ea\u05d7\u05dc \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05d1\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d4\u05db\u05dc\u05dc\u05d9.\n\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:1200,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11677,7 +11677,7 @@ window._annualISOReport=function(){
     '## 8. החלטות והמלצות לשנה הבאה\n(3-5 פעולות עיקריות שההנהלה צריכה להחליט / לתקצב)\n\n'+
     'כללים:\n- אל תמציא נתונים — השתמש רק במה שצורף\n- אם נתון חסר — אמור "לא נמצא בנתונים"\n- בלי הקדמה כללית, התחל ישירות בחלק 1\n- כתוב בלשון פורמלית-מקצועית, מתאים לאודיטור חיצוני\n\n'+
     'הנתונים:\n'+JSON.stringify(data,null,2);
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
     model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:3000,
     messages:[{role:'user',content:aiPrompt}]
   })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
@@ -11760,7 +11760,7 @@ window._mrAINarrative=function(){
     '- כל סעיף בכותרת ## משלו\n'+
     '- בלי הקדמה ובלי "מזל טוב" בסוף\n\n'+
     'הנתונים:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:1500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11876,7 +11876,7 @@ window._aiTodayPlan=function(){
     '- אל תרשום משימה שכבר בפיגור עמוק (>30 יום) אלא אם היא קריטית\n'+
     '- כל פעולה חייבת להיות הרצה היום או מחר, לא רעיון מופשט\n\n'+
     'הנתונים:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:900,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -11946,7 +11946,7 @@ window._tskBulkAI=function(){
     'כללים: PPE/חומ"ס/אש = קריטי 1-3 ימים. ליקוי בסיור / NCR = גבוה 7. נוהל / הדרכה / תיעוד = רגיל 14-30. תיוק / archiving = נמוך 30+.\n\n'+
     'הקפד על JSON תקין בלבד, ללא הקדמה. החזר אותו מספר אובייקטים כמו השורות.\n\n'+
     'היום: '+today+'\nהשורות:\n'+lines.map(function(l,i){return (i+1)+'. '+l;}).join('\n');
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:2000,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
     .then(function(res){
@@ -12058,7 +12058,7 @@ window._askSend=function(){
     'תשובה קצרה ומדויקת (1-3 משפטים, או רשימה אם מתאים). השתמש במספרים מדויקים מתוך הנתונים. אם רלוונטי — צטט שמות אחראים / מספרי NCR / תאריכים.\n\n'+
     'הנתונים (אצלך לקריאה בלבד):\n'+JSON.stringify(snap,null,2)+'\n\n'+
     'השאלה:\n'+q;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
     model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,
     messages:[{role:'user',content:aiPrompt}]
   })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
@@ -12086,7 +12086,7 @@ window._ocrAnalyze=function(file,prompt){
     rd.onload=function(ev){
       // Strip the data URL prefix → just base64
       var b64=String(ev.target.result||'').replace(/^data:image\/[^;]+;base64,/,'');
-      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
         model:'@cf/meta/llama-3.2-11b-vision-instruct',
         prompt:prompt,
         image:b64,
@@ -12203,7 +12203,7 @@ window._tskAI=function(){
     '- עדכון תיק / archiving = נמוך, 30+ ימים\n\n'+
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'היום: '+today+'\nהמשימה:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:200,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -12249,7 +12249,7 @@ window._incAI=function(){
     '  "dy": מספר שלם של ימי היעדרות צפויים (0 אם אין פציעה, אחרת הערכה גסה: 1-2 חבלה קלה, 3-7 פציעה בינונית, 8-30 חמורה, 30+ קריטית)\n}\n\n'+
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'התקרית:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:300,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -12295,7 +12295,7 @@ window._legAI=function(){
     '  "a": "בטיחות בעבודה" או "איכות סביבה" או "כח אדם" או "כללי"\n}\n\n'+
     'הקפד על JSON תקין בלבד, ללא הקדמה.\n\n'+
     'החוק:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -12335,7 +12335,7 @@ window._toolboxAI=function(){
   var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. בהינתן נושא Toolbox-Talk (שיחת בטיחות יומית של 5-10 דק), צור תוכן קצר ומעשי — 3-5 נקודות שאפשר לדבר עליהן עם הצוות. לא רשימה מופשטת — נקודות קונקרטיות עם דוגמאות מהשטח.\n\n'+
     'הפק טקסט פשוט (לא JSON), ב-3-5 שורות, ללא הקדמה.\n\n'+
     'הנושא: '+topic;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:400,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -12371,7 +12371,7 @@ window._nmAI=function(){
     '  "notes": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u2014 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d5\u05e0\u05e2\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05ea \u05dc\u05d4\u05ea\u05e8\u05d7\u05e9\u05d5\u05ea \u05e2\u05ea\u05d9\u05d3\u05d9\u05d5\u05ea \u2014 \u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0?"\n}\n\n'+
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
     '\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7:\n'+ctx;
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
@@ -15204,7 +15204,7 @@ window._ncrAI=function(id){
     '  "owner_suggested": "role such as production manager / safety / maintenance (not a person name)",\n'+
     '  "due_days": 14\n'+
     '}';
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:_AI_MODEL,max_tokens:1200,messages:[{role:'user',content:prompt}]})
   }).then(function(r){return r.json();}).then(function(d){
     var t=d.content&&d.content[0]?d.content[0].text:'';
@@ -15278,7 +15278,7 @@ window.ncrAgentAnalyzeAll=function(){
     '4. Urgent alerts / \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d3\u05d7\u05d5\u05e4\u05d5\u05ea';
   function status(msg){P.innerHTML='<div style="text-align:center;padding:30px;color:#4a6a8a">'+esc(msg)+'</div>';}
   function ask(prompt,maxTok){
-    return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+    return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
       body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:maxTok,messages:[{role:'user',content:prompt}]})
     }).then(function(r){return r.text().then(function(txt){return{status:r.status,ok:r.ok,txt:txt};});}).then(function(res){
       if(!res.ok)throw new Error('API '+res.status+': '+(res.txt||'').substring(0,300));
@@ -15673,7 +15673,7 @@ function _capAnalyze(text, isRefine){
   }else{
     userContent = CAP_PROMPT + '\n\nUser input: ' + text;
   }
-  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},
+  fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:_AI_MODEL,max_tokens:800,messages:[{role:'user',content:userContent}]})
   })
   .then(function(r){return r.text().then(function(t){return {ok:r.ok,status:r.status,txt:t};});})
@@ -17450,7 +17450,7 @@ function _odBuildClassifyPrompt(name,extractedText){
 }
 // Send a TEXT prompt to Workers AI text model and return the response.
 function _aiTextClassify(prompt){
-  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
     model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     max_tokens:800,
     messages:[{role:'user',content:prompt}]
@@ -17474,7 +17474,7 @@ function _aiClaudeVisionClassify(blob,prompt){
     rd.onload=function(ev){
       var b64=String(ev.target.result||'').replace(/^data:image\/[^;]+;base64,/,'');
       var mime=blob.type||'image/jpeg';
-      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
         model:'claude-haiku-4-5',
         max_tokens:600,
         messages:[{role:'user',content:[

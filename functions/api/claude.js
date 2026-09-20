@@ -8,13 +8,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
-import {
-  defaultAllowedOrigins,
-  originPasses,
-  corsHeaders,
-  jsonResp,
-  isAllowedCaller
-} from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireUser } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
 // models are kept for backward-compat — switch the client back any time by
@@ -41,6 +35,17 @@ export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
+
+  // The origin gate stops another website's page. It does not stop curl, which
+  // sets Origin freely — so until now this was an unauthenticated LLM proxy:
+  // anyone could burn the Workers AI daily quota (taking every AI feature in
+  // the app down with it) and, for claude-* models, spend ANTHROPIC_KEY on
+  // arbitrary prompts. Security review 2026-09-20.
+  // Anonymous sessions are refused: the trustee screen hides every AI control
+  // (index.html: body.emp-mode .cap-fab, #ask-fab { display:none }), so no
+  // legitimate anonymous caller exists.
+  const who = await requireUser(request, env);
+  if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
 
   const body = await request.text();
   if (body.length > MAX_BODY_BYTES) return jsonResp({ error: 'body too large' }, 413, cors);

@@ -48,3 +48,40 @@ export function isAllowedCaller(request, allowed) {
   }
   return false;
 }
+
+// ---- who is on the other end -------------------------------------------------
+// Security review 2026-09-20. The May audit made wa-send require a JWT (H1).
+// In September the app gained a no-password trustee screen, which signs in
+// ANONYMOUSLY — and Supabase anonymous sign-in produces a real user, so
+// /auth/v1/user returns 200 for it and the H1 gate stopped meaning anything.
+// The client already knew the difference (index.html: !session.user.is_anonymous);
+// the server did not. Endpoints that spend money, send from the factory's
+// verified WhatsApp number, or burn an AI quota use this instead.
+//
+// Returns { ok, status, error, user } — never throws.
+export async function requireUser(request, env, opts) {
+  const allowAnonymous = !!(opts && opts.allowAnonymous);
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) return { ok: false, status: 500, error: 'server misconfigured: missing SUPABASE_SERVICE_ROLE_KEY' };
+  const token = (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { ok: false, status: 401, error: 'missing bearer token' };
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  let resp, user;
+  try {
+    resp = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }
+    });
+  } catch (e) {
+    return { ok: false, status: 502, error: 'auth check failed' };
+  }
+  if (!resp.ok) return { ok: false, status: 401, error: 'invalid session token' };
+  try { user = await resp.json(); } catch (e) { return { ok: false, status: 502, error: 'auth check failed' }; }
+  // Supabase marks these explicitly. Treat a missing email as anonymous too:
+  // every real account in this app signs in with one, so absence is the tell
+  // even if the flag is ever dropped from the response shape.
+  const anonymous = user && (user.is_anonymous === true || !user.email);
+  if (anonymous && !allowAnonymous) {
+    return { ok: false, status: 403, error: 'anonymous session not allowed here', anonymous: true };
+  }
+  return { ok: true, user, anonymous: !!anonymous };
+}
