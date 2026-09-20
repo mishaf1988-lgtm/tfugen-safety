@@ -6039,7 +6039,8 @@ function _capNote(total,shown,onMore,cols){
     ' \u2014 \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d4\u05d3\u05d7\u05d5\u05e4\u05d5\u05ea \u05e8\u05d0\u05e9\u05d5\u05e0\u05d5\u05ea. ';
   var btn='<button class="btn btn-d btn-sm" onclick="'+onMore+'">\u05d4\u05e6\u05d2 \u05d0\u05ea \u05db\u05d5\u05dc\u05df ('+total+')</button>';
   var inner='<div style="text-align:center;padding:12px;color:var(--t3);font-size:12px">'+txt+btn+'</div>';
-  return cols?('<tr><td colspan="'+cols+'" data-label="">'+inner+'</td></tr>'):inner;
+  // class="cap-note": this row is furniture, not data. _exportCSV skips it.
+  return cols?('<tr class="cap-note"><td colspan="'+cols+'" data-label="">'+inner+'</td></tr>'):inner;
 }
 function tskShowAll(){window._tskShowAll=true;rTasks();}
 function expShowAll(){window._expShowAll=true;rExp();}
@@ -13156,9 +13157,29 @@ window._exportICS=function(){
   setTimeout(function(){URL.revokeObjectURL(url);if(a.parentNode)a.parentNode.removeChild(a);},500);
   toast('\u05d9\u05d5\u05e6\u05d0 \u05dc\u05d5\u05d7 \u05e9\u05e0\u05d4: '+count+' \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u2713');
 };
+// #617 capped the tasks and expiry pages at _RENDER_CAP painted rows. This
+// export reads the PAINTED DOM, so without lifting the cap first it hands over
+// 200 rows of N — a file that looks complete and is not. An export that
+// silently drops records is worse than a slow page, which is the same reason
+// the counters above those lists were never capped.
+function _capLiftForExport(){
+  var was={tsk:window._tskShowAll,exp:window._expShowAll};
+  window._tskShowAll=true;window._expShowAll=true;
+  try{if(CUR==='tasks'&&typeof rTasks==='function')rTasks();}catch(e){}
+  try{if(CUR==='exp'&&typeof rExp==='function')rExp();}catch(e){}
+  return function(){
+    window._tskShowAll=was.tsk;window._expShowAll=was.exp;
+    try{if(CUR==='tasks'&&typeof rTasks==='function')rTasks();}catch(e){}
+    try{if(CUR==='exp'&&typeof rExp==='function')rExp();}catch(e){}
+  };
+}
 window._exportCSV=function(){
   var on=document.querySelector('.page.on');
   if(!on){toast('\u05d0\u05d9\u05df \u05d3\u05e3 \u05e4\u05e2\u05d9\u05dc');return;}
+  var _restoreCap=_capLiftForExport();
+  try{ _exportCSVDo(on); } finally { _restoreCap(); }
+};
+function _exportCSVDo(on){
   var table=on.querySelector('table');
   if(!table){toast('\u05d0\u05d9\u05df \u05d8\u05d1\u05dc\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d1\u05d3\u05e3 \u05d4\u05d6\u05d4');return;}
   function cellTxt(td){
@@ -13173,6 +13194,7 @@ window._exportCSV=function(){
   table.querySelectorAll('tbody tr').forEach(function(tr){
     var tds=tr.querySelectorAll('td');
     if(!tds.length)return;
+    if(tr.classList.contains('cap-note'))return;
     if(tds.length===1&&tds[0].classList.contains('et'))return;
     rows.push(Array.prototype.map.call(tds,cellTxt));
   });
