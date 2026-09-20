@@ -130,21 +130,41 @@ console.log('\n3. an anonymous session is not the same as a signed-in one');
 
 console.log('\n4. a migration that has not been run says so');
 {
-  // The three that are waiting on Michael. If one of these is ever quietly
-  // edited to look applied, this check is what notices.
-  const PENDING = [
-    '2026-09-20_storage_trustee_scope.sql',
-    '2026-09-20_trustee_close_ownership.sql',
-    '2026-09-20_audit_log_append_only.sql',
-  ];
+  // Every migration waiting on Michael. If one is ever quietly edited to look
+  // applied, or ships without the two things he needs to run it safely, this
+  // is what notices. Started as three; the list grew with #678/#681/#684 and
+  // the additions were nearly missed, so it is derived rather than typed —
+  // every 2026-09-20 migration is pending until he says otherwise.
+  const PENDING = files.filter((f) => f.startsWith('2026-09-20_'));
+  check('the pending set is not empty — otherwise this section asserts nothing', PENDING.length >= 7, PENDING);
   PENDING.forEach((f) => {
-    const p = path.join(MIG, f);
-    check(f + ' exists', fs.existsSync(p), f);
-    if (!fs.existsSync(p)) return;
-    const t = fs.readFileSync(p, 'utf8');
-    check('  ...carries a verification block to paste', /verify|אימות/i.test(t) && /SELECT/i.test(t));
-    check('  ...and a rollback', /rollback|רולבק|DROP POLICY IF EXISTS/i.test(t));
+    const t = src[f];
+    check(f, /verify|אימות/i.test(t) && /SELECT/i.test(t) && /rollback|רולבק|DROP POLICY IF EXISTS/i.test(t),
+      { verify: /verify|אימות/i.test(t), select: /SELECT/i.test(t), rollback: /rollback|רולבק|DROP POLICY IF EXISTS/i.test(t) });
   });
+
+  // They are meant to be pasted one after another in a single SQL Editor, so
+  // no two may create the same object under different definitions, and none
+  // may carry an uncommented destructive statement into that run.
+  const created = {};
+  const clash = [];
+  PENDING.forEach((f) => {
+    const clean = src[f].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+    const re = /CREATE\s+(?:TABLE|INDEX)\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][\w.]*)/gi;
+    let m;
+    while ((m = re.exec(clean))) {
+      const k = m[1].toLowerCase();
+      if (created[k] && created[k] !== f) clash.push(k + ': ' + created[k] + ' + ' + f);
+      created[k] = f;
+    }
+  });
+  check('no two pending migrations create the same object', clash.length === 0, clash);
+
+  const live = PENDING.filter((f) => {
+    const clean = src[f].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+    return /\b(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|DELETE\s+FROM)\b/i.test(clean);
+  });
+  check('none of them runs a destructive statement — the rollbacks stay commented out', live.length === 0, live);
 }
 
 console.log('\n5. a destructive statement is never silent');
