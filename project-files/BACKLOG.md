@@ -101,14 +101,14 @@
 
 | # | מה | חומרה | מאמץ | |
 |---|---|---|---|---|
-| 5.1 | **`sbGet` בלי pagination.** Supabase מחזיר 1000 שורות לכל היותר, ו-`_sbMergePull` מתייחס אליהן כאל **כל** הטבלה — שורה מקומית שלא חזרה נמחקת. עם 375 NCR זה בסדר **היום** | 🔴 | S | ✅ |
-| 5.2 | **PATCH/DELETE שנגע ב-0 שורות נחשב «הועלה בהצלחה»** — והפעולה יורדת מהתור | 🟠 | S | ✅ |
-| 5.3 | **אין טיפול בפקיעת סשן.** משיכה שנכשלת ב-401 מסתיימת בשקט | 🟠 | S | ✅ |
+| 5.1 | ~~**`sbGet` בלי pagination.** Supabase מחזיר 1000 שורות לכל היותר, ו-`_sbMergePull` מתייחס אליהן כאל **כל** הטבלה — שורה מקומית שלא חזרה נמחקת. עם 375 NCR זה בסדר **היום**~~ **#657** | 🔴 | S | ✅ |
+| 5.2 | ~~**PATCH/DELETE שנגע ב-0 שורות נחשב «הועלה בהצלחה»** — והפעולה יורדת מהתור~~ **#657** | 🟠 | S | ✅ |
+| 5.3 | ~~**אין טיפול בפקיעת סשן.** משיכה שנכשלת ב-401 מסתיימת בשקט~~ **#657** | 🟠 | S | ✅ |
 | 5.4 | ~~**הגיבוי לא כולל** `ncr_ai`, `ncr_comments`, `ncr_patterns`, `audit_log`, `equip_inspection_history`; ה-cron גם לא את טבלאות הנאמנים~~ **#646** | 🔴 | M | ✅ |
 | 5.5 | ~~**כשה-cron מפסיק לרוץ אף אחד לא יודע** — `/health` מחזיר 'ok' תמיד~~ **#646** | 🟠 | S | ✅ |
-| 5.6 | **פתיחה קרה בלי רשת = מסך כניסה נעול.** supabase-js נטען מ-CDN וה-SW לא שומר אותו | 🟠 | S | ✅ |
+| 5.6 | ~~**פתיחה קרה בלי רשת = מסך כניסה נעול.** supabase-js נטען מ-CDN וה-SW לא שומר אותו~~ **#657** | 🟠 | S | ✅ |
 | 5.7 | **עריכה שולחת את כל השורה בלי גרסה** — שני אנשים באותה דקה, השני דורס את הראשון | 🟠 | M | ✅ |
-| 5.8 | **`audit_log` ניתן לשינוי ולמחיקה** על ידי כל מנהל דרך REST | 🟠 | S | ✅ |
+| 5.8 | **`audit_log` ניתן לשינוי ולמחיקה** על ידי כל מנהל דרך REST — מיגרציה נכתבה (**#657**), טרם הורצה: [#658](../../issues/658) | 🟠 | S | ✅👤 |
 | 5.9 | **אין שום בדיקה אוטומטית ל-RLS ול-Storage** — 78 מיגרציות עם «Verify» בהערות בלבד | 🟠 | M | 🟨 |
 | 5.10 | **`2026-09-20_trustee_close_ownership.sql` — לא הורצה** | 🔴 | — | ✅👤 |
 | 5.11 | **`2026-09-20_storage_trustee_scope.sql` — לא הורצה** (נכתבה היום) | 🔴 | — | ✅👤 |
@@ -152,6 +152,7 @@
 | #650 | נאמנים: חמישה מבויי סתום במסך שמתנדב מחזיק ביד (4.1, 4.2, 4.3, 4.10, 4.11) |
 | #652 | נאמנים: עבודה שנעשתה ולא נרשמה, נאמן שקיים פעמיים, ופרס שאיש לא הכריז (4.4, 4.6–4.9) |
 | #654 | מרשמים: הראיה שהמערכת מבקשת ממבקר להאמין לה בלי להראות (3.4, 3.6, 3.8–3.10, 3.12) · מיגרציה פתוחה: [#655](../../issues/655) |
+| #657 | סנכרון: ארבע דרכים שבהן האפליקציה אמרה שהכל בסדר כשלא (5.1, 5.2, 5.3, 5.6) · מיגרציה פתוחה ל-5.8: [#658](../../issues/658) |
 
 ## 8. לא מומלץ
 
@@ -642,7 +643,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: מגבלה שמשנה את גודל העבודה, ובדקתי אותה: `near_miss` פתוח לקריאה ל-admin/manager בלבד — migrations/2026-04-24_rls_stage2_admin_manager.sql:151-157 `CREATE POLICY near_miss_admin_manager_all ON near_miss FOR ALL TO authenticated USING (public.is_admin_manager())`, וה-`emp_insert` הוא INSERT בלבד. כלומר הסשן האנונימי **לא יכול לקרוא בחזרה** את הדיווח שלו, ולכן «מה קרה עם מה שדיווחתי» עבור כמעט-ונפגע מוגבל למטמון המקומי של אותו מכשיר — סטטוס שהמנהל עדכן לא יגיע לשם לעולם בלי שינוי RLS. זה בדיוק ההבדל מ-`trustee_reports`, שה-SELECT שלו פתוח לכל authenticated (migrations/2026-09-18_trustee_reports.sql) — ובגללו המסך של הנאמן כן עונה. לכן: החצי של «שדות מנהל» הוא S ובטוח; החצי של המעקב דורש או policy חדש (פעולה ידנית ב-Supabase → כלל 7 ב-CLAUDE.md, אישור מפורש של מיכאל) או להסתפק ב«נשלח ✓» מקומי. שני סיכונים בתיקון: אל תסתיר את `nm-sev` בלי ברירת מחדל — `svNm` 8069 כותב `sev:gv('nm-sev')` ו-select מוסתר וריק ישמור `''`; ומיפוי הנאמן לדיווח דורש את `nm-rep` (ב-`near_miss` אין שדה `u`), אז מילוי מראש מ-`_truMe()` הוא תנאי מוקדם לרשימת המעקב, לא קישוט. לשימוש חוזר: `_truStatusBadge`, `fd()`.
 
 
-### 5.1 — ✅ confirmed · מאמץ S
+### 5.1 — ✅ בוצע ב-**#657** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `sbGet` (index.html:3023-3037) builds one URL and never pages: line 3034 — `return fetch(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord+lim,{headers:sbH(),priority:'low'});`. No `Range` header, no `offset`, no loop, no `Prefer: count=exact`, so the response's `Content-Range` is never read and truncation is undetectable. `lim` comes from `_sbLimit` (3022) which holds only `{notifications_log:500}` — every business table sends no `limit` at all, which is exactly what `tests/harness/notif-log-test.js:86` asserts ("no business table asks for a limit"). But "no limit" is a client-side statement; PostgREST still applies the project's `db-max-rows`. The repo states the value itself in `workers/backup-cron.js:169-171`: "Supabase REST returns at most 1000 rows per request by default, so page through the table for safety" — the Worker pages with `Range: ${from}-${to}` (line 176), the browser does not. The second half of the claim is the deciding part, in `_sbMergePull` (3261-3283). `merged` is built only from the rows the server returned, and then only local rows that are still in the outbox are re-added: line 3277-3280 — `Object.keys(ob).forEach(function(id){ if(ob[id]==='del'||seen[id]||!local[id])return; merged.push(local[id]); });` followed by line 3282 `DB[t]=merged;`. A local row that was not in the returned page and has no pending op is silently dropped, and `sdb()` in `sbSync`'s `finish()` (3288) then writes the trimmed DB to localStorage.
 
@@ -653,7 +654,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שני דברים משנים את התמונה: (1) הפתרון כבר כתוב ב-repo — `fetchAllRows` ב-worker עושה בדיוק את זה; להעתיק את התבנית, לא להמציא. (2) להשתמש ב-`Range` ולא ב-`limit=` — `tests/harness/notif-log-test.js:86-87` מקבע שאף טבלה עסקית לא שולחת `limit=`, וזו החלטה מפורשת ב-DECISIONS.md (2026-09-20, «למה אף טבלה עסקית לא נחתכה») — pagination ב-Range לא שוברת את הבדיקה ולא סותרת את ההחלטה. ההחלטה ההיא הניחה ש«בלי limit = הכל» — זה בדיוק הפער. תלות עם 5.4: `_backupBuildSnapshot` (16795-16815) קורא `DB[t]`, אז DB חתוך → גיבוי חתוך. לתקן את 5.1 לפני שמרחיבים את הגיבוי.
 
 
-### 5.2 — ✅ confirmed · מאמץ S
+### 5.2 — ✅ בוצע ב-**#657** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `_obSend` (index.html:3139-3162). PATCH is built at 3143 — `url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();` — and DELETE at 3144. The only test on the answer is line 3147: `if(!r.ok){return r.text().then(function(body){ ... throw ... });}`. Nothing else. `sbH()` (3007) sends `'Prefer':'return=representation'`, so PostgREST answers a 0-row PATCH/DELETE with **HTTP 200 and `[]`** — `r.ok` is true, the promise resolves, and in `_obDrainOps` (3174-3213) line 3186 `return _obSend(op).then(function(){_obMarkSent(op);})` marks it sent; the op is then excluded from `merged` at 3209 and written out of localStorage at 3211. The returned representation array is never parsed, so "updated 1 row" and "updated 0 rows" are indistinguishable. Real triggers exist in this schema: `migrations/2026-04-24_rls_stage2_admin_manager.sql` gives `FOR ALL TO authenticated USING (public.is_admin_manager())` — a user with role מדווח, or the anonymous emp/trustee session (`migrations/2026-04-21_rls_roles.sql`, INSERT-only on 4 tables), gets 0 rows on UPDATE/DELETE and a 200. Same blind spot again at `_eqiPdfSyncRow` (7924-7932), line 7930: `if(!r.ok)return r.text().then(...)`.
 
@@ -664,7 +665,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: סיכון בתיקון: אם נזרוק על 0 שורות, **מחיקה של שורה שכבר נמחקה תיתקע בתור לנצח** ותדליק את הפעמון האדום של «פעולות נכשלו». לכן: `del` שהחזיר 0 שורות = הצלחה (המטרה הושגה), `upd` שהחזיר 0 שורות = כישלון. אפשר להשתמש ב-`op.tries` שכבר קיים (3077) כדי לא להסתולל. `_obLastErr`/`syncDiag` כבר יודעים להציג את זה — להשתמש במנגנון הקיים, לא לבנות חדש.
 
 
-### 5.3 — ✅ confirmed · מאמץ S
+### 5.3 — ✅ בוצע ב-**#657** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `sbGet` (3023-3037) collapses every non-2xx into `null` at line 3035: `.then(function(r){return r.ok?r.json():null;})`. `sbSync` (3284-3311) then does, at 3301-3303: `// null = the fetch failed (offline, 401, 5xx…). Leave the cache alone` / `if(rows===null){finish();return;}`. So a 401 is handled identically to being offline — no re-auth, no toast, no log. Worse, `finish()` (3287-3289) still runs for all 38 tables and reaches `if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}` — the app declares itself online. And `_obDrainOps` with an empty queue hits line 3178: `if(!q.length){_obBadge('ok');_obSetErr(null);return Promise.resolve();}` → `_obBadge('ok')` (3123) paints the pill green with ✓ בענן. `_sbAuth` (3006) memoizes in `_sbAuthPromise` and is never reset on a 401 — the only four places that clear it (14048, 14058, 14103, 15059) are login/logout paths. Reads fail silently; writes do surface (`_obSend` throws → `hadErr` → red pill), so the asymmetry the claim describes is exactly right.
 
@@ -697,7 +698,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: השם «/health» הוא חלק מהבעיה — STATUS.md:54 ו-project-files/INFRA-2026-05-06.md:27 שניהם מתעדים אותו כאילו הוא בדיקת גיבוי; אם מתקנים את הקוד צריך לעדכן גם את שני המסמכים. שוב — ה-Worker לא נפרס מה-repo (wrangler.toml:4-6), אז שינוי ב-`backup-cron.js` דורש הדבקה ידנית ב-Cloudflare dashboard ואימות לפני `[x]`. הדרך הקצרה ביותר לתועלת מיכאל היא דווקא צד האפליקציה — `_backupSyncFromStorage` כבר מחזיק את רשימת הקבצים מה-bucket ורץ ~15 שניות אחרי טעינה (17042); להשתמש ב-`fd()` לתצוגת התאריך ולא לפרמט ידנית. לא להפוך את זה ל-alert() — מסך ה-OneDrive הוא המקום הנכון.
 
 
-### 5.6 — ✅ confirmed · מאמץ S
+### 5.6 — ✅ בוצע ב-**#657** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: index.html:30 — `<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>` (cross-origin, no `crossorigin` attr → no-cors request → opaque response). functions/sw.js.js:66-69 bypasses only supabase.co / /api/ / anthropic.com / googleapis.com — jsdelivr is NOT bypassed, so the SW handles it; the deciding line is functions/sw.js.js:76 `if (resp && resp.ok && resp.type === 'basic') {` — an opaque response has ok=false and type='opaque', so it is never written to the cache. functions/sw.js.js:28 `const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];` — the library is not pre-cached at install either. The repo's own SW test already locks this in: tests/harness/sw-cache-test.mjs:214 `check('a cross-origin (non-basic) response is never written to the cache', ...)`. Offline the fetch fails and functions/sw.js.js:101 falls back to `caches.match(req).then((r) => r || caches.match('/'))` — a text/html document returned for a script request, which _headers:6 `X-Content-Type-Options: nosniff` then refuses to execute. Result: `window.supabase` undefined → index.html:3005 `_sbBoot(){if(_sbClient||typeof supabase==='undefined')return;` leaves `_sbClient` null → boot IIFE index.html:15149-15150 `_sbBoot(); if(!_sbClient){proceed(null);return;}` → session null → index.html:15142 `showLogin()`. Pressing כניסה hits index.html:14007 `if(!_sbClient){...;_loginErr('Supabase אינו זמין');return;}`.
 
@@ -719,7 +720,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: Realtime לא מציל ולא מחמיר את הסיכוי — הוא מחמיר את ההפתעה: _rtApply (index.html:3384-3386) `DB[tbl]=DB[tbl].map(function(r){if(r.id===nr.id){found=true;return nr;}return r;})` מחליף את השורה המקומית בזמן שהמודאל פתוח, אבל שדות הטופס נשארים עם הערכים הישנים — כך שהשמירה דורסת נתון שהמערכת כבר ידעה שהשתנה. הערה חשובה למימוש: ב-_svPut הנזק מוגבל לשדות שב-_EDIT_MODS (index.html:4024), כי `Object.assign({},arr[k],r)` לוקח את שאר העמודות מהשורה המקומית המעודכנת; ב-svNcr אין הגנה כזו כי `rec` נבנה מלא. פתרון מינימלי ובטוח: עמודת `updated_at` + `?id=eq.X&updated_at=eq.<מה שנקרא>`, ובדיקת התשובה — PATCH שנגע ב-0 שורות = התנגשות, להציג למשתמש. ⚠ זה תלוי ישירות בפריט 5.2 באותו קובץ («PATCH שנגע ב-0 שורות נחשב הצלחה») — בלי לתקן קודם את 5.2, מנגנון הגרסה יזהה התנגשות ויזרוק את השינוי בשקט במקום לדרוס בשקט. לתקן את 5.2 קודם.
 
 
-### 5.8 — ✅ confirmed · מאמץ S
+### 5.8 — ✅ מיגרציה נכתבה ב-**#657**, טרם הורצה — [#658](../../issues/658)
 
 **ראיה**: migrations/2026-04-24_audit_log.sql:45-48 — השורה המכריעה היא 46: `CREATE POLICY audit_log_admin_manager_all ON audit_log\n  FOR ALL TO authenticated\n  USING (public.is_admin_manager())\n  WITH CHECK (public.is_admin_manager());`. `FOR ALL` כולל UPDATE ו-DELETE. זו המיגרציה היחידה שנוגעת ב-audit_log — `grep -rn audit_log migrations/*.sql` לא מחזיר שום policy מאוחר יותר, ו-2026-05-04_rls_perf_wrap.sql ו-2026-09-18_rls_auth_jwt_initplan.sql שניהם לא מזכירים אותה. מי שעובר את השער: private/public.is_admin_manager() (migrations/2026-05-29_canonical_is_admin_manager_function.sql:32-37) — `auth.jwt()->>'email'='admin@tfugen.local' OR EXISTS (... u.role IN ('אדמין','מנהל'))`. באפליקציה עצמה אין מסלול כזה: index.html:8623 (rAudit) רק קורא (`select=*&order=ts.desc&limit=200`), ואין אף קריאה ל-`sbUpd('audit_log'...)` או `askDel('audit_log'...)`. ההגנה היחידה היא לקוחית ודקורטיבית — index.html:3599 `_DEL_PROTECTED` רק מוסיף שורת אזהרה במודאל.
 
