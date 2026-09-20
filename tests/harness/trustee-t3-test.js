@@ -47,7 +47,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     return { cur: CUR, month: document.getElementById('tru-mgr-month').textContent, pills, board, rows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length };
   }, { M, D, prev });
   check('page opens on this month', s1.cur === 'trustees' && /2026/.test(s1.month), s1.month);
-  check('pills: 2 open, 6 closed, 9 ok, 17 all (last month excluded)', s1.pills.join(' ') === 'פתוחים: 2 נסגרו: 6 תקינים: 9 הכל: 17', s1.pills);
+  // #684 added a fifth pill between נסגרו and תקינים: closed findings that
+  // nobody has checked. The six closed ones start out unchecked, so it is 6.
+  check('pills: 2 open, 6 closed, 6 of them unchecked, 9 ok, 17 all (last month excluded)', s1.pills.join(' ') === 'פתוחים: 2 נסגרו: 6 נסגרו, טרם נבדקו: 6 תקינים: 9 הכל: 17', s1.pills);
   check('leaderboard: דנה 62 (eligible) · רון 60 · יוסי 60 — tie broken by hazards closed', s1.board.map(x => x.u + ':' + x.total).join(' ') === 'דנה:62 רון:60 יוסי:60' && s1.board[0].elig && s1.board[1].elig && s1.board[2].elig && s1.board[0].chips === 6, s1.board);
   check('default filter "open" lists the 2 open hazards', s1.rows === 2, s1.rows);
 
@@ -92,7 +94,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const r = DB.trustee_reports.find(x => x.id === 'd1');
     return { items, inline, s: r.s, note: r.mgr_note, upd: window.__upd.length, shown: /הועבר למנהל הייצור/.test(document.querySelector('#tb-trustees tr[data-tru-row="d1"]').textContent) };
   });
-  check('closed row offers פתח מחדש; reopen → פתוח; routing note edited INLINE in the row (no prompt), saved (sbUpd) and shown', /פתח מחדש/.test(m2.items[0]) && m2.inline && m2.s === 'פתוח' && m2.note === 'הועבר למנהל הייצור' && m2.upd === 3 && m2.shown, m2);
+  // #684 put «אשר שהסגירה נבדקה» above פתח מחדש on a closed row, so this
+  // no longer indexes [0]. Both must be there, and reopening still works.
+  check('closed row offers אשר סגירה and פתח מחדש; reopen → פתוח; routing note edited INLINE in the row (no prompt), saved (sbUpd) and shown', m2.items.some(function(x){return /פתח מחדש/.test(x);}) && m2.items.some(function(x){return /אשר שהסגירה נבדקה/.test(x);}) && m2.inline && m2.s === 'פתוח' && m2.note === 'הועבר למנהל הייצור' && m2.upd === 3 && m2.shown, m2);
   const m3 = await page.evaluate(() => {
     document.querySelector('#tb-trustees tr[data-tru-row="d1"] [onclick^="_truRowMenu("]').click();
     Array.from(document.querySelectorAll('#tru-row-menu button')).find(b => /צור משימה/.test(b.textContent)).click();
