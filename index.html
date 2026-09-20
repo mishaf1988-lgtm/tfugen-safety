@@ -1410,6 +1410,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="page-title">&#128203; &#1505;&#1511;&#1497;&#1512;&#1514; <span>&#1492;&#1504;&#1492;&#1500;&#1492;</span> <span id="mr-period" style="font-size:14px;color:var(--t3);font-weight:400"></span></div>
     <button class="btn btn-s" onclick="rMr()" style="background:#3b82f6">&#8635; &#1512;&#1506;&#1504;&#1503;</button>
   </div>
+  <!-- Which quarter. Everything below reads it, and every count on the page
+       carries a delta against the quarter before it. -->
+  <div id="mr-period-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
   <div class="card"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497; (snapshot &#1504;&#1493;&#1499;&#1495;&#1497;)</div>
     <div class="kgrid">
       <div class="kpi kpi-r"><div class="kpi-label">NCR &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div class="kpi-val" id="mr-ncr-open">0</div><div class="kpi-sub" id="mr-ncr-sub">-</div></div>
@@ -1420,11 +1423,17 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div class="card"><div class="card-title">&#128197; רבעון נוכחי (אירועים בתקופה)</div>
     <div class="kgrid">
-      <div class="kpi kpi-r"><div class="kpi-label">NCR שנפתחו</div><div class="kpi-val" id="mr-ncr-q-new">0</div></div>
-      <div class="kpi kpi-g"><div class="kpi-label">NCR שנסגרו</div><div class="kpi-val" id="mr-ncr-q-closed">0</div></div>
-      <div class="kpi kpi-o"><div class="kpi-label">תקריות</div><div class="kpi-val" id="mr-inc-q">0</div><div class="kpi-sub" id="mr-inc-sub">-</div></div>
-      <div class="kpi kpi-b"><div class="kpi-label">כמעט ונפגע</div><div class="kpi-val" id="mr-nm-q">0</div></div>
+      <div class="kpi kpi-r"><div class="kpi-label">NCR שנפתחו</div><div class="kpi-val" id="mr-ncr-q-new">0</div><div class="kpi-sub" id="mr-d-ncr-new">-</div></div>
+      <div class="kpi kpi-g"><div class="kpi-label">NCR שנסגרו</div><div class="kpi-val" id="mr-ncr-q-closed">0</div><div class="kpi-sub" id="mr-d-ncr-closed">-</div></div>
+      <div class="kpi kpi-o"><div class="kpi-label">תקריות</div><div class="kpi-val" id="mr-inc-q">0</div><div class="kpi-sub" id="mr-inc-sub">-</div><div class="kpi-sub" id="mr-d-inc">-</div></div>
+      <div class="kpi kpi-b"><div class="kpi-label">כמעט ונפגע</div><div class="kpi-val" id="mr-nm-q">0</div><div class="kpi-sub" id="mr-d-nm">-</div></div>
     </div>
+  </div>
+  <div class="card"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; &#1489;&#1514;&#1511;&#1493;&#1508;&#1492;</div>
+    <div id="mr-close-time" style="font-size:13px;line-height:1.7"></div>
+  </div>
+  <div class="card" id="mr-ontime-card" style="display:none"><div class="card-title">&#9989; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1504;&#1505;&#1490;&#1512;&#1493; &#1489;&#1494;&#1502;&#1503; &#8212; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
+    <div id="mr-ontime"></div>
   </div>
   <!-- The formal trend an auditor asks for. On the page, not in a modal, so
        _printPage (which prints .page.on) carries it into the PDF. -->
@@ -5281,16 +5290,14 @@ function _renderKpiCard(){
   else { ratioVal=nm30/inc30; ratioStr=ratioVal.toFixed(1); }
   // KPI 3: % of closed NCRs that closed within 30 days of opening.
   var ncrAll=(DB.ncr||[]);
-  var ncrClosed=ncrAll.filter(function(r){return r.cd;});
-  var ncrFastClose=ncrClosed.filter(function(r){
-    var days=(new Date(r.cd)-new Date(r.ts))/(1000*60*60*24);
-    return days<=30;
-  }).length;
-  var pctFastNcr=ncrClosed.length?Math.round(ncrFastClose*100/ncrClosed.length):0;
-  // KPI 4: average days NCR open → closed (lower is better).
-  var avgNcrDays=ncrClosed.length
-    ? Math.round(ncrClosed.reduce(function(s,r){return s+(new Date(r.cd)-new Date(r.ts))/(1000*60*60*24);},0)/ncrClosed.length)
-    : 0;
+  var ncrClosed=_ncrClosedIn(null,null);
+  // Both of these used cd \u2212 ts, and ts is the last-saved stamp \u2014 see
+  // _ncrCloseDays. They now use the one definition, over the last 12 months
+  // rather than all history, so a good quarter can actually move them.
+  var _kpiFrom=new Date();_kpiFrom.setFullYear(_kpiFrom.getFullYear()-1);
+  var _kpiT=_ncrTimeStats(_kpiFrom,null);
+  var pctFastNcr=_kpiT.pct30||0;
+  var avgNcrDays=_kpiT.avg===null?0:Math.round(_kpiT.avg);
   function tile(value,label,hint,color,tooltip){
     return '<div title="'+esc(tooltip||'')+'" style="flex:1;min-width:140px;padding:10px;background:#fff;border:2px solid '+color+';border-radius:10px;text-align:center;cursor:default">'+
       '<div style="font-size:26px;font-weight:700;color:'+color+';line-height:1">'+value+'</div>'+
@@ -5307,9 +5314,9 @@ function _renderKpiCard(){
   var tiles=[];
   if(allEq.length)tiles.push(tile(pctValid+'%', '\u05e6\u05d9\u05d5\u05d3 \u05d1\u05ea\u05d5\u05e7\u05e3', allEq.length+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd', validColor, '\u05d0\u05d7\u05d5\u05d6 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05ea\u05d5\u05e7\u05e4\u05dd \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e4\u05d2. \u05d9\u05e2\u05d3: 85% \u05d5\u05de\u05e2\u05dc\u05d4.'));
   if(nm30||inc30)tiles.push(tile(ratioStr,    '\u05d9\u05d7\u05e1 Near-Miss : Incident (30 \u05d9\u05d5\u05dd)', nm30+' / '+inc30,                ratioColor, '\u05e4\u05d9\u05e8\u05de\u05d9\u05d3\u05ea Heinrich — \u05d9\u05d7\u05e1 \u05d1\u05e8\u05d9\u05d0 \u05d4\u05d5\u05d0 10:1 \u05d5\u05de\u05e2\u05dc\u05d4. \u05e2\u05e8\u05da \u05e0\u05de\u05d5\u05da \u05de\u05e6\u05d1\u05d9\u05e2 \u05e2\u05dc \u05ea\u05ea-\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05dc \u05db\u05de\u05e2\u05d8\u05d9\u05dd.'));
-  if(ncrClosed.length){
-    tiles.push(tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.'));
-    tiles.push(tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', ncrClosed.length+' '+'NCR \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.'));
+  if(_kpiT.n){
+    tiles.push(tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', _kpiT.n+' \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.'));
+    tiles.push(tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', _kpiT.n+' \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.'));
   }
   var acc=g('dash-kpi-acc');
   if(!tiles.length){if(acc)acc.style.display='none';box.innerHTML='';return;}
@@ -5632,28 +5639,23 @@ function rDash(){
     if(dnt){
       var _CLOS2='\u05e1\u05d2\u05d5\u05e8';
       var ncrAll=DB.ncr||[];
-      var closed=ncrAll.filter(function(n){return n.s===_CLOS2&&n.sd&&n.cd;});
-      var openR=ncrAll.filter(function(n){return n.s!==_CLOS2&&n.sd;});
-      var avgClose=null;
-      if(closed.length){
-        var sum=0,cnt=0;
-        closed.forEach(function(n){
-          try{var a=new Date(n.sd),b=new Date(n.cd);var dd=(b-a)/86400000;if(!isNaN(dd)&&dd>=0){sum+=dd;cnt++;}}catch(e){}
-        });
-        if(cnt)avgClose=sum/cnt;
-      }
+      // 12 months, and the one shared definition \u2014 this card and the KPI tile
+      // used to disagree with each other on the same data.
+      var _dFrom=new Date();_dFrom.setFullYear(_dFrom.getFullYear()-1);
+      var _st=_ncrTimeStats(_dFrom,null);
+      var closed=_ncrClosedIn(_dFrom,null);
+      var openR=ncrAll.filter(function(n){return n.s!==_CLOS2&&_ncrOpenedAt(n);});
+      var avgClose=_st.avg;
       var avgOpen=null;
       if(openR.length){
         var sum2=0,cnt2=0,now=new Date();
         openR.forEach(function(n){
-          try{var a=new Date(n.sd);var dd=(now-a)/86400000;if(!isNaN(dd)&&dd>=0){sum2+=dd;cnt2++;}}catch(e){}
+          try{var a=new Date(_ncrOpenedAt(n));var dd=(now-a)/86400000;if(!isNaN(dd)&&dd>=0){sum2+=dd;cnt2++;}}catch(e){}
         });
         if(cnt2)avgOpen=sum2/cnt2;
       }
-      var p30=ncrAll.filter(function(n){return n.s===_CLOS2&&n.sd&&n.cd;}).filter(function(n){
-        try{var d=(new Date(n.cd)-new Date(n.sd))/86400000;return d<=30;}catch(e){return false;}
-      }).length;
-      var pctIn30=closed.length?Math.round(100*p30/closed.length):null;
+      var p30=_st.fast;
+      var pctIn30=_st.pct30;
       var pills=[];
       if(avgClose!==null)pills.push({lbl:'\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9\u05dd \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4',v:avgClose.toFixed(1),color:'#16a34a',sub:closed.length+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd'});
       if(avgOpen!==null)pills.push({lbl:'\u05de\u05de\u05d5\u05e6\u05e2 \u05d2\u05d9\u05dc \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',v:avgOpen.toFixed(0)+'\u05d9',color:avgOpen>30?'#cc1f1f':'#1d4ed8',sub:openR.length+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'});
@@ -8815,11 +8817,61 @@ window._calOpenDay=function(y,m,d){
     '</div>';
   }).join('');
 };
-function _mrPeriod(){
+// ---- 6.2 ----
+// Two different formulas for the same number lived on the same home screen.
+// The KPI tile used cd \u2212 ts; ts is the row's LAST-SAVED stamp, rewritten by
+// svNcr on every edit and by _reopen. Open an NCR from 2025, fix a comma,
+// save \u2014 ts jumps to today, cd stays in the past, and the result is
+// NEGATIVE: the tile counted it as a fast close (days<=30 is true for -300
+// too) and dragged the average down, sometimes below zero. The dashboard
+// card used cd \u2212 sd and got a different number from the same rows. So the
+// same screen showed \u00ab42 \u05d9\u05d5\u05dd\u00bb and \u00ab12- \u05d9\u05d5\u05dd\u00bb with no way to tell which was
+// right. There is one honest answer: discovery to closure.
+function _ncrOpenedAt(n){return n&&(n.sd||n.src_date||n.created_at)||null;}
+function _ncrCloseDays(n){
+  if(!n||!n.cd)return null;
+  var a=_ncrOpenedAt(n);if(!a)return null;
+  var d0=new Date(a),d1=new Date(n.cd);
+  if(isNaN(d0)||isNaN(d1))return null;
+  var days=(d1-d0)/86400000;
+  // A closing date before the discovery date is bad data, not a fast close.
+  return days<0?null:days;
+}
+// Closed NCRs whose duration can actually be computed, optionally inside a
+// window. Everything that reports a time now goes through this.
+function _ncrClosedIn(from,to){
+  return (DB.ncr||[]).filter(function(n){
+    if(!n||!n.cd)return false;
+    if(_ncrCloseDays(n)===null)return false;
+    if(!from&&!to)return true;
+    var d=new Date(n.cd);if(isNaN(d))return false;
+    if(from&&d<from)return false;
+    if(to&&d>to)return false;
+    return true;
+  });
+}
+function _ncrTimeStats(from,to){
+  var rows=_ncrClosedIn(from,to);
+  if(!rows.length)return {n:0,avg:null,pct30:null,fast:0};
+  var sum=0,fast=0;
+  rows.forEach(function(n){var d=_ncrCloseDays(n);sum+=d;if(d<=30)fast++;});
+  return {n:rows.length,avg:sum/rows.length,pct30:Math.round(100*fast/rows.length),fast:fast};
+}
+// ---- 6.3 ----
+// Both time metrics ran over the whole history with no date window, so a
+// brilliant quarter or a terrible one barely moved a number averaged over
+// 375 records going back to 2023. \u00ab\u05d4\u05e9\u05ea\u05e4\u05e8\u05e0\u05d5?\u00bb \u2014 the question every
+// management review opens with \u2014 had no answer on the screen.
+var _MR_OFFSET=0;                    // 0 = this quarter, 1 = the one before
+function _mrShift(off){_MR_OFFSET=Math.max(0,Math.min(8,off|0));rMr();}
+function _mrPeriod(offset){
   var d=new Date();
-  var q=Math.floor(d.getMonth()/3)+1;
+  // offset quarters back, rolling into the previous year at Q1.
+  var qi=Math.floor(d.getMonth()/3)-(offset||0);
   var y=d.getFullYear();
-  var sM=(q-1)*3;
+  while(qi<0){qi+=4;y--;}
+  var q=qi+1;
+  var sM=qi*3;
   var start=new Date(y,sM,1);
   var end=new Date(y,sM+3,0,23,59,59);
   return {q:q,y:y,start:start,end:end,label:'Q'+q+' '+y};
@@ -8830,8 +8882,13 @@ function _mrInPeriod(d,p){
   return nd>=p.start&&nd<=p.end;
 }
 function rMr(){
-  var p=_mrPeriod();
+  var p=_mrPeriod(_MR_OFFSET),pPrev=_mrPeriod(_MR_OFFSET+1);
   var pe=g('mr-period');if(pe)pe.textContent=' · '+p.label;
+  var nav=g('mr-period-nav');
+  if(nav){
+    nav.innerHTML='<button class="btn btn-s btn-sm" onclick="_mrShift('+(_MR_OFFSET+1)+')">\u203a '+_mrPeriod(_MR_OFFSET+1).label+'</button>'
+      +(_MR_OFFSET>0?('<button class="btn btn-s btn-sm" onclick="_mrShift('+(_MR_OFFSET-1)+')">'+_mrPeriod(_MR_OFFSET-1).label+' \u2039</button><button class="btn btn-s btn-sm" onclick="_mrShift(0)">\u05d4\u05e8\u05d1\u05e2\u05d5\u05df \u05d4\u05e0\u05d5\u05db\u05d7\u05d9</button>'):'');
+  }
   // The twelve-month trend, on the page rather than inside the NCR agent
   // modal — which is the only reason it can reach the printed review at all.
   try{
@@ -8842,6 +8899,14 @@ function rMr(){
       else if(trC)trC.style.display='none';
     }
   }catch(e){console.warn('mr-trend failed',e);}
+  try{
+    var otC=g('mr-ontime-card'),otB=g('mr-ontime');
+    if(otB){
+      var otH=(typeof _tskOnTime12Html==='function')?_tskOnTime12Html():'';
+      if(otH){otB.innerHTML=otH;if(otC)otC.style.display='';}
+      else if(otC)otC.style.display='none';
+    }
+  }catch(e){console.warn('mr-ontime failed',e);}
   var today=new Date().toISOString().split('T')[0];
   var thisMonth=today.substring(0,7);
   var ncrAll=DB.ncr||[];
@@ -8861,13 +8926,56 @@ function rMr(){
   g('mr-exp-soon').textContent=expSoon;
   var roundsM=(DB.rounds||[]).filter(function(r){return r.d&&String(r.d).substring(0,7)===thisMonth;}).length;
   g('mr-rounds').textContent=roundsM;
-  g('mr-ncr-q-new').textContent=ncrAll.filter(function(n){return _mrInPeriod(n.sd||n.src_date||n.created_at||n.ts,p);}).length;
-  g('mr-ncr-q-closed').textContent=ncrAll.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8'&&_mrInPeriod(n.cd||n.close_date,p);}).length;
+  // ---- 6.4 ----
+  // The AI prompt asked the model whether the trend is better \u05d1\u05d9\u05d7\u05e1 \u05dc\u05e8\u05d1\u05e2\u05d5\u05df
+  // \u05e7\u05d5\u05d3\u05dd, under a hard rule saying \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05de\u05e1\u05e4\u05e8\u05d9\u05dd, from a data object
+  // built entirely from the CURRENT quarter. It could only produce a vague
+  // sentence or invent a number \u2014 and this text goes into a signed
+  // management-review record handed to an auditor. Michael could not see it
+  // on the page either: 14 NCRs this quarter, good or bad?
+  function _cnt(per){
+    var inc=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,per);});
+    return {
+      ncrNew:ncrAll.filter(function(n){return _mrInPeriod(_ncrOpenedAt(n)||n.ts,per);}).length,
+      ncrClosed:ncrAll.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8'&&_mrInPeriod(n.cd||n.close_date,per);}).length,
+      inc:inc.length,
+      lostDays:inc.reduce(function(s,i){return s+(parseInt(i.dy)||0);},0),
+      nm:(DB.near_miss||[]).filter(function(m){return _mrInPeriod(m.d||m.ts,per);}).length,
+      tlk:(DB.toolbox||[]).filter(function(t){return _mrInPeriod(t.d||t.ts,per);}).length,
+      time:_ncrTimeStats(per.start,per.end)
+    };
+  }
+  var cur=_cnt(p),prev=_cnt(pPrev);
+  window._mrCounts={cur:cur,prev:prev,period:p.label,prevPeriod:pPrev.label};
+  // For a count of findings, fewer is better; for near-misses and toolbox
+  // talks reported, MORE is better \u2014 a drop there is a reporting problem.
+  function _delta(now,was,moreIsBetter){
+    if(was===0&&now===0)return '<span style="font-size:11px;color:var(--t3)">\u2014</span>';
+    var d=now-was;
+    if(d===0)return '<span style="font-size:11px;color:var(--t3)">\u25ac \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9</span>';
+    var good=moreIsBetter?(d>0):(d<0);
+    return '<span style="font-size:11px;font-weight:700;color:'+(good?'#16a34a':'#cc1f1f')+'">'+(d>0?'\u25b2 +':'\u25bc ')+d+'</span>'
+      +'<span style="font-size:10px;color:var(--t3)"> \u05de\u05ea\u05d5\u05da '+was+'</span>';
+  }
+  function setD(id,now,was,moreIsBetter){var el=g(id);if(el)el.innerHTML=_delta(now,was,moreIsBetter);}
+  g('mr-ncr-q-new').textContent=cur.ncrNew;
+  g('mr-ncr-q-closed').textContent=cur.ncrClosed;
   var incQ=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,p);});
   g('mr-inc-q').textContent=incQ.length;
-  var lostDays=incQ.reduce(function(s,i){return s+(parseInt(i.dy)||0);},0);
+  var lostDays=cur.lostDays;
   g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df';
-  g('mr-nm-q').textContent=(DB.near_miss||[]).filter(function(m){return _mrInPeriod(m.d||m.ts,p);}).length;
+  g('mr-nm-q').textContent=cur.nm;
+  setD('mr-d-ncr-new',cur.ncrNew,prev.ncrNew,false);
+  setD('mr-d-ncr-closed',cur.ncrClosed,prev.ncrClosed,true);
+  setD('mr-d-inc',cur.inc,prev.inc,false);
+  setD('mr-d-nm',cur.nm,prev.nm,true);
+  var tEl=g('mr-close-time');
+  if(tEl){
+    if(cur.time.n){
+      var was=prev.time.n?(' \u00b7 \u05e8\u05d1\u05e2\u05d5\u05df \u05e7\u05d5\u05d3\u05dd '+prev.time.avg.toFixed(1)+'\u05d9 / '+prev.time.pct30+'%'):'';
+      tEl.innerHTML='<strong>'+cur.time.avg.toFixed(1)+'\u05d9</strong> \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05d2\u05d9\u05dc\u05d5\u05d9 \u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4 \u00b7 <strong>'+cur.time.pct30+'%</strong> \u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd ('+cur.time.n+' NCR)'+was;
+    }else tEl.innerHTML='<span style="color:var(--t3)">\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 NCR \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d6\u05d5</span>';
+  }
   function pct(t){
     var rs=DB[t]||[];if(!rs.length)return {pct:0,t:0,v:0};
     var v=rs.filter(function(r){return r.e&&r.e>=today;}).length;
@@ -8877,7 +8985,8 @@ function rMr(){
   g('mr-tr-pct').textContent=trP.pct+'%';g('mr-tr-sub').textContent=trP.v+' / '+trP.t;
   g('mr-docs-pct').textContent=dcP.pct+'%';g('mr-docs-sub').textContent=dcP.v+' / '+dcP.t;
   g('mr-eqi-pct').textContent=eqP.pct+'%';g('mr-eqi-sub').textContent=eqP.v+' / '+eqP.t;
-  g('mr-tlk-q').textContent=(DB.toolbox||[]).filter(function(t){return _mrInPeriod(t.d||t.ts,p);}).length;
+  g('mr-tlk-q').textContent=cur.tlk;
+  setD('mr-d-tlk',cur.tlk,prev.tlk,true);
   var top5=openS.filter(function(n){return n.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'||n.p==='\u05d2\u05d1\u05d5\u05d4';}).sort(function(a,b){var ad=a.sd||a.src_date||'';var bd=b.sd||b.src_date||'';return ad>bd?-1:1;}).slice(0,5);
   if(top5.length){
     g('mr-top-ncr').innerHTML=top5.map(function(n){
@@ -9220,7 +9329,19 @@ function svTsk(){
   var pid=gv('tsk-parent')||null;
   if(pid===id)pid=null;
   var existingIdx=(DB.tasks||[]).findIndex(function(r){return r.id===id;});
-  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:gv('tsk-status')||_TSK_OPEN,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,project_id:gv('tsk-project-id')||null,notes:gv('tsk-notes')||null,ts:new Date().toISOString()};
+  // ---- 6.10 ----
+  // This rebuilt the row from the form and overwrote the stored one, so a
+  // task closed through the modal lost closed_date entirely \u2014 the two quick
+  // paths (_tskQuickStatus, _tskBulkAction) stamp it and this one silently
+  // dropped it. The weekly \u00ab\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05d4\u05d5\u05e9\u05dc\u05de\u05d5\u00bb count and the annual one
+  // both read it, so those numbers were a biased subset. ext_id went the
+  // same way, which quietly breaks the OneDrive link.
+  var _old=(DB.tasks||[]).find(function(x){return x.id===id;})||{};
+  var _st=gv('tsk-status')||_TSK_OPEN;
+  var _cd=_old.closed_date||null;
+  if(_st===_TSK_DONE&&!_cd)_cd=new Date().toISOString().split('T')[0];
+  if(_st!==_TSK_DONE&&_st!==_TSK_CANC)_cd=null;   // reopened: it is not closed any more
+  var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:_st,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,project_id:gv('tsk-project-id')||null,notes:gv('tsk-notes')||null,closed_date:_cd,ext_id:(_old.ext_id||null),ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
@@ -12535,7 +12656,30 @@ window._mrAINarrative=function(){
     '- הדרכות תקפות: '+kpis.trPct+' ('+kpis.trSub+')\n'+
     '- מסמכים בתוקף: '+kpis.docsPct+' ('+kpis.docsSub+')\n'+
     '- בדיקות ציוד תקפות: '+kpis.eqiPct+' ('+kpis.eqiSub+')\n'+
-    '- שיחות בטיחות: '+kpis.tlkQ;
+    '- שיחות בטיחות: '+kpis.tlkQ+
+    // The prompt below asks whether the trend is better than the previous
+    // quarter, under a hard rule saying not to invent numbers \u2014 and until now
+    // the context carried only the current quarter. The model could produce a
+    // vague sentence or a number it made up, in a text that goes into a signed
+    // management-review record. rMr() computes both quarters; this hands them over.
+    (function(){
+      var c=window._mrCounts;
+      if(!c||!c.prev)return '';
+      function line(lbl,now,was){var d=now-was;return '\n- '+lbl+': '+now+' (רבעון קודם '+was+', שינוי '+(d>0?'+':'')+d+')';}
+      var out='\n\nהשוואה לרבעון הקודם ('+c.prevPeriod+'):'
+        +line('NCR שנפתחו',c.cur.ncrNew,c.prev.ncrNew)
+        +line('NCR שנסגרו',c.cur.ncrClosed,c.prev.ncrClosed)
+        +line('תקריות',c.cur.inc,c.prev.inc)
+        +line('ימי אבדן',c.cur.lostDays,c.prev.lostDays)
+        +line('כמעט-נפגע',c.cur.nm,c.prev.nm)
+        +line('שיחות בטיחות',c.cur.tlk,c.prev.tlk);
+      if(c.cur.time.n||c.prev.time.n){
+        out+='\n- זמן סגירה ממוצע (ימים, מגילוי עד סגירה): '
+          +(c.cur.time.avg===null?'אין נתונים':c.cur.time.avg.toFixed(1))
+          +' (רבעון קודם '+(c.prev.time.avg===null?'אין נתונים':c.prev.time.avg.toFixed(1))+')';
+      }
+      return out;
+    })();
   var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. בהינתן KPIs של רבעון, כתוב נרטיב סקירה רשמי לישיבת סקירת הנהלה (ISO 45001:9.3 / 14001:9.3), בעברית תקנית, מותאם להעתקה לפרוטוקול. 4 חלקים בדיוק:\n\n'+
     '## 1. סטטוס כללי\n'+
     '(2-3 משפטים — מצב ההתאמה הכללי, האם המגמה טובה/קבועה/מדאיגה ביחס לרבעון קודם)\n\n'+
@@ -16694,6 +16838,55 @@ function _ncrTrend12(){
     });
   });
   return months;
+}
+// ---- 6.10 ----
+// \u00ab\u05d0\u05d7\u05d5\u05d6 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df\u00bb existed nowhere: nothing in the file ever compared
+// closed_date against due. The data is there for every task closed through
+// the quick paths, and from this PR for the ones closed through the form too.
+// Counted only over tasks that HAD a target date \u2014 a task with no due date
+// cannot be late, and including it would flatter the number.
+function _tskOnTime12(){
+  var d=new Date(),months=[];
+  for(var i=11;i>=0;i--){
+    var m=new Date(d.getFullYear(),d.getMonth()-i,1);
+    months.push({key:m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0'),lbl:(m.getMonth()+1)+'/'+String(m.getFullYear()).slice(2),done:0,onTime:0});
+  }
+  var by={};months.forEach(function(m){by[m.key]=m;});
+  (DB.tasks||[]).forEach(function(t){
+    if(!t||!t.closed_date||!t.due)return;
+    if(t.status!==_TSK_DONE)return;
+    var k=String(t.closed_date).substring(0,7);
+    var m=by[k];if(!m)return;
+    m.done++;
+    if(String(t.closed_date)<=String(t.due))m.onTime++;
+  });
+  months.forEach(function(m){m.pct=m.done?Math.round(100*m.onTime/m.done):null;});
+  return months;
+}
+function _tskOnTime12Html(){
+  var months=_tskOnTime12();
+  var withData=months.filter(function(m){return m.done;});
+  if(!withData.length)return '';
+  var totalDone=withData.reduce(function(a,m){return a+m.done;},0);
+  var totalOn=withData.reduce(function(a,m){return a+m.onTime;},0);
+  var W=340,H=110,padL=8,padR=8,padT=12,padB=22;
+  var cW=W-padL-padR,cH=H-padT-padB,slot=cW/months.length,barW=Math.max(6,slot-5);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="\u05d0\u05d7\u05d5\u05d6 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df" style="display:block">';
+  svg+='<line x1="'+padL+'" y1="'+(padT+cH)+'" x2="'+(W-padR)+'" y2="'+(padT+cH)+'" stroke="#d5d8de"></line>';
+  months.forEach(function(m,i){
+    var x=padL+i*slot+(slot-barW)/2;
+    if(m.pct===null){
+      svg+='<rect x="'+x+'" y="'+(padT+cH-3)+'" width="'+barW+'" height="3" fill="#e5e7eb"><title>'+m.lbl+' \u00b7 \u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e9\u05d9\u05de\u05d5\u05ea</title></rect>';
+    }else{
+      var h=Math.max(2,Math.round(cH*m.pct/100));
+      var col=m.pct>=80?'#16a34a':(m.pct>=50?'#eab308':'#cc1f1f');
+      svg+='<rect x="'+x+'" y="'+(padT+cH-h)+'" width="'+barW+'" height="'+h+'" fill="'+col+'"><title>'+m.lbl+' \u00b7 '+m.pct+'% ('+m.onTime+'/'+m.done+')</title></rect>';
+    }
+    if(i%2===0||i===months.length-1)svg+='<text x="'+(x+barW/2)+'" y="'+(H-7)+'" font-size="8" fill="#8a8f98" text-anchor="middle">'+m.lbl+'</text>';
+  });
+  svg+='</svg>';
+  var avg=Math.round(100*totalOn/totalDone);
+  return svg+'<div style="text-align:center;font-size:12px;margin-top:4px;color:#444"><strong>'+avg+'%</strong> \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd ('+totalOn+' \u05de\u05ea\u05d5\u05da '+totalDone+' \u05e9\u05d4\u05d9\u05d4 \u05dc\u05d4\u05df \u05d9\u05e2\u05d3)</div>';
 }
 function _ncrTrend12Svg(months){
   months=months||_ncrTrend12();
