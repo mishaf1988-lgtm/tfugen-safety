@@ -47,6 +47,16 @@ function makeCaches(seed) {
   };
   const wrap = (name) => ({
     addAll: async (urls) => { const c = cacheOf(name); for (const u of urls) { const r = await api.__fetch(req(u)); if (!r || !r.ok) throw new Error('addAll failed ' + u); c.set(ORIGIN + u, r); } },
+    // Cache.add is standard and the worker uses it for the vendor files; the
+    // fake had only addAll, so an install that used add threw ReferenceError
+    // halfway through and the shell came out half-filled.
+    add: async (request) => {
+      const c = cacheOf(name);
+      const rq = typeof request === 'string' ? req(request) : request;
+      const r = await api.__fetch(rq);
+      if (!r || !r.ok) throw new Error('add failed ' + rq.url);
+      c.set(rq.url.startsWith('http') ? rq.url : ORIGIN + rq.url, r);
+    },
     put: async (rq, rs) => { cacheOf(name).set(rq.url, rs); },
     match: async (rq, o) => hit(cacheOf(name), rq.url, !!(o && o.ignoreSearch)),
   });
@@ -127,6 +137,33 @@ console.log('\n2. install and activate');
   await settle(e);
   check('skipWaiting so a new build does not wait for every tab to close', w.self_.__skipped === true);
   check('install fills the shell: ' + SHELL.join(' '), SHELL.every((p) => w.caches_.__store.get(CACHE) && w.caches_.__store.get(CACHE).has(ORIGIN + p)), Array.from((w.caches_.__store.get(CACHE) || new Map()).keys()));
+  // supabase-js is the whole login: without it the manager gets a login
+  // screen that answers "Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df" and then erases the message.
+  const VENDOR = (SW.match(/const VENDOR = \[([\s\S]*?)\];/) || ['', ''])[1].match(/'([^']+)'/g) || [];
+  check('the worker names supabase-js as a vendor file', VENDOR.length === 1 && /supabase-js/.test(VENDOR[0]), VENDOR);
+  check('install caches it too, so the first offline open has it', VENDOR.every((u) => w.caches_.__store.get(CACHE).has(u.replace(/'/g, ''))), Array.from(w.caches_.__store.get(CACHE).keys()));
+
+  // A vendor URL that 404s must not take the shell with it.
+  {
+    const w2 = boot(SW, { net: (rq) => /jsdelivr/.test(rq.url) ? Promise.resolve(new Response('nope', { status: 404 })) : resp('net' + new URL(rq.url).pathname) });
+    const e2 = w2.fire('install');
+    await settle(e2);
+    check('a vendor file that 404s still leaves the shell cached', SHELL.every((p) => w2.caches_.__store.get(CACHE) && w2.caches_.__store.get(CACHE).has(ORIGIN + p)), Array.from((w2.caches_.__store.get(CACHE) || new Map()).keys()));
+  }
+
+  // ...and offline it is served from the cache rather than falling back to
+  // index.html, which nosniff refuses to execute as a script.
+  {
+    const vendorUrl = VENDOR[0].replace(/'/g, '');
+    const offline = boot(SW, { net: () => Promise.reject(new Error('offline')), caches: w.caches_ });
+    const ev = offline.fire('fetch', { url: vendorUrl, method: 'GET', mode: 'no-cors' });
+    const got = await Promise.resolve(ev.responded).catch((err) => err);
+    check('offline, the cached supabase-js is served', got && got.ok === true, got && (got.message || got.status));
+    const missing = boot(SW, { net: () => Promise.reject(new Error('offline')) });
+    const ev2 = missing.fire('fetch', { url: ORIGIN + '/some.js', method: 'GET', mode: 'no-cors' });
+    const got2 = await Promise.resolve(ev2.responded).then(() => 'served', () => 'rejected');
+    check('a script we do not have is refused, not answered with index.html', got2 === 'rejected', got2);
+  }
 }
 {
   const seeded = makeCaches({ 'tfgn-old1': { '/index.html': resp('old') }, 'tfgn-old2': {}, [CACHE]: { '/index.html': resp('new') } });
