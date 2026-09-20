@@ -412,6 +412,12 @@ body.hc .fab:hover{transform:none}
 .cap-fab:active{transform:scale(.94)}
 .cap-fab::after{content:'דווח';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#7c3aed;background:#fff;padding:2px 8px;border-radius:999px;border:1px solid #d8b4fe;white-space:nowrap;font-family:inherit;line-height:1.3}
 body.emp-mode .cap-fab,body.emp-mode #ask-fab{display:none}
+/* 4.12 — the worker opened the manager's near-miss form: severity, type,
+   status, notes and the AI classify button. Those are the safety manager's
+   triage, and a worker who has to grade a hazard before reporting it mostly
+   does not report it. The fields stay in the DOM so svNm still reads them;
+   _nmEmpPrefill resets them so nothing rides along from a manager session. */
+body.emp-mode .nm-mgr-only{display:none!important}
 /* P1#2: no chat FAB anywhere — the assistant lives in the header ⋯ menu and the agents
    page; the only floating button is the report (Smart Capture) one. !important because
    the button carries an inline display:flex. Supersedes the P1#1 home-only rule. */
@@ -811,7 +817,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:#92400e"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:#a16207;font-size:11px">&#8212; &#1497;&#1505;&#1493;&#1504;&#1499;&#1512;&#1503; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1497;&#1492;&#1497;&#1492; &#1495;&#1497;&#1489;&#1493;&#1512;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:#f59e0b;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
   </div>
   <div id="emp-recent" style="margin-top:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;display:none">
-    <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1502;&#1492; &#1513;&#1504;&#1513;&#1502;&#1512; &#1489;&#1502;&#1499;&#1513;&#1497;&#1512; &#1492;&#1494;&#1492;)</span></div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:#64748b">(&#1493;&#1502;&#1492; &#1511;&#1512;&#1492; &#1488;&#1497;&#1514;&#1501;)</span></div>
     <div id="emp-recent-list" style="font-size:13px;line-height:1.6"></div>
   </div>
   <!-- TRUSTEE SCREEN (T2): shown instead of the report grid when #pg-emp-home has .tru-open -->
@@ -2424,13 +2430,13 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1488;&#1494;&#1493;&#1512;</label><select id="nm-location-id" class="inp"></select></div>
     <div class="field" id="nm-area-legacy" style="display:none"><label>&#1488;&#1494;&#1493;&#1512; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="nm-area" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1502;&#1491;&#1493;&#1493;&#1495;</label><input id="nm-rep" list="active-users-list" placeholder="&#1489;&#1495;&#1512; &#1488;&#1493; &#1492;&#1511;&#1500;&#1491;..."></div>
-    <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="nm-sev"><option>&#1511;&#1496;&#1497;&#1503;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option></select></div>
-    <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="nm-typ"><option>&#1508;&#1497;&#1494;&#1497;</option><option>&#1499;&#1497;&#1502;&#1497;</option><option>&#1495;&#1513;&#1502;&#1500;&#1497;</option><option>&#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1504;&#1508;&#1497;&#1500;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
-    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="nm-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
-    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="nm-notes" rows="2"></textarea></div>
+    <div class="field nm-mgr-only"><label>&#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="nm-sev"><option>&#1511;&#1496;&#1497;&#1503;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1495;&#1502;&#1493;&#1512;</option></select></div>
+    <div class="field nm-mgr-only"><label>&#1505;&#1493;&#1490;</label><select id="nm-typ"><option>&#1508;&#1497;&#1494;&#1497;</option><option>&#1499;&#1497;&#1502;&#1497;</option><option>&#1495;&#1513;&#1502;&#1500;&#1497;</option><option>&#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1504;&#1508;&#1497;&#1500;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
+    <div class="field nm-mgr-only"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="nm-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
+    <div class="field fw nm-mgr-only"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="nm-notes" rows="2"></textarea></div>
     <div class="field fw"><label>&#128247; &#1510;&#1497;&#1500;&#1493;&#1501;</label><div id="nm-photo-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_nmPickPhoto()">&#128247; &#1510;&#1500;&#1501; / &#1489;&#1495;&#1512; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="nm-ai-btn" onclick="_nmAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1493;&#1493;&#1490; &#1493;&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-nm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p nm-mgr-only" id="nm-ai-btn" onclick="_nmAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1493;&#1493;&#1490; &#1493;&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</button><button class="btn btn-p" onclick="svNm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- TRUSTEE REPORT MODAL — one tour: several tasks, several findings (point 2) -->
@@ -8525,11 +8531,15 @@ function tskAssigneeFilter(v){window._tskAssFilter=v||'';rTasks();}
 function tskSearch(v){window._tskSearchQ=String(v||'').trim().toLowerCase();rTasks();}
 function rNm(){
   var tb=g('tb-nm');if(!tb)return;
-  var _sevW={'חמור':0,'בינוני':1,'קל':2};
+  // קל was never an option in the form — it offers קטין — so every קטין row
+  // landed in the «unknown» bucket. Since 4.12 a worker's report can genuinely
+  // arrive with no severity, and that bucket now means one thing and sorts
+  // FIRST: these are the reports waiting for the manager to grade them.
+  var _sevW={'\u05d7\u05de\u05d5\u05e8':0,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':1,'\u05e7\u05d8\u05d9\u05df':2};
   var rows=(DB.near_miss||[]).slice().sort(function(a,b){
     var ac=a.s==='סגור'?1:0, bc=b.s==='סגור'?1:0;
     if(ac!==bc)return ac-bc;
-    var as=_sevW[a.sev]!==undefined?_sevW[a.sev]:3, bs=_sevW[b.sev]!==undefined?_sevW[b.sev]:3;
+    var as=a.sev?(_sevW[a.sev]!==undefined?_sevW[a.sev]:3):-1, bs=b.sev?(_sevW[b.sev]!==undefined?_sevW[b.sev]:3):-1;
     if(as!==bs)return as-bs;
     return (b.d||'')+(b.t||'')>(a.d||'')+(a.t||'')?1:-1;
   });
@@ -8573,13 +8583,13 @@ function rNm(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">🚫<span class="et-ic"></span>\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2<br><button class="et-cta" onclick="openModal(\'m-nm\')">+ \u05d3\u05d9\u05d5\u05d5\u05d7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var sevCls={'\u05e7\u05d8\u05d9\u05df':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR'};
   tb.innerHTML=rows.map(function(r){
-    var sc=sevCls[r.sev]||'bX';
+    var sc=r.sev?(sevCls[r.sev]||'bX'):'bY';          // ungraded = waiting on the manager, not «nothing»
     var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'\u2014';
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var areaTxt=r.location_id&&typeof _locName==='function'?_locName(r.location_id):'';
     if(!areaTxt)areaTxt=r.area||'\u2014';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u2014')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'\u2014')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u05d8\u05e8\u05dd \u05e1\u05d5\u05d5\u05d2')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');_signifyDom(tb);
 }
 // Near-miss draft autosave. Same pattern as NCR/Inc but the nm modal has
@@ -8635,7 +8645,7 @@ function _nmDraftCheck(){
 function svNm(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var r={id:_svEditId('near_miss')||gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev'),typ:gv('nm-typ'),s:gv('nm-s'),notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
+  var r={id:_svEditId('near_miss')||gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev')||null,typ:gv('nm-typ')||null,s:gv('nm-s')||'\u05e4\u05ea\u05d5\u05d7',notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
   _svPut('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
   if(typeof _nmDraftClear==='function')_nmDraftClear();
@@ -15604,6 +15614,28 @@ function _truRender(){
   h+='<div style="font-weight:700;font-size:14px;margin:14px 0 6px">\ud83d\udcdd \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+mine.length+')</div>';
   if(!mine.length)h+='<div style="font-size:13px;color:var(--t2)" id="tru-mine-empty">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';
   else h+='<div id="tru-mine">'+mine.map(function(r){return _truMineRowHtml(r,false);}).join('')+'</div>';
+  // 4.12 \u2014 the \u26d4 button at the bottom of this screen files a near-miss, and
+  // then the report vanished from the trustee's world: this list is
+  // trustee_reports only, so the one thing a worker reports OUTSIDE a tour was
+  // the one thing they could never follow. Kept as its own block rather than
+  // merged into \u00ab\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9\u00bb above, because that list's count is the
+  // one the points are scored from \u2014 a near-miss earns none and must not
+  // inflate it.
+  var myNm=(DB.near_miss||[]).filter(function(r){
+    if(!me||!r.rep)return false;
+    if(typeof _truNameKey==='function'&&_truNameKey(r.rep)!==_truNameKey(me))return false;
+    return String(r.d||r.ts||'').substring(0,7)===m;
+  }).sort(function(x,y){return String(y.d||y.ts||'').localeCompare(String(x.d||x.ts||''));});
+  if(myNm.length){
+    h+='<div class="card" id="tru-my-nm" style="padding:10px 12px">'
+      +'<div style="font-weight:700;font-size:14px">\u26d4 \u05d4\u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2 \u05e9\u05d3\u05d9\u05d5\u05d5\u05d7\u05ea\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+myNm.length+')</div>'
+      +'<div style="font-size:12px;color:var(--t2);margin-bottom:6px">\u05dc\u05d0 \u05de\u05d6\u05db\u05d4 \u05d1\u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u2014 \u05de\u05d5\u05e4\u05d9\u05e2 \u05db\u05d3\u05d9 \u05e9\u05ea\u05d3\u05e2/\u05d9 \u05de\u05d4 \u05e7\u05e8\u05d4 \u05d0\u05d9\u05ea\u05d5.</div>'
+      +'<div id="tru-my-nm-list">'+myNm.map(function(r){
+        return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0">'
+          +'<span style="flex:1;min-width:0;font-size:13px">'+esc(String(r.descr||'').substring(0,60))+'</span>'
+          +'<span style="text-align:left">'+_nmLoopHtml(r)+'</span></div>';
+      }).join('')+'</div></div>';
+  }
   var area=(typeof _truAreaOf==='function')?_truAreaOf(me):'';
   var areaOpen=_truAreaOpen(me);
   if(areaOpen.length){
@@ -16524,15 +16556,73 @@ function empReport(type){
   var mid=m[type];if(!mid)return;
   openModal(mid);
   if(type==='eqi'){var s=g('eqi-s');if(s)s.value='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df';}
+  if(type==='nm'&&typeof _nmEmpPrefill==='function')_nmEmpPrefill();
+}
+// ---- 4.12 ----
+// The worker's copy of the near-miss form. The manager's fields are hidden
+// by CSS above; this clears them, so a severity or status left selected in a
+// manager session cannot ride along invisibly on a worker's report. Severity
+// is deliberately left EMPTY rather than defaulted to \u05e7\u05d8\u05d9\u05df: the worker is not
+// grading the hazard, and a report that silently claims \u00ab\u05e7\u05d8\u05d9\u05df\u00bb is worse than
+// one that says it still needs triage. rNm sorts those to the top.
+function _nmEmpPrefill(){
+  if(typeof empIsOn!=='function'||!empIsOn())return;
+  var sev=g('nm-sev');if(sev)sev.selectedIndex=-1;
+  var typ=g('nm-typ');if(typ)typ.selectedIndex=-1;
+  var st=g('nm-s');if(st)st.selectedIndex=0;                      // \u05e4\u05ea\u05d5\u05d7
+  var nt=g('nm-notes');if(nt)nt.value='';
+  var d=g('nm-d');if(d&&!d.value)d.value=new Date().toISOString().split('T')[0];
+  var rep=g('nm-rep');
+  if(rep&&!rep.value&&typeof _truMe==='function')rep.value=_truMe()||'';
 }
 // Worker-mode "my recent reports" panel \u2014 surfaces the last 5 things the
 // device submitted (across nm/eqi/rounds/tr) so the worker can confirm the
 // report actually saved before walking away. Sorted by ts desc.
+// ---- 1.13 ----
+// A worker reports a hazard, sees a green \u2713, and then silence. He is never
+// told whether an NCR was opened, whether anyone acted, or whether it closed.
+// After three of those people stop reporting \u2014 and the near-miss:incident
+// ratio, the KPI on the dashboard, falls for the worst possible reason.
+//
+// The link already exists and already survives a sync: _nmChainApply writes
+// \u00ab\u05e0\u05e4\u05ea\u05d7 NCR-123 \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4\u00bb into nm.notes. It also sets nm.ncr_id, but
+// near_miss has no such column, so the sync drops it (the PGRST204 self-heal)
+// and it is local to whichever device did the chaining. So the number in the
+// text is the durable half, and it is read first.
+function _nmNcrRef(nm){
+  var m=String((nm&&nm.notes)||'').match(/NCR-\d+/);
+  return m?m[0]:'';
+}
+// The NCR record itself, only if this user is allowed to see it. The anonymous
+// kiosk session cannot read ncr at all, so this is null there \u2014 and the number
+// from the text still shows. Never assume the row is reachable.
+function _nmNcrOf(nm){
+  if(!nm)return null;
+  var list=DB.ncr||[];
+  if(nm.ncr_id){var byId=list.find(function(n){return n.id===nm.ncr_id;});if(byId)return byId;}
+  var ref=_nmNcrRef(nm);
+  return ref?(list.find(function(n){return n.num===ref;})||null):null;
+}
+// \u2713 \u05e0\u05e9\u05de\u05e8 answers \u00abdid the phone keep it\u00bb. This answers \u00abdid anything happen\u00bb.
+function _nmLoopHtml(r){
+  var st=r.s||'\u05e4\u05ea\u05d5\u05d7';
+  var col=st==='\u05e1\u05d2\u05d5\u05e8'?'#16a34a':(st==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#d97706':'#64748b');
+  var ref=_nmNcrRef(r),n=_nmNcrOf(r),tail='';
+  if(ref)tail=' \u00b7 '+ref+((n&&n.s)?(' '+n.s):'');
+  return '<span style="font-size:11px;white-space:nowrap;font-weight:600;color:'+col+'">'+esc(st)+esc(tail)+'</span>';
+}
 function rEmpRecent(){
   var box=g('emp-recent');var list=g('emp-recent-list');
   if(!box||!list)return;
+  var me=(typeof _truMe==='function')?_truMe():'';
+  var key=function(v){return (typeof _truNameKey==='function')?_truNameKey(v||''):String(v||'').trim();};
   var items=[];
-  (DB.near_miss||[]).forEach(function(r){items.push({tbl:'nm',icon:'\u26a0',label:'\u05db\u05de\u05e2\u05d8',d:r.descr||'',ts:r.ts||r.d});});
+  (DB.near_miss||[]).forEach(function(r){
+    // \u00ab\u05e9\u05dc\u05d9\u00bb means mine. When the person has told us who they are, show theirs
+    // and not the whole plant's; when they have not, the panel stays as it was.
+    if(me&&r.rep&&key(r.rep)!==key(me))return;
+    items.push({tbl:'nm',icon:'\u26a0',label:'\u05db\u05de\u05e2\u05d8',d:r.descr||'',ts:r.ts||r.d,loop:_nmLoopHtml(r)});
+  });
   (DB.equip_inspections||[]).forEach(function(r){if(r.s==='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df')items.push({tbl:'eqi',icon:'\ud83d\udd27',label:'\u05ea\u05e7\u05dc\u05d4',d:(r.code?r.code+' ':'')+(r.notes||r.n||''),ts:r.ts||r.d});});
   (DB.rounds||[]).forEach(function(r){items.push({tbl:'round',icon:'\u2600',label:'\u05e1\u05d1\u05d1',d:(r.inspector||'')+(r.notes?' \u2014 '+r.notes:''),ts:r.ts||r.d});});
   items=items.filter(function(x){return x.ts;}).sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');}).slice(0,5);
@@ -16545,9 +16635,14 @@ function rEmpRecent(){
       else when=Math.round(ageMin/1440)+' \u05d9\u05de\u05d9\u05dd';
     }catch(e){}
     var preview=String(it.d||'').substring(0,60);
-    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0"><span style="flex:1;min-width:0"><span style="font-size:14px">'+it.icon+'</span> <strong>'+esc(it.label)+'</strong>: '+esc(preview)+(preview.length>=60?'...':'')+'</span><span style="font-size:11px;color:#16a34a;white-space:nowrap;font-weight:600">\u2713 '+esc(when)+'</span></div>';
+    // A near-miss says what became of it; the rest keep the \u00absaved\u00bb receipt,
+    // because nothing downstream tracks them.
+    var right=it.loop?(it.loop+'<div style="font-size:10px;color:#94a3b8">'+esc(when)+'</div>')
+      :'<span style="font-size:11px;color:#16a34a;white-space:nowrap;font-weight:600">\u2713 '+esc(when)+'</span>';
+    return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #e2e8f0"><span style="flex:1;min-width:0"><span style="font-size:14px">'+it.icon+'</span> <strong>'+esc(it.label)+'</strong>: '+esc(preview)+(preview.length>=60?'...':'')+'</span><span style="text-align:left">'+right+'</span></div>';
   }).join('');
 }
+
 // Refresh recent panel any time the worker home page becomes visible.
 window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIsOn())try{rEmpRecent();}catch(e){}});
 (function(){
