@@ -11,7 +11,10 @@ function slice(startMarker, endMarker) {
 }
 const obSrc = slice('var _obSentRecently={};', 'function _obBadge(');
 // T2 (2026-09-18): the merge moved into _sbMergePull, defined right above sbSync — slice from there.
-const syncSrc = slice('function _sbMergePull(', "window.addEventListener('online'");
+// 5.7 (2026-09-20): _sbMergePull now records the version each row arrived
+// with, and the helpers that do it sit just above it. Slice from there so
+// this suite keeps running the real source rather than a stub of it.
+const syncSrc = slice('var _rowVer={};', "window.addEventListener('online'");
 
 let pass = 0, fail = 0;
 function check(label, cond, detail) {
@@ -37,12 +40,13 @@ function sandbox({ db, outbox, cloud, sentRecently, authRejected }) {
     _obBadge: (state) => { calls.badge.push(state); },
     Date: Date,
     Object: Object,
+    window: {},
   };
   const src = obSrc + '\n' + syncSrc +
     '\nif(__sent){Object.keys(__sent).forEach(function(k){_obSentRecently[k]=__sent[k];});}' +
     '\nreturn {sbSync:sbSync,_obLocalState:_obLocalState,_obMarkSent:_obMarkSent,getSB:function(){return SB_ON;},_obSentRecently:_obSentRecently};';
-  const f = new Function('DB', 'SB_ON', '_obGet', 'sbGet', 'sdb', '_sbRefresh', '_obDrain', '_sbAuthRejected', '_obBadge', '__sent', src);
-  const api = f(env.DB, env.SB_ON, env._obGet, env.sbGet, env.sdb, env._sbRefresh, env._obDrain, env._sbAuthRejected, env._obBadge, sentRecently || null);
+  const f = new Function('DB', 'SB_ON', '_obGet', 'sbGet', 'sdb', '_sbRefresh', '_obDrain', '_sbAuthRejected', '_obBadge', 'window', '__sent', src);
+  const api = f(env.DB, env.SB_ON, env._obGet, env.sbGet, env.sdb, env._sbRefresh, env._obDrain, env._sbAuthRejected, env._obBadge, env.window, sentRecently || null);
   return { api, calls, db };
 }
 const tick = () => new Promise(r => setTimeout(r, 5));
