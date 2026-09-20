@@ -49,7 +49,7 @@ Claude Code loads this file automatically at the start of every session in this 
 
 ## Workflow — כל משימה חדשה
 
-1. **קרא** `STATUS.md` → מצא משימה לא-מסומנת
+1. **קרא** `STATUS.md` → מצא משימה לא-מסומנת. אם אין — `project-files/BACKLOG.md` הוא תור העבודה (75 פריטים לפי תחום, חומרה ומאמץ)
 2. **קרא** `DECISIONS.md` → ודא שאתה לא סותר החלטה קודמת
 3. **צור branch**: `routine/<name>-YYYY-MM-DD`
 4. **ערוך** בשינויים ממוקדים
@@ -76,10 +76,11 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - **`CLAUDE.md`** — ההקשר הקבוע (הקובץ הזה)
 - **`STATUS.md`** — משימות פתוחות + Last Known Good
 - **`DECISIONS.md`** — יומן החלטות (מה נבחר ולמה)
+- **`project-files/BACKLOG.md`** — **תור העבודה**: כל מה שנמצא ועדיין לא נעשה, לפי תחום/חומרה/מאמץ, עם סימון מה אומת בקוד ומה לא
 - **`project-files/`** — קבצים להעלאה ל-Claude Project (מובייל)
 
 **בתחילת כל שיחה** (גם בסשן חדש בחשבון אחר), Claude צריך:
-1. לקרוא את 3 הקבצים הללו
+1. לקרוא את 4 הקבצים הללו
 2. לשאול את המשתמש מה המטרה של השיחה
 3. לפעול לפי החוקים פה
 
@@ -114,6 +115,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 ## הפניות
 
+- **תור העבודה: `project-files/BACKLOG.md`**
 - תבניות קוד: `project-files/PATTERNS.md`
 - Checklist לפני PR: `project-files/CHECKLIST.md`
 - Skill מפורט: `.claude/skills/tfugen-dev/SKILL.md`
