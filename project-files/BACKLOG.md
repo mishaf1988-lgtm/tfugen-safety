@@ -70,15 +70,15 @@
 | 3.1 | ~~**עריכת הדרכה מוחקת את התעודה.** `svTr` כותב `file_url` תמיד; `_genEdit('tr')` לא משחזר אותו. עדכנת תוקף → התעודה נעלמה~~ **#648** | 🔴 | S | ✅ |
 | 3.2 | ~~**גיבוי מרשם השמיעה כותב עמודות ריקות.** הקוד מייצא `r.n/r.d/r.res/r.e`; הרשומות מכילות `emp_name/test_date/...`. זה ה-CSV ש-`delAllHearing` מייצא **לפני מחיקת כל המרשם**~~ **#648** | 🔴 | S | ✅ |
 | 3.3 | **אין פעולת «חידוש» באף מרשם.** הדרך היחידה היא לערוך ולדרוס — ההיסטוריה נמחקת | 🟠 | M | 🟨 |
-| 3.4 | **`med` (בדיקות רפואיות) לא בעמוד התפוגות ולא ב-VIEW_CONFIG** — אבל כן בלוח השנה, בסקירת ההנהלה ובהתראות | 🟠 | S | ✅ |
+| 3.4 | ~~**`med` (בדיקות רפואיות) לא בעמוד התפוגות ולא ב-VIEW_CONFIG** — אבל כן בלוח השנה, בסקירת ההנהלה ובהתראות~~ **#654** | 🟠 | S | ✅ |
 | 3.5 | **ל-`hearing_tests` אין שדה תפוגה בכלל** — לא נסרק, לא מתריע, לא מופיע בתפוגות | 🟠 | M | ✅ |
-| 3.6 | **בדיקה חוזרת: `next_due` ידני** — שום דבר לא מקדם אותו לפי המחזור | 🟠 | S | ✅ |
+| 3.6 | ~~**בדיקה חוזרת: `next_due` ידני** — שום דבר לא מקדם אותו לפי המחזור~~ **#654** | 🟠 | S | ✅ |
 | 3.7 | **מאגר חוקי: «סטטוס עמידה» הוא ערך בודד** בלי תאריך, בלי מי קבע, בלי ראיה ובלי היסטוריה. §9.1.2 דורש רשומת הערכת ציות | 🟠 | M | 🟨 |
-| 3.8 | **לטופס מסמכים אין אזור צירוף, ואין ✎** — `svDoc` תמיד יוצר רשומה חדשה | 🟠 | S | ✅ |
-| 3.9 | **לטפסי צמ"ג וקבלנים אין שדה צירוף** — אין איך לצרף אישור | 🟡 | S | ✅ |
-| 3.10 | **`VIEW_CONFIG.tr` מציג את `c` כ«מדריך»** — בטופס זו קטגוריה. הדף וה-PDF מדפיסים «מדריך: בטיחות» | 🟡 | S | ✅ |
+| 3.8 | ~~**לטופס מסמכים אין אזור צירוף, ואין ✎** — `svDoc` תמיד יוצר רשומה חדשה~~ **#654** | 🟠 | S | ✅ |
+| 3.9 | ~~**לטפסי צמ"ג וקבלנים אין שדה צירוף** — אין איך לצרף אישור~~ **#654** | 🟡 | S | ✅ |
+| 3.10 | ~~**`VIEW_CONFIG.tr` מציג את `c` כ«מדריך»** — בטופס זו קטגוריה. הדף וה-PDF מדפיסים «מדריך: בטיחות»~~ **#654** | 🟡 | S | ✅ |
 | 3.11 | **שש פונקציות שמירה לא כותבות חותמת משתמש** — מי שמר ומתי קיים רק ב-`audit_log` | 🟡 | M | 🟨 |
-| 3.12 | **מצב ריק בעמוד התפוגות תמיד אומר «אין בדיקות ציוד»** — גם בלשונית «פג» ועל עמוד שמאגד 5 מרשמים | 🟡 | S | ✅ |
+| 3.12 | ~~**מצב ריק בעמוד התפוגות תמיד אומר «אין בדיקות ציוד»** — גם בלשונית «פג» ועל עמוד שמאגד 5 מרשמים~~ **#654** | 🟡 | S | ✅ |
 
 ## 4. נאמני בטיחות
 
@@ -151,6 +151,7 @@
 | #649 | הלולאה היומית ×5 — כל אחת מהן ענתה על השאלה הלא נכונה (2.1–2.5) |
 | #650 | נאמנים: חמישה מבויי סתום במסך שמתנדב מחזיק ביד (4.1, 4.2, 4.3, 4.10, 4.11) |
 | #652 | נאמנים: עבודה שנעשתה ולא נרשמה, נאמן שקיים פעמיים, ופרס שאיש לא הכריז (4.4, 4.6–4.9) |
+| #654 | מרשמים: הראיה שהמערכת מבקשת ממבקר להאמין לה בלי להראות (3.4, 3.6, 3.8–3.10, 3.12) · מיגרציה פתוחה: [#655](../../issues/655) |
 
 ## 8. לא מומלץ
 
@@ -431,7 +432,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: לפני שבונים טבלת היסטוריה כללית — כדאי להחליט אם משכפלים את `equip_inspection_history` לכל טבלה או מוסיפים טבלה אחת `record_history`; DECISIONS.md שורות 1383-1390 קובע ל-`ncr_ai` את דפוס ה-`version` (כל ניתוח = גרסה חדשה) ודוחה במפורש עמודת jsonb יחידה «אין היסטוריה, קשה ל-query» — אותו שיקול חל כאן. תלוי ב-3.8: אין טעם להוסיף «חידוש» ל-docs לפני שיש שם בכלל עריכה. חובה לעבור דרך `_EDIT_MODS` (4024) ולא לשכפל טפסים, ולשמור על כלל 2 של CLAUDE.md — תאריך ריק → `null`, לא `''`.
 
 
-### 3.4 — ✅ confirmed · מאמץ S
+### 3.4 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: כל שלושת החלקים מאומתים, והתמונה גרועה ממה שנטען. **לא בתפוגות**: `_expCollect` (5986-5993) מונה חמש טבלאות בלבד — `docs`, `tr`, `ppe`, `ctr`, `equip_inspections`; `med` איננה. אותו דבר ב-`_expNoDate` (5996-6011) — חמש קריאות `take()`, בלי med. **לא ב-VIEW_CONFIG**: המפתחות ב-11191-11266 הם docs/auds/ncr/inc/tr/rsk/emp/ppe/ins/drl/ctr/wst/hzm/env/leg/near_miss/equip_inspections/rounds/hearing_tests/tasks/toolbox/env_aspects/projects — אין `med`, וגם `_VIEW_EDITOR_FALLBACK` (11268) לא מכיל אותה, לכן `showView('med',id)` נופל ל-11274: `console.warn('showView: no VIEW_CONFIG for',tbl);toast('לא ניתן להציג — טבלה "'+tbl+'" אינה נתמכת');return;`. **כן בלוח השנה**: `_calCollect` שורה 8457 — `['ppe','tr','docs','ctr','equip_inspections','med'].forEach(...)`, ו-`_calOpenDay` (8516) מרכיב שורה עם `onclick="showView(this.dataset.vtbl,this.dataset.vid)"` — כלומר הקליק בלוח השנה מוביל בדיוק ל-toast השגיאה. **כן בסקירת ההנהלה**: `med_pct:pctValid('med')` (11998), וגם `_aiWeeklySummary` (11898), `_aiTodayPlan` (12157, עם `label={...,med:'בדיקה רפואית'}`), ה-snapshot של הצ'אט (12375), וה-ICS (13133). **כן בהתראות**: 11072 — `['ppe','tr','docs','ctr','drl','ins','med','equip_inspections']` לאירוע `expiry_30days`. **מעבר לטענה**: אין בכלל עמוד `med` — אין `pg-med` ב-HTML, אין `rMed` במפת `rPage` (16464-16466), ואין אף `goPage('med')` בקובץ, למרות ש-`_MANAGER_PAGES` (3701) כולל `med:1`. רשומות מגיעות ל-`med` רק דרך Smart Capture (17981-17984: `DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);`) ו-OneDrive (17457, 18195).
 
@@ -453,7 +454,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: מלכוד אמיתי: אין שום טופס לבדיקת שמיעה. הרשומות נכנסות רק דרך ייבוא ה-Excel — `hearXlOk` (13507-13512): `data.forEach(function(r){DB.hearing_tests.push(r);sbIns('hearing_tests',r);});` — ואין `m-hearing` ואין `svHearing`. לכן הוספת עמודה לבדה לא תמלא כלום: או שמחשבים `e = test_date + מחזור` (התקנות בדרך כלל שנתי/דו-שנתי לפי רמת חשיפה — שאלה למיכאל), או שמוסיפים עמודה לגיליון הייבוא. הדרך הזולה והבטוחה: פונקציית עזר `_hearExpiry(r)` שמחזירה `test_date + 12 חודשים` ולהזין אותה ל-5 הסורקים, בלי migration בכלל — אז אין סיכון ל-schema ואין תלות בהרצה ידנית של מיכאל (כלל 7 ב-CLAUDE.md). לשים לב: `hearing_tests` היא טבלה מוגנת ב-`_DEL_PROTECTED` (3599) — אל תיגע בשורות קיימות.
 
 
-### 3.6 — ✅ confirmed · מאמץ S
+### 3.6 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `svItp` (10805-10813), שורה 10808 היא ההכרעה: `var r={id:id,name:name,recur_count:parseInt(gv('itp-recur-count'))||1,recur_unit:gv('itp-recur-unit')||'year',next_due:gv('itp-next-due')||null,responsible:...};` — `next_due` נלקח כפשוטו משדה `<input type="date">`. `recur_count`/`recur_unit` נכתבים ונקראים במקום אחד בדיוק: תווית התצוגה ב-`rItp` שורה 10774 — `'<span style="font-size:11px;color:var(--t3)">כל '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span>'` — ועוד פעמיים ב-`editItp` (10794-10795) כדי למלא את הטופס בחזרה. grep ל-`recur_count|recur_unit|next_due` על כל ה-repo (index.html + workers/ + functions/ + tools/) לא מחזיר שום חישוב, שום `setMonth`, שום cron. `_collectVirtualTasks` (8953-8960) קורא את `next_due` אבל רק קורא: `if(!it.active||!it.next_due)return; var d=du(it.next_due); if(d>30)return; ... var prefix=d<0?'פג ב-'+(-d)+' ימים: ':...`. והמשימה הווירטואלית היא לקריאה בלבד — ב-`rTasks` שורות 9613-9617 היא מקבלת שלושה כפתורים: `srcViewBtn` (👁), `promoteBtn` (➕ openTskModal) ו-`srcDelBtn` (🗑 askDel על טבלת המקור). אין «הושלם», ואין checkbox (9625: `var cb=r.isVirtual?'':'<input type="checkbox"...`).
 
@@ -475,7 +476,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: מסומן בבקלוג ⬜👤 — צריך החלטה של מיכאל לפני קוד: האם הערכת ציות היא שורה בטבלה נפרדת (כמו `ncr_ai` עם `version`, DECISIONS.md:1383-1390, שם נדחתה במפורש עמודת jsonb יחידה כי «אין היסטוריה, קשה ל-query») או ארבע עמודות נוספות ב-`leg` בלי היסטוריה. באג נלווה שמצאתי ושווה לתקן באותו PR, כי הוא נוגע באותה פונקציה: `svLeg` שורה 4603 כותב `d:gv('leg-d')||null`, אבל **אין אלמנט `leg-d` ב-DOM** (בדקתי — `id="leg-d"` לא קיים בקובץ), ו-`gv` מחזיר `''` לאלמנט חסר (2940: `function gv(id){var el=g(id);return el?el.value.trim():'';}`). כלומר כל עריכה של חוק מאפסת את `d` — «תיאור ישן» — שאותו `VIEW_CONFIG.leg` (11245) מדפיס למסך ול-PDF. כלל 4 של CLAUDE.md: אסור להוסיף טופס HTML נפרד, הכל ב-index.html; ולפני שינוי schema ל-`leg` — גיבוי, יש תקדים `backup_ops_20260918`.
 
 
-### 3.8 — ✅ confirmed · מאמץ S
+### 3.8 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: שלושת החלקים נפתחו ואומתו. (1) **תמיד רשומה חדשה** — `svDoc` ב-`index.html:4199-4205`, שורת ההכרעה 4201: `var r={id:gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e')||null,s:gv('d-s'),i:gv('d-i')||null,nt:gv('d-nt')};` — `gid()` בלי `_svEditId('docs')||`, בניגוד לכל שאר הפונקציות (למשל `svPpe:4531` `id:_svEditId('ppe')||gid()`). (2) **אין ✎** — `_EDIT_MODS` (שורה 4024) מכיל 14 טבלאות: rsk, tr, ppe, emp, ctr, ins, drl, wst, hzm, env, toolbox, ptw, near_miss, auds. `docs` **לא** ביניהן, ולכן ב-`showView` שורה 11292: `edBtn.style.display=_editableTbl(tbl)?'':'none';` — כפתור העריכה מוסתר בדף הצפייה של מסמך. `_svEditing['docs']` לא נקבע באף מקום (ההשמה היחידה היא `_svEditing[tbl]=id` ב-`_genEdit:4063`). (3) **אין אזור צירוף** — המודאל `m-doc` (שורות 1963-1978) מכיל רק d-n, d-c, d-v, d-o, d-u, d-e, d-s, d-i, d-nt; אין `<div id="doc-attach-area">` ואין קריאה ל-`_attachPick`. `rDocs:9664` מייצר רק 👁 ו-🗑. אין עמודת `file_url` ל-`docs` באף מיגרציה (`grep file_url migrations/` → inc, tr, env_aspects, equip_inspections, toolbox, page_files בלבד).
 
@@ -486,7 +487,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שתי אזהרות מהקוד עצמו. (א) **חלק הצירוף דורש מיגרציה** — `ALTER TABLE docs ADD COLUMN IF NOT EXISTS file_url text` — כלומר פריט 👤 שמיכאל צריך להריץ; חלק ה-✎ הוא קוד טהור וניתן לעשות אותו לבד. (ב) **אל תחזור על באג 3.1.** `svTr:4461` כותב `file_url:_attachUrls['tr-attach-area']||null` **תמיד**, ו-`_genEdit:4044-4065` ממלא רק את `cfg.f` — הוא לא מחזיר את הקובץ לאזור הצירוף, ולכן `_svPut` (4034, `Object.assign({},arr[k],r)`) דורס את התעודה ב-null. פריט 3.1 מסומן ✅ ב-BACKLOG, אבל ✅ שם אומר «אומת בקוד», לא «תוקן» — הבאג עדיין שם. אם מוסיפים ל-docs גם ✎ וגם צירוף באותו PR, חובה למלא את `_attachUrls['doc-attach-area']` ב-`_genEdit` (התבנית הנכונה קיימת ב-`editEasp`, שורות 10160-10161). שימוש חוזר: `printReport:13374` כבר מדפיס «קובץ מצורף» לכל רשומה שיש לה `file_url` — אין מה להוסיף שם.
 
 
-### 3.9 — ✅ confirmed · מאמץ S
+### 3.9 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: **צמ"ג**: המודאל `m-ppe` (שורות 2264-2276) — שישה שדות בלבד (ppe-ty, ppe-w, ppe-m, ppe-d, ppe-e, ppe-c) ושורת כפתורים 2275: `<button class="btn btn-s" onclick="closeModal('m-ppe')">ביטול</button><button class="btn btn-p" onclick="svPpe()">שמור</button>` — אין `_attachPick`, אין OCR. `svPpe:4531`: `var r={id:_svEditId('ppe')||gid(),ty:ty,w:gv('ppe-w'),m:gv('ppe-m'),d:gv('ppe-d')||null,e:gv('ppe-e')||null,c:gv('ppe-c')};` — אין `file_url`. **קבלנים**: המודאל `m-ctr` (2730-2743), שבעה שדות, אותה שורת כפתורים (2742). `svCtr:4558`: `var r={id:_svEditId('ctr')||gid(),n:n,ty:gv('ctr-ty'),c:gv('ctr-c'),ph:gv('ctr-ph'),e:gv('ctr-e')||null,tr:gv('ctr-tr'),s:gv('ctr-s')};` — אין `file_url`. `VIEW_CONFIG.ppe` (11216) ו-`VIEW_CONFIG.ctr` (11228) הם ללא מפתח `photo:` (להשוואה: `toolbox` ב-11254 יש `photo:'file_url'`). גם אין נתיב עקיף: `_pageFileRender` (הבאנר «קובץ רשמי לכל הטופס») נקרא בדיוק פעם אחת בקובץ — שורה 10100, `_pageFileRender('env_aspects','easp-pagefile')`. אין עמודת `file_url` ל-`ppe`/`ctr` באף מיגרציה.
 
@@ -497,7 +498,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: **דורש מיגרציה** לשתי טבלאות: `ALTER TABLE ppe ADD COLUMN IF NOT EXISTS file_url text;` ו-`ALTER TABLE ctr ADD COLUMN IF NOT EXISTS file_url text;` — פריט 👤 שמיכאל מריץ ומאמת (כלל 7). תלוי ב-3.8: זו בדיוק אותה עבודה, ועדיף PR אחד שמוסיף צירוף ל-docs+ppe+ctr מאשר שלושה. סיכון זהה ל-3.8: `_genEdit` לא משחזר קבצים, ו-`ppe`/`ctr` **כן** נמצאות ב-`_EDIT_MODS`, כלומר יש להן ✎ פעיל — אם מוסיפים `file_url` בלי לתקן את `_genEdit`, מייצרים להן מיידית את באג 3.1 (עריכת תאריך תוקף מוחקת את האישור). לכן התיקון ב-`_genEdit` הוא **תנאי מוקדם**, לא תוספת. עזרים קיימים לשימוש חוזר: `_attachPick`/`_attachUrls`/`_attachRender`/`_attachClear`/`_attachBusy`, והתבנית המלאה כבר כתובה ב-`svEasp` (10135-10146) ו-`editEasp` (10160-10161).
 
 
-### 3.10 — ✅ confirmed · מאמץ S
+### 3.10 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `VIEW_CONFIG.tr` ב-`index.html:11206`, שורת ההכרעה: `['עובד','w'],['הדרכה','n'],['מדריך','c'],` — כלומר `['מדריך','c']`. מול זה, המודאל `m-tr` שורה 2074: `<div class="field"><label>קטגוריה</label><select id="t-c"><option>בטיחות</option><option>ISO</option><option>כיבוי אש</option><option>ציוד מגן</option><option>נהלים</option></select></div>`. `_EDIT_MODS.tr` (4024) ממפה `"t-c":"c"`, ו-`svTr:4461` כותב `c:gv('t-c')`. שלושת נתיבי התצוגה מדפיסים את `f[0]` מילה במילה: `showView:11315` (`...'>'+esc(f[0])+'</span><strong>'...`), `printReport:13370` (`rows+='<tr><th scope="col">'+f[0]+'</th><td>'+...`), ו-`_odBuildReportHtml:18218` (זהה). לכן רשומת הדרכה מציגה ומדפיסה «מדריך: בטיחות». לטבלת `tr` אין בכלל עמודת מדריך — `svTr` כותב w, n, c, d, e, sc, s, file_url וזהו.
 
@@ -519,7 +520,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שלוש נקודות שמשנות את התמונה. (א) **יש כבר תקדים עובד בקוד** — `ncr.verified_by`/`verified_at` (שורות 13273-13275: `var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin'; rec.verified_by=u; rec.verified_at=new Date().toISOString();`) ותצוגה מוכנה ב-`showView:11408-11409`. זו בדיוק התבנית לשימוש חוזר, כולל נוסח ההצגה. (ב) **DECISIONS.md:1247** דחה במפורש «created_by + row-level ownership — דורש migration לכל הטבלאות» — אבל בהקשר של **RLS ובעלות על שורות** (Vuln #7, 2026-04-21), לא בהקשר של חותמת ביקורת. זה לא סותר להוסיף `updated_by` כשדה תצוגה, אבל כדאי להזכיר את ההחלטה ב-PR כדי שלא ייראה כסתירה. (ג) **כל טבלה דורשת מיגרציה** (`ALTER TABLE ... ADD COLUMN updated_by text, updated_at timestamptz`) — 👤, וזו הסיבה ל-M ולא S. ההמלצה: לא לרדוף אחרי כל 15 הפונקציות, אלא לצמצם לחמשת מרשמי התפוגה שהאזור הזה עוסק בהם — משם מגיע ה-PDF שהמבקר רואה.
 
 
-### 3.12 — ✅ confirmed · מאמץ S
+### 3.12 — ✅ בוצע ב-**#654** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `rExp` ב-`index.html:6047`, שורת ההכרעה 6080: `if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">🔧<br>אין בדיקות ציוד<br><button class="et-cta" onclick="openModal(\'m-eqi\')">+ בדיקה ראשונה</button></td></tr>';return;}` — 🔧 «אין בדיקות ציוד» + «+ בדיקה ראשונה» שפותח את `m-eqi`. השורה יושבת **אחרי** הסינון לפי לשונית (6062-6072, `var f=window._expFilter||'all'`) ואחרי המיון, כלומר היא רצה על התוצאה של כל אחת מששת הלשוניות שמגדיר `expFilter:6013-6020`: all · exp («פג») · 7 · 30 · 90 · none («ללא תאריך»). והעמוד באמת מאגד חמישה מרשמים — `_expCollect:5988-5992` אוסף מ-`DB.docs` (מסמך), `DB.tr` (הדרכה), `DB.ppe` (צמג), `DB.ctr` (קבלן) ו-`DB.equip_inspections` (בדיקת ציוד); `_expNoDate:6006-6010` אותם חמישה. המיפוי בשורה 6084 מאשר: `var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections'};`.
 
