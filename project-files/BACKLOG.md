@@ -77,7 +77,7 @@
 | 3.8 | ~~**לטופס מסמכים אין אזור צירוף, ואין ✎** — `svDoc` תמיד יוצר רשומה חדשה~~ **#654** | 🟠 | S | ✅ |
 | 3.9 | ~~**לטפסי צמ"ג וקבלנים אין שדה צירוף** — אין איך לצרף אישור~~ **#654** | 🟡 | S | ✅ |
 | 3.10 | ~~**`VIEW_CONFIG.tr` מציג את `c` כ«מדריך»** — בטופס זו קטגוריה. הדף וה-PDF מדפיסים «מדריך: בטיחות»~~ **#654** | 🟡 | S | ✅ |
-| 3.11 | **שש פונקציות שמירה לא כותבות חותמת משתמש** — מי שמר ומתי קיים רק ב-`audit_log` | 🟡 | M | 🟨 |
+| 3.11 | ~~**שש פונקציות שמירה לא כותבות חותמת משתמש** — מי שמר ומתי קיים רק ב-`audit_log`~~ **#672** | 🟡 | M | ✅ |
 | 3.12 | ~~**מצב ריק בעמוד התפוגות תמיד אומר «אין בדיקות ציוד»** — גם בלשונית «פג» ועל עמוד שמאגד 5 מרשמים~~ **#654** | 🟡 | S | ✅ |
 
 ## 4. נאמני בטיחות
@@ -107,9 +107,9 @@
 | 5.4 | ~~**הגיבוי לא כולל** `ncr_ai`, `ncr_comments`, `ncr_patterns`, `audit_log`, `equip_inspection_history`; ה-cron גם לא את טבלאות הנאמנים~~ **#646** | 🔴 | M | ✅ |
 | 5.5 | ~~**כשה-cron מפסיק לרוץ אף אחד לא יודע** — `/health` מחזיר 'ok' תמיד~~ **#646** | 🟠 | S | ✅ |
 | 5.6 | ~~**פתיחה קרה בלי רשת = מסך כניסה נעול.** supabase-js נטען מ-CDN וה-SW לא שומר אותו~~ **#657** | 🟠 | S | ✅ |
-| 5.7 | **עריכה שולחת את כל השורה בלי גרסה** — שני אנשים באותה דקה, השני דורס את הראשון | 🟠 | M | ✅ |
+| 5.7 | ~~**עריכה שולחת את כל השורה בלי גרסה** — שני אנשים באותה דקה, השני דורס את הראשון~~ **#672** | 🟠 | M | ✅ |
 | 5.8 | **`audit_log` ניתן לשינוי ולמחיקה** על ידי כל מנהל דרך REST — מיגרציה נכתבה (**#657**), טרם הורצה: [#658](../../issues/658) | 🟠 | S | ✅👤 |
-| 5.9 | **אין שום בדיקה אוטומטית ל-RLS ול-Storage** — 78 מיגרציות עם «Verify» בהערות בלבד | 🟠 | M | 🟨 |
+| 5.9 | ~~**אין שום בדיקה אוטומטית ל-RLS ול-Storage** — 78 מיגרציות עם «Verify» בהערות בלבד~~ **#672** | 🟠 | M | ✅ |
 | 5.10 | **`2026-09-20_trustee_close_ownership.sql` — לא הורצה** | 🔴 | — | ✅👤 |
 | 5.11 | **`2026-09-20_storage_trustee_scope.sql` — לא הורצה** (נכתבה היום) | 🔴 | — | ✅👤 |
 
@@ -516,7 +516,12 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שתי הערות. (א) זו אותה משפחת באגים של פריט 1.2 (`VIEW_CONFIG.ncr` מתייג «סיבה»→p ו«פעולה מתקנת»→o) שכבר אומת ✅ — שווה לתקן את שניהם באותו PR, כי זו אותה שורת קוד ואותה בדיקה. (ב) אם מיכאל באמת רוצה שם מדריך במרשם ההדרכות זה **לא** S: `tr` תצטרך עמודה חדשה (מיגרציה 👤) + שדה במודאל + `_EDIT_MODS.tr` + `svTr` + `VIEW_CONFIG`. עדיף לפצל: קודם לתקן את התווית (מיידי, בלי DB), ואם עולה צורך בשם מדריך — פריט נפרד. כלל 1 של הפרויקט: המחרוזת החדשה חייבת להיכתב כ-`\uXXXX`. אגב, תוך כדי הקריאה נמצא ש-`_trOcrCert:12513` ו-`_docOcrCert:12473` בודקים `if(cEl && !cEl.value && ...)` על `<select>` — ל-select תמיד יש ערך (האופציה הראשונה), ולכן הקטגוריה שה-OCR זיהה **אף פעם לא נכתבת**. לא חלק מהפריט הזה, אבל זה אותו שדה `t-c`.
 
 
-### 3.11 — 🟨 partly · מאמץ M
+### 3.11 — ~~🟨 partly~~ ✅ **נעשה ב-#672** · מאמץ M
+
+> **מה שבוצע בפועל שונה מהמוצע למטה.** במקום להוסיף `updated_by`/`updated_at`
+> לחמש טבלאות (מיגרציה + 46 פונקציות לשנות), `showView` קורא בחזרה את
+> `audit_log` — שכבר רושם בדיוק את זה על כל `sbIns`/`sbUpd`/`sbDel`. בלי מיגרציה,
+> בלי עמודה חדשה, ועובד גם רטרואקטיבית על רשומות קיימות.
 
 **ראיה**: העובדה נכונה, המספר לא. סרקתי את כל 46 הפונקציות `sv*` בקובץ: **אף אחת מהן לא כותבת חותמת משתמש** — לא `created_by`, לא `updated_by`, לא `user_email`. 15 מהן כותבות רק `ts` (svNcr:4312, svPtw, svEqi, svNm, svRound, svToolbox, svTsk, svEasp, svLoc, svItp, svItype, svPrj, svTru), ו-**15 פונקציות שמירה של מרשמים לא כותבות אפילו `ts`**: svDoc(4199), svAud(4206), svInc(4431), svTr(4457), svRsk(4467), svEmp(4489), svPpe(4529), svIns(4535), svDrl(4550), svCtr(4556), svWst(4562), svHzm(4568), svEnv(4574), svLeg(4598), svUser(9040). כלומר «שש» הוא חסר מאוד — אלא אם הכוונה הייתה לשש הפונקציות של האזור הזה בלבד (svDoc/svTr/svPpe/svCtr/svIns/svDrl). החצי השני של הטענה **מדויק**: `_aud:3233` — `var entry={user_email:u,table_name:tbl,record_id:record_id,op:op,title:title};` — נקרא מ-`sbIns`/`sbUpd`/`sbDel` (3235-3237), וזה המקום היחיד שבו «מי ומתי» נשמר.
 
@@ -715,7 +720,12 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: התיקון הנקי ביותר הוא לא לגעת ב-SW בכלל: לשים עותק של supabase.js כקובץ סטטי ב-repo ולשנות את index.html:30 ל-`/supabase-2.45.4.js`. אז התגובה היא same-origin → `type:'basic'` → ה-store הקיים שומר אותה ללא שינוי, וצריך רק להוסיף את הנתיב ל-SHELL (functions/sw.js.js:28) כדי שגם הפתיחה האופליינית הראשונה תעבוד. זה לא סותר כלל 5/6 ב-CLAUDE.md (הכלל אוסר קבצי HTML נוספים ו-build step, לא קובץ vendor סטטי), ו-_headers:17 כבר מתיר `script-src 'self'`. ⚠ סיכון אם בוחרים במסלול השני — לשמור תגובות opaque במטמון: ל-opaque יש status 0, ואי אפשר להבדיל בין הצלחה ל-404, אז שגיאה חד-פעמית נתקעת במטמון לתמיד. ⚠ תלות שמגבילה את S: גם אחרי שהספרייה נטענת, `getSession()` (index.html:15151) עלול להיכשל אופליין אם ה-access token פג (ברירת מחדל שעה) — supabase-js ינסה refresh ברשת. כדי שהפתיחה הקרה באמת תפתח את האפליקציה צריך גם מסלול שסומך על הסשן השמור/`_currentUser` במקום לדרוש טוקן טרי. בלי זה התיקון פותר רק פתיחה בתוך השעה האחרונה.
 
 
-### 5.7 — ✅ confirmed · מאמץ M
+### 5.7 — ✅ **נעשה ב-#672** · מאמץ M
+
+> **בלי המיגרציה שמוצעת למטה.** `ts` כבר קיים וכל `sv*` כותב אותו מחדש,
+> אז הוא הגרסה. הערה למי שיגע בזה: עמודת התנאי חייבת להיות אחת
+> ששמירה מזיזה. `_sbTsCol` היא מפת **מיון** ו-`ncr` לא נמצא בה — שימוש בה
+> מפיל את התנאי ל-`created_at`, שעדכון לעולם לא מזיז. הבדיקה תפסה את זה.
 
 **ראיה**: index.html:3238 `function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}` — השורה השלמה נכנסת לתור. השורה המכריעה בשליחה, index.html:3143: `else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}` — PATCH לפי id בלבד, בלי `If-Match`, בלי תנאי על `updated_at`, והגוף הוא כל השורה. מה נשלח: index.html:4035 (_svPut) `if(k>=0){arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k]);}` — כל העמודות שהלקוח מכיר; ו-index.html:4339 (svNcr) `if(id){DB.ncr=DB.ncr.map(function(r){return r.id===id?rec:r;});sbUpd('ncr',rec);}` — `rec` נבנה מאפס מהטופס (index.html:4318-4337) ומחליף את השורה כולה. `grep -n "If-Match|updated_at|xmin|row_version" index.html` מחזיר 0 תוצאות, ובמיגרציות `updated_at` קיים רק ב-2026-05-10_oauth_tokens.sql. 31 אתרי קריאה ל-sbUpd, כולם באותה צורה.
 
@@ -737,7 +747,13 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: התיקון בטוח מבחינת קוד: אימתתי שהאפליקציה לעולם לא מעדכנת ולא מוחקת audit_log — _aud (index.html:3219-3236) דוחף אך ורק `{op:'ins'}`, והייצוא ב-index.html:13052 רק קורא. לכן הסרת UPDATE/DELETE לא שוברת שום זרימה קיימת. ⚠ זו פעולה שדורשת אישור מפורש של מיכאל לפי CLAUDE.md סעיף 2 ב-«Supabase MCP»: «שינוי או מחיקה של RLS policy קיימת» מסווג כהרסני — ולכן הפריט מסומן 👤 גם ב-BACKLOG. ⚠ שתי הסתייגויות על הראיה: (1) הקוד ב-repo הוא המקור היחיד שיכולתי לקרוא — הרשת של הסביבה חוסמת את Supabase (CLAUDE.md), אז אי אפשר לאמת מול pg_policies החי שלא נוסף policy out-of-band; (2) המיגרציה קוראת ל-`public.is_admin_manager()` בעוד המיגרציות מ-2026-05 ואילך עברו ל-`private.` — שתי הגרסאות קיימות בפרויקט, וכדאי לקבע את החדשה על `private.` כמו השאר. לשלב את השינוי עם 5.4, שדורש ממילא לכלול את audit_log בגיבוי.
 
 
-### 5.9 — 🟨 partly · מאמץ M
+### 5.9 — ~~🟨 partly~~ ✅ **נעשה ב-#672** · מאמץ M
+
+> **מה שבוצע, ומה עדיין לא.** נוספה `tests/harness/rls-policy-test.mjs` (27 בדיקות)
+> שקוראת את המיגרציות כטקסט, ו-`_securityselftest.js` קיבל בדיקת Storage אמיתית.
+> **מה שלא נסגר:** אין מסלול רשת מהסשן ל-DB החי (CLAUDE.md, סעיף Supabase MCP),
+> לכן היקף הטוקן האנונימי מדווח כפער ידוע ולא כ-pass, ואין CI שמריץ את
+> ההארנס — הוא עדיין ידני. והחור עצמו (5.11) עדיין פתוח עד שהמיגרציה תורץ.
 
 **ראיה**: הליבה נכונה, המספרים לא. ספירה בפועל: `ls migrations/*.sql | wc -l` → **80**, לא 78; ומתוכן רק **37** מכילות את המילה verify בכלל, ורק **19** מכילות בלוק `-- Verify` בתחילת שורה. כלומר 43 מיגרציות לא מציעות אפילו שאילתת אימות בהערה. על «אין שום בדיקה אוטומטית» — קיימות 54 סוויטות ב-tests/harness/, אבל אף אחת לא נוגעת ב-DB החי: כל ההופעות של `znhjtpcltrxxyfjczgvw.supabase.co` בהן הן קבועים ב-mock (למשל tests/harness/anon-boundary-test.mjs:27 ואחריו `globalThis.fetch = async (url, init) => {...}`). שתי ה«storage» מטעות: tests/harness/storage-full-test.js בודק localStorage מלא, לא Supabase Storage; ו-tests/harness/storage-scope-test.js אומר על עצמו בשורות 9-11 «That boundary is not a property of the database — it is a property of THIS CODE» — הוא מאמת את מוסכמת השמות `tru-ph-` בלקוח, לא את ה-policy. מה כן קיים ומפריך את ה«שום»: functions/api/_securityselftest.js מריץ 3 בדיקות RLS אמיתיות מול ה-DB החי עם ה-JWT של הקורא — `sens_ncr_visible_to_caller` (שורות 219-234), `app_users_visible_to_caller` (240-256), `password_reset_visible_to_caller` (258-274). אפס בדיקות Storage שם. ואין CI: `ls .github/workflows/` מחזיר קובץ אחד, daily-reminders.yml, שה-schedule שלו מבוטל — tests/harness/run.sh מורץ ידנית בלבד.
 

@@ -16,7 +16,7 @@ Claude Code loads this file automatically at the start of every session in this 
 
 | שכבה | טכנולוגיה |
 |---|---|
-| UI | **single-file** `index.html` (~7800 lines) — אין build step, אין framework |
+| UI | **single-file** `index.html` (~20,500 lines) — אין build step, אין framework |
 | Backend | **Supabase** — 35+ טבלאות, REST API, `znhjtpcltrxxyfjczgvw.supabase.co` |
 | AI | Cloudflare Pages Function `functions/api/claude.js` → Claude API (streaming) |
 | Deploy | **Cloudflare Pages** auto-deploy מ-`main` (project: `tapugan-safety`) |
