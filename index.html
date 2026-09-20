@@ -1631,13 +1631,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row">
     <div class="page-title">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; <span>&#1513;&#1502;&#1497;&#1506;&#1492;</span></div>
     <button class="btn btn-p" onclick="openHearXl()">&#128228; &#1492;&#1506;&#1500;&#1492; Excel</button>
+    <button class="btn btn-s" onclick="_hearFillExp()" title="&#1500;&#1512;&#1513;&#1493;&#1502;&#1493;&#1514; &#1513;&#1488;&#1497;&#1503; &#1500;&#1492;&#1503; &#1514;&#1508;&#1493;&#1490;&#1492;">&#128197; &#1502;&#1500;&#1488; &#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</button>
     <button class="btn btn-d" onclick="delAllHearing()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <div class="row">
     <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="_debRHearing()" style="flex:1;min-width:200px">
   </div>
   <div id="hearing-count" style="font-size:13px;color:var(--t2);margin-bottom:8px"></div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1514;&quot;&#1494;</th><th scope="col">&#1490;&#1497;&#1500;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th scope="col">&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th scope="col">&#1489;&#1493;&#1491;&#1511;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1514;&quot;&#1494;</th><th scope="col">&#1490;&#1497;&#1500;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th scope="col">&#1514;&#1511;&#1507; &#1506;&#1491;</th><th scope="col">&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th scope="col">&#1489;&#1493;&#1491;&#1511;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
 
@@ -2887,6 +2888,13 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</label><select id="leg-c"><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1499;&#1493;&#1503; &#1488;&#1495;&#1512;&#1493;&#1503;</label><input type="date" id="leg-u"></div>
     <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="leg-last-review"></div>
+    <!-- 3.7 — §9.1.2 wants an evaluation-of-compliance record: what was
+         checked, when, by whom. The status was a lone dropdown, so אינו מציית
+         could become מציית with the review date still a year old. These are
+         stamped by svLeg when the status changes, so they cannot drift. -->
+    <div class="field"><label>&#1504;&#1511;&#1489;&#1506; &#1489;&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="leg-c-date" readonly style="opacity:.75"></div>
+    <div class="field"><label>&#1504;&#1511;&#1489;&#1506; &#1506;&#1500; &#1497;&#1491;&#1497;</label><input id="leg-c-by" readonly style="opacity:.75"></div>
+    <div class="field fw"><label>&#128206; &#1512;&#1488;&#1497;&#1492; &#1500;&#1506;&#1502;&#1497;&#1491;&#1492;</label><div id="leg-evidence-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('leg-evidence-area','leg')">&#128247; &#128196; &#1510;&#1512;&#1507; &#1488;&#1497;&#1513;&#1493;&#1512; / &#1514;&#1505;&#1511;&#1497;&#1512; / &#1502;&#1491;&#1497;&#1491;&#1492;</button></div></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="leg-o"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-leg')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="leg-ai-btn" onclick="_legAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1504;&#1514;&#1495; &#1493;&#1505;&#1499;&#1501; AI</button><button class="btn btn-p" onclick="svLeg()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -4920,7 +4928,9 @@ function svEnv(){
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rEnv();
 }
 function openNewLegModal(){
-  ['leg-id','leg-s','leg-law-num','leg-topic','leg-src-url','leg-summary','leg-full-text','leg-u','leg-last-review','leg-o'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  ['leg-id','leg-s','leg-law-num','leg-topic','leg-src-url','leg-summary','leg-full-text','leg-u','leg-last-review','leg-o','leg-c-date','leg-c-by'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  _attachUrls['leg-evidence-area']=null;
+  if(typeof _attachClear==='function')_attachClear('leg-evidence-area');
   var lt=g('leg-law-type');if(lt)lt.value='';
   openModal('m-leg');
 }
@@ -4935,6 +4945,11 @@ function editLeg(id){
   setIf('leg-topic',rec.topic);setIf('leg-src-url',rec.src_url);
   setIf('leg-summary',rec.summary);setIf('leg-full-text',rec.full_text);
   setIf('leg-last-review',rec.last_review);
+  // 3.7 — read-only on the form: they are written by svLeg when the status
+  // changes, never typed, so they cannot drift away from the determination.
+  setIf('leg-c-date',rec.c_date);setIf('leg-c-by',rec.c_by);
+  _attachUrls['leg-evidence-area']=rec.c_evidence_url||null;
+  if(rec.c_evidence_url&&typeof _attachRender==='function')_attachRender('leg-evidence-area',rec.c_evidence_url,'');
   openModal('m-leg');
 }
 function svLeg(){
@@ -4954,8 +4969,21 @@ function svLeg(){
     src_url:gv('leg-src-url')||null,
     summary:gv('leg-summary')||null,
     full_text:gv('leg-full-text')||null,
-    last_review:gv('leg-last-review')||null
+    last_review:gv('leg-last-review')||null,
+    c_evidence_url:_attachUrls['leg-evidence-area']||null
   };
+  // 3.7 — the determination carries its own date and author, and they are
+  // written HERE rather than typed, because a field somebody has to remember
+  // to update is a field that stays a year out of date. Only a CHANGE
+  // re-stamps: editing the summary of a law does not re-date the judgement.
+  var _prev=id?(DB.leg||[]).find(function(x){return x.id===id;}):null;
+  if(!_prev||_prev.c!==r.c){
+    r.c_date=new Date().toISOString().substring(0,10);
+    r.c_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
+  }else{
+    r.c_date=_prev.c_date||null;
+    r.c_by=_prev.c_by||null;
+  }
   if(id){
     DB.leg=DB.leg.map(function(x){return x.id===id?r:x;});
     sbUpd('leg',r);
@@ -6532,6 +6560,11 @@ function _expCollect(){
   (DB.ppe||[]).forEach(function(r){if(r.e)items.push({name:r.ty||'',owner:r.w||'',mod:'ppe',modLabel:'\u05e6\u05de\u05d2',e:r.e,id:r.id});});
   (DB.ctr||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.c||'',mod:'ctr',modLabel:'\u05e7\u05d1\u05dc\u05df',e:r.e,id:r.id});});
   (DB.equip_inspections||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.code||'',owner:r.vendor||r.loc||'',mod:'eqi',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',e:r.e,id:r.id});});
+  // 3.5 — audiometric surveillance was the one statutory register with no
+  // expiry field at all: not scanned here, not in the calendar, not in the ICS
+  // and not in the 30-day warning. rHearing printed the test date with fd() and
+  // no eb(), so there was not one colour badge on the whole page.
+  (DB.hearing_tests||[]).forEach(function(r){if(r.e)items.push({name:r.emp_name||'',owner:r.dept||r.role||'',mod:'hearing',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',e:r.e,id:r.id});});
   // med was in the calendar, in the 30-day notification, in the management
   // review and in the ISO report \u2014 and not here, on the one page whose whole
   // job is expiry. A medical check scanned in raised a yellow dot on the
@@ -6556,6 +6589,9 @@ function _expNoDate(){
   take('ctr','ctr','\u05e7\u05d1\u05dc\u05df',function(r){return r.n;},function(r){return r.c;});
   take('equip_inspections','eqi','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',function(r){return r.n||r.code;},function(r){return r.vendor||r.loc;});
   take('med','med','\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',function(r){return r.n||r.t;},function(r){return r.t;});
+  // The register is imported from Excel in bulk, so «no date set» is the normal
+  // starting state for hundreds of rows. Showing them is the point.
+  take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
 function expFilter(f){
@@ -6657,7 +6693,7 @@ function rExp(){
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
@@ -9185,9 +9221,9 @@ function _calCollect(y,m){
   (DB.tasks||[]).forEach(function(t){
     var d=sameMonth(t.due);if(d)add(d,'task',(t.title||'\u05de\u05e9\u05d9\u05de\u05d4').substring(0,40),'tasks',t.id);
   });
-  ['ppe','tr','docs','ctr','equip_inspections','med'].forEach(function(tb){
+  ['ppe','tr','docs','ctr','equip_inspections','med','hearing_tests'].forEach(function(tb){
     (DB[tb]||[]).forEach(function(r){
-      var d=sameMonth(r.e);if(d){var nm=r.n||r.code||r.ty||tb;add(d,'exp',String(nm).substring(0,40),tb,r.id);}
+      var d=sameMonth(r.e);if(d){var nm=r.n||r.code||r.ty||r.emp_name||tb;add(d,'exp',String(nm).substring(0,40),tb,r.id);}
     });
   });
   (DB.rounds||[]).forEach(function(r){
@@ -9443,10 +9479,10 @@ function rMr(){
     }).join('');
   }else{g('mr-top-ncr').innerHTML='<div class="et" style="padding:14px">\u05d0\u05d9\u05df NCR \u05e7\u05e8\u05d9\u05d8\u05d9 \u05e4\u05ea\u05d5\u05d7</div>';}
   var allExp=[];
-  ['ppe','tr','docs','ctr','equip_inspections','med'].forEach(function(tb){
+  ['ppe','tr','docs','ctr','equip_inspections','med','hearing_tests'].forEach(function(tb){
     (DB[tb]||[]).forEach(function(r){
       if(!r.e)return;var dd=du(r.e);if(dd<-30||dd>60)return;
-      var name=String(r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
+      var name=String(r.n||r.code||r.ty||r.emp_name||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
       allExp.push({tb:tb,id:r.id,name:name,e:r.e,dd:dd});
     });
   });
@@ -12150,13 +12186,13 @@ function _notifDailyScan(){
     // event had never fired once. _notifBuildWaArgs already reads
     // r.n / r.code / r.vendor, so the message side needed no change.
     var expSoon=[];
-    ['ppe','tr','docs','ctr','drl','ins','med','equip_inspections'].forEach(function(k){
+    ['ppe','tr','docs','ctr','drl','ins','med','equip_inspections','hearing_tests'].forEach(function(k){
       (DB[k]||[]).forEach(function(r){
         if(!r.e)return;
         var d=new Date(r.e);
         if(isNaN(d.getTime()))return;
         var days=Math.floor((d-today)/86400000);
-        if(days>=0&&days<=30)expSoon.push({tbl:k,id:r.id,name:r.n||r.code||r.t||'\u05e4\u05e8\u05d9\u05d8',days:days});
+        if(days>=0&&days<=30)expSoon.push({tbl:k,id:r.id,name:r.n||r.code||r.t||r.emp_name||'\u05e4\u05e8\u05d9\u05d8',days:days});
       });
     });
     // Most urgent first, so the 3-item cap can never hide something expiring
@@ -12393,7 +12429,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05d7\u05d5\u05dd \u05e8\u05d0\u05e9\u05d9','a'],['\u05ea\u05ea-\u05e0\u05d5\u05e9\u05d0','topic'],
     ['\u05ea\u05e7\u05e6\u05d9\u05e8','summary'],['\u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0','full_text'],
     ['\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05e7\u05d5\u05e8','src_url'],
-    ['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e2\u05de\u05d9\u05d3\u05d4','c'],
+    ['\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e2\u05de\u05d9\u05d3\u05d4','c'],['\u05e0\u05e7\u05d1\u05e2 \u05d1\u05ea\u05d0\u05e8\u05d9\u05da','c_date'],['\u05e0\u05e7\u05d1\u05e2 \u05e2\u05dc \u05d9\u05d3\u05d9','c_by'],
     ['\u05e2\u05d3\u05db\u05d5\u05df \u05d0\u05d7\u05e8\u05d5\u05df','u'],['\u05e1\u05e7\u05d9\u05e8\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4','last_review'],
     ['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d9\u05e9\u05df','d']]},
   near_miss:{title:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',back:'nm',fields:[
@@ -12410,7 +12446,7 @@ var VIEW_CONFIG={
   hearing_tests:{title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',back:'hearing',fields:[
     ['\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3','emp_name'],['\u05ea"\u05d6','emp_id'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d9\u05d3\u05d4','dob'],['\u05d2\u05d9\u05dc','age'],['\u05de\u05d9\u05df','gender'],
     ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],['\u05e7\u05d5\u05e4\u05d4/\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],['\u05e9\u05e0\u05d4','year'],
-    ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
+    ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05ea\u05e7\u05e3 \u05e2\u05d3','e'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
@@ -12581,7 +12617,7 @@ function showView(tbl,id){
   var canWA=false;
   if(tbl==='ncr'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canWA=true;
   else if(tbl==='tasks'&&rec.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&rec.status!=='\u05d1\u05d5\u05d8\u05dc')canWA=true;
-  else if(['ppe','tr','docs','ctr','equip_inspections','med'].indexOf(tbl)>=0&&rec.e){
+  else if(['ppe','tr','docs','ctr','equip_inspections','med','hearing_tests'].indexOf(tbl)>=0&&rec.e){
     var dd=du(rec.e);if(dd<=30)canWA=true;
   }
   if(canWA&&_isAdminUser()){
@@ -13645,8 +13681,8 @@ function _askBuildSnapshot(){
   });
   // Expirations within next 30 days.
   var endW=nowMs+30*86400000;var exp=[];
-  ['ppe','tr','docs','ctr','equip_inspections','med'].forEach(function(k){
-    (DB[k]||[]).forEach(function(r){if(!r.e)return;var t=new Date(r.e).getTime();if(isNaN(t))return;if(t>=nowMs-86400000&&t<=endW){exp.push({type:k,name:String(r.n||r.t||r.full_name||r.code||'').substring(0,40),expiry:r.e,days_left:Math.floor((t-nowMs)/86400000)});}});
+  ['ppe','tr','docs','ctr','equip_inspections','med','hearing_tests'].forEach(function(k){
+    (DB[k]||[]).forEach(function(r){if(!r.e)return;var t=new Date(r.e).getTime();if(isNaN(t))return;if(t>=nowMs-86400000&&t<=endW){exp.push({type:k,name:String(r.n||r.t||r.full_name||r.code||r.emp_name||'').substring(0,40),expiry:r.e,days_left:Math.floor((t-nowMs)/86400000)});}});
   });
   exp.sort(function(a,b){return a.days_left-b.days_left;});
   s.expirations_30d=exp.slice(0,15);
@@ -14894,19 +14930,62 @@ function hearXlOk(){
   addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4: '+data.length);
   sdb();closeHearXl();toast('\u05d9\u05d5\u05d1\u05d0\u05d5 '+data.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u2713');rHearing();
 }
+// ---- 3.5 ----
+// One row at a time. Empty clears it back to «no date» rather than storing ''.
+window._hearSetExp=function(id){
+  var r=(DB.hearing_tests||[]).find(function(x){return x.id===id;});
+  if(!r){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var v=prompt('\u05ea\u05e7\u05e3 \u05e2\u05d3 (YYYY-MM-DD) — \u05e8\u05d9\u05e7 \u05de\u05d5\u05d7\u05e7\n\n'+(r.emp_name||'')+(r.test_date?(' \u00b7 \u05e0\u05d1\u05d3\u05e7 '+fd(r.test_date)):''),r.e||'');
+  if(v===null)return;
+  v=String(v).trim();
+  if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  r.e=v||null;                                 // CLAUDE.md rule 2: empty is null
+  r.ts=new Date().toISOString();
+  sbUpd('hearing_tests',r);sdb();rHearing();
+  toast(v?('\u05e0\u05e9\u05de\u05e8 \u2713'):'\u05d4\u05ea\u05e4\u05d5\u05d2\u05d4 \u05e0\u05de\u05d7\u05e7\u05d4');
+};
+// And in bulk, because the register arrives from Excel hundreds of rows at a
+// time. The PERIOD is asked for rather than assumed: the interval between
+// audiometric tests is set by the exposure and the regulation, and inventing a
+// default here would be putting a legal figure in Michael's mouth. Only rows
+// that have no date are touched — an existing one is never overwritten.
+window._hearFillExp=function(){
+  var rows=(DB.hearing_tests||[]).filter(function(r){return !r.e&&r.test_date;});
+  var noDate=(DB.hearing_tests||[]).filter(function(r){return !r.e&&!r.test_date;}).length;
+  if(!rows.length){toast(noDate?('\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05dd \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d7\u05e9\u05d1 \u05de\u05de\u05e0\u05d5'):'\u05dc\u05db\u05d5\u05dc\u05df \u05db\u05d1\u05e8 \u05d9\u05e9 \u05ea\u05e4\u05d5\u05d2\u05d4');return;}
+  var m=prompt('\u05db\u05dc \u05db\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d7\u05d5\u05d6\u05e8\u05ea \u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e9\u05de\u05d9\u05e2\u05d4?\n\n'
+    +'\u05d4\u05ea\u05e4\u05d5\u05d2\u05d4 \u05ea\u05d7\u05d5\u05e9\u05d1 \u05db\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 + \u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05d4.\n'
+    +'\u05d4\u05ea\u05d3\u05d9\u05e8\u05d5\u05ea \u05e0\u05e7\u05d1\u05e2\u05ea \u05d1\u05ea\u05e7\u05e0\u05d5\u05ea \u05d5\u05dc\u05e4\u05d9 \u05d4\u05d7\u05e9\u05d9\u05e4\u05d4 — \u05d0\u05e0\u05d9 \u05dc\u05d0 \u05de\u05de\u05e6\u05d9\u05d0 \u05d0\u05d5\u05ea\u05d4 \u05d1\u05e9\u05d1\u05d9\u05dc\u05da.\n\n'
+    +rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d9\u05e2\u05d5\u05d3\u05db\u05e0\u05d5'+(noDate?(' \u00b7 '+noDate+' \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d9\u05d9\u05e9\u05d0\u05e8\u05d5 \u05e8\u05d9\u05e7\u05d5\u05ea'):''),'12');
+  if(m===null)return;
+  var n=parseInt(String(m).trim(),10);
+  if(!n||n<1||n>120){toast('\u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df (1\u2013120)');return;}
+  if(!confirm(rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d9\u05e7\u05d1\u05dc\u05d5 \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e9\u05dc \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 + '+n+' \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd. \u05dc\u05d4\u05de\u05e9\u05d9\u05da?'))return;
+  var done=0;
+  rows.forEach(function(r){
+    var d=new Date(r.test_date);
+    if(isNaN(d))return;
+    d.setMonth(d.getMonth()+n);
+    r.e=d.toISOString().substring(0,10);
+    r.ts=new Date().toISOString();
+    sbUpd('hearing_tests',r);done++;
+  });
+  sdb();rHearing();
+  toast(done+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d5 \u2713');
+};
 function rHearing(){
   var tb=g('tb-hearing');if(!tb)return;
   var q=(gv('hearing-search')||'').toLowerCase();
   var list=(DB.hearing_tests||[]).slice().sort(function(a,b){return (b.test_date||'').localeCompare(a.test_date||'');});
   if(q)list=list.filter(function(r){return (r.emp_name||'').toLowerCase().indexOf(q)>=0||(r.emp_id||'').indexOf(q)>=0||(r.dept||'').toLowerCase().indexOf(q)>=0;});
   var cnt=g('hearing-count');if(cnt)cnt.textContent=list.length+' / '+(DB.hearing_tests||[]).length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
-  if(!list.length){tb.innerHTML='<tr><td colspan="10" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
+  if(!list.length){tb.innerHTML='<tr><td colspan="11" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=list.map(function(r){
     var view='<button class="btn btn-d btn-sm" data-vtbl="hearing_tests" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdf='<button class="btn btn-d btn-sm" data-ptbl="hearing_tests" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var del='<button class="btn btn-d btn-sm" data-dtbl="hearing_tests" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
     var notes=(r.notes||'').replace(/</g,'&lt;');if(notes.length>32)notes=notes.substring(0,32)+'...';
-    return '<tr><td><strong>'+(r.emp_name?esc(r.emp_name):'\u2014')+'</strong></td><td>'+(r.emp_id?esc(r.emp_id):'\u2014')+'</td><td>'+(r.age?esc(r.age):'\u2014')+'</td><td>'+(r.role?esc(r.role):'\u2014')+'</td><td>'+(r.dept?esc(r.dept):'\u2014')+'</td><td>'+fd(r.test_date)+'</td><td style="max-width:200px">'+notes+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+view+' '+pdf+'</td><td>'+del+'</td></tr>';
+    return '<tr><td><strong>'+(r.emp_name?esc(r.emp_name):'\u2014')+'</strong></td><td>'+(r.emp_id?esc(r.emp_id):'\u2014')+'</td><td>'+(r.age?esc(r.age):'\u2014')+'</td><td>'+(r.role?esc(r.role):'\u2014')+'</td><td>'+(r.dept?esc(r.dept):'\u2014')+'</td><td>'+fd(r.test_date)+'</td><td>'+(r.e?eb(r.e):'<button class="btn btn-d btn-sm" data-hid="'+esc(r.id)+'" onclick="_hearSetExp(this.dataset.hid)" title="\u05e7\u05d1\u05e2 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4" style="font-size:11px">+ \u05ea\u05e4\u05d5\u05d2\u05d4</button>')+'</td><td style="max-width:200px">'+notes+'</td><td>'+(r.inspector?esc(r.inspector):'\u2014')+'</td><td>'+view+' '+pdf+'</td><td>'+del+'</td></tr>';
   }).join('');
 }
 // The audiometric register is statutory health-surveillance data. This used to
@@ -15162,6 +15241,19 @@ function _legReviewBadge(rec){
   var ic=m.state==='overdue'?'\ud83d\udd34':(m.state==='soon'?'\u26a0\ufe0f':(m.state==='never'?'\u26ab':'\u2705'));
   return '<span style="font-size:11px;color:'+col+';font-weight:700;white-space:nowrap">'+ic+' '+m.label+'</span>';
 }
+// ---- 3.7 ----
+// מציית was a lone dropdown. Nothing recorded WHEN it was decided, by WHOM,
+// or on what evidence — and «סקירה אחרונה» beside it is a separate field that
+// Michael types by hand, so אינו מציית could become מציית while the badge next
+// to it still said «✅ in 340 days» from last year's review. In front of an
+// auditor asking §9.1.2 «on what basis», the answer was a dropdown.
+function _legCStamp(l){
+  if(!l)return '';
+  if(!l.c_date)return '<div style="font-size:10px;color:#b45309">\u05dc\u05d0 \u05ea\u05d5\u05e2\u05d3 \u05de\u05ea\u05d9 \u05e0\u05e7\u05d1\u05e2</div>';
+  var who=l.c_by?(' \u00b7 '+esc(l.c_by)):'';
+  var ev=l.c_evidence_url?' \ud83d\udcce':'';
+  return '<div style="font-size:10px;color:var(--t3)">'+esc(fd(l.c_date))+who+ev+'</div>';
+}
 function rLeg(){
   var tb=g('tb-leg');if(!tb)return;
   if(!DB.leg.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\u2696\ufe0f<br>\u05d0\u05d9\u05df \u05d7\u05d5\u05e7\u05d9\u05dd / \u05ea\u05e7\u05e0\u05d5\u05ea \u05d1\u05de\u05d0\u05d2\u05e8<br><button class="et-cta" onclick="openNewLegModal()">+ \u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
@@ -15186,7 +15278,7 @@ function rLeg(){
     var moreBtn='<button class="btn btn-d btn-sm" data-lid="'+esc(l.id)+'" onclick="_legRowMenu(this.dataset.lid,this)" title="&#1506;&#1512;&#1497;&#1499;&#1492; / &#1502;&#1495;&#1497;&#1511;&#1492;">&#8943;</button>';
     var hasContent=l.summary||l.full_text;
     var contentBadge=hasContent?'<span style="font-size:9px;color:var(--ok);font-weight:700">✓ \u05ea\u05d5\u05db\u05df</span>':'<span style="font-size:9px;color:var(--warn);font-weight:700">⚠ \u05dc\u05dc\u05d0 \u05ea\u05d5\u05db\u05df</span>';
-    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+'</td><td data-label="\u05e1\u05e7\u05d9\u05e8\u05d4">'+_legReviewBadge(l)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea" style="white-space:nowrap">'+viewBtn+' '+moreBtn+'</td></tr>';
+    return '<tr><td data-label="\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7" style="max-width:260px">'+nameCell+'<br>'+contentBadge+'</td><td data-label="\u05e1\u05d5\u05d2">'+lt+'</td><td data-label="\u05ea\u05d7\u05d5\u05dd">'+esc(l.a||'')+'</td><td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+sb(l.c)+_legCStamp(l)+'</td><td data-label="\u05e1\u05e7\u05d9\u05e8\u05d4">'+_legReviewBadge(l)+'</td><td data-label="\u05e2\u05d3\u05db\u05d5\u05df">'+fd(l.u)+'</td><td data-label="\u05de\u05e7\u05d5\u05e8">'+srcBtn+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea" style="white-space:nowrap">'+viewBtn+' '+moreBtn+'</td></tr>';
   }).join('');
 }
 function legFilter(f){window._legFilter=f;['all','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05db\u05d7 \u05d0\u05d3\u05dd','\u05db\u05dc\u05dc\u05d9'].forEach(function(k){var el=g('leg-tab-'+k.replace(/ /g,'_'));if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rLeg();}
@@ -17056,16 +17148,16 @@ window._waExpiryAlert=function(tbl,id){
   if(!r){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var today=new Date().toISOString().split('T')[0];
   var days=r.e?Math.ceil((new Date(r.e)-new Date(today))/86400000):0;
-  var name=String(r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
+  var name=String(r.n||r.code||r.ty||r.emp_name||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':'');
   var dueDate=r.e?fd(r.e):'?';
-  var ownerName=r.w||r.vendor||r.o||r.c||null;
+  var ownerName=r.w||r.vendor||r.o||r.c||r.emp_name||null;
   var smart=_waResolvePhone(ownerName);
   _waConfirm(smart||_waLastTo(),{template:'tfugen_expiry_warning',language:'he',params:[name.substring(0,80),String(days),dueDate]},smart?ownerName:null);
 };
 window._waAlertFromView=function(tbl,id){
   if(tbl==='ncr')return _waNcrAlert(id);
   if(tbl==='tasks')return _waTaskAlert(id);
-  if(['ppe','tr','docs','ctr','equip_inspections','med'].indexOf(tbl)>=0)return _waExpiryAlert(tbl,id);
+  if(['ppe','tr','docs','ctr','equip_inspections','med','hearing_tests'].indexOf(tbl)>=0)return _waExpiryAlert(tbl,id);
   toast('\u05d0\u05d9\u05df \u05ea\u05d1\u05e0\u05d9\u05ea WhatsApp \u05dc\u05e1\u05d5\u05d2 \u05d6\u05d4');
 };
 window._waTestSend=function(){
