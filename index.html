@@ -886,6 +886,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-totals-card" style="display:none"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="dash-section-title" id="dash-stats-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <!-- Which area is getting WORSE. The card above says which is worst now;
+       for a safety committee that is the difference between "5 findings in
+       the frying hall" and "the frying hall is climbing for a third month". -->
+  <div class="card" id="dash-heat-card" style="display:none"><div class="card-title">&#127777;&#65039; &#1488;&#1494;&#1493;&#1512;&#1497;&#1501; &#8212; 6 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501;</div><div id="dash-heat"></div></div>
   <div class="card" id="dash-by-prj-card" style="display:none"><div class="card-title">&#127959;&#65039; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</div><div id="dash-by-prj"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-by-itype-card" style="display:none"><div class="card-title">&#127919; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</div><div id="dash-by-itype"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-critical-card" style="display:none"><div class="card-title">&#128293; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</div><div id="dash-critical"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -1148,6 +1152,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <!-- Global datalist of active users for "reporter" dropdowns — populated by _refreshUsersDatalist() -->
 <datalist id="active-users-list"></datalist>
+<!-- Employee names, for any field that has to join back to DB.emp by name. -->
+<datalist id="emp-names-list"></datalist>
 
 <!-- TASKS PAGE -->
 <div id="pg-tasks" class="page">
@@ -1534,6 +1540,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-tr" class="page">
   <div class="row"><div class="page-title">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-tr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <div class="card" id="tr-dept-card" style="display:none"><div class="card-title">&#127891; &#1499;&#1513;&#1497;&#1512;&#1493;&#1514; &#1500;&#1508;&#1497; &#1502;&#1495;&#1500;&#1511;&#1492; <span style="font-weight:400;font-size:11px;color:var(--t2)">ISO 45001 &#167;7.2 &#8212; &#1492;&#1490;&#1512;&#1493;&#1506; &#1489;&#1512;&#1488;&#1513;</span></div>
+    <div id="tr-dept"></div>
+  </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
 </div>
@@ -2091,7 +2100,11 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-tr')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1492;&#1491;&#1512;&#1499;&#1492;</div>
   <div class="fgrid">
-    <div class="field"><label>&#1513;&#1501; &#1506;&#1493;&#1489;&#1491; *</label><input id="t-w"></div>
+    <!-- Bare until #668. The department report joins tr.w to emp.n by exact
+         text, so a typo, a reversed name or a nickname silently became
+         "לא משויך" and made the percentages wrong. Same datalist the task
+         assignee field already has. -->
+    <div class="field"><label>&#1513;&#1501; &#1506;&#1493;&#1489;&#1491; *</label><input id="t-w" list="emp-names-list"></div>
     <div class="field"><label>&#1513;&#1501; &#1492;&#1491;&#1512;&#1499;&#1492; *</label><input id="t-n"></div>
     <div class="field"><label>&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492;</label><select id="t-c"><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>ISO</option><option>&#1499;&#1497;&#1489;&#1493;&#1497; &#1488;&#1513;</option><option>&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503;</option><option>&#1504;&#1492;&#1500;&#1497;&#1501;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="t-d"></div>
@@ -4310,6 +4323,11 @@ function openModal(id){
     if(typeof _prjOptionsHtml==='function'){mo.querySelectorAll('select[id$="-project-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_prjOptionsHtml(null);}});}
     if(typeof _itypeOptionsHtml==='function'){mo.querySelectorAll('select[id$="-issue-type-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_itypeOptionsHtml(null);}});}
     // populate assignee datalists from app_users + emp
+    var edl=g('emp-names-list');
+    if(edl){
+      var en=(DB.emp||[]).map(function(e){return e&&e.n;}).filter(Boolean).sort(function(a,b){return a.localeCompare(b,'he');});
+      edl.innerHTML=en.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
+    }
     var dl=mo.querySelector('#tsk-assignee-list');
     if(dl && !dl.options.length){
       var names={};
@@ -5268,6 +5286,63 @@ function _renderToday(){
 // 4 tiles showing forward-looking metrics, color-coded against industry
 // thresholds. Helps the safety manager see culture/health at a glance
 // instead of always reacting to lagging incidents.
+// ---- 6.8 ----
+// Six months \u00d7 area, counting findings: NCRs, incidents, near-misses and
+// open trustee hazards, by the month each was raised.
+function _areaKey(r){
+  if(r&&r.location_id&&typeof _locName==='function'){var n=_locName(r.location_id);if(n)return n;}
+  var t=String((r&&(r.loc||r.l||r.area))||'').trim();
+  // row() writes a trustee location as 'area \u00b7 detail'; the area is enough.
+  if(t.indexOf(' \u00b7 ')>0)t=t.split(' \u00b7 ')[0];
+  return t||'';
+}
+function _areaHeat6(){
+  var d=new Date(),months=[];
+  for(var i=5;i>=0;i--){var m=new Date(d.getFullYear(),d.getMonth()-i,1);months.push({k:m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0'),lbl:(m.getMonth()+1)+'/'+String(m.getFullYear()).slice(2)});}
+  var idx={};months.forEach(function(m,i){idx[m.k]=i;});
+  var by={};
+  function add(r,dateOf){
+    var a=_areaKey(r);if(!a)return;
+    var dt=dateOf(r);if(!dt)return;
+    var k=String(dt).substring(0,7);
+    if(idx[k]===undefined)return;
+    if(!by[a])by[a]=months.map(function(){return 0;});
+    by[a][idx[k]]++;
+  }
+  (DB.ncr||[]).forEach(function(r){add(r,function(x){return (typeof _ncrOpenedAt==='function'?_ncrOpenedAt(x):null)||x.ts;});});
+  (DB.inc||[]).forEach(function(r){add(r,function(x){return x.dt||x.d||x.ts;});});
+  (DB.near_miss||[]).forEach(function(r){add(r,function(x){return x.d||x.ts;});});
+  (DB.trustee_reports||[]).forEach(function(r){
+    if(!(typeof _truIsHazard==='function'&&_truIsHazard(r)))return;
+    add(r,function(x){return (typeof _truRowMonth==='function')?_truRowMonth(x):(x.m||x.d);});
+  });
+  // Busiest first, and only the areas that actually had something.
+  var areas=Object.keys(by).map(function(a){
+    var v=by[a],total=v.reduce(function(s,x){return s+x;},0);
+    var firstHalf=v.slice(0,3).reduce(function(s,x){return s+x;},0);
+    var lastHalf=v.slice(3).reduce(function(s,x){return s+x;},0);
+    return {area:a,months:v,total:total,rising:lastHalf>firstHalf};
+  }).filter(function(x){return x.total;}).sort(function(a,b){return b.total-a.total;});
+  var max=1;areas.forEach(function(a){a.months.forEach(function(v){if(v>max)max=v;});});
+  return {months:months,areas:areas.slice(0,8),max:max};
+}
+function _areaHeatHtml(hm){
+  function cell(v,max){
+    if(!v)return '<td style="padding:0 1px"><div title="0" style="height:22px;border-radius:3px;background:#f1f5f9"></div></td>';
+    var t=v/max;
+    var bg=t>0.66?'#cc1f1f':(t>0.33?'#f59e0b':'#fde68a');
+    var fg=t>0.33?'#fff':'#92400e';
+    return '<td style="padding:0 1px"><div title="'+v+'" style="height:22px;border-radius:3px;background:'+bg+';color:'+fg+';font-size:10px;font-weight:700;line-height:22px;text-align:center">'+v+'</div></td>';
+  }
+  var head='<tr><th></th>'+hm.months.map(function(m){return '<th style="font-size:9px;color:var(--t3);font-weight:400;padding:0 1px">'+m.lbl+'</th>';}).join('')+'<th></th></tr>';
+  var rows=hm.areas.map(function(a){
+    return '<tr data-heat-area="'+esc(a.area)+'"><td style="font-size:11px;white-space:nowrap;padding-left:6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">'+esc(a.area)+'</td>'
+      +a.months.map(function(v){return cell(v,hm.max);}).join('')
+      +'<td style="font-size:11px;padding-right:4px;white-space:nowrap;color:'+(a.rising?'#cc1f1f':'var(--t3)')+'">'+(a.rising?'\u25b2 \u05e2\u05d5\u05dc\u05d4':'')+'</td></tr>';
+  }).join('');
+  return '<table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table>'
+    +'<div style="font-size:11px;color:var(--t3);margin-top:6px">\u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d1\u05db\u05dc \u05d7\u05d5\u05d3\u05e9 \u2014 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea, \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea, \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05d5\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd. \u25b2 = \u05e9\u05dc\u05d5\u05e9\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u05d2\u05d1\u05d5\u05d4\u05d9\u05dd \u05de\u05e7\u05d5\u05d3\u05de\u05d9\u05d4\u05dd.</div>';
+}
 function _renderKpiCard(){
   var box=g('dash-kpi'); if(!box)return;
   var today=new Date(); today.setHours(0,0,0,0);
@@ -5298,6 +5373,55 @@ function _renderKpiCard(){
   var _kpiT=_ncrTimeStats(_kpiFrom,null);
   var pctFastNcr=_kpiT.pct30||0;
   var avgNcrDays=_kpiT.avg===null?0:Math.round(_kpiT.avg);
+  // ---- 6.7 ----
+  // The four tiles here were static numbers. \u00ab12 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9\u00bb
+  // says nothing without knowing there were 30 two months ago \u2014 which is
+  // exactly the difference between a leading indicator and a lagging one.
+  // Six monthly counts, drawn as a polyline. No library.
+  function _monthKeys(n){
+    var out=[],d=new Date();
+    for(var i=n-1;i>=0;i--){var m=new Date(d.getFullYear(),d.getMonth()-i,1);out.push({k:m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0'),lbl:(m.getMonth()+1)+'/'+String(m.getFullYear()).slice(2)});}
+    return out;
+  }
+  function _monthCounts(rows,keyOf,n){
+    var ms=_monthKeys(n||6),by={};
+    ms.forEach(function(m){by[m.k]=0;});
+    (rows||[]).forEach(function(r){
+      var k=keyOf(r);if(!k)return;
+      k=String(k).substring(0,7);
+      if(by[k]!==undefined)by[k]++;
+    });
+    return ms.map(function(m){return {k:m.k,lbl:m.lbl,v:by[m.k]};});
+  }
+  function _spark(series,color){
+    if(!series||series.length<2)return '';
+    var vals=series.map(function(x){return x.v;});
+    var max=Math.max.apply(null,vals),min=Math.min.apply(null,vals);
+    if(max===min)max=min+1;
+    var W=110,H=22,step=W/(series.length-1);
+    var pts=series.map(function(x,i){return (i*step).toFixed(1)+','+(H-1-(H-2)*(x.v-min)/(max-min)).toFixed(1);});
+    var last=pts[pts.length-1].split(',');
+    return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="22" style="display:block;margin-top:4px" role="img" aria-label="'+esc(series.map(function(x){return x.lbl+': '+x.v;}).join(', '))+'">'
+      +'<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round"></polyline>'
+      +'<circle cx="'+last[0]+'" cy="'+last[1]+'" r="2" fill="'+color+'"></circle>'
+      +'<title>'+esc(series.map(function(x){return x.lbl+': '+x.v;}).join(' \u00b7 '))+'</title></svg>';
+  }
+  // A leading tile: the last month's count, six months of history under it,
+  // and a word for which way it is going. For all four of these MORE is
+  // better \u2014 they measure reporting and routine activity, so a fall is the
+  // warning, not a success.
+  function leadTile(series,label,color,tooltip){
+    var now=series[series.length-1].v;
+    var before=series.slice(0,-1);
+    var avg=before.length?before.reduce(function(a,x){return a+x.v;},0)/before.length:0;
+    var dir=(avg===0&&now===0)?'':(now>avg*1.15?'\u25b2':(now<avg*0.85?'\u25bc':'\u25ac'));
+    var dirCol=dir==='\u25b2'?'#16a34a':(dir==='\u25bc'?'#cc1f1f':'var(--t3)');
+    return '<div title="'+esc(tooltip||'')+'" style="flex:1;min-width:140px;padding:10px;background:#fff;border:2px solid '+color+';border-radius:10px;text-align:center">'
+      +'<div style="font-size:26px;font-weight:700;color:'+color+';line-height:1">'+now+'</div>'
+      +'<div style="font-size:12px;color:#1a1d23;margin-top:4px;font-weight:600">'+label+'</div>'
+      +'<div style="font-size:10px;color:'+dirCol+';margin-top:2px">'+(dir?dir+' ':'')+'\u05de\u05de\u05d5\u05e6\u05e2 6 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd: '+avg.toFixed(1)+'</div>'
+      +_spark(series,color)+'</div>';
+  }
   function tile(value,label,hint,color,tooltip){
     return '<div title="'+esc(tooltip||'')+'" style="flex:1;min-width:140px;padding:10px;background:#fff;border:2px solid '+color+';border-radius:10px;text-align:center;cursor:default">'+
       '<div style="font-size:26px;font-weight:700;color:'+color+';line-height:1">'+value+'</div>'+
@@ -5318,6 +5442,17 @@ function _renderKpiCard(){
     tiles.push(tile(pctFastNcr+'%', 'NCR \u05e0\u05e1\u05d2\u05e8\u05d5 \u05e2\u05d3 30 \u05d9\u05d5\u05dd', _kpiT.n+' \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd', fastColor, '\u05d0\u05d7\u05d5\u05d6 \u05d4-NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd \u05de\u05e4\u05ea\u05d9\u05d7\u05d4. \u05d9\u05e2\u05d3: 70% \u05d5\u05de\u05e2\u05dc\u05d4.'));
     tiles.push(tile(avgNcrDays+'\u05d9', '\u05de\u05de\u05d5\u05e6\u05e2 \u05d9\u05de\u05d9 \u05e1\u05d2\u05d9\u05e8\u05ea NCR', _kpiT.n+' \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd', avgColor, '\u05d6\u05de\u05df \u05de\u05de\u05d5\u05e6\u05e2 \u05de\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d5\u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4. \u05d9\u05e2\u05d3: \u05e2\u05d3 14 \u05d9\u05d5\u05dd.'));
   }
+  // The four that were missing: what people REPORT and what gets done as a
+  // routine. _truRowMonth, not r.m \u2014 a trustee report may carry only d.
+  var sNm=_monthCounts(DB.near_miss,function(r){return r.d||r.ts;},6);
+  var sTru=_monthCounts(DB.trustee_reports,function(r){return (typeof _truRowMonth==='function')?_truRowMonth(r):(r.m||r.d);},6);
+  var sRnd=_monthCounts(DB.rounds,function(r){return r.d||r.ts;},6);
+  var sTlk=_monthCounts(DB.toolbox,function(r){return r.d||r.ts;},6);
+  function anyOf(s){return s.some(function(x){return x.v;});}
+  if(anyOf(sNm))tiles.push(leadTile(sNm,'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d7\u05d5\u05d3\u05e9','#1d4ed8','\u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d5\u05d0 \u05de\u05d3\u05d3 \u05de\u05d5\u05d1\u05d9\u05dc \u2014 \u05d9\u05e8\u05d9\u05d3\u05d4 \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d9\u05d0 \u05d4\u05d0\u05d6\u05d4\u05e8\u05d4, \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05d4'));
+  if(anyOf(sTru))tiles.push(leadTile(sTru,'\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9','#7c3aed','\u05db\u05de\u05d4 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d2\u05d9\u05e2\u05d5 \u05de\u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'));
+  if(anyOf(sRnd))tiles.push(leadTile(sRnd,'\u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d7\u05d5\u05d3\u05e9','#0d9488','\u05e8\u05e6\u05d9\u05e4\u05d5\u05ea \u05d4\u05e1\u05d1\u05d1 \u05d4\u05d9\u05d5\u05de\u05d9'));
+  if(anyOf(sTlk))tiles.push(leadTile(sTlk,'\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9','#b45309','\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05d1\u05e9\u05d8\u05d7'));
   var acc=g('dash-kpi-acc');
   if(!tiles.length){if(acc)acc.style.display='none';box.innerHTML='';return;}
   if(acc)acc.style.display='';
@@ -5756,6 +5891,22 @@ function rDash(){
       }else{if(dlc)dlc.style.display='none';}
     }
   }catch(e){console.warn('dash-by-loc failed',e);}
+
+  // ---- 6.8 ----
+  // Findings per area per month, six months, as a CSS heat strip. The area
+  // key is location_id where there is one and the free-text loc otherwise:
+  // most of the 375 imported NCRs carry only loc, and keying on the FK alone
+  // would show empty months everywhere they are.
+  try{
+    var dhc=g('dash-heat-card'),dh=g('dash-heat');
+    if(dh){
+      var hm=_areaHeat6();
+      if(hm.areas.length){
+        if(dhc)dhc.style.display='';
+        dh.innerHTML=_areaHeatHtml(hm);
+      }else{if(dhc)dhc.style.display='none';}
+    }
+  }catch(e){console.warn('dash-heat failed',e);}
 
   // Dashboard: by project widget
   try{
@@ -10367,8 +10518,64 @@ function rInc(){
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
   tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="חמור/קריטי פתוח '+stAge+' ימים — חסרה חקירה" style="background:#fde2e2;border:1px solid #b91c1c;border-radius:10px;padding:1px 6px;color:#7f1d1d;font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+i.d.substring(0,30)+stBadge+'</td><td>'+i.ty+'</td><td><span class="b '+(sv_colors[i.sv]||'bX')+'">'+i.sv+'</span></td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(i.id)+'" onclick="editInc(this.dataset.eid)" title="ערוך">&#9998;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
+// ---- 6.9 ----
+// \u00ab\u05d0\u05d9\u05d6\u05d5 \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u05d1\u05d4\u05d3\u05e8\u05db\u05d5\u05ea\u00bb is the first question an ISO 45001 auditor asks
+// under \u00a77.2, and the system could only answer with one number for the whole
+// plant. The join is tr.w \u2194 emp.n, and the department is emp.dep. Both sides
+// are free text, so a name that matches nothing is counted and SHOWN as
+// \u05dc\u05d0 \u05de\u05e9\u05d5\u05d9\u05da rather than quietly dropped \u2014 a percentage that hides its
+// own gaps is worse than no percentage.
+function _trByDept(){
+  var today=new Date().toISOString().split('T')[0];
+  var depOf={};
+  (DB.emp||[]).forEach(function(e){if(e&&e.n)depOf[String(e.n).trim()]=String(e.dep||'').trim();});
+  var by={};
+  (DB.tr||[]).forEach(function(t){
+    if(!t)return;
+    var w=String(t.w||'').trim();
+    var known=Object.prototype.hasOwnProperty.call(depOf,w);
+    var dep=known?(depOf[w]||'\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4'):'\u05dc\u05d0 \u05de\u05e9\u05d5\u05d9\u05da';
+    if(!by[dep])by[dep]={dep:dep,total:0,valid:0,expired:0,undated:0,unmatched:!known};
+    var row=by[dep];row.total++;
+    if(!t.e)row.undated++;
+    else if(String(t.e)>=today)row.valid++;
+    else row.expired++;
+  });
+  return Object.keys(by).map(function(k){
+    var r=by[k];
+    r.pct=r.total?Math.round(100*r.valid/r.total):0;
+    return r;
+  }).sort(function(a,b){
+    // worst first \u2014 that is the row the auditor wants; unmatched last.
+    if(a.unmatched!==b.unmatched)return a.unmatched?1:-1;
+    return a.pct-b.pct;
+  });
+}
+function _trByDeptHtml(){
+  var rows=_trByDept();
+  if(!rows.length)return '';
+  return '<div style="font-size:12px">'+rows.map(function(r){
+    var col=r.unmatched?'#94a3b8':(r.pct>=90?'#16a34a':(r.pct>=70?'#eab308':'#cc1f1f'));
+    var bar='<div style="height:8px;border-radius:4px;background:#f1f5f9;overflow:hidden;margin-top:3px"><div style="height:8px;width:'+r.pct+'%;background:'+col+'"></div></div>';
+    return '<div data-dep="'+esc(r.dep)+'" style="padding:6px 0;border-bottom:1px solid #f0f0f0">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><span'+(r.unmatched?' style="color:var(--t3)"':'')+'>'+esc(r.dep)+'</span>'
+      +'<span style="white-space:nowrap;color:'+col+';font-weight:700">'+r.pct+'% <span style="font-weight:400;color:var(--t3)">('+r.valid+'/'+r.total+')</span></span></div>'
+      +bar
+      +((r.expired||r.undated)?('<div style="font-size:10px;color:var(--t3);margin-top:2px">'+(r.expired?r.expired+' \u05e4\u05d2\u05d5':'')+(r.expired&&r.undated?' \u00b7 ':'')+(r.undated?r.undated+' \u05dc\u05dc\u05d0 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3':'')+'</div>'):'')
+      +'</div>';
+  }).join('')
+  +'<div style="font-size:11px;color:var(--t3);margin-top:6px">\u00ab\u05dc\u05d0 \u05de\u05e9\u05d5\u05d9\u05da\u00bb = \u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d4\u05d3\u05e8\u05db\u05d4 \u05d0\u05d9\u05e0\u05d5 \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd. \u05ea\u05e7\u05df \u05d0\u05ea \u05d4\u05e9\u05dd \u05d1\u05d4\u05d3\u05e8\u05db\u05d4 \u05d0\u05d5 \u05d4\u05d5\u05e1\u05e3 \u05d0\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3.</div></div>';
+}
 function rTr(){
   var tb=g('tb-tr');if(!tb)return;
+  try{
+    var dc=g('tr-dept-card'),db=g('tr-dept');
+    if(db){
+      var dh=_trByDeptHtml();
+      if(dh){db.innerHTML=dh;if(dc)dc.style.display='';}
+      else if(dc)dc.style.display='none';
+    }
+  }catch(e){console.warn('tr-dept failed',e);}
   if(!DB.tr.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83c\udf93<br>\u05d0\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-tr\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+esc(t.w)+'</strong></td><td>'+esc(t.n)+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
