@@ -142,6 +142,7 @@ body.emp-mode .topbar-left img{box-shadow:none!important;transform:none!importan
 body.hc .bell:hover,body.hc .bell:active{transform:none}
 
 /* ---- BADGE COUNTERS (topbar/bnav) ---- */
+#notif-badge{box-shadow:0 0 0 2px #fff,0 2px 4px rgba(204,31,31,.45)!important}
 #my-tasks-badge,#bn-tasks-badge{box-shadow:0 0 0 2px #fff,0 2px 4px rgba(204,31,31,.45)!important;animation:badge-pulse 2.4s ease-in-out infinite}
 @keyframes badge-pulse{
   0%,100%{box-shadow:0 0 0 2px #fff,0 0 0 0 rgba(204,31,31,.45)}
@@ -769,7 +770,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
          did this already, but on a phone nothing said so. -->
     <button class="bell" id="home-btn" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" aria-label="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" onclick="goHome()">&#127968;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
-    <button class="bell" id="notif-btn" title="&#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifSettings()">&#128276;</button>
+    <!-- The bell used to open the SETTINGS screen and looked identical whether
+         something had happened or not. A missed toast (driving, screen off,
+         phone in a pocket) left no sign at all. It now opens the log with a
+         count of what arrived since the last look; the settings are one tap
+         further, where they belong. -->
+    <button class="bell" id="notif-btn" title="&#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" aria-label="&#1492;&#1514;&#1512;&#1488;&#1493;&#1514;" onclick="openNotifCenter()" style="position:relative">&#128276;<span id="notif-badge" style="display:none;position:absolute;top:-2px;left:-2px;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;line-height:16px;border-radius:9px;padding:0 3px;text-align:center"></span></button>
     <button class="bell" id="my-tasks-btn" title="&#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1497;" onclick="goPage('tasks')" style="position:relative">&#128221;<span id="my-tasks-badge" style="display:none;position:absolute;top:0;right:0;background:#cc1f1f;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center;line-height:1.4">0</span></button>
     <button class="bell" id="more-menu-btn" title="&#1506;&#1493;&#1491; &#1508;&#1506;&#1493;&#1500;&#1493;&#1514;" onclick="_topMoreMenu(this)">&#8943;</button>
     <button class="bell" id="pwa-install-btn" title="&#1492;&#1514;&#1511;&#1503; &#1499;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;" onclick="_pwaInstall()" style="display:none">&#128241;</button>
@@ -876,15 +882,21 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <!-- Leading indicators: collapsed by default, hidden entirely until there is data behind at least one tile (P1#1). -->
   <details class="more-accordion" id="dash-kpi-acc" style="display:none"><summary>&#128202; &#1488;&#1497;&#1504;&#1491;&#1497;&#1511;&#1496;&#1493;&#1512;&#1497;&#1501; &#1502;&#1493;&#1489;&#1497;&#1500;&#1497;&#1501; (Leading Indicators)</summary><div id="dash-kpi" style="padding:4px 10px 12px"></div></details>
 
-  <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-today-tasks-card" style="display:none"><div class="card-title">&#9203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1497;&#1493;&#1501; &#1492;&#1494;&#1492;</div><div id="dash-today-tasks"></div></div>
+  <!-- "פעילות אחרונה" hidden — clutters the home screen; activity log is still in audit_log table. -->
+  <div class="card" id="dash-recent-card" style="display:none"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
+  <!-- ~20 statistics cards live under this line. It was a label; it is now a
+       switch, because the actionable part of the home screen (\u05d4\u05d9\u05d5\u05dd, the
+       alerts) is above it and everything below is reading material. -->
+  <div class="dash-section-title" id="dash-stats-title" role="button" tabindex="0" style="cursor:pointer;user-select:none" onclick="_dashStatsToggle()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_dashStatsToggle();}">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514; <span id="dash-stats-chev" style="font-size:12px;color:var(--t3)">&#9662;</span></div>
+  <!-- Moved under the fold in #670: these five are statistics, and the item
+       asks for the whole section to collapse. The state is remembered, so
+       leaving it open costs one tap, once. -->
+  <div class="card" id="dash-weekly-card"><div class="card-title">&#128202; &#1492;&#1513;&#1489;&#1493;&#1506; &#1502;&#1493;&#1500; &#1513;&#1489;&#1493;&#1506; &#1513;&#1506;&#1489;&#1512;</div><div id="dash-weekly"><p class="et">&#1488;&#1497;&#1503; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501;</p></div></div>
   <div class="card" id="dash-month-card" style="display:none"><div class="card-title">&#128197; &#1505;&#1497;&#1499;&#1493;&#1501; &#1495;&#1493;&#1491;&#1513; &#1494;&#1492;</div><div id="dash-month" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
   <div class="card" id="dash-tsk-bd-card" style="display:none"><div class="card-title">&#128218; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1500;&#1508;&#1497; &#1505;&#1496;&#1496;&#1493;&#1505;</div><div id="dash-tsk-bd" style="font-size:12px"></div></div>
   <div class="card" id="dash-ncr-time-card" style="display:none"><div class="card-title">&#9201;&#65039; &#1494;&#1502;&#1503; &#1496;&#1497;&#1508;&#1493;&#1500; NCR</div><div id="dash-ncr-time" style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px"></div></div>
-  <!-- "פעילות אחרונה" hidden — clutters the home screen; activity log is still in audit_log table. -->
-  <div class="card" id="dash-recent-card" style="display:none"><div class="card-title">&#128338; &#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</div><div id="dash-recent"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-totals-card" style="display:none"><div class="card-title">&#128202; &#1505;&#1497;&#1499;&#1493;&#1501; &#1499;&#1500;&#1500;&#1497;</div><div id="dash-totals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px"></div></div>
-  <div class="dash-section-title" id="dash-stats-title">&#128202; &#1505;&#1496;&#1496;&#1497;&#1505;&#1496;&#1497;&#1511;&#1493;&#1514; &#1493;&#1502;&#1490;&#1502;&#1493;&#1514;</div>
   <div class="card" id="dash-by-loc-card" style="display:none"><div class="card-title">&#128205; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501; &#1500;&#1508;&#1497; &#1488;&#1494;&#1493;&#1512;</div><div id="dash-by-loc"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <!-- Which area is getting WORSE. The card above says which is worst now;
        for a safety committee that is the difference between "5 findings in
@@ -2032,11 +2044,15 @@ id="m-ncr" style="display:none">
   <button class="close-btn" onclick="closeModal('m-ncr')">&#10005;</button>
   <div class="modal-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1492; / &#1502;&#1502;&#1510;&#1488;</div>
   <input type="hidden" id="ncr-id">
+  <!-- Recurrence. Filled by _ncrRepeatBanner whenever the description or the
+       area changes, so it appears while the form is still being written
+       rather than after the record is saved. -->
+  <div id="ncr-repeat" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:#92400e;line-height:1.5"></div>
   <div class="fgrid">
-    <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="ncr-d" class="inp" rows="2" placeholder="&#1514;&#1488;&#1512; &#1488;&#1514; &#1492;&#1502;&#1502;&#1510;&#1488;..."></textarea></div>
+    <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="ncr-d" class="inp" rows="2" oninput="if(typeof _ncrRepeatDebounced==='function')_ncrRepeatDebounced()" placeholder="&#1514;&#1488;&#1512; &#1488;&#1514; &#1492;&#1502;&#1502;&#1510;&#1488;..."></textarea></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="ncr-a" class="inp"><option value="">&#1489;&#1495;&#1512;...</option><option value="&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option value="&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1490;&#1497;&#1500;&#1493;&#1497;</label><input id="ncr-sd" type="date" class="inp"></div>
-    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><select id="ncr-location-id" class="inp"></select></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><select id="ncr-location-id" class="inp" onchange="if(typeof _ncrRepeatBanner==='function')_ncrRepeatBanner()"></select></div>
     <div class="field" id="ncr-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="ncr-loc" type="text" class="inp" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="ncr-project-id" class="inp"></select></div>
     <div class="field"><label>&#127919; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</label><select id="ncr-issue-type-id" class="inp"></select></div>
@@ -2694,7 +2710,7 @@ id="m-ncr" style="display:none">
       <div style="color:var(--t2);margin-top:6px">סמן WhatsApp / Email בשורה «ליקוי מנאמן בטיחות» למעלה ולחץ «שמור». «שלח בדיקה» משתמש במה שכתוב כאן עכשיו.</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-s btn-sm" onclick="_truNotifyTest()">&#128232; שלח הודעת בדיקה</button><span id="notif-tru-test-res" style="font-size:12px"></span></div>
     </div>
-    <details style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
+    <details id="notif-log-acc" style="margin-top:14px;border-top:1px solid #ddd;padding-top:10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--t2)">&#128203; &#1492;&#1497;&#1505;&#1496;&#1493;&#1512;&#1497;&#1497;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; (20 &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;)</summary>
       <div id="notif-log-list" style="max-height:240px;overflow-y:auto;margin-top:8px;font-size:11px"></div>
       <button onclick="_notifLogExport()" style="margin-top:8px;margin-left:6px;font-size:11px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128202; CSV</button>
@@ -4414,6 +4430,7 @@ function openNewNcrModal(){
   if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',null);
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display='none';
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
+  var _rb=g('ncr-repeat');if(_rb){_rb.style.display='none';_rb.innerHTML='';}
   openModal('m-ncr');
   // Draft autosave \u2014 only for new NCRs (no ncr-id). Check for stale draft.
   if(typeof _ncrDraftCheck==='function')_ncrDraftCheck();
@@ -4494,6 +4511,7 @@ function editNcr(id){
   var sn=g('ncr-sens');if(sn)sn.checked=!!rec.sens;
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   openModal('m-ncr');
+  if(typeof _ncrRepeatBanner==='function')try{_ncrRepeatBanner();}catch(e){}
 }
 // The next free NCR number. Was String(DB.ncr.length+1): delete one row and
 // the next new NCR is issued a number that a live record already holds — and
@@ -5516,6 +5534,35 @@ window._renderDashKpis=function(c){
 // Hide the "statistics & trends" section title when every card under it is
 // hidden (each of those cards hides itself when it has nothing to show).
 // The two admin tool cards at the bottom are not statistics — skipped.
+// ---- 2.11 ----
+// Folded state is per device and survives a reload. The cards' own
+// visibility is decided by rDash; folding remembers what rDash showed so
+// unfolding does not reveal a row of empty cards.
+var _DASH_STATS_KEY='tfgn_dash_stats_open';
+function _dashStatsOpen(){try{return localStorage.getItem(_DASH_STATS_KEY)!=='0';}catch(e){return true;}}
+window._dashStatsToggle=function(){
+  try{localStorage.setItem(_DASH_STATS_KEY,_dashStatsOpen()?'0':'1');}catch(e){}
+  _dashStatsApply();
+};
+window._dashStatsApply=function(){
+  var t=g('dash-stats-title');if(!t)return;
+  var open=_dashStatsOpen(),skip={'dash-wa-test':1,'dash-secaudit':1};
+  var n=0,el=t.nextElementSibling;
+  while(el&&el.classList&&el.classList.contains('card')){
+    if(!skip[el.id]){
+      if(open){
+        if(el.dataset.folded==='1'){el.dataset.folded='';el.style.display='';}
+        if(el.style.display!=='none')n++;
+      }else{
+        if(el.style.display!=='none'){el.dataset.folded='1';el.style.display='none';n++;}
+        else if(el.dataset.folded==='1')n++;
+      }
+    }
+    el=el.nextElementSibling;
+  }
+  var chev=g('dash-stats-chev');
+  if(chev)chev.innerHTML=open?'\u25be':('\u25b4 '+n);
+};
 window._dashHideEmptySection=function(){
   var t=g('dash-stats-title');if(!t)return;
   var skip={'dash-wa-test':1,'dash-secaudit':1};
@@ -5525,6 +5572,7 @@ window._dashHideEmptySection=function(){
     el=el.nextElementSibling;
   }
   t.style.display=any?'':'none';
+  _dashStatsApply();
 };
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
@@ -6355,6 +6403,7 @@ function rDash(){
     });
   }catch(e){console.warn('dash-kpis failed',e);}
   try{_dashHideEmptySection();}catch(e){}
+  try{_notifBadge();}catch(e){}
 }
 // CAPA effectiveness verification (ISO 45001 §10.2 / ISO 14001 §10.2).
 //
@@ -6714,7 +6763,10 @@ function _isoClauses(){
   var capaDue=(typeof _capaDue==='function')?_capaDue().length:0;
   var verified=(DB.ncr||[]).filter(function(r){return r.verified_by;}).length;
   var incN=_isoCount('inc'),nmN=_isoCount('near_miss');
-  add(both,'10.2','\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05d5\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea',ncrN+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u00b7 '+ncrOpen+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u00b7 '+verified+' \u05d0\u05d5\u05de\u05ea\u05d5 \u05dc\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u00b7 '+incN+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u00b7 '+nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',
+  // A reopened NCR is a corrective action that did not hold. \u00a710.2 is the
+  // clause that asks whether it worked, so the count belongs here.
+  var reopened=(typeof _reopenedNcrs==='function')?_reopenedNcrs().length:0;
+  add(both,'10.2','\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05d5\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea',ncrN+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u00b7 '+ncrOpen+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u00b7 '+verified+' \u05d0\u05d5\u05de\u05ea\u05d5 \u05dc\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea'+(reopened?(' \u00b7 '+reopened+' \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9'):'')+' \u00b7 '+incN+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u00b7 '+nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',
     ncrN?(capaDue?'warn':'ok'):'bad',
     ncrN?(capaDue?capaDue+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d9\u05d5\u05ea\u05e8 \u05de-30 \u05d9\u05d5\u05dd \u05d5\u05d0\u05d9\u05e9 \u05dc\u05d0 \u05d1\u05d3\u05e7 \u05d0\u05dd \u05e2\u05d1\u05d3\u05d5':''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4');
   return C;
@@ -9093,7 +9145,8 @@ function rMr(){
       lostDays:inc.reduce(function(s,i){return s+(parseInt(i.dy)||0);},0),
       nm:(DB.near_miss||[]).filter(function(m){return _mrInPeriod(m.d||m.ts,per);}).length,
       tlk:(DB.toolbox||[]).filter(function(t){return _mrInPeriod(t.d||t.ts,per);}).length,
-      time:_ncrTimeStats(per.start,per.end)
+      time:_ncrTimeStats(per.start,per.end),
+      reopened:ncrAll.filter(function(n){return (typeof _reopenCount==='function'?_reopenCount(n):0)>0&&_mrInPeriod(n.cd||n.ts,per);}).length
     };
   }
   var cur=_cnt(p),prev=_cnt(pPrev);
@@ -11155,6 +11208,42 @@ function _notifEnabled(eventKey,channelKey){
   var p=_notifPrefs();
   return !!(p[eventKey]&&p[eventKey][channelKey]);
 }
+// ---- 2.8 ----
+// notifications_log has no read/seen column and adding one would be a
+// migration for something that is per-DEVICE anyway: \u00abhave I looked at this
+// on this phone\u00bb is not a fact about the row. The newest ts the user has
+// seen is kept locally; everything after it is unread.
+var _NOTIF_SEEN_KEY='tfgn_notif_seen_ts';
+function _notifSeenTs(){try{return localStorage.getItem(_NOTIF_SEEN_KEY)||'';}catch(e){return '';}}
+function _notifUnread(){
+  var seen=_notifSeenTs();
+  return (DB.notifications_log||[]).filter(function(l){return l&&l.ts&&String(l.ts)>seen;}).length;
+}
+function _notifMarkSeen(){
+  var newest='';
+  (DB.notifications_log||[]).forEach(function(l){if(l&&l.ts&&String(l.ts)>newest)newest=String(l.ts);});
+  if(newest){try{localStorage.setItem(_NOTIF_SEEN_KEY,newest);}catch(e){}}
+  _notifBadge();
+}
+function _notifBadge(){
+  var b=g('notif-badge');if(!b)return;
+  var n=_notifUnread();
+  b.style.display=n?'':'none';
+  b.textContent=n>99?'99+':String(n);
+  var btn=g('notif-btn');
+  if(btn)btn.title=n?(n+' \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea'):'\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea';
+}
+// The bell now lands on the log, open, and marks it read. Same modal, so
+// the settings and the test button are still one scroll away.
+window.openNotifCenter=function(){
+  openNotifSettings();
+  var acc=g('notif-log-acc');if(acc)acc.open=true;
+  setTimeout(function(){
+    var acc2=g('notif-log-acc');
+    if(acc2&&acc2.scrollIntoView)try{acc2.scrollIntoView({block:'start'});}catch(e){}
+    _notifMarkSeen();
+  },60);
+};
 function openNotifSettings(){
   var modal=g('m-notif');if(!modal)return;
   var prefs=_notifPrefs();
@@ -12189,28 +12278,36 @@ function showView(tbl,id){
   else if(tbl==='inc'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canSpawnTsk=true;
   else if(tbl==='near_miss'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canSpawnTsk=true;
   else if(tbl==='rsk')canSpawnTsk=true;
-  if(canSpawnTsk&&_isAdminUser()){
-    // ---- 1.9 ----
-    // svTsk has always stored source_table/source_id, and _truTaskFor reads
-    // that link back \u2014 for trustees only. Everywhere else the record showed
-    // the same \u00ab+ \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1\u00bb button the next day as if nothing had
-    // happened: no sign a task existed, who owns it, when it is due or
-    // whether it is done. The result was duplicate tasks for one NCR, and
-    // no way to show the chain of treatment from the record itself.
-    var _srcTasks=_tasksFor(tbl,id);
-    if(_srcTasks.length){
-      html+='<div id="view-tasks" style="margin-top:10px"><div style="font-size:12px;color:#888;margin-bottom:4px">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05db\u05d0\u05df ('+_srcTasks.length+')</div>'
-        +_srcTasks.map(function(t){
-          var done=t.status===_TSK_DONE||t.status===_TSK_CANC;
-          var late=(!done&&t.due&&typeof du==='function'&&du(t.due)<0);
-          var col=done?'#15803d':(late?'#cc1f1f':'var(--t2)');
-          return '<div data-tid="'+esc(t.id)+'" onclick="editTsk(this.dataset.tid)" style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px">'
-            +'<span style="flex:1;min-width:0">'+(done?'\u2705 ':(late?'\u26a0 ':'\u25cb '))+esc(String(t.title||'').substring(0,60))+'</span>'
-            +'<span style="white-space:nowrap;color:'+col+';font-size:11px">'+esc(t.status||'')+(t.due?' \u00b7 '+fd(t.due):'')+(t.assignee?' \u00b7 '+esc(t.assignee):'')+'</span></div>';
-        }).join('')+'</div>';
-    }
-    html+='<div style="margin-top:8px"><button data-stbl="'+esc(tbl)+'" data-sid="'+esc(id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" style="width:100%;background:#1e293b;border:1px solid #3b82f6;border-radius:8px;color:#60a5fa;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+(_srcTasks.length?'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea':'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1 (CAPA)')+'</button></div>';
+  // Both of these describe what ALREADY happened, so they belong on a closed
+  // record too \u2014 that is the one an auditor opens. Only the button that
+  // creates a new task stays behind canSpawnTsk.
+  // ---- 1.9 ----
+  // svTsk has always stored source_table/source_id, and _truTaskFor reads
+  // that link back \u2014 for trustees only. Everywhere else the record showed
+  // the same \u00ab+ \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1\u00bb button the next day as if nothing had
+  // happened: no sign a task existed, who owns it, when it is due or
+  // whether it is done. The result was duplicate tasks for one NCR, and
+  // no way to show the chain of treatment from the record itself.
+  // An NCR that has been reopened is not the same as one that closed once.
+  if(tbl==='ncr'&&typeof _reopenCount==='function'){
+    var _ro=_reopenCount(rec);
+    if(_ro)html+='<div id="view-reopen" style="margin-top:10px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:8px 10px;font-size:12px;color:#92400e">\u21a9 \u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 '+_ro+' \u05e4\u05e2\u05de\u05d9\u05dd \u2014 \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05de\u05ea\u05e7\u05e0\u05ea \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7\u05d4. \u05e4\u05e8\u05d8\u05d9\u05dd \u05d1\u05d4\u05e2\u05e8\u05d5\u05ea.</div>';
   }
+  var _srcTasks=_tasksFor(tbl,id);
+  if(_srcTasks.length){
+    html+='<div id="view-tasks" style="margin-top:10px"><div style="font-size:12px;color:#888;margin-bottom:4px">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05db\u05d0\u05df ('+_srcTasks.length+')</div>'
+      +_srcTasks.map(function(t){
+        var done=t.status===_TSK_DONE||t.status===_TSK_CANC;
+        var late=(!done&&t.due&&typeof du==='function'&&du(t.due)<0);
+        var col=done?'#15803d':(late?'#cc1f1f':'var(--t2)');
+        return '<div data-tid="'+esc(t.id)+'" onclick="editTsk(this.dataset.tid)" style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px">'
+          +'<span style="flex:1;min-width:0">'+(done?'\u2705 ':(late?'\u26a0 ':'\u25cb '))+esc(String(t.title||'').substring(0,60))+'</span>'
+          +'<span style="white-space:nowrap;color:'+col+';font-size:11px">'+esc(t.status||'')+(t.due?' \u00b7 '+fd(t.due):'')+(t.assignee?' \u00b7 '+esc(t.assignee):'')+'</span></div>';
+      }).join('')+'</div>';
+  }
+  if(canSpawnTsk&&_isAdminUser()){
+    html+='<div style="margin-top:8px"><button data-stbl="'+esc(tbl)+'" data-sid="'+esc(id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" style="width:100%;background:#1e293b;border:1px solid #3b82f6;border-radius:8px;color:#60a5fa;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+(_srcTasks.length?'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea':'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1 (CAPA)')+'</button></div>';
+    }
   if(tbl==='ncr'){
     html+='<div id="ncr-comments-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:13px">&#128172; \u05d4\u05e2\u05e8\u05d5\u05ea (<span id="ncr-comments-count">0</span>)</div></div><div id="ncr-comments-list" style="font-size:12px;color:#888">\u05d8\u05d5\u05e2\u05df...</div><div style="display:flex;gap:6px;margin-top:8px"><input id="ncr-comment-input" placeholder="\u05d4\u05d5\u05e1\u05e3 \u05d4\u05e2\u05e8\u05d4..." style="flex:1;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:8px;font-family:inherit"><button data-cid="'+esc(id)+'" onclick="_ncrCommentAdd(this.dataset.cid)" style="padding:8px 14px;background:#3b82f6;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">\u05e4\u05e8\u05e1\u05dd</button></div></div>';
   }
@@ -12250,6 +12347,53 @@ function _eqiNormalizeDef(s){
     .replace(/[^֐-׿\w\s]/g,' ')
     .replace(/\s+/g,' ')
     .trim();
+}
+// ---- 1.14 ----
+// Opening an NCR on an oil leak at filling station 3 told Michael nothing
+// about it being the fourth time this year at that station. He writes a
+// local root cause, closes it, and it comes back \u2014 which is exactly the
+// difference between a repair and the corrective action \u00a710.2 asks for.
+//
+// Matching is deliberately narrow: same area AND a similar description,
+// inside 12 months. Area alone would fire on every NCR in a busy hall and
+// the banner would be ignored within a week. Closed records count \u2014 they
+// are the recurrence.
+function _ncrSimilar(rec,months){
+  if(!rec)return [];
+  var area=(typeof _areaKey==='function')?_areaKey(rec):'';
+  var desc=String(rec.d||'').trim();
+  if(!area||desc.length<6)return [];
+  var from=new Date();from.setMonth(from.getMonth()-(months||12));
+  return (DB.ncr||[]).filter(function(n){
+    if(!n||n.id===rec.id)return false;
+    if(_areaKey(n)!==area)return false;
+    var when=(typeof _ncrOpenedAt==='function'?_ncrOpenedAt(n):null)||n.ts;
+    var d=when?new Date(when):null;
+    if(!d||isNaN(d)||d<from)return false;
+    return _eqiDefSimilar(desc,String(n.d||''));
+  }).sort(function(a,b){return String((_ncrOpenedAt(b)||b.ts)||'').localeCompare(String((_ncrOpenedAt(a)||a.ts)||''));});
+}
+var _NCR_REPEAT_T=null;
+function _ncrRepeatDebounced(){
+  if(_NCR_REPEAT_T)clearTimeout(_NCR_REPEAT_T);
+  // typing a description should not re-scan 375 records on every keystroke
+  _NCR_REPEAT_T=setTimeout(function(){_NCR_REPEAT_T=null;try{_ncrRepeatBanner();}catch(e){}},400);
+}
+function _ncrRepeatBanner(){
+  var box=g('ncr-repeat');if(!box)return;
+  var rec={
+    id:(g('ncr-id')&&g('ncr-id').value)||null,
+    d:gv('ncr-d'),loc:gv('ncr-loc'),location_id:gv('ncr-location-id')||null
+  };
+  var hits=_ncrSimilar(rec,12);
+  if(!hits.length){box.style.display='none';box.innerHTML='';return;}
+  var closed=hits.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
+  box.style.display='';
+  box.innerHTML='<div style="font-weight:700">\u26a0 '+hits.length+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u05d3\u05d5\u05de\u05d5\u05ea \u05d1\u05d0\u05d5\u05ea\u05d5 \u05d0\u05d6\u05d5\u05e8 \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd'+(closed?(' \u00b7 '+closed+' \u05de\u05d4\u05df \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5'):'')+'</div>'
+    +'<div style="font-size:11px;margin-top:2px">\u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8 \u2014 \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05e9\u05d5\u05e8\u05e9\u05d9\u05ea \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d8\u05d5\u05e4\u05dc\u05d4 (\u00a710.2).</div>'
+    +'<div style="margin-top:4px">'+hits.slice(0,4).map(function(n){
+      return '<a data-nid="'+esc(n.id)+'" onclick="closeModal(\'m-ncr\');showView(\'ncr\',this.dataset.nid)" style="display:block;cursor:pointer;color:#92400e;text-decoration:underline;font-size:11px">'+esc(n.num||'NCR')+' \u00b7 '+fd((typeof _ncrOpenedAt==='function'?_ncrOpenedAt(n):null)||n.ts)+' \u00b7 '+esc(String(n.d||'').substring(0,50))+'</a>';
+    }).join('')+(hits.length>4?('<div style="font-size:11px">\u05d5\u05e2\u05d5\u05d3 '+(hits.length-4)+'</div>'):'')+'</div>';
 }
 function _eqiDefSimilar(a,b){
   var na=_eqiNormalizeDef(a), nb=_eqiNormalizeDef(b);
@@ -12880,6 +13024,9 @@ window._mrAINarrative=function(){
         +line('ימי אבדן',c.cur.lostDays,c.prev.lostDays)
         +line('כמעט-נפגע',c.cur.nm,c.prev.nm)
         +line('שיחות בטיחות',c.cur.tlk,c.prev.tlk);
+      if(c.cur.reopened||c.prev.reopened){
+        out+='\n- אי-התאמות שנפתחו מחדש (פעולה מתקנת שלא החזיקה): '+c.cur.reopened+' (רבעון קודם '+c.prev.reopened+')';
+      }
       if(c.cur.time.n||c.prev.time.n){
         out+='\n- זמן סגירה ממוצע (ימים, מגילוי עד סגירה): '
           +(c.cur.time.avg===null?'אין נתונים':c.cur.time.avg.toFixed(1))
@@ -14101,6 +14248,24 @@ window._viewCopy=function(tbl,id){
     }
   }catch(e){console.warn('_viewCopy failed',e);toast('\u05e9\u05d2\u05d9\u05d0\u05d4');}
 };
+// ---- 1.15 ----
+// Reopening an NCR wrote a line into notes and nothing else. So an NCR that
+// closed, reopened, closed and reopened again looks in every report exactly
+// like any other closed one \u2014 the false success counted twice \u2014 and \u00ab\u05db\u05de\u05d4
+// \u05de\u05d4\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d4\u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e9\u05dc\u05db\u05dd \u05dc\u05d0 \u05e2\u05d1\u05d3\u05d5?\u00bb, the question \u00a710.2 exists for, could
+// only be answered by reading 375 notes fields by hand.
+//
+// The stamp the app itself writes is the record. Counting it needs no column
+// and no migration, and it works on every row that was ever reopened,
+// including the ones from before anybody thought to count.
+var _REOPEN_RE=/\[\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 /g;
+function _reopenCount(rec){
+  if(!rec)return 0;
+  if(typeof rec.reopen_count==='number'&&rec.reopen_count>0)return rec.reopen_count;
+  var m=String(rec.notes||'').match(_REOPEN_RE);
+  return m?m.length:0;
+}
+function _reopenedNcrs(){return (DB.ncr||[]).filter(function(n){return _reopenCount(n)>0;});}
 window._capaVerify=function(id){
   var rec=(DB.ncr||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
