@@ -126,7 +126,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const mo = await page.evaluate(() => { _truMgrShift(-1); const a = { month: document.getElementById('tru-mgr-month').textContent, rows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length, all: Array.from(document.querySelectorAll('#tru-mgr-summary button')).slice(-1)[0].textContent.trim() }; _truExportCsv(); a.toastPrev = window.__toasts.slice(-1)[0]; _truMgrShift(0); a.back = document.getElementById('tru-mgr-month').textContent; return a; });
   check('previous month: 1 row (old1 open), all: 1; CSV still exports; "החודש" returns', mo.rows === 1 && mo.all === 'הכל: 1' && /יוצא/.test(mo.toastPrev) && /2026/.test(mo.back) && mo.month !== mo.back, mo);
   const hm = await page.evaluate(() => { document.getElementById('tru-mgr-more-btn').click(); const items = Array.from(document.querySelectorAll('#tru-mgr-menu button')).map(b => b.textContent.trim()); document.body.click(); return items; });
-  check('header ⋯: roster · task catalogue · winner · CSV export · print · open the trustee screen', hm.length === 6 && /רשימת הנאמנים/.test(hm[0]) && /קטלוג המשימות/.test(hm[1]) && /זוכה החודש/.test(hm[2]) && /CSV/.test(hm[3]) && /הדפס/.test(hm[4]) && /מסך הנאמן/.test(hm[5]), hm);
+  check('header ⋯: roster · trustee link · task catalogue · winner · CSV export · print · open the trustee screen', hm.length === 7 && /רשימת הנאמנים/.test(hm[0]) && /קישור לנאמנים/.test(hm[1]) && /קטלוג המשימות/.test(hm[2]) && /זוכה החודש/.test(hm[3]) && /CSV/.test(hm[4]) && /הדפס/.test(hm[5]) && /מסך הנאמן/.test(hm[6]), hm);
   await page.waitForTimeout(300);
   await page.screenshot({ path: OUT + '/trustees-mgr-375.png', fullPage: true });
 
