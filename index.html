@@ -1973,6 +1973,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="d-s"><option>&#1489;&#1514;&#1493;&#1511;&#1507;</option><option>&#1489;&#1505;&#1511;&#1497;&#1512;&#1492;</option><option>&#1502;&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1514;&#1511;&#1503; ISO</label><input id="d-i" placeholder="ISO 45001:2018"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="d-nt"></textarea></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1492;&#1502;&#1505;&#1502;&#1498; &#1506;&#1510;&#1502;&#1493;</label><div id="doc-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('doc-attach-area','doc')">&#128247; &#128196; &#1492;&#1502;&#1505;&#1502;&#1498; &#1506;&#1510;&#1502;&#1493; / &#1505;&#1512;&#1497;&#1511;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-doc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="doc-ocr-btn" onclick="_docOcrCert()" style="background:#7c3aed;border-color:#7c3aed">&#128270; &#1511;&#1512;&#1488; &#1502;&#1505;&#1502;&#1498; (OCR)</button><button class="btn btn-p" onclick="svDoc()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -2272,6 +2273,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</label><input type="date" id="ppe-d"></div>
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507;/&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="ppe-e"></div>
     <div class="field"><label>&#1502;&#1510;&#1489;</label><select id="ppe-c"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1491;&#1493;&#1512;&#1513; &#1492;&#1495;&#1500;&#1508;&#1492;</option><option>&#1508;&#1490;&#1493;&#1501;</option></select></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1514;&#1506;&#1493;&#1491;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</label><div id="ppe-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('ppe-attach-area','ppe')">&#128247; &#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1514;&#1505;&#1511;&#1497;&#1512;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-ppe')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svPpe()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -2740,6 +2742,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</label><input type="date" id="ctr-e"></div>
     <div class="field"><label>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</label><select id="ctr-tr"><option>&#1492;&#1493;&#1499;&#1513;&#1512;</option><option>&#1500;&#1488; &#1492;&#1493;&#1499;&#1513;&#1512;</option><option>&#1491;&#1493;&#1512;&#1513; &#1492;&#1499;&#1513;&#1512;&#1492;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ctr-s"><option>&#1508;&#1506;&#1497;&#1500;</option><option>&#1500;&#1488; &#1508;&#1506;&#1497;&#1500;</option><option>&#1502;&#1493;&#1513;&#1492;&#1492;</option></select></div>
+    <div class="field fw"><label>&#128247;&#128196; &#1489;&#1497;&#1496;&#1493;&#1495; / &#1492;&#1505;&#1499;&#1501; / &#1492;&#1491;&#1512;&#1499;&#1492;</label><div id="ctr-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('ctr-attach-area','ctr')">&#128247; &#128196; &#1489;&#1497;&#1496;&#1493;&#1495; / &#1492;&#1505;&#1499;&#1501; / &#1492;&#1491;&#1512;&#1499;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-ctr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svCtr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -3155,6 +3158,18 @@ function _obSend(op){
               var m=j.message.match(/Could not find the '([^']+)' column/);
               if(m && Object.prototype.hasOwnProperty.call(op.row,m[1])){
                 delete op.row[m[1]];
+                // The row is saved either way \u2014 that is what this branch is for \u2014
+                // but the dropped value is gone, silently, for ever. A file_url
+                // written to a table whose migration has not run looked to the
+                // user exactly like a successful save. Say it once per column.
+                try{
+                  var _k='pgrst204:'+op.tbl+':'+m[1];
+                  if(!_obDropped[_k]){
+                    _obDropped[_k]=1;
+                    console.warn('[schema] '+op.tbl+'.'+m[1]+' missing on the server \u2014 value dropped');
+                    if(typeof toast==='function')toast('\u26a0 \u05d4\u05e2\u05de\u05d5\u05d3\u05d4 '+m[1]+' \u05d1\u05d8\u05d1\u05dc\u05d4 '+op.tbl+' \u05dc\u05d0 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1\u05e9\u05e8\u05ea \u2014 \u05d4\u05e2\u05e8\u05da \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e8\u05d9\u05e5 \u05de\u05d9\u05d2\u05e8\u05e6\u05d9\u05d4.');
+                  }
+                }catch(e){}
                 return _obSend(op);
               }
             }
@@ -3428,6 +3443,7 @@ function _rtApply(tbl,payload){
 }
 // One-time outbox sanitizer: strip known-bad fields written by older PDF flow
 // before they get sent (otherwise PostgREST returns PGRST204 on every retry).
+var _obDropped={};
 function _obSanitize(){
   try{
     var BAD={equip_inspections:['last_inspection_date','status']};
@@ -4029,7 +4045,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"}},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"}},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -4059,7 +4075,20 @@ function _genEdit(tbl,id){
     Object.keys(cfg.f).forEach(function(dom){
       var el=g(dom);if(!el)return;
       var v=rec[cfg.f[dom]];
-      el.value=(v===null||v===undefined)?'':v;
+      v=(v===null||v===undefined)?'':v;
+      // A <select> silently refuses a value it has no option for, and the
+      // field then reads as empty \u2014 so a record whose value came from
+      // somewhere other than the form (Smart Capture writes ppe.ty from the
+      // file name, OneDrive writes free text) could not be saved through \u270e
+      // at all: the save bailed on \u00ab\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8\u00bb about a field that looked
+      // filled in. Carry the stored value in as an option so the edit works
+      // and the value survives it.
+      if(v!==''&&el.tagName==='SELECT'){
+        var found=false;
+        for(var oi=0;oi<el.options.length;oi++)if(el.options[oi].value===String(v)){found=true;break;}
+        if(!found){var op=document.createElement('option');op.value=String(v);op.textContent=String(v);el.appendChild(op);}
+      }
+      el.value=v;
     });
     // svTr / svToolbox write `file_url: _attachUrls[area] || null` on EVERY save.
     // Nothing restored _attachUrls when the form was opened for editing, so a
@@ -4222,9 +4251,13 @@ document.addEventListener('keydown',function(e){
 
 function svDoc(){
   var n=gv('d-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e')||null,s:gv('d-s'),i:gv('d-i')||null,nt:gv('d-nt')};
-  DB.docs.push(r);sbIns('docs',r);addLog('\u05de\u05e1\u05de\u05da \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-doc');
+  // id:gid() unconditionally \u2014 alone among the save functions \u2014 so \u2713 on an
+  // existing document created a second row instead of correcting the first.
+  // With _EDIT_MODS.docs there is now a \u270e to reach this from.
+  var r={id:_svEditId('docs')||gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e')||null,s:gv('d-s'),i:gv('d-i')||null,nt:gv('d-nt'),file_url:_attachUrls['doc-attach-area']||null};
+  _svPut('docs',r);addLog('\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8: '+n);sdb();closeModal('m-doc');
   ['d-n','d-o','d-nt','d-i'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  _attachClear('doc-attach-area');
   toast('\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8 &#10003;');rDocs();
 }
 function svAud(){
@@ -4555,8 +4588,9 @@ function svPtw(){
 }
 function svPpe(){
   var ty=gv('ppe-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
-  var r={id:_svEditId('ppe')||gid(),ty:ty,w:gv('ppe-w'),m:gv('ppe-m'),d:gv('ppe-d')||null,e:gv('ppe-e')||null,c:gv('ppe-c')};
-  _svPut('ppe',r);addLog('\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05e0\u05d5\u05e1\u05e3');sdb();closeModal('m-ppe');
+  var r={id:_svEditId('ppe')||gid(),ty:ty,w:gv('ppe-w'),m:gv('ppe-m'),d:gv('ppe-d')||null,e:gv('ppe-e')||null,c:gv('ppe-c'),file_url:_attachUrls['ppe-attach-area']||null};
+  _svPut('ppe',r);addLog('\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05e0\u05e9\u05de\u05e8');sdb();closeModal('m-ppe');
+  _attachClear('ppe-attach-area');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rPpe();
 }
 function svIns(){
@@ -4582,8 +4616,9 @@ function svDrl(){
 }
 function svCtr(){
   var n=gv('ctr-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:_svEditId('ctr')||gid(),n:n,ty:gv('ctr-ty'),c:gv('ctr-c'),ph:gv('ctr-ph'),e:gv('ctr-e')||null,tr:gv('ctr-tr'),s:gv('ctr-s')};
-  _svPut('ctr',r);addLog('\u05e7\u05d1\u05dc\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-ctr');
+  var r={id:_svEditId('ctr')||gid(),n:n,ty:gv('ctr-ty'),c:gv('ctr-c'),ph:gv('ctr-ph'),e:gv('ctr-e')||null,tr:gv('ctr-tr'),s:gv('ctr-s'),file_url:_attachUrls['ctr-attach-area']||null};
+  _svPut('ctr',r);addLog('\u05e7\u05d1\u05dc\u05df \u05e0\u05e9\u05de\u05e8: '+n);sdb();closeModal('m-ctr');
+  _attachClear('ctr-attach-area');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rCtr();
 }
 function svWst(){
@@ -6043,6 +6078,11 @@ function _expCollect(){
   (DB.ppe||[]).forEach(function(r){if(r.e)items.push({name:r.ty||'',owner:r.w||'',mod:'ppe',modLabel:'\u05e6\u05de\u05d2',e:r.e,id:r.id});});
   (DB.ctr||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.c||'',mod:'ctr',modLabel:'\u05e7\u05d1\u05dc\u05df',e:r.e,id:r.id});});
   (DB.equip_inspections||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.code||'',owner:r.vendor||r.loc||'',mod:'eqi',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',e:r.e,id:r.id});});
+  // med was in the calendar, in the 30-day notification, in the management
+  // review and in the ISO report \u2014 and not here, on the one page whose whole
+  // job is expiry. A medical check scanned in raised a yellow dot on the
+  // calendar and an alert, and appeared on no list.
+  (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
 }
 // The same five sources, but the rows every scanner skips: no expiry date at
@@ -6061,6 +6101,7 @@ function _expNoDate(){
   take('ppe','ppe','\u05e6\u05de\u05d2',function(r){return r.ty;},function(r){return r.w;});
   take('ctr','ctr','\u05e7\u05d1\u05dc\u05df',function(r){return r.n;},function(r){return r.c;});
   take('equip_inspections','eqi','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',function(r){return r.n||r.code;},function(r){return r.vendor||r.loc;});
+  take('med','med','\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',function(r){return r.n||r.t;},function(r){return r.t;});
   return out;
 }
 function expFilter(f){
@@ -6097,6 +6138,34 @@ function _capNote(total,shown,onMore,cols){
 }
 function tskShowAll(){window._tskShowAll=true;rTasks();}
 function expShowAll(){window._expShowAll=true;rExp();}
+// This page aggregates six registers, and every empty tab said the same
+// thing: \ud83d\udd27 \u00ab\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3\u00bb with a button that opens a NEW equipment
+// inspection. So pressing \u00ab\u05e4\u05d2\u00bb to confirm that nothing has expired \u2014 the good
+// case \u2014 read as a warning that the equipment register is empty, and the
+// button invited entering equipment nobody needed. On the filtered tabs an
+// empty result is good news and gets no call to action at all.
+function _expEmptyRow(f,total){
+  var msg,icon='\u2705',cta='';
+  if(f==='exp')msg='\u05d0\u05d9\u05df \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05e9\u05e4\u05d2\u05d5 \u2014 \u05d4\u05db\u05dc \u05d1\u05ea\u05d5\u05e7\u05e3';
+  else if(f==='7')msg='\u05d0\u05d9\u05df \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05e7\u05e8\u05d5\u05d1';
+  else if(f==='30')msg='\u05d0\u05d9\u05df \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d1-30 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05e7\u05e8\u05d5\u05d1\u05d9\u05dd';
+  else if(f==='90')msg='\u05d0\u05d9\u05df \u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05d1-90 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05e7\u05e8\u05d5\u05d1\u05d9\u05dd';
+  else if(f==='none')msg='\u05dc\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d9\u05e9 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3';
+  else{
+    // 'all' with nothing at all: the registers really are empty. Only here
+    // does an invitation to add something make sense \u2014 and it points at the
+    // registers, not at one of the six.
+    icon='\ud83d\udcc5';msg='\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05e2\u05dd \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05d1\u05d0\u05e3 \u05de\u05e8\u05e9\u05dd';
+    cta='<br><div style="margin-top:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap">'
+      +'<button class="et-cta" onclick="goPage(\'eqi\')">\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3</button>'
+      +'<button class="et-cta" onclick="goPage(\'tr\')">\u05d4\u05d3\u05e8\u05db\u05d5\u05ea</button>'
+      +'<button class="et-cta" onclick="goPage(\'docs\')">\u05de\u05e1\u05de\u05db\u05d9\u05dd</button></div>';
+  }
+  // When the tab is empty but the page is not, say so \u2014 it is the difference
+  // between \u00abnothing is due\u00bb and \u00abnothing is tracked\u00bb.
+  var sub=(f!=='all'&&total)?'<div style="font-size:11px;color:var(--t3);margin-top:6px">'+total+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05de\u05e2\u05e7\u05d1 \u05d1\u05db\u05dc \u05d4\u05de\u05e8\u05e9\u05de\u05d9\u05dd</div>':'';
+  return '<tr><td colspan="6" class="et" data-label="">'+icon+'<br>'+msg+sub+cta+'</td></tr>';
+}
 function rExp(){
   var items=_expCollect();
   var noDate=_expNoDate();
@@ -6130,11 +6199,11 @@ function rExp(){
     return du(a.e)-du(b.e);
   });
   var tb=g('tb-exp');if(!tb)return;
-  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udd27<br>\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="openModal(\'m-eqi\')">+ \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML=_expEmptyRow(f,items.length+noDate.length);return;}
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
@@ -10850,8 +10919,47 @@ function rItp(){
     if(r.next_due){var dd=du(r.next_due);if(dd<0)dueCol='var(--bad)';else if(dd<=30)dueCol='var(--warn)';}
     var bg=r.active?'#dcfce7':'#fce4e4';
     var act=r.active?'\u05e4\u05e2\u05d9\u05dc':'\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc';
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" style="background:#16a34a" onclick="_itpDone(\''+safeId+'\')" title="\u05d1\u05d5\u05e6\u05e2 \u2014 \u05e7\u05d3\u05dd \u05dc\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0">✓</button><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   }).join('');
+}
+// recur_count / recur_unit were decoration: written, read back into the form,
+// printed as \u00ab\u05db\u05dc 1 \u05e9\u05e0\u05d9\u05dd\u00bb \u2014 and nothing in the repo ever moved next_due.
+// So a yearly check appeared in the task list 30 days before its date and
+// stayed there for ever: \u00ab\u05e4\u05d2 \u05d1-1 \u05d9\u05de\u05d9\u05dd\u00bb, \u00ab\u05e4\u05d2 \u05d1-77 \u05d9\u05de\u05d9\u05dd\u00bb, long after it had
+// been done, because the virtual task has no \u05d4\u05d5\u05e9\u05dc\u05dd and no checkbox. The
+// red counter filled with items already handled, and stopped being believed.
+var _ITP_UNIT_DAYS={day:1,week:7};
+function _itpNextDue(from,count,unit){
+  var d=new Date(from);
+  if(isNaN(d.getTime()))return null;
+  count=parseInt(count,10)||1;
+  if(count<1)count=1;
+  if(unit==='month'||unit==='year'){
+    var day=d.getDate(),m=d.getMonth()+(unit==='year'?count*12:count);
+    d.setDate(1);d.setMonth(m);
+    // 31 January plus one month is the end of February, not 3 March.
+    var last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    d.setDate(Math.min(day,last));
+  }else{
+    d.setDate(d.getDate()+count*(_ITP_UNIT_DAYS[unit]||1));
+  }
+  return d.toISOString().substring(0,10);
+}
+function _itpDone(id){
+  var rec=(DB.inspection_types||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var today=new Date().toISOString().substring(0,10);
+  var next=_itpNextDue(rec.next_due||today,rec.recur_count,rec.recur_unit);
+  // Missed by more than a full cycle: count from today, or the \u201cnew\u201d date
+  // would land in the past and the row would stay red.
+  if(!next||next<=today)next=_itpNextDue(today,rec.recur_count,rec.recur_unit);
+  if(!next){toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d7\u05e9\u05d1 \u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0');return;}
+  if(!confirm('\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u00ab'+(rec.name||'')+'\u00bb \u05d1\u05d5\u05e6\u05e2\u05d4?\n\n\u05d4\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0 \u05d9\u05e2\u05d1\u05d5\u05e8 \u05dc-'+fd(next)+'.'))return;
+  rec.next_due=next;rec.ts=new Date().toISOString();
+  sbUpd('inspection_types',rec);sdb();
+  try{addLog('\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d1\u05d5\u05e6\u05e2: '+String(rec.name||'').substring(0,40)+' \u2192 '+next);}catch(e){}
+  toast('\u05d1\u05d5\u05e6\u05e2 \u2713 \u05d4\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0: '+fd(next));
+  rItp();if(typeof rTasks==='function')rTasks();if(typeof rDash==='function')rDash();
 }
 function _itpOpenAdd(){
   g('itp-id').value='';
@@ -11297,7 +11405,14 @@ function rEmp(){
 }
 
 var VIEW_CONFIG={
-  docs:{title:'\u05de\u05e1\u05de\u05db\u05d9\u05dd',back:'docs',fields:[
+  // There is no m-med form and no pg-med page: med rows arrive only from
+  // Smart Capture and from OneDrive. Until now there was no VIEW_CONFIG
+  // either, so the calendar entry and the 30-day alert both led to
+  // \u00ab\u05d8\u05d1\u05dc\u05d4 med \u05d0\u05d9\u05e0\u05d4 \u05e0\u05ea\u05de\u05db\u05ea\u00bb \u2014 a record the system alerts on and refuses to show.
+  med:{title:'\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea',back:'exp',photo:'file_url',fields:[
+    ['\u05e2\u05d5\u05d1\u05d3 / \u05e0\u05d5\u05e9\u05d0','n'],['\u05e1\u05d5\u05d2 \u05d1\u05d3\u05d9\u05e7\u05d4','t'],
+    ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','d'],['\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3','e'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
+  docs:{title:'\u05de\u05e1\u05de\u05db\u05d9\u05dd',back:'docs',photo:'file_url',fields:[
     ['\u05e9\u05dd','n'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','c'],['\u05d2\u05e8\u05e1\u05d4','v'],
     ['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],['\u05ea\u05d5\u05e7\u05e3','e'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','nt']]},
   auds:{title:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea',back:'aud',fields:[
@@ -11313,14 +11428,14 @@ var VIEW_CONFIG={
     ['\u05ea\u05d0\u05e8\u05d9\u05da','dt'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05e1\u05d5\u05d2','ty'],
     ['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05de\u05d9\u05e7\u05d5\u05dd','l'],['\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df','dy'],['\u05d4\u05e2\u05e8\u05d5\u05ea','r']]},
   tr:{title:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea',back:'tr',fields:[
-    ['\u05e2\u05d5\u05d1\u05d3','w'],['\u05d4\u05d3\u05e8\u05db\u05d4','n'],['\u05de\u05d3\u05e8\u05d9\u05da','c'],
+    ['\u05e2\u05d5\u05d1\u05d3','w'],['\u05d4\u05d3\u05e8\u05db\u05d4','n'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','c'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05ea\u05e4\u05d5\u05d2\u05d4','e'],['\u05e6\u05d9\u05d5\u05df','sc'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   rsk:{title:'\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd',back:'rsk',fields:[
     ['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05d0\u05d6\u05d5\u05e8','a'],['\u05d1\u05e2\u05dc\u05d9\u05dd','o'],
     ['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea','p'],['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05e4\u05e2\u05d5\u05dc\u05d4','ac']]},
   emp:{title:'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',back:'emp',fields:[
     ['\u05e9\u05dd','n'],['\u05ea\u05e4\u05e7\u05d9\u05d3','r'],['\u05de\u05d7\u05dc\u05e7\u05d4','dep'],['\u05d8\u05dc\u05e4\u05d5\u05df','ph']]},
-  ppe:{title:'PPE',back:'ppe',fields:[
+  ppe:{title:'PPE',back:'ppe',photo:'file_url',fields:[
     ['\u05e1\u05d5\u05d2','ty'],['\u05e2\u05d5\u05d1\u05d3','w'],['\u05de\u05e7\u05e6\u05d4','m'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05ea\u05e4\u05d5\u05d2\u05d4','e'],['\u05de\u05e6\u05d1','c']]},
   ins:{title:'\u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'ins',fields:[
@@ -11329,7 +11444,7 @@ var VIEW_CONFIG={
   drl:{title:'\u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd',back:'drl',fields:[
     ['\u05e1\u05d5\u05d2','ty'],['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','p'],
     ['\u05de\u05e9\u05da (\u05d3\u05e7)','dur'],['\u05e6\u05d9\u05d5\u05df','sc']]},
-  ctr:{title:'\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',back:'ctr',fields:[
+  ctr:{title:'\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',back:'ctr',photo:'file_url',fields:[
     ['\u05e9\u05dd','n'],['\u05e1\u05d5\u05d2 \u05e2\u05d1\u05d5\u05d3\u05d4','ty'],['\u05d0\u05d9\u05e9 \u05e7\u05e9\u05e8','c'],
     ['\u05ea\u05d5\u05e7\u05e3 \u05d4\u05e1\u05db\u05dd','e'],['\u05d4\u05db\u05e9\u05e8\u05d4','tr'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   wst:{title:'\u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea',back:'wst',fields:[

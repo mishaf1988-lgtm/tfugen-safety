@@ -39,7 +39,9 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
       fieldCounts: tbls.map((t) => [t, _EDIT_MODS[t] ? Object.keys(_EDIT_MODS[t].f).length : 0]),
       ptwChecks: _EDIT_MODS.ptw && _EDIT_MODS.ptw.c ? Object.keys(_EDIT_MODS.ptw.c).length : 0,
     }), TBLS);
-    check('all 14 are registered', r.missing.length === 0 && r.known.length === 14, r.missing);
+    // 15 since #654: `docs` joined, which is how the ISO procedure register
+    // got a ✎ at all — svDoc used to write id:gid() unconditionally.
+    check('all 14 are registered, plus docs', r.missing.length === 0 && r.known.length === 15 && r.known.indexOf('docs') >= 0, r.known);
     check('every one carries a non-empty field map', r.fieldCounts.every((x) => x[1] > 0), r.fieldCounts.filter((x) => !x[1]));
     check('the permit’s 8 work-type checkboxes are mapped too', r.ptwChecks === 8, r.ptwChecks);
     const already = await page.evaluate(() => ['ncr', 'inc', 'tasks', 'equip_inspections'].filter((t) => _EDIT_MODS[t]));
