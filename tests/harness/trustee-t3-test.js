@@ -248,8 +248,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     return out;
   });
   check('helper: active trustees under 5 tasks, most behind first (לב 0 · טטינה 1 · גלינה 2); the inactive one is excluded', nd.behind.join(' ') === 'לב:0 טטינה:1 גלינה:2', nd.behind);
-  check('home line: counts them, names each with its task count, and says how long is left', /3 נאמנים טרם השלימו 5 משימות/.test(nd.title || '') && /לב \(0\/8\)/.test(nd.sub || '') && /טטינה \(1\/8\)/.test(nd.sub || '') && /גלינה \(2\/8\)/.test(nd.sub || '') && (nd.left === 0 ? /היום האחרון/.test(nd.sub) : new RegExp('נותרו ' + nd.left + ' ימים').test(nd.sub || '')) && nd.badge === (nd.left === 0 ? 'היום' : nd.left + 'י'), nd);
-  check('a fourth one behind: three names then «ועוד 1», title follows the count', /4 נאמנים טרם השלימו/.test(nd.title4 || '') && /ועוד 1/.test(nd.sub4 || '') && (nd.sub4.match(/\(\d\/8\)/g) || []).length === 3, { title4: nd.title4, sub4: nd.sub4 });
+  // the denominator is _truMinTasks() — the threshold the line is actually
+  // about — not a hard-coded 8. See 4.9 in trustees-batch2-test.js.
+  check('home line: counts them, names each against the threshold, and says how long is left', /3 נאמנים טרם השלימו 5 משימות/.test(nd.title || '') && /לב \(0\/5\)/.test(nd.sub || '') && /טטינה \(1\/5\)/.test(nd.sub || '') && /גלינה \(2\/5\)/.test(nd.sub || '') && (nd.left === 0 ? /היום האחרון/.test(nd.sub) : new RegExp('נותרו ' + nd.left + ' ימים').test(nd.sub || '')) && nd.badge === (nd.left === 0 ? 'היום' : nd.left + 'י'), nd);
+  check('a fourth one behind: three names then «ועוד 1», title follows the count', /4 נאמנים טרם השלימו/.test(nd.title4 || '') && /ועוד 1/.test(nd.sub4 || '') && (nd.sub4.match(/\(\d\/5\)/g) || []).length === 3, { title4: nd.title4, sub4: nd.sub4 });
   check('hidden when everyone is on track, shown again when one falls behind, hidden outside the mid-month window', nd.onTrack && nd.inWindow && nd.outOfWindow, nd);
   const ndClick = await page.evaluate(() => { const it = Array.from(document.querySelectorAll('#today-items .today-item')).find(x => /טרם השל/.test(x.textContent)); it.click(); return CUR; });
   check('clicking the line opens the trustees page', ndClick === 'trustees', ndClick);

@@ -31,6 +31,9 @@ const MAX_AGE_MS = 48 * 3600 * 1000;
 // until then the approved incident template carries the message.
 const TEMPLATE_DEDICATED = 'tfugen_trustee_hazard';
 const TEMPLATE_FALLBACK = 'tfugen_incident_alert';
+// The built-in catalogue, and the fallback. Once migrations/2026-09-19_trustee_tasks.sql
+// has run the manager can rename a task from the app — and the message that
+// went out still carried this wording. taskName() reads the table first.
 const TASKS = {
   1: 'סיור מפגעים באזור', 2: 'מקלחות חירום ושטיפות עיניים', 3: 'דרכי מילוט ויציאות חירום',
   4: 'תקינות סולמות וגישה לגובה', 5: 'עמדות כיבוי אש', 6: 'מגיני מכונות ולחצני עצירה',
@@ -75,7 +78,7 @@ export async function onRequest({ request, env }) {
     };
     if (!prefs.whatsapp_to && !prefs.email_to) return jsonResp({ error: 'no recipient: fill a WhatsApp number or an email' }, 400, cors);
     const sample = { id: 'test', u: 'בדיקה', t: 5, d: new Date().toISOString().substring(0, 10), loc: 'מחסן · מטף מזרחי', f: 'הודעת בדיקה — מטף ללא פלומבה', photo_url: null };
-    const res = await deliver(env, prefs, sample);
+    const res = await deliver(env, prefs, sample, await taskName(sb, sample.t));
     return jsonResp({ ok: true, test: true, ...res }, 200, cors);
   }
 
@@ -108,8 +111,9 @@ export async function onRequest({ request, env }) {
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || !claimed.length) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
 
-  const res = await deliver(env, prefs, row);
-  const title = clean((row.u || '') + ' — ' + (TASKS[row.t] || ('משימה ' + row.t)) + (row.f ? ': ' + row.f : ''), 120);
+  const task = await taskName(sb, row.t);
+  const res = await deliver(env, prefs, row, task);
+  const title = clean((row.u || '') + ' — ' + task + (row.f ? ': ' + row.f : ''), 120);
   const logs = [];
   if (res.whatsapp) logs.push({ channel: res.whatsapp === 'sent' ? 'whatsapp' : 'whatsapp_error', detail: res.whatsapp });
   if (res.email) logs.push({ channel: res.email === 'sent' ? 'email' : 'email_error', detail: res.email });
@@ -143,9 +147,24 @@ async function loadPrefs(sb) {
   return out;
 }
 
-async function deliver(env, prefs, row) {
+// The task's current name. Falls back to the built-in map for the window
+// before the migration runs, for a number the table does not carry, and for
+// any read that fails — a notification must never be lost over its subject line.
+async function taskName(sb, n) {
+  const num = parseInt(n, 10);
+  const fallback = TASKS[num] || ('משימה ' + n);
+  if (!(num > 0)) return fallback;
+  try {
+    const r = await sb('trustee_tasks?n=eq.' + num + '&select=t');
+    if (!r.ok) return fallback;
+    const rows = await r.json();
+    const t = Array.isArray(rows) && rows[0] && rows[0].t;
+    return t ? String(t) : fallback;
+  } catch (e) { return fallback; }
+}
+
+async function deliver(env, prefs, row, task) {
   const res = {};
-  const task = TASKS[row.t] || ('משימה ' + row.t);
   if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task);
   if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task);
   return res;
