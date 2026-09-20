@@ -1483,6 +1483,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div style="font-size:10px;color:var(--t3);margin-top:6px">&#1502;&#1497;&#1497;&#1510;&#1512; &#1502;&#1505;&#1502;&#1498; &#1502;&#1493;&#1499;&#1503; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; (ISO 45001:9.3 / 14001:9.3) &#1506;&#1500; &#1489;&#1505;&#1497;&#1505; &#1499;&#1500; &#1492;-KPIs &#1513;&#1500;&#1502;&#1506;&#1500;&#1492;</div>
     </div>
   </div>
+  <div class="card"><div class="card-title">&#128193; &#1514;&#1497;&#1511; &#1505;&#1511;&#1497;&#1512;&#1493;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 / 14001 &#167;9.3.3 &#8212; &#1502;&#1497;&#1491;&#1506; &#1502;&#1514;&#1493;&#1506;&#1491; &#1513;&#1497;&#1513; &#1500;&#1513;&#1502;&#1512;)</span></div>
+    <div id="mr-saved-list" style="font-size:13px"></div>
+  </div>
   <div class="card"><div class="card-title">&#128202; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1505;&#1502;&#1499;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 / 45001 surveillance)</span></div>
     <div id="mr-ai-annual"><button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">&#129302; &#1510;&#1493;&#1512; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497;</button>
       <div style="font-size:10px;color:var(--t3);margin-top:6px">12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#8212; &#1502;&#1492;&#1493;&#1493;&#1492; &#1492;&#1499;&#1504;&#1492; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; &#1504;&#1497;&#1496;&#1493;&#1512; ISO &#1513;&#1504;&#1514;&#1497;</div>
@@ -3022,7 +3025,7 @@ var _isAdmin=false;
 // date in May while the app shipped many times a week, and a restored backup
 // named a version that had not been current for months.
 var APP_VER='2026.09.20';
-var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
+var DB={record_history:[],mgmt_reviews:[],docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -3084,7 +3087,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-18.v2';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -3095,7 +3098,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -3516,7 +3519,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var done=0;
   function finish(){
     done++;
@@ -3575,7 +3578,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -3817,7 +3820,7 @@ function forceSync(){
 // rows never reached the server \u2014 but named for what it does, and warning in
 // the direction that can actually lose someone else's work.
 function _forceUpload(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var totalRowsToPush=0;
   syncTbls.forEach(function(t){var r=DB[t];if(r&&r.length)totalRowsToPush+=r.length;});
   if(totalRowsToPush===0){toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');return;}
@@ -3866,7 +3869,7 @@ window.setDeletePassword=function(pw){
 var _delPending={tbl:null,id:null};
 // Tables CLAUDE.md says must not casually lose rows: ncr is 375 production
 // records, ncr_ai and trustee_reports are history keyed by version / month.
-var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea'};
+var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea',record_history:'\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d7\u05d9\u05d3\u05d5\u05e9\u05d9\u05dd',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};
 var _DEL_TBL_LABEL={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea'};
 // What the user is about to destroy, in words. A red trash on the tasks page
 // deletes the NCR behind the row, not the row \u2014 that is deliberate, but it
@@ -9362,6 +9365,7 @@ function _mrInPeriod(d,p){
   return nd>=p.start&&nd<=p.end;
 }
 function rMr(){
+  try{_mrReviewsRender();}catch(e){}
   var p=_mrPeriod(_MR_OFFSET),pPrev=_mrPeriod(_MR_OFFSET+1);
   var pe=g('mr-period');if(pe)pe.textContent=' · '+p.label;
   var nav=g('mr-period-nav');
@@ -12120,6 +12124,81 @@ function svPrj(){
   sdb();closeModal('m-prj');toast('\u05e0\u05e9\u05de\u05e8 ✓');rPrj();
 }
 
+// ---- 3.3 ----
+// Renewing a certificate overwrote what it replaced. _svPut does
+// `arr[k]=Object.assign({},arr[k],r); sbUpd(tbl,arr[k]);` — so Michael opens
+// ✎ on a training record, changes the date, saves, and the PREVIOUS expiry is
+// gone. audit_log can show that somebody updated TR-17 on 3/9; it cannot show
+// what the validity was before, or when the previous training happened.
+//
+// Equipment already has a renewal path that keeps history
+// (_eqiHistoryWrite → equip_inspection_history), but it is called only from
+// the PDF flow — never from svEqi, and never for the other registers.
+//
+// One generic table rather than 15 copies: DECISIONS.md rejects a single jsonb
+// column for ncr_ai because «there is no history, and it is hard to query».
+// table_name + record_id keeps it queryable without adding a table per
+// register.
+var _RENEWABLE={docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',ppe:'\u05e6\u05de\u05d2',ctr:'\u05e7\u05d1\u05dc\u05df',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'};
+function _rhFor(tbl,id){
+  return (DB.record_history||[]).filter(function(h){return h&&h.table_name===tbl&&h.record_id===id;})
+    .sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+}
+// The date the record itself calls «when it was done» differs per register.
+function _rhDoneField(tbl){return tbl==='hearing_tests'?'test_date':'d';}
+window._renewRecord=function(tbl,id){
+  if(!_RENEWABLE[tbl]){toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d3\u05d5\u05e9 \u05dc\u05e1\u05d5\u05d2 \u05d6\u05d4');return;}
+  var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
+  if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var dF=_rhDoneField(tbl);
+  var today=new Date().toISOString().substring(0,10);
+  var nd=prompt('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d4\u05d7\u05d3\u05e9 (YYYY-MM-DD)'
+    +(rec[dF]?('\n\n\u05d4\u05e7\u05d5\u05d3\u05dd: '+fd(rec[dF])):''),today);
+  if(nd===null)return;
+  nd=String(nd).trim();
+  if(nd&&!/^\d{4}-\d{2}-\d{2}$/.test(nd)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  var ne=prompt('\u05ea\u05e4\u05d5\u05d2\u05d4 \u05d7\u05d3\u05e9\u05d4 (YYYY-MM-DD)'
+    +(rec.e?('\n\n\u05d4\u05e7\u05d5\u05d3\u05de\u05ea: '+fd(rec.e)):''),rec.e||'');
+  if(ne===null)return;
+  ne=String(ne).trim();
+  if(ne&&!/^\d{4}-\d{2}-\d{2}$/.test(ne)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  if(!nd&&!ne){toast('\u05dc\u05d0 \u05d4\u05d5\u05d6\u05df \u05db\u05dc\u05d5\u05dd');return;}
+  // The history row is written FIRST and carries the OLD values — that is the
+  // whole point. If the record write were to fail after it, the worst case is
+  // a history row for a renewal that did not happen, which is visible; the
+  // other order loses the previous expiry, which is not.
+  var h={id:gid(),table_name:tbl,record_id:id,
+    e_old:rec.e||null,e_new:ne||null,d_old:rec[dF]||null,
+    note:null,
+    changed_by:(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null,
+    ts:new Date().toISOString()};
+  if(!DB.record_history)DB.record_history=[];
+  DB.record_history.push(h);
+  sbIns('record_history',h);
+  if(nd)rec[dF]=nd;
+  if(ne)rec.e=ne;
+  rec.ts=new Date().toISOString();
+  sbUpd(tbl,rec);sdb();
+  addLog('\u05d7\u05d9\u05d3\u05d5\u05e9 '+(_RENEWABLE[tbl]||tbl)+': '+String(rec.n||rec.ty||rec.emp_name||rec.code||'').substring(0,30));
+  toast('\u05d7\u05d5\u05d3\u05e9 — \u05d4\u05e7\u05d5\u05d3\u05dd \u05e0\u05e9\u05de\u05e8 \u05d1\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4');
+  showView(tbl,id);
+  if(typeof _rerender==='function')try{_rerender(tbl);}catch(e){}
+};
+function _rhSectionHtml(tbl,id){
+  var rows=_rhFor(tbl,id);
+  if(!rows.length)return '';
+  return '<div id="renew-history" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:6px">\u267b \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d7\u05d9\u05d3\u05d5\u05e9\u05d9\u05dd ('+rows.length+')</div>'
+    +rows.map(function(h){
+      var bits=[];
+      if(h.e_old)bits.push('\u05ea\u05e4\u05d5\u05d2\u05d4 \u05e7\u05d5\u05d3\u05de\u05ea: '+esc(fd(h.e_old)));
+      if(h.d_old)bits.push('\u05d1\u05d9\u05e6\u05d5\u05e2 \u05e7\u05d5\u05d3\u05dd: '+esc(fd(h.d_old)));
+      if(h.e_new)bits.push('\u2192 '+esc(fd(h.e_new)));
+      var when='';try{when=fd(String(h.ts).substring(0,10));}catch(e){}
+      return '<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f0f0">'+esc(bits.join(' \u00b7 '))
+        +'<div style="font-size:10px;color:var(--t3)">'+esc(when)+(h.changed_by?(' \u00b7 '+esc(h.changed_by)):'')+'</div></div>';
+    }).join('')+'</div>';
+}
 // Custom Properties (Vitre §16#5) — generic key-value per record
 function _cpListFor(tbl,recId){
   return (DB.custom_props||[]).filter(function(p){return p.entity_table===tbl && p.entity_id===recId;}).sort(function(a,b){return (a.k||'').localeCompare(b.k||'','he');});
@@ -12447,6 +12526,11 @@ var VIEW_CONFIG={
     ['\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3','emp_name'],['\u05ea"\u05d6','emp_id'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d9\u05d3\u05d4','dob'],['\u05d2\u05d9\u05dc','age'],['\u05de\u05d9\u05df','gender'],
     ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],['\u05e7\u05d5\u05e4\u05d4/\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],['\u05e9\u05e0\u05d4','year'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05ea\u05e7\u05e3 \u05e2\u05d3','e'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
+  mgmt_reviews:{title:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',back:'mr',fields:[
+    ['\u05e1\u05d5\u05d2','kind'],['\u05ea\u05e7\u05d5\u05e4\u05d4','period'],['\u05e0\u05db\u05ea\u05d1 \u05e2\u05dc \u05d9\u05d3\u05d9','created_by'],['\u05ea\u05d5\u05db\u05df','content']]},
+  record_history:{title:'\u05d7\u05d9\u05d3\u05d5\u05e9',back:'exp',fields:[
+    ['\u05de\u05e8\u05e9\u05dd','table_name'],['\u05ea\u05e4\u05d5\u05d2\u05d4 \u05e7\u05d5\u05d3\u05de\u05ea','e_old'],['\u05ea\u05e4\u05d5\u05d2\u05d4 \u05d7\u05d3\u05e9\u05d4','e_new'],
+    ['\u05d1\u05d9\u05e6\u05d5\u05e2 \u05e7\u05d5\u05d3\u05dd','d_old'],['\u05d7\u05d5\u05d3\u05e9 \u05e2\u05dc \u05d9\u05d3\u05d9','changed_by'],['\u05d4\u05e2\u05e8\u05d4','note']]},
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
@@ -12633,6 +12717,13 @@ function showView(tbl,id){
   else if(tbl==='rsk')canSpawnTsk=true;
   // Who last touched this record, and when. From audit_log, which already
   // carries it \u2014 the sv* functions do not.
+  // 3.3 — renew rather than overwrite, and show what was replaced.
+  try{
+    if(_RENEWABLE[tbl]&&_isAdminUser()){
+      html+='<div style="margin-top:10px"><button data-rntbl="'+esc(tbl)+'" data-rnid="'+esc(id)+'" onclick="_renewRecord(this.dataset.rntbl,this.dataset.rnid)" style="width:100%;background:#eef2ff;border:1px solid #6366f1;border-radius:8px;color:#3730a3;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\u267b \u05d7\u05d3\u05e9 — \u05e9\u05d5\u05de\u05e8 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d3\u05dd</button></div>';
+    }
+    html+=_rhSectionHtml(tbl,id);
+  }catch(e){}
   try{html+=_auditStampHtml(tbl,id,rec);}catch(e){}
   // Both of these describe what ALREADY happened, so they belong on a closed
   // record too \u2014 that is the one an auditor opens. Only the button that
@@ -13311,6 +13402,7 @@ window._annualISOReport=function(){
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
         '<button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">⧮ צור מחדש</button>'+
         '<button class="btn btn-sm" onclick="_annualISOCopy()" style="background:#fff;border:1px solid #d4d4d8">📋 העתק</button>'+
+          '<button class="btn btn-sm" onclick="_mrSaveReview(\'annual\')" style="background:#fff;border:1px solid #16a34a;color:#15803d">\ud83d\udcbe \u05e9\u05de\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7</button>'+
         '<span style="font-size:10px;color:var(--t3);margin-right:auto">נוצר: '+esc(when)+'</span>'+
         '</div>';
       window._annualISORaw=content;
@@ -13423,6 +13515,7 @@ window._mrAINarrative=function(){
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center">'+
           '<button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">⧮ צור מחדש</button>'+
           '<button class="btn btn-sm" onclick="_mrAICopy()" style="background:#fff;border:1px solid #d4d4d8">📋 העתק</button>'+
+          '<button class="btn btn-sm" onclick="_mrSaveReview(\'review\')" style="background:#fff;border:1px solid #16a34a;color:#15803d">\ud83d\udcbe \u05e9\u05de\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7</button>'+
           '<span style="font-size:10px;color:var(--t3);margin-right:auto">נוצר: '+esc(generatedAt)+'</span>'+
         '</div>';
       window._mrAIRaw=content;
@@ -13432,6 +13525,53 @@ window._mrAINarrative=function(){
         '<button class="btn btn-p btn-sm" onclick="_mrAINarrative()" style="background:#7c3aed;border-color:#7c3aed">⧮ נסה שוב</button>';
     });
 };
+// ---- 6.11 ----
+// _mrAINarrative builds the whole §9.3 narrative and then does exactly one
+// thing with it: `window._mrAIRaw=content;` — a JS variable that lives until
+// the page reloads. The two buttons beside it are «regenerate» and «copy».
+// Same shape in _annualISOReport. So the management review — which §9.3.3
+// requires be RETAINED as documented information — existed only in the
+// clipboard of whoever pressed copy, and only until they copied something
+// else. There is no such table in any of the 80 migrations.
+window._mrSaveReview=function(kind){
+  var content=(kind==='annual'?window._annualISORaw:window._mrAIRaw)||'';
+  if(!content){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e9\u05de\u05d5\u05e8 — \u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 \u05e7\u05d5\u05d3\u05dd');return;}
+  var period=(kind==='annual')
+    ? String(new Date().getFullYear())
+    : ((typeof _mrPeriod==='function'&&(_mrPeriod(typeof _MR_OFFSET!=='undefined'?_MR_OFFSET:0)||{}).label)||'');
+  var rec={
+    id:gid(),kind:(kind==='annual'?'annual':'review'),period:period||null,
+    content:content,
+    kpis:(function(){try{return JSON.stringify(window._mrAIKpis||null);}catch(e){return null;}})(),
+    created_by:(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null,
+    ts:new Date().toISOString()
+  };
+  if(!DB.mgmt_reviews)DB.mgmt_reviews=[];
+  DB.mgmt_reviews.push(rec);
+  sbIns('mgmt_reviews',rec);
+  sdb();
+  addLog('\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4: '+(period||''));
+  toast('\u05e0\u05e9\u05de\u05e8 \u05dc\u05ea\u05d9\u05e7 \u2713');
+  _mrReviewsRender();
+};
+function _mrReviewsList(){
+  return (DB.mgmt_reviews||[]).slice().sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+}
+function _mrReviewsRender(){
+  var box=g('mr-saved-list');if(!box)return;
+  var list=_mrReviewsList();
+  if(!list.length){box.innerHTML='<div style="font-size:12px;color:var(--t2)">\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d5 \u05e1\u05e7\u05d9\u05e8\u05d5\u05ea. \u05d0\u05d7\u05e8\u05d9 \u05e9\u05ea\u05d9\u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 — \u05dc\u05d7\u05e5 «\u05e9\u05de\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7».</div>';return;}
+  box.innerHTML=list.map(function(r){
+    var when='';try{when=fd(String(r.ts).substring(0,10));}catch(e){}
+    var kind=r.kind==='annual'?'\u05d3\u05d5\u05d7 \u05e9\u05e0\u05ea\u05d9':'\u05e1\u05e7\u05d9\u05e8\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0">'
+      +'<span style="flex:1;min-width:0"><strong>'+esc(kind)+'</strong>'+(r.period?(' \u00b7 '+esc(r.period)):'')
+      +'<div style="font-size:11px;color:var(--t3)">'+esc(when)+(r.created_by?(' \u00b7 '+esc(r.created_by)):'')+'</div></span>'
+      +'<button class="btn btn-d btn-sm" data-vtbl="mgmt_reviews" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> '
+      +'<button class="btn btn-d btn-sm" data-ptbl="mgmt_reviews" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>'
+      +'</div>';
+  }).join('');
+}
 window._mrAICopy=function(){
   var txt=window._mrAIRaw||'';
   if(!txt){toast('אין מה להעתיק');return;}
@@ -16332,7 +16472,7 @@ function rTrustees(){
   var sum=g('tru-mgr-summary');
   if(sum){
     function pill(key,label,n,color,bg,txt){var on=(_truMgrF===key);return '<button onclick="_truMgrSetFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:10px 12px;min-height:44px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';}
-    sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
+    sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('unver','\u05e0\u05e1\u05d2\u05e8\u05d5, \u05d8\u05e8\u05dd \u05e0\u05d1\u05d3\u05e7\u05d5',_truUnverified(m).length,'#b45309','#fef3c7','#92400e')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
   }
   var board=_truBoard(m);
   var bEl=g('tru-mgr-board');
@@ -16367,6 +16507,7 @@ function rTrustees(){
   var list=rows.filter(function(r){
     if(_truMgrF==='open')return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;
     if(_truMgrF==='closed')return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;
+    if(_truMgrF==='unver')return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED&&!r.verified_by;
     if(_truMgrF==='ok')return !_truIsHazard(r);
     return true;
   }).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
@@ -16389,7 +16530,7 @@ function rTrustees(){
       +'<td data-label="" class="tru-head"><strong>'+esc(r.u)+'</strong> <span style="color:var(--t2)">\u00b7 '+esc(r.t)+'. '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+'</span></td>'
       +'<td data-label="\u05d0\u05d6\u05d5\u05e8">'+esc(r.loc||(r.location_id?_locName(r.location_id):'')||'\u2014')+'</td>'
       +'<td data-label="\u05de\u05de\u05e6\u05d0">'+(r.f?esc(r.f):'<span style="color:var(--t3)">\u2014</span>')+photo+afterHtml+refHtml+note+tskHtml+'</td>'
-      +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+_truAgeChip(r)+'</td>'
+      +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+_truVerifyBadge(r)+_truAgeChip(r)+'</td>'
       +'<td data-label=""><button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_truRowMenu(this,this.dataset.rid)" aria-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">\u22ef</button></td>'
       +'</tr>';
   }).join('');
@@ -16400,7 +16541,10 @@ function _truRowMenu(anchor,id){
   _popMenu(anchor,'tru-row-menu',function(item,sep){
     if(_truIsHazard(r)){
       if(r.s!==TRUSTEE_S_CLOSED)item('\u2705','\u05e1\u05de\u05df \u05e0\u05e1\u05d2\u05e8 (\u05ea\u05d5\u05e7\u05df \u05d1\u05e9\u05d8\u05d7)',function(){_truMgrSetStatus(id,TRUSTEE_S_CLOSED);});
-      else item('\u21a9','\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9',function(){_truMgrSetStatus(id,TRUSTEE_S_OPEN);});
+      else{
+        if(!r.verified_by)item('\u2714','\u05d0\u05e9\u05e8 \u05e9\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05e0\u05d1\u05d3\u05e7\u05d4',function(){_truVerifyClose(id);});
+        item('\u21a9','\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9',function(){_truMgrSetStatus(id,TRUSTEE_S_OPEN);});
+      }
       item('\ud83d\udcdd',_truTaskFor(id)?'\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d4':'\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4 (\u05e0\u05d9\u05ea\u05d5\u05d1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d4)',function(){if(_truTaskFor(id))goPage('tasks');else _truMgrSpawnTask(id);});
       item('\ud83d\udccc','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',function(){_truMgrNote(id);});
       sep();
@@ -16410,6 +16554,36 @@ function _truRowMenu(anchor,id){
 }
 // quiet: the caller is closing several at once and will toast and re-render
 // itself \u2014 same single write path either way.
+// ---- 4.5 ----
+// A trustee closes their own finding by photographing the fix, and the points
+// are awarded on that. That is Michael's explicit decision — DECISIONS.md
+// 2026-09-18 §3, deliberately with no UPDATE and no RPC so it works offline
+// through the outbox — and none of it changes here. The scoring is untouched.
+//
+// What was missing is the second pair of eyes. There is no verification field
+// anywhere in the trustee_reports schema (id, u, m, t, d, location_id, loc,
+// ok, f, photo_url, s, ref, mgr_note, ts), so נסגר on the manager's screen
+// means «a trustee photographed a fix», not «somebody checked» — and the two
+// are indistinguishable at a glance, including in the audit-readiness report.
+window._truVerifyClose=function(id){
+  var r=_truFind(id);if(!r){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  if(r.s!==TRUSTEE_S_CLOSED){toast('\u05d4\u05de\u05de\u05e6\u05d0 \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e1\u05d2\u05d5\u05e8');return;}
+  if(r.verified_by){toast('\u05db\u05d1\u05e8 \u05d0\u05d5\u05e9\u05e8');return;}
+  if(!confirm('\u05dc\u05d0\u05e9\u05e8 \u05e9\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05e0\u05d1\u05d3\u05e7\u05d4?\n\n'+String(r.f||'').substring(0,80)))return;
+  r.verified_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
+  r.verified_at=new Date().toISOString();
+  sbUpd('trustee_reports',r);sdb();
+  toast('\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4 \u2713');
+  rTrustees();
+};
+function _truVerifyBadge(r){
+  if(!r||r.s!==TRUSTEE_S_CLOSED)return '';
+  if(r.verified_by)return ' <span class="b bG" title="'+esc(String(r.verified_by))+'">\u2714 \u05e0\u05d1\u05d3\u05e7</span>';
+  return ' <span class="b bY">\u05d8\u05e8\u05dd \u05e0\u05d1\u05d3\u05e7</span>';
+}
+function _truUnverified(m){
+  return _truRows(m).filter(function(r){return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED&&!r.verified_by;});
+}
 function _truMgrSetStatus(id,st,quiet){
   var r=_truFind(id);if(!r)return;
   r.s=st;sbUpd('trustee_reports',r);sdb();
@@ -18823,7 +18997,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();

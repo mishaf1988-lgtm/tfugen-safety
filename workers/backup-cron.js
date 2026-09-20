@@ -42,7 +42,9 @@ const TABLES = [
   // the trustee programme
   'trustee_reports','trustees','trustee_winners','trustee_tasks',
   // history nothing else keeps
-  'ncr_ai','ncr_comments','ncr_patterns','equip_inspection_history','audit_log'
+  'ncr_ai','ncr_comments','ncr_patterns','equip_inspection_history','audit_log',
+  // renewal history (3.3) and the management reviews §9.3.3 says to retain (6.11)
+  'record_history','mgmt_reviews'
 ];
 
 export default {
