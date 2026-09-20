@@ -18,12 +18,31 @@
 // the user still ends up with backups in OneDrive without us needing to
 // solve the cross-platform auth problem on the Worker side.
 
+// Every table that would have to be restored to bring the factory back.
+//
+// 2026-09-20: this list had 33 names and was missing two whole groups.
+//   * the four trustee tables — the entire worker-participation programme,
+//     which is ISO 45001 §5.4 evidence, and the only record of who reported
+//     what. The in-app backup had them; the cron, which is the one that runs
+//     unattended, did not.
+//   * the history tables nothing else keeps: ncr_ai (CLAUDE.md names it
+//     protected production history, versioned per analysis), ncr_comments,
+//     ncr_patterns, equip_inspection_history, and audit_log — which is the
+//     answer to "who changed this record" and exists nowhere else.
+//
+// notifications_log is deliberately NOT here: it is an append-only delivery
+// log, it is the one table capped on sync (_sbLimit), and it is recoverable
+// from the CSV export. Everything else that holds a fact goes in.
 const TABLES = [
   'docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl',
   'ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds',
   'hearing_tests','tasks','app_users','toolbox','env_aspects','page_files',
   'locations','saved_views','notification_prefs','custom_props','projects',
-  'inspection_types','issue_types'
+  'inspection_types','issue_types',
+  // the trustee programme
+  'trustee_reports','trustees','trustee_winners','trustee_tasks',
+  // history nothing else keeps
+  'ncr_ai','ncr_comments','ncr_patterns','equip_inspection_history','audit_log'
 ];
 
 export default {
@@ -38,7 +57,27 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/health') {
-      return new Response('ok', { status: 200 });
+      // Answers what actually happened, not that the worker is reachable.
+      // 200 = a backup succeeded recently. 503 = it has not, and says why, so
+      // an uptime check pointed here notices a cron that stopped running.
+      let last = LAST_RUN;
+      if (!last && env.BACKUP_STATE) {
+        try { const raw = await env.BACKUP_STATE.get('last_run'); if (raw) last = JSON.parse(raw); } catch (e) { /* fall through to unknown */ }
+      }
+      if (!last) {
+        return new Response(JSON.stringify({ status: 'unknown', detail: 'no run recorded by this worker yet' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      }
+      const age = Date.now() - Date.parse(last.at);
+      const stale = !(age < STALE_MS);
+      const healthy = last.ok && !stale;
+      return new Response(JSON.stringify({
+        status: healthy ? 'ok' : (stale ? 'stale' : 'failing'),
+        last_run_at: last.at,
+        age_hours: Math.round(age / 3600000),
+        ok: last.ok, errors: last.errors,
+        total_rows: last.total_rows, table_count: last.table_count,
+        filename: last.filename,
+      }), { status: healthy ? 200 : 503, headers: { 'Content-Type': 'application/json' } });
     }
     if (url.pathname === '/run') {
       const key = request.headers.get('x-trigger') || url.searchParams.get('key');
@@ -120,7 +159,7 @@ async function runBackup(env) {
     }
   }
 
-  return {
+  const result = {
     ok: uploadOk && errors.length === 0,
     filename,
     table_count: snapshot._meta.table_count,
@@ -131,7 +170,26 @@ async function runBackup(env) {
     prune: pruneInfo,
     duration_ms: Date.now() - start
   };
+  // Remember it. Until now the only trace of a run was a Cloudflare log line,
+  // and /health answered 'ok' whether the cron had run an hour ago or stopped
+  // in July — so a backup that quietly died looked exactly like one that
+  // worked. LAST_RUN is a KV binding when one is configured; without it the
+  // value lives in module scope, which still covers the common case of a
+  // warm worker and costs nothing.
+  LAST_RUN = { at: new Date().toISOString(), ok: result.ok, filename: result.filename,
+               total_rows: result.total_rows, table_count: result.table_count,
+               errors: result.errors.length, duration_ms: result.duration_ms };
+  try { if (env.BACKUP_STATE) await env.BACKUP_STATE.put('last_run', JSON.stringify(LAST_RUN)); } catch (e) { /* state is a convenience, never fail a good backup over it */ }
+  return result;
 }
+
+// The last run this worker instance saw. Module scope survives between
+// invocations on a warm worker; env.BACKUP_STATE (KV) survives a cold one.
+let LAST_RUN = null;
+
+// How long a gap makes a backup system "not working". Dailies, so a day and a
+// half of silence is already wrong.
+const STALE_MS = 36 * 3600 * 1000;
 
 // Keep only the latest `keep` snapshot files in the bucket, sorted by
 // filename DESC (filenames embed the ISO timestamp so lexical sort
