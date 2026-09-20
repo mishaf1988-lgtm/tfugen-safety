@@ -6170,6 +6170,184 @@ function eqiSearch(){var q=g('eqi-q');window._eqiQ=q?q.value.toLowerCase():'';_e
 // row currently visible on the equipment page (after category/status/search/
 // location filters). Designed for monthly ISO 45001 audits: header + summary
 // pills + table sorted by next-inspection-date + signature line + footer.
+// ISO audit report. An auditor for 45001 or 14001 does not ask "show me your
+// app" — they ask, clause by clause, "show me the evidence, and show me where
+// it is thin". Every one of those answers already lives in this database,
+// scattered across nineteen pages. This puts them on one sheet.
+//
+// A clause is GREEN only when there are records AND something happened in the
+// last twelve months. An auditor discounts a register that stopped being kept.
+// Amber and red both name the exact number behind them, so nothing here is an
+// opinion the safety manager has to defend without a figure.
+var _ISO_RECENT_MONTHS=12;
+function _isoCount(tbl){return (DB[tbl]||[]).length;}
+// Rows whose own date falls inside the window. Undated rows do not count as
+// recent — that is the whole point of the question.
+function _isoRecent(tbl,fld,months){
+  var cut=new Date();cut.setMonth(cut.getMonth()-(months||_ISO_RECENT_MONTHS));
+  var c=cut.toISOString().substring(0,10);
+  return (DB[tbl]||[]).filter(function(r){
+    var v=r&&r[fld];if(!v)return false;
+    return String(v).substring(0,10)>=c;
+  }).length;
+}
+// Records carrying an expiry, split into valid and lapsed.
+function _isoExpiry(tbl){
+  var ok=0,gone=0,none=0;
+  (DB[tbl]||[]).forEach(function(r){
+    if(!r.e){none++;return;}
+    if(du(r.e)<0)gone++;else ok++;
+  });
+  return {ok:ok,gone:gone,none:none,total:(DB[tbl]||[]).length};
+}
+function _isoClauses(){
+  var C=[];
+  function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||''});}
+  var both='45001 + 14001',s45='45001',s14='14001';
+
+  // 5.4 — worker participation. The trustee programme is the evidence.
+  var truN=_isoCount('trustees'),truR=_isoCount('trustee_reports');
+  // _truRowMonth falls back to the report's own date when m is missing, and
+  // _truThisMonth is the same key the trustee screens use — reading r.m by
+  // hand here would disagree with them on a row saved without it.
+  var truMonth=(typeof _truRowMonth==='function'&&typeof _truThisMonth==='function')
+    ? (DB.trustee_reports||[]).filter(function(r){return _truRowMonth(r)===_truThisMonth();}).length : 0;
+  add(s45,'5.4','\u05d4\u05e9\u05ea\u05ea\u05e4\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d5\u05d4\u05ea\u05d9\u05d9\u05e2\u05e6\u05d5\u05ea',
+    truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u00b7 '+truMonth+' \u05d4\u05d7\u05d5\u05d3\u05e9',
+    truN?(truMonth?'ok':'warn'):'bad',
+    truN?(truMonth?'':'\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9'):'\u05dc\u05d0 \u05de\u05d5\u05e0\u05d5 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+
+  // 6.1.2 — hazard identification and risk assessment.
+  var rskN=_isoCount('rsk');
+  add(both,'6.1.2','\u05d6\u05d9\u05d4\u05d5\u05d9 \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d4\u05e2\u05e8\u05db\u05ea\u05dd',rskN+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd',rskN?'ok':'bad',rskN?'':'\u05de\u05e8\u05e9\u05dd \u05d4\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e8\u05d9\u05e7');
+
+  // 6.1.2 (14001) — environmental aspects.
+  var easpN=_isoCount('env_aspects');
+  add(s14,'6.1.2','\u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd',easpN+' \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd',easpN?'ok':'bad',easpN?'':'\u05dc\u05d0 \u05d6\u05d5\u05d4\u05d5 \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd');
+
+  // 6.1.3 — legal and other requirements.
+  var legN=_isoCount('leg');
+  var legSrc=(DB.leg||[]).filter(function(r){return r.src_url;}).length;
+  add(both,'6.1.3','\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05d5\u05d0\u05d7\u05e8\u05d5\u05ea',legN+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05ea\u05e7\u05e0\u05d5\u05ea \u00b7 '+legSrc+' \u05e2\u05dd \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05e7\u05d5\u05e8',legN?(legSrc?'ok':'warn'):'bad',
+    legN?(legSrc?'':'\u05d0\u05e3 \u05d7\u05d5\u05e7 \u05d0\u05d9\u05e0\u05d5 \u05de\u05e7\u05d5\u05e9\u05e8 \u05dc\u05e0\u05d5\u05e1\u05d7 \u05d4\u05de\u05e7\u05d5\u05e8'):'\u05de\u05e8\u05e9\u05dd \u05d4\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05e8\u05d9\u05e7');
+
+  // 7.2 — competence. Training with a live expiry date.
+  var tr=_isoExpiry('tr');
+  add(both,'7.2','\u05db\u05e9\u05d9\u05e8\u05d5\u05ea \u05d5\u05d4\u05d3\u05e8\u05db\u05d4',tr.total+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u00b7 '+tr.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3 \u00b7 '+tr.gone+' \u05e4\u05d2\u05d5',
+    tr.total?(tr.gone?'warn':'ok'):'bad',
+    tr.total?(tr.gone?(tr.gone+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e4\u05d2\u05d5 \u05d5\u05dc\u05d0 \u05d7\u05d5\u05d3\u05e9\u05d5'):''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4');
+
+  // 7.4 — communication and awareness: toolbox talks.
+  var tbN=_isoCount('toolbox'),tbR=_isoRecent('toolbox','d');
+  add(both,'7.4','\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea \u05d5\u05de\u05d5\u05d3\u05e2\u05d5\u05ea',tbN+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+tbR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',tbN?(tbR?'ok':'warn'):'bad',
+    tbN?(tbR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+
+  // 8.1 — operational control: permits, PPE, statutory equipment inspections.
+  var ptwN=_isoCount('ptw'),ppe=_isoExpiry('ppe'),eqi=_isoExpiry('equip_inspections');
+  add(both,'8.1','\u05d1\u05e7\u05e8\u05d4 \u05ea\u05e4\u05e2\u05d5\u05dc\u05d9\u05ea',ptwN+' \u05d4\u05d9\u05ea\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u00b7 '+ppe.total+' \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u00b7 '+eqi.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u00b7 '+eqi.gone+' \u05e4\u05d2\u05d5',
+    eqi.total?((eqi.gone||eqi.none)?'warn':'ok'):'bad',
+    eqi.total?[(eqi.gone?eqi.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05e4\u05d2\u05d5 \u2014 \u05d4\u05e4\u05e8\u05ea \u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea':''),(eqi.none?eqi.none+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05db\u05dc\u05dc':'')].filter(Boolean).join(' · '):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05d5\u05ea');
+
+  // 8.1 (14001) — waste and hazardous materials.
+  var wstN=_isoCount('wst'),wstR=_isoRecent('wst','d'),hzmN=_isoCount('hzm');
+  add(s14,'8.1','\u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',wstN+' \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u00b7 '+wstR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u00b7 '+hzmN+' \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',
+    (wstN||hzmN)?(wstR?'ok':'warn'):'bad',
+    (wstN||hzmN)?(wstR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05e4\u05d9\u05e0\u05d5\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05d0\u05d9\u05df \u05de\u05e8\u05e9\u05dd \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd');
+
+  // 8.2 — emergency preparedness: drills.
+  var drlN=_isoCount('drl'),drlR=_isoRecent('drl','d');
+  add(both,'8.2','\u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d5\u05ea\u05d2\u05d5\u05d1\u05d4 \u05dc\u05de\u05e6\u05d1\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd',drlN+' \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd \u00b7 '+drlR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',drlN?(drlR?'ok':'warn'):'bad',
+    drlN?(drlR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd');
+
+  // 9.1 — monitoring and measurement: safety rounds, inspections, health.
+  var insN=_isoCount('ins'),insR=_isoRecent('ins','d');
+  var rndR=_isoRecent('rounds','d',3);
+  var medX=_isoExpiry('med'),hearN=_isoCount('hearing_tests');
+  add(both,'9.1','\u05e0\u05d9\u05d8\u05d5\u05e8, \u05de\u05d3\u05d9\u05d3\u05d4 \u05d5\u05e0\u05d9\u05ea\u05d5\u05d7',insN+' \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+insR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u00b7 '+rndR+' \u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d1\u05e8\u05d1\u05e2\u05d5\u05df \u00b7 '+medX.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u00b7 '+hearN+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',
+    (insR||rndR)?((medX.gone)?'warn':'ok'):'bad',
+    (insR||rndR)?(medX.gone?medX.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u05e4\u05d2\u05d5':''):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8 \u05d0\u05d5 \u05e1\u05d1\u05d1 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4');
+
+  // 9.2 — internal audit.
+  var audN=_isoCount('auds'),audR=_isoRecent('auds','d');
+  add(both,'9.2','\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',audN+' \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u00b7 '+audR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',audN?(audR?'ok':'warn'):'bad',
+    audN?(audR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd');
+
+  // 10.2 — nonconformity and corrective action, and whether anyone checked
+  // that the corrective action worked. This is the clause the app is built
+  // around, and the verification queue is what an auditor asks for last.
+  var ncrN=_isoCount('ncr');
+  var ncrOpen=(DB.ncr||[]).filter(function(r){return r.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
+  var capaDue=(typeof _capaDue==='function')?_capaDue().length:0;
+  var verified=(DB.ncr||[]).filter(function(r){return r.verified_by;}).length;
+  var incN=_isoCount('inc'),nmN=_isoCount('near_miss');
+  add(both,'10.2','\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05d5\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea',ncrN+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u00b7 '+ncrOpen+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u00b7 '+verified+' \u05d0\u05d5\u05de\u05ea\u05d5 \u05dc\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u00b7 '+incN+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u00b7 '+nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',
+    ncrN?(capaDue?'warn':'ok'):'bad',
+    ncrN?(capaDue?capaDue+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d9\u05d5\u05ea\u05e8 \u05de-30 \u05d9\u05d5\u05dd \u05d5\u05d0\u05d9\u05e9 \u05dc\u05d0 \u05d1\u05d3\u05e7 \u05d0\u05dd \u05e2\u05d1\u05d3\u05d5':''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4');
+  return C;
+}
+window.isoAuditReport=function(){
+  var C=_isoClauses();
+  var now=new Date();
+  var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
+  var nOk=C.filter(function(c){return c.st==='ok';}).length;
+  var nWarn=C.filter(function(c){return c.st==='warn';}).length;
+  var nBad=C.filter(function(c){return c.st==='bad';}).length;
+  var icon={ok:'✅',warn:'⚠️',bad:'❌'};
+  var body=C.map(function(c,i){
+    return '<tr class="'+c.st+'">'+
+      '<td class="num">'+(i+1)+'</td>'+
+      '<td class="cl"><b>'+esc(c.cl)+'</b><div class="std">'+esc(c.std)+'</div></td>'+
+      '<td><b>'+esc(c.title)+'</b></td>'+
+      '<td>'+esc(c.ev)+'</td>'+
+      '<td class="st">'+icon[c.st]+'</td>'+
+      '<td class="gap">'+(c.gap?esc(c.gap):'—')+'</td>'+
+    '</tr>';
+  }).join('');
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
+  '<style>'+
+    '@page{size:A4;margin:12mm}'+
+    'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
+    '.head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #cc1f1f;padding:8px 0;margin-bottom:10px}'+
+    '.head img{height:56px}.head h1{margin:0;font-size:17px;color:#cc1f1f}'+
+    '.head .sub{font-size:11px;color:#5a6070;margin-top:3px}'+
+    '.summary{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;font-size:12px}'+
+    '.summary .pill{padding:5px 12px;border-radius:12px;border:1px solid #ddd;background:#f8fafc}'+
+    '.summary .pill.bad{background:#fee2e2;border-color:#cc1f1f;color:#991b1b}'+
+    '.summary .pill.warn{background:#fef3c7;border-color:#b45309;color:#92400e}'+
+    '.summary .pill.ok{background:#dcfce7;border-color:#16a34a;color:#15803d}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px}'+
+    'th{background:#cc1f1f;color:#fff;text-align:right;padding:7px;border:1px solid #cc1f1f}'+
+    'td{padding:6px 7px;border:1px solid #ddd;vertical-align:top}'+
+    'td.num{text-align:center;width:22px;color:#5a6070}'+
+    'td.cl{white-space:nowrap;width:70px}td.cl .std{font-size:9px;color:#5a6070;font-weight:400;margin-top:2px}'+
+    'td.st{text-align:center;width:34px;font-size:15px}'+
+    'td.gap{color:#991b1b}'+
+    'tr.ok td.gap{color:#5a6070}'+
+    'tr{page-break-inside:avoid}'+
+    '.note{margin-top:12px;font-size:10px;color:#5a6070;background:#f8fafc;border-right:3px solid #cc1f1f;padding:8px 10px;line-height:1.7}'+
+    '.foot{margin-top:16px;display:flex;justify-content:space-between;font-size:10px;color:#5a6070;border-top:1px solid #ddd;padding-top:10px}'+
+    '.foot .line{border-bottom:1px solid #1a1d23;width:150px;display:inline-block;height:18px}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
+  '</style></head><body>'+
+  '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
+  '<div class="head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+
+    '<div><h1>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df \u00b7 \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
+  '<div class="summary">'+
+    '<span class="pill ok">'+'\u05de\u05db\u05d5\u05e1\u05d4:'+' <b>'+nOk+'</b></span>'+
+    (nWarn?'<span class="pill warn">'+'\u05e4\u05e2\u05e8:'+' <b>'+nWarn+'</b></span>':'')+
+    (nBad?'<span class="pill bad">'+'\u05d7\u05e1\u05e8:'+' <b>'+nBad+'</b></span>':'')+
+    '<span class="pill">'+'\u05e1\u05e2\u05d9\u05e4\u05d9\u05dd:'+' <b>'+C.length+'</b></span>'+
+  '</div>'+
+  '<table><thead><tr><th>#</th><th>'+'\u05e1\u05e2\u05d9\u05e3'+'</th><th>'+'\u05d3\u05e8\u05d9\u05e9\u05ea \u05d4\u05ea\u05e7\u05df'+'</th><th>'+'\u05d4\u05e8\u05d0\u05d9\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea'+'</th><th>'+'\u05de\u05e6\u05d1'+'</th><th>'+'\u05de\u05d4 \u05d7\u05e1\u05e8'+'</th></tr></thead><tbody>'+body+'</tbody></table>'+
+  '<div class="note">'+'\u05d4\u05d3\u05d5\u05d7 \u05de\u05d5\u05e4\u05e7 \u05de\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d4\u05d7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e8\u05d2\u05e2 \u05d4\u05d4\u05e4\u05e7\u05d4. \u05e1\u05e2\u05d9\u05e3 \u05de\u05e1\u05d5\u05de\u05df \u05db\u05de\u05db\u05d5\u05e1\u05d4 \u05e8\u05e7 \u05db\u05e9\u05d9\u05e9 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05d2\u05dd \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05d1-12 \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u2014 \u05de\u05e8\u05e9\u05dd \u05e9\u05d4\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e0\u05d4\u05dc \u05d0\u05d9\u05e0\u05d5 \u05e8\u05d0\u05d9\u05d4. \u05d4\u05d3\u05d5\u05d7 \u05d0\u05d9\u05e0\u05d5 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea: \u05d4\u05d5\u05d0 \u05de\u05e8\u05d0\u05d4 \u05d0\u05d9\u05e4\u05d4 \u05d4\u05e8\u05d0\u05d9\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea \u05d5\u05d0\u05d9\u05e4\u05d4 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05e9\u05d4\u05de\u05d1\u05e7\u05e8 \u05de\u05d2\u05d9\u05e2.'+'</div>'+
+  '<div class="foot"><div>'+'\u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9: '+'<span class="line"></span></div><div>'+'\u05ea\u05d0\u05e8\u05d9\u05da: '+'<span class="line"></span></div></div>'+
+  '</body></html>';
+  var w=window.open('','_blank');
+  if(!w){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd \u2014 \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
+  w.document.write(html);w.document.close();
+};
 function _eqiPrintAll(){
   // Reuse the same filter pipeline as rEqi so what the user sees == what prints.
   var locF=window._eqiLocFilter||'';
@@ -8584,6 +8762,7 @@ window._topMoreMenu=function(anchor){
   item('\ud83e\udd16','\u05e9\u05d0\u05dc \u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8 (AI)',function(){openModal('m-ask');if(typeof _askInit==='function')_askInit();});
   if(typeof _isAdminUser==='function'&&_isAdminUser())item('\ud83e\udde0','\u05db\u05dc\u05d9 AI (Agents)',function(){goPage('agents');});
   sep();
+  if(typeof _role==='function'&&_role()!=='reporter')item('\ud83c\udfdb','\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea ISO',function(){if(typeof isoAuditReport==='function')isoAuditReport();});
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
   item('\ud83d\udcc6','\u05d9\u05d9\u05e6\u05d0 \u05dc\u05d5\u05d7 \u05e9\u05e0\u05d4 (iCal/Google Calendar)',function(){if(typeof _exportICS==='function')_exportICS();});
