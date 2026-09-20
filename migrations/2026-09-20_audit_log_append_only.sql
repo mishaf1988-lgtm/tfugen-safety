@@ -44,6 +44,8 @@ BEGIN;
 
 -- הקריאה — בדיוק כמו קודם.
 DROP POLICY IF EXISTS audit_log_admin_manager_all ON public.audit_log;
+-- גם החדש — אחרת הרצה שנייה של הקובץ נופלת על «policy already exists».
+DROP POLICY IF EXISTS audit_log_admin_manager_select ON public.audit_log;
 
 CREATE POLICY audit_log_admin_manager_select ON public.audit_log
   FOR SELECT TO authenticated
