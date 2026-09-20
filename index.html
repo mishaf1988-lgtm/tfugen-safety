@@ -3289,10 +3289,25 @@ function sbSync(silent){
 // Learn how many photos are already waiting from an earlier visit, so the
 // badge tells the truth from the first paint.
 try{setTimeout(function(){if(typeof _phSync==='function')_phSync();},0);}catch(e){}
-window.addEventListener('online',function(){_obDrain();if(SB_ON)sbSync(true);});
-window.addEventListener('focus',function(){_obDrain();if(SB_ON)sbSync(true);});
+// Every sbSync fans out to 38 unlimited GETs. The focus handler fired the
+// whole fan-out each time the user came back to the tab, so switching between
+// WhatsApp and the app four times meant 152 requests on the factory's wifi —
+// and realtime (_rtStart) is already streaming the same changes live. This
+// pull is the safety net for when realtime dropped, not a per-glance refresh.
+// Reconnecting after being offline still pulls immediately: that is exactly
+// when the local copy is most likely to be stale.
+var _sbFocusPull=0, _SB_FOCUS_MIN_MS=60000;
+function _sbPullOnFocus(force){
+  if(!SB_ON)return;
+  var now=Date.now();
+  if(!force&&_sbFocusPull&&(now-_sbFocusPull)<_SB_FOCUS_MIN_MS)return;
+  _sbFocusPull=now;
+  sbSync(true);
+}
+window.addEventListener('online',function(){_obDrain();_sbPullOnFocus(true);});
+window.addEventListener('focus',function(){_obDrain();_sbPullOnFocus(false);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON)sbSync(true);},600*1000);
+setInterval(function(){if(SB_ON){_sbFocusPull=Date.now();sbSync(true);}},600*1000);
 
 // --- Realtime sync (Supabase postgres_changes) ---
 var _sbRT=null,_rtState='off';
@@ -5943,6 +5958,31 @@ function expFilter(f){
   });
   rExp();
 }
+// A list page has a ceiling on what it paints. Measured 2026-09-20 with
+// production-shaped data (375 NCRs, 150 rows in each expiry table, 200 pieces
+// of equipment): the tasks page put 16,548 elements in the DOM and the expiry
+// page 9,647. That is the phone's scroll budget, spent on rows nobody reaches.
+//
+// Both pages sort urgent-first BEFORE this runs, so the cap only ever hides
+// the tail. The counters above the list are computed from the full set and
+// stay honest - a cap that quietly changed the numbers would be worse than a
+// slow page. One button paints the rest.
+var _RENDER_CAP=200;
+function _capRows(rows,flag){
+  if(window[flag]||rows.length<=_RENDER_CAP)return rows;
+  return rows.slice(0,_RENDER_CAP);
+}
+// The footer row that says what is missing and offers to paint it.
+function _capNote(total,shown,onMore,cols){
+  if(shown>=total)return '';
+  var txt='\u05de\u05d5\u05e6\u05d2\u05d5\u05ea '+shown+' \u05de\u05ea\u05d5\u05da '+total+
+    ' \u2014 \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d4\u05d3\u05d7\u05d5\u05e4\u05d5\u05ea \u05e8\u05d0\u05e9\u05d5\u05e0\u05d5\u05ea. ';
+  var btn='<button class="btn btn-d btn-sm" onclick="'+onMore+'">\u05d4\u05e6\u05d2 \u05d0\u05ea \u05db\u05d5\u05dc\u05df ('+total+')</button>';
+  var inner='<div style="text-align:center;padding:12px;color:var(--t3);font-size:12px">'+txt+btn+'</div>';
+  return cols?('<tr><td colspan="'+cols+'" data-label="">'+inner+'</td></tr>'):inner;
+}
+function tskShowAll(){window._tskShowAll=true;rTasks();}
+function expShowAll(){window._expShowAll=true;rExp();}
 function rExp(){
   var items=_expCollect();
   var noDate=_expNoDate();
@@ -5981,12 +6021,14 @@ function rExp(){
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
   var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections'};
-  tb.innerHTML=rows.map(function(i){
+  var _expTotal=rows.length;
+  var _expShown=_capRows(rows,'_expShowAll');
+  tb.innerHTML=_expShown.map(function(i){
     var t=_tbl[i.mod]||'';
     var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'&#8212;';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'&#8212;')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
-  }).join('');
+  }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
 }
 window._eqiFilter='all';
 window._eqiQ='';
@@ -9315,7 +9357,9 @@ function rTasks(){
   var _cardsHost=g('tb-tasks-cards');
   tb.innerHTML='';
   if(!_cardsHost){console.warn('tb-tasks-cards missing \u2014 using tbody fallback');_cardsHost=tb;}
-  _cardsHost.innerHTML=rows.map(function(r){
+  var _tskTotal=rows.length;
+  var _tskShown=_capRows(rows,'_tskShowAll');
+  _cardsHost.innerHTML=_tskShown.map(function(r){
     var dueCls='';var dueLbl=r.due?fd(r.due):'\u2014';
     if(r.due&&!isDone(r)){
       var dd=du(r.due);
@@ -9359,7 +9403,7 @@ function rTasks(){
       '<div>'+sb(r.status)+'</div>'+
       '<div class="tsk-act">'+actions+'</div>'+
       '</div>';
-  }).join('');
+  }).join('')+_capNote(_tskTotal,_tskShown.length,'tskShowAll()',0);
   // Diagnostic row count, kept hidden: inspectable in devtools if a CSS
   // regression ever hides the list again, invisible to users.
   try{
