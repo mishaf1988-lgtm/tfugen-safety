@@ -2063,9 +2063,15 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="ncr-project-id" class="inp"></select></div>
     <div class="field"><label>&#127919; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</label><select id="ncr-issue-type-id" class="inp"></select></div>
     <div class="field"><label>&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;</label><input id="ncr-rc" type="text" class="inp" placeholder="&#1502;&#1492; &#1490;&#1512;&#1501; &#1500;&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1492;?"></div>
+    <!-- 1.11 — a second dimension, not a duplicate of issue_types: that tree
+         classifies the SYMPTOM (החלקות → שמן על הרצפה); this is the CAUSE. -->
+    <div class="field"><label>&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1497;&#1514; &#1505;&#1497;&#1489;&#1492;</label><select id="ncr-rc-cat" class="inp"><option value="">&#1496;&#1512;&#1501; &#1505;&#1493;&#1493;&#1490;</option><option>&#1488;&#1491;&#1501;</option><option>&#1504;&#1493;&#1492;&#1500;</option><option>&#1510;&#1497;&#1493;&#1491;</option><option>&#1505;&#1489;&#1497;&#1489;&#1492;</option><option>&#1504;&#1497;&#1492;&#1493;&#1500;</option></select></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
     <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;" &#1493;-"&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512;.</div><button type="button" id="ncr-ai-rc-btn" onclick="_ncrAIRcAction()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1489;&#1492; &#1493;&#1508;&#1506;&#1493;&#1500;&#1492;</button></div></div>
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="ncr-p" class="inp"><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option><option selected>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
+    <!-- 1.7 — §10.2.1e wants the measure recorded when the action is decided.
+         Without it the check 30 days later is a memory test («seems fine»). -->
+    <div class="field fw"><label>&#1511;&#1512;&#1497;&#1496;&#1512;&#1497;&#1493;&#1503; &#1492;&#1510;&#1500;&#1495;&#1492; &#8212; &#1488;&#1497;&#1498; &#1504;&#1491;&#1506; &#1513;&#1492;&#1508;&#1506;&#1493;&#1500;&#1492; &#1506;&#1489;&#1491;&#1492;?</label><textarea id="ncr-success-criteria" rows="2" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1488;&#1508;&#1505; &#1495;&#1494;&#1512;&#1493;&#1514; &#1489;-3 &#1505;&#1489;&#1489;&#1497;&#1501; &#1512;&#1510;&#1493;&#1508;&#1497;&#1501;"></textarea></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
     <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date" class="inp"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ncr-s" class="inp" onchange="ncrStatusChange()"><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option></select></div>
@@ -4505,7 +4511,7 @@ function svAud(){
   toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rAud();
 }
 function openNewNcrModal(){
-  ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-rc-cat','ncr-success-criteria','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
   // a <select> ignores value=''; a new NCR starts at the default, and without
   // this it would keep whatever the previously-opened record had.
   var _pEl=g('ncr-p');if(_pEl)_pEl.value='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea';
@@ -4526,7 +4532,7 @@ function openNewNcrModal(){
 // draft exists. Cleared on successful svNcr or explicit cancel.
 var _NCR_DRAFT_KEY='tfgn_ncr_draft_v1';
 var _NCR_DRAFT_TIMER=null;
-var _NCR_DRAFT_FIELDS=['ncr-d','ncr-a','ncr-p','ncr-loc','ncr-location-id','ncr-project-id','ncr-issue-type-id','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-notes','ncr-five-why'];
+var _NCR_DRAFT_FIELDS=['ncr-d','ncr-a','ncr-p','ncr-loc','ncr-location-id','ncr-project-id','ncr-issue-type-id','ncr-rc','ncr-rc-cat','ncr-success-criteria','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-notes','ncr-five-why'];
 function _ncrDraftSnapshot(){
   var snap={};
   _NCR_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el)snap[f]=el.value||'';});
@@ -4590,6 +4596,7 @@ function editNcr(id){
   // show their root cause in the form \u2014 and saving moves it to rc, so the
   // data heals through ordinary use instead of needing a migration.
   setIf('ncr-rc',rec.rc||rec.root_cause);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);setIf('ncr-p',rec.p);
+  setIf('ncr-rc-cat',rec.rc_cat);setIf('ncr-success-criteria',rec.success_criteria);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
   setIf('ncr-five-why',rec.five_why);
@@ -4653,6 +4660,8 @@ function svNcr(){
     project_id:gv('ncr-project-id')||null,
     issue_type_id:gv('ncr-issue-type-id')||null,
     rc:gv('ncr-rc')||'',
+    rc_cat:gv('ncr-rc-cat')||null,
+    success_criteria:gv('ncr-success-criteria')||null,
     c:gv('ncr-c')||'',
     o:gv('ncr-o')||'',
     u:gv('ncr-u')||null,
@@ -10572,6 +10581,7 @@ if(chipsEl){
   if(locF){var ln=(typeof _locName==='function')?_locName(locF):locF;chips.push({label:'📍 '+ln,clear:'ncrLocFilter(\'\')'});}
   if(prjF){var pn=(typeof _prjName==='function')?_prjName(prjF):prjF;chips.push({label:'🏗️ '+pn,clear:'ncrPrjFilter(\'\')'});}
   if(itypeF){var itn=(typeof _itypeName==='function')?_itypeName(itypeF):itypeF;chips.push({label:'\ud83c\udfaf '+itn,clear:'ncrItypeFilter(\'\')'});}
+  if(window._ncrCauseFilter)chips.push({label:'\ud83e\udde9 '+window._ncrCauseFilter,clear:'ncrCauseFilter(\'\')'});
   var _qfNcr=window._ncrQuickFilter||'';
   if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',m1:'\ud83d\udcc5 30 \u05d9\u05d5\u05dd',m3:'\ud83d\udcc5 90 \u05d9\u05d5\u05dd',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd',capa:'\u2705 \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05d0\u05d9\u05de\u05d5\u05ea'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
   chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
@@ -10615,9 +10625,15 @@ if(_ncrQF){
   // The verification queue as a filter: the same set the Today line counts.
   else if(_ncrQF==='capa'){var _due={};_capaDue().forEach(function(r){_due[r.id]=1;});rows=rows.filter(function(r){return _due[r.id];});}
 }
+// 1.11 — the pills are built from the rows BEFORE this filter, so choosing one
+// cause does not hide the others and leave no way back to them.
+var _ncrRowsPreCause=rows.slice();
+if(window._ncrCauseFilter)rows=rows.filter(function(r){return r.rc_cat===window._ncrCauseFilter;});
 // Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then newest first
 // by sd (\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9) \u2014 this used to localeCompare r.d, which is the description text.
-var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
+// \u05d2\u05d1\u05d5\u05d4\u05d4 is what the form offers; these weights only knew \u05d2\u05d1\u05d5\u05d4, so a
+// high-priority NCR sorted as if it had no priority at all.
+var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4\u05d4':1,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
 if(_ncrQF==='capa'){
   // A queue is worked oldest-first. Every row here is closed and unprioritised,
   // so the ordinary sort would fall through to newest-first and put the most
@@ -10662,7 +10678,8 @@ try{
     var inProgN=rows.filter(function(r){return r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';}).length;
     var closedN=rows.filter(function(r){return r.s==='\u05e1\u05d2\u05d5\u05e8';}).length;
     var critN=rows.filter(function(r){return r.p==='\u05e7\u05e8\u05d9\u05d8\u05d9';}).length;
-    var highN=rows.filter(function(r){return r.p==='\u05d2\u05d1\u05d5\u05d4'&&r.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
+    // The form offers \u05d2\u05d1\u05d5\u05d4\u05d4; this asked for \u05d2\u05d1\u05d5\u05d4, so the pill has always read 0.
+    var highN=rows.filter(function(r){return r.p==='\u05d2\u05d1\u05d5\u05d4\u05d4'&&r.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
     var staleN=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.ts)return false;return (Date.now()-new Date(r.ts).getTime())/86400000>=30;}).length;
     summaryEl.innerHTML=
       '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+rows.length+'</strong></span>'+
@@ -10672,6 +10689,7 @@ try{
       (critN?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05e7\u05e8\u05d9\u05d8\u05d9: <strong>'+critN+'</strong></span>':'')+
       (highN?'<span style="background:#ffedd5;border:1px solid #ea580c;border-radius:14px;padding:3px 10px;color:#9a3412">\u05d2\u05d1\u05d5\u05d4 \u05e4\u05ea\u05d5\u05d7: <strong>'+highN+'</strong></span>':'')+
       (staleN?'<span style="background:#f1f5f9;border:1px solid #475569;border-radius:14px;padding:3px 10px;color:#1e293b">\u23f3 \u05e4\u05ea\u05d5\u05d7 30+ \u05d9\u05de\u05d9\u05dd: <strong>'+staleN+'</strong></span>':'')+
+      _ncrCauseHtml(_ncrRowsPreCause)+
       (_ncrClosedHidden?'<span onclick="_ncrToggleClosed()" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e6\u05d2\u05ea \u05d4\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:14px;padding:3px 10px;color:#64748b;cursor:pointer">\ud83d\udd12 '+_ncrClosedHidden+' \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd \u05de\u05d5\u05e1\u05ea\u05e8\u05d9\u05dd</span>':'');
   }
 }catch(e){}
@@ -10728,11 +10746,39 @@ window._ncrFilter=t;
 });
 rNcr();
 }
+// ---- 1.11 ----
+// \u05de\u05d4 \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05db\u05d9 \u05e9\u05db\u05d9\u05d7\u05d4 \u05dc\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05d0\u05e6\u05dc\u05db\u05dd? is the question an ISO audit opens
+// with, and with 375 records the root cause was 375 free-text strings: no
+// way to count «12 of them were a procedure failure» without reading them all,
+// and no way to show a trend. issue_types already classifies the SYMPTOM, so
+// this is a second dimension rather than a duplicate of it.
+//
+// Counted from the DISPLAYED rows, like the pills beside it, so the numbers
+// and the list never disagree.
+function _ncrCauseCounts(rows){
+  var m={},n=0;
+  (rows||[]).forEach(function(r){var k=r&&r.rc_cat;if(!k)return;m[k]=(m[k]||0)+1;n++;});
+  return {map:m,n:n,list:Object.keys(m).sort(function(a,b){return m[b]-m[a];})};
+}
+function _ncrCauseHtml(rows){
+  var c=_ncrCauseCounts(rows);
+  if(!c.n)return '';
+  var sel=window._ncrCauseFilter||'';
+  var out=c.list.map(function(k){
+    var on=sel===k;
+    return '<span onclick="ncrCauseFilter(\''+esc(k)+'\')" title="\u05e1\u05e0\u05df \u05dc\u05e4\u05d9 \u05e1\u05d9\u05d1\u05d4 \u05d6\u05d5" style="background:'+(on?'#1e293b':'#eef2ff')+';border:1px solid #6366f1;border-radius:14px;padding:3px 10px;color:'+(on?'#fff':'#3730a3')+';cursor:pointer">'+esc(k)+': <strong>'+c.map[k]+'</strong></span>';
+  }).join('');
+  // An unclassified backlog is worth seeing, not hiding.
+  var none=(rows||[]).length-c.n;
+  if(none)out+='<span title="\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05dc\u05d0 \u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d9\u05ea \u05e1\u05d9\u05d1\u05d4" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:14px;padding:3px 10px;color:#64748b">\u05dc\u05dc\u05d0 \u05e1\u05d9\u05d5\u05d5\u05d2: <strong>'+none+'</strong></span>';
+  return out;
+}
+function ncrCauseFilter(v){window._ncrCauseFilter=(window._ncrCauseFilter===v)?'':(v||'');rNcr();}
 function ncrLocFilter(v){window._ncrLocFilter=v||'';rNcr();}
 function ncrPrjFilter(v){window._ncrPrjFilter=v||'';rNcr();}
 function ncrItypeFilter(v){window._ncrItypeFilter=v||'';rNcr();}
 function ncrQuickFilter(preset){window._ncrQuickFilter=preset||'';rNcr();toast('\u05e1\u05d9\u05e0\u05d5\u05df: '+preset);}
-function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';window._ncrItypeFilter='';window._ncrQuickFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
+function ncrClearAll(){window._ncrLocFilter='';window._ncrPrjFilter='';window._ncrItypeFilter='';window._ncrQuickFilter='';window._ncrCauseFilter='';if(typeof ncrTab==='function')ncrTab('all');toast('\u05e0\u05d5\u05e7\u05d4');}
 function _locFilterOptionsHtml(currentId,placeholder){
   var flat=(typeof _locFlatList==='function')?_locFlatList():[];
   var html='<option value="">'+(placeholder||'— \u05db\u05dc \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd —')+'</option>';
@@ -12308,8 +12354,9 @@ var VIEW_CONFIG={
   ncr:{title:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d5\u05ea / \u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',back:'ncr',fields:[
     ['\u05de\u05e1\u05f3','num'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9','sd'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],
     ['\u05e1\u05d5\u05d2','a'],['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','p'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],
-    ['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9','rc'],['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','root_cause'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','immediate'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','c'],['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],
+    ['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9','rc'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d9\u05ea \u05e1\u05d9\u05d1\u05d4','rc_cat'],['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','root_cause'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','immediate'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','c'],['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],
     ['\u05d9\u05e2\u05d3 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2','u'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','cd'],
+    ['\u05e7\u05e8\u05d9\u05d8\u05e8\u05d9\u05d5\u05df \u05d4\u05e6\u05dc\u05d7\u05d4','success_criteria'],['\u05ea\u05d5\u05e6\u05d0\u05ea \u05d0\u05d9\u05de\u05d5\u05ea','verification_result'],
     ['\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why','five_why'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   inc:{title:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',back:'inc',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','dt'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05e1\u05d5\u05d2','ty'],
@@ -12518,7 +12565,13 @@ function showView(tbl,id){
   if(tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8'&&rec.cd){
     var capaAge=_capaAge(rec);
     if(rec.verified_by){
-      html+='<div style="margin-top:8px;background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:10px;font-size:12px;color:#166534">&#9989; \u05d0\u05d5\u05de\u05ea \u05e2\u05dc \u05d9\u05d3\u05d9 <strong>'+esc(rec.verified_by)+'</strong> \u05d1-'+fd(String(rec.verified_at).substring(0,10))+(rec.verification_notes?'<div style="margin-top:4px;color:#15803d">'+esc(rec.verification_notes)+'</div>':'')+'</div>';
+      // A signature is not a result. An action judged INEFFECTIVE used to
+      // show the same green box as one that worked.
+      var _bad=rec.verification_result===CAPA_IN;
+      var _bg=_bad?'#fee2e2':'#dcfce7',_bd=_bad?'#cc1f1f':'#16a34a',_fg=_bad?'#991b1b':'#166534',_fg2=_bad?'#b91c1c':'#15803d';
+      var _ic=_bad?'\u274c':'\u2705';
+      var _hd=_bad?'\u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05de\u05ea\u05e7\u05e0\u05ea \u05dc\u05d0 \u05d4\u05d9\u05d9\u05ea\u05d4 \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05ea — \u05d0\u05d5\u05de\u05ea \u05e2\u05dc \u05d9\u05d3\u05d9':'\u05d0\u05d5\u05de\u05ea \u05e2\u05dc \u05d9\u05d3\u05d9';
+      html+='<div style="margin-top:8px;background:'+_bg+';border:1px solid '+_bd+';border-radius:8px;padding:10px;font-size:12px;color:'+_fg+'">'+_ic+' '+_hd+' <strong>'+esc(rec.verified_by)+'</strong> \u05d1-'+fd(String(rec.verified_at).substring(0,10))+(rec.verification_notes?'<div style="margin-top:4px;color:'+_fg2+'">'+esc(rec.verification_notes)+'</div>':'')+'</div>';
     }else if(capaAge>=CAPA_VERIFY_DAYS&&_isAdminUser()){
       html+='<div style="margin-top:8px"><button data-vid="'+esc(id)+'" onclick="_capaVerify(this.dataset.vid)" style="width:100%;background:#0d3d2d;border:1px solid #10b981;border-radius:8px;color:#10b981;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#9989; \u05d0\u05de\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea (\u05e1\u05d2\u05d5\u05e8 '+capaAge+' \u05d9\u05de\u05d9\u05dd)</button></div>';
     }else if(capaAge<CAPA_VERIFY_DAYS&&_isAdminUser()){
@@ -14533,21 +14586,44 @@ function _reopenCount(rec){
   return m?m.length:0;
 }
 function _reopenedNcrs(){return (DB.ncr||[]).filter(function(n){return _reopenCount(n)>0;});}
+// ---- 1.7 ----
+// _capaVerify wrote verified_by / verified_at / verification_notes and
+// nothing else, and the gate was `if(rec.verified_by){toast(\u05db\u05d1\u05e8 \u05d0\u05d5\u05de\u05ea);return;}`
+// — the mere existence of a signature meant «passed». So when the corrective
+// action did NOT work there was nowhere to say so. The two remaining moves
+// were: don't press the button (and the NCR sits in \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05d0\u05d9\u05de\u05d5\u05ea for
+// ever, looking like neglect), or press it and type \u05dc\u05d0 \u05e2\u05d1\u05d3 into the free
+// text — after which every screen, including the audit-readiness report,
+// showed it green.
+//
+// Judged against the criterion written at closing time, not against memory,
+// which is what §10.2.1e asks for. And an ineffective action routes into the
+// EXISTING _reopen rather than inventing a second reopen path.
+var CAPA_EFF='\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9',CAPA_IN='\u05dc\u05d0 \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9';
 window._capaVerify=function(id){
   var rec=(DB.ncr||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   if(rec.verified_by){toast('\u05db\u05d1\u05e8 \u05d0\u05d5\u05de\u05ea');return;}
-  var notes=prompt('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d0\u05d9\u05de\u05d5\u05ea (\u05d0\u05d9\u05da \u05d5\u05d5\u05d3\u05d0\u05ea \u05e9\u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05de\u05ea\u05e7\u05e0\u05ea \u05e2\u05d1\u05d3\u05d4?):','');
+  var crit=String(rec.success_criteria||'').trim();
+  var notes=prompt('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d0\u05d9\u05de\u05d5\u05ea — \u05de\u05d4 \u05e0\u05d1\u05d3\u05e7 \u05d1\u05e4\u05d5\u05e2\u05dc?'
+    +(crit?('\n\n\u05e7\u05e8\u05d9\u05d8\u05e8\u05d9\u05d5\u05df \u05d4\u05d4\u05e6\u05dc\u05d7\u05d4 \u05e9\u05e0\u05e7\u05d1\u05e2 \u05d1\u05e1\u05d2\u05d9\u05e8\u05d4:\n'+crit):('\n\n(\u05dc\u05d0 \u05e0\u05e7\u05d1\u05e2 \u05e7\u05e8\u05d9\u05d8\u05e8\u05d9\u05d5\u05df \u05d4\u05e6\u05dc\u05d7\u05d4 \u05d1\u05e1\u05d2\u05d9\u05e8\u05d4)')),'');
   if(notes===null)return;
   notes=String(notes).trim();
   if(!notes){toast('\u05e0\u05d3\u05e8\u05e9 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05d0\u05d9\u05de\u05d5\u05ea');return;}
+  var eff=confirm('\u05d4\u05d0\u05dd \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05de\u05ea\u05e7\u05e0\u05ea \u05e2\u05d1\u05d3\u05d4?\n\n'
+    +'\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05ea — \u05d4\u05d1\u05e2\u05d9\u05d4 \u05dc\u05d0 \u05d7\u05d6\u05e8\u05d4.\n'
+    +'\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d0 \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05ea — \u05d6\u05d4 \u05d9\u05d9\u05e8\u05e9\u05dd, \u05d5\u05ea\u05d5\u05e6\u05e2 \u05d4\u05e6\u05e2\u05d4 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9.');
   var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
   rec.verified_by=u;
   rec.verified_at=new Date().toISOString();
   rec.verification_notes=notes;
+  rec.verification_result=eff?CAPA_EFF:CAPA_IN;
   rec.ts=new Date().toISOString();
   sbUpd('ncr',rec);sdb();
-  toast('\u05d0\u05d5\u05de\u05ea \u2713');
+  toast(eff?('\u05d0\u05d5\u05de\u05ea \u05db\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9 \u2713'):'\u05e0\u05e8\u05e9\u05dd: \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05d4\u05d9\u05d9\u05ea\u05d4 \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05ea');
+  if(!eff&&typeof _reopen==='function'&&confirm('\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d0\u05d9-\u05d4\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u05de\u05d7\u05d3\u05e9 \u05db\u05d3\u05d9 \u05dc\u05d8\u05e4\u05dc \u05d1\u05d4 \u05e9\u05d5\u05d1?')){
+    _reopen('ncr',id);return;
+  }
   showView('ncr',id);
   if(typeof rNcr==='function')rNcr();if(typeof rDash==='function')rDash();
 };
