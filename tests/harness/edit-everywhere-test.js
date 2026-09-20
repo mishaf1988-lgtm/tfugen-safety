@@ -115,14 +115,29 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
 
   console.log('\n4. the permit’s work-type checkboxes come back ticked');
   {
+    // svPtw stores types as types.join(', ') — a STRING. The first version of
+    // this test used an array, so it only ever exercised the defensive branch
+    // and never the shape a real permit actually has.
     const r = await page.evaluate(() => {
-      DB.ptw = [{ id: 'p9', con: 'קבלן א', types: ['עבודות חמות', 'חלל מוקף'] }];
+      DB.ptw = [{ id: 'p9', con: 'קבלן א', types: 'עבודות חמות, חלל מוקף' }];
       _genEdit('ptw', 'p9');
       const on = Object.keys(_EDIT_MODS.ptw.c).filter((d) => { const el = g(d); return el && el.checked; });
       return { on: on.sort(), con: g('ptw-con').value };
     });
-    check('exactly the two saved types are ticked', r.on.join() === 'ptw-cnf,ptw-hot', r.on);
+    check('the stored string "עבודות חמות, חלל מוקף" ticks exactly those two boxes', r.on.join() === 'ptw-cnf,ptw-hot', r.on);
     check('and the contractor name is filled', r.con === 'קבלן א', r);
+    const arr = await page.evaluate(() => {
+      DB.ptw = [{ id: 'p8', con: 'קבלן ב', types: ['עבודה בגובה'] }];
+      _genEdit('ptw', 'p8');
+      return Object.keys(_EDIT_MODS.ptw.c).filter((d) => { const el = g(d); return el && el.checked; });
+    });
+    check('an array still works too, for any row saved before the join', arr.join() === 'ptw-hgt', arr);
+    const none = await page.evaluate(() => {
+      DB.ptw = [{ id: 'p7', con: 'קבלן ג' }];
+      _genEdit('ptw', 'p7');
+      return Object.keys(_EDIT_MODS.ptw.c).filter((d) => { const el = g(d); return el && el.checked; });
+    });
+    check('a permit with no types ticks nothing, and leaves no box from the previous record', none.length === 0, none);
   }
 
   console.log('\n5. opening a form any other way starts a NEW record');
