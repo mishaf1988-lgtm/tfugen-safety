@@ -185,11 +185,37 @@ async function sendWhatsApp(env, to, row, task) {
   }
 }
 
+// The bucket has been private since 2026-04-21, but the email kept linking the
+// /object/public/… URL the client stores — so "📷 תמונת הממצא" answered 400 for
+// every manager who ever clicked it. Mint a signed link instead. It is valid
+// for seven days, which is long enough to act on a hazard and short enough that
+// a forwarded mail does not become a permanent key to the photo.
+const PHOTO_LINK_TTL = 7 * 24 * 3600;
+async function signPhoto(serviceKey, publicUrl) {
+  const m = String(publicUrl || '').match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/([^?]+)/);
+  if (!m) return null;
+  try {
+    const r = await fetch(SUPABASE_URL + '/storage/v1/object/sign/' + m[1] + '/' + m[2], {
+      method: 'POST',
+      headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: PHOTO_LINK_TTL }),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.signedURL ? SUPABASE_URL + '/storage/v1' + d.signedURL : null;
+  } catch (e) { return null; }
+}
+
 async function sendEmail(env, to, row, task) {
   if (!env.RESEND_KEY) return 'error: email not configured (RESEND_KEY missing in Cloudflare env)';
   const who = esc(row.u), loc = esc(row.loc || 'לא צוין'), finding = esc(row.f || 'ללא תיאור');
   const date = esc(row.d || '');
-  const photo = row.photo_url && /^https?:\/\//.test(row.photo_url) ? '<p><a href="' + esc(row.photo_url) + '">📷 תמונת הממצא</a></p>' : '';
+  // A photo that cannot be opened is worse than no photo: it reads as a broken
+  // system. Link it only when the signature actually came back.
+  const signed = row.photo_url && /^https?:\/\//.test(row.photo_url) && env.SUPABASE_SERVICE_ROLE_KEY
+    ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url)
+    : null;
+  const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
   const subject = '🦺 ליקוי מנאמן בטיחות — ' + clean(row.u, 40) + ' · ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
     + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">🦺 ליקוי חדש מנאמן בטיחות</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן — ניהול הבטיחות</p></div>'
