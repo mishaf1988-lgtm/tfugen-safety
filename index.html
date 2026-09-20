@@ -6856,6 +6856,149 @@ function _isoClauses(){
     ncrN?(capaDue?capaDue+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d9\u05d5\u05ea\u05e8 \u05de-30 \u05d9\u05d5\u05dd \u05d5\u05d0\u05d9\u05e9 \u05dc\u05d0 \u05d1\u05d3\u05e7 \u05d0\u05dd \u05e2\u05d1\u05d3\u05d5':''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4');
   return C;
 }
+// ---- 6.13 ----
+// Nothing in the app answered the question a plant manager or a board asks:
+// «האם אנחנו בטוחים יותר?». Open counts, an ISO evidence sheet, and an AI
+// narrative told to compare with last quarter while being handed no
+// last-quarter numbers. The one real 12-month chart was buried in a 360px
+// panel inside the NCR Agent modal.
+//
+// Not charts on the home page: DECISIONS.md 2026-04-19 records that four
+// Chart.js graphs went on the dashboard in PR #16 and Michael asked for them
+// removed. What survived is this shape — a separate printable sheet, built
+// from hand-written SVG, on demand.
+//
+// The date column differs per table (`dt` on inc, `d` on near_miss/rounds/
+// toolbox, `sd`/`cd` on ncr), so the field is an argument and a fallback list,
+// never a guess. A caller that guessed wrong reports zero for ever without
+// erroring — there were three of those live in the weekly digest.
+function _trendRows(tbl,flds,fromISO,toISO){
+  var list=[].concat(flds);
+  return (DB[tbl]||[]).filter(function(r){
+    if(!r)return false;
+    var v=null;
+    for(var i=0;i<list.length;i++){if(r[list[i]]){v=r[list[i]];break;}}
+    if(!v)return false;
+    var d=String(v).substring(0,10);
+    return d>=fromISO&&d<toISO;
+  });
+}
+// Two windows of exactly the same length: the last 12 months, and the 12
+// months before them. Comparing nine months of this year against twelve of
+// last is how a plant «improves» on paper every January.
+function _trendWindows(){
+  var to=new Date();
+  var from=new Date(to.getTime());from.setFullYear(from.getFullYear()-1);
+  var pFrom=new Date(from.getTime());pFrom.setFullYear(pFrom.getFullYear()-1);
+  var iso=function(d){return d.toISOString().substring(0,10);};
+  return {from:iso(from),to:iso(to),pFrom:iso(pFrom),pTo:iso(from)};
+}
+// upGood: more is better. It is true for near-miss reports and rounds — a
+// plant that reports more near misses is not less safe, it is more honest —
+// and false for incidents and lost days. Getting this backwards is how a
+// reporting collapse reads as an improvement.
+function _trendDelta(cur,prev,upGood){
+  if(prev===null||prev===undefined||cur===null||cur===undefined)return {txt:'—',dir:'flat'};
+  if(!prev)return {txt:(cur?'\u05d0\u05d9\u05df \u05d1\u05e1\u05d9\u05e1 \u05dc\u05d4\u05e9\u05d5\u05d5\u05d0\u05d4':'—'),dir:'flat'};
+  var pct=Math.round(100*(cur-prev)/prev);
+  if(pct===0)return {txt:'\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9',dir:'flat'};
+  var up=pct>0;
+  return {txt:(up?'▲ ':'▼ ')+Math.abs(pct)+'%',dir:(up===!!upGood)?'good':'bad'};
+}
+function _trendIndicators(){
+  var w=_trendWindows();
+  var out=[];
+  function num(label,cur,prev,upGood,note){out.push({label:label,cur:cur,prev:prev,d:_trendDelta(cur,prev,upGood),note:note||''});}
+
+  var incC=_trendRows('inc',['dt','d'],w.from,w.to),incP=_trendRows('inc',['dt','d'],w.pFrom,w.pTo);
+  var ld=function(rows){return rows.reduce(function(a,r){return a+(parseInt(r.dy,10)||0);},0);};
+  num('\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea',incC.length,incP.length,false);
+  num('\u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea',ld(incC),ld(incP),false,'\u05e1\u05db\u05d5\u05dd \u05e9\u05d3\u05d4 \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea \u05d1\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea');
+
+  var nmC=_trendRows('near_miss',['d','ts'],w.from,w.to),nmP=_trendRows('near_miss',['d','ts'],w.pFrom,w.pTo);
+  num('\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',nmC.length,nmP.length,true,'\u05e2\u05dc\u05d9\u05d9\u05d4 = \u05ea\u05e8\u05d1\u05d5\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d8\u05d5\u05d1\u05d4 \u05d9\u05d5\u05ea\u05e8, \u05dc\u05d0 \u05e1\u05db\u05e0\u05d4 \u05d2\u05d3\u05d5\u05dc\u05d4 \u05d9\u05d5\u05ea\u05e8');
+  var ratio=function(nm,inc){return inc?Math.round(10*nm/inc)/10:null;};
+  num('\u05d9\u05d7\u05e1 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 : \u05ea\u05d0\u05d5\u05e0\u05d4',ratio(nmC.length,incC.length),ratio(nmP.length,incP.length),true,'\u05db\u05de\u05d4 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e2\u05dc \u05db\u05dc \u05ea\u05d0\u05d5\u05e0\u05d4');
+
+  var ncrOpenC=_trendRows('ncr',['sd','ts'],w.from,w.to),ncrOpenP=_trendRows('ncr',['sd','ts'],w.pFrom,w.pTo);
+  num('\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5',ncrOpenC.length,ncrOpenP.length,false);
+  num('\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5',_trendRows('ncr',['cd'],w.from,w.to).length,_trendRows('ncr',['cd'],w.pFrom,w.pTo).length,true);
+  if(typeof _ncrTimeStats==='function'){
+    var tC=_ncrTimeStats(new Date(w.from),new Date(w.to)),tP=_ncrTimeStats(new Date(w.pFrom),new Date(w.pTo));
+    num('\u05d6\u05de\u05df \u05e1\u05d2\u05d9\u05e8\u05d4 \u05de\u05de\u05d5\u05e6\u05e2 (\u05d9\u05de\u05d9\u05dd)',tC.avg===null?null:Math.round(tC.avg),tP.avg===null?null:Math.round(tP.avg),false);
+    num('\u05e0\u05e1\u05d2\u05e8\u05d5 \u05ea\u05d5\u05da 30 \u05d9\u05d5\u05dd (%)',tC.pct30,tP.pct30,true);
+  }
+  num('\u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8',_trendRows('rounds',['d','ts'],w.from,w.to).length,_trendRows('rounds',['d','ts'],w.pFrom,w.pTo).length,true);
+  num('\u05ea\u05d3\u05e8\u05d9\u05db\u05d9 Toolbox',_trendRows('toolbox',['d','ts'],w.from,w.to).length,_trendRows('toolbox',['d','ts'],w.pFrom,w.pTo).length,true);
+  num('\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',_trendRows('trustee_reports',['d','ts'],w.from,w.to).length,_trendRows('trustee_reports',['d','ts'],w.pFrom,w.pTo).length,true);
+  return {w:w,rows:out};
+}
+window.safetyTrendReport=function(){
+  var T=_trendIndicators(),w=T.w;
+  var now=new Date();
+  var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
+  var fdISO=function(v){try{return fd(v);}catch(e){return v;}};
+  var nGood=T.rows.filter(function(r){return r.d.dir==='good';}).length;
+  var nBad=T.rows.filter(function(r){return r.d.dir==='bad';}).length;
+  var val=function(v){return (v===null||v===undefined)?'—':String(v);};
+  var body=T.rows.map(function(r){
+    return '<tr class="'+r.d.dir+'">'+
+      '<td><b>'+esc(r.label)+'</b>'+(r.note?'<div class="note-s">'+esc(r.note)+'</div>':'')+'</td>'+
+      '<td class="n">'+esc(val(r.cur))+'</td>'+
+      '<td class="n prev">'+esc(val(r.prev))+'</td>'+
+      '<td class="d">'+esc(r.d.txt)+'</td>'+
+    '</tr>';
+  }).join('');
+  var chart='';
+  try{if(typeof _ncrTrend12Svg==='function')chart='<div class="chart"><div class="ch-t">\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9 — 12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</div>'+_ncrTrend12Svg()+'</div>';}catch(e){}
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? — \u05de\u05d2\u05de\u05d5\u05ea \u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4'+' · '+stamp+'</title>'+
+  '<style>'+
+    '@page{size:A4;margin:12mm}'+
+    'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
+    '.head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #cc1f1f;padding:8px 0;margin-bottom:10px}'+
+    '.head img{height:56px}.head h1{margin:0;font-size:17px;color:#cc1f1f}'+
+    '.head .sub{font-size:11px;color:#5a6070;margin-top:3px}'+
+    '.summary{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;font-size:12px}'+
+    '.summary .pill{padding:5px 12px;border-radius:12px;border:1px solid #ddd;background:#f8fafc}'+
+    '.summary .pill.bad{background:#fee2e2;border-color:#cc1f1f;color:#991b1b}'+
+    '.summary .pill.ok{background:#dcfce7;border-color:#16a34a;color:#15803d}'+
+    'table{width:100%;border-collapse:collapse;font-size:11px}'+
+    'th{background:#cc1f1f;color:#fff;text-align:right;padding:7px;border:1px solid #cc1f1f}'+
+    'td{padding:6px 7px;border:1px solid #ddd;vertical-align:top}'+
+    'td.n{text-align:center;width:70px;font-weight:700;font-size:13px}'+
+    'td.prev{font-weight:400;color:#5a6070}'+
+    'td.d{text-align:center;width:90px;font-weight:700}'+
+    'tr.good td.d{color:#15803d}tr.bad td.d{color:#991b1b}tr.flat td.d{color:#5a6070;font-weight:400}'+
+    '.note-s{font-size:9px;color:#5a6070;font-weight:400;margin-top:2px}'+
+    'tr{page-break-inside:avoid}'+
+    '.chart{margin:14px 0;page-break-inside:avoid}.ch-t{font-weight:700;font-size:12px;margin-bottom:4px}'+
+    '.note{margin-top:12px;font-size:10px;color:#5a6070;background:#f8fafc;border-right:3px solid #cc1f1f;padding:8px 10px;line-height:1.7}'+
+    '.foot{margin-top:16px;display:flex;justify-content:space-between;font-size:10px;color:#5a6070;border-top:1px solid #ddd;padding-top:10px}'+
+    '.foot .line{border-bottom:1px solid #1a1d23;width:150px;display:inline-block;height:18px}'+
+    '@media print{.no-print{display:none!important}}'+
+    '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
+  '</style></head><body>'+
+  '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
+  '<div class="head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+
+    '<div><h1>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8?'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df · \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
+  '<div class="summary">'+
+    '<span class="pill ok">'+'\u05d4\u05e9\u05ea\u05e4\u05e8\u05d5:'+' <b>'+nGood+'</b></span>'+
+    '<span class="pill bad">'+'\u05d4\u05d5\u05e8\u05e2\u05d5:'+' <b>'+nBad+'</b></span>'+
+    '<span class="pill">'+'\u05de\u05d3\u05d3\u05d9\u05dd:'+' <b>'+T.rows.length+'</b></span>'+
+  '</div>'+
+  '<table><thead><tr><th>'+'\u05de\u05d3\u05d3'+'</th><th>'+'12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd'+'</th><th>'+'12 \u05d4\u05e7\u05d5\u05d3\u05de\u05d9\u05dd'+'</th><th>'+'\u05e9\u05d9\u05e0\u05d5\u05d9'+'</th></tr></thead><tbody>'+body+'</tbody></table>'+
+  chart+
+  '<div class="note">'+'\u05e9\u05ea\u05d9 \u05d4\u05ea\u05e7\u05d5\u05e4\u05d5\u05ea \u05d1\u05d0\u05d5\u05e8\u05da \u05d6\u05d4\u05d4 \u05d1\u05d3\u05d9\u05d5\u05e7: '+fdISO(w.from)+'–'+fdISO(w.to)+' \u05de\u05d5\u05dc '+fdISO(w.pFrom)+'–'+fdISO(w.pTo)+'. '+
+    '\u05d7\u05e5 \u05d9\u05e8\u05d5\u05e7 = \u05d4\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e8\u05e6\u05d5\u05d9 \u05dc\u05d0\u05d5\u05ea\u05d5 \u05de\u05d3\u05d3, \u05d5\u05dc\u05d0 \u05d1\u05d4\u05db\u05e8\u05d7 \u05e2\u05dc\u05d9\u05d9\u05d4: \u05e2\u05dc\u05d9\u05d9\u05d4 \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2 \u05d5\u05d1\u05e1\u05d1\u05d1\u05d9\u05dd \u05d4\u05d9\u05d0 '+
+    '\u05e9\u05d9\u05e4\u05d5\u05e8, \u05d5\u05d9\u05e8\u05d9\u05d3\u05d4 \u05d1\u05d4\u05dd \u05d4\u05d9\u05d0 \u05e7\u05e8\u05d9\u05e1\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7 — \u05dc\u05d0 \u05de\u05e4\u05e2\u05dc \u05d1\u05d8\u05d5\u05d7 \u05d9\u05d5\u05ea\u05e8. \u05de\u05d3\u05d3 \u05e9\u05dc\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea \u05e9\u05dc\u05d5 \u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd '+
+    '\u05de\u05e1\u05d5\u05de\u05df «\u05d0\u05d9\u05df \u05d1\u05e1\u05d9\u05e1 \u05dc\u05d4\u05e9\u05d5\u05d5\u05d0\u05d4» \u05d5\u05dc\u05d0 \u05db-100% \u05e9\u05d9\u05e4\u05d5\u05e8. \u05d4\u05d3\u05d5\u05d7 \u05de\u05d5\u05e4\u05e7 \u05de\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d4\u05d7\u05d9\u05d9\u05dd \u05d1\u05e8\u05d2\u05e2 \u05d4\u05d4\u05e4\u05e7\u05d4.'+'</div>'+
+  '<div class="foot"><div>'+'\u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9: '+'<span class="line"></span></div><div>'+'\u05ea\u05d0\u05e8\u05d9\u05da: '+'<span class="line"></span></div></div>'+
+  '</body></html>';
+  var w2=window.open('','_blank');
+  if(!w2){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd — \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
+  w2.document.write(html);w2.document.close();
+};
 window.isoAuditReport=function(){
   var C=_isoClauses();
   var now=new Date();
@@ -9463,6 +9606,7 @@ window._topMoreMenu=function(anchor){
   if(typeof _isAdminUser==='function'&&_isAdminUser())item('\ud83e\udde0','\u05db\u05dc\u05d9 AI (Agents)',function(){goPage('agents');});
   sep();
   if(typeof _role==='function'&&_role()!=='reporter')item('\ud83c\udfdb','\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea ISO',function(){if(typeof isoAuditReport==='function')isoAuditReport();});
+  if(typeof _role==='function'&&_role()!=='reporter')item('\ud83d\udcc8','\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? (\u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4)',function(){if(typeof safetyTrendReport==='function')safetyTrendReport();});
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
   item('\ud83d\udcc6','\u05d9\u05d9\u05e6\u05d0 \u05dc\u05d5\u05d7 \u05e9\u05e0\u05d4 (iCal/Google Calendar)',function(){if(typeof _exportICS==='function')_exportICS();});
@@ -12924,14 +13068,14 @@ window._aiWeeklySummary=function(){
     if(isNaN(t))return false;
     return (nowMs-t)/86400000 < 7;
   }
-  var CRIT='\u05e7\u05e8\u05d9\u05d8\u05d9',HIGH='\u05d2\u05d1\u05d5\u05d4',CLOS='\u05e1\u05d2\u05d5\u05e8';
+  var CRIT='\u05e7\u05e8\u05d9\u05d8\u05d9',HIGH='\u05d2\u05d1\u05d5\u05d4\u05d4',CLOS='\u05e1\u05d2\u05d5\u05e8';
   var ncrLast=(DB.ncr||[]).filter(function(r){return inLast7(r.sd||r.src_date||r.ts);});
-  var ncrCrit=ncrLast.filter(function(r){return r.sv===CRIT;}).length;
-  var ncrHigh=ncrLast.filter(function(r){return r.sv===HIGH;}).length;
-  var ncrSamples=ncrLast.slice(0,5).map(function(r){return '\u2022 '+(r.num||'')+' '+String(r.d||'').substring(0,80)+(r.sv?' ['+r.sv+']':'');}).join('\n');
+  var ncrCrit=ncrLast.filter(function(r){return r.p===CRIT;}).length;
+  var ncrHigh=ncrLast.filter(function(r){return r.p===HIGH;}).length;
+  var ncrSamples=ncrLast.slice(0,5).map(function(r){return '\u2022 '+(r.num||'')+' '+String(r.d||'').substring(0,80)+(r.p?' ['+r.p+']':'');}).join('\n');
   var incLast=(DB.inc||[]).filter(function(r){return inLast7(r.dt||r.d);});
-  var incLD=incLast.reduce(function(a,r){return a+(parseInt(r.lost_days||0,10)||0);},0);
-  var incSamples=incLast.slice(0,3).map(function(r){return '\u2022 '+String(r.d||'(\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8)').substring(0,80)+(r.sv?' ['+r.sv+']':'')+(r.lost_days?' '+r.lost_days+' \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea':'');}).join('\n');
+  var incLD=incLast.reduce(function(a,r){return a+(parseInt(r.dy||0,10)||0);},0);
+  var incSamples=incLast.slice(0,3).map(function(r){return '\u2022 '+String(r.d||'(\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8)').substring(0,80)+(r.sv?' ['+r.sv+']':'')+(r.dy?' '+r.dy+' \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea':'');}).join('\n');
   var nmLast=(DB.near_miss||[]).filter(function(r){return inLast7(r.d);});
   var nmSamples=nmLast.slice(0,3).map(function(r){return '\u2022 '+String(r.descr||'').substring(0,80);}).join('\n');
   var rndLast=(DB.rounds||[]).filter(function(r){return inLast7(r.d);}).length;
