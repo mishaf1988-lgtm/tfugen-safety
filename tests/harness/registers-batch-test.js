@@ -113,10 +113,15 @@ let ACCEPT = true, DIALOGS = [];
     check('...and the expiry date', /תוקף עד/.test(view.text), view.text.slice(0, 200));
     check('the scanned certificate is wired through, since Smart Capture saves one', view.photoKey === 'file_url', view.photoKey);
 
+    // Was a regex over the source for the literal table list, which broke the
+    // moment 3.5 added hearing_tests to it (#681). What it meant to assert is
+    // that a med row reaches the calendar, so assert that instead.
     const cal = await page.evaluate(() => {
-      // the calendar row builds exactly this call; it used to dead-end
-      const tbls = [...document.querySelectorAll('script')].map((s) => s.textContent).join('');
-      return /\['ppe','tr','docs','ctr','equip_inspections','med'\]/.test(tbls);
+      const d = new Date(Date.now() + 5 * 864e5);
+      const iso = d.toISOString().split('T')[0];
+      DB.med = [{ id: 'm-cal', t: 'מוסא עלי', e: iso }];
+      const got = _calCollect(d.getFullYear(), d.getMonth());
+      return Object.keys(got).some((k) => (got[k] || []).some((i) => i.tbl === 'med' && i.id === 'm-cal'));
     });
     check('the calendar still collects med — this is the click that used to dead-end', cal, cal);
   }
