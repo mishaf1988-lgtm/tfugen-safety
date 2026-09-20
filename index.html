@@ -4439,7 +4439,11 @@ function editNcr(id){
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display=(rec.loc&&!rec.location_id)?'':'none';
   var prjSel=g('ncr-project-id');if(prjSel&&typeof _prjOptionsHtml==='function'){prjSel.innerHTML=_prjOptionsHtml(rec.project_id||null);}
   var itSel=g('ncr-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function'){itSel.innerHTML=_itypeOptionsHtml(rec.issue_type_id||null);}
-  setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);setIf('ncr-p',rec.p);
+  // The rows imported from Excel before this was fixed carry root_cause,
+  // not rc. Reading the old column here means the 375 production records
+  // show their root cause in the form \u2014 and saving moves it to rc, so the
+  // data heals through ordinary use instead of needing a migration.
+  setIf('ncr-rc',rec.rc||rec.root_cause);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);setIf('ncr-p',rec.p);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
   setIf('ncr-five-why',rec.five_why);
@@ -4466,6 +4470,32 @@ function svNcr(){
   var d=gv('ncr-d'),a=gv('ncr-a')||gv('ncr-sel-a')||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
   if(!d){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var s=gv('ncr-s')||'\u05e4\u05ea\u05d5\u05d7';
+  // ---- 1.6 : the closing gate ----
+  // The only check in this function was that the description is not empty.
+  // So \u05e1\u05d2\u05d5\u05e8 could be saved with no root cause, no corrective action and
+  // nobody responsible \u2014 and that record then counts as closed in the
+  // dashboard, in the ISO readiness report and in the average days-to-close,
+  // and lands in the effectiveness-verification queue after 30 days, asking
+  // somebody to verify an action that was never written down. \u00a710.2.1 is
+  // exactly this: "show me the evidence the corrective action was decided".
+  //
+  // It fires only on the TRANSITION to \u05e1\u05d2\u05d5\u05e8. The 375 records imported from
+  // Excel are already closed and mostly have none of these fields; editing
+  // one of them \u2014 fixing a typo, adding a location \u2014 must keep working.
+  var _prev=id?(DB.ncr||[]).find(function(r){return r.id===id;}):null;
+  var _wasClosed=!!(_prev&&_prev.s==='\u05e1\u05d2\u05d5\u05e8');
+  if(s==='\u05e1\u05d2\u05d5\u05e8'&&!_wasClosed){
+    var _miss=[];
+    if(!gv('ncr-rc'))_miss.push('\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9');
+    if(!gv('ncr-c'))_miss.push('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea');
+    if(!gv('ncr-o'))_miss.push('\u05d0\u05d7\u05e8\u05d0\u05d9');
+    if(_miss.length){
+      toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9: '+_miss.join(' \u00b7 '));
+      var _first=g(_miss[0]==='\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9'?'ncr-rc':(_miss[0]==='\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea'?'ncr-c':'ncr-o'));
+      if(_first)try{_first.focus();_first.scrollIntoView({block:'center'});}catch(e){}
+      return;
+    }
+  }
   var cat = (a==='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4') ? 'env' : 'saf';
   var rec={
     id:id||(NCRI++).toString(36)+Date.now().toString(36),
@@ -4495,10 +4525,12 @@ function svNcr(){
       _notifyEvent('ncr_critical',{title:(rec.num||'')+' '+String(rec.d||'').substring(0,40),id:rec.id});
     }
   }
+  var _nmLinked=(typeof _nmChainApply==='function')?_nmChainApply(rec):null;
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' NCR: '+d.substring(0,30));
   if(typeof _ncrDraftClear==='function')_ncrDraftClear();
   sdb();closeModal('m-ncr');rNcr();rDash();
-  toast('\u05e0\u05e9\u05de\u05e8 ✓');
+  if(_nmLinked&&typeof rNm==='function')try{rNm();}catch(e){}
+  toast(_nmLinked?'\u05e0\u05e9\u05de\u05e8 ✓ \u05d5\u05d4\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05e1\u05d5\u05de\u05df \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'\u05e0\u05e9\u05de\u05e8 ✓');
 }
 
 function openNewIncModal(){
@@ -9193,6 +9225,12 @@ function _collectVirtualTasks(){
   });
   (DB.near_miss||[]).forEach(function(m){
     if(!_isOpenish(m.s))return;
+    // A near-miss that became an NCR is represented by that NCR. Both rows
+    // used to sit in the task list for one event, and the near-miss one
+    // stayed open for ever because nothing ever closed it. \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc is the
+    // honest status for it \u2014 it is being handled, under the NCR \u2014 so the
+    // duplicate is removed here rather than by inventing a fourth status.
+    if(m.ncr_id&&(DB.ncr||[]).some(function(n){return n.id===m.ncr_id;}))return;
     virt.push({id:'v:near_miss:'+m.id,title:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+String(m.descr||'').substring(0,60),assignee:m.rep||null,due:null,status:_mapStatus(m.s),priority:m.sev==='\u05d7\u05de\u05d5\u05e8'?'\u05e7\u05e8\u05d9\u05d8\u05d9':_TSK_PRI_DEF,source_table:'near_miss',source_id:m.id,notes:null,isVirtual:true});
   });
   function _addExp(tbl,nameFn,ownerFn){
@@ -11339,7 +11377,14 @@ function _notifDailyScan(){
     var today=new Date();today.setHours(0,0,0,0);
     var todayStr=today.toISOString().split('T')[0];
     // task_overdue: open/in-progress tasks with due < today - 3 days
-    var overdueTasks=(DB.tasks||[]).filter(function(t){
+    // Virtual tasks \u2014 an NCR past its due date, a piece of equipment past its
+    // inspection \u2014 were in every other screen's list and in none of the
+    // outgoing notifications. An NCR that blew its target sent nothing: no
+    // WhatsApp, no row in notifications_log. The dashboard showed it, so a
+    // manager who opened the app knew; one who did not, did not.
+    var _scanTasks=(DB.tasks||[]).slice();
+    if(typeof _collectVirtualTasks==='function')try{_scanTasks=_scanTasks.concat(_collectVirtualTasks());}catch(e){}
+    var overdueTasks=_scanTasks.filter(function(t){
       if(!t.due)return false;
       if(t.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'||t.status==='\u05d1\u05d5\u05d8\u05dc')return false;
       var d=new Date(t.due);
@@ -11347,7 +11392,10 @@ function _notifDailyScan(){
       return daysLate>=3;
     }).slice(0,3);
     overdueTasks.forEach(function(t){
-      _notifyEvent('task_overdue',{title:t.title||'\u05de\u05e9\u05d9\u05de\u05d4',id:t.id});
+      // A virtual task's id is 'v:<table>:<row id>' and is not in DB.tasks,
+      // so the WhatsApp builder has to be told where to look \u2014 otherwise it
+      // finds nothing and the message is silently dropped.
+      _notifyEvent('task_overdue',{title:t.title||'\u05de\u05e9\u05d9\u05de\u05d4',id:t.id,virtual:!!t.isVirtual,src:t.source_table||null,src_id:t.source_id||null,due:t.due||null,assignee:t.assignee||null});
     });
     // expiry_30days: items expiring within 0-30 days.
     // P0#2: equip_inspections was missing from this list even though
@@ -11440,7 +11488,11 @@ function _notifBuildWaArgs(eventKey,payload){
     return to2?{to:to2,template:'tfugen_incident_alert',language:'he',params:[loc,sev,rsn]}:null;
   }
   if(eventKey==='task_overdue'){
-    var t=(DB.tasks||[]).find(function(r){return r.id===payload.id;});if(!t)return null;
+    var t=(DB.tasks||[]).find(function(r){return r.id===payload.id;});
+    // A virtual task (an overdue NCR, a lapsed inspection) has no row in
+    // DB.tasks. The payload carries everything the message needs.
+    if(!t&&payload.virtual)t={id:payload.id,title:payload.title,due:payload.due,assignee:payload.assignee};
+    if(!t)return null;
     var today=new Date().toISOString().split('T')[0];
     var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
     var to3=_waResolvePhone(t.assignee)||_waLastTo();
@@ -11501,6 +11553,13 @@ function rEmp(){
   tb.innerHTML=DB.emp.map(function(e){return '<tr><td><strong>'+e.n+'</strong></td><td>'+(e.r||'&#8212;')+'</td><td>'+(e.dep||'&#8212;')+'</td><td>'+(e.ph||'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 
+// Every task spawned from one record, newest first. The link has always been
+// stored; until now only the trustee screen read it back.
+function _tasksFor(tbl,id){
+  if(!tbl||!id)return [];
+  return (DB.tasks||[]).filter(function(t){return t&&t.source_table===tbl&&t.source_id===id;})
+    .sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+}
 var VIEW_CONFIG={
   // There is no m-med form and no pg-med page: med rows arrive only from
   // Smart Capture and from OneDrive. Until now there was no VIEW_CONFIG
@@ -11518,7 +11577,7 @@ var VIEW_CONFIG={
   ncr:{title:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d5\u05ea / \u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',back:'ncr',fields:[
     ['\u05de\u05e1\u05f3','num'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9','sd'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],
     ['\u05e1\u05d5\u05d2','a'],['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','p'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],
-    ['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9','rc'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','c'],['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],
+    ['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9','rc'],['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','root_cause'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea (\u05de\u05d9\u05d9\u05d1\u05d5\u05d0)','immediate'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','c'],['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],
     ['\u05d9\u05e2\u05d3 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2','u'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','cd'],
     ['\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why','five_why'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   inc:{title:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',back:'inc',fields:[
@@ -11753,7 +11812,26 @@ function showView(tbl,id){
   else if(tbl==='near_miss'&&rec.s!=='\u05e1\u05d2\u05d5\u05e8')canSpawnTsk=true;
   else if(tbl==='rsk')canSpawnTsk=true;
   if(canSpawnTsk&&_isAdminUser()){
-    html+='<div style="margin-top:8px"><button data-stbl="'+esc(tbl)+'" data-sid="'+esc(id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" style="width:100%;background:#1e293b;border:1px solid #3b82f6;border-radius:8px;color:#60a5fa;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1 (CAPA)</button></div>';
+    // ---- 1.9 ----
+    // svTsk has always stored source_table/source_id, and _truTaskFor reads
+    // that link back \u2014 for trustees only. Everywhere else the record showed
+    // the same \u00ab+ \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1\u00bb button the next day as if nothing had
+    // happened: no sign a task existed, who owns it, when it is due or
+    // whether it is done. The result was duplicate tasks for one NCR, and
+    // no way to show the chain of treatment from the record itself.
+    var _srcTasks=_tasksFor(tbl,id);
+    if(_srcTasks.length){
+      html+='<div id="view-tasks" style="margin-top:10px"><div style="font-size:12px;color:#888;margin-bottom:4px">\ud83d\udcdd \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05db\u05d0\u05df ('+_srcTasks.length+')</div>'
+        +_srcTasks.map(function(t){
+          var done=t.status===_TSK_DONE||t.status===_TSK_CANC;
+          var late=(!done&&t.due&&typeof du==='function'&&du(t.due)<0);
+          var col=done?'#15803d':(late?'#cc1f1f':'var(--t2)');
+          return '<div data-tid="'+esc(t.id)+'" onclick="editTsk(this.dataset.tid)" style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px">'
+            +'<span style="flex:1;min-width:0">'+(done?'\u2705 ':(late?'\u26a0 ':'\u25cb '))+esc(String(t.title||'').substring(0,60))+'</span>'
+            +'<span style="white-space:nowrap;color:'+col+';font-size:11px">'+esc(t.status||'')+(t.due?' \u00b7 '+fd(t.due):'')+(t.assignee?' \u00b7 '+esc(t.assignee):'')+'</span></div>';
+        }).join('')+'</div>';
+    }
+    html+='<div style="margin-top:8px"><button data-stbl="'+esc(tbl)+'" data-sid="'+esc(id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" style="width:100%;background:#1e293b;border:1px solid #3b82f6;border-radius:8px;color:#60a5fa;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+(_srcTasks.length?'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea':'&#10133; \u05e4\u05ea\u05d7 \u05de\u05e9\u05d9\u05de\u05ea \u05de\u05e2\u05e7\u05d1 (CAPA)')+'</button></div>';
   }
   if(tbl==='ncr'){
     html+='<div id="ncr-comments-section" style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:13px">&#128172; \u05d4\u05e2\u05e8\u05d5\u05ea (<span id="ncr-comments-count">0</span>)</div></div><div id="ncr-comments-list" style="font-size:12px;color:#888">\u05d8\u05d5\u05e2\u05df...</div><div style="display:flex;gap:6px;margin-top:8px"><input id="ncr-comment-input" placeholder="\u05d4\u05d5\u05e1\u05e3 \u05d4\u05e2\u05e8\u05d4..." style="flex:1;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:8px;font-family:inherit"><button data-cid="'+esc(id)+'" onclick="_ncrCommentAdd(this.dataset.cid)" style="padding:8px 14px;background:#3b82f6;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">\u05e4\u05e8\u05e1\u05dd</button></div></div>';
@@ -13640,6 +13718,22 @@ window._capaVerify=function(id){
   showView('ncr',id);
   if(typeof rNcr==='function')rNcr();if(typeof rDash==='function')rDash();
 };
+// The near-miss whose \u00ab\u05e4\u05ea\u05d7 NCR\u00bb button is open right now. Set when the
+// draft is filled, consumed by svNcr when the NCR is actually saved \u2014 so
+// abandoning the form changes nothing.
+var _nmChainPending=null;
+function _nmChainApply(rec){
+  var nmId=_nmChainPending;_nmChainPending=null;
+  if(!nmId||!rec)return null;
+  var nm=(DB.near_miss||[]).find(function(r){return r.id===nmId;});
+  if(!nm)return null;
+  nm.s='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc';
+  nm.ncr_id=rec.id;
+  var line='\u05e0\u05e4\u05ea\u05d7 '+(rec.num||'NCR')+' \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4';
+  if(String(nm.notes||'').indexOf(line)<0)nm.notes=(nm.notes?nm.notes+'\n':'')+line;
+  sbUpd('near_miss',nm);
+  return nm;
+}
 window._chainNmToNcr=function(nmId){
   var nm=(DB.near_miss||[]).find(function(r){return r.id===nmId;});
   if(!nm){toast('\u05d3\u05d9\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -13658,6 +13752,15 @@ window._chainNmToNcr=function(nmId){
       setIf('ncr-sd',nm.d||new Date().toISOString().split('T')[0]);
       setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 #'+nmId);
       var prio=g('ncr-p');if(prio&&nm.sev==='\u05d7\u05de\u05d5\u05e8')prio.value='\u05e7\u05e8\u05d9\u05d8\u05d9';
+      // ---- 1.8 ----
+      // The link was a sentence in the NCR's notes and nothing else: the
+      // near-miss stayed \u05e4\u05ea\u05d5\u05d7, so the task list showed TWO rows for one
+      // event \u2014 \u00ab\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: \u2026\u00bb and \u00abNCR-0xxx \u2014 \u2026\u00bb \u2014 and the near-miss
+      // one stayed open for ever, dripping into every count that reads it.
+      // From the other side, whoever opened the near-miss had no way to know
+      // an NCR existed. Marking it \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc, with the reason in its own
+      // notes, closes both holes without a schema change.
+      _nmChainPending=nmId;
       toast('\u05d8\u05d9\u05d5\u05d8\u05ea NCR \u05de\u05d5\u05dc\u05d0\u05d4 — \u05e1\u05e7\u05d5\u05e8 \u05d5\u05e9\u05de\u05d5\u05e8');
     },200);
   },300);
@@ -15090,7 +15193,7 @@ function _truMgrShift(dir){
 }
 function _truMgrSetFilter(f){_truMgrF=f;rTrustees();}
 function _truFind(id){return (DB.trustee_reports||[]).find(function(x){return x.id===id;});}
-function _truTaskFor(id){return (DB.tasks||[]).find(function(x){return x.source_table==='trustee_reports'&&x.source_id===id;});}
+function _truTaskFor(id){return _tasksFor('trustee_reports',id)[0];}
 // Active trustees still short of the prize threshold this month, most behind
 // first. This is what replaces the WhatsApp group: there, everyone saw who had
 // posted; here nobody would know until the month ended.
@@ -15823,7 +15926,7 @@ function xlRead(file){if(!file)return;xlSt('\u05e7\u05d5\u05e8\u05d0...','#d9770
 function xlSv(v){if(v===null||v===undefined)return '';var s=String(v).trim();return(s==='null'||s==='undefined'||(s.toLowerCase()==='nan'))?'':(s);}
 function xlDate(v){if(!v)return '';try{if(v instanceof Date)return v.toISOString().split('T')[0];var s=xlSv(v);if(!s)return '';if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split('/');return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');}var d=new Date(s);return isNaN(d.getTime())?s:d.toISOString().split('T')[0];}catch(e){return xlSv(v);}}
 function xlGid(n){return 'xl'+String(n).padStart(4,'0')+Math.random().toString(36).substr(2,4);}
-function xlParse(wb){var res=[],idx=_ncrMaxNum()+1;/* was 1: with NCR-0001..0375 already in the table every generated number collided and xlOk dropped the whole sheet */var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};wb.SheetNames.forEach(function(sn){var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0;var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0;if(!isEnv&&!isSaf)return;var ws=wb.Sheets[sn];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});var hIdx=-1;for(var r=0;r<Math.min(8,rows.length);r++){if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}}if(hIdx<0)return;var ds=hIdx+1;if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;for(var r2=ds;r2<rows.length;r2++){var row=rows[r2];if(row.filter(function(c){return xlSv(c);}).length<2)continue;var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:'',s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',src_date:'',category:isEnv?'env':'saf'};if(isEnv){rec.d=xlSv(row[1]);rec.src_date=xlDate(row[2]);rec.root_cause=xlSv(row[3]);rec.immediate=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);}else{var dept=xlSv(row[1]),haz=xlSv(row[2]);rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);rec.src_date=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';}if(!rec.d)continue;res.push(rec);idx++;}});return res;}
+function xlParse(wb){var res=[],idx=_ncrMaxNum()+1;/* was 1: with NCR-0001..0375 already in the table every generated number collided and xlOk dropped the whole sheet */var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};wb.SheetNames.forEach(function(sn){var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0;var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0;if(!isEnv&&!isSaf)return;var ws=wb.Sheets[sn];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});var hIdx=-1;for(var r=0;r<Math.min(8,rows.length);r++){if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}}if(hIdx<0)return;var ds=hIdx+1;if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;for(var r2=ds;r2<rows.length;r2++){var row=rows[r2];if(row.filter(function(c){return xlSv(c);}).length<2)continue;var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:'',s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',src_date:'',category:isEnv?'env':'saf'};if(isEnv){rec.d=xlSv(row[1]);rec.src_date=xlDate(row[2]);/* was root_cause/immediate \u2014 columns no form, no view and no AI path reads, so every imported root cause was invisible in the app. rc is the field the whole NCR module uses; the immediate action has no field of its own and goes to the notes, labelled. */rec.rc=xlSv(row[3]);var _imm=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);if(_imm)rec.notes=(rec.notes?rec.notes+'\n':'')+'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea: '+_imm;}else{var dept=xlSv(row[1]),haz=xlSv(row[2]);rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);rec.src_date=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';}if(!rec.d)continue;res.push(rec);idx++;}});return res;}
 function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var _xlKey=function(r){return (String(r.d||'').trim().toLowerCase()+'|'+String(r.src_date||'').trim());};var ex={};dbncr.forEach(function(r){var k=_xlKey(r);if(k!=='|')ex[k]=1;});var seen={};var add=window._xlData.filter(function(r){var k=_xlKey(r);if(k==='|')return true;if(ex[k]||seen[k])return false;seen[k]=1;return true;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#d97706');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;var _xlNcrFailed=0;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){_xlNcrFailed++;console.warn('ncr import: row failed',r,e);}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length+(_xlNcrFailed?' ('+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5)':''));}catch(e){}try{sdb();}catch(e){}closeXlModal();try{var msg=_xlNcrFailed>0?('\u05d9\u05d5\u05d1\u05d0: '+(add.length-_xlNcrFailed)+'\u202c \u05e0\u05e9\u05de\u05e8\u05d5, '+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5'):('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');toast(msg);}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
 
 
@@ -16236,17 +16339,35 @@ function _ncrFmt(an,pc,n){
 window._ncrApply=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
   var an=_naf[id];if(!an||an.err)return;
-  if(!confirm('\u05dc\u05d4\u05d7\u05dc \u05d0\u05ea \u05d4\u05e0\u05d9\u05ea\u05d5\u05d7 \u05e2\u05dc \u05d4-NCR?\n(\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 + \u05e4\u05e2\u05d5\u05dc\u05d4 + \u05d0\u05d7\u05e8\u05d0\u05d9 + \u05d9\u05e2\u05d3 \u05d9\u05d5\u05d7\u05dc\u05e4\u05d5)'))return;
   var ca0=(an.corrective_actions&&an.corrective_actions[0])||'';
-  var patch={rc:an.root_cause||null,c:ca0||null,o:an.owner_suggested||null,u:an.due_suggested||null};
+  // Applying used to replace all four fields outright. _ncrAIRcAction, the
+  // button in the modal, has always guarded \u2014 it only fills a field that is
+  // still empty \u2014 and this is the same decision: a suggestion never silently
+  // overwrites what somebody wrote after standing in front of the machine.
+  var _cur=(window.DB&&window.DB.ncr&&window.DB.ncr.find(function(x){return x.id===id;}))||n||{};
+  function _keep(v){return String(v==null?'':v).trim();}
+  var _patch={},_kept=[],_pairs=[['rc',an.root_cause,'\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9'],['c',ca0,'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea'],['o',an.owner_suggested,'\u05d0\u05d7\u05e8\u05d0\u05d9'],['u',an.due_suggested,'\u05d9\u05e2\u05d3']];
+  _pairs.forEach(function(pr){
+    var key=pr[0],val=pr[1];
+    if(!val)return;
+    if(_keep(_cur[key])){_kept.push(pr[2]);return;}
+    _patch[key]=val;
+  });
+  if(!Object.keys(_patch).length){
+    alert(_kept.length?('\u05db\u05dc \u05d4\u05e9\u05d3\u05d5\u05ea \u05db\u05d1\u05e8 \u05de\u05dc\u05d0\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e9\u05d5\u05e0\u05d5: '+_kept.join(' \u00b7 ')+'\n\n\u05d0\u05dd \u05e8\u05e6\u05d9\u05ea \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u2014 \u05e2\u05e8\u05d5\u05da \u05d0\u05ea \u05d4-NCR \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea.'):'\u05d0\u05d9\u05df \u05d1\u05e0\u05d9\u05ea\u05d5\u05d7 \u05de\u05d4 \u05dc\u05d4\u05d7\u05d9\u05dc.');
+    return;
+  }
+  var patch=_patch;
+  var _names=Object.keys(_patch).map(function(k){return ({rc:'\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9',c:'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea',o:'\u05d0\u05d7\u05e8\u05d0\u05d9',u:'\u05d9\u05e2\u05d3'})[k];}).join(' \u00b7 ');
+  if(!confirm('\u05dc\u05de\u05dc\u05d0 \u05d0\u05ea \u05d4\u05e9\u05d3\u05d5\u05ea \u05d4\u05e8\u05d9\u05e7\u05d9\u05dd: '+_names+'?'+(_kept.length?('\n\n\u05e0\u05e9\u05de\u05e8\u05d9\u05dd \u05db\u05de\u05d5 \u05e9\u05d4\u05dd: '+_kept.join(' \u00b7 ')):'')))return;
   fetch(_SB+'/rest/v1/ncr?id=eq.'+encodeURIComponent(id),{
     method:'PATCH',
     headers:{apikey:_SK,Authorization:'Bearer '+(_sbToken||_SK),'Content-Type':'application/json',Prefer:'return=minimal'},
     body:JSON.stringify(patch)
   }).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);
-    n.rc=patch.rc||'';n.c=patch.c||'';n.o=patch.o||'';n.u=patch.u||'';
-    if(window.DB&&window.DB.ncr){var rec=window.DB.ncr.find(function(x){return x.id===id;});if(rec){rec.rc=n.rc;rec.c=n.c;rec.o=n.o;rec.u=n.u;}}
+    Object.keys(patch).forEach(function(k){n[k]=patch[k];});
+    if(window.DB&&window.DB.ncr){var rec=window.DB.ncr.find(function(x){return x.id===id;});if(rec)Object.keys(patch).forEach(function(k){rec[k]=patch[k];});}
     _ncrRender();window._ncrSel(id);
     if(typeof rNcr==='function')rNcr();if(typeof rDash==='function')rDash();
   }).catch(function(err){alert('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05d7\u05dc\u05d4: '+(err&&err.message||err));});
@@ -16288,7 +16409,19 @@ window._ncrAI=function(id){
     'Priority: '+(n.p||'')+'\n'+
     'Location: '+(n.loc||n.location||'')+'\n'+
     'Source date: '+(n.sd||n.src_date||'')+'\n'+
-    'Notes: '+(n.notes||'')+'\n\n'+
+    'Notes: '+(n.notes||'')+'\n'+
+    // ---- 1.10 ----
+    // The prompt listed the description, area, priority, location, source
+    // date and notes \u2014 and not the root cause, the 5-Why, the corrective
+    // action or the owner, all of which are already on the object. So a
+    // manager who spent a quarter of an hour on a 5-Why got an analysis that
+    // had never seen it, and could contradict what was decided on the floor.
+    // _ncrAIRcAction, the button inside the modal, has always sent them.
+    'Root cause already recorded: '+(n.rc||n.root_cause||'\u2014')+'\n'+
+    '5-Why already recorded: '+(n.five_why||'\u2014')+'\n'+
+    'Corrective action already recorded: '+(n.c||'\u2014')+'\n'+
+    'Owner already assigned: '+(n.o||'\u2014')+'\n'+
+    'If a field above is not \u2014, treat it as the decision already made on site: build on it, say plainly if you disagree, and do not silently replace it.\n\n'+
     'Schema (respond in Hebrew values, JSON only, no markdown fences):\n'+
     '{\n'+
     '  "risk": "critical|high|medium|low",\n'+
