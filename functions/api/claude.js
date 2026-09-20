@@ -69,13 +69,49 @@ export async function onRequest({ request, env }) {
         hint: 'In Cloudflare Pages dashboard: Settings → Functions → Bindings → Add Binding → Workers AI. Variable name must be exactly "AI". Then redeploy.'
       }, 500, cors);
     }
+    // The client speaks Anthropic; Workers AI does not. Until 2026-09-20 the
+    // translation here threw away everything it did not recognise, in silence:
+    //
+    //   * `system` was dropped. legAskAI's whole guardrail — "never invent an
+    //     inspection interval, a threshold or a date" — lives in `system`, and
+    //     the answer panel tells the safety manager in so many words that the
+    //     AI is forbidden to invent numbers. It never reached the model.
+    //   * an Anthropic content-block array was passed through as-is, so a
+    //     {type:'document'} PDF reached a text-only model as "[object Object]".
+    //   * `stream:true` was ignored, so a client reading SSE got one JSON blob
+    //     and accumulated the empty string.
+    //
+    // Translate what can be translated, and refuse loudly for what cannot.
+    const isVision = parsed.model.indexOf('vision') >= 0;
+    let cfMessages = [];
+    if (!isVision) {
+      let fileBlock = null;
+      cfMessages = (parsed.messages || []).map((m) => {
+        let c = m && m.content;
+        if (Array.isArray(c)) {
+          const bad = c.find((b) => b && b.type && b.type !== 'text');
+          if (bad) fileBlock = bad.type;
+          c = c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('\n');
+        }
+        return { role: (m && m.role) || 'user', content: typeof c === 'string' ? c : String(c == null ? '' : c) };
+      });
+      if (fileBlock) {
+        return jsonResp({
+          error: 'model cannot read files',
+          detail: parsed.model + ' is text-only and was sent a "' + fileBlock + '" block. Extract the text client-side, or call a vision model.'
+        }, 400, cors);
+      }
+      if (typeof parsed.system === 'string' && parsed.system.trim()) {
+        cfMessages = [{ role: 'system', content: parsed.system }].concat(cfMessages);
+      }
+    }
+
     try {
       // Vision model takes a different request shape: {prompt, image} where
       // image is either an array of byte ints or base64. Client sends base64.
-      const isVision = parsed.model.indexOf('vision') >= 0;
       const aiInput = isVision
         ? { prompt: parsed.prompt || '', image: parsed.image || '', max_tokens: parsed.max_tokens }
-        : { messages: parsed.messages, max_tokens: parsed.max_tokens };
+        : { messages: cfMessages, max_tokens: parsed.max_tokens };
       let aiResp;
       try {
         aiResp = await env.AI.run(parsed.model, aiInput);
@@ -107,6 +143,31 @@ export async function onRequest({ request, env }) {
         stop_reason: 'end_turn',
         usage: { input_tokens: 0, output_tokens: 0 }
       };
+
+      // A client that asked for a stream is reading SSE and will find nothing
+      // in a JSON body. Workers AI answered in one piece — emit that one piece
+      // as the Anthropic event sequence the client already parses, so the
+      // streaming call sites work against either provider.
+      if (parsed.stream) {
+        const enc = new TextEncoder();
+        const ev = (name, obj) => enc.encode('event: ' + name + '\ndata: ' + JSON.stringify(obj) + '\n\n');
+        const sse = new ReadableStream({
+          start(c) {
+            c.enqueue(ev('message_start', { type: 'message_start', message: { ...out, content: [] } }));
+            c.enqueue(ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
+            c.enqueue(ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: text } }));
+            c.enqueue(ev('content_block_stop', { type: 'content_block_stop', index: 0 }));
+            c.enqueue(ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 0 } }));
+            c.enqueue(ev('message_stop', { type: 'message_stop' }));
+            c.close();
+          }
+        });
+        return new Response(sse, {
+          status: 200,
+          headers: { ...cors, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }
+        });
+      }
+
       return jsonResp(out, 200, cors);
     } catch (err) {
       const m = String((err && err.message) || err);
