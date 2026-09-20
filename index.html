@@ -4022,7 +4022,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"rsk":{"m":"m-rsk","l":"סיכון","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"הדרכה","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"}},"ppe":{"m":"m-ppe","l":"צמג","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"}},"emp":{"m":"m-emp","l":"עובד","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-n":"n"}},"ctr":{"m":"m-ctr","l":"קבלן","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"}},"ins":{"m":"m-ins","l":"בדיקה","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"תרגיל","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"פסולת","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"חומרים","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"סביבה","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"תיבת כלים","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"}},"ptw":{"m":"m-ptw","l":"היתר","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"עבודות חמות","ptw-hgt":"עבודה בגובה","ptw-elc":"עבודות חשמל","ptw-eng":"ניתוק אנרגיה","ptw-lft":"עבודות הנפה","ptw-chm":"קרבת כימיקלים","ptw-cnf":"חלל מוקף","ptw-rof":"עבודה על גגות"}},"near_miss":{"m":"m-nm","l":"כמעט","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"מבדק","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"}},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"}},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -4054,6 +4054,22 @@ function _genEdit(tbl,id){
       var v=rec[cfg.f[dom]];
       el.value=(v===null||v===undefined)?'':v;
     });
+    // svTr / svToolbox write `file_url: _attachUrls[area] || null` on EVERY save.
+    // Nothing restored _attachUrls when the form was opened for editing, so a
+    // trip through ✎ to change an expiry date silently deleted the attached
+    // certificate — the exact evidence an auditor asks for under §7.2. Same
+    // pattern the incident and env-aspect forms already use.
+    if(cfg.attach){
+      var _aArea=cfg.attach;
+      if(rec.file_url){
+        _attachUrls[_aArea]=rec.file_url;
+        var _fn=String(rec.file_url).split('/').pop().split('?')[0];
+        if(typeof _attachRender==='function')_attachRender(_aArea,rec.file_url,_fn);
+      }else{
+        _attachUrls[_aArea]=null;
+        if(typeof _attachClear==='function')_attachClear(_aArea);
+      }
+    }
     if(cfg.c){
       var types=rec.types||[];
       if(typeof types==='string')types=types.split(',').map(function(x){return x.trim();});
@@ -13566,11 +13582,31 @@ function delAllHearing(){
   g('m-del-confirm').style.display='block';
   setTimeout(function(){var e2=g('del-pw');if(e2)e2.focus();},100);
 }
+// The columns this wrote — n/emp, d, res/result, e — exist on no hearing
+// record. rHearing reads emp_name / emp_id / test_date / dept, and the import
+// builds exactly those (index.html ~13502). So the file came out with an id
+// and five empty columns, and this is the CSV delAllHearing exports right
+// BEFORE wiping the whole register. The safety net was a blank sheet.
+var _HEAR_COLS=[
+  ['id','id'],
+  ['\u05e9\u05dd \u05d4\u05e2\u05d5\u05d1\u05d3','emp_name'],
+  ['\u05ea\u05f4\u05d6','emp_id'],
+  ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],
+  ['\u05d1\u05d5\u05d3\u05e7','inspector'],
+  ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],
+  ['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],
+  ['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],
+  ['\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d9\u05d3\u05d4','dob'],
+  ['\u05d2\u05d9\u05dc','age'],
+  ['\u05de\u05d9\u05df','gender'],
+  ['\u05e9\u05e0\u05d4','year'],
+  ['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']
+];
 function _hearingBackupCsv(rows){
-  var hdr=['id','\u05e2\u05d5\u05d1\u05d3','\u05ea\u05d0\u05e8\u05d9\u05da','\u05ea\u05d5\u05e6\u05d0\u05d4','\u05ea\u05e4\u05d5\u05d2\u05d4','\u05d4\u05e2\u05e8\u05d5\u05ea'];
+  var hdr=_HEAR_COLS.map(function(c){return c[0];});
   var q=function(v){v=(v===null||v===undefined)?'':String(v);return '"'+v.replace(/"/g,'""')+'"';};
   var lines=[hdr.map(q).join(',')];
-  rows.forEach(function(r){lines.push([r.id,r.n||r.emp||'',r.d||'',r.res||r.result||'',r.e||'',r.notes||''].map(q).join(','));});
+  rows.forEach(function(r){lines.push(_HEAR_COLS.map(function(c){return q(r[c[1]]);}).join(','));});
   var blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
