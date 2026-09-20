@@ -2013,6 +2013,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;</label><input id="ncr-rc" type="text" class="inp" placeholder="&#1502;&#1492; &#1490;&#1512;&#1501; &#1500;&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1492;?"></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
     <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;" &#1493;-"&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512;.</div><button type="button" id="ncr-ai-rc-btn" onclick="_ncrAIRcAction()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1489;&#1492; &#1493;&#1508;&#1506;&#1493;&#1500;&#1492;</button></div></div>
+    <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="ncr-p" class="inp"><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option><option selected>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
     <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date" class="inp"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ncr-s" class="inp" onchange="ncrStatusChange()"><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option></select></div>
@@ -4212,6 +4213,9 @@ function svAud(){
 }
 function openNewNcrModal(){
   ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  // a <select> ignores value=''; a new NCR starts at the default, and without
+  // this it would keep whatever the previously-opened record had.
+  var _pEl=g('ncr-p');if(_pEl)_pEl.value='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea';
   var a=g('ncr-a');if(a)a.value='';
   var s=g('ncr-s');if(s)s.value='\u05e4\u05ea\u05d5\u05d7';
   var sn=g('ncr-sens');if(sn)sn.checked=false;
@@ -4228,7 +4232,7 @@ function openNewNcrModal(){
 // draft exists. Cleared on successful svNcr or explicit cancel.
 var _NCR_DRAFT_KEY='tfgn_ncr_draft_v1';
 var _NCR_DRAFT_TIMER=null;
-var _NCR_DRAFT_FIELDS=['ncr-d','ncr-a','ncr-loc','ncr-location-id','ncr-project-id','ncr-issue-type-id','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-notes','ncr-five-why'];
+var _NCR_DRAFT_FIELDS=['ncr-d','ncr-a','ncr-p','ncr-loc','ncr-location-id','ncr-project-id','ncr-issue-type-id','ncr-rc','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-notes','ncr-five-why'];
 function _ncrDraftSnapshot(){
   var snap={};
   _NCR_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el)snap[f]=el.value||'';});
@@ -4287,7 +4291,7 @@ function editNcr(id){
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display=(rec.loc&&!rec.location_id)?'':'none';
   var prjSel=g('ncr-project-id');if(prjSel&&typeof _prjOptionsHtml==='function'){prjSel.innerHTML=_prjOptionsHtml(rec.project_id||null);}
   var itSel=g('ncr-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function'){itSel.innerHTML=_itypeOptionsHtml(rec.issue_type_id||null);}
-  setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);
+  setIf('ncr-rc',rec.rc);setIf('ncr-c',rec.c);setIf('ncr-o',rec.o);setIf('ncr-p',rec.p);
   setIf('ncr-u',rec.u);setIf('ncr-sd',rec.sd||rec.src_date);setIf('ncr-cd',rec.cd);
   setIf('ncr-s',rec.s||'\u05e4\u05ea\u05d5\u05d7');setIf('ncr-notes',rec.notes);
   setIf('ncr-five-why',rec.five_why);
@@ -5259,8 +5263,8 @@ function rDash(){
         var ageDays=(nowMs-t)/86400000;
         return ageDays>=startAgo && ageDays<endAgo;
       }
-      var ncrThis=(DB.ncr||[]).filter(function(r){return inRange(r.d,0,7);}).length;
-      var ncrLast=(DB.ncr||[]).filter(function(r){return inRange(r.d,7,14);}).length;
+      var ncrThis=(DB.ncr||[]).filter(function(r){return inRange(r.sd||r.src_date||r.ts,0,7);}).length;
+      var ncrLast=(DB.ncr||[]).filter(function(r){return inRange(r.sd||r.src_date||r.ts,7,14);}).length;
       var nmThis=(DB.near_miss||[]).filter(function(r){return inRange(r.d,0,7);}).length;
       var nmLast=(DB.near_miss||[]).filter(function(r){return inRange(r.d,7,14);}).length;
       var incThis=(DB.inc||[]).filter(function(r){return inRange(r.dt||r.d,0,7);}).length;
@@ -5311,7 +5315,7 @@ function rDash(){
     if(dm){
       var nowM=new Date();var monthStart=new Date(nowM.getFullYear(),nowM.getMonth(),1).getTime();
       function inMonth(s){if(!s)return false;var t=new Date(s).getTime();return !isNaN(t)&&t>=monthStart;}
-      var ncrM=(DB.ncr||[]).filter(function(r){return inMonth(r.d||r.ts);}).length;
+      var ncrM=(DB.ncr||[]).filter(function(r){return inMonth(r.sd||r.src_date||r.ts);}).length;
       var incM=(DB.inc||[]).filter(function(r){return inMonth(r.dt||r.d);}).length;
       var nmM=(DB.near_miss||[]).filter(function(r){return inMonth(r.d||r.ts);}).length;
       var tskDoneM=(DB.tasks||[]).filter(function(r){return r.status==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&inMonth(r.closed_date||r.cd||r.ts);}).length;
@@ -11196,9 +11200,11 @@ var VIEW_CONFIG={
     ['\u05e0\u05d5\u05e9\u05d0','n'],['\u05de\u05d1\u05e7\u05e8','a'],['\u05ea\u05d0\u05e8\u05d9\u05da','d'],
     ['\u05e6\u05d9\u05d5\u05df','sc'],['\u05e1\u05d9\u05db\u05d5\u05dd','sm'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   ncr:{title:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d5\u05ea / \u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',back:'ncr',fields:[
-    ['\u05de\u05e1\'','num'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05d0\u05d6\u05d5\u05e8','a'],
-    ['\u05e1\u05d9\u05d1\u05d4','p'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','o'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],
-    ['\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why','five_why']]},
+    ['\u05de\u05e1\u05f3','num'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9','sd'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],
+    ['\u05e1\u05d5\u05d2','a'],['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','p'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],
+    ['\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9','rc'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea','c'],['\u05d0\u05d7\u05e8\u05d0\u05d9','o'],
+    ['\u05d9\u05e2\u05d3 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2','u'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','cd'],
+    ['\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why','five_why'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   inc:{title:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',back:'inc',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','dt'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05e1\u05d5\u05d2','ty'],
     ['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05de\u05d9\u05e7\u05d5\u05dd','l'],['\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df','dy'],['\u05d4\u05e2\u05e8\u05d5\u05ea','r']]},
@@ -11880,7 +11886,7 @@ window._aiWeeklySummary=function(){
     return (nowMs-t)/86400000 < 7;
   }
   var CRIT='\u05e7\u05e8\u05d9\u05d8\u05d9',HIGH='\u05d2\u05d1\u05d5\u05d4',CLOS='\u05e1\u05d2\u05d5\u05e8';
-  var ncrLast=(DB.ncr||[]).filter(function(r){return inLast7(r.d);});
+  var ncrLast=(DB.ncr||[]).filter(function(r){return inLast7(r.sd||r.src_date||r.ts);});
   var ncrCrit=ncrLast.filter(function(r){return r.sv===CRIT;}).length;
   var ncrHigh=ncrLast.filter(function(r){return r.sv===HIGH;}).length;
   var ncrSamples=ncrLast.slice(0,5).map(function(r){return '\u2022 '+(r.num||'')+' '+String(r.d||'').substring(0,80)+(r.sv?' ['+r.sv+']':'');}).join('\n');
@@ -13314,7 +13320,18 @@ window._reopen=function(tbl,id){
   var stamp='\n[\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 '+today+' \u05e2\u05dc \u05d9\u05d3\u05d9 '+u+': '+reason+']';
   rec.notes=(rec.notes?String(rec.notes):'')+stamp;
   if(tbl==='tasks'){rec.status='\u05e4\u05ea\u05d5\u05d7';rec.closed_date=null;}
-  else if(tbl==='ncr'){rec.s='\u05e4\u05ea\u05d5\u05d7';rec.cd=null;}
+  else if(tbl==='ncr'){
+    rec.s='\u05e4\u05ea\u05d5\u05d7';rec.cd=null;
+    // An effectiveness verification proves a fix that has since been reopened,
+    // so it stops being true the moment this runs. Leaving it set also hid the
+    // record from _capaDue() for good, because that filters on verified_by.
+    if(rec.verified_by){
+      // rec.notes was already built from `stamp` above, so append to notes
+      // itself — appending to stamp here would go nowhere.
+      rec.notes=(rec.notes||'')+'\n['+'\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u05d1\u05d5\u05d8\u05dc'+' \u2014 '+'\u05d4\u05d9\u05d4: '+rec.verified_by+', '+fd(String(rec.verified_at||'').substring(0,10))+']';
+      rec.verified_by=null;rec.verified_at=null;rec.verification_notes=null;
+    }
+  }
   rec.ts=new Date().toISOString();
   sbUpd(tbl,rec);sdb();
   toast('\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9 \u2713');
