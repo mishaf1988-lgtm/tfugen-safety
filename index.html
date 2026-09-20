@@ -899,7 +899,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="dash-rsk-review-card" style="display:none"><div class="card-title">&#9889; &#1505;&#1497;&#1499;&#1493;&#1504;&#1497;&#1501; &#1500;&#1505;&#1511;&#1497;&#1512;&#1492; &#1514;&#1511;&#1493;&#1508;&#1514;&#1497;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 &#167;6.1.2)</span></div><div id="dash-rsk-review"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <!-- The two AI cards (weekly summary / today plan) moved to the agents page (P1#1). -->
   <div class="card" id="dash-week-card" style="display:none"><div class="card-title">&#128197; &#1492;&#1513;&#1489;&#1493;&#1506; &#1492;&#1511;&#1512;&#1493;&#1489; (7 &#1497;&#1502;&#1497;&#1501;)</div><div id="dash-week"></div></div>
-  <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div><div id="dash-ovc"></div></div>
+  <div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#8212; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;: &#1504;&#1508;&#1514;&#1495; &#183; &#1504;&#1505;&#1490;&#1512; &#183; &#1510;&#1489;&#1512;</div><div id="dash-ovc"></div></div>
   <div class="card" id="dash-itp-card" style="display:none"><div class="card-title">&#128270; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1495;&#1493;&#1494;&#1512;&#1493;&#1514; &#1511;&#1512;&#1493;&#1489;&#1493;&#1514;</div><div id="dash-itp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <!-- "פקיעות ב-30 יום" card hidden — same items appear in the unified Tasks page (virtual tasks). Kept in DOM for compatibility (rDash still writes to #dash-exp), just visually hidden. -->
   <div class="card" id="dash-exp-card" style="display:none"><div class="card-title">&#1508;&#1511;&#1497;&#1506;&#1493;&#1514; &#1489;-30 &#1497;&#1493;&#1501;</div><div id="dash-exp"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
@@ -1423,6 +1423,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div class="kpi kpi-o"><div class="kpi-label">תקריות</div><div class="kpi-val" id="mr-inc-q">0</div><div class="kpi-sub" id="mr-inc-sub">-</div></div>
       <div class="kpi kpi-b"><div class="kpi-label">כמעט ונפגע</div><div class="kpi-val" id="mr-nm-q">0</div></div>
     </div>
+  </div>
+  <!-- The formal trend an auditor asks for. On the page, not in a modal, so
+       _printPage (which prints .page.on) carries it into the PDF. -->
+  <div class="card" id="mr-trend-card" style="display:none"><div class="card-title">&#128200; &#1502;&#1490;&#1502;&#1514; NCR &#8212; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
+    <div id="mr-trend"></div>
   </div>
   <div class="card"><div class="card-title">⚠ 5 ה-NCR הקריטיים הפתוחים</div>
     <div id="mr-top-ncr" style="font-size:13px"></div>
@@ -5278,7 +5283,7 @@ window._renderDashKpis=function(c){
     {v:c.incYear,   cls:'kpi-o',label:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05d4\u05e9\u05e0\u05d4',go:"goPage('inc')"},
     {v:c.nmMonth,   cls:'kpi-o',label:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d7\u05d5\u05d3\u05e9',go:"goPage('nm')"},
     {v:c.ptwOpen,   cls:'kpi-g',label:'\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea',sub:'PTW',go:"goPage('ptw')"},
-    {v:c.lostDays,  cls:'kpi-r',label:'\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',sub:'LTIF',go:"goPage('inc')"},
+    {v:c.lostDays,  cls:'kpi-r',label:'\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',sub:'\u05d4\u05e9\u05e0\u05d4',go:"goPage('inc')"},
     {v:c.trPct,     cls:'kpi-g',label:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05ea\u05d5\u05e7\u05e3',fmt:'%',go:"goPage('tr')"},
     {v:c.docsValid, cls:'kpi-g',label:'\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3',go:"goPage('docs')"},
     {v:c.emps,      cls:'kpi-b',label:'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',go:"goPage('emp')"}
@@ -5395,7 +5400,16 @@ function rDash(){
   var kn=ncr.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
   var ke=DB.emp.length;
   var kc=rsk.filter(function(r){return r.p*r.sv>=15;}).length;
-  var kl=inc.reduce(function(s,i){return s+(i.dy||0);},0);
+  // Was the sum over the WHOLE history, captioned LTIF. LTIF is
+  // lost-time injuries \u00d7 1,000,000 \u00f7 hours worked, and the app stores no
+  // man-hours anywhere \u2014 so the tile was a cumulative day count wearing the
+  // name of a frequency rate. It is now what it says: lost days this year.
+  var _klY=new Date().getFullYear();
+  var kl=inc.reduce(function(s,i){
+    var dt=new Date(i.dt||i.d||i.ts||'');
+    if(isNaN(dt)||dt.getFullYear()!==_klY)return s;
+    return s+(i.dy||0);
+  },0);
   var kp=DB.ptw.filter(function(p){return p.s==='\u05e4\u05ea\u05d5\u05d7'||p.s==='\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2';}).length;
   // (the old k1..k8 accordion tiles are gone — see _renderDashKpis at the end)
   var alerts='',exp=[];
@@ -6038,32 +6052,13 @@ function rDash(){
     var dovc=g('dash-ovc-card');
     var dov=g('dash-ovc');
     if(dov){
-      var nowOC=new Date();nowOC.setHours(0,0,0,0);
-      var weeks=[];
-      for(var w=3;w>=0;w--){
-        var endD=new Date(nowOC.getTime()-w*7*86400000);
-        var startD=new Date(endD.getTime()-7*86400000+86400000);
-        var lblS=String(startD.getDate()).padStart(2,'0')+'/'+String(startD.getMonth()+1).padStart(2,'0');
-        weeks.push({start:startD,end:endD,label:lblS,opened:0,closed:0});
-      }
-      function _wkBucket(d){if(!d)return -1;var dt=new Date(d);if(isNaN(dt))return -1;for(var i=0;i<weeks.length;i++){if(dt>=weeks[i].start&&dt<=weeks[i].end)return i;}return -1;}
-      (DB.ncr||[]).forEach(function(n){
-        var b=_wkBucket(n.sd||n.src_date||n.d);
-        if(b>=0)weeks[b].opened++;
-        if(n.s==='\u05e1\u05d2\u05d5\u05e8'&&n.cd){var bc=_wkBucket(n.cd);if(bc>=0)weeks[bc].closed++;}
-      });
-      var any=weeks.some(function(w){return w.opened||w.closed;});
-      if(any){
-        dovc.style.display='';
-        var maxV=Math.max.apply(null,weeks.map(function(w){return Math.max(w.opened,w.closed);}));
-        if(maxV<1)maxV=1;
-        var bars=weeks.map(function(w){
-          var hO=Math.round(60*w.opened/maxV);
-          var hC=Math.round(60*w.closed/maxV);
-          return '<div style="text-align:center;flex:1;min-width:60px"><div style="display:flex;align-items:flex-end;justify-content:center;height:65px;gap:3px"><div title="\u05e0\u05e4\u05ea\u05d7: '+w.opened+'" style="width:18px;background:#cc1f1f;height:'+hO+'px;border-radius:3px 3px 0 0"></div><div title="\u05e0\u05e1\u05d2\u05e8: '+w.closed+'" style="width:18px;background:#16a34a;height:'+hC+'px;border-radius:3px 3px 0 0"></div></div><div style="font-size:10px;color:#444;margin-top:4px;font-weight:600">'+esc(w.label)+'</div><div style="font-size:9px;color:var(--t3)">+'+w.opened+' / -'+w.closed+'</div></div>';
-        }).join('');
-        dov.innerHTML='<div style="display:flex;justify-content:space-around;align-items:flex-end;padding:8px 0">'+bars+'</div><div style="margin-top:6px;font-size:11px;color:#444;text-align:center"><span style="display:inline-flex;align-items:center;gap:4px;margin:0 8px"><span style="display:inline-block;width:10px;height:10px;background:#cc1f1f;border-radius:2px"></span>\u05e0\u05e4\u05ea\u05d7</span><span style="display:inline-flex;align-items:center;gap:4px;margin:0 8px"><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px"></span>\u05e0\u05e1\u05d2\u05e8</span></div>';
-      }else{dovc.style.display='none';}
+      // Four weeks of opened-vs-closed could not answer the one question an
+      // auditor asks \u2014 is the pile growing or shrinking? \u2014 and the twelve-month
+      // chart that could was buried in the NCR agent modal. Same card, same
+      // place, twelve months, with the backlog on it.
+      var ovcHtml=(typeof _ncrTrend12Html==='function')?_ncrTrend12Html():'';
+      if(ovcHtml){dovc.style.display='';dov.innerHTML=ovcHtml;}
+      else{dovc.style.display='none';}
     }
   }catch(e){console.warn('dash-ovc failed',e);}
 
@@ -8761,6 +8756,16 @@ function _mrInPeriod(d,p){
 function rMr(){
   var p=_mrPeriod();
   var pe=g('mr-period');if(pe)pe.textContent=' · '+p.label;
+  // The twelve-month trend, on the page rather than inside the NCR agent
+  // modal — which is the only reason it can reach the printed review at all.
+  try{
+    var trC=g('mr-trend-card'),trB=g('mr-trend');
+    if(trB){
+      var trH=(typeof _ncrTrend12Html==='function')?_ncrTrend12Html():'';
+      if(trH){trB.innerHTML=trH;if(trC)trC.style.display='';}
+      else if(trC)trC.style.display='none';
+    }
+  }catch(e){console.warn('mr-trend failed',e);}
   var today=new Date().toISOString().split('T')[0];
   var thisMonth=today.substring(0,7);
   var ncrAll=DB.ncr||[];
@@ -12321,7 +12326,12 @@ window._annualISOReport=function(){
   var aiPrompt='אתה מנהל בטיחות במפעל תעשייתי בישראל. כתוב **דו"ח שנתי לסקירת הנהלה / מבדק surveillance של ISO 14001 + ISO 45001**, המבוסס אך ורק על הנתונים שצורפו. מסמך פורמלי בעברית תקנית, ערוך לפרוטוקול הביקורת.\n\n'+
     'מבנה הדוח (8 חלקים, כל אחד פתוח בכותרת ## ועם מספר):\n\n'+
     '## 1. תקופה ונתונים כלליים\n(תקופה, סך אירועים בשנה — NCRs/תקריות/near-miss)\n\n'+
-    '## 2. ביצועי בטיחות (KPIs)\n(LTIF, ימי אבדן, אחוז סגירת NCRs בזמן, מגמות)\n\n'+
+    // The prompt asked section 2 for LTIF while the data object it is handed
+    // carries incidents:{count, lost_days} and no man-hours at all — LTIF is
+    // lost-time injuries × 1,000,000 ÷ hours worked. Under the hard rule
+    // "אל תמציא נתונים" the model could only invent it or write "לא נמצא" in
+    // the headline KPI section of a document that goes to an external auditor.
+    '## 2. ביצועי בטיחות (KPIs)\n(ימי אבדן, מספר תקריות, אחוז סגירת NCRs בזמן, מגמות. אל תחשב LTIF — אין במערכת שעות עבודה)\n\n'+
     '## 3. ניהול סיכונים\n(מאגר הסיכונים — מספר, מספר ב-RPN גבוה, פעולות שננקטו)\n\n'+
     '## 4. סקירה סביבתית (ISO 14001:6.1.2)\n(היבטים סביבתיים מהותיים, מצב תאימות לחוק)\n\n'+
     '## 5. הדרכות וכשירות (ISO 45001:7.2)\n(הדרכות שבוצעו, אחוז ציות, פערים שזוהו)\n\n'+
@@ -13347,6 +13357,38 @@ window._exportBackup=function(){
 // (CDN, lazy-loaded on first use). Microsoft Excel / OneDrive / Google
 // Sheets all open the result. The user can then version it in OneDrive
 // for Business or any cloud drive.
+// ---- 6.1 ----
+// _exportXlsx took the union of the raw DB keys and handed it to
+// json_to_sheet as the header row, so the workbook that gets sent as
+// evidence in an audit opens on: id, num, d, a, category, loc, rc, c, o, u,
+// s, sd, cd, sens, p, ts. An auditor cannot know that sv is \u05d7\u05d5\u05de\u05e8\u05d4, dy is
+// \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df and u is \u05d9\u05e2\u05d3 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2. VIEW_CONFIG already holds a Hebrew
+// label for most of these columns \u2014 that is what it is for \u2014 and the rest
+// are named here. A column nobody has named keeps its raw key rather than
+// being guessed at: a wrong label is worse than a technical one.
+var _COL_LABELS={
+  id:'\u05de\u05d6\u05d4\u05d4',ts:'\u05e2\u05d5\u05d3\u05db\u05df',created_at:'\u05e0\u05d5\u05e6\u05e8',num:'\u05de\u05e1\u05f3',notes:'\u05d4\u05e2\u05e8\u05d5\u05ea',
+  category:'\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4',sens:'\u05e8\u05d2\u05d9\u05e9',five_why:'\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why',
+  file_url:'\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3',photo_url:'\u05ea\u05de\u05d5\u05e0\u05d4',
+  location_id:'\u05de\u05d6\u05d4\u05d4 \u05de\u05d9\u05e7\u05d5\u05dd',project_id:'\u05de\u05d6\u05d4\u05d4 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8',issue_type_id:'\u05de\u05d6\u05d4\u05d4 \u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',
+  parent_id:'\u05de\u05d6\u05d4\u05d4 \u05d0\u05d1',source_table:'\u05d8\u05d1\u05dc\u05ea \u05de\u05e7\u05d5\u05e8',source_id:'\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8',
+  closed_date:'\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4',src_date:'\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9',
+  verified_by:'\u05d0\u05d5\u05de\u05ea \u05e2\u05dc \u05d9\u05d3\u05d9',verified_at:'\u05ea\u05d0\u05e8\u05d9\u05da \u05d0\u05d9\u05de\u05d5\u05ea',verification_notes:'\u05d4\u05e2\u05e8\u05d5\u05ea \u05d0\u05d9\u05de\u05d5\u05ea',
+  root_cause:'\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 (\u05d9\u05d9\u05d1\u05d5\u05d0)',immediate:'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea (\u05d9\u05d9\u05d1\u05d5\u05d0)',
+  user_email:'\u05de\u05e9\u05ea\u05de\u05e9',op:'\u05e4\u05e2\u05d5\u05dc\u05d4',table_name:'\u05d8\u05d1\u05dc\u05d4',event_type:'\u05e1\u05d5\u05d2 \u05d0\u05d9\u05e8\u05d5\u05e2',
+  channel:'\u05e2\u05e8\u05d5\u05e5',payload:'\u05ea\u05d5\u05db\u05df',prefs:'\u05d4\u05e2\u05d3\u05e4\u05d5\u05ea',
+  u:'\u05d9\u05e2\u05d3 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2',m:'\u05d7\u05d5\u05d3\u05e9',n:'\u05e9\u05dd',t:'\u05e1\u05d5\u05d2',d:'\u05ea\u05d0\u05e8\u05d9\u05da',e:'\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3',s:'\u05e1\u05d8\u05d8\u05d5\u05e1'
+};
+function _xlsxLabel(tbl,key){
+  var cfg=(typeof VIEW_CONFIG!=='undefined')&&VIEW_CONFIG[tbl];
+  if(cfg&&cfg.fields)for(var i=0;i<cfg.fields.length;i++)if(cfg.fields[i][1]===key)return cfg.fields[i][0];
+  return _COL_LABELS[key]||key;
+}
+// The header row, with the raw key kept in brackets so a technical reader
+// can still map the sheet back to the schema.
+function _xlsxHeaders(tbl,cols){
+  return cols.map(function(k){var l=_xlsxLabel(tbl,k);return l===k?k:(l+' ('+k+')');});
+}
 window._exportXlsx=function(){
   toast('בונה קובץ אקסל...');
   var ensureXlsx=function(cb){
@@ -13400,6 +13442,7 @@ window._exportXlsx=function(){
           });return o;
         });
         var ws=XLSX.utils.json_to_sheet(data,{header:cols});
+        XLSX.utils.sheet_add_aoa(ws,[_xlsxHeaders(t,cols)],{origin:'A1'});
         var nm=String(sheetName[t]||t).substring(0,31);
         XLSX.utils.book_append_sheet(wb,ws,nm);
         added++;
@@ -16402,6 +16445,101 @@ window._ncrPatternShow=function(idx){
   var p=_ncrPatternsCache[Number(idx)||0];if(!p)return;
   _ncrRenderAggregate(p.content||'');
 };
+// ---- 6.5 + 6.6 : the only twelve-month view was buried in a modal ----
+// The formal trend \u2014 the thing an ISO auditor asks for as evidence \u2014 lived in
+// _ncrTrendSvg, reachable only through NCR \u2190 \ud83e\udd16 \u05e1\u05d5\u05db\u05df AI \u2190 \ud83d\udcc8 \u05de\u05d2\u05de\u05d5\u05ea, drawn
+// 360px wide on a dark panel, fed by a fetch that only runs inside the agent,
+// and invisible to print (_printPage prints .page.on, and a modal is not one).
+// The home page did have a trend, but four weeks of it, and only opened vs
+// closed \u2014 never the backlog, which is the actual question: is the pile
+// growing or shrinking over a year?
+//
+// One chart, light theme, plain SVG, no library: opened and closed as bars,
+// the open backlog at each month end as a line. Used on the home page and on
+// the management-review page, which prints.
+function _ncrTrend12(){
+  var d=new Date(),months=[];
+  for(var i=11;i>=0;i--){
+    var m=new Date(d.getFullYear(),d.getMonth()-i,1);
+    var end=new Date(d.getFullYear(),d.getMonth()-i+1,0);end.setHours(23,59,59,999);
+    months.push({y:m.getFullYear(),mo:m.getMonth(),end:end,lbl:(m.getMonth()+1)+'/'+String(m.getFullYear()).slice(2),opened:0,closed:0,backlog:0});
+  }
+  var CL='\u05e1\u05d2\u05d5\u05e8';
+  function bucket(v){
+    if(!v)return -1;
+    var dt=new Date(v);if(isNaN(dt))return -1;
+    for(var k=0;k<months.length;k++)if(months[k].y===dt.getFullYear()&&months[k].mo===dt.getMonth())return k;
+    return -1;
+  }
+  (DB.ncr||[]).forEach(function(n){
+    // n.d is the DESCRIPTION on an NCR, never a date \u2014 see 1.5. ts is the row's
+    // own creation time and is the only honest fallback.
+    var op=n.sd||n.src_date||n.ts;
+    var bo=bucket(op);if(bo>=0)months[bo].opened++;
+    var cl=(n.s===CL)?(n.cd||null):null;
+    var bc=bucket(cl);if(bc>=0)months[bc].closed++;
+    // The backlog at the end of month i: opened on or before it, and not yet
+    // closed by then.
+    var opD=op?new Date(op):null;if(opD&&isNaN(opD))opD=null;
+    var clD=cl?new Date(cl):null;if(clD&&isNaN(clD))clD=null;
+    if(!opD)return;
+    months.forEach(function(mm){
+      if(opD>mm.end)return;
+      if(clD&&clD<=mm.end)return;
+      mm.backlog++;
+    });
+  });
+  return months;
+}
+function _ncrTrend12Svg(months){
+  months=months||_ncrTrend12();
+  var maxBar=1,maxLine=1;
+  months.forEach(function(m){
+    if(m.opened>maxBar)maxBar=m.opened;
+    if(m.closed>maxBar)maxBar=m.closed;
+    if(m.backlog>maxLine)maxLine=m.backlog;
+  });
+  var W=340,H=150,padL=26,padR=26,padT=14,padB=26;
+  var cW=W-padL-padR,cH=H-padT-padB;
+  var slot=cW/months.length,barW=Math.max(3,(slot-4)/2);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="\u05de\u05d2\u05de\u05ea NCR \u05dc-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd" style="display:block">';
+  svg+='<line x1="'+padL+'" y1="'+(padT+cH)+'" x2="'+(W-padR)+'" y2="'+(padT+cH)+'" stroke="#d5d8de"></line>';
+  svg+='<text x="2" y="'+(padT+7)+'" font-size="8" fill="#8a8f98">'+maxBar+'</text>';
+  svg+='<text x="2" y="'+(padT+cH+3)+'" font-size="8" fill="#8a8f98">0</text>';
+  svg+='<text x="'+(W-2)+'" y="'+(padT+7)+'" font-size="8" fill="#1d4ed8" text-anchor="end">'+maxLine+'</text>';
+  var pts=[];
+  months.forEach(function(m,i){
+    var x0=padL+i*slot+2;
+    var hO=Math.round(cH*m.opened/maxBar),hC=Math.round(cH*m.closed/maxBar);
+    if(m.opened)svg+='<rect x="'+x0+'" y="'+(padT+cH-hO)+'" width="'+barW+'" height="'+hO+'" fill="#cc1f1f"><title>'+m.lbl+' \u00b7 \u05e0\u05e4\u05ea\u05d7\u05d5 '+m.opened+'</title></rect>';
+    if(m.closed)svg+='<rect x="'+(x0+barW+1)+'" y="'+(padT+cH-hC)+'" width="'+barW+'" height="'+hC+'" fill="#16a34a"><title>'+m.lbl+' \u00b7 \u05e0\u05e1\u05d2\u05e8\u05d5 '+m.closed+'</title></rect>';
+    pts.push((x0+barW).toFixed(1)+','+(padT+cH-cH*m.backlog/maxLine).toFixed(1));
+    if(i%2===0||i===months.length-1)svg+='<text x="'+(x0+barW)+'" y="'+(H-8)+'" font-size="8" fill="#8a8f98" text-anchor="middle">'+m.lbl+'</text>';
+  });
+  svg+='<polyline points="'+pts.join(' ')+'" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round"></polyline>';
+  var last=months[months.length-1];
+  svg+='<circle cx="'+pts[pts.length-1].split(',')[0]+'" cy="'+pts[pts.length-1].split(',')[1]+'" r="2.5" fill="#1d4ed8"><title>\u05e6\u05d1\u05e8 \u05e4\u05ea\u05d5\u05d7 '+last.backlog+'</title></circle>';
+  svg+='</svg>';
+  return svg;
+}
+function _ncrTrend12Html(){
+  var months=_ncrTrend12();
+  var any=months.some(function(m){return m.opened||m.closed||m.backlog;});
+  if(!any)return '';
+  var first=months[0].backlog,last=months[months.length-1].backlog;
+  var delta=last-first;
+  var dir=delta>0?('\u25b2 \u05d4\u05e6\u05d1\u05e8 \u05d2\u05d3\u05dc \u05d1-'+delta):(delta<0?('\u25bc \u05d4\u05e6\u05d1\u05e8 \u05e7\u05d8\u05df \u05d1-'+(-delta)):'\u25ac \u05d4\u05e6\u05d1\u05e8 \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9');
+  var dirCol=delta>0?'#cc1f1f':(delta<0?'#16a34a':'var(--t3)');
+  var opened=months.reduce(function(a,m){return a+m.opened;},0);
+  var closed=months.reduce(function(a,m){return a+m.closed;},0);
+  return _ncrTrend12Svg(months)
+    +'<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;font-size:11px;margin-top:6px;color:#444">'
+    +'<span><span style="display:inline-block;width:10px;height:10px;background:#cc1f1f;border-radius:2px"></span> \u05e0\u05e4\u05ea\u05d7\u05d5 ('+opened+')</span>'
+    +'<span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;border-radius:2px"></span> \u05e0\u05e1\u05d2\u05e8\u05d5 ('+closed+')</span>'
+    +'<span><span style="display:inline-block;width:14px;height:2px;background:#1d4ed8;vertical-align:middle"></span> \u05e6\u05d1\u05e8 \u05e4\u05ea\u05d5\u05d7 ('+last+')</span>'
+    +'</div>'
+    +'<div style="text-align:center;font-size:12px;font-weight:700;margin-top:4px;color:'+dirCol+'">'+dir+' \u05d1-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd</div>';
+}
 function _ncrTrendSvg(){
   var d=new Date(),months=[];
   for(var i=11;i>=0;i--){
@@ -17452,6 +17590,14 @@ function _backupBuildXlsx(snapshot){
     // Sheet names are limited to 31 chars in Excel.
     var sheetName=t.length>31?t.substring(0,31):t;
     var ws=XLSX.utils.json_to_sheet(rows);
+    // Same raw-header problem as _exportXlsx had: this workbook is the one
+    // that lands in OneDrive and gets opened months later by somebody who
+    // does not have the schema in their head.
+    try{
+      var _bk={};rows.forEach(function(r){if(r&&typeof r==='object')Object.keys(r).forEach(function(k){_bk[k]=1;});});
+      var _bcols=Object.keys(_bk);
+      if(_bcols.length)XLSX.utils.sheet_add_aoa(ws,[_xlsxHeaders(t,_bcols)],{origin:'A1'});
+    }catch(e){}
     XLSX.utils.book_append_sheet(wb,ws,sheetName);
   });
   // Convert to ArrayBuffer for upload as Blob
