@@ -117,18 +117,18 @@
 
 | # | מה | חומרה | מאמץ | |
 |---|---|---|---|---|
-| 6.1 | **`_exportXlsx` משתמש בשמות העמודות הגולמיים ככותרת** — `u`, `dy`, `sv`. מבקר שפותח את הגיליון לא יודע מה זה | 🟠 | S | ✅ |
+| 6.1 | ~~**`_exportXlsx` משתמש בשמות העמודות הגולמיים ככותרת** — `u`, `dy`, `sv`. מבקר שפותח את הגיליון לא יודע מה זה~~ **#660** | 🟠 | S | ✅ |
 | 6.2 | **זמן סגירת NCR מחושב בשתי דרכים שונות** (`cd-ts` מול `cd-sd`), ו-`ts` נדרס בכל שמירה | 🟠 | M | ✅ |
 | 6.3 | **אין חלוקה לתקופות.** כל מדדי הזמן על כל ההיסטוריה — אי אפשר לומר «ברבעון הזה סגרנו מהר יותר» | 🟠 | M | ✅ |
 | 6.4 | **סקירת ההנהלה בלי רבעון קודם ובלי Δ** — בעוד שהפרומפט מבקש מהמודל להשוות לרבעון קודם | 🟠 | M | ✅ |
-| 6.5 | **גרף המגמה קיים אבל קבור** בתוך פאנל ה-NCR Agent — לא בבית, לא בסקירה, לא בהדפסה | 🟡 | S | 🟨 |
-| 6.6 | **מגמת 12 חודשים: נפתח / נסגר / צבר** — SVG ידני, בלי ספרייה | 🟠 | S | 🟨 |
+| 6.5 | ~~**גרף המגמה קיים אבל קבור** בתוך פאנל ה-NCR Agent — לא בבית, לא בסקירה, לא בהדפסה~~ **#660** | 🟡 | S | 🟨 |
+| 6.6 | ~~**מגמת 12 חודשים: נפתח / נסגר / צבר** — SVG ידני, בלי ספרייה~~ **#660** | 🟠 | S | 🟨 |
 | 6.7 | **Sparklines לאינדיקטורים מובילים** — כמעט-נפגע, דיווחי נאמנים, סבבים, שיחות בטיחות | 🟠 | M | ✅ |
 | 6.8 | **פס חום 6 חודשים לכל אזור** — CSS בלבד | 🟡 | M | ✅ |
 | 6.9 | **כשירות הדרכות לפי מחלקה** — קישור `tr.w` ל-`emp.n` | 🟡 | M | ✅ |
 | 6.10 | **אחוז משימות שנסגרו בזמן, לפי חודש** — דורש `closed_date` ב-`svTsk` | 🟡 | M | ✅ |
 | 6.11 | **פרוטוקול סקירת הנהלה שנשמר כרשומה.** §9.3 | 🟠 | M | ✅ |
-| 6.12 | **אריח «ימי אבדן» מתויג LTIF** ומציג ימים גולמיים — זה לא LTIF | 🟡 | S | ✅ |
+| 6.12 | ~~**אריח «ימי אבדן» מתויג LTIF** ומציג ימים גולמיים — זה לא LTIF~~ **#660** | 🟡 | S | ✅ |
 | 6.13 | **דף אחד להנהלה: «האם אנחנו נהיים בטוחים יותר?»** באותו דפוס של דוח ה-ISO | 🟠 | L | ✅ |
 
 ---
@@ -153,6 +153,7 @@
 | #652 | נאמנים: עבודה שנעשתה ולא נרשמה, נאמן שקיים פעמיים, ופרס שאיש לא הכריז (4.4, 4.6–4.9) |
 | #654 | מרשמים: הראיה שהמערכת מבקשת ממבקר להאמין לה בלי להראות (3.4, 3.6, 3.8–3.10, 3.12) · מיגרציה פתוחה: [#655](../../issues/655) |
 | #657 | סנכרון: ארבע דרכים שבהן האפליקציה אמרה שהכל בסדר כשלא (5.1, 5.2, 5.3, 5.6) · מיגרציה פתוחה ל-5.8: [#658](../../issues/658) |
+| #660 | דוחות: מה שהאפליקציה מוסרת למישהו מחוץ לה (6.1, 6.5, 6.6, 6.12) |
 
 ## 8. לא מומלץ
 
@@ -742,7 +743,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: לא לתקן את זה כפי שנוסח. הניסוח «אין שום בדיקה» יוביל לבנות מאפס את מה שכבר קיים; הפער האמיתי צר וממוקד יותר: (א) אפס בדיקות Storage בכל צורה שהיא, (ב) 3 טבלאות בלבד מכוסות ב-RLS מתוך 35+, (ג) שום דבר לא רץ אוטומטית — _securityselftest הוא endpoint שמישהו צריך לפתוח, ו-run.sh הוא סקריפט שמישהו צריך להריץ. ההרחבה הזולה ביותר היא להוסיף ל-_securityselftest בדיקות Storage שליליות מול טוקן אנונימי — הן היו תופסות את החור של 2026-09-20 ביום שנפתח, והמשתמש כבר יודע לפתוח אותו (יש כפתור «🔒 בדיקת אבטחה» בדשבורד, STATUS.md, PR #532). ⚠ תלות: הבדיקות האלה ייכשלו כל עוד migrations/2026-09-20_storage_trustee_scope.sql לא הורצה — להריץ אותה קודם (היא דורשת אישור מפורש, כמו 5.8). ⚠ סיכון: _securityselftest חשוף בלי אימות ומחזיר CORS `*` (שורה 38) — בדיקות חדשות חייבות להישאר ספירות/סטטוסים בלבד, בלי שמות קבצים או תוכן, אחרת הכלי שנועד למדוד את החור יהפוך למפת דרכים אליו.
 
 
-### 6.1 — ✅ confirmed · מאמץ S
+### 6.1 — ✅ בוצע ב-**#660** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `window._exportXlsx` — index.html:13033-13096. The header comes from the raw DB keys and nothing translates them. index.html:13075-13076 collects the union of keys per table: `var keys={};rows.forEach(function(r){if(r&&typeof r==='object')Object.keys(r).forEach(function(k){keys[k]=1;});});` / `var cols=Object.keys(keys);` — and the deciding line, index.html:13085: `var ws=XLSX.utils.json_to_sheet(data,{header:cols});`. `cols` goes straight in as the header row. The only Hebrew in the function is the `sheetName` map (13056-13070), which names the TAB, not the columns. The claim's three examples all check out: `sv` and `dy` are real `inc` columns (VIEW_CONFIG inc, index.html:11206-11207: `['חומרה','sv'],['מיקום','l'],['ימי אבדן','dy']` = חומרה / ימי אבדן), and `u` is the NCR due date (index.html:2017: `<label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date">`).
 
@@ -786,7 +787,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: התיקון זול יחסית כי כל התשתית קיימת: `_mrInPeriod(d,p)` (8542) כבר מקבל אובייקט תקופה כפרמטר, אז מספיק לקרוא לו פעמיים. מלכודת: `_mrAINarrative` קורא ערכים מה-DOM דרך `txt(id)` (index.html:12047), כלומר Δ שיוצג על המסך חייב לשבת באלמנט נפרד — אם תדחפו «14 (+3)» לתוך `mr-ncr-q-new` הטקסט הזה ייכנס לפרומפט כמחרוזת ויבלבל את המודל. הוסיפו span נפרד. תלות: אם מיישמים גם 6.3, ה-generalization של `_mrPeriod` משותף לשניהם — לעשות פעם אחת. אזהרת סגנון: `_mrAINarrative` והפרומפט כולו (12084-12100) כתובים בעברית גולמית ב-JS בניגוד לחוק 1 ב-CLAUDE.md; אל תרחיבו את החוב — טקסט חדש ב-\uXXXX. לא נמצאה החלטה ב-DECISIONS.md שמצדיקה את היעדר ההשוואה.
 
 
-### 6.5 — 🟨 partly · מאמץ S
+### 6.5 — ✅ בוצע ב-**#660** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: החלק על הקבורה נכון, החלק על «לא בבית» לא. `_ncrTrendSvg()` מוגדר ב-index.html:15786 ונקרא בדיוק פעם אחת בכל הקובץ — index.html:15839: `P.innerHTML=_ncrTrendSvg()+legend+summary;` בתוך `_ncrShowTrend`, ש-`P` שלו הוא `document.getElementById('ncr-agent-panel')` (15827), פאנל ברוחב 360px בתוך מודאל ה-NCR Agent. הכניסה היחידה היא הכפתור בכותרת המודאל, index.html:15184: `<button onclick="_ncrShowTrend()" ... title="&#1490;&#1512;&#1507; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;">&#128200; &#1502;&#1490;&#1502;&#1493;&#1514;</button>`, והמודאל עצמו נפתח רק מ-`openNCRAgent()` — שני אתרי קריאה בלבד: index.html:1470 (כפתור «🤖 סוכן AI» בדף NCR) ו-index.html:3937. יתרה מזו, הגרף אוכל מ-`_nad` (index.html:15187), שמתמלא רק ב-`_ncrLoad` (index.html:15445: `_nad=raw;`) — fetch נפרד ל-REST, כך שבלי לפתוח את הסוכן ולחכות לטעינה אין גרף. אבל: בדשבורד כן יושב גרף מגמה — index.html:898: `<div class="card" id="dash-ovc-card" style="display:none"><div class="card-title">&#128202; NCR &#1504;&#1508;&#1514;&#1495; &#1502;&#1493;&#1500; &#1504;&#1505;&#1490;&#1512; &#8212; 4 &#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</div>`, בתוך `<div id="pg-dash" class="page on">` (index.html:830), ומצויר ב-`rDash` index.html:5862-5885 עם עמודות SVG-less (divים) לכל שבוע.
 
@@ -797,7 +798,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: לפני שמזיזים משהו לדשבורד — יש החלטה קודמת נגד. DECISIONS.md:1274-1278, «2026-04-19 — Revert: הסרת Dashboard 2.0 Phase A»: «הסרת 4 הגרפים (Chart.js) שנוספו ב-PR #16... סיבה: החלטה של המשתמש — הגרפים לא סיפקו ערך מספיק או לא התאימו לזרימת העבודה היומיומית». אחד מארבעת הגרפים שהוסרו היה בדיוק זה: «NCR trend (line, 12 חודשים, Safety vs Env)» (DECISIONS.md:1332). כלומר להחזיר גרף 12 חודשים לדשבורד זה להפוך החלטה מפורשת של מיכאל — צריך לשאול אותו, לא להניח. היעד ההגיוני שלא מתנגש עם ההחלטה הזו הוא דף סקירת ההנהלה ותיק המבדק, שם הגרף משרת מבקר ולא את הזרימה היומיומית. חומרה 🟡 נראית נכונה: זו נגישות, לא נתון שגוי.
 
 
-### 6.6 — 🟨 partly · מאמץ S
+### 6.6 — ✅ בוצע ב-**#660** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: שני חלקים מתוך שלושה כבר קיימים.
 (א) גרף «נפתח מול נסגר» קיים בבית — HTML שורה 898: `<div class="card" id="dash-ovc-card" ...>📊 NCR נפתח מול נסגר — 4 שבועות`, מרונדר ב-`rDash()` שורות 5860-5893. השורה המכריעה, 5873-5876: `(DB.ncr||[]).forEach(function(n){var b=_wkBucket(n.sd||n.src_date||n.d); if(b>=0)weeks[b].opened++; if(n.s==='סגור'&&n.cd){var bc=_wkBucket(n.cd);if(bc>=0)weeks[bc].closed++;}});` — כלומר נפתח+נסגר כבר מחושבים, אבל ב-4 דליים שבועיים, ובעמודות div של CSS ולא SVG.
@@ -872,7 +873,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: The precedent to copy is exact: `migrations/2026-04-18_ncr_ai.sql` persists versioned AI output per parent record with `version int`, `ts timestamptz`, `created_by` — same shape works for a review keyed by quarter. Two things that are easy to miss: (1) if the table is not added to `_BACKUP_TABLES` (16780) the nightly backup silently skips it, and (2) it must go into `_DEL_PROTECTED` (3599) like `ncr_ai` and `trustee_reports`, or `askDel` will happily delete minutes an auditor may ask for. Save the KPI snapshot as columns, not just the narrative text — that snapshot is what makes backlog item 6.4 (previous quarter + Δ) possible, since the prompt at 12084 already instructs the model to compare to the previous quarter while supplying no previous-quarter data. The table is new, so nothing destructive is involved; CLAUDE.md rule 7 still applies — do not tick it in STATUS.md until Michael confirms the migration ran.
 
 
-### 6.12 — ✅ confirmed · מאמץ S
+### 6.12 — ✅ בוצע ב-**#660** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: The tile is index.html:5109: `{v:c.lostDays,  cls:'kpi-r',label:'ימי אבדן',sub:'LTIF',go:"goPage('inc')"}` — label "ימי אבדן", sub-caption literally `'LTIF'`. The value comes from index.html:5226: `var kl=inc.reduce(function(s,i){return s+(i.dy||0);},0);` where `inc=DB.inc` (index.html:5212), so it is the plain sum of the `dy` column over the entire history — not a rate, and not even scoped to a period. LTIF is lost-time injuries × 1,000,000 ÷ hours worked; the app stores no man-hours anywhere (no settings/config table in `_BACKUP_TABLES` at 16780, and `dy` is written as a plain integer at index.html:4436 `dy:gi('i-dy')`). So the tile is a raw cumulative day count wearing the name of a frequency rate.
 
