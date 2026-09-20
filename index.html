@@ -1488,6 +1488,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="ncrQuickFilter('m3')" style="padding:5px 10px;font-size:11px">&#128197; 90 &#1497;&#1493;&#1501;</button>
     <button class="btn btn-s" onclick="ncrQuickFilter('stale')" style="padding:5px 10px;font-size:11px">&#9201;&#65039; &#1497;&#1513;&#1504;&#1497;&#1501; (30+&#1497;)</button>
     <button class="btn btn-s" onclick="ncrQuickFilter('overdue')" style="padding:5px 10px;font-size:11px">&#9203; &#1495;&#1493;&#1512;&#1490;&#1497;&#1501; &#1500;&#1497;&#1506;&#1491;</button>
+    <button class="btn btn-s" id="ncr-qf-capa" onclick="ncrQuickFilter('capa')" style="padding:5px 10px;font-size:11px;display:none;background:#dcfce7;border-color:#16a34a;color:#15803d">&#9989; &#1502;&#1502;&#1514;&#1497;&#1504;&#1493;&#1514; &#1500;&#1488;&#1497;&#1502;&#1493;&#1514; (<span id="ncr-qf-capa-n">0</span>)</button>
   </div>
   <div id="ncr-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="ncr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
@@ -4880,6 +4881,7 @@ function _todayClick(fn,a1,a2){
   if(fn==='view'){showView(a1,a2);return;}
   if(fn==='edit'){editTsk(a1);return;}
   if(fn==='tasks'){goPage('tasks');if(typeof tskFilter==='function')tskFilter(a1||'all');return;}
+  if(fn==='ncrcapa'){goPage('ncr');if(typeof ncrQuickFilter==='function')ncrQuickFilter('capa');return;}
 }
 function _renderToday(){
   var listEl=g('today-items'), hdr=g('today-header'), cnt=g('today-count');
@@ -4901,6 +4903,18 @@ function _renderToday(){
         title:(trStale.length===1?'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e4\u05ea\u05d5\u05d7 \u05de\u05e2\u05dc ':trStale.length+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e2\u05dc ')+TRUSTEE_STALE_DAYS+' \u05d9\u05d5\u05dd',
         sub:'\u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: '+String(oldest.loc||'').substring(0,40)+(oldest.f?' \u2014 '+String(oldest.f).substring(0,50):'')+' ('+oldAge+' \u05d9\u05d5\u05dd)',
         badge:oldAge+'\u05d9',badgeCls:'red',fn:'page',a1:'trustees',a2:''});
+    }
+  }
+  // 1a2. Corrective actions closed long ago that nobody ever verified. ISO
+  // asks whether the fix worked, not whether it was written down.
+  if(typeof _capaDue==='function'&&typeof _isAdminUser==='function'&&_isAdminUser()){
+    var capaQ=_capaDue();
+    if(capaQ.length){
+      var capaOld=capaQ[0],capaOldAge=_capaAge(capaOld);
+      items.push({priority:2,icon:'\u2705',
+        title:(capaQ.length===1?'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05d0\u05d7\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea':capaQ.length+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea'),
+        sub:'\u05e1\u05d2\u05d5\u05e8\u05d5\u05ea \u05de\u05e2\u05dc '+CAPA_VERIFY_DAYS+' \u05d9\u05d5\u05dd \u05d5\u05d8\u05e8\u05dd \u05e0\u05d1\u05d3\u05e7 \u05d0\u05dd \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05de\u05ea\u05e7\u05e0\u05ea \u05e2\u05d1\u05d3\u05d4 \u00b7 \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7\u05d4: '+String(capaOld.num||capaOld.id).substring(0,20)+' ('+capaOldAge+'\u05d9)',
+        badge:'\u05d0\u05de\u05ea',badgeCls:'amber',fn:'ncrcapa',a1:'',a2:''});
     }
   }
   // 1b. Trustee hazards nobody has routed yet (no task, no routing note) — one line, managers only.
@@ -5922,6 +5936,32 @@ function rDash(){
     });
   }catch(e){console.warn('dash-kpis failed',e);}
   try{_dashHideEmptySection();}catch(e){}
+}
+// CAPA effectiveness verification (ISO 45001 §10.2 / ISO 14001 §10.2).
+//
+// The button that records a verification has existed since May, but it lived
+// ONLY inside the view modal of one closed NCR, and only if you happened to
+// open one that had been closed for 30 days or more. With 375 NCRs nobody
+// finds those by browsing, so in practice the step never happened: the system
+// documented corrective actions and never proved any of them worked. That is
+// the difference between a system that records and a system that can be
+// audited. This turns it into a queue the manager is shown.
+var CAPA_VERIFY_DAYS=30;
+// Days since the NCR was closed, or null if it carries no closing date.
+function _capaAge(r){
+  if(!r||!r.cd)return null;
+  var t=new Date(r.cd).getTime();
+  if(isNaN(t))return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+// Closed long enough to judge, and nobody has judged it. Oldest first.
+function _capaDue(){
+  return (DB.ncr||[]).filter(function(r){
+    if(r.s!=='\u05e1\u05d2\u05d5\u05e8')return false;
+    if(r.verified_by)return false;
+    var a=_capaAge(r);
+    return a!==null&&a>=CAPA_VERIFY_DAYS;
+  }).sort(function(a,b){return (_capaAge(b)||0)-(_capaAge(a)||0);});
 }
 function _expCollect(){
   var items=[];
@@ -9465,10 +9505,18 @@ if(chipsEl){
   if(prjF){var pn=(typeof _prjName==='function')?_prjName(prjF):prjF;chips.push({label:'🏗️ '+pn,clear:'ncrPrjFilter(\'\')'});}
   if(itypeF){var itn=(typeof _itypeName==='function')?_itypeName(itypeF):itypeF;chips.push({label:'\ud83c\udfaf '+itn,clear:'ncrItypeFilter(\'\')'});}
   var _qfNcr=window._ncrQuickFilter||'';
-  if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',m1:'\ud83d\udcc5 30 \u05d9\u05d5\u05dd',m3:'\ud83d\udcc5 90 \u05d9\u05d5\u05dd',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
+  if(_qfNcr){var qfL={critical:'\ud83d\udd25 \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd',week:'\ud83d\udcc5 \u05d4\u05e9\u05d1\u05d5\u05e2',m1:'\ud83d\udcc5 30 \u05d9\u05d5\u05dd',m3:'\ud83d\udcc5 90 \u05d9\u05d5\u05dd',stale:'\u23f1\ufe0f \u05d9\u05e9\u05e0\u05d9\u05dd',overdue:'\u23f3 \u05d7\u05d5\u05e8\u05d2\u05d9\u05dd',capa:'\u2705 \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05d0\u05d9\u05de\u05d5\u05ea'}[_qfNcr]||_qfNcr;chips.push({label:qfL,clear:'ncrQuickFilter(\'\')'});}
   chipsEl.innerHTML=chips.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#dcecff;border:1px solid #4d9fff;border-radius:14px;font-size:11px;color:#1a1d23">'+esc(c.label)+'<button onclick="'+c.clear+'" style="background:transparent;border:none;color:#1d4ed8;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1" title="\u05d4\u05e1\u05e8">×</button></span>';}).join('');
 }
 var isAdm=_isAdminUser();
+// The verification-queue button appears only when there IS a queue and the
+// person can act on it — an empty filter button is just noise.
+try{
+  var _capaN=isAdm?_capaDue().length:0;
+  var _capaB=g('ncr-qf-capa'),_capaC=g('ncr-qf-capa-n');
+  if(_capaC)_capaC.textContent=_capaN;
+  if(_capaB)_capaB.style.display=_capaN?'':'none';
+}catch(e){}
 var rows=DB.ncr.filter(function(n){
   if(n.sens&&!isAdm)return false;
   if(filter==='saf'&&!(n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0)))return false;
@@ -9496,11 +9544,19 @@ if(_ncrQF){
   else if(_ncrQF==='m3')rows=rows.filter(function(r){var dd=_ncrAgeDays(r);return dd!==null&&dd>=-1&&dd<=90;});
   else if(_ncrQF==='stale')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.ts)return false;return (Date.now()-new Date(r.ts).getTime())/86400000>=30;});
   else if(_ncrQF==='overdue')rows=rows.filter(function(r){if(r.s==='\u05e1\u05d2\u05d5\u05e8'||!r.u)return false;return new Date(r.u)<todayQ;});
+  // The verification queue as a filter: the same set the Today line counts.
+  else if(_ncrQF==='capa'){var _due={};_capaDue().forEach(function(r){_due[r.id]=1;});rows=rows.filter(function(r){return _due[r.id];});}
 }
 // Sort: open before closed, then by priority weight (\u05e7\u05e8\u05d9\u05d8\u05d9 highest), then newest first
 // by sd (\u05ea\u05d0\u05e8\u05d9\u05da \u05d2\u05d9\u05dc\u05d5\u05d9) \u2014 this used to localeCompare r.d, which is the description text.
 var _pW={'\u05e7\u05e8\u05d9\u05d8\u05d9':0,'\u05d2\u05d1\u05d5\u05d4':1,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':2,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':2,'\u05e0\u05de\u05d5\u05db\u05d4':3,'\u05e0\u05de\u05d5\u05da':3};
-rows.sort(function(a,b){
+if(_ncrQF==='capa'){
+  // A queue is worked oldest-first. Every row here is closed and unprioritised,
+  // so the ordinary sort would fall through to newest-first and put the most
+  // overdue verification at the BOTTOM — the opposite of the order the "today"
+  // line names as the oldest.
+  rows.sort(function(a,b){return String(a.cd||'').localeCompare(String(b.cd||''));});
+}else rows.sort(function(a,b){
   var ac=a.s==='\u05e1\u05d2\u05d5\u05e8'?1:0, bc=b.s==='\u05e1\u05d2\u05d5\u05e8'?1:0;
   if(ac!==bc)return ac-bc;
   var ap=_pW[a.p]!==undefined?_pW[a.p]:4, bp=_pW[b.p]!==undefined?_pW[b.p]:4;
@@ -9511,7 +9567,10 @@ rows.sort(function(a,b){
 // summary, so the pills always describe exactly what the list shows. The
 // previous order computed the summary from the full set, so it read
 // "\u05e1\u05d4\u05f4\u05db: 375" while the list showed 4 \u2014 looking like nothing was filtered.
-var _ncrHiding=(window._ncrHideClosed!==false);
+// The verification queue is made ENTIRELY of closed NCRs, and this screen
+// hides closed rows by default — so without this the queue filter would
+// select three rows and then show none of them.
+var _ncrHiding=(window._ncrHideClosed!==false)&&_ncrQF!=='capa';
 var _ncrClosedHidden=0;
 (function(){
   var b=g('ncr-tab-status');
@@ -9573,6 +9632,13 @@ tb.innerHTML=rows.map(function(n){
   var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
+  // Verification is a two-tap trip through the view modal otherwise, and the
+  // queue can be dozens long. Offer it on the row, for the rows that need it.
+  var capaBtn='';
+  if(isAdm&&n.s==='\u05e1\u05d2\u05d5\u05e8'&&!n.verified_by){
+    var _cAge=_capaAge(n);
+    if(_cAge!==null&&_cAge>=CAPA_VERIFY_DAYS)capaBtn='<button class="btn btn-d btn-sm" style="background:#065f46" data-cid="'+esc(n.id)+'" onclick="_capaVerify(this.dataset.cid)" title="\u05d0\u05de\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u2014 \u05e1\u05d2\u05d5\u05e8 '+_cAge+' \u05d9\u05de\u05d9\u05dd">&#9989;</button> ';
+  }
   return '<tr>'+
     '<td><span class="b bX" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e2\u05ea\u05e7\u05d4" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'\u05d4\u05d5\u05e2\u05ea\u05e7\')">'+(n.num||'&#8212;')+'</span>'+priBadge+sensBadge+staleBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
@@ -9582,7 +9648,7 @@ tb.innerHTML=rows.map(function(n){
     '<td>'+sb(n.s)+'</td>'+
     '<td>'+(n.o||'').substring(0,15)+'</td>'+
     '<td>'+eb(n.u)+'</td>'+
-    '<td>'+viewBtn+' '+editBtn+' '+delBtn+'</td>'+
+    '<td>'+capaBtn+viewBtn+' '+editBtn+' '+delBtn+'</td>'+
   '</tr>';
 }).join('');
 }
@@ -11124,13 +11190,13 @@ function showView(tbl,id){
     html+='<div style="margin-top:10px"><button data-nmid="'+esc(id)+'" onclick="_chainNmToNcr(this.dataset.nmid)" style="width:100%;background:#fef2f2;border:1px solid #cc1f1f;border-radius:8px;color:#991b1b;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#9888;\ufe0f \u05e4\u05ea\u05d7 NCR \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4</button></div>';
   }
   if(tbl==='ncr'&&rec.s==='\u05e1\u05d2\u05d5\u05e8'&&rec.cd){
-    var capaAge=Math.floor((Date.now()-new Date(rec.cd).getTime())/86400000);
+    var capaAge=_capaAge(rec);
     if(rec.verified_by){
       html+='<div style="margin-top:8px;background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:10px;font-size:12px;color:#166534">&#9989; \u05d0\u05d5\u05de\u05ea \u05e2\u05dc \u05d9\u05d3\u05d9 <strong>'+esc(rec.verified_by)+'</strong> \u05d1-'+fd(String(rec.verified_at).substring(0,10))+(rec.verification_notes?'<div style="margin-top:4px;color:#15803d">'+esc(rec.verification_notes)+'</div>':'')+'</div>';
-    }else if(capaAge>=30&&_isAdminUser()){
+    }else if(capaAge>=CAPA_VERIFY_DAYS&&_isAdminUser()){
       html+='<div style="margin-top:8px"><button data-vid="'+esc(id)+'" onclick="_capaVerify(this.dataset.vid)" style="width:100%;background:#0d3d2d;border:1px solid #10b981;border-radius:8px;color:#10b981;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#9989; \u05d0\u05de\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea (\u05e1\u05d2\u05d5\u05e8 '+capaAge+' \u05d9\u05de\u05d9\u05dd)</button></div>';
-    }else if(capaAge<30&&_isAdminUser()){
-      html+='<div style="margin-top:8px;font-size:11px;color:var(--t3);text-align:center">&#9203; \u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u05d9\u05d4\u05d9\u05d4 \u05d6\u05de\u05d9\u05df \u05d1\u05e2\u05d5\u05d3 '+(30-capaAge)+' \u05d9\u05de\u05d9\u05dd</div>';
+    }else if(capaAge<CAPA_VERIFY_DAYS&&_isAdminUser()){
+      html+='<div style="margin-top:8px;font-size:11px;color:var(--t3);text-align:center">&#9203; \u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea \u05d9\u05d4\u05d9\u05d4 \u05d6\u05de\u05d9\u05df \u05d1\u05e2\u05d5\u05d3 '+(CAPA_VERIFY_DAYS-capaAge)+' \u05d9\u05de\u05d9\u05dd</div>';
     }
   }
   var canWA=false;
