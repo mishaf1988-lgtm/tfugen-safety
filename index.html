@@ -595,6 +595,8 @@ body.emp-mode #pg-emp-home{display:block!important}
 .emp-btn.b{border-color:var(--blue);background:#eff6ff}
 .emp-toggle{display:block;width:100%;margin-top:22px;padding:11px;background:#f0f1f3;color:var(--t2);border:1px solid var(--border);border-radius:8px;font-family:'Heebo',Arial,sans-serif;font-size:12px;font-weight:700}
 #emp-toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none;max-width:calc(100vw - 32px);white-space:normal;text-align:center;line-height:1.4}
+.ti-done{flex:none;width:34px;height:34px;min-width:34px;border-radius:9px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1}
+.ti-done:active{background:#16a34a;color:#fff}
 #emp-mode-badge{display:none;background:#ecfdf5;color:#166534;border:1px solid #16a34a;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
 body.emp-mode #emp-mode-badge{display:inline-block}
 /* Trustees (T2, 2026-09-18): the trustee screen lives inside the employee
@@ -2650,6 +2652,16 @@ id="m-ncr" style="display:none">
   <div class="modal-body">
     <div id="notif-alloff-banner" style="display:none;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#92400e;line-height:1.5">&#9888; &#1499;&#1500; &#1492;&#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1499;&#1489;&#1493;&#1497;&#1497;&#1501; &#8212; &#1500;&#1488; &#1497;&#1497;&#1513;&#1500;&#1495;&#1493; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;. &#1505;&#1502;&#1503; &#1514;&#1497;&#1489;&#1493;&#1514; &#1493;&#1513;&#1502;&#1493;&#1512;, &#1488;&#1493;: <button onclick="_notifEnableRecommended()" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;margin-right:4px">&#10003; &#1492;&#1508;&#1506;&#1500; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514; &#1489;&#1514;&#1493;&#1498; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</button></div>
     <table id="notif-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+    <!-- The fallback recipient. Until now an unresolved notification went to
+         whatever number was last typed into the admin "WhatsApp test" card,
+         which nothing on screen said. -->
+    <div id="notif-self-box" style="margin-top:12px;border:1px solid #d5d8de;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5">
+      <div style="font-weight:700;margin-bottom:6px">&#128242; &#1492;&#1502;&#1505;&#1508;&#1512; &#1513;&#1500;&#1497; &#8212; &#1500;&#1488;&#1503; &#1514;&#1490;&#1497;&#1506; &#1492;&#1514;&#1512;&#1488;&#1492; &#1499;&#1513;&#1488;&#1497;&#1503; &#1488;&#1495;&#1512;&#1488;&#1497; &#1502;&#1494;&#1493;&#1492;&#1492;</div>
+      <div class="fgrid">
+        <div class="field"><label>&#128241; WhatsApp</label><input id="notif-self-wa" placeholder="9725XXXXXXXX" inputmode="tel" dir="ltr"></div>
+      </div>
+      <div style="color:var(--t2);margin-top:6px">&#1492;&#1513;&#1488;&#1512; &#1512;&#1497;&#1511; &#8212; &#1492;&#1514;&#1512;&#1488;&#1492; &#1513;&#1500;&#1488; &#1494;&#1493;&#1492;&#1514;&#1492; &#1488;&#1495;&#1512;&#1488;&#1497; &#1514;&#1497;&#1512;&#1513;&#1501; &#1489;&#1497;&#1493;&#1502;&#1503; &#1489;&#1500;&#1489;&#1491;, &#1489;&#1500;&#1497; &#1500;&#1492;&#1497;&#1513;&#1500;&#1495; &#1500;&#1488;&#1497;&#1513;.</div>
+    </div>
     <!-- Trustee hazards are sent by the server; these are its recipients (saved with the matrix). -->
     <div id="notif-trustee-box" style="margin-top:12px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5">
       <div style="font-weight:700;margin-bottom:6px">&#129466; ליקוי מנאמן בטיחות — לאן לשלוח (נשלח מהשרת, גם כשהאפליקציה סגורה)</div>
@@ -2947,6 +2959,11 @@ window._debGsearch      = _deb(function(){ if(typeof _gsearchRender==='function'
 
 var ADMIN_EMAIL='admin@tfugen.local';
 var _isAdmin=false;
+// One place. It was hardcoded in three independent spots \u2014 the \u22ef menu, the
+// about dialog and the JSON backup \u2014 so the \u00ab\u05d0\u05d5\u05d3\u05d5\u05ea\u00bb line kept naming a
+// date in May while the app shipped many times a week, and a restored backup
+// named a version that had not been current for months.
+var APP_VER='2026.09.20';
 var DB={docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
 var CUR='dash';
 var NCRI=1;
@@ -5081,6 +5098,13 @@ function _sourceIcon(tbl){
   var m={ncr:'🚨',inc:'⚠️',near_miss:'🚫',rsk:'⚡',ppe:'🦺',tr:'🎓',docs:'📄',ctr:'🤝',equip_inspections:'🔧',round:'☀',tasks:'✅'};
   return m[tbl]||'✅';
 }
+// One tap instead of four. _tskQuickStatus already does the whole job \u2014 it
+// sets the status, fills closed_date, uploads, re-renders both screens and
+// (since #652) offers to close a trustee finding behind it.
+function _todayDone(id){
+  if(!id||typeof _tskQuickStatus!=='function')return;
+  _tskQuickStatus(id,_TSK_DONE);
+}
 function _todayClick(fn,a1,a2){
   if(fn==='page'){goPage(a1);return;}
   // _roundOpenNew is the ONLY path that calls _roundPopulateThemeSelect and
@@ -5171,7 +5195,13 @@ function _renderToday(){
     var clickFn = t.isVirtual ? 'view' : 'edit';
     var a1 = t.isVirtual ? (t.source_table||'tasks') : t.id;
     var a2 = t.isVirtual ? (t.source_id||'') : '';
-    var baseItem = {icon:_sourceIcon(t.source_table||'tasks'),title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',fn:clickFn,a1:a1,a2:a2};
+    // due travels with the item so the sort below can break ties on it. It
+    // used not to, and Array.sort is stable, so inside \u05e4\u05d9\u05d2\u05d5\u05e8 the order was
+    // DB.tasks order \u2014 which comes back from the server ts.desc, i.e. the
+    // task touched most recently first and the one stuck longest last. With
+    // TOP=6, a two-month-old overdue task could be pushed off the screen
+    // entirely, behind \u00ab\u2190 \u05e8\u05d0\u05d4 \u05d4\u05db\u05dc\u00bb. Exactly backwards.
+    var baseItem = {icon:_sourceIcon(t.source_table||'tasks'),title:t.title||'(\u05dc\u05dc\u05d0 \u05db\u05d5\u05ea\u05e8\u05ea)',fn:clickFn,a1:a1,a2:a2,due:t.due||null,tid:(t.isVirtual?null:t.id)};
     var _AL=(t.source_table==='equip_inspections')?'\u05e1\u05e4\u05e7':'\u05d0\u05d7\u05e8\u05d0\u05d9';
     if(t.due){
       var daysUntil=du(t.due);
@@ -5184,8 +5214,14 @@ function _renderToday(){
       }
     }
   });
-  // Sort by priority, then by due date
-  items.sort(function(a,b){return a.priority-b.priority;});
+  // Priority first, then the oldest due date. The non-task rows (the morning
+  // round, trustee findings, the CAPA queue) carry no due date and sort to
+  // the end of their own priority band rather than at random. du() is
+  // deliberately not used here: a comparator runs O(n log n) times and this
+  // is a plain string compare on ISO dates, which orders identically.
+  items.sort(function(a,b){
+    return (a.priority-b.priority)||String(a.due||'9999-99-99').localeCompare(String(b.due||'9999-99-99'));
+  });
   var TOP=6;
   var topItems=items.slice(0,TOP);
   var extraCount=items.length-topItems.length;
@@ -5198,10 +5234,18 @@ function _renderToday(){
   if(hdr)hdr.classList.remove('ok');
   if(cnt)cnt.textContent=items.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea';
   var html=topItems.map(function(it){
+    // A real task gets a \u2713. Ticking one off used to be: tap the row, open a
+    // modal with eight fields, open the status select, choose \u05d4\u05d5\u05e9\u05dc\u05dd, save \u2014
+    // four taps for something already done in the plant yesterday. So the
+    // list did not get cleaned, and then \u00ab\u05d4\u05d9\u05d5\u05dd\u00bb showed a backlog that was not
+    // real. A virtual row (an NCR, a lapsed inspection) gets none: it is not
+    // a task and closing it means closing the record behind it.
+    var tick=it.tid?('<button class="ti-done" data-tid="'+esc(it.tid)+'" title="\u05e1\u05de\u05df \u05db\u05d4\u05d5\u05e9\u05dc\u05dd" aria-label="\u05e1\u05de\u05df \u05db\u05d4\u05d5\u05e9\u05dc\u05dd" onclick="event.stopPropagation();_todayDone(this.dataset.tid)">\u2713</button>'):'';
     return '<div class="today-item" data-fn="'+esc(it.fn)+'" data-a1="'+esc(String(it.a1||''))+'" data-a2="'+esc(String(it.a2||''))+'" onclick="_todayClick(this.dataset.fn,this.dataset.a1,this.dataset.a2)">'+
       '<div class="ti-ic">'+it.icon+'</div>'+
       '<div class="ti-body"><div class="ti-title">'+esc(it.title)+'</div><div class="ti-sub">'+esc(it.sub)+'</div></div>'+
       '<div class="ti-badge '+it.badgeCls+'">'+esc(it.badge)+'</div>'+
+      tick+
       '<div class="ti-chev">◂</div>'+
       '</div>';
   }).join('');
@@ -9027,7 +9071,7 @@ window._topMoreMenu=function(anchor){
   item('\u25d0','\u05e0\u05d9\u05d2\u05d5\u05d3\u05d9\u05d5\u05ea \u05d2\u05d1\u05d5\u05d4\u05d4',function(){if(typeof hcToggle==='function')hcToggle();});
   item('\u2753','\u05e2\u05d6\u05e8\u05d4 / \u05e7\u05d9\u05e6\u05d5\u05e8\u05d9 \u05de\u05e7\u05dc\u05d3\u05ea',function(){if(typeof openModal==='function')openModal('m-help');});
   sep();
-  item('\u2139','\u05d0\u05d5\u05d3\u05d5\u05ea (v2026.05.02)',function(){if(typeof _showAbout==='function')_showAbout();});
+  item('\u2139','\u05d0\u05d5\u05d3\u05d5\u05ea (v'+APP_VER+')',function(){if(typeof _showAbout==='function')_showAbout();});
   document.body.appendChild(menu);
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 };
@@ -10801,6 +10845,7 @@ function openNotifSettings(){
   g('notif-table').innerHTML='<thead>'+hdr+'</thead><tbody>'+body+'</tbody>';
   var _th=prefs.trustee_hazard||{};
   var _wa=g('notif-tru-wa');if(_wa)_wa.value=_th.whatsapp_to||'';
+  var _self=g('notif-self-wa');if(_self)_self.value=_notifSelfWa();
   var _em=g('notif-tru-email');if(_em)_em.value=_th.email_to||'';
   var _tr=g('notif-tru-test-res');if(_tr)_tr.textContent='';
   // P0/#6: surface the "everything off" state — otherwise all-unchecked
@@ -10971,6 +11016,10 @@ window._notifEnableRecommended=function(){
     newPrefs[ev.key]={inapp:true,email:!!e.email,whatsapp:!!e.whatsapp};
     if(ev.key==='trustee_hazard'){newPrefs[ev.key].whatsapp_to=e.whatsapp_to||'';newPrefs[ev.key].email_to=e.email_to||'';}
   });
+  // Both writers build prefs from scratch and overwrite the row, so this one
+  // has to carry _self across too or enabling the recommended set would wipe
+  // the number the manager saved.
+  newPrefs._self=cur._self||{};
   if(!DB.notification_prefs)DB.notification_prefs=[];
   var existing=_notifPrefsRow();
   var rec={id:u,prefs:newPrefs,ts:new Date().toISOString()};
@@ -11009,6 +11058,7 @@ function saveNotifSettings(){
   if(!newPrefs.trustee_hazard)newPrefs.trustee_hazard={};
   newPrefs.trustee_hazard.whatsapp_to=gv('notif-tru-wa').replace(/[^0-9]/g,'');
   newPrefs.trustee_hazard.email_to=gv('notif-tru-email');
+  newPrefs._self={whatsapp_to:gv('notif-self-wa').replace(/[^0-9]/g,'')};
   if(!DB.notification_prefs)DB.notification_prefs=[];
   var existing=_notifPrefsRow();
   var rec={id:u,prefs:newPrefs,ts:new Date().toISOString()};
@@ -11476,7 +11526,7 @@ function _notifBuildWaArgs(eventKey,payload){
     var num=String(n.num||'').replace(/^NCR-/,'')||String(n.id||'');
     var area=fmtTitle(n.a||n.loc||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df',60);
     var descr=fmtTitle(n.d||'\u05d0\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8',200);
-    var to=_waResolvePhone(n.o)||_waLastTo();
+    var to=_waResolvePhone(n.o)||_notifSelfWa();
     return to?{to:to,template:'tfugen_ncr_critical',language:'he',params:[num,area,descr]}:null;
   }
   if(eventKey==='incident_critical'){
@@ -11484,7 +11534,7 @@ function _notifBuildWaArgs(eventKey,payload){
     var loc=fmtTitle(i.l||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df',60);
     var sev=fmtTitle(i.sv||'',30);
     var rsn=fmtTitle(i.r||'\u05d0\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8',150);
-    var to2=_waResolvePhone(i.r||i.rep)||_waLastTo();
+    var to2=_waResolvePhone(i.r||i.rep)||_notifSelfWa();
     return to2?{to:to2,template:'tfugen_incident_alert',language:'he',params:[loc,sev,rsn]}:null;
   }
   if(eventKey==='task_overdue'){
@@ -11495,7 +11545,7 @@ function _notifBuildWaArgs(eventKey,payload){
     if(!t)return null;
     var today=new Date().toISOString().split('T')[0];
     var late=t.due?Math.max(0,Math.ceil((new Date(today)-new Date(t.due))/86400000)):0;
-    var to3=_waResolvePhone(t.assignee)||_waLastTo();
+    var to3=_waResolvePhone(t.assignee)||_notifSelfWa();
     return to3?{to:to3,template:'tfugen_task_overdue_v2',language:'he',params:[fmtTitle(t.title,80),String(late)]}:null;
   }
   if(eventKey==='expiry_30days'){
@@ -11505,11 +11555,11 @@ function _notifBuildWaArgs(eventKey,payload){
     var days=r.e?Math.ceil((new Date(r.e)-new Date(today2))/86400000):0;
     var name=fmtTitle((r.n||r.code||r.ty||'\u05e4\u05e8\u05d9\u05d8')+(r.w?' ('+r.w+')':''),80);
     var due=r.e?fd(r.e):'?';
-    var to4=_waResolvePhone(r.w||r.vendor||r.o||r.c)||_waLastTo();
+    var to4=_waResolvePhone(r.w||r.vendor||r.o||r.c)||_notifSelfWa();
     return to4?{to:to4,template:'tfugen_expiry_warning',language:'he',params:[name,String(days),due]}:null;
   }
   if(eventKey==='round_missed'){
-    var to5=_waLastTo();
+    var to5=_notifSelfWa();
     return to5?{to:to5,template:'tfugen_round_missed',language:'he',params:[]}:null;
   }
   return null;
@@ -13410,11 +13460,11 @@ window._emergencyReport=function(){
   },300);
 };
 window._showAbout=function(){
-  alert('TFUGEN Safety Management System\n\u05d2\u05e8\u05e1\u05d4: 2026.05.02\n\u05de\u05ea\u05d5\u05e2\u05d3 ISO 14001 + ISO 45001\n\n\u05de\u05e4\u05ea\u05d7: Claude\n\u05d1\u05e2\u05dc\u05d9\u05dd: \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05da\n\n\u05e2\u05d3\u05db\u05d5\u05df: '+new Date().toISOString().split('T')[0]);
+  alert('TFUGEN Safety Management System\n\u05d2\u05e8\u05e1\u05d4: '+APP_VER+'\n\u05de\u05ea\u05d5\u05e2\u05d3 ISO 14001 + ISO 45001\n\n\u05de\u05e4\u05ea\u05d7: Claude\n\u05d1\u05e2\u05dc\u05d9\u05dd: \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05da\n\n\u05e2\u05d3\u05db\u05d5\u05df: '+new Date().toISOString().split('T')[0]);
 };
 window._exportBackup=function(){
   try{
-    var snapshot={ts:new Date().toISOString(),app:'tfugen-safety',version:'overnight-2026-05-02',data:DB};
+    var snapshot={ts:new Date().toISOString(),app:'tfugen-safety',version:APP_VER,data:DB};
     var json=JSON.stringify(snapshot,null,2);
     var blob=new Blob([json],{type:'application/json'});
     var url=URL.createObjectURL(blob);
@@ -16008,11 +16058,32 @@ window._pwaInstall=function(){
 };
 /* ---- WhatsApp test ---- */
 function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'';}
+// ---- 2.9 + 2.10 ----
+// The four automatic events all fell back to _waLastTo() \u2014 tfgn_wa_last,
+// written in exactly one place: the admin \u00ab\u05d1\u05d3\u05d9\u05e7\u05ea WhatsApp\u00bb card. So a
+// notification whose owner could not be matched against app_users (the
+// normal case, since \u05d0\u05d7\u05e8\u05d0\u05d9 is free text) went, with no confirm and no
+// warning, to whichever number was last typed into a test box \u2014 a supplier,
+// a contractor, anyone. The code comment two lines below even promised the
+// opposite: \u00abfall back to log (no spam to default number)\u00bb.
+//
+// The fallback is now a number the manager set on purpose, in the
+// notification settings, and nothing else.
+function _notifSelfWa(){
+  try{var p=(typeof _notifPrefs==='function')?_notifPrefs():null;return String((p&&p._self&&p._self.whatsapp_to)||'').replace(/[^0-9]/g,'');}catch(e){return '';}
+}
 function _waResolvePhone(name){
   if(!name)return null;
   var n=String(name).trim();if(!n)return null;
   var u=(DB.app_users||[]).find(function(x){return x.active!==false&&x.phone&&(x.full_name===n||x.username===n);});
-  return u?String(u.phone).trim():null;
+  // Meta wants digits only. app_users.phone is free text and is routinely
+  // stored as 972-54-999-8888, so every automatic message to somebody whose
+  // number carries dashes went out malformed \u2014 and the failure is on Meta's
+  // side, which means it looked like nothing happened at all. The saved
+  // \u00ab\u05d4\u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05d9\u00bb is already normalised on the way in; this does the same
+  // for a number that came from the users table.
+  var digits=u?String(u.phone).replace(/[^0-9]/g,''):'';
+  return digits||null;
 }
 function _waConfirm(to,opts,who){
   var msg=who?'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp \u05dc-'+to+' ('+who+')?':'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05ea\u05e8\u05d0\u05ea WhatsApp \u05dc-'+to+'?';
