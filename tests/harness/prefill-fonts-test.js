@@ -1,7 +1,12 @@
 // Two small things that cost real time and one that could cost the whole page.
 //   * turning a trustee finding into a task blanked the due date openTskModal
 //     had just derived, so the iOS date wheel opened for a value already known
-//   * the assignee was left empty although the finding names who reported it
+//   * the assignee was prefilled with the trustee who REPORTED the finding.
+//     That was this file's own doing, and it was wrong: a trustee is a
+//     volunteer representative, not the department that owns the machine, so
+//     routing without looking handed the repair back to the person who raised
+//     it — who then appeared in בפיגור for not fixing it. Reversed here;
+//     trustees-batch-test.js holds the full case.
 //   * the Google Fonts stylesheet was render-blocking: when a network
 //     BLACK-HOLES it (drops packets rather than refusing — what a content
 //     filter does) the page never painted at all
@@ -95,7 +100,7 @@ const iso = (days) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate
     const expected = iso(-3 + 30);
     check('the due date is filled, not blanked', !!r.due, r);
     check('it is 30 days from the day it was reported (' + expected + ')', r.due === expected, r);
-    check('the assignee defaults to the trustee who reported it', r.assignee === 'מוסא', r);
+    check('the assignee is left for the manager — it is NOT the reporting trustee', r.assignee === '', r);
     check('the title and source link still work as before', /נאמן בטיחות/.test(r.title) && r.srcTbl === 'trustee_reports', r);
 
     const typed = await page.evaluate(() => {

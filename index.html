@@ -3397,6 +3397,12 @@ function _rtApply(tbl,payload){
     DB[tbl] = DB[tbl].slice(0, 200);
   }
   if(typeof _invalidateNameCache==='function')_invalidateNameCache(tbl);
+  // One row is not a catalogue. The kiosk never runs sbSync, so realtime is
+  // the only thing that ever wrote DB.trustee_tasks there \u2014 and _truTasks()
+  // stops falling back to the built-in eight the moment the table is
+  // non-empty, so a single UPDATE left the trustee looking at one task.
+  // Re-read the whole table instead of trusting the row that just arrived.
+  if(tbl==='trustee_tasks'&&typeof _truIsOpen==='function'&&_truIsOpen()&&typeof _truPull==='function')try{_truPull(false);}catch(e){}
   _rtChangedTbls[tbl]=1;
   if(_rtPending)return;
   _rtPending=(window.requestAnimationFrame||function(f){return setTimeout(f,16);})(function(){
@@ -4925,6 +4931,7 @@ function _todayClick(fn,a1,a2){
   if(fn==='edit'){editTsk(a1);return;}
   if(fn==='tasks'){goPage('tasks');if(typeof tskFilter==='function')tskFilter(a1||'all');return;}
   if(fn==='ncrcapa'){goPage('ncr');if(typeof ncrQuickFilter==='function')ncrQuickFilter('capa');return;}
+  if(fn==='trustee'){if(typeof _truGo==='function')_truGo(a1,a2);else goPage('trustees');return;}
 }
 function _renderToday(){
   var listEl=g('today-items'), hdr=g('today-header'), cnt=g('today-count');
@@ -4945,7 +4952,7 @@ function _renderToday(){
       items.push({priority:1,icon:'\ud83e\uddba',
         title:(trStale.length===1?'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e4\u05ea\u05d5\u05d7 \u05de\u05e2\u05dc ':trStale.length+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e2\u05dc ')+TRUSTEE_STALE_DAYS+' \u05d9\u05d5\u05dd',
         sub:'\u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: '+String(oldest.loc||'').substring(0,40)+(oldest.f?' \u2014 '+String(oldest.f).substring(0,50):'')+' ('+oldAge+' \u05d9\u05d5\u05dd)',
-        badge:oldAge+'\u05d9',badgeCls:'red',fn:'page',a1:'trustees',a2:''});
+        badge:oldAge+'\u05d9',badgeCls:'red',fn:'trustee',a1:oldest.id,a2:'open'});
     }
   }
   // 1a2. Corrective actions closed long ago that nobody ever verified. ISO
@@ -4963,7 +4970,7 @@ function _renderToday(){
   // 1b. Trustee hazards nobody has routed yet (no task, no routing note) — one line, managers only.
   if(typeof _truAwaitingRouting==='function'&&typeof _role==='function'&&_role()!=='reporter'){
     var trAwait=_truAwaitingRouting().length;
-    if(trAwait)items.push({priority:2,icon:'\ud83e\uddba',title:trAwait+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1',sub:'\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',badge:'\u05e0\u05ea\u05d1',badgeCls:'amber',fn:'page',a1:'trustees',a2:''});
+    if(trAwait)items.push({priority:2,icon:'\ud83e\uddba',title:trAwait+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1',sub:'\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e9\u05d3\u05d5\u05d5\u05d7\u05d5 \u05d5\u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d5 \u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',badge:'\u05e0\u05ea\u05d1',badgeCls:'amber',fn:'trustee',a1:(_truAwaitingRouting()[0]||{}).id||'',a2:'open'});
   }
   // 1c. Trustees short of the threshold, from mid-month on \u2014 managers only.
   // Hidden when everyone is on track, like every other panel on this screen.
@@ -14385,7 +14392,12 @@ function _truFillLists(){
 // with the same merge rules as sbSync (null = unreachable \u2192 keep cache).
 function _truPull(manual){
   if(typeof sbGet!=='function')return Promise.resolve(false);
-  var tbls=['trustee_reports','trustees','trustee_winners'],obBefore={};
+  // trustee_tasks belongs here too: the kiosk never runs sbSync, so without
+  // it the catalogue came only from realtime. One UPDATE on one task left
+  // DB.trustee_tasks holding exactly that row, and _truTasks() stops falling
+  // back to the built-in eight the moment the table is non-empty \u2014 so the
+  // screen collapsed from 8 tasks to 1.
+  var tbls=['trustee_reports','trustees','trustee_winners','trustee_tasks'],obBefore={};
   tbls.forEach(function(t){obBefore[t]=_obLocalState(t);});
   return Promise.all(tbls.map(function(t){return sbGet(t);})).then(function(res){
     var any=false;
@@ -14416,6 +14428,27 @@ function _truStatusBadge(r){
 }
 function _truDaysLeft(){var d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate();}
 function _truIntroSync(){var it=g('tru-intro');if(it)it.open=!_truMe();}
+// One line in "my reports". Shared by the current month and by the block of
+// still-open findings from earlier months, because closing a finding is the
+// same action whichever month it was opened in.
+function _truMineRowHtml(r,showAge){
+  var t=_truTask(r.t);
+  var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
+  var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'');
+  var age=null;if(showAge&&typeof _truAgeDays==='function')age=_truAgeDays(r);
+  var ageHtml=(age===null||age===undefined)?'':' <span class="b bY">'+age+' \u05d9\u05d5\u05dd</span>';
+  return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+ageHtml+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
+}
+// My hazards from BEFORE the month being shown that nobody has closed yet,
+// oldest first. The monthly reset is the competition's rule, not the
+// finding's \u2014 a hole in the floor does not stop existing on the 1st.
+function _truMyOpenOlder(me,m){
+  m=m||_truThisMonth();
+  if(!me)return [];
+  return (DB.trustee_reports||[]).filter(function(r){
+    return r&&r.u===me&&_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED&&_truRowMonth(r)<m;
+  }).sort(function(a,b){return String(a.ts||a.d||'').localeCompare(String(b.ts||b.d||''));});
+}
 function _truRender(){
   var box=g('tru-body');if(!box)return;
   var me=_truMe(),m=_truThisMonth();
@@ -14457,14 +14490,21 @@ function _truRender(){
     h+='<div id="tru-my-rank" style="font-size:12px;color:var(--t2)">'+(mine2?('\u05d0\u05ea/\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd '+(myIdx+1)+' \u05de\u05ea\u05d5\u05da '+board.length+(myIdx===0?' \u2014 \u05de\u05d5\u05d1\u05d9\u05dc/\u05d4! \ud83d\udcaa':(board[0].total>mine2.total?' \u2014 '+(board[0].total-mine2.total)+' \u05e0\u05e7\u05f3 \u05de\u05d4\u05de\u05d5\u05d1\u05d9\u05dc/\u05d4':' \u2014 \u05e9\u05d5\u05d5\u05d9\u05d5\u05df \u05d1\u05e8\u05d0\u05e9, \u05e0\u05e7\u05d1\u05e2 \u05dc\u05e4\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5'))):'\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d1\u05dc\u05d5\u05d7 \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05df \u05d9\u05db\u05e0\u05d9\u05e1 \u05d0\u05d5\u05ea\u05da')+'</div>';
   }
   h+='</div>';
+  // A finding opened in September and still open in October: the list above
+  // is this month's, so on the 1st the finding \u2014 and the only button that
+  // closes it \u2014 disappeared from the trustee's screen entirely. It was still
+  // open on the manager's screen, still counted as stale, and the one person
+  // who could photograph the fix could no longer reach it.
+  var older=_truMyOpenOlder(me,m);
+  if(older.length){
+    h+='<div class="card" id="tru-older" style="padding:10px 12px;background:#fff7ed;border:2px solid #f59e0b">'
+      +'<div style="font-weight:800;font-size:14px;color:#92400e">\ud83e\uddef \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e9\u05dc\u05d9 \u05e9\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd ('+older.length+')</div>'
+      +'<div style="font-size:12px;color:#92400e;margin-bottom:6px">\u05ea\u05d5\u05e7\u05df \u05d1\u05e9\u05d8\u05d7? \u05e6\u05dc\u05dd \u05d0\u05ea \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u2014 \u05d6\u05d4 \u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0 \u05d5\u05de\u05d6\u05db\u05d4 \u05d1\u05e0\u05e7\u05d5\u05d3\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9.</div>'
+      +'<div id="tru-older-list">'+older.map(function(r){return _truMineRowHtml(r,true);}).join('')+'</div></div>';
+  }
   h+='<div style="font-weight:700;font-size:14px;margin:14px 0 6px">\ud83d\udcdd \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9 ('+mine.length+')</div>';
   if(!mine.length)h+='<div style="font-size:13px;color:var(--t2)" id="tru-mine-empty">\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9.</div>';
-  else h+='<div id="tru-mine">'+mine.map(function(r){
-    var t=_truTask(r.t);
-    var closeBtn=(_truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED)?' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" onclick="_truCloseReport(\''+esc(r.id)+'\')">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9</button>':'';
-    var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" style="font-size:12px">\ud83d\udcf7</a>':'');
-    return '<div class="tru-rep" data-tru-rep="'+esc(r.id)+'"><span style="flex:1;min-width:0"><strong>'+esc(r.t)+'. '+esc(t?t.t:'')+'</strong> \u00b7 '+fd(r.d)+'<br><span style="color:var(--t2)">'+esc(r.loc||'')+(r.f?' \u2014 '+esc(String(r.f).substring(0,80)):'')+'</span>'+photo+(r.mgr_note?'<br><span style="color:#92400e">\ud83d\udccc '+esc(r.mgr_note)+'</span>':'')+'</span><span style="white-space:nowrap">'+_truStatusBadge(r)+closeBtn+'</span></div>';
-  }).join('')+'</div>';
+  else h+='<div id="tru-mine">'+mine.map(function(r){return _truMineRowHtml(r,false);}).join('')+'</div>';
   h+='<div class="tru-danger">\ud83d\udea8 <strong>\u05e1\u05db\u05e0\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea?</strong> \u05de\u05ea\u05e7\u05e9\u05e8\u05d9\u05dd \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d3. \u05de\u05d2\u05df \u05de\u05db\u05d5\u05e0\u05d4 \u05e9\u05d4\u05d5\u05e1\u05e8 \u05d0\u05d5 \u05e0\u05d5\u05d8\u05e8\u05dc \u05d5"\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05db\u05d0\u05df.<button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="empReport(\'nm\')">\u26d4 \u05d3\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2</button></div>';
   box.innerHTML=h;
   if(typeof _signifyDom==='function')try{_signifyDom(box);}catch(e){}
@@ -14792,6 +14832,26 @@ function _truAgeChip(r){
   var late=age>=TRUSTEE_STALE_DAYS;
   return ' <span class="b '+(late?'bR':'')+'" data-tru-age="'+age+'"'+(late?'':' style="background:#f1f5f9;color:var(--t2);border:1px solid var(--border)"')+'>'+age+' \u05d9\u05de\u05d9\u05dd</span>';
 }
+// Following a finding from the \u05d4\u05d9\u05d5\u05dd list. The trustee page always opened on
+// the current month, and the findings on that list are the OLD ones \u2014 stale
+// past 30 days, or never routed at all. So the line said \"open for 74 days\"
+// and led to a month that did not contain it: \u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d.
+// Jump to the month the finding was actually filed in, with the filter that
+// shows it, and mark the row so it is obvious which one was meant.
+function _truGo(id,filter){
+  var r=id?_truFind(id):null;
+  var m=r?_truRowMonth(r):null;
+  _truMgrM=(m&&m!==_truThisMonth())?m:null;
+  _truMgrF=filter||'open';
+  goPage('trustees');
+  if(!r)return;
+  setTimeout(function(){
+    var row=document.querySelector('tr[data-tru-row="'+id+'"]');if(!row)return;
+    try{row.scrollIntoView({block:'center'});}catch(e){}
+    row.style.transition='background .4s';row.style.background='#fef9c3';
+    setTimeout(function(){row.style.background='';},2400);
+  },60);
+}
 function rTrustees(){
   var m=_truMgrMonth();
   var mEl=g('tru-mgr-month');if(mEl)mEl.textContent=_truMonthLabel(m);
@@ -14920,10 +14980,13 @@ function _truMgrSpawnTask(id){
     base.setDate(base.getDate()+TRUSTEE_STALE_DAYS);
     due.value=base.toISOString().substring(0,10);
   }
-  // The area the finding came from is the obvious owner; the roster knows who
-  // that is. Typing wins \u2014 this only fills a field that is still empty.
-  var asg=g('tsk-assignee');
-  if(asg&&!asg.value&&r.u)asg.value=r.u;
+  // The assignee is deliberately left empty. r.u is the trustee who REPORTED
+  // the finding \u2014 a volunteer representative, not the department that owns the
+  // machine \u2014 and filling it in meant that a manager who routed without
+  // looking handed the repair back to the person who raised it, who then
+  // appeared in \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 for not fixing it. Who reported it is in the notes,
+  // where it belongs. The datalist offers the names; the manager picks one.
+  // (openTskModal already blanked it; nothing refills it here on purpose.)
 }
 function _truExportCsv(){
   var m=_truMgrMonth();
@@ -15251,7 +15314,13 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       document.body.classList.add('emp-mode');
       var app=g('app');if(app)app.style.display='block';
       ldb();CUR='emp-home';
+      // doEmpLogin() builds the trustee screen; this branch \u2014 the one that runs
+      // every time a trustee REOPENS the saved link or the installed PWA \u2014 did
+      // not. pg-emp-home is shown by CSS, so the page appeared, but tru-only was
+      // never applied and _truRender never ran: an empty screen on every return.
+      if(typeof _truEmpHome==='function')_truEmpHome(true);
       SB_ON=true;_obDrain();_rtStart();
+      if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
     }else{
       showLogin();
     }
