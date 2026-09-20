@@ -108,7 +108,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('צור משימה: task modal prefilled (title with area + finding, source label נאמן בטיחות, notes with reporter/date/photo, due 30 days from the report, assignee = the trustee)', m3.open && /נאמן בטיחות — אולם טיגון: דלת חירום חסומה/.test(m3.title) && /נאמן בטיחות/.test(m3.src) && /דווח ע"י דנה/.test(m3.notes) && /d1\.jpg/.test(m3.notes) && m3.srcTbl === 'trustee_reports' && m3.srcId === 'd1'
     // #609: the due date used to be blanked after openTskModal derived it,
     // so the manager opened the date wheel for a value the code knew.
-    && /^\d{4}-\d{2}-\d{2}$/.test(m3.due) && m3.due === (function(){var d=new Date('2026-09-19');d.setDate(d.getDate()+30);return d.toISOString().substring(0,10);})(), m3);
+    && /^\d{4}-\d{2}-\d{2}$/.test(m3.due) && m3.due === (function(){var d=new Date(D);d.setDate(d.getDate()+30);return d.toISOString().substring(0,10);})(), m3);
   check('saved task links back on the row; the menu now says "פתח את המשימה"', m3.saved && m3.link && m3.items2.some(x => /פתח את המשימה/.test(x)), { saved: m3.saved, link: m3.link, items: m3.items2 });
 
   console.log('\n4. CSV for the committee, month picker, header ⋯ menu');

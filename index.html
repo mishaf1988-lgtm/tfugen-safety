@@ -4125,7 +4125,18 @@ function openModal(id){
   }
 }
 
+// Closing a form abandons the edit it was opened for. openModal already clears
+// the state, so nothing could go wrong through the UI today — but leaving it
+// armed after an explicit close is stale state one refactor away from an
+// accidental overwrite. QA 2026-09-20.
+function _svClearEditFor(modalId){
+  if(typeof _EDIT_MODS==='undefined')return;
+  Object.keys(_EDIT_MODS).forEach(function(tbl){
+    if(_EDIT_MODS[tbl].m===modalId)delete _svEditing[tbl];
+  });
+}
 function closeModal(id){
+  _svClearEditFor(id);
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
   if(ov){ov.style.display='none';ov.style.position='';ov.style.width='';ov.style.height='';}
@@ -4251,14 +4262,17 @@ function editNcr(id){
 // The next free NCR number. Was String(DB.ncr.length+1): delete one row and
 // the next new NCR is issued a number that a live record already holds — and
 // the number is the audit identifier.
-function _ncrNextNum(){
+// The highest NCR number in use. #604 fixed svNcr; QA 2026-09-20 found two more
+// places still doing (length+1) — the OneDrive auto-import and the Excel import.
+function _ncrMaxNum(){
   var mx=0;
   (DB.ncr||[]).forEach(function(r){
     var m=/^NCR-(\d+)$/.exec(String(r.num||''));
     if(m){var v=parseInt(m[1],10);if(v>mx)mx=v;}
   });
-  return 'NCR-'+String(mx+1).padStart(4,'0');
+  return mx;
 }
+function _ncrNextNum(){return 'NCR-'+String(_ncrMaxNum()+1).padStart(4,'0');}
 function svNcr(){
   var id=g('ncr-id')&&g('ncr-id').value;
   var d=gv('ncr-d'),a=gv('ncr-a')||gv('ncr-sel-a')||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
@@ -14716,8 +14730,8 @@ function xlRead(file){if(!file)return;xlSt('\u05e7\u05d5\u05e8\u05d0...','#d9770
 function xlSv(v){if(v===null||v===undefined)return '';var s=String(v).trim();return(s==='null'||s==='undefined'||(s.toLowerCase()==='nan'))?'':(s);}
 function xlDate(v){if(!v)return '';try{if(v instanceof Date)return v.toISOString().split('T')[0];var s=xlSv(v);if(!s)return '';if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split('/');return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');}var d=new Date(s);return isNaN(d.getTime())?s:d.toISOString().split('T')[0];}catch(e){return xlSv(v);}}
 function xlGid(n){return 'xl'+String(n).padStart(4,'0')+Math.random().toString(36).substr(2,4);}
-function xlParse(wb){var res=[],idx=1;var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};wb.SheetNames.forEach(function(sn){var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0;var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0;if(!isEnv&&!isSaf)return;var ws=wb.Sheets[sn];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});var hIdx=-1;for(var r=0;r<Math.min(8,rows.length);r++){if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}}if(hIdx<0)return;var ds=hIdx+1;if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;for(var r2=ds;r2<rows.length;r2++){var row=rows[r2];if(row.filter(function(c){return xlSv(c);}).length<2)continue;var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:'',s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',src_date:'',category:isEnv?'env':'saf'};if(isEnv){rec.d=xlSv(row[1]);rec.src_date=xlDate(row[2]);rec.root_cause=xlSv(row[3]);rec.immediate=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);}else{var dept=xlSv(row[1]),haz=xlSv(row[2]);rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);rec.src_date=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';}if(!rec.d)continue;res.push(rec);idx++;}});return res;}
-function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var ex=dbncr.map(function(r){return r.num;});var add=window._xlData.filter(function(r){return ex.indexOf(r.num)<0;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#d97706');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;var _xlNcrFailed=0;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){_xlNcrFailed++;console.warn('ncr import: row failed',r,e);}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length+(_xlNcrFailed?' ('+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5)':''));}catch(e){}try{sdb();}catch(e){}closeXlModal();try{var msg=_xlNcrFailed>0?('\u05d9\u05d5\u05d1\u05d0: '+(add.length-_xlNcrFailed)+'\u202c \u05e0\u05e9\u05de\u05e8\u05d5, '+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5'):('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');toast(msg);}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
+function xlParse(wb){var res=[],idx=_ncrMaxNum()+1;/* was 1: with NCR-0001..0375 already in the table every generated number collided and xlOk dropped the whole sheet */var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};wb.SheetNames.forEach(function(sn){var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0;var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0;if(!isEnv&&!isSaf)return;var ws=wb.Sheets[sn];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});var hIdx=-1;for(var r=0;r<Math.min(8,rows.length);r++){if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}}if(hIdx<0)return;var ds=hIdx+1;if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;for(var r2=ds;r2<rows.length;r2++){var row=rows[r2];if(row.filter(function(c){return xlSv(c);}).length<2)continue;var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:'',s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',src_date:'',category:isEnv?'env':'saf'};if(isEnv){rec.d=xlSv(row[1]);rec.src_date=xlDate(row[2]);rec.root_cause=xlSv(row[3]);rec.immediate=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);}else{var dept=xlSv(row[1]),haz=xlSv(row[2]);rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);rec.src_date=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';}if(!rec.d)continue;res.push(rec);idx++;}});return res;}
+function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var _xlKey=function(r){return (String(r.d||'').trim().toLowerCase()+'|'+String(r.src_date||'').trim());};var ex={};dbncr.forEach(function(r){var k=_xlKey(r);if(k!=='|')ex[k]=1;});var seen={};var add=window._xlData.filter(function(r){var k=_xlKey(r);if(k==='|')return true;if(ex[k]||seen[k])return false;seen[k]=1;return true;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#d97706');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;var _xlNcrFailed=0;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){_xlNcrFailed++;console.warn('ncr import: row failed',r,e);}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length+(_xlNcrFailed?' ('+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5)':''));}catch(e){}try{sdb();}catch(e){}closeXlModal();try{var msg=_xlNcrFailed>0?('\u05d9\u05d5\u05d1\u05d0: '+(add.length-_xlNcrFailed)+'\u202c \u05e0\u05e9\u05de\u05e8\u05d5, '+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5'):('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');toast(msg);}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
 
 
 function loadFromSupabase(){
@@ -17527,7 +17541,7 @@ function _odApplyExtractedFields(t,p,name,uploadedUrl){
     rec.d=dateOk(p.d);rec.e=dateOk(p.e);rec.file_url=uploadedUrl;
     DB.med=DB.med||[];DB.med.push(rec);sbIns('med',rec);
   }else if(t==='ncr'){
-    rec.num='NCR-'+String((DB.ncr||[]).length+1).padStart(4,'0');
+    rec.num=_ncrNextNum();   // was (length+1): reissued a number a live record holds
     rec.d=clean(p.summary)||clean(p.label)||nm.substring(0,200);
     rec.a='בטיחות';rec.s='פתוח';rec.p='בינונית';rec.photo_url=uploadedUrl;
     DB.ncr=DB.ncr||[];DB.ncr.push(rec);sbIns('ncr',rec);
