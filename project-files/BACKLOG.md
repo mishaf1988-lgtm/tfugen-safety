@@ -55,13 +55,13 @@
 | 2.3 | ~~**תג 📝 «המשימות שלי» תמיד 0.** שלוש דרכי ההשוואה משוות שם בעברית לכתובת אימייל~~ **#649** | 🟠 | S | ✅ |
 | 2.4 | ~~**סריקת ההתראות היומית ב-`sessionStorage`.** באייפון כל פתיחה קרה = סשן חדש → אותן התראות שוב ושוב כל היום~~ **#649** | 🟠 | S | ✅ |
 | 2.5 | ~~**«השבוע הקרוב» מדלג על בדיקות הציוד** — סורק `ppe/tr/docs/ctr` בלבד~~ **#649** | 🟠 | S | ✅ |
-| 2.6 | **סגירה בהקשה אחת מ«היום»** — היום: הקשה → מודאל מלא → select → שמור = 4 הקשות למשימה שכבר בוצעה | 🟡 | S | ✅ |
-| 2.7 | **«היום» ממוין לפי עדיפות בלבד** — בתוך «פיגור» הסדר הוא סדר ההכנסה, לא הוותק | 🟡 | S | ✅ |
+| 2.6 | ~~**סגירה בהקשה אחת מ«היום»** — היום: הקשה → מודאל מלא → select → שמור = 4 הקשות למשימה שכבר בוצעה~~ **#664** | 🟡 | S | ✅ |
+| 2.7 | ~~**«היום» ממוין לפי עדיפות בלבד** — בתוך «פיגור» הסדר הוא סדר ההכנסה, לא הוותק~~ **#664** | 🟡 | S | ✅ |
 | 2.8 | **🔔 בטופ-בר פותח הגדרות, לא התראות.** אין «לא נקרא»; toast נעלם אחרי 2.5 שניות ואין לאן לחזור | 🟠 | M | 🟨 |
-| 2.9 | **התראת WhatsApp נופלת למספר האחרון שנשלח אליו** (`tfgn_wa_last`) — יכול להיות כל אחד | 🟠 | S | ✅ |
-| 2.10 | **«שלח אליי»** — שדה קבוע למספר של מיכאל בהגדרות ההתראות | 🟡 | S | 🟨 |
+| 2.9 | ~~**התראת WhatsApp נופלת למספר האחרון שנשלח אליו** (`tfgn_wa_last`) — יכול להיות כל אחד~~ **#664** | 🟠 | S | ✅ |
+| 2.10 | ~~**«שלח אליי»** — שדה קבוע למספר של מיכאל בהגדרות ההתראות~~ **#664** | 🟡 | S | 🟨 |
 | 2.11 | **מתחת ל«היום» יש ~20 כרטיסי סטטיסטיקה.** לקפל תחת «📊 סטטיסטיקות ומגמות» | 🟡 | M | 🟨 |
-| 2.12 | **תפריט ⋯ = 16 פריטים ברשימה שטוחה**, יומיומי לצד פעם-בשנה. ומספר הגרסה בו קבוע בקוד (`v2026.05.02`) | 🟡 | S | 🟨 |
+| 2.12 | ~~**תפריט ⋯ = 16 פריטים ברשימה שטוחה**, יומיומי לצד פעם-בשנה. ומספר הגרסה בו קבוע בקוד (`v2026.05.02`)~~ **#664** | 🟡 | S | 🟨 |
 
 ## 3. מרשמי ציות ותפוגה
 
@@ -155,6 +155,7 @@
 | #657 | סנכרון: ארבע דרכים שבהן האפליקציה אמרה שהכל בסדר כשלא (5.1, 5.2, 5.3, 5.6) · מיגרציה פתוחה ל-5.8: [#658](../../issues/658) |
 | #660 | דוחות: מה שהאפליקציה מוסרת למישהו מחוץ לה (6.1, 6.5, 6.6, 6.12) |
 | #662 | NCR: הפער בין «הרשומה אומרת סגור» לבין «תראה לי מה נעשה» (1.3, 1.6, 1.8–1.10, 1.12) |
+| #664 | הלולאה היומית: מסך הבוקר, ולאן באמת הולכות ההודעות שהוא שולח (2.6, 2.7, 2.9, 2.10, 2.12) |
 
 ## 8. לא מומלץ
 
@@ -326,7 +327,7 @@
 **הערה**: ארבע הערות: (א) **יש מסלול S בלי מיגרציה** — לספור את מופעי החותמת ב-notes ברג'קס (`/\[נפתח מחדש /g`), כי הפורמט קבוע מאז שהפיצ'ר נכתב. זה לא דורש הרצה של מיכאל ומספיק לדוח. חיסרון: שביר אם מישהו עורך notes ידנית. המיגרציה נקייה יותר אבל חוסמת את הפריט עד שמיכאל ירוץ (כלל 7). (ב) ממצא נלווה שלא היה בטענה: `_reopen` **לא קורא ל-addLog** — כל פונקציית sv* אחרת כן (svNcr ב-4345, svAud, svDoc). כלומר פתיחה מחדש לא מופיעה גם ביומן הביקורת `audit_log`, לא רק בדוחות. זו שורה אחת, כדאי להוסיף אותה באותו PR. (ג) תלות בפריט 1.4 (מאומת ✅): `_reopen` גם לא מאפס `verified_by`, אז רשומה שנפתחה מחדש ממשיכה להציג «✅ אומת» (index.html:11408). שלושתם באותן 20 שורות — לתקן בבת אחת. (ד) סיכון: `_reopen` משותף ל-tasks ול-ncr (index.html:11398). מונה על `ncr` בלבד ידרוש הסתעפות לפי `tbl`, או עמודה מקבילה ב-tasks.
 
 
-### 2.6 — ✅ confirmed · מאמץ S
+### 2.6 — ✅ בוצע ב-**#664** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: index.html:4996-5002 — שורת «היום» נבנית כך: `'<div class="today-item" ... onclick="_todayClick(this.dataset.fn,this.dataset.a1,this.dataset.a2)">'` ואחריה רק `ti-ic` / `ti-body` / `ti-badge` / `ti-chev`. אין כפתור ✓, אין checkbox — כל השורה היא onclick אחד. ב-`_todayClick` (4898-4904) השורה שמכריעה היא 4902: `if(fn==='edit'){editTsk(a1);return;}`. `editTsk` (8930-8947) מסתיים ב-`openModal('m-tsk')`. במודאל m-tsk הדרך היחידה לסגור משימה היא `<select id="tsk-status"><option>פתוח</option>...<option>הושלם</option></select>` (2517) ואז `<button class="btn btn-p" onclick="svTsk()">שמור</button>` (2523). כלומר: הקשה על השורה (1) → פתיחת ה-select (2) → בחירת «הושלם» (3) → «שמור» (4). בדיוק 4 הקשות, כמו שנטען.
 
@@ -337,7 +338,7 @@
 **הערה**: העזר כבר קיים — אסור לשכפל: `_tskQuickStatus(id,_TSK_DONE)` ב-index.html:8692-8702 עושה בדיוק את זה (מעדכן status, ממלא `closed_date`, `sbUpd`, `sdb`, ואז `rTasks()+rDash()`). הוא כבר מחובר לתפריט ⋯ בדף המשימות (8726: `item('✓','סגור (הושלם)',function(){_tskQuickStatus(taskId,_TSK_DONE);},'#16a34a')`). מכיוון ש-`rDash()` מריץ שוב את `_renderToday`, השורה תיעלם מעצמה — אין צורך בקוד רענון. שתי הסתייגויות: (א) זה תקף רק למשימות אמיתיות; פריטים וירטואליים ב«היום» הולכים ל-`fn==='view'` (4901) ואין להם שדה status לכתוב אליו, וכך גם «סבב בוקר», שורות הנאמנים ותור אימות ה-CAPA — הכפתור חייב להופיע רק כש-`it.fn==='edit'`. (ב) המאמץ שנטען (M) גבוה מדי בגלל (א) — בהיקף של משימות אמיתיות בלבד זה S.
 
 
-### 2.7 — ✅ confirmed · מאמץ S
+### 2.7 — ✅ בוצע ב-**#664** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: index.html:4982-4983 — ההערה מבטיחה דבר אחד והקוד עושה אחר:
 ```
@@ -364,7 +365,7 @@
 **הערה**: לא נדרשת מיגרציה: סימן «נקרא עד» יכול לשבת ב-localStorage כ-watermark של `ts` (כמו `tfgn_alert_dism_<date>` ב-4881-4888), ואז ה-badge הוא ספירת שורות ב-`DB.notifications_log` עם `ts` גדול ממנו. שתי מגבלות שחייבים לדעת מראש: (1) `notifications_log` נמצא ב-`window._SDB_SKIP` — הוא אף פעם לא נשמר ל-localStorage ומגיע רק מהשרת עם `_sbLimit={notifications_log:500}` (3023), כלומר בטלפון בלי רשת מרכז ההתראות יהיה ריק; (2) ה-RLS הוא `notifications_log_admin_manager_all` (private.is_admin_manager()) — לנאמן/מדווח אין שם כלום, אז ה-badge חייב להיות מוסתר לפי `_role()` ולא להראות 0 תמידי (זו בדיוק התקלה של פריט 2.3). תלות: ההתראות ב-`_notifyEvent` נרשמות ליומן דרך `_notifLog` (11100-11107) שכבר כותב `ts` — אין מה לשנות בצד הכתיבה.
 
 
-### 2.9 — ✅ confirmed · מאמץ S
+### 2.9 — ✅ בוצע ב-**#664** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: `_notifBuildWaArgs` (index.html:11108-11150) נופל ל-`tfgn_wa_last` בכל ארבעת האירועים, והשורות המכריעות הן: 11118 `var to=_waResolvePhone(n.o)||_waLastTo();` · 11126 `var to2=_waResolvePhone(i.r||i.rep)||_waLastTo();` · 11133 `var to3=_waResolvePhone(t.assignee)||_waLastTo();` · 11143 `var to4=_waResolvePhone(r.w||r.vendor||r.o||r.c)||_waLastTo();` — ו-`round_missed` ב-11147 הוא `var to5=_waLastTo();` בלי שום ניסיון זיהוי. `_notifyEvent` ב-11160 שולח ישירות: `_waSend(args.to,{template:args.template,language:args.language,params:args.params});` — **בלי confirm**, בניגוד למסלול הידני `_waNcrAlert`/`_waTaskAlert`/`_waExpiryAlert` (15254-15285) שעובר דרך `_waConfirm` ומציג את המספר. ההערה ב-11164 `// Couldn't resolve phone — fall back to log (no spam to default number)` מבטיחה בדיוק את ההיפך ממה שקורה — הענף הזה נגיש רק כאשר גם `_waLastTo()` ריק. מקור הערך: 15245 `function _waLastTo(){return localStorage.getItem('tfgn_wa_last')||'';}`, ונכתב במקום אחד בלבד — 15303 `try{localStorage.setItem('tfgn_wa_last',to);}catch(e){...}` בתוך `_waTestSend`. והמסלול רץ אוטומטית: `rDash` 5135 `setTimeout(_notifDailyScan,1500)` → `_notifDailyScan` (11047-11095) → `_notifyEvent`.
 
@@ -375,7 +376,7 @@
 **הערה**: תלוי ישירות ב-2.10 — אלה שני חצאים של אותו תיקון. אם מוחקים את `||_waLastTo()` בלי יעד מוגדר, `round_missed` מת לגמרי (אין לו מקור אחר) ושאר האירועים יירשמו `whatsapp_skipped` — שיפור באבטחה אבל נסיגה בתפקוד, ומיכאל יחווה את זה כ«ההתראות הפסיקו». הסדר הנכון: קודם 2.10 (שדה «המספר שלי»), ואז כאן `_waResolvePhone(...)||_myPhone()` ו-`round_missed` → `_myPhone()` בלבד. כדאי גם להוסיף את `to` ל-payload ב-11161 כדי שהיומן יראה לאן נשלח בפועל. לא לגעת ב-`_waConfirm` (15250-15253) — שם הוא כבר תקין. הערה: כרטיס הבדיקה `dash-wa-test` מוצג רק לאדמין (13879-13880), אז המספר תמיד הוקלד על ידי מיכאל עצמו — «יכול להיות כל אחד» נכון, אבל במובן של «כל מי שמיכאל בדק מולו פעם», לא של מספר זר אקראי.
 
 
-### 2.10 — 🟨 partly · מאמץ S
+### 2.10 — ✅ בוצע ב-**#664** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: הפער אמיתי: אין בשום מקום «המספר שלי». `_notifBuildWaArgs` (11108-11150) לא קורא את ההעדפות בכלל לצורך נמען — הוא מכיר רק `_waResolvePhone(...)` ו-`_waLastTo()`. **אבל** שדה טלפון כבר יושב בדיוק במודאל שהפריט מבקש: index.html:2644 `<div class="field"><label>📱 WhatsApp למספר</label><input id="notif-tru-wa" placeholder="9725XXXXXXXX" inputmode="tel" dir="ltr"></div>`, נשמר ב-`saveNotifSettings` 10727 `newPrefs.trustee_hazard.whatsapp_to=gv('notif-tru-wa').replace(/[^0-9]/g,'');` ונטען חזרה ב-10520 `var _wa=g('notif-tru-wa');if(_wa)_wa.value=_th.whatsapp_to||'';`. הוא משויך לאירוע אחד בלבד (`trustee_hazard`) ונצרך רק בצד השרת ב-`/api/trustee-notify` (10708). כלומר העבודה היא להרחיב שדה קיים, לא להוסיף אחד מאפס.
 
@@ -403,7 +404,7 @@ Two further corrections. (a) The section title sits at line 881, so only 19 of t
 **הערה**: Three things change the picture before anyone edits this. (1) `_dashHideEmptySection` (index.html:5123-5133) walks `var any=false,el=t.nextElementSibling; while(el&&el.classList&&el.classList.contains('card')){...}` — it depends on the cards being the title's SIBLINGS. Wrap them in a `<details>` and that walk finds nothing, so the section header would hide itself even when full. Rewrite it in the same commit. (2) index.html:557 targets `#pg-dash > .dash-section-title` and index.html:558 `#pg-dash > .card` with `column-span:all` / `break-inside:avoid` for the 2-column (≥1080px) and 3-column (≥1500px) desktop layout — those are direct-child selectors, so a wrapper silently kills the desktop masonry. (3) Reuse the existing `.more-accordion` class (index.html:264-269) — it is already the fold pattern used by `dash-kpi-acc` at index.html:871, already has the ▼ chevron and is already in the print rule at index.html:653/673. Do not invent a second accordion style. Nothing in DECISIONS.md forbids folding this section; the P1#1 decision (DECISIONS.md:1084) explicitly set the hierarchy "🎯 היום actionable at the top → KPI strip → accordion for additional metrics", so folding the statistics tail is a continuation of that decision, not a reversal of it.
 
 
-### 2.12 — 🟨 partly · מאמץ S
+### 2.12 — ✅ בוצע ב-**#664** (2026-09-20) · הראיה נשמרת למטה
 
 **ראיה**: The menu is `window._topMoreMenu` at index.html:8737-8781, opened from the topbar at index.html:768 `<button class="bell" id="more-menu-btn" title="עוד פעולות" onclick="_topMoreMenu(this)">&#8943;</button>`. I counted the `item(` calls between 8737 and the closing `document.body.appendChild(menu)`: **15, not 16** (lines 8759, 8760, 8761, 8764, 8765, 8767, 8768, 8769, 8770, 8771, 8772, 8773, 8775, 8776, 8777). Three of those are gated — 8760 and 8765 by `if(typeof _isAdminUser==='function'&&_isAdminUser())`, 8767 by `if(typeof _role==='function'&&_role()!=='reporter')` — so an admin/manager like Michael sees all 15, a reporter sees 12.
 
