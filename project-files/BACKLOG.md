@@ -129,7 +129,7 @@
 | 6.10 | ~~**אחוז משימות שנסגרו בזמן, לפי חודש** — דורש `closed_date` ב-`svTsk`~~ **#666** | 🟡 | M | ✅ |
 | 6.11 | **פרוטוקול סקירת הנהלה שנשמר כרשומה.** §9.3 | 🟠 | M | ✅ |
 | 6.12 | ~~**אריח «ימי אבדן» מתויג LTIF** ומציג ימים גולמיים — זה לא LTIF~~ **#660** | 🟡 | S | ✅ |
-| 6.13 | **דף אחד להנהלה: «האם אנחנו נהיים בטוחים יותר?»** באותו דפוס של דוח ה-ISO | 🟠 | L | ✅ |
+| 6.13 | ~~**דף אחד להנהלה: «האם אנחנו נהיים בטוחים יותר?»** באותו דפוס של דוח ה-ISO~~ **#676** | 🟠 | L | ✅ |
 
 ---
 
@@ -924,7 +924,13 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: Do not "fix" this by computing a fake LTIF — there is no hours-worked figure in the system, and inventing a denominator in a document that goes to an ISO auditor is worse than the wrong caption. Either relabel (S, today) or, if Michael wants the real rate, that is a separate item: one annual man-hours field plus a count of incidents with `dy>0`, which is more than 60 lines once it needs a place to be stored and edited. Note that `mr-inc-sub` (index.html:8574) already presents the same quantity honestly — `lostDays+' ימי אבדן'` — so only the home tile is mislabelled; keep them consistent. Two things to sweep in the same pass while in this code: index.html:5226 uses the unguarded `i.dy||0` whereas index.html:8573 uses `parseInt(i.dy)||0`, and index.html:11888 in `_aiWeeklySummary` reads `parseInt(r.lost_days||0,10)` — but the column is `dy` (index.html:4436), so the weekly AI summary reports 0 lost days every single week regardless of the data.
 
 
-### 6.13 — ✅ confirmed · מאמץ L
+### 6.13 — ✅ **נעשה ב-#676** · מאמץ L
+
+> ההערה למטה צדקה: אחרי 6.6/6.7/6.10 זו הייתה **הרכבה**, לא L.
+> והמלכודת שהיא הצביעה עליה («עמודת התאריך שונה לפי טבלה») היתה גדולה משנראתה:
+> בסיכום השבועי שנשלח להנהלת המפעל היו **שלושה** שדות שלא קיימים — `ncr.sv`
+> (אין שדה כזה; חומרה היא `p`), האיות של «גבוהה», ו-`inc.lost_days` (השדה הוא `dy`).
+> כל שבוע יצא «קריטי: 0, גבוה: 0, 0 ימי היעדרות» בלי קשר למציאות. תוקנו ב-#676.
 
 **ראיה**: Nothing in the file answers "are we getting safer". The only trend rendering that exists is `_ncrTrendSvg()` (index.html:15786) — a hand-rolled 12-month stacked bar of NCRs split saf/env — and `_ncrShowTrend` (index.html:15826) paints it with `P.innerHTML=_ncrTrendSvg()+legend+summary;` into `#ncr-agent-panel`, i.e. a 360px side panel inside the NCR Agent modal, reachable only from the 📈 מגמות button in that modal's header (index.html:15184). The management page renders period counts only — `rMr()` (8547) has no prior-period arm anywhere in 8547-8625. `_isoClauses()` (index.html:6204) answers "is the evidence there", never "is it better than last year": its recency test is `_isoRecent` (6190), a binary `String(v).substring(0,10)>=c`. The single comparison anywhere in the app is the dashboard insight at index.html:5190: `if(incThisWeek>incLastWeek&&incThisWeek>=2)ins.push('📈 השבוע נפתחו ...')` — one metric, week over week, and only fired when it got worse.
 
