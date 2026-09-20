@@ -20,8 +20,8 @@ function check(label, cond, detail) {
 }
 
 // Build a fresh sandbox per scenario.
-function sandbox({ db, outbox, cloud, sentRecently }) {
-  const calls = { sdb: 0, refresh: 0, drain: 0 };
+function sandbox({ db, outbox, cloud, sentRecently, authRejected }) {
+  const calls = { sdb: 0, refresh: 0, drain: 0, badge: [] };
   const env = {
     DB: db,
     SB_ON: false,
@@ -30,14 +30,19 @@ function sandbox({ db, outbox, cloud, sentRecently }) {
     sdb: () => { calls.sdb++; },
     _sbRefresh: () => { calls.refresh++; },
     _obDrain: () => { calls.drain++; },
+    // Since #657 finish() asks whether the reads were REJECTED (401/403) as
+    // opposed to unreachable, and paints the pill accordingly \u2014 a dead session
+    // used to be indistinguishable from being offline, and both showed \u2713 \u05d1\u05e2\u05e0\u05df.
+    _sbAuthRejected: () => !!authRejected,
+    _obBadge: (state) => { calls.badge.push(state); },
     Date: Date,
     Object: Object,
   };
   const src = obSrc + '\n' + syncSrc +
     '\nif(__sent){Object.keys(__sent).forEach(function(k){_obSentRecently[k]=__sent[k];});}' +
     '\nreturn {sbSync:sbSync,_obLocalState:_obLocalState,_obMarkSent:_obMarkSent,getSB:function(){return SB_ON;},_obSentRecently:_obSentRecently};';
-  const f = new Function('DB', 'SB_ON', '_obGet', 'sbGet', 'sdb', '_sbRefresh', '_obDrain', '__sent', src);
-  const api = f(env.DB, env.SB_ON, env._obGet, env.sbGet, env.sdb, env._sbRefresh, env._obDrain, sentRecently || null);
+  const f = new Function('DB', 'SB_ON', '_obGet', 'sbGet', 'sdb', '_sbRefresh', '_obDrain', '_sbAuthRejected', '_obBadge', '__sent', src);
+  const api = f(env.DB, env.SB_ON, env._obGet, env.sbGet, env.sdb, env._sbRefresh, env._obDrain, env._sbAuthRejected, env._obBadge, sentRecently || null);
   return { api, calls, db };
 }
 const tick = () => new Promise(r => setTimeout(r, 5));
@@ -153,6 +158,22 @@ const ids = (arr) => (arr || []).map(r => r.id);
     check('del + upd recorded', k.includes('ncr|D1') && k.includes('tasks|U1'), k.join());
     const st = api._obLocalState('ncr');
     check('_obLocalState sees recent del', st.D1 === 'del', JSON.stringify(st));
+  }
+
+  // S-auth \u2014 the reads were REJECTED, not unreachable.
+  console.log('\nSA  a rejected session is not \u00abin the cloud\u00bb');
+  {
+    const db = { ncr: [{ id: 'N1' }] };
+    const { api, calls } = sandbox({ db, outbox: [], cloud: {}, authRejected: true });
+    api.sbSync(true); await tick();
+    check('the sync still completes rather than hanging', calls.sdb === 1 && calls.refresh === 1, JSON.stringify(calls));
+    check('...and the pill is told the session is rejected', calls.badge.indexOf('auth') >= 0, JSON.stringify(calls.badge));
+  }
+  {
+    const db = { ncr: [{ id: 'N1' }] };
+    const { api, calls } = sandbox({ db, outbox: [], cloud: {}, authRejected: false });
+    api.sbSync(true); await tick();
+    check('an ordinary sync says nothing about auth', calls.badge.indexOf('auth') < 0, JSON.stringify(calls.badge));
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

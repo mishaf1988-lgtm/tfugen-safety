@@ -27,7 +27,11 @@
      flash of the fallback font on a cold load. -->
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet"></noscript>
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<!-- crossorigin: without it this is a no-cors request and the answer is an
+     opaque response, which a service worker is not allowed to cache. That is
+     why a cold open with no signal left the manager staring at a login screen
+     that answers "Supabase אינו זמין" — see functions/sw.js.js VENDOR. -->
+<script defer crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
 <script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
 <style>
@@ -3025,9 +3029,55 @@ var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection
 // the server for the whole thing at the moment it is clicked, so nothing the
 // manager can export today becomes smaller.
 var _sbLimit={notifications_log:500};
-function sbGet(tbl){
+// ---- 5.1 : the browser read one page and called it the whole table ----
+// PostgREST caps a response at db-max-rows (1000 by default) and says so in
+// Content-Range \u2014 which nothing read. _sbMergePull then treats what came back
+// as the WHOLE table: a local row that was not in the page and has no queued
+// op is dropped from DB, and sdb() writes the trimmed copy to localStorage.
+// Sorted created_at.desc, so it is the OLDEST records that would vanish \u2014 from
+// the lists, the counters, the expiry page, the CSV and the in-app backup,
+// with no warning. workers/backup-cron.js has paged since it was written;
+// the browser never did. ncr is at 375 today, which is why nobody has seen it.
+var _SB_PAGE=1000;
+var _SB_MAX_PAGES=50;     // 50k rows; a runaway loop is worse than a truncated read
+function _sbRangeH(from,to){var h=sbH();h['Range-Unit']='items';h['Range']=from+'-'+to;return h;}
+function _sbFetchAll(url,cap){
+  var rows=[],from=0,pages=0;
+  function next(){
+    var to=from+_SB_PAGE-1;
+    if(cap&&to>cap-1)to=cap-1;
+    var want=to-from+1;
+    if(want<1)return Promise.resolve({ok:true,rows:rows});
+    return fetch(url,{headers:_sbRangeH(from,to),priority:'low'}).then(function(r){
+      if(!r.ok)return {ok:false,status:r.status};
+      return r.json().then(function(j){
+        if(!Array.isArray(j))return {ok:false,status:r.status};
+        rows=rows.concat(j);pages++;
+        if(j.length<want)return {ok:true,rows:rows};             // a short page is the end
+        if(cap&&rows.length>=cap)return {ok:true,rows:rows.slice(0,cap)};
+        if(pages>=_SB_MAX_PAGES)return {ok:true,rows:rows,truncated:true};
+        from=to+1;
+        return next();
+      },function(){return {ok:false,status:r.status};});
+    },function(){return {ok:false,status:0};});
+  }
+  return next();
+}
+// ---- 5.3 : a rejected session was indistinguishable from being offline ----
+// Every non-2xx collapsed to null, and sbSync treats null as \u00abunreachable, keep
+// the cache\u00bb \u2014 then still sets SB_ON=true and paints the pill \u2713 \u05d1\u05e2\u05e0\u05df. With a
+// refresh token that had been invalidated (a device long offline, a changed
+// password, a disabled user) the manager saw days-old expiries and open NCRs
+// under a green tick. Not an error \u2014 false confidence, which is worse.
+// _sbAuthPromise is memoized and was never cleared on a 401, so every later
+// read reused the same dead token.
+var _sbAuthBad=0;
+function _sbAuthRejected(){return _sbAuthBad>0;}
+function _sbReauth(){_sbAuthPromise=null;_sbToken=null;return _sbAuth();}
+function sbGet(tbl){return _sbGetOnce(tbl,false);}
+function _sbGetOnce(tbl,isRetry){
   var ord=(_sbTsCol[tbl]||'created_at')+'.desc';
-  var lim=_sbLimit[tbl]?('&limit='+_sbLimit[tbl]):'';
+  var cap=_sbLimit[tbl]||0;
   // Column projection: noisy log tables fetch only the columns the UI uses,
   // shrinking payload by 60-80%. Hot business tables stay on `*` until each
   // is verified against every UI touch-point. Per Phase 5 — surgical adoption.
@@ -3036,10 +3086,16 @@ function sbGet(tbl){
   // user-triggered writes (sbIns / sbUpd / sbDel) jump the queue. Hint
   // is silently ignored on browsers that don't support it (Firefox <132).
   return _sbAuth().then(function(){
-    return fetch(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord+lim,{headers:sbH(),priority:'low'});
-  }).then(function(r){return r.ok?r.json():null;})
-    .then(function(j){return Array.isArray(j)?j:null;})
-    .catch(function(){return null;});
+    return _sbFetchAll(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord,cap);
+  }).then(function(res){
+    if(res&&res.ok){_sbAuthBad=0;return Array.isArray(res.rows)?res.rows:null;}
+    var st=res&&res.status;
+    if(st===401||st===403){
+      if(!isRetry)return _sbReauth().then(function(){return _sbGetOnce(tbl,true);}).catch(function(){_sbAuthBad=Date.now();return null;});
+      _sbAuthBad=Date.now();
+    }
+    return null;
+  }).catch(function(){return null;});
 }
 // Per-table column projection map. Only includes tables verified against
 // every UI render path. Adding a table here when its render code is unsure
@@ -3138,17 +3194,44 @@ function _obBadge(state){
   var ic=document.getElementById('sync-pill-icon'),tx=document.getElementById('sync-pill-txt');
   p.classList.remove('on','ok','err');
   if(state==='err'){p.classList.add('on','err');if(ic)ic.textContent='\u26a0';if(tx)tx.textContent=n+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5 \u2014 \u05d4\u05e7\u05dc\u05e7 \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd';return;}
-  if(n===0){if(state==='ok'){p.classList.add('on','ok');if(ic)ic.textContent='\u2713';if(tx)tx.textContent='\u05d1\u05e2\u05e0\u05df';setTimeout(function(){p.classList.remove('on','ok');},2000);}return;}
+  // The session was rejected. The screen is showing a local copy that may be
+  // days old, and the one thing it must not do is claim to be in the cloud.
+  if(state==='auth'){p.classList.add('on','err');if(ic)ic.textContent='\ud83d\udd12';if(tx)tx.textContent='\u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05e4\u05d2 \u2014 \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d9\u05e9\u05e0\u05d9\u05dd. \u05d4\u05e7\u05dc\u05e7 \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd';return;}
+  if(n===0){if(state==='ok'&&!_sbAuthRejected()){p.classList.add('on','ok');if(ic)ic.textContent='\u2713';if(tx)tx.textContent='\u05d1\u05e2\u05e0\u05df';setTimeout(function(){p.classList.remove('on','ok');},2000);}return;}
   p.classList.add('on');if(ic)ic.textContent='\u21ba';if(tx)tx.textContent=n+' \u05de\u05de\u05ea\u05d9\u05df\u05d5\u05ea';
 }
 function _obSend(op){
   return _sbAuth().then(function(){
     var url,opts={};
-    if(op.op==='ins'){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
+    // An update that keeps matching nothing usually means the row is not on
+    // the server at all (deleted elsewhere, or never arrived). After three
+    // tries put it back as an upsert rather than let the op sit in the queue
+    // for ever \u2014 if RLS is what is refusing, the upsert is refused too and the
+    // op stays queued and visible, which is the point.
+    var asUpsert=(op.op==='upd'&&(op.tries||0)>=3&&op.row&&op.row.id);
+    if(op.op==='ins'||asUpsert){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
     else if(op.op==='upd'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);}
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
     return fetch(url,opts).then(function(r){
+      // ---- 5.2 ----
+      // sbH() asks for return=representation, so PostgREST answers a PATCH or
+      // DELETE that matched NOTHING with 200 and []. Nobody read the body, so
+      // \u00abupdated 1 row\u00bb and \u00abupdated 0 rows\u00bb were the same answer: the op was
+      // marked sent, dropped from the queue, and the pill went \u2713 \u05d1\u05e2\u05e0\u05df \u2014 then
+      // the next pull brought the old value back and the edit was gone. RLS
+      // really does produce this: a \u05de\u05d3\u05d5\u05d5\u05d7, or the anonymous kiosk session,
+      // gets 0 rows and a 200 on every UPDATE.
+      if(r.ok&&(op.op==='upd'||op.op==='del')){
+        return r.json().then(function(j){
+          if(!Array.isArray(j)||j.length)return r;                 // rows really changed
+          // A DELETE that matched nothing is done: the row is already gone.
+          if(op.op==='del')return r;
+          var z=new Error('0 rows');z.status=r.status;z.zeroRows=true;
+          z.body='\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4 (\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea)';
+          throw z;
+        },function(){return r;});                                   // unreadable body: leave as before
+      }
       if(!r.ok){return r.text().then(function(body){
         // Self-heal PGRST204 (schema cache): drop unknown column from payload and retry.
         if(r.status===400 && op.row){
@@ -3303,7 +3386,11 @@ function sbSync(silent){
   var done=0;
   function finish(){
     done++;
-    if(done===tbls.length){SB_ON=true;sdb();_sbRefresh(silent);_obDrain();}
+    if(done!==tbls.length)return;
+    SB_ON=true;sdb();_sbRefresh(silent);_obDrain();
+    // Every table came back null AND at least one of them was a 401/403:
+    // the session is dead, not the network. Say so instead of \u2713 \u05d1\u05e2\u05e0\u05df.
+    if(_sbAuthRejected())_obBadge('auth');
   }
   // P0 (2026-09-18): the server is the source of truth for every table,
   // every pull — including tables with queued outbox ops (they used to be
@@ -8050,6 +8137,11 @@ function _eqiPdfSyncRow(op,rec){
     else{url=SBU+'/rest/v1/equip_inspections?id=eq.'+encodeURIComponent(rec.id);opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(rec);}
     return fetch(url,opts).then(function(r){
       if(!r.ok)return r.text().then(function(b){throw new Error('HTTP '+r.status+': '+b.substring(0,120));});
+      // Same blind spot as _obSend had: a PATCH that matched nothing answers
+      // 200 with [], and the PDF import reported the row as synced.
+      if(op!=='ins')return r.json().then(function(j){
+        if(Array.isArray(j)&&!j.length)throw new Error('0 rows \u2014 \u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4');
+      },function(){});
     });
   });
 }
@@ -14050,9 +14142,12 @@ function rLg(){
   el.innerHTML=DB.hist.map(function(h){var dt=new Date(h.ts);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>'+h.tx+'</span><span style="color:var(--t3);white-space:nowrap;margin-right:8px">'+dt.toLocaleDateString('he-IL')+' '+dt.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span></div>';}).join('');
 }
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
-function _loginErr(msg){
+// sticky: a message that explains why login CANNOT work must not erase itself
+// after 2.5 seconds, leaving an empty login screen and no explanation.
+function _loginErr(msg,sticky){
   var err=g('pw-err');if(err)err.textContent=msg;
-  var pw=g('pw');if(pw){pw.value='';pw.focus();}
+  var pw=g('pw');if(pw){pw.value='';if(!sticky)pw.focus();}
+  if(sticky)return;
   setTimeout(function(){var e=g('pw-err');if(e)e.textContent='';},2500);
 }
 // Current logged-in user profile (after login). Null for anonymous/emp mode.
@@ -14260,7 +14355,17 @@ function doLogin(){
   var email=_resolveEmail(uname);
   var lb=g('login-btn');if(lb){lb.disabled=true;lb.dataset.txt=lb.textContent||'';lb.textContent='\u05de\u05ea\u05d7\u05d1\u05e8...';}
   _sbBoot();
-  if(!_sbClient){if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}_loginErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');return;}
+  if(!_sbClient){
+    if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+    // The library is loaded from a CDN. Offline on a device that has not
+    // cached it yet, there is nothing to log in with \u2014 say that, and say what
+    // does work, instead of two words that vanish.
+    var off=(typeof navigator!=='undefined'&&navigator.onLine===false);
+    _loginErr(off
+      ?'\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05d0\u05d9\u05e0\u05d8\u05e8\u05e0\u05d8, \u05d5\u05e1\u05e4\u05e8\u05d9\u05d9\u05ea \u05d4\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8. \u05e4\u05ea\u05d7 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea \u05e2\u05dd \u05e7\u05dc\u05d9\u05d8\u05d4 \u2014 \u05de\u05e9\u05dd \u05d5\u05d0\u05d9\u05dc\u05da \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05ea\u05e2\u05d1\u05d5\u05d3 \u05d2\u05dd \u05d1\u05dc\u05d9.'
+      :'\u05e1\u05e4\u05e8\u05d9\u05d9\u05ea \u05d4\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4 (Supabase). \u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3; \u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8 \u2014 \u05d7\u05e1\u05dd \u05e8\u05e9\u05ea \u05d0\u05d5 \u05d7\u05d5\u05e1\u05dd \u05e4\u05e8\u05e1\u05d5\u05de\u05d5\u05ea.',true);
+    return;
+  }
   _sbClient.auth.signInWithPassword({email:email,password:val}).then(function(r){
     if(r.error||!r.data||!r.data.session){
       if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}

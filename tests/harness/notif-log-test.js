@@ -46,12 +46,21 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       channel: 'email',
       payload: { title: 'התראה ' + i },
     }));
-    // stand in for the network: honour ?limit= exactly as PostgREST does
-    window.fetch = function (u) {
+    // Stand in for the network. Since #657 sbGet pages with a Range header
+    // instead of ?limit=, exactly as PostgREST expects and as the nightly
+    // worker has always done \u2014 so the cap is now a range, not a query param.
+    window.fetch = function (u, o) {
       window.__urls.push(String(u));
-      const m = String(u).match(/[?&]limit=(\d+)/);
-      const rows = m ? window.__server.slice(0, Number(m[1])) : window.__server;
-      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(rows) });
+      window.__ranges = window.__ranges || [];
+      const range = (o && o.headers && o.headers.Range) || '';
+      window.__ranges.push(range);
+      const m = range.match(/^(\d+)-(\d+)$/);
+      const qm = String(u).match(/[?&]limit=(\d+)/);
+      let rows;
+      if (m) rows = window.__server.slice(+m[1], +m[2] + 1);
+      else if (qm) rows = window.__server.slice(0, Number(qm[1]));
+      else rows = window.__server;
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(rows), text: () => Promise.resolve('') });
     };
     // catch the download instead of performing it
     window.__csv = null;
@@ -63,13 +72,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   console.log('\n1. the routine sync asks for a window, not the whole history');
   {
     const r = await page.evaluate(() => {
-      window.__urls = [];
+      window.__urls = []; window.__ranges = [];
       return sbGet('notifications_log').then((rows) => ({
-        url: window.__urls[0], got: rows.length, cap: _sbLimit.notifications_log,
+        url: window.__urls[0], ranges: window.__ranges, got: rows.length, cap: _sbLimit.notifications_log,
       }));
     });
-    check('the request carries a limit', /[?&]limit=\d+/.test(r.url), r.url);
-    check('it is the configured cap, not an arbitrary number', r.url.indexOf('limit=' + r.cap) > 0, { url: r.url, cap: r.cap });
+    check('the request asks for a bounded range', /^\d+-\d+$/.test(r.ranges[0] || ''), r.ranges);
+    check('it is the configured cap, not an arbitrary number', r.ranges[0] === '0-' + (r.cap - 1), { ranges: r.ranges, cap: r.cap });
+    check('...and one request is enough for it', r.ranges.length === 1, r.ranges);
     check('so 500 rows come back instead of 2,000', r.got === 500, r.got);
   }
 
@@ -80,7 +90,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const tbls = ['ncr', 'tasks', 'equip_inspections', 'trustee_reports', 'ppe', 'emp', 'app_users'];
       return Promise.all(tbls.map((t) => {
         window.__urls = [];
-        return sbGet(t).then(() => { out[t] = /[?&]limit=/.test(window.__urls[0]); });
+        window.__ranges = [];
+        return sbGet(t).then(() => { out[t] = /[?&]limit=/.test(window.__urls[0]) || /^0-499$/.test(window.__ranges[0] || ''); });
       })).then(() => ({ capped: Object.keys(out).filter((k) => out[k]), limits: Object.keys(_sbLimit) }));
     });
     check('no business table asks for a limit — hiding an old NCR would be data loss', r.capped.length === 0, r.capped);

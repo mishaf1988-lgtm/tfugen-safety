@@ -26,11 +26,25 @@ export async function onRequest({ env }) {
 
 const CACHE = 'tfgn-${BUILD}';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
+// supabase-js is the whole login. Without it _sbBoot leaves _sbClient null,
+// the boot path falls through to showLogin(), and typing the password answers
+// "Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df" \u2014 a message that erases itself after 2.5s. So a cold
+// open with no signal locked the MANAGER out of data already on the device
+// (employee mode has no such dependency and got in fine). It is cross-origin,
+// so it needs crossorigin="anonymous" on the tag (index.html) to come back as
+// a CORS response rather than an opaque one a worker may not cache.
+const VENDOR = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
+];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {}))
+    caches.open(CACHE).then((c) => Promise.all([
+      c.addAll(SHELL).catch(() => {}),
+      // One at a time: one vendor URL that 404s must not take the shell with it.
+      Promise.all(VENDOR.map((u) => c.add(new Request(u, { mode: 'cors' })).catch(() => {}))),
+    ]))
   );
 });
 
@@ -72,8 +86,9 @@ self.addEventListener('fetch', (e) => {
   }
 
   // Keep the freshest copy around, but never let a cache error break the page.
+  const isVendor = VENDOR.indexOf(url.split('?')[0]) >= 0;
   const store = (resp) => {
-    if (resp && resp.ok && resp.type === 'basic') {
+    if (resp && resp.ok && (resp.type === 'basic' || (isVendor && resp.type === 'cors'))) {
       const copy = resp.clone();
       caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
     }
@@ -99,10 +114,26 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
+  // A vendor script must come from the cache the moment the network is gone,
+  // and must never fall back to index.html: nosniff refuses to execute an
+  // HTML document as a script, so the page would break in a way that reads as
+  // "the app is broken" rather than "you are offline".
+  if (isVendor) {
+    e.respondWith(
+      caches.match(req, { cacheName: CACHE }).then((hit) => {
+        if (hit) { e.waitUntil(fetch(req).then(store).catch(() => {})); return hit; }
+        return fetch(req).then(store);
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     fetch(req)
       .then(store)
-      .catch(() => caches.match(req).then((r) => r || caches.match('/')))
+      // Only a navigation may fall back to the shell. A script or a stylesheet
+      // served index.html is refused by nosniff and looks like a broken app.
+      .catch(() => caches.match(req).then((r) => r || (req.mode === 'navigate' ? caches.match('/') : Promise.reject(new Error('offline')))))
   );
 });
 `;
