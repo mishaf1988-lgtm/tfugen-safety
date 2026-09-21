@@ -30,7 +30,7 @@ function world(opts) {
     if (u.startsWith(SB + '/rest/v1/notifications_log')) return new Response('', { status: 201 });
     if (u.includes('graph.facebook.com')) {
       if (st.metaFail) return json({ error: { code: 190, message: 'Invalid OAuth access token' } }, 401);
-      if (body.template.name === 'tfugen_trustee_hazard' && st.dedicatedMissing) return json({ error: { code: 132001, message: 'Template name does not exist in the translation' } }, 404);
+      if (body.template.name === 'tfugen_safety_report' && st.dedicatedMissing) return json({ error: { code: 132001, message: 'Template name does not exist in the translation' } }, 404);
       return json({ messages: [{ id: 'wamid.1' }] });
     }
     // The bucket is private, so the email must carry a SIGNED link. st.signOk
@@ -60,7 +60,11 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({ row: fresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'r1' }), env }); const j = await r.json();
     const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
     check('200, whatsapp sent, email sent', r.status === 200 && j.ok && j.whatsapp === 'sent' && j.email === 'sent', j);
-    check('dedicated template tried first, then the approved incident template with location / "ליקוי נאמן" / finding', meta.length === 2 && meta[0].body.template.name === 'tfugen_trustee_hazard' && meta[1].body.template.name === 'tfugen_incident_alert' && meta[1].body.to === '972501234567' && meta[1].body.template.components[0].parameters.map(p => p.text).join('|') === 'מחסן · הידרנט|ליקוי נאמן בטיחות - דנה, עמדות כיבוי אש|ללא פלומבה', meta.map(m => m.body.template));
+    // The fallback template's own labels are, in order, «סוג», «מיקום»,
+    // «חומרה». We used to pass location, kind, finding -- so the store room
+    // appeared under «סוג» and the task name under «מיקום». Michael read one
+    // on his phone on 2026-09-21 and it looked like a broken system.
+    check('the approved template is used as a fallback, with the parameters in the order ITS labels expect (kind, location, finding)', meta.length === 2 && meta[0].body.template.name === 'tfugen_safety_report' && meta[1].body.template.name === 'tfugen_incident_alert' && meta[1].body.to === '972501234567' && meta[1].body.template.components[0].parameters.map(p => p.text).join('|') === 'ליקוי בסיור נאמן: עמדות כיבוי אש|מחסן · הידרנט|ללא פלומבה', meta.map(m => m.body.template));
     check('email to the saved address with trustee, task, location, finding, a SIGNED photo link and the app link', resend && resend.body.to[0] === 'sviva@tapugan.co.il' && /דנה/.test(resend.body.subject) && /הידרנט/.test(resend.body.html) && /ללא פלומבה/.test(resend.body.html) && /token=SIGNED/.test(resend.body.html) && !/object\/public\//.test(resend.body.html) && /tapugan-safety\.pages\.dev/.test(resend.body.html), resend && resend.body.subject);
     check('two log rows (whatsapp, email) written by the server', log && log.body.length === 2 && log.body.map(x => x.channel).join() === 'whatsapp,email' && log.body[0].event_type === 'trustee_hazard', log && log.body);
     check('the claim is a PATCH guarded by notified_at=is.null', w.calls.some(c => c.method === 'PATCH' && /notified_at=is\.null/.test(c.u) && c.body.notified_at), w.calls.filter(c => c.method === 'PATCH').map(c => c.u)); }
@@ -131,7 +135,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('…and accepted with it', j2.ok === true && j2.whatsapp === 'sent', j2); }
   { const r = await onRequest({ request: req({ id: 'r1' }), env: { META_ACCESS_TOKEN: 'x' } }); check('missing service key → 500', r.status === 500); }
   { const w = world({ row: fresh(), prefs: prefsOn, dedicatedMissing: false }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json(); const meta = w.calls.filter(c => c.u.includes('graph.facebook.com'));
-    check('once the dedicated template exists it is used directly: trustee / task — location / finding', j.whatsapp === 'sent' && meta.length === 1 && meta[0].body.template.name === 'tfugen_trustee_hazard' && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'דנה|עמדות כיבוי אש — מחסן · הידרנט|ללא פלומבה', meta.map(m => m.body.template)); }
+    check('once the dedicated template exists it is used directly: reporter / kind / location / finding', j.whatsapp === 'sent' && meta.length === 1 && meta[0].body.template.name === 'tfugen_safety_report' && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'דנה|ליקוי בסיור נאמן: עמדות כיבוי אש|מחסן · הידרנט|ללא פלומבה', meta.map(m => m.body.template)); }
   console.log('\n3. test mode from the settings screen');
   { const r = await onRequest({ request: req({ test: true, whatsapp_to: '972501234567' }), env }); check('test without a session → 401', r.status === 401); }
   { const w = world({ authOk: false }); const r = await onRequest({ request: req({ test: true, whatsapp_to: '972501234567' }, { Authorization: 'Bearer bad' }), env }); check('test with a bad session → 401', r.status === 401); }
@@ -158,9 +162,13 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('the mail is headed as a near-miss, not as a trustee finding', /כמעט ונפגע/.test(resend.body.subject) && !/ליקוי מנאמן/.test(resend.body.subject), resend && resend.body.subject);
     // There is no approved near-miss template. Trying the trustee one first
     // would burn a call on a guaranteed refusal.
-    check('WhatsApp goes straight to the approved incident template, one call only',
-      meta.length === 1 && meta[0].body.template.name === 'tfugen_incident_alert'
-      && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'רציף העמסה|כמעט ונפגע - משה לוי, חומרה גבוהה, ציוד הרמה|משטח כמעט נפל מהמלגזה', meta.map(m => m.body.template));
+    // The dedicated template covers both sources, so a near-miss tries it too
+    // and falls back the same way. The kind line carries the severity, which
+    // is the one thing a near-miss has and a trustee finding does not.
+    check('a near-miss uses the same template, and falls back with kind / location / description',
+      meta.length === 2 && meta[0].body.template.name === 'tfugen_safety_report'
+      && meta[1].body.template.name === 'tfugen_incident_alert'
+      && meta[1].body.template.components[0].parameters.map(p => p.text).join('|') === 'כמעט ונפגע, חומרה גבוהה|רציף העמסה|משטח כמעט נפל מהמלגזה', meta.map(m => m.body.template));
     check('the log says near_miss, so the two are told apart afterwards', log && log.body[0].event_type === 'near_miss', log && log.body);
     check('the claim guards the near_miss row', w.calls.some(c => c.method === 'PATCH' && /near_miss\?id=eq\.n1&notified_at=is\.null/.test(c.u)), w.calls.filter(c => c.method === 'PATCH').map(c => c.u)); }
   { const w = world({ nm: { ...nmFresh(), notified_at: '2026-09-21T06:00:00Z' }, prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env })).json();
@@ -207,20 +215,22 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
 
     const w1 = world({ row: plain(), prefs: prefsOn });
     await onRequest({ request: req({ id: 'r1' }), env });
-    const m1 = w1.calls.filter(c => c.u.includes('graph.facebook.com')).slice(-1)[0];
+    const m1 = w1.calls.filter(c => c.u.includes('graph.facebook.com'));
     const e1 = w1.calls.find(c => c.u.includes('resend'));
     check('the trustee email subject is clean', !offenders(e1.body.subject).length, offenders(e1.body.subject).concat(e1.body.subject));
     check('...and its body, footer included', !offenders(e1.body.html).length, offenders(e1.body.html));
     check('...and the plain-text part', !offenders(e1.body.text).length, offenders(e1.body.text).concat(e1.body.text));
-    check('...and the WhatsApp parameters', !offenders(JSON.stringify(m1.body)).length, offenders(JSON.stringify(m1.body)));
+    check('...and the WhatsApp parameters of EVERY template tried, not only the last',
+      m1.length >= 2 && !offenders(JSON.stringify(m1.map(c => c.body))).length, offenders(JSON.stringify(m1.map(c => c.body))));
 
     const w2 = world({ nm: plainNm(), prefs: prefsOn });
     await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env });
-    const m2 = w2.calls.filter(c => c.u.includes('graph.facebook.com')).slice(-1)[0];
+    const m2 = w2.calls.filter(c => c.u.includes('graph.facebook.com'));
     const e2 = w2.calls.find(c => c.u.includes('resend'));
     check('the same for a near-miss, subject and body', !offenders(e2.body.subject + e2.body.html + e2.body.text).length,
       offenders(e2.body.subject + e2.body.html + e2.body.text));
-    check('...and its WhatsApp parameters', !offenders(JSON.stringify(m2.body)).length, offenders(JSON.stringify(m2.body)));
+    check('...and its WhatsApp parameters, every template tried',
+      m2.length >= 2 && !offenders(JSON.stringify(m2.map(c => c.body))).length, offenders(JSON.stringify(m2.map(c => c.body))));
 
     // The sample the "send a test" button delivers is our wording too, and it
     // is the first message anyone ever sees from this system.

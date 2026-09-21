@@ -39,9 +39,14 @@ const APP_URL = 'https://tapugan-safety.pages.dev';
 const PREFS_ID = 'admin@tfugen.local';
 const EVENT = 'trustee_hazard';
 const MAX_AGE_MS = 48 * 3600 * 1000;
-// A dedicated Meta template (he) — used as soon as it exists and is approved;
-// until then the approved incident template carries the message.
-const TEMPLATE_DEDICATED = 'tfugen_trustee_hazard';
+// The template this system is meant to send on. Until it exists and is
+// approved in Meta, the approved incident template carries the message -- and
+// carries it badly: its fixed text reads «🚨 תקרית בטיחות ... נא לטפל מיידית»,
+// which is a road accident, not a fire extinguisher missing a seal. Michael saw
+// the first one on 2026-09-21 and said so. project-files/WHATSAPP-TEMPLATE.md
+// is the text to submit; the moment it is approved this code uses it with no
+// further change.
+const TEMPLATE_DEDICATED = 'tfugen_safety_report';
 const TEMPLATE_FALLBACK = 'tfugen_incident_alert';
 // The built-in catalogue, and the fallback. Once migrations/2026-09-19_trustee_tasks.sql
 // has run the manager can rename a task from the app — and the message that
@@ -70,7 +75,7 @@ const SOURCES = {
     lineLabel: 'משימה',
     // The task number reads naturally in front of its name, and only there.
     lineText: (row, line) => (row.t ? esc(row.t) + '. ' : '') + esc(line),
-    waMiddle: (who, line) => 'ליקוי נאמן בטיחות - ' + who + ', ' + line,
+    kindLabel: (row, line) => 'ליקוי בסיור נאמן: ' + line,
     footer: 'נשלח אוטומטית כשנאמן שומר ליקוי. באפליקציה: מודולים > נאמני בטיחות',
   },
   near_miss: {
@@ -86,7 +91,7 @@ const SOURCES = {
     whoLabel: 'מדווח',
     lineLabel: 'חומרה / סוג',
     lineText: (row, line) => esc(line),
-    waMiddle: (who, line) => 'כמעט ונפגע - ' + who + ', ' + line,
+    kindLabel: (row, line) => 'כמעט ונפגע' + (row.sev ? ', חומרה ' + row.sev : ''),
     footer: 'נשלח אוטומטית כשנשמר דיווח כמעט ונפגע. באפליקציה: מודולים > כמעט ונפגע',
   },
 };
@@ -258,17 +263,19 @@ async function sendWhatsApp(env, to, row, task, src) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return 'error: WhatsApp not configured (META env vars)';
   const who = clean(row.u, 40), loc = clean(row.loc || 'לא צוין', 60), finding = clean(row.f || 'ללא תיאור', 150);
   try {
-    // Dedicated template first: {{1}} trustee · {{2}} task + location · {{3}} finding
-    // There is no dedicated near-miss template, so that source goes straight
-    // to the approved incident one rather than burning a call to be refused.
-    let r = src.event === 'near_miss'
-      ? { ok: false, parsed: { error: { code: 132001, message: 'no dedicated template for near_miss' } } }
-      : await metaSend(env, to, TEMPLATE_DEDICATED, [who, clean(task + ' — ' + loc, 90), finding]);
+    const kind = clean(src.kindLabel(row, task), 90);
+    // The template we want: {{1}} reporter, {{2}} kind, {{3}} location, {{4}} finding.
+    let r = await metaSend(env, to, TEMPLATE_DEDICATED, [who, kind, loc, finding]);
     const err = r.parsed && r.parsed.error;
     const missing = !r.ok && err && (err.code === 132001 || /template/i.test(String(err.message || '')));
     if (missing) {
-      // Approved incident template: {{1}} location · {{2}} severity · {{3}} description
-      r = await metaSend(env, to, TEMPLATE_FALLBACK, [loc, clean(src.waMiddle(who, task), 90), finding]);
+      // The approved incident template, whose fixed labels are, in order:
+      //   סוג: {{1}}   מיקום: {{2}}   חומרה: {{3}}
+      // We were passing location, kind, finding -- so every line was captioned
+      // as something it was not: the store room appeared under «סוג», the task
+      // name under «מיקום». Read on a phone it looked like a broken system
+      // reporting a road accident. This is the order the labels actually want.
+      r = await metaSend(env, to, TEMPLATE_FALLBACK, [kind, loc, finding]);
     }
     if (r.ok) return 'sent';
     const e2 = r.parsed && r.parsed.error;
