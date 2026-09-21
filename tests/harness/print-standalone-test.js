@@ -110,6 +110,59 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...with who printed it and when', /מיכאל/.test(d), 'no author line');
   }
 
+  console.log('\n3b. where the notice lands');
+  {
+    // The button sits inside the report's .head, which is a flex row. Inserted
+    // next to it, the notice became a flex item and covered the logo and the
+    // title -- Michael's screenshot at 16:12. It belongs below the header.
+    const doc = await page.evaluate(() => {
+      window.toast = function () {}; window.alert = function () {};
+      const mm = new Date().toISOString().substring(0, 7);
+      DB.ncr = [{ id: 'n1', d: mm + '-05', s: 'פתוח', ts: mm + '-05T08:00:00Z' }];
+      DB.inc = []; DB.near_miss = []; DB.rounds = []; DB.toolbox = []; DB.trustee_reports = [];
+      let out = '';
+      const realOpen = window.open;
+      window.open = function () {
+        return { document: { open: function () {}, close: function () {}, write: function (h) { out += h; } } };
+      };
+      try { window.safetyTrendReport(); } catch (e) { out = 'ERROR ' + (e && e.message); }
+      window.open = realOpen;
+      return out;
+    });
+    const p3 = await ctx.newPage();
+    await p3.setViewportSize({ width: 390, height: 844 });
+    await p3.setContent(doc, { waitUntil: 'load' });
+    await p3.evaluate(() => {
+      const realMM = window.matchMedia;
+      window.matchMedia = function (q) {
+        if (String(q).indexOf('display-mode: standalone') >= 0) return { matches: true, media: q };
+        return realMM.call(window, q);
+      };
+      window.print = function () {};
+      try { _tryPrint(document.querySelector('.no-print')); } catch (e) {}
+      window.matchMedia = realMM;
+    });
+    await p3.waitForTimeout(120);
+    const m = await p3.evaluate(() => {
+      const n = document.getElementById('print-help');
+      const h = document.querySelector('.head');
+      if (!n || !h) return { n: !!n, h: !!h };
+      const nr = n.getBoundingClientRect(), hr = h.getBoundingClientRect();
+      return {
+        n: true, h: true,
+        insideHead: h.contains(n),
+        below: nr.top >= hr.bottom - 1,
+        overlapsHead: !(nr.top >= hr.bottom || nr.bottom <= hr.top),
+        onScreen: nr.left >= -1 && nr.right <= window.innerWidth + 1,
+      };
+    });
+    check('the notice is rendered', m.n && m.h, m);
+    check('...outside the header, not as one of its flex items', !m.insideHead, m);
+    check('...and does not cover the logo or the title', !m.overlapsHead && m.below, m);
+    check('...and fits the screen', m.onScreen, m);
+    await p3.close();
+  }
+
   console.log('\n4. when the window is refused');
   {
     const r = await run({ standalone: true, blocked: true });
