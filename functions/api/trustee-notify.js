@@ -70,8 +70,8 @@ const SOURCES = {
     lineLabel: 'משימה',
     // The task number reads naturally in front of its name, and only there.
     lineText: (row, line) => (row.t ? esc(row.t) + '. ' : '') + esc(line),
-    waMiddle: (who, line) => 'ליקוי נאמן בטיחות — ' + who + ', ' + line,
-    footer: 'נשלח אוטומטית כשנאמן שומר ליקוי · מודולים → נאמני בטיחות',
+    waMiddle: (who, line) => 'ליקוי נאמן בטיחות - ' + who + ', ' + line,
+    footer: 'נשלח אוטומטית כשנאמן שומר ליקוי. באפליקציה: מודולים > נאמני בטיחות',
   },
   near_miss: {
     select: 'id,rep,descr,area,sev,typ,d,s,photo_url,ts,notified_at',
@@ -86,8 +86,8 @@ const SOURCES = {
     whoLabel: 'מדווח',
     lineLabel: 'חומרה / סוג',
     lineText: (row, line) => esc(line),
-    waMiddle: (who, line) => 'כמעט ונפגע — ' + who + ', ' + line,
-    footer: 'נשלח אוטומטית כשנשמר דיווח כמעט ונפגע · מודולים → כמעט ונפגע',
+    waMiddle: (who, line) => 'כמעט ונפגע - ' + who + ', ' + line,
+    footer: 'נשלח אוטומטית כשנשמר דיווח כמעט ונפגע. באפליקציה: מודולים > כמעט ונפגע',
   },
 };
 
@@ -128,7 +128,7 @@ export async function onRequest({ request, env }) {
       email: body.email !== false, email_to: clean(body.email_to, 120)
     };
     if (!prefs.whatsapp_to && !prefs.email_to) return jsonResp({ error: 'no recipient: fill a WhatsApp number or an email' }, 400, cors);
-    const sample = { id: 'test', u: 'בדיקה', t: 5, d: new Date().toISOString().substring(0, 10), loc: 'מחסן · מטף מזרחי', f: 'הודעת בדיקה — מטף ללא פלומבה', photo_url: null };
+    const sample = { id: 'test', u: 'בדיקה', t: 5, d: new Date().toISOString().substring(0, 10), loc: 'מחסן, מטף מזרחי', f: 'הודעת בדיקה - מטף ללא פלומבה', photo_url: null };
     const res = await deliver(env, prefs, sample, await taskName(sb, sample.t), SOURCES.trustee_reports);
     return jsonResp({ ok: true, test: true, ...res }, 200, cors);
   }
@@ -228,7 +228,7 @@ async function lineFor(sb, src, row) {
     const bits = [];
     if (row.sev) bits.push('חומרה ' + clean(row.sev, 20));
     if (row.typ) bits.push(clean(row.typ, 40));
-    return bits.length ? bits.join(' · ') : 'כמעט ונפגע';
+    return bits.length ? bits.join(', ') : 'כמעט ונפגע';
   }
   return taskName(sb, row.t);
 }
@@ -309,9 +309,9 @@ async function sendEmail(env, to, row, task, src) {
     ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url)
     : null;
   const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
-  const subject = src.emoji + ' ' + src.subject + ' — ' + clean(row.u, 40) + ' · ' + clean(task, 40);
+  const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
-    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן — ניהול הבטיחות</p></div>'
+    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן - ניהול הבטיחות</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
     + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
     + '<p style="margin-top:16px"><a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
@@ -319,7 +319,7 @@ async function sendEmail(env, to, row, task, src) {
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: env.RESEND_FROM || 'Tapugan Safety <onboarding@resend.dev>', to: [to], subject, html, text: subject + ' — ' + clean(row.loc, 60) + ': ' + clean(row.f, 200) + ' · ' + APP_URL })
+      body: JSON.stringify({ from: env.RESEND_FROM || 'Tapugan Safety <onboarding@resend.dev>', to: [to], subject, html, text: subject + ' - ' + clean(row.loc, 60) + ': ' + clean(row.f, 200) + ' ' + APP_URL })
     });
     if (r.ok) return 'sent';
     const t = await r.text();

@@ -60,7 +60,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({ row: fresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'r1' }), env }); const j = await r.json();
     const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
     check('200, whatsapp sent, email sent', r.status === 200 && j.ok && j.whatsapp === 'sent' && j.email === 'sent', j);
-    check('dedicated template tried first, then the approved incident template with location / "ליקוי נאמן" / finding', meta.length === 2 && meta[0].body.template.name === 'tfugen_trustee_hazard' && meta[1].body.template.name === 'tfugen_incident_alert' && meta[1].body.to === '972501234567' && meta[1].body.template.components[0].parameters.map(p => p.text).join('|') === 'מחסן · הידרנט|ליקוי נאמן בטיחות — דנה, עמדות כיבוי אש|ללא פלומבה', meta.map(m => m.body.template));
+    check('dedicated template tried first, then the approved incident template with location / "ליקוי נאמן" / finding', meta.length === 2 && meta[0].body.template.name === 'tfugen_trustee_hazard' && meta[1].body.template.name === 'tfugen_incident_alert' && meta[1].body.to === '972501234567' && meta[1].body.template.components[0].parameters.map(p => p.text).join('|') === 'מחסן · הידרנט|ליקוי נאמן בטיחות - דנה, עמדות כיבוי אש|ללא פלומבה', meta.map(m => m.body.template));
     check('email to the saved address with trustee, task, location, finding, a SIGNED photo link and the app link', resend && resend.body.to[0] === 'sviva@tapugan.co.il' && /דנה/.test(resend.body.subject) && /הידרנט/.test(resend.body.html) && /ללא פלומבה/.test(resend.body.html) && /token=SIGNED/.test(resend.body.html) && !/object\/public\//.test(resend.body.html) && /tapugan-safety\.pages\.dev/.test(resend.body.html), resend && resend.body.subject);
     check('two log rows (whatsapp, email) written by the server', log && log.body.length === 2 && log.body.map(x => x.channel).join() === 'whatsapp,email' && log.body[0].event_type === 'trustee_hazard', log && log.body);
     check('the claim is a PATCH guarded by notified_at=is.null', w.calls.some(c => c.method === 'PATCH' && /notified_at=is\.null/.test(c.u) && c.body.notified_at), w.calls.filter(c => c.method === 'PATCH').map(c => c.u)); }
@@ -154,13 +154,13 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     // reporter and the hazard both blank, which still looks like it worked.
     check('the reporter, the place and the description survive the different column names',
       /משה לוי/.test(resend.body.subject) && /רציף העמסה/.test(resend.body.html) && /משטח כמעט נפל/.test(resend.body.html), resend && resend.body.subject);
-    check('severity and type become the line under the name', /חומרה גבוהה · ציוד הרמה/.test(resend.body.html), resend && resend.body.html.substring(0, 400));
+    check('severity and type become the line under the name', /חומרה גבוהה, ציוד הרמה/.test(resend.body.html), resend && resend.body.html.substring(0, 400));
     check('the mail is headed as a near-miss, not as a trustee finding', /כמעט ונפגע/.test(resend.body.subject) && !/ליקוי מנאמן/.test(resend.body.subject), resend && resend.body.subject);
     // There is no approved near-miss template. Trying the trustee one first
     // would burn a call on a guaranteed refusal.
     check('WhatsApp goes straight to the approved incident template, one call only',
       meta.length === 1 && meta[0].body.template.name === 'tfugen_incident_alert'
-      && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'רציף העמסה|כמעט ונפגע — משה לוי, חומרה גבוהה · ציוד הרמה|משטח כמעט נפל מהמלגזה', meta.map(m => m.body.template));
+      && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'רציף העמסה|כמעט ונפגע - משה לוי, חומרה גבוהה, ציוד הרמה|משטח כמעט נפל מהמלגזה', meta.map(m => m.body.template));
     check('the log says near_miss, so the two are told apart afterwards', log && log.body[0].event_type === 'near_miss', log && log.body);
     check('the claim guards the near_miss row', w.calls.some(c => c.method === 'PATCH' && /near_miss\?id=eq\.n1&notified_at=is\.null/.test(c.u)), w.calls.filter(c => c.method === 'PATCH').map(c => c.u)); }
   { const w = world({ nm: { ...nmFresh(), notified_at: '2026-09-21T06:00:00Z' }, prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env })).json();
@@ -189,6 +189,47 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
       log && log.body.some(x => x.channel === 'email_error'), log && log.body.map(x => x.channel)); }
   { const w = world({ row: fresh(), prefs: prefsOn, resendOk: false }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
     check('any other Resend failure still reports its status and body', /Resend 422/.test(j.email), j.email); }
+
+  // CLAUDE.md, "שפה ותקשורת": text that goes to people uses keyboard characters
+  // only. These alerts are exactly that -- Michael read one on his phone on
+  // 2026-09-21 and it carried an em dash and a middle dot. The check is on what
+  // is DELIVERED, not on the source, and the fixture carries none of these
+  // characters so anything found came from our own wording.
+  console.log('\n6. keyboard characters only in what is delivered');
+  {
+    const BANNED = [['—', 'em dash'], ['–', 'en dash'], ['־', 'maqaf'],
+      ['«', 'guillemet'], ['»', 'guillemet'], ['“', 'curly quote'], ['”', 'curly quote'],
+      ['‘', 'curly quote'], ['’', 'curly quote'], ['…', 'ellipsis'], ['·', 'middle dot'],
+      ['→', 'arrow'], ['×', 'multiplication sign']];
+    const offenders = (s) => BANNED.filter(([ch]) => String(s).includes(ch)).map(([ch, n]) => n + ' (' + ch + ')');
+    const plain = () => ({ ...fresh(), loc: 'מחסן, הידרנט', photo_url: null });
+    const plainNm = () => ({ ...nmFresh(), photo_url: null });
+
+    const w1 = world({ row: plain(), prefs: prefsOn });
+    await onRequest({ request: req({ id: 'r1' }), env });
+    const m1 = w1.calls.filter(c => c.u.includes('graph.facebook.com')).slice(-1)[0];
+    const e1 = w1.calls.find(c => c.u.includes('resend'));
+    check('the trustee email subject is clean', !offenders(e1.body.subject).length, offenders(e1.body.subject).concat(e1.body.subject));
+    check('...and its body, footer included', !offenders(e1.body.html).length, offenders(e1.body.html));
+    check('...and the plain-text part', !offenders(e1.body.text).length, offenders(e1.body.text).concat(e1.body.text));
+    check('...and the WhatsApp parameters', !offenders(JSON.stringify(m1.body)).length, offenders(JSON.stringify(m1.body)));
+
+    const w2 = world({ nm: plainNm(), prefs: prefsOn });
+    await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env });
+    const m2 = w2.calls.filter(c => c.u.includes('graph.facebook.com')).slice(-1)[0];
+    const e2 = w2.calls.find(c => c.u.includes('resend'));
+    check('the same for a near-miss, subject and body', !offenders(e2.body.subject + e2.body.html + e2.body.text).length,
+      offenders(e2.body.subject + e2.body.html + e2.body.text));
+    check('...and its WhatsApp parameters', !offenders(JSON.stringify(m2.body)).length, offenders(JSON.stringify(m2.body)));
+
+    // The sample the "send a test" button delivers is our wording too, and it
+    // is the first message anyone ever sees from this system.
+    const w3 = world({});
+    await onRequest({ request: req({ test: true, whatsapp: true, whatsapp_to: '972501234567', email: true, email_to: 'me@tapugan.co.il' }, { Authorization: 'Bearer good' }), env });
+    const e3 = w3.calls.find(c => c.u.includes('resend'));
+    check('and the test message, which is the first one anyone sees',
+      !offenders(e3.body.subject + e3.body.html + e3.body.text).length, offenders(e3.body.subject + e3.body.html + e3.body.text));
+  }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
