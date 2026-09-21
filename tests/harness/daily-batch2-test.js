@@ -236,6 +236,23 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('so does the about dialog', r.aboutUsesIt, r.aboutUsesIt);
     check('and so does the JSON backup, which is what a restore reads back', r.backupUsesIt, r.backupUsesIt);
 
+    // Michael, 2026-09-21: «הורד את הרישום מפתח קלוד ורשום שם שלי». This is a
+    // system he presents inside his own plant, and the about box is where
+    // somebody looks to see whose it is. Checked on the text that is actually
+    // shown, not on the source, because the source keeps its Hebrew escaped.
+    const about = await page.evaluate(() => {
+      let said = null;
+      const real = window.alert;
+      window.alert = function (t) { said = String(t); };
+      try { _showAbout(); } catch (e) { said = 'ERROR ' + (e && e.message); }
+      window.alert = real;
+      return said;
+    });
+    check('the about box names Michael', /מיכאל פריילך/.test(about || ''), about);
+    check('...and credits nobody else as its developer', !/Claude/.test(about || ''), about);
+    check('...and still carries the version and the date',
+      about && about.indexOf(r.ver) > 0 && /\d{4}-\d{2}-\d{2}/.test(about), about);
+
     const inBackup = await page.evaluate(() => {
       return window.__b ? window.__b.text().then((t) => { try { return JSON.parse(t).version; } catch (e) { return 'unparsed'; } }) : null;
     });
