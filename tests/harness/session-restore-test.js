@@ -40,6 +40,11 @@ window.supabase = { createClient: function () {
 `;
 
 const ADMIN = { access_token: 'tok', user: { email: 'mishaf1988@gmail.com', is_anonymous: false } };
+// The app's admin is admin@tfugen.local; every other named user is
+// <username>@tfugen.local with a row in app_users that carries the role.
+const REAL_ADMIN = { access_token: 'tok', user: { email: 'admin@tfugen.local', is_anonymous: false } };
+const MANAGER = { access_token: 'tok', user: { email: 'dani@tfugen.local', is_anonymous: false } };
+const LOCAL_DB = { app_users: [{ id: 'dani', username: 'dani', role: '\u05de\u05e0\u05d4\u05dc', full_name: '\u05d3\u05e0\u05d9', active: true }] };
 const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } };
 
 (async () => {
@@ -53,6 +58,7 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     const p = await ctx.newPage();
     p.on('dialog', (d) => d.accept().catch(() => {}));
     if (o.emp) await p.addInitScript((k) => { try { localStorage.setItem(k, '1'); } catch (e) {} }, EMP_KEY);
+    if (o.db) await p.addInitScript((d) => { try { localStorage.setItem('tfgn2', JSON.stringify(d)); } catch (e) {} }, o.db);
     await p.route('**/*', async (r) => {
       const u = r.request().url();
       if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: SRC });
@@ -80,11 +86,19 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
       login: document.getElementById('login').style.display || '(never set)',
       app: getComputedStyle(document.getElementById('app')).display,
       isAdmin: typeof _isAdmin !== 'undefined' ? _isAdmin : '?',
+      role: typeof _role === 'function' ? _role() : '?',
+      who: (typeof _currentUser !== 'undefined' && _currentUser) ? _currentUser.username : null,
       emp: document.body.classList.contains('emp-mode'),
       made: window.__made || 0,
       wired: !!(window.doLogin && typeof window.doLogin === 'function'),
     }));
     r.ms = Date.now() - t0;
+    if (o.db) {
+      // the profile merge runs 900ms after the restore, as it does after login
+      await p.waitForTimeout(1100);
+      const late = await p.evaluate(() => ({ role: _role(), who: _currentUser && _currentUser.username }));
+      r.role = late.role; r.who = late.who;
+    }
     await p.close();
     return r;
   };
@@ -97,6 +111,19 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     check('...and the login screen is not left covering it', r.login === 'none', r);
     check('...and the user is the admin again, not a stranger', r.isAdmin === true, r);
     check('...it did ask the library for the session', r.made === 1, r.made);
+  }
+
+  console.log('\n1b. and it knows who came back');
+  {
+    // doLogin builds _currentUser from the form. The restore path never did,
+    // and _role() reads a null user as 'reporter' -- so the admin came back
+    // to the reporter's menus. Invisible until the restore actually ran.
+    const r = await boot({ session: REAL_ADMIN, lib: 'ok' });
+    check('the admin is the admin after a reload', r.who === 'admin' && r.role === 'admin', { who: r.who, role: r.role });
+    const m = await boot({ session: MANAGER, lib: 'ok', db: LOCAL_DB });
+    await new Promise((r2) => setTimeout(r2, 0));
+    check('a manager is named from the session', m.who === 'dani', m.who);
+    check('...and gets the manager role from the local app_users row', m.role === 'manager', m.role);
   }
 
   console.log('\n2. with no session it still asks for a password');
