@@ -54,9 +54,12 @@ window.supabase = { createClient: function () {
         // to start from a known state. Without this, the delay chosen in case
         // 4 was still in force in cases 8 and 9 -- which is how they failed,
         // and how they could just as easily have passed for the wrong reason.
-        [s.seenKey, s.empKey, s.prefsKey].forEach(function (k) { localStorage.removeItem(k); });
+        [s.seenKey, s.empKey, s.prefsKey, 'tfgn_emp_code'].forEach(function (k) { localStorage.removeItem(k); });
         if (s.idle !== null) localStorage.setItem(s.seenKey, String(Date.now() - s.idle));
-        if (s.emp) localStorage.setItem(s.empKey, '1');
+        // The trustee screen sits behind a shared code since 2026-09-21. This
+        // case is about the lock never touching a trustee, not about the gate,
+        // so the phone already knows the code.
+        if (s.emp) { localStorage.setItem(s.empKey, '1'); localStorage.setItem('tfgn_emp_code', 'RIGHT'); }
         // Since Michael asked for a lock on every open, that is the default. The
         // timed cases seed 30 minutes explicitly; lockMin:null means "whatever
         // the app defaults to", for the cases about the default itself.
