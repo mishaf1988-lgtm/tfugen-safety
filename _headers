@@ -5,6 +5,9 @@
 # ---- Defaults applied to every response ----
 /*
   X-Content-Type-Options: nosniff
+  # An internal plant system has no business in a search result. The meta
+  # tag in index.html asks; this tells, on every response and every file.
+  X-Robots-Tag: noindex, nofollow
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(self)
   X-Frame-Options: SAMEORIGIN
