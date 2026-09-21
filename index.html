@@ -2732,7 +2732,7 @@ id="m-ncr" style="display:none">
       <button onclick="_notifLogExport()" style="margin-top:8px;margin-left:6px;font-size:11px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128202; CSV</button>
     </details>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492; (hello_world)">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-s" onclick="testAllTriggers()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1502;&#1499;&#1500; 5 &#1492;-templates &#1488;&#1495;&#1491; &#1488;&#1495;&#1512;&#1497; &#1492;&#1513;&#1504;&#1497;" style="background:#1d4ed8;color:#fff">&#127919; &#1489;&#1491;&#1493;&#1511; &#1499;&#1493;&#1500;&#1501;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492; (hello_world)">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-s" id="wa-tpl-btn" onclick="_waTemplateSubmit(this)" title="&#1502;&#1490;&#1497;&#1513; &#1500;-Meta &#1514;&#1489;&#1504;&#1497;&#1514; &#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1502;&#1504;&#1493;&#1505;&#1495;&#1514; &#1512;&#1490;&#1493;&#1506;, &#1489;&#1502;&#1511;&#1493;&#1501; &#1494;&#1493; &#1513;&#1499;&#1514;&#1493;&#1489; &#1489;&#1492; «&#1514;&#1511;&#1512;&#1497;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;»" style="background:#0d9488;color:#fff">&#128228; &#1492;&#1490;&#1513; &#1514;&#1489;&#1504;&#1497;&#1514;</button><button class="btn btn-s" onclick="testAllTriggers()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1502;&#1499;&#1500; 5 &#1492;-templates &#1488;&#1495;&#1491; &#1488;&#1495;&#1512;&#1497; &#1492;&#1513;&#1504;&#1497;" style="background:#1d4ed8;color:#fff">&#127919; &#1489;&#1491;&#1493;&#1511; &#1499;&#1493;&#1500;&#1501;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP -->
@@ -11628,6 +11628,28 @@ function openNotifSettings(){
 // "these notifications went out, on these dates" — so it asks the server for
 // the whole log at the moment it is clicked, and only falls back to what is
 // on the device when the network is not there.
+// ---- submit the WhatsApp template (2026-09-21) ----
+// The alert is carried by a Meta template. The only approved one was written
+// for road accidents and opens with «\u05ea\u05e7\u05e8\u05d9\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea», which is not what a fire
+// extinguisher missing its seal deserves. The replacement has to be submitted
+// to Meta for approval -- a form, on a phone, in English, with sample values.
+// The server already holds the token and the account id, so this is one press.
+// `trustee-notify` prefers the new template on every send and switches to it
+// the moment Meta approves; nothing here needs to be deployed again.
+function _waTemplateSubmit(btn){
+  if(btn){btn.disabled=true;btn.textContent='\ud83d\udce4 ' + '\u05e9\u05d5\u05dc\u05d7...';}
+  var done=function(){if(btn){btn.disabled=false;btn.innerHTML='\ud83d\udce4 ' + '\u05d4\u05d2\u05e9 \u05ea\u05d1\u05e0\u05d9\u05ea';}};
+  fetch('/api/wa-templates',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:'{}'})
+    .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+    .then(function(x){
+      done();
+      if(x.ok&&x.j&&x.j.already){toast('\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1-Meta');return;}
+      if(x.ok&&x.j&&x.j.ok){toast('\u05d4\u05d5\u05d2\u05e9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8. Meta \u05d1\u05d3\u05e8\u05da \u05db\u05dc\u05dc \u05e2\u05d5\u05e0\u05d4 \u05ea\u05d5\u05da \u05d3\u05e7\u05d5\u05ea \u05e2\u05d3 \u05d9\u05d5\u05dd');return;}
+      var d=(x.j&&(x.j.detail||x.j.error))||'\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2\u05d4';
+      toast('\u05d4\u05d4\u05d2\u05e9\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+String(d).substring(0,120));
+    })
+    .catch(function(e){done();toast('\u05d4\u05d4\u05d2\u05e9\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+((e&&e.message)||e));});
+}
 function _notifLogExport(){
   toast('\u05de\u05d5\u05e9\u05da \u05d0\u05ea \u05d4\u05d9\u05d5\u05de\u05df \u05d4\u05de\u05dc\u05d0...');
   var cols=(_sbCols&&_sbCols.notifications_log)||'*';

@@ -10,6 +10,7 @@ export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}"
 mkdir -p _build
 cp ../../functions/_shared.js _build/_shared.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/trustee-notify.js > _build/trustee-notify.mjs
+sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-templates.js > _build/wa-templates.mjs
 filter="${1:-}"; fail=0
 # The only two scripts that legitimately print a report instead of a pass/fail
 # count. Anything ELSE that prints no summary has crashed or timed out, and that
