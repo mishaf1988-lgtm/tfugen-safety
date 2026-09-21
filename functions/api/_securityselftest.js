@@ -301,15 +301,86 @@ export async function onRequest({ request }) {
       pushCheck({ id: 'storage_list_for_caller', got: 'fetch failed', verdict: '⚠' });
     }
 
-    // Whether the anonymous kiosk is scoped to tru-ph-* can only be proved
-    // with an anonymous token, which this endpoint does not hold. Reported
-    // as a known gap so nobody reads a green board as full coverage.
-    pushCheck({
-      id: 'storage_anon_scope',
-      expected: 'anonymous session limited to tru-ph-* (migrations/2026-09-20_storage_trustee_scope.sql)',
-      got: 'not testable from this endpoint — needs an anonymous token',
-      verdict: '⚠'
-    });
+    // This used to say the anonymous case was «not testable from this endpoint
+    // — needs an anonymous token». That was wrong: the endpoint holds the
+    // publishable key, and an anonymous token is exactly what the kiosk mints
+    // with it. So it can be proved, by doing what the kiosk does.
+    //
+    // It is opt-in (?anon=1) for one reason only: signing in anonymously
+    // creates a real row in auth.users, and a check that quietly grows that
+    // table on every run is its own small problem. Ask for it and it runs.
+    if (url.searchParams.get('anon') === '1') {
+      let anonTok = null;
+      try {
+        const su = await fetch(SBU + '/auth/v1/signup', {
+          method: 'POST',
+          headers: { apikey: SBK, 'Content-Type': 'application/json' },
+          body: '{}'
+        });
+        const sj = await su.json().catch(() => ({}));
+        anonTok = sj && sj.access_token;
+        pushCheck({
+          id: 'anon_signin',
+          expected: 'an anonymous session can be created (this is what the kiosk does)',
+          got: anonTok ? 'got a token' : ('no token — HTTP ' + su.status),
+          verdict: verdict(!!anonTok)
+        });
+      } catch (e) {
+        pushCheck({ id: 'anon_signin', expected: 'anonymous sign-in', got: 'fetch failed', verdict: '⚠' });
+      }
+
+      if (anonTok) {
+        const anonH = { apikey: SBK, Authorization: 'Bearer ' + anonTok, 'Content-Type': 'application/json' };
+        // Each of these is a hole that was real at some point in this project.
+        const probes = [
+          ['anon_cannot_read_backups', '/storage/v1/object/list/backups',
+           'the nightly full-database dump must be unreachable (2026-09-21)'],
+          ['anon_cannot_list_all_photos', '/storage/v1/object/list/incidents-photos',
+           'incident photos must not be listable wholesale (migrations/2026-09-20_storage_trustee_scope.sql)'],
+        ];
+        for (const [id, path, expected] of probes) {
+          try {
+            const r = await fetch(SBU + path, { method: 'POST', headers: anonH, body: JSON.stringify({ limit: 50, prefix: '' }) });
+            let rows = [];
+            try { rows = await r.json(); } catch (e) { rows = []; }
+            const listed = Array.isArray(rows) ? rows.filter((x) => x && x.name && !/^tru-ph-/.test(x.name)) : [];
+            pushCheck({
+              id, expected,
+              got: 'HTTP ' + r.status + ' · ' + listed.length + ' non-kiosk file(s) visible',
+              verdict: verdict(listed.length === 0)
+            });
+          } catch (e) {
+            pushCheck({ id, expected, got: 'fetch failed', verdict: '⚠' });
+          }
+        }
+        // And the tables an anonymous visitor must never reach.
+        for (const [id, table] of [['anon_cannot_read_ncr', 'ncr'],
+                                   ['anon_cannot_read_audit_log', 'audit_log'],
+                                   ['anon_cannot_read_app_users', 'app_users']]) {
+          try {
+            const r = await fetch(SBU + '/rest/v1/' + table + '?select=id&limit=5', { headers: anonH });
+            let rows = [];
+            try { rows = await r.json(); } catch (e) { rows = []; }
+            const n = Array.isArray(rows) ? rows.length : 0;
+            pushCheck({
+              id,
+              expected: 'anonymous session sees 0 rows of ' + table,
+              got: 'HTTP ' + r.status + ' · ' + n + ' row(s)',
+              verdict: verdict(n === 0)
+            });
+          } catch (e) {
+            pushCheck({ id, expected: 'anonymous read of ' + table, got: 'fetch failed', verdict: '⚠' });
+          }
+        }
+      }
+    } else {
+      pushCheck({
+        id: 'storage_anon_scope',
+        expected: 'anonymous session limited to tru-ph-* and locked out of backups',
+        got: 'not run — add ?anon=1 (it creates one anonymous auth user, so it is opt-in)',
+        verdict: '⚠'
+      });
+    }
 
     // Information: caller's identity (no PII beyond the JWT email which the
     // caller already knows about themselves).
