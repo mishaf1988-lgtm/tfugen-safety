@@ -137,6 +137,8 @@ body.emp-mode .topbar-left img{box-shadow:none!important;transform:none!importan
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
 @media(prefers-reduced-motion:reduce){.sync-pill.on,.sync-pill.err{animation:none}}
 .bell{background:transparent;border:none;border-radius:8px;font-size:20px;padding:6px 8px;color:var(--t2);cursor:pointer;line-height:1;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s ease,transform .15s ease}
+@media(max-width:400px){.topbar-actions .bell{min-width:31px;padding:6px 4px;font-size:18px}}
+@media(max-width:340px){.topbar-actions #my-tasks-btn{display:none}}
 .bell:hover{background:#f5f5f5;transform:scale(1.08)}
 .bell:active{background:#eaeaea;transform:scale(.96)}
 body.hc .bell:hover,body.hc .bell:active{transform:none}
@@ -774,6 +776,12 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="bell" id="menu-btn" title="&#1514;&#1508;&#1512;&#1497;&#1496;" aria-label="&#1514;&#1508;&#1512;&#1497;&#1496;" onclick="_menuOpen()">&#9776;</button>
     <!-- Michael 2026-09-19: one tap back to the home page from any page. The logo
          did this already, but on a phone nothing said so. -->
+    <!-- Michael 2026-09-21: installed on the home screen, the app has no
+         browser chrome and therefore no back button, and the edge-swipe is
+         not something anyone is told about. History was already wired to
+         goPage; this is the affordance for it. Right-pointing, because the
+         layout is right-to-left. Hidden on the home page. -->
+    <button class="bell" id="back-btn" title="&#1495;&#1494;&#1512;&#1492;" aria-label="&#1495;&#1494;&#1512;&#1492;" onclick="goBack()" style="display:none">&#8594;</button>
     <button class="bell" id="home-btn" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" aria-label="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" onclick="goHome()">&#127968;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <!-- The bell used to open the SETTINGS screen and looked identical whether
@@ -4032,6 +4040,22 @@ function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 // is sent to dash by goPage's own gate. Any open modal is closed first — the
 // top bar sits under the modal overlay so the button itself is never reachable
 // from inside a form, but this keeps goHome() correct for any other caller.
+// How many pages deep the app has navigated within its own history. Counted
+// rather than read off history.length, which also counts whatever the browser
+// was showing before the app was opened -- going "back" into that from a
+// home-screen app means leaving it.
+var _navDepth=0;
+window.goBack=function(){
+  if(_navDepth>0){try{history.back();return;}catch(e){}}
+  goHome();
+};
+// Shown on every page except the one there is nothing to go back from.
+window._backBtnSync=function(){
+  var b=document.getElementById('back-btn');if(!b)return;
+  var home=(typeof empIsOn==='function'&&empIsOn())?'emp-home':'dash';
+  var show=(typeof CUR!=='undefined'&&CUR&&CUR!==home);
+  b.style.display=show?'':'none';
+};
 window.goHome=function(){
   document.querySelectorAll('.modal').forEach(function(m){
     if(m.id&&(m.style.display==='block'||m.style.display==='flex')){try{closeModal(m.id);}catch(e){}}
@@ -21289,11 +21313,18 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
   var _g=goPage;
   window.goPage=function(id){
     _g(id);
-    try{if(history.state&&history.state.page===id)return;history.pushState({page:id},'','#'+id);}catch(e){}
+    try{
+      if(history.state&&history.state.page===id){if(typeof _backBtnSync==='function')_backBtnSync();return;}
+      history.pushState({page:id},'','#'+id);
+      if(typeof _navDepth!=='undefined')_navDepth++;
+    }catch(e){}
+    if(typeof _backBtnSync==='function')_backBtnSync();
   };
   window.addEventListener('popstate',function(e){
     var p=(e.state&&e.state.page)||(location.hash&&location.hash.slice(1));
     if(p)_g(p);
+    if(typeof _navDepth!=='undefined'&&_navDepth>0)_navDepth--;
+    if(typeof _backBtnSync==='function')_backBtnSync();
   });
   if(location.hash){
     var p=location.hash.slice(1);

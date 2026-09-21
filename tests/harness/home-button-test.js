@@ -73,6 +73,11 @@ const TASKS = [{ status: 'פתוח', assignee: 'admin' }, { status: 'פתוח', 
           search:!!document.getElementById('gsearch-btn'),
           tasksBadge:v(document.getElementById('my-tasks-badge'))?document.getElementById('my-tasks-badge').textContent:null,
           logoH:Math.round(img.height),gap:Math.round(act.left-img.right),overflow:tb.scrollWidth-tb.clientWidth};})(${vis})`);
+      // ← joined the row on 2026-09-21, but this runs on the home page, where
+      // there is nothing to go back from, so it is correctly absent here.
+      // back-button-test covers it where it does appear. The overflow number
+      // is the one that changed: six controls did not fit at 360 and 375 until
+      // the padding was tightened.
       check(w + 'px: ☰ 🏠 🔔 📝 ⋯ with the count "3", no 🔍, logo ' + r.logoH + 'px, nothing overflows',
         r.btns.join() === 'menu-btn,home-btn,notif-btn,my-tasks-btn,more-menu-btn' && !r.search && r.tasksBadge === '3' && r.logoH >= 48 && r.gap >= 0 && r.overflow === 0, r);
       await ctx.close();
