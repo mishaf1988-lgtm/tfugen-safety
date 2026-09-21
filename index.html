@@ -9605,7 +9605,7 @@ function _tskMenu(taskId,anchor){
   var existing=document.getElementById('tsk-action-menu');if(existing)existing.remove();
   var menu=document.createElement('div');
   menu.id='tsk-action-menu';
-  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:180px;font-family:inherit;direction:rtl';
+  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:180px;max-width:min(92vw,320px);font-family:inherit;direction:rtl';
   var rect=anchor.getBoundingClientRect();
   var top=rect.bottom+4;
   if(top+260>window.innerHeight)top=Math.max(8,rect.top-260);
@@ -9614,7 +9614,7 @@ function _tskMenu(taskId,anchor){
   function item(emoji,label,fn,color){
     var b=document.createElement('button');
     b.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;text-align:right;cursor:pointer;font-size:13px;font-family:inherit;color:'+(color||'#222');
-    b.innerHTML='<span style="font-size:15px;width:20px;text-align:center">'+emoji+'</span><span>'+label+'</span>';
+    b.innerHTML='<span style="font-size:15px;width:20px;flex:0 0 20px;text-align:center">'+emoji+'</span><span style="flex:1;white-space:normal;line-height:1.35">'+label+'</span>';
     b.onmouseover=function(){b.style.background='#f5f7fa';};
     b.onmouseout=function(){b.style.background='';};
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
@@ -9633,20 +9633,27 @@ function _tskMenu(taskId,anchor){
   item('\ud83d\udccb','\u05e9\u05db\u05e4\u05dc \u05de\u05e9\u05d9\u05de\u05d4',function(){_tskDuplicate(taskId);});
   item('\ud83d\uddd1','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('tasks',taskId);},'#cc1f1f');
   document.body.appendChild(menu);
+  // Keep the menu inside the viewport. Without this a long label makes the
+  // menu wider than the phone, and since it is anchored by `right` the
+  // overflow falls off the LEFT edge -- where the text is, in RTL. On a
+  // 390px screen half the header menu was unreadable.
+  var _mr=menu.getBoundingClientRect();
+  if(_mr.left<8){menu.style.right='auto';menu.style.left='8px';}
+  else if(_mr.right>window.innerWidth-8){menu.style.right='8px';}
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 }
 window._topMoreMenu=function(anchor){
   var existing=document.getElementById('top-more-menu');if(existing){existing.remove();return;}
   var menu=document.createElement('div');
   menu.id='top-more-menu';
-  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:200px;font-family:inherit;direction:rtl';
+  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:200px;max-width:min(92vw,320px);font-family:inherit;direction:rtl';
   var rect=anchor.getBoundingClientRect();
   menu.style.top=(rect.bottom+4)+'px';
   menu.style.right=Math.max(8,window.innerWidth-rect.right)+'px';
   function item(emoji,label,fn){
     var b=document.createElement('button');
     b.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;text-align:right;cursor:pointer;font-size:13px;font-family:inherit;color:#222';
-    b.innerHTML='<span style="font-size:15px;width:20px;text-align:center">'+emoji+'</span><span>'+label+'</span>';
+    b.innerHTML='<span style="font-size:15px;width:20px;flex:0 0 20px;text-align:center">'+emoji+'</span><span style="flex:1;white-space:normal;line-height:1.35">'+label+'</span>';
     b.onmouseover=function(){b.style.background='#f5f7fa';};
     b.onmouseout=function(){b.style.background='';};
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
@@ -9680,6 +9687,13 @@ window._topMoreMenu=function(anchor){
   sep();
   item('\u2139','\u05d0\u05d5\u05d3\u05d5\u05ea (v'+APP_VER+')',function(){if(typeof _showAbout==='function')_showAbout();});
   document.body.appendChild(menu);
+  // Keep the menu inside the viewport. Without this a long label makes the
+  // menu wider than the phone, and since it is anchored by `right` the
+  // overflow falls off the LEFT edge -- where the text is, in RTL. On a
+  // 390px screen half the header menu was unreadable.
+  var _mr=menu.getBoundingClientRect();
+  if(_mr.left<8){menu.style.right='auto';menu.style.left='8px';}
+  else if(_mr.right>window.innerWidth-8){menu.style.right='8px';}
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 };
 // Generic anchored dropdown (same look as the header ⋯ menu). `fill(item,sep)`
@@ -9699,7 +9713,7 @@ window._popMenu=function(anchor,menuId,fill){
     var b=document.createElement('button');
     b.type='button';
     b.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;border:none;background:none;text-align:right;cursor:pointer;font-size:13px;font-family:inherit;color:'+(danger?'#b91c1c':'#222');
-    b.innerHTML='<span style="font-size:15px;width:20px;text-align:center">'+emoji+'</span><span>'+label+'</span>';
+    b.innerHTML='<span style="font-size:15px;width:20px;flex:0 0 20px;text-align:center">'+emoji+'</span><span style="flex:1;white-space:normal;line-height:1.35">'+label+'</span>';
     b.onmouseover=function(){b.style.background=danger?'#fef2f2':'#f5f7fa';};
     b.onmouseout=function(){b.style.background='';};
     b.onclick=function(e){e.stopPropagation();closeMenu();fn();};
