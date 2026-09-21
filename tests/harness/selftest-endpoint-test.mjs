@@ -70,6 +70,15 @@ console.log('\n2. a browser gets something a person can read');
   check('...sized for a phone', /width=device-width/.test(web.body));
   check('the counts are on it', /עברו/.test(web.body) && /נכשלו/.test(web.body) && /אזהרות/.test(web.body));
   check('...and every check is listed with its verdict', /class="c"/.test(web.body) && /class="v"/.test(web.body));
+  // The page is RTL because the labels are Hebrew, but every VALUE on it is
+  // English — header names, status codes, policy strings. Without an explicit
+  // direction on both value lines the RTL context reorders anything starting
+  // with a digit or a bracket, and «401 (means …)» came out as «(means …) 401».
+  const ltrRules = (web.body.match(/direction:ltr/g) || []).length;
+  check('both the expected and the got line are forced LTR', ltrRules >= 3, ltrRules + ' direction:ltr rules');
+  const expectedRule = (web.body.match(/\.e\{[^}]*\}/) || [''])[0];
+  check('...the «expected» line specifically, which was the one that flipped',
+    /direction:ltr/.test(expectedRule), expectedRule);
   check('it says how to run the parts that need a token', /Authorization/.test(web.body));
   check('...and how to prove the anonymous case', /\?anon=1/.test(web.body));
 }

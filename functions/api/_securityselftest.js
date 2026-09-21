@@ -431,7 +431,11 @@ export async function onRequest({ request }) {
  .h{font-size:13px;font-weight:700;display:flex;gap:7px;align-items:baseline}
  .v{font-size:16px}
  code{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;direction:ltr;unicode-bidi:embed}
- .e{font-size:11px;color:#64748b;margin-top:3px}
+ /* Both of these are English — header names, status codes, policy text.
+    Without an explicit direction the RTL context reorders anything that
+    starts with a digit or a bracket: «401 (means H1 JWT-gate is active)»
+    rendered as «(means H1 JWT-gate is active) 401» on Michael's phone. */
+ .e{font-size:11px;color:#64748b;margin-top:3px;direction:ltr;unicode-bidi:embed;text-align:right}
  .g{font-size:12px;margin-top:2px;direction:ltr;unicode-bidi:embed;text-align:right}
  .n{margin-top:14px;font-size:11px;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;line-height:1.7}
  a{color:#2563eb}
