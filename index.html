@@ -2698,6 +2698,15 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- NOTIFICATION SETTINGS MODAL -->
+<div class="overlay" id="ov-sys" onclick="closeModal('m-sys')"></div>
+<div class="modal" id="m-sys" style="display:none;max-width:560px">
+  <button class="close-btn" onclick="closeModal('m-sys')">&#10005;</button>
+  <div class="modal-title">&#129658; &#1502;&#1510;&#1489; &#1492;&#1502;&#1506;&#1512;&#1499;&#1514;</div>
+  <div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">&#1489;&#1491;&#1497;&#1511;&#1492; &#1495;&#1497;&#1492; &#1513;&#1500; &#1492;&#1491;&#1489;&#1512;&#1497;&#1501; &#1513;&#1504;&#1493;&#1496;&#1497;&#1501; &#1500;&#1492;&#1497;&#1513;&#1489;&#1512; &#1489;&#1513;&#1511;&#1496;: &#1500;&#1502;&#1497; &#1492;&#1492;&#1514;&#1512;&#1488;&#1493;&#1514; &#1492;&#1493;&#1500;&#1499;&#1493;&#1514;, &#1492;&#1488;&#1501; &#1492;&#1503; &#1489;&#1488;&#1502;&#1514; &#1497;&#1493;&#1510;&#1488;&#1493;&#1514;, &#1493;&#1502;&#1492; &#1502;&#1510;&#1489; &#1492;&#1490;&#1497;&#1489;&#1493;&#1497;.</div>
+  <div id="sys-list"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-sys')">&#1505;&#1490;&#1493;&#1512;</button><button class="btn btn-p" onclick="_sysStateRun()">&#8634; &#1489;&#1491;&#1493;&#1511; &#1513;&#1493;&#1489;</button></div>
+</div>
+
 <div class="overlay" id="ov-notif" onclick="closeModal('m-notif')"></div>
 <div class="modal" id="m-notif" style="display:none;max-width:560px">
   <button class="close-btn" onclick="closeModal('m-notif')">&#10005;</button>
@@ -9649,6 +9658,7 @@ window._topMoreMenu=function(anchor){
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
   item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0 (\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d4\u05e2\u05e0\u05df)',function(){if(typeof forceSync==='function')forceSync();});
   if(typeof _isAdminUser==='function'&&_isAdminUser())item('\u2b06','\u05d4\u05e2\u05dc\u05d4 \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05e9\u05e8\u05ea',function(){if(typeof _forceUpload==='function')_forceUpload();});
+  if(typeof _role==='function'&&_role()!=='reporter')item('\ud83e\ude7a','\u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea',function(){if(typeof _sysStateOpen==='function')_sysStateOpen();});
   item('\ud83e\uddba','\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',function(){if(typeof empToggle==='function')empToggle(true);});
   sep();
   // AI entry from the header (P1#1) \u2014 the floating button is hidden on home.
@@ -11678,6 +11688,151 @@ function _waTemplateStatus(){
       // so would send him to press the button again for nothing.
       _waTplSet('<span style="color:var(--t3)">' + '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05de\u05e6\u05d1 \u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05db\u05e8\u05d2\u05e2' + '</span>');
     });
+}
+
+// ---- system state (2026-09-21) ----
+// Four things broke in one day and every one of them was silent: the email had
+// been refused by Resend since it was set up, the WhatsApp alert went out on a
+// template written for road accidents, a Vercel project had been serving a
+// second public copy of the app for four months, and no notification recipient
+// had ever been filled in. In each case the app looked completely fine.
+//
+// That is the pattern this screen exists for. It asks the questions nobody
+// thinks to ask, and it reports ONLY what it actually checked -- anything that
+// cannot be verified from the browser is listed apart, as unverified, instead
+// of being shown as a green tick.
+var SYS_OK='ok',SYS_WARN='warn',SYS_BAD='bad';
+function _sysRow(st,t,d,a){return {s:st,t:t,d:d||'',a:a||''};}
+function _sysAgo(iso){var v=Date.parse(iso||'');return isNaN(v)?null:Math.floor((Date.now()-v)/86400000);}
+
+// 1. Is there anybody to notify? This was false for months and nothing said so.
+function _sysChkRecipient(){
+  var p=(typeof _notifPrefs==='function'?_notifPrefs():null)||{};
+  var th=p.trustee_hazard||{};
+  var wa=(th.whatsapp&&th.whatsapp_to)?String(th.whatsapp_to):'';
+  var em=(th.email&&th.email_to)?String(th.email_to):'';
+  if(!wa&&!em)return _sysRow(SYS_BAD,'\u05e0\u05de\u05e2\u05df \u05dc\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea','\u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8 \u05d0\u05e3 \u05e0\u05de\u05e2\u05df. \u05dc\u05d9\u05e7\u05d5\u05d9 \u05e9\u05e0\u05d0\u05de\u05df \u05d9\u05d3\u05d5\u05d5\u05d7 \u05dc\u05d0 \u05d9\u05d2\u05d9\u05e2 \u05dc\u05d0\u05d9\u05e9.','\u05de\u05d5\u05d3\u05d5\u05dc\u05d9\u05dd, \u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea: \u05dc\u05e1\u05de\u05df \u05d0\u05ea \u05e9\u05d5\u05e8\u05ea «\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df / \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2», \u05dc\u05de\u05dc\u05d0 WhatsApp \u05d0\u05d5 \u05de\u05d9\u05d9\u05dc, \u05d5\u05dc\u05e9\u05de\u05d5\u05e8');
+  var who=[];if(wa)who.push('WhatsApp '+wa);if(em)who.push(em);
+  if(!wa)return _sysRow(SYS_WARN,'\u05e0\u05de\u05e2\u05df \u05dc\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea','\u05de\u05d5\u05d2\u05d3\u05e8 \u05de\u05d9\u05d9\u05dc \u05d1\u05dc\u05d1\u05d3 ('+em+'). \u05de\u05d9\u05d9\u05dc \u05e0\u05e7\u05e8\u05d0 \u05de\u05d0\u05d5\u05d7\u05e8 \u05d9\u05d5\u05ea\u05e8 \u05de\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df.','\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05de\u05e1\u05e4\u05e8 WhatsApp \u05d1\u05d0\u05d5\u05ea\u05d5 \u05de\u05e1\u05da');
+  return _sysRow(SYS_OK,'\u05e0\u05de\u05e2\u05df \u05dc\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea',who.join(', '),'');
+}
+
+// 2. Did anything actually go out? The settings can be perfect while every
+// send is refused at the far end -- which is exactly what Resend was doing.
+function _sysChkDelivery(){
+  var rows=(DB.notifications_log||[]).slice().sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+  if(!rows.length)return _sysRow(SYS_WARN,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea.','\u05dc\u05dc\u05d7\u05d5\u05e5 «\u05e9\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4» \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea');
+  var ok=null,bad=null;
+  rows.forEach(function(r){
+    var c=String((r&&r.channel)||'');
+    if(!ok&&(c==='whatsapp'||c==='email'))ok=r;
+    if(!bad&&/_error$/.test(c))bad=r;
+  });
+  if(bad&&(!ok||String(bad.ts||'')>String(ok.ts||''))){
+    var det=String((bad.payload&&bad.payload.detail)||'').substring(0,150);
+    return _sysRow(SYS_BAD,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d4\u05db\u05e9\u05dc \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05d7\u05d3\u05e9 \u05d9\u05d5\u05ea\u05e8 \u05de\u05d4\u05d4\u05e6\u05dc\u05d7\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4. \u05e2\u05e8\u05d5\u05e5: '+String(bad.channel||'')+'. '+det,'\u05d9\u05d5\u05de\u05df \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d1\u05ea\u05d7\u05ea\u05d9\u05ea \u05de\u05e1\u05da \u05d4\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05de\u05e8\u05d0\u05d4 \u05d0\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4');
+  }
+  if(!ok)return _sysRow(SYS_WARN,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d1\u05d9\u05d5\u05de\u05df \u05d9\u05e9 \u05e8\u05e7 \u05db\u05e9\u05dc\u05d9\u05dd, \u05d1\u05dc\u05d9 \u05e9\u05dc\u05d9\u05d7\u05d4 \u05de\u05d5\u05e6\u05dc\u05d7\u05ea \u05d0\u05d7\u05ea.','\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 \u05d5\u05dc\u05e8\u05d0\u05d5\u05ea \u05de\u05d4 \u05d7\u05d5\u05d6\u05e8');
+  var d=_sysAgo(ok.ts);
+  return _sysRow(SYS_OK,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05d4\u05e6\u05dc\u05d7\u05d4'+(d===null?'':(d===0?' \u05d4\u05d9\u05d5\u05dd':d===1?' \u05d0\u05ea\u05de\u05d5\u05dc':' \u05dc\u05e4\u05e0\u05d9 '+d+' \u05d9\u05de\u05d9\u05dd'))+' \u05d1\u05e2\u05e8\u05d5\u05e5 '+String(ok.channel||''),'');
+}
+
+// 3. Which WhatsApp template the alerts will actually go out on. Read from
+// Meta, not from anything we remember.
+function _sysChkTemplate(){
+  return fetch('/api/wa-templates',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var list=(j&&j.data)||[],t=null;
+      for(var i=0;i<list.length;i++){if(list[i]&&list[i].name===WA_TPL_NAME){t=list[i];break;}}
+      if(!t)return _sysRow(SYS_WARN,'\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4','\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05e8\u05d2\u05d5\u05e2\u05d4 \u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9\u05d4. \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d1\u05ea\u05d1\u05e0\u05d9\u05ea \u05e9\u05db\u05ea\u05d5\u05d1 \u05d1\u05d4 «\u05ea\u05e7\u05e8\u05d9\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea» \u05d5«\u05e0\u05d0 \u05dc\u05d8\u05e4\u05dc \u05de\u05d9\u05d9\u05d3\u05d9\u05ea».','\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea, \u05db\u05e4\u05ea\u05d5\u05e8 «\u05d4\u05d2\u05e9 \u05ea\u05d1\u05e0\u05d9\u05ea»');
+      var st=String(t.status||'').toUpperCase();
+      if(st==='APPROVED')return _sysRow(SYS_OK,'\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4','\u05de\u05d0\u05d5\u05e9\u05e8\u05ea \u05d5\u05e4\u05e2\u05d9\u05dc\u05d4. \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05e0\u05e4\u05ea\u05d7\u05d5\u05ea \u05d1«\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d7\u05d3\u05e9».','');
+      if(st==='REJECTED'||st==='PAUSED'||st==='DISABLED')return _sysRow(SYS_BAD,'\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4','Meta \u05d3\u05d7\u05ea\u05d4 \u05d0\u05d5 \u05d4\u05e9\u05d4\u05ea\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d1\u05e0\u05d9\u05ea ('+st+').','\u05dc\u05ea\u05e7\u05df \u05e0\u05d5\u05e1\u05d7 \u05dc\u05e4\u05d9 project-files/WHATSAPP-TEMPLATE.md \u05d5\u05dc\u05d4\u05d2\u05d9\u05e9 \u05e9\u05d5\u05d1');
+      return _sysRow(SYS_WARN,'\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4','\u05d4\u05d5\u05d2\u05e9\u05d4 \u05d5\u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc-Meta ('+st+'). \u05e2\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d9\u05d5\u05e6\u05d0\u05d5\u05ea \u05d1\u05e0\u05d5\u05e1\u05d7 \u05d4\u05d9\u05e9\u05df.','\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea, \u05e8\u05e7 \u05dc\u05d4\u05de\u05ea\u05d9\u05df');
+    })
+    ['catch'](function(){return _sysRow(SYS_WARN,'\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4','\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d5\u05dc Meta \u05db\u05e8\u05d2\u05e2.','');});
+}
+
+// 4. The nightly snapshot. It runs on a server nobody looks at.
+function _sysChkBackup(){
+  if(!_sbToken)return Promise.resolve(_sysRow(SYS_WARN,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9','\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea, \u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d3\u05d5\u05e7.',''));
+  return fetch(SBU+'/storage/v1/object/list/backups',{
+    method:'POST',
+    headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},
+    body:JSON.stringify({prefix:'',limit:200,sortBy:{column:'name',order:'desc'}})
+  }).then(function(r){if(!r.ok)throw new Error(String(r.status));return r.json();})
+    .then(function(rows){
+      var names=(rows||[]).map(function(x){return (x&&x.name)||'';}).filter(function(n){return /\d{4}-\d{2}-\d{2}/.test(n);}).sort();
+      if(!names.length)return _sysRow(SYS_BAD,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9','\u05d0\u05d9\u05df \u05d0\u05e3 \u05e7\u05d5\u05d1\u05e5 \u05d2\u05d9\u05d1\u05d5\u05d9 \u05d1\u05d3\u05dc\u05d9.','\u05dc\u05d1\u05d3\u05d5\u05e7 \u05e9\u05d4-Worker \u05d1\u05e7\u05dc\u05d0\u05d5\u05d3\u05e4\u05dc\u05d9\u05d9\u05e8 \u05e8\u05e5');
+      var last=names[names.length-1],m=last.match(/(\d{4}-\d{2}-\d{2})/);
+      var d=_sysAgo(m?m[1]:'');
+      if(d===null)return _sysRow(SYS_WARN,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9','\u05e0\u05de\u05e6\u05d0 \u05d2\u05d9\u05d1\u05d5\u05d9 \u05d0\u05d1\u05dc \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05de\u05de\u05e0\u05d5 \u05ea\u05d0\u05e8\u05d9\u05da: '+last,'');
+      if(d>2)return _sysRow(SYS_BAD,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9','\u05d4\u05d2\u05d9\u05d1\u05d5\u05d9 \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05de\u05dc\u05e4\u05e0\u05d9 '+d+' \u05d9\u05de\u05d9\u05dd ('+(m?m[1]:'')+').','\u05d4\u05d2\u05d9\u05d1\u05d5\u05d9 \u05d0\u05de\u05d5\u05e8 \u05dc\u05e8\u05d5\u05e5 \u05db\u05dc \u05dc\u05d9\u05dc\u05d4. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05d4-Worker');
+      return _sysRow(SYS_OK,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9',names.length+' \u05d2\u05d9\u05d1\u05d5\u05d9\u05d9\u05dd, \u05d4\u05d0\u05d7\u05e8\u05d5\u05df '+(m?m[1]:''),'');
+    })['catch'](function(e){return _sysRow(SYS_WARN,'\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc\u05d9\u05dc\u05d9','\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05d2\u05d9\u05d1\u05d5\u05d9\u05d9\u05dd ('+((e&&e.message)||'')+').','\u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e2\u05dc \u05d3\u05dc\u05d9 \u05d4\u05d2\u05d9\u05d1\u05d5\u05d9\u05d9\u05dd');});
+}
+
+// 5. Anything the phone saved but never managed to send.
+function _sysChkOutbox(){
+  var n=0;try{n=(_obGet()||[]).length;}catch(e){}
+  if(n===0)return _sysRow(SYS_OK,'\u05ea\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05de\u05d7\u05e9\u05d1 \u05d4\u05e2\u05e0\u05df','\u05e8\u05d9\u05e7, \u05d4\u05db\u05dc \u05e0\u05e9\u05dc\u05d7','');
+  if(n<5)return _sysRow(SYS_WARN,'\u05ea\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05de\u05d7\u05e9\u05d1 \u05d4\u05e2\u05e0\u05df',(n===1?'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d0\u05d7\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4.':n+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4.'),'\u05d1\u05d3\u05e8\u05da \u05db\u05dc\u05dc \u05e0\u05e4\u05ea\u05e8 \u05dc\u05d1\u05d3 \u05db\u05e9\u05d9\u05e9 \u05e7\u05dc\u05d9\u05d8\u05d4');
+  return _sysRow(SYS_BAD,'\u05ea\u05d5\u05e8 \u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05de\u05d7\u05e9\u05d1 \u05d4\u05e2\u05e0\u05df',n+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05ea\u05e7\u05d5\u05e2\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8.','\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05e2\u05dd \u05e7\u05dc\u05d9\u05d8\u05d4 \u05d8\u05d5\u05d1\u05d4 \u05d5\u05dc\u05e8\u05e2\u05e0\u05df');
+}
+
+// 6 and 7. The trustee programme cannot run without a roster and a catalogue,
+// and a report without a location is a report nobody can act on.
+function _sysChkTrustees(){
+  var t=(DB.trustees||[]).filter(function(x){return x&&x.active!==false;}).length;
+  var k=(DB.trustee_tasks||[]).filter(function(x){return x&&x.active!==false;}).length;
+  if(!t)return _sysRow(SYS_BAD,'\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea','\u05d0\u05d9\u05df \u05d0\u05e3 \u05e0\u05d0\u05de\u05df \u05e4\u05e2\u05d9\u05dc \u05d1\u05e8\u05e9\u05d9\u05de\u05d4.','\u05e2\u05de\u05d5\u05d3 \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd, \u05ea\u05e4\u05e8\u05d9\u05d8, \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd');
+  if(!k)return _sysRow(SYS_BAD,'\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',t+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd, \u05d0\u05d1\u05dc \u05d0\u05d9\u05df \u05d0\u05e3 \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea \u05e4\u05e2\u05d9\u05dc\u05d4.','\u05e2\u05de\u05d5\u05d3 \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd, \u05ea\u05e4\u05e8\u05d9\u05d8, \u05e7\u05d8\u05dc\u05d5\u05d2 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea');
+  return _sysRow(SYS_OK,'\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',t+' \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd, '+k+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d7\u05d5\u05d3\u05e9\u05d9\u05d5\u05ea','');
+}
+function _sysChkLocations(){
+  var n=(DB.locations||[]).length;
+  if(!n)return _sysRow(SYS_WARN,'\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd','\u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d5 \u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd. \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d9\u05e1\u05ea\u05de\u05db\u05d5 \u05e2\u05dc \u05d8\u05e7\u05e1\u05d8 \u05d7\u05d5\u05e4\u05e9\u05d9 \u05d1\u05dc\u05d1\u05d3.','\u05e2\u05de\u05d5\u05d3 \u05d4\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd');
+  return _sysRow(SYS_OK,'\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd',n+' \u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd \u05de\u05d5\u05d2\u05d3\u05e8\u05d9\u05dd','');
+}
+
+// Things the browser genuinely cannot check. Listed as unchecked rather than
+// dressed up as green, because a false all-clear is worse than a gap.
+var SYS_MANUAL=[
+  ['\u05d4\u05d2\u05e0\u05d4 \u05de\u05e4\u05e0\u05d9 \u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05e9\u05d3\u05dc\u05e4\u05d5','\u05de\u05d5\u05e4\u05e2\u05dc \u05d1\u05de\u05de\u05e9\u05e7 Supabase, \u05ea\u05d7\u05ea Authentication. \u05e0\u05d1\u05d3\u05e7 \u05db\u05db\u05d1\u05d5\u05d9 \u05d1-21/09.'],
+  ['\u05d3\u05d5\u05de\u05d9\u05d9\u05df \u05de\u05d0\u05d5\u05de\u05ea \u05dc\u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc','\u05d1\u05dc\u05d9 \u05d6\u05d4 \u05d4\u05de\u05d9\u05d9\u05dc \u05de\u05d2\u05d9\u05e2 \u05e8\u05e7 \u05dc\u05db\u05ea\u05d5\u05d1\u05ea \u05e9\u05d0\u05d9\u05ea\u05d4 \u05e0\u05e4\u05ea\u05d7 \u05d7\u05e9\u05d1\u05d5\u05df Resend. \u05e8\u05d0\u05d4 project-files/IT-REQUEST-DNS.md.']
+];
+
+function _sysStateOpen(){
+  openModal('m-sys');
+  _sysStateRun();
+}
+function _sysStateRun(){
+  var box=g('sys-list');if(!box)return;
+  box.innerHTML='<div style="padding:16px;text-align:center;color:var(--t3)">'+esc('\u05d1\u05d5\u05d3\u05e7...')+'</div>';
+  var quick=[_sysChkRecipient(),_sysChkDelivery(),_sysChkOutbox(),_sysChkTrustees(),_sysChkLocations()];
+  Promise.all([_sysChkTemplate(),_sysChkBackup()]).then(function(slow){
+    var rows=[quick[0],quick[1],slow[0],slow[1],quick[2],quick[3],quick[4]];
+    var bad=rows.filter(function(r){return r.s===SYS_BAD;}).length;
+    var warn=rows.filter(function(r){return r.s===SYS_WARN;}).length;
+    var head;
+    if(bad)head='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px;margin-bottom:10px;color:#b91c1c;font-weight:700">'+esc(bad===1?'\u05d3\u05d1\u05e8 \u05d0\u05d7\u05d3 \u05d3\u05d5\u05e8\u05e9 \u05d8\u05d9\u05e4\u05d5\u05dc':bad+' '+'\u05d3\u05d1\u05e8\u05d9\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc')+'</div>';
+    else if(warn)head='<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px;margin-bottom:10px;color:#92400e;font-weight:700">'+esc(warn===1?'\u05d3\u05d1\u05e8 \u05d0\u05d7\u05d3 \u05e9\u05d5\u05d5\u05d4 \u05ea\u05e9\u05d5\u05de\u05ea \u05dc\u05d1':warn+' '+'\u05d3\u05d1\u05e8\u05d9\u05dd \u05e9\u05d5\u05d5\u05d9\u05dd \u05ea\u05e9\u05d5\u05de\u05ea \u05dc\u05d1')+'</div>';
+    else head='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;margin-bottom:10px;color:#166534;font-weight:700">'+esc('\u05d4\u05db\u05dc \u05ea\u05e7\u05d9\u05df')+'</div>';
+    var ic={ok:'\u2713',warn:'\u26a0',bad:'\u2717'},col={ok:'#166534',warn:'#92400e',bad:'#b91c1c'};
+    var html=head;
+    rows.forEach(function(r){
+      html+='<div style="border-bottom:1px solid var(--border);padding:9px 0">'
+        +'<div style="font-weight:700;color:'+col[r.s]+'">'+ic[r.s]+' '+esc(r.t)+'</div>'
+        +(r.d?'<div style="font-size:12px;color:var(--t2);margin-top:2px">'+esc(r.d)+'</div>':'')
+        +(r.a&&r.s!==SYS_OK?'<div style="font-size:12px;color:#1d4ed8;margin-top:3px">'+esc('\u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea: ')+esc(r.a)+'</div>':'')
+        +'</div>';
+    });
+    html+='<div style="margin-top:12px;font-size:12px;color:var(--t3)"><b>'+esc('\u05dc\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea')+'</b><br>';
+    SYS_MANUAL.forEach(function(m){html+='\u2022 <b>'+esc(m[0])+'</b> '+esc(m[1])+'<br>';});
+    html+='</div>';
+    box.innerHTML=html;
+  });
 }
 function _waTemplateSubmit(btn){
   if(btn){btn.disabled=true;btn.textContent='\ud83d\udce4 ' + '\u05e9\u05d5\u05dc\u05d7...';}
