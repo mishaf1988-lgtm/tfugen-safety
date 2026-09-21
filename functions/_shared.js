@@ -28,10 +28,16 @@ export function corsHeaders(origin, allowed, methods = 'POST,OPTIONS') {
   };
 }
 
+// charset=utf-8 is not optional here. Without it Safari decodes the body as
+// Latin-1, so every Hebrew string and every ✓ / ⚠ in a response comes out as
+// mojibake — which is exactly how the security self-test read on Michael's
+// phone: «âœ"» where a tick should be. claude.js always declared it on its
+// stream; this, which serves ten endpoints including trustee-notify and its
+// Hebrew task names, never did.
 export function jsonResp(payload, status, cors) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...cors, 'Content-Type': 'application/json' }
+    headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' }
   });
 }
 
