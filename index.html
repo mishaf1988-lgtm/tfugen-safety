@@ -1963,7 +1963,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </label>
   <div class="field" style="margin-bottom:10px">
     <label style="font-size:11px;color:var(--t3);font-weight:600">&#1489;&#1511;&#1513; &#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1493;&#1489; &#1488;&#1495;&#1512;&#1497;</label>
-    <select id="mvis-lock" style="font-size:14px"><option value="15">15 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="30">30 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="120">&#1513;&#1506;&#1514;&#1497;&#1497;&#1501; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="720">12 &#1513;&#1506;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="0">&#1500;&#1506;&#1493;&#1500;&#1501; &#1500;&#1488; (&#1504;&#1513;&#1488;&#1512; &#1502;&#1495;&#1493;&#1489;&#1512;)</option></select>
+    <select id="mvis-lock" style="font-size:14px"><option value="-1">&#1489;&#1499;&#1500; &#1508;&#1514;&#1497;&#1495;&#1492; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</option><option value="15">15 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="30">30 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="120">&#1513;&#1506;&#1514;&#1497;&#1497;&#1501; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="720">12 &#1513;&#1506;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="0">&#1500;&#1506;&#1493;&#1500;&#1501; &#1500;&#1488; (&#1504;&#1513;&#1488;&#1512; &#1502;&#1495;&#1493;&#1489;&#1512;)</option></select>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1504;&#1513;&#1488;&#1512;&#1514; &#1508;&#1514;&#1493;&#1495;&#1492; &#1499;&#1500; &#1506;&#1493;&#1491; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1489;&#1492;. &#1500;&#1488; &#1495;&#1500; &#1506;&#1500; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.</div>
   </div>
 
@@ -4256,7 +4256,7 @@ window._modVisSaveFromUI=function(){
   // Lock delay. 0 is a real choice (never lock), so an empty select is the
   // only thing that falls back to the default.
   var lk=document.getElementById('mvis-lock');
-  if(lk&&lk.value!==''){var lv=parseInt(lk.value,10);if(!isNaN(lv)&&lv>=0)p.lockMin=lv;}
+  if(lk&&lk.value!==''){var lv=parseInt(lk.value,10);if(!isNaN(lv)&&lv>=-1)p.lockMin=lv;}
   _appPrefsSet(p);
   closeModal('m-modules-vis');
   if(typeof toast==='function')toast('✓ ההגדרות נשמרו');
@@ -4281,10 +4281,17 @@ window._appPrefsLandingPage=function(){
 // Trustees are never locked. They have no password to come back with, and a
 // locked-out trustee means a hazard goes unreported.
 window._LOCK_SEEN_KEY='tfgn_last_seen';
-window._LOCK_DEFAULT_MIN=30;
+// Michael, later the same day: «נעילה אחרי כל כניסה לאפליקציה, לא להשאיר פתוח».
+// -1 is that choice: every open asks, and so does coming back after more
+// than a minute away. A minute, because a camera round trip or a share
+// sheet hides the page for seconds, and locking the form somebody was in
+// the middle of is not what "do not leave it open" meant.
+window._LOCK_DEFAULT_MIN=-1;
+window._LOCK_RESUME_GRACE_MS=60*1000;
 window._lockMinutes=function(){
   var m=_appPrefs().lockMin;
   if(m===0)return 0;                                  // chosen: never lock
+  if(m===-1)return -1;                                // chosen: every open
   return (typeof m==='number'&&m>0)?m:_LOCK_DEFAULT_MIN;
 };
 window._lockStamp=function(){
@@ -4300,9 +4307,16 @@ window._lockIdleMs=function(){
     return ms<0?-1:ms;                                // a clock that went backwards proves nothing
   }catch(e){return -1;}
 };
-window._lockExpired=function(){
+// ctx is 'resume' when the app is coming back from the background, and
+// anything else (or nothing) at startup.
+window._lockExpired=function(ctx){
   var min=_lockMinutes();if(!min)return false;
-  var ms=_lockIdleMs();return ms>=0&&ms>min*60*1000;
+  var ms=_lockIdleMs();
+  if(min===-1){
+    if(ctx!=='resume')return true;                    // every open asks, a reload included
+    return ms>=0&&ms>_LOCK_RESUME_GRACE_MS;           // seconds away is a camera, not a departure
+  }
+  return ms>=0&&ms>min*60*1000;
 };
 // Drop the session and ask for the password. Runs both at startup and when the
 // app is resumed from the background — on iOS a home-screen app usually resumes
@@ -4328,7 +4342,7 @@ window._lockNow=function(){
     document.addEventListener(ev,function(){seen(false);},true);
   });
   function resumed(){
-    if(_isAdmin&&_lockExpired())_lockNow();
+    if(_isAdmin&&_lockExpired('resume'))_lockNow();
     else seen(true);
   }
   document.addEventListener('visibilitychange',function(){
