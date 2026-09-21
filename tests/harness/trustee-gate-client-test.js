@@ -135,17 +135,21 @@ window.supabase = { createClient: function () { return { auth: {
     await p2.close();
   }
 
-  console.log('\n4b. turning remembering off reaches phones that already did');
+  console.log('\n4b. a phone that kept a code from before is asked anyway');
   {
-    // The policy changed under a phone that had been allowed to remember. It
-    // keeps the session it is in and is asked on the next open, like everyone.
+    // Michael hit this: his phone held a code from when remembering was on,
+    // and it let him straight in. The first build checked AFTER admitting,
+    // which handed exactly that phone one free entry. «Every time» has no
+    // first-time exception.
+    //
     // The stored code has to be one the server still ACCEPTS, or this measures
     // a rejection instead of a policy change. It did, the first time.
     const p = await open({ emp: true, stored: 'RIGHT', server: 'ok', remember: false });
-    await p.waitForTimeout(250);
+    await p.waitForTimeout(400);
     const s = await state(p);
-    check('this session is not interrupted', s.app === 'block' && s.gate === 'none', s);
-    check('...but the stored code is dropped', !s.stored, s.stored);
+    check('it is not let in on the kept code', s.gate !== 'none' && s.app === 'none', s);
+    check('...and the kept code is dropped', !s.stored, s.stored);
+    check('...having asked the server before deciding', p.__gate.length === 1 && p.__gate[0] === 'RIGHT', p.__gate);
     await p.close();
   }
 
