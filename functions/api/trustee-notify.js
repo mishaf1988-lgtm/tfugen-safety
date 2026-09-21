@@ -1,9 +1,21 @@
-// Cloudflare Pages Function — a trustee's hazard report → WhatsApp (+ email)
-// to the safety officer, server-side, so it lands even when the app is closed.
+// Cloudflare Pages Function — a hazard report → WhatsApp (+ email) to the
+// safety officer, server-side, so it lands even when the app is closed.
 //
-// Two callers:
-//   1. A Supabase database trigger (pg_net) after INSERT into trustee_reports
-//      with ok=false:            POST /api/trustee-notify   {"id":"<report id>"}
+// Two sources, because on the floor they are the same event: something that
+// is about to hurt somebody. A trustee's ליקוי comes from trustee_reports; a
+// כמעט ונפגע comes from near_miss and can be filed by anyone, which is
+// exactly why it used to reach nobody until the manager next opened the app.
+// Michael on 2026-09-21: "שלא יצא מצב שכמה אנשים מעלים ומגלים מאוחר".
+//
+// Both notify the SAME recipient, the one saved under `trustee_hazard` in
+// notification_prefs, so there is one phone number and one address to fill in
+// rather than two.
+//
+// Callers:
+//   1. A Supabase database trigger (pg_net) after INSERT:
+//        trustee_reports, ok=false → POST {"id":"<id>"}
+//        near_miss, any row        → POST {"id":"<id>","src":"near_miss"}
+//      `src` is absent on the older trigger and defaults to trustee_reports.
 //   2. The app's notification settings, "send a test":
 //                                 POST /api/trustee-notify   {"test":true, ...}
 //      with a Supabase session in `Authorization: Bearer` (same gate as wa-send).
@@ -38,6 +50,45 @@ const TASKS = {
   1: 'סיור מפגעים באזור', 2: 'מקלחות חירום ושטיפות עיניים', 3: 'דרכי מילוט ויציאות חירום',
   4: 'תקינות סולמות וגישה לגובה', 5: 'עמדות כיבוי אש', 6: 'מגיני מכונות ולחצני עצירה',
   7: 'עזרה ראשונה וציוד מגן', 8: 'מעקב סגירה'
+};
+
+// The two tables, and everything that differs between them. Anything the rest
+// of the file needs per-source lives here, so adding a third source later is a
+// table entry rather than a hunt through the delivery code.
+const SOURCES = {
+  trustee_reports: {
+    select: 'id,u,t,d,loc,f,ok,s,photo_url,ts,notified_at',
+    // Only a ליקוי is a hazard. A clean check is the trustee doing the job.
+    skipReason: (r) => (r.ok === false ? null : 'not a hazard'),
+    // One shape for the delivery code: who reported, where, what.
+    norm: (r) => r,
+    event: 'trustee_hazard',
+    emoji: '🦺',
+    title: 'ליקוי חדש מנאמן בטיחות',
+    subject: 'ליקוי מנאמן בטיחות',
+    whoLabel: 'נאמן',
+    lineLabel: 'משימה',
+    // The task number reads naturally in front of its name, and only there.
+    lineText: (row, line) => (row.t ? esc(row.t) + '. ' : '') + esc(line),
+    waMiddle: (who, line) => 'ליקוי נאמן בטיחות — ' + who + ', ' + line,
+    footer: 'נשלח אוטומטית כשנאמן שומר ליקוי · מודולים → נאמני בטיחות',
+  },
+  near_miss: {
+    select: 'id,rep,descr,area,sev,typ,d,s,photo_url,ts,notified_at',
+    // Every near-miss is worth knowing about the moment it is filed. There is
+    // no "clean" near-miss to filter out.
+    skipReason: () => null,
+    norm: (r) => ({ ...r, u: r.rep || 'לא צוין', loc: r.area || '', f: r.descr || '', t: '' }),
+    event: 'near_miss',
+    emoji: '⛔',
+    title: 'דיווח חדש: כמעט ונפגע',
+    subject: 'כמעט ונפגע',
+    whoLabel: 'מדווח',
+    lineLabel: 'חומרה / סוג',
+    lineText: (row, line) => esc(line),
+    waMiddle: (who, line) => 'כמעט ונפגע — ' + who + ', ' + line,
+    footer: 'נשלח אוטומטית כשנשמר דיווח כמעט ונפגע · מודולים → כמעט ונפגע',
+  },
 };
 
 // Meta rejects parameters with newlines / tabs / long runs of spaces.
@@ -78,7 +129,7 @@ export async function onRequest({ request, env }) {
     };
     if (!prefs.whatsapp_to && !prefs.email_to) return jsonResp({ error: 'no recipient: fill a WhatsApp number or an email' }, 400, cors);
     const sample = { id: 'test', u: 'בדיקה', t: 5, d: new Date().toISOString().substring(0, 10), loc: 'מחסן · מטף מזרחי', f: 'הודעת בדיקה — מטף ללא פלומבה', photo_url: null };
-    const res = await deliver(env, prefs, sample, await taskName(sb, sample.t));
+    const res = await deliver(env, prefs, sample, await taskName(sb, sample.t), SOURCES.trustee_reports);
     return jsonResp({ ok: true, test: true, ...res }, 200, cors);
   }
 
@@ -88,16 +139,23 @@ export async function onRequest({ request, env }) {
   }
   const id = clean(body.id, 64);
   if (!id || /[^A-Za-z0-9_-]/.test(id)) return jsonResp({ error: 'id required' }, 400, cors);
+  // The table name reaches the query string, so it is picked from the map by
+  // key and never taken from the request as text.
+  const srcKey = clean(body.src, 32) || 'trustee_reports';
+  const src = Object.prototype.hasOwnProperty.call(SOURCES, srcKey) ? SOURCES[srcKey] : null;
+  if (!src) return jsonResp({ error: 'unknown src' }, 400, cors);
 
-  const rowResp = await sb('trustee_reports?id=eq.' + encodeURIComponent(id) + '&select=id,u,t,d,loc,f,ok,s,photo_url,ts,notified_at');
+  const rowResp = await sb(srcKey + '?id=eq.' + encodeURIComponent(id) + '&select=' + src.select);
   if (!rowResp.ok) return jsonResp({ error: 'db read failed', status: rowResp.status }, 502, cors);
   const rows = await rowResp.json();
-  const row = Array.isArray(rows) ? rows[0] : null;
-  if (!row) return jsonResp({ error: 'not found' }, 404, cors);
-  if (row.ok !== false) return jsonResp({ ok: true, skipped: 'not a hazard' }, 200, cors);
-  if (row.notified_at) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
-  const age = Date.now() - Date.parse(row.ts || 0);
+  const raw = Array.isArray(rows) ? rows[0] : null;
+  if (!raw) return jsonResp({ error: 'not found' }, 404, cors);
+  const skip = src.skipReason(raw);
+  if (skip) return jsonResp({ ok: true, skipped: skip }, 200, cors);
+  if (raw.notified_at) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
+  const age = Date.now() - Date.parse(raw.ts || 0);
   if (!(age < MAX_AGE_MS)) return jsonResp({ ok: true, skipped: 'too old' }, 200, cors);
+  const row = src.norm(raw);
 
   const prefs = await loadPrefs(sb);
   if (!(prefs.whatsapp && prefs.whatsapp_to) && !(prefs.email && prefs.email_to)) {
@@ -105,14 +163,14 @@ export async function onRequest({ request, env }) {
   }
 
   // Claim the row: only the caller whose PATCH flips notified_at from null sends.
-  const claim = await sb('trustee_reports?id=eq.' + encodeURIComponent(id) + '&notified_at=is.null', {
+  const claim = await sb(srcKey + '?id=eq.' + encodeURIComponent(id) + '&notified_at=is.null', {
     method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ notified_at: new Date().toISOString() })
   });
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || !claimed.length) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
 
-  const task = await taskName(sb, row.t);
-  const res = await deliver(env, prefs, row, task);
+  const task = await lineFor(sb, src, row);
+  const res = await deliver(env, prefs, row, task, src);
   const title = clean((row.u || '') + ' — ' + task + (row.f ? ': ' + row.f : ''), 120);
   const logs = [];
   if (res.whatsapp) logs.push({ channel: res.whatsapp === 'sent' ? 'whatsapp' : 'whatsapp_error', detail: res.whatsapp });
@@ -123,7 +181,7 @@ export async function onRequest({ request, env }) {
         method: 'POST', headers: { Prefer: 'return=minimal' },
         body: JSON.stringify(logs.map((l) => ({
           id: 'tn' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          user_email: 'server', event_type: EVENT, channel: l.channel,
+          user_email: 'server', event_type: src.event, channel: l.channel,
           payload: { id: row.id, title, detail: l.detail }, ts: new Date().toISOString()
         })))
       });
@@ -163,10 +221,22 @@ async function taskName(sb, n) {
   } catch (e) { return fallback; }
 }
 
-async function deliver(env, prefs, row, task) {
+// The one line under the reporter's name: which check it was for a trustee,
+// how bad it was for a near-miss.
+async function lineFor(sb, src, row) {
+  if (src.event === 'near_miss') {
+    const bits = [];
+    if (row.sev) bits.push('חומרה ' + clean(row.sev, 20));
+    if (row.typ) bits.push(clean(row.typ, 40));
+    return bits.length ? bits.join(' · ') : 'כמעט ונפגע';
+  }
+  return taskName(sb, row.t);
+}
+
+async function deliver(env, prefs, row, task, src) {
   const res = {};
-  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task);
-  if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task);
+  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task, src);
+  if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task, src);
   return res;
 }
 
@@ -184,17 +254,21 @@ async function metaSend(env, to, template, params) {
   return { ok: resp.ok, status: resp.status, parsed };
 }
 
-async function sendWhatsApp(env, to, row, task) {
+async function sendWhatsApp(env, to, row, task, src) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return 'error: WhatsApp not configured (META env vars)';
   const who = clean(row.u, 40), loc = clean(row.loc || 'לא צוין', 60), finding = clean(row.f || 'ללא תיאור', 150);
   try {
     // Dedicated template first: {{1}} trustee · {{2}} task + location · {{3}} finding
-    let r = await metaSend(env, to, TEMPLATE_DEDICATED, [who, clean(task + ' — ' + loc, 90), finding]);
+    // There is no dedicated near-miss template, so that source goes straight
+    // to the approved incident one rather than burning a call to be refused.
+    let r = src.event === 'near_miss'
+      ? { ok: false, parsed: { error: { code: 132001, message: 'no dedicated template for near_miss' } } }
+      : await metaSend(env, to, TEMPLATE_DEDICATED, [who, clean(task + ' — ' + loc, 90), finding]);
     const err = r.parsed && r.parsed.error;
     const missing = !r.ok && err && (err.code === 132001 || /template/i.test(String(err.message || '')));
     if (missing) {
       // Approved incident template: {{1}} location · {{2}} severity · {{3}} description
-      r = await metaSend(env, to, TEMPLATE_FALLBACK, [loc, clean('ליקוי נאמן בטיחות — ' + who + ', ' + task, 90), finding]);
+      r = await metaSend(env, to, TEMPLATE_FALLBACK, [loc, clean(src.waMiddle(who, task), 90), finding]);
     }
     if (r.ok) return 'sent';
     const e2 = r.parsed && r.parsed.error;
@@ -225,7 +299,7 @@ async function signPhoto(serviceKey, publicUrl) {
   } catch (e) { return null; }
 }
 
-async function sendEmail(env, to, row, task) {
+async function sendEmail(env, to, row, task, src) {
   if (!env.RESEND_KEY) return 'error: email not configured (RESEND_KEY missing in Cloudflare env)';
   const who = esc(row.u), loc = esc(row.loc || 'לא צוין'), finding = esc(row.f || 'ללא תיאור');
   const date = esc(row.d || '');
@@ -235,13 +309,13 @@ async function sendEmail(env, to, row, task) {
     ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url)
     : null;
   const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
-  const subject = '🦺 ליקוי מנאמן בטיחות — ' + clean(row.u, 40) + ' · ' + clean(task, 40);
+  const subject = src.emoji + ' ' + src.subject + ' — ' + clean(row.u, 40) + ' · ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
-    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">🦺 ליקוי חדש מנאמן בטיחות</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן — ניהול הבטיחות</p></div>'
+    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן — ניהול הבטיחות</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
-    + '<p><strong>נאמן:</strong> ' + who + '</p><p><strong>משימה:</strong> ' + esc(row.t) + '. ' + esc(task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
+    + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
     + '<p style="margin-top:16px"><a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
-    + '</div><div style="background:#f9fafb;padding:10px;text-align:center;font-size:11px;color:#9ca3af;border-radius:0 0 8px 8px">נשלח אוטומטית כשנאמן שומר ליקוי · מודולים → נאמני בטיחות</div></div>';
+    + '</div><div style="background:#f9fafb;padding:10px;text-align:center;font-size:11px;color:#9ca3af;border-radius:0 0 8px 8px">' + esc(src.footer) + '</div></div>';
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
