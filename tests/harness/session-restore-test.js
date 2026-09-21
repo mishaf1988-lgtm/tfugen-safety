@@ -57,6 +57,10 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
   const boot = async (o) => {
     const p = await ctx.newPage();
     p.on('dialog', (d) => d.accept().catch(() => {}));
+    // The default lock since 2026-09-21 is «every open», which would send every
+    // case here to the login screen and prove nothing about the restore. This
+    // suite is about the restore, so it runs under the timed lock.
+    await p.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); } catch (e) {} });
     if (o.emp) await p.addInitScript((k) => { try { localStorage.setItem(k, '1'); } catch (e) {} }, EMP_KEY);
     if (o.db) await p.addInitScript((d) => { try { localStorage.setItem('tfgn2', JSON.stringify(d)); } catch (e) {} }, o.db);
     await p.route('**/*', async (r) => {

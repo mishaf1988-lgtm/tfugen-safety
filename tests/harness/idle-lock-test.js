@@ -57,12 +57,15 @@ window.supabase = { createClient: function () {
         [s.seenKey, s.empKey, s.prefsKey].forEach(function (k) { localStorage.removeItem(k); });
         if (s.idle !== null) localStorage.setItem(s.seenKey, String(Date.now() - s.idle));
         if (s.emp) localStorage.setItem(s.empKey, '1');
-        if (s.lockMin !== undefined) localStorage.setItem(s.prefsKey, JSON.stringify({ lockMin: s.lockMin }));
+        // Since Michael asked for a lock on every open, that is the default. The
+        // timed cases seed 30 minutes explicitly; lockMin:null means "whatever
+        // the app defaults to", for the cases about the default itself.
+        if (s.lockMin !== null) localStorage.setItem(s.prefsKey, JSON.stringify({ lockMin: s.lockMin }));
       } catch (e) {}
     }, {
       seenKey: SEEN_KEY, empKey: EMP_KEY, prefsKey: PREFS_KEY,
       idle: o.idleMin === undefined || o.idleMin === null ? null : o.idleMin * MIN,
-      emp: !!o.emp, lockMin: o.lockMin,
+      emp: !!o.emp, lockMin: (o.lockMin === undefined ? 30 : o.lockMin),
     });
     await p.route('**/*', (r) => {
       const u = r.request().url();
@@ -118,12 +121,68 @@ window.supabase = { createClient: function () {
     const under = await boot({ idleMin: 29 });
     const ru = await state(under);
     check('29 minutes is still inside', ru.app === 'block' && ru.isAdmin === true, ru);
-    check('...and the default reads as 30', ru.mins === 30, ru.mins);
+    check('...with the 30 that was chosen in force', ru.mins === 30, ru.mins);
     await under.close();
     const over = await boot({ idleMin: 31 });
     const ro = await state(over);
     check('31 minutes is outside', ro.login === 'flex' && ro.isAdmin === false, ro);
     await over.close();
+  }
+
+  console.log('\n3b. the default is a lock on every open');
+  {
+    // Michael, the same afternoon: «נעילה אחרי כל כניסה לאפליקציה, לא להשאיר
+    // פתוח». So a phone that has never chosen anything asks every time --
+    // used a minute ago or not.
+    const p1 = await boot({ idleMin: 1, lockMin: null });
+    const r = await state(p1);
+    check('used a minute ago, no choice made: the password is asked for', r.login === 'flex' && r.isAdmin === false, r);
+    check('...and the session really dropped', r.signedOut === 1, r.signedOut);
+    check('...because the default is «every open»', r.mins === -1, r.mins);
+    await p1.close();
+    const p2 = await boot({ idleMin: null, lockMin: -1 });
+    const fresh = await state(p2);
+    check('a phone never stamped asks too -- every open means every open', fresh.login === 'flex', fresh);
+    await p2.close();
+    const p3 = await boot({ idleMin: 1, lockMin: -1 });
+    const chosen = await state(p3);
+    check('chosen explicitly it behaves the same', chosen.login === 'flex' && chosen.signedOut === 1, chosen);
+    // "Chosen explicitly" proves nothing while the default is the same value:
+    // a build that dropped -1 on the floor and fell back to the default
+    // passed this. So the default is moved out of the way and -1 has to
+    // survive on its own.
+    const own = await p3.evaluate(() => {
+      window._LOCK_DEFAULT_MIN = 30;
+      localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: -1 }));
+      return _lockMinutes();
+    });
+    check('...and -1 is read as a choice, not mistaken for «unset»', own === -1, own);
+    await p3.close();
+  }
+
+  console.log('\n3c. «every open»: coming back is an open, a camera round trip is not');
+  {
+    // On iOS a home-screen app resumes without reloading, so a phone in
+    // this mode has to lock on resume too -- but the page also goes hidden
+    // for the seconds a camera or a share sheet is up, and locking the form
+    // somebody was in the middle of is not what "do not leave it open" meant.
+    const p = await boot({ idleMin: 1, lockMin: 30 });
+    const r = await p.evaluate(async (k) => {
+      try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: -1 })); } catch (e) {}
+      const out = {};
+      localStorage.setItem(k, String(Date.now() - 20 * 1000));           // 20 seconds away
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r2) => setTimeout(r2, 120));
+      out.afterSeconds = { app: getComputedStyle(document.getElementById('app')).display, isAdmin: _isAdmin };
+      localStorage.setItem(k, String(Date.now() - 3 * 60 * 1000));       // three minutes away
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r2) => setTimeout(r2, 120));
+      out.afterMinutes = { login: document.getElementById('login').style.display, isAdmin: _isAdmin, signedOut: window.__signedOut || 0 };
+      return out;
+    }, SEEN_KEY);
+    check('twenty seconds away: still in', r.afterSeconds.app === 'block' && r.afterSeconds.isAdmin === true, r.afterSeconds);
+    check('three minutes away: locked', r.afterMinutes.login === 'flex' && r.afterMinutes.isAdmin === false && r.afterMinutes.signedOut === 1, r.afterMinutes);
+    await p.close();
   }
 
   console.log('\n4. the delay is his to change');
@@ -238,7 +297,7 @@ window.supabase = { createClient: function () {
 
   console.log('\n9. the setting is reachable, and it saves');
   {
-    const p = await boot({ idleMin: 1 });
+    const p = await boot({ idleMin: 1, lockMin: null });
     const r = await p.evaluate((k) => {
       const sel = document.getElementById('mvis-lock');
       if (!sel) return { missing: true };
@@ -251,8 +310,9 @@ window.supabase = { createClient: function () {
       return { shown: shown, saved: saved, mins: _lockMinutes(), opts: [].map.call(sel.options, function (o) { return o.value; }) };
     }, PREFS_KEY);
     check('the choice is in the settings screen', !r.missing, r);
-    check('...showing what is in force (30 by default)', r.shown === '30', r);
+    check('...showing what is in force («every open» by default)', r.shown === '-1', r);
     check('...and «never» is one of the choices', (r.opts || []).indexOf('0') >= 0, r.opts);
+    check('...and so is «every open»', (r.opts || []).indexOf('-1') >= 0, r.opts);
     check('changing it saves and takes effect', r.saved === 120 && r.mins === 120, r);
     await p.close();
   }
