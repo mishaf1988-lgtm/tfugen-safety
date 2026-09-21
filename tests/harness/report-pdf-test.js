@@ -108,11 +108,20 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       };
       const realClick = HTMLAnchorElement.prototype.click;
       HTMLAnchorElement.prototype.click = function () { clicked = this.download; };
+      // The document opens on a tap of its own, so window.open and the
+      // navigation fallback both have to be observable.
+      let opened = null, went = null;
+      window.open = function (u) { opened = u; return opt.openBlocked ? null : { focus: function () {} }; };
+      window._rptGo = function (u) { went = u; };
 
       const btn = document.querySelector('.no-print');
       const label0 = btn.textContent;
       _tryPrint(btn);
       await new Promise((r2) => setTimeout(r2, 300));
+      // Each button is its own gesture; that is the whole reason they exist.
+      if (opt.then === 'open') { const b2 = document.getElementById('rpt-open'); if (b2) b2.click(); }
+      if (opt.then === 'share') { const b2 = document.getElementById('rpt-share'); if (b2) b2.click(); }
+      await new Promise((r2) => setTimeout(r2, 120));
 
       HTMLAnchorElement.prototype.click = realClick;
       window.matchMedia = realMM;
@@ -125,6 +134,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         msg: msg ? msg.textContent.trim() : null,
         msgInHead: msg ? !!document.querySelector('.head').contains(msg) : null,
         label: btn.textContent, labelBack: btn.textContent === label0, disabled: btn.disabled,
+        opened: opened, went: went,
+        buttons: [].slice.call(document.querySelectorAll('#rpt-msg button')).map(function (x) { return x.id; }),
       };
     }, o);
     await p.close();
@@ -168,21 +179,45 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...each inset by the same margin', (tall.imgs || []).every((i) => i.x === 8 && i.y === 8), tall.imgs);
   }
 
-  console.log('\n4. where the file goes');
+  console.log('\n4. the document is offered, not forced');
   {
+    // iOS refuses a window.open or a navigation that is not tied to a gesture,
+    // and the tap that started the render expired seconds ago while the page
+    // was being rasterised. So nothing happens on its own: two buttons, two
+    // fresh gestures.
     const r = await run({ standalone: true, libs: 'ok', canShare: true });
-    check('it opens the share sheet with a real PDF',
+    check('it says the PDF is ready', /מוכן/.test(r.msg || ''), r.msg);
+    check('...and offers both opening it and sending it',
+      r.buttons.join() === 'rpt-open,rpt-share', r.buttons);
+    check('...without opening or sharing anything by itself',
+      !r.opened && !r.went && !r.shared && !r.clicked, r);
+  }
+
+  console.log('\n5. opening it');
+  {
+    const r = await run({ standalone: true, libs: 'ok', canShare: true, then: 'open' });
+    check('the tap opens the PDF in a window', /^blob:/.test(r.opened || ''), r.opened);
+    check('...and does not navigate away as well', !r.went, r);
+    const blocked = await run({ standalone: true, libs: 'ok', canShare: true, then: 'open', openBlocked: true });
+    // A blocked pop-up is common on a phone. The report window itself then
+    // shows the document rather than nothing happening.
+    check('a blocked window falls back to showing it here', /^blob:/.test(blocked.went || ''), blocked);
+  }
+
+  console.log('\n6. sending it');
+  {
+    const r = await run({ standalone: true, libs: 'ok', canShare: true, then: 'share' });
+    check('the tap opens the share sheet with a real PDF',
       r.shared && /\.pdf$/.test(r.shared.name) && r.shared.type === 'application/pdf', r.shared);
-    check('...and says it is ready', /מוכן/.test(r.msg || ''), r.msg);
-    const noShare = await run({ standalone: true, libs: 'ok', canShare: false });
+    const noShare = await run({ standalone: true, libs: 'ok', canShare: false, then: 'share' });
     check('with no share sheet it saves the file instead', /\.pdf$/.test(noShare.clicked || ''), noShare);
-    const abort = await run({ standalone: true, libs: 'ok', canShare: true, shareErr: 'AbortError' });
+    const abort = await run({ standalone: true, libs: 'ok', canShare: true, shareErr: 'AbortError', then: 'share' });
     check('cancelling does not then save it behind your back', !abort.clicked, abort);
-    const denied = await run({ standalone: true, libs: 'ok', canShare: true, shareErr: 'NotAllowedError' });
+    const denied = await run({ standalone: true, libs: 'ok', canShare: true, shareErr: 'NotAllowedError', then: 'share' });
     check('a refused share falls back to saving', /\.pdf$/.test(denied.clicked || ''), denied);
   }
 
-  console.log('\n5. when it cannot be done, it says so');
+  console.log('\n7. when it cannot be done, it says so');
   {
     // The failure that matters most: no network for the libraries. Silence
     // here would be the original bug all over again.
@@ -195,7 +230,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...and does not leave the report half hidden', broken.labelBack, broken);
   }
 
-  console.log('\n6. the message sits where it can be read');
+  console.log('\n8. the message sits where it can be read');
   {
     const r = await run({ standalone: true, libs: 'fail', canShare: true });
     check('outside the header, not over the logo', r.msgInHead === false, r.msgInHead);
