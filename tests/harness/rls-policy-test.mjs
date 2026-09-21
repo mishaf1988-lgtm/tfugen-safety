@@ -276,6 +276,25 @@ console.log('\n6. the live self-test covers what it claims to');
     // The gap this item is about: zero Storage checks, in the very endpoint
     // that would have caught the hole.
     check('...and it now probes Storage too, which is where the hole was', /storage\/v1\/object/.test(t), (t.match(/storage[^\n]{0,60}/) || [])[0]);
+
+    // It used to report the anonymous case as «not testable from this
+    // endpoint — needs an anonymous token». That was wrong: the endpoint
+    // holds the publishable key, which is exactly what the kiosk mints an
+    // anonymous token with. Now it does what the kiosk does and checks what
+    // that session can actually reach.
+    // Comments stripped: the file EXPLAINS that it used to say «not testable»,
+    // and matching that prose passes while the code says the opposite. Same
+    // trap as the migration check above; it caught me twice in one day.
+    const tCode = t.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    check('it can prove the anonymous case rather than declaring it untestable',
+      /auth\/v1\/signup/.test(tCode) && !/not testable from this endpoint/.test(tCode),
+      (tCode.match(/not testable[^\n]{0,60}/) || ['signup call missing'])[0]);
+    check('...and the backups bucket is one of the things it proves unreachable',
+      /anon_cannot_read_backups/.test(t));
+    // Creating an auth user as a side effect of a health check is its own
+    // small problem, so it must not happen unless asked.
+    check('...and it only mints that session when explicitly asked (?anon=1)',
+      /searchParams\.get\('anon'\)/.test(t), 'must be opt-in');
   }
 }
 
