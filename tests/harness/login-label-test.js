@@ -37,6 +37,27 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('and no worked example is left anywhere (' + ph.all.length + ')', ph.all.length === 0, ph.all);
   }
 
+  // The recovery screen promised a password "within seconds" long after the
+  // server stopped sending one: /api/self-recovery queues a row for the admin
+  // and sends nothing. Somebody using it waited for a message that was never
+  // coming, which is the worst shape a bug can take on a login screen.
+  console.log('\nthe recovery screen says what actually happens');
+  {
+    const t = await page.evaluate(() => {
+      const m = document.getElementById('m-forgot-pw');
+      return { all: m.textContent.replace(/\s+/g, ' '), btn: m.querySelector('.btn-p').textContent.trim() };
+    });
+    check('it does not promise an automatic send', !/אוטומטית|תוך שניות/.test(t.all), t.all.slice(0, 160));
+    check('...it says the request goes to the safety manager', /לממונה הבטיחות/.test(t.all), t.all.slice(0, 160));
+    check('...and the button asks for a reset rather than claiming to send one',
+      !/שלח סיסמה חדשה/.test(t.btn) && /בקשה/.test(t.btn), t.btn);
+    // Rule 1: Hebrew in JS strings is escaped. This block never was.
+    const src = require('fs').readFileSync(require('path').resolve(__dirname, '../../index.html'), 'utf8');
+    const fn = src.slice(src.indexOf('window._forgotPwSendWa'), src.indexOf('function doLogin()'));
+    const raw = (fn.match(/'[^']*[\u0590-\u05ff][^']*'/g) || []);
+    check('no raw Hebrew left in the handler (' + raw.length + ')', raw.length === 0, raw.slice(0, 3));
+  }
+
   const m = await page.evaluate(() => { const lg = document.getElementById('login'); lg.style.display = 'none'; document.getElementById('app').style.display = 'block'; window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); const more = document.querySelector('.topbar [onclick*="_topMoreMenu"], .topbar [onclick*="MoreMenu"], #more-btn, [id*="more"]'); return { hasMore: !!more, id: more && more.id, oc: more && more.getAttribute('onclick') }; });
   const items = await page.evaluate(() => { const btn = Array.from(document.querySelectorAll('.topbar button')).find(b => /⋯|…/.test(b.textContent)); if (!btn) return null; btn.click(); const its = Array.from(document.querySelectorAll('div[style*="z-index:9999"] button, div[style*="z-index: 9999"] button')).map(b => b.textContent.trim()); document.body.click(); return its; });
   check('header ⋯ menu: entry reads 🦺 דיווח נאמני בטיחות (no more "מצב עובד")', items && items.some(t => /דיווח נאמני בטיחות/.test(t)) && !items.some(t => /מצב עובד/.test(t)), items);
