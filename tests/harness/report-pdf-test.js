@@ -66,7 +66,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
           setTimeout(function () {
             if (opt.libs === 'fail') { if (el.onerror) el.onerror(); return; }
             window.html2canvas = function (node, cfg) {
-              captured = { tag: node.tagName, scale: cfg && cfg.scale, bg: cfg && cfg.backgroundColor };
+              captured = { tag: node.tagName, scale: cfg && cfg.scale, bg: cfg && cfg.backgroundColor,
+                w: cfg && cfg.width, bodyW: document.body.style.width };
               // What is on screen at the moment of capture is the report only.
               hiddenDuring = [].slice.call(document.querySelectorAll('.no-print,.noprint'))
                 .filter(function (x) { return x.style.display !== 'none'; }).length;
@@ -134,7 +135,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         msg: msg ? msg.textContent.trim() : null,
         msgInHead: msg ? !!document.querySelector('.head').contains(msg) : null,
         label: btn.textContent, labelBack: btn.textContent === label0, disabled: btn.disabled,
-        opened: opened, went: went,
+        opened: opened, went: went, bodyWAfter: document.body.style.width,
         buttons: [].slice.call(document.querySelectorAll('#rpt-msg button')).map(function (x) { return x.id; }),
       };
     }, o);
@@ -158,6 +159,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       && r.asked.some((u) => /html2canvas/.test(u)) && r.asked.some((u) => /jspdf/.test(u)), r.asked);
     check('the whole page is captured, at 2x, on white',
       r.captured && r.captured.tag === 'BODY' && r.captured.scale === 2 && r.captured.bg === '#ffffff', r.captured);
+    // 703px is 186mm at 96dpi: A4 less the margins the report already designs
+    // for. Captured at the phone's width instead, the PDF is a photograph of a
+    // phone screen stretched across a sheet of paper.
+    check('...laid out at A4 width rather than the phone width',
+      r.captured.w === 703 && r.captured.bodyW === '703px', r.captured);
+    check('...and the page is put back afterwards', r.bodyWAfter === '', r.bodyWAfter);
     // The button and the status line must not appear in the document.
     check('nothing marked no-print is visible while it captures', r.hiddenDuring === 0, r.hiddenDuring);
     check('...and it is all back afterwards',
@@ -174,9 +181,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const tall = await run({ standalone: true, libs: 'ok', canShare: true, canvasH: 4000 });
     check('a tall one is split (' + (tall.imgs ? tall.imgs.length : 0) + ' pages)', tall.imgs && tall.imgs.length >= 3, tall.imgs);
     // The bug this guards: a slice taller than the sheet runs off the paper.
-    const over = (tall.imgs || []).filter((i) => i.h > 297 - 16 + 1);
+    const over = (tall.imgs || []).filter((i) => i.h > 297 - 24 + 1);
     check('...and no page is taller than the paper', over.length === 0, over);
-    check('...each inset by the same margin', (tall.imgs || []).every((i) => i.x === 8 && i.y === 8), tall.imgs);
+    check('...each inset by the same A4 margin', (tall.imgs || []).every((i) => i.x === 12 && i.y === 12 && i.w === 186), tall.imgs);
   }
 
   console.log('\n4. the document is offered, not forced');
