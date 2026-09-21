@@ -17568,19 +17568,27 @@ function _empGateSubmit(){
 // runs at once and the check happens behind it; only a definite refusal
 // (403) takes the screen away again. No answer at all -- no signal -- does
 // not, because that is a working phone with no reception, not an intruder.
+// A phone that kept a code is not let in on it until the server has agreed.
+// It used to go in first and check afterwards, which gave a phone holding a
+// code from before the policy changed one free entry -- Michael hit exactly
+// that and reported it. «Every time» does not have a first-time exception.
+//
+// The exception that stays is no reception: a trustee on the plant floor with
+// no signal gets in on the code their phone kept, because the alternative is a
+// hazard nobody reports. A server that answers decides; one that cannot is
+// waited for, briefly, and then assumed absent.
 function _empGate(next){
   var stored=_empGateStored();
   if(!stored){_empGateNext=next;_empGateShow();return;}
-  _empGateOk=true;_empGateSeen=Date.now();
-  next();
+  var settled=false;
+  var admit=function(){if(settled)return;settled=true;_empGateOk=true;_empGateSeen=Date.now();next();};
+  var ask=function(){if(settled)return;settled=true;_empGateForget();_empGateOk=false;_empGateNext=next;_empGateShow();};
+  var t=setTimeout(admit,2500);   // a connection that hangs rather than fails
   _empGateAsk(stored).then(function(r){
-    if(r.status===403){_empGateForget();_empGateOk=false;_empGateNext=next;_empGateShow();}
-    else if(r.ok&&r.data&&r.data.remember!==true){
-      // The policy changed under a phone that had been allowed to remember.
-      // It keeps this session and is asked on the next open, like everyone else.
-      _empGateForget();
-    }
-  }).catch(function(){});
+    clearTimeout(t);
+    if(r.ok&&r.data&&r.data.remember===true)admit();
+    else ask();
+  }).catch(function(){clearTimeout(t);admit();});
 }
 // Coming back to a trustee screen that is not allowed to remember the code.
 // A form that is open is a hazard report being written, with a photo already

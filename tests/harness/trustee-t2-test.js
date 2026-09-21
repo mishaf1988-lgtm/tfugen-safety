@@ -20,7 +20,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const disp = (sel) => page.evaluate((sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).display : 'missing'; }, sel);
 
   console.log('\n1. employee mode lands on the trustee screen; intro first');
-  const e1 = await page.evaluate(() => {
+  const e1 = await page.evaluate(async () => {
     localStorage.removeItem('tfgn_trustee_name'); localStorage.removeItem('tfgn_outbox');
     window.__toasts = []; window.toast = function (m) { window.__toasts.push(String(m)); };
     window.__empToasts = []; window.empToast = function (m) { window.__empToasts.push(String(m)); };
@@ -28,9 +28,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.__server = [{ id: 'srv1', u: 'יוסי', m: new Date().toISOString().substring(0, 7), t: 5, d: new Date().toISOString().substring(0, 10), ok: true, s: 'תקין', ts: '2026-09-01T08:00:00Z' }];
     window.__roster = [{ id: 'tru_01', n: 'לב', dep: 'ייצור ואריזה', active: true }, { id: 'tru_09', n: 'ישן', active: false }];
     window.__pulls = 0; window.sbGet = function (t) { if (t === 'trustee_reports') window.__pulls++; return Promise.resolve(t === 'trustee_reports' ? JSON.parse(JSON.stringify(window.__server)) : (t === 'trustees' ? JSON.parse(JSON.stringify(window.__roster)) : null)); };
-    // a phone that already knows the shared code (2026-09-21) goes straight in
+    // A phone that already knows the shared code (2026-09-21). Entry is async
+    // now: the code is checked with the server BEFORE the screen is built, so
+    // that a phone holding a code from an older policy does not get one free
+    // entry. With no server reachable here the check fails and it goes in.
     try { localStorage.setItem('tfgn_emp_code', 'RIGHT'); } catch (e) {}
     doEmpLogin();
+    await new Promise((r) => {
+      const t0 = Date.now();
+      (function wait() {
+        if (CUR === 'emp-home' || Date.now() - t0 > 4000) return r();
+        setTimeout(wait, 50);
+      })();
+    });
     const home = document.getElementById('pg-emp-home'); const intro = document.getElementById('tru-intro');
     return { emp: document.body.classList.contains('emp-mode'), cur: CUR, only: home.classList.contains('tru-only'), back: getComputedStyle(document.getElementById('tru-back-btn')).display, toggle: getComputedStyle(home.querySelector('.emp-toggle')).display, introOpen: intro.open, introTxt: intro.textContent.replace(/\s+/g, ' ') };
   });
