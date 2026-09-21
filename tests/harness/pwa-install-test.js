@@ -4,6 +4,13 @@
 // shortcuts are not decoration -- they are the first thing a worker sees and
 // the fastest way into a report.
 //
+// Platform note, so nobody promises it again: **iOS does not implement the
+// manifest `shortcuts` member.** Long-pressing a home-screen web app on an
+// iPhone offers Delete and Edit Home Screen, nothing else. The shortcuts here
+// are real and tested, and they work on Android and in desktop Chrome -- which
+// matters, because plenty of the trustees carry Android. I told Michael on
+// 2026-09-21 that a long press would show them on his iPhone. It will not.
+//
 // The defect this suite was written for: apple-touch-icon pointed at an SVG.
 // **iOS ignores SVG there.** With nothing usable declared, iPhone uses a
 // screenshot of the page as the icon, so the app installed itself as a blurry
