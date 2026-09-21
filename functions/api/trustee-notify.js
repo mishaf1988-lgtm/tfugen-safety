@@ -323,6 +323,16 @@ async function sendEmail(env, to, row, task, src) {
     });
     if (r.ok) return 'sent';
     const t = await r.text();
+    // Resend's most common refusal, and the one that reads like a bug in us.
+    // With no verified domain it delivers ONLY to the address the account was
+    // opened with, and answers 403 with a wall of English JSON that lands in a
+    // Hebrew log line. Michael hit it on 2026-09-21 and had to read it out of
+    // net._http_response in the SQL editor to find out what to do.
+    if (r.status === 403 && /only send testing emails/i.test(t)) {
+      const own = (t.match(/\(([^()\s]+@[^()\s]+)\)/) || [])[1] || '';
+      return 'error: Resend שולח רק אל ' + (own || 'כתובת החשבון')
+        + ' כל עוד אין דומיין מאומת. או לשים את הכתובת הזו כיעד, או לאמת דומיין ב-resend.com/domains ולהגדיר RESEND_FROM ב-Cloudflare';
+    }
     return 'error: Resend ' + r.status + ' ' + t.substring(0, 160);
   } catch (e) {
     return 'error: network ' + String(e && e.message || e).substring(0, 120);
