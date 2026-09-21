@@ -6,7 +6,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 function world(opts) {
   const calls = [];
-  const st = { row: opts.row, nm: opts.nm, prefs: opts.prefs, signOk: opts.signOk, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
+  const st = { row: opts.row, nm: opts.nm, prefs: opts.prefs, signOk: opts.signOk, resendUnverified: opts.resendUnverified, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
   globalThis.fetch = async (url, init) => {
     const u = String(url); const method = (init && init.method) || 'GET'; const body = init && init.body ? JSON.parse(init.body) : null;
     calls.push({ u, method, body, headers: init && init.headers });
@@ -40,7 +40,12 @@ function world(opts) {
       if (st.signOk === false) return new Response('{"error":"nope"}', { status: 400 });
       return json({ signedURL: '/object/sign/incidents-photos/tru-ph-5-a-1758.jpg?token=SIGNED' });
     }
-    if (u.includes('api.resend.com')) return st.resendOk ? json({ id: 'em_1' }) : new Response('{"message":"nope"}', { status: 422 });
+    if (u.includes('api.resend.com')) {
+      // The real refusal, verbatim, from 2026-09-21: no verified domain means
+      // Resend delivers only to the address the account was opened with.
+      if (st.resendUnverified) return new Response(JSON.stringify({ statusCode: 403, name: 'validation_error', message: 'You can only send testing emails to your own email address (mishaf1988@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.' }), { status: 403 });
+      return st.resendOk ? json({ id: 'em_1' }) : new Response('{"message":"nope"}', { status: 422 });
+    }
     throw new Error('unexpected fetch ' + u);
   };
   return { calls, st };
@@ -169,6 +174,21 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({ row: fresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'r1' }), env });
     check('a request with no src still means trustee_reports, so the older DB trigger keeps working',
       r.status === 200 && w.calls.some(c => /rest\/v1\/trustee_reports\?id=eq\.r1/.test(c.u)), r.status); }
+
+  // The log line is read by a safety manager on a phone. Handing him Resend's
+  // English JSON is how a configuration step turns into "the system is broken":
+  // on 2026-09-21 the only way to find out what to do was to read
+  // net._http_response in the SQL editor.
+  console.log('\n5. a refusal a person can act on');
+  { const w = world({ row: fresh(), prefs: prefsOn, resendUnverified: true }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json(); const log = w.calls.find(c => c.u.includes('notifications_log'));
+    check('the 403 names the address Resend WILL accept', /mishaf1988@gmail\.com/.test(j.email), j.email);
+    check('...says what to do about it, in Hebrew', /דומיין מאומת/.test(j.email) && /resend\.com\/domains/.test(j.email), j.email);
+    check('...and does not hand over the raw JSON', !/statusCode/.test(j.email) && !/validation_error/.test(j.email), j.email);
+    check('WhatsApp still went out — one channel failing does not lose the other', j.whatsapp === 'sent', j);
+    check('the failure is logged, so it is visible in the app without the SQL editor',
+      log && log.body.some(x => x.channel === 'email_error'), log && log.body.map(x => x.channel)); }
+  { const w = world({ row: fresh(), prefs: prefsOn, resendOk: false }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
+    check('any other Resend failure still reports its status and body', /Resend 422/.test(j.email), j.email); }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
