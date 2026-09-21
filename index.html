@@ -1961,7 +1961,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input type="checkbox" id="mvis-hc" style="margin:0">
     <span style="flex:1">&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492; (&#1500;&#1488;&#1493;&#1512; &#1495;&#1497;&#1510;&#1493;&#1504;&#1497; &#1495;&#1494;&#1511;)</span>
   </label>
-  <div class="field" style="margin-bottom:10px">
+  <div class="field" id="mvis-lock-row" style="margin-bottom:10px">
     <label style="font-size:11px;color:var(--t3);font-weight:600">&#1489;&#1511;&#1513; &#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1493;&#1489; &#1488;&#1495;&#1512;&#1497;</label>
     <select id="mvis-lock" style="font-size:14px"><option value="-1">&#1489;&#1499;&#1500; &#1508;&#1514;&#1497;&#1495;&#1492; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</option><option value="15">15 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="30">30 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="120">&#1513;&#1506;&#1514;&#1497;&#1497;&#1501; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="720">12 &#1513;&#1506;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="0">&#1500;&#1506;&#1493;&#1500;&#1501; &#1500;&#1488; (&#1504;&#1513;&#1488;&#1512; &#1502;&#1495;&#1493;&#1489;&#1512;)</option></select>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1504;&#1513;&#1488;&#1512;&#1514; &#1508;&#1514;&#1493;&#1495;&#1492; &#1499;&#1500; &#1506;&#1493;&#1491; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1489;&#1492;. &#1500;&#1488; &#1495;&#1500; &#1506;&#1500; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.</div>
@@ -4235,7 +4235,13 @@ window._modVisOpen=function(){
   // Default landing page + hc
   var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'dash';
   var hc=document.getElementById('mvis-hc');if(hc)hc.checked=document.body.classList.contains('hc');
-  var lk=document.getElementById('mvis-lock');if(lk)lk.value=String(_lockMinutes());
+  // How long the app may stay unlocked is a plant rule, not a taste. Every
+  // role can open this screen, so without the gate any user could set their
+  // own device to «never» and opt out of what the manager decided.
+  var lkRow=document.getElementById('mvis-lock-row');
+  var lkAdmin=(typeof _isAdminUser==='function')?_isAdminUser():false;
+  if(lkRow)lkRow.style.display=lkAdmin?'':'none';
+  var lk=document.getElementById('mvis-lock');if(lk&&lkAdmin)lk.value=String(_lockMinutes());
   openModal('m-modules-vis');
 };
 window._modVisAll=function(on){
@@ -4255,8 +4261,12 @@ window._modVisSaveFromUI=function(){
   var hc=document.getElementById('mvis-hc');if(hc)p.hc=!!hc.checked;
   // Lock delay. 0 is a real choice (never lock), so an empty select is the
   // only thing that falls back to the default.
+  // Reading it back is gated too: hiding a control is not the same as
+  // refusing the value it carries.
   var lk=document.getElementById('mvis-lock');
-  if(lk&&lk.value!==''){var lv=parseInt(lk.value,10);if(!isNaN(lv)&&lv>=-1)p.lockMin=lv;}
+  if(lk&&lk.value!==''&&typeof _isAdminUser==='function'&&_isAdminUser()){
+    var lv=parseInt(lk.value,10);if(!isNaN(lv)&&lv>=-1)p.lockMin=lv;
+  }
   _appPrefsSet(p);
   closeModal('m-modules-vis');
   if(typeof toast==='function')toast('✓ ההגדרות נשמרו');

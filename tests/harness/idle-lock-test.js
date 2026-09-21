@@ -304,6 +304,9 @@ window.supabase = { createClient: function () {
     const r = await p.evaluate((k) => {
       const sel = document.getElementById('mvis-lock');
       if (!sel) return { missing: true };
+      // The delay is the manager's to set (section 10), so this case has to be
+      // the manager to be about the setting rather than about the gate.
+      window._currentUser = { username: 'admin' };
       _modVisOpen();
       const shown = sel.value;
       sel.value = '120';
@@ -317,6 +320,38 @@ window.supabase = { createClient: function () {
     check('...and «never» is one of the choices', (r.opts || []).indexOf('0') >= 0, r.opts);
     check('...and so is «every open»', (r.opts || []).indexOf('-1') >= 0, r.opts);
     check('changing it saves and takes effect', r.saved === 120 && r.mins === 120, r);
+    await p.close();
+  }
+
+  console.log('\n10. the delay is the manager\'s to set, not each user\'s');
+  {
+    // Every role can open the display-settings screen, and the lock lives in
+    // it. Without a gate, any user could set their own device to «never» and
+    // quietly opt out of the rule the manager had just made.
+    const p = await boot({ idleMin: 1, lockMin: null });
+    const r = await p.evaluate(() => {
+      const out = {};
+      window._currentUser = { username: 'admin' };
+      _modVisOpen();
+      out.admin = getComputedStyle(document.getElementById('mvis-lock-row')).display !== 'none';
+      closeModal('m-modules-vis');
+      window._currentUser = { username: 'yos', role: 'מדווח' };
+      _modVisOpen();
+      out.reporter = getComputedStyle(document.getElementById('mvis-lock-row')).display !== 'none';
+      // Hiding a control is not refusing the value it carries: a reporter who
+      // reaches the field anyway must still not be able to save it.
+      document.getElementById('mvis-lock').value = '0';
+      _modVisSaveFromUI();
+      out.after = _lockMinutes();
+      window._currentUser = { username: 'dani', role: 'מנהל' };
+      _modVisOpen();
+      out.manager = getComputedStyle(document.getElementById('mvis-lock-row')).display !== 'none';
+      return out;
+    });
+    check('the admin sets it', r.admin, r);
+    check('...a reporter is not shown it', !r.reporter, r);
+    check('...nor is a manager', !r.manager, r);
+    check('...and a value sent anyway is refused (still ' + r.after + ')', r.after === -1, r);
     await p.close();
   }
 
