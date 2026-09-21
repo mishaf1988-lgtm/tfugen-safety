@@ -11,7 +11,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.route('**/*', (r) => r.request().url().startsWith('file://') ? r.continue() : r.abort());
   await page.goto(HTML, { waitUntil: 'load' }); await page.waitForTimeout(800);
   const l = await page.evaluate(() => { const b = document.getElementById('login-emp-btn'); return { txt: b.textContent.replace(/\s+/g, ' ').trim(), vis: getComputedStyle(b).display !== 'none', quick: /דיווח מהיר/.test(document.getElementById('login').textContent) }; });
-  check('login screen: the no-password button now reads 🦺 דיווח נאמני בטיחות (ללא סיסמה); "דיווח מהיר" is gone', /🦺 דיווח נאמני בטיחות \(ללא סיסמה\)/.test(l.txt) && l.vis && !l.quick, l);
+  // Until 2026-09-21 the label promised «(ללא סיסמה)». There is a shared code
+  // in front of the trustee screen now, so the promise came off the button.
+  check('login screen: the trustee button reads 🦺 דיווח נאמני בטיחות, with no "no password" promise; "דיווח מהיר" is gone',
+    /🦺 דיווח נאמני בטיחות/.test(l.txt) && !/ללא סיסמה/.test(l.txt) && l.vis && !l.quick, l);
   await page.screenshot({ path: OUT + '/login-375.png' });
   const m = await page.evaluate(() => { const lg = document.getElementById('login'); lg.style.display = 'none'; document.getElementById('app').style.display = 'block'; window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); const more = document.querySelector('.topbar [onclick*="_topMoreMenu"], .topbar [onclick*="MoreMenu"], #more-btn, [id*="more"]'); return { hasMore: !!more, id: more && more.id, oc: more && more.getAttribute('onclick') }; });
   const items = await page.evaluate(() => { const btn = Array.from(document.querySelectorAll('.topbar button')).find(b => /⋯|…/.test(b.textContent)); if (!btn) return null; btn.click(); const its = Array.from(document.querySelectorAll('div[style*="z-index:9999"] button, div[style*="z-index: 9999"] button')).map(b => b.textContent.trim()); document.body.click(); return its; });

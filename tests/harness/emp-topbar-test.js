@@ -14,7 +14,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.route('**/*', (r) => { const u = r.request().url(); if (/\/logo\.jpg$/.test(u)) return r.fulfill({ status: 200, contentType: 'image/jpeg', body: LOGO }); return u.startsWith('file://') ? r.continue() : r.abort(); });
   await page.goto(HTML, { waitUntil: 'load' }); await page.waitForTimeout(800);
   const vis = (sel) => page.evaluate((sel) => { const el = document.querySelector(sel); if (!el) return 'missing'; const r = el.getBoundingClientRect(); return getComputedStyle(el).display !== 'none' && r.width > 0 ? 'visible' : 'hidden'; }, sel);
-  await page.evaluate(() => { localStorage.removeItem('tfgn_trustee_name'); window.sbGet = () => Promise.resolve(null); doEmpLogin(); });
+  // The trustee screen sits behind a shared code since 2026-09-21; a phone
+  // that remembers it goes straight in, which is the state this case wants.
+  await page.evaluate(() => { localStorage.removeItem('tfgn_trustee_name'); localStorage.setItem('tfgn_emp_code', 'RIGHT'); window.sbGet = () => Promise.resolve(null); doEmpLogin(); });
   await page.waitForTimeout(300);
   const e = { actions: await vis('.topbar-actions'), menu: await vis('#menu-btn'), home: await vis('#home-btn'), notif: await vis('#notif-btn'), tasks: await vis('#my-tasks-btn'), more: await vis('#more-menu-btn'), logo: await page.evaluate(() => { const r = document.querySelector('.topbar-left img').getBoundingClientRect(); return { h: Math.round(r.height), cx: Math.round(r.left + r.width / 2) }; }) };
   check('trustee mode: menu / home / notifications / my-tasks / ⋯ are all gone', e.actions !== 'visible' && e.menu !== 'visible' && e.home !== 'visible' && e.notif !== 'visible' && e.tasks !== 'visible' && e.more !== 'visible', e);
@@ -22,7 +24,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const click = await page.evaluate(() => { window.scrollTo(0, 400); const before = CUR; document.querySelector('.topbar-left').click(); return { before, after: CUR, y: window.scrollY }; });
   check('tapping the logo in trustee mode just scrolls to the top, does not navigate', click.before === 'emp-home' && click.after === 'emp-home' && click.y === 0, click);
   await page.screenshot({ path: OUT + '/emp-topbar-375.png', clip: { x: 0, y: 0, width: 375, height: 140 } });
-  await page.evaluate(() => { document.body.classList.remove('emp-mode'); localStorage.removeItem('tfgn_emp_mode'); window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); });
+  await page.evaluate(() => { document.body.classList.remove('emp-mode'); localStorage.removeItem('tfgn_emp_mode'); localStorage.removeItem('tfgn_emp_code'); window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('dash'); });
   await page.waitForTimeout(200);
   const m = { actions: await vis('.topbar-actions'), menu: await vis('#menu-btn'), home: await vis('#home-btn'), search: await vis('#gsearch-btn'), more: await vis('#more-menu-btn'), logoH: await page.evaluate(() => Math.round(document.querySelector('.topbar-left img').getBoundingClientRect().height)), nav: await page.evaluate(() => { goPage('tasks'); document.querySelector('.topbar-left').click(); return CUR; }) };
   // 🔍 moved into the ☰ sheet in favour of 🏠 (Michael's call) — home-button-test covers both.

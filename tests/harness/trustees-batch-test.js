@@ -278,6 +278,10 @@ const OTHER = 'דנה לוי';
       const last = (function () { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })();
       try {
         localStorage.setItem('tfgn_emp_mode', '1');
+        // Since 2026-09-21 the trustee screen sits behind a shared code the
+        // phone remembers. A return visit without it gets the code screen,
+        // not the home -- which is right, and not what this case is about.
+        localStorage.setItem('tfgn_emp_code', 'RIGHT');
         localStorage.setItem('tfgn_trustee_name', me);
         localStorage.setItem('tfgn2', JSON.stringify({
           trustee_reports: [{ id: 'b1', u: me, t: 6, d: last + '-28', ts: last + '-28T09:00:00Z', ok: false, s: 'פתוח', loc: 'אולם טיגון', f: 'מגן על מסוע 3 הוסר' }],
@@ -315,7 +319,7 @@ const OTHER = 'דנה לוי';
     check('the cached report survived the reload', r.reports === 1, r.reports);
     check('and last month’s open finding is reachable on this boot too', r.hasOlder, r);
 
-    await page.evaluate(() => { try { localStorage.removeItem('tfgn_emp_mode'); localStorage.removeItem('tfgn2'); localStorage.removeItem('tfgn_trustee_name'); } catch (e) {} });
+    await page.evaluate(() => { try { localStorage.removeItem('tfgn_emp_mode'); localStorage.removeItem('tfgn_emp_code'); localStorage.removeItem('tfgn2'); localStorage.removeItem('tfgn_trustee_name'); } catch (e) {} });
   }
 
   await browser.close();
