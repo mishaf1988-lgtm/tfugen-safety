@@ -97,7 +97,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
   console.log('\n5. every export goes through it');
   {
-    const src = require('fs').readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
+    let src = require('fs').readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
+    // The script injected into each generated report carries its own tiny
+    // download, for the PDF it builds there. That is a different document and
+    // a different code path; strip it before counting the app's own.
+    src = src.replace(/<script>function _rptMsg[\s\S]*?<\\\/script>/g, '');
     // One a.download is allowed: the one inside _saveFileDownload itself.
     const left = (src.match(/a\.download=/g) || []).length;
     check('no export still builds its own download link (' + left + ' left, the helper)', left === 1, left);
