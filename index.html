@@ -14949,8 +14949,49 @@ window._printPage=function(){
   on.insertBefore(hdr,on.firstChild);
   var cleanup=function(){if(hdr.parentNode)hdr.parentNode.removeChild(hdr);window.removeEventListener('afterprint',cleanup);};
   window.addEventListener('afterprint',cleanup);
+  // iOS does not give a home-screen web app a print dialog: window.print() is
+  // a no-op there, silently. Michael installed the app on 2026-09-21 and the
+  // button stopped doing anything the same day -- from inside Safari it had
+  // always worked. So in standalone mode the page is written into a new window
+  // instead, which iOS opens in Safari, where Share -> Print reaches the PDF.
+  if(_printStandalone()){
+    if(_printViaWindow(on,hdr,title)){toast('\u05e0\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9. \u05dc\u05d7\u05e5 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 «\u05d4\u05d3\u05e4\u05e1» \u05db\u05d3\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 PDF');}
+    cleanup();
+    return;
+  }
   setTimeout(function(){window.print();setTimeout(cleanup,2000);},80);
 };
+// True when the app is running from the home screen rather than in a browser
+// tab. navigator.standalone is the iOS signal; display-mode covers the rest.
+function _printStandalone(){
+  try{
+    if(window.navigator&&window.navigator.standalone===true)return true;
+    if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)return true;
+  }catch(e){}
+  return false;
+}
+// The current page, on its own, in a window that can be printed. Every <style>
+// in the document comes along, so the print rules that hide the chrome still
+// apply; the header built above is carried in as markup rather than left
+// behind in the app.
+function _printViaWindow(on,hdr,title){
+  var w;
+  try{w=window.open('','_blank');}catch(e){w=null;}
+  if(!w){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d7\u05dc\u05d5\u05df \u05d4\u05d3\u05e4\u05e1\u05d4. \u05d0\u05e4\u05e9\u05e8\u05d5 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05d5\u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1');return false;}
+  var css='';
+  try{document.querySelectorAll('style').forEach(function(st){css+=(st.textContent||'');});}catch(e){}
+  var hdrHtml='';
+  try{hdrHtml=hdr?hdr.outerHTML.replace('display:none','display:block'):'';}catch(e){}
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<title>'+esc(title)+'</title><style>'+css
+    +'body{margin:0;padding:12px;background:#fff}'
+    +'.page{display:block!important}'
+    +'.topbar,.bnav,.fab,.no-print,.modal,.overlay,#ai-fab,#emp-fab{display:none!important}'
+    +'</style></head><body>'+hdrHtml+on.innerHTML+'</body></html>';
+  try{w.document.open();w.document.write(html);w.document.close();}
+  catch(e){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4');return false;}
+  return true;
+}
 window._viewCopy=function(tbl,id){
   try{
     var cfg=VIEW_CONFIG[tbl];if(!cfg)return;
