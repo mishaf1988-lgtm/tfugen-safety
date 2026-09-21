@@ -711,7 +711,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
     <a onclick="_openForgotPwModal()" style="display:block;margin-top:8px;font-size:12px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
     <div class="login-sep">&#1488;&#1493;</div>
-    <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">&#129466;</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; (&#1500;&#1500;&#1488; &#1505;&#1497;&#1505;&#1502;&#1492;)</button>
+    <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">🦺</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
   </div>
 </div>
@@ -746,6 +746,17 @@ body.emp-mode #emp-mode-badge{display:inline-block}
      MUST live OUTSIDE #app — that container is display:none until login
      completes, so anything inside it can't render before the modal needs
      to fire. -->
+<div class="overlay" id="ov-emp-gate" style="display:none;z-index:2999"></div>
+<div class="modal" id="m-emp-gate" style="display:none;max-width:380px;z-index:3000">
+  <div class="modal-title">&#129466; &#1499;&#1504;&#1497;&#1505;&#1514; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+  <div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:12px">&#1492;&#1494;&#1497;&#1504;&#1493; &#1488;&#1514; &#1492;&#1511;&#1493;&#1491; &#1513;&#1511;&#1497;&#1489;&#1500;&#1514;&#1501; &#1502;&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;. &#1502;&#1494;&#1497;&#1504;&#1497;&#1501; &#1508;&#1506;&#1501; &#1488;&#1495;&#1514;, &#1492;&#1496;&#1500;&#1508;&#1493;&#1503; &#1494;&#1493;&#1499;&#1512;.</div>
+  <div class="field fw"><label>&#1511;&#1493;&#1491; &#1499;&#1504;&#1497;&#1505;&#1492;</label>
+    <input id="emp-gate-code" type="password" autocomplete="off" autocapitalize="off" inputmode="text" style="font-size:18px;letter-spacing:2px;text-align:center;direction:ltr">
+  </div>
+  <div id="emp-gate-err" style="min-height:18px;font-size:12px;color:#b91c1c;margin:6px 0"></div>
+  <button type="button" id="emp-gate-btn" class="btn" onclick="_empGateSubmit()" style="width:100%;padding:12px;font-size:15px;font-weight:900">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+  <button type="button" class="btn btn-sec" onclick="_empGateCancel()" style="width:100%;margin-top:8px">&#1495;&#1494;&#1512;&#1492;</button>
+</div>
 <div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
 <div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
   <div class="modal-title">&#128274; &#1492;&#1490;&#1491;&#1512;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
@@ -17473,17 +17484,83 @@ function empToggle(on){
     }
   }
 }
+// ---- The shared code on the trustee screen ------------------------------
+// One code for everybody, by Michael's choice on 2026-09-21, told that it is
+// a curtain and not a lock. The code is never in this file: what was typed
+// goes to /api/trustee-gate, and the phone remembers it only once the server
+// said yes. Every later open re-checks it in the background, so changing
+// the code in Cloudflare signs every phone out. A phone with no signal
+// still opens -- a trustee on the floor with no reception is who the
+// offline outbox exists for -- and is checked the next time it has one.
+var _EMP_GATE_KEY='tfgn_emp_code';
+var _empGateNext=null;
+function _empGateStored(){try{return localStorage.getItem(_EMP_GATE_KEY)||'';}catch(e){return '';}}
+function _empGateForget(){try{localStorage.removeItem(_EMP_GATE_KEY);}catch(e){}}
+function _empGateAsk(code){
+  return fetch('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
+    .then(function(r){return r.json().catch(function(){return {};}).then(function(j){return {status:r.status,ok:r.ok,data:j};});});
+}
+function _empGateShow(){
+  var ov=g('ov-emp-gate'),m=g('m-emp-gate');
+  if(ov)ov.style.display='block';if(m)m.style.display='block';
+  var err=g('emp-gate-err');if(err)err.textContent='';
+  var inp=g('emp-gate-code');if(inp){inp.value='';setTimeout(function(){try{inp.focus();}catch(e){}},120);}
+}
+function _empGateHide(){
+  var ov=g('ov-emp-gate'),m=g('m-emp-gate');
+  if(ov)ov.style.display='none';if(m)m.style.display='none';
+}
+function _empGateCancel(){
+  _empGateHide();_empGateNext=null;
+  // Back to the login screen: there is nothing to show behind the curtain.
+  try{localStorage.removeItem(EMP_KEY);}catch(e){}
+  document.body.classList.remove('emp-mode');
+  var app=g('app');if(app)app.style.display='none';
+  var ls=g('login');if(ls)ls.style.display='flex';
+}
+function _empGateSubmit(){
+  var inp=g('emp-gate-code'),btn=g('emp-gate-btn'),err=g('emp-gate-err');
+  var code=inp?String(inp.value||'').trim():'';
+  if(!code){if(err)err.textContent='\u05d4\u05d6\u05d9\u05e0\u05d5 \u05e7\u05d5\u05d3';return;}
+  if(btn){btn.disabled=true;btn.textContent='\u05d1\u05d5\u05d3\u05e7...';}
+  _empGateAsk(code).then(function(r){
+    if(btn){btn.disabled=false;btn.textContent='\u05db\u05e0\u05d9\u05e1\u05d4';}
+    if(r.ok){
+      try{localStorage.setItem(_EMP_GATE_KEY,code);}catch(e){}
+      _empGateHide();var nx=_empGateNext;_empGateNext=null;if(nx)nx();return;
+    }
+    if(inp)inp.value='';
+    if(err)err.textContent=(r.data&&r.data.message)||(r.status===503?'\u05d4\u05e7\u05d5\u05d3 \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d4 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.':'\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9');
+  }).catch(function(){
+    if(btn){btn.disabled=false;btn.textContent='\u05db\u05e0\u05d9\u05e1\u05d4';}
+    if(err)err.textContent='\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05db\u05e9\u05d9\u05e9 \u05e7\u05dc\u05d9\u05d8\u05d4.';
+  });
+}
+// Runs `next` once the phone is allowed through. With a remembered code it
+// runs at once and the check happens behind it; only a definite refusal
+// (403) takes the screen away again. No answer at all -- no signal -- does
+// not, because that is a working phone with no reception, not an intruder.
+function _empGate(next){
+  var stored=_empGateStored();
+  if(!stored){_empGateNext=next;_empGateShow();return;}
+  next();
+  _empGateAsk(stored).then(function(r){
+    if(r.status===403){_empGateForget();_empGateNext=next;_empGateShow();}
+  }).catch(function(){});
+}
 function doEmpLogin(){
   _isAdmin=false;
   try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
   document.body.classList.add('emp-mode');
   var ls=g('login');if(ls)ls.style.display='none';
   var app=g('app');if(app)app.style.display='block';
-  _sbAuth().catch(function(){});
-  ldb();CUR='emp-home';
-  if(typeof _truEmpHome==='function')_truEmpHome(true);
-  SB_ON=true;_obDrain();
-  if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
+  _empGate(function(){
+    _sbAuth().catch(function(){});
+    ldb();CUR='emp-home';
+    if(typeof _truEmpHome==='function')_truEmpHome(true);
+    SB_ON=true;_obDrain();
+    if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
+  });
 }
 function empToast(msg){
   var t=g('emp-toast');if(!t)return;
@@ -17644,9 +17721,11 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       // every time a trustee REOPENS the saved link or the installed PWA \u2014 did
       // not. pg-emp-home is shown by CSS, so the page appeared, but tru-only was
       // never applied and _truRender never ran: an empty screen on every return.
-      if(typeof _truEmpHome==='function')_truEmpHome(true);
-      SB_ON=true;_obDrain();_rtStart();
-      if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
+      _empGate(function(){
+        if(typeof _truEmpHome==='function')_truEmpHome(true);
+        SB_ON=true;_obDrain();_rtStart();
+        if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
+      });
     }else{
       showLogin();
     }

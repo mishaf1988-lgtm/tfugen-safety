@@ -65,7 +65,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('report form picker: active roster (גלינה, מוסא), not the deactivated לב/עזב, past reporters, then "אחר" with a free-text input', p.opts.includes('גלינה') && p.opts.includes('מוסא') && !p.opts.includes('לב') && !p.opts.includes('עזב') && p.opts[p.opts.length - 1] === '__other__' && p.otherHidden && p.otherShown && p.val === 'אורח', p);
   const e = await page.evaluate(() => {
     localStorage.removeItem('tfgn_trustee_name'); window.sbGet = () => Promise.resolve(null);
-    document.body.classList.remove('emp-mode'); doEmpLogin();
+    document.body.classList.remove('emp-mode');
+    // a phone that already knows the shared code (2026-09-21) goes straight in
+    try { localStorage.setItem('tfgn_emp_code', 'RIGHT'); } catch (e) {}
+    doEmpLogin();
     const opts = Array.from(document.querySelectorAll('#tru-me option')).map(o => o.value);
     document.getElementById('tru-me').value = 'גלינה'; _truMeChanged('גלינה');
     const stored = localStorage.getItem('tfgn_trustee_name'); const score = document.querySelector('#tru-score .n').textContent;

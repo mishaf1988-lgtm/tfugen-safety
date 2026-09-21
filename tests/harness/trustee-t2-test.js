@@ -28,6 +28,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.__server = [{ id: 'srv1', u: 'יוסי', m: new Date().toISOString().substring(0, 7), t: 5, d: new Date().toISOString().substring(0, 10), ok: true, s: 'תקין', ts: '2026-09-01T08:00:00Z' }];
     window.__roster = [{ id: 'tru_01', n: 'לב', dep: 'ייצור ואריזה', active: true }, { id: 'tru_09', n: 'ישן', active: false }];
     window.__pulls = 0; window.sbGet = function (t) { if (t === 'trustee_reports') window.__pulls++; return Promise.resolve(t === 'trustee_reports' ? JSON.parse(JSON.stringify(window.__server)) : (t === 'trustees' ? JSON.parse(JSON.stringify(window.__roster)) : null)); };
+    // a phone that already knows the shared code (2026-09-21) goes straight in
+    try { localStorage.setItem('tfgn_emp_code', 'RIGHT'); } catch (e) {}
     doEmpLogin();
     const home = document.getElementById('pg-emp-home'); const intro = document.getElementById('tru-intro');
     return { emp: document.body.classList.contains('emp-mode'), cur: CUR, only: home.classList.contains('tru-only'), back: getComputedStyle(document.getElementById('tru-back-btn')).display, toggle: getComputedStyle(home.querySelector('.emp-toggle')).display, introOpen: intro.open, introTxt: intro.textContent.replace(/\s+/g, ' ') };
