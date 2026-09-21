@@ -749,7 +749,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div class="overlay" id="ov-emp-gate" style="display:none;z-index:2999"></div>
 <div class="modal" id="m-emp-gate" style="display:none;max-width:380px;z-index:3000">
   <div class="modal-title">&#129466; &#1499;&#1504;&#1497;&#1505;&#1514; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
-  <div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:12px">&#1492;&#1494;&#1497;&#1504;&#1493; &#1488;&#1514; &#1492;&#1511;&#1493;&#1491; &#1513;&#1511;&#1497;&#1489;&#1500;&#1514;&#1501; &#1502;&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;. &#1502;&#1494;&#1497;&#1504;&#1497;&#1501; &#1508;&#1506;&#1501; &#1488;&#1495;&#1514;, &#1492;&#1496;&#1500;&#1508;&#1493;&#1503; &#1494;&#1493;&#1499;&#1512;.</div>
+  <div style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:12px">&#1492;&#1494;&#1497;&#1504;&#1493; &#1488;&#1514; &#1492;&#1511;&#1493;&#1491; &#1513;&#1511;&#1497;&#1489;&#1500;&#1514;&#1501; &#1502;&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.</div>
   <div class="field fw"><label>&#1511;&#1493;&#1491; &#1499;&#1504;&#1497;&#1505;&#1492;</label>
     <input id="emp-gate-code" type="password" autocomplete="off" autocapitalize="off" inputmode="text" style="font-size:18px;letter-spacing:2px;text-align:center;direction:ltr">
   </div>
@@ -17508,6 +17508,16 @@ function empToggle(on){
 // offline outbox exists for -- and is checked the next time it has one.
 var _EMP_GATE_KEY='tfgn_emp_code';
 var _empGateNext=null;
+// Set once the code has been accepted in THIS page load. When the plant policy
+// says not to remember, this is all that is kept: the trustee is not asked
+// again while they are still using the app, and the next open starts over.
+var _empGateOk=false;
+// Coming back from a camera or a share sheet is not coming back tomorrow. The
+// same minute the manager's lock uses -- and, unlike it, a trustee in the
+// middle of a form is never interrupted, because that form is a hazard report
+// with a photo in it and losing it loses the report.
+var _EMP_GATE_GRACE_MS=60*1000;
+var _empGateSeen=0;
 function _empGateStored(){try{return localStorage.getItem(_EMP_GATE_KEY)||'';}catch(e){return '';}}
 function _empGateForget(){try{localStorage.removeItem(_EMP_GATE_KEY);}catch(e){}}
 function _empGateAsk(code){
@@ -17540,7 +17550,11 @@ function _empGateSubmit(){
   _empGateAsk(code).then(function(r){
     if(btn){btn.disabled=false;btn.textContent='\u05db\u05e0\u05d9\u05e1\u05d4';}
     if(r.ok){
-      try{localStorage.setItem(_EMP_GATE_KEY,code);}catch(e){}
+      _empGateOk=true;_empGateSeen=Date.now();
+      // Only if the plant says so. Otherwise nothing is written down, and the
+      // next open asks again.
+      if(r.data&&r.data.remember===true){try{localStorage.setItem(_EMP_GATE_KEY,code);}catch(e){}}
+      else _empGateForget();
       _empGateHide();var nx=_empGateNext;_empGateNext=null;if(nx)nx();return;
     }
     if(inp)inp.value='';
@@ -17557,11 +17571,38 @@ function _empGateSubmit(){
 function _empGate(next){
   var stored=_empGateStored();
   if(!stored){_empGateNext=next;_empGateShow();return;}
+  _empGateOk=true;_empGateSeen=Date.now();
   next();
   _empGateAsk(stored).then(function(r){
-    if(r.status===403){_empGateForget();_empGateNext=next;_empGateShow();}
+    if(r.status===403){_empGateForget();_empGateOk=false;_empGateNext=next;_empGateShow();}
+    else if(r.ok&&r.data&&r.data.remember!==true){
+      // The policy changed under a phone that had been allowed to remember.
+      // It keeps this session and is asked on the next open, like everyone else.
+      _empGateForget();
+    }
   }).catch(function(){});
 }
+// Coming back to a trustee screen that is not allowed to remember the code.
+// A form that is open is a hazard report being written, with a photo already
+// attached: it is never taken away.
+function _empGateResume(){
+  if(_isAdmin||!empIsOn()||!_empGateOk)return;
+  if(_empGateStored())return;                       // remembering is allowed here
+  if(Date.now()-_empGateSeen<=_EMP_GATE_GRACE_MS){_empGateSeen=Date.now();return;}
+  try{
+    var busy=[].slice.call(document.querySelectorAll('.modal')).some(function(m){
+      return m.id!=='m-emp-gate'&&getComputedStyle(m).display!=='none';});
+    if(busy){_empGateSeen=Date.now();return;}
+  }catch(e){}
+  _empGateOk=false;
+  var app=g('app');if(app)app.style.display='none';
+  _empGateNext=function(){var a2=g('app');if(a2)a2.style.display='block';};
+  _empGateShow();
+}
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden)_empGateResume();
+});
+window.addEventListener('focus',_empGateResume);
 function doEmpLogin(){
   _isAdmin=false;
   try{localStorage.setItem(EMP_KEY,'1');}catch(e){}

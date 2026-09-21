@@ -61,5 +61,12 @@ export async function onRequest({ request, env }) {
       message: 'קוד שגוי'
     }, 403, cors);
   }
-  return jsonResp({ ok: true }, 200, cors);
+  // Michael, 2026-09-21: «אני רוצה הזנה של קוד כל פעם מחדש». Whether the phone
+  // may remember the code is a plant policy, not a per-phone preference, so it
+  // is decided here and obeyed there. Default is to ask every time, which is
+  // what he asked for; TRUSTEE_REMEMBER=1 in Cloudflare turns remembering back
+  // on without a code change, because the cost of this lands on people who do
+  // not report yet and he may want it back.
+  const remember = String(env.TRUSTEE_REMEMBER || '') === '1';
+  return jsonResp({ ok: true, remember }, 200, cors);
 }
