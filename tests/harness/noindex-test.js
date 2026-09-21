@@ -25,12 +25,17 @@ console.log('\n1. robots.txt exists and says no');
   const body = (r || '').split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
   check('it applies to every crawler', /User-agent:\s*\*/i.test(body), body);
   check('...and disallows the whole site', /Disallow:\s*\/\s*$/im.test(body), body);
-  // Cloudflare Pages serves it statically only if the functions router does
-  // not claim it. _routes.json include list is what decides.
+  // Since the geo gate landed, EVERY path is routed through Functions, so
+  // "the router does not claim it" is no longer the right question -- the
+  // middleware claims it and hands it on. What still has to be true is that
+  // something hands it on. That is asserted for real, against the running
+  // middleware, in geo-gate-test; here we only check the two agree.
   let routes = null;
   try { routes = JSON.parse(read('_routes.json')); } catch (e) {}
-  const claimed = (routes && routes.include || []).filter((p) => p === '/*' || p === '/robots.txt');
-  check('and the function router does not swallow it', claimed.length === 0, routes && routes.include);
+  const all = (routes && routes.include || []).indexOf('/*') >= 0;
+  const mw = read('functions/_middleware.js');
+  check('if the router claims every path, a middleware exists to pass files on',
+    !all || (mw && /next\(\)/.test(mw)), { include: routes && routes.include, middleware: !!mw });
 }
 
 console.log('\n2. the page itself carries noindex');
