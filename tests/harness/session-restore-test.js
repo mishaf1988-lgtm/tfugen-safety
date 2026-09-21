@@ -61,7 +61,11 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // case here to the login screen and prove nothing about the restore. This
     // suite is about the restore, so it runs under the timed lock.
     await p.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); } catch (e) {} });
-    if (o.emp) await p.addInitScript((k) => { try { localStorage.setItem(k, '1'); } catch (e) {} }, EMP_KEY);
+    // Since 2026-09-21 the trustee screen sits behind a shared code. A phone
+    // without it gets the code screen, which is correct and is covered in
+    // trustee-gate-client-test; this case is about the restore, so the phone
+    // arrives already knowing the code.
+    if (o.emp) await p.addInitScript((k) => { try { localStorage.setItem(k, '1'); localStorage.setItem('tfgn_emp_code', 'RIGHT'); } catch (e) {} }, EMP_KEY);
     if (o.db) await p.addInitScript((d) => { try { localStorage.setItem('tfgn2', JSON.stringify(d)); } catch (e) {} }, o.db);
     await p.route('**/*', async (r) => {
       const u = r.request().url();

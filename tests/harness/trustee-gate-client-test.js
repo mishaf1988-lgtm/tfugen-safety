@@ -82,7 +82,9 @@ window.supabase = { createClient: function () { return { auth: {
     const s = await state(p);
     check('the code screen is up', s.gate !== 'none', s);
     check('...and nothing was remembered yet', !s.stored, s.stored);
-    check('...and the login screen is not on top of it', s.login === 'none', s.login);
+    // The app used to sit behind the code screen, dimmed but readable, showing
+    // a shell no trustee ever sees. The guide screenshot is what showed it.
+    check('...with nothing of the app showing behind it', s.app === 'none', s.app);
     await p.close();
   }
 
@@ -160,8 +162,17 @@ window.supabase = { createClient: function () { return { auth: {
     await p.waitForTimeout(300);
     const s = await state(p);
     check('pressing it asks for the code', s.gate !== 'none', s);
+    // btn alone has no background of its own and falls back to the browser's
+    // grey, which on a phone reads as a disabled button. The guide screenshot
+    // is what showed it.
+    const styled = await p.evaluate(() => {
+      const bg = getComputedStyle(document.getElementById('emp-gate-btn')).backgroundColor;
+      const m = bg.match(/\d+/g) || [];
+      return { bg, red: Number(m[0]) > 150 && Number(m[1]) < 90 && Number(m[2]) < 90 };
+    });
+    check('...and the entry button looks like the primary action, not a disabled one', styled.red, styled);
     check('...and going back returns to the login screen', true);
-    await p.click('#m-emp-gate .btn-sec');
+    await p.click('#m-emp-gate .btn-s');
     await p.waitForTimeout(200);
     const back = await state(p);
     check('back: login screen, no trustee mode left behind', back.login !== 'none' && !back.emp && back.gate === 'none', back);

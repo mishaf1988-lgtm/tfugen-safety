@@ -754,8 +754,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="emp-gate-code" type="password" autocomplete="off" autocapitalize="off" inputmode="text" style="font-size:18px;letter-spacing:2px;text-align:center;direction:ltr">
   </div>
   <div id="emp-gate-err" style="min-height:18px;font-size:12px;color:#b91c1c;margin:6px 0"></div>
-  <button type="button" id="emp-gate-btn" class="btn" onclick="_empGateSubmit()" style="width:100%;padding:12px;font-size:15px;font-weight:900">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
-  <button type="button" class="btn btn-sec" onclick="_empGateCancel()" style="width:100%;margin-top:8px">&#1495;&#1494;&#1512;&#1492;</button>
+  <button type="button" id="emp-gate-btn" class="btn btn-p" onclick="_empGateSubmit()" style="width:100%;padding:12px;font-size:15px;font-weight:900">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+  <button type="button" class="btn btn-s" onclick="_empGateCancel()" style="width:100%;margin-top:8px">&#1495;&#1494;&#1512;&#1492;</button>
 </div>
 <div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
 <div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
@@ -17566,9 +17566,12 @@ function doEmpLogin(){
   _isAdmin=false;
   try{localStorage.setItem(EMP_KEY,'1');}catch(e){}
   document.body.classList.add('emp-mode');
-  var ls=g('login');if(ls)ls.style.display='none';
-  var app=g('app');if(app)app.style.display='block';
+  // The app stays hidden until the code passes. It used to appear behind the
+  // code screen, dimmed but readable, and what showed through was the shell a
+  // trustee never sees. Found by looking at the guide screenshot.
   _empGate(function(){
+    var ls=g('login');if(ls)ls.style.display='none';
+    var app=g('app');if(app)app.style.display='block';
     _sbAuth().catch(function(){});
     ldb();CUR='emp-home';
     if(typeof _truEmpHome==='function')_truEmpHome(true);
@@ -17707,7 +17710,10 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       admin=false;
     }
     _isAdmin=admin;
-    if(admin||emp)hideLogin();
+    // The trustee branch hides it inside the gate instead: until the code
+    // passes there is nothing to show, and the login screen behind the code
+    // screen is the right backdrop rather than a blank page.
+    if(admin)hideLogin();
     if(admin){
       _sbToken=session.access_token;
       _sbAuthPromise=Promise.resolve(session);
@@ -17729,13 +17735,14 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
     }else if(emp){
       document.body.classList.add('emp-mode');
-      var app=g('app');if(app)app.style.display='block';
       ldb();CUR='emp-home';
       // doEmpLogin() builds the trustee screen; this branch \u2014 the one that runs
       // every time a trustee REOPENS the saved link or the installed PWA \u2014 did
       // not. pg-emp-home is shown by CSS, so the page appeared, but tru-only was
       // never applied and _truRender never ran: an empty screen on every return.
       _empGate(function(){
+        hideLogin();
+        var app=g('app');if(app)app.style.display='block';
         if(typeof _truEmpHome==='function')_truEmpHome(true);
         SB_ON=true;_obDrain();_rtStart();
         if(typeof rEmpRecent==='function')try{rEmpRecent();}catch(e){}
