@@ -333,8 +333,8 @@ NOTIFY pgrst, 'reload schema';
 --
 --     CREATE POLICY audit_log_admin_manager_all ON audit_log
 --       FOR ALL TO authenticated
---       USING (public.is_admin_manager())
---       WITH CHECK (public.is_admin_manager());
+--       USING (private.is_admin_manager())
+--       WITH CHECK (private.is_admin_manager());
 --
 -- `FOR ALL` כולל UPDATE ו-DELETE. זו המיגרציה היחידה שנוגעת ב-audit_log —
 -- אין אחריה שום policy שמצמצמת אותה.
@@ -364,8 +364,6 @@ NOTIFY pgrst, 'reload schema';
 -- מחליף policy אחת רחבה בשתיים צרות: קריאה למנהל/אדמין, כתיבה = INSERT בלבד.
 -- אין DROP TABLE, אין DELETE, אף שורה לא נוגעים בה.
 
-BEGIN;
-
 -- הקריאה — בדיוק כמו קודם.
 DROP POLICY IF EXISTS audit_log_admin_manager_all ON public.audit_log;
 -- גם החדש — אחרת הרצה שנייה של הקובץ נופלת על «policy already exists».
@@ -373,7 +371,7 @@ DROP POLICY IF EXISTS audit_log_admin_manager_select ON public.audit_log;
 
 CREATE POLICY audit_log_admin_manager_select ON public.audit_log
   FOR SELECT TO authenticated
-  USING (public.is_admin_manager());
+  USING (private.is_admin_manager());
 
 -- ההוספה — כל משתמש מאומת, כמו היום (policy זה כבר קיים מ-2026-04-24;
 -- נוצר כאן רק אם אינו קיים, כדי שהקובץ יהיה בטוח לחזור עליו).
@@ -390,8 +388,6 @@ BEGIN
 END $$;
 
 -- ואין policy ל-UPDATE ול-DELETE. בלי policy, RLS אוסר.
-
-COMMIT;
 
 NOTIFY pgrst, 'reload schema';
 
@@ -431,8 +427,8 @@ NOTIFY pgrst, 'reload schema';
 --   DROP POLICY IF EXISTS audit_log_admin_manager_select ON public.audit_log;
 --   CREATE POLICY audit_log_admin_manager_all ON public.audit_log
 --     FOR ALL TO authenticated
---     USING (public.is_admin_manager())
---     WITH CHECK (public.is_admin_manager());
+--     USING (private.is_admin_manager())
+--     WITH CHECK (private.is_admin_manager());
 
 
 -- ======================================================================
