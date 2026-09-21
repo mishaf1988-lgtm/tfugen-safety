@@ -52,7 +52,7 @@ window.supabase = { createClient: function () { return { auth: {
         if (o.server === 'down') return r.abort();
         if (o.server === 'unset') return r.fulfill({ status: 503, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'not configured', message: 'הקוד עדיין לא הוגדר' }) });
         if (o.server === 'wrong' || sent !== 'RIGHT') return r.fulfill({ status: 403, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'wrong code', message: 'קוד שגוי' }) });
-        return r.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ ok: true }) });
+        return r.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ ok: true, remember: !!o.remember }) });
       }
       return r.abort();
     });
@@ -100,24 +100,52 @@ window.supabase = { createClient: function () { return { auth: {
     await p.close();
   }
 
-  console.log('\n3. the right code opens the trustee screen and is remembered');
+  console.log('\n3. the right code opens the trustee screen, and is not written down');
   {
+    // Michael, 2026-09-21: «אני רוצה הזנה של קוד כל פעם מחדש». The plant policy
+    // comes from the server, and the default is not to remember.
     const p = await open({ emp: true, server: 'ok' });
     await type(p, 'RIGHT');
     const s = await state(p);
     check('the code screen is gone', s.gate === 'none', s);
     check('...the trustee screen is showing', s.emp && s.app === 'block', s);
-    check('...and the phone remembers the code', s.stored === 'RIGHT', s.stored);
+    check('...and nothing was stored on the phone', !s.stored, s.stored);
     await p.close();
   }
 
-  console.log('\n4. next time it just opens, and checks behind the screen');
+  console.log('\n3b. so the next open asks again');
   {
-    const p = await open({ emp: true, stored: 'RIGHT', server: 'ok' });
+    const p = await open({ emp: true, server: 'ok' });
     const s = await state(p);
-    check('no code screen', s.gate === 'none', s);
-    check('...straight into the trustee screen', s.emp && s.app === 'block', s);
-    check('...and the remembered code was re-checked with the server', p.__gate.length === 1 && p.__gate[0] === 'RIGHT', p.__gate);
+    check('a fresh open wants the code', s.gate !== 'none' && s.app === 'none', s);
+    await p.close();
+  }
+
+  console.log('\n4. unless the plant says the phone may remember it');
+  {
+    const p = await open({ emp: true, server: 'ok', remember: true });
+    await type(p, 'RIGHT');
+    const s = await state(p);
+    check('with remember on, the code is kept', s.stored === 'RIGHT', s.stored);
+    await p.close();
+    const p2 = await open({ emp: true, stored: 'RIGHT', server: 'ok', remember: true });
+    const s2 = await state(p2);
+    check('...and the next open goes straight in', s2.gate === 'none' && s2.emp && s2.app === 'block', s2);
+    check('...having re-checked it with the server', p2.__gate.length === 1 && p2.__gate[0] === 'RIGHT', p2.__gate);
+    await p2.close();
+  }
+
+  console.log('\n4b. turning remembering off reaches phones that already did');
+  {
+    // The policy changed under a phone that had been allowed to remember. It
+    // keeps the session it is in and is asked on the next open, like everyone.
+    // The stored code has to be one the server still ACCEPTS, or this measures
+    // a rejection instead of a policy change. It did, the first time.
+    const p = await open({ emp: true, stored: 'RIGHT', server: 'ok', remember: false });
+    await p.waitForTimeout(250);
+    const s = await state(p);
+    check('this session is not interrupted', s.app === 'block' && s.gate === 'none', s);
+    check('...but the stored code is dropped', !s.stored, s.stored);
     await p.close();
   }
 
@@ -131,12 +159,45 @@ window.supabase = { createClient: function () { return { auth: {
     await p.close();
   }
 
+  console.log('\n5b. coming back to a screen that is not allowed to remember');
+  {
+    const p = await open({ emp: true, server: 'ok' });
+    await type(p, 'RIGHT');
+    const r = await p.evaluate(async () => {
+      const out = {};
+      // Seconds away: a camera, or a share sheet. Not a departure.
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r2) => setTimeout(r2, 120));
+      out.quick = { gate: getComputedStyle(document.getElementById('m-emp-gate')).display, app: getComputedStyle(document.getElementById('app')).display };
+      // Two minutes away, with a report half written and a photo on it. The
+      // form is never taken away -- losing it loses the hazard report.
+      window._empGateSeen = Date.now() - 2 * 60 * 1000;
+      const m = document.getElementById('m-tru');
+      if (m) m.style.display = 'block';
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r2) => setTimeout(r2, 120));
+      out.busy = { gate: getComputedStyle(document.getElementById('m-emp-gate')).display };
+      if (m) m.style.display = 'none';
+      // Two minutes away with nothing open: the code again.
+      window._empGateSeen = Date.now() - 2 * 60 * 1000;
+      document.dispatchEvent(new Event('visibilitychange'));
+      await new Promise((r2) => setTimeout(r2, 120));
+      out.away = { gate: getComputedStyle(document.getElementById('m-emp-gate')).display, app: getComputedStyle(document.getElementById('app')).display };
+      return out;
+    });
+    check('a few seconds away changes nothing', r.quick.gate === 'none' && r.quick.app === 'block', r.quick);
+    check('...and a form being written is never interrupted', r.busy.gate === 'none', r.busy);
+    check('...but coming back later asks for the code', r.away.gate !== 'none' && r.away.app === 'none', r.away);
+    await p.close();
+  }
+
   console.log('\n6. no reception is not a wrong code');
   {
-    const p = await open({ emp: true, stored: 'RIGHT', server: 'down' });
+    const p = await open({ emp: true, stored: 'RIGHT', server: 'down', remember: true });
     const s = await state(p);
     check('the trustee screen opens anyway', s.gate === 'none' && s.emp && s.app === 'block', s);
     check('...and the code is kept for next time', s.stored === 'RIGHT', s.stored);
+    check('...without the server having answered at all', p.__gate.length === 1, p.__gate);
     await p.close();
   }
 

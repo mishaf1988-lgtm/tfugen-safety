@@ -42,6 +42,13 @@ console.log('\n1. the right code opens the door');
   check('...quickly, with no punishment delay', r.ms < 300, r.ms);
   const spaced = await call({ code: '  482913 ' });
   check('...and a code typed with stray spaces still works', spaced.status === 200, spaced);
+  // Whether the phone may keep the code is a plant policy, so the server says
+  // so rather than each phone deciding. Michael asked for every open to ask.
+  check('...and by default the phone is told not to remember it', r.body.remember === false, r.body);
+  const keep = await call({ code: '482913', env: { TRUSTEE_CODE: '482913', TRUSTEE_REMEMBER: '1' } });
+  check('TRUSTEE_REMEMBER=1 turns it back on without a code change', keep.body.remember === true, keep.body);
+  const other = await call({ code: '482913', env: { TRUSTEE_CODE: '482913', TRUSTEE_REMEMBER: 'yes' } });
+  check('...and only that exact value does', other.body.remember === false, other.body);
 }
 
 console.log('\n2. a wrong code is refused, and slowly');
