@@ -128,6 +128,46 @@ console.log('\n3. an anonymous session is not the same as a signed-in one');
   check('...and it does not give the anonymous session DELETE', !/FOR\s+DELETE[\s\S]{0,400}is_anonymous'\)::boolean\s*,\s*true\s*\)\s*=\s*true/i.test(scope));
 }
 
+console.log('\n3b. every Storage bucket the repo touches is scoped, not just the photos one');
+{
+  // #642 scoped `incidents-photos` and stopped there. The `backups` bucket —
+  // which the nightly cron fills with a complete dump of the database — was
+  // still `USING (bucket_id = 'backups')` and nothing more, so every
+  // authenticated session including the anonymous kiosk could download the
+  // lot. Found 2026-09-21 by get_advisors, fixed the same day.
+  //
+  // So the rule is not «the photos bucket is scoped» but «no bucket is
+  // reachable on bucket_id alone».
+  const buckets = new Set();
+  const loose = [];
+  files.forEach((f) => {
+    policies(src[f]).forEach((p) => {
+      const m = [...p.body.matchAll(/bucket_id\s*=\s*'([a-z0-9-]+)'/gi)].map((x) => x[1]);
+      if (!m.length) return;
+      m.forEach((b) => buckets.add(b));
+      // the clause that names the bucket and nothing else about WHO is asking
+      const knowsCaller = /is_anonymous|is_admin_manager|auth\.uid\(\)|tru-ph-|auth\.jwt\(\)\s*->>\s*'email'/i.test(p.body);
+      if (!knowsCaller) loose.push(f + ': ' + p.name + ' (' + m.join(',') + ')');
+    });
+  });
+  check('the repo defines Storage policies for more than one bucket', buckets.size >= 2, [...buckets]);
+  // The loose ones are history; what matters is that a migration exists that
+  // narrows each of them.
+  const fixed = fs.existsSync(path.join(MIG, '2026-09-20_storage_trustee_scope.sql'))
+             && fs.existsSync(path.join(MIG, '2026-09-21_storage_backups_scope.sql'));
+  check('...and every bucket that was reachable on bucket_id alone has a scoping migration',
+    loose.length === 0 || fixed, loose);
+  // Comments stripped first — the file EXPLAINS the fix in prose, and matching
+  // that prose would pass even with the live clause deleted. (It did.)
+  const bk = fs.existsSync(path.join(MIG, '2026-09-21_storage_backups_scope.sql'))
+    ? fs.readFileSync(path.join(MIG, '2026-09-21_storage_backups_scope.sql'), 'utf8')
+        .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n')
+    : '';
+  check('the backups bucket is scoped to a named admin, not merely to «authenticated»',
+    /is_admin_manager/.test(bk) && /is_anonymous/.test(bk),
+    'backups hold a full dump of every table');
+}
+
 console.log('\n4. a migration that has not been run says so');
 {
   // Every migration waiting on Michael. If one is ever quietly edited to look
@@ -165,6 +205,51 @@ console.log('\n4. a migration that has not been run says so');
     return /\b(DROP\s+TABLE|DROP\s+COLUMN|TRUNCATE|DELETE\s+FROM)\b/i.test(clean);
   });
   check('none of them runs a destructive statement — the rollbacks stay commented out', live.length === 0, live);
+}
+
+console.log('\n4b. no migration can fail halfway through a paste');
+{
+  // These three guards were written for RUN_ALL_PENDING.sql, the one-paste
+  // file that carried the seven migrations waiting on Michael. All seven ran
+  // on 2026-09-21, so that file and its builder are gone — but the failures
+  // they caught are not specific to it, so they live here now and apply to
+  // every migration in the folder.
+
+  // 1. The gate function moved from public to private on 2026-05-29. A file
+  //    still on the April spelling dies with «function does not exist» — which
+  //    is what happened to Michael on 2026-09-21, three lines after a DROP
+  //    POLICY had already run.
+  const CANON = '2026-05-29_canonical_is_admin_manager_function.sql';
+  const after = files.filter((f) => f > CANON && f !== 'RUN_ALL_PENDING.sql');
+  const stale = after.filter((f) => /public\.is_admin_manager/.test(
+    src[f].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n')));
+  check('no migration written after the move still calls public.is_admin_manager()', stale.length === 0, stale);
+  check('...and the canonical file defines it in private', /FUNCTION\s+private\.is_admin_manager/i.test(src[CANON] || ''));
+
+  // 2. The SQL editor wraps a paste in one transaction, so a failure rolls all
+  //    of it back. A file with its own COMMIT ends that transaction early, and
+  //    a failure after it leaves the database half-migrated with no signal.
+  const txn = files.filter((f) => f !== 'RUN_ALL_PENDING.sql')
+    .filter((f) => src[f].split('\n').some((l) => /^\s*(BEGIN|COMMIT|ROLLBACK)\s*;\s*$/i.test(l)));
+  check('no migration opens or closes a transaction of its own', txn.length === 0, txn);
+
+  // 3. Every CREATE POLICY has to be re-runnable: Postgres has no
+  //    IF NOT EXISTS for policies, so it must be dropped by name first or sit
+  //    behind a pg_policy / pg_policies check.
+  const unsafe = [];
+  files.filter((f) => f !== 'RUN_ALL_PENDING.sql').forEach((f) => {
+    const clean = src[f].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+    [...clean.matchAll(/CREATE\s+POLICY\s+"?([A-Za-z_][\w]*)"?/gi)].map((x) => x[1]).forEach((n) => {
+      const dropped = new RegExp('DROP\\s+POLICY\\s+IF\\s+EXISTS\\s+"?' + n + '"?', 'i').test(clean);
+      const guarded = /FROM\s+pg_polic(y|ies)/i.test(clean)
+        && new RegExp("(polname|policyname)\\s*=\\s*'" + n + "'", 'i').test(clean);
+      if (!dropped && !guarded) unsafe.push(f + ': ' + n);
+    });
+  });
+  // Files from before this rule existed are history; what matters is that the
+  // ones still waiting to be run are safe to paste twice.
+  const pendingUnsafe = unsafe.filter((x) => /^2026-09-2[01]_/.test(x));
+  check('every CREATE POLICY in a recent migration is re-runnable', pendingUnsafe.length === 0, pendingUnsafe);
 }
 
 console.log('\n5. a destructive statement is never silent');
