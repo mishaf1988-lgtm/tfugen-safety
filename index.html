@@ -2732,6 +2732,7 @@ id="m-ncr" style="display:none">
       <button onclick="_notifLogExport()" style="margin-top:8px;margin-left:6px;font-size:11px;background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer">&#128202; CSV</button>
     </details>
   </div>
+  <div id="wa-tpl-status" style="font-size:11px;color:var(--t2);margin:8px 0 0;line-height:1.5"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-notif')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-s" onclick="testNotif()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1500;&#1491;&#1493;&#1490;&#1502;&#1492; (hello_world)">&#129514; &#1489;&#1491;&#1497;&#1511;&#1492;</button><button class="btn btn-s" id="wa-tpl-btn" onclick="_waTemplateSubmit(this)" title="&#1502;&#1490;&#1497;&#1513; &#1500;-Meta &#1514;&#1489;&#1504;&#1497;&#1514; &#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1502;&#1504;&#1493;&#1505;&#1495;&#1514; &#1512;&#1490;&#1493;&#1506;, &#1489;&#1502;&#1511;&#1493;&#1501; &#1494;&#1493; &#1513;&#1499;&#1514;&#1493;&#1489; &#1489;&#1492; «&#1514;&#1511;&#1512;&#1497;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;»" style="background:#0d9488;color:#fff">&#128228; &#1492;&#1490;&#1513; &#1514;&#1489;&#1504;&#1497;&#1514;</button><button class="btn btn-s" onclick="testAllTriggers()" title="&#1513;&#1500;&#1495; &#1492;&#1514;&#1512;&#1488;&#1492; &#1502;&#1499;&#1500; 5 &#1492;-templates &#1488;&#1495;&#1491; &#1488;&#1495;&#1512;&#1497; &#1492;&#1513;&#1504;&#1497;" style="background:#1d4ed8;color:#fff">&#127919; &#1489;&#1491;&#1493;&#1511; &#1499;&#1493;&#1500;&#1501;</button><button class="btn btn-p" onclick="saveNotifSettings()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
@@ -11623,6 +11624,7 @@ function openNotifSettings(){
     }
   }
   openModal('m-notif');
+  if(typeof _waTemplateStatus==='function')_waTemplateStatus();
 }
 // The screen holds a recent window (see _sbLimit). The export is evidence —
 // "these notifications went out, on these dates" — so it asks the server for
@@ -11636,13 +11638,54 @@ function openNotifSettings(){
 // The server already holds the token and the account id, so this is one press.
 // `trustee-notify` prefers the new template on every send and switches to it
 // the moment Meta approves; nothing here needs to be deployed again.
+// Michael pressed the submit button and then asked "how do I know it was
+// submitted?" -- a fair question, because the answer was a toast that had
+// already gone. Meta's own status lives one GET away (wa-templates has always
+// listed templates with their review state), so the settings screen says it
+// out loud instead: not submitted / in review / approved / rejected.
+var WA_TPL_NAME='tfugen_safety_report';
+function _waTplSet(html){var b=g('wa-tpl-status');if(b)b.innerHTML=html;}
+function _waTplLabel(st){
+  var m={
+    APPROVED:['#166534','\u2713 ' + '\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05de\u05d0\u05d5\u05e9\u05e8\u05ea \u05d5\u05e4\u05e2\u05d9\u05dc\u05d4'],
+    PENDING:['#92400e','\u23f3 ' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05d5\u05d2\u05e9\u05d4 \u05d5\u05de\u05de\u05ea\u05d9\u05e0\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 Meta'],
+    IN_APPEAL:['#92400e','\u23f3 ' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05d1\u05e2\u05e8\u05e2\u05d5\u05e8 \u05de\u05d5\u05dc Meta'],
+    PENDING_DELETION:['#92400e','\u23f3 ' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05d1\u05ea\u05d4\u05dc\u05d9\u05da \u05de\u05d7\u05d9\u05e7\u05d4'],
+    REJECTED:['#b91c1c','\u2717 ' + 'Meta \u05d3\u05d7\u05ea\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d1\u05e0\u05d9\u05ea. \u05e6\u05e8\u05d9\u05da \u05dc\u05ea\u05e7\u05df \u05e0\u05d5\u05e1\u05d7 \u05d5\u05dc\u05d4\u05d2\u05d9\u05e9 \u05e9\u05d5\u05d1'],
+    PAUSED:['#b91c1c','\u2717 ' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05de\u05d5\u05e9\u05d4\u05d9\u05ea \u05d1-Meta'],
+    DISABLED:['#b91c1c','\u2717 ' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05de\u05d5\u05e9\u05d1\u05ea\u05ea \u05d1-Meta']
+  };
+  return m[st]||['#92400e','\u2753 ' + '\u05de\u05e6\u05d1 \u05dc\u05d0 \u05de\u05d5\u05db\u05e8: '+st];
+}
+function _waTemplateStatus(){
+  var box=g('wa-tpl-status');if(!box)return;
+  _waTplSet('<span style="color:var(--t3)">' + '\u05d1\u05d5\u05d3\u05e7 \u05de\u05e6\u05d1 \u05ea\u05d1\u05e0\u05d9\u05ea...' + '</span>');
+  fetch('/api/wa-templates',{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var list=(j&&j.data)||[];
+      var t=null;
+      for(var i=0;i<list.length;i++){if(list[i]&&list[i].name===WA_TPL_NAME){t=list[i];break;}}
+      if(!t){
+        _waTplSet('<span style="color:#92400e">' + '\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9\u05d4. \u05dc\u05d7\u05e5 «\u05d4\u05d2\u05e9 \u05ea\u05d1\u05e0\u05d9\u05ea» \u05db\u05d3\u05d9 \u05e9\u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d9\u05d9\u05e7\u05e8\u05d0\u05d5 «\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d7\u05d3\u05e9» \u05d1\u05de\u05e7\u05d5\u05dd «\u05ea\u05e7\u05e8\u05d9\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea».' + '</span>');
+        return;
+      }
+      var lbl=_waTplLabel(String(t.status||'').toUpperCase());
+      _waTplSet('<span style="color:'+lbl[0]+'"><b>'+lbl[1]+'</b></span>');
+    })
+    .catch(function(){
+      // Not being able to ask is not the same as "not submitted", and saying
+      // so would send him to press the button again for nothing.
+      _waTplSet('<span style="color:var(--t3)">' + '\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05de\u05e6\u05d1 \u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05db\u05e8\u05d2\u05e2' + '</span>');
+    });
+}
 function _waTemplateSubmit(btn){
   if(btn){btn.disabled=true;btn.textContent='\ud83d\udce4 ' + '\u05e9\u05d5\u05dc\u05d7...';}
   var done=function(){if(btn){btn.disabled=false;btn.innerHTML='\ud83d\udce4 ' + '\u05d4\u05d2\u05e9 \u05ea\u05d1\u05e0\u05d9\u05ea';}};
   fetch('/api/wa-templates',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:'{}'})
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
     .then(function(x){
-      done();
+      done();_waTemplateStatus();
       if(x.ok&&x.j&&x.j.already){toast('\u05d4\u05ea\u05d1\u05e0\u05d9\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1-Meta');return;}
       if(x.ok&&x.j&&x.j.ok){toast('\u05d4\u05d5\u05d2\u05e9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8. Meta \u05d1\u05d3\u05e8\u05da \u05db\u05dc\u05dc \u05e2\u05d5\u05e0\u05d4 \u05ea\u05d5\u05da \u05d3\u05e7\u05d5\u05ea \u05e2\u05d3 \u05d9\u05d5\u05dd');return;}
       var d=(x.j&&(x.j.detail||x.j.error))||'\u05e9\u05d2\u05d9\u05d0\u05d4 \u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2\u05d4';
