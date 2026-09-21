@@ -1949,6 +1949,11 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input type="checkbox" id="mvis-hc" style="margin:0">
     <span style="flex:1">&#1502;&#1510;&#1489; &#1504;&#1497;&#1490;&#1493;&#1491;&#1497;&#1493;&#1514; &#1490;&#1489;&#1493;&#1492; (&#1500;&#1488;&#1493;&#1512; &#1495;&#1497;&#1510;&#1493;&#1504;&#1497; &#1495;&#1494;&#1511;)</span>
   </label>
+  <div class="field" style="margin-bottom:10px">
+    <label style="font-size:11px;color:var(--t3);font-weight:600">&#1489;&#1511;&#1513; &#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1493;&#1489; &#1488;&#1495;&#1512;&#1497;</label>
+    <select id="mvis-lock" style="font-size:14px"><option value="15">15 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="30">30 &#1491;&#1511;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="120">&#1513;&#1506;&#1514;&#1497;&#1497;&#1501; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="720">12 &#1513;&#1506;&#1493;&#1514; &#1489;&#1500;&#1497; &#1513;&#1497;&#1502;&#1493;&#1513;</option><option value="0">&#1500;&#1506;&#1493;&#1500;&#1501; &#1500;&#1488; (&#1504;&#1513;&#1488;&#1512; &#1502;&#1495;&#1493;&#1489;&#1512;)</option></select>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1504;&#1513;&#1488;&#1512;&#1514; &#1508;&#1514;&#1493;&#1495;&#1492; &#1499;&#1500; &#1506;&#1493;&#1491; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1489;&#1492;. &#1500;&#1488; &#1495;&#1500; &#1506;&#1500; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;.</div>
+  </div>
 
   <div style="font-size:12px;color:var(--t2);font-weight:800;margin:14px 0 6px;padding-right:10px;position:relative">
     <span style="position:absolute;right:0;top:3px;width:3px;height:13px;border-radius:2px;background:var(--red)"></span>
@@ -4218,6 +4223,7 @@ window._modVisOpen=function(){
   // Default landing page + hc
   var dp=document.getElementById('mvis-default-page');if(dp)dp.value=p.defaultPage||'dash';
   var hc=document.getElementById('mvis-hc');if(hc)hc.checked=document.body.classList.contains('hc');
+  var lk=document.getElementById('mvis-lock');if(lk)lk.value=String(_lockMinutes());
   openModal('m-modules-vis');
 };
 window._modVisAll=function(on){
@@ -4235,6 +4241,10 @@ window._modVisSaveFromUI=function(){
   var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'dash';
   // High contrast
   var hc=document.getElementById('mvis-hc');if(hc)p.hc=!!hc.checked;
+  // Lock delay. 0 is a real choice (never lock), so an empty select is the
+  // only thing that falls back to the default.
+  var lk=document.getElementById('mvis-lock');
+  if(lk&&lk.value!==''){var lv=parseInt(lk.value,10);if(!isNaN(lv)&&lv>=0)p.lockMin=lv;}
   _appPrefsSet(p);
   closeModal('m-modules-vis');
   if(typeof toast==='function')toast('✓ ההגדרות נשמרו');
@@ -4246,6 +4256,75 @@ document.addEventListener('DOMContentLoaded',function(){setTimeout(_appPrefsAppl
 window._appPrefsLandingPage=function(){
   var p=_appPrefs();return p.defaultPage||'dash';
 };
+
+// ---- Idle lock ------------------------------------------------------------
+// Michael, 2026-09-21: "why does it let me into the app without a password?"
+//
+// Until that morning the app asked for the password on every single open — not
+// by design, but because a bug meant the saved session was never read. Fixing
+// the bug removed a protection nobody had meant to build and everybody had got
+// used to. He asked for it back without losing the fix, so: the session is
+// kept while the app is in use, and dropped after a spell of not being used.
+//
+// Trustees are never locked. They have no password to come back with, and a
+// locked-out trustee means a hazard goes unreported.
+window._LOCK_SEEN_KEY='tfgn_last_seen';
+window._LOCK_DEFAULT_MIN=30;
+window._lockMinutes=function(){
+  var m=_appPrefs().lockMin;
+  if(m===0)return 0;                                  // chosen: never lock
+  return (typeof m==='number'&&m>0)?m:_LOCK_DEFAULT_MIN;
+};
+window._lockStamp=function(){
+  try{localStorage.setItem(_LOCK_SEEN_KEY,String(Date.now()));}catch(e){}
+};
+// -1 is "no idea", which is not grounds to lock anyone out: the first load
+// after this ships has no stamp yet, and neither does a cleared device.
+window._lockIdleMs=function(){
+  try{
+    var v=parseInt(localStorage.getItem(_LOCK_SEEN_KEY)||'',10);
+    if(!v||isNaN(v))return -1;
+    var ms=Date.now()-v;
+    return ms<0?-1:ms;                                // a clock that went backwards proves nothing
+  }catch(e){return -1;}
+};
+window._lockExpired=function(){
+  var min=_lockMinutes();if(!min)return false;
+  var ms=_lockIdleMs();return ms>=0&&ms>min*60*1000;
+};
+// Drop the session and ask for the password. Runs both at startup and when the
+// app is resumed from the background — on iOS a home-screen app usually resumes
+// without reloading, so a startup-only check would almost never fire.
+window._lockNow=function(){
+  try{_rtStop();}catch(e){}
+  try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
+  _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
+  try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
+  var app=g('app');if(app)app.style.display='none';
+  var ls=g('login');if(ls)ls.style.display='flex';
+  var pw=g('pw');if(pw){pw.value='';setTimeout(function(){try{pw.focus();}catch(e){}},100);}
+};
+(function(){
+  var last=0;
+  function seen(force){
+    if(!_isAdmin)return;                              // the login screen and trustees keep nothing alive
+    var now=Date.now();
+    if(!force&&now-last<60000)return;                 // once a minute is enough
+    last=now;_lockStamp();
+  }
+  ['pointerdown','keydown'].forEach(function(ev){
+    document.addEventListener(ev,function(){seen(false);},true);
+  });
+  function resumed(){
+    if(_isAdmin&&_lockExpired())_lockNow();
+    else seen(true);
+  }
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){seen(true);return;}           // remember when he left
+    resumed();
+  });
+  window.addEventListener('focus',resumed);
+})();
 
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
@@ -16085,6 +16164,7 @@ function _finishLogin(lb){
   document.body.classList.remove('emp-mode');
   var ls=g('login');if(ls)ls.style.display='none';
   var app=g('app');if(app)app.style.display='block';
+  if(typeof _lockStamp==='function')_lockStamp();
   ldb();if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
   setTimeout(_fetchCurrentUserProfile,900);
 }
@@ -17526,12 +17606,21 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
   function proceed(session){
     var admin=!!(session&&session.user&&!session.user.is_anonymous&&session.user.email);
     var emp=false;try{emp=localStorage.getItem(EMP_KEY)==='1';}catch(e){}
+    // The session may still be valid and yet be too old to walk straight in on.
+    // Whoever is holding the phone gets to prove it is theirs.
+    if(admin&&typeof _lockExpired==='function'&&_lockExpired()){
+      try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
+      _sbToken=null;_sbAuthPromise=null;
+      try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
+      admin=false;
+    }
     _isAdmin=admin;
     if(admin||emp)hideLogin();
     if(admin){
       _sbToken=session.access_token;
       _sbAuthPromise=Promise.resolve(session);
       var app=g('app');if(app)app.style.display='block';
+      if(typeof _lockStamp==='function')_lockStamp();
       ldb();if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
     }else if(emp){
       document.body.classList.add('emp-mode');
