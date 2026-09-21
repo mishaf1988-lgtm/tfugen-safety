@@ -11509,7 +11509,7 @@ var NOTIF_EVENTS=[
   {key:'round_missed',     label:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u05d7\u05e1\u05e8'},
   {key:'incident_critical',label:'\u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea'},
   // Sent by the SERVER (Supabase trigger → /api/trustee-notify), so it lands with the app closed.
-  {key:'trustee_hazard',   label:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05de\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05d9\u05d9\u05d3\u05d9, \u05de\u05d4\u05e9\u05e8\u05ea'}
+  {key:'trustee_hazard',   label:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df / \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2 - \u05de\u05d9\u05d9\u05d3\u05d9, \u05de\u05d4\u05e9\u05e8\u05ea'}
 ];
 var NOTIF_CHANNELS=[
   {key:'whatsapp',label:'WhatsApp',icon:'\ud83d\udcf1'},
@@ -11601,7 +11601,7 @@ function openNotifSettings(){
     if(!logs.length){
       logBox.innerHTML='<div style="color:var(--t3);font-style:italic">— \u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df —</div>';
     }else{
-      var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea',trustee_hazard:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df'};
+      var evLbl={ncr_critical:'NCR \u05e7\u05e8\u05d9\u05d8\u05d9',task_overdue:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8',expiry_30days:'\u05ea\u05e4\u05d5\u05d2\u05d4',round_missed:'\u05e1\u05d1\u05d1 \u05d7\u05e1\u05e8',incident_critical:'\u05ea\u05e7\u05e8\u05d9\u05ea',trustee_hazard:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2'};
       var chLbl={whatsapp:'📱 \u05e0\u05e9\u05dc\u05d7',whatsapp_pending:'📱 (\u05de\u05de\u05ea\u05d9\u05df)',whatsapp_skipped:'📱 \u05d3\u05d5\u05dc\u05d2 (\u05d0\u05d9\u05df \u05e1\u05dc\u05d5\u05dc\u05e8\u05d9)',whatsapp_error:'📱 \u05e9\u05d2\u05d9\u05d0\u05d4',email_pending:'📧 (\u05de\u05de\u05ea\u05d9\u05df)',email:'\ud83d\udce7 \u05e0\u05e9\u05dc\u05d7',email_error:'\ud83d\udce7 \u05e9\u05d2\u05d9\u05d0\u05d4',inapp:'🔔'};
       var _logHtml=logs.map(function(l){
         var dt=new Date(l.ts);

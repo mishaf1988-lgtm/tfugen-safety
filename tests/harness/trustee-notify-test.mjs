@@ -6,7 +6,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 function world(opts) {
   const calls = [];
-  const st = { row: opts.row, prefs: opts.prefs, signOk: opts.signOk, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
+  const st = { row: opts.row, nm: opts.nm, prefs: opts.prefs, signOk: opts.signOk, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
   globalThis.fetch = async (url, init) => {
     const u = String(url); const method = (init && init.method) || 'GET'; const body = init && init.body ? JSON.parse(init.body) : null;
     calls.push({ u, method, body, headers: init && init.headers });
@@ -14,6 +14,10 @@ function world(opts) {
     if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false } : { error: 'bad' }, st.authOk ? 200 : 401);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'GET') return json(st.row ? [st.row] : []);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; return json([{ id: st.row.id }]); }
+    // near_miss, added 2026-09-21. Same shape of read and claim, different
+    // table and different column names -- which is the whole risk.
+    if (u.startsWith(SB + '/rest/v1/near_miss?id=eq.') && method === 'GET') return json(st.nm ? [st.nm] : []);
+    if (u.startsWith(SB + '/rest/v1/near_miss?id=eq.') && method === 'PATCH') { if (st.claimed || !st.nm || st.nm.notified_at) return json([]); st.claimed = true; return json([{ id: st.nm.id }]); }
     // The catalogue table. undefined = the 2026-09-19 migration has not run,
     // which is the state production is in today.
     if (u.startsWith(SB + '/rest/v1/trustee_tasks')) {
@@ -131,5 +135,40 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({}); const r = await onRequest({ request: req({ test: true }, { Authorization: 'Bearer good' }), env }); check('test with no recipient → 400 with a clear message', r.status === 400); }
   { const w = world({}); const j = await (await onRequest({ request: req({ test: true, email: true, email_to: 'me@tapugan.co.il' }, { Authorization: 'Bearer good' }), env: { SUPABASE_SERVICE_ROLE_KEY: 'svc' } })).json();
     check('email without RESEND_KEY says exactly what is missing', /RESEND_KEY/.test(j.email), j); }
+  // A near-miss can be filed by anyone, not just a trustee, and until today it
+  // reached nobody until the manager next opened the app. It is the same event
+  // on the floor -- something that was about to hurt somebody -- so it goes out
+  // on the same channel, to the same recipient.
+  console.log('\n4. near_miss: the second source');
+  const nmFresh = () => ({ id: 'n1', rep: 'משה לוי', descr: 'משטח כמעט נפל מהמלגזה', area: 'רציף העמסה', sev: 'גבוהה', typ: 'ציוד הרמה', d: '2026-09-21', s: 'פתוח', photo_url: null, ts: new Date().toISOString(), notified_at: null });
+  { const w = world({ nm: nmFresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env }); const j = await r.json();
+    const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
+    check('200, both channels', r.status === 200 && j.whatsapp === 'sent' && j.email === 'sent', j);
+    check('it reads near_miss, not trustee_reports', w.calls.some(c => /rest\/v1\/near_miss\?id=eq\.n1/.test(c.u)) && !w.calls.some(c => c.u.includes('trustee_reports')), w.calls.map(c => c.u));
+    // rep/descr/area, not u/f/loc. Getting this wrong sends a message with the
+    // reporter and the hazard both blank, which still looks like it worked.
+    check('the reporter, the place and the description survive the different column names',
+      /משה לוי/.test(resend.body.subject) && /רציף העמסה/.test(resend.body.html) && /משטח כמעט נפל/.test(resend.body.html), resend && resend.body.subject);
+    check('severity and type become the line under the name', /חומרה גבוהה · ציוד הרמה/.test(resend.body.html), resend && resend.body.html.substring(0, 400));
+    check('the mail is headed as a near-miss, not as a trustee finding', /כמעט ונפגע/.test(resend.body.subject) && !/ליקוי מנאמן/.test(resend.body.subject), resend && resend.body.subject);
+    // There is no approved near-miss template. Trying the trustee one first
+    // would burn a call on a guaranteed refusal.
+    check('WhatsApp goes straight to the approved incident template, one call only',
+      meta.length === 1 && meta[0].body.template.name === 'tfugen_incident_alert'
+      && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'רציף העמסה|כמעט ונפגע — משה לוי, חומרה גבוהה · ציוד הרמה|משטח כמעט נפל מהמלגזה', meta.map(m => m.body.template));
+    check('the log says near_miss, so the two are told apart afterwards', log && log.body[0].event_type === 'near_miss', log && log.body);
+    check('the claim guards the near_miss row', w.calls.some(c => c.method === 'PATCH' && /near_miss\?id=eq\.n1&notified_at=is\.null/.test(c.u)), w.calls.filter(c => c.method === 'PATCH').map(c => c.u)); }
+  { const w = world({ nm: { ...nmFresh(), notified_at: '2026-09-21T06:00:00Z' }, prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env })).json();
+    check('a near-miss already notified is not sent twice', j.skipped === 'already notified' && !w.calls.some(c => c.u.includes('graph.facebook.com')), j); }
+  { const w = world({ nm: { ...nmFresh(), sev: '', typ: '' }, prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env })).json(); const resend = w.calls.find(c => c.u.includes('resend'));
+    check('with no severity and no type it still sends, with a plain line', j.email === 'sent' && /כמעט ונפגע/.test(resend.body.html), j); }
+  // src reaches the query string. It is looked up as a key in a fixed map, so
+  // anything else must be refused rather than concatenated into a URL.
+  { const w = world({ nm: nmFresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'n1', src: 'app_users' }), env });
+    check('an unknown src is refused, and nothing is read', r.status === 400 && !w.calls.length, r.status); }
+  { const w = world({ row: fresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'r1' }), env });
+    check('a request with no src still means trustee_reports, so the older DB trigger keeps working',
+      r.status === 200 && w.calls.some(c => /rest\/v1\/trustee_reports\?id=eq\.r1/.test(c.u)), r.status); }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
