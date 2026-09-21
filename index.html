@@ -726,7 +726,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <button class="close-btn" onclick="_closeForgotPwModal()">&#10005;</button>
   <div class="modal-title">&#128273; &#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;</div>
   <div style="background:#dbeafe;border:1px solid #2563eb;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#1e40af;line-height:1.6">
-    הזיני את שם המשתמש. סיסמה חדשה תישלח אוטומטית למייל ול-WhatsApp הרשומים שלך תוך שניות.
+    הזינו את שם המשתמש. הבקשה תגיע לממונה הבטיחות, והסיסמה החדשה תימסר לכם על ידו. זה לא אוטומטי ולא מיידי.
   </div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</label>
@@ -735,7 +735,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="fp-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
   <div class="modal-footer" style="display:flex;flex-direction:column;gap:8px">
-    <button class="btn btn-p" onclick="_forgotPwSendWa()" style="background:#25D366;border-color:#25D366;width:100%">📱 שלח סיסמה חדשה</button>
+    <button class="btn btn-p" onclick="_forgotPwSendWa()" style="background:#25D366;border-color:#25D366;width:100%">🔑 שלח בקשה לאיפוס</button>
     <button class="btn btn-s" onclick="_closeForgotPwModal()" style="width:100%">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
   </div>
 </div>
@@ -16024,32 +16024,36 @@ window._forgotPwSendWa=function(){
   var unameEl=g('fp-username');
   var uname=unameEl?String(unameEl.value||'').trim().toLowerCase():'';
   var errEl=g('fp-err');
-  if(!uname){if(errEl)errEl.textContent='יש להזין שם משתמש';return;}
+  if(!uname){if(errEl)errEl.textContent='\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9';return;}
   if(errEl)errEl.textContent='';
   var btn=document.querySelector('#m-forgot-pw .btn-p');
-  if(btn){btn.disabled=true;btn.textContent='⏳ שולח...';}
-  // Phase 3 — autonomous flow. Server (/api/self-recovery) generates a
-  // new password, updates Supabase Auth, and dispatches it directly to
-  // the user's registered email + WhatsApp via Microsoft Graph
-  // CLIENT_CREDENTIALS + WhatsApp Business API templates. No admin in
-  // the loop. The endpoint always returns 200 to avoid leaking which
-  // usernames exist.
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05e9\u05d5\u05dc\u05d7...';}
+  // /api/self-recovery QUEUES a row in password_reset_requests for the admin
+  // to approve. It sends nothing. The autonomous delivery this comment used to
+  // describe was removed on 2026-05-10, because the tapugan.co.il tenant
+  // blocks the Graph consent it needed -- and the screen was never told. The
+  // blue box, the button and the toast all went on promising a password
+  // "within seconds", so anybody who used it waited for a message that was
+  // never coming. Corrected 2026-09-21.
+  //
+  // The endpoint always answers 200, so which usernames exist cannot be read
+  // off the reply.
   fetch('/api/self-recovery',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({username:uname})
   }).then(function(r){return r.json().catch(function(){return {};});}).then(function(j){
-    if(btn){btn.disabled=false;btn.textContent='📱 שלח סיסמה חדשה';}
+    if(btn){btn.disabled=false;btn.textContent='\ud83d\udd11 \u05e9\u05dc\u05d7 \u05d1\u05e7\u05e9\u05d4 \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1';}
     _closeForgotPwModal();
     if(typeof toast==='function'){
       // Generic message (no enumeration). User who actually exists will
       // get their email/WhatsApp shortly; user who doesn't sees the same
       // toast and can't tell.
-      toast('✓ אם המשתמש קיים, סיסמה חדשה נשלחה למייל ולטלפון הרשומים שלך');
+      toast('\u2713 \u05d0\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05e7\u05d9\u05d9\u05dd, \u05d4\u05d1\u05e7\u05e9\u05d4 \u05e0\u05e9\u05dc\u05d7\u05d4 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
     }
   }).catch(function(err){
-    if(btn){btn.disabled=false;btn.textContent='📱 שלח סיסמה חדשה';}
-    if(errEl)errEl.textContent='שגיאת רשת — נסה שוב';
+    if(btn){btn.disabled=false;btn.textContent='\ud83d\udd11 \u05e9\u05dc\u05d7 \u05d1\u05e7\u05e9\u05d4 \u05dc\u05d0\u05d9\u05e4\u05d5\u05e1';}
+    if(errEl)errEl.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea \u05e8\u05e9\u05ea, \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1';
   });
 };
 
