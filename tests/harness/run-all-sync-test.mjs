@@ -87,6 +87,45 @@ console.log('\n4b. it warns that existing policies are replaced');
   check('the header says outright that existing RLS policies are replaced', /\u05de\u05d7\u05dc\u05d9\u05e3 policies \u05e7\u05d9\u05d9\u05de\u05d5\u05ea/.test(head), head.slice(0, 200));
 }
 
+console.log('\n4c. it calls functions that actually exist');
+{
+  // This is what broke the first real run (2026-09-21). The gate function was
+  // created as public.is_admin_manager() in April, then moved to the `private`
+  // schema on 2026-05-29 (2026-05-29_canonical_is_admin_manager_function.sql).
+  // One pending migration was still on the April spelling, so the paste died
+  // with «function public.is_admin_manager() does not exist» — after the DROP
+  // POLICY above it had already run.
+  const stale = [];
+  ORDER.forEach((m) => {
+    const f = fs.readFileSync(path.join(MIG, m.file), 'utf8')
+      .split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+    if (/public\.is_admin_manager/.test(f)) stale.push(m.file);
+  });
+  check('no pending migration calls public.is_admin_manager() — it lives in private', stale.length === 0, stale);
+
+  // And the canonical definition is in the repo, so the name is checkable.
+  const canon = fs.readFileSync(path.join(MIG, '2026-05-29_canonical_is_admin_manager_function.sql'), 'utf8');
+  check('...and the canonical file still defines it there', /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+private\.is_admin_manager/i.test(canon));
+}
+
+console.log('\n4d. no migration ends the transaction early');
+{
+  // The Supabase editor wraps the whole paste in ONE implicit transaction, so
+  // a failure anywhere rolls the whole thing back — which is what we want from
+  // a seven-part paste. An explicit COMMIT inside a section ENDS that
+  // transaction mid-file, and a failure after it would leave the plant with
+  // half the migrations applied and no signal about which half.
+  const bad = [];
+  ORDER.forEach((m) => {
+    const f = fs.readFileSync(path.join(MIG, m.file), 'utf8');
+    // a DO $$ block legitimately contains BEGIN ... END; the statement-level
+    // ones are what matter, so match only a line that is exactly BEGIN;/COMMIT;
+    const lines = f.split('\n').filter((l) => /^\s*(BEGIN|COMMIT|ROLLBACK)\s*;\s*$/i.test(l));
+    if (lines.length) bad.push(m.file + ': ' + lines.map((x) => x.trim()).join(' '));
+  });
+  check('no pending migration opens or closes a transaction of its own', bad.length === 0, bad);
+}
+
 console.log('\n5. it is safe to run twice');
 {
   const body = fs.readFileSync(OUT, 'utf8');
