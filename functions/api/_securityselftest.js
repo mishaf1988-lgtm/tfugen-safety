@@ -60,6 +60,160 @@ export async function onRequest({ request }) {
     else counts.warn++;
   }
 
+  // ----- What a stranger sees.  GET ...?stranger=1  -------------------------
+  //
+  // Michael, 2026-09-21: «כל האפליקציה חשופה לעולם». Everything else in this
+  // file answers "what does the CALLER see". That is a different question from
+  // the one he asked, and the one that was never measured: the app sits on the
+  // open internet, so what does somebody who only has the URL see?
+  //
+  // The Storage hole of September was exactly this case. Four policies were
+  // granted to `authenticated`, and the day the trustee kiosk began signing in
+  // anonymously, "authenticated" came to include every visitor off the street.
+  // It lived in production for weeks because nothing ever asked.
+  //
+  // Supabase has two kinds of stranger and they are not the same principal:
+  //   anon       no session at all, just the publishable key. Any visitor,
+  //              any crawler, anybody who views source.
+  //   anonymous  a real session that happens to be anonymous. This is what the
+  //              trustee kiosk signs in as, and what turned that hole on.
+  //
+  // Requires the caller's own token, verified against Supabase rather than
+  // merely decoded: the output of this section is a map of what is exposed,
+  // and serving it to the world would BE the leak it goes looking for.
+  //
+  // It reads counts. Never a row, never a field. Runs on its own, without the
+  // header and gate checks above, to stay well inside the Workers subrequest
+  // limit -- a probe that dies half way through proves nothing.
+  if (url.searchParams.get('stranger') === '1') {
+    if (!userToken) return jsonResp({ error: 'this check needs your own login' }, 401, cors);
+    let who = null;
+    try {
+      const vr = await fetch(SBU + '/auth/v1/user', {
+        headers: { apikey: SBK, Authorization: 'Bearer ' + userToken }
+      });
+      if (vr.ok) who = await vr.json();
+    } catch (e) { /* who stays null */ }
+    // A decoded JWT proves nothing -- anyone can write one. And an anonymous
+    // session must not be able to ask what anonymous sessions can see.
+    if (!who || who.is_anonymous === true || !who.email) {
+      return jsonResp({ error: 'this check needs a named login' }, 403, cors);
+    }
+
+    // `open` marks a table the trustee kiosk genuinely needs without a login.
+    // Anything else a stranger can read is a finding, not a design.
+    const PROBE = [
+      { t: 'app_users' }, { t: 'password_reset_requests' }, { t: 'audit_log' },
+      { t: 'med' }, { t: 'hearing_tests' }, { t: 'emp' }, { t: 'tr' },
+      { t: 'docs' }, { t: 'ncr' }, { t: 'inc' }, { t: 'near_miss' },
+      { t: 'ptw' }, { t: 'notifications_log' }, { t: 'record_history' },
+      { t: 'equip_inspections' }, { t: 'rounds' },
+      { t: 'trustee_reports', open: true }, { t: 'trustees', open: true },
+      { t: 'trustee_tasks', open: true }, { t: 'locations', open: true }
+    ];
+    const BUCKETS = ['incidents-photos', 'backups'];
+    // Cloudflare allows a Worker 50 subrequests, and a probe cut off two
+    // thirds of the way through does not report "incomplete" -- it reports
+    // what it managed, which reads exactly like a clean result. So the second
+    // stranger gets the short list: the tables that would hurt most, and both
+    // buckets, since Storage is where this class of hole actually appeared.
+    const SHORT = ['app_users', 'med', 'hearing_tests', 'emp', 'docs', 'ncr',
+      'inc', 'audit_log', 'password_reset_requests', 'record_history'];
+
+    // One reader = one set of headers. The only difference between the two
+    // strangers is whether an Authorization header is present.
+    async function probe(label, hdrs, only) {
+      const list = only ? PROBE.filter((p) => only.indexOf(p.t) >= 0) : PROBE;
+      const rows = await Promise.all(list.map(async (p) => {
+        try {
+          const r = await fetch(SBU + '/rest/v1/' + p.t + '?select=*&limit=1', {
+            headers: { ...hdrs, Prefer: 'count=exact' }
+          });
+          const cr = r.headers.get('content-range') || '';
+          const n = parseInt((cr.split('/')[1] || '-1'), 10);
+          // Denied is the good answer. A 200 with 0 rows is equally good:
+          // the policy let the query run and returned nothing.
+          const readable = r.ok && n > 0;
+          return {
+            id: label + ':' + p.t,
+            expected: p.open ? 'readable (the trustee screen needs it)' : 'not readable',
+            got: r.ok ? (n < 0 ? 'readable, count unknown' : n + ' rows') : 'denied (' + r.status + ')',
+            verdict: p.open ? '⚠' : verdict(!readable)
+          };
+        } catch (e) {
+          return { id: label + ':' + p.t, got: 'fetch failed: ' + e.message, verdict: '⚠' };
+        }
+      }));
+      const buckets = await Promise.all(BUCKETS.map(async (b) => {
+        try {
+          const r = await fetch(SBU + '/storage/v1/object/list/' + b, {
+            method: 'POST',
+            headers: { ...hdrs, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefix: '', limit: 1 })
+          });
+          let listed = 0;
+          if (r.ok) { const j = await r.json(); listed = Array.isArray(j) ? j.length : 0; }
+          return {
+            id: label + ':storage/' + b,
+            expected: 'not listable',
+            got: r.ok ? (listed + ' object(s) listed') : 'denied (' + r.status + ')',
+            verdict: verdict(!(r.ok && listed > 0))
+          };
+        } catch (e) {
+          return { id: label + ':storage/' + b, got: 'fetch failed: ' + e.message, verdict: '⚠' };
+        }
+      }));
+      return rows.concat(buckets);
+    }
+
+    (await probe('anon', { apikey: SBK })).forEach(pushCheck);
+
+    // The second stranger costs a throwaway user in auth.users, so it is asked
+    // for explicitly rather than created behind the operator's back.
+    if (url.searchParams.get('anon') === '1') {
+      let tok = null;
+      try {
+        const sr = await fetch(SBU + '/auth/v1/signup', {
+          method: 'POST',
+          headers: { apikey: SBK, 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (sr.ok) { const j = await sr.json(); tok = j.access_token || (j.session && j.session.access_token) || null; }
+      } catch (e) { /* tok stays null */ }
+      if (!tok) {
+        pushCheck({
+          id: 'anonymous_session',
+          expected: 'a throwaway anonymous session to test with',
+          got: 'could not create one (anonymous sign-in may be off, which is itself good news)',
+          verdict: '⚠'
+        });
+      } else {
+        (await probe('anonymous', { apikey: SBK, Authorization: 'Bearer ' + tok }, SHORT)).forEach(pushCheck);
+        pushCheck({
+          id: 'anonymous_session',
+          expected: 'the short list, to stay inside the subrequest budget',
+          got: 'probed ' + SHORT.length + ' of ' + PROBE.length + ' tables plus both buckets',
+          verdict: '⚠'
+        });
+      }
+    } else {
+      pushCheck({
+        id: 'anonymous_session',
+        expected: 'add &anon=1 to also test a signed-in anonymous session',
+        got: 'skipped (it would create a throwaway user in auth.users)',
+        verdict: '⚠'
+      });
+    }
+
+    return jsonResp({
+      scope: 'what a stranger sees',
+      note: 'counts only, never row contents. A trustee table marked readable is by design; confirm that is still what you want.',
+      caller: who.email,
+      summary: counts,
+      checks
+    }, 200, cors);
+  }
+
   // ----- 1. HTML Cache-Control -----
   try {
     const r = await fetch(origin + '/index.html', { method: 'HEAD', cf: { cacheTtl: 0 } });

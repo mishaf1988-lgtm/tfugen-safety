@@ -17849,20 +17849,35 @@ window._secAuditRun=function(){
   box.textContent='⏳ מריץ בדיקות…';
   var headers={'Accept':'application/json'};
   if(_sbToken)headers['Authorization']='Bearer '+_sbToken;
-  fetch('/api/_securityselftest',{method:'GET',headers:headers})
-    .then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,data:j};});})
-    .then(function(res){
-      if(!res.ok||!res.data){box.textContent='✗ קריאה נכשלה (HTTP '+res.status+')';return;}
-      var d=res.data;var s=d.summary||{};
-      var head='✓ '+s.pass+'  ⚠ '+s.warn+'  ✗ '+s.fail+'   /   סה״כ '+s.total+'\n'+'─'.repeat(40)+'\n';
-      var lines=(d.checks||[]).map(function(c){
-        var glyph=c.verdict==='✓'?'✓':(c.verdict==='✗'?'✗':'⚠');
-        var color=c.verdict==='✓'?'#15803d':(c.verdict==='✗'?'#b91c1c':'#b45309');
-        return '<span style="color:'+color+';font-weight:700">'+glyph+'</span> '+esc(c.id)+'\n   נדרש: '+esc(String(c.expected||''))+'\n   נמצא: '+esc(String(c.got||''));
+  // Two questions, one press. The plain run says what the ADMIN sees; the
+  // stranger run says what somebody with only the URL sees, which is the
+  // question Michael asked on 21/09 and the one nothing had ever measured.
+  var get=function(qs){
+    return fetch('/api/_securityselftest'+qs,{method:'GET',headers:headers})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,data:j};});})
+      .catch(function(err){return {ok:false,status:0,data:null,err:(err&&err.message)||String(err)};});
+  };
+  Promise.all([get(''),get('?stranger=1')])
+    .then(function(both){
+      var main=both[0],strange=both[1];
+      if(!main.ok||!main.data){box.textContent='\u2717 \u05e7\u05e8\u05d9\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (HTTP '+main.status+')';return;}
+      var checks=(main.data.checks||[]).slice();
+      // A stranger run that did not happen must say so. Silence here would
+      // read as "nothing found", which is the opposite of what it means.
+      if(strange.ok&&strange.data&&strange.data.checks)checks=checks.concat(strange.data.checks);
+      else checks.push({id:'stranger_probe',expected:'\u05de\u05d4 \u05e9\u05d6\u05e8 \u05e8\u05d5\u05d0\u05d4',
+        got:'\u05dc\u05d0 \u05e8\u05e6\u05d4 (HTTP '+strange.status+') '+((strange.data&&strange.data.error)||strange.err||''),verdict:'\u26a0'});
+      var s={pass:0,warn:0,fail:0};
+      checks.forEach(function(c){if(c.verdict==='\u2713')s.pass++;else if(c.verdict==='\u2717')s.fail++;else s.warn++;});
+      var head='\u2713 '+s.pass+'  \u26a0 '+s.warn+'  \u2717 '+s.fail+'   /   \u05e1\u05d4\u05f4\u05db '+checks.length+'\n'+'\u2500'.repeat(40)+'\n';
+      var lines=checks.map(function(c){
+        var glyph=c.verdict==='\u2713'?'\u2713':(c.verdict==='\u2717'?'\u2717':'\u26a0');
+        var color=c.verdict==='\u2713'?'#15803d':(c.verdict==='\u2717'?'#b91c1c':'#b45309');
+        return '<span style="color:'+color+';font-weight:700">'+glyph+'</span> '+esc(c.id)+'\n   \u05e0\u05d3\u05e8\u05e9: '+esc(String(c.expected||''))+'\n   \u05e0\u05de\u05e6\u05d0: '+esc(String(c.got||''));
       }).join('\n\n');
-      box.innerHTML=esc(head).replace(/✓/g,'<span style="color:#15803d">✓</span>').replace(/✗/g,'<span style="color:#b91c1c">✗</span>').replace(/⚠/g,'<span style="color:#b45309">⚠</span>')+'\n'+lines;
+      box.innerHTML=esc(head).replace(/\u2713/g,'<span style="color:#15803d">\u2713</span>').replace(/\u2717/g,'<span style="color:#b91c1c">\u2717</span>').replace(/\u26a0/g,'<span style="color:#b45309">\u26a0</span>')+'\n'+lines;
     })
-    .catch(function(e){box.textContent='✗ שגיאה: '+(e&&e.message||e);});
+    .catch(function(err){box.textContent='\u2717 \u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err);});
 };
 
 window._waDiagnose=function(){
