@@ -24,6 +24,8 @@ Claude Code loads this file automatically at the start of every session in this 
 ### API endpoints — `/functions/api/*.js`
 כל קוד צד שרת יושב ב-`/functions/api/*.js` (Cloudflare Pages Functions API: `onRequest`, `env` arg, named export). אין יותר תיקיית `/api` של Vercel — הוסרה ב-2026-05-03 כשהמיגרציה ל-Cloudflare הושלמה.
 
+> **2026-09-21:** השורה הזו הייתה נכונה לגבי ה-repo ולא לגבי המציאות. **פרויקט ה-Vercel עצמו נשאר מחובר ל-GitHub ופרס בכל דחיפה עוד ארבעה חודשים**, בכתובת `tfugen-safety.vercel.app` — עותק ציבורי שני של אפליקציית בטיחות, שבו 11 נקודות הקצה מחזירות 404 כי Vercel אינו מריץ Pages Functions. התגלה ממיילי פריסה כושלת אצל מיכאל, **ונמחק על ידו ב-21/09**. החשבון ריק מפרויקטים. **Cloudflare Pages הוא הייצור היחיד, עכשיו גם בפועל.**
+
 ## חוקי פיתוח חובה
 
 1. **עברית ב-JS strings = `\uXXXX`**. לעולם לא תווים גולמיים.
