@@ -5231,7 +5231,7 @@ function ptwPrint(){
   var parts=[];
   parts.push('<!DOCTYPE html>');
   parts.push('<html dir="rtl">');
-  parts.push('<head><meta charset="UTF-8"><title>PTW '+p.num+'</title>');
+  parts.push('<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PTW '+p.num+'</title>');
   parts.push('<style>body{font-family:Arial;padding:20px;direction:rtl;font-size:12px}');
   parts.push('h1{color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:6px}');
   parts.push('table{width:100%;border-collapse:collapse;margin:10px 0}');
@@ -7010,7 +7010,7 @@ window.safetyTrendReport=function(){
   }).join('');
   var chart='';
   try{if(typeof _ncrTrend12Svg==='function')chart='<div class="chart"><div class="ch-t">\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9 — 12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</div>'+_ncrTrend12Svg()+'</div>';}catch(e){}
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? — \u05de\u05d2\u05de\u05d5\u05ea \u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4'+' · '+stamp+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? — \u05de\u05d2\u05de\u05d5\u05ea \u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4'+' · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
@@ -7076,7 +7076,7 @@ window.isoAuditReport=function(){
       '<td class="gap">'+(c.gap?esc(c.gap):'—')+'</td>'+
     '</tr>';
   }).join('');
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
@@ -7183,7 +7183,7 @@ function _eqiPrintAll(){
       '<td>'+esc(r.s||'—')+'</td>'+
     '</tr>';
   }).join('');
-  var html = '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>דוח מסכם ציוד · '+stamp+'</title>'+
+  var html = '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>דוח מסכם ציוד · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4 landscape;margin:10mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:11px;margin:0}'+
@@ -7421,7 +7421,7 @@ window._viewShowQr=function(tbl,id){
     var html='<div style="text-align:center;padding:20px"><div style="margin-bottom:10px;font-weight:700;font-size:14px">'+name+'</div>'+code+(ident?'<div style="font-size:11px;color:#666;margin-bottom:8px">'+ident+'</div>':'')+'<div style="display:inline-block;padding:10px;border:1px solid #ddd;background:#fff;border-radius:8px">'+svg+'</div><div style="font-size:10px;color:#888;margin-top:8px;direction:ltr;word-break:break-all">'+esc(url)+'</div><div style="margin-top:14px"><button onclick="window.print()" class="btn btn-p" style="font-family:inherit">'+'\u05d4\u05d3\u05e4\u05e1'+'</button></div></div>';
     var w=window.open('','_blank');
     if(!w){toast('\u05e4\u05ea\u05d7 \u05d7\u05dc\u05d5\u05df \u05d7\u05d3\u05e9: \u05d9\u05e9 \u05dc\u05d1\u05d8\u05dc \u05d7\u05e1\u05d9\u05de\u05ea popups');return;}
-    w.document.write('<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>QR · '+esc(rec.n||rec.code||id)+'</title><style>body{font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0}@media print{body{background:#fff}.btn{display:none!important}}.btn{padding:10px 20px;border-radius:8px;border:none;background:#cc1f1f;color:#fff;font-size:14px;font-weight:700;cursor:pointer}</style></head><body>'+html+'</body></html>');
+    w.document.write('<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR · '+esc(rec.n||rec.code||id)+'</title><style>body{font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0}@media print{body{background:#fff}.btn{display:none!important}}.btn{padding:10px 20px;border-radius:8px;border:none;background:#cc1f1f;color:#fff;font-size:14px;font-weight:700;cursor:pointer}</style></head><body>'+html+'</body></html>');
     w.document.close();
   });
 };
@@ -7463,7 +7463,7 @@ window._eqiPrintQrSheet=function(){
       '</div>';
     }).join('');
     var stamp=new Date().toLocaleDateString('he-IL');
-    var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR — Tapugan Safety'+'</title>'+
+    var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR — Tapugan Safety'+'</title>'+
     '<style>'+
       '@page{size:A4;margin:6mm}'+
       'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;margin:0;padding:6mm;background:#fff}'+
@@ -14582,7 +14582,7 @@ window._auditPack=function(){
     '</tr>';
   }).join('');
   // Build the document
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+'\u05ea\u05d9\u05e7 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea — Tapugan Safety'+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05ea\u05d9\u05e7 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea — Tapugan Safety'+'</title>'+
   '<style>'+
     '@page{size:A4 portrait;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:11px;margin:0}'+
@@ -15199,7 +15199,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
   var logoImg=logoSrc?'<img class="doc-logo" src="'+logoSrc+'" alt="TFUGEN">':'<span style="font-size:28px;font-weight:900;color:#cc1f1f">TFUGEN</span>';
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+ref+' \u2014 '+cfg.title+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+ref+' \u2014 '+cfg.title+'</title>'+
     '<style>'+
     '*{box-sizing:border-box}'+
     'body{font-family:Arial,"Segoe UI",sans-serif;margin:20px;color:#111;direction:rtl}'+
@@ -18261,7 +18261,7 @@ function _ncrTrend12Svg(months){
   var W=340,H=150,padL=26,padR=26,padT=14,padB=26;
   var cW=W-padL-padR,cH=H-padT-padB;
   var slot=cW/months.length,barW=Math.max(3,(slot-4)/2);
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="\u05de\u05d2\u05de\u05ea NCR \u05dc-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd" style="display:block">';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="\u05de\u05d2\u05de\u05ea NCR \u05dc-12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd" style="display:block;width:100%;height:auto;max-width:100%">';
   svg+='<line x1="'+padL+'" y1="'+(padT+cH)+'" x2="'+(W-padR)+'" y2="'+(padT+cH)+'" stroke="#d5d8de"></line>';
   svg+='<text x="2" y="'+(padT+7)+'" font-size="8" fill="#8a8f98">'+maxBar+'</text>';
   svg+='<text x="2" y="'+(padT+cH+3)+'" font-size="8" fill="#8a8f98">0</text>';
@@ -20744,7 +20744,7 @@ function _odBuildReportHtml(tbl,rec,photoDataUrl){
   var stamp=new Date().toLocaleString('he-IL');
   var imgSrc=photoDataUrl||(rec&&rec.photo_url?String(rec.photo_url).replace(/"/g,''):'');
   var photo=imgSrc?'<div style="margin:18px 0;text-align:center"><img src="'+imgSrc+'" style="max-width:100%;max-height:520px;border:1px solid #ccc;border-radius:6px"></div>':'';
-  return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>'+(cfg.title||tbl)+'</title>'+
+  return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+(cfg.title||tbl)+'</title>'+
     '<style>html,body{margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;background:#fff}'+
     '.report{padding:32px;width:730px;box-sizing:border-box}'+
     'h1{color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin:0 0 18px 0;font-size:24px}'+
