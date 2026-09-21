@@ -17518,10 +17518,16 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
   }
+  // #login is display:flex;position:fixed;inset:0;z-index:1000 by default, so
+  // it covers the app until something takes it away. Only _finishLogin and
+  // doEmpLogin ever did, and neither runs on this path — which stayed
+  // invisible for as long as this path never reached a logged-in user.
+  function hideLogin(){var ls=g('login');if(ls)ls.style.display='none';}
   function proceed(session){
     var admin=!!(session&&session.user&&!session.user.is_anonymous&&session.user.email);
     var emp=false;try{emp=localStorage.getItem(EMP_KEY)==='1';}catch(e){}
     _isAdmin=admin;
+    if(admin||emp)hideLogin();
     if(admin){
       _sbToken=session.access_token;
       _sbAuthPromise=Promise.resolve(session);
@@ -17544,9 +17550,29 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
     var lb=g('login-btn');if(lb)lb.addEventListener('click',doLogin);
     var pw=g('pw');if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
   }
-  _sbBoot();
-  if(!_sbClient){proceed(null);return;}
-  _sbClient.auth.getSession().then(function(r){proceed(r&&r.data?r.data.session:null);}).catch(function(){proceed(null);});
+  function start(){
+    _sbBoot();
+    if(!_sbClient){proceed(null);return;}
+    _sbClient.auth.getSession().then(function(r){proceed(r&&r.data?r.data.session:null);}).catch(function(){proceed(null);});
+  }
+  // supabase-js is loaded with <script defer>, which by definition has NOT run
+  // while the parser is still here — and this block is inline, so it is here.
+  // Asking _sbBoot() now always found `supabase` undefined, went straight to
+  // proceed(null), and showed the login screen: the saved session was never
+  // even looked at. Every reload asked for the password again, and on an
+  // iPhone a reload is one accidental pull down from the top of the screen.
+  // So: wait for the library. DOMContentLoaded fires after deferred scripts
+  // have run — or failed, in which case there is genuinely nothing to log in
+  // with and the login screen is the right answer after all.
+  var begun=false;
+  var once=function(){if(begun)return;begun=true;start();};
+  if(typeof supabase!=='undefined')once();
+  else{
+    document.addEventListener('DOMContentLoaded',once);
+    // A request that hangs rather than fails never fires DOMContentLoaded, and
+    // a blank screen forever is worse than a login screen.
+    setTimeout(once,8000);
+  }
 })();
 
 function openXlModal(){var ov=document.getElementById('ov-xl'),mo=document.getElementById('m-xl');if(ov){ov.style.display='flex';document.body.style.overflow='hidden';window.scrollTo(0,0);}if(mo)mo.style.display='block';window._xlData=[];var s=document.getElementById('xl-st');if(s)s.textContent='';var b=document.getElementById('xl-ok');if(b)b.style.display='none';var p=document.getElementById('xl-pw');if(p)p.style.display='none';var i=document.getElementById('xl-inp');if(i)i.value='';}
