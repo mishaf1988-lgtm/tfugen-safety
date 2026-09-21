@@ -1,0 +1,8 @@
+# Tapugan Safety is an internal plant system, not a public site.
+# Nothing here belongs in a search result: not the login page, not the
+# trustee screen, not a report someone shared a link to.
+#
+# This file asks. The X-Robots-Tag header in _headers tells, on every
+# response, and is what a crawler that ignores this one still has to obey.
+User-agent: *
+Disallow: /
