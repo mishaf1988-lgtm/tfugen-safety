@@ -5231,7 +5231,7 @@ function ptwPrint(){
   var parts=[];
   parts.push('<!DOCTYPE html>');
   parts.push('<html dir="rtl">');
-  parts.push('<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PTW '+p.num+'</title>');
+  parts.push('<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>PTW '+p.num+'</title>');
   parts.push('<style>body{font-family:Arial;padding:20px;direction:rtl;font-size:12px}');
   parts.push('h1{color:#cc1f1f;border-bottom:2px solid #cc1f1f;padding-bottom:6px}');
   parts.push('table{width:100%;border-collapse:collapse;margin:10px 0}');
@@ -5240,7 +5240,7 @@ function ptwPrint(){
   parts.push('button{background:#cc1f1f;color:#fff;border:none;padding:8px 20px;cursor:pointer;margin-bottom:10px}');
   parts.push('@media print{button{display:none}}');
   parts.push('</style></head><body>');
-  parts.push('<button onclick="window.print()">\u05d4\u05d3\u05e4\u05e1</button>');
+  parts.push('<button onclick="_tryPrint(this)">\u05d4\u05d3\u05e4\u05e1</button>');
   parts.push('<h1>\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea &mdash; \u05ea\u05e4\u05d5\u05d2\u05df</h1>');
   parts.push('<table>');
   parts.push('<tr><td>\u05de\u05e1\'</td><td>'+p.num+'</td><td>\u05ea\u05d0\u05e8\u05d9\u05da</td><td>'+p.ds+' - '+p.de+'</td></tr>');
@@ -7010,7 +7010,7 @@ window.safetyTrendReport=function(){
   }).join('');
   var chart='';
   try{if(typeof _ncrTrend12Svg==='function')chart='<div class="chart"><div class="ch-t">\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9 — 12 \u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd</div>'+_ncrTrend12Svg()+'</div>';}catch(e){}
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? — \u05de\u05d2\u05de\u05d5\u05ea \u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4'+' · '+stamp+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8? — \u05de\u05d2\u05de\u05d5\u05ea \u05e9\u05e0\u05d4 \u05de\u05d5\u05dc \u05e9\u05e0\u05d4'+' · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
@@ -7037,7 +7037,7 @@ window.safetyTrendReport=function(){
     '@media print{.no-print{display:none!important}}'+
     '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
   '</style></head><body>'+
-  '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
+  '<button class="no-print" onclick="_tryPrint(this)">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
   '<div class="head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+
     '<div><h1>'+'\u05d4\u05d0\u05dd \u05d0\u05e0\u05d7\u05e0\u05d5 \u05d1\u05d8\u05d5\u05d7\u05d9\u05dd \u05d9\u05d5\u05ea\u05e8?'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df · \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
   '<div class="summary">'+
@@ -7076,7 +7076,7 @@ window.isoAuditReport=function(){
       '<td class="gap">'+(c.gap?esc(c.gap):'—')+'</td>'+
     '</tr>';
   }).join('');
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
@@ -7103,7 +7103,7 @@ window.isoAuditReport=function(){
     '@media print{.no-print{display:none!important}}'+
     '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
   '</style></head><body>'+
-  '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
+  '<button class="no-print" onclick="_tryPrint(this)">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
   '<div class="head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+
     '<div><h1>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df \u00b7 \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
   '<div class="summary">'+
@@ -7183,7 +7183,7 @@ function _eqiPrintAll(){
       '<td>'+esc(r.s||'—')+'</td>'+
     '</tr>';
   }).join('');
-  var html = '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>דוח מסכם ציוד · '+stamp+'</title>'+
+  var html = '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>דוח מסכם ציוד · '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4 landscape;margin:10mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:11px;margin:0}'+
@@ -7214,7 +7214,7 @@ function _eqiPrintAll(){
     '@media print{.no-print{display:none!important}}'+
     '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit}'+
   '</style></head><body>'+
-  '<button class="no-print" onclick="window.print()">הדפס עכשיו</button>'+
+  '<button class="no-print" onclick="_tryPrint(this)">הדפס עכשיו</button>'+
   '<div class="head">'+
     (logoSrc?'<img src="'+logoSrc+'">':'')+
     '<div><h1>דוח מסכם &mdash; בדיקות ציוד תקופה (פקודת הבטיחות)</h1><div class="sub">תעשיות תפוגן &middot; הופק ב: '+esc(stamp)+'</div></div>'+
@@ -7418,10 +7418,10 @@ window._viewShowQr=function(tbl,id){
               rec.internal_number?('\u05de\u05e1\u05f3 \u05e4\u05e0\u05d9\u05de\u05d9: '+esc(rec.internal_number)):
               rec.serial_number?('\u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9: '+esc(rec.serial_number)):'';
     var code=rec.code?'<div style="font-family:monospace;font-size:14px;color:#444">'+esc(rec.code)+'</div>':'';
-    var html='<div style="text-align:center;padding:20px"><div style="margin-bottom:10px;font-weight:700;font-size:14px">'+name+'</div>'+code+(ident?'<div style="font-size:11px;color:#666;margin-bottom:8px">'+ident+'</div>':'')+'<div style="display:inline-block;padding:10px;border:1px solid #ddd;background:#fff;border-radius:8px">'+svg+'</div><div style="font-size:10px;color:#888;margin-top:8px;direction:ltr;word-break:break-all">'+esc(url)+'</div><div style="margin-top:14px"><button onclick="window.print()" class="btn btn-p" style="font-family:inherit">'+'\u05d4\u05d3\u05e4\u05e1'+'</button></div></div>';
+    var html='<div style="text-align:center;padding:20px"><div style="margin-bottom:10px;font-weight:700;font-size:14px">'+name+'</div>'+code+(ident?'<div style="font-size:11px;color:#666;margin-bottom:8px">'+ident+'</div>':'')+'<div style="display:inline-block;padding:10px;border:1px solid #ddd;background:#fff;border-radius:8px">'+svg+'</div><div style="font-size:10px;color:#888;margin-top:8px;direction:ltr;word-break:break-all">'+esc(url)+'</div><div style="margin-top:14px"><button onclick="_tryPrint(this)" class="btn btn-p" style="font-family:inherit">'+'\u05d4\u05d3\u05e4\u05e1'+'</button></div></div>';
     var w=window.open('','_blank');
     if(!w){toast('\u05e4\u05ea\u05d7 \u05d7\u05dc\u05d5\u05df \u05d7\u05d3\u05e9: \u05d9\u05e9 \u05dc\u05d1\u05d8\u05dc \u05d7\u05e1\u05d9\u05de\u05ea popups');return;}
-    w.document.write('<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QR · '+esc(rec.n||rec.code||id)+'</title><style>body{font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0}@media print{body{background:#fff}.btn{display:none!important}}.btn{padding:10px 20px;border-radius:8px;border:none;background:#cc1f1f;color:#fff;font-size:14px;font-weight:700;cursor:pointer}</style></head><body>'+html+'</body></html>');
+    w.document.write('<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>QR · '+esc(rec.n||rec.code||id)+'</title><style>body{font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0}@media print{body{background:#fff}.btn{display:none!important}}.btn{padding:10px 20px;border-radius:8px;border:none;background:#cc1f1f;color:#fff;font-size:14px;font-weight:700;cursor:pointer}</style></head><body>'+html+'</body></html>');
     w.document.close();
   });
 };
@@ -7463,7 +7463,7 @@ window._eqiPrintQrSheet=function(){
       '</div>';
     }).join('');
     var stamp=new Date().toLocaleDateString('he-IL');
-    var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR — Tapugan Safety'+'</title>'+
+    var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+'\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR — Tapugan Safety'+'</title>'+
     '<style>'+
       '@page{size:A4;margin:6mm}'+
       'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;margin:0;padding:6mm;background:#fff}'+
@@ -7480,7 +7480,7 @@ window._eqiPrintQrSheet=function(){
       '@media print{.no-print{display:none!important}}'+
       '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit;z-index:1000}'+
     '</style></head><body>'+
-    '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1'+'</button>'+
+    '<button class="no-print" onclick="_tryPrint(this)">'+'\u05d4\u05d3\u05e4\u05e1'+'</button>'+
     '<div class="head"><h1>'+'\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR \u05dc\u05e6\u05d9\u05d5\u05d3'+' &mdash; '+rows.length+' '+'\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd'+'</h1><div>'+esc(stamp)+'</div></div>'+
     '<div class="grid">'+cards+'</div>'+
     '</body></html>';
@@ -14582,7 +14582,7 @@ window._auditPack=function(){
     '</tr>';
   }).join('');
   // Build the document
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+'\u05ea\u05d9\u05e7 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea — Tapugan Safety'+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+'\u05ea\u05d9\u05e7 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea — Tapugan Safety'+'</title>'+
   '<style>'+
     '@page{size:A4 portrait;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:11px;margin:0}'+
@@ -14617,7 +14617,7 @@ window._auditPack=function(){
     '.no-print{position:fixed;top:8px;left:8px;background:#cc1f1f;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;border:none;font-family:inherit;z-index:1000}'+
     '@media print{.no-print{display:none!important}}'+
   '</style></head><body>'+
-  '<button class="no-print" onclick="window.print()">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
+  '<button class="no-print" onclick="_tryPrint(this)">'+'\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF'+'</button>'+
   // -------- Cover --------
   '<div class="cover">'+
     (logoSrc?'<img src="'+logoSrc+'">':'')+
@@ -14982,7 +14982,7 @@ function _printViaWindow(on,hdr,title){
   try{document.querySelectorAll('style').forEach(function(st){css+=(st.textContent||'');});}catch(e){}
   var hdrHtml='';
   try{hdrHtml=hdr?hdr.outerHTML.replace('display:none','display:block'):'';}catch(e){}
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script>'
     +'<title>'+esc(title)+'</title><style>'+css
     +'body{margin:0;padding:12px;background:#fff}'
     +'.page{display:block!important}'
@@ -15240,7 +15240,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
   var now=new Date();
   var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL');
   var logoImg=logoSrc?'<img class="doc-logo" src="'+logoSrc+'" alt="TFUGEN">':'<span style="font-size:28px;font-weight:900;color:#cc1f1f">TFUGEN</span>';
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+ref+' \u2014 '+cfg.title+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+ref+' \u2014 '+cfg.title+'</title>'+
     '<style>'+
     '*{box-sizing:border-box}'+
     'body{font-family:Arial,"Segoe UI",sans-serif;margin:20px;color:#111;direction:rtl}'+
@@ -15266,7 +15266,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
     '.noprint .sz{background:#fff;color:#333;border:1px solid #999}'+
     '@media print{.noprint{display:none}body{margin:10mm}.photo img{max-height:95vh}}'+
     '</style></head><body>'+
-    '<div class="noprint"><button onclick="window.print()">\uD83D\uDDA8 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
+    '<div class="noprint"><button onclick="_tryPrint(this)">\uD83D\uDDA8 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'95vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'50vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d7\u05e6\u05d9 \u05e2\u05de\u05d5\u05d3</button>'+
     '<button class="sz" onclick="try{window.close()}catch(e){}history.back()">\u2715 \u05e1\u05d2\u05d5\u05e8 / \u05d7\u05d6\u05d5\u05e8 \u05d0\u05d7\u05d5\u05e8\u05d4</button></div>'+
@@ -18293,12 +18293,22 @@ function _tskOnTime12Html(){
 }
 function _ncrTrend12Svg(months){
   months=months||_ncrTrend12();
-  var maxBar=1,maxLine=1;
+  var maxBar=1,maxLine=1,total=0;
   months.forEach(function(m){
     if(m.opened>maxBar)maxBar=m.opened;
     if(m.closed>maxBar)maxBar=m.closed;
     if(m.backlog>maxLine)maxLine=m.backlog;
+    total+=(m.opened||0)+(m.closed||0)+(m.backlog||0);
   });
+  // With nothing to draw, the bars have zero height and the line sits on the
+  // axis: a tall blank rectangle with a stranded row of months underneath,
+  // which reads as a broken chart rather than an empty one. Michael sent a
+  // screenshot of exactly that on 2026-09-21.
+  if(!total){
+    return '<div style="padding:18px 12px;text-align:center;color:#5a6070;font-size:12px;'
+      +'border:1px dashed #d5d8de;border-radius:8px;background:#fafbfc">'
+      +'\u05d0\u05d9\u05df \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05d1-12 \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd, \u05d5\u05dc\u05db\u05df \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e9\u05e8\u05d8\u05d8.</div>';
+  }
   var W=340,H=150,padL=26,padR=26,padT=14,padB=26;
   var cW=W-padL-padR,cH=H-padT-padB;
   var slot=cW/months.length,barW=Math.max(3,(slot-4)/2);
@@ -20785,7 +20795,7 @@ function _odBuildReportHtml(tbl,rec,photoDataUrl){
   var stamp=new Date().toLocaleString('he-IL');
   var imgSrc=photoDataUrl||(rec&&rec.photo_url?String(rec.photo_url).replace(/"/g,''):'');
   var photo=imgSrc?'<div style="margin:18px 0;text-align:center"><img src="'+imgSrc+'" style="max-width:100%;max-height:520px;border:1px solid #ccc;border-radius:6px"></div>':'';
-  return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+(cfg.title||tbl)+'</title>'+
+  return '<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _tryPrint(b){var sa=false;try{sa=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches);}catch(e){}try{window.print();}catch(e){}if(!sa)return;var n=document.getElementById(\'print-help\');if(n)return;n=document.createElement(\'div\');n.id=\'print-help\';n.className=\'no-print noprint\';n.style.cssText=\'margin:10px 0;padding:10px 12px;border:1px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:12px;line-height:1.7;color:#92400e\';n.innerHTML=\'<b>\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d6\u05de\u05d9\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e9\u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea.</b> \u05d6\u05d5 \u05de\u05d2\u05d1\u05dc\u05d4 \u05e9\u05dc iOS, \u05dc\u05d0 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:9px 16px;border-radius:8px;text-decoration:none;font-weight:700">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';if(b&&b.parentNode)b.parentNode.insertBefore(n,b.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}<\/script><title>'+(cfg.title||tbl)+'</title>'+
     '<style>html,body{margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;color:#111;direction:rtl;background:#fff}'+
     '.report{padding:32px;width:730px;box-sizing:border-box}'+
     'h1{color:#cc1f1f;border-bottom:3px solid #cc1f1f;padding-bottom:8px;margin:0 0 18px 0;font-size:24px}'+

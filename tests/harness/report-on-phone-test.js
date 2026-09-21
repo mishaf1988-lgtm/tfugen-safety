@@ -64,7 +64,10 @@ console.log('\n2. the chart has a size of its own');
   // phone width -- the situation in the screenshot.
   const doc = await page.evaluate(() => {
     window.toast = function () {}; window.alert = function () {};
-    DB.ncr = []; DB.inc = []; DB.near_miss = []; DB.rounds = []; DB.toolbox = []; DB.trustee_reports = [];
+    DB.inc = []; DB.near_miss = []; DB.rounds = []; DB.toolbox = []; DB.trustee_reports = [];
+    const mm = new Date().toISOString().substring(0, 7);
+    DB.ncr = [{ id: 'n1', d: mm + '-05', s: 'פתוח', ts: mm + '-05T08:00:00Z' },
+              { id: 'n2', d: mm + '-11', s: 'סגור', cd: mm + '-18', ts: mm + '-11T08:00:00Z' }];
     let captured = '';
     const realOpen = window.open;
     window.open = function () {

@@ -129,6 +129,42 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...in the browser path either', r2.leftovers <= 1, r2.leftovers);
   }
 
+  // The report windows are a second, separate print button -- eight of them,
+  // one per generated document. Michael pressed the one on «האם אנחנו בטוחים
+  // יותר?» and it did nothing for the same reason. These documents are written
+  // into a window, so the handler has to travel inside them.
+  console.log('\n6. the print button inside every generated report');
+  {
+    const src = require('fs').readFileSync(require('path').resolve(__dirname, '../../index.html'), 'utf8');
+    const bare = (src.match(/onclick="window\.print\(\)"/g) || []).length;
+    check('no report still calls window.print() directly', bare === 0, bare + ' left');
+    const viaHandler = (src.match(/onclick="_tryPrint\(this\)"/g) || []).length;
+    check('every report button goes through the handler (' + viaHandler + ')', viaHandler >= 8, viaHandler);
+    // Injected next to the viewport meta, so a new report cannot be added
+    // without it.
+    const heads = (src.match(/<head><meta charset=/gi) || []).length;
+    const withFn = (src.match(/<head><meta charset="[^"]+"><meta name="viewport"[^>]*><script>function _tryPrint/gi) || []).length;
+    check('...and the handler is in every generated document', withFn === heads, { heads: heads, withFn: withFn });
+  }
+
+  console.log('\n7. an empty chart says it is empty');
+  {
+    const doc = await page.evaluate(() => {
+      DB.ncr = [];
+      try { return _ncrTrend12Svg(); } catch (e) { return 'ERROR ' + (e && e.message); }
+    });
+    // A chart with nothing in it draws zero-height bars and a line along the
+    // axis: a tall blank rectangle that reads as broken rather than as empty.
+    check('with no NCRs it returns a note, not an empty chart',
+      /אין אי-התאמויות/.test(doc) && doc.indexOf('<svg') < 0, doc.slice(0, 120));
+    const doc2 = await page.evaluate(() => {
+      const m = new Date().toISOString().substring(0, 7);
+      DB.ncr = [{ id: 'n1', d: m + '-05', s: 'פתוח', ts: m + '-05T08:00:00Z' }];
+      try { return _ncrTrend12Svg(); } catch (e) { return 'ERROR ' + (e && e.message); }
+    });
+    check('...and with data it is still a chart', doc2.indexOf('<svg') === 0, doc2.slice(0, 80));
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
