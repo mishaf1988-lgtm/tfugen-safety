@@ -123,7 +123,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('the report is produced', r.length > 500, r.length);
     check('it is titled with the question it answers', /האם אנחנו בטוחים יותר/.test(r), r.slice(0, 200));
     check('it prints A4 like the other sheets', /@page\{size:A4/.test(r));
-    check('it has the print button and hides it when printing', /onclick="window\.print\(\)"/.test(r) && /\.no-print\{display:none!important\}/.test(r));
+    // The button goes through _tryPrint, not a bare window.print(): on iOS the
+    // bare call is a silent no-op inside a home-screen app, and the report is
+    // opened from exactly there.
+    check('it has the print button and hides it when printing', /onclick="_tryPrint\(this\)"/.test(r) && /\.no-print\{display:none!important\}/.test(r));
+    check('...and the handler travels with the document', /function _tryPrint\(/.test(r));
     check('incidents are in it', /תאונות/.test(r), r.slice(0, 400));
     check('...with the lost days read from the right column (4, not 0)', />4</.test(r), (r.match(/ימי ההיעדרות[\s\S]{0,140}/) || [])[0]);
     check('last year’s lost days are the other two (10)', />10</.test(r), (r.match(/ימי ההיעדרות[\s\S]{0,140}/) || [])[0]);
