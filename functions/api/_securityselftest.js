@@ -392,14 +392,63 @@ export async function onRequest({ request }) {
     });
   }
 
-  return jsonResp({
+  const payload = {
     timestamp: new Date().toISOString(),
-    summary: {
-      pass: counts.pass,
-      fail: counts.fail,
-      warn: counts.warn,
-      total: checks.length
-    },
+    summary: { pass: counts.pass, fail: counts.fail, warn: counts.warn, total: checks.length },
     checks: checks
-  }, 200, cors);
+  };
+
+  // A browser gets a page it can actually read. The JSON is still there for
+  // anything programmatic (?format=json, or any client that does not ask for
+  // HTML) — but the person who most needs this endpoint reads it on a phone,
+  // and Safari was offering to DOWNLOAD it as a file rather than show it.
+  const wantsHtml = (request.headers.get('accept') || '').includes('text/html')
+                 && url.searchParams.get('format') !== 'json';
+  if (!wantsHtml) return jsonResp(payload, 200, cors);
+
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const colour = { '✓': '#15803d', '✗': '#b91c1c', '⚠': '#b45309' };
+  const rows = checks.map((c) => `
+    <div class="c" style="border-right-color:${colour[c.verdict] || '#94a3b8'}">
+      <div class="h"><span class="v" style="color:${colour[c.verdict] || '#64748b'}">${esc(c.verdict)}</span> <code>${esc(c.id)}</code></div>
+      <div class="e">${esc(c.expected || '')}</div>
+      <div class="g">${esc(c.got || '')}</div>
+    </div>`).join('');
+
+  const html = `<!doctype html><html dir="rtl" lang="he"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>בדיקת אבטחה — Tapugan Safety</title>
+<style>
+ body{font-family:-apple-system,Arial,Heebo,sans-serif;margin:0;padding:14px;background:#f8fafc;color:#1a1d23}
+ h1{font-size:17px;margin:0 0 2px}
+ .t{font-size:11px;color:#64748b;margin-bottom:12px}
+ .s{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+ .s b{display:block;font-size:22px;line-height:1.1}
+ .s div{flex:1;min-width:76px;text-align:center;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px;font-size:11px}
+ .s .p{border-color:#16a34a;color:#15803d}.s .f{border-color:#cc1f1f;color:#b91c1c}.s .w{border-color:#b45309;color:#b45309}
+ .c{background:#fff;border:1px solid #e2e8f0;border-right-width:4px;border-radius:9px;padding:9px 11px;margin-bottom:7px}
+ .h{font-size:13px;font-weight:700;display:flex;gap:7px;align-items:baseline}
+ .v{font-size:16px}
+ code{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;direction:ltr;unicode-bidi:embed}
+ .e{font-size:11px;color:#64748b;margin-top:3px}
+ .g{font-size:12px;margin-top:2px;direction:ltr;unicode-bidi:embed;text-align:right}
+ .n{margin-top:14px;font-size:11px;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;line-height:1.7}
+ a{color:#2563eb}
+</style></head><body>
+<h1>בדיקת אבטחה</h1>
+<div class="t">${esc(payload.timestamp)}</div>
+<div class="s">
+ <div class="p"><b>${counts.pass}</b>עברו</div>
+ <div class="f"><b>${counts.fail}</b>נכשלו</div>
+ <div class="w"><b>${counts.warn}</b>אזהרות</div>
+</div>
+${rows}
+<div class="n">
+ בדיקות ה-RLS דורשות טוקן — פתח את הכתובת הזו <b>מתוך האפליקציה</b>, או הוסף כותרת Authorization.<br>
+ להוכחת המקרה האנונימי: <a href="?anon=1">?anon=1</a> (יוצר משתמש אנונימי אחד, לכן אינו רץ כברירת מחדל).<br>
+ ל-JSON גולמי: <a href="?format=json">?format=json</a>
+</div>
+</body></html>`;
+  return new Response(html, { status: 200, headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8' } });
 }
