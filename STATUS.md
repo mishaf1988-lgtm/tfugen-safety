@@ -26,7 +26,7 @@
 
 | # | מה | מצב | מה צריך |
 |---|---|---|---|
-| 1 | **מייל ההתראות מגיע רק ל-`mishaf1988@gmail.com`** | חוסם נמענים נוספים | להחליף את כתובת החשבון ב-resend.com, **או** לאמת דומיין ב-resend.com/domains ולהגדיר `RESEND_FROM` ב-Cloudflare Pages |
+| 1 | **מייל ההתראות מגיע רק ל-`mishaf1988@gmail.com`** | חוסם נמענים נוספים | להחליף את כתובת החשבון ב-resend.com, **או** לאמת דומיין ולהגדיר `RESEND_FROM` ב-Cloudflare Pages. **נוסח מוכן ל-IT: `project-files/IT-REQUEST-DNS.md`** (מיכאל מנהל את ה-IT בארגון) |
 | 2 | **העברה מ-Gmail לאאוטלוק** | תקוע | ⚠ **אי אפשר להגדיר מאייפון.** לא באפליקציה, לא באתר לנייד, וגם `?nocheckbrowser` לא עוקף. נדרש מחשב. **אל תשלח אותו לנסות שוב מהטלפון** |
 | 3 | **לשלוח לנאמנים את המדריך ואת הקישור** | מוכן, טרם נשלח | `project-files/guide-trustees/מדריך-נאמני-בטיחות.pdf` + `כרטיס-מהיר.png`. הקישור: `https://tapugan-safety.pages.dev/?emp=1`, וגם בתוך האפליקציה: עמוד הנאמנים → ⋯ → 🔗 שלח קישור לנאמנים |
 | 4 | **Leaked-Password Protection ב-Supabase Auth** | כבוי | פעולה בממשק Supabase. אומת ככבוי ב-`get_advisors` ב-21/09 |
