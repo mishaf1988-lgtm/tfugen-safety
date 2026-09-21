@@ -9659,6 +9659,7 @@ window._topMoreMenu=function(anchor){
   item('\ud83d\udd96','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 (PDF)',function(){if(typeof _printPage==='function')_printPage();});
   item('\ud83d\udcca','\u05d9\u05d9\u05e6\u05d0 \u05d8\u05d1\u05dc\u05d4 \u05dc-CSV',function(){if(typeof _exportCSV==='function')_exportCSV();});
   item('\ud83d\udcc6','\u05d9\u05d9\u05e6\u05d0 \u05dc\u05d5\u05d7 \u05e9\u05e0\u05d4 (iCal/Google Calendar)',function(){if(typeof _exportICS==='function')_exportICS();});
+  item('\u26a0','\u05d9\u05d9\u05e6\u05d5\u05d0 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd + \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2)',function(){if(typeof _hazExportXlsx==='function')_hazExportXlsx();});
   item('\ud83d\udcd7','\u05d2\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e7\u05e1\u05dc \u05de\u05dc\u05d0 (Excel)',function(){if(typeof _exportXlsx==='function')_exportXlsx();});
   item('\u2601\ufe0f','\u05d7\u05d9\u05d1\u05d5\u05e8 OneDrive (\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9)',function(){openModal('m-od');if(typeof _odRenderStatus==='function')_odRenderStatus();});
   item('\ud83d\udcbe','\u05d2\u05d9\u05d1\u05d5\u05d9 JSON',function(){if(typeof _exportBackup==='function')_exportBackup();});
@@ -16708,6 +16709,66 @@ function _truExportCsv(){
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
   toast('\u05d9\u05d5\u05e6\u05d0 \u2713 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');
 }
+
+// ---- hazards export to Excel (2026-09-21) ----
+// Michael works in Excel, and until today the only route there was the monthly
+// trustee CSV -- a scorecard with the findings appended underneath it. It also
+// stopped at the trustees: a near-miss reported by anyone else never reached
+// the file at all, and on the floor those are the same thing, something that
+// nearly hurt somebody.
+//
+// One sheet, both sources, open ones on top. The column names are Hebrew
+// because the person who opens the file is the safety manager.
+var HAZ_SRC_TRU='\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',HAZ_SRC_NM='\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2';
+// A near-miss is still open while it is \u05e4\u05ea\u05d5\u05d7 or \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc -- the same test rNm
+// and the dashboard already use, so the file cannot disagree with the screen.
+function _hazNmOpen(r){return r&&(r.s==='\u05e4\u05ea\u05d5\u05d7'||r.s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc');}
+function _hazDays(iso){var t=Date.parse(iso||'');return isNaN(t)?'':Math.floor((Date.now()-t)/86400000);}
+// Both tables, flattened to one shape.
+function _hazRows(){
+  var out=[];
+  (DB.trustee_reports||[]).forEach(function(r){
+    if(!_truIsHazard(r))return;
+    var tk=_truTask(parseInt(r.t,10)),open=r.s!==TRUSTEE_S_CLOSED;
+    out.push({src:HAZ_SRC_TRU,d:r.d||String(r.ts||'').substring(0,10),
+      loc:r.loc||(r.location_id?_locName(r.location_id):''),who:r.u||'',
+      what:r.f||'',kind:tk?tk.t:'',sev:'',s:r.s||'',open:open,
+      days:open?_hazDays(r.ts||r.d):'',owner:r.ref||'',photo:r.photo_url||'',id:r.id||''});
+  });
+  (DB.near_miss||[]).forEach(function(r){
+    var open=_hazNmOpen(r);
+    out.push({src:HAZ_SRC_NM,d:r.d||'',
+      loc:r.area||(r.location_id?_locName(r.location_id):''),who:r.rep||'',
+      what:r.descr||'',kind:r.typ||'',sev:r.sev||'',s:r.s||'',open:open,
+      days:open?_hazDays(r.ts||r.d):'',owner:'',photo:r.photo_url||'',id:r.id||''});
+  });
+  // Open first, then newest first. The file exists to be worked from, not read.
+  return out.sort(function(a,b){
+    if(a.open!==b.open)return a.open?-1:1;
+    return String(b.d||'').localeCompare(String(a.d||''));
+  });
+}
+function _hazAoa(rows){
+  var aoa=[['\u05de\u05e7\u05d5\u05e8','\u05ea\u05d0\u05e8\u05d9\u05da','\u05d0\u05d6\u05d5\u05e8 / \u05de\u05d9\u05e7\u05d5\u05dd','\u05de\u05d9 \u05d3\u05d9\u05d5\u05d5\u05d7','\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','\u05de\u05e9\u05d9\u05de\u05d4 / \u05e1\u05d5\u05d2','\u05d7\u05d5\u05de\u05e8\u05d4','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05d9\u05de\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7','\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4','\u05ea\u05de\u05d5\u05e0\u05d4','\u05de\u05d6\u05d4\u05d4']];
+  rows.forEach(function(r){aoa.push([r.src,fd(r.d),r.loc,r.who,r.what,r.kind,r.sev,r.s,r.days,r.owner,r.photo,r.id]);});
+  return aoa;
+}
+window._hazExportXlsx=function(){
+  var rows=_hazRows();
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  _ensureXlsxLib().then(function(){
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(_hazAoa(rows)),'\u05de\u05e4\u05d2\u05e2\u05d9\u05dd');
+    var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='tapugan-hazards-'+new Date().toISOString().substring(0,10)+'.xlsx';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},100);
+    var openN=rows.filter(function(r){return r.open;}).length;
+    toast('\u05d9\u05d5\u05e6\u05d0 ✓ '+rows.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd ('+openN+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd)');
+  })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
+};
 // ---- roster editor (manager): public.trustees ----
 function _truRosterOpen(){_truRosterRender();openModal('m-tru-roster');}
 function _truRosterRender(){
@@ -16989,6 +17050,7 @@ function _truMgrMenu(anchor){
     item('\ud83d\udccb','\u05e7\u05d8\u05dc\u05d5\u05d2 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea',_truTasksOpen);
     item('\ud83c\udfc6','\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9 + \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4',_truWinnerOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
+    item('\u26a0','\u05d9\u05d9\u05e6\u05d5\u05d0 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd + \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2)',_hazExportXlsx);
     item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
     sep();
     item('\ud83e\uddba','\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df (\u05dc\u05dc\u05d0 \u05e1\u05d9\u05e1\u05de\u05d4)',function(){empToggle(true);_truOpen();});
