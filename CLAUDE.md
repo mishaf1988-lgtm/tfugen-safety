@@ -105,18 +105,15 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - `ncr_ai` table — ניתוחי AI של NCR (היסטוריה לפי `version`). אסור למחוק שורות היסטוריות
 - `equip_inspections` table — בדיקות ציוד חובה לפי פקודת הבטיחות (שדה תפוגה: `e`)
 
-## Supabase MCP — גישה ישירה ל-DB (מ-2026-09-19)
+## Supabase MCP — גישה ישירה ל-DB (מחובר מ-2026-09-22)
 
-**מצב אמיתי (נבדק 2026-09-19 מתוך סשן ענן):** סביבת הענן «Default» של Claude Code היא ברמת רשת **Trusted** — מגיעה רק ל-package registries ולדומיינים מאושרים. **כל הדומיינים של Supabase חסומים בה**: `mcp.supabase.com`, `api.supabase.com`, `*.supabase.co` → 403 מפרוקסי ה-egress ("policy denial"). לכן:
-- `.mcp.json` בשורש ה-repo (`https://mcp.supabase.com/mcp`, OAuth, בלי טוקן) **לא מתחבר בסביבה הזו כמו שהיא** — הוא נכון, הרשת חוסמת אותו.
-- גם `curl` ל-REST של Supabase נכשל — **אי אפשר לאמת מיגרציות מתוך הסשן**; האימות הוא צילום מסך של מיכאל מ-SQL Editor (כמו ב-#582).
+**מחובר ועובד** דרך **Connector ב-claude.ai** (OAuth, בלי טוקן בקוד). אומת 2026-09-22: `list_projects` מחזיר את `znhjtpcltrxxyfjczgvw` (ACTIVE_HEALTHY, Postgres 17), ו-`execute_sql`/`get_advisors` עובדים. המחבר עובר דרך `api.anthropic.com` ולכן **לא מושפע** מחסימת הרשת.
 
-**שני מסלולים שעובדים — צריך אחד מהם, פעם אחת:**
-- **A. Connector ב-claude.ai** (המסלול המוכח): Customize → Connectors → **+** → Add custom connector → Name `Supabase`, URL `https://mcp.supabase.com/mcp` → התחברות ל-Supabase. עובר דרך `api.anthropic.com` שמותר ברשת — בדיוק כמו שמחבר GitHub עובד. נטען **רק בתחילת שיחה**.
-- **B. לפתוח את הרשת של הסביבה**: claude.ai/code → Environments → Default → **Network access → Custom** → להוסיף `mcp.supabase.com`, `api.supabase.com`, `*.supabase.co`. אז גם `.mcp.json` מתחבר (אישור חד-פעמי לשרת הפרויקט + OAuth) **וגם אימות REST עובד מהסשן**. ⚠ יש דיווחים פתוחים (claude-code #19087, #34690) שהרשימה לא תמיד מגיעה לפרוקסי — בסשן חדש לבדוק `curl -sI https://mcp.supabase.com/mcp`; אם עדיין 403 → מסלול A.
-- ב-checkout **מקומי** (Claude Code על מחשב, בלי פרוקסי) `.mcp.json` עובד כמו שהוא.
+⚠️ **הרשת של סביבת הענן עדיין חוסמת את Supabase ישירות** (`mcp.supabase.com`, `*.supabase.co` → 403 מפרוקסי ה-egress). המשמעות:
+- ה-MCP עובד **רק דרך ה-Connector**. הרשומה ב-`.mcp.json` בשורש ה-repo נשארת «ממתינה לאישור» ולא תתחבר בענן — היא רלוונטית רק ל-checkout מקומי.
+- `curl`/`fetch` ל-REST של Supabase מתוך הסשן עדיין נכשלים. לאימות משתמשים ב-`execute_sql` של ה-MCP, לא ב-curl.
 
-הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref`** בכתובת — בכוונה, כי הוא מכבה את `get_advisors` שבהם השתמשנו בסבב האבטחה.
+הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref`** בכתובת — בכוונה, כדי ש-`get_advisors` יעבוד.
 
 **ההרשאה היא קריאה + כתיבה.** לכן:
 
