@@ -116,6 +116,35 @@ const EDIT_DEL = /^(askDel\(|delById\(|delAll|editTsk\(|editNcr\(|editInc\(|_rou
     check('what is left is what works', r.pages.sort().join(',') === 'dash,emp-home,menu,tasks,view', r.pages);
   }
 
+  // Michael, 2026-09-22: he wants the admin to grant access from inside the
+  // app. That already worked -- the role dropdown writes app_users.role, which
+  // is what the database rules read -- but it never said what a role grants,
+  // and after the reporter's pages were narrowed that mattered more.
+  console.log('\nthe role dropdown says what it grants');
+  {
+    const r = await page.evaluate(() => {
+      const out = {};
+      DB.app_users = [{ id: 'u1', username: 'yos', full_name: 'יוסי', role: 'מדווח', active: true }];
+      editUser('u1');
+      out.reporter = document.getElementById('u-role-hint').textContent;
+      const sel = document.getElementById('u-role');
+      sel.value = 'מנהל'; sel.dispatchEvent(new Event('change'));
+      out.manager = document.getElementById('u-role-hint').textContent;
+      sel.value = 'אדמין'; sel.dispatchEvent(new Event('change'));
+      out.admin = document.getElementById('u-role-hint').textContent;
+      closeModal('m-user');
+      return out;
+    });
+    check('opening a reporter explains what a reporter gets', /משימות/.test(r.reporter) && r.reporter.length > 25, r.reporter);
+    // The narrowing is the part an admin would not guess, so it has to be said.
+    check('...including that they cannot open records', /לא פותח|לא עורך/.test(r.reporter), r.reporter);
+    check('...and where an employee reports instead', /נאמן/.test(r.reporter), r.reporter);
+    check('changing the choice changes the explanation', r.manager !== r.reporter && /עריכה|מחיקה/.test(r.manager), r.manager);
+    check('...and admin is described as everything', /ניהול משתמשים/.test(r.admin), r.admin);
+    check('the three descriptions are all different',
+      new Set([r.reporter, r.manager, r.admin]).size === 3, [r.reporter, r.manager, r.admin]);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

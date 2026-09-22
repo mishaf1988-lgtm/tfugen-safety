@@ -1099,7 +1099,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="fgrid">
     <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; * (&#1488;&#1493;&#1514;&#1497;&#1493;&#1514; &#1500;&#1488; &#1506;&#1489;&#1512;&#1497;&#1493;&#1514;)</label><input id="nu-username" placeholder="username" autocapitalize="off" autocomplete="off"></div>
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="nu-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
-    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="nu-role"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="nu-role" onchange="_roleHint('nu-role','nu-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="nu-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="nu-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512;"></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="nu-phone" type="tel" placeholder="050-1234567"></div>
     <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="nu-email" type="email" placeholder="name@co.il"></div>
@@ -1171,7 +1171,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       </div>
     </div>
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="u-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
-    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role" onchange="_roleHint('u-role','u-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="u-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="u-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512; / &#1488;&#1495;&#1494;&#1511;&#1492; / ..."></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="u-phone" type="tel" placeholder="050-1234567"></div>
     <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="u-email" type="email" placeholder="name@co.il"></div>
@@ -10151,6 +10151,20 @@ function rUsers(){
   }).join('');
 }
 
+// What each role actually gets. The dropdown has always been the way an admin
+// grants access from inside the app -- the value lands in app_users.role,
+// which is what the database rules read -- but it never said what it grants.
+// After the reporter's pages were narrowed on 2026-09-22 that gap got wider:
+// «\u05de\u05d3\u05d5\u05d5\u05d7» now means much less than it used to, and nothing on the
+// screen said so. Keep these in step with _REPORTER_PAGES and _ADMIN_ONLY_PAGES.
+window._ROLE_HINTS={};
+_ROLE_HINTS['\u05de\u05d3\u05d5\u05d5\u05d7']='\u05d3\u05e9\u05d1\u05d5\u05e8\u05d3, \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e1\u05da \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05dc\u05d1\u05d3. \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05dc\u05d0 \u05e2\u05d5\u05e8\u05da. \u05e2\u05d5\u05d1\u05d3 \u05e9\u05e6\u05e8\u05d9\u05da \u05dc\u05d3\u05d5\u05d5\u05d7 \u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df.';
+_ROLE_HINTS['\u05de\u05e0\u05d4\u05dc']='\u05db\u05dc \u05de\u05e1\u05db\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4, \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05d4\u05de\u05d2\u05de\u05d5\u05ea, \u05db\u05d5\u05dc\u05dc \u05e2\u05e8\u05d9\u05db\u05d4 \u05d5\u05de\u05d7\u05d9\u05e7\u05d4. \u05d1\u05dc\u05d9 \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d1\u05dc\u05d9 \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d1\u05dc\u05d9 \u05db\u05dc\u05d9 AI.';
+_ROLE_HINTS['\u05d0\u05d3\u05de\u05d9\u05df']='\u05d4\u05db\u05dc, \u05db\u05d5\u05dc\u05dc \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea.';
+window._roleHint=function(selId,outId){
+  var sel=g(selId),out=g(outId);if(!sel||!out)return;
+  out.textContent=_ROLE_HINTS[sel.value]||'';
+};
 function editUser(id){
   var u=(DB.app_users||[]).find(function(x){return x.id===id;});
   if(!u){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -10158,6 +10172,7 @@ function editUser(id){
   g('u-username').value=u.username||u.id;
   g('u-full-name').value=u.full_name||'';
   g('u-role').value=u.role||'\u05de\u05d3\u05d5\u05d5\u05d7';
+  _roleHint('u-role','u-role-hint');
   g('u-dept').value=u.dept||'';
   g('u-phone').value=u.phone||'';
   g('u-email').value=u.email||'';
@@ -10190,6 +10205,7 @@ function svUser(){
 function openNewUserModal(){
   ['nu-username','nu-full-name','nu-dept','nu-phone','nu-email','nu-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var r=g('nu-role');if(r)r.value='\u05de\u05d3\u05d5\u05d5\u05d7';
+  _roleHint('nu-role','nu-role-hint');
   var st=g('nu-status');if(st)st.textContent='';
   var btn=g('nu-submit');if(btn){btn.disabled=false;btn.textContent='➕ \u05d9\u05e6\u05d5\u05e8';}
   openModal('m-newuser');
