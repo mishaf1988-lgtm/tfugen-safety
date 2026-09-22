@@ -58,6 +58,11 @@ window.supabase = { createClient: function () { return { auth: {
     });
     await p.goto(ORIGIN + '/', { waitUntil: 'load' });
     await p.waitForTimeout(600);
+    // Since 2026-09-22 the site opens on the home screen unless the phone
+    // remembers the code; the code screen comes up when the trustee taps the
+    // vest button there. The cases about the code screen do that tap here
+    // (o.tap === false: stay on the home screen, for the cases about it).
+    if (o.emp && !o.stored && o.tap !== false) { await p.evaluate(() => doEmpLogin()); await p.waitForTimeout(300); }
     p.__gate = gateCalls;
     return p;
   };
@@ -88,6 +93,31 @@ window.supabase = { createClient: function () { return { auth: {
     // The app used to sit behind the code screen, dimmed but readable, showing
     // a shell no trustee ever sees. The guide screenshot is what showed it.
     check('...with nothing of the app showing behind it', s.app === 'none', s.app);
+    await p.close();
+  }
+
+  console.log('\n1b. the bare address with a leftover flag opens the home screen, not the code screen (2026-09-22)');
+  {
+    // Michael, three times over: «כשמזינים את האתר צריכים להגיע למסך הבית, שם
+    // הנאמן לוחץ ומגיע למודול ואז מזין את הסיסמה». A flag with no remembered
+    // code behind it is not a reason to open the kiosk on him.
+    const p = await open({ emp: true, tap: false, server: 'ok' });
+    const s = await state(p);
+    check('the login / home screen, no code screen', s.login !== 'none' && s.gate === 'none' && !s.emp, s);
+    check('...and the leftover flag is dropped', (await p.evaluate(() => localStorage.getItem('tfgn_emp_mode'))) === null);
+    // The button on that screen is the way in: it asks for the code.
+    await p.evaluate(() => doEmpLogin());
+    await p.waitForTimeout(300);
+    const s2 = await state(p);
+    check('tapping the trustee button opens the code screen', s2.gate !== 'none', s2);
+    await p.close();
+  }
+  {
+    // A remembered code still opens the kiosk by itself on the bare address:
+    // that is what the tick box promises.
+    const p = await open({ emp: true, stored: 'RIGHT', server: 'ok' });
+    const s = await state(p);
+    check('a phone that remembers the code goes straight to the trustee screen', s.emp && s.home && s.gate === 'none', s);
     await p.close();
   }
 

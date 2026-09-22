@@ -17886,6 +17886,16 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       try{localStorage.removeItem(EMP_KEY);}catch(e){}
       document.body.classList.remove('emp-mode');
       showLogin();
+    }else if(emp&&!_empGateStored()){
+      // Michael, 2026-09-22 (third time, in plain words): the site opens on
+      // the home screen; the trustee taps the vest button there and THEN
+      // types the code. The guide has described exactly that all along. The
+      // kiosk opens by itself only when the phone remembers the code (the
+      // "remember me" box ticked). A sticky flag with nothing behind it is
+      // dropped, ?emp=1 included.
+      try{localStorage.removeItem(EMP_KEY);}catch(e){}
+      document.body.classList.remove('emp-mode');
+      showLogin();
     }else if(emp){
       document.body.classList.add('emp-mode');
       ldb();CUR='emp-home';
