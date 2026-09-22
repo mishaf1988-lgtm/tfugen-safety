@@ -13,6 +13,14 @@
 
 ---
 
+## 2026-09-22 — RTK לא מותקן: נבדק בפועל, התועלת אצלנו קטנה והסיכון יושב על העריכות
+
+**החלטה**: לא להתקין את RTK (`rtk-ai/rtk`, דוחס פלט Bash דרך PreToolUse hook). לחזור לשאלה רק אם `/usage` יראה, אחרי שבוע עם השינויים של #764/#765, שפלט כלים הוא נתח גדול מהצריכה. בינתיים לא לבדוק שוב, הממצאים פה.
+**מה נבדק (בסשן ענן, 22/09)**: הסקריפט הרשמי נכשל כי `github.com/releases/latest` מוחזר 403 מפרוקסי ה-egress; הורדה ישירה עם גרסה נעוצה (`v0.49.0`, `rtk-x86_64-unknown-linux-musl.tar.gz`, 4.8MB) עוברת. הגרסה נקראת מ-`Cargo.toml` ב-raw.githubusercontent (200). טלמטריה: `RTK_TELEMETRY_DISABLED=1`. מדידה על ה-repo: `grep -n askDel index.html` 15,779 → 2,287 בייטים (85%), `ls -la` 65%, `git status` 30%, `git log --oneline` ו-`git diff --stat` 0%. ה-hook (`rtk hook claude`) מעביר את `bash tests/harness/run.sh` ללא שינוי, אז אין התנגשות עם `lean-harness.py`.
+**סיבה**: (1) RTK דוחס פלט Bash, ואצלנו הטוקנים הולכים לקבצי המצב ולאורך השיחה, שטופלו ב-#764. הכלים הפנימיים Read/Grep/Glob לא עוברים דרכו כלל. (2) `rtk grep` חותך שורות ארוכות באמצע (`...="'+esc(r.id)+'"...`), ו-`index.html` מלא בהן; grep אצלנו משמש למצוא טקסט מדויק ל-Edit, ושורה חתוכה = Edit שנכשל = סיבוב נוסף. (3) עלות תפעולית: ה-hook גלובלי (`rtk init -g` כותב ל-`~/.claude/settings.json`), HOME בענן נמחק בכל סשן, אז נדרש SessionStart hook שמוריד בינארי בכל פעם + חיווט ידני ב-settings של הפרויקט. עוד חלק נע בלי מספר שמצדיק אותו.
+**אלטרנטיבות שנדחו**: התקנה עם הגנות (`rtk proxy grep` על index.html, גרסה נעוצה): אפשרית, נשמרת לאם-וכאשר. `alexgreensh/token-optimizer`: רישיון PolyForm Noncommercial. `egorfedorov/claude-context-optimizer`: כלי מדידה בלבד, מקומי, יכול לשמש למדידה שתכריע.
+**קישורים**: #764, #765 · `.claude/hooks/README.md`
+
 ## 2026-09-22 — חיסכון בטוקנים: קריאה חכמה של קבצי המצב, hooks במקום טקסט, היסטוריה מחוץ ל-CLAUDE.md
 
 **החלטה**: (1) כלל הפתיחה ב-CLAUDE.md כבר לא «קרא את 4 הקבצים». `STATUS.md`/`DECISIONS.md`/`BACKLOG.md` (600KB ביחד) נקראים לפי סעיף ולפי grep של מילת מפתח; רק `CLAUDE.md` נקרא במלואו. (2) שלושה חוקים עברו לאכיפה ב-hooks (`.claude/hooks/`): חסימת SQL הרסני על `ncr`/`ncr_ai`/`trustee_reports` (גם דרך Supabase MCP), אזהרה על עברית גולמית שנוספה ל-`<script>`, וקיצור פלט ה-harness רק כשהוא ירוק. (3) הרקע ההיסטורי (Vercel, 375 רשומות ncr, שלוש התנגשויות הסנכרון, אימות ה-MCP, מדיניות הסיסמאות) עבר ל-skill `tfugen-history`. **האזהרות עצמן נשארו ב-CLAUDE.md**, עבר רק ה«למה». (4) `tfugen-lean` הורחב: `tfugen-ref` לפני grep, Haiku לחיפושים רחבים (מוצא בלבד, לא מחליט), והצעה לשיחה חדשה כשמשימה נסגרה.
