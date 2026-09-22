@@ -17606,6 +17606,13 @@ function _empGateCancel(){
   // Back to the login screen: there is nothing to show behind the curtain.
   try{localStorage.removeItem(EMP_KEY);}catch(e){}
   document.body.classList.remove('emp-mode');
+  // The kiosk branch of proceed() had already set CUR='emp-home' before the
+  // gate opened. Left there, the manager who signs in from here lands on the
+  // dashboard with the state saying trustee home: rDash skips its widgets,
+  // the back arrow shows on the home page, on-dash is off. Seen 2026-09-22
+  // while reproducing Michael's path (gate -> back -> password).
+  CUR='dash';
+  try{document.body.classList.toggle('on-dash',true);}catch(e){}
   var app=g('app');if(app)app.style.display='none';
   var ls=g('login');if(ls)ls.style.display='flex';
 }
