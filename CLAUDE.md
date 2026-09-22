@@ -24,7 +24,7 @@ Claude Code loads this file automatically at the start of every session in this 
 ### API endpoints — `/functions/api/*.js`
 כל קוד צד שרת יושב ב-`/functions/api/*.js` (Cloudflare Pages Functions API: `onRequest`, `env` arg, named export). אין יותר תיקיית `/api` של Vercel — הוסרה ב-2026-05-03 כשהמיגרציה ל-Cloudflare הושלמה.
 
-> **2026-09-21:** השורה הזו הייתה נכונה לגבי ה-repo ולא לגבי המציאות. **פרויקט ה-Vercel עצמו נשאר מחובר ל-GitHub ופרס בכל דחיפה עוד ארבעה חודשים**, בכתובת `tfugen-safety.vercel.app` — עותק ציבורי שני של אפליקציית בטיחות, שבו 11 נקודות הקצה מחזירות 404 כי Vercel אינו מריץ Pages Functions. התגלה ממיילי פריסה כושלת אצל מיכאל, **ונמחק על ידו ב-21/09**. החשבון ריק מפרויקטים. **Cloudflare Pages הוא הייצור היחיד, עכשיו גם בפועל.**
+פרויקט ה-Vercel נמחק גם מהדשבורד ב-2026-09-21 (הסיפור המלא: skill `tfugen-history`). **אין Vercel. אל תפנה ל-`tfugen-safety.vercel.app`.**
 
 ## חוקי פיתוח חובה
 
@@ -41,6 +41,8 @@ Claude Code loads this file automatically at the start of every session in this 
 5. **אל תיצור קבצי HTML נוספים**. הכל ב-`index.html`.
 6. **אל תוסיף framework / build step / bundler**.
 7. **אין לסמן `[x]` בלי הוכחת הרצה** — פעולה ידנית ב-Supabase, migration, RLS, Storage policy או שינוי Auth תסומן כבוצעה ב-`STATUS.md` רק אחרי שהמשתמש אישר במפורש שההרצה והאימות עברו. `IF NOT EXISTS` אומר שההרצה בטוחה לחזרה, אבל לא מוכיח שהפעולה בוצעה או שהאפליקציה עובדת.
+
+**שלושה מהחוקים נאכפים גם ב-hooks** (`.claude/hooks/`, מחווטים ב-`.claude/settings.json`): חסימת `DELETE`/`TRUNCATE`/`DROP` על `ncr`/`ncr_ai`/`trustee_reports`, אזהרה כשעריכה מוסיפה עברית גולמית ל-`<script>`, וקיצור פלט ה-harness כשהוא ירוק. hook רץ בכל קריאה; טקסט פה יכול להישכח אחרי compaction.
 
 ## שפה ותקשורת
 
@@ -59,8 +61,11 @@ Claude Code loads this file automatically at the start of every session in this 
 
 ## Workflow — כל משימה חדשה
 
-1. **קרא** `STATUS.md` → מצא משימה לא-מסומנת. אם אין — `project-files/BACKLOG.md` הוא תור העבודה (75 פריטים לפי תחום, חומרה ומאמץ)
-2. **קרא** `DECISIONS.md` → ודא שאתה לא סותר החלטה קודמת
+1. **קרא חכם, לא הכל.** `STATUS.md` (200KB), `DECISIONS.md` (150KB) ו-`BACKLOG.md` (230KB) גדולים מכדי להיקרא בשלמותם, וקריאה כזו שורפת את רוב תקציב השיחה לפני שנעשה משהו. במקום זה:
+   - `STATUS.md`: רק הסעיף «מה פתוח עכשיו» (`grep -n "^## " STATUS.md` ואז `sed -n` על הטווח) + `grep -n "\- \[ \]" STATUS.md` למשימות הפתוחות.
+   - `DECISIONS.md`: `grep -n -i "<מילת מפתח של המשימה>"` ואז לקרוא רק את ההחלטות שנמצאו. **חובה** לפני שינוי ארכיטקטוני, כדי לא לסתור החלטה קודמת.
+   - `BACKLOG.md`: רק כשאין משימה ב-STATUS, ורק את סעיף התחום הרלוונטי (`grep -n "^## "`).
+2. **חיפוש ב-`index.html` (1.4MB)**: קודם skill `tfugen-ref` (טבלאות, עזרים, מספרי שורות), ואז `grep -n` צר. **לעולם לא `Read` על הקובץ כולו.** חיפוש רחב שמצריך כמה ניסיונות: לסוכן משנה על Haiku, שמחזיר רק מיקומים. הוא **מוצא**, ההחלטה והבדיקה נשארות אצל המודל הראשי.
 3. **צור branch**: `routine/<name>-YYYY-MM-DD`
 4. **ערוך** בשינויים ממוקדים
 5. **בדוק**:
@@ -91,7 +96,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 ### חוקי סנכרון — חובה, לא המלצה
 
-שני החשבונות עורכים את **אותו `index.html` בן 1.4MB** במקביל. ב-2026-09-22 זה עלה שלוש פעמים בעבודה כפולה (PR שהתנגש אחרי 31 commits ונדרש יישום מחדש · שתי עריכות STATUS שנפלו על עוגנים ששוכתבו · «ממצא» על טבלת `ncr` שהחשבון השני כבר חקר וסגר יום קודם). בכל הפעמים זו הייתה עבודה כפולה ולא אובדן — אבל זה עניין של זמן.
+שני החשבונות עורכים את **אותו `index.html` בן 1.4MB** במקביל. ב-2026-09-22 זה עלה שלוש פעמים בעבודה כפולה (הפירוט: skill `tfugen-history`). מכאן החוקים:
 
 1. **`git fetch origin main` + `reset --hard origin/main` לפני כל עריכה** — לא כתגובה להתנגשות. גם אם עברו חמש דקות.
 2. **לפני שמתקנים `STATUS.md` / `CLAUDE.md` / `BACKLOG.md` — לקרוא אותם מחדש אחרי ה-fetch.** עוגני טקסט בקבצים האלה מתיישנים תוך דקות.
@@ -100,20 +105,17 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 5. **חלוקת נתיבים** (כשמוסכמת) נרשמת כאן, כדי ששני הצדדים יראו אותה.
 
 **בתחילת כל שיחה** (גם בסשן חדש בחשבון אחר), Claude צריך:
-1. לקרוא את 4 הקבצים הללו
+1. לקרוא את `CLAUDE.md` במלואו, ואת השאר **לפי כלל «קרא חכם»** בסעיף Workflow (הסעיף הפתוח ב-STATUS, grep ממוקד ב-DECISIONS/BACKLOG). לא לקרוא 600KB.
 2. לשאול את המשתמש מה המטרה של השיחה
 3. לפעול לפי החוקים פה
+
+**שיחה ארוכה מייקרת כל הודעה** (כל ההיסטוריה נשלחת מחדש). כשמשימה נסגרה ומוזגה, להציע למיכאל לפתוח שיחה חדשה: המצב כבר ב-`STATUS.md`, לא צריך לגרור אותו בהקשר.
 
 ## אזורים רגישים — בקש אישור לפני שינוי
 
 - `api/claude.js` — API key של Claude, אל תחשוף בקומיטים
 - קריאות Supabase — אל תשנה את ה-schema בלי דיון
-- `ncr` table — אין למחוק/להחליף.
-  **נמדד מול ה-DB 2026-09-22: `public.ncr` = 0 שורות · `backup_ops_20260918.ncr` = 375.**
-  שתי הגרסאות הקודמות של השורה הזו היו שגויות: «375 רשומות production» (לא נכון מאז 18/09)
-  וגם «המספר מעולם לא היה נכון» (גם לא — הרשומות קיימות, בגיבוי). מה שקרה בפועל:
-  375 רשומות יובאו, וב-18/09 בוצע **איפוס תפעול מכוון** עם גיבוי ל-`backup_ops_20260918`.
-  `public.ncr` ריקה בכוונה. האזהרה נשארת בתוקף לקראת העלייה לאוויר
+- `ncr` table — אין למחוק/להחליף. **`public.ncr` = 0 שורות בכוונה (איפוס תפעול 18/09), `backup_ops_20260918.ncr` = 375** (נמדד 2026-09-22). ההיסטוריה: skill `tfugen-history`. נאכף ב-hook `guard-sql.py`
 - `ncr_ai` table — ניתוחי AI של NCR (היסטוריה לפי `version`). אסור למחוק שורות היסטוריות
 - `equip_inspections` table — בדיקות ציוד חובה לפי פקודת הבטיחות (שדה תפוגה: `e`)
 
@@ -121,22 +123,13 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 **אל תפעיל «Password requirements» (דרישת תווים) ב-Auth → Providers → Email.** זה ישבור שתי פונקציות שרת.
 
-`functions/api/create-user.js` ו-`functions/api/reset-password.js` מייצרות סיסמה זמנית מהתווים `abcdefghjkmnpqrstuvwxyz23456789` — **אותיות קטנות וספרות בלבד**, 8 תווים. זה מכוון: הסיסמה מוכתבת בטלפון, ולכן אין בה אותיות גדולות, סמלים, או תווים שקל להתבלבל בהם (`i/l/o/0/1`). המשתמש מוחלף בכל מקרה בכניסה הראשונה (`must_change_password`).
+`create-user.js` ו-`reset-password.js` מייצרות סיסמה זמנית מאותיות קטנות וספרות בלבד (8 תווים, מוכתבת בטלפון). דרישת תווים תגרום ל-Supabase לדחות את הסיסמה **שהשרת עצמו מייצר**: יצירת משתמש ו«שכחתי סיסמה» יישברו בלי שום קשר גלוי להגדרה.
 
-אם תופעל דרישת תווים, Supabase ידחה את הסיסמה **שהשרת עצמו מייצר**: יצירת משתמש חדש תיכשל ו«שכחתי סיסמה» יפסיק לעבוד — בלי שום קשר גלוי להגדרה ששונתה.
-
-**המצב הנכון (אומת בצילום מסך 2026-09-22):** `Minimum password length = 8` מופעל, `Password requirements` **ריק בכוונה**. הסיסמה שהמשתמש בוחר בעצמו נאכפת בקוד, בשני מסלולים שונים: החלפה כפויה בכניסה ראשונה דורשת **10** תווים (`index.html:16194`), והחלפה יזומה דורשת **8** (`index.html:15931`). שניהם ≥ המינימום של Supabase.
-«Prevent use of leaked passwords» אינו זמין בתוכנית החינמית (Pro ומעלה) — ראה STATUS, נסגר 2026-09-22.
+**המצב הנכון:** `Minimum password length = 8` מופעל, `Password requirements` **ריק בכוונה**. אורך הסיסמה שהמשתמש בוחר נאכף בקוד (10 בכניסה ראשונה, 8 בהחלפה יזומה). הרקע והאימות: skill `tfugen-history`.
 
 ## Supabase MCP — גישה ישירה ל-DB (מחובר מ-2026-09-22)
 
-**מחובר ועובד** דרך **Connector ב-claude.ai** (OAuth, בלי טוקן בקוד). אומת 2026-09-22: `list_projects` מחזיר את `znhjtpcltrxxyfjczgvw` (ACTIVE_HEALTHY, Postgres 17), ו-`execute_sql`/`get_advisors` עובדים. המחבר עובר דרך `api.anthropic.com` ולכן **לא מושפע** מחסימת הרשת.
-
-⚠️ **הרשת של סביבת הענן עדיין חוסמת את Supabase ישירות** (`mcp.supabase.com`, `*.supabase.co` → 403 מפרוקסי ה-egress). המשמעות:
-- ה-MCP עובד **רק דרך ה-Connector**. הרשומה ב-`.mcp.json` בשורש ה-repo נשארת «ממתינה לאישור» ולא תתחבר בענן — היא רלוונטית רק ל-checkout מקומי.
-- `curl`/`fetch` ל-REST של Supabase מתוך הסשן עדיין נכשלים. לאימות משתמשים ב-`execute_sql` של ה-MCP, לא ב-curl.
-
-הפרויקט `znhjtpcltrxxyfjczgvw` הוא היחיד בחשבון, לכן **אין `project_ref`** בכתובת — בכוונה, כדי ש-`get_advisors` יעבוד.
+**מחובר ועובד** דרך **Connector ב-claude.ai** (`mcp__Supabase__*`, OAuth). ⚠️ הרשת של הענן חוסמת את `*.supabase.co` ישירות: הרשומה `supabase` ב-`.mcp.json` נכשלת בענן בכל סשן (זה צפוי, לא תקלה), ו-`curl` ל-REST נכשל. **לאימות משתמשים ב-`execute_sql` של ה-MCP.** פרטי האימות: skill `tfugen-history`.
 
 **ההרשאה היא קריאה + כתיבה.** לכן:
 
@@ -153,3 +146,5 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - Checklist לפני PR: `project-files/CHECKLIST.md`
 - Skill מפורט: `.claude/skills/tfugen-dev/SKILL.md`
 - **Skill לחיסכון בטוקנים: `.claude/skills/tfugen-lean/SKILL.md`** — תשובות קצרות, grep צר במקום קריאת קבצים, ורשימה מפורשת של מה שאסור לחתוך בו (מערך הבדיקות, שבירה מכוונת, כלל 7)
+- **Skill היסטוריה: `.claude/skills/tfugen-history/SKILL.md`** — הרקע שהוצא מהקובץ הזה (Vercel, 375 רשומות ncr, התנגשויות הסנכרון, אימות ה-MCP, מדיניות הסיסמאות). לטעון רק כשמשימה נוגעת בהם
+- **Hooks: `.claude/hooks/README.md`** — החוקים שנאכפים בקוד
