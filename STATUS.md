@@ -12,7 +12,7 @@
 | skill `tfugen-history`: הרקע יצא מ-CLAUDE.md, האזהרות נשארו | ✅ ב-main |
 | `tfugen-lean` הורחב: `tfugen-ref` קודם, Haiku לחיפושים, שיחה חדשה אחרי מיזוג | ✅ ב-main |
 | שלושה hooks ב-`.claude/hooks/` (SQL הרסני על ncr, עברית גולמית, קיצור harness), נבדקו ידנית: deny/pass/rewrite/ratchet | ✅ ב-main |
-| **חיווט ה-hooks ב-`.claude/settings.json`** | ❌ **פתוח.** הסשן בענן חסום מלערוך את הקובץ הזה (self-modification). הקטע המוכן: `.claude/hooks/README.md`. **בלי החיווט ה-hooks לא רצים.** מיכאל מדביק, או מאשר לסשן לכתוב |
+| חיווט ה-hooks ב-`.claude/settings.json` | ✅ ב-main. נכתב אחרי שמיכאל הוציא את הסשן ממצב auto (במצב auto המסנן חוסם כתיבה לקובץ הזה בלי אפשרות אישור). **נכנס לפעולה מהסשן הבא**, לא בסשן שכתב אותו |
 | RTK (דחיסת פלט Bash) | ⏸ שלב שני, אחרי בדיקת התקנה בענן וכיבוי טלמטריה. `DECISIONS.md` 22/09 |
 
 ## 🚦 לפני הפצת המדריך לנאמנים — בדיקה אחרונה (2026-09-22)
