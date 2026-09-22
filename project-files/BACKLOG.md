@@ -246,7 +246,7 @@
 **הערה**: סיכון אמיתי בתיקון: 375 ה-NCR בייצור יובאו מאקסל עם s='סגור' (xlParse, 15164) והרבה מהם בלי rc/c/o. שער שחוסם **כל** שמירה עם סטטוס 'סגור' יינעל על רשומות ישנות — מיכאל יפתח NCR ישן כדי לתקן פסיק, וייחסם. הפתרון: להפעיל את השער רק כשהסטטוס **משתנה** ל'סגור' (להשוות מול DB.ncr.find(id).s), או רק על רשומות חדשות. עוד שני דברים שראיתי בדרך ונוגעים לאותו קוד: (1) `id="ncr-p"` **לא קיים** במודאל (הגריד ב-1998-2038 אין בו שדה עדיפות), ו-gv מחזיר '' לאלמנט חסר (2940: `return el?el.value.trim():'';`) — לכן שורה 4336 `p:gv('ncr-p')||'בינונית'` **מאפסת את העדיפות ל«בינונית» בכל עריכה** של NCR קיים, ו-editNcr (4280) גם הוא לא מחזיר את הערך; (2) כתוצאה מכך התנאי בשורה 4342 `rec.p==='קריטי'` לעולם לא מתקיים — התראת `ncr_critical` היא קוד מת. שווה לצרף לאותו PR.
 
 
-### 1.7 — ✅ **הקוד נעשה ב-#678** · ממתין להרצת מיגרציה ב-[#679](../../issues/679) · מאמץ M
+### 1.7 — ✅ **הקוד נעשה ב-#678** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09) · מאמץ M
 
 > לא מסומן כבוצע לפי **כלל 7** ב-`CLAUDE.md`: אין לסמן `[x]` בלי הוכחת הרצה.
 > עד שהמיגרציה תרוץ, השדות החדשים נמחקים בסנכרון עם האזהרה שנוספה ב-#654.
@@ -293,7 +293,7 @@
 **הערה**: ‏DECISIONS.md, «2026-04-18 — NCR Agent Accept & Apply (PR 5b)» (שורות 1349-1366), מתעד את מיפוי 4 השדות כהחלטה מכוונת — לכן זו לא טעות קוד אלא החלטה שצריך לשנות במודע, ושורה ב-DECISIONS.md בסוף. שים לב שההחלטה ההיא גם כתבה במפורש «`corrective_actions[0]` ולא `immediate_action`» — לא לשנות את זה אגב אורחא. ההגנה מ-_ncrAIRcAction היא התקדים לחיקוי, לא המצאה חדשה. נקודה נוספת שראיתי ב-_ncrApply: אחרי ה-PATCH היא מעדכנת את DB.ncr בזיכרון (15589) אבל **לא קוראת ל-`sdb()`** — המטמון ב-localStorage נשאר עם הערכים הישנים עד הסנכרון הבא, כך שרענון אופליין מחזיר את מה שנדרס. שורה אחת.
 
 
-### 1.11 — ✅ **הקוד נעשה ב-#678** · ממתין להרצת מיגרציה ב-[#679](../../issues/679) · מאמץ M
+### 1.11 — ✅ **הקוד נעשה ב-#678** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09) · מאמץ M
 
 > לא מסומן כבוצע לפי **כלל 7** ב-`CLAUDE.md`: אין לסמן `[x]` בלי הוכחת הרצה.
 > עד שהמיגרציה תרוץ, השדות החדשים נמחקים בסנכרון עם האזהרה שנוספה ב-#654.
@@ -462,7 +462,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: Reuse, do not duplicate: `window._popMenu` (index.html:8790-8889) is the generic anchored dropdown the rest of the app already standardised on — `_eqiMoreMenu`, `_truMgrMenu` (index.html:15029), `_legRowMenu`, `_itypeRowMenu` all use it, and it already has the viewport clamp `if(mr.left<8){...}else if(mr.right>window.innerWidth-8){...}`. `_topMoreMenu` predates it and is a copy-paste of the same 40 lines. The clean fix is to reimplement `_topMoreMenu` on top of `_popMenu` — its `item(emoji,label,fn,danger)` signature is call-compatible — but **keep the menu id `'top-more-menu'`**, because the print stylesheet at index.html:653 hides it by that exact id (`.overlay,.modal,#top-more-menu,#eqi-more-menu,...{display:none!important}`) and PR #555 relies on that so the menu does not leak onto printed pages. Risk if you reorder or nest items: STATUS.md records five separate sessions that added entries here (#563 renamed the trustee entry, #597 moved search into ☰ not here, #622 added the ISO readiness report, #619/#599 added entries to the *trustees* ⋯ which is a different menu at index.html:15029) — check none of those labels is the one Michael was told to look for. For the version, introduce one `var APP_VER='2026.09.20'` near the top and read it in all three sites; changing only the menu label would leave `_showAbout` contradicting it.
 
 
-### 3.3 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+### 3.3 — ✅ **הקוד נעשה ב-#684** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09)
 
 > לא מסומן כבוצע — **כלל 7**.
 > **נבחרה טבלה גנרית `record_history`** ולא שכפול של `equip_inspection_history`
@@ -488,7 +488,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: לתקן קודם את `VIEW_CONFIG.med` ואז את `_expCollect` — בלי ה-VIEW_CONFIG כל שורה חדשה בדף התפוגות תיתן 👁 שמוביל לאותו toast שגיאה, כי `rExp` (6089) ממפה `var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections'}` וקורא `showView`. שדות מוצעים ל-VIEW_CONFIG לפי מה ש-Smart Capture כותב בפועל (17981-17984): `n` (שם), `t` (סוג), `d` (תאריך), `e` (תפוגה), `file_url`. שם העמוד ב-`back:` חייב להיות עמוד קיים — אם לא בונים `pg-med`, להפנות ל-`exp`. `med` כבר ב-`_BACKUP_TABLES` (16780), ב-syncTbls (3550) וב-`_MANAGER_PAGES` (3701), ולכן לא צריך migration ולא שינוי הרשאות.
 
 
-### 3.5 — ✅ **הקוד נעשה ב-#681** · ממתין למיגרציה ב-[#682](../../issues/682) · מאמץ M
+### 3.5 — ✅ **הקוד נעשה ב-#681** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09) · מאמץ M
 
 > לא מסומן כבוצע — **כלל 7**.
 > **הערה:** התדירות של בדיקה אודיומטרית **לא מקודדת** בקוד ולא במיגרציה.
@@ -515,7 +515,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: ממצא נלווה שמצאתי תוך כדי ושווה לתקן באותה נגיעה: `_eqiCycleResolve` (7551-7558) מחפש מחזור לציוד לפי שם ב-`inspection_types` — `if(hit.cycle_months)return parseInt(hit.cycle_months,10)||null; if(hit.frequency_months)return parseInt(hit.frequency_months,10)||null;` — אבל `svItp` לא כותב אף אחד משני השדות האלה (הוא כותב `recur_count`/`recur_unit`), ולכן הענף הזה מת: מיכאל יכול להגדיר «מלגזה — כל 6 חודשים» ומסלול ה-PDF לא ימצא את זה לעולם ויפול לברירת המחדל 12 חודשים ב-`_eqiResolveExpiry` (7524). תיקון נקי: `_itpCycleMonths(rec)` אחת שממירה recur_count+recur_unit לחודשים, ושתי הנקודות (קידום next_due ו-_eqiCycleResolve) יקראו לה. חובה להשתמש ב-`du()` הקיים ולא לחשב ימים ידנית.
 
 
-### 3.7 — ~~🟨 partly~~ ✅ **הקוד נעשה ב-#681** · ממתין למיגרציה ב-[#682](../../issues/682) · מאמץ M
+### 3.7 — ~~🟨 partly~~ ✅ **הקוד נעשה ב-#681** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09) · מאמץ M
 
 > לא מסומן כבוצע — **כלל 7**.
 > **נבחרו עמודות ב-`leg` ולא טבלת `leg_compliance`** נפרדת: הסעיף הציע את שתיהן.
@@ -613,7 +613,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: הטענה מעריכה M; בפועל S. **לא** לסגור אוטומטית בשקט: DECISIONS.md 2026-09-18 §3 קובע שסגירה = דיווח t=8 עם תמונת «אחרי», ומשימה שנסגרה אינה הוכחה שמישהו צילם. הכיוון הבטוח — לשאול את המנהל «לסמן גם את הממצא נסגר?» ולקרוא ל-`_truMgrSetStatus(id,TRUSTEE_S_CLOSED)` הקיים (הוא כבר עושה `sbUpd`+`addLog`+`rTrustees`+`rDash`). RLS בסדר: UPDATE על `trustee_reports` מותר ל-admin/manager, והמנהל הוא זה שסוגר משימות. שווה גם להציג את סטטוס המשימה על שורת הממצא — כרגע `tskHtml` (14738) מציג רק את הכותרת כקישור, בלי סטטוס. שים לב: +2 ייזקפו לחודש שבו **דווח** הליקוי (14179), לא לחודש הסגירה.
 
 
-### 4.5 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+### 4.5 — ✅ **הקוד נעשה ב-#684** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09)
 
 > לא מסומן כבוצע — **כלל 7**.
 > **ההחלטה שלך לא שונתה**: הנאמן עדיין סוגר ממצא שהוא פתח, והנקודות
@@ -627,7 +627,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 
 **מיקום התיקון**: מיגרציה חדשה (עמודות `verified_by`/`verified_at` ל-`trustee_reports`), index.html:14566+14592 (`svTru`), 14182-14185 (`_truScore`), 14710-14745 (`rTrustees` — פילטר רביעי «נסגרו, טרם נבדקו»), 14752-14762 (`_truRowMenu` — «אשר סגירה»)
 
-**הערה**: לפני שנוגעים במנגנון הזה: `migrations/2026-09-20_trustee_close_ownership.sql` **טרם הורצה** (כתוב בראש הקובץ ובפריט 5.10 בבקלוג). בלעדיה כל מבקר בקישור הציבורי יכול לסגור כל ממצא בלולאה — זה פער חמור יותר באותו מנגנון בדיוק, וצריך לרוץ קודם. עוד נקודה לפני שינוי ניקוד: +2 נזקפים לחודש שבו **דווח** הליקוי (`_truScore` 14179 מסנן `_truRows(m)` לפי `r.u===u`), כך שסגירה ב-3 באוקטובר משנה למפרע את לוח ספטמבר — גם אחרי שהוכרז זוכה. פעולה ידנית של מיכאל נדרשת (מיגרציה), ולכן זה לא פריט שנסגר בתוך ריצה אחת.
+**הערה**: `migrations/2026-09-20_trustee_close_ownership.sql` **הורצה ואומתה 2026-09-22** (כתוב בראש הקובץ ובפריט 5.10 בבקלוג). בלעדיה כל מבקר בקישור הציבורי יכול לסגור כל ממצא בלולאה — זה פער חמור יותר באותו מנגנון בדיוק, וצריך לרוץ קודם. עוד נקודה לפני שינוי ניקוד: +2 נזקפים לחודש שבו **דווח** הליקוי (`_truScore` 14179 מסנן `_truRows(m)` לפי `r.u===u`), כך שסגירה ב-3 באוקטובר משנה למפרע את לוח ספטמבר — גם אחרי שהוכרז זוכה. פעולה ידנית של מיכאל נדרשת (מיגרציה), ולכן זה לא פריט שנסגר בתוך ריצה אחת.
 
 
 ### 4.6 — ✅ בוצע ב-**#652** (2026-09-20) · הראיה נשמרת למטה
@@ -795,7 +795,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: Realtime לא מציל ולא מחמיר את הסיכוי — הוא מחמיר את ההפתעה: _rtApply (index.html:3384-3386) `DB[tbl]=DB[tbl].map(function(r){if(r.id===nr.id){found=true;return nr;}return r;})` מחליף את השורה המקומית בזמן שהמודאל פתוח, אבל שדות הטופס נשארים עם הערכים הישנים — כך שהשמירה דורסת נתון שהמערכת כבר ידעה שהשתנה. הערה חשובה למימוש: ב-_svPut הנזק מוגבל לשדות שב-_EDIT_MODS (index.html:4024), כי `Object.assign({},arr[k],r)` לוקח את שאר העמודות מהשורה המקומית המעודכנת; ב-svNcr אין הגנה כזו כי `rec` נבנה מלא. פתרון מינימלי ובטוח: עמודת `updated_at` + `?id=eq.X&updated_at=eq.<מה שנקרא>`, ובדיקת התשובה — PATCH שנגע ב-0 שורות = התנגשות, להציג למשתמש. ⚠ זה תלוי ישירות בפריט 5.2 באותו קובץ («PATCH שנגע ב-0 שורות נחשב הצלחה») — בלי לתקן קודם את 5.2, מנגנון הגרסה יזהה התנגשות ויזרוק את השינוי בשקט במקום לדרוס בשקט. לתקן את 5.2 קודם.
 
 
-### 5.8 — ✅ מיגרציה נכתבה ב-**#657**, טרם הורצה — [#658](../../issues/658)
+### 5.8 — ✅ מיגרציה נכתבה ב-**#657** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09)
 
 **ראיה**: migrations/2026-04-24_audit_log.sql:45-48 — השורה המכריעה היא 46: `CREATE POLICY audit_log_admin_manager_all ON audit_log\n  FOR ALL TO authenticated\n  USING (public.is_admin_manager())\n  WITH CHECK (public.is_admin_manager());`. `FOR ALL` כולל UPDATE ו-DELETE. זו המיגרציה היחידה שנוגעת ב-audit_log — `grep -rn audit_log migrations/*.sql` לא מחזיר שום policy מאוחר יותר, ו-2026-05-04_rls_perf_wrap.sql ו-2026-09-18_rls_auth_jwt_initplan.sql שניהם לא מזכירים אותה. מי שעובר את השער: private/public.is_admin_manager() (migrations/2026-05-29_canonical_is_admin_manager_function.sql:32-37) — `auth.jwt()->>'email'='admin@tfugen.local' OR EXISTS (... u.role IN ('אדמין','מנהל'))`. באפליקציה עצמה אין מסלול כזה: index.html:8623 (rAudit) רק קורא (`select=*&order=ts.desc&limit=200`), ואין אף קריאה ל-`sbUpd('audit_log'...)` או `askDel('audit_log'...)`. ההגנה היחידה היא לקוחית ודקורטיבית — index.html:3599 `_DEL_PROTECTED` רק מוסיף שורת אזהרה במודאל.
 
@@ -942,7 +942,7 @@ One real defect the claim does NOT mention, and it is the one that bites on a ph
 **הערה**: שני דברים שמשנים את התמונה. (1) `svTsk` מפיל גם את `ext_id` באותה דרך, ו-`_sbMergePull` מעדיף את העותק המקומי כל עוד הפעולה בתור — שורה 3272: `if((o==='ins'||o==='upd')&&local[r.id]){merged.push(local[r.id]);return;}` — כך שהאיבוד מורגש עד המשיכה הבאה. (2) **האלמוני החשוב**: `closed_date` לא מופיע באף מיגרציה. `migrations/2026-04-21_tasks.sql` יוצר את `tasks` בלעדיו, וה-ALTER-ים המאוחרים מוסיפים רק `ext_id`, `parent_id`, `project_id`. STATUS.md שורה 203 מצהיר «ללא migration — משתמש בעמודות קיימות», אבל תיקיית המיגרציות לא מגבה את זה. אם העמודה לא נוספה ידנית, כל PATCH שנושא `closed_date` נכשל ב-PGRST204 ונתקע בתור בניסיונות חוזרים — התרחיש הזה כבר קרה פעם אחת כאן והשאיר מנקה קשיח: `_obSanitize()` שורה 3425 `var BAD={equip_inspections:['last_inspection_date','status']};`. לא יכולתי לאמת מול Supabase — הרשת של סביבת הענן חוסמת את `*.supabase.co` (מתועד ב-CLAUDE.md). לפני כל עבודה על 6.10, שאילתה אחת ב-SQL Editor: `select column_name from information_schema.columns where table_name='tasks';`. אם `closed_date` חסר — מיגרציה של שורה אחת קודמת, ולפי כלל 7 היא לא מסומנת `[x]` עד שמיכאל מאשר שהיא רצה.
 
 
-### 6.11 — ✅ **הקוד נעשה ב-#684** · ממתין למיגרציה ב-[#685](../../issues/685)
+### 6.11 — ✅ **הקוד נעשה ב-#684** · ✅ **המיגרציה הורצה ואומתה 2026-09-21** (הכותרת נשארה «ממתין» עד 22/09)
 
 > לא מסומן כבוצע — **כלל 7**.
 > שתי הטבלאות החדשות נכנסו גם לגיבוי **וגם ל-cron** — בדיקה קיימת

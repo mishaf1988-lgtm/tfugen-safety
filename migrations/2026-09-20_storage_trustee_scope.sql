@@ -1,6 +1,8 @@
 -- Storage — the anonymous kiosk session had the run of the whole bucket
 -- Date: 2026-09-20 (security review, second round)
 --
+-- ✅ APPLIED AND VERIFIED 2026-09-21. (This banner still read NOT YET RUN until
+-- 22/09, long after the fact.) Original note follows.
 -- ⚠ NOT YET RUN. Needs Michael's explicit go-ahead: this replaces four existing
 --   RLS policies, which CLAUDE.md classes as a destructive-class operation
 --   approved each time.

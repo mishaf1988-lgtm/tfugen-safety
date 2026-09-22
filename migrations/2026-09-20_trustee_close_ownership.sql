@@ -1,5 +1,7 @@
 -- Trustee closure trigger — ownership check (2026-09-20, security review)
 --
+-- ✅ APPLIED AND VERIFIED 2026-09-22 — private.trustee_reports_close_ref carries
+-- the ownership check. (This banner still read NOT YET RUN until then.)
 -- ⚠ NOT YET RUN. Needs Michael's explicit go-ahead (CLAUDE.md: changing an
 --   existing DB function is a destructive-class operation, approved each time).
 --
