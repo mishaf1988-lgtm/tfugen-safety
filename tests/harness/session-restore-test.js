@@ -66,6 +66,10 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // trustee-gate-client-test; this case is about the restore, so the phone
     // arrives already knowing the code.
     if (o.emp) await p.addInitScript((k) => { try { localStorage.setItem(k, '1'); localStorage.setItem('tfgn_emp_code', 'RIGHT'); } catch (e) {} }, EMP_KEY);
+    // Set or cleared explicitly: localStorage survives between pages in one
+    // context, so a leftover mark from an earlier case would silently change
+    // what the next one is testing.
+    await p.addInitScript((on) => { try { if (on) localStorage.setItem('tfgn_mgr_device', '1'); else localStorage.removeItem('tfgn_mgr_device'); } catch (e) {} }, !!o.mgrDevice);
     if (o.db) await p.addInitScript((d) => { try { localStorage.setItem('tfgn2', JSON.stringify(d)); } catch (e) {} }, o.db);
     await p.route('**/*', async (r) => {
       const u = r.request().url();
@@ -102,6 +106,7 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
       empFlag: (function () { try { return localStorage.getItem('tfgn_emp_mode'); } catch (e) { return '?'; } })(),
       gate: (function () { const m = document.getElementById('m-emp-gate'); return m ? getComputedStyle(m).display : '(none)'; })(),
       onDash: (typeof CUR !== 'undefined') ? CUR : '?',
+      mgrDevice: (function () { try { return localStorage.getItem('tfgn_mgr_device'); } catch (e) { return '?'; } })(),
     }));
     r.ms = Date.now() - t0;
     if (o.db) {
@@ -209,6 +214,29 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // The trustee side is untouched: no admin session, flag set, gate asks.
     const r = await boot({ session: ANON, lib: 'ok', emp: true });
     check('a real trustee device still goes to the trustee screen', r.isAdmin === false && r.emp === true, { isAdmin: r.isAdmin, emp: r.emp });
+  }
+
+  console.log('\nZ2. a manager phone whose session expired goes to login, not the code screen (2026-09-22)');
+  {
+    // The first fix covered a session that was still valid. Michael's had
+    // expired: the idle lock signed him out, EMP_KEY from testing ?emp=1 was
+    // still there, and with no admin session the app could not tell his phone
+    // from a trustee's — so it showed the trustees' code curtain, on his own
+    // phone, with no hint that «חזרה» led back to his login.
+    const r = await boot({ session: null, lib: 'ok', emp: true, mgrDevice: true });
+    check('no session + manager phone: the login screen, not the kiosk', r.login !== 'none' && r.emp === false, r);
+    check('...and no code screen in the way', r.gate === 'none' || r.gate === '(none)', r.gate);
+
+    // An expired admin session takes the same path: proceed() drops admin, and
+    // the manager mark is what stops it falling through to the kiosk.
+    const r2 = await boot({ session: ANON, lib: 'ok', emp: true, mgrDevice: true });
+    check('an anonymous session on a manager phone does not open the kiosk either', r2.emp === false, { emp: r2.emp, login: r2.login });
+  }
+
+  {
+    // A real trustee phone has never signed in, so nothing changes for it.
+    const r = await boot({ session: ANON, lib: 'ok', emp: true });
+    check('a trustee phone still goes to the trustee screen', r.emp === true && r.mgrDevice === null, { emp: r.emp, mark: r.mgrDevice });
   }
 
   await browser.close();

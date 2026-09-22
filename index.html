@@ -756,7 +756,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <label id="emp-gate-remember-row" style="display:none;align-items:center;gap:8px;margin:10px 0 2px;font-size:13px;cursor:pointer;min-height:44px"><input type="checkbox" id="emp-gate-remember" style="width:20px;height:20px;flex:none"><span>זכור אותי במכשיר הזה — לא לבקש קוד כל פעם</span></label>
   <div id="emp-gate-err" style="min-height:18px;font-size:12px;color:#b91c1c;margin:6px 0"></div>
   <button type="button" id="emp-gate-btn" class="btn btn-p" onclick="_empGateSubmit()" style="width:100%;padding:12px;font-size:15px;font-weight:900">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
-  <button type="button" class="btn btn-s" onclick="_empGateCancel()" style="width:100%;margin-top:8px">&#1495;&#1494;&#1512;&#1492;</button>
+  <button type="button" class="btn btn-s" onclick="_empGateCancel()" style="width:100%;margin-top:8px;min-height:44px">&#1495;&#1494;&#1512;&#1492; &#1500;&#1502;&#1505;&#1498; &#1492;&#1499;&#1504;&#1497;&#1505;&#1492;</button>
 </div>
 <div class="overlay" id="ov-force-pw" style="display:none;z-index:1999"></div>
 <div class="modal" id="m-force-pw-change" style="display:none;max-width:400px;z-index:2000">
@@ -16233,6 +16233,10 @@ window._pwChangeSubmit=function(){
 function _finishLogin(lb){
   if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
   _isAdmin=true;
+  // This phone belongs to someone who signs in. Kept so that when the session
+  // later expires, the app sends them to their own login screen instead of the
+  // trustees' code curtain \u2014 see proceed().
+  try{localStorage.setItem(MGR_DEVICE_KEY,'1');}catch(e){}
   try{localStorage.removeItem(EMP_KEY);}catch(e){}
   document.body.classList.remove('emp-mode');
   var ls=g('login');if(ls)ls.style.display='none';
@@ -17522,6 +17526,10 @@ function _truMgrMenu(anchor){
 }
 // ---- EMPLOYEE MODE (Stage A) ----
 var EMP_KEY='tfgn_emp_mode';
+// Set once a password login succeeds on this device, and never cleared by
+// the trustee flow. It is the only thing that tells a manager's own phone
+// apart from a trustee's once the session is gone.
+var MGR_DEVICE_KEY='tfgn_mgr_device';
 function empIsOn(){return document.body.classList.contains('emp-mode');}
 function empToggle(on){
   if(on){
@@ -17568,6 +17576,11 @@ var _empGateSeen=0;
 // Whether the plant permits a phone to keep the code. Assumed permitted until
 // the server says otherwise, so the box is not hidden on a first, offline open.
 var _empGateAllowRemember=true;
+// Has a manager ever signed in on this phone? Michael tested the ?emp=1 link
+// on his own phone; the flag it sets outlived his session, and when the idle
+// lock signed him out the app put him behind the trustees' code screen with
+// no sign that \u00ab\u05d7\u05d6\u05e8\u05d4\u00bb was the way back to his own login.
+function _isMgrDevice(){try{return localStorage.getItem(MGR_DEVICE_KEY)==='1';}catch(e){return false;}}
 function _empGateStored(){try{return localStorage.getItem(_EMP_GATE_KEY)||'';}catch(e){return '';}}
 function _empGateForget(){try{localStorage.removeItem(_EMP_GATE_KEY);}catch(e){}}
 function _empGateAsk(code){
@@ -17852,6 +17865,13 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       try{localStorage.removeItem(EMP_KEY);}catch(e){}
       document.body.classList.remove('emp-mode');
       rDash();sbSync();_rtStart();
+    }else if(emp&&_isMgrDevice()){
+      // A manager's own phone with no live session. The kiosk flag is left over
+      // from testing the ?emp=1 link; the boot block has already put emp-mode on
+      // the body, so it has to come off here too, or the trustee-only CSS stays.
+      try{localStorage.removeItem(EMP_KEY);}catch(e){}
+      document.body.classList.remove('emp-mode');
+      showLogin();
     }else if(emp){
       document.body.classList.add('emp-mode');
       ldb();CUR='emp-home';
