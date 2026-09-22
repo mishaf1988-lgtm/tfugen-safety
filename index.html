@@ -753,6 +753,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="field fw"><label>&#1511;&#1493;&#1491; &#1499;&#1504;&#1497;&#1505;&#1492;</label>
     <input id="emp-gate-code" type="password" autocomplete="off" autocapitalize="off" inputmode="text" style="font-size:18px;letter-spacing:2px;text-align:center;direction:ltr">
   </div>
+  <label id="emp-gate-remember-row" style="display:none;align-items:center;gap:8px;margin:10px 0 2px;font-size:13px;cursor:pointer;min-height:44px"><input type="checkbox" id="emp-gate-remember" style="width:20px;height:20px;flex:none"><span>זכור אותי במכשיר הזה — לא לבקש קוד כל פעם</span></label>
   <div id="emp-gate-err" style="min-height:18px;font-size:12px;color:#b91c1c;margin:6px 0"></div>
   <button type="button" id="emp-gate-btn" class="btn btn-p" onclick="_empGateSubmit()" style="width:100%;padding:12px;font-size:15px;font-weight:900">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
   <button type="button" class="btn btn-s" onclick="_empGateCancel()" style="width:100%;margin-top:8px">&#1495;&#1494;&#1512;&#1492;</button>
@@ -17564,6 +17565,9 @@ var _empGateOk=false;
 // with a photo in it and losing it loses the report.
 var _EMP_GATE_GRACE_MS=60*1000;
 var _empGateSeen=0;
+// Whether the plant permits a phone to keep the code. Assumed permitted until
+// the server says otherwise, so the box is not hidden on a first, offline open.
+var _empGateAllowRemember=true;
 function _empGateStored(){try{return localStorage.getItem(_EMP_GATE_KEY)||'';}catch(e){return '';}}
 function _empGateForget(){try{localStorage.removeItem(_EMP_GATE_KEY);}catch(e){}}
 function _empGateAsk(code){
@@ -17574,6 +17578,10 @@ function _empGateShow(){
   var ov=g('ov-emp-gate'),m=g('m-emp-gate');
   if(ov)ov.style.display='block';if(m)m.style.display='block';
   var err=g('emp-gate-err');if(err)err.textContent='';
+  // Unticked every time it opens: remembering is something the trustee asks
+  // for, never something a previous session leaves switched on for them.
+  var cb=g('emp-gate-remember');if(cb)cb.checked=false;
+  var row=g('emp-gate-remember-row');if(row)row.style.display=(_empGateAllowRemember===false)?'none':'flex';
   var inp=g('emp-gate-code');if(inp){inp.value='';setTimeout(function(){try{inp.focus();}catch(e){}},120);}
 }
 function _empGateHide(){
@@ -17597,9 +17605,13 @@ function _empGateSubmit(){
     if(btn){btn.disabled=false;btn.textContent='\u05db\u05e0\u05d9\u05e1\u05d4';}
     if(r.ok){
       _empGateOk=true;_empGateSeen=Date.now();
-      // Only if the plant says so. Otherwise nothing is written down, and the
-      // next open asks again.
-      if(r.data&&r.data.remember===true){try{localStorage.setItem(_EMP_GATE_KEY,code);}catch(e){}}
+      // Two gates, both must open: the plant has to permit remembering at all
+      // (TRUSTEE_REMEMBER=0 forbids it), and the trustee has to have ticked the
+      // box. Otherwise nothing is written down and the next open asks again.
+      var allow=!(r.data&&r.data.allowRemember===false)&&!(r.data&&r.data.remember===false);
+      _empGateAllowRemember=allow;
+      var wants=!!(g('emp-gate-remember')&&g('emp-gate-remember').checked);
+      if(allow&&wants){try{localStorage.setItem(_EMP_GATE_KEY,code);}catch(e){}}
       else _empGateForget();
       _empGateHide();var nx=_empGateNext;_empGateNext=null;if(nx)nx();return;
     }
@@ -17827,7 +17839,19 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
       // and from the sync after; _finishLogin waits the same 900ms.
       try{_applyRoleGates();}catch(e){}
       setTimeout(function(){try{_fetchCurrentUserProfile();}catch(e){}},900);
-      if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
+      // A signed-in manager is not a kiosk. EMP_KEY is sticky \u2014 one visit to
+      // the ?emp=1 trustee link sets it for good \u2014 and _finishLogin clears it
+      // on a fresh password login, but this branch (a RESTORED session) did
+      // not. The result: Michael opened the app, the leftover flag put him on
+      // the trustee screen, and the code gate asked him for the trustees'
+      // shared code instead of showing him his own dashboard. Found by him,
+      // 2026-09-22, after testing the ?emp=1 link.
+      //
+      // Previewing the trustee screen is still one tap away in the \u22ef menu,
+      // which calls empToggle(true) at runtime and does not depend on this.
+      try{localStorage.removeItem(EMP_KEY);}catch(e){}
+      document.body.classList.remove('emp-mode');
+      rDash();sbSync();_rtStart();
     }else if(emp){
       document.body.classList.add('emp-mode');
       ldb();CUR='emp-home';

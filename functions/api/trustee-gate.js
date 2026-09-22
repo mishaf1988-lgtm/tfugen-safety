@@ -61,12 +61,17 @@ export async function onRequest({ request, env }) {
       message: 'קוד שגוי'
     }, 403, cors);
   }
-  // Michael, 2026-09-21: «אני רוצה הזנה של קוד כל פעם מחדש». Whether the phone
-  // may remember the code is a plant policy, not a per-phone preference, so it
-  // is decided here and obeyed there. Default is to ask every time, which is
-  // what he asked for; TRUSTEE_REMEMBER=1 in Cloudflare turns remembering back
-  // on without a code change, because the cost of this lands on people who do
-  // not report yet and he may want it back.
-  const remember = String(env.TRUSTEE_REMEMBER || '') === '1';
-  return jsonResp({ ok: true, remember }, 200, cors);
+  // Michael, 2026-09-21: «אני רוצה הזנה של קוד כל פעם מחדש», so the default was
+  // to ask every time and the phone was never allowed to keep the code.
+  // 2026-09-22 he asked for the choice to sit with the trustee instead: a
+  // tick box on the gate, unticked by default, so a trustee who wants to stop
+  // typing can, and one who does nothing keeps being asked.
+  //
+  // The plant still gets the final word, because a shared code that every
+  // phone keeps is a curtain that never closes: TRUSTEE_REMEMBER=0 forbids
+  // remembering outright and the tick box is not offered. Anything else
+  // (unset, or 1) lets the trustee decide. `allow` is a permission, not an
+  // instruction — the phone stores nothing unless the person ticked the box.
+  const allow = String(env.TRUSTEE_REMEMBER || '') !== '0';
+  return jsonResp({ ok: true, remember: allow, allowRemember: allow }, 200, cors);
 }

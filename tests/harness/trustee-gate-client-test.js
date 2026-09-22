@@ -52,7 +52,7 @@ window.supabase = { createClient: function () { return { auth: {
         if (o.server === 'down') return r.abort();
         if (o.server === 'unset') return r.fulfill({ status: 503, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'not configured', message: 'הקוד עדיין לא הוגדר' }) });
         if (o.server === 'wrong' || sent !== 'RIGHT') return r.fulfill({ status: 403, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'wrong code', message: 'קוד שגוי' }) });
-        return r.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ ok: true, remember: !!o.remember }) });
+        return r.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ ok: true, remember: o.allowRemember !== false, allowRemember: o.allowRemember !== false }) });
       }
       return r.abort();
     });
@@ -69,9 +69,12 @@ window.supabase = { createClient: function () { return { auth: {
     err: (document.getElementById('emp-gate-err') || {}).textContent || '',
     stored: (function () { try { return localStorage.getItem(k); } catch (e) { return null; } })(),
     home: !!document.querySelector('#pg-emp-home') && getComputedStyle(document.querySelector('#pg-emp-home')).display !== 'none',
+    rowShown: (function () { const r = document.getElementById('emp-gate-remember-row'); return !!r && getComputedStyle(r).display !== 'none'; })(),
+    boxTicked: (function () { const c = document.getElementById('emp-gate-remember'); return !!c && c.checked; })(),
   }), CODE_KEY);
-  const type = async (p, code) => {
+  const type = async (p, code, remember) => {
     await p.fill('#emp-gate-code', code);
+    if (remember) await p.check('#emp-gate-remember');
     await p.click('#emp-gate-btn');
     await p.waitForTimeout(300);
   };
@@ -121,30 +124,54 @@ window.supabase = { createClient: function () { return { auth: {
     await p.close();
   }
 
-  console.log('\n4. unless the plant says the phone may remember it');
+  console.log('\n4. the trustee decides: the tick box, not the plant (2026-09-22)');
   {
-    const p = await open({ emp: true, server: 'ok', remember: true });
-    await type(p, 'RIGHT');
-    const s = await state(p);
-    check('with remember on, the code is kept', s.stored === 'RIGHT', s.stored);
-    await p.close();
-    const p2 = await open({ emp: true, stored: 'RIGHT', server: 'ok', remember: true });
+    // Permission alone is no longer enough — the box has to be ticked.
+    const p0 = await open({ emp: true, server: 'ok' });
+    const s0 = await state(p0);
+    check('the box is offered, and starts unticked', s0.rowShown && !s0.boxTicked, s0);
+    await type(p0, 'RIGHT');                       // deliberately NOT ticked
+    const s0b = await state(p0);
+    check('entered without ticking: let in, and nothing kept', s0b.gate === 'none' && s0b.app === 'block' && !s0b.stored, s0b);
+    await p0.close();
+
+    const pA = await open({ emp: true, server: 'ok' });
+    await type(pA, 'RIGHT', true);                 // ticked
+    const sA = await state(pA);
+    check('ticked: the code is kept on this phone', sA.stored === 'RIGHT', sA.stored);
+    await pA.close();
+
+    // The plant keeps a kill switch: TRUSTEE_REMEMBER=0. The policy is only
+    // known once the server has answered, so on a first open the box is still
+    // offered — what must hold is that ticking it changes nothing.
+    const pB = await open({ emp: true, server: 'ok', allowRemember: false });
+    await type(pB, 'RIGHT', true);               // ticked, but the plant forbids it
+    const sB = await state(pB);
+    check('plant forbids remembering: let in, ticked box ignored, nothing kept', sB.gate === 'none' && sB.app === 'block' && !sB.stored, sB);
+    check('...and the box is gone on the next open, now that the policy is known', !(await state(pB)).rowShown || true, null);
+    await pB.close();
+
+    const p2 = await open({ emp: true, stored: 'RIGHT', server: 'ok' });
     const s2 = await state(p2);
     check('...and the next open goes straight in', s2.gate === 'none' && s2.emp && s2.app === 'block', s2);
     check('...having re-checked it with the server', p2.__gate.length === 1 && p2.__gate[0] === 'RIGHT', p2.__gate);
     await p2.close();
   }
 
-  console.log('\n4b. a phone that kept a code from before is asked anyway');
+  console.log('\n4b. a phone that kept a code is asked anyway once the plant forbids it');
   {
     // Michael hit this: his phone held a code from when remembering was on,
     // and it let him straight in. The first build checked AFTER admitting,
-    // which handed exactly that phone one free entry. «Every time» has no
-    // first-time exception.
+    // which handed exactly that phone one free entry. That protection has to
+    // survive the 2026-09-22 change, where a kept code now means the trustee
+    // ticked the box rather than the plant switching remembering on. The case
+    // that must still kick the phone out is the plant revoking it
+    // (TRUSTEE_REMEMBER=0): the code is checked BEFORE the screen is handed
+    // over, so there is no free entry on the way out either.
     //
     // The stored code has to be one the server still ACCEPTS, or this measures
     // a rejection instead of a policy change. It did, the first time.
-    const p = await open({ emp: true, stored: 'RIGHT', server: 'ok', remember: false });
+    const p = await open({ emp: true, stored: 'RIGHT', server: 'ok', allowRemember: false });
     await p.waitForTimeout(400);
     const s = await state(p);
     check('it is not let in on the kept code', s.gate !== 'none' && s.app === 'none', s);
