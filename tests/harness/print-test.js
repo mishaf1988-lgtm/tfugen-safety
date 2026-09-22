@@ -85,7 +85,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const pp = await page.evaluate(() => new Promise((res) => { goPage('ncr'); rNcr(); _printPage(); setTimeout(() => { const h = document.getElementById('print-header'); const out = { prints: window.__prints, header: h ? h.textContent.replace(/\s+/g, ' ').trim() : null, first: h && h.parentElement.firstChild === h }; window.dispatchEvent(new Event('afterprint')); setTimeout(() => { out.removed = !document.getElementById('print-header'); res(out); }, 50); }, 200); }));
   check('window.print called once, header injected at the top with the page title, user and date', pp.prints === 1 && pp.first && /אי התאמות|NCR|אי-התאמ/.test(pp.header) && /מיכאל/.test(pp.header) && /20\d\d/.test(pp.header), pp);
   check('header removed after printing', pp.removed === true, pp);
-  check('header carries the build stamp so QA can tell which build printed', /2026-09-18\.v2/.test(pp.header), pp.header);
+  check('header carries the build stamp so QA can tell which build printed', /2026-09-22\.v1/.test(pp.header), pp.header);
 
   console.log('\n4. record PDF path still there');
   const rec = await page.evaluate(() => { let opened = 0; const o = window.open; window.open = function () { opened++; return { document: { open() {}, write() {}, close() {} }, focus() {}, print() {} }; }; try { printReport('ncr', 'n1'); } catch (e) { return { err: String(e) }; } window.open = o; return { opened, viewPdfBtn: !!document.getElementById('view-pdf'), tables: Object.keys(VIEW_CONFIG).length }; });
