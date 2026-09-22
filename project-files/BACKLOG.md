@@ -197,7 +197,7 @@
 
 **פרויקט:** 6.13.
 
-**וממתין לך:** 5.10 · 5.11 (שתי מיגרציות), Vitre, connector של Supabase, Leaked-Password Protection.
+**וממתין לך:** Vitre. (5.10 · 5.11 הורצו ואומתו · connector של Supabase חובר 22/09 · Leaked-Password Protection נסגר 22/09 — לא זמין בתוכנית החינמית.)
 
 ---
 
