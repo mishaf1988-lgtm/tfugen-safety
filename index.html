@@ -3125,7 +3125,7 @@ window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); })
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
 function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
-var _APP_BUILD='2026-09-18.v2';
+var _APP_BUILD='2026-09-22.v1';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
@@ -17821,6 +17821,13 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
   function proceed(session){
     var admin=!!(session&&session.user&&!session.user.is_anonymous&&session.user.email);
     var emp=false;try{emp=localStorage.getItem(EMP_KEY)==='1';}catch(e){}
+    // A restored manager session proves whose phone this is, whether or not
+    // the lock lets it walk in. Until 2026-09-22 the mark was written only by
+    // a password login, and the default lock is "every open": admin was
+    // dropped a few lines below, the mark was never set, and the leftover
+    // kiosk flag sent Michael to the trustees' code screen on every open --
+    // through two fixes. The mark has to be written BEFORE the lock check.
+    if(admin){try{localStorage.setItem(MGR_DEVICE_KEY,'1');}catch(e){}}
     // The session may still be valid and yet be too old to walk straight in on.
     // Whoever is holding the phone gets to prove it is theirs.
     if(admin&&typeof _lockExpired==='function'&&_lockExpired()){

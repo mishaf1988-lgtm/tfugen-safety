@@ -60,7 +60,9 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // The default lock since 2026-09-21 is «every open», which would send every
     // case here to the login screen and prove nothing about the restore. This
     // suite is about the restore, so it runs under the timed lock.
-    await p.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); } catch (e) {} });
+    // o.lockEveryOpen keeps the real default («every open»), for the cases
+    // that are about what happens when the lock drops the restored session.
+    await p.addInitScript((every) => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: every ? -1 : 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); } catch (e) {} }, !!o.lockEveryOpen);
     // Since 2026-09-21 the trustee screen sits behind a shared code. A phone
     // without it gets the code screen, which is correct and is covered in
     // trustee-gate-client-test; this case is about the restore, so the phone
@@ -237,6 +239,24 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // A real trustee phone has never signed in, so nothing changes for it.
     const r = await boot({ session: ANON, lib: 'ok', emp: true });
     check('a trustee phone still goes to the trustee screen', r.emp === true && r.mgrDevice === null, { emp: r.emp, mark: r.mgrDevice });
+  }
+
+  console.log('\nZ3. the default lock («every open») + a leftover kiosk flag: login, not the code screen (2026-09-22)');
+  {
+    // Why fixes #758 and #759 changed nothing for Michael. His session WAS
+    // restored as a manager, but the default lock is «every open», so proceed()
+    // dropped admin before either fix could act; the manager mark was written
+    // only by a password login he had not done since. With the mark written
+    // from the restored session itself, before the lock check, the phone is
+    // recognised as his even when the lock sends him to type his password.
+    const r = await boot({ session: ADMIN, lib: 'ok', emp: true, lockEveryOpen: true });
+    check('the lock drops the restored session (he has to type his password)', r.isAdmin === false && r.login !== 'none', { isAdmin: r.isAdmin, login: r.login });
+    check('...but the phone is now marked as a manager\'s from the restored session alone', r.mgrDevice === '1', r.mgrDevice);
+    check('...so the leftover kiosk flag is cleared and it is his login screen, not the trustees\' code screen', r.emp === false && r.empFlag === null && (r.gate === 'none' || r.gate === '(none)'), { emp: r.emp, empFlag: r.empFlag, gate: r.gate });
+
+    // Same lock, a trustee phone: no admin session ever, so no mark, kiosk as before.
+    const r2 = await boot({ session: ANON, lib: 'ok', emp: true, lockEveryOpen: true });
+    check('a trustee phone under the same lock still opens the kiosk', r2.emp === true && r2.mgrDevice === null, { emp: r2.emp, mark: r2.mgrDevice });
   }
 
   await browser.close();
