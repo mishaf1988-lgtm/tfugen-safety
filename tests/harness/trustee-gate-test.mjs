@@ -44,11 +44,17 @@ console.log('\n1. the right code opens the door');
   check('...and a code typed with stray spaces still works', spaced.status === 200, spaced);
   // Whether the phone may keep the code is a plant policy, so the server says
   // so rather than each phone deciding. Michael asked for every open to ask.
-  check('...and by default the phone is told not to remember it', r.body.remember === false, r.body);
+  // 2026-09-22: the default flipped. Remembering used to be a plant policy that
+  // defaulted to off; Michael asked for the trustee to choose with a tick box, so
+  // the server now answers 'permitted' unless TRUSTEE_REMEMBER=0 forbids it. The
+  // phone still stores nothing unless the box was ticked — see the client suite.
+  check('...and by default the phone is PERMITTED to remember, the box decides', r.body.remember === true && r.body.allowRemember === true, r.body);
   const keep = await call({ code: '482913', env: { TRUSTEE_CODE: '482913', TRUSTEE_REMEMBER: '1' } });
   check('TRUSTEE_REMEMBER=1 turns it back on without a code change', keep.body.remember === true, keep.body);
   const other = await call({ code: '482913', env: { TRUSTEE_CODE: '482913', TRUSTEE_REMEMBER: 'yes' } });
-  check('...and only that exact value does', other.body.remember === false, other.body);
+  const forbidden = await call({ code: '482913', env: { TRUSTEE_CODE: '482913', TRUSTEE_REMEMBER: '0' } });
+  check('...and a stray value does not forbid it', other.body.remember === true && other.body.allowRemember === true, other.body);
+  check('...while TRUSTEE_REMEMBER=0 does, and the box is not offered', forbidden.body.remember === false && forbidden.body.allowRemember === false, forbidden.body);
 }
 
 console.log('\n2. a wrong code is refused, and slowly');

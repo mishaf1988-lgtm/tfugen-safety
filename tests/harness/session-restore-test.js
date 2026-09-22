@@ -99,6 +99,9 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
       emp: document.body.classList.contains('emp-mode'),
       made: window.__made || 0,
       wired: !!(window.doLogin && typeof window.doLogin === 'function'),
+      empFlag: (function () { try { return localStorage.getItem('tfgn_emp_mode'); } catch (e) { return '?'; } })(),
+      gate: (function () { const m = document.getElementById('m-emp-gate'); return m ? getComputedStyle(m).display : '(none)'; })(),
+      onDash: (typeof CUR !== 'undefined') ? CUR : '?',
     }));
     r.ms = Date.now() - t0;
     if (o.db) {
@@ -186,6 +189,26 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
   {
     const r = await boot({ session: null, lib: 'ok' });
     check('the login handler is in place', r.wired, r);
+  }
+
+  console.log('\nZ. a restored manager is not sent to the trustee gate (2026-09-22)');
+  {
+    // Michael opened the app and was asked for the trustees' shared code
+    // instead of his own dashboard. EMP_KEY is sticky — one visit to the
+    // ?emp=1 link sets it for good — and a fresh password login clears it,
+    // but a RESTORED session did not, so the leftover flag routed the manager
+    // into the kiosk and the gate demanded a code he does not use.
+    const r = await boot({ session: ADMIN, lib: 'ok', emp: true });
+    check('signed in as a manager, not the kiosk', r.isAdmin === true && r.app === 'block', r);
+    check('the leftover kiosk flag is cleared, not obeyed', r.empFlag === null && r.emp === false, { empFlag: r.empFlag, emp: r.emp });
+    check('no code screen, and he lands on the dashboard', r.gate === 'none' || r.gate === '(none)', r.gate);
+    check('...on the dashboard, not the trustee home', r.onDash !== 'emp-home', r.onDash);
+  }
+
+  {
+    // The trustee side is untouched: no admin session, flag set, gate asks.
+    const r = await boot({ session: ANON, lib: 'ok', emp: true });
+    check('a real trustee device still goes to the trustee screen', r.isAdmin === false && r.emp === true, { isAdmin: r.isAdmin, emp: r.emp });
   }
 
   await browser.close();
