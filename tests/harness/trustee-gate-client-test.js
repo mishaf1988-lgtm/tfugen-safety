@@ -268,6 +268,11 @@ window.supabase = { createClient: function () { return { auth: {
     await p.waitForTimeout(200);
     const back = await state(p);
     check('back: login screen, no trustee mode left behind', back.login !== 'none' && !back.emp && back.gate === 'none', back);
+    // The kiosk branch had set CUR='emp-home' before the gate opened. A manager
+    // signing in from here (Michael's path, 2026-09-22) must land on a dashboard
+    // whose state says dashboard: rDash renders, the back arrow stays hidden.
+    const nav = await p.evaluate(() => ({ cur: CUR, onDash: document.body.classList.contains('on-dash'), flag: localStorage.getItem('tfgn_emp_mode') }));
+    check('...and the page state is the dashboard again, kiosk flag gone', nav.cur === 'dash' && nav.onDash && nav.flag === null, nav);
     await p.close();
   }
 
