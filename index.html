@@ -4008,10 +4008,26 @@ function _role(){
 var _MANAGER_PAGES = {dash:1,tasks:1,ncr:1,inc:1,nm:1,round:1,toolbox:1,eqi:1,exp:1,
   ppe:1,tr:1,docs:1,ctr:1,med:1,ins:1,drl:1,wst:1,hzm:1,env:1,leg:1,easp:1,rsk:1,emp:1,
   ptw:1,'ptw-view':1,hearing:1,view:1,cal:1,loc:1,prj:1,itp:1,itype:1,'emp-home':1,menu:1,lg:1,trustees:1};
-var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,
-  // Creation flows \u2014 reporter can OPEN these pages, but per-action filters
-  // (rTasks, rNcr, etc.) limit what they see inside.
-  nm:1,inc:1,round:1,toolbox:1,ncr:1,view:1};
+// What a reporter may open. Narrowed 2026-09-22, by Michael's choice, to the
+// pages that actually work for them.
+//
+// It used to include nm, inc, round, toolbox and ncr -- five creation flows.
+// The Stage 2 migration of 2026-04-24 dropped the old permissive `admin_all`
+// from 22 tables and replaced it with is_admin_manager(), saying so in its own
+// header: "other authenticated users -> NO access via REST". So a reporter
+// could fill any of those five forms, press save, and the database would
+// refuse the write. The outbox kept the failure with an error badge rather
+// than losing it quietly, but the record never arrived: it sat on their phone
+// instead of in front of the safety manager.
+//
+// TO ADD A PAGE BACK, two things change together, and the second is the one
+// that matters: this list, AND a database policy that lets a reporter write to
+// that page's table. A page here without a policy there is a form that fails.
+// roles-test.js checks the pair against the migrations.
+//
+// An employee who needs to report something still can: the trustee screen
+// (?emp=1) is a separate, working path that needs no account at all.
+var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,view:1};
 // Central permission check. Returns true if the current user is allowed to
 // see/use `feature`. Use this everywhere instead of duplicating role
 // strings \u2014 easier to audit and change.

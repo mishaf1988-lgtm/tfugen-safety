@@ -87,7 +87,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('manager: regular modules visible', ['docs', 'eqi', 'rsk', 'emp', 'wst', 'cal'].every(k => s.visibleKeys.includes(k)), s.visibleKeys);
   await setRole(null);  // reporter
   s = await state();
-  check('reporter: non-reporter modules hidden, reporter pages remain', !s.visibleKeys.includes('docs') && !s.visibleKeys.includes('eqi') && ['ncr', 'nm', 'inc', 'round', 'tasks'].every(k => s.visibleKeys.includes(k)), s.visibleKeys);
+  // Narrowed 2026-09-22: the five creation flows left the reporter's list,
+  // because the database refuses their writes. Tasks is what remains.
+  check('reporter: non-reporter modules hidden, reporter pages remain',
+    !s.visibleKeys.includes('docs') && !s.visibleKeys.includes('eqi')
+    && s.visibleKeys.includes('tasks')
+    && !['ncr', 'nm', 'inc', 'round'].some(k => s.visibleKeys.includes(k)), s.visibleKeys);
   await setRole({ username: 'admin' });
   s = await state();
   check('back to admin: everything restored', ['docs', 'eqi', 'users', 'audit'].every(k => s.visibleKeys.includes(k)), s.hiddenIds);

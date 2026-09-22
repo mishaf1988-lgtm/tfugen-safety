@@ -42,18 +42,28 @@ const EDIT_DEL = /^(askDel\(|delById\(|delAll|editTsk\(|editNcr\(|editInc\(|_rou
     const add = Array.from(pg.querySelectorAll('button.btn-p'));
     return { cur: window.CUR, editDelTotal: ed.length, editDelVisible: ed.filter(vis).length, addVisible: add.filter(vis).length, roleClass: document.body.className.split(' ').filter(c => /^role-/.test(c)).join(',') };
   }, pageId);
+  // Since 2026-09-22 a reporter reaches only the pages the database will
+  // actually accept work on, so the five creation flows below are a
+  // manager-and-up set. What a reporter sees is checked in its own section.
   const PAGES = ['tasks', 'nm', 'inc', 'ncr', 'round', 'toolbox'];
+  const REPORTER_PAGES = ['tasks'];
 
   console.log('\n1. reporter');
   await page.evaluate(() => { window._currentUser = null; _applyRoleGates(); });
-  for (const p of PAGES) {
+  for (const p of REPORTER_PAGES) {
     const r = await scan(p);
     check(p + ': ' + r.editDelTotal + ' edit/delete affordances rendered, 0 visible; add stays (' + r.addVisible + ')', r.cur === p && r.editDelTotal > 0 && r.editDelVisible === 0 && (p === 'tasks' || p === 'toolbox' || r.addVisible > 0), r);
   }
+  // And the five that were taken away really are refused, not merely hidden:
+  // goPage sends a reporter back to the dashboard.
+  for (const p of PAGES.filter((x) => REPORTER_PAGES.indexOf(x) < 0)) {
+    const r = await scan(p);
+    check(p + ': a reporter is sent back to the dashboard', r.cur === 'dash', r);
+  }
   check('body carries role-reporter only', (await page.evaluate(() => document.body.className.split(' ').filter(c => /^role-/.test(c)).join(','))) === 'role-reporter');
-  await page.evaluate(() => goPage('nm'));
+  await page.evaluate(() => goPage('tasks'));
   await page.waitForTimeout(400);
-  await page.screenshot({ path: OUT + '/roles-reporter-nm-375.png' });
+  await page.screenshot({ path: OUT + '/roles-reporter-tasks-375.png' });
 
   console.log('\n2. manager');
   await page.evaluate(() => { window._currentUser = { username: 'mgr', role: 'מנהל' }; _applyRoleGates(); });
@@ -74,6 +84,38 @@ const EDIT_DEL = /^(askDel\(|delById\(|delAll|editTsk\(|editNcr\(|editInc\(|_rou
 
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
+  // Michael, 2026-09-22, asked whether an ordinary user should reach the whole
+  // system. The answer that mattered was not about seeing too much: a reporter
+  // was offered five creation forms whose tables the database had closed to
+  // them in April, so they could fill one in and have the write refused.
+  //
+  // This is the pair that has to hold. A page in the reporter's list whose
+  // table is admin/manager-only in the migrations is a form that fails, and
+  // the repo can prove that much on its own.
+  console.log('\nreporter pages and database rules agree');
+  {
+    const fsx = require('fs'), px = require('path');
+    const MIG = px.resolve(__dirname, '../../migrations');
+    const sql = fsx.readdirSync(MIG).filter((f) => f.endsWith('.sql'))
+      .map((f) => fsx.readFileSync(px.join(MIG, f), 'utf8')).join('\n');
+    // Tables whose access was handed to is_admin_manager(). Stage 2 wrote one
+    // DROP per table before each CREATE, which is the complete list.
+    const locked = new Set((sql.match(/DROP POLICY IF EXISTS admin_all ON ([a-z_]+)/g) || [])
+      .map((m) => m.split(' ON ')[1]).filter((t) => t !== 'public'));
+    const r = await page.evaluate(() => ({
+      pages: Object.keys(window._REPORTER_PAGES || {}),
+      primary: window._PAGE_PRIMARY || {},
+    }));
+    const clash = r.pages.filter((pg) => r.primary[pg] && locked.has(r.primary[pg]))
+      .map((pg) => pg + ' -> ' + r.primary[pg]);
+    check('no reporter page writes to a table the database closed to them', clash.length === 0, clash);
+    // And the narrowing really happened: these five were the ones that failed.
+    ['nm', 'inc', 'round', 'toolbox', 'ncr'].forEach((pg) => {
+      check('...' + pg + ' is no longer offered to a reporter', r.pages.indexOf(pg) < 0, r.pages);
+    });
+    check('what is left is what works', r.pages.sort().join(',') === 'dash,emp-home,menu,tasks,view', r.pages);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
