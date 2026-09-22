@@ -132,3 +132,4 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - תבניות קוד: `project-files/PATTERNS.md`
 - Checklist לפני PR: `project-files/CHECKLIST.md`
 - Skill מפורט: `.claude/skills/tfugen-dev/SKILL.md`
+- **Skill לחיסכון בטוקנים: `.claude/skills/tfugen-lean/SKILL.md`** — תשובות קצרות, grep צר במקום קריאת קבצים, ורשימה מפורשת של מה שאסור לחתוך בו (מערך הבדיקות, שבירה מכוונת, כלל 7)
