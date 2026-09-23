@@ -2557,6 +2557,7 @@ id="m-ncr" style="display:none">
   <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
     <button class="btn btn-s" style="min-height:44px" onclick="closeModal('m-tru-route')">סגור</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRoutePdf()">&#128196; PDF</button>
+    <button class="btn btn-s" style="min-height:44px" data-vitre-btn onclick="_truRouteVitre()" title="Vitre &#1508;&#1493;&#1514;&#1495;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1500;&#1504;&#1502;&#1506;&#1503; &#1493;&#1513;&#1493;&#1500;&#1495;&#1514; &#1500;&#1493; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1504;&#1502;&#1506;&#1503; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1489;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1506;&#1501; &#1502;&#1505;&#1508;&#1512; &#1506;&#1493;&#1489;&#1491;.">&#55357;&#56562; SMS &#1491;&#1512;&#1498; Vitre</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRouteMail()">&#9993;&#65039; מייל</button>
     <button class="btn btn-p" style="min-height:44px;flex:1 1 100%;background:#25D366;border-color:#25D366" onclick="_truRouteWa()">&#128241; וואטסאפ</button>
   </div>
@@ -17251,6 +17252,37 @@ function _truRouteMail(){
   try{_truRouteNav(url);}catch(e){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc');return;}
   _truRouteNote(r,f,'\u05de\u05d9\u05d9\u05dc');
   toast('\u05e0\u05e4\u05ea\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc, \u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05db\u05de\u05e0\u05d5\u05ea\u05d1');
+}
+// "\u05e9\u05dc\u05d7 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc" through Vitre (DECISIONS 2026-09-23: Vitre is the SMS channel).
+// The recipient must be an employee we imported from Vitre (emp.ext_id): matched
+// by the phone typed in the form, else by exact name. The server submits the
+// notification form in the system's name; Vitre opens a task for the recipient
+// and sends SMS + email per that user's settings. Nothing is sent when no
+// employee matches: a wrong recipient would get a real SMS.
+function _truRouteVitreRecipient(f){
+  var ph=_vitreNormPhone(f.phone),nm=_vitreNormName(f.name);
+  var emps=(DB.emp||[]).filter(function(e){return e.ext_id;});
+  var hit=null;
+  if(ph)hit=emps.filter(function(e){return _vitreNormPhone(e.ph)===ph;})[0]||null;
+  if(!hit&&nm)hit=emps.filter(function(e){return _vitreNormName(e.n)===nm;})[0]||null;
+  return hit;
+}
+function _truRouteVitre(){
+  var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
+  var who=_truRouteVitreRecipient(f);
+  if(!who){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05e2\u05d5\u05d1\u05d3 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 Vitre \u05dc\u05e4\u05d9 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05d5 \u05d4\u05e9\u05dd. \u05d1\u05d7\u05e8 \u05e2\u05d5\u05d1\u05d3 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d0\u05d5 \u05e9\u05dc\u05d7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4');return;}
+  if(!confirm('\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d3\u05e8\u05da Vitre \u05dc-'+who.n+' (\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 '+who.ext_id+')?\nVitre \u05ea\u05e4\u05ea\u05d7 \u05dc\u05d5 \u05de\u05e9\u05d9\u05de\u05d4 \u05d5\u05ea\u05e9\u05dc\u05d7 SMS \u05d5\u05de\u05d9\u05d9\u05dc.'))return;
+  var btn=document.querySelector('#m-tru-route [data-vitre-btn]');if(btn)btn.disabled=true;
+  var body={to:String(who.ext_id),title:'\u05dc\u05d9\u05e7\u05d5\u05d9: '+(r.f||'')+' - '+_truLocOf(r),details:_truRouteText(r,f),link:_truRoutePhoto(r)||(location.origin+location.pathname)};
+  fetch('/api/vitre?op=notify',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:JSON.stringify(body)})
+    .then(function(res){return res.json().then(function(j){return{ok:res.ok,status:res.status,data:j};});})
+    .then(function(res){
+      if(btn)btn.disabled=false;
+      if(!res.ok){toast('\u274c Vitre: '+String((res.data&&(res.data.detail||res.data.error))||('HTTP '+res.status)));return;}
+      _truRouteNote(r,f,'Vitre SMS'+(res.data.appointmentId?' #'+res.data.appointmentId:''));
+      closeModal('m-tru-route');
+      toast('\u2705 \u05e0\u05e9\u05dc\u05d7 \u05d3\u05e8\u05da Vitre \u05dc-'+who.n+': \u05de\u05e9\u05d9\u05de\u05d4 + SMS + \u05de\u05d9\u05d9\u05dc',{ok:true});
+    }).catch(function(err){if(btn)btn.disabled=false;toast('\u274c '+(err&&err.message||err));});
 }
 function _truRoutePdfHtml(r,f){
   var t=_truTask(r.t),p=_truRoutePhoto(r),today=new Date().toISOString().substring(0,10);

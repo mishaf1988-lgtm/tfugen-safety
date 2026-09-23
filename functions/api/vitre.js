@@ -11,6 +11,7 @@
 //   GET /api/vitre?op=training_photo&id=N       fresh 5-minute link to the task's photo, served from Vitre's storage
 //   GET /api/vitre?op=review_schema&id=N        admin: schema of one form (question/answer dataKeys)
 //   POST /api/vitre?op=review_submit_test       admin: ONE submission of the notification TEST form (id locked below)
+//   POST /api/vitre?op=notify                   staff: { to, title, details, link } -> notification form -> Vitre task + SMS/email to `to`
 //
 // Read-only towards Vitre, with one deliberate exception: review_submit_test
 // (23/09 evening) submits the test form "בדיקת התראות - למחיקה" to learn whether
@@ -31,6 +32,13 @@ const UPSTREAM_TIMEOUT_MS = 15000;
 // The only form this endpoint may ever submit: "בדיקת התראות - למחיקה", built
 // by Michael on 23/09 for the notification test. Change deliberately or never.
 const VITRE_TEST_REVIEW_ID = 11997;
+// The production notification form "התראה מ-Tapugan Safety" (built 23/09 evening):
+// questions to (employee entity, externalId) / title / details / link, task rule
+// "responsible from the entity answer". Submitted in the name of the system
+// employee (externalId 9001 unless VITRE_NOTIFY_CREATED_BY says otherwise), never
+// in a person's name: Vitre skips the notification when creator == responsible.
+const VITRE_NOTIFY_REVIEW_ID = 11998;
+const VITRE_NOTIFY_CREATED_BY_DEFAULT = '9001';
 const ADMIN_EMAIL = 'admin@tfugen.local';
 
 function vitreHeaders(env) {
@@ -163,9 +171,10 @@ export async function onRequest({ request, env }) {
 
   const url = new URL(request.url);
   const op = (url.searchParams.get('op') || 'ping').toLowerCase();
-  // POST exists for exactly one op; everything else stays a GET.
-  if (request.method === 'POST' && op !== 'review_submit_test') return jsonResp({ error: 'method not allowed' }, 405, cors);
-  if (request.method === 'GET' && op === 'review_submit_test') return jsonResp({ error: 'POST required' }, 405, cors);
+  // POST exists for the two ops that submit a form; everything else stays a GET.
+  const POST_OPS = { review_submit_test: 1, notify: 1 };
+  if (request.method === 'POST' && !POST_OPS[op]) return jsonResp({ error: 'method not allowed' }, 405, cors);
+  if (request.method === 'GET' && POST_OPS[op]) return jsonResp({ error: 'POST required' }, 405, cors);
   // The form ops are admin-only: the schema names people, the submission writes to Vitre.
   const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
   if ((op === 'review_schema' || op === 'review_submit_test') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
@@ -323,6 +332,33 @@ export async function onRequest({ request, env }) {
       reviewId: VITRE_TEST_REVIEW_ID, createdBy, sent: { data }, upstreamStatus: r.status, ok: r.ok,
       result: r.json, text: r.text, networkError: r.networkError
     }, r.ok ? 200 : 502, cors);
+  }
+
+  // ---- Notification through Vitre (DECISIONS 2026-09-23: Vitre is the SMS channel) ----
+  // Body: { to (recipient employee externalId), title, details, link }. Submits the
+  // notification form; Vitre opens a task for the recipient and sends SMS + email
+  // per that user's notification settings. Any signed-in staff account may call
+  // this (it is the "send to handling" button); the form id and the submitter
+  // are constants, so the call cannot reach any other form.
+  if (op === 'notify') {
+    let body = null;
+    try { body = await request.json(); } catch (e) { return jsonResp({ error: 'invalid JSON body' }, 400, cors); }
+    const to = String((body && body.to) || '').trim();
+    const title = String((body && body.title) || '').trim().slice(0, 200);
+    const details = String((body && body.details) || '').trim().slice(0, 4000);
+    const link = String((body && body.link) || '').trim().slice(0, 500);
+    if (!/^\d{1,10}$/.test(to)) return jsonResp({ error: 'to (recipient employee externalId, digits) required' }, 400, cors);
+    if (!title) return jsonResp({ error: 'title required' }, 400, cors);
+    const createdBy = String(env.VITRE_NOTIFY_CREATED_BY || VITRE_NOTIFY_CREATED_BY_DEFAULT);
+    if (createdBy === to) return jsonResp({ error: 'recipient equals the system submitter; Vitre would not notify' }, 400, cors);
+    const data = { to, title };
+    if (details) data.details = details;
+    if (link) data.link = link;
+    const qs = '/review/submit?reviewId=' + VITRE_NOTIFY_REVIEW_ID + '&createdBy=' + encodeURIComponent(createdBy);
+    const r = await vitrePost(env, qs, { data });
+    if (!r.ok) return jsonResp({ error: 'vitre ' + (r.status || 'unreachable'), detail: String((r.json && (r.json.message || r.json.description)) || r.text || r.networkError || '').slice(0, 300), upstreamStatus: r.status }, r.status >= 400 ? 502 : 504, cors);
+    const j = r.json || {};
+    return jsonResp({ ok: true, to, appointmentId: j.id || null, previewUrl: j.previewUrl || null, status: j.status || null }, 200, cors);
   }
 
   // ---- Weekly safety-refresher import (Vitre task -> our toolbox row) ----
