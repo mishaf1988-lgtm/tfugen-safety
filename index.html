@@ -5947,6 +5947,8 @@ window._dashHideEmptySection=function(){
 };
 function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
+  // Vitre refreshers -> toolbox, once a day, admin only, silent unless something new (#601).
+  if(typeof _vitreAutoSync==='function')setTimeout(_vitreAutoSync,4000);
   // Phase 2 Agent 2 — refresh password reset request inbox on every
   // dashboard render. Cheap (1 SELECT, hidden if no rows / non-admin).
   if(typeof _pwReqLoad==='function')_pwReqLoad();
@@ -18353,21 +18355,13 @@ function _vitreTrColsOk(){
 }
 window._vitreTrPreview=function(){
   if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  if(_vitreAutoBusy){toast('\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05e8\u05e5 \u05db\u05e8\u05d2\u05e2, \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2');return;}
   var box=g('dash-vitre-result');
-  var say=function(t){if(box)box.textContent=t;};
+  var say=function(t){if(box){box.textContent=t;box.dataset.auto='';}};
   say('\u23f3 \u05d1\u05d5\u05d3\u05e7 \u05e2\u05de\u05d5\u05d3\u05d5\u05ea \u05d1\u05d8\u05d1\u05dc\u05ea \u05e9\u05d9\u05d7\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea...');
   _vitreTrColsOk().then(function(ok){
     if(!ok)throw new Error('\u05d1\u05d8\u05d1\u05dc\u05ea toolbox \u05d7\u05e1\u05e8\u05d5\u05ea \u05d4\u05e2\u05de\u05d5\u05d3\u05d5\u05ea dep / ext_id. \u05d9\u05e9 \u05dc\u05d4\u05e8\u05d9\u05e5 \u05e7\u05d5\u05d3\u05dd \u05d0\u05ea migrations/2026-09-23_toolbox_vitre_import.sql');
-    var all=[],page=1,MAX=60;
-    var step=function(){
-      say('\u23f3 \u05e1\u05d5\u05e8\u05e7 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1-Vitre, \u05e2\u05de\u05d5\u05d3 '+page+'... ('+all.length+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05e2\u05d3 \u05db\u05d4)');
-      return _vitreGet('op=trainings&page='+page).then(function(res){
-        all=all.concat(res.rows||[]);
-        if(res.hasMore&&page<MAX){page++;return step();}
-        return {rows:all,pages:page,truncated:!!(res.hasMore&&page>=MAX)};
-      });
-    };
-    return step();
+    return _vitreTrScanNew(function(page,n){say('\u23f3 \u05e1\u05d5\u05e8\u05e7 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1-Vitre, \u05e2\u05de\u05d5\u05d3 '+page+'... ('+n+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05e2\u05d3 \u05db\u05d4)');});
   }).then(function(res){
     var have={};(DB.toolbox||[]).forEach(function(r){if(r.ext_id)have[String(r.ext_id)]=r;});
     var seen={},items=[];
@@ -18475,18 +18469,95 @@ window._vitreTrApply=function(){
     var it=todo.shift();done++;
     if(prog)prog.textContent='\u23f3 '+done+' / '+(done+todo.length)+' \u00b7 \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id;
     _vitreGet('op=training&id='+encodeURIComponent(it.t.id)).then(function(v){
-      var dstr=String(v.createDate||it.t.createDate||'').slice(0,10)||null;
-      // file_url stays empty on purpose: the photo lives in Vitre and the viewer
-      // opens it live through op=training_photo (Michael 23/09: Vitre is the storage).
-      var r={id:gid(),d:dstr,topic:_VITRE_TR_TOPIC,presenter:v.presenter||null,attendees:null,s:'\u05e0\u05de\u05e1\u05e8\u05d4',
-        notes:'\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id+(v.files?'':' \u00b7 \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
-        file_url:null,ts:new Date().toISOString(),
-        dep:(v.depts&&v.depts.length)?v.depts.join(', '):null,ext_id:String(it.t.id)};
+      var r=_vitreTrRow(it.t,v);
       DB.toolbox.push(r);sbIns('toolbox',r);ok++;if(!v.files)noPhoto++;
       it.exists=true;
     }).catch(function(err){fail.push('#'+it.t.id);console.warn('vitre training import',it.t.id,err);}).then(next);
   };
   next();
+};
+// One toolbox row from a Vitre list entry (t) and its op=training detail (v).
+// Shared by the manual import and the daily auto sync so both write the same shape.
+// file_url stays empty on purpose: the photo lives in Vitre and the viewer
+// opens it live through op=training_photo (Michael 23/09: Vitre is the storage).
+function _vitreTrRow(t,v){
+  var dstr=String(v.createDate||t.createDate||'').slice(0,10)||null;
+  return {id:gid(),d:dstr,topic:_VITRE_TR_TOPIC,presenter:v.presenter||null,attendees:null,s:'\u05e0\u05de\u05e1\u05e8\u05d4',
+    notes:'\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #'+t.id+(v.files?'':' \u00b7 \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
+    file_url:null,ts:new Date().toISOString(),
+    dep:(v.depts&&v.depts.length)?v.depts.join(', '):null,ext_id:String(t.id)};
+}
+// Walk every page of op=trainings (oldest-first, 200 a page) and return the
+// refresher tasks whose Vitre id is not yet in toolbox.ext_id. Shared scan.
+function _vitreTrScanNew(say){
+  var all=[],page=1,MAX=60;
+  var step=function(){
+    if(say)say(page,all.length);
+    return _vitreGet('op=trainings&page='+page).then(function(res){
+      all=all.concat(res.rows||[]);
+      if(res.hasMore&&page<MAX){page++;return step();}
+      return {rows:all,pages:page,truncated:!!(res.hasMore&&page>=MAX)};
+    });
+  };
+  return step();
+}
+
+// ---- Daily auto sync: Vitre refreshers -> toolbox, silent, admin only ----
+// STATUS #601 \u00ab\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e9\u05d5\u05d8\u05e3\u00bb: when an admin opens the dashboard, at most once a
+// day (localStorage flag, set only after a successful run), scan the Vitre
+// task list and import just the refreshers we do not have yet. No preview,
+// no employee sync (Michael picked 51 of 159; new employees stay manual).
+// Toast only when something new arrived; a quiet day stays quiet.
+// The manual button stays and refuses to open while this is running, and this
+// does not start while the manual preview is open: both read DB.toolbox.ext_id
+// to decide what is new, so two writers at once could duplicate a row.
+var _vitreAutoBusy=false,_vitreAutoTried=false;
+window._vitreAutoSync=function(){
+  try{
+    if(_vitreAutoBusy||_vitreAutoTried||_vitreTr)return;
+    if(!SB_ON||!navigator.onLine)return;                 // toolbox not pulled from the server yet: "new" would mean "everything"
+    if(typeof _isAdminUser!=='function'||!_isAdminUser())return;
+    var flag='tfgn_vitre_sync_'+new Date().toISOString().substring(0,10);
+    if(_scanSeen(flag))return;
+  }catch(e){return;}
+  _vitreAutoBusy=true;_vitreAutoTried=true;             // one attempt per page load, even if Vitre is down
+  var box=g('dash-vitre-result');
+  var note=function(t){if(box&&(!box.textContent||box.dataset.auto==='1')){box.textContent=t;box.dataset.auto='1';}};
+  var flag='tfgn_vitre_sync_'+new Date().toISOString().substring(0,10);
+  var ok=0,fail=0,todo=[];
+  var finish=function(err){
+    _vitreAutoBusy=false;
+    if(err){note('\u26a0\ufe0f \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05e0\u05db\u05e9\u05dc: '+(err&&err.message||err));console.warn('vitre auto sync',err);return;}
+    _scanMark(flag);
+    var when=new Date();var hhmm=('0'+when.getHours()).slice(-2)+':'+('0'+when.getMinutes()).slice(-2);
+    note('\ud83d\udd04 \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05d4\u05d9\u05d5\u05dd '+hhmm+': '+(ok?ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd':'\u05d0\u05d9\u05df \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd')+(fail?', '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
+    if(!ok&&!fail)return;
+    addLog('\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre: '+ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05de\u05e9\u05db\u05d5'+(fail?', '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
+    sdb();
+    if(CUR==='toolbox'&&typeof rToolbox==='function')rToolbox();
+    if(typeof rDash==='function')try{rDash();}catch(e){}
+    if(ok)toast('\ud83d\udd04 '+ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05de\u05e9\u05db\u05d5 \u05de-Vitre',{ok:true});
+  };
+  var next=function(){
+    if(!todo.length){finish();return;}
+    var t=todo.shift();
+    _vitreGet('op=training&id='+encodeURIComponent(t.id)).then(function(v){
+      var k=String(t.id);
+      if((DB.toolbox||[]).some(function(r){return String(r.ext_id||'')===k;}))return;   // arrived meanwhile (other device / realtime)
+      var r=_vitreTrRow(t,v);
+      if(!DB.toolbox)DB.toolbox=[];
+      DB.toolbox.push(r);sbIns('toolbox',r);ok++;
+    }).catch(function(err){fail++;console.warn('vitre auto sync',t.id,err);}).then(next);
+  };
+  _vitreTrColsOk().then(function(cols){
+    if(!cols)throw new Error('toolbox.dep / ext_id missing');
+    return _vitreTrScanNew();
+  }).then(function(res){
+    var have={};(DB.toolbox||[]).forEach(function(r){if(r.ext_id)have[String(r.ext_id)]=1;});
+    var seen={};
+    res.rows.forEach(function(t){var k=String(t.id);if(seen[k]||have[k])return;seen[k]=1;todo.push(t);});
+    next();
+  }).catch(finish);
 };
 
 // Open the photo of an imported refresher straight from Vitre (fresh SAS link).
