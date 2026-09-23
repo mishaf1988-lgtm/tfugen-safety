@@ -13103,6 +13103,11 @@ function showView(tbl,id){
       }
     }
   }
+  // Refresher imported from Vitre: the photo stays in Vitre's storage, so
+  // offer a live link instead of an inline image (op=training_photo).
+  if(tbl==='toolbox'&&rec.ext_id&&!rec.file_url){
+    html+='<div style="padding:10px 0"><button class="btn btn-p" data-vx="'+esc(rec.ext_id)+'" onclick="_vitreOpenPhoto(this.dataset.vx,this)">\ud83d\udcf7 \u05e6\u05d9\u05dc\u05d5\u05dd \u05d4\u05d3\u05e3 \u05d4\u05d7\u05ea\u05d5\u05dd (\u05de-Vitre)</button><div style="font-size:11px;color:var(--t3);margin-top:4px">\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e0\u05e4\u05ea\u05d7 \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05de\u05d4\u05d0\u05d7\u05e1\u05d5\u05df \u05e9\u05dc Vitre \u05d5\u05ea\u05e7\u05e3 \u05db\u05de\u05d4 \u05d3\u05e7\u05d5\u05ea</div></div>';
+  }
   // Custom properties (Vitre \u00a716#5)
   if(typeof _cpListFor==='function'){
     var cps=_cpListFor(tbl,id);
@@ -18390,7 +18395,7 @@ function _vitreTrRender(p){
   var box=g('vitre-imp-body');if(!box)return;
   var nNew=0,nHave=0;p.items.forEach(function(it){if(it.exists)nHave++;else nNew++;});
   var h='<div style="font-weight:700;margin-bottom:4px">'+p.items.length+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d1-Vitre ('+p.pages+' \u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05e0\u05e1\u05e8\u05e7\u05d5): <span style="color:var(--ok)">'+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd</span> \u00b7 '+nHave+' \u05db\u05d1\u05e8 \u05d0\u05e6\u05dc\u05e0\u05d5'+(p.truncated?' \u00b7 <span style="color:var(--bad)">\u05d4\u05e1\u05e8\u05d9\u05e7\u05d4 \u05e0\u05e2\u05e6\u05e8\u05d4 \u05d1\u05d2\u05d1\u05d5\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd, \u05d4\u05e8\u05e5 \u05e9\u05d5\u05d1 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0</span>':'')+'</div>';
-  h+='<div style="font-size:11px;color:var(--t3);margin-bottom:6px">\u05dc\u05db\u05dc \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05e0\u05e9\u05de\u05e8\u05d9\u05dd: \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05d2\u05d9\u05e9, \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05e9\u05e1\u05d5\u05de\u05e0\u05d5 \u05d1\u05d8\u05d5\u05e4\u05e1 (\u05d0\u05dd \u05d6\u05d5\u05d4\u05d5), \u05d5\u05e6\u05d9\u05dc\u05d5\u05dd \u05d4\u05d3\u05e3 \u05d4\u05d7\u05ea\u05d5\u05dd \u05e9\u05de\u05d5\u05e2\u05ea\u05e7 \u05dc-Storage \u05e9\u05dc\u05e0\u05d5. \u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd \u05e0\u05e9\u05d0\u05e8\u05d9\u05dd \u05d1\u05e6\u05d9\u05dc\u05d5\u05dd.</div>';
+  h+='<div style="font-size:11px;color:var(--t3);margin-bottom:6px">\u05dc\u05db\u05dc \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05e0\u05e9\u05de\u05e8\u05d9\u05dd: \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05d2\u05d9\u05e9, \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05e9\u05e1\u05d5\u05de\u05e0\u05d5 \u05d1\u05d8\u05d5\u05e4\u05e1 (\u05d0\u05dd \u05d6\u05d5\u05d4\u05d5). \u05e6\u05d9\u05dc\u05d5\u05dd \u05d4\u05d3\u05e3 \u05d4\u05d7\u05ea\u05d5\u05dd \u05e0\u05e9\u05d0\u05e8 \u05d1-Vitre \u05d5\u05e0\u05e4\u05ea\u05d7 \u05de\u05e9\u05dd \u05d1\u05dc\u05d7\u05d9\u05e6\u05d4, \u05d1\u05dc\u05d9 \u05dc\u05ea\u05e4\u05d5\u05e1 \u05d0\u05d7\u05e1\u05d5\u05df \u05d0\u05e6\u05dc\u05e0\u05d5.</div>';
   if(nNew){
     h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12px"><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(true)">\u05d1\u05d7\u05e8 \u05d4\u05db\u05dc</button><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(false)">\u05e0\u05e7\u05d4 \u05d1\u05d7\u05d9\u05e8\u05d4</button><span id="vitre-imp-selcount" style="color:var(--t2)"></span></div>';
   }
@@ -18425,28 +18430,42 @@ window._vitreTrApply=function(){
   if(!DB.toolbox)DB.toolbox=[];
   var next=function(){
     if(!todo.length){
-      addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: '+ok+' \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
+      addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: '+ok+' \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
       sdb();
       if(typeof rToolbox==='function')rToolbox();
       if(typeof rDash==='function')try{rDash();}catch(e){}
       _vitreTr=null;
       closeModal('m-vitre-imp');
-      toast((fail.length?'\u26a0\ufe0f ':'\u2705 ')+'\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre: '+ok+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5 ('+fail.slice(0,3).join(', ')+')':''),{ok:!fail.length});
+      toast((fail.length?'\u26a0\ufe0f ':'\u2705 ')+'\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre: '+ok+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5 ('+fail.slice(0,3).join(', ')+')':''),{ok:!fail.length});
       return;
     }
     var it=todo.shift();done++;
     if(prog)prog.textContent='\u23f3 '+done+' / '+(done+todo.length)+' \u00b7 \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id;
     _vitreGet('op=training&id='+encodeURIComponent(it.t.id)).then(function(v){
       var dstr=String(v.createDate||it.t.createDate||'').slice(0,10)||null;
+      // file_url stays empty on purpose: the photo lives in Vitre and the viewer
+      // opens it live through op=training_photo (Michael 23/09: Vitre is the storage).
       var r={id:gid(),d:dstr,topic:_VITRE_TR_TOPIC,presenter:v.presenter||null,attendees:null,s:'\u05e0\u05de\u05e1\u05e8\u05d4',
-        notes:'\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id+(v.photoError?' \u00b7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05d4\u05d5\u05e2\u05ea\u05e7\u05d4: '+v.photoError:''),
-        file_url:v.photoUrl||null,ts:new Date().toISOString(),
+        notes:'\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id+(v.files?'':' \u00b7 \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
+        file_url:null,ts:new Date().toISOString(),
         dep:(v.depts&&v.depts.length)?v.depts.join(', '):null,ext_id:String(it.t.id)};
-      DB.toolbox.push(r);sbIns('toolbox',r);ok++;if(!v.photoUrl)noPhoto++;
+      DB.toolbox.push(r);sbIns('toolbox',r);ok++;if(!v.files)noPhoto++;
       it.exists=true;
     }).catch(function(err){fail.push('#'+it.t.id);console.warn('vitre training import',it.t.id,err);}).then(next);
   };
   next();
+};
+
+// Open the photo of an imported refresher straight from Vitre (fresh SAS link).
+window._vitreOpenPhoto=function(taskId,btn){
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d1\u05d9\u05d0 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05de-Vitre...';}
+  var restore=function(){if(btn){btn.disabled=false;btn.textContent='\ud83d\udcf7 \u05e6\u05d9\u05dc\u05d5\u05dd \u05d4\u05d3\u05e3 \u05d4\u05d7\u05ea\u05d5\u05dd (\u05de-Vitre)';}};
+  _vitreGet('op=training_photo&id='+encodeURIComponent(taskId)).then(function(v){
+    restore();
+    if(!v.url){toast('\u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05dc\u05de\u05e9\u05d9\u05de\u05d4 \u05d4\u05d6\u05d5 \u05d1-Vitre');return;}
+    var w=window.open(v.url,'_blank');
+    if(!w)location.href=v.url;
+  }).catch(function(err){restore();toast('\u274c '+(err&&err.message||err));});
 };
 
 // Shape discovery for the Vitre -> toolbox import: dumps the newest refresher

@@ -6,6 +6,9 @@
 //   GET /api/vitre?op=tasks[&limit=N]      company tasks (id, title, priority, dueDate, responsible, closeDate)
 //   GET /api/vitre?op=orgunits             org units (id, externalId, name) — maps Employee.orgUnitId to a name
 //   GET /api/vitre?op=training_probe[&title=..|&id=N]  newest refresher-form task with detail, files, appointment + review result (shape discovery)
+//   GET /api/vitre?op=trainings&page=N          one page (200) of tasks whose title contains the refresher needle; hasMore for paging
+//   GET /api/vitre?op=training&id=N[&copy=1]    one task as a toolbox row (presenter, date, depts); copy=1 also copies the photo to our Storage
+//   GET /api/vitre?op=training_photo&id=N       fresh 5-minute link to the task's photo, served from Vitre's storage
 //
 // This endpoint never writes to Vitre. Every op is a GET on their side.
 // Reference for the upstream API: project-files/VITRE-API.md (Swagger summary).
@@ -79,6 +82,11 @@ function extractSelectedAnswers(node, acc, depth) {
   }
   Object.keys(node).forEach(k => { const v = node[k]; if (v && typeof v === 'object') extractSelectedAnswers(v, acc, depth + 1); });
   return acc;
+}
+
+// First image attachment of a task, else the first file of any kind.
+function pickImage(list) {
+  return list.find(f => /\.(jpe?g|png|webp|heic)(\?|$)/i.test(String(f.name || f.url || ''))) || list[0] || null;
 }
 
 export async function onRequest({ request, env }) {
@@ -268,13 +276,17 @@ export async function onRequest({ request, env }) {
         out.depts = extractSelectedAnswers(rr.json);
       } else out.reviewError = rr.status || rr.networkError || null;
     }
-    // Copy the first image attachment into our bucket. The Vitre URL is a
-    // short-lived SAS link, so the copy happens here, right after listing.
+    // Michael, 23/09: Vitre stays the storage (he pays for it); our Supabase
+    // free tier does not take 236+ phone photos. So by default only COUNT the
+    // attachments; the viewer fetches a fresh link with op=training_photo when
+    // someone opens the row. ?copy=1 copies the first image into our bucket
+    // (kept for a future "bring my photos home" button). The Vitre URL is a
+    // short-lived SAS link, so a copy has to happen right after listing.
     const files = await vitreGet(env, '/task/getFiles/' + id);
     const list = files.ok && files.json && Array.isArray(files.json.files) ? files.json.files : [];
     out.files = list.length;
-    const img = list.find(f => /\.(jpe?g|png|webp|heic)(\?|$)/i.test(String(f.name || f.url || ''))) || list[0];
-    if (img && img.url) {
+    const img = pickImage(list);
+    if (img && img.url && url.searchParams.get('copy') === '1') {
       const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
       const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
       if (!serviceKey) out.photoError = 'missing SUPABASE_SERVICE_ROLE_KEY';
@@ -301,5 +313,19 @@ export async function onRequest({ request, env }) {
     return jsonResp(out, 200, cors);
   }
 
-  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe | trainings | training)' }, 400, cors);
+  // Fresh short-lived link to the photo attached to a refresher task. Nothing
+  // is stored on our side; the browser opens the link straight from Vitre's
+  // storage (Azure SAS URL, about five minutes).
+  if (op === 'training_photo') {
+    const id = parseInt(url.searchParams.get('id'), 10);
+    if (!id) return jsonResp({ error: 'id required' }, 400, cors);
+    const files = await vitreGet(env, '/task/getFiles/' + id);
+    if (!files.ok) return upstreamError(files, cors);
+    const list = files.json && Array.isArray(files.json.files) ? files.json.files : [];
+    const img = pickImage(list);
+    return jsonResp({ id, files: list.length, url: img && img.url || null, name: img && img.name || null,
+      all: list.map(f => ({ name: f.name || null, url: f.url || null })) }, 200, cors);
+  }
+
+  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe | trainings | training | training_photo)' }, 400, cors);
 }
