@@ -9,8 +9,13 @@
 //   GET /api/vitre?op=trainings&page=N          one page (200) of tasks whose title contains the refresher needle; hasMore for paging
 //   GET /api/vitre?op=training&id=N[&copy=1]    one task as a toolbox row (presenter, date, depts); copy=1 also copies the photo to our Storage
 //   GET /api/vitre?op=training_photo&id=N       fresh 5-minute link to the task's photo, served from Vitre's storage
+//   GET /api/vitre?op=review_schema&id=N        admin: schema of one form (question/answer dataKeys)
+//   POST /api/vitre?op=review_submit_test       admin: ONE submission of the notification TEST form (id locked below)
 //
-// This endpoint never writes to Vitre. Every op is a GET on their side.
+// Read-only towards Vitre, with one deliberate exception: review_submit_test
+// (23/09 evening) submits the test form "בדיקת התראות - למחיקה" to learn whether
+// an API submission fires Vitre's SMS/email the way a manual one does. The
+// review id is a constant here, so this endpoint cannot submit any other form.
 // Reference for the upstream API: project-files/VITRE-API.md (Swagger summary).
 //
 // Secrets (Cloudflare Pages -> Settings -> Variables and Secrets, Production):
@@ -23,6 +28,10 @@ import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireU
 const VITRE_BASE = 'https://publicapi.hbinov.com';
 const API_VERSION = '1.0';
 const UPSTREAM_TIMEOUT_MS = 15000;
+// The only form this endpoint may ever submit: "בדיקת התראות - למחיקה", built
+// by Michael on 23/09 for the notification test. Change deliberately or never.
+const VITRE_TEST_REVIEW_ID = 11997;
+const ADMIN_EMAIL = 'admin@tfugen.local';
 
 function vitreHeaders(env) {
   return {
@@ -47,6 +56,28 @@ async function vitreGet(env, path, withAuth = true) {
     let json = null;
     try { json = text ? JSON.parse(text) : null; } catch (e) {}
     return { status: resp.status, ok: resp.ok, json, text: json ? null : text.slice(0, 300), networkError: null };
+  } catch (e) {
+    return { status: 0, ok: false, json: null, text: null, networkError: String(e && e.message || e).slice(0, 200) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// POST against Vitre with a JSON body. Same return shape as vitreGet, never throws.
+async function vitrePost(env, path, body) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    const resp = await fetch(VITRE_BASE + path, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, vitreHeaders(env)),
+      body: JSON.stringify(body || {}),
+      signal: ctrl.signal
+    });
+    const text = await resp.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch (e) {}
+    return { status: resp.status, ok: resp.ok, json, text: json ? null : text.slice(0, 600), networkError: null };
   } catch (e) {
     return { status: 0, ok: false, json: null, text: null, networkError: String(e && e.message || e).slice(0, 200) };
   } finally {
@@ -119,10 +150,10 @@ function pickImage(list) {
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
-  const cors = corsHeaders(origin, allowed, 'GET,OPTIONS');
+  const cors = corsHeaders(origin, allowed, 'GET,POST,OPTIONS');
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-  if (request.method !== 'GET') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  if (request.method !== 'GET' && request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
 
   // Employee rows carry phone numbers. Trustees sign in anonymously and must
@@ -132,6 +163,12 @@ export async function onRequest({ request, env }) {
 
   const url = new URL(request.url);
   const op = (url.searchParams.get('op') || 'ping').toLowerCase();
+  // POST exists for exactly one op; everything else stays a GET.
+  if (request.method === 'POST' && op !== 'review_submit_test') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  if (request.method === 'GET' && op === 'review_submit_test') return jsonResp({ error: 'POST required' }, 405, cors);
+  // The form ops are admin-only: the schema names people, the submission writes to Vitre.
+  const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
+  if ((op === 'review_schema' || op === 'review_submit_test') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
 
   const ID = env.VITRE_API_KEY_ID;
   const SECRET = env.VITRE_API_KEY_SECRET;
@@ -258,6 +295,34 @@ export async function onRequest({ request, env }) {
       out.rawResult = await grab('/appointmetResult/get/' + apptId);
     }
     return jsonResp(out, 200, cors);
+  }
+
+  // ---- Notification test (23/09 evening): does an API submission fire SMS/email? ----
+  // Step 1: the form schema, so the question/answer dataKeys can be read.
+  if (op === 'review_schema') {
+    const id = parseInt(url.searchParams.get('id'), 10) || VITRE_TEST_REVIEW_ID;
+    const r = await vitreGet(env, '/review/getSchema?reviewId=' + id);
+    if (!r.ok) return upstreamError(r, cors);
+    const cut = JSON.parse(JSON.stringify(r.json, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
+    return jsonResp({ reviewId: id, schema: cut }, 200, cors);
+  }
+  // Step 2: one submission of the TEST form only. Body: { createdBy, data, projectId? }.
+  // createdBy = the submitter's Vitre employee externalId; data = { questionDataKey: answerDataKey|value }.
+  // Whatever Vitre answers (200 or 4xx) is returned verbatim so the shape can be read.
+  if (op === 'review_submit_test') {
+    let body = null;
+    try { body = await request.json(); } catch (e) { return jsonResp({ error: 'invalid JSON body' }, 400, cors); }
+    const createdBy = String((body && body.createdBy) || '').trim();
+    const data = body && body.data && typeof body.data === 'object' ? body.data : null;
+    if (!/^\d{1,10}$/.test(createdBy)) return jsonResp({ error: 'createdBy (employee externalId, digits) required' }, 400, cors);
+    if (!data || !Object.keys(data).length) return jsonResp({ error: 'data object required' }, 400, cors);
+    let qs = '/review/submit?reviewId=' + VITRE_TEST_REVIEW_ID + '&createdBy=' + encodeURIComponent(createdBy);
+    if (body.projectId) qs += '&projectId=' + encodeURIComponent(String(body.projectId));
+    const r = await vitrePost(env, qs, { data });
+    return jsonResp({
+      reviewId: VITRE_TEST_REVIEW_ID, createdBy, sent: { data }, upstreamStatus: r.status, ok: r.ok,
+      result: r.json, text: r.text, networkError: r.networkError
+    }, r.ok ? 200 : 502, cors);
   }
 
   // ---- Weekly safety-refresher import (Vitre task -> our toolbox row) ----
