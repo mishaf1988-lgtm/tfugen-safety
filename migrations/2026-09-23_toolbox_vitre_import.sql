@@ -7,8 +7,8 @@
 --   ext_id text  Vitre task id; the import matches on it so a re-run never
 --                duplicates a row (same pattern as emp.ext_id)
 --
--- NOT yet applied at commit time: the Supabase MCP call awaits approval. Verify
--- with information_schema.columns before ticking STATUS (rule 7).
+-- Applied 2026-09-23 via Supabase MCP (apply_migration "toolbox_dep_ext_id_vitre") and
+-- verified in information_schema.columns (dep, ext_id present).
 -- Idempotent: safe to re-run.
 
 ALTER TABLE public.toolbox ADD COLUMN IF NOT EXISTS dep text;

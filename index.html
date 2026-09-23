@@ -965,6 +965,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-d" onclick="_vitreCall('tasks')" style="font-size:13px;white-space:nowrap">&#128203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
       <button class="btn btn-p" onclick="_vitreImportPreview()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1492;&#1508;&#1506;&#1497;&#1500;&#1497;&#1501; &#1502;-Vitre &#1493;&#1502;&#1510;&#1497;&#1490; &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492; &#1500;&#1508;&#1504;&#1497; &#1513;&#1502;&#1497;&#1512;&#1492;. &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1488;&#1507; &#1506;&#1493;&#1489;&#1491;.">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre</button>
       <button class="btn btn-d" onclick="_vitreTrainingProbe()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1492;&#1512;&#1497;&#1506;&#1504;&#1493;&#1503; &#1492;&#1513;&#1489;&#1493;&#1506;&#1497; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#1502;-Vitre &#1506;&#1501; &#1492;&#1496;&#1493;&#1508;&#1505; &#1493;&#1492;&#1511;&#1489;&#1510;&#1497;&#1501;, &#1499;&#1496;&#1511;&#1505;&#1496; &#1500;&#1492;&#1506;&#1514;&#1511;&#1492;. &#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;.">&#128270; &#1502;&#1489;&#1504;&#1492; &#1512;&#1497;&#1506;&#1504;&#1493;&#1503; (&#1488;&#1489;&#1495;&#1493;&#1503;)</button>
+      <button class="btn btn-p" onclick="_vitreTrPreview()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1492;&#1490;&#1513;&#1493;&#1514; &#1496;&#1493;&#1508;&#1505; &#1492;&#1512;&#1497;&#1506;&#1504;&#1493;&#1503; &#1492;&#1513;&#1489;&#1493;&#1506;&#1497; &#1502;-Vitre &#1500;&#1514;&#1493;&#1498; &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;, &#1506;&#1501; &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492; &#1493;&#1489;&#1495;&#1497;&#1512;&#1492;. &#1512;&#1497;&#1510;&#1492; &#1495;&#1493;&#1494;&#1512;&#1514; &#1500;&#1488; &#1502;&#1499;&#1508;&#1497;&#1500;&#1492;.">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1512;&#1497;&#1506;&#1504;&#1493;&#1504;&#1497;&#1501; &#1502;-Vitre</button>
     </div>
     <div id="dash-vitre-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;. &#1500;&#1488; &#1499;&#1493;&#1514;&#1489; &#1499;&#1500;&#1493;&#1501; &#1500;-Vitre</div>
@@ -2285,7 +2286,7 @@ id="m-ncr" style="display:none">
 <div class="overlay" id="ov-emp" onclick="closeModal('m-emp')"></div>
 <div class="modal" id="m-vitre-imp" style="display:none">
   <button class="close-btn" onclick="closeModal('m-vitre-imp')">&#10005;</button>
-  <div class="modal-title">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre: &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492;</div>
+  <div class="modal-title" id="vitre-imp-title">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre: &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492;</div>
   <div style="font-size:11px;color:var(--t3);margin-bottom:8px">&#1499;&#1497;&#1493;&#1493;&#1503; &#1488;&#1495;&#1491; &#1489;&#1500;&#1489;&#1491; (Vitre &#1488;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;). &#1506;&#1512;&#1498; &#1512;&#1497;&#1511; &#1489;-Vitre &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1506;&#1512;&#1498; &#1511;&#1497;&#1497;&#1501;. &#1488;&#1507; &#1506;&#1493;&#1489;&#1491; &#1500;&#1488; &#1504;&#1502;&#1495;&#1511; &#1493;&#1500;&#1488; &#1502;&#1493;&#1513;&#1489;&#1514;.</div>
   <div id="vitre-imp-body" style="max-height:60vh;overflow-y:auto"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-vitre-imp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="vitre-imp-apply" onclick="_vitreImportApply()">&#1488;&#1513;&#1512; &#1497;&#1497;&#1489;&#1493;&#1488;</button></div>
@@ -9425,7 +9426,7 @@ function rToolbox(){
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="toolbox" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
     var delBtn='<button class="btn btn-d btn-sm" data-dtbl="toolbox" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:180px;word-break:break-word">'+esc(r.topic||'\u2014')+'</td><td>'+(r.presenter?esc(r.presenter):'\u2014')+'</td><td>'+(r.attendees?esc(r.attendees):'\u2014')+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:180px;word-break:break-word">'+esc(r.topic||'\u2014')+(r.dep?'<div style="font-size:10px;color:var(--t3)">'+esc(r.dep)+'</div>':'')+'</td><td>'+(r.presenter?esc(r.presenter):'\u2014')+'</td><td>'+(r.attendees?esc(r.attendees):'\u2014')+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 function svToolbox(){
@@ -13014,7 +13015,7 @@ var VIEW_CONFIG={
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
-    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'file_url'},
+    ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05de\u05d7\u05dc\u05e7\u05d5\u05ea','dep'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes'],['\u05de\u05d6\u05d4\u05d4 Vitre','ext_id']],photo:'file_url'},
   env_aspects:{title:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'easp',fields:[['\u05d4\u05d9\u05d1\u05d8','aspect'],['\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df','activity'],['\u05e9\u05dc\u05d1 \u05d7\u05d9\u05d9\u05dd','lifecycle'],['\u05e9\u05dc\u05d9\u05d8\u05d4/\u05d4\u05e9\u05e4\u05e2\u05d4','control_type'],['\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e9\u05e4\u05e2\u05d4','direction'],['\u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d4\u05d4\u05d9\u05d1\u05d8','impact'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','p_curr'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05e4\u05d5\u05e2\u05dc','sv_curr'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea','additional_controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','p_pot'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','sv_pot'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],['\u05d0\u05d7\u05e8\u05d0\u05d9','owner'],['\u05dc\u05d5\u05d6','review_date'],['\u05d4\u05e1\u05d1\u05e8 \u05dc\u05d0\u05d9 \u05d1\u05d9\u05e6\u05d5\u05e2','explanation'],['\u05d4\u05e4\u05e0\u05d9\u05d4 \u05dc\u05d7\u05d5\u05e7','legal_ref'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   projects:{title:'\u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8',back:'prj',fields:[['\u05e9\u05dd','name'],['\u05ea\u05d9\u05d0\u05d5\u05e8','description'],['\u05d4\u05ea\u05d7\u05dc\u05d4','start_date'],['\u05e1\u05d9\u05d5\u05dd','end_date'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status']]}
 };
@@ -18322,6 +18323,132 @@ window._secAuditRun=function(){
 
 // Vitre read-only bridge (functions/api/vitre.js). Admin card on the dashboard.
 // ping -> env + reachability + key acceptance; employees / tasks -> counts + first rows.
+// ---- Vitre -> toolbox: weekly safety-refresher import (admin, manual, never deletes) ----
+// DECISIONS 2026-09-23: managers keep submitting the refresher form in Vitre;
+// every submission becomes a toolbox (\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) row here. Flow: walk
+// /api/vitre?op=trainings page by page (the list is oldest-first) -> compare
+// with DB.toolbox by ext_id (= Vitre task id) -> preview with per-row ticks
+// -> for each ticked task op=training pulls presenter, departments and copies
+// the photo into our Storage -> sbIns('toolbox'). Re-running never duplicates:
+// a task whose id is already in toolbox.ext_id is listed as "\u05e7\u05d9\u05d9\u05dd".
+var _vitreTr=null;
+var _VITRE_TR_TOPIC='\u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9 (Vitre)';
+function _vitreHdr(){return {'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')};}
+function _vitreGet(qs){
+  return fetch('/api/vitre?'+qs,{method:'GET',headers:_vitreHdr()}).then(function(r){
+    return r.json().then(function(j){if(!r.ok)throw new Error('HTTP '+r.status+': '+String((j&&j.error)||'')+(j&&j.detail?' '+String(j.detail):''));return j;});
+  });
+}
+// The two new columns must exist before the first insert, or every queued row
+// fails with 400 and sits in the offline queue. Ask PostgREST for them once.
+function _vitreTrColsOk(){
+  return _sbAuth().then(function(){
+    return fetch(SBU+'/rest/v1/toolbox?select=dep,ext_id&limit=1',{headers:{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK)}});
+  }).then(function(r){return r.ok;}).catch(function(){return false;});
+}
+window._vitreTrPreview=function(){
+  if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  var box=g('dash-vitre-result');
+  var say=function(t){if(box)box.textContent=t;};
+  say('\u23f3 \u05d1\u05d5\u05d3\u05e7 \u05e2\u05de\u05d5\u05d3\u05d5\u05ea \u05d1\u05d8\u05d1\u05dc\u05ea \u05e9\u05d9\u05d7\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea...');
+  _vitreTrColsOk().then(function(ok){
+    if(!ok)throw new Error('\u05d1\u05d8\u05d1\u05dc\u05ea toolbox \u05d7\u05e1\u05e8\u05d5\u05ea \u05d4\u05e2\u05de\u05d5\u05d3\u05d5\u05ea dep / ext_id. \u05d9\u05e9 \u05dc\u05d4\u05e8\u05d9\u05e5 \u05e7\u05d5\u05d3\u05dd \u05d0\u05ea migrations/2026-09-23_toolbox_vitre_import.sql');
+    var all=[],page=1,MAX=60;
+    var step=function(){
+      say('\u23f3 \u05e1\u05d5\u05e8\u05e7 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d1-Vitre, \u05e2\u05de\u05d5\u05d3 '+page+'... ('+all.length+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05e2\u05d3 \u05db\u05d4)');
+      return _vitreGet('op=trainings&page='+page).then(function(res){
+        all=all.concat(res.rows||[]);
+        if(res.hasMore&&page<MAX){page++;return step();}
+        return {rows:all,pages:page,truncated:!!(res.hasMore&&page>=MAX)};
+      });
+    };
+    return step();
+  }).then(function(res){
+    var have={};(DB.toolbox||[]).forEach(function(r){if(r.ext_id)have[String(r.ext_id)]=r;});
+    var seen={},items=[];
+    res.rows.forEach(function(t){
+      var k=String(t.id);if(seen[k])return;seen[k]=1;
+      items.push({t:t,exists:!!have[k],sel:!have[k]});
+    });
+    items.sort(function(a,b){return String(b.t.createDate||'').localeCompare(String(a.t.createDate||''));});
+    _vitreTr={items:items,pages:res.pages,truncated:res.truncated};
+    _vitreTrRender(_vitreTr);
+    say('');
+    var ttl=g('vitre-imp-title');if(ttl)ttl.textContent='\u2b07\ufe0f \u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de-Vitre: \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4';
+    openModal('m-vitre-imp');
+  }).catch(function(err){say('\u274c '+(err&&err.message||err));});
+};
+function _vitreTrSelected(p){return p.items.filter(function(it){return it.sel&&!it.exists;}).length;}
+function _vitreTrBtn(p){
+  var btn=g('vitre-imp-apply');if(!btn)return;
+  var n=_vitreTrSelected(p);
+  btn.disabled=!n;btn.textContent=n?'\u05d0\u05e9\u05e8 \u05d9\u05d9\u05d1\u05d5\u05d0 ('+n+')':'\u05dc\u05d0 \u05e0\u05d1\u05d7\u05e8 \u05d0\u05e3 \u05e8\u05d9\u05e2\u05e0\u05d5\u05df';
+  btn.setAttribute('onclick','_vitreTrApply()');
+  var cnt=g('vitre-imp-selcount');if(cnt)cnt.textContent=n+' \u05e0\u05d1\u05d7\u05e8\u05d5';
+}
+function _vitreTrRender(p){
+  var box=g('vitre-imp-body');if(!box)return;
+  var nNew=0,nHave=0;p.items.forEach(function(it){if(it.exists)nHave++;else nNew++;});
+  var h='<div style="font-weight:700;margin-bottom:4px">'+p.items.length+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d1-Vitre ('+p.pages+' \u05e2\u05de\u05d5\u05d3\u05d9\u05dd \u05e0\u05e1\u05e8\u05e7\u05d5): <span style="color:var(--ok)">'+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd</span> \u00b7 '+nHave+' \u05db\u05d1\u05e8 \u05d0\u05e6\u05dc\u05e0\u05d5'+(p.truncated?' \u00b7 <span style="color:var(--bad)">\u05d4\u05e1\u05e8\u05d9\u05e7\u05d4 \u05e0\u05e2\u05e6\u05e8\u05d4 \u05d1\u05d2\u05d1\u05d5\u05dc \u05d4\u05e2\u05de\u05d5\u05d3\u05d9\u05dd, \u05d4\u05e8\u05e5 \u05e9\u05d5\u05d1 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0</span>':'')+'</div>';
+  h+='<div style="font-size:11px;color:var(--t3);margin-bottom:6px">\u05dc\u05db\u05dc \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05e0\u05e9\u05de\u05e8\u05d9\u05dd: \u05ea\u05d0\u05e8\u05d9\u05da, \u05de\u05d2\u05d9\u05e9, \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05e9\u05e1\u05d5\u05de\u05e0\u05d5 \u05d1\u05d8\u05d5\u05e4\u05e1 (\u05d0\u05dd \u05d6\u05d5\u05d4\u05d5), \u05d5\u05e6\u05d9\u05dc\u05d5\u05dd \u05d4\u05d3\u05e3 \u05d4\u05d7\u05ea\u05d5\u05dd \u05e9\u05de\u05d5\u05e2\u05ea\u05e7 \u05dc-Storage \u05e9\u05dc\u05e0\u05d5. \u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd \u05e0\u05e9\u05d0\u05e8\u05d9\u05dd \u05d1\u05e6\u05d9\u05dc\u05d5\u05dd.</div>';
+  if(nNew){
+    h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12px"><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(true)">\u05d1\u05d7\u05e8 \u05d4\u05db\u05dc</button><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(false)">\u05e0\u05e7\u05d4 \u05d1\u05d7\u05d9\u05e8\u05d4</button><span id="vitre-imp-selcount" style="color:var(--t2)"></span></div>';
+  }
+  var rowStyle='border:1px solid var(--bd,#ddd);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start';
+  p.items.forEach(function(it,i){
+    var t=it.t,dt=t.createDate?fd(String(t.createDate).slice(0,10)):'\u2014';
+    if(it.exists){h+='<div style="'+rowStyle+';opacity:.6"><span style="width:16px;flex:none">\u2713</span><div style="flex:1"><span style="color:var(--t3);font-weight:700">\u05e7\u05d9\u05d9\u05dd</span> '+dt+' <span style="color:var(--t3)">#'+esc(String(t.id))+'</span></div></div>';return;}
+    h+='<div style="'+rowStyle+'"><input type="checkbox" '+(it.sel?'checked ':'')+'data-i="'+i+'" onchange="_vitreTrSel(this.dataset.i,this.checked)" style="margin-top:3px;flex:none"><div style="flex:1"><span style="color:var(--ok);font-weight:700">\u05d7\u05d3\u05e9</span> <strong>'+dt+'</strong> <span style="color:var(--t3)">#'+esc(String(t.id))+'</span><div style="color:var(--t2)">'+esc(t.title||'')+(t.closeDate?'':' \u00b7 <span style="color:#b45309">\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7 \u05d1-Vitre</span>')+'</div></div></div>';
+  });
+  h+='<div id="vitre-tr-progress" style="font-size:12px;color:var(--t2);margin-top:6px"></div>';
+  box.innerHTML=h;
+  _vitreTrBtn(p);
+}
+window._vitreTrSel=function(i,on){var it=_vitreTr&&_vitreTr.items[parseInt(i,10)];if(!it)return;it.sel=!!on;_vitreTrBtn(_vitreTr);};
+window._vitreTrSelAll=function(on){
+  if(!_vitreTr)return;
+  _vitreTr.items.forEach(function(it){if(!it.exists)it.sel=!!on;});
+  var box=g('vitre-imp-body');
+  if(box)box.querySelectorAll('input[data-i][onchange^="_vitreTrSel("]').forEach(function(cb){cb.checked=!!on;});
+  _vitreTrBtn(_vitreTr);
+};
+// Pull each ticked task one at a time (each call copies a photo server-side),
+// write the toolbox row through the normal queue, and report at the end.
+window._vitreTrApply=function(){
+  var p=_vitreTr;if(!p)return;
+  if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  var todo=p.items.filter(function(it){return it.sel&&!it.exists;});
+  if(!todo.length)return;
+  var btn=g('vitre-imp-apply');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}
+  var prog=g('vitre-tr-progress');
+  var done=0,ok=0,noPhoto=0,fail=[];
+  if(!DB.toolbox)DB.toolbox=[];
+  var next=function(){
+    if(!todo.length){
+      addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: '+ok+' \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
+      sdb();
+      if(typeof rToolbox==='function')rToolbox();
+      if(typeof rDash==='function')try{rDash();}catch(e){}
+      _vitreTr=null;
+      closeModal('m-vitre-imp');
+      toast((fail.length?'\u26a0\ufe0f ':'\u2705 ')+'\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre: '+ok+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e0\u05e9\u05de\u05e8\u05d5'+(noPhoto?', '+noPhoto+' \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4':'')+(fail.length?', '+fail.length+' \u05e0\u05db\u05e9\u05dc\u05d5 ('+fail.slice(0,3).join(', ')+')':''),{ok:!fail.length});
+      return;
+    }
+    var it=todo.shift();done++;
+    if(prog)prog.textContent='\u23f3 '+done+' / '+(done+todo.length)+' \u00b7 \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id;
+    _vitreGet('op=training&id='+encodeURIComponent(it.t.id)).then(function(v){
+      var dstr=String(v.createDate||it.t.createDate||'').slice(0,10)||null;
+      var r={id:gid(),d:dstr,topic:_VITRE_TR_TOPIC,presenter:v.presenter||null,attendees:null,s:'\u05e0\u05de\u05e1\u05e8\u05d4',
+        notes:'\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #'+it.t.id+(v.photoError?' \u00b7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05d4\u05d5\u05e2\u05ea\u05e7\u05d4: '+v.photoError:''),
+        file_url:v.photoUrl||null,ts:new Date().toISOString(),
+        dep:(v.depts&&v.depts.length)?v.depts.join(', '):null,ext_id:String(it.t.id)};
+      DB.toolbox.push(r);sbIns('toolbox',r);ok++;if(!v.photoUrl)noPhoto++;
+      it.exists=true;
+    }).catch(function(err){fail.push('#'+it.t.id);console.warn('vitre training import',it.t.id,err);}).then(next);
+  };
+  next();
+};
+
 // Shape discovery for the Vitre -> toolbox import: dumps the newest refresher
 // task (detail, files, appointment, review result) into a textarea the admin
 // can copy and paste into the chat. The cloud cannot reach Vitre, so this is
@@ -18424,6 +18551,8 @@ window._vitreImportPreview=function(){
     _vitreImp.unmappedUnits=Object.keys(miss);
     _vitreRenderPreview(_vitreImp);
     if(box)box.textContent='';
+    var ttl=g('vitre-imp-title');if(ttl)ttl.textContent='\u2b07\ufe0f \u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05de-Vitre: \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4';
+    var ab=g('vitre-imp-apply');if(ab)ab.setAttribute('onclick','_vitreImportApply()');
     openModal('m-vitre-imp');
   }).catch(function(err){if(box)box.textContent='\u274c '+(err&&err.message||err);});
 };
