@@ -958,6 +958,15 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="dash-wa-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1502;&#1505;&#1508;&#1512; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1502;&#1488;&#1493;&#1502;&#1514; &#1489;-Meta dashboard</div>
   </div>
+  <div class="card" id="dash-vitre-test" style="display:none"><div class="card-title">&#128279; &#1489;&#1491;&#1497;&#1511;&#1514; Vitre (admin)</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <button class="btn btn-d" onclick="_vitreCall('ping')" style="font-size:13px;white-space:nowrap" title="&#1492;&#1488;&#1501; &#1492;&#1502;&#1508;&#1514;&#1495;&#1493;&#1514; &#1502;&#1493;&#1490;&#1491;&#1512;&#1497;&#1501; &#1493;&#1502;&#1514;&#1511;&#1489;&#1500;&#1497;&#1501; &#1489;-Vitre">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
+      <button class="btn btn-d" onclick="_vitreCall('employees')" style="font-size:13px;white-space:nowrap">&#128101; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</button>
+      <button class="btn btn-d" onclick="_vitreCall('tasks')" style="font-size:13px;white-space:nowrap">&#128203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
+    </div>
+    <div id="dash-vitre-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
+    <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;. &#1500;&#1488; &#1499;&#1493;&#1514;&#1489; &#1499;&#1500;&#1493;&#1501; &#1500;-Vitre</div>
+  </div>
   <div class="card" id="dash-secaudit" style="display:none"><div class="card-title">&#128274; &#1489;&#1491;&#1497;&#1511;&#1514; &#1488;&#1489;&#1496;&#1495;&#1492; (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
       <button class="btn btn-p" onclick="_secAuditRun()" style="font-size:13px;white-space:nowrap">&#128272; &#1492;&#1512;&#1510;&#1497; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1488;&#1489;&#1496;&#1495;&#1492;</button>
@@ -5898,7 +5907,7 @@ window._dashStatsToggle=function(){
 };
 window._dashStatsApply=function(){
   var t=g('dash-stats-title');if(!t)return;
-  var open=_dashStatsOpen(),skip={'dash-wa-test':1,'dash-secaudit':1};
+  var open=_dashStatsOpen(),skip={'dash-wa-test':1,'dash-vitre-test':1,'dash-secaudit':1};
   var n=0,el=t.nextElementSibling;
   while(el&&el.classList&&el.classList.contains('card')){
     if(!skip[el.id]){
@@ -5917,7 +5926,7 @@ window._dashStatsApply=function(){
 };
 window._dashHideEmptySection=function(){
   var t=g('dash-stats-title');if(!t)return;
-  var skip={'dash-wa-test':1,'dash-secaudit':1};
+  var skip={'dash-wa-test':1,'dash-vitre-test':1,'dash-secaudit':1};
   var any=false,el=t.nextElementSibling;
   while(el&&el.classList&&el.classList.contains('card')){
     if(!skip[el.id]&&el.style.display!=='none')any=true;
@@ -16002,6 +16011,8 @@ function _applyRoleGates(){
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
+  var vitreCard=g('dash-vitre-test');
+  if(vitreCard) vitreCard.style.display = isAdmin ? '' : 'none';
   var secauditCard=g('dash-secaudit');
   if(secauditCard) secauditCard.style.display = isAdmin ? '' : 'none';
   // Hide the bnav "modules" entry from reporters — none of the
@@ -18298,6 +18309,44 @@ window._secAuditRun=function(){
       box.innerHTML=esc(head).replace(/\u2713/g,'<span style="color:#15803d">\u2713</span>').replace(/\u2717/g,'<span style="color:#b91c1c">\u2717</span>').replace(/\u26a0/g,'<span style="color:#b45309">\u26a0</span>')+'\n'+lines;
     })
     .catch(function(err){box.textContent='\u2717 \u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err);});
+};
+
+// Vitre read-only bridge (functions/api/vitre.js). Admin card on the dashboard.
+// ping -> env + reachability + key acceptance; employees / tasks -> counts + first rows.
+window._vitreCall=function(op){
+  var box=g('dash-vitre-result');
+  if(!box)return;
+  box.textContent='\u23f3 '+(op==='ping'?'\u05de\u05d0\u05d1\u05d7\u05df...':'\u05de\u05d5\u05e9\u05da \u05de-Vitre...');
+  fetch('/api/vitre?op='+encodeURIComponent(op)+(op==='ping'?'':'&limit=20'),{method:'GET',headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});})
+    .then(function(res){
+      var d=res.data||{};
+      var mono='<div style="font-family:monospace;font-size:11px;line-height:1.6;background:#f8f9fa;border:1px solid #ddd;border-radius:6px;padding:8px;margin-top:4px;direction:ltr;text-align:left">';
+      if(!res.ok){box.innerHTML=mono+'\u274c HTTP '+res.status+': '+esc(String(d.error||''))+(d.detail?'<br>'+esc(String(d.detail)):'')+'</div>';return;}
+      var lines=[];
+      if(op==='ping'){
+        var env=d.env||{},reach=d.reachability||{},auth=d.auth;
+        var dot=function(v){return /^set/.test(String(v))?'\u2705':'\u274c';};
+        lines.push('<strong>Secrets (Cloudflare Pages):</strong><br>');
+        lines.push(dot(env.VITRE_API_KEY_ID)+' VITRE_API_KEY_ID: '+esc(String(env.VITRE_API_KEY_ID||'?'))+'<br>');
+        lines.push(dot(env.VITRE_API_KEY_SECRET)+' VITRE_API_KEY_SECRET: '+esc(String(env.VITRE_API_KEY_SECRET||'?'))+'<br><br>');
+        lines.push((reach.ok?'\u2705':'\u274c')+' reachability (GET /System/ping): HTTP '+(reach.status||'?')+(reach.version?' v'+esc(String(reach.version)):'')+(reach.networkError?' \u2014 '+esc(String(reach.networkError)):'')+'<br>');
+        if(auth){lines.push((auth.ok?'\u2705':'\u274c')+' auth (GET /Employee?PageSize=1): HTTP '+(auth.status||'?')+(auth.error?' \u2014 '+esc(String(auth.error)):'')+'<br>');}
+        if(d.next_step){lines.push('<br>\u27a1\ufe0f '+esc(String(d.next_step)));}
+      }else if(op==='employees'){
+        lines.push('<strong>'+d.count+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd</strong> (limit '+d.limit+')<br>');
+        (d.rows||[]).slice(0,10).forEach(function(e){
+          lines.push('#'+esc(String(e.externalId||e.id))+' '+esc(String(e.displayName||''))+(e.jobTitle?' \u00b7 '+esc(String(e.jobTitle)):'')+(e.phone?' \u00b7 '+esc(String(e.phone)):'')+(e.email?' \u00b7 '+esc(String(e.email)):'')+'<br>');
+        });
+      }else{
+        lines.push('<strong>'+d.count+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea</strong>, '+d.open+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea (limit '+d.limit+')<br>');
+        (d.rows||[]).slice(0,10).forEach(function(t){
+          lines.push((t.closeDate?'\u2611 ':'\u2610 ')+'#'+t.id+' '+esc(String(t.title||''))+' \u00b7 '+esc(String(t.priority||''))+(t.dueDate?' \u00b7 due '+esc(String(t.dueDate).slice(0,10)):'')+'<br>');
+        });
+      }
+      box.innerHTML=mono+lines.join('')+'</div>';
+    })
+    .catch(function(err){box.textContent='\u274c '+(err&&err.message||err);});
 };
 
 window._waDiagnose=function(){
