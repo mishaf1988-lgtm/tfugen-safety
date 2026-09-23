@@ -77,6 +77,8 @@ CRUD מלא לפי `externalId`: `GET/POST /Location`, `GET/PUT/PATCH /Location/
 
 (שים לב לשגיאת הכתיב בנתיב: `appointmet`, לא `appointment`.)
 
+**מבנה `get-review-result` כפי שנצפה 23/09 (טופס ריענון שבועי, appointment 3533731):** `{ appointmentId, actionId (= task id), reviewName, categories[], reviewResultQuestionGroups[], questions[] }`. כל שאלה: `{ id, categoryId, title, questionType, status ("Answered"/"NotAnswered"), selectedAnswers:[{ text, externalId, image, severity }] }`. סוגי שאלה שנראו: `TextOnlyTemplate` (שם טופס, מבצע הדיווח עם `externalId` = מספר עובד, תאריך `dd/mm/yyyy`, שעה), `CheckBoxTemplate` (המחלקות: `text` = `"1"` מסומן / `"0"` לא), `ImageOnlyTemplate` (`image` = נתיב ב-blob, מופרד `|`), `DocumentTemplate`, `DateOnlyTemplate`. **המשימה לא נוצרת מהטופס אלא נסגרת בו:** `task.generatedByAppointmentId` = null, `task.closedByAppointmentId` = מזהה ההגשה. `/task/getFiles/{id}` → `{ files:[{ name, url }] }`, ה-`url` הוא Azure blob עם חתימת SAS של כ-5 דקות. `/task/get` מדפדף מהישן לחדש.
+
 ### אחרים
 - **Dashboard**: `GET /dashboard/{chartId}?type&from&to` (נתוני גרף בפורמט קובץ), `GET /dashboard/file-types`.
 - **Dictionary**: `GET /dictionary/get`, `GET /dictionary/get/{id}`, `POST /dictionary/add`, `PUT /dictionary/update`.

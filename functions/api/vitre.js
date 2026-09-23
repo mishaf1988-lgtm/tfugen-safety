@@ -66,22 +66,49 @@ function upstreamError(r, cors) {
   return jsonResp({ error: 'vitre ' + (r.status || 'unreachable'), detail: String(msg).slice(0, 300) }, r.status >= 400 ? 502 : 504, cors);
 }
 
-// Best-effort walk of a review result: collect the display text of every
-// answer that looks selected. The exact shape of get-review-result is not
-// documented; this covers the usual { questions: [{ answers: [{ text, isSelected }] }] }
-// family and returns [] rather than guessing when nothing matches.
-function extractSelectedAnswers(node, acc, depth) {
-  acc = acc || []; depth = depth || 0;
+// Departments ticked on the refresher form. Shape seen 23/09 (task 3285307):
+// reviewResult.questions[] with questionType "CheckBoxTemplate", title = the
+// department name ("\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", "\u05ea\u05d5\u05e6\"\u05d2", ...), selectedAnswers[0].text "1" when
+// ticked, "0" when not. Falls back to a generic "looks selected" walk for any
+// other form shape, and returns [] rather than guessing.
+function extractSelectedAnswers(rr) {
+  const out = [];
+  const qs = rr && Array.isArray(rr.questions) ? rr.questions : null;
+  if (qs) {
+    qs.forEach(q => {
+      if (q.questionType !== 'CheckBoxTemplate') return;
+      const on = Array.isArray(q.selectedAnswers) && q.selectedAnswers.some(a => a && (a.text === '1' || a.text === 'true' || a.text === true));
+      const label = q.title && String(q.title).trim();
+      if (on && label && out.indexOf(label) < 0) out.push(label);
+    });
+    return out;
+  }
+  return walkSelected(rr, out, 0);
+}
+function walkSelected(node, acc, depth) {
   if (!node || depth > 8) return acc;
-  if (Array.isArray(node)) { node.forEach(n => extractSelectedAnswers(n, acc, depth + 1)); return acc; }
+  if (Array.isArray(node)) { node.forEach(n => walkSelected(n, acc, depth + 1)); return acc; }
   if (typeof node !== 'object') return acc;
   const picked = node.isSelected === true || node.selected === true || node.isChecked === true || node.checked === true || node.value === true;
   if (picked) {
     const label = node.text || node.title || node.name || node.answerText || node.label || node.displayName;
     if (label && typeof label === 'string' && acc.indexOf(label.trim()) < 0) acc.push(label.trim());
   }
-  Object.keys(node).forEach(k => { const v = node[k]; if (v && typeof v === 'object') extractSelectedAnswers(v, acc, depth + 1); });
+  Object.keys(node).forEach(k => { const v = node[k]; if (v && typeof v === 'object') walkSelected(v, acc, depth + 1); });
   return acc;
+}
+
+// The form also carries the submitter's employee number ("\u05de\u05d1\u05e6\u05e2 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7" ->
+// selectedAnswers[0].externalId), which is emp.ext_id on our side.
+function extractPresenterExtId(rr) {
+  const qs = rr && Array.isArray(rr.questions) ? rr.questions : [];
+  for (const q of qs) {
+    if (q.categoryId && q.questionType === 'TextOnlyTemplate' && Array.isArray(q.selectedAnswers)) {
+      const a = q.selectedAnswers[0];
+      if (a && a.externalId && /^\d+$/.test(String(a.externalId)) && a.text) return String(a.externalId);
+    }
+  }
+  return null;
 }
 
 // First image attachment of a task, else the first file of any kind.
@@ -267,13 +294,14 @@ export async function onRequest({ request, env }) {
       presenter: (d.createdByUser && d.createdByUser.displayName) || (d.responsibleUser && d.responsibleUser.displayName) || null,
       presenterEmail: (d.createdByUser && d.createdByUser.email) || null,
       appointmentId: d.closedByAppointmentId || d.generatedByAppointmentId || null,
-      depts: [], reviewResult: null, photoUrl: null, photoError: null, files: 0
+      depts: [], presenterExtId: null, reviewResult: null, photoUrl: null, photoError: null, files: 0
     };
     if (out.appointmentId) {
       const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + out.appointmentId);
       if (rr.ok && rr.json) {
         out.reviewResult = JSON.parse(JSON.stringify(rr.json, (k, x) => (typeof x === 'string' && x.length > 300) ? x.slice(0, 300) + '...' : x));
         out.depts = extractSelectedAnswers(rr.json);
+        out.presenterExtId = extractPresenterExtId(rr.json);
       } else out.reviewError = rr.status || rr.networkError || null;
     }
     // Michael, 23/09: Vitre stays the storage (he pays for it); our Supabase
