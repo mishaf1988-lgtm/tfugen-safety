@@ -13,6 +13,12 @@
 
 ---
 
+## 2026-09-23 — Vitre: גשר קריאה בלבד דרך Pages Function, זוג secrets, בלי כתיבה ל-Vitre
+**החלטה**: החיבור ל-Vitre (HBSafety Public API) עובר דרך `functions/api/vitre.js` בלבד: GET, `op=ping|employees|tasks`, אימות ב-headers `X-api-key-id` + `X-api-key-secret` משני Secrets ב-Cloudflare (`VITRE_API_KEY_ID`, `VITRE_API_KEY_SECRET`). הקריאה דורשת משתמש מחובר לא-אנונימי (`requireUser`), כי התשובה כוללת טלפונים של עובדים. אין כתיבה ל-Vitre בשלב הזה.
+**סיבה**: המפתח של Vitre מייצג את **החברה** בהרשאת מנהל, בלי scopes. חשיפה שלו בדפדפן = גישה מלאה לכל הנתונים. הדפוס זהה ל-`META_ACCESS_TOKEN` ו-`RESEND_KEY`. קריאה בלבד קודם, כי ה-API לא מאפשר ליצור משימה ישירות (רק דרך טופס), ולפני שמשקיעים בכתיבה צריך לבדוק אם התראות Vitre בכלל יוצאות על הגשה דרך API.
+**אלטרנטיבות שנדחו**: קריאה ישירה מהדפדפן ל-`publicapi.hbinov.com` (המפתח היה נחשף); Supabase Edge Function (כל קוד השרת שלנו כבר ב-Pages Functions); בניית "ערוץ SMS דרך Vitre" לפני בדיקה (הדרך עקיפה, טופס ולא משימה, ולא מתועד שהתראות יוצאות).
+**קישורים**: `project-files/VITRE-API.md`, `project-files/VITRE-QUESTIONS.md`, PR #770 (תיעוד), PR של `vitre.js` (23/09)
+
 ## 2026-09-22 — RTK לא מותקן: נבדק בפועל, התועלת אצלנו קטנה והסיכון יושב על העריכות
 
 **החלטה**: לא להתקין את RTK (`rtk-ai/rtk`, דוחס פלט Bash דרך PreToolUse hook). לחזור לשאלה רק אם `/usage` יראה, אחרי שבוע עם השינויים של #764/#765, שפלט כלים הוא נתח גדול מהצריכה. בינתיים לא לבדוק שוב, הממצאים פה.
