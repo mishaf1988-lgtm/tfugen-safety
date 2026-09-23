@@ -963,6 +963,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-d" onclick="_vitreCall('ping')" style="font-size:13px;white-space:nowrap" title="&#1492;&#1488;&#1501; &#1492;&#1502;&#1508;&#1514;&#1495;&#1493;&#1514; &#1502;&#1493;&#1490;&#1491;&#1512;&#1497;&#1501; &#1493;&#1502;&#1514;&#1511;&#1489;&#1500;&#1497;&#1501; &#1489;-Vitre">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
       <button class="btn btn-d" onclick="_vitreCall('employees')" style="font-size:13px;white-space:nowrap">&#128101; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</button>
       <button class="btn btn-d" onclick="_vitreCall('tasks')" style="font-size:13px;white-space:nowrap">&#128203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
+      <button class="btn btn-p" onclick="_vitreImportPreview()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1492;&#1508;&#1506;&#1497;&#1500;&#1497;&#1501; &#1502;-Vitre &#1493;&#1502;&#1510;&#1497;&#1490; &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492; &#1500;&#1508;&#1504;&#1497; &#1513;&#1502;&#1497;&#1512;&#1492;. &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1488;&#1507; &#1506;&#1493;&#1489;&#1491;.">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre</button>
     </div>
     <div id="dash-vitre-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;. &#1500;&#1488; &#1499;&#1493;&#1514;&#1489; &#1499;&#1500;&#1493;&#1501; &#1500;-Vitre</div>
@@ -2281,6 +2282,13 @@ id="m-ncr" style="display:none">
 
 <!-- EMP MODAL -->
 <div class="overlay" id="ov-emp" onclick="closeModal('m-emp')"></div>
+<div class="modal" id="m-vitre-imp" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-vitre-imp')">&#10005;</button>
+  <div class="modal-title">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre: &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492;</div>
+  <div style="font-size:11px;color:var(--t3);margin-bottom:8px">&#1499;&#1497;&#1493;&#1493;&#1503; &#1488;&#1495;&#1491; &#1489;&#1500;&#1489;&#1491; (Vitre &#1488;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;). &#1506;&#1512;&#1498; &#1512;&#1497;&#1511; &#1489;-Vitre &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1506;&#1512;&#1498; &#1511;&#1497;&#1497;&#1501;. &#1488;&#1507; &#1506;&#1493;&#1489;&#1491; &#1500;&#1488; &#1504;&#1502;&#1495;&#1511; &#1493;&#1500;&#1488; &#1502;&#1493;&#1513;&#1489;&#1514;.</div>
+  <div id="vitre-imp-body" style="max-height:60vh;overflow-y:auto"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-vitre-imp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="vitre-imp-apply" onclick="_vitreImportApply()">&#1488;&#1513;&#1512; &#1497;&#1497;&#1489;&#1493;&#1488;</button></div>
+</div>
 <div class="modal" id="m-emp" style="display:none">
   <button class="close-btn" onclick="closeModal('m-emp')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1506;&#1493;&#1489;&#1491;</div>
@@ -12953,7 +12961,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05d0\u05d6\u05d5\u05e8','a'],['\u05d1\u05e2\u05dc\u05d9\u05dd','o'],
     ['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea','p'],['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05e4\u05e2\u05d5\u05dc\u05d4','ac']]},
   emp:{title:'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',back:'emp',fields:[
-    ['\u05e9\u05dd','n'],['\u05ea\u05e4\u05e7\u05d9\u05d3','r'],['\u05de\u05d7\u05dc\u05e7\u05d4','dep'],['\u05d8\u05dc\u05e4\u05d5\u05df','ph']]},
+    ['\u05e9\u05dd','n'],['\u05ea\u05e4\u05e7\u05d9\u05d3','r'],['\u05de\u05d7\u05dc\u05e7\u05d4','dep'],['\u05d8\u05dc\u05e4\u05d5\u05df','ph'],['\u05de\u05d9\u05d9\u05dc','em'],['\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3','ext_id']]},
   ppe:{title:'PPE',back:'ppe',photo:'file_url',fields:[
     ['\u05e1\u05d5\u05d2','ty'],['\u05e2\u05d5\u05d1\u05d3','w'],['\u05de\u05e7\u05e6\u05d4','m'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05ea\u05e4\u05d5\u05d2\u05d4','e'],['\u05de\u05e6\u05d1','c']]},
@@ -18347,6 +18355,133 @@ window._vitreCall=function(op){
       box.innerHTML=mono+lines.join('')+'</div>';
     })
     .catch(function(err){box.textContent='\u274c '+(err&&err.message||err);});
+};
+
+// ---- Vitre -> emp: employee import (admin, manual, one-way, never deletes) ----
+// DECISIONS 2026-09-23: Tapugan Safety leads, Vitre only feeds the employee
+// list. Flow: fetch /api/vitre?op=employees (+ orgunits for unit names) ->
+// match against DB.emp (ext_id, then normalised phone, then exact name) ->
+// preview modal (new / updated / unchanged, proposed matches can be unticked)
+// -> confirm -> sbIns / sbUpd through the usual offline queue. An empty Vitre
+// value never blanks a value we already hold. Employees that exist here but
+// not in Vitre are listed for information only.
+var _vitreImp=null;
+var _VITRE_F={n:'\u05e9\u05dd',ph:'\u05d8\u05dc\u05e4\u05d5\u05df',em:'\u05de\u05d9\u05d9\u05dc',r:'\u05ea\u05e4\u05e7\u05d9\u05d3',dep:'\u05de\u05d7\u05dc\u05e7\u05d4',ext_id:'\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3'};
+function _vitreNormPhone(p){var d=String(p||'').replace(/\D/g,'');if(!d)return '';if(d.indexOf('972')===0)d='0'+d.slice(3);return d;}
+function _vitreNormName(n){return String(n||'').replace(/\s+/g,' ').trim();}
+// Effective kind: a proposed (phone/name) match the admin unticked becomes a new row.
+function _vitreKind(it){return (it.proposed&&!it.accept)?'new':it.kind;}
+window._vitreImportPreview=function(){
+  if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  var box=g('dash-vitre-result');
+  if(box)box.textContent='\u23f3 \u05de\u05d5\u05e9\u05da \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d5\u05d9\u05d7\u05d9\u05d3\u05d5\u05ea \u05de-Vitre...';
+  var H={'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')};
+  var getOp=function(op,extra){
+    return fetch('/api/vitre?op='+op+(extra||''),{method:'GET',headers:H}).then(function(r){
+      return r.json().then(function(j){if(!r.ok)throw new Error('HTTP '+r.status+': '+String((j&&j.error)||'')+(j&&j.detail?' '+String(j.detail):''));return j;});
+    });
+  };
+  // Unit names are nice-to-have: if /OrgUnit fails the import still runs, dep stays empty.
+  Promise.all([getOp('employees','&limit=500'),getOp('orgunits').catch(function(){return {rows:[]};})]).then(function(res){
+    var units={};
+    (res[1].rows||[]).forEach(function(u){if(u.id!==null&&u.id!==undefined&&u.name)units[String(u.id)]=String(u.name);});
+    _vitreImp=_vitreBuildPlan(res[0].rows||[],units);
+    _vitreRenderPreview(_vitreImp);
+    if(box)box.textContent='';
+    openModal('m-vitre-imp');
+  }).catch(function(err){if(box)box.textContent='\u274c '+(err&&err.message||err);});
+};
+function _vitreBuildPlan(rows,units){
+  var byExt={},byPh={},byName={};
+  (DB.emp||[]).forEach(function(e){
+    if(e.ext_id)byExt[String(e.ext_id)]=e;
+    var p=_vitreNormPhone(e.ph);if(p&&!byPh[p])byPh[p]=e;
+    var n=_vitreNormName(e.n);if(n&&!byName[n])byName[n]=e;
+  });
+  var items=[],taken={},seenExt={},skipped=0;
+  rows.forEach(function(v){
+    var ext=(v.externalId===null||v.externalId===undefined)?'':String(v.externalId).trim();
+    var name=_vitreNormName(v.displayName);
+    // No employee number = no stable key to sync on; no name = nothing to show. Counted, not imported.
+    if(!ext||!name||seenExt[ext]){skipped++;return;}
+    seenExt[ext]=1;
+    var inc={n:name,ph:_vitreNormPhone(v.phone)||null,em:String(v.email||'').trim()||null,r:String(v.jobTitle||'').trim()||null,
+      dep:(v.orgUnitId!==null&&v.orgUnitId!==undefined&&units[String(v.orgUnitId)])||null,ext_id:ext};
+    var match=byExt[ext]||null,how='ext';
+    // Only unlinked local rows are candidates for a phone/name match, so a row
+    // already tied to another Vitre employee is never re-assigned.
+    if(!match&&inc.ph&&byPh[inc.ph]&&!byPh[inc.ph].ext_id&&!taken[byPh[inc.ph].id]){match=byPh[inc.ph];how='phone';}
+    if(!match&&byName[name]&&!byName[name].ext_id&&!taken[byName[name].id]){match=byName[name];how='name';}
+    if(match)taken[match.id]=1;
+    var it={inc:inc,match:match,how:how,proposed:!!match&&how!=='ext',accept:true,changes:[],kind:'new'};
+    if(match){
+      ['n','ph','em','r','dep','ext_id'].forEach(function(k){
+        var nv=inc[k];if(nv===null||nv===undefined||nv==='')return;
+        var ov=(match[k]===undefined||match[k]===null||match[k]==='')?null:String(match[k]);
+        if(k==='ph'&&ov!==null&&_vitreNormPhone(ov)===nv)return; // same number, different punctuation: not a change
+        if(ov!==String(nv))it.changes.push({k:k,from:ov,to:nv});
+      });
+      it.kind=it.changes.length?'upd':'same';
+    }
+    items.push(it);
+  });
+  var onlyLocal=(DB.emp||[]).filter(function(e){return !taken[e.id];});
+  return {items:items,onlyLocal:onlyLocal,skipped:skipped,total:rows.length};
+}
+function _vitreRenderPreview(plan){
+  var box=g('vitre-imp-body');if(!box)return;
+  var c={new:0,upd:0,same:0};
+  plan.items.forEach(function(it){c[_vitreKind(it)]++;});
+  var h='<div style="font-weight:700;margin-bottom:8px">'+plan.total+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05d1-Vitre: <span style="color:var(--ok)">'+c.new+' \u05d7\u05d3\u05e9\u05d9\u05dd</span> \u00b7 <span style="color:#b45309">'+c.upd+' \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05d9\u05dd</span> \u00b7 '+c.same+' \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9'+(plan.skipped?' \u00b7 <span style="color:var(--t3)">'+plan.skipped+' \u05d1\u05dc\u05d9 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 (\u05dc\u05d0 \u05d9\u05d9\u05d5\u05d1\u05d0\u05d5)</span>':'')+'</div>';
+  var rowStyle='border:1px solid var(--bd,#ddd);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px;line-height:1.5';
+  plan.items.forEach(function(it,i){
+    var k=_vitreKind(it);if(k==='same')return;
+    var head='<strong>'+esc(it.inc.n)+'</strong> <span style="color:var(--t3)">#'+esc(it.inc.ext_id)+'</span>';
+    if(k==='new'){
+      var bits=[];['ph','em','r','dep'].forEach(function(f){if(it.inc[f])bits.push(_VITRE_F[f]+': '+esc(it.inc[f]));});
+      h+='<div style="'+rowStyle+'"><span style="color:var(--ok);font-weight:700">\u05d7\u05d3\u05e9</span> '+head+(bits.length?'<div style="color:var(--t2)">'+bits.join(' \u00b7 ')+'</div>':'');
+      if(it.proposed)h+='<label style="display:block;margin-top:4px;color:var(--t2)"><input type="checkbox" data-i="'+i+'" onchange="_vitreToggle(this.dataset.i,this.checked)"> \u05d7\u05d1\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05e7\u05d9\u05d9\u05dd: '+esc(it.match.n)+(it.match.ph?' ('+esc(it.match.ph)+')':'')+'</label>';
+      h+='</div>';
+    }else{
+      h+='<div style="'+rowStyle+'"><span style="color:#b45309;font-weight:700">\u05e2\u05d3\u05db\u05d5\u05df</span> '+head;
+      if(it.proposed)h+='<label style="display:block;margin:4px 0;color:var(--t2)"><input type="checkbox" checked data-i="'+i+'" onchange="_vitreToggle(this.dataset.i,this.checked)"> \u05d4\u05ea\u05d0\u05de\u05d4 \u05de\u05d5\u05e6\u05e2\u05ea \u05dc\u05e4\u05d9 '+(it.how==='phone'?'\u05d8\u05dc\u05e4\u05d5\u05df':'\u05e9\u05dd')+': '+esc(it.match.n)+(it.match.ph?' ('+esc(it.match.ph)+')':'')+'. \u05d1\u05d8\u05dc \u05db\u05d3\u05d9 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d1\u05de\u05e7\u05d5\u05dd.</label>';
+      h+='<div style="color:var(--t2)">'+it.changes.map(function(ch){return _VITRE_F[ch.k]+': '+(ch.from===null?'<em>\u05e8\u05d9\u05e7</em>':esc(ch.from))+' \u2192 '+esc(ch.to);}).join('<br>')+'</div></div>';
+    }
+  });
+  if(plan.onlyLocal.length){
+    h+='<details style="margin-top:8px;font-size:12px"><summary style="cursor:pointer;color:var(--t2)">'+plan.onlyLocal.length+' \u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05d0\u05e6\u05dc\u05e0\u05d5 \u05d5\u05dc\u05d0 \u05d1-Vitre (\u05dc\u05d9\u05d3\u05d9\u05e2\u05d4, \u05dc\u05d0 \u05e0\u05de\u05d7\u05e7\u05d9\u05dd)</summary><div style="color:var(--t3);margin-top:4px">'+plan.onlyLocal.map(function(e){return esc(e.n||'')+(e.ph?' ('+esc(e.ph)+')':'');}).join('<br>')+'</div></details>';
+  }
+  box.innerHTML=h;
+  var btn=g('vitre-imp-apply');
+  if(btn){btn.disabled=!(c.new+c.upd);btn.textContent=(c.new+c.upd)?'\u05d0\u05e9\u05e8 \u05d9\u05d9\u05d1\u05d5\u05d0 ('+(c.new+c.upd)+')':'\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05d1\u05d0';}
+}
+window._vitreToggle=function(i,on){
+  var it=_vitreImp&&_vitreImp.items[parseInt(i,10)];if(!it)return;
+  it.accept=!!on;
+  _vitreRenderPreview(_vitreImp);
+};
+window._vitreImportApply=function(){
+  var plan=_vitreImp;if(!plan)return;
+  if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  if(!DB.emp)DB.emp=[];
+  var nNew=0,nUpd=0;
+  plan.items.forEach(function(it){
+    var k=_vitreKind(it);
+    if(k==='new'){
+      var r={id:gid(),n:it.inc.n,r:it.inc.r,dep:it.inc.dep,s:null,ph:it.inc.ph,em:it.inc.em,ext_id:it.inc.ext_id};
+      DB.emp.push(r);sbIns('emp',r);nNew++;
+    }else if(k==='upd'){
+      var e=it.match;
+      it.changes.forEach(function(ch){e[ch.k]=ch.to;});
+      sbUpd('emp',e);nUpd++;
+    }
+  });
+  addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05de-Vitre: '+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd, '+nUpd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
+  sdb();
+  if(typeof rEmp==='function')rEmp();
+  _vitreImp=null;
+  closeModal('m-vitre-imp');
+  toast('\u2705 \u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre: '+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd, '+nUpd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5',{ok:true});
 };
 
 window._waDiagnose=function(){

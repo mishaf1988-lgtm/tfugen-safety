@@ -4,6 +4,7 @@
 //   GET /api/vitre?op=ping                 env vars set? Vitre reachable? keys accepted?
 //   GET /api/vitre?op=employees[&limit=N]  active employees (id, externalId, name, phone, email, ...)
 //   GET /api/vitre?op=tasks[&limit=N]      company tasks (id, title, priority, dueDate, responsible, closeDate)
+//   GET /api/vitre?op=orgunits             org units (id, externalId, name) — maps Employee.orgUnitId to a name
 //
 // This endpoint never writes to Vitre. Every op is a GET on their side.
 // Reference for the upstream API: project-files/VITRE-API.md (Swagger summary).
@@ -148,5 +149,22 @@ export async function onRequest({ request, env }) {
     return jsonResp({ count: rows.length, open, limit, rows }, 200, cors);
   }
 
-  return jsonResp({ error: 'unknown op (ping | employees | tasks)' }, 400, cors);
+  // Employee.orgUnitId is a number; the import into emp.dep wants the unit's name.
+  if (op === 'orgunits') {
+    const r = await vitreGet(env, '/OrgUnit?PageSize=500&Start=0');
+    if (!r.ok) return upstreamError(r, cors);
+    // Swagger lists a plain array; tolerate a wrapped { items: [...] } too.
+    const list = Array.isArray(r.json) ? r.json : (r.json && Array.isArray(r.json.items) ? r.json.items : null);
+    if (!list) return upstreamError(r, cors);
+    const rows = list.map(u => ({
+      id: u.id,
+      externalId: u.externalId || null,
+      name: u.name || u.displayName || u.title || null,
+      parentId: u.parentId || null,
+      isContractor: !!u.isContractor
+    }));
+    return jsonResp({ count: rows.length, rows }, 200, cors);
+  }
+
+  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits)' }, 400, cors);
 }
