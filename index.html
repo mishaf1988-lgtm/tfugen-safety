@@ -964,6 +964,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-d" onclick="_vitreCall('employees')" style="font-size:13px;white-space:nowrap">&#128101; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</button>
       <button class="btn btn-d" onclick="_vitreCall('tasks')" style="font-size:13px;white-space:nowrap">&#128203; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;</button>
       <button class="btn btn-p" onclick="_vitreImportPreview()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1492;&#1508;&#1506;&#1497;&#1500;&#1497;&#1501; &#1502;-Vitre &#1493;&#1502;&#1510;&#1497;&#1490; &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492; &#1500;&#1508;&#1504;&#1497; &#1513;&#1502;&#1497;&#1512;&#1492;. &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1488;&#1507; &#1506;&#1493;&#1489;&#1491;.">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre</button>
+      <button class="btn btn-d" onclick="_vitreTrainingProbe()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1492;&#1512;&#1497;&#1506;&#1504;&#1493;&#1503; &#1492;&#1513;&#1489;&#1493;&#1506;&#1497; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#1502;-Vitre &#1506;&#1501; &#1492;&#1496;&#1493;&#1508;&#1505; &#1493;&#1492;&#1511;&#1489;&#1510;&#1497;&#1501;, &#1499;&#1496;&#1511;&#1505;&#1496; &#1500;&#1492;&#1506;&#1514;&#1511;&#1492;. &#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;.">&#128270; &#1502;&#1489;&#1504;&#1492; &#1512;&#1497;&#1506;&#1504;&#1493;&#1503; (&#1488;&#1489;&#1495;&#1493;&#1503;)</button>
     </div>
     <div id="dash-vitre-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;. &#1500;&#1488; &#1499;&#1493;&#1514;&#1489; &#1499;&#1500;&#1493;&#1501; &#1500;-Vitre</div>
@@ -18321,6 +18322,30 @@ window._secAuditRun=function(){
 
 // Vitre read-only bridge (functions/api/vitre.js). Admin card on the dashboard.
 // ping -> env + reachability + key acceptance; employees / tasks -> counts + first rows.
+// Shape discovery for the Vitre -> toolbox import: dumps the newest refresher
+// task (detail, files, appointment, review result) into a textarea the admin
+// can copy and paste into the chat. The cloud cannot reach Vitre, so this is
+// how the field mapping gets read before the import is written.
+window._vitreTrainingProbe=function(){
+  var box=g('dash-vitre-result');if(!box)return;
+  box.textContent='\u23f3 \u05de\u05d5\u05e9\u05da \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d0\u05d7\u05e8\u05d5\u05df \u05de-Vitre...';
+  fetch('/api/vitre?op=training_probe',{method:'GET',headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
+    .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
+    .then(function(res){
+      var txt=JSON.stringify(res.data,null,1);
+      box.innerHTML='<div style="margin:4px 0">'+(res.ok?'\u2705':'\u274c HTTP '+res.status)+' <button class="btn btn-d btn-sm" onclick="_vitreCopyProbe()">\ud83d\udccb \u05d4\u05e2\u05ea\u05e7</button> <span style="color:var(--t3)">\u05d4\u05d3\u05d1\u05e7 \u05d0\u05ea \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d1\u05e6\'\u05d0\u05d8</span></div>'+
+        '<textarea id="vitre-probe-txt" readonly style="width:100%;height:40vh;font-family:monospace;font-size:10px;direction:ltr;text-align:left"></textarea>';
+      g('vitre-probe-txt').value=txt;
+    })
+    .catch(function(err){box.textContent='\u274c '+(err&&err.message||err);});
+};
+window._vitreCopyProbe=function(){
+  var ta=g('vitre-probe-txt');if(!ta)return;
+  var done=function(){toast('\u05d4\u05d5\u05e2\u05ea\u05e7 \u05dc\u05dc\u05d5\u05d7 \u2713',{ok:true});};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(done).catch(function(){ta.select();toast('\u05e1\u05de\u05df \u05d5\u05d4\u05e2\u05ea\u05e7 \u05d9\u05d3\u05e0\u05d9\u05ea');});}
+  else{ta.select();try{document.execCommand('copy');done();}catch(e){toast('\u05e1\u05de\u05df \u05d5\u05d4\u05e2\u05ea\u05e7 \u05d9\u05d3\u05e0\u05d9\u05ea');}}
+};
+
 window._vitreCall=function(op){
   var box=g('dash-vitre-result');
   if(!box)return;
