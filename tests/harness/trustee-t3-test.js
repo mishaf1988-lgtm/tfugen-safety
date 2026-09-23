@@ -79,7 +79,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const r = DB.trustee_reports.find(x => x.id === 'd1');
     return { items, s: r.s, upd: window.__upd.slice(-1)[0], toast: window.__toasts.slice(-1)[0], menuGone: !document.getElementById('tru-row-menu'), openRows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length, pills: Array.from(document.querySelectorAll('#tru-mgr-summary button')).map(b => b.textContent.trim()).slice(0, 2).join(' '), board: Array.from(document.querySelectorAll('#tru-mgr-board .tru-board-row')).map(x => x.dataset.truU + ':' + x.lastElementChild.textContent.trim()).join(' ') };
   });
-  check('menu offers: סמן נסגר · צור משימה · הערת ניתוב · מחק', /סמן נסגר/.test(m1.items[0]) && /צור משימה/.test(m1.items[1]) && /הערת ניתוב/.test(m1.items[2]) && /מחק/.test(m1.items[3]), m1.items);
+  check('menu offers: סמן נסגר · צור משימה · הערת ניתוב · שלח לטיפול · מחק', /סמן נסגר/.test(m1.items[0]) && /צור משימה/.test(m1.items[1]) && /הערת ניתוב/.test(m1.items[2]) && /שלח לטיפול/.test(m1.items[3]) && /מחק/.test(m1.items[4]), m1.items);
   check('close: s=נסגר, sbUpd once, toast, list/pills/board re-rendered (דנה 64)', m1.s === 'נסגר' && m1.upd.id === 'd1' && m1.upd.s === 'נסגר' && /נסגר/.test(m1.toast) && m1.menuGone && m1.openRows === 1 && m1.pills === 'פתוחים: 1 נסגרו: 7' && /דנה:64/.test(m1.board), m1);
   const m2 = await page.evaluate(() => {
     _truMgrSetFilter('closed');

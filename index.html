@@ -2519,6 +2519,28 @@ id="m-ncr" style="display:none">
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru-link')">סגור</button><button class="btn btn-s" style="min-height:44px" onclick="_truLinkCopy()">&#128203; העתק</button><button class="btn btn-p" style="min-height:44px;background:#25D366;border-color:#25D366" onclick="_truLinkShare()">&#128241; שתף</button></div>
 </div>
 
+<!-- SEND A FINDING TO MAINTENANCE / ELECTRICIAN (2026-09-23): the people who fix things do not use the app -->
+<div class="overlay" id="ov-tru-route" onclick="closeModal('m-tru-route')"></div>
+<div class="modal" id="m-tru-route" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tru-route')">&#10005;</button>
+  <div class="modal-title">&#128228; שלח לטיפול</div>
+  <div id="tru-route-sum" style="font-size:13px;line-height:1.5;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px"></div>
+  <div id="tru-route-recent" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+  <div class="field"><label>תחום</label><select id="tru-route-role"><option>אחזקה</option><option>חשמל</option><option>בטיחות</option><option>קבלן</option><option>אחר</option></select></div>
+  <div class="field"><label>שם</label><input id="tru-route-name" placeholder="למי זה מיועד"></div>
+  <div class="field"><label>טלפון (לוואטסאפ)</label><input id="tru-route-phone" type="tel" inputmode="tel" placeholder="050-0000000" style="direction:ltr;text-align:right"></div>
+  <div class="field"><label>אימייל</label><input id="tru-route-email" type="email" inputmode="email" placeholder="name@example.com" style="direction:ltr;text-align:right"></div>
+  <div class="field"><label>לטיפול עד</label><input id="tru-route-due" type="date"></div>
+  <div class="field"><label>הנחיות (לא חובה)</label><textarea id="tru-route-notes" rows="2" placeholder="מה לעשות, מה לבדוק"></textarea></div>
+  <div style="font-size:12px;color:var(--t2);line-height:1.5;margin:6px 0 10px">הליקוי, האזור, התאריך, קישור לתמונה, למי ועד מתי - הכל נכנס להודעה. הנמען לא צריך את האפליקציה. הממצא יסומן כמנותב והנאמן יראה את זה.</div>
+  <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+    <button class="btn btn-s" style="min-height:44px" onclick="closeModal('m-tru-route')">סגור</button>
+    <button class="btn btn-s" style="min-height:44px" onclick="_truRoutePdf()">&#128196; PDF</button>
+    <button class="btn btn-s" style="min-height:44px" onclick="_truRouteMail()">&#9993;&#65039; מייל</button>
+    <button class="btn btn-p" style="min-height:44px;flex:1 1 100%;background:#25D366;border-color:#25D366" onclick="_truRouteWa()">&#128241; וואטסאפ</button>
+  </div>
+</div>
+
 <!-- TRUSTEE TASK CATALOGUE (manager) -->
 <div class="overlay" id="ov-tru-tasks" onclick="closeModal('m-tru-tasks')"></div>
 <div class="modal" id="m-tru-tasks" style="display:none">
@@ -17020,6 +17042,7 @@ function _truRowMenu(anchor,id){
       }
       item('\ud83d\udcdd',_truTaskFor(id)?'\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d4':'\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4 (\u05e0\u05d9\u05ea\u05d5\u05d1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d4)',function(){if(_truTaskFor(id))goPage('tasks');else _truMgrSpawnTask(id);});
       item('\ud83d\udccc','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',function(){_truMgrNote(id);});
+      item('\ud83d\udce4','\u05e9\u05dc\u05d7 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc (\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 / \u05de\u05d9\u05d9\u05dc / PDF)',function(){_truRouteOpen(id);});
       sep();
     }
     item('\ud83d\uddd1','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
@@ -17109,6 +17132,127 @@ function _truAskCloseFor(ids){
 // iPhone is a tiny LTR dialog with no RTL and no keyboard suggestions, and this is
 // the manager's most frequent routing action. prompt() stays only as a fallback
 // when the row is not rendered (e.g. called from somewhere else).
+// ---- sending a finding to someone outside the app (2026-09-23) ----
+// Michael: \u00ab\u05d0\u05e0\u05e9\u05d9 \u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc \u05dc\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05e6\u05d5\u05e8\u05d4 \u05de\u05de\u05d5\u05e9\u05d1\u05ea \u05e2\u05dd \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4\u00bb. A finding
+// has to reach them where they are: WhatsApp, e-mail, or a one-page work
+// order they can print. Same text on every route, keyboard characters only
+// (CLAUDE.md: this is read by people). Recipients are remembered on the
+// device, so the second time it is one tap. Each send writes the routing
+// note, so the trustee sees their finding is being handled and it leaves
+// the "not yet routed" list.
+var _TRU_ROUTE_KEY='tfgn_route_contacts';
+var _truRouteId=null;
+function _truRouteContacts(){try{var a=JSON.parse(localStorage.getItem(_TRU_ROUTE_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function _truRouteRemember(c){
+  if(!c||!c.name)return;
+  var a=_truRouteContacts().filter(function(x){return x&&x.name!==c.name;});
+  a.unshift({name:c.name,role:c.role||'',phone:c.phone||'',email:c.email||''});
+  try{localStorage.setItem(_TRU_ROUTE_KEY,JSON.stringify(a.slice(0,12)));}catch(e){}
+}
+// The stored location is "area \u00b7 spot"; outbound text gets a comma instead,
+// the middle dot is not on a keyboard (CLAUDE.md).
+function _truLocOf(r){return String(r.loc||(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||'').replace(/\s*\u00b7\s*/g,', ');}
+// A photo still waiting in the offline queue has no address anyone can open.
+function _truRoutePhoto(r){var p=String(r.photo_url||'');return (p&&p.indexOf('pending:')!==0)?p:'';}
+function _truRouteOpen(id){
+  var r=_truFind(id);if(!r)return;
+  _truRouteId=id;
+  var t=_truTask(r.t);
+  var sum=g('tru-route-sum');
+  if(sum)sum.innerHTML='<strong>'+esc(r.f||'')+'</strong><br>'+esc(_truLocOf(r))+' \u00b7 '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+(r.u?' \u00b7 '+esc(r.u):'');
+  var due=new Date();due.setDate(due.getDate()+7);
+  var dueEl=g('tru-route-due');if(dueEl)dueEl.value=due.toISOString().substring(0,10);
+  ['tru-route-name','tru-route-phone','tru-route-email','tru-route-notes'].forEach(function(k){var e=g(k);if(e)e.value='';});
+  var role=g('tru-route-role');if(role)role.selectedIndex=0;
+  _truRouteChips();
+  openModal('m-tru-route');
+}
+function _truRouteChips(){
+  var box=g('tru-route-recent');if(!box)return;
+  box.innerHTML=_truRouteContacts().map(function(c,i){
+    return '<button type="button" class="btn btn-s" style="min-height:44px;padding:8px 12px;font-size:13px" data-i="'+i+'" onclick="_truRoutePick(this.dataset.i)">'+esc(c.name)+(c.role?' ('+esc(c.role)+')':'')+'</button>';
+  }).join('');
+}
+function _truRoutePick(i){
+  var c=_truRouteContacts()[parseInt(i,10)];if(!c)return;
+  var m={'tru-route-name':c.name,'tru-route-phone':c.phone,'tru-route-email':c.email,'tru-route-role':c.role};
+  Object.keys(m).forEach(function(k){var e=g(k);if(e)e.value=m[k]||'';});
+}
+function _truRouteRead(){
+  return {role:gv('tru-route-role'),name:gv('tru-route-name'),phone:gv('tru-route-phone'),email:gv('tru-route-email'),due:gv('tru-route-due')||null,notes:gv('tru-route-notes')};
+}
+function _truRouteWho(f){return [f.role,f.name].filter(Boolean).join(' - ');}
+function _truRouteText(r,f){
+  var t=_truTask(r.t),L=[];
+  L.push('\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 - \u05ea\u05e4\u05d5\u05d2\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+  L.push('\u05dc\u05d9\u05e7\u05d5\u05d9: '+(r.f||''));
+  L.push('\u05d0\u05d6\u05d5\u05e8: '+_truLocOf(r));
+  if(t)L.push('\u05de\u05e9\u05d9\u05de\u05d4: '+r.t+'. '+t.t);
+  L.push('\u05d3\u05d5\u05d5\u05d7: '+fd(r.d)+(r.u?' \u05e2\u05dc \u05d9\u05d3\u05d9 '+r.u:''));
+  var p=_truRoutePhoto(r);if(p)L.push('\u05ea\u05de\u05d5\u05e0\u05d4: '+p);
+  var who=_truRouteWho(f);
+  L.push('\u05dc\u05d8\u05d9\u05e4\u05d5\u05dc: '+(who||'')+(f.due?(who?', ':'')+'\u05e2\u05d3 '+fd(f.due):''));
+  if(f.notes)L.push('\u05d4\u05e0\u05d7\u05d9\u05d5\u05ea: '+f.notes);
+  L.push('\u05de\u05e1\u05e4\u05e8 \u05de\u05de\u05e6\u05d0: '+r.id);
+  return L.join('\n');
+}
+// 050-123-4567 -> 972501234567, which is what wa.me wants.
+function _truRoutePhone(p){var d=String(p||'').replace(/\D/g,'');if(d.indexOf('0')===0)d='972'+d.substring(1);return d;}
+function _truRouteNote(r,f,via){
+  var who=_truRouteWho(f),today=new Date().toISOString().substring(0,10);
+  r.mgr_note='\u05e0\u05d5\u05ea\u05d1'+(who?' \u05dc'+who:'')+(f.due?' \u05e2\u05d3 '+fd(f.due):'')+' ('+via+' '+fd(today)+')';
+  sbUpd('trustee_reports',r);sdb();
+  _truRouteRemember(f);
+  try{rTrustees();rDash();}catch(e){}
+}
+// One place to leave the page, so a test can catch the address.
+function _truRouteNav(url){location.href=url;}
+function _truRouteWa(){
+  var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
+  var url='https://wa.me/'+_truRoutePhone(f.phone)+'?text='+encodeURIComponent(_truRouteText(r,f));
+  var w=null;try{w=window.open(url,'_blank');}catch(e){}
+  if(!w){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4');return;}
+  _truRouteNote(r,f,'\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4');
+  toast('\u05e0\u05e9\u05dc\u05d7 \u05dc\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4, \u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05db\u05de\u05e0\u05d5\u05ea\u05d1');
+}
+function _truRouteMail(){
+  var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
+  var url='mailto:'+encodeURIComponent(f.email||'')+'?subject='+encodeURIComponent('\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 - '+(r.f||'')+' - '+_truLocOf(r))+'&body='+encodeURIComponent(_truRouteText(r,f));
+  try{_truRouteNav(url);}catch(e){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05d9\u05d9\u05dc');return;}
+  _truRouteNote(r,f,'\u05de\u05d9\u05d9\u05dc');
+  toast('\u05e0\u05e4\u05ea\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc, \u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05db\u05de\u05e0\u05d5\u05ea\u05d1');
+}
+function _truRoutePdfHtml(r,f){
+  var t=_truTask(r.t),p=_truRoutePhoto(r),today=new Date().toISOString().substring(0,10);
+  function row(k,v){return v?'<tr><th style="text-align:right;padding:8px 10px;border:1px solid #ddd;background:#f6f6f6;width:130px;font-size:13px">'+k+'</th><td style="padding:8px 10px;border:1px solid #ddd;font-size:14px">'+v+'</td></tr>':'';}
+  return '<div style="max-width:720px;margin:0 auto;padding:8px;color:#111">'
+    +'<div class="no-print" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.6">'
+    +'<button onclick="_tryPrint(this)" style="font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:0;background:#b91c1c;color:#fff;min-height:44px">\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 PDF</button>'
+    +'<span style="margin-right:10px">\u05d1\u05d0\u05d9\u05d9\u05e4\u05d5\u05df: \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3, "\u05d4\u05d3\u05e4\u05e1", \u05d5\u05d0\u05d6 \u05e6\u05d1\u05d9\u05d8\u05d4 \u05e2\u05dc \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05db-PDF \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7.</span></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #b91c1c;padding-bottom:8px;margin-bottom:14px">'
+    +'<div><div style="font-size:24px;font-weight:900">\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4</div><div style="font-size:12px;color:#555">\u05ea\u05e4\u05d5\u05d2\u05df - \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div>'
+    +'<div style="font-size:12px;color:#555;text-align:left">\u05de\u05e1\u05e4\u05e8: '+esc(r.id)+'<br>\u05d4\u05d5\u05e4\u05e7: '+fd(today)+'</div></div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +row('\u05dc\u05d8\u05d9\u05e4\u05d5\u05dc',esc(_truRouteWho(f)))
+    +row('\u05e2\u05d3 \u05ea\u05d0\u05e8\u05d9\u05da',f.due?fd(f.due):'')
+    +row('\u05dc\u05d9\u05e7\u05d5\u05d9','<strong>'+esc(r.f||'')+'</strong>')
+    +row('\u05d0\u05d6\u05d5\u05e8',esc(_truLocOf(r)))
+    +row('\u05de\u05e9\u05d9\u05de\u05d4',t?esc(r.t+'. '+t.t):'')
+    +row('\u05d3\u05d5\u05d5\u05d7',fd(r.d)+(r.u?' \u05e2\u05dc \u05d9\u05d3\u05d9 '+esc(r.u):''))
+    +row('\u05d4\u05e0\u05d7\u05d9\u05d5\u05ea',esc(f.notes||''))
+    +'</table>'
+    +(p?'<img src="'+esc(p)+'" alt="" style="display:block;max-width:100%;max-height:440px;border-radius:8px;margin:14px auto 0">':'')
+    +'<div style="display:flex;gap:16px;margin-top:22px;font-size:13px">'
+    +'<div style="flex:1;border:1px solid #bbb;border-radius:8px;padding:12px;min-height:64px">\u05d8\u05d5\u05e4\u05dc \u05d1\u05ea\u05d0\u05e8\u05d9\u05da: ____________</div>'
+    +'<div style="flex:1;border:1px solid #bbb;border-radius:8px;padding:12px;min-height:64px">\u05e9\u05dd \u05d5\u05d7\u05ea\u05d9\u05de\u05d4: ____________</div></div>'
+    +'<div style="font-size:12px;color:#555;margin-top:14px;line-height:1.6">\u05dc\u05d0\u05d7\u05e8 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc: \u05dc\u05d4\u05d5\u05d3\u05d9\u05e2 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05d4\u05e0\u05d0\u05de\u05df \u05d9\u05e6\u05dc\u05dd \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u05d5\u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05d9\u05e1\u05d2\u05e8 \u05d1\u05de\u05e2\u05e8\u05db\u05ea.</div>'
+    +'</div>';
+}
+function _truRoutePdf(){
+  var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
+  var d=document.createElement('div');d.innerHTML=_truRoutePdfHtml(r,f);
+  if(_printViaWindow(d,null,'\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 - '+(r.f||'')))_truRouteNote(r,f,'PDF');
+}
 function _truMgrNote(id){
   var r=_truFind(id);if(!r)return;
   var row=document.querySelector('tr[data-tru-row="'+id+'"]');
