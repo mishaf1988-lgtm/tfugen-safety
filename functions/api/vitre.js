@@ -5,6 +5,7 @@
 //   GET /api/vitre?op=employees[&limit=N]  active employees (id, externalId, name, phone, email, ...)
 //   GET /api/vitre?op=tasks[&limit=N]      company tasks (id, title, priority, dueDate, responsible, closeDate)
 //   GET /api/vitre?op=orgunits             org units (id, externalId, name) — maps Employee.orgUnitId to a name
+//   GET /api/vitre?op=training_probe[&title=..|&id=N]  newest refresher-form task with detail, files, appointment + review result (shape discovery)
 //
 // This endpoint never writes to Vitre. Every op is a GET on their side.
 // Reference for the upstream API: project-files/VITRE-API.md (Swagger summary).
@@ -166,5 +167,43 @@ export async function onRequest({ request, env }) {
     return jsonResp({ count: rows.length, rows }, 200, cors);
   }
 
-  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits)' }, 400, cors);
+  // One-off probe for the weekly safety-refresher flow: managers submit the
+  // form "טופס ביצוע ריענון בטיחות" in Vitre, which spawns a CompanyTask.
+  // Returns the newest matching task with everything the API has on it (detail,
+  // files, comments, the appointment and its structured review result) so the
+  // shape can be read from the dashboard before the import into `toolbox` is
+  // written. Read-only. Long strings are truncated so the response stays small.
+  if (op === 'training_probe') {
+    const needle = (url.searchParams.get('title') || 'ריענון').toLowerCase();
+    const idParam = url.searchParams.get('id');
+    const cut = (v) => JSON.parse(JSON.stringify(v, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
+    const grab = async (path) => { const r = await vitreGet(env, path); return r.ok ? cut(r.json) : { error: r.status, body: r.text || r.networkError || (r.json && r.json.message) || null }; };
+    let task = null, listInfo = null;
+    if (idParam) {
+      task = { id: parseInt(idParam, 10) };
+    } else {
+      const list = await vitreGet(env, '/task/get?PageNumber=1&PageSize=100');
+      if (!list.ok || !Array.isArray(list.json)) return upstreamError(list, cors);
+      const hits = list.json.filter(t => String(t.title || '').toLowerCase().includes(needle));
+      listInfo = { scanned: list.json.length, matching: hits.length, sampleTitles: list.json.slice(0, 5).map(t => t.title) };
+      hits.sort((a, b) => String(b.createDate || '').localeCompare(String(a.createDate || '')));
+      task = hits[0] || null;
+      if (!task) return jsonResp({ list: listInfo, task: null, hint: 'no task title contains the needle; pass ?title=... or ?id=...' }, 200, cors);
+    }
+    const out = { list: listInfo, taskId: task.id, listRow: task.title ? cut(task) : null };
+    out.detail = await grab('/task/get/' + task.id);
+    out.files = await grab('/task/getFiles/' + task.id);
+    out.comments = await grab('/task/getComments/' + task.id);
+    const d = out.detail || {};
+    const apptId = d.generatedByAppointmentId || (d.task && d.task.generatedByAppointmentId) || task.generatedByAppointmentId || null;
+    out.appointmentId = apptId;
+    if (apptId) {
+      out.appointment = await grab('/appointmet/get/' + apptId);
+      out.reviewResult = await grab('/appointmetResult/get-review-result/' + apptId);
+      out.rawResult = await grab('/appointmetResult/get/' + apptId);
+    }
+    return jsonResp(out, 200, cors);
+  }
+
+  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe)' }, 400, cors);
 }
