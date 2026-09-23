@@ -18399,6 +18399,12 @@ function _vitreTrRender(p){
   if(nNew){
     h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12px"><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(true)">\u05d1\u05d7\u05e8 \u05d4\u05db\u05dc</button><button class="btn btn-d btn-sm" onclick="_vitreTrSelAll(false)">\u05e0\u05e7\u05d4 \u05d1\u05d7\u05d9\u05e8\u05d4</button><span id="vitre-imp-selcount" style="color:var(--t2)"></span></div>';
   }
+  // Rows imported before the department extractor knew the form's shape: offer
+  // a re-read of just the departments, no re-import, no duplicates.
+  var noDep=(DB.toolbox||[]).filter(function(r){return r.ext_id&&!r.dep;}).length;
+  if(noDep){
+    h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12px"><button class="btn btn-d btn-sm" id="vitre-tr-refresh" onclick="_vitreTrRefreshDeps()">\ud83d\udd04 \u05e2\u05d3\u05db\u05df \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05dc-'+noDep+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d5\u05d1\u05d0\u05d5\u05ea \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4</button><span style="color:var(--t3)">\u05e7\u05d5\u05e8\u05d0 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05de-Vitre, \u05de\u05e2\u05d3\u05db\u05df \u05e8\u05e7 \u05d0\u05ea \u05e9\u05d3\u05d4 \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea</span></div>';
+  }
   var rowStyle='border:1px solid var(--bd,#ddd);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start';
   p.items.forEach(function(it,i){
     var t=it.t,dt=t.createDate?fd(String(t.createDate).slice(0,10)):'\u2014';
@@ -18419,6 +18425,33 @@ window._vitreTrSelAll=function(on){
 };
 // Pull each ticked task one at a time (each call copies a photo server-side),
 // write the toolbox row through the normal queue, and report at the end.
+// Re-read departments for imported rows that have none. Sequential, updates
+// only `dep`, stops reporting when done. Safe to run again at any time.
+window._vitreTrRefreshDeps=function(){
+  if(!_isAdminUser()){toast('\u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  var rows=(DB.toolbox||[]).filter(function(r){return r.ext_id&&!r.dep;});
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05e9\u05d9\u05d7\u05d5\u05ea \u05de\u05d9\u05d5\u05d1\u05d0\u05d5\u05ea \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4');return;}
+  var btn=g('vitre-tr-refresh');if(btn){btn.disabled=true;}
+  var prog=g('vitre-tr-progress');
+  var total=rows.length,done=0,upd=0,empty=0,fail=0;
+  var next=function(){
+    if(!rows.length){
+      if(btn){btn.disabled=false;btn.textContent='\ud83d\udd04 \u05e2\u05d3\u05db\u05df \u05de\u05d7\u05dc\u05e7\u05d5\u05ea ('+(empty+fail)+' \u05e0\u05d5\u05ea\u05e8\u05d5 \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4)';}
+      if(prog)prog.textContent='';
+      sdb();if(typeof rToolbox==='function')rToolbox();
+      addLog('\u05e2\u05d3\u05db\u05d5\u05df \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05de-Vitre: '+upd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5, '+empty+' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1, '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5');
+      toast((upd?'\u2705 ':'\u26a0\ufe0f ')+upd+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05e7\u05d9\u05d1\u05dc\u05d5 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea'+(empty?', '+empty+' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1':'')+(fail?', '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''),{ok:!!upd});
+      return;
+    }
+    var r=rows.shift();done++;
+    if(prog)prog.textContent='\u23f3 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea: '+done+' / '+total+' \u00b7 \u05de\u05e9\u05d9\u05de\u05d4 #'+r.ext_id;
+    _vitreGet('op=training&id='+encodeURIComponent(r.ext_id)).then(function(v){
+      if(v.depts&&v.depts.length){r.dep=v.depts.join(', ');sbUpd('toolbox',r);upd++;}
+      else empty++;
+    }).catch(function(){fail++;}).then(next);
+  };
+  next();
+};
 window._vitreTrApply=function(){
   var p=_vitreTr;if(!p)return;
   if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
