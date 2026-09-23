@@ -18328,8 +18328,13 @@ window._secAuditRun=function(){
 // how the field mapping gets read before the import is written.
 window._vitreTrainingProbe=function(){
   var box=g('dash-vitre-result');if(!box)return;
+  // /task/get pages oldest-first, so a title search over the first 100 misses
+  // this year's refreshers. Ask for a task id (from the Vitre URL / list); empty = title search.
+  var id=prompt('\u05de\u05d6\u05d4\u05d4 \u05de\u05e9\u05d9\u05de\u05ea \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d1-Vitre (\u05de\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05e9\u05dd). \u05e8\u05d9\u05e7 = \u05d7\u05d9\u05e4\u05d5\u05e9 \u05dc\u05e4\u05d9 \u05db\u05d5\u05ea\u05e8\u05ea','3285307');
+  if(id===null)return;
+  id=String(id).replace(/\D/g,'');
   box.textContent='\u23f3 \u05de\u05d5\u05e9\u05da \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d0\u05d7\u05e8\u05d5\u05df \u05de-Vitre...';
-  fetch('/api/vitre?op=training_probe',{method:'GET',headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
+  fetch('/api/vitre?op=training_probe'+(id?'&id='+id:''),{method:'GET',headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
     .then(function(r){return r.json().then(function(j){return{ok:r.ok,status:r.status,data:j};});})
     .then(function(res){
       var txt=JSON.stringify(res.data,null,1);
