@@ -19,7 +19,7 @@ function world(o) {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/auth/v1/user')) return json(w.email ? { id: 'u1', email: w.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
     if (u.includes('/review/getSchema')) return json({ reviewId: 11997, categories: [{ questions: [{ dataKey: 'q1', title: 'x', answers: [{ dataKey: 'a1', text: 'y' }] }] }] });
-    if (u.includes('/review/submit')) return json(w.submitStatus === 200 ? { appointmentId: 777, actionId: 888 } : { message: 'comment required' }, w.submitStatus);
+    if (u.includes('/review/submit')) return json(w.submitStatus === 200 ? { id: 777, title: 't', status: 'Draft', previewUrl: 'https://app.vitre.io/formResults/x' } : { message: 'comment required' }, w.submitStatus);
     return json({ message: 'unexpected ' + u }, 404);
   };
   return w;
@@ -66,7 +66,7 @@ console.log('review_submit_test: body validation, then the locked submission');
   check('createdBy and projectId pass through', sub && /createdBy=654/.test(sub.u) && /projectId=3/.test(sub.u), sub && sub.u);
   check('body is { data }', sub && JSON.stringify(sub.body) === JSON.stringify({ data: { q1: 'a1' } }), sub && sub.body);
   check('Vitre key headers present', sub && sub.headers['X-api-key-id'] === 'kid' && sub.headers['X-api-key-secret'] === 'ksecret');
-  check('200 with Vitre result verbatim', r.status === 200 && r.json.ok && r.json.result.appointmentId === 777, r.json);
+  check('200 with Vitre result verbatim', r.status === 200 && r.json.ok && r.json.result.id === 777, r.json);
   check('response echoes what was sent', r.json.sent.data.q1 === 'a1' && r.json.reviewId === 11997 && r.json.createdBy === '654');
   w = world({ submitStatus: 400 });
   r = await run('POST', 'op=review_submit_test', { createdBy: '654', data: { q1: 'a1' } });
@@ -86,6 +86,58 @@ console.log('review_schema: admin-only read');
   check('schema returned', r.status === 200 && r.json.schema.reviewId === 11997, r.json);
   r = await run('GET', 'op=review_schema&id=42');
   check('another id can be READ (read is harmless)', w.calls.some(c => /reviewId=42/.test(c.u)));
+}
+
+console.log('notify: staff-callable, locked to the notification form, system submitter');
+{
+  let w = world({ email: null });
+  let r = await run('POST', 'op=notify', { to: '599', title: 't' });
+  check('anonymous refused', r.status === 403 && !w.calls.some(c => c.u.includes('hbinov')), r);
+  w = world({ email: 'manager@tfugen.local' });
+  r = await run('GET', 'op=notify');
+  check('GET refused (405)', r.status === 405, r);
+  r = await run('POST', 'op=notify', { to: 'x', title: 't' });
+  check('non-numeric recipient -> 400', r.status === 400, r);
+  r = await run('POST', 'op=notify', { to: '599' });
+  check('missing title -> 400', r.status === 400, r);
+  r = await run('POST', 'op=notify', { to: '9001', title: 't' });
+  check('recipient == system submitter -> 400 (Vitre would not notify)', r.status === 400, r);
+  check('no Vitre call so far', !w.calls.some(c => c.u.includes('hbinov')));
+  r = await run('POST', 'op=notify', { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://a', reviewId: 11997 });
+  const sub = w.calls.find(c => c.u.includes('/review/submit'));
+  check('a manager (non-admin) may send', r.status === 200 && r.json.ok, r.json);
+  check('submits the NOTIFICATION form 11998, not the body reviewId', sub && /reviewId=11998(&|$)/.test(sub.u), sub && sub.u);
+  check('createdBy is the system employee 9001', sub && /createdBy=9001/.test(sub.u), sub && sub.u);
+  check('data carries to/title/details/link', sub && JSON.stringify(sub.body) === JSON.stringify({ data: { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://a' } }), sub && sub.body);
+  check('response has the appointment id and preview url', r.json.appointmentId === 777 && r.json.previewUrl && r.json.to === '599', r.json);
+  w = world({ email: 'manager@tfugen.local' });
+  r = await run('POST', 'op=notify', { to: '599', title: 't' });
+  const sub2 = w.calls.find(c => c.u.includes('/review/submit'));
+  check('empty details/link are left out of data', sub2 && JSON.stringify(sub2.body) === JSON.stringify({ data: { to: '599', title: 't' } }), sub2 && sub2.body);
+  w = world({ email: 'manager@tfugen.local', submitStatus: 400 });
+  r = await run('POST', 'op=notify', { to: '599', title: 't' });
+  check('Vitre 4xx -> 502 with detail', r.status === 502 && r.json.detail === 'comment required', r.json);
+  const envOverride = Object.assign({}, env, { VITRE_NOTIFY_CREATED_BY: '9002' });
+  w = world({ email: 'manager@tfugen.local' });
+  const rr = await onRequest({ request: req('POST', 'op=notify', { to: '599', title: 't' }), env: envOverride });
+  const sub3 = w.calls.find(c => c.u.includes('/review/submit'));
+  check('VITRE_NOTIFY_CREATED_BY overrides the submitter', rr.status === 200 && sub3 && /createdBy=9002/.test(sub3.u), sub3 && sub3.u);
+}
+
+console.log('client recipient resolver (_truRouteVitreRecipient from index.html)');
+{
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const cut = (a, b) => html.slice(html.indexOf(a), html.indexOf(b));
+  const src = cut('function _vitreNormPhone', 'function _vitreKind') + cut('function _truRouteVitreRecipient', 'function _truRouteVitre(');
+  const mk = new Function('DB', src + '\nreturn _truRouteVitreRecipient;');
+  const emp = [{ n: 'דני כהן', ph: '0541111111', ext_id: '12' }, { n: 'מיכאל פרייליך', ph: '0547940073', ext_id: '599' }, { n: 'בלי מספר', ph: '0549999999' }];
+  const find = mk({ emp });
+  check('phone typed with dashes matches', find({ phone: '054-794-0073', name: '' }).ext_id === '599');
+  check('phone in 972 form matches', find({ phone: '+972541111111', name: '' }).ext_id === '12');
+  check('no phone: exact name matches (extra spaces ignored)', find({ phone: '', name: ' דני  כהן ' }).ext_id === '12');
+  check('phone wins over a different name', find({ phone: '0547940073', name: 'דני כהן' }).ext_id === '599');
+  check('employee without ext_id is never a recipient', find({ phone: '0549999999', name: 'בלי מספר' }) === null);
+  check('unknown phone and name -> null (nothing is sent)', find({ phone: '0500000000', name: 'x' }) === null);
 }
 
 console.log('client key finder (_vitreFindKeys from index.html)');
