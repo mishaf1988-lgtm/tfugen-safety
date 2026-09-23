@@ -63,6 +63,24 @@ function upstreamError(r, cors) {
   return jsonResp({ error: 'vitre ' + (r.status || 'unreachable'), detail: String(msg).slice(0, 300) }, r.status >= 400 ? 502 : 504, cors);
 }
 
+// Best-effort walk of a review result: collect the display text of every
+// answer that looks selected. The exact shape of get-review-result is not
+// documented; this covers the usual { questions: [{ answers: [{ text, isSelected }] }] }
+// family and returns [] rather than guessing when nothing matches.
+function extractSelectedAnswers(node, acc, depth) {
+  acc = acc || []; depth = depth || 0;
+  if (!node || depth > 8) return acc;
+  if (Array.isArray(node)) { node.forEach(n => extractSelectedAnswers(n, acc, depth + 1)); return acc; }
+  if (typeof node !== 'object') return acc;
+  const picked = node.isSelected === true || node.selected === true || node.isChecked === true || node.checked === true || node.value === true;
+  if (picked) {
+    const label = node.text || node.title || node.name || node.answerText || node.label || node.displayName;
+    if (label && typeof label === 'string' && acc.indexOf(label.trim()) < 0) acc.push(label.trim());
+  }
+  Object.keys(node).forEach(k => { const v = node[k]; if (v && typeof v === 'object') extractSelectedAnswers(v, acc, depth + 1); });
+  return acc;
+}
+
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
@@ -195,7 +213,9 @@ export async function onRequest({ request, env }) {
     out.files = await grab('/task/getFiles/' + task.id);
     out.comments = await grab('/task/getComments/' + task.id);
     const d = out.detail || {};
-    const apptId = d.generatedByAppointmentId || (d.task && d.task.generatedByAppointmentId) || task.generatedByAppointmentId || null;
+    // The refresher form is submitted as the task's closing appointment, so
+    // closedByAppointmentId is where the review result lives (probe 23/09).
+    const apptId = d.closedByAppointmentId || d.generatedByAppointmentId || (d.task && d.task.generatedByAppointmentId) || task.generatedByAppointmentId || null;
     out.appointmentId = apptId;
     if (apptId) {
       out.appointment = await grab('/appointmet/get/' + apptId);
@@ -205,5 +225,81 @@ export async function onRequest({ request, env }) {
     return jsonResp(out, 200, cors);
   }
 
-  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe)' }, 400, cors);
+  // ---- Weekly safety-refresher import (Vitre task -> our toolbox row) ----
+  // Managers submit "טופס ביצוע ריענון בטיחות שבועיות" in Vitre; each
+  // submission is a CompanyTask closed by an appointment (the form). The task
+  // list pages oldest-first, so the browser walks the pages with op=trainings
+  // and then pulls each selected task with op=training, which also copies the
+  // attached photo into our Storage: the Vitre file link is a 5-minute SAS URL.
+
+  // One page of the task list, filtered by title. hasMore lets the caller loop.
+  if (op === 'trainings') {
+    const needle = (url.searchParams.get('title') || 'ריענון').toLowerCase();
+    const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+    const pageSize = 200;
+    const r = await vitreGet(env, '/task/get?PageNumber=' + page + '&PageSize=' + pageSize);
+    if (!r.ok || !Array.isArray(r.json)) return upstreamError(r, cors);
+    const rows = r.json.filter(t => String(t.title || '').toLowerCase().includes(needle)).map(t => ({
+      id: t.id, title: t.title || null, createDate: t.createDate || null, closeDate: t.closeDate || null,
+      responsibleUserId: t.responsibleUserId || null
+    }));
+    return jsonResp({ page, pageSize, scanned: r.json.length, hasMore: r.json.length >= pageSize, rows }, 200, cors);
+  }
+
+  // One task, ready to become a toolbox row: presenter, date, ticked departments
+  // (best effort from the review result), and the photo copied to our Storage.
+  if (op === 'training') {
+    const id = parseInt(url.searchParams.get('id'), 10);
+    if (!id) return jsonResp({ error: 'id required' }, 400, cors);
+    const detail = await vitreGet(env, '/task/get/' + id);
+    if (!detail.ok || !detail.json) return upstreamError(detail, cors);
+    const d = detail.json;
+    const out = {
+      id, title: d.title || d.displayName || null, createDate: d.createDate || null, closeDate: d.closeDate || null,
+      presenter: (d.createdByUser && d.createdByUser.displayName) || (d.responsibleUser && d.responsibleUser.displayName) || null,
+      presenterEmail: (d.createdByUser && d.createdByUser.email) || null,
+      appointmentId: d.closedByAppointmentId || d.generatedByAppointmentId || null,
+      depts: [], reviewResult: null, photoUrl: null, photoError: null, files: 0
+    };
+    if (out.appointmentId) {
+      const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + out.appointmentId);
+      if (rr.ok && rr.json) {
+        out.reviewResult = JSON.parse(JSON.stringify(rr.json, (k, x) => (typeof x === 'string' && x.length > 300) ? x.slice(0, 300) + '...' : x));
+        out.depts = extractSelectedAnswers(rr.json);
+      } else out.reviewError = rr.status || rr.networkError || null;
+    }
+    // Copy the first image attachment into our bucket. The Vitre URL is a
+    // short-lived SAS link, so the copy happens here, right after listing.
+    const files = await vitreGet(env, '/task/getFiles/' + id);
+    const list = files.ok && files.json && Array.isArray(files.json.files) ? files.json.files : [];
+    out.files = list.length;
+    const img = list.find(f => /\.(jpe?g|png|webp|heic)(\?|$)/i.test(String(f.name || f.url || ''))) || list[0];
+    if (img && img.url) {
+      const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+      const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      if (!serviceKey) out.photoError = 'missing SUPABASE_SERVICE_ROLE_KEY';
+      else {
+        try {
+          const src = await fetch(img.url);
+          if (!src.ok) out.photoError = 'vitre file ' + src.status;
+          else {
+            const ct = src.headers.get('content-type') || 'image/jpeg';
+            const ext = /png/i.test(ct) ? '.png' : (/webp/i.test(ct) ? '.webp' : '.jpg');
+            const fname = 'vitre-tr-' + id + ext;
+            const body = await src.arrayBuffer();
+            const up = await fetch(SUPABASE_URL + '/storage/v1/object/incidents-photos/' + fname, {
+              method: 'POST',
+              headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': ct, 'x-upsert': 'true', 'cache-control': 'max-age=31536000' },
+              body
+            });
+            if (up.ok) out.photoUrl = SUPABASE_URL + '/storage/v1/object/public/incidents-photos/' + fname;
+            else out.photoError = 'storage ' + up.status + ' ' + (await up.text()).slice(0, 200);
+          }
+        } catch (e) { out.photoError = String(e && e.message || e).slice(0, 200); }
+      }
+    }
+    return jsonResp(out, 200, cors);
+  }
+
+  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe | trainings | training)' }, 400, cors);
 }
