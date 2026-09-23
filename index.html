@@ -18361,10 +18361,11 @@ window._vitreCall=function(op){
 // DECISIONS 2026-09-23: Tapugan Safety leads, Vitre only feeds the employee
 // list. Flow: fetch /api/vitre?op=employees (+ orgunits for unit names) ->
 // match against DB.emp (ext_id, then normalised phone, then exact name) ->
-// preview modal (new / updated / unchanged, proposed matches can be unticked)
-// -> confirm -> sbIns / sbUpd through the usual offline queue. An empty Vitre
-// value never blanks a value we already hold. Employees that exist here but
-// not in Vitre are listed for information only.
+// preview modal (new / updated / unchanged, proposed matches can be unticked,
+// every row can be ticked in or out: Vitre's "active" list still carries
+// people who left) -> confirm -> sbIns / sbUpd through the usual offline
+// queue. An empty Vitre value never blanks a value we already hold. Employees
+// that exist here but not in Vitre are listed for information only.
 var _vitreImp=null;
 var _VITRE_F={n:'\u05e9\u05dd',ph:'\u05d8\u05dc\u05e4\u05d5\u05df',em:'\u05de\u05d9\u05d9\u05dc',r:'\u05ea\u05e4\u05e7\u05d9\u05d3',dep:'\u05de\u05d7\u05dc\u05e7\u05d4',ext_id:'\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3'};
 function _vitreNormPhone(p){var d=String(p||'').replace(/\D/g,'');if(!d)return '';if(d.indexOf('972')===0)d='0'+d.slice(3);return d;}
@@ -18382,10 +18383,15 @@ window._vitreImportPreview=function(){
     });
   };
   // Unit names are nice-to-have: if /OrgUnit fails the import still runs, dep stays empty.
-  Promise.all([getOp('employees','&limit=500'),getOp('orgunits').catch(function(){return {rows:[]};})]).then(function(res){
+  Promise.all([getOp('employees','&limit=500'),getOp('orgunits').catch(function(e){return {rows:[],error:String(e&&e.message||e)};})]).then(function(res){
     var units={};
-    (res[1].rows||[]).forEach(function(u){if(u.id!==null&&u.id!==undefined&&u.name)units[String(u.id)]=String(u.name);});
+    // Employee.orgUnitId should equal OrgUnit.id; index externalId too in case Vitre keys it that way.
+    (res[1].rows||[]).forEach(function(u){if(!u.name)return;if(u.id!==null&&u.id!==undefined)units[String(u.id)]=String(u.name);if(u.externalId&&!units[String(u.externalId)])units[String(u.externalId)]=String(u.name);});
     _vitreImp=_vitreBuildPlan(res[0].rows||[],units);
+    // Diagnostics for the preview header: how many units came back, and which employee unit ids found no name.
+    _vitreImp.unitsCount=(res[1].rows||[]).length;_vitreImp.unitsError=res[1].error||null;
+    var miss={};(res[0].rows||[]).forEach(function(v){if(v.orgUnitId!==null&&v.orgUnitId!==undefined&&!units[String(v.orgUnitId)])miss[String(v.orgUnitId)]=1;});
+    _vitreImp.unmappedUnits=Object.keys(miss);
     _vitreRenderPreview(_vitreImp);
     if(box)box.textContent='';
     openModal('m-vitre-imp');
@@ -18413,7 +18419,7 @@ function _vitreBuildPlan(rows,units){
     if(!match&&inc.ph&&byPh[inc.ph]&&!byPh[inc.ph].ext_id&&!taken[byPh[inc.ph].id]){match=byPh[inc.ph];how='phone';}
     if(!match&&byName[name]&&!byName[name].ext_id&&!taken[byName[name].id]){match=byName[name];how='name';}
     if(match)taken[match.id]=1;
-    var it={inc:inc,match:match,how:how,proposed:!!match&&how!=='ext',accept:true,changes:[],kind:'new'};
+    var it={inc:inc,match:match,how:how,proposed:!!match&&how!=='ext',accept:true,sel:true,changes:[],kind:'new'};
     if(match){
       ['n','ph','em','r','dep','ext_id'].forEach(function(k){
         var nv=inc[k];if(nv===null||nv===undefined||nv==='')return;
@@ -18428,33 +18434,58 @@ function _vitreBuildPlan(rows,units){
   var onlyLocal=(DB.emp||[]).filter(function(e){return !taken[e.id];});
   return {items:items,onlyLocal:onlyLocal,skipped:skipped,total:rows.length};
 }
+// Rows that will actually be written: new or updated, and ticked.
+function _vitreSelected(plan){return plan.items.filter(function(it){return it.sel&&_vitreKind(it)!=='same';}).length;}
+function _vitreUpdateApplyBtn(plan){
+  var btn=g('vitre-imp-apply');if(!btn)return;
+  var n=_vitreSelected(plan);
+  btn.disabled=!n;btn.textContent=n?'\u05d0\u05e9\u05e8 \u05d9\u05d9\u05d1\u05d5\u05d0 ('+n+')':'\u05dc\u05d0 \u05e0\u05d1\u05d7\u05e8 \u05d0\u05e3 \u05e2\u05d5\u05d1\u05d3';
+  var cnt=g('vitre-imp-selcount');if(cnt)cnt.textContent=n+' \u05e0\u05d1\u05d7\u05e8\u05d5';
+}
 function _vitreRenderPreview(plan){
   var box=g('vitre-imp-body');if(!box)return;
   var c={new:0,upd:0,same:0};
   plan.items.forEach(function(it){c[_vitreKind(it)]++;});
-  var h='<div style="font-weight:700;margin-bottom:8px">'+plan.total+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05d1-Vitre: <span style="color:var(--ok)">'+c.new+' \u05d7\u05d3\u05e9\u05d9\u05dd</span> \u00b7 <span style="color:#b45309">'+c.upd+' \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05d9\u05dd</span> \u00b7 '+c.same+' \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9'+(plan.skipped?' \u00b7 <span style="color:var(--t3)">'+plan.skipped+' \u05d1\u05dc\u05d9 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 (\u05dc\u05d0 \u05d9\u05d9\u05d5\u05d1\u05d0\u05d5)</span>':'')+'</div>';
-  var rowStyle='border:1px solid var(--bd,#ddd);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px;line-height:1.5';
+  var h='<div style="font-weight:700;margin-bottom:4px">'+plan.total+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05d1-Vitre: <span style="color:var(--ok)">'+c.new+' \u05d7\u05d3\u05e9\u05d9\u05dd</span> \u00b7 <span style="color:#b45309">'+c.upd+' \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05d9\u05dd</span> \u00b7 '+c.same+' \u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9'+(plan.skipped?' \u00b7 <span style="color:var(--t3)">'+plan.skipped+' \u05d1\u05dc\u05d9 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 (\u05dc\u05d0 \u05d9\u05d9\u05d5\u05d1\u05d0\u05d5)</span>':'')+'</div>';
+  h+='<div style="font-size:11px;color:var(--t3);margin-bottom:6px">\u05d9\u05d7\u05d9\u05d3\u05d5\u05ea \u05de-Vitre: '+(plan.unitsError?'\u05e9\u05d2\u05d9\u05d0\u05d4 ('+esc(plan.unitsError)+')':String(plan.unitsCount||0))+((plan.unmappedUnits||[]).length?' \u00b7 \u05de\u05d6\u05d4\u05d9 \u05d9\u05d7\u05d9\u05d3\u05d4 \u05d0\u05e6\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d1\u05dc\u05d9 \u05e9\u05dd \u05d1\u05e8\u05e9\u05d9\u05de\u05d4: '+esc(plan.unmappedUnits.slice(0,8).join(', '))+(plan.unmappedUnits.length>8?'...':''):'')+'</div>';
+  if(c.new+c.upd){
+    h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:12px"><button class="btn btn-d btn-sm" onclick="_vitreSelAll(true)">\u05d1\u05d7\u05e8 \u05d4\u05db\u05dc</button><button class="btn btn-d btn-sm" onclick="_vitreSelAll(false)">\u05e0\u05e7\u05d4 \u05d1\u05d7\u05d9\u05e8\u05d4</button><span id="vitre-imp-selcount" style="color:var(--t2)"></span><span style="color:var(--t3)">\u05e1\u05de\u05df \u05e8\u05e7 \u05d0\u05ea \u05de\u05d9 \u05e9\u05e2\u05d3\u05d9\u05d9\u05df \u05e2\u05d5\u05d1\u05d3 \u05e4\u05d4</span></div>';
+  }
+  var rowStyle='border:1px solid var(--bd,#ddd);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start';
   plan.items.forEach(function(it,i){
     var k=_vitreKind(it);if(k==='same')return;
     var head='<strong>'+esc(it.inc.n)+'</strong> <span style="color:var(--t3)">#'+esc(it.inc.ext_id)+'</span>';
+    var cb='<input type="checkbox" '+(it.sel?'checked ':'')+'data-i="'+i+'" onchange="_vitreSel(this.dataset.i,this.checked)" style="margin-top:3px;flex:none" title="\u05dc\u05d9\u05d9\u05d1\u05d0 \u05e2\u05d5\u05d1\u05d3 \u05d6\u05d4">';
     if(k==='new'){
       var bits=[];['ph','em','r','dep'].forEach(function(f){if(it.inc[f])bits.push(_VITRE_F[f]+': '+esc(it.inc[f]));});
-      h+='<div style="'+rowStyle+'"><span style="color:var(--ok);font-weight:700">\u05d7\u05d3\u05e9</span> '+head+(bits.length?'<div style="color:var(--t2)">'+bits.join(' \u00b7 ')+'</div>':'');
+      h+='<div style="'+rowStyle+'">'+cb+'<div style="flex:1"><span style="color:var(--ok);font-weight:700">\u05d7\u05d3\u05e9</span> '+head+(bits.length?'<div style="color:var(--t2)">'+bits.join(' \u00b7 ')+'</div>':'');
       if(it.proposed)h+='<label style="display:block;margin-top:4px;color:var(--t2)"><input type="checkbox" data-i="'+i+'" onchange="_vitreToggle(this.dataset.i,this.checked)"> \u05d7\u05d1\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05e7\u05d9\u05d9\u05dd: '+esc(it.match.n)+(it.match.ph?' ('+esc(it.match.ph)+')':'')+'</label>';
-      h+='</div>';
+      h+='</div></div>';
     }else{
-      h+='<div style="'+rowStyle+'"><span style="color:#b45309;font-weight:700">\u05e2\u05d3\u05db\u05d5\u05df</span> '+head;
+      h+='<div style="'+rowStyle+'">'+cb+'<div style="flex:1"><span style="color:#b45309;font-weight:700">\u05e2\u05d3\u05db\u05d5\u05df</span> '+head;
       if(it.proposed)h+='<label style="display:block;margin:4px 0;color:var(--t2)"><input type="checkbox" checked data-i="'+i+'" onchange="_vitreToggle(this.dataset.i,this.checked)"> \u05d4\u05ea\u05d0\u05de\u05d4 \u05de\u05d5\u05e6\u05e2\u05ea \u05dc\u05e4\u05d9 '+(it.how==='phone'?'\u05d8\u05dc\u05e4\u05d5\u05df':'\u05e9\u05dd')+': '+esc(it.match.n)+(it.match.ph?' ('+esc(it.match.ph)+')':'')+'. \u05d1\u05d8\u05dc \u05db\u05d3\u05d9 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d1\u05de\u05e7\u05d5\u05dd.</label>';
-      h+='<div style="color:var(--t2)">'+it.changes.map(function(ch){return _VITRE_F[ch.k]+': '+(ch.from===null?'<em>\u05e8\u05d9\u05e7</em>':esc(ch.from))+' \u2192 '+esc(ch.to);}).join('<br>')+'</div></div>';
+      h+='<div style="color:var(--t2)">'+it.changes.map(function(ch){return _VITRE_F[ch.k]+': '+(ch.from===null?'<em>\u05e8\u05d9\u05e7</em>':esc(ch.from))+' \u2192 '+esc(ch.to);}).join('<br>')+'</div></div></div>';
     }
   });
   if(plan.onlyLocal.length){
     h+='<details style="margin-top:8px;font-size:12px"><summary style="cursor:pointer;color:var(--t2)">'+plan.onlyLocal.length+' \u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05d0\u05e6\u05dc\u05e0\u05d5 \u05d5\u05dc\u05d0 \u05d1-Vitre (\u05dc\u05d9\u05d3\u05d9\u05e2\u05d4, \u05dc\u05d0 \u05e0\u05de\u05d7\u05e7\u05d9\u05dd)</summary><div style="color:var(--t3);margin-top:4px">'+plan.onlyLocal.map(function(e){return esc(e.n||'')+(e.ph?' ('+esc(e.ph)+')':'');}).join('<br>')+'</div></details>';
   }
   box.innerHTML=h;
-  var btn=g('vitre-imp-apply');
-  if(btn){btn.disabled=!(c.new+c.upd);btn.textContent=(c.new+c.upd)?'\u05d0\u05e9\u05e8 \u05d9\u05d9\u05d1\u05d5\u05d0 ('+(c.new+c.upd)+')':'\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05d1\u05d0';}
+  _vitreUpdateApplyBtn(plan);
 }
+// Tick/untick one row. No re-render: the list is long and a redraw would lose the scroll position.
+window._vitreSel=function(i,on){
+  var it=_vitreImp&&_vitreImp.items[parseInt(i,10)];if(!it)return;
+  it.sel=!!on;
+  _vitreUpdateApplyBtn(_vitreImp);
+};
+window._vitreSelAll=function(on){
+  if(!_vitreImp)return;
+  _vitreImp.items.forEach(function(it){it.sel=!!on;});
+  var box=g('vitre-imp-body');
+  if(box)box.querySelectorAll('input[data-i][onchange^="_vitreSel("]').forEach(function(cb){cb.checked=!!on;});
+  _vitreUpdateApplyBtn(_vitreImp);
+};
 window._vitreToggle=function(i,on){
   var it=_vitreImp&&_vitreImp.items[parseInt(i,10)];if(!it)return;
   it.accept=!!on;
@@ -18464,26 +18495,27 @@ window._vitreImportApply=function(){
   var plan=_vitreImp;if(!plan)return;
   if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
   if(!DB.emp)DB.emp=[];
-  var nNew=0,nUpd=0;
+  var nNew=0,nUpd=0,nSkip=0;
   plan.items.forEach(function(it){
     var k=_vitreKind(it);
+    if(k==='same')return;
+    if(!it.sel){nSkip++;return;}
     if(k==='new'){
       var r={id:gid(),n:it.inc.n,r:it.inc.r,dep:it.inc.dep,s:null,ph:it.inc.ph,em:it.inc.em,ext_id:it.inc.ext_id};
       DB.emp.push(r);sbIns('emp',r);nNew++;
-    }else if(k==='upd'){
+    }else{
       var e=it.match;
       it.changes.forEach(function(ch){e[ch.k]=ch.to;});
       sbUpd('emp',e);nUpd++;
     }
   });
-  addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05de-Vitre: '+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd, '+nUpd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5');
+  addLog('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05de-Vitre: '+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd, '+nUpd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5'+(nSkip?', '+nSkip+' \u05dc\u05d0 \u05e0\u05d1\u05d7\u05e8\u05d5':''));
   sdb();
   if(typeof rEmp==='function')rEmp();
   _vitreImp=null;
   closeModal('m-vitre-imp');
   toast('\u2705 \u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre: '+nNew+' \u05d7\u05d3\u05e9\u05d9\u05dd, '+nUpd+' \u05e2\u05d5\u05d3\u05db\u05e0\u05d5',{ok:true});
 };
-
 window._waDiagnose=function(){
   var rEl=g('dash-wa-result');
   if(rEl)rEl.textContent='\u23f3 \u05de\u05d0\u05d1\u05d7\u05df...';
