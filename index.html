@@ -2557,7 +2557,7 @@ id="m-ncr" style="display:none">
   <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
     <button class="btn btn-s" style="min-height:44px" onclick="closeModal('m-tru-route')">סגור</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRoutePdf()">&#128196; PDF</button>
-    <button class="btn btn-s" style="min-height:44px" data-vitre-btn onclick="_truRouteVitre()" title="Vitre &#1508;&#1493;&#1514;&#1495;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1500;&#1504;&#1502;&#1506;&#1503; &#1493;&#1513;&#1493;&#1500;&#1495;&#1514; &#1500;&#1493; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1504;&#1502;&#1506;&#1503; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1489;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1506;&#1501; &#1502;&#1505;&#1508;&#1512; &#1506;&#1493;&#1489;&#1491;.">&#55357;&#56562; SMS &#1491;&#1512;&#1498; Vitre</button>
+    <button class="btn btn-s" style="min-height:44px;display:none" data-vitre-btn onclick="_truRouteVitre()" title="Vitre &#1508;&#1493;&#1514;&#1495;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1500;&#1504;&#1502;&#1506;&#1503; &#1493;&#1513;&#1493;&#1500;&#1495;&#1514; &#1500;&#1493; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1504;&#1502;&#1506;&#1503; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1489;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1506;&#1501; &#1502;&#1505;&#1508;&#1512; &#1506;&#1493;&#1489;&#1491;.">&#55357;&#56562; SMS &#1491;&#1512;&#1498; Vitre</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRouteMail()">&#9993;&#65039; מייל</button>
     <button class="btn btn-p" style="min-height:44px;flex:1 1 100%;background:#25D366;border-color:#25D366" onclick="_truRouteWa()">&#128241; וואטסאפ</button>
   </div>
@@ -17267,7 +17267,13 @@ function _truRouteVitreRecipient(f){
   if(!hit&&nm)hit=emps.filter(function(e){return _vitreNormName(e.n)===nm;})[0]||null;
   return hit;
 }
+// Paused 23/09 evening (Michael: "I do not want this to work yet"): the button is
+// display:none in the markup and the function refuses while _VITRE_SMS_ON is
+// false. Form 11998 in Vitre still lacks the "to" question and its task rule.
+// Flip the flag and drop the display:none when the form is ready.
+var _VITRE_SMS_ON=false;
 function _truRouteVitre(){
+  if(!_VITRE_SMS_ON){toast('\u05e2\u05e8\u05d5\u05e5 Vitre \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05de\u05d5\u05e4\u05e2\u05dc');return;}
   var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
   var who=_truRouteVitreRecipient(f);
   if(!who){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05e2\u05d5\u05d1\u05d3 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3 Vitre \u05dc\u05e4\u05d9 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05d5 \u05d4\u05e9\u05dd. \u05d1\u05d7\u05e8 \u05e2\u05d5\u05d1\u05d3 \u05de\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d0\u05d5 \u05e9\u05dc\u05d7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4');return;}
