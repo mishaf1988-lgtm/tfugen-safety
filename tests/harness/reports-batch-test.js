@@ -253,7 +253,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...and says so: «השנה», not a rate it cannot compute', /השנה/.test(sum[0] || ''), sum);
 
     const prompt = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    const sec2 = (prompt.match(/## 2\. [^']*/) || [''])[0];
+    // Since 2026-09-24 rule 1 holds: the Hebrew in this prompt is written as
+    // \\uXXXX in the source. Read the source, so decode what it says before
+    // looking for the words -- the value at runtime was proven identical.
+    const sec2 = ((prompt.match(/## 2\. [^']*/) || [''])[0])
+      .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
     check('the annual ISO prompt no longer asks the model for LTIF', !/\(LTIF,/.test(sec2), sec2);
     check('...it asks for what the data actually contains', /ימי אבדן/.test(sec2) && /מספר תקריות/.test(sec2), sec2);
     check('...and says outright not to compute LTIF, so the model cannot invent one', /אל תחשב LTIF/.test(sec2), sec2);
