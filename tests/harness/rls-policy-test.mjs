@@ -98,9 +98,13 @@ console.log('\n2. no policy hands a whole table to «authenticated» uncondition
   const narrowing = [];
   files.forEach((f) => src[f].split('\n').forEach((l) => {
     if (/^\s*--/.test(l)) return;
-    if (/CREATE\s+POLICY\s+(mfa_required|viewer_no_(insert|update|delete))\b/i.test(l)) narrowing.push({ f, l: l.trim(), ok: /AS\s+RESTRICTIVE/i.test(l) });
+    // pwchange_required (2026-09-24 red-team) blocks a session whose token
+    // still carries must_change_password. As a PERMISSIVE policy it would OR
+    // with the others and grant every such session access -- the opposite of
+    // its job -- so it, like mfa_required and the viewer blocks, must be RESTRICTIVE.
+    if (/CREATE\s+POLICY\s+(mfa_required|pwchange_required|viewer_no_(insert|update|delete))\b/i.test(l)) narrowing.push({ f, l: l.trim(), ok: /AS\s+RESTRICTIVE/i.test(l) });
   }));
-  check('every CREATE POLICY mfa_required / viewer_no_* says AS RESTRICTIVE (' + narrowing.length + ' lines)', narrowing.length >= 8 && narrowing.every((x) => x.ok),
+  check('every CREATE POLICY mfa_required / pwchange_required / viewer_no_* says AS RESTRICTIVE (' + narrowing.length + ' lines)', narrowing.length >= 8 && narrowing.every((x) => x.ok),
     narrowing.filter((x) => !x.ok).map((x) => x.f + ': ' + x.l.slice(0, 80)));
 
   const guarded = forAll.filter((p) => /is_admin_manager|is_admin_only|auth\.uid\(\)|auth\.jwt\(\)/i.test(p.body));
