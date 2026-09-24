@@ -313,5 +313,35 @@ console.log('\n6. the live self-test covers what it claims to');
   }
 }
 
+console.log('\n7. role is resolved by the full login email, never the local part (red-team 2026-09-24)');
+{
+  // The critical finding: is_admin_manager / is_admin_only / is_viewer matched
+  // split_part(email,'@',1) -- the local part only -- so <staff-username>@any
+  // -domain resolved to that staff member. The fix binds to the full
+  // <id>@tfugen.local email. This guards against a future migration bringing
+  // the local-part form back: for each function, only its LAST definition (the
+  // one Postgres keeps) is judged.
+  const FNS = ['is_admin_manager', 'is_admin_only', 'is_viewer'];
+  for (const fn of FNS) {
+    const defs = files.filter((f) => new RegExp('FUNCTION\\s+private\\.' + fn + '\\b').test(src[f])).sort();
+    const last = defs[defs.length - 1];
+    check(fn + ' has a definition in the migrations', !!last, defs);
+    if (last) {
+      // Strip comment lines: the rollback section quotes the old split_part
+      // form on purpose, and matching it there is the same false-positive trap
+      // the other checks in this file guard against.
+      const body = src[last].split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+      check(fn + ' (last defined in ' + last + ') binds to the full @tfugen.local email',
+        /\|\|\s*'@tfugen\.local'/.test(body), last);
+      check(fn + ' (last defined in ' + last + ') does NOT resolve identity by the email local part',
+        !/split_part\(\s*auth\.jwt\(\)\s*->>\s*'email'\s*,\s*'@'\s*,\s*1\s*\)/.test(body), last);
+    }
+  }
+  // The server mirror (requireRole) must reject a foreign domain too.
+  const shared = fs.readFileSync(path.join(ROOT, 'functions/_shared.js'), 'utf8');
+  check('functions/_shared.js userRole requires the @tfugen.local domain',
+    /!==\s*'tfugen\.local'/.test(shared), 'userRole domain guard missing');
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
