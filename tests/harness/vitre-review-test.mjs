@@ -9,7 +9,10 @@ import { onRequest } from './_build/vitre.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-const env = { VITRE_API_KEY_ID: 'kid', VITRE_API_KEY_SECRET: 'ksecret', SUPABASE_SERVICE_ROLE_KEY: 'srv' };
+// VITRE_NOTIFY_ENABLED: this suite tests what notify DOES when it is on. Since
+// 2026-09-24 it is off unless that is set, and the pause itself is covered in
+// vitre-gate-test.mjs.
+const env = { VITRE_API_KEY_ID: 'kid', VITRE_API_KEY_SECRET: 'ksecret', SUPABASE_SERVICE_ROLE_KEY: 'srv', VITRE_NOTIFY_ENABLED: '1' };
 
 function world(o) {
   const w = { calls: [], email: o.email === undefined ? 'admin@tfugen.local' : o.email, submitStatus: o.submitStatus || 200 };
@@ -18,6 +21,12 @@ function world(o) {
     w.calls.push({ u, method, body: init && init.body ? JSON.parse(init.body) : null, headers: init && init.headers });
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/auth/v1/user')) return json(w.email ? { id: 'u1', email: w.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
+    // Since 2026-09-24 the endpoint reads the caller's role from app_users,
+    // the way is_admin_manager() does in the database. manager@ is a manager.
+    if (u.startsWith(SB + '/rest/v1/app_users')) {
+      const id = decodeURIComponent(u.split('id=eq.')[1].split('&')[0]);
+      return json(id === 'manager' ? [{ role: 'מנהל', active: true }] : []);
+    }
     if (u.includes('/review/getSchema')) return json({ reviewId: 11997, categories: [{ questions: [{ dataKey: 'q1', title: 'x', answers: [{ dataKey: 'a1', text: 'y' }] }] }] });
     if (u.includes('/review/submit')) return json(w.submitStatus === 200 ? { id: 777, title: 't', status: 'Draft', previewUrl: 'https://app.vitre.io/formResults/x' } : { message: 'comment required' }, w.submitStatus);
     return json({ message: 'unexpected ' + u }, 404);
@@ -103,12 +112,12 @@ console.log('notify: staff-callable, locked to the notification form, system sub
   r = await run('POST', 'op=notify', { to: '9001', title: 't' });
   check('recipient == system submitter -> 400 (Vitre would not notify)', r.status === 400, r);
   check('no Vitre call so far', !w.calls.some(c => c.u.includes('hbinov')));
-  r = await run('POST', 'op=notify', { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://a', reviewId: 11997 });
+  r = await run('POST', 'op=notify', { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://tapugan-safety.pages.dev/?emp=1', reviewId: 11997 });
   const sub = w.calls.find(c => c.u.includes('/review/submit'));
   check('a manager (non-admin) may send', r.status === 200 && r.json.ok, r.json);
   check('submits the NOTIFICATION form 11998, not the body reviewId', sub && /reviewId=11998(&|$)/.test(sub.u), sub && sub.u);
   check('createdBy is the system employee 9001', sub && /createdBy=9001/.test(sub.u), sub && sub.u);
-  check('data carries to/title/details/link', sub && JSON.stringify(sub.body) === JSON.stringify({ data: { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://a' } }), sub && sub.body);
+  check('data carries to/title/details/link', sub && JSON.stringify(sub.body) === JSON.stringify({ data: { to: '599', title: 'ליקוי: x', details: 'd', link: 'https://tapugan-safety.pages.dev/?emp=1' } }), sub && sub.body);
   check('response has the appointment id and preview url', r.json.appointmentId === 777 && r.json.previewUrl && r.json.to === '599', r.json);
   w = world({ email: 'manager@tfugen.local' });
   r = await run('POST', 'op=notify', { to: '599', title: 't' });

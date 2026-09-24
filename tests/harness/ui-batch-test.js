@@ -245,7 +245,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       _dashStatsToggle();
       const title = g('dash-stats-title');
       const cards = []; let el = title.nextElementSibling;
-      const SKIP = ['dash-wa-test', 'dash-secaudit'];   // admin tools, not statistics
+      const SKIP = ['dash-wa-test', 'dash-vitre-test', 'dash-secaudit'];   // the app's own skip list since #792   // admin tools, not statistics
       while (el && el.classList && el.classList.contains('card')) { if (SKIP.indexOf(el.id) < 0) cards.push({ id: el.id, shown: el.style.display !== 'none' }); el = el.nextElementSibling; }
       return { visible: cards.filter((c) => c.shown).length, chev: (g('dash-stats-chev') || {}).textContent, saved: localStorage.getItem('tfgn_dash_stats_open') };
     });
@@ -258,7 +258,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       rDash();                                   // a full re-render must not unfold it
       const title = g('dash-stats-title');
       const cards = []; let el = title.nextElementSibling;
-      const SKIP = ['dash-wa-test', 'dash-secaudit'];
+      const SKIP = ['dash-wa-test', 'dash-vitre-test', 'dash-secaudit'];   // the app's own skip list since #792
       while (el && el.classList && el.classList.contains('card')) { if (SKIP.indexOf(el.id) < 0) cards.push(el.style.display !== 'none'); el = el.nextElementSibling; }
       return cards.filter(Boolean).length;
     });
