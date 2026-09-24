@@ -61,7 +61,7 @@ const VIEWER = 'צופה';
 
   // What the viewer must not see: every way to delete, edit, or start a record.
   const scan = () => page.evaluate(() => {
-    const re = /^(askDel\(|delById\(|delAll|edit|eqiEdit\(|_roundEdit\(|_eqiClone\(|_eqiRemoveFile\(|_tskMenu\(|_legRowMenu\(|_itypeRowMenu\(|_invOpen\(|_itpDone\(|_truCloseReport\(|_truRosterEdit\(|_truTasksEdit\(|_truTasksDel\(|openNew|openTskModal\(|_roundOpenNew\(|capOpen\()|OpenAdd\(|^openModal\((?![^)]*-sheet)/;
+    const re = /^(askDel\(|delById\(|delAll|edit|eqiEdit\(|_roundEdit\(|_eqiClone\(|_eqiRemoveFile\(|_tskMenu\(|_legRowMenu\(|_itypeRowMenu\(|_invOpen\(|_itpDone\(|_truCloseReport\(|_truRosterEdit\(|_truTasksEdit\(|_truTasksDel\(|_ncrCommentAdd\(|_ncrFb\(|openNew|openTskModal\(|_roundOpenNew\(|capOpen\()|OpenAdd\(|^openModal\((?![^)]*-sheet)/;
     const vis = (el) => { if (!el.isConnected) return false; for (let p = el; p && p !== document.body; p = p.parentElement) { const cs = getComputedStyle(p); if (cs.display === 'none' || cs.visibility === 'hidden') return false; } return true; };
     const pg = document.getElementById('pg-' + CUR);
     const all = Array.from((pg || document).querySelectorAll('[onclick]')).concat(Array.from(document.querySelectorAll('#cap-fab')));
@@ -127,12 +127,16 @@ const VIEWER = 'צופה';
     openModal('m-modules-sheet');
     const sheetOpen = shown('m-modules-sheet');
     closeModal('m-modules-sheet');
+    // Legacy direct-REST write paths that do not pass through sbIns (the DB
+    // refuses them too; the client should still stop them cleanly).
+    _ncrCommentAdd('n1');
+    _ncrFb('n1', 'up');
     return { ob: JSON.parse(localStorage.getItem('tfgn_outbox') || '[]').length, near: DB.near_miss.length, toasts: window.__toasts.filter((t) => /צפייה/.test(t)).length, delOpen, formOpen, sheetOpen };
   });
   check('sbIns / sbUpd / sbDel / _aud put nothing in the outbox', w.ob === 0, w);
   check('the delete confirmation never opens', !w.delOpen, w);
   check('a new-record form does not open', !w.formOpen, w);
-  check('each refusal says why (5 toasts: ins, upd, del, askDel, form)', w.toasts === 5, w);
+  check('the legacy NCR-comment and AI-feedback writes are stopped too (7 toasts)', w.toasts === 7, w);
   check('navigation sheets still open', w.sheetOpen, w);
 
   console.log('\n4. the role hint an admin reads when choosing it');

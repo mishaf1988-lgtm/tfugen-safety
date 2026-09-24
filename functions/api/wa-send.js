@@ -9,7 +9,7 @@
 // (same pattern used by create/delete/reset/rename-user). Any logged-in
 // user can still send — the gate just rejects anonymous callers.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -29,7 +29,10 @@ export async function onRequest({ request, env }) {
   // screen started handing every visitor an anonymous one: this endpoint sends
   // from the factory's verified Meta number, so an anonymous caller here is an
   // open relay. Security review 2026-09-20.
-  const who = await requireUser(request, env);
+  // 2026-09-24 review: a JWT alone still admitted a reporter, who could then
+  // send arbitrary free-text WhatsApp from the company number (phishing under a
+  // trusted identity, Meta ban risk). Sending is a manager action -- require it.
+  const who = await requireRole(request, env, ['admin', 'manager']);
   if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
 
   const PHONE_ID = env.META_PHONE_NUMBER_ID;

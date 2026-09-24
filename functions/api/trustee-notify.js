@@ -31,7 +31,7 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -124,8 +124,10 @@ export async function onRequest({ request, env }) {
   // ---- (2) test message from the settings screen: needs a logged-in session ----
   if (body.test === true) {
     // Same hole as wa-send: this path takes an attacker-chosen recipient and
-    // sends through Meta AND Resend. An anonymous kiosk token must not reach it.
-    const who = await requireUser(request, env);
+    // sends through Meta AND Resend. An anonymous kiosk token must not reach it,
+    // and (2026-09-24 review) neither may a reporter -- sending a test to any
+    // recipient is a manager action. Only admin/manager.
+    const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     // The test uses what the screen holds right now (the prefs row may not be saved yet).
     const prefs = {

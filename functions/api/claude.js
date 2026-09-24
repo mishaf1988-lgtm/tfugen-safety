@@ -8,7 +8,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
 // models are kept for backward-compat — switch the client back any time by
@@ -44,7 +44,11 @@ export async function onRequest({ request, env }) {
   // Anonymous sessions are refused: the trustee screen hides every AI control
   // (index.html: body.emp-mode .cap-fab, #ask-fab { display:none }), so no
   // legitimate anonymous caller exists.
-  const who = await requireUser(request, env);
+  // 2026-09-24 review: a JWT alone still admitted a reporter, who could burn the
+  // Workers AI quota (down for everyone) and spend ANTHROPIC_KEY on arbitrary
+  // prompts. AI is a staff feature -- reporters reach no AI page. A viewer is
+  // allowed (it "reads what a manager reads", incl. the AI summaries).
+  const who = await requireRole(request, env, ['admin', 'manager', 'viewer']);
   if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
 
   const body = await request.text();
