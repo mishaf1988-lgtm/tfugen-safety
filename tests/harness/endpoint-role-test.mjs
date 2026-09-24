@@ -79,6 +79,17 @@ const TEST_NOTIFY = { test: true, whatsapp_to: '972501234567', email_to: 'x@y.co
     check(name + ' -> ' + (allow ? 'sends' : 'denied 403') + ' (' + r.status + ')', allow ? !denied(r) : (denied(r) && !w.metaSent && !w.resendCalled), r);
   }
 
+  console.log('\n4b. domain-bound role (2026-09-24 red-team): a staff username on a foreign domain is nobody');
+  // rtmgr@evil.com has the local part of a real manager but the wrong domain.
+  // userRole must not resolve it, so the endpoints deny it even though an
+  // app_users row for that username exists.
+  for (const [ep, name] of [[waSend, 'wa-send'], [claude, 'claude'], [trusteeNotify, 'trustee-notify']]) {
+    const w = world({ email: 'rtmgr@evil.com', row: { role: 'מנהל', active: true } });
+    const r = await call(ep, name === 'wa-send' ? WA : name === 'claude' ? AI : TEST_NOTIFY);
+    check(name + ': rtmgr@evil.com is denied (' + r.status + ')', denied(r) && !w.metaSent && !w.aiCalled, r);
+  }
+  { const w = world({ email: 'dani@tfugen.local', row: { role: 'מנהל', active: true } }); const r = await call(waSend, WA); check('and the same username on @tfugen.local still passes', !denied(r) && w.metaSent, r); }
+
   console.log('\n4. the gate reads app_users the way the database does');
   // active=false is no role (mirrors is_admin_manager's active check); a role
   // string the map does not know is nobody.

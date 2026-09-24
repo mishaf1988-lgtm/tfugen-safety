@@ -52,7 +52,11 @@ const ADMIN_EMAIL = 'admin@tfugen.local';
 async function staffRole(env, user) {
   const email = String((user && user.email) || '').toLowerCase();
   if (email === ADMIN_EMAIL) return 'admin';
-  const id = email.split('@')[0];
+  // 2026-09-24 red-team: bind to the full login email, not the local part, so
+  // <staff-username>@attacker.com cannot pass as staff (see is_admin_manager).
+  const at = email.split('@');
+  if (at.length !== 2 || at[1] !== 'tfugen.local') return null;
+  const id = at[0];
   if (!/^[a-z0-9._-]{1,60}$/.test(id)) return null;
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';

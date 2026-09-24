@@ -13,6 +13,13 @@
 
 ---
 
+## 2026-09-24 — זיהוי תפקיד נקשר למייל המלא `<id>@tfugen.local`, לא לחלק המקומי; must_change_password נאכף ב-RLS
+**החלטה**: (1) `is_admin_manager`/`is_admin_only`/`is_viewer`, `app_users_read`, `userRole` (`_shared.js`) ו-`staffRole` (`vitre.js`) מתאימים את המייל המלא ל-`u.id || '@tfugen.local'` במקום `split_part(email,'@',1)`. (2) מדיניות RESTRICTIVE `pwchange_required` על כל טבלה + Storage חוסמת סשן שהטוקן שלו נושא `user_metadata.must_change_password=true`; הלקוח מרענן טוקן (`refreshSession`) אחרי החלפת הסיסמה. (3) נמחקה `incidents_photos_update_trustee_kiosk`.
+**סיבה**: בדיקת חדירה סבב 2. עיוורון-הדומיין אפשר ל-`<שם-מנהל>@attacker.com` להיות מזוהה כמנהל (אומת חי: קרא 51 עובדים) — הסלמה מלאה אם signup פתוח; ה-2FA לא עוצר כי לחשבון חדש אין גורם. `must_change_password` נבדק רק בלקוח, אז סיסמה זמנית עבדה לנצח. הקיוסק יכל לדרוס כל תמונת אירוע (`tru-ph-%`, בלי בעלים).
+**למה בטוח**: כל הכניסות הן `@tfugen.local` (`_resolveEmail`, `create-user.js`), אז דרישת הדומיין לא שוברת כניסה. שער האדמין (`admin@tfugen.local` מלא) נשאר, לא נגעתי.
+**נשאר להחלטה (נוגע בקיוסק/הגדרה)**: קריאת/סטרים נתוני נאמנים לכל סשן אנונימי (#3); `TRUSTEE_NOTIFY_SECRET` — לחווט לשני הטריגרים יחד עם ה-env אחרת ההתראות נשברות בשקט (#5); סגירת signup בדשבורד.
+**קישורים**: `migrations/2026-09-24_pentest_hardening.sql`, `functions/_shared.js`, `functions/api/vitre.js`, `index.html` (_pwChangeSubmit), `project-files/PENTEST-2026-09-24.md`, בדיקות: `endpoint-role-test`,`vitre-gate-test`,`force-pw-test`
+
 ## 2026-09-24 — הרשאה לפי תפקיד בנקודות קצה: `requireRole` ב-`_shared.js`, לא רק `requireUser`
 **החלטה**: נקודות קצה שמוציאות כסף/הודעות או שורפות מכסה מקבלות שער תפקיד, לא רק בדיקת "מחובר ולא אנונימי". עוזר משותף `requireRole(request, env, allowed[])` ב-`_shared.js` קורא את `app_users` דרך ה-service key (id = החלק המקומי של המייל, `active IS NOT FALSE`) וממפה תפקיד. `wa-send`=אדמין/מנהל, `trustee-notify` test=אדמין/מנהל, `claude`=אדמין/מנהל/צופה. `vitre.js` כבר עשה זאת עם `staffRole` המקומי שלו ולא נגעתי בו (יש לו 27 בדיקות).
 **סיבה**: בדיקת חדירה 24/09. `requireUser` מאשר מדווח — הדרגה שה-DB חוסם מכל טבלה תפעולית והנקודה הכי סבירה לדריסת רגל של תוקף. דרכה מדווח יכול היה לשלוח וואטסאפ בטקסט חופשי מהמספר המאומת (פישינג), לשרוף את מפתח ה-AI, ולשלוח הודעת בדיקה לכל נמען.

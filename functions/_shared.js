@@ -112,7 +112,13 @@ export async function userRole(env, user) {
   const email = String((user && user.email) || '').toLowerCase();
   if (!email) return null;
   if (email === ADMIN_EMAIL) return 'admin';
-  const id = email.split('@')[0];
+  // 2026-09-24 red-team: the role must be bound to the FULL login email, not
+  // just the local part -- otherwise <staff-username>@attacker.com resolves to
+  // that staff member (matches the DB fix in is_admin_manager). Every real
+  // login is <username>@tfugen.local (create-user.js, index.html _resolveEmail).
+  const at = email.split('@');
+  if (at.length !== 2 || at[1] !== 'tfugen.local') return null;
+  const id = at[0];
   if (!/^[a-z0-9._-]{1,60}$/.test(id)) return null;
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
