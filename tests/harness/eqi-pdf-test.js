@@ -34,8 +34,11 @@ async function realProxySse() {
   const src = fs.readFileSync(path.join(ROOT, 'functions/api/claude.js'), 'utf8')
     .replace(/from '\.\.\/_shared\.js'/, "from '" + pathToFileURL(path.join(ROOT, 'functions/_shared.js')).href + "'");
   const mod = await import('data:text/javascript;charset=utf-8,' + encodeURIComponent(src));
+  // claude.js now requires a staff role (2026-09-24 pentest fix), read the way
+  // the DB reads it. This feature is an admin action; the built-in admin needs
+  // no app_users lookup, so the auth mock alone is enough.
   globalThis.fetch = async (url) => {
-    if (String(url).startsWith(SB + '/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1', email: 'a@b.c' }), { status: 200 });
+    if (String(url).startsWith(SB + '/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1', email: 'admin@tfugen.local' }), { status: 200 });
     throw new Error('unexpected ' + url);
   };
   const env = { SUPABASE_SERVICE_ROLE_KEY: 'svc', AI: { run: async () => ({ response: MODEL_ANSWER }) } };

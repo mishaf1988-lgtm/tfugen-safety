@@ -91,3 +91,50 @@ export async function requireUser(request, env, opts) {
   }
   return { ok: true, user, anonymous: !!anonymous };
 }
+
+// ---- authorization by role ---------------------------------------------------
+// requireUser proves WHO is calling; it does not prove they may do the thing.
+// A reporter carries a real, non-anonymous session, so requireUser admits them
+// -- and until the 2026-09-24 review wa-send, claude and the trustee-notify test
+// path did nothing more, so a reporter (or an attacker holding a reporter
+// account) could send WhatsApp from the company number, burn the AI key, or fire
+// a test message to any recipient. The role is read exactly the way
+// private.is_admin_manager() reads it in the database: app_users.id is the local
+// part of the login email, and a row with active=false counts as no role.
+export const ADMIN_EMAIL = 'admin@tfugen.local';
+const ROLE_MAP = {
+  'אדמין': 'admin',    // admin
+  'מנהל': 'manager',        // manager
+  'צופה': 'viewer',         // viewer (read-only, 2026-09-24)
+  'מדווח': 'reporter'  // reporter (default)
+};
+export async function userRole(env, user) {
+  const email = String((user && user.email) || '').toLowerCase();
+  if (!email) return null;
+  if (email === ADMIN_EMAIL) return 'admin';
+  const id = email.split('@')[0];
+  if (!/^[a-z0-9._-]{1,60}$/.test(id)) return null;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  if (!key) return null;
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(id) + '&select=role,active',
+      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const u = Array.isArray(rows) ? rows[0] : null;
+    if (!u || u.active === false) return null;
+    return ROLE_MAP[u.role] || null;
+  } catch (e) { return null; }
+}
+// requireUser + a role gate. `allowed` is the list of roles that may proceed
+// (e.g. ['admin','manager']). Returns { ok, status, error, user, role }.
+export async function requireRole(request, env, allowed) {
+  const who = await requireUser(request, env);
+  if (!who.ok) return who;
+  const role = await userRole(env, who.user);
+  if (!role || (Array.isArray(allowed) && allowed.indexOf(role) < 0)) {
+    return { ok: false, status: 403, error: 'insufficient role', user: who.user, role: role };
+  }
+  return { ok: true, user: who.user, role: role };
+}

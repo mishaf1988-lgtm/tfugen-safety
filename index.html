@@ -477,6 +477,8 @@ body.role-viewer [onclick^="openTskModal("],
 body.role-viewer [onclick*="OpenAdd("],
 body.role-viewer [onclick^="_roundOpenNew("],
 body.role-viewer [onclick^="capOpen("],
+body.role-viewer [onclick^="_ncrCommentAdd("],
+body.role-viewer [onclick^="_ncrFb("],
 body.role-viewer .cap-fab{display:none !important}
 #view-only-bar{display:none;background:#1e3a5f;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:6px 10px}
 body.role-viewer #view-only-bar{display:block}
@@ -13480,6 +13482,7 @@ function _ncrCommentsLoad(id){
     .catch(function(){if(box)box.innerHTML='<div class="et" style="padding:10px;font-size:11px;color:var(--bad)">\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d8\u05e2\u05d9\u05e0\u05ea \u05d4\u05e2\u05e8\u05d5\u05ea</div>';});
 }
 window._ncrCommentAdd=function(id){
+  if(_viewBlock())return;   // viewer: DB refuses the write anyway; stop it here with a clear message
   var inp=g('ncr-comment-input');var t=inp?String(inp.value||'').trim():'';
   if(!t){toast('\u05d4\u05d6\u05df \u05d8\u05e7\u05e1\u05d8');return;}
   var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
@@ -19406,6 +19409,7 @@ window._ncrApply=function(id){
   }).catch(function(err){alert('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05d7\u05dc\u05d4: '+(err&&err.message||err));});
 };
 window._ncrFb=function(id,val){
+  if(_viewBlock())return;   // viewer: DB refuses the ncr_ai write anyway; stop it here with a clear message
   var an=_naf[id];if(!an||an.err||!an.version)return;
   var newFb=(an.feedback===val)?null:val;
   var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
