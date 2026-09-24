@@ -110,6 +110,10 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
 
   console.log('\n5. PDF: a one-page work order with the photo and signature lines');
   const pdf = await page.evaluate(() => {
+    // Section 4 reopened the modal, which resets the due date to a week from
+    // today. This check asserts 30/09/2026 -- and passed on 23/09 only because
+    // a week from THAT day was 30/09. From 24/09 main was red. Pin it.
+    document.getElementById('tru-route-due').value = '2026-09-30';
     window.__pdf = null; window._printViaWindow = function (on, hdr, title) { window.__pdf = { html: on.innerHTML, title }; return true; };
     window.__upd = [];
     _truRoutePdf();

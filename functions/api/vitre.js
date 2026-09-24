@@ -24,7 +24,7 @@
 //   VITRE_API_KEY_SECRET  "מפתח סודי"        -> header X-api-key-secret
 // Never in code, never in the browser. Same posture as META_ACCESS_TOKEN / RESEND_KEY.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE } from '../_shared.js';
 
 const VITRE_BASE = 'https://publicapi.hbinov.com';
 const API_VERSION = '1.0';
@@ -40,6 +40,44 @@ const VITRE_TEST_REVIEW_ID = 11997;
 const VITRE_NOTIFY_REVIEW_ID = 11998;
 const VITRE_NOTIFY_CREATED_BY_DEFAULT = '9001';
 const ADMIN_EMAIL = 'admin@tfugen.local';
+
+// Who may use this bridge at all. requireUser admits ANY signed-in account,
+// and that includes a reporter -- the role the database keeps out of every
+// working table (Stage 2, 2026-04-24) and out of other people's app_users rows
+// (H2). Through here the same account could read the whole company's phone
+// and email directory (op=employees), presenter emails (op=training), and send
+// SMS in the company's name (op=notify). Found in the 2026-09-24 review. The
+// role is read the way private.is_admin_manager() reads it in the database:
+// app_users.id is the local part of the login email.
+async function staffRole(env, user) {
+  const email = String((user && user.email) || '').toLowerCase();
+  if (email === ADMIN_EMAIL) return 'admin';
+  const id = email.split('@')[0];
+  if (!/^[a-z0-9._-]{1,60}$/.test(id)) return null;
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  if (!key) return null;
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(id) + '&select=role,active',
+      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    const u = Array.isArray(rows) ? rows[0] : null;
+    if (!u || u.active === false) return null;
+    if (u.role === '\u05d0\u05d3\u05de\u05d9\u05df') return 'admin';     // admin
+    if (u.role === '\u05de\u05e0\u05d4\u05dc') return 'manager';          // manager
+    return null;
+  } catch (e) { return null; }
+}
+
+// A link in an SMS or an email sent in the company's name is the whole of a
+// phishing message. Only the app's own pages may be linked.
+function ownLink(link) {
+  if (!link) return true;
+  let u;
+  try { u = new URL(link); } catch (e) { return false; }
+  return u.protocol === 'https:' && (u.origin === CF_PROD || CF_PREVIEW_RE.test(u.origin));
+}
 
 function vitreHeaders(env) {
   return {
@@ -168,6 +206,8 @@ export async function onRequest({ request, env }) {
   // not reach this; a signed-in staff account is the minimum.
   const who = await requireUser(request, env);
   if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+  const role = await staffRole(env, who.user);
+  if (!role) return jsonResp({ error: 'staff only' }, 403, cors);
 
   const url = new URL(request.url);
   const op = (url.searchParams.get('op') || 'ping').toLowerCase();
@@ -341,6 +381,13 @@ export async function onRequest({ request, env }) {
   // this (it is the "send to handling" button); the form id and the submitter
   // are constants, so the call cannot reach any other form.
   if (op === 'notify') {
+    // The channel was "paused" on 2026-09-23 (#796) by hiding the button and
+    // setting a flag in the page. Neither is on the server, so a direct POST
+    // still sent the SMS. The pause lives here now: nothing goes out until
+    // VITRE_NOTIFY_ENABLED=1 is set in Cloudflare.
+    if (String(env.VITRE_NOTIFY_ENABLED || '') !== '1') {
+      return jsonResp({ error: 'notify is paused (VITRE_NOTIFY_ENABLED is not 1)' }, 403, cors);
+    }
     let body = null;
     try { body = await request.json(); } catch (e) { return jsonResp({ error: 'invalid JSON body' }, 400, cors); }
     const to = String((body && body.to) || '').trim();
@@ -349,6 +396,7 @@ export async function onRequest({ request, env }) {
     const link = String((body && body.link) || '').trim().slice(0, 500);
     if (!/^\d{1,10}$/.test(to)) return jsonResp({ error: 'to (recipient employee externalId, digits) required' }, 400, cors);
     if (!title) return jsonResp({ error: 'title required' }, 400, cors);
+    if (!ownLink(link)) return jsonResp({ error: 'link must point at the app itself' }, 400, cors);
     const createdBy = String(env.VITRE_NOTIFY_CREATED_BY || VITRE_NOTIFY_CREATED_BY_DEFAULT);
     if (createdBy === to) return jsonResp({ error: 'recipient equals the system submitter; Vitre would not notify' }, 400, cors);
     const data = { to, title };
