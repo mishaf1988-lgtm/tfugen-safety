@@ -132,5 +132,17 @@ console.log('\n5. a link in the company\'s name points at the company\'s app');
   check('...and so is no link at all', r.status === 200, r);
 }
 
+console.log('\n4. domain-bound staff (2026-09-24 red-team)');
+{
+  // The manager's local part on a foreign domain must not pass as staff --
+  // staffRole binds to the full <id>@tfugen.local email now.
+  let w = world({ email: 'dani@evil.com', row: { role: 'מנהל', active: true } });
+  let r = await run('GET', 'op=employees');
+  check('dani@evil.com cannot read the directory', r.status === 403 && !reachedVitre(w), r);
+  w = world(MANAGER);
+  r = await run('GET', 'op=employees');
+  check('dani@tfugen.local still can', r.status === 200, r);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

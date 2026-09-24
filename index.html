@@ -16472,6 +16472,11 @@ window._pwChangeSubmit=function(){
   if(!_sbClient){showErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
   _sbClient.auth.updateUser({password:newPw,data:{must_change_password:false}}).then(function(r){
     if(r.error){showErr('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(r.error.message||'\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e2\u05d3\u05db\u05df'));if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
+    // must_change_password is enforced in the database now (RESTRICTIVE
+    // pwchange_required on every table). updateUser cleared the flag, but it
+    // reaches the token only on a refresh -- so refresh before the app_users
+    // read below, which that very policy would otherwise block.
+    return _sbClient.auth.refreshSession().then(function(rs){var s=rs&&rs.data&&rs.data.session;if(s){_sbToken=s.access_token;_sbAuthPromise=Promise.resolve(s);}}).catch(function(){}).then(function(){
     try{document.getElementById('ov-force-pw').style.display='none';document.getElementById('m-force-pw-change').style.display='none';}catch(e){}
     if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}
     window._pendingLogin=null;
@@ -16496,6 +16501,7 @@ window._pwChangeSubmit=function(){
       _currentUser={username:pending.uname.toLowerCase()};
       for(var k in u)_currentUser[k]=u[k];
       _finishLogin(pending.lb);
+    });
     });
   }).catch(function(err){
     showErr('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err));
