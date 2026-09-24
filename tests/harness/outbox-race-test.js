@@ -9,13 +9,13 @@ const src = slice('var OB_KEY=', 'function _obBadge(') + '\n' + slice('function 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
-function sandbox() {
+function sandbox(viewer) {
   const store = {};
   const localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
   const pending = [];                                  // controllable sends
-  const env = { localStorage, SB_ON: true, _obSanitize() {}, _obBadge() {}, _obSend: (op) => new Promise((res, rej) => { pending.push({ op, res, rej }); }) };
-  const f = new Function('localStorage', 'SB_ON', '_obSanitize', '_obBadge', '_obSend', src + '\nreturn {push:_obPush,drain:_obDrain,get:_obGet};');
-  const api = f(env.localStorage, env.SB_ON, env._obSanitize, env._obBadge, env._obSend);
+  const env = { localStorage, SB_ON: true, _obSanitize() {}, _obBadge() {}, _obSend: (op) => new Promise((res, rej) => { pending.push({ op, res, rej }); }), _viewOnly: () => !!viewer };
+  const f = new Function('localStorage', 'SB_ON', '_obSanitize', '_obBadge', '_obSend', '_viewOnly', src + '\nreturn {push:_obPush,drain:_obDrain,get:_obGet};');
+  const api = f(env.localStorage, env.SB_ON, env._obSanitize, env._obBadge, env._obSend, env._viewOnly);
   return { api, pending };
 }
 const tick = () => new Promise(r => setTimeout(r, 5));
@@ -55,6 +55,12 @@ const tick = () => new Promise(r => setTimeout(r, 5));
     for (let i = 0; i < 6; i++) { await tick(); pending.forEach(p => { if (!p.done) { p.done = true; p.res(); } }); }
     await d; await tick();
     check('queue empty after both land', api.get().length === 0, api.get());
+  }
+  console.log('\n4. a viewer (2026-09-24) puts nothing in the outbox, whoever calls _obPush');
+  {
+    const { api } = sandbox(true);
+    api.push({ op: 'ins', tbl: 'audit_log', row: { id: 'V' } });
+    check('queue still empty', api.get().length === 0, api.get());
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
