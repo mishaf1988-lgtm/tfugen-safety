@@ -87,7 +87,22 @@ console.log('\n2. no policy hands a whole table to «authenticated» uncondition
     return !d || d <= latest[k].file;     // dropped before it was (re)created
   }).map((k) => latest[k]);
 
-  const forAll = live.filter((p) => /FOR\s+ALL/i.test(p.body) && /TO\s+authenticated/i.test(p.body));
+  // A RESTRICTIVE policy can only take access away (it is ANDed with the
+  // permissive ones), so it cannot be the hole this looks for. The next
+  // check makes sure the 2026-09-24 ones stay restrictive: mfa_required as a
+  // PERMISSIVE policy would hand every table to every user without a factor.
+  const restrictive = (p) => /AS\s+RESTRICTIVE/i.test(p.body);
+  const forAll = live.filter((p) => /FOR\s+ALL/i.test(p.body) && /TO\s+authenticated/i.test(p.body) && !restrictive(p));
+  // Most of them are created in a format() loop over every table, which the
+  // policy parser does not see; so every line that creates one is read directly.
+  const narrowing = [];
+  files.forEach((f) => src[f].split('\n').forEach((l) => {
+    if (/^\s*--/.test(l)) return;
+    if (/CREATE\s+POLICY\s+(mfa_required|viewer_no_(insert|update|delete))\b/i.test(l)) narrowing.push({ f, l: l.trim(), ok: /AS\s+RESTRICTIVE/i.test(l) });
+  }));
+  check('every CREATE POLICY mfa_required / viewer_no_* says AS RESTRICTIVE (' + narrowing.length + ' lines)', narrowing.length >= 8 && narrowing.every((x) => x.ok),
+    narrowing.filter((x) => !x.ok).map((x) => x.f + ': ' + x.l.slice(0, 80)));
+
   const guarded = forAll.filter((p) => /is_admin_manager|is_admin_only|auth\.uid\(\)|auth\.jwt\(\)/i.test(p.body));
   check('every live FOR ALL policy is gated by a function or the caller identity', forAll.length === guarded.length,
     forAll.filter((p) => guarded.indexOf(p) < 0).map((p) => p.file + ': ' + p.name));

@@ -4,7 +4,8 @@
 --   * build the read-only viewer role («צופה») and two-step sign-in, and
 --   * fix the bug that a deactivated manager keeps database access.
 --
--- Three things, all in one transaction so the database is never half-changed.
+-- Three things in one file. It has no BEGIN/COMMIT of its own: the SQL editor and
+-- apply_migration each run a file as one transaction, so a failure changes nothing.
 --
 -- 1. ACTIVE CHECK. private.is_admin_manager() and private.is_admin_only() never
 --    looked at app_users.active. Switching a manager off on the users page ended
@@ -34,7 +35,6 @@
 --
 -- Rollback at the bottom.
 
-BEGIN;
 
 -- ---- 1. active check ------------------------------------------------------
 CREATE OR REPLACE FUNCTION private.is_admin_manager()
@@ -159,7 +159,6 @@ CREATE POLICY viewer_no_insert ON storage.objects AS RESTRICTIVE FOR INSERT TO a
 CREATE POLICY viewer_no_update ON storage.objects AS RESTRICTIVE FOR UPDATE TO authenticated USING (NOT (SELECT private.is_viewer()));
 CREATE POLICY viewer_no_delete ON storage.objects AS RESTRICTIVE FOR DELETE TO authenticated USING (NOT (SELECT private.is_viewer()));
 
-COMMIT;
 
 -- ---- Verify (read-only) ----------------------------------------------------
 -- SELECT tablename, count(*) FILTER (WHERE policyname='mfa_required')     AS mfa,

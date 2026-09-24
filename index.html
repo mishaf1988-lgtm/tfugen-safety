@@ -450,6 +450,36 @@ body.role-reporter [onclick^="_tskMenu("],
 body.role-reporter [onclick^="_legRowMenu("],
 body.role-reporter [onclick^="_itypeRowMenu("],
 body.role-reporter [onclick^="_invOpen("]{display:none !important}
+/* Viewer (2026-09-24): reads what a manager reads and changes nothing. Everything a
+   reporter loses, plus every way to START a record. The database refuses a viewer's
+   write whatever the browser sends (viewer_no_* policies); hiding the buttons only
+   saves filling a form that cannot be saved. The two sheets are navigation, not forms. */
+body.role-viewer [onclick^="askDel("],
+body.role-viewer [onclick^="delById("],
+body.role-viewer [onclick^="delAll"],
+body.role-viewer [onclick^="edit"],
+body.role-viewer [onclick^="eqiEdit("],
+body.role-viewer [onclick^="_roundEdit("],
+body.role-viewer [onclick^="_eqiClone("],
+body.role-viewer [onclick^="_eqiRemoveFile("],
+body.role-viewer [onclick^="_tskMenu("],
+body.role-viewer [onclick^="_legRowMenu("],
+body.role-viewer [onclick^="_itypeRowMenu("],
+body.role-viewer [onclick^="_invOpen("],
+body.role-viewer [onclick^="_itpDone("],
+body.role-viewer [onclick^="_truCloseReport("],
+body.role-viewer [onclick^="_truRosterEdit("],
+body.role-viewer [onclick^="_truTasksEdit("],
+body.role-viewer [onclick^="_truTasksDel("],
+body.role-viewer [onclick^="openModal("]:not([onclick*="-sheet"]),
+body.role-viewer [onclick^="openNew"],
+body.role-viewer [onclick^="openTskModal("],
+body.role-viewer [onclick*="OpenAdd("],
+body.role-viewer [onclick^="_roundOpenNew("],
+body.role-viewer [onclick^="capOpen("],
+body.role-viewer .cap-fab{display:none !important}
+#view-only-bar{display:none;background:#1e3a5f;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:6px 10px}
+body.role-viewer #view-only-bar{display:block}
 /* B3 (2026-09-18): on phones the NCR agent's two columns stack — the analysis panel on top,
    the list below — instead of a 360px panel squeezing the list to a sliver. */
 @media(max-width:640px){
@@ -779,8 +809,22 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
 </div>
 
+<div class="overlay" id="ov-mfa" style="display:none;z-index:1999"></div>
+<div class="modal" id="m-mfa" style="display:none;max-width:360px;z-index:2000">
+  <div class="modal-title">&#128272; &#1511;&#1493;&#1491; &#1488;&#1497;&#1502;&#1493;&#1514;</div>
+  <div style="font-size:13px;line-height:1.6;margin-bottom:10px">&#1492;&#1494;&#1503; &#1488;&#1514; &#1492;&#1511;&#1493;&#1491; &#1489;&#1503; 6 &#1492;&#1505;&#1508;&#1512;&#1493;&#1514; &#1502;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1497;&#1514; &#1492;&#1488;&#1497;&#1502;&#1493;&#1514; &#1489;&#1496;&#1500;&#1508;&#1493;&#1503;.</div>
+  <input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" dir="ltr" style="width:100%;font-size:24px;letter-spacing:8px;text-align:center;padding:10px;border:1px solid #cbd5e1;border-radius:10px">
+  <div id="mfa-err" style="font-size:12px;color:var(--bad);margin-top:6px;min-height:18px"></div>
+  <div class="modal-footer">
+    <button class="btn btn-s" id="mfa-cancel">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
+    <button class="btn btn-p" id="mfa-ok">&#1488;&#1497;&#1513;&#1493;&#1512;</button>
+  </div>
+  <div style="font-size:11px;color:var(--t3);margin-top:10px;line-height:1.5">&#1488;&#1497;&#1503; &#1490;&#1497;&#1513;&#1492; &#1500;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1497;&#1514; &#1492;&#1488;&#1497;&#1502;&#1493;&#1514;? &#1508;&#1504;&#1492; &#1500;&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1506;&#1512;&#1499;&#1514;.</div>
+</div>
+
 <!-- APP -->
 <div id="app">
+<div id="view-only-bar">&#1502;&#1510;&#1489; &#1510;&#1508;&#1497;&#1497;&#1492; &#1489;&#1500;&#1489;&#1491;. &#1488;&#1508;&#1513;&#1512; &#1500;&#1512;&#1488;&#1493;&#1514; &#1492;&#1499;&#1500;, &#1488;&#1497; &#1488;&#1508;&#1513;&#1512; &#1500;&#1513;&#1504;&#1493;&#1514; &#1491;&#1489;&#1512;.</div>
 
 <!-- TOP BAR -->
 <div class="topbar">
@@ -1114,7 +1158,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="fgrid">
     <div class="field"><label>&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; * (&#1488;&#1493;&#1514;&#1497;&#1493;&#1514; &#1500;&#1488; &#1506;&#1489;&#1512;&#1497;&#1493;&#1514;)</label><input id="nu-username" placeholder="username" autocapitalize="off" autocomplete="off"></div>
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="nu-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
-    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="nu-role" onchange="_roleHint('nu-role','nu-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="nu-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="nu-role" onchange="_roleHint('nu-role','nu-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1510;&#1493;&#1508;&#1492;">&#1510;&#1493;&#1508;&#1492;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="nu-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="nu-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512;"></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="nu-phone" type="tel" placeholder="050-1234567"></div>
     <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="nu-email" type="email" placeholder="name@co.il"></div>
@@ -1186,7 +1230,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       </div>
     </div>
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="u-full-name" placeholder="&#1497;&#1493;&#1505;&#1497; &#1499;&#1492;&#1503;"></div>
-    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role" onchange="_roleHint('u-role','u-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="u-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
+    <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><select id="u-role" onchange="_roleHint('u-role','u-role-hint')"><option value="&#1502;&#1491;&#1493;&#1493;&#1495;">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="&#1510;&#1493;&#1508;&#1492;">&#1510;&#1493;&#1508;&#1492;</option><option value="&#1502;&#1504;&#1492;&#1500;">&#1502;&#1504;&#1492;&#1500;</option><option value="&#1488;&#1491;&#1502;&#1497;&#1503;">&#1488;&#1491;&#1502;&#1497;&#1503;</option></select><div id="u-role-hint" style="font-size:11px;color:var(--t3);line-height:1.5;margin-top:4px"></div></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="u-dept" placeholder="&#1497;&#1497;&#1510;&#1493;&#1512; / &#1488;&#1495;&#1494;&#1511;&#1492; / ..."></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="u-phone" type="tel" placeholder="050-1234567"></div>
     <div class="field"><label>&#1488;&#1497;&#1502;&#1497;&#1497;&#1500;</label><input id="u-email" type="email" placeholder="name@co.il"></div>
@@ -1955,6 +1999,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()" data-kw="whatsapp מייל"><span class="sic">&#128276;</span>הגדרות התראות</button>
     <button class="sheet-btn" onclick="_modVisOpen()" data-kw="מודולים ניגודיות"><span class="sic">&#9881;&#65039;</span>הגדרות תצוגה</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()" data-kw="סיסמה"><span class="sic">&#128273;</span>שנה סיסמה</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_mfaSetupOpen()" data-kw="2fa &#1511;&#1493;&#1491; &#1488;&#1489;&#1496;&#1495;&#1492;"><span class="sic">&#128272;</span>&#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button>
   </div>
   <div id="m-modules-empty" style="display:none;text-align:center;color:var(--t3);font-size:13px;padding:18px 0">אין מודול שמתאים לחיפוש</div>
 </div>
@@ -2030,6 +2075,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" onclick="closeModal('m-changepw')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
     <button class="btn btn-p" id="cpw-submit" onclick="_changePwSubmit()">&#128190; &#1506;&#1491;&#1499;&#1503; &#1505;&#1497;&#1505;&#1502;&#1492;</button>
   </div>
+</div>
+
+<div class="overlay" id="ov-mfa-setup" onclick="closeModal('m-mfa-setup')"></div>
+<div class="modal" id="m-mfa-setup" style="display:none;max-width:400px">
+  <button class="close-btn" onclick="closeModal('m-mfa-setup')">&#10005;</button>
+  <div class="modal-title">&#128272; &#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</div>
+  <div id="mfa-setup-body" style="font-size:13px;line-height:1.6"></div>
 </div>
 
 <div class="overlay" id="ov-del-confirm" onclick="cancelDel()"></div>
@@ -3293,6 +3345,9 @@ function _obWarnFull(){
 function _obLastErr(){try{return JSON.parse(localStorage.getItem(OB_ERR_KEY)||'null');}catch(e){return null;}}
 function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e));else localStorage.removeItem(OB_ERR_KEY);}catch(x){}}
 function _obPush(op){
+  // Backstop: nothing a viewer does waits in the outbox. Writes that start on
+  // their own (the audit row _aud adds) never pass through sbIns to be stopped.
+  if(_viewOnly())return;
   op.ts=op.ts||Date.now();
   op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   op.tries=op.tries||0;
@@ -3522,9 +3577,18 @@ function _aud(op,tbl,idOrRow){
     _obPush({op:'ins',tbl:'audit_log',row:entry});
   }catch(e){console.warn('audit failed:',e);}
 }
-function sbIns(tbl,row){_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbUpd(tbl,row){if(!row||!row.id)return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbDel(tbl,id){_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
+// A viewer changes nothing. The database refuses the write whatever the
+// browser sends; this stops it before a form, a toggle or the outbox gets
+// involved, and says why, instead of a save that fails later.
+function _viewOnly(){try{return _role()==='viewer';}catch(e){return false;}}
+function _viewBlock(){
+  if(!_viewOnly())return false;
+  try{toast('\u05de\u05e6\u05d1 \u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3, \u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e9\u05e0\u05d5\u05ea');}catch(e){}
+  return true;
+}
+function sbIns(tbl,row){if(_viewBlock())return;_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
 // re-render on any change because they aggregate across many tables.
@@ -3961,6 +4025,7 @@ function _delDescribe(tbl,id){
   return {label:label,title:title,found:!!row};
 }
 function askDel(tbl,id){
+  if(_viewBlock())return;
   _delPending={tbl:tbl,id:id};
   var d=_delDescribe(tbl,id);
   var what=g('del-what');
@@ -4045,6 +4110,7 @@ function _role(){
   var r=_currentUser.role||'';
   if(r==='\u05d0\u05d3\u05de\u05d9\u05df')return 'admin';   // \u05d0\u05d3\u05de\u05d9\u05df
   if(r==='\u05de\u05e0\u05d4\u05dc')return 'manager';       // \u05de\u05e0\u05d4\u05dc
+  if(r==='\u05e6\u05d5\u05e4\u05d4')return 'viewer';        // \u05e6\u05d5\u05e4\u05d4: reads what a manager reads, writes nothing
   return 'reporter';                                        // \u05de\u05d3\u05d5\u05d5\u05d7 (default)
 }
 // Pages that managers can see (admin sees everything, reporter sees a
@@ -4079,6 +4145,7 @@ var _REPORTER_PAGES = {dash:1,tasks:1,'emp-home':1,menu:1,view:1};
 function _can(feature){
   var r=_role();
   if(r==='admin')return true;
+  if(r==='viewer')return feature==='view-all-tasks'||feature==='view-all-modules'||feature==='see-modules-sheet'||feature==='see-dashboard';
   switch(feature){
     case 'manage-users':case 'view-audit':case 'use-agents':case 'manage-backups':
     case 'manage-mail-rules':case 'see-wa-test':
@@ -4617,6 +4684,8 @@ function _genEdit(tbl,id){
 }
 
 function openModal(id){
+  // A form whose only purpose is a save button a viewer cannot use.
+  if(_viewOnly()){var fm=g(id);if(fm&&fm.querySelector('[onclick^="sv"]')){_viewBlock();return;}}
   // Opening a form any other way starts a NEW record \u2014 never an accidental
   // overwrite of the one that was being edited.
   if(!_genEditOpening)_svEditing={};
@@ -10207,6 +10276,7 @@ function rUsers(){
 window._ROLE_HINTS={};
 _ROLE_HINTS['\u05de\u05d3\u05d5\u05d5\u05d7']='\u05d3\u05e9\u05d1\u05d5\u05e8\u05d3, \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e1\u05da \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05dc\u05d1\u05d3. \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05dc\u05d0 \u05e2\u05d5\u05e8\u05da. \u05e2\u05d5\u05d1\u05d3 \u05e9\u05e6\u05e8\u05d9\u05da \u05dc\u05d3\u05d5\u05d5\u05d7 \u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df.';
 _ROLE_HINTS['\u05de\u05e0\u05d4\u05dc']='\u05db\u05dc \u05de\u05e1\u05db\u05d9 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4, \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea \u05d5\u05d4\u05de\u05d2\u05de\u05d5\u05ea, \u05db\u05d5\u05dc\u05dc \u05e2\u05e8\u05d9\u05db\u05d4 \u05d5\u05de\u05d7\u05d9\u05e7\u05d4. \u05d1\u05dc\u05d9 \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d1\u05dc\u05d9 \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d1\u05dc\u05d9 \u05db\u05dc\u05d9 AI.';
+_ROLE_HINTS['\u05e6\u05d5\u05e4\u05d4']='\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05de\u05d4 \u05e9\u05de\u05e0\u05d4\u05dc \u05e8\u05d5\u05d0\u05d4 \u05d5\u05dc\u05d0 \u05de\u05e9\u05e0\u05d4 \u05db\u05dc\u05d5\u05dd: \u05dc\u05d0 \u05e4\u05d5\u05ea\u05d7 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05dc\u05d0 \u05e2\u05d5\u05e8\u05da \u05d5\u05dc\u05d0 \u05de\u05d5\u05d7\u05e7. \u05de\u05ea\u05d0\u05d9\u05dd \u05dc\u05e1\u05d5\u05e7\u05e8, \u05dc\u05de\u05d1\u05e7\u05e8 \u05d0\u05d5 \u05dc\u05d4\u05e0\u05d4\u05dc\u05d4.';
 _ROLE_HINTS['\u05d0\u05d3\u05de\u05d9\u05df']='\u05d4\u05db\u05dc, \u05db\u05d5\u05dc\u05dc \u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd, \u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d5\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea.';
 window._roleHint=function(selId,outId){
   var sel=g(selId),out=g(outId);if(!sel||!out)return;
@@ -15988,7 +16058,10 @@ window._changePwSubmit=function(){
   if(!email)return fail('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d6\u05d4\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05ea\u05de\u05e9');
   var btn=g('cpw-submit');if(btn){btn.disabled=true;btn.textContent='\u05de\u05e2\u05d3\u05db\u05df...';}
   // Verify current password, then update.
-  _sbClient.auth.signInWithPassword({email:email,password:cur}).then(function(r){
+  // Checking the current password signs in again, and for someone with a second
+  // factor that new session is password-only: the code is asked for again here.
+  _sbClient.auth.signInWithPassword({email:email,password:cur}).then(_mfaAfterPw).then(function(r){
+    if(r&&r.mfaCancelled)throw new Error('mfa-cancel');
     if(r.error||!r.data||!r.data.session)throw new Error('bad-current');
     _sbToken=r.data.session.access_token;
     return _sbClient.auth.updateUser({password:nw});
@@ -16000,6 +16073,7 @@ window._changePwSubmit=function(){
   }).catch(function(e){
     if(btn){btn.disabled=false;btn.textContent='💾 \u05e2\u05d3\u05db\u05df \u05e1\u05d9\u05e1\u05de\u05d4';}
     var msg=((e&&e.message)||'').toString();
+    if(msg==='mfa-cancel'){fail('\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d5\u05d8\u05dc: \u05e0\u05d3\u05e8\u05e9 \u05e7\u05d5\u05d3 \u05d0\u05d9\u05de\u05d5\u05ea. \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9.');try{_sbClient.auth.signOut();}catch(x){}_sbToken=null;_sbAuthPromise=null;setTimeout(function(){location.reload();},1500);return;}
     if(msg==='bad-current')fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9\u05ea \u05e9\u05d2\u05d5\u05d9\u05d4');
     else if(/different|same/i.test(msg))fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4 \u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05d9\u05d5\u05ea \u05e9\u05d5\u05e0\u05d4');
     else if(/pwned|compromised|breach|leaked/i.test(msg))fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d6\u05d5\u05d4\u05ea\u05d4 \u05d1\u05d3\u05dc\u05d9\u05e4\u05d4 \u05d9\u05d3\u05d5\u05e2\u05d4 — \u05d1\u05d7\u05e8 \u05d0\u05d7\u05e8\u05ea');
@@ -16011,13 +16085,16 @@ window._changePwSubmit=function(){
 function _applyRoleGates(){
   var role = _role();
   var isAdmin = role==='admin';
-  var isManagerOrUp = role==='admin'||role==='manager';
+  // A viewer sees the menus a manager sees. What separates them is writing,
+  // and the database settles that, not which menus appear.
+  var isManagerOrUp = role==='admin'||role==='manager'||role==='viewer';
   // Roles Phase B (A4): expose the role to CSS. body.role-reporter hides every
   // edit / delete affordance (see the stylesheet); creation stays. UI-only —
   // RLS is what actually blocks the writes.
   try{
     document.body.classList.toggle('role-reporter',role==='reporter');
     document.body.classList.toggle('role-manager',role==='manager');
+    document.body.classList.toggle('role-viewer',role==='viewer');
     document.body.classList.toggle('role-admin',role==='admin');
   }catch(e){}
   // Admin-only modules sheet buttons
@@ -16153,6 +16230,140 @@ window._forgotPwSendWa=function(){
   });
 };
 
+// ---- Two-step sign-in (2026-09-24) -----------------------------------------
+// The database refuses a password-only session of anyone who has a second
+// factor (the mfa_required policies, migrations/2026-09-24_viewer_mfa_active.sql).
+// So every path that signs in with a password asks for the code here, before it
+// reads anything. Someone without a factor never sees any of this. The check is
+// allowed to fail open: if the browser cannot tell, the database still can.
+function _mfaNeeded(){
+  if(!_sbClient||!_sbClient.auth||!_sbClient.auth.mfa)return Promise.resolve(false);
+  return _sbClient.auth.mfa.getAuthenticatorAssuranceLevel().then(function(r){
+    var d=r&&r.data;return !!(d&&d.nextLevel==='aal2'&&d.currentLevel!=='aal2');
+  }).catch(function(){return false;});
+}
+function _mfaNewSession(){
+  return _sbClient.auth.getSession().then(function(s){
+    var sess=s&&s.data&&s.data.session;
+    if(sess){_sbToken=sess.access_token;_sbAuthPromise=Promise.resolve(sess);}
+    return sess;
+  });
+}
+// Resolves with the aal2 session once the code checks out; rejects if the
+// person gives up. It signs nobody out: what giving up means is the caller's.
+function _mfaAsk(){
+  return new Promise(function(resolve,reject){
+    var ov=g('ov-mfa'),mo=g('m-mfa'),inp=g('mfa-code'),err=g('mfa-err'),ok=g('mfa-ok'),no=g('mfa-cancel');
+    if(!mo||!inp||!ok||!no){reject(new Error('mfa-ui'));return;}
+    inp.value='';if(err)err.textContent='';ok.disabled=false;
+    if(ov)ov.style.display='block';mo.style.display='block';
+    setTimeout(function(){try{inp.focus();}catch(e){}},50);
+    function done(){if(ov)ov.style.display='none';mo.style.display='none';ok.onclick=null;no.onclick=null;inp.onkeydown=null;}
+    function submit(){
+      var code=String(inp.value||'').replace(/\D/g,'');
+      if(code.length!==6){if(err)err.textContent='\u05d4\u05d6\u05df 6 \u05e1\u05e4\u05e8\u05d5\u05ea';return;}
+      ok.disabled=true;
+      _sbClient.auth.mfa.listFactors().then(function(r){
+        var f=r&&r.data&&r.data.totp&&r.data.totp[0];
+        if(!f)throw new Error('no-factor');
+        return _sbClient.auth.mfa.challengeAndVerify({factorId:f.id,code:code});
+      }).then(function(v){
+        if(v&&v.error)throw v.error;
+        return _mfaNewSession();
+      }).then(function(sess){
+        done();resolve(sess);
+      }).catch(function(e){
+        ok.disabled=false;
+        if(err)err.textContent=(e&&e.message==='no-factor')?'\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05d6\u05d4':'\u05d4\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9 \u05d0\u05d5 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';
+        inp.value='';try{inp.focus();}catch(x){}
+      });
+    }
+    ok.onclick=submit;
+    inp.onkeydown=function(e){if(e.key==='Enter')submit();};
+    no.onclick=function(){done();reject(new Error('mfa-cancel'));};
+  });
+}
+function _mfaStep(){return _mfaNeeded().then(function(n){return n?_mfaAsk():null;});}
+// For the chain after signInWithPassword: the aal2 session replaces the
+// password-only one, or the result is marked as given up.
+function _mfaAfterPw(r){
+  if(!r||r.error||!r.data||!r.data.session)return r;
+  return _mfaStep().then(function(s){if(s)r.data.session=s;return r;},function(){r.mfaCancelled=true;return r;});
+}
+// A saved session that is password-only for someone who has a factor is
+// worth nothing to the database. Drop it, and the login screen asks properly.
+function _mfaRestore(s){
+  if(!s||!s.user||s.user.is_anonymous)return Promise.resolve(s);
+  return _mfaNeeded().then(function(n){
+    if(!n)return s;
+    try{_sbClient.auth.signOut();}catch(e){}
+    return null;
+  });
+}
+function _mfaEl(parent,tag,text,css){var e=document.createElement(tag);if(text)e.textContent=text;if(css)e.style.cssText=css;parent.appendChild(e);return e;}
+function _mfaBtn(parent,label,cls,fn){var b=_mfaEl(parent,'button',label,'margin:8px 0 4px;width:100%');b.className='btn '+cls;b.onclick=fn;return b;}
+function _mfaSetupErr(e){var box=g('mfa-setup-body');if(box)box.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+String((e&&e.message)||e||'').substring(0,120);}
+window._mfaSetupOpen=function(){
+  _sbBoot();
+  if(!_sbClient||!_currentUser||!_currentUser.username){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8, \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  openModal('m-mfa-setup');_mfaSetupRender();
+};
+function _mfaSetupRender(){
+  var box=g('mfa-setup-body');if(!box)return;
+  box.textContent='\u05d8\u05d5\u05e2\u05df...';
+  _sbClient.auth.mfa.listFactors().then(function(r){
+    if(r&&r.error)throw r.error;
+    var on=(r&&r.data&&r.data.totp)||[];
+    box.textContent='';
+    if(on.length){
+      _mfaEl(box,'div','\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e4\u05e2\u05d9\u05dc. \u05d1\u05db\u05dc \u05db\u05e0\u05d9\u05e1\u05d4 \u05ea\u05ea\u05d1\u05e7\u05e9 \u05d2\u05dd \u05e7\u05d5\u05d3 \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d1\u05d8\u05dc\u05e4\u05d5\u05df.','font-weight:700;color:var(--ok)');
+      _mfaEl(box,'div','\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05d1\u05d3 \u05d0\u05d5 \u05d4\u05d5\u05d7\u05dc\u05e3? \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d9\u05db\u05d5\u05dc \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e9\u05dc\u05da, \u05d5\u05d0\u05d6 \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05d1\u05e1\u05d9\u05e1\u05de\u05d4 \u05d5\u05de\u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05de\u05d7\u05d3\u05e9.','font-size:12px;color:var(--t3);margin-top:6px');
+      _mfaBtn(box,'\u05db\u05d1\u05d4 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9','btn-s',function(){
+        if(!confirm('\u05dc\u05db\u05d1\u05d5\u05ea \u05d0\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9? \u05d0\u05d7\u05e8\u05d9 \u05d6\u05d4 \u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d1\u05d3\u05d4 \u05ea\u05e1\u05e4\u05d9\u05e7 \u05db\u05d3\u05d9 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1.'))return;
+        _sbClient.auth.mfa.unenroll({factorId:on[0].id}).then(function(x){if(x&&x.error)throw x.error;return _mfaNewSession();}).then(function(){toast('\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05db\u05d5\u05d1\u05d4');_mfaSetupRender();}).catch(_mfaSetupErr);
+      });
+    }else{
+      _mfaEl(box,'div','\u05db\u05e8\u05d2\u05e2 \u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d1\u05d3\u05d4 \u05de\u05e1\u05e4\u05d9\u05e7\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1. \u05e2\u05dd \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e6\u05e8\u05d9\u05da \u05d2\u05dd \u05e7\u05d5\u05d3 \u05e9\u05de\u05ea\u05d7\u05dc\u05e3 \u05db\u05dc 30 \u05e9\u05e0\u05d9\u05d5\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05da, \u05db\u05da \u05e9\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d3\u05dc\u05e4\u05d4 \u05dc\u05d0 \u05de\u05e1\u05e4\u05d9\u05e7\u05d4.');
+      _mfaBtn(box,'\u05d4\u05e4\u05e2\u05dc \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9','btn-p',_mfaEnroll);
+    }
+  }).catch(_mfaSetupErr);
+}
+function _mfaEnroll(){
+  var box=g('mfa-setup-body');if(!box)return;
+  box.textContent='\u05d8\u05d5\u05e2\u05df...';
+  _sbClient.auth.mfa.listFactors().then(function(r){
+    // An attempt left half-way stays listed, unverified; clear it first.
+    var stale=((r&&r.data&&r.data.all)||[]).filter(function(f){return f.status!=='verified';});
+    return Promise.all(stale.map(function(f){return _sbClient.auth.mfa.unenroll({factorId:f.id});}));
+  }).then(function(){
+    return _sbClient.auth.mfa.enroll({factorType:'totp',friendlyName:'Tapugan Safety '+new Date().toISOString().slice(0,16)});
+  }).then(function(e){
+    if(!e||e.error||!e.data)throw (e&&e.error)||new Error('enroll');
+    var id=e.data.id,t=e.data.totp||{};
+    box.textContent='';
+    _mfaEl(box,'div','1. \u05d4\u05ea\u05e7\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05d0\u05d9\u05de\u05d5\u05ea: Google Authenticator \u05d0\u05d5 Microsoft Authenticator.');
+    _mfaEl(box,'div','2. \u05d4\u05e7\u05e9 \u05e2\u05dc \u05d4\u05d5\u05e1\u05e3 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d0\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e0\u05e4\u05ea\u05d7 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d0\u05d7\u05e8, \u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e8\u05d9\u05d1\u05d5\u05e2 \u05d0\u05d5 \u05d4\u05e2\u05ea\u05e7 \u05d0\u05ea \u05d4\u05de\u05e4\u05ea\u05d7.','margin-top:6px');
+    var a=_mfaEl(box,'a','\u05d4\u05d5\u05e1\u05e3 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4','display:block;text-align:center;text-decoration:none;margin:10px 0 4px');a.className='btn btn-p';a.href=t.uri||'#';a.id='mfa-setup-uri';
+    if(t.qr_code){var img=_mfaEl(box,'img','','display:block;width:170px;height:170px;margin:8px auto;background:#fff');img.alt='QR';img.src=t.qr_code;}
+    var sec=_mfaEl(box,'div',t.secret||'','font-family:monospace;direction:ltr;text-align:center;font-size:13px;word-break:break-all;background:#f1f5f9;border-radius:8px;padding:8px;margin:6px 0');sec.id='mfa-setup-secret';
+    _mfaBtn(box,'\u05d4\u05e2\u05ea\u05e7 \u05de\u05e4\u05ea\u05d7','btn-s',function(){try{navigator.clipboard.writeText(t.secret||'').then(function(){toast('\u05d4\u05de\u05e4\u05ea\u05d7 \u05d4\u05d5\u05e2\u05ea\u05e7');});}catch(x){}});
+    _mfaEl(box,'div','3. \u05d4\u05d6\u05df \u05db\u05d0\u05df \u05d0\u05ea \u05d4\u05e7\u05d5\u05d3 \u05d1\u05df 6 \u05d4\u05e1\u05e4\u05e8\u05d5\u05ea \u05e9\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05de\u05e6\u05d9\u05d2\u05d4:','margin-top:10px;font-weight:700');
+    var inp=_mfaEl(box,'input','','width:100%;font-size:22px;letter-spacing:6px;text-align:center;padding:8px;border:1px solid #cbd5e1;border-radius:10px;margin-top:6px');
+    inp.id='mfa-setup-code';inp.setAttribute('inputmode','numeric');inp.setAttribute('autocomplete','one-time-code');inp.maxLength=6;inp.dir='ltr';
+    var err=_mfaEl(box,'div','','font-size:12px;color:var(--bad);min-height:18px;margin-top:4px');
+    var ok=_mfaBtn(box,'\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05e4\u05e2\u05dc\u05d4','btn-p',function(){
+      var code=String(inp.value||'').replace(/\D/g,'');
+      if(code.length!==6){err.textContent='\u05d4\u05d6\u05df 6 \u05e1\u05e4\u05e8\u05d5\u05ea';return;}
+      ok.disabled=true;
+      _sbClient.auth.mfa.challengeAndVerify({factorId:id,code:code}).then(function(v){
+        if(v&&v.error)throw v.error;
+        return _mfaNewSession();
+      }).then(function(){toast('\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05d4\u05d5\u05e4\u05e2\u05dc',{ok:true});_mfaSetupRender();}).catch(function(){ok.disabled=false;err.textContent='\u05d4\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9 \u05d0\u05d5 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';});
+    });
+    ok.id='mfa-setup-ok';
+  }).catch(_mfaSetupErr);
+}
+
 function doLogin(){
   var pw=g('pw');if(!pw)return;
   var unameEl=g('uname');
@@ -16174,7 +16385,13 @@ function doLogin(){
       :'\u05e1\u05e4\u05e8\u05d9\u05d9\u05ea \u05d4\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4 (Supabase). \u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3; \u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8 \u2014 \u05d7\u05e1\u05dd \u05e8\u05e9\u05ea \u05d0\u05d5 \u05d7\u05d5\u05e1\u05dd \u05e4\u05e8\u05e1\u05d5\u05de\u05d5\u05ea.',true);
     return;
   }
-  _sbClient.auth.signInWithPassword({email:email,password:val}).then(function(r){
+  _sbClient.auth.signInWithPassword({email:email,password:val}).then(_mfaAfterPw).then(function(r){
+    if(r&&r.mfaCancelled){
+      try{_sbClient.auth.signOut();}catch(e){}
+      _sbToken=null;_sbAuthPromise=null;
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+      _loginErr('\u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4: \u05e0\u05d3\u05e8\u05e9 \u05e7\u05d5\u05d3 \u05d0\u05d9\u05de\u05d5\u05ea');return;
+    }
     if(r.error||!r.data||!r.data.session){
       if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
       _loginErr('\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd');return;
@@ -18131,7 +18348,7 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
   function start(){
     _sbBoot();
     if(!_sbClient){proceed(null);return;}
-    _sbClient.auth.getSession().then(function(r){proceed(r&&r.data?r.data.session:null);}).catch(function(){proceed(null);});
+    _sbClient.auth.getSession().then(function(r){return _mfaRestore(r&&r.data?r.data.session:null);}).then(function(s){proceed(s);}).catch(function(){proceed(null);});
   }
   // supabase-js is loaded with <script defer>, which by definition has NOT run
   // while the parser is still here — and this block is inline, so it is here.

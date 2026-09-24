@@ -25,12 +25,10 @@
 --
 -- Rollback at the bottom recreates them exactly.
 
-BEGIN;
 DROP POLICY IF EXISTS "Enable read access for all users"   ON storage.objects;
 DROP POLICY IF EXISTS "allow anon insert incidents-photos" ON storage.objects;
 DROP POLICY IF EXISTS "allow_anon_upload 1ug2xgt_0"        ON storage.objects;
 DROP POLICY IF EXISTS "allow anon read incidents-photos"   ON storage.objects;
-COMMIT;
 
 -- ---- Verify ------------------------------------------------------------------
 -- SELECT policyname, roles FROM pg_policies
