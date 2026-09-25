@@ -1,0 +1,2 @@
+delete
+# First line is the mode for the push-triggered run of cleanup-merged-branches.yml: delete or report.

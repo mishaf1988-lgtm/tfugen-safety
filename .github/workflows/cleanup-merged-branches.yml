@@ -8,7 +8,13 @@
 # Branches without a merged PR are only counted, never deleted.
 name: cleanup-merged-branches
 
+# A second way to run it, for when the dropdown in the mobile Actions UI does
+# not register the choice (25/09, twice): push a change to
+# .github/branch-cleanup.txt on main whose first line is "delete" or "report".
 on:
+  push:
+    branches: [main]
+    paths: [".github/branch-cleanup.txt"]
   workflow_dispatch:
     inputs:
       mode:
@@ -38,10 +44,25 @@ jobs:
           gh api --paginate "repos/${{ github.repository }}/pulls?state=closed&per_page=100" \
             --jq '.[] | select(.merged_at != null) | .head.ref' | sort -u > merged_heads.txt
           echo "merged PR heads: $(wc -l < merged_heads.txt)"
+      - name: Resolve mode
+        id: mode
+        env:
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_AGE: ${{ inputs.min_age_days }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            m=$(head -n1 .github/branch-cleanup.txt 2>/dev/null | tr -d '[:space:]')
+          else
+            m="$INPUT_MODE"
+          fi
+          [ "$m" = "delete" ] || m="report"
+          echo "mode=$m" >> "$GITHUB_OUTPUT"
+          echo "min_age=${INPUT_AGE:-2}" >> "$GITHUB_OUTPUT"
+          echo "resolved mode: $m (event: ${{ github.event_name }})"
       - name: Decide
         env:
-          MODE: ${{ inputs.mode }}
-          MIN_AGE: ${{ inputs.min_age_days }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          MIN_AGE: ${{ steps.mode.outputs.min_age }}
         run: |
           now=$(date +%s); cutoff=$(( now - MIN_AGE*86400 ))
           : > delete.txt; : > young.txt; : > unmerged.txt
@@ -62,7 +83,7 @@ jobs:
           echo "--- no merged PR (kept) ---"; cat unmerged.txt
           echo "--- would delete ---"; cat delete.txt
       - name: Delete
-        if: ${{ inputs.mode == 'delete' }}
+        if: ${{ steps.mode.outputs.mode == 'delete' }}
         run: |
           n=0
           while read -r b; do
