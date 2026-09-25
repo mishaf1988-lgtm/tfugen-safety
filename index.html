@@ -4428,7 +4428,10 @@ window._LOCK_SEEN_KEY='tfgn_last_seen';
 // than a minute away. A minute, because a camera round trip or a share
 // sheet hides the page for seconds, and locking the form somebody was in
 // the middle of is not what "do not leave it open" meant.
-window._LOCK_DEFAULT_MIN=-1;
+// 25/09, with two-factor sign-in mandatory for every password user, Michael
+// moved the default to 12 hours: «every open» made password + code the price
+// of every glance at the app. -1 stays available in the settings per device.
+window._LOCK_DEFAULT_MIN=720;
 window._LOCK_RESUME_GRACE_MS=60*1000;
 window._lockMinutes=function(){
   var m=_appPrefs().lockMin;

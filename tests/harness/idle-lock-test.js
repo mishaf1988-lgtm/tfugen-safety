@@ -140,12 +140,20 @@ window.supabase = { createClient: function () {
     // Michael, the same afternoon: «נעילה אחרי כל כניסה לאפליקציה, לא להשאיר
     // פתוח». So a phone that has never chosen anything asks every time --
     // used a minute ago or not.
+    // 25/09: with two-factor sign-in mandatory, Michael moved the default to
+    // 12 hours. A phone that has never chosen anything walks in when used
+    // recently, and is asked after half a day away. «every open» is still
+    // a choice in the settings (p2, p3 below).
     const p1 = await boot({ idleMin: 1, lockMin: null });
     const r = await state(p1);
-    check('used a minute ago, no choice made: the password is asked for', r.login === 'flex' && r.isAdmin === false, r);
-    check('...and the session really dropped', r.signedOut === 1, r.signedOut);
-    check('...because the default is «every open»', r.mins === -1, r.mins);
+    check('used a minute ago, no choice made: walks straight in', r.login !== 'flex' && r.isAdmin === true, r);
+    check('...and the session was kept', r.signedOut === 0, r.signedOut);
+    check('...because the default is 12 hours', r.mins === 720, r.mins);
     await p1.close();
+    const p1b = await boot({ idleMin: 13 * 60, lockMin: null });
+    const rb = await state(p1b);
+    check('13 hours away, no choice made: the password is asked for', rb.login === 'flex' && rb.isAdmin === false && rb.signedOut === 1, rb);
+    await p1b.close();
     const p2 = await boot({ idleMin: null, lockMin: -1 });
     const fresh = await state(p2);
     check('a phone never stamped asks too -- every open means every open', fresh.login === 'flex', fresh);
@@ -319,7 +327,7 @@ window.supabase = { createClient: function () {
       return { shown: shown, saved: saved, mins: _lockMinutes(), opts: [].map.call(sel.options, function (o) { return o.value; }) };
     }, PREFS_KEY);
     check('the choice is in the settings screen', !r.missing, r);
-    check('...showing what is in force («every open» by default)', r.shown === '-1', r);
+    check('...showing what is in force (12 hours by default)', r.shown === '720', r);
     check('...and «never» is one of the choices', (r.opts || []).indexOf('0') >= 0, r.opts);
     check('...and so is «every open»', (r.opts || []).indexOf('-1') >= 0, r.opts);
     check('changing it saves and takes effect', r.saved === 120 && r.mins === 120, r);
@@ -354,7 +362,7 @@ window.supabase = { createClient: function () {
     check('the admin sets it', r.admin, r);
     check('...a reporter is not shown it', !r.reporter, r);
     check('...nor is a manager', !r.manager, r);
-    check('...and a value sent anyway is refused (still ' + r.after + ')', r.after === -1, r);
+    check('...and a value sent anyway is refused (still ' + r.after + ')', r.after === 720, r);
     await p.close();
   }
 
