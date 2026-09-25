@@ -143,8 +143,11 @@ console.log('\n3. it says which way round the answer is');
   const byDesign = await call('?stranger=1', NAMED);
   check('a trustee table reads as a question, not a failure',
     byId(byDesign.body, 'anon:trustees').verdict === '⚠' && byDesign.body.summary.fail === 0, byId(byDesign.body, 'anon:trustees'));
-  check('...and the reply says to confirm it is still wanted',
-    /confirm/i.test(byDesign.body.note || ''), byDesign.body.note);
+  // 2026-09-25: a clean trustee result is a tick, not a warning, so the note no
+  // longer says "confirm". It now names the one that stays a warning: open item
+  // #3, an anonymous session reading the reports (manager note included).
+  check('...and the reply points at open item #3 for the reports',
+    /#3/.test(byDesign.body.note || '') && /manager note/i.test(byDesign.body.note || ''), byDesign.body.note);
 }
 
 console.log('\n4. it reads counts, never contents');
@@ -194,8 +197,11 @@ console.log('\n6. it fits in one request');
   // managed, which reads exactly like a clean result.
   const calls = world({ user: 'named', readable: {} });
   await call('?stranger=1&anon=1', NAMED);
-  check('both strangers together stay under the limit (' + calls.length + ' subrequests)',
-    calls.length < 40, calls.length);
+  // Cloudflare's hard limit is 50. 2026-09-25 added the four trustee tables to
+  // the anonymous probe (Michael's request), so the ceiling here moved from 40
+  // to 42 -- still 8 under the real limit, which is what "well inside" means.
+  check('both strangers together stay well under the limit (' + calls.length + '/50 subrequests)',
+    calls.length <= 42, calls.length);
 }
 
 console.log('\n7. the ordinary self-test is untouched');
