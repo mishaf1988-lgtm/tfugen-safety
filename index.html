@@ -16563,12 +16563,15 @@ function doLogin(){
     _sbAuthPromise=Promise.resolve(r.data.session);
 
     // First-login gate: if the admin set/reset this user's password, the
-    // server marked user_metadata.must_change_password=true. Force the
-    // user to pick a new password BEFORE entering the app. The pending
-    // login state is captured in window._pendingLogin so _pwChangeSubmit
-    // can resume the flow after the password is updated.
+    // server marked must_change_password=true. Force the user to pick a new
+    // password BEFORE entering the app. The pending login state is captured
+    // in window._pendingLogin so _pwChangeSubmit can resume the flow after
+    // the password is updated. The flag lives in app_metadata (what the RLS
+    // policy reads; only the server can write it) and, for older accounts,
+    // in user_metadata -- either one gates.
     var meta=(r.data.user&&r.data.user.user_metadata)||{};
-    if(meta.must_change_password===true){
+    var appMeta=(r.data.user&&r.data.user.app_metadata)||{};
+    if(meta.must_change_password===true||appMeta.must_change_password===true){
       window._pendingLogin={lb:lb,email:email,uname:uname};
       // Reset the login button so the user doesn't see "מתחבר..." stuck.
       // The modal takes focus from here.
@@ -16605,10 +16608,13 @@ window._pwChangeSubmit=function(){
   if(!_sbClient){showErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
   _sbClient.auth.updateUser({password:newPw,data:{must_change_password:false}}).then(function(r){
     if(r.error){showErr('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(r.error.message||'\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e2\u05d3\u05db\u05df'));if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
-    // must_change_password is enforced in the database now (RESTRICTIVE
-    // pwchange_required on every table). updateUser cleared the flag, but it
-    // reaches the token only on a refresh -- so refresh before the app_users
-    // read below, which that very policy would otherwise block.
+    // must_change_password is enforced in the database (RESTRICTIVE
+    // pwchange_required on every table, reading app_metadata). The password
+    // change itself releases it -- a DB trigger drops the app_metadata flag
+    // when encrypted_password changes; updateUser above also clears the
+    // legacy user_metadata copy. Either way it reaches the token only on a
+    // refresh -- so refresh before the app_users read below, which that very
+    // policy would otherwise block.
     return _sbClient.auth.refreshSession().then(function(rs){var s=rs&&rs.data&&rs.data.session;if(s){_sbToken=s.access_token;_sbAuthPromise=Promise.resolve(s);}}).catch(function(){}).then(function(){
     try{document.getElementById('ov-force-pw').style.display='none';document.getElementById('m-force-pw-change').style.display='none';}catch(e){}
     if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}
