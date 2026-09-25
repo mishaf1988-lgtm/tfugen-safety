@@ -63,5 +63,13 @@ while ((m = re.exec(src))) {
 check('every inline script parses (' + parsed + '/' + blocks + ')', parsed === blocks && blocks > 0, raw.filter((x) => /parse/.test(x)));
 check('no string, template or regex carries raw Hebrew (' + raw.length + ')', raw.length === 0, raw.slice(0, 8));
 
+// The markup side of the same habit. An emoji written as two numeric entities
+// for its UTF-16 halves (&#55357;&#56562; instead of &#128242;) is not a
+// character in HTML: browsers render it as two replacement marks. Four
+// buttons shipped that way (found 2026-09-25 on the Vitre SMS button).
+const halves = [];
+src.split('\n').forEach((l, i) => { const m = l.match(/&#5[56]\d{3};/g); if (m) halves.push('line ' + (i + 1) + ': ' + m.join('')); });
+check('no HTML entity is a lone UTF-16 surrogate half (' + halves.length + ')', halves.length === 0, halves.slice(0, 8));
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
