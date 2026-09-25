@@ -1,2 +1,17 @@
-report
+delete
 # First line is the mode for the push-triggered run of cleanup-merged-branches.yml: delete or report.
+# "also:" lines name branches to delete regardless of PR state (25/09: 13 April snapshots whose
+# features all live on main in a later form, plus the wip viewer-role branch superseded by #801).
+also: claude/busy-cori-3W8vH
+also: claude/busy-cori-76r8m
+also: claude/busy-cori-MIpwj
+also: routine/add-to-home-screen-2026-04-20
+also: routine/expiries-agent-2026-04-17-0001
+also: routine/expiries-agent-2026-04-17-0200
+also: routine/expiries-agent-2026-04-17-0900
+also: routine/hearing-tests-2026-04-20
+also: routine/remove-medical-2026-04-20
+also: routine/security-api-hardening-2026-04-20
+also: routine/security-rls-anon-auth-2026-04-20
+also: routine/toolbox-talks-2026-04-19
+also: routine/viewer-role-2026-09-21

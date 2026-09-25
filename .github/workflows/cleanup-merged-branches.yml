@@ -77,7 +77,16 @@ jobs:
                 echo "$b" >> unmerged.txt
               fi
             done
-          echo "=== would delete (merged PR, older than $MIN_AGE days): $(wc -l < delete.txt)"
+          # Explicit extras (push mode only): lines "also: <branch>" in the mode
+          # file name branches to delete regardless of PR state, never main.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            grep -E '^also:' .github/branch-cleanup.txt 2>/dev/null | sed -E 's/^also:[[:space:]]*//' | while read -r extra; do
+              [ -z "$extra" ] && continue
+              [ "$extra" = "main" ] && continue
+              if git rev-parse -q --verify "refs/remotes/origin/$extra" >/dev/null && ! grep -qxF "$extra" delete.txt; then echo "$extra" >> delete.txt; echo "also: $extra"; fi
+            done
+          fi
+          echo "=== would delete (merged PR, older than $MIN_AGE days, plus 'also:' lines): $(wc -l < delete.txt)"
           echo "=== kept, merged but younger than $MIN_AGE days: $(wc -l < young.txt)"
           echo "=== kept, no merged PR: $(wc -l < unmerged.txt)"
           echo "--- no merged PR (kept) ---"; cat unmerged.txt
