@@ -241,5 +241,17 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
       !offenders(e3.body.subject + e3.body.html + e3.body.text).length, offenders(e3.body.subject + e3.body.html + e3.body.text));
   }
 
+  console.log('\nprobe (25/09): a GET ?probe=1 says whether the shared secret is configured, nothing else');
+  {
+    const mk = (qs, env) => onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-notify' + qs, { method: 'GET', headers: { origin: 'https://tapugan-safety.pages.dev' } }), env });
+    let r = await mk('?probe=1', { SUPABASE_SERVICE_ROLE_KEY: 'srv' });
+    let j = await r.json();
+    check('no secret in env -> secret_configured false', r.status === 200 && j.secret_configured === false, j);
+    r = await mk('?probe=1', { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'abc' });
+    j = await r.json();
+    check('secret in env -> true, and the value is not echoed', r.status === 200 && j.secret_configured === true && !JSON.stringify(j).includes('abc'), j);
+    r = await mk('', { SUPABASE_SERVICE_ROLE_KEY: 'srv' });
+    check('a plain GET is still 405', r.status === 405, r.status);
+  }
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
