@@ -4801,6 +4801,7 @@ function _svClearEditFor(modalId){
   });
 }
 function closeModal(id){
+  if(id==='m-mfa-setup'&&_mfaMust)return;   // mandatory for admin/manager: stays open until a factor is verified
   _svClearEditFor(id);
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
@@ -16181,12 +16182,14 @@ function _fetchCurrentUserProfile(){
   if(!_currentUser||!_currentUser.username){_applyRoleGates();return;}
   if(_currentUser.username==='admin'){
     _applyRoleGates();
+    try{_mfaEnforce();}catch(e){}
     try{toast('\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd, \u05d0\u05d3\u05de\u05d9\u05df ✨',{ok:true});}catch(e){}
     return;
   }
   var u=(DB.app_users||[]).find(function(x){return (x.username||'').toLowerCase()===_currentUser.username;});
   if(u){for(var k in u)_currentUser[k]=u[k];}
   _applyRoleGates();
+  try{_mfaEnforce();}catch(e){}
   try{
     var name=(_currentUser.full_name||_currentUser.username||'').trim();
     if(name){toast('\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd, '+name+' ✨',{ok:true});}
@@ -16316,6 +16319,32 @@ function _mfaRestore(s){
 function _mfaEl(parent,tag,text,css){var e=document.createElement(tag);if(text)e.textContent=text;if(css)e.style.cssText=css;parent.appendChild(e);return e;}
 function _mfaBtn(parent,label,cls,fn){var b=_mfaEl(parent,'button',label,'margin:8px 0 4px;width:100%');b.className='btn '+cls;b.onclick=fn;return b;}
 function _mfaSetupErr(e){var box=g('mfa-setup-body');if(box)box.textContent='\u05e9\u05d2\u05d9\u05d0\u05d4: '+String((e&&e.message)||e||'').substring(0,120);}
+// ---- Mandatory second factor for admin and manager (Michael, 25/09) --------
+// Michael: "\u05d7\u05d5\u05d1\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df \u05d5\u05de\u05e0\u05d4\u05dc\u05d9\u05dd". A signed-in admin or manager without a
+// verified TOTP factor gets the setup modal as soon as the role is known,
+// cannot close it, and cannot turn the factor off later. Viewers and
+// reporters are untouched. The database side stays as it is (mfa_required
+// only binds people who enrolled); a role-wide DB rule can follow once
+// every manager has enrolled, otherwise it would lock them all out at once.
+var _mfaMust=false;
+function _mfaRoleMust(){var r=_role();return r==='admin'||r==='manager';}
+function _mfaEnforce(){
+  if(!_mfaRoleMust()||!_sbClient||!_sbClient.auth||!_sbClient.auth.mfa||!_sbToken)return Promise.resolve(false);
+  return _sbClient.auth.mfa.listFactors().then(function(r){
+    var on=(r&&r.data&&r.data.totp)||[];
+    if(on.length){_mfaMust=false;return false;}
+    _mfaMust=true;
+    var mo=g('m-mfa-setup');
+    if(mo&&mo.style.display==='block')_mfaMustUi(true);else _mfaSetupOpen();   // already open (enrolling): do not repaint under their hands
+    return true;
+  }).catch(function(){return false;});   // cannot tell: the database still decides, do not lock the screen
+}
+function _mfaMustUi(on){
+  var mo=g('m-mfa-setup'),ov=g('ov-mfa-setup');
+  var x=mo?mo.querySelector('.close-btn'):null;
+  if(x)x.style.display=on?'none':'';
+  if(ov)ov.onclick=on?null:function(){closeModal('m-mfa-setup');};
+}
 window._mfaSetupOpen=function(){
   _sbBoot();
   if(!_sbClient||!_currentUser||!_currentUser.username){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8, \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
@@ -16328,14 +16357,18 @@ function _mfaSetupRender(){
     if(r&&r.error)throw r.error;
     var on=(r&&r.data&&r.data.totp)||[];
     box.textContent='';
+    _mfaMustUi(_mfaMust&&!on.length);
     if(on.length){
+      if(_mfaMust){_mfaMust=false;_mfaMustUi(false);closeModal('m-mfa-setup');toast('\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05d4\u05d5\u05e4\u05e2\u05dc. \u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd',{ok:true});return;}
       _mfaEl(box,'div','\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e4\u05e2\u05d9\u05dc. \u05d1\u05db\u05dc \u05db\u05e0\u05d9\u05e1\u05d4 \u05ea\u05ea\u05d1\u05e7\u05e9 \u05d2\u05dd \u05e7\u05d5\u05d3 \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d1\u05d8\u05dc\u05e4\u05d5\u05df.','font-weight:700;color:var(--ok)');
       _mfaEl(box,'div','\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05d1\u05d3 \u05d0\u05d5 \u05d4\u05d5\u05d7\u05dc\u05e3? \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d9\u05db\u05d5\u05dc \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e9\u05dc\u05da, \u05d5\u05d0\u05d6 \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05d1\u05e1\u05d9\u05e1\u05de\u05d4 \u05d5\u05de\u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05de\u05d7\u05d3\u05e9.','font-size:12px;color:var(--t3);margin-top:6px');
-      _mfaBtn(box,'\u05db\u05d1\u05d4 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9','btn-s',function(){
+      if(_mfaRoleMust()){_mfaEl(box,'div','\u05dc\u05d0\u05d3\u05de\u05d9\u05df \u05d5\u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05d4\u05d5\u05d0 \u05d7\u05d5\u05d1\u05d4 \u05d5\u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05db\u05d1\u05d5\u05ea \u05d0\u05d5\u05ea\u05d5. \u05dc\u05d4\u05d7\u05dc\u05e4\u05ea \u05d8\u05dc\u05e4\u05d5\u05df: \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05de\u05d5\u05d7\u05e7 \u05d0\u05ea \u05d4\u05d2\u05d5\u05e8\u05dd \u05d1-Supabase, \u05d5\u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05d1\u05d0\u05d4 \u05de\u05e4\u05e2\u05d9\u05dc\u05d9\u05dd \u05de\u05d7\u05d3\u05e9.','color:var(--t2);margin-top:8px');}
+      else _mfaBtn(box,'\u05db\u05d1\u05d4 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9','btn-s',function(){
         if(!confirm('\u05dc\u05db\u05d1\u05d5\u05ea \u05d0\u05ea \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9? \u05d0\u05d7\u05e8\u05d9 \u05d6\u05d4 \u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d1\u05d3\u05d4 \u05ea\u05e1\u05e4\u05d9\u05e7 \u05db\u05d3\u05d9 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1.'))return;
         _sbClient.auth.mfa.unenroll({factorId:on[0].id}).then(function(x){if(x&&x.error)throw x.error;return _mfaNewSession();}).then(function(){toast('\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05db\u05d5\u05d1\u05d4');_mfaSetupRender();}).catch(_mfaSetupErr);
       });
     }else{
+      if(_mfaMust)_mfaEl(box,'div','\u05dc\u05ea\u05e4\u05e7\u05d9\u05d3 \u05e9\u05dc\u05da (\u05d0\u05d3\u05de\u05d9\u05df / \u05de\u05e0\u05d4\u05dc) \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05d7\u05d5\u05d1\u05d4. \u05d4\u05e4\u05e2\u05dc \u05d0\u05d5\u05ea\u05d5 \u05e2\u05db\u05e9\u05d9\u05d5 \u05db\u05d3\u05d9 \u05dc\u05d4\u05de\u05e9\u05d9\u05da \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.','font-weight:700;color:var(--bad);margin-bottom:8px');
       _mfaEl(box,'div','\u05db\u05e8\u05d2\u05e2 \u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d1\u05d3\u05d4 \u05de\u05e1\u05e4\u05d9\u05e7\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1. \u05e2\u05dd \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05e6\u05e8\u05d9\u05da \u05d2\u05dd \u05e7\u05d5\u05d3 \u05e9\u05de\u05ea\u05d7\u05dc\u05e3 \u05db\u05dc 30 \u05e9\u05e0\u05d9\u05d5\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05da, \u05db\u05da \u05e9\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d3\u05dc\u05e4\u05d4 \u05dc\u05d0 \u05de\u05e1\u05e4\u05d9\u05e7\u05d4.');
       _mfaBtn(box,'\u05d4\u05e4\u05e2\u05dc \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9','btn-p',_mfaEnroll);
     }

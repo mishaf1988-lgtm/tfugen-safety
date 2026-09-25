@@ -54,6 +54,8 @@ const stub = (o) => `
 const ADMIN_EMAIL = 'admin@tfugen.local';
 const VERIFIED = [{ id: 'f9', status: 'verified', factor_type: 'totp' }];
 const DANI = { id: 'dani', username: 'dani', role: 'מנהל', full_name: 'דני', active: true };
+const VERED = { id: 'vered', username: 'vered', role: 'צופה', full_name: 'ורד', active: true };
+const USERS = { dani: DANI, vered: VERED };
 
 (async () => {
   const browser = await pw.chromium.launch();
@@ -70,7 +72,7 @@ const DANI = { id: 'dani', username: 'dani', role: 'מנהל', full_name: 'דנ�
       const u = r.request().url();
       if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: SRC });
       if (/supabase-js/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: stub(o) });
-      if (/\/rest\/v1\/app_users/.test(u)) { p.__rest.push(await p.evaluate(() => window.__sb.aal).catch(() => '?')); return r.fulfill({ contentType: 'application/json', body: JSON.stringify([DANI]) }); }
+      if (/\/rest\/v1\/app_users/.test(u)) { p.__rest.push(await p.evaluate(() => window.__sb.aal).catch(() => '?')); const un = (u.match(/username=eq\.([a-z]+)/) || [])[1]; return r.fulfill({ contentType: 'application/json', body: JSON.stringify(USERS[un] ? [USERS[un]] : [DANI]) }); }
       return r.abort();
     });
     await p.goto(ORIGIN + '/', { waitUntil: 'load' });
@@ -93,6 +95,31 @@ const DANI = { id: 'dani', username: 'dani', role: 'מנהל', full_name: 'דנ�
   let s = await state(p);
   check('the admin walks straight in, no code window', s.app && !s.codeWin, s);
   check('with the password-only session, as before', s.token === 'tok-aal1', s);
+  // 25/09, Michael: "mandatory for admin and managers". The role is known
+  // 900ms after login; from then on the setup window is up and stays up.
+  await p.waitForTimeout(1200);
+  const must = (pg) => pg.evaluate(() => { const mo = document.getElementById('m-mfa-setup'); const x = mo.querySelector('.close-btn'); return { open: mo.style.display === 'block', xHidden: x.style.display === 'none', must: window._mfaMust, body: document.getElementById('mfa-setup-body').textContent, ovClick: !!document.getElementById('ov-mfa-setup').onclick }; });
+  let m = await must(p);
+  check('admin without a factor: the setup window opens by itself, mandatory', m.open && m.must && /חובה/.test(m.body), m);
+  check('no X, and the overlay does not close it', m.xHidden && !m.ovClick, m);
+  await p.evaluate(() => closeModal('m-mfa-setup'));
+  await p.click('#ov-mfa-setup', { force: true }).catch(() => {});
+  m = await must(p);
+  check('closeModal and the overlay leave it open', m.open && m.must, m);
+  await p.close();
+
+  console.log('\n1b. the same for a manager; not for a viewer');
+  p = await boot({});
+  await login(p, 'dani');
+  await p.waitForTimeout(1200);
+  m = await must(p);
+  check('manager without a factor: mandatory window', m.open && m.must, m);
+  await p.close();
+  p = await boot({});
+  await login(p, 'vered');
+  await p.waitForTimeout(1200);
+  m = await must(p);
+  check('viewer without a factor: nothing opens', !m.open && !m.must, m);
   await p.close();
 
   console.log('\n2. a second factor: the password alone is not enough');
@@ -139,15 +166,17 @@ const DANI = { id: 'dani', username: 'dani', role: 'מנהל', full_name: 'דנ�
   p = await boot({ aal: 'aal1', session: { access_token: 'x', user: { email: ADMIN_EMAIL, is_anonymous: false } } });
   s = await state(p);
   check('no factor: straight back in, as before', s.app && s.signOuts === 0, s);
+  await p.waitForTimeout(1200);
+  m = await must(p);
+  check('...and the restored admin meets the mandatory window too', m.open && m.must, m);
   await p.close();
 
-  console.log('\n5. turning it on and off from the settings');
+  console.log('\n5. the admin enrols from the mandatory window');
   p = await boot({ factors: [{ id: 'old', status: 'unverified', factor_type: 'totp' }] });
   await login(p, 'admin');
-  await p.evaluate(() => _mfaSetupOpen());
-  await p.waitForTimeout(300);
+  await p.waitForTimeout(1200);
   let body = await p.evaluate(() => document.getElementById('mfa-setup-body').textContent);
-  check('off: explains what it adds', /סיסמה לבדה מספיקה/.test(body), body.slice(0, 80));
+  check('off: explains what it adds, and that it is mandatory', /סיסמה לבדה מספיקה/.test(body) && /חובה/.test(body), body.slice(0, 80));
   await p.click('#mfa-setup-body button.btn-p');
   await p.waitForTimeout(400);
   const en = await p.evaluate(() => ({ uri: (document.getElementById('mfa-setup-uri') || {}).href || '', secret: (document.getElementById('mfa-setup-secret') || {}).textContent || '', qr: !!document.querySelector('#mfa-setup-body img'), factors: window.__sb.factors.map((f) => f.id + ':' + f.status) }));
@@ -155,12 +184,31 @@ const DANI = { id: 'dani', username: 'dani', role: 'מנהל', full_name: 'דנ�
   check('the key is shown to copy by hand, and the QR for another device', en.secret === 'JBSWY3DPEHPK3PXP' && en.qr, en);
   check('the half-finished attempt from before was cleared first', en.factors.length === 1 && en.factors[0] === 'f1:unverified', en.factors);
   await p.fill('#mfa-setup-code', '999999'); await p.click('#mfa-setup-ok'); await p.waitForTimeout(300);
-  const wrong = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, f: window.__sb.factors[0].status }));
-  check('a wrong code does not switch it on', wrong.f === 'unverified' && /שגוי/.test(wrong.body), wrong);
-  await p.fill('#mfa-setup-code', GOOD); await p.click('#mfa-setup-ok'); await p.waitForTimeout(400);
-  const on = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, f: window.__sb.factors.map((x) => x.status), token: window._sbToken }));
-  check('the right code switches it on, and the window says so', on.f.join() === 'verified' && /פעיל/.test(on.body), on);
+  const wrong = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, f: window.__sb.factors[0].status, must: window._mfaMust }));
+  check('a wrong code does not switch it on, window still mandatory', wrong.f === 'unverified' && /שגוי/.test(wrong.body) && wrong.must, wrong);
+  await p.fill('#mfa-setup-code', GOOD); await p.click('#mfa-setup-ok'); await p.waitForTimeout(500);
+  const on = await p.evaluate(() => ({ f: window.__sb.factors.map((x) => x.status), token: window._sbToken, must: window._mfaMust, open: document.getElementById('m-mfa-setup').style.display === 'block', x: document.querySelector('#m-mfa-setup .close-btn').style.display }));
+  check('the right code switches it on and releases the window', on.f.join() === 'verified' && !on.must && !on.open && on.x === '', on);
   check('this session is now aal2', on.token === 'tok-aal2', on);
+  await p.evaluate(() => _mfaSetupOpen());
+  await p.waitForTimeout(300);
+  const again = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, off: !!document.querySelector('#mfa-setup-body button.btn-s') }));
+  check('reopened from the menu: active, and no "switch off" for an admin', /פעיל/.test(again.body) && !again.off && /חובה/.test(again.body), again);
+  await p.close();
+
+  console.log('\n5b. a viewer can still turn it on and off');
+  p = await boot({});
+  await login(p, 'vered');
+  await p.waitForTimeout(1200);
+  await p.evaluate(() => _mfaSetupOpen());
+  await p.waitForTimeout(300);
+  body = await p.evaluate(() => document.getElementById('mfa-setup-body').textContent);
+  check('off, and not mandatory', /סיסמה לבדה מספיקה/.test(body) && !/חובה/.test(body), body.slice(0, 80));
+  await p.click('#mfa-setup-body button.btn-p');
+  await p.waitForTimeout(400);
+  await p.fill('#mfa-setup-code', GOOD); await p.click('#mfa-setup-ok'); await p.waitForTimeout(400);
+  const von = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, off: !!document.querySelector('#mfa-setup-body button.btn-s') }));
+  check('on, with the "switch off" button', /פעיל/.test(von.body) && von.off, von);
   await p.click('#mfa-setup-body button.btn-s');
   await p.waitForTimeout(400);
   const off = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, n: window.__sb.factors.length }));
