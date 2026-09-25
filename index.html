@@ -32,7 +32,7 @@
      opaque response, which a service worker is not allowed to cache. That is
      why a cold open with no signal left the manager staring at a login screen
      that answers "Supabase אינו זמין" — see functions/sw.js.js VENDOR. -->
-<script defer crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script defer crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.0/dist/umd/supabase.js"></script>
 <!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
 <script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
 <style>
@@ -741,6 +741,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <input id="pw" type="password" placeholder="&#1505;&#1497;&#1505;&#1502;&#1492;" autocomplete="current-password">
     <div id="pw-err"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
+    <button id="login-pk-btn" type="button" style="display:none;margin-top:8px" onclick="_pkLogin()">&#55357;&#56593; &#1499;&#1504;&#1497;&#1505;&#1492; &#1506;&#1501; Face ID</button>
     <a onclick="_openForgotPwModal()" style="display:block;margin-top:8px;font-size:12px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
     <div class="login-sep">&#1488;&#1493;</div>
     <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">🦺</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
@@ -2003,6 +2004,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_modVisOpen()" data-kw="מודולים ניגודיות"><span class="sic">&#9881;&#65039;</span>הגדרות תצוגה</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()" data-kw="סיסמה"><span class="sic">&#128273;</span>שנה סיסמה</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_mfaSetupOpen()" data-kw="2fa &#1511;&#1493;&#1491; &#1488;&#1489;&#1496;&#1495;&#1492;"><span class="sic">&#128272;</span>&#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button>
+    <button class="sheet-btn" id="sheet-btn-passkey" data-role-gated="1" style="display:none" onclick="closeModal(m-modules-sheet);_pkRegister()" data-kw="face id passkey &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506;"><span class="sic">&#55357;&#56593;</span>Face ID / &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506; (&#1508;&#1497;&#1497;&#1500;&#1493;&#1496;)</button>
   </div>
   <div id="m-modules-empty" style="display:none;text-align:center;color:var(--t3);font-size:13px;padding:18px 0">אין מודול שמתאים לחיפוש</div>
 </div>
@@ -3230,7 +3232,7 @@ var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 var SB_ON=false;
 var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
-function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth'}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
+function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
@@ -16122,6 +16124,8 @@ function _applyRoleGates(){
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
   var mrBtn=g('sheet-btn-mr');
   if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
+  var pkBtn=g('sheet-btn-passkey');
+  if(pkBtn) pkBtn.style.display = isAdmin ? '' : 'none';
   var agentsBtn=g('sheet-btn-agents');
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
@@ -16337,7 +16341,10 @@ var _mfaMust=false;
 function _mfaRoleMust(){return !!(_currentUser&&_currentUser.username)&&!empIsOn();}
 function _mfaEnforce(){
   if(!_mfaRoleMust()||!_sbClient||!_sbClient.auth||!_sbClient.auth.mfa||!_sbToken)return Promise.resolve(false);
-  return _sbClient.auth.mfa.listFactors().then(function(r){
+  return _pkList().then(function(pks){
+    if(pks.length){_mfaMust=false;return {data:{totp:[{id:'passkey'}]}};}   // the passkey is the second factor
+    return _sbClient.auth.mfa.listFactors();
+  }).then(function(r){
     var on=(r&&r.data&&r.data.totp)||[];
     if(on.length){_mfaMust=false;return false;}
     _mfaMust=true;
@@ -16396,6 +16403,7 @@ function _mfaEnroll(){
     var id=e.data.id,t=e.data.totp||{};
     box.textContent='';
     if(_mfaMust)_mfaEl(box,'div','\u05dc\u05db\u05dc \u05de\u05d9 \u05e9\u05e0\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05dd \u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05d7\u05d5\u05d1\u05d4. \u05d4\u05e4\u05e2\u05dc \u05d0\u05d5\u05ea\u05d5 \u05e2\u05db\u05e9\u05d9\u05d5 \u05db\u05d3\u05d9 \u05dc\u05d4\u05de\u05e9\u05d9\u05da.','font-weight:700;color:var(--bad);margin-bottom:8px');
+    if(_mfaMust&&_isAdminUser()&&_pkOn())_mfaBtn(box,'\ud83d\udd11 \u05d0\u05d5 \u05d1\u05de\u05e7\u05d5\u05dd: Face ID / \u05d8\u05d1\u05d9\u05e2\u05ea \u05d0\u05e6\u05d1\u05e2 (\u05e4\u05d9\u05d9\u05dc\u05d5\u05d8)','btn-s',_pkRegister);
     _mfaEl(box,'div','1. \u05d4\u05ea\u05e7\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05d0\u05d9\u05de\u05d5\u05ea: Google Authenticator \u05d0\u05d5 Microsoft Authenticator.');
     _mfaEl(box,'div','2. \u05d4\u05e7\u05e9 \u05e2\u05dc \u05d4\u05d5\u05e1\u05e3 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05d0\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e0\u05e4\u05ea\u05d7 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d0\u05d7\u05e8, \u05e1\u05e8\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e8\u05d9\u05d1\u05d5\u05e2 \u05d0\u05d5 \u05d4\u05e2\u05ea\u05e7 \u05d0\u05ea \u05d4\u05de\u05e4\u05ea\u05d7.','margin-top:6px');
     var a=_mfaEl(box,'a','\u05d4\u05d5\u05e1\u05e3 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4','display:block;text-align:center;text-decoration:none;margin:10px 0 4px');a.className='btn btn-p';a.href=t.uri||'#';a.id='mfa-setup-uri';
@@ -16419,6 +16427,99 @@ function _mfaEnroll(){
   }).catch(_mfaSetupErr);
 }
 
+// After a session exists (password, or a passkey): admin walks in, anyone else
+// is checked against app_users for approval, then _finishLogin. Shared by
+// doLogin and _pkLogin so the two sign-ins cannot drift apart.
+function _loginResolveUser(lb,email,uname){
+  // Admin bypasses the approval gate
+  if(email===ADMIN_EMAIL){
+    _currentUser={username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'};
+    _finishLogin(lb);return;
+  }
+
+  // For non-admin users - check the app_users row for approval (active=true + full_name)
+  fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
+    headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
+  }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
+    var u=rows[0];
+    var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
+    if(!approved){
+      try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
+      _sbToken=null;_sbAuthPromise=null;
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+      _loginErr('\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d8\u05e8\u05dd \u05d0\u05d5\u05e9\u05e8 \u05e2\u05f4\u05d9 \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05e0\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df.');
+      return;
+    }
+    _currentUser={username:uname.toLowerCase()};
+    for(var k in u)_currentUser[k]=u[k];
+    _finishLogin(lb);
+  }).catch(function(err){
+    try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
+    _sbToken=null;_sbAuthPromise=null;
+    if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+    _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e8\u05e9\u05d0\u05d4: '+(err&&err.message||err));
+  });
+}
+// ---- Face ID / fingerprint sign-in (Supabase passkeys), pilot 25/09 ----------
+// Michael: password + code on every open is too much, and an app left open
+// is a problem. A passkey answers both: the phone's own biometrics are the
+// whole sign-in, so the lock can be short again. Supabase marks passkeys
+// experimental (supabase-js 2.105+, opt-in in _sbBoot), so this is a pilot:
+// registration is offered to the admin only, and the login button appears
+// only on a device that registered one. A user with a passkey is not made to
+// enrol an authenticator app: the passkey is the second factor. They must NOT
+// also hold a TOTP factor, or the database (mfa_required) would demand aal2
+// that a passkey session does not carry.
+var _PK_KEY='tfgn_passkey_dev';
+function _pkOn(){return !!(_sbClient&&_sbClient.auth&&typeof _sbClient.auth.signInWithPasskey==='function'&&typeof _sbClient.auth.registerPasskey==='function');}
+function _pkDev(){try{return localStorage.getItem(_PK_KEY)==='1';}catch(e){return false;}}
+function _pkList(){
+  if(!_pkOn()||!_sbClient.auth.passkey||typeof _sbClient.auth.passkey.list!=='function')return Promise.resolve([]);
+  return _sbClient.auth.passkey.list().then(function(r){return (r&&r.data)||[];}).catch(function(){return [];});
+}
+function _pkShowLoginBtn(){
+  var b=g('login-pk-btn');if(!b)return;
+  try{_sbBoot();}catch(e){}
+  b.style.display=(_pkOn()&&_pkDev())?'':'none';
+}
+window._pkLogin=function(){
+  _sbBoot();
+  if(!_pkOn()){_loginErr('\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd Face ID \u05dc\u05d0 \u05d6\u05de\u05d9\u05e0\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4');return;}
+  var lb=g('login-pk-btn');if(lb){lb.disabled=true;lb.dataset.txt=lb.textContent||'';lb.textContent='\u05de\u05d6\u05d4\u05d4...';}
+  var back=function(){if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd Face ID';}};
+  _sbClient.auth.signInWithPasskey().then(function(r){
+    if(!r||r.error||!r.data||!r.data.session){back();_loginErr('\u05d4\u05d6\u05d9\u05d4\u05d5\u05d9 \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d9\u05d7: '+String((r&&r.error&&r.error.message)||'')+' (\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1 \u05d1\u05e1\u05d9\u05e1\u05de\u05d4)');return;}
+    var s=r.data.session;
+    _sbToken=s.access_token;_sbAuthPromise=Promise.resolve(s);
+    var email=String((s.user&&s.user.email)||'');
+    var uname=email.split('@')[0];
+    if(!uname){back();_loginErr('\u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05d0 \u05d6\u05d5\u05d4\u05d4');return;}
+    _loginResolveUser(lb,email,uname);
+  }).catch(function(err){back();_loginErr('\u05d4\u05d6\u05d9\u05d4\u05d5\u05d9 \u05d1\u05d5\u05d8\u05dc \u05d0\u05d5 \u05e0\u05db\u05e9\u05dc'+(err&&err.message?': '+err.message:''));});
+};
+// From the settings sheet (admin only while piloting) or from the mandatory
+// two-factor window. On success the device remembers it has a passkey, and
+// the mandatory window, if open, lets go.
+window._pkRegister=function(){
+  _sbBoot();
+  if(!_isAdminUser()){toast('\u05e4\u05d9\u05d9\u05dc\u05d5\u05d8: Face ID \u05d6\u05de\u05d9\u05df \u05db\u05e8\u05d2\u05e2 \u05dc\u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  if(!_pkOn()){toast('Face ID \u05dc\u05d0 \u05d6\u05de\u05d9\u05df: \u05d4\u05e1\u05e4\u05e8\u05d9\u05d9\u05d4 \u05d0\u05d5 \u05d4\u05d4\u05d2\u05d3\u05e8\u05d4 \u05d1-Supabase \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05de\u05d5\u05db\u05e0\u05d5\u05ea');return;}
+  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8, \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  _sbClient.auth.registerPasskey().then(function(r){
+    if(!r||r.error)throw (r&&r.error)||new Error('registerPasskey');
+    try{localStorage.setItem(_PK_KEY,'1');}catch(e){}
+    // The mandatory window may have started a TOTP enrolment before the user
+    // chose Face ID; an unverified factor is clutter, drop it.
+    try{_sbClient.auth.mfa.listFactors().then(function(f){((f&&f.data&&f.data.all)||[]).filter(function(x){return x.status!=='verified';}).forEach(function(x){_sbClient.auth.mfa.unenroll({factorId:x.id});});}).catch(function(){});}catch(e){}
+    toast('Face ID / \u05d8\u05d1\u05d9\u05e2\u05ea \u05d0\u05e6\u05d1\u05e2 \u05d4\u05d5\u05e4\u05e2\u05dc\u05d5 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4. \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05d1\u05d0\u05d4: \u05db\u05e4\u05ea\u05d5\u05e8 "\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd Face ID"',{ok:true});
+    if(_mfaMust){_mfaMust=false;_mfaMustUi(false);closeModal('m-mfa-setup');}
+    var box=g('mfa-setup-body');if(box&&g('m-mfa-setup')&&g('m-mfa-setup').style.display==='block')_mfaSetupRender();
+  }).catch(function(err){
+    var m=String((err&&err.message)||err||'');
+    toast('\u05d4\u05e8\u05d9\u05e9\u05d5\u05dd \u05dc\u05d0 \u05d4\u05d5\u05e9\u05dc\u05dd: '+(/cancel|abort|NotAllowed/i.test(m)?'\u05d1\u05d5\u05d8\u05dc':m.substring(0,120)));
+  });
+};
+document.addEventListener('DOMContentLoaded',function(){setTimeout(_pkShowLoginBtn,900);});
 function doLogin(){
   var pw=g('pw');if(!pw)return;
   var unameEl=g('uname');
@@ -16472,34 +16573,7 @@ function doLogin(){
       return;
     }
 
-    // Admin bypasses the approval gate
-    if(email===ADMIN_EMAIL){
-      _currentUser={username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'};
-      _finishLogin(lb);return;
-    }
-
-    // For non-admin users — check the app_users row for approval (active=true + full_name)
-    fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
-      headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
-    }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
-      var u=rows[0];
-      var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
-      if(!approved){
-        try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
-        _sbToken=null;_sbAuthPromise=null;
-        if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
-        _loginErr('\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d8\u05e8\u05dd \u05d0\u05d5\u05e9\u05e8 \u05e2\u05f4\u05d9 \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05e0\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df.');
-        return;
-      }
-      _currentUser={username:uname.toLowerCase()};
-      for(var k in u)_currentUser[k]=u[k];
-      _finishLogin(lb);
-    }).catch(function(err){
-      try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
-      _sbToken=null;_sbAuthPromise=null;
-      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
-      _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e8\u05e9\u05d0\u05d4: '+(err&&err.message||err));
-    });
+    _loginResolveUser(lb,email,uname);
   }).catch(function(){
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
