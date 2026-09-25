@@ -34,7 +34,7 @@ const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.
 // so it needs crossorigin="anonymous" on the tag (index.html) to come back as
 // a CORS response rather than an opaque one a worker may not cache.
 const VENDOR = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.0/dist/umd/supabase.js',
 ];
 
 self.addEventListener('install', (e) => {

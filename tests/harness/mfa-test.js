@@ -22,7 +22,7 @@ const GOOD = '123456';
 const stub = (o) => `
 (function(){
   var S = window.__sb = { factors: ${JSON.stringify(o.factors || [])}, aal: ${JSON.stringify(o.aal || 'aal1')},
-    session: ${JSON.stringify(o.session || null)}, signOuts: 0, updates: [], verifies: 0, enrolls: 0, n: 0 };
+    session: ${JSON.stringify(o.session || null)}, signOuts: 0, updates: [], verifies: 0, enrolls: 0, n: 0, passkeys: ${JSON.stringify(o.passkeys || [])}, pkLogins: 0 };
   function sess(email){ return { access_token: 'tok-' + S.aal, user: { email: email, is_anonymous: false, user_metadata: {} } }; }
   function verified(){ return S.factors.filter(function(f){ return f.status === 'verified' && f.factor_type === 'totp'; }); }
   window.supabase = { createClient: function(){ return { auth: {
@@ -35,6 +35,12 @@ const stub = (o) => `
       S.aal = 'aal1'; S.session = sess(c.email);
       return Promise.resolve({ data: { session: S.session, user: S.session.user }, error: null });
     },
+    // Passkeys (pilot 25/09): the stub keeps the registered passkeys like the
+    // server does. A passkey sign-in is aal1 (no TOTP in the session).
+    signInWithPasskey: function(){ S.pkLogins++; if (!S.passkeys.length) return Promise.resolve({ data: {}, error: { message: 'webauthn_credential_not_found' } });
+      S.aal = 'aal1'; S.session = sess('${ADMIN_EMAIL}'); return Promise.resolve({ data: { session: S.session, user: S.session.user }, error: null }); },
+    registerPasskey: function(){ var k = { id: 'pk' + (++S.n), friendly_name: 'iCloud Keychain' }; S.passkeys.push(k); return Promise.resolve({ data: k, error: null }); },
+    passkey: { list: function(){ return Promise.resolve({ data: S.passkeys.slice(), error: null }); } },
     updateUser: function(u){ S.updates.push({ aal: S.aal, keys: Object.keys(u) }); return Promise.resolve({ data: { user: {} }, error: null }); },
     mfa: {
       getAuthenticatorAssuranceLevel: function(){ return Promise.resolve({ data: { currentLevel: S.session ? S.aal : null, nextLevel: verified().length ? 'aal2' : S.aal } }); },
@@ -211,6 +217,45 @@ const USERS = { dani: DANI, vered: VERED };
   p = await boot({});
   const kiosk = await p.evaluate(() => { document.body.classList.add('emp-mode'); window._currentUser = { username: 'x' }; return _mfaRoleMust(); });
   check('_mfaRoleMust is false in kiosk mode', kiosk === false, kiosk);
+  await p.close();
+
+  console.log('\n8. Face ID (passkeys) pilot');
+  p = await boot({});
+  await login(p, 'admin');
+  await p.waitForTimeout(1200);
+  const pkBtn = await p.evaluate(() => Array.from(document.querySelectorAll('#mfa-setup-body button')).map((b) => b.textContent).filter((x) => /Face ID/.test(x)));
+  check('the mandatory window offers Face ID instead (admin, pilot)', pkBtn.length === 1, pkBtn);
+  await p.evaluate(() => Array.from(document.querySelectorAll('#mfa-setup-body button')).find((b) => /Face ID/.test(b.textContent)).click());
+  await p.waitForTimeout(400);
+  let pk = await p.evaluate(() => ({ n: window.__sb.passkeys.length, must: window._mfaMust, open: document.getElementById('m-mfa-setup').style.display === 'block', flag: localStorage.getItem('tfgn_passkey_dev'), totp: window.__sb.factors.length }));
+  check('registering releases the window, marks the device, enrols no TOTP', pk.n === 1 && !pk.must && !pk.open && pk.flag === '1' && pk.totp === 0, pk);
+  await p.close();
+
+  p = await boot({ passkeys: [{ id: 'pk9', friendly_name: 'iCloud Keychain' }] });
+  await p.addInitScript(() => { try { localStorage.setItem('tfgn_passkey_dev', '1'); } catch (e) {} });
+  await p.reload({ waitUntil: 'load' });
+  await p.waitForTimeout(1200);
+  let vis = await p.evaluate(() => { const b = document.getElementById('login-pk-btn'); return b && getComputedStyle(b).display !== 'none'; });
+  check('a device that registered one sees the Face ID button on the login screen', vis === true, vis);
+  await p.click('#login-pk-btn');
+  await p.waitForTimeout(1500);
+  s = await state(p);
+  pk = await p.evaluate(() => ({ logins: window.__sb.pkLogins, must: window._mfaMust, open: document.getElementById('m-mfa-setup').style.display === 'block', user: window._currentUser && window._currentUser.username }));
+  check('Face ID signs the admin in, no password, no code window', s.app && !s.codeWin && pk.logins === 1 && pk.user === 'admin', { s, pk });
+  check('and no mandatory window: the passkey is the second factor', !pk.must && !pk.open, pk);
+  await p.close();
+
+  p = await boot({ passkeys: [{ id: 'pk9' }] });
+  await p.waitForTimeout(1200);
+  vis = await p.evaluate(() => { const b = document.getElementById('login-pk-btn'); return b && getComputedStyle(b).display !== 'none'; });
+  check('a device that never registered one does not see the button', vis === false, vis);
+  await p.close();
+
+  p = await boot({});
+  await login(p, 'vered');
+  await p.waitForTimeout(1200);
+  const vBtn = await p.evaluate(() => Array.from(document.querySelectorAll('#mfa-setup-body button')).map((b) => b.textContent).filter((x) => /Face ID/.test(x)));
+  check('a non-admin is not offered Face ID yet (pilot)', vBtn.length === 0, vBtn);
   await p.close();
 
   console.log('\n6. change password with a factor: checking the old one signs in again');
