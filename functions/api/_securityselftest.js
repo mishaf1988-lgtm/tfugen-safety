@@ -118,7 +118,10 @@ export async function onRequest({ request }) {
     // stranger gets the short list: the tables that would hurt most, and both
     // buckets, since Storage is where this class of hole actually appeared.
     const SHORT = ['app_users', 'med', 'hearing_tests', 'emp', 'docs', 'ncr',
-      'inc', 'audit_log', 'password_reset_requests', 'record_history'];
+      'inc', 'audit_log', 'password_reset_requests', 'record_history',
+      // 2026-09-25: the trustee tables too, so open item #3 (an anonymous
+      // session reading the reports) shows up on this screen.
+      'trustee_reports', 'trustees', 'trustee_tasks', 'locations'];
 
     // One reader = one set of headers. The only difference between the two
     // strangers is whether an Authorization header is present.
@@ -134,11 +137,31 @@ export async function onRequest({ request }) {
           // Denied is the good answer. A 200 with 0 rows is equally good:
           // the policy let the query run and returned nothing.
           const readable = r.ok && n > 0;
+          // The four `open` tables used to be a fixed ⚠ whatever came back, so a
+          // clean result looked like a warning. Michael, 2026-09-25: no defect,
+          // no warning. The verdict now depends on who asked and what returned.
+          let expected, v;
+          if (!p.open) { expected = 'not readable'; v = verdict(!readable); }
+          else if (label === 'anon') {
+            // No session at all. The trustee screen signs in anonymously first,
+            // so 0 rows for a bare stranger is the correct answer.
+            expected = 'not readable without a session (the trustee screen signs in first)';
+            v = readable ? '⚠' : '✓';
+          } else if (p.t === 'trustee_reports') {
+            // Open item #3: an anonymous session reads every report, the manager
+            // note included. Stays a warning until that decision is made.
+            expected = 'open item #3: readable by any anonymous session, incl. the manager note';
+            v = readable ? '⚠' : '✓';
+          } else {
+            // The trustee screen needs these through its anonymous session.
+            expected = 'readable (the trustee screen needs it)';
+            v = readable ? '✓' : '⚠';
+          }
           return {
             id: label + ':' + p.t,
-            expected: p.open ? 'readable (the trustee screen needs it)' : 'not readable',
+            expected: expected,
             got: r.ok ? (n < 0 ? 'readable, count unknown' : n + ' rows') : 'denied (' + r.status + ')',
-            verdict: p.open ? '⚠' : verdict(!readable)
+            verdict: v
           };
         } catch (e) {
           return { id: label + ':' + p.t, got: 'fetch failed: ' + e.message, verdict: '⚠' };
@@ -207,7 +230,7 @@ export async function onRequest({ request }) {
 
     return jsonResp({
       scope: 'what a stranger sees',
-      note: 'counts only, never row contents. A trustee table marked readable is by design; confirm that is still what you want.',
+      note: 'counts only, never row contents. No finding is a tick. A warning on anonymous:trustee_reports is open item #3 - any anonymous session reads the reports, the manager note included.',
       caller: who.email,
       summary: counts,
       checks
