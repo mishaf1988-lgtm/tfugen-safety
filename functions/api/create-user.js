@@ -83,7 +83,12 @@ export async function onRequest({ request, env }) {
       // must_change_password: forces the user to set their own password on
       // the first successful login. The browser checks this flag after
       // signIn and shows the m-force-pw-change modal before continuing.
-      user_metadata: { username, full_name, must_change_password: true }
+      // The RLS policy pwchange_required reads it from app_metadata, which
+      // only the service key can write (a user can rewrite their own
+      // user_metadata and would otherwise release themself). The copy in
+      // user_metadata stays for the client and for the transition.
+      user_metadata: { username, full_name, must_change_password: true },
+      app_metadata: { must_change_password: true }
     })
   });
 

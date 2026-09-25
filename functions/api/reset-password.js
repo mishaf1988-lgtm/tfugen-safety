@@ -97,5 +97,25 @@ export async function onRequest({ request, env }) {
     return jsonResp({ error: 'password reset failed (' + updResp.status + '): ' + errText.slice(0, 300) }, 502, cors);
   }
 
+  // The RLS policy pwchange_required reads the flag from app_metadata (only
+  // the service key can write it). It is set in a SECOND request, after the
+  // password: a DB trigger clears the flag whenever encrypted_password
+  // changes, so sending both in one PUT could let the trigger wipe the flag
+  // that same statement set.
+  const existingApp = (targetUser && targetUser.app_metadata) || {};
+  const appResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
+    method: 'PUT',
+    headers: {
+      apikey: serviceKey,
+      Authorization: 'Bearer ' + serviceKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ app_metadata: Object.assign({}, existingApp, { must_change_password: true }) })
+  });
+  if (!appResp.ok) {
+    const errText = await appResp.text();
+    return jsonResp({ error: 'password reset flag failed (' + appResp.status + '): ' + errText.slice(0, 300) }, 502, cors);
+  }
+
   return jsonResp({ success: true, username, password: newPassword }, 200, cors);
 }

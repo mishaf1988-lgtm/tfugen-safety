@@ -34,6 +34,12 @@
 **שחזור אם אדמין איבד את הטלפון**: Supabase → Authentication → Users → המשתמש → מחיקת ה-factor. מיד אחרי זה הוא נכנס בסיסמה בלבד.
 **קישורים**: `migrations/2026-09-24_viewer_mfa_active.sql`, `migrations/2026-09-24_storage_drop_anon.sql`, STATUS «סקירה 2026-09-24»
 
+## 2026-09-25 — `must_change_password` נקרא מ-`app_metadata`, ורק שינוי סיסמה אמיתי משחרר אותו
+**החלטה**: מדיניות `pwchange_required` (49 טבלאות + Storage) קוראת את הדגל מ-`auth.jwt() -> 'app_metadata'` במקום `user_metadata`. הדגל נכתב בשרת (`create-user.js`, `reset-password.js` בבקשה שנייה אחרי הסיסמה) ונמחק על ידי טריגר על `auth.users` כש-`encrypted_password` משתנה. הלקוח מכבד כל אחד משני הדגלים ועדיין מנקה את העותק הישן ב-`user_metadata`.
+**סיבה**: Supabase security advisor סימן ERROR (`rls_references_user_metadata`): `user_metadata` הוא של המשתמש, `updateUser({data:{must_change_password:false}})` מנקה אותו בלי להחליף סיסמה, וסיסמה זמנית שהוכתבה בטלפון (וידועה למי שהכתיב) ממשיכה לעבוד. `app_metadata` נכתב רק עם מפתח השירות, והטריגר לא מאמין ללקוח בכלל.
+**סיכונים שהתקבלו במודע**: (1) הטריגר רץ בתור `supabase_auth_admin`: המיגרציה נותנת לו USAGE על `private` ו-EXECUTE על הפונקציה, אחרת כל שינוי סיסמה ב-Auth היה נופל. (2) בחלון שבין מיזוג הקוד להרצת המיגרציה משתמש חדש שכבר החליף סיסמה יתבקש להחליף פעם נוספת אחרי המיגרציה (הדגל ב-`app_metadata` נשאר עד שינוי סיסמה נוסף). (3) הרצת המיגרציה = שינוי 50 policies קיימות, ולכן רק באישור מפורש של מיכאל.
+**קישורים**: `migrations/2026-09-25_pwchange_app_metadata.sql` · `tests/harness/pwchange-app-metadata-test.mjs` (21) · פנטסט 24/09 #2 · lint 0015.
+
 ## 2026-09-25 — פיילוט כניסה ב-Face ID / טביעת אצבע (passkeys של Supabase), קודם על הטלפון של מיכאל
 **החלטה**: passkey הוא מסלול כניסה מלא (בלי סיסמה, בלי קוד) ומחליף את הגורם השני למי שרשם אחד. supabase-js עודכן מ-2.45.4 ל-2.105.0 (המינימום המתועד ל-passkeys), עם `experimental:{passkey:true}` ב-`_sbBoot`. הרישום מוצע לאדמין בלבד בזמן הפיילוט (מסך המודולים, ומתוך חלון הדו-שלבי החובה); כפתור «כניסה עם Face ID» מופיע רק במכשיר שרשם passkey (`tfgn_passkey_dev`). `_loginResolveUser` הופרד מ-`doLogin` ומשמש את שני מסלולי הכניסה. מי שיש לו passkey פטור מחלון האימות החובה, **ואסור** שיהיה לו גם גורם TOTP מאומת: סשן passkey הוא `aal1`, ו-`mfa_required` ב-DB היה חוסם אותו.
 **סיבה**: מיכאל 25/09: סיסמה + קוד בכל פתיחה «מסובך», ו«האפליקציה נשארת פתוחה זה בעיה». שתי הדרישות סותרות עם סיסמה וקוד, ומתיישבות עם ביומטריה: הפתיחה מחדש היא מבט אחד, ואז הנעילה יכולה לחזור ל«בכל פתיחה». Supabase לא מציעה WebAuthn כגורם שני (רק TOTP ו-SMS), אבל מציעה passkeys ככניסה ראשית, ניסיוני.
