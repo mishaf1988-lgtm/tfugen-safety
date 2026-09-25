@@ -108,7 +108,7 @@ const USERS = { dani: DANI, vered: VERED };
   check('closeModal and the overlay leave it open', m.open && m.must, m);
   await p.close();
 
-  console.log('\n1b. the same for a manager; not for a viewer');
+  console.log('\n1b. the same for a manager and a viewer');
   p = await boot({});
   await login(p, 'dani');
   await p.waitForTimeout(1200);
@@ -119,7 +119,7 @@ const USERS = { dani: DANI, vered: VERED };
   await login(p, 'vered');
   await p.waitForTimeout(1200);
   m = await must(p);
-  check('viewer without a factor: nothing opens', !m.open && !m.must, m);
+  check('viewer without a factor: mandatory too (everyone with a password, 25/09)', m.open && m.must, m);
   await p.close();
 
   console.log('\n2. a second factor: the password alone is not enough');
@@ -196,23 +196,25 @@ const USERS = { dani: DANI, vered: VERED };
   check('reopened from the menu: active, and no "switch off" for an admin', /פעיל/.test(again.body) && !again.off && /חובה/.test(again.body), again);
   await p.close();
 
-  console.log('\n5b. a viewer can still turn it on and off');
+  console.log('\n5b. a viewer enrols the same way and cannot switch off either');
   p = await boot({});
   await login(p, 'vered');
   await p.waitForTimeout(1200);
-  await p.evaluate(() => _mfaSetupOpen());
-  await p.waitForTimeout(300);
   body = await p.evaluate(() => document.getElementById('mfa-setup-body').textContent);
-  check('off, and not mandatory', /סיסמה לבדה מספיקה/.test(body) && !/חובה/.test(body), body.slice(0, 80));
+  check('mandatory window for the viewer', /סיסמה לבדה מספיקה/.test(body) && /חובה/.test(body), body.slice(0, 80));
   await p.click('#mfa-setup-body button.btn-p');
   await p.waitForTimeout(400);
-  await p.fill('#mfa-setup-code', GOOD); await p.click('#mfa-setup-ok'); await p.waitForTimeout(400);
-  const von = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, off: !!document.querySelector('#mfa-setup-body button.btn-s') }));
-  check('on, with the "switch off" button', /פעיל/.test(von.body) && von.off, von);
-  await p.click('#mfa-setup-body button.btn-s');
-  await p.waitForTimeout(400);
-  const off = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, n: window.__sb.factors.length }));
-  check('switching off (after confirming) removes the factor', off.n === 0 && /סיסמה לבדה מספיקה/.test(off.body), off);
+  await p.fill('#mfa-setup-code', GOOD); await p.click('#mfa-setup-ok'); await p.waitForTimeout(500);
+  await p.evaluate(() => _mfaSetupOpen());
+  await p.waitForTimeout(300);
+  const von = await p.evaluate(() => ({ body: document.getElementById('mfa-setup-body').textContent, off: !!document.querySelector('#mfa-setup-body button.btn-s'), must: window._mfaMust, n: window.__sb.factors.filter((f) => f.status === 'verified').length }));
+  check('on, released, and no "switch off" button', /פעיל/.test(von.body) && !von.off && !von.must && von.n === 1, von);
+  await p.close();
+
+  console.log('\n5c. the trustee kiosk (anonymous, code only) is untouched');
+  p = await boot({});
+  const kiosk = await p.evaluate(() => { document.body.classList.add('emp-mode'); window._currentUser = { username: 'x' }; return _mfaRoleMust(); });
+  check('_mfaRoleMust is false in kiosk mode', kiosk === false, kiosk);
   await p.close();
 
   console.log('\n6. change password with a factor: checking the old one signs in again');
