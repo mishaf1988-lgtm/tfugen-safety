@@ -32,7 +32,7 @@
      opaque response, which a service worker is not allowed to cache. That is
      why a cold open with no signal left the manager staring at a login screen
      that answers "Supabase אינו זמין" — see functions/sw.js.js VENDOR. -->
-<script defer crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.0/dist/umd/supabase.js"></script>
+<script defer crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <!-- Phase 0 instrumentation: Web Vitals (LCP/INP/CLS), defer so it doesn't block parse. -->
 <script defer src="https://cdn.jsdelivr.net/npm/web-vitals@4/dist/web-vitals.iife.js"></script>
 <style>
@@ -16124,8 +16124,10 @@ function _applyRoleGates(){
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
   var mrBtn=g('sheet-btn-mr');
   if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
+  // Face ID pilot parked (Michael, 25/09: «נוותר בינתיים, אולי נחזור»): the
+  // library is back on 2.45.4, which has no passkey API, so the button stays hidden.
   var pkBtn=g('sheet-btn-passkey');
-  if(pkBtn) pkBtn.style.display = isAdmin ? '' : 'none';
+  if(pkBtn) pkBtn.style.display = 'none';
   var agentsBtn=g('sheet-btn-agents');
   if(agentsBtn) agentsBtn.style.display = isAdmin ? '' : 'none';
   var waCard=g('dash-wa-test');
@@ -16470,6 +16472,10 @@ function _loginResolveUser(lb,email,uname){
 // enrol an authenticator app: the passkey is the second factor. They must NOT
 // also hold a TOTP factor, or the database (mfa_required) would demand aal2
 // that a passkey session does not carry.
+// PARKED 25/09 (Michael): supabase-js is back on 2.45.4, which has no passkey
+// API, so _pkOn() is false everywhere and nothing below is reachable from the
+// UI. To resume: bump the library (page + sw.js.js) to 2.105+, unhide
+// sheet-btn-passkey in _applyRoleGates, enable Passkeys in Supabase (STATUS).
 var _PK_KEY='tfgn_passkey_dev';
 function _pkOn(){return !!(_sbClient&&_sbClient.auth&&typeof _sbClient.auth.signInWithPasskey==='function'&&typeof _sbClient.auth.registerPasskey==='function');}
 function _pkDev(){try{return localStorage.getItem(_PK_KEY)==='1';}catch(e){return false;}}
