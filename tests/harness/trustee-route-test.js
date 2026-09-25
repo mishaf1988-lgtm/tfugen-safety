@@ -75,6 +75,8 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
     /ליקוי: פנסי אזהרה/.test(wa.text) && /אזור: חומר גלם/.test(wa.text) && /משימה: 1\./.test(wa.text) && /על ידי לב/.test(wa.text)
     && /תמונה: https:\/\/sb\.co\/.*r1\.jpg/.test(wa.text) && /לטיפול: חשמל - דני, עד 30\/09\/2026/.test(wa.text) && /הנחיות: לבדוק גם/.test(wa.text) && /מספר ממצא: r1/.test(wa.text), wa.text);
   check('...and only keyboard characters (no long dash, no «», no middle dot)', !NON_KEYBOARD.test(wa.text), wa.text.match(NON_KEYBOARD));
+  // 25/09: a link that opens the finding itself for anyone who has the app.
+  check('the text carries a deep link to this finding (production URL off https)', /לפתיחה באפליקציה: https:\/\/tapugan-safety\.pages\.dev\/\?tru=r1/.test(wa.text), wa.text.split('\n').slice(-2));
   check('the routing note is written once, names who and until when', wa.upd.length === 1 && wa.upd[0].t === 'trustee_reports' && /נותב לחשמל - דני עד 30\/09\/2026 \(וואטסאפ/.test(wa.note), { upd: wa.upd, note: wa.note });
   check('the recipient is remembered on the device', wa.contacts.length === 1 && wa.contacts[0].name === 'דני' && wa.contacts[0].phone === '050-123-4567' && wa.contacts[0].role === 'חשמל', wa.contacts);
   check('the manager is told', wa.toasts.some(t => /וואטסאפ/.test(t)), wa.toasts);
@@ -134,6 +136,21 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
   check('no «תמונה:» line for a pending photo; who/due line still well-formed', !/תמונה:/.test(pend) && /לטיפול: אחזקה\n/.test(pend + '\n'), pend);
 
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
+  console.log('\n6. the deep link opens the finding');
+  const dl = await page.evaluate(async () => {
+    goPage('dash');
+    window._truDeepId = 'r1'; window._isAdmin = true;
+    rDash();
+    await new Promise((r) => setTimeout(r, 700));
+    const row = document.querySelector('tr[data-tru-row="r1"]');
+    return { cur: CUR, consumed: window._truDeepId === null, row: !!row, lit: !!(row && row.style.background), url: _truLink({ id: 'a b' }) };
+  });
+  check('?tru=<id> lands on the trustees page, on that row, highlighted, once', dl.cur === 'trustees' && dl.row && dl.lit && dl.consumed, dl);
+  check('the id is url-encoded in the link', /\?tru=a%20b$/.test(dl.url), dl.url);
+  const kiosk = await page.evaluate(async () => { window._truDeepId = 'r1'; window._isAdmin = false; rDash(); await new Promise((r) => setTimeout(r, 100)); return window._truDeepId; });
+  check('without a signed-in session (kiosk) the link is kept, not consumed', kiosk === 'r1', kiosk);
+  await page.evaluate(() => { window._truDeepId = null; });
+
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
