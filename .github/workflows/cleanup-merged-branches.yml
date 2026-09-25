@@ -1,0 +1,72 @@
+# Deletes remote branches whose pull request was merged (squash merges leave
+# the branch behind, and the repo had 500+ of them by 2026-09-25). Run it from
+# the Actions tab: "report" only lists what would go, "delete" deletes.
+#
+# Safety: main is never touched; a branch is deleted only if a merged PR has
+# it as head AND its last commit is older than min_age_days (so a branch that
+# got new commits after its PR merged, or was pushed minutes ago, stays).
+# Branches without a merged PR are only counted, never deleted.
+name: cleanup-merged-branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "report = list only, delete = delete merged branches"
+        type: choice
+        default: report
+        options: [report, delete]
+      min_age_days:
+        description: "skip branches whose last commit is younger than this"
+        default: "2"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: List merged pull request heads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/pulls?state=closed&per_page=100" \
+            --jq '.[] | select(.merged_at != null) | .head.ref' | sort -u > merged_heads.txt
+          echo "merged PR heads: $(wc -l < merged_heads.txt)"
+      - name: Decide
+        env:
+          MODE: ${{ inputs.mode }}
+          MIN_AGE: ${{ inputs.min_age_days }}
+        run: |
+          now=$(date +%s); cutoff=$(( now - MIN_AGE*86400 ))
+          : > delete.txt; : > young.txt; : > unmerged.txt
+          git for-each-ref --format='%(committerdate:unix) %(refname:short)' refs/remotes/origin \
+          | while read -r ts ref; do
+              b="${ref#origin/}"
+              [ "$b" = "main" ] && continue
+              [ "$b" = "HEAD" ] && continue
+              if grep -qxF "$b" merged_heads.txt; then
+                if [ "$ts" -lt "$cutoff" ]; then echo "$b" >> delete.txt; else echo "$b" >> young.txt; fi
+              else
+                echo "$b" >> unmerged.txt
+              fi
+            done
+          echo "=== would delete (merged PR, older than $MIN_AGE days): $(wc -l < delete.txt)"
+          echo "=== kept, merged but younger than $MIN_AGE days: $(wc -l < young.txt)"
+          echo "=== kept, no merged PR: $(wc -l < unmerged.txt)"
+          echo "--- no merged PR (kept) ---"; cat unmerged.txt
+          echo "--- would delete ---"; cat delete.txt
+      - name: Delete
+        if: ${{ inputs.mode == 'delete' }}
+        run: |
+          n=0
+          while read -r b; do
+            [ -z "$b" ] && continue
+            if git push origin --delete "$b" >/dev/null 2>&1; then n=$((n+1)); else echo "failed: $b"; fi
+          done < delete.txt
+          echo "deleted: $n"
