@@ -106,6 +106,11 @@ export async function onRequest({ request, env }) {
   const cors = corsHeaders(origin, allowed, 'POST,OPTIONS');
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+  // Read-only probe (25/09): is the shared secret configured on this deployment?
+  // A boolean only, so the env can be checked from a phone browser after a deploy.
+  if (request.method === 'GET' && new URL(request.url).searchParams.get('probe') === '1') {
+    return jsonResp({ ok: true, secret_configured: !!env.TRUSTEE_NOTIFY_SECRET }, 200, cors);
+  }
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
 
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
