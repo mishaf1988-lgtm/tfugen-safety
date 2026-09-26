@@ -12,7 +12,8 @@
 //   GET /api/vitre?op=review_schema&id=N        admin: schema of one form (question/answer dataKeys)
 //   GET /api/vitre?op=swagger[&path=/x][&q=..][&fresh=1]  admin: Vitre's own Swagger doc; no path = index of every path, path = that path + the models it references
 //   POST /api/vitre?op=review_submit_test       admin: ONE submission of the notification TEST form (id locked below)
-//   POST /api/vitre?op=notify                   staff: { to, title, details, link } -> notification form -> Vitre task + SMS/email to `to`
+//   POST /api/vitre?op=notify                   staff: { to, title, details, link, photo } -> notification form -> Vitre task + SMS/email to `to`
+//                                               photo = a link to OUR Storage; copied into Vitre (uploadImage) and answered under VITRE_PHOTO_KEY when that env var is set
 //
 // Read-only towards Vitre, with one deliberate exception: review_submit_test
 // (23/09 evening) submits the test form "בדיקת התראות - למחיקה" to learn whether
@@ -178,6 +179,64 @@ function collectRefs(sw, node, models, depth) {
       collectRefs(sw, v, models, depth + 1);
     }
   });
+}
+
+// ---- Photo inside the notification form (26/09) ----
+// Swagger (read through op=swagger, 26/09): POST /file/uploadImage takes
+// multipart/form-data with one field `file` and answers a plain STRING, the
+// stored path; /review/submit's data is { questionDataKey: string }, so that
+// string is the answer to the form's image question. The question's DataKey
+// lives in VITRE_PHOTO_KEY (Cloudflare): unset = the photo is left out and
+// the SMS still goes, so a missing question in Vitre can never block a hazard.
+const PHOTO_MAX_BYTES = 8 * 1024 * 1024;
+// Only OUR Storage may be fetched with the service key: any other host would
+// receive that key in the request headers.
+function ownStorageObject(env, link) {
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  let u;
+  try { u = new URL(String(link || '')); } catch (e) { return null; }
+  if (u.origin !== SUPABASE_URL) return null;
+  const m = u.pathname.match(/^\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([A-Za-z0-9._-]+)\/(.+)$/);
+  if (!m) return null;
+  return { bucket: m[1], path: m[2] };
+}
+async function fetchOwnPhoto(env, obj) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return { ok: false, error: 'missing SUPABASE_SERVICE_ROLE_KEY' };
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  try {
+    const r = await fetch(SUPABASE_URL + '/storage/v1/object/' + obj.bucket + '/' + obj.path, { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (!r.ok) return { ok: false, error: 'storage ' + r.status };
+    const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+    if (!/^image\//.test(ct)) return { ok: false, error: 'not an image (' + ct + ')' };
+    const bytes = await r.arrayBuffer();
+    if (bytes.byteLength > PHOTO_MAX_BYTES) return { ok: false, error: 'photo larger than 8MB' };
+    if (!bytes.byteLength) return { ok: false, error: 'empty file' };
+    return { ok: true, bytes, ct, name: obj.path.split('/').pop() || 'photo.jpg' };
+  } catch (e) { return { ok: false, error: String(e && e.message || e).slice(0, 200) }; }
+}
+// POST /file/uploadImage. Returns { ok, status, value } where value is the string
+// Vitre answered (JSON-quoted or bare text), or { ok:false, error }.
+async function vitreUploadImage(env, photo) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    const form = new FormData();
+    form.append('file', new Blob([photo.bytes], { type: photo.ct }), photo.name);
+    // No Content-Type here: fetch writes the multipart boundary itself.
+    const resp = await fetch(VITRE_BASE + '/file/uploadImage', { method: 'POST', headers: vitreHeaders(env), body: form, signal: ctrl.signal });
+    const text = await resp.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch (e) {}
+    if (!resp.ok) return { ok: false, status: resp.status, error: String((json && (json.message || json.description)) || text || '').slice(0, 300) };
+    const value = typeof json === 'string' ? json : String(text || '').trim();
+    if (!value) return { ok: false, status: resp.status, error: 'uploadImage answered 200 with an empty body' };
+    return { ok: true, status: resp.status, value };
+  } catch (e) {
+    return { ok: false, status: 0, error: String(e && e.message || e).slice(0, 200) };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function clampLimit(raw, dflt, max) {
@@ -486,11 +545,31 @@ export async function onRequest({ request, env }) {
     const data = { to, title };
     if (details) data.details = details;
     if (link) data.link = link;
+    // The finding's photo, into the form itself. A failure anywhere on this
+    // path is reported in `photo` and never stops the submission.
+    const photoLink = String((body && body.photo) || '').trim().slice(0, 1000);
+    let photo = null;
+    if (photoLink) {
+      const obj = ownStorageObject(env, photoLink);
+      if (!obj) return jsonResp({ error: 'photo must be a link to the app\'s own Storage' }, 400, cors);
+      const photoKey = String(env.VITRE_PHOTO_KEY || '').trim();
+      if (!/^[A-Za-z0-9_-]{1,60}$/.test(photoKey)) {
+        photo = { ok: false, skipped: true, error: 'VITRE_PHOTO_KEY unset: photo left out of the form' };
+      } else {
+        const got = await fetchOwnPhoto(env, obj);
+        if (!got.ok) photo = { ok: false, error: got.error };
+        else {
+          const up = await vitreUploadImage(env, got);
+          if (!up.ok) photo = { ok: false, error: 'uploadImage ' + (up.status || 'unreachable') + ': ' + up.error };
+          else { data[photoKey] = up.value; photo = { ok: true, key: photoKey, value: up.value.slice(0, 300), bytes: got.bytes.byteLength }; }
+        }
+      }
+    }
     const qs = '/review/submit?reviewId=' + VITRE_NOTIFY_REVIEW_ID + '&createdBy=' + encodeURIComponent(createdBy);
     const r = await vitrePost(env, qs, { data });
-    if (!r.ok) return jsonResp({ error: 'vitre ' + (r.status || 'unreachable'), detail: String((r.json && (r.json.message || r.json.description)) || r.text || r.networkError || '').slice(0, 300), upstreamStatus: r.status }, r.status >= 400 ? 502 : 504, cors);
+    if (!r.ok) return jsonResp({ error: 'vitre ' + (r.status || 'unreachable'), detail: String((r.json && (r.json.message || r.json.description)) || r.text || r.networkError || '').slice(0, 300), upstreamStatus: r.status, photo }, r.status >= 400 ? 502 : 504, cors);
     const j = r.json || {};
-    return jsonResp({ ok: true, to, appointmentId: j.id || null, previewUrl: j.previewUrl || null, status: j.status || null }, 200, cors);
+    return jsonResp({ ok: true, to, appointmentId: j.id || null, previewUrl: j.previewUrl || null, status: j.status || null, photo }, 200, cors);
   }
 
   // ---- Weekly safety-refresher import (Vitre task -> our toolbox row) ----

@@ -86,6 +86,9 @@ CRUD מלא לפי `externalId`: `GET/POST /Location`, `GET/PUT/PATCH /Location/
 - **Dictionary**: `GET /dictionary/get`, `GET /dictionary/get/{id}`, `POST /dictionary/add`, `PUT /dictionary/update`.
 - **EmployeeCustomProperty**: CRUD לשדות מותאמים של עובד.
 - **File**: `GET /file/get?filePath`, `POST /file/upload/{filename}`, `POST /file/uploadImage`, `POST /file/uploadFile` (להגשת טפסים עם תמונות).
+  - **`POST /file/uploadImage` (נקרא מה-Swagger 26/09):** גוף `multipart/form-data`, שדה אחד `file` (binary). תשובה 200 = **מחרוזת** (הנתיב בסטורג' של Vitre; `text/plain` או JSON). שגיאות = `PublicApiErrorResult` `{ statusCode, message, description }`.
+  - **`POST /review/submit` (26/09):** query `reviewId` (int, חובה), `createdBy` (מספר עובד חיצוני, חובה), `projectId` (אופציונלי). גוף `{ data: { "<question dataKey>": "<answer dataKey | externalId של ישות | מחרוזת>" } }`, כל הערכים מחרוזות. תשובה `AppointmentPublicResponseModel` `{ id, title, date, status (Draft/Canceled/Proccessing/PartiallyCompleted/Completed), projectReviewId, endDate, assignedUserId, fileId, completedDate, scorePercent, scoreNumeric, previewUrl }`. **תשובת תמונה** = המחרוזת ש-`uploadImage` החזיר, תחת ה-dataKey של שאלת התמונה (מומש ב-`op=notify`, מפתח השאלה ב-`VITRE_PHOTO_KEY`; ממתין לאימות בהגשה אמיתית).
+  - **`PUT /review/submit` (26/09):** מעדכן הגשה קיימת: query `createdBy` + `appointmentId`, אותו גוף `{ data }`. אפשרות להוסיף תמונה/תשובה להגשה שכבר נשלחה.
 - **Deeplink**: מדבקות QR (`/deeplink/batch`, `/deeplink/{linkId}/claim`).
 - **SafetyPlan**: קריאה בלבד של תוכניות בטיחות חתומות: `GET /safety-plan`, `/safety-plan/{id}`, `/safety-plan/{id}/version`, `/safety-plan/{id}/version/download` (PDF).
 - **System**: `GET /System/ping` (בלי אימות), `GET /System/get-review-result-schema`.
