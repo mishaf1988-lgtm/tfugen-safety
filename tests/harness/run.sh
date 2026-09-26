@@ -21,6 +21,9 @@ filter="${1:-}"; fail=0
 # printed, which made a broken suite indistinguishable from a passing one.
 NO_ASSERTIONS="notif-scan-test.js sc-test.js"
 for f in *.js *.mjs *.py; do
+  # visual-audit.js is the on-demand phone sweep (~5 min per width, screenshots
+  # to a folder), not a pass/fail suite. Run it by name; see README.
+  [ "$f" = "visual-audit.js" ] && continue
   [ -n "$filter" ] && [[ "$f" != *"$filter"* ]] && continue
   printf '%-28s ' "$f"
   case "$f" in
