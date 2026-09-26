@@ -10052,6 +10052,17 @@ window._popMenu=function(anchor,menuId,fill){
   var mr=menu.getBoundingClientRect();
   if(mr.left<8){menu.style.right='auto';menu.style.left='8px';}
   else if(mr.right>window.innerWidth-8){menu.style.right='8px';}
+  // And inside it vertically. A row menu opened from the last card of a phone
+  // page (Michael, 2026-09-26: the trustee finding's row menu, with "delete
+  // report" as its 6th item) ran past the bottom edge, and a fixed menu cannot be
+  // scrolled to. Flip above the anchor when there is room; otherwise pin to
+  // the top and let the menu itself scroll.
+  var vh=window.innerHeight;
+  if(mr.bottom>vh-8){
+    var above=rect.top-4-mr.height;
+    if(above>=8)menu.style.top=above+'px';
+    else{menu.style.top='8px';menu.style.maxHeight=(vh-16)+'px';menu.style.overflowY='auto';}
+  }
   setTimeout(function(){document.addEventListener('click',outside,true);document.addEventListener('keydown',keyEsc,true);},50);
 };
 // A3: per-row menus for the dense lists. Edit / delete are skipped for
