@@ -2,6 +2,8 @@
 
 מקור: `https://publicapi.hbinov.com/swagger/index.html` (JSON: `/api-docs/v1/swagger.json`). הודבק על ידי מיכאל 2026-09-23. הקובץ הזה הוא תקציר לעבודה, לא העתק; כשמשהו לא ברור, לפתוח את ה-Swagger.
 
+**מהטלפון (26/09):** דשבורד → כלי Vitre → כפתור «📜 Swagger» (אדמין בלבד) → נתיב, למשל `/file/uploadImage`. השרת (`op=swagger` ב-`functions/api/vitre.js`) מוריד את ה-Swagger של Vitre ומחזיר את הנתיב עם המודלים שהוא מפנה אליהם; ריק = רשימת כל הנתיבים (`&q=` מסנן). «העתק» ולהדביק לצ'אט. הענן חסום מול Vitre, זו הדרך היחידה ש-Claude רואה את הסכמה.
+
 ## אימות
 
 | header | ערך | מקור בממשק Vitre |

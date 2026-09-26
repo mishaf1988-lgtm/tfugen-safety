@@ -10,6 +10,7 @@
 //   GET /api/vitre?op=training&id=N[&copy=1]    one task as a toolbox row (presenter, date, depts); copy=1 also copies the photo to our Storage
 //   GET /api/vitre?op=training_photo&id=N       fresh 5-minute link to the task's photo, served from Vitre's storage
 //   GET /api/vitre?op=review_schema&id=N        admin: schema of one form (question/answer dataKeys)
+//   GET /api/vitre?op=swagger[&path=/x][&q=..][&fresh=1]  admin: Vitre's own Swagger doc; no path = index of every path, path = that path + the models it references
 //   POST /api/vitre?op=review_submit_test       admin: ONE submission of the notification TEST form (id locked below)
 //   POST /api/vitre?op=notify                   staff: { to, title, details, link } -> notification form -> Vitre task + SMS/email to `to`
 //
@@ -135,6 +136,50 @@ async function vitrePost(env, path, body) {
   }
 }
 
+// ---- Swagger slice (26/09) ----
+// The cloud session cannot reach Vitre and Michael works from the phone, so the
+// server fetches Vitre's own Swagger document and hands back one path with the
+// models it references. Read-only. The document is public in Swagger UI, so it
+// is asked for without the keys first and with them if Vitre says otherwise.
+// Kept in the isolate for 10 minutes: one download serves a whole reading session.
+const SWAGGER_PATH = '/api-docs/v1/swagger.json';
+const SWAGGER_TTL_MS = 10 * 60 * 1000;
+let _swaggerCache = { at: 0, json: null };
+async function swaggerDoc(env, fresh) {
+  if (!fresh && _swaggerCache.json && (Date.now() - _swaggerCache.at) < SWAGGER_TTL_MS) return { ok: true, json: _swaggerCache.json, cached: true };
+  let r = await vitreGet(env, SWAGGER_PATH, false);
+  if (!r.ok || !r.json) r = await vitreGet(env, SWAGGER_PATH, true);
+  if (!r.ok || !r.json || typeof r.json !== 'object') return { ok: false, r };
+  _swaggerCache = { at: Date.now(), json: r.json };
+  return { ok: true, json: r.json, cached: false };
+}
+// '#/definitions/X' (Swagger 2) or '#/components/schemas/X' (OpenAPI 3) -> that node, or null.
+function swaggerRef(sw, ref) {
+  if (typeof ref !== 'string' || ref.slice(0, 2) !== '#/') return null;
+  const segs = ref.slice(2).split('/').map(s => s.replace(/~1/g, '/').replace(/~0/g, '~'));
+  let n = sw;
+  for (const s of segs) { if (!n || typeof n !== 'object') return null; n = n[s]; }
+  return n === undefined ? null : n;
+}
+// Every $ref under `node`, and under the models those refs name, into `models`
+// keyed by the ref string. A model is registered before it is walked, so a
+// self-referencing schema ends instead of looping. Capped at 60 models.
+function collectRefs(sw, node, models, depth) {
+  if (!node || typeof node !== 'object' || depth > 20) return;
+  if (Array.isArray(node)) { node.forEach(x => collectRefs(sw, x, models, depth + 1)); return; }
+  Object.keys(node).forEach(k => {
+    const v = node[k];
+    if (k === '$ref' && typeof v === 'string') {
+      if (models[v] !== undefined || Object.keys(models).length >= 60) return;
+      const target = swaggerRef(sw, v);
+      models[v] = target === null ? { missing: true } : target;
+      if (target) collectRefs(sw, target, models, 0);
+    } else if (v && typeof v === 'object') {
+      collectRefs(sw, v, models, depth + 1);
+    }
+  });
+}
+
 function clampLimit(raw, dflt, max) {
   const n = parseInt(raw, 10);
   if (!Number.isFinite(n) || n <= 0) return dflt;
@@ -221,7 +266,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET' && POST_OPS[op]) return jsonResp({ error: 'POST required' }, 405, cors);
   // The form ops are admin-only: the schema names people, the submission writes to Vitre.
   const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
-  if ((op === 'review_schema' || op === 'review_submit_test') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
+  if ((op === 'review_schema' || op === 'review_submit_test' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
 
   const ID = env.VITRE_API_KEY_ID;
   const SECRET = env.VITRE_API_KEY_SECRET;
@@ -358,6 +403,41 @@ export async function onRequest({ request, env }) {
     if (!r.ok) return upstreamError(r, cors);
     const cut = JSON.parse(JSON.stringify(r.json, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
     return jsonResp({ reviewId: id, schema: cut }, 200, cors);
+  }
+  // The Swagger document itself, sliced (see swaggerDoc above). Without ?path:
+  // an index of METHOD + path + summary (?q= filters it). With ?path: every
+  // path containing it (exact match wins), with the models its $refs name.
+  if (op === 'swagger') {
+    const doc = await swaggerDoc(env, url.searchParams.get('fresh') === '1');
+    if (!doc.ok) return upstreamError(doc.r, cors);
+    const sw = doc.json;
+    const paths = (sw.paths && typeof sw.paths === 'object') ? sw.paths : {};
+    const METHODS = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
+    const spec = sw.openapi || sw.swagger || null;
+    const info = sw.info ? { title: sw.info.title || null, version: sw.info.version || null } : null;
+    const cut = (v) => JSON.parse(JSON.stringify(v, (k, x) => (typeof x === 'string' && x.length > 600) ? x.slice(0, 600) + '...' : x));
+    const want = String(url.searchParams.get('path') || '').trim().toLowerCase();
+    if (!want) {
+      const index = [];
+      Object.keys(paths).forEach(p => {
+        const item = paths[p] || {};
+        METHODS.forEach(m => {
+          if (!item[m]) return;
+          const s = String(item[m].summary || item[m].description || '').slice(0, 120);
+          index.push({ method: m.toUpperCase(), path: p, summary: s || null });
+        });
+      });
+      const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
+      const rows = q ? index.filter(x => (x.path + ' ' + (x.summary || '')).toLowerCase().includes(q)) : index;
+      return jsonResp({ source: VITRE_BASE + SWAGGER_PATH, spec, info, cached: doc.cached, count: rows.length, total: index.length, paths: rows,
+        hint: 'pass ?path=/file/uploadImage for one path with the models it references' }, 200, cors);
+    }
+    const exact = Object.keys(paths).filter(p => p.toLowerCase() === want);
+    const hits = exact.length ? exact : Object.keys(paths).filter(p => p.toLowerCase().includes(want));
+    if (!hits.length) return jsonResp({ error: 'path not found in swagger', path: want, hint: 'op=swagger without path lists every path' }, 404, cors);
+    const models = {};
+    const matched = hits.slice(0, 10).map(p => { collectRefs(sw, paths[p], models, 0); return { path: p, item: paths[p] }; });
+    return jsonResp(cut({ source: VITRE_BASE + SWAGGER_PATH, spec, info, cached: doc.cached, path: want, matched, modelCount: Object.keys(models).length, models }), 200, cors);
   }
   // Step 2: one submission of the TEST form only. Body: { createdBy, data, projectId? }.
   // createdBy = the submitter's Vitre employee externalId; data = { questionDataKey: answerDataKey|value }.

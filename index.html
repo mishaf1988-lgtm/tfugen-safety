@@ -1034,6 +1034,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <button class="btn btn-d" onclick="_vitreTrainingProbe()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1492;&#1512;&#1497;&#1506;&#1504;&#1493;&#1503; &#1492;&#1513;&#1489;&#1493;&#1506;&#1497; &#1492;&#1488;&#1495;&#1512;&#1493;&#1503; &#1502;-Vitre &#1506;&#1501; &#1492;&#1496;&#1493;&#1508;&#1505; &#1493;&#1492;&#1511;&#1489;&#1510;&#1497;&#1501;, &#1499;&#1496;&#1511;&#1505;&#1496; &#1500;&#1492;&#1506;&#1514;&#1511;&#1492;. &#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;.">&#128270; &#1502;&#1489;&#1504;&#1492; &#1512;&#1497;&#1506;&#1504;&#1493;&#1503; (&#1488;&#1489;&#1495;&#1493;&#1503;)</button>
       <button class="btn btn-p" onclick="_vitreTrPreview()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1493;&#1513;&#1498; &#1488;&#1514; &#1492;&#1490;&#1513;&#1493;&#1514; &#1496;&#1493;&#1508;&#1505; &#1492;&#1512;&#1497;&#1506;&#1504;&#1493;&#1503; &#1492;&#1513;&#1489;&#1493;&#1506;&#1497; &#1502;-Vitre &#1500;&#1514;&#1493;&#1498; &#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;, &#1506;&#1501; &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492; &#1493;&#1489;&#1495;&#1497;&#1512;&#1492;. &#1512;&#1497;&#1510;&#1492; &#1495;&#1493;&#1494;&#1512;&#1514; &#1500;&#1488; &#1502;&#1499;&#1508;&#1497;&#1500;&#1492;.">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1512;&#1497;&#1506;&#1504;&#1493;&#1504;&#1497;&#1501; &#1502;-Vitre</button>
       <button class="btn btn-d" onclick="_vitreReviewSchema()" style="font-size:13px;white-space:nowrap" title="&#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;: &#1492;&#1505;&#1499;&#1502;&#1492; &#1513;&#1500; &#1496;&#1493;&#1508;&#1505; &#1492;&#1489;&#1491;&#1497;&#1511;&#1492; 11997 (&#1502;&#1508;&#1514;&#1495;&#1493;&#1514; &#1492;&#1513;&#1488;&#1500;&#1493;&#1514; &#1493;&#1492;&#1514;&#1513;&#1493;&#1489;&#1493;&#1514;)">&#129514; &#1505;&#1499;&#1502;&#1514; &#1496;&#1493;&#1508;&#1505; &#1492;&#1489;&#1491;&#1497;&#1511;&#1492;</button>
+      <button class="btn btn-d" onclick="_vitreSwagger()" style="font-size:13px;white-space:nowrap" title="&#1488;&#1491;&#1502;&#1497;&#1503;: &#1511;&#1496;&#1506; &#1502;&#1492;-Swagger &#1513;&#1500; Vitre &#1500;&#1508;&#1497; &#1504;&#1514;&#1497;&#1489; (&#1500;&#1502;&#1513;&#1500; /file/uploadImage) &#1506;&#1501; &#1492;&#1502;&#1493;&#1491;&#1500;&#1497;&#1501; &#1513;&#1492;&#1493;&#1488; &#1502;&#1508;&#1504;&#1492; &#1488;&#1500;&#1497;&#1492;&#1501;; &#1512;&#1497;&#1511; = &#1512;&#1513;&#1497;&#1502;&#1514; &#1499;&#1500; &#1492;&#1504;&#1514;&#1497;&#1489;&#1497;&#1501;. &#1511;&#1512;&#1497;&#1488;&#1492; &#1489;&#1500;&#1489;&#1491;">&#128220; Swagger</button>
       <button class="btn btn-d" onclick="_vitreReviewSubmitTest()" style="font-size:13px;white-space:nowrap" title="&#1492;&#1490;&#1513;&#1492; &#1488;&#1495;&#1514; &#1513;&#1500; &#1496;&#1493;&#1508;&#1505; &#1492;&#1489;&#1491;&#1497;&#1511;&#1492; 11997 &#1491;&#1512;&#1498; &#1492;-API &#1513;&#1500; Vitre, &#1500;&#1489;&#1491;&#1493;&#1511; &#1488;&#1501; &#1497;&#1493;&#1510;&#1488;&#1497;&#1501; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1513;&#1512;&#1514; &#1504;&#1506;&#1493;&#1500; &#1500;&#1496;&#1493;&#1508;&#1505; &#1492;&#1494;&#1492; &#1489;&#1500;&#1489;&#1491;.">&#129514; &#1492;&#1490;&#1513;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492; &#1491;&#1512;&#1498; &#1492;-API</button>
     </div>
     <div id="dash-vitre-result" style="font-size:11px;color:var(--t2);margin-top:6px"></div>
@@ -19037,6 +19038,20 @@ window._vitreReviewSchema=function(){
   _vitreJson('/api/vitre?op=review_schema&id='+_VITRE_TEST_REVIEW).then(function(res){
     if(res.ok)_vitreSchema=res.data.schema;
     _vitreShowJson(box,res,'\u05e1\u05db\u05de\u05ea \u05d8\u05d5\u05e4\u05e1 '+_VITRE_TEST_REVIEW);
+  }).catch(function(err){box.textContent='\u274c '+(err&&err.message||err);});
+};
+// Admin: one slice of Vitre's Swagger document (op=swagger). Michael reads the
+// request/response shapes from the phone instead of the Swagger UI on a PC;
+// the cloud session cannot reach Vitre, so he pastes the text back to Claude.
+window._vitreSwagger=function(){
+  if(!_isAdminUser()){toast('\u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
+  var box=g('dash-vitre-result');if(!box)return;
+  var p=prompt('\u05e0\u05ea\u05d9\u05d1 \u05d1-Swagger \u05e9\u05dc Vitre (\u05e8\u05d9\u05e7 = \u05e8\u05e9\u05d9\u05de\u05ea \u05db\u05dc \u05d4\u05e0\u05ea\u05d9\u05d1\u05d9\u05dd)','/file/uploadImage');
+  if(p===null)return;
+  p=String(p).trim();
+  box.textContent='\u23f3 \u05de\u05d5\u05e9\u05da \u05d0\u05ea \u05d4-Swagger \u05de-Vitre...';
+  _vitreJson('/api/vitre?op=swagger'+(p?'&path='+encodeURIComponent(p):'')).then(function(res){
+    _vitreShowJson(box,res,p?'Swagger '+esc(p):'Swagger: \u05db\u05dc \u05d4\u05e0\u05ea\u05d9\u05d1\u05d9\u05dd');
   }).catch(function(err){box.textContent='\u274c '+(err&&err.message||err);});
 };
 // Find the question "\u05d4\u05d0\u05dd \u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d4\u05d2\u05d9\u05e2\u05d4?" and its answer "\u05dc\u05d0" in whatever shape
