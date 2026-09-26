@@ -220,7 +220,7 @@ body.hc .card{box-shadow:var(--sh)!important;transform:none!important}
 @media(min-width:1080px){.kgrid{gap:14px}}
 
 /* Section divider used on the dashboard */
-.dash-section-title{margin:18px 0 6px;font-size:12px;color:var(--t2);font-weight:800;text-align:right;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-direction:row-reverse}
+.dash-section-title{margin:18px 0 6px;min-height:44px;font-size:12px;color:var(--t2);font-weight:800;text-align:right;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;flex-direction:row-reverse}
 .dash-section-title::before{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent 0%,#ddd 30%,#ddd 100%)}
 body.hc .dash-section-title::before{background:#000}
 
@@ -327,7 +327,7 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 .tbl-wrap{overflow-x:visible}
 .tbl-wrap table,.tbl-wrap thead,.tbl-wrap tbody,.tbl-wrap tr{display:block;width:auto}
 .tbl-wrap thead{display:none}
-.tbl-wrap tr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);transition:box-shadow .15s ease;display:grid;grid-template-columns:1fr;gap:8px 16px}
+.tbl-wrap tr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.06);transition:box-shadow .15s ease;display:flex;flex-wrap:wrap;gap:8px 16px}
 .tbl-wrap tr:active{box-shadow:0 1px 2px rgba(15,23,42,.06),0 4px 10px rgba(15,23,42,.10)}
 .tsk-row{display:grid;grid-template-columns:32px minmax(180px,1fr) 110px 100px 90px 130px 90px 160px;gap:10px;align-items:center}
 .tsk-row .tsk-act{white-space:nowrap;text-align:left}
@@ -340,12 +340,26 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
   .tsk-row>div:first-child{flex:none}
   .tsk-row>div:nth-child(2){flex:1 1 calc(100% - 42px)}
   .tsk-row>div:nth-child(n+3):not(.tsk-act){flex:0 0 auto}
+  /* A flex item defaults to min-width:auto, so a long description column
+     (the third cell) grew to its full text width and ran 240px off the left
+     edge of a 390px phone (visual audit, 2026-09-26). Let every cell shrink
+     and wrap instead. */
+  .tsk-row>div{min-width:0;max-width:100%;overflow-wrap:anywhere}
   .tsk-row .tsk-act{flex:1 0 100%;white-space:normal;text-align:right;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
 }
 .tbl-wrap tbody tr:nth-child(even) td{background:transparent}
 .tbl-wrap td{display:block;border:none;padding:0;text-align:right;white-space:normal;word-break:break-word;color:#1a1d23;font-size:14px;line-height:1.5;min-width:0}
 .tbl-wrap td::before{content:attr(data-label);display:block;color:var(--t3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
 .tbl-wrap td:not([data-label])::before,.tbl-wrap td[data-label=""]::before{display:none}
+/* Action cells (no label, one button each: view / PDF / delete) became
+   full-width blocks on the phone, so every row spent two or three extra lines
+   on buttons stacked under each other (visual audit, 2026-09-26). Flow them
+   side by side. Every label-less cell in the app holds only buttons, so no
+   text is affected. And a labelled cell with nothing in it showed a label
+   over empty space; it now shows a dash like the rows that already do. */
+.tbl-wrap td{flex:1 1 100%}
+.tbl-wrap td:not([data-label]),.tbl-wrap tr:not(.cap-note)>td[data-label=""]:not(.et){flex:0 0 auto;width:auto}
+.tbl-wrap td[data-label]:not([data-label=""]):empty::after{content:"\2014";color:var(--t3)}
 .tbl-wrap td.et{grid-column:1/-1;display:block;text-align:center;padding:20px 0}
 /* trustees findings (rTrustees): the first cell is a compact head line, no label; tighter block spacing */
 #tb-trustees td.tru-head{font-size:14px;line-height:1.4;margin-bottom:6px}
@@ -354,10 +368,10 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
 /* Wider viewports: pack fields into a 2-3 column grid per card so the
    layout feels efficient on desktop. Each cell still labeled. */
 @media(min-width:600px){
-  .tbl-wrap tr{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tbl-wrap tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(min-width:900px){
-  .tbl-wrap tr{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .tbl-wrap tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 body.hc th{background:var(--red)}
 body.hc tbody tr:nth-child(even) td{background:transparent}
@@ -520,7 +534,12 @@ body.hc .close-btn:hover,body.hc .close-btn:active{transform:none}
 .modal.is-fullscreen .close-btn{position:sticky;top:0;left:auto;right:0;float:right;font-size:15px;font-weight:700;padding:10px 16px;min-height:44px;background:#fff;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06);z-index:10;margin-left:0}
 .modal.is-fullscreen .modal-title{font-size:20px;padding-top:6px;clear:both}
 .modal.is-fullscreen .modal-footer{position:sticky;bottom:0;background:#fff;padding-top:10px;margin-top:14px;border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04)}
-.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+/* 1fr alone cannot shrink below an input's intrinsic width, so on a 320px
+   phone the two columns came out 167px each and the fields ran 38px off the
+   left edge of the modal (visual audit 2026-09-26). minmax(0,1fr) lets them
+   shrink; under 360px a single column reads better anyway. */
+@media (max-width:359px){.fgrid{grid-template-columns:minmax(0,1fr)}}
 .fw{grid-column:1/-1}
 .field{display:flex;flex-direction:column;gap:6px}
 label{font-size:13px;font-weight:700;color:var(--t2);letter-spacing:.1px}
@@ -635,9 +654,9 @@ body.emp-mode #pg-emp-home{display:block!important}
 .emp-btn.o{border-color:var(--warn);background:#fff8ed}
 .emp-btn.y{border-color:#eab308;background:#fefce8}
 .emp-btn.b{border-color:var(--blue);background:#eff6ff}
-.emp-toggle{display:block;width:100%;margin-top:22px;padding:11px;background:#f0f1f3;color:var(--t2);border:1px solid var(--border);border-radius:8px;font-family:'Heebo',Arial,sans-serif;font-size:12px;font-weight:700}
+.emp-toggle{display:block;width:100%;margin-top:22px;padding:11px;background:#f0f1f3;color:var(--t2);border:1px solid var(--border);border-radius:8px;font-family:'Heebo',Arial,sans-serif;font-size:12px;font-weight:700;min-height:44px}
 #emp-toast{position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,.2);display:none;max-width:calc(100vw - 32px);white-space:normal;text-align:center;line-height:1.4}
-.ti-done{flex:none;width:34px;height:34px;min-width:34px;border-radius:9px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1}
+.ti-done{flex:none;width:40px;height:40px;min-width:40px;border-radius:9px;border:1px solid #16a34a;background:#f0fdf4;color:#15803d;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1}
 .ti-done:active{background:#16a34a;color:#fff}
 #emp-mode-badge{display:none;background:#ecfdf5;color:#166534;border:1px solid #16a34a;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:700}
 body.emp-mode #emp-mode-badge{display:inline-block}
@@ -742,10 +761,10 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="pw-err"></div>
     <button id="login-btn">&#1499;&#1504;&#1497;&#1505;&#1492;</button>
     <button id="login-pk-btn" type="button" style="display:none;margin-top:8px" onclick="_pkLogin()">&#128273; &#1499;&#1504;&#1497;&#1505;&#1492; &#1506;&#1501; Face ID</button>
-    <a onclick="_openForgotPwModal()" style="display:block;margin-top:8px;font-size:12px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
+    <a onclick="_openForgotPwModal()" style="display:block;margin-top:4px;padding:13px 8px;font-size:13px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
     <div class="login-sep">&#1488;&#1493;</div>
     <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">🦺</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
-    <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</p>
+    <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2026</p>
   </div>
 </div>
 
@@ -936,7 +955,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="qa-btn" onclick="openModal('m-nm')"><span class="qa-ic">&#9889;</span><span>כמעט ונפגע</span></button>
     <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO &#8212; &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
   </div>
-  <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
+  <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="min-height:40px;display:flex;align-items:center;padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
   <!-- Phase 2 Agent 2: pending password reset requests inbox.
        Visible only to admin AND only when there are pending rows.
@@ -1027,7 +1046,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="dash-secaudit-result" style="font-size:11px;color:var(--t2);margin-top:6px;font-family:ui-monospace,monospace;white-space:pre-wrap;max-height:60vh;overflow-y:auto"></div>
     <div style="font-size:10px;color:var(--t3);margin-top:4px">&#1502;&#1502;&#1495;&#1497;&#1513; &#1488;&#1514; <code>/api/_securityselftest</code> &#1506;&#1501; ה-token &#1513;&#1500;&#1499;&#1501;, &#1499;&#1493;&#1500;&#1500; &#1489;&#1491;&#1497;&#1511;&#1493;&#1514; RLS &#1499;&#1488;&#1491;&#1502;&#1497;&#1503;</div>
   </div>
-  <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; &#1499;&#1500; &#1492;&#1494;&#1499;&#1493;&#1497;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1493;&#1514; | <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> &mdash; &#1502;&#1504;&#1492;&#1500; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 
@@ -1094,13 +1113,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-docs" class="page">
   <div class="row"><div class="page-title">&#1502;&#1505;&#1502;&#1499;&#1497; <span>ISO</span></div><button class="btn btn-p" onclick="openModal('m-doc')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1511;&#1496;&#1490;.</th><th scope="col">&#1490;&#1512;&#1505;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-docs"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-aud" class="page">
   <div class="row"><div class="page-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; <span>&#1508;&#1504;&#1497;&#1502;&#1497;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-aud')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1502;&#1489;&#1511;&#1512;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-aud"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <!-- NEAR-MISS PAGE -->
@@ -1639,7 +1658,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row"><div class="page-title">&#1514;&#1488;&#1493;&#1504;&#1493;&#1514; <span>&#1493;&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openNewIncModal()">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div id="inc-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;.</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-inc"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-tr" class="page">
@@ -1648,7 +1667,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="tr-dept"></div>
   </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-tr"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-rsk" class="page">
@@ -1669,13 +1688,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div id="rsk-matrix-host" style="overflow-x:auto"></div>
     </div>
   </div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-emp" class="page">
   <div class="row"><div class="page-title">&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</div><button class="btn btn-p" onclick="openModal('m-emp')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1496;&#1500;&#1508;&#1493;&#1503;</th><th scope="col">&#1502;&#1497;&#1497;&#1500;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-emp"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-ptw" class="page">
@@ -1683,13 +1702,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:#7f1d1d">&#128465;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1502;&#1505;'</th><th scope="col">&#1511;&#1489;&#1500;&#1503;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1513;&#1506;&#1493;&#1514;</th><th scope="col">&#1502;&#1511;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-ptw-view" class="page">
   <div class="row"><button class="btn btn-s" onclick="goPage('ptw')" style="font-size:13px">&#8594; &#1495;&#1494;&#1512;&#1492;</button><div class="page-title">&#1510;&#1508;&#1497;&#1497;&#1514; &#1492;&#1512;&#1513;&#1488;&#1492;</div></div>
   <div class="card" id="ptw-view-card" style="font-size:13px;line-height:2.2"></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-view" class="page">
@@ -1703,13 +1722,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="view-qr" style="font-size:13px;display:none;background:#0d9488" onclick="_viewShowQr(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1510;&#1490; QR (&#1500;&#1499;&#1500; &#1505;&#1493;&#1490;&#1497; &#1510;&#1497;&#1493;&#1491;)">&#128290;</button>
   </div>
   <div class="card" id="view-body" style="font-size:13px;line-height:2.2"></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-ppe" class="page">
   <div class="row"><div class="page-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; <span>PPE</span></div><button class="btn btn-p" onclick="openModal('m-ppe')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1508;&#1512;&#1496;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</th><th scope="col">&#1514;&#1493;&#1511;&#1507;</th><th scope="col">&#1502;&#1510;&#1489;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ppe"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 
@@ -1725,7 +1744,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="hearing-count" style="font-size:13px;color:var(--t2);margin-bottom:8px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1514;&quot;&#1494;</th><th scope="col">&#1490;&#1497;&#1500;</th><th scope="col">&#1514;&#1508;&#1511;&#1497;&#1491;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</th><th scope="col">&#1514;&#1511;&#1507; &#1506;&#1491;</th><th scope="col">&#1492;&#1502;&#1500;&#1510;&#1493;&#1514;</th><th scope="col">&#1489;&#1493;&#1491;&#1511;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hearing"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <!-- Hearing Excel Import Modal -->
@@ -1752,25 +1771,25 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-ins" class="page">
   <div class="row"><div class="page-title">&#1505;&#1497;&#1493;&#1512;&#1497; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ins')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1488;&#1494;&#1493;&#1512;</th><th scope="col">&#1502;&#1489;&#1510;&#1506;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col">&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ins"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-drl" class="page">
   <div class="row"><div class="page-title">&#1514;&#1512;&#1490;&#1497;&#1500;&#1497; <span>&#1495;&#1497;&#1512;&#1493;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-drl')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1502;&#1513;&#1514;&#1514;&#1508;&#1497;&#1501;</th><th scope="col">&#1502;&#1513;&#1498;</th><th scope="col">&#1510;&#1497;&#1493;&#1503;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-drl"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-ctr" class="page">
   <div class="row"><div class="page-title">&#1511;&#1489;&#1500;&#1504;&#1497;&#1501; <span>&#1493;&#1505;&#1508;&#1511;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-ctr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</th><th scope="col">&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</th><th scope="col">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-ctr"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-wst" class="page">
   <div class="row"><div class="page-title">&#1497;&#1493;&#1502;&#1503; <span>&#1508;&#1505;&#1493;&#1500;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-wst')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1511;')</th><th scope="col">&#1511;&#1493;&#1491; &#1488;&#1513;&#1508;&#1492;</th><th scope="col">&#1499;&#1500;&#1500; &#1508;&#1505;&#1493;&#1500;&#1514;</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-wst"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-hzm" class="page">
@@ -1779,13 +1798,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="hzm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="hzm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th scope="col">UN</th><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">MSDS</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-env" class="page">
   <div class="row"><div class="page-title">&#1504;&#1497;&#1496;&#1493;&#1512; <span>&#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</span></div><button class="btn btn-p" onclick="openModal('m-env')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</th><th scope="col">&#1502;&#1491;&#1491;</th><th scope="col">&#1514;&#1493;&#1510;&#1488;&#1492;</th><th scope="col">&#1504;&#1493;&#1512;&#1502;&#1492;</th><th scope="col">&#1505;&#1496;.</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-env"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-leg" class="page">
@@ -1809,13 +1828,13 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s btn-sm" id="leg-rv-tab-never" onclick="legReviewFilter('never')">&#1500;&#1500;&#1488; &#1505;&#1511;&#1497;&#1512;&#1492;</button>
   </div></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1492;&#1495;&#1493;&#1511;</th><th scope="col">&#1505;&#1493;&#1490;</th><th scope="col">&#1514;&#1495;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1505;&#1511;&#1497;&#1512;&#1492;</th><th scope="col">&#1506;&#1491;&#1499;&#1493;&#1503;</th><th scope="col">&#1502;&#1511;&#1493;&#1512;</th><th scope="col">&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</th></tr></thead><tbody id="tb-leg"></tbody></table></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 <div id="pg-lg" class="page">
   <div class="row"><div class="page-title">&#1497;&#1493;&#1502;&#1503; <span>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</span></div><button class="btn btn-d btn-sm" onclick="clearLog()">&#1504;&#1511;&#1492;</button></div>
   <div class="card"><div id="log-list"><p class="et">&#1488;&#1497;&#1503; &#1508;&#1506;&#1493;&#1500;&#1493;&#1514;</p></div></div>
-  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2025</div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
 </div>
 
 </div><!-- /main -->
@@ -2336,7 +2355,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492; (1-4)</label><select id="r-s"><option value="1">1 - &#1513;&#1493;&#1500;&#1497;&#1514; (&#1506;&#1494;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492;)</option><option value="2">2 - &#1511;&#1500;&#1492; (&#1496;&#1497;&#1508;&#1493;&#1500; &#1512;&#1508;&#1493;&#1488;&#1497;)</option><option value="3" selected>3 - &#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514; (&#1508;&#1490;&#1497;&#1506;&#1492;/&#1502;&#1495;&#1500;&#1492; 30+ &#1497;&#1493;&#1501;)</option><option value="4">4 - &#1495;&#1502;&#1493;&#1512;&#1492; (&#1502;&#1493;&#1493;&#1514; &#1488;&#1493; &#1504;&#1499;&#1493;&#1514;)</option></select></div>
     <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492;</label><textarea id="r-ac"></textarea></div>
     <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; (ISO 45001:6.1.2)</label><input type="date" id="r-last_review"></div>
-    <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1492;&#1510;&#1497;&#1506; P, S, &#1493;&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512; &#1493;&#1492;&#1514;&#1495;&#1493;&#1501;.</div><button type="button" id="rsk-ai-btn" onclick="_rskAI()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1491;&#1497;&#1512;&#1493;&#1490; &#1493;&#1502;&#1497;&#1496;&#1497;&#1490;&#1510;&#1497;&#1492;</button></div></div>
+    <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1492;&#1510;&#1497;&#1506; P, S, &#1493;&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512; &#1493;&#1492;&#1514;&#1495;&#1493;&#1501;.</div><button type="button" id="rsk-ai-btn" onclick="_rskAI()" style="min-height:40px;padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1491;&#1497;&#1512;&#1493;&#1490; &#1493;&#1502;&#1497;&#1496;&#1497;&#1490;&#1510;&#1497;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-rsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -2737,7 +2756,7 @@ id="m-ncr" style="display:none">
   <div style="font-size:11px;color:var(--t3);margin:12px 0 6px;font-weight:700">&#9888; &#1492;&#1506;&#1512;&#1499;&#1514; &#1505;&#1497;&#1499;&#1493;&#1503;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1502;&#1513;&#1502;&#1506;&#1493;&#1514; &#1492;&#1492;&#1497;&#1489;&#1496;</label><textarea id="ea-impact" rows="2" placeholder="לדוגמה: שימוש מוגבר באנרגיה עלול לגרום לצריכת יתר של משאבי טבע מוגבלים"></textarea></div>
-    <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><label style="display:flex;justify-content:space-between;align-items:center">&#129302; &#1488;&#1497;&#1505;&#1493;&#1507; &#1489; AI <button type="button" id="ea-ai-btn" onclick="_easpAI()" style="padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#1492;&#1510;&#1506; &#1502;&#1513;&#1502;&#1506;&#1493;&#1514; &#1493;&#1489;&#1511;&#1512;&#1493;&#1514;</button></label><div style="font-size:10px;color:#5a6070;margin-top:4px">&#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1502;&#1513;&#1502;&#1506;&#1493;&#1514;", "&#1489;&#1511;&#1512;&#1493;&#1514; &#1511;&#1497;&#1497;&#1502;&#1493;&#1514;" &#1493;-"&#1489;&#1511;&#1512;&#1493;&#1514; &#1504;&#1493;&#1505;&#1508;&#1493;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1492;&#1497;&#1489;&#1496; &#1493;&#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514;.</div></div>
+    <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><label style="display:flex;justify-content:space-between;align-items:center">&#129302; &#1488;&#1497;&#1505;&#1493;&#1507; &#1489; AI <button type="button" id="ea-ai-btn" onclick="_easpAI()" style="min-height:40px;padding:4px 10px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#1492;&#1510;&#1506; &#1502;&#1513;&#1502;&#1506;&#1493;&#1514; &#1493;&#1489;&#1511;&#1512;&#1493;&#1514;</button></label><div style="font-size:10px;color:#5a6070;margin-top:4px">&#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1502;&#1513;&#1502;&#1506;&#1493;&#1514;", "&#1489;&#1511;&#1512;&#1493;&#1514; &#1511;&#1497;&#1497;&#1502;&#1493;&#1514;" &#1493;-"&#1489;&#1511;&#1512;&#1493;&#1514; &#1504;&#1493;&#1505;&#1508;&#1493;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1492;&#1497;&#1489;&#1496; &#1493;&#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514;.</div></div>
     <div class="field fw"><label>&#1489;&#1511;&#1512;&#1493;&#1514; &#1511;&#1497;&#1497;&#1502;&#1493;&#1514;</label><textarea id="ea-controls" rows="2" placeholder="תיאור הבקרות הקיימות במפעל..."></textarea></div>
     <div class="field"><label>&#1505;&#1489;&#1497;&#1512;&#1493;&#1514; (P) &#1489;&#1508;&#1493;&#1506;&#1500;</label><select id="ea-pcurr"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492; (S) &#1489;&#1508;&#1493;&#1506;&#1500;</label><select id="ea-svcurr"><option value="">בחר</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
@@ -5577,7 +5596,7 @@ function ptwPrint(){
   parts.push('<tr><td>\u05de\u05e0\u05d4\u05dc: '+p.sg3n+'</td><td>'+p.sg3d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('<tr><td>\u05de\u05de\u05d5\u05e0\u05d4: '+p.sg4n+'</td><td>'+p.sg4d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('</table>');
-  parts.push('<p style="text-align:center;font-size:10px;color:#999">&copy; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e4\u05d5\u05d2\u05df 2025</p>');
+  parts.push('<p style="text-align:center;font-size:10px;color:#999">&copy; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e4\u05d5\u05d2\u05df 2026</p>');
   parts.push('</body></html>');
   w.document.write(parts.join(''));
   w.document.close();
@@ -7872,7 +7891,7 @@ function rEqi(){
         var on=(curF===key);
         return '<button onclick="eqiFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:10px 12px;min-height:44px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';
       }
-      var exportBtn='<button onclick="_eqiExportExpiredCsv()" title="CSV \u05e9\u05dc \u05db\u05dc \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5 — \u05d4\u05db\u05d9 \u05d9\u05e9\u05df \u05e7\u05d5\u05d3\u05dd" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;border:1px solid #cc1f1f;background:#fff;color:#cc1f1f;opacity:'+(expN?'1':'.55')+'">⬇ \u05d9\u05d9\u05e6\u05d5\u05d0 \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 ('+expN+')</button>';
+      var exportBtn='<button onclick="_eqiExportExpiredCsv()" title="CSV \u05e9\u05dc \u05db\u05dc \u05d4\u05e6\u05d9\u05d5\u05d3 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5 — \u05d4\u05db\u05d9 \u05d9\u05e9\u05df \u05e7\u05d5\u05d3\u05dd" style="font-family:inherit;cursor:pointer;border-radius:20px;min-height:40px;padding:6px 14px;font-size:12px;font-weight:700;border:1px solid #cc1f1f;background:#fff;color:#cc1f1f;opacity:'+(expN?'1':'.55')+'">⬇ \u05d9\u05d9\u05e6\u05d5\u05d0 \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 ('+expN+')</button>';
       eS.innerHTML=
         pill('exp','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3',expN,'#cc1f1f','#fce4e4','#991b1b')+
         pill('30','≤30 \u05d9\u05d5\u05dd',soonN,'#b45309','#fef3c7','#92400e')+
@@ -9971,7 +9990,9 @@ window._topMoreMenu=function(anchor){
   var existing=document.getElementById('top-more-menu');if(existing){existing.remove();return;}
   var menu=document.createElement('div');
   menu.id='top-more-menu';
-  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:200px;max-width:min(92vw,320px);font-family:inherit;direction:rtl';
+  menu.style.cssText='position:fixed;z-index:9999;background:#fff;border:1px solid #dde0e6;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);padding:6px 0;min-width:200px;max-width:min(92vw,320px);font-family:inherit;direction:rtl;max-height:calc(100vh - 72px);overflow-y:auto';
+  // 18 items: taller than a 320x568 phone (visual audit 2026-09-26). The menu
+  // scrolls inside itself instead of running past the bottom edge.
   var rect=anchor.getBoundingClientRect();
   menu.style.top=(rect.bottom+4)+'px';
   menu.style.right=Math.max(8,window.innerWidth-rect.right)+'px';
@@ -10883,7 +10904,7 @@ function rTasks(){
   if(!rows.length){
     tb.innerHTML='';
     var _emp=g('tb-tasks-cards');
-    if(_emp)_emp.innerHTML='<div style="text-align:center;padding:36px 20px;color:#64748b;font-size:14px;background:#fafbfc;border:1px dashed #cbd5e1;border-radius:10px;margin-top:8px">✅<br>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button onclick="openTskModal()" style="margin-top:10px;padding:8px 16px;background:#cc1f1f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></div>';
+    if(_emp)_emp.innerHTML='<div style="text-align:center;padding:36px 20px;color:#64748b;font-size:14px;background:#fafbfc;border:1px dashed #cbd5e1;border-radius:10px;margin-top:8px">✅<br>\u05d0\u05d9\u05df \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea<br><button onclick="openTskModal()" style="margin-top:10px;min-height:44px;padding:8px 16px;background:#cc1f1f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">+ \u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4</button></div>';
     if(typeof _tskBulkClear==='function')_tskBulkClear();
     return;
   }
@@ -11339,7 +11360,7 @@ function rRsk(){
     var revBadge=rev.state==='overdue'?'<span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #cc1f1f;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8 '+(rev.days||'?')+' \u05d9\u05de\u05d9\u05dd">\u26a0 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05e4\u05d2\u05d4</span>':
       rev.state==='soon'?'<span style="display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #d97706;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1\u05e2\u05d5\u05d3 \u05d9\u05de\u05d9\u05dd \u05de\u05e2\u05d8\u05d9\u05dd">\u23f3 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1-30 \u05d9\u05d5\u05dd</span>':
       rev.state==='never'?'<span style="display:inline-block;background:#fee2e2;color:#991b1b;border:1px solid #cc1f1f;font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05de\u05e2\u05d5\u05dc\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8">\u26a0 \u05dc\u05dc\u05d0 \u05e1\u05e7\u05d9\u05e8\u05d4</span>':'';
-    return '<tr><td>'+r.d.substring(0,25)+revBadge+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+String(r.d||'').substring(0,25)+revBadge+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
   }).join('');
   _rskMatrix();
 }
@@ -23015,7 +23036,7 @@ function _expPdf(){window.print();}
       row.setAttribute('data-exp-for',id);
       row.style.cssText='gap:6px;justify-content:flex-end;margin:4px 0 6px';
       row.innerHTML='<button class="btn btn-s" data-tb="'+id+'" onclick="_expXlsx(this.dataset.tb)" title="&#1497;&#1497;&#1510;&#1493;&#1488; Excel">&#128196; Excel</button>'+
-                    '<button class="btn btn-s" onclick="_expPdf()" title="&#1492;&#1491;&#1508;&#1505;&#1492; / PDF">&#128438; PDF</button>';
+                    '<button class="btn btn-s" onclick="_expPdf()" title="&#1492;&#1491;&#1508;&#1505;&#1492; / PDF">&#128424; PDF</button>';
       anchor.parentElement.insertBefore(row,anchor);
     });
   }
