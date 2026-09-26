@@ -134,6 +134,65 @@ const WIDTHS = [320, 390];
     check('a deliberately long label still fits on screen', r.left >= 0 && r.right <= r.vw, r);
   }
 
+  // 2026-09-26: the trustee finding is the last card on the page, so its ⋯
+  // sits near the bottom of the phone. The 6-item row menu opened downward
+  // and «מחק דיווח», the last item, was below the screen edge; being
+  // position:fixed it could not be scrolled into view. It must flip upward.
+  console.log('\n_popMenu anchored near the bottom edge (row menu of the last card)');
+  {
+    const r = await page.evaluate(async () => {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'position:fixed;bottom:120px;right:8px;width:44px;height:44px';
+      document.body.appendChild(btn);
+      window._popMenu(btn, 'probe-menu-2', function (item, sep) {
+        item('✅', 'אשר שהסגירה נבדקה');
+        item('↩', 'פתח מחדש');
+        item('📝', 'צור משימה (ניתוב למחלקה)');
+        item('📌', 'הערת ניתוב');
+        item('📤', 'שלח לטיפול (וואטסאפ / מייל / PDF)');
+        sep();
+        item('🗑', 'מחק דיווח', function () {}, true);
+      });
+      await new Promise((r2) => setTimeout(r2, 60));
+      const m = document.getElementById('probe-menu-2');
+      const mr = m.getBoundingClientRect();
+      const last = m.querySelectorAll('button');
+      const lr = last[last.length - 1].getBoundingClientRect();
+      const br = btn.getBoundingClientRect();
+      const out = { top: Math.round(mr.top), bottom: Math.round(mr.bottom), vh: window.innerHeight,
+        lastBottom: Math.round(lr.bottom), anchorTop: Math.round(br.top) };
+      m.remove(); btn.remove();
+      return out;
+    });
+    check('the whole menu is inside the viewport', r.top >= 0 && r.bottom <= r.vh, r);
+    check('the last item (delete) is visible', r.lastBottom <= r.vh, r);
+    check('it opened above the anchor', r.bottom <= r.anchorTop, r);
+  }
+
+  // And when there is no room above either (tiny viewport): pinned to the top
+  // and scrollable, never cut off.
+  {
+    await page.setViewportSize({ width: 390, height: 300 });
+    const r = await page.evaluate(async () => {
+      const btn = document.createElement('button');
+      btn.style.cssText = 'position:fixed;top:130px;right:8px;width:44px;height:44px';
+      document.body.appendChild(btn);
+      window._popMenu(btn, 'probe-menu-3', function (item, sep) {
+        for (let i = 0; i < 7; i++) item('•', 'פריט מספר ' + (i + 1));
+      });
+      await new Promise((r2) => setTimeout(r2, 60));
+      const m = document.getElementById('probe-menu-3');
+      const mr = m.getBoundingClientRect();
+      const out = { top: Math.round(mr.top), bottom: Math.round(mr.bottom), vh: window.innerHeight,
+        scrolls: m.scrollHeight > m.clientHeight, oy: getComputedStyle(m).overflowY };
+      m.remove(); btn.remove();
+      return out;
+    });
+    check('no room either way: the menu is clamped to the viewport', r.top >= 0 && r.bottom <= r.vh, r);
+    check('and scrolls inside itself', r.scrolls && r.oy === 'auto', r);
+    await page.setViewportSize({ width: 390, height: 844 });
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
