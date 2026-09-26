@@ -27,6 +27,7 @@
 | GET | `/task/get?PageNumber&PageSize` | רשימת משימות החברה → `TaskResponseModelV1[]` |
 | GET | `/task/get/{id}` | משימה + אחראי, יוצר, אירועים (`TaskDetailResponseModel`) |
 | PUT | `/task/close` | סגירה (`TaskCloseModel`: taskId, isHandled, taskHandled.description) **או העברת אחראי** (`responsibleChange.newResponsibleId`, reasonType) |
+| | | **נקרא מה-Swagger 26/09:** `TaskCloseModel { taskId (int), isHandled (bool), createdByUserId? (int, מזהה פנימי), appointmentId? (int), responsibleChange? { description, newResponsibleId, reasonType: NotMyResponsibility/NotAbleToFix/Other }, taskHandled? { description } }`. תשובה `TaskCloseResponseModel { success: bool }`. **`/task/get` (26/09): רק `PageNumber`, `PageSize`, בלי סינון ובלי מיון**; `TaskResponseModelV1` כולל גם `uploadedCloseFile, createdByUserId, closedByUserId, topParentId, companyId, attachmentFileGroupId (uuid), displayName, taskSetupId, reviewAuditor, metaData, closedByAppointmentId`. מומש ב-`op=close`: המשימה של הגשה נמצאת דרך `get-review-result/{appointment}.actionId` + אימות `generatedByAppointmentId` ב-`/task/get/{id}`, ואם לא, סריקת דפים (200 לדף, עד 40). |
 | GET | `/task/get-events-pdf?taskId&language` | PDF אירועי משימה |
 | GET | `/task/getFiles/{id}` | קבצים מצורפים |
 | GET | `/task/getComments/{id}` | תגובות |

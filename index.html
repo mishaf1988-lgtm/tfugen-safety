@@ -17498,6 +17498,7 @@ window._truVerifyClose=function(id){
   r.verified_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'admin';
   r.verified_at=new Date().toISOString();
   sbUpd('trustee_reports',r);sdb();
+  _truVitreClose(r);
   toast('\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05d0\u05d5\u05e9\u05e8\u05d4 \u2713');
   rTrustees();
 };
@@ -17509,9 +17510,36 @@ function _truVerifyBadge(r){
 function _truUnverified(m){
   return _truRows(m).filter(function(r){return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED&&!r.verified_by;});
 }
+// ---- the finding closes here, the Vitre task closes there (26/09) ----
+// "Send to handling" through Vitre leaves "Vitre SMS #<appointment>" in the
+// finding's mgr_note. When a manager closes the finding, or verifies a closure
+// a trustee photographed, the server (op=close) finds the task that
+// appointment generated and closes it. The note then carries the task number,
+// so a second close is a no-op. Never blocks the local close: Vitre down =
+// a toast, the finding is closed here regardless.
+function _truVitreApptOf(r){var m=/Vitre SMS #(\d+)/.exec(String(r&&r.mgr_note||''));return m?m[1]:null;}
+function _truVitreClosedIn(r){return /Vitre \u05de\u05e9\u05d9\u05de\u05d4 #\d+ \u05e0\u05e1\u05d2\u05e8\u05d4/.test(String(r&&r.mgr_note||''));}
+function _truVitreClose(r){
+  if(!r||!_truVitreApptOf(r)||_truVitreClosedIn(r))return null;
+  if(typeof _VITRE_SMS_ON!=='undefined'&&!_VITRE_SMS_ON)return null;
+  var who=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||'';
+  var body={appointmentId:_truVitreApptOf(r),description:'\u05e0\u05e1\u05d2\u05e8 \u05d1-Tapugan Safety'+(who?' \u05e2\u05dc \u05d9\u05d3\u05d9 '+who:'')+' ('+fd(new Date().toISOString().substring(0,10))+')'};
+  return fetch('/api/vitre?op=close',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')},body:JSON.stringify(body)})
+    .then(function(res){return res.json().then(function(j){return{ok:res.ok,status:res.status,data:j};});})
+    .then(function(res){
+      var d=res.data||{};
+      if(!res.ok){toast('\u26a0\ufe0f \u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre \u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d4: '+String(d.detail||d.error||('HTTP '+res.status)));return false;}
+      r.mgr_note=String(r.mgr_note||'')+' \u00b7 Vitre \u05de\u05e9\u05d9\u05de\u05d4 #'+d.taskId+' \u05e0\u05e1\u05d2\u05e8\u05d4';
+      sbUpd('trustee_reports',r);sdb();
+      toast(d.alreadyClosed?'\u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre \u05db\u05d1\u05e8 \u05d4\u05d9\u05d9\u05ea\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4':'\u2705 \u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre \u05e0\u05e1\u05d2\u05e8\u05d4 (#'+d.taskId+')',{ok:true});
+      try{rTrustees();}catch(e){}
+      return true;
+    }).catch(function(err){toast('\u26a0\ufe0f Vitre: '+(err&&err.message||err));return false;});
+}
 function _truMgrSetStatus(id,st,quiet){
   var r=_truFind(id);if(!r)return;
   r.s=st;sbUpd('trustee_reports',r);sdb();
+  if(st===TRUSTEE_S_CLOSED)_truVitreClose(r);
   try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05de\u05e6\u05d0 '+(st===TRUSTEE_S_CLOSED?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.f||'').substring(0,30));}catch(e){}
   if(quiet)return;
   toast(st===TRUSTEE_S_CLOSED?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');
