@@ -1,0 +1,145 @@
+// Server-side OneDrive access (Michael, 2026-09-27: "do it through the server").
+//
+// Why a separate Azure app: the in-browser OneDrive link is an SPA public
+// client, whose refresh tokens live 24h and are bound to the browser
+// (DECISIONS 2026-09-21). A server needs a confidential client: its own app
+// registration with a client secret. Refresh tokens issued to it last 90 days
+// and roll forward every time they are used, so a log that is written a few
+// times a week never expires.
+//
+// Delegated, not application permissions: the tenant admin was unreachable in
+// May (migrations/2026-05-10_oauth_tokens.sql), and delegated Files.ReadWrite
+// only reaches the signed-in user's own OneDrive, not every mailbox in the
+// company. sviva signs in once through /api/ms-auth; the refresh token lands in
+// public.oauth_tokens (service-role only, no RLS policies) and never leaves
+// the server.
+//
+// Env (Cloudflare Pages): ONEDRIVE_CLIENT_ID, ONEDRIVE_CLIENT_SECRET,
+// ONEDRIVE_TENANT_ID (optional, default "common"), SUPABASE_SERVICE_ROLE_KEY.
+// New names on purpose: AZURE_* may still hold the values of the flow that was
+// deleted on 2026-05-10.
+
+export const PROVIDER = 'onedrive_server';
+export const SCOPES = 'offline_access User.Read Files.ReadWrite';
+const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+
+export function odConfigured(env) {
+  return !!(env.ONEDRIVE_CLIENT_ID && env.ONEDRIVE_CLIENT_SECRET && env.SUPABASE_SERVICE_ROLE_KEY);
+}
+export function tokenUrl(env) {
+  return 'https://login.microsoftonline.com/' + encodeURIComponent(env.ONEDRIVE_TENANT_ID || 'common') + '/oauth2/v2.0/token';
+}
+export function authorizeUrl(env) {
+  return 'https://login.microsoftonline.com/' + encodeURIComponent(env.ONEDRIVE_TENANT_ID || 'common') + '/oauth2/v2.0/authorize';
+}
+
+function sb(env) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = env.SUPABASE_URL || SB_DEFAULT;
+  return {
+    url,
+    h: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+  };
+}
+
+// ---- small key/value store: public.server_state (service-role only) ----
+export async function stateGet(env, keys) {
+  const s = sb(env);
+  const r = await fetch(s.url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: s.h });
+  if (!r.ok) return {};
+  const rows = await r.json();
+  const out = {};
+  (Array.isArray(rows) ? rows : []).forEach((x) => { out[x.key] = { value: x.value, at: x.updated_at }; });
+  return out;
+}
+export async function stateSet(env, obj) {
+  const s = sb(env);
+  const now = new Date().toISOString();
+  const rows = Object.keys(obj).map((k) => ({ key: k, value: obj[k] === null ? null : String(obj[k]), updated_at: now }));
+  await fetch(s.url + '/rest/v1/server_state?on_conflict=key', {
+    method: 'POST',
+    headers: { ...s.h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(rows),
+  });
+}
+
+// ---- token store: public.oauth_tokens ----
+export async function tokenRow(env) {
+  const s = sb(env);
+  const r = await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&select=user_email,refresh_token,access_token,expires_at,updated_at&order=updated_at.desc&limit=1', { headers: s.h });
+  if (!r.ok) throw new Error('token store read failed (' + r.status + ')');
+  const rows = await r.json();
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+export async function saveTokens(env, email, t) {
+  const s = sb(env);
+  const row = {
+    provider: PROVIDER,
+    user_email: String(email || '').toLowerCase(),
+    refresh_token: t.refresh_token,
+    access_token: t.access_token || null,
+    expires_at: t.expires_in ? new Date(Date.now() + (t.expires_in - 60) * 1000).toISOString() : null,
+    scope: t.scope || null,
+    updated_at: new Date().toISOString(),
+  };
+  // One connected account at a time: a new sign-in replaces the old one.
+  await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&user_email=neq.' + encodeURIComponent(row.user_email), { method: 'DELETE', headers: s.h });
+  const r = await fetch(s.url + '/rest/v1/oauth_tokens?on_conflict=provider,user_email', {
+    method: 'POST',
+    headers: { ...s.h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(row),
+  });
+  if (!r.ok) throw new Error('token store write failed (' + r.status + ')');
+}
+
+async function tokenCall(env, params) {
+  const body = new URLSearchParams({
+    client_id: env.ONEDRIVE_CLIENT_ID,
+    client_secret: env.ONEDRIVE_CLIENT_SECRET,
+    scope: SCOPES,
+    ...params,
+  });
+  const r = await fetch(tokenUrl(env), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) {
+    const why = (j && (j.error_description || j.error)) || ('HTTP ' + r.status);
+    const e = new Error('microsoft token: ' + String(why).split('\r')[0].substring(0, 160));
+    e.code = j && j.error;
+    throw e;
+  }
+  return j;
+}
+export function exchangeCode(env, code, redirectUri) {
+  return tokenCall(env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+}
+
+// A valid access token for the connected account, refreshing when needed.
+// Throws with .code === 'not_connected' when nobody has signed in yet.
+export async function accessToken(env) {
+  const row = await tokenRow(env);
+  if (!row || !row.refresh_token) { const e = new Error('not connected'); e.code = 'not_connected'; throw e; }
+  if (row.access_token && row.expires_at && Date.parse(row.expires_at) > Date.now() + 60000) {
+    return { token: row.access_token, email: row.user_email };
+  }
+  const t = await tokenCall(env, { grant_type: 'refresh_token', refresh_token: row.refresh_token });
+  // Microsoft rotates the refresh token; keep the new one, or the old one if none came back.
+  await saveTokens(env, row.user_email, { ...t, refresh_token: t.refresh_token || row.refresh_token });
+  return { token: t.access_token, email: row.user_email };
+}
+
+// PUT a file by path under the user's OneDrive root. Replaces an existing
+// file of the same name. `folder` segments are encoded one by one so the
+// slashes stay separators.
+export async function putFile(token, folder, name, bytes, type) {
+  const seg = String(folder || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '/' + encodeURIComponent(name) + ':/content';
+  const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type || 'application/octet-stream' }, body: bytes });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = (j && j.error && (j.error.message || j.error.code)) || '';
+    const e = new Error('onedrive ' + r.status + (msg ? ': ' + String(msg).substring(0, 160) : ''));
+    e.status = r.status;
+    throw e;
+  }
+  return { webUrl: j.webUrl || null, size: j.size || null };
+}

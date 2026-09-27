@@ -30,6 +30,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       write: () => new Uint8Array([1, 2, 3]) };
     try { localStorage.removeItem('tfgn_tru_od_sig'); } catch (e) {}
     window.sbIns = () => {}; window.sbUpd = () => {}; window.sdb = () => {};
+    const toasts = []; window.toast = (m) => { toasts.push(String(m)); };
 
     DB.trustee_tasks = [{ id: 'k5', n: 5, t: 'עמדות כיבוי אש', active: true }, { id: 'k8', n: 8, t: 'מעקב סגירה', active: true }];
     DB.trustee_reports = [
@@ -86,6 +87,25 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     failNext = true; await _truOdNow(); r.tileErr = tileTxt();
     await _truOdNow(); r.tileOk = tileTxt();
     r.hasNowBtn = !!document.querySelector('#dash-tru-log button[onclick="_truOdNow()"]');
+    // server side (27/09): the tile follows what /api/trustee-log says
+    _truSrv = { configured: true, connected: false }; _truLogHomeRender(true);
+    r.srvNotConn = tileTxt();
+    r.srvConnBtn = !!document.querySelector('#dash-tru-log button[onclick="_truSrvConnect()"]');
+    _truSrv = { configured: true, connected: true, last: '2026-09-27T09:05:00Z', error: null }; _truLogHomeRender(true);
+    r.srvOk = tileTxt();
+    _truSrv = { configured: true, connected: true, last: null, error: 'onedrive 423: locked' }; _truLogHomeRender(true);
+    r.srvErr = tileTxt();
+    const pushesBefore = pushes.length;
+    r.tickWhenServer = await _truOdTick(true);
+    r.browserPushedWhenServer = pushes.length - pushesBefore;
+    const sent = []; const realFetch = window.fetch;
+    window.fetch = (u, init) => { sent.push({ u: String(u), body: init && init.body }); return Promise.resolve(new Response(JSON.stringify({ ok: true, pushed: true, rows: 5 }), { status: 200 })); };
+    toasts.length = 0;
+    r.nowServer = await _truOdNow();
+    r.nowServerCall = sent[0];
+    r.nowServerToast = toasts.slice();
+    window.fetch = realFetch;
+    _truSrv = null;
     r.menu = labels.some((x) => x.cb === window._truLogExportXlsx && /נאמנים/.test(x.l));
     return r;
   });
@@ -127,6 +147,13 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('"send now" pushes even when nothing changed', out.nowSame === 'pushed' && out.nowPushed === 1, [out.nowSame, out.nowPushed]);
   check('a failed push shows the error on the tile', /נכשלה/.test(out.tileErr) && /423/.test(out.tileErr), out.tileErr);
   check('...and a later success clears it', !/נכשלה/.test(out.tileOk) && /עודכן בענן/.test(out.tileOk), out.tileOk);
+  console.log('\n6. when the server does it');
+  check('server configured, not connected: the tile offers the one-time connect', /השרת עוד לא מחובר/.test(out.srvNotConn) && out.srvConnBtn, out.srvNotConn);
+  check('server connected: the tile says it updates automatically, with the time', /מתעדכן אוטומטית מהשרת/.test(out.srvOk) && /27\/09\/2026/.test(out.srvOk), out.srvOk);
+  check('server error is shown on the tile', /השרת לא הצליח/.test(out.srvErr) && /423/.test(out.srvErr), out.srvErr);
+  check('the in-browser push stands down while the server is connected', out.tickWhenServer === 'server' && out.browserPushedWhenServer === 0, out.tickWhenServer);
+  check('"send now" goes to the server with force', out.nowServer === 'pushed' && out.nowServerCall && /\/api\/trustee-log$/.test(out.nowServerCall.u) && JSON.parse(out.nowServerCall.body).force === true, out.nowServerCall);
+  check('...and says it was sent', out.nowServerToast.some((t) => /נשלח/.test(t)), out.nowServerToast);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

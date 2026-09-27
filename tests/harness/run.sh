@@ -14,6 +14,11 @@ sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-templates.js > _
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/vitre.js > _build/vitre.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-send.js > _build/wa-send.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/claude.js > _build/claude.mjs
+# trustee-log (27/09): its own helper modules, imported as ../_xlsx.js and ../_onedrive.js
+for m in _xlsx _onedrive; do cp ../../functions/$m.js _build/$m.mjs; done
+for f in trustee-log ms-auth; do
+  sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
+done
 filter="${1:-}"; fail=0
 # The only two scripts that legitimately print a report instead of a pass/fail
 # count. Anything ELSE that prints no summary has crashed or timed out, and that
