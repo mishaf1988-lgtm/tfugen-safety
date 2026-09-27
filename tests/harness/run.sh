@@ -15,7 +15,7 @@ sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-send.js > _build
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/claude.js > _build/claude.mjs
 # trustee-log (27/09): its own helper modules, imported as ../_xlsx.js and ../_onedrive.js
 for m in _xlsx _onedrive; do cp ../../functions/$m.js _build/$m.mjs; done
-for f in trustee-log ms-auth trustee-notify; do
+for f in trustee-log ms-auth trustee-notify mail-inbox; do
   sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 filter="${1:-}"; fail=0

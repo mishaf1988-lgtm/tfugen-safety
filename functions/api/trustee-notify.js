@@ -323,7 +323,9 @@ async function sendEmail(env, to, row, task, src) {
     ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url)
     : null;
   const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
-  const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
+  // [TS-<id>] (trustee findings only): a reply to this mail saying "טופל"
+  // closes the finding (mail-inbox.js, 2026-09-27).
+  const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40) + (src.event === 'trustee_hazard' && row.id ? ' [TS-' + row.id + ']' : '');
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
     + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן - ניהול הבטיחות</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
