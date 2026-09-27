@@ -38,6 +38,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('only the newest turn carries the snapshot', m(1)[0].content.indexOf('"counts"') < 0 && m(1)[2].content.indexOf('"counts"') > 0);
   check('capped at 4 previous turns (9 messages)', m(5).length === 9 && m(5)[0].content === 'q2', m(5).map((x) => String(x.content).slice(0, 4)));
   check('fallback answer gets the note', (out.html.match(/Gemini/g) || []).length === 1, out.html.length);
+  const md = await page.evaluate(() => _askMd('**הממצא:** x <img src=x onerror=alert(1)> **b**'));
+  check('**bold** rendered as <b>', md.indexOf('<b>הממצא:</b>') === 0 && md.indexOf('<b>b</b>') > 0, md);
+  check('model text is escaped, not markup', md.indexOf('<img') < 0 && md.indexOf('&lt;img') > 0, md);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log(`\n${pass}/${pass + fail} passed`);

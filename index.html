@@ -14416,6 +14416,9 @@ window._askQuick=function(q){
 // new question, so a follow-up ("and the second one?") has its context. Only
 // the newest turn carries the data snapshot; older turns are the bare Q and A.
 var _ASK_TURNS=[],_ASK_TURNS_MAX=4;
+// Gemini answers in Markdown; show **bold** as bold. Escape first, so the
+// model's text can never become markup.
+function _askMd(t){return esc(t).replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');}
 function _askMessages(turns,prompt){
   var m=[];
   turns.forEach(function(t){m.push({role:'user',content:t.q});m.push({role:'assistant',content:t.a});});
@@ -14498,7 +14501,7 @@ window._askSend=function(){
       var dj;try{dj=JSON.parse(res.txt);}catch(e){hist.innerHTML+='<div style="color:var(--bad);font-size:12px;padding:8px">\u05e9\u05d2\u05d9\u05d0\u05ea JSON</div>';return;}
       var content=dj.content&&dj.content[0]?dj.content[0].text:'';
       if(!content){hist.innerHTML+='<div class="et" style="padding:8px;font-size:12px">\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4</div>';return;}
-      hist.innerHTML+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:6px auto 6px 0;max-width:90%;color:#1a1d23;white-space:pre-wrap;line-height:1.6">🤖 '+esc(content)+'</div>';
+      hist.innerHTML+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:6px auto 6px 0;max-width:90%;color:#1a1d23;white-space:pre-wrap;line-height:1.6">🤖 '+_askMd(content)+'</div>';
       if(dj.fallback_from)hist.innerHTML+='<div style="color:var(--t3);font-size:10px;margin:-2px 0 6px">\u05e2\u05e0\u05d4 \u05de\u05d5\u05d3\u05dc \u05d2\u05d9\u05d1\u05d5\u05d9 (Gemini \u05dc\u05d0 \u05d6\u05de\u05d9\u05df)</div>';
       _ASK_TURNS.push({q:q,a:content});if(_ASK_TURNS.length>_ASK_TURNS_MAX)_ASK_TURNS.shift();
       hist.scrollTop=hist.scrollHeight;
