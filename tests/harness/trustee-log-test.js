@@ -77,6 +77,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     r.tileVisible = !!(tile && tile.offsetParent);
     r.tileWired = !!(tile && /_truLogExportXlsx/.test(tile.getAttribute('onclick') || ''));
     r.qaCount = document.querySelectorAll('#dash-qa .qa-btn').length;
+    const tileTxt = () => (document.getElementById('dash-tru-log') || {}).textContent || '';
+    connected = false; _truLogHomeRender(); r.tileOffline = tileTxt();
+    r.nowOffline = await _truOdNow();
+    connected = true;
+    const before = pushes.length;
+    r.nowSame = await _truOdNow(); r.nowPushed = pushes.length - before;
+    failNext = true; await _truOdNow(); r.tileErr = tileTxt();
+    await _truOdNow(); r.tileOk = tileTxt();
+    r.hasNowBtn = !!document.querySelector('#dash-tru-log button[onclick="_truOdNow()"]');
     r.menu = labels.some((x) => x.cb === window._truLogExportXlsx && /נאמנים/.test(x.l));
     return r;
   });
@@ -112,6 +121,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('...shows total reports and open findings (5 reports, 1 open)', /5 דיווחים/.test(out.tileText || '') && /1 ליקויים פתוחים/.test(out.tileText || ''), out.tileText);
   check('...and downloads the log', out.tileWired);
   check('...without adding a 7th quick-action tile', out.qaCount === 6, out.qaCount);
+  check('tile says when this device is not connected to OneDrive', /לא מחובר ל-OneDrive/.test(out.tileOffline), out.tileOffline);
+  check('"send now" button is on the tile', out.hasNowBtn);
+  check('"send now" when not connected does not push', out.nowOffline === 'offline', out.nowOffline);
+  check('"send now" pushes even when nothing changed', out.nowSame === 'pushed' && out.nowPushed === 1, [out.nowSame, out.nowPushed]);
+  check('a failed push shows the error on the tile', /נכשלה/.test(out.tileErr) && /423/.test(out.tileErr), out.tileErr);
+  check('...and a later success clears it', !/נכשלה/.test(out.tileOk) && /עודכן בענן/.test(out.tileOk), out.tileOk);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

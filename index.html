@@ -17963,14 +17963,37 @@ function _truLogHomeRender(){
   var box=g('dash-tru-log');if(!box)return;
   var reps=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
   var openN=reps.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
-  var last='';try{last=localStorage.getItem('tfgn_tru_od_last')||'';}catch(e){}
-  var od=last?'<div style="font-size:11px;color:var(--t2)">\u2601\ufe0f \u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05e2\u05e0\u05df: <bdi dir="ltr">'+esc(fd(last.substring(0,10)))+' '+esc(new Date(last).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}))+'</bdi></div>':'';
+  var last='',err='';try{last=localStorage.getItem('tfgn_tru_od_last')||'';err=localStorage.getItem('tfgn_tru_od_err')||'';}catch(e){}
+  var tok=(typeof _odToken==='function')?_odToken():null,conn=!!(tok&&tok.account);
+  var st;
+  if(!conn)st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive, \u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7</span>';
+  else if(err)st='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc-OneDrive \u05e0\u05db\u05e9\u05dc\u05d4: '+esc(err.substring(0,80))+'</span>';
+  else if(last)st='\u2601\ufe0f \u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05e2\u05e0\u05df: <bdi dir="ltr">'+esc(fd(last.substring(0,10)))+' '+esc(new Date(last).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}))+'</bdi>';
+  else st='\u2601\ufe0f \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05dc-OneDrive';
   box.innerHTML='<button class="btn btn-s" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right" onclick="_truLogExportXlsx()" aria-label="\u05d4\u05d5\u05e8\u05d3 \u05d0\u05ea \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd">'
     +'<span style="display:flex;flex-direction:column;align-items:flex-start;min-width:0"><strong>\ud83d\udcd7 \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd (\u05d0\u05e7\u05e1\u05dc)</strong>'
-    +'<span style="font-size:12px;color:var(--t2)">'+reps.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, '+openN+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>'+od+'</span>'
-    +'<span style="white-space:nowrap;font-weight:700">\u2b07\ufe0f \u05d4\u05d5\u05e8\u05d3</span></button>';
+    +'<span style="font-size:12px;color:var(--t2)">'+reps.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, '+openN+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>'
+    +'<span style="font-size:11px;color:var(--t2)">'+st+'</span></span>'
+    +'<span style="white-space:nowrap;font-weight:700">\u2b07\ufe0f \u05d4\u05d5\u05e8\u05d3</span></button>'
+    +'<button class="btn btn-s btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truOdNow()">\u2601\ufe0f \u05e9\u05dc\u05d7 \u05dc-OneDrive \u05e2\u05db\u05e9\u05d9\u05d5</button>';
 }
-window._truOdTick=function(){
+// The tile's button: push now, ignoring the "nothing changed" check, and say
+// what happened. The automatic push is silent, so this is how a manager finds
+// out why the file is not in OneDrive.
+window._truOdNow=function(){
+  var tok=(typeof _odToken==='function')?_odToken():null;
+  if(!tok||!tok.account){toast('\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive. \u05ea\u05e4\u05e8\u05d9\u05d8 ... > \u2601\ufe0f \u05d7\u05d9\u05d1\u05d5\u05e8 OneDrive > \u05d4\u05ea\u05d7\u05d1\u05e8, \u05d5\u05d0\u05d6 \u05e9\u05d5\u05d1');return Promise.resolve('offline');}
+  toast('\u2601\ufe0f \u05e9\u05d5\u05dc\u05d7 \u05dc-OneDrive...');
+  return _truOdTick(true).then(function(r){
+    if(r==='pushed')toast('\u2705 \u05e0\u05e9\u05dc\u05d7. \u05d1-OneDrive: Apps > Tapugan Safety > \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+    else if(r==='empty')toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4');
+    else if(r==='busy')toast('\u05e9\u05dc\u05d9\u05d7\u05d4 \u05db\u05d1\u05e8 \u05e8\u05e6\u05d4, \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2');
+    else{var e='';try{e=localStorage.getItem('tfgn_tru_od_err')||'';}catch(x){}toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+(e||r));}
+    _truLogHomeRender();
+    return r;
+  });
+};
+window._truOdTick=function(force){
   if(_TRU_OD_BUSY)return Promise.resolve('busy');
   var tok=(typeof _odToken==='function')?_odToken():null;
   if(!tok||!tok.account)return Promise.resolve('offline');
@@ -17978,16 +18001,16 @@ window._truOdTick=function(){
   if(aoa.length<2)return Promise.resolve('empty');
   var sig=_truSig(aoa),last='';
   try{last=localStorage.getItem('tfgn_tru_od_sig')||'';}catch(e){}
-  if(sig===last)return Promise.resolve('same');
+  if(sig===last&&!force)return Promise.resolve('same');
   _TRU_OD_BUSY=true;
   return _ensureXlsxLib().then(function(){
     return _odPushFile(_truLogBlob(aoa),TRU_OD_FOLDER,TRU_OD_FILE);
   }).then(function(){
-    try{localStorage.setItem('tfgn_tru_od_sig',sig);localStorage.setItem('tfgn_tru_od_last',new Date().toISOString());}catch(e){}
+    try{localStorage.setItem('tfgn_tru_od_sig',sig);localStorage.setItem('tfgn_tru_od_last',new Date().toISOString());localStorage.removeItem('tfgn_tru_od_err');}catch(e){}
     dlog('[tru-od] pushed '+(aoa.length-1)+' rows');
     return 'pushed';
-  })['catch'](function(e){dlog('[tru-od] failed: '+((e&&e.message)||e));return 'failed';})
-  .then(function(r){_TRU_OD_BUSY=false;return r;});
+  })['catch'](function(e){var msg=String((e&&e.message)||e).substring(0,200);dlog('[tru-od] failed: '+msg);try{localStorage.setItem('tfgn_tru_od_err',msg);}catch(x){}return 'failed';})
+  .then(function(r){_TRU_OD_BUSY=false;try{_truLogHomeRender();}catch(e){}return r;});
 };
 document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){_truOdTick();},20000);});
 window.addEventListener('focus',function(){setTimeout(function(){_truOdTick();},3000);});
