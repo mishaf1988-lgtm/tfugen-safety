@@ -358,7 +358,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET' && POST_OPS[op]) return jsonResp({ error: 'POST required' }, 405, cors);
   // The form ops are admin-only: the schema names people, the submission writes to Vitre.
   const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
-  if ((op === 'review_schema' || op === 'review_submit_test' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
+  if ((op === 'review_schema' || op === 'review_result' || op === 'review_submit_test' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
 
   const ID = env.VITRE_API_KEY_ID;
   const SECRET = env.VITRE_API_KEY_SECRET;
@@ -495,6 +495,18 @@ export async function onRequest({ request, env }) {
     if (!r.ok) return upstreamError(r, cors);
     const cut = JSON.parse(JSON.stringify(r.json, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
     return jsonResp({ reviewId: id, schema: cut }, 200, cors);
+  }
+  // One submission as Vitre stored it (admin, read-only): which answers, with
+  // what values, reached the form. Added 27/09 when the photo answer of
+  // appointment 3612206 showed up empty in the portal and nothing said whether
+  // Vitre had dropped the string or never received it.
+  if (op === 'review_result') {
+    const id = parseInt(url.searchParams.get('id'), 10);
+    if (!id) return jsonResp({ error: 'id (appointmentId) required' }, 400, cors);
+    const r = await vitreGet(env, '/appointmetResult/get-review-result/' + id);
+    if (!r.ok) return upstreamError(r, cors);
+    const cut = JSON.parse(JSON.stringify(r.json, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
+    return jsonResp({ appointmentId: id, result: cut }, 200, cors);
   }
   // The Swagger document itself, sliced (see swaggerDoc above). Without ?path:
   // an index of METHOD + path + summary (?q= filters it). With ?path: every
