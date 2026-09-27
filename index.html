@@ -19089,11 +19089,12 @@ window._vitrePhotoProbe=function(){
   var tpl=prompt('\u05ea\u05d1\u05e0\u05d9\u05ea \u05d4\u05e2\u05e8\u05da ({v} = \u05d4\u05de\u05d7\u05e8\u05d5\u05d6\u05ea \u05e9-uploadImage \u05de\u05d7\u05d6\u05d9\u05e8), \u05dc\u05de\u05e9\u05dc {v} \u05d0\u05d5 {v}| \u05d0\u05d5 |{v}','{v}');
   if(tpl===null)return;
   // "endpoint field" | "endpoint raw" | "endpoint field noput" (upload only, no PUT)
-  var how=prompt('\u05d0\u05d5\u05e4\u05df \u05d4\u05d4\u05e2\u05dc\u05d0\u05d4: <\u05e0\u05ea\u05d9\u05d1> <\u05e9\u05dd \u05e9\u05d3\u05d4 \u05d0\u05d5 raw> [noput], \u05dc\u05de\u05e9\u05dc "/file/uploadImage file", "/file/uploadFile file noput", "/file/upload/{name} raw noput"','/file/uploadImage file noput');
+  var how=prompt('\u05d0\u05d5\u05e4\u05df \u05d4\u05d4\u05e2\u05dc\u05d0\u05d4: <\u05e0\u05ea\u05d9\u05d1> <\u05e9\u05dd \u05e9\u05d3\u05d4 \u05d0\u05d5 raw> [noput | submit], \u05dc\u05de\u05e9\u05dc "/file/uploadFile file noput" (\u05d4\u05e2\u05dc\u05d0\u05d4 \u05d1\u05dc\u05d1\u05d3) \u05d0\u05d5 "/file/uploadFile file submit" (\u05d4\u05d2\u05e9\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05e9\u05dc \u05d4\u05d8\u05d5\u05e4\u05e1 = \u05de\u05e9\u05d9\u05de\u05d4 + SMS \u05dc\u05de\u05d9\u05db\u05d0\u05dc)','/file/uploadFile file noput');
   if(how===null)return;
-  var hw=String(how).trim().split(/\s+/),req={appointmentId:id,photo:ph,template:tpl,endpoint:hw[0]||'/file/uploadImage'};
+  var hw=String(how).trim().split(/\s+/),req={appointmentId:id,photo:ph,template:tpl,endpoint:hw[0]||'/file/uploadFile'};
   if(hw[1]==='raw')req.raw=true;else if(hw[1])req.field=hw[1];
   if(hw.indexOf('noput')>=0)req.put=false;
+  if(hw.indexOf('submit')>=0){req.submit=true;req.put=false;}
   box.textContent='\u23f3 \u05de\u05e2\u05dc\u05d4 \u05dc-Vitre ('+req.endpoint+')...';
   _vitreJson('/api/vitre?op=photo_probe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)}).then(function(res){
     _vitreShowJson(box,res,'\u05d1\u05d3\u05d9\u05e7\u05ea \u05ea\u05de\u05d5\u05e0\u05d4 '+id+' ['+esc(how)+']');

@@ -185,9 +185,15 @@ function collectRefs(sw, node, models, depth) {
 }
 
 // ---- Photo inside the notification form (26/09) ----
-// Swagger (read through op=swagger, 26/09): POST /file/uploadImage takes
+// The shape of the media answer. Must contain {v}; anything else = plain {v}.
+function photoTemplate(env) {
+  const t = String(env.VITRE_PHOTO_TEMPLATE || '').slice(0, 200);
+  return t.includes('{v}') ? t : '{v}';
+}
+// Swagger (read through op=swagger, 26/09): POST /file/uploadFile takes
 // multipart/form-data with one field `file` and answers a plain STRING, the
-// stored path; /review/submit's data is { questionDataKey: string }, so that
+// stored path (27/09, probe: uploadImage answers 200 with "|" and stores
+// nothing; uploadFile answers "c405/files/<guid>.jpg"; raw bodies hit the WAF); /review/submit's data is { questionDataKey: string }, so that
 // string is the answer to the form's image question. The question's DataKey
 // lives in VITRE_PHOTO_KEY (Cloudflare): unset = the photo is left out and
 // the SMS still goes, so a missing question in Vitre can never block a hazard.
@@ -218,13 +224,13 @@ async function fetchOwnPhoto(env, obj) {
     return { ok: true, bytes, ct, name: obj.path.split('/').pop() || 'photo.jpg' };
   } catch (e) { return { ok: false, error: String(e && e.message || e).slice(0, 200) }; }
 }
-// POST /file/uploadImage. Returns { ok, status, value } where value is the string
+// POST /file/uploadFile. Returns { ok, status, value } where value is the string
 // Vitre answered (JSON-quoted or bare text), or { ok:false, error }.
 // opts (photo_probe only): endpoint under /file/, multipart field name, or
 // raw=true to send the bytes as the body with the image's Content-Type.
 async function vitreUploadImage(env, photo, opts) {
   const o = opts || {};
-  const endpoint = o.endpoint || '/file/uploadImage';
+  const endpoint = o.endpoint || '/file/uploadFile';
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
   try {
@@ -241,7 +247,7 @@ async function vitreUploadImage(env, photo, opts) {
     try { json = text ? JSON.parse(text) : null; } catch (e) {}
     if (!resp.ok) return { ok: false, status: resp.status, error: String((json && (json.message || json.description)) || text || '').slice(0, 300) };
     const value = typeof json === 'string' ? json : String(text || '').trim();
-    if (!value) return { ok: false, status: resp.status, error: 'uploadImage answered 200 with an empty body' };
+    if (!value) return { ok: false, status: resp.status, error: 'upload answered 200 with an empty body' };
     return { ok: true, status: resp.status, value };
   } catch (e) {
     return { ok: false, status: 0, error: String(e && e.message || e).slice(0, 200) };
@@ -526,8 +532,8 @@ export async function onRequest({ request, env }) {
     if (String(env.VITRE_NOTIFY_ENABLED || '') !== '1') return jsonResp({ error: 'notify is paused (VITRE_NOTIFY_ENABLED is not 1)' }, 403, cors);
     let body = null;
     try { body = await request.json(); } catch (e) { return jsonResp({ error: 'invalid JSON body' }, 400, cors); }
-    const apptId = parseInt(body && body.appointmentId, 10);
-    if (!apptId) return jsonResp({ error: 'appointmentId required' }, 400, cors);
+    const apptId = parseInt(body && body.appointmentId, 10) || 0;
+    if (!apptId && !(body && (body.put === false || body.submit))) return jsonResp({ error: 'appointmentId required' }, 400, cors);
     const photoKey = String(env.VITRE_PHOTO_KEY || '').trim();
     if (!/^[A-Za-z0-9_-]{1,60}$/.test(photoKey)) return jsonResp({ error: 'VITRE_PHOTO_KEY unset' }, 400, cors);
     const obj = ownStorageObject(env, String((body && body.photo) || ''));
@@ -536,23 +542,35 @@ export async function onRequest({ request, env }) {
     // How to upload (27/09 round 1: the stock call answered "|", i.e. no file
     // seen): endpoint under /file/, multipart field name, or raw body; the
     // filename may be overridden (e.g. to try an extension Vitre likes).
-    const endpoint = String((body && body.endpoint) || '/file/uploadImage').trim();
+    const endpoint = String((body && body.endpoint) || '/file/uploadFile').trim();
     if (!/^\/file\/[A-Za-z0-9_\-\/.{}]{1,80}$/.test(endpoint)) return jsonResp({ error: 'endpoint must be a /file/... path' }, 400, cors);
     const field = String((body && body.field) || 'file').trim().slice(0, 40);
     const raw = !!(body && body.raw);
     const doPut = !(body && body.put === false);
+    // submit:true = a NEW submission of the notification form (PUT on an
+    // existing one is refused: "Question is readonly", 27/09). Creates a task
+    // for `to` through rule 17305, like op=notify does.
+    const doSubmit = !!(body && body.submit);
+    const to = String((body && body.to) || '599').trim();
+    if (doSubmit && !/^\d{1,10}$/.test(to)) return jsonResp({ error: 'to must be an employee externalId' }, 400, cors);
     const got = await fetchOwnPhoto(env, obj);
     if (!got.ok) return jsonResp({ error: 'storage: ' + got.error }, 502, cors);
     if (body && body.filename) got.name = String(body.filename).slice(0, 80);
     const up = await vitreUploadImage(env, got, { endpoint: endpoint.split('{name}').join(encodeURIComponent(got.name)), field, raw });
     const out = { appointmentId: apptId, key: photoKey, template, bytes: got.bytes.byteLength, ct: got.ct, filename: got.name, how: { endpoint, field: raw ? null : field, raw },
       upload: { status: up.status, ok: up.ok, value: up.ok ? up.value.slice(0, 400) : null, error: up.ok ? null : up.error } };
-    if (!up.ok || !doPut) return jsonResp(out, up.ok ? 200 : 502, cors);
+    if (!up.ok || (!doPut && !doSubmit)) return jsonResp(out, up.ok ? 200 : 502, cors);
     const value = template.split('{v}').join(up.value);
     const createdBy = String(env.VITRE_NOTIFY_CREATED_BY || VITRE_NOTIFY_CREATED_BY_DEFAULT);
     const data = {}; data[photoKey] = value;
-    const put = await vitrePut(env, '/review/submit?createdBy=' + encodeURIComponent(createdBy) + '&appointmentId=' + apptId, { data });
-    const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + apptId);
+    let put, readId = apptId;
+    if (doSubmit) {
+      Object.assign(data, { to, title: '\u05d1\u05d3\u05d9\u05e7\u05ea \u05ea\u05de\u05d5\u05e0\u05d4 - \u05dc\u05de\u05d7\u05d9\u05e7\u05d4 [' + template + ']', details: '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e4\u05d5\u05e8\u05de\u05d8 \u05e9\u05dc \u05ea\u05e9\u05d5\u05d1\u05ea \u05de\u05d3\u05d9\u05d4 (photo_probe)' });
+      put = await vitrePost(env, '/review/submit?reviewId=' + VITRE_NOTIFY_REVIEW_ID + '&createdBy=' + encodeURIComponent(createdBy), { data });
+      readId = (put.json && put.json.id) || null;
+      out.submitted = { appointmentId: readId, status: put.json && put.json.status || null, previewUrl: put.json && put.json.previewUrl || null };
+    } else put = await vitrePut(env, '/review/submit?createdBy=' + encodeURIComponent(createdBy) + '&appointmentId=' + apptId, { data });
+    const rr = readId ? await vitreGet(env, '/appointmetResult/get-review-result/' + readId) : { ok: false, status: null };
     let stored = null;
     if (rr.ok && rr.json && Array.isArray(rr.json.questions)) {
       const q = rr.json.questions.find(x => x && x.dataKey === photoKey);
@@ -685,8 +703,13 @@ export async function onRequest({ request, env }) {
         if (!got.ok) photo = { ok: false, error: got.error };
         else {
           const up = await vitreUploadImage(env, got);
-          if (!up.ok) photo = { ok: false, error: 'uploadImage ' + (up.status || 'unreachable') + ': ' + up.error };
-          else { data[photoKey] = up.value; photo = { ok: true, key: photoKey, value: up.value.slice(0, 300), bytes: got.bytes.byteLength }; }
+          if (!up.ok) photo = { ok: false, error: 'uploadFile ' + (up.status || 'unreachable') + ': ' + up.error };
+          else {
+            // The answer's shape is not documented; VITRE_PHOTO_TEMPLATE (Cloudflare,
+            // default {v}) lets it change without a deploy once the probe finds it.
+            const value = photoTemplate(env).split('{v}').join(up.value);
+            data[photoKey] = value; photo = { ok: true, key: photoKey, value: value.slice(0, 300), bytes: got.bytes.byteLength };
+          }
         }
       }
     }
