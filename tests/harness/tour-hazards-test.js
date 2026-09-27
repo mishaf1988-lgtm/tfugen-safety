@@ -29,7 +29,7 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     window.toast = function (m) { toasts.push(String(m)); };
     DB.tour_hazards = [
       { id: 'th-1', n: 1, d: null, tour_no: 1, dept: 'מעצבים', loc: 'חדר חשמל', descr: 'חדר חשמל פתוח', sev: 'בינונית', resp: 'חשמל', due: fx.past10, s: 'פתוח' },
-      { id: 'th-2', n: 2, d: fx.past30, tour_no: 1, dept: 'מעצבים', descr: 'מחסן מבולגן', sev: 'גבוהה', resp: 'מנהל המחלקה', due: fx.past20, s: 'סגור', closed_d: fx.past15 },
+      { id: 'th-2', n: 2, d: fx.past30, tour_no: 1, dept: 'מעצבים', descr: 'מחסן מבולגן', sev: 'גבוהה', resp: 'מנהל המחלקה', resp2: 'בטיחות', due: fx.past20, s: 'סגור', closed_d: fx.past15 },
       { id: 'th-3', n: 3, d: fx.past5, tour_no: 9, dept: 'ייצור טוגנים', descr: 'בריחת קיטור', sev: 'גבוהה', resp: 'אחזקה', due: fx.past2, s: 'בטיפול' },
       { id: 'th-4', n: 4, d: fx.past1, tour_no: 10, dept: 'מעצבים', descr: 'ג\'ריקן בכניסה', sev: 'בינונית', resp: 'מנהל המחלקה', due: fx.fut3, s: 'פתוח' },
       { id: 'th-5', n: 5, d: fx.past1, tour_no: 10, dept: 'מעצבים', descr: 'אין יעד', sev: 'נמוכה', resp: 'בטיחות', due: null, s: 'פתוח' },
@@ -58,10 +58,14 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     document.getElementById('thz-s').value = 'סגור';
     svThz();
     res.newRow = ins.slice(-1)[0];
+    // the same party twice is one party
+    thzNew(); document.getElementById('thz-descr').value = 'x'; document.getElementById('thz-resp').value = 'חשמל'; document.getElementById('thz-resp2').value = 'חשמל'; svThz();
+    res.sameResp2 = ins.slice(-1)[0][1].resp2;
+    DB.tour_hazards.pop();
     // edit: selects keep all their options, n stays, closing date is cleared on reopen
     _genEdit('tour_hazards', 'th-2');
     res.editSevOpts = document.getElementById('thz-sev').options.length;
-    res.editPrefill = { descr: gv('thz-descr'), s: gv('thz-s'), closed: gv('thz-closed'), dept: gv('thz-dept') };
+    res.editPrefill = { descr: gv('thz-descr'), s: gv('thz-s'), closed: gv('thz-closed'), dept: gv('thz-dept'), resp2: gv('thz-resp2') };
     document.getElementById('thz-s').value = 'פתוח';
     svThz();
     res.edited = upd.slice(-1)[0];
@@ -96,9 +100,10 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   const nr = out.newRow && out.newRow[1];
   check('saved to tour_hazards with the next n (6)', out.newRow && out.newRow[0] === 'tour_hazards' && nr.n === 6 && /^th-/.test(nr.id), out.newRow);
   check('saved as סגור with no date: closing date = today', nr && nr.s === 'סגור' && nr.closed_d === out.newRow[1].closed_d && /^\d{4}-\d{2}-\d{2}$/.test(nr.closed_d), nr);
-  check('empty fields are null, never ""', nr && nr.loc === null && nr.action === null && nr.due === null && nr.notes === null, nr);
+  check('empty fields are null, never ""', nr && nr.loc === null && nr.action === null && nr.due === null && nr.notes === null && nr.resp2 === null, nr);
+  check('second responsible equal to the first is dropped', out.sameResp2 === null, out.sameResp2);
   check('edit: every select keeps its options (3 severities)', out.editSevOpts === 3, out.editSevOpts);
-  check('edit: fields filled from the record', out.editPrefill.descr === 'מחסן מבולגן' && out.editPrefill.s === 'סגור' && out.editPrefill.dept === 'מעצבים', out.editPrefill);
+  check('edit: fields filled from the record', out.editPrefill.descr === 'מחסן מבולגן' && out.editPrefill.s === 'סגור' && out.editPrefill.dept === 'מעצבים' && out.editPrefill.resp2 === 'בטיחות', out.editPrefill);
   check('edit: an update, not a new row; n and ts kept', out.edited && out.edited[0] === 'tour_hazards' && out.th2.n === 2 && out.count === 6, out.edited);
   check('reopened: closing date cleared', out.th2.s === 'פתוח' && out.th2.closed_d === null, out.th2);
 
