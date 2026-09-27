@@ -194,6 +194,10 @@ export async function attachPhotos(env, aoa, reports, now, od) {
   want.sort((a, b) => (a.open === b.open ? a.i - b.i : a.open ? -1 : 1));
   const images = [];
   let bytes = 0, thumbs = true;
+  // What each photo became, returned with the result: the only way to see a
+  // live run from here (27/09: thumbnails missing in the live file only).
+  const diag = [];
+  images.diag = diag;
   for (const x of want) {
     if (images.length >= MAX_IMAGES || bytes >= MAX_IMAGE_BYTES) break;
     const obj = encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/');
@@ -201,20 +205,34 @@ export async function attachPhotos(env, aoa, reports, now, od) {
       const have = orig[aoa[x.i][ID_COL]];
       if (have && !thumbs) {
         if (bytes + have.length > MAX_IMAGE_BYTES) continue;
-        bytes += have.length; images.push({ row: x.i, col: PHOTO_COL, bytes: have }); continue;
+        bytes += have.length; images.push({ row: x.i, col: PHOTO_COL, bytes: have });
+        diag.push({ row: x.i, src: 'reuse', n: have.length, info: imageInfo(have) }); continue;
       }
       let r = null;
       if (thumbs) {
-        r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain', { headers: hdr });
-        if (!r.ok) { thumbs = false; r = null; } // no transforms on this plan: stop asking
+        // format=origin: without it Supabase may answer WebP, which Excel
+        // does not embed and imageInfo does not read.
+        r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain&format=origin', { headers: hdr });
+        if (!r.ok) { diag.push({ row: x.i, src: 'thumb', status: r.status }); thumbs = false; r = null; } // no transforms on this plan: stop asking
       }
+      let src = r ? 'thumb' : 'orig';
       if (!r) r = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr });
-      if (!r.ok) continue;
-      const b = new Uint8Array(await r.arrayBuffer());
-      if (!imageInfo(b) || bytes + b.length > MAX_IMAGE_BYTES) continue;
+      if (!r.ok) { diag.push({ row: x.i, src, status: r.status }); continue; }
+      let b = new Uint8Array(await r.arrayBuffer());
+      let info = imageInfo(b);
+      if (!info && src === 'thumb') {
+        // A thumbnail we cannot embed: take the original instead.
+        diag.push({ row: x.i, src, n: b.length, type: r.headers.get('content-type'), info: null });
+        src = 'orig';
+        const r2 = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr });
+        if (!r2.ok) continue;
+        b = new Uint8Array(await r2.arrayBuffer()); info = imageInfo(b);
+      }
+      diag.push({ row: x.i, src, n: b.length, type: r.headers.get('content-type'), info });
+      if (!info || bytes + b.length > MAX_IMAGE_BYTES) continue;
       bytes += b.length;
       images.push({ row: x.i, col: PHOTO_COL, bytes: b });
-    } catch (e) { /* no picture for this row */ }
+    } catch (e) { diag.push({ row: x.i, error: String((e && e.message) || e).substring(0, 80) }); }
   }
   return images;
 }
@@ -279,7 +297,8 @@ export async function runLog(env, force) {
     // must not lose them, or they are uploaded again next time.
     if (Object.keys(od.copied).length !== before) await stateSet(env, { trustee_photos: JSON.stringify(od.copied) }).catch(() => {});
     const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS, images), XLSX_TYPE);
-    const save = { trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' };
+    const save = { trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '',
+      trustee_log_diag: JSON.stringify({ images: images.length, diag: images.diag || [] }).substring(0, 4000) };
     // Copies still pending: keep the old signature so the next trigger writes again.
     if (!od.pending) save.trustee_log_sig = await logSig(sig, reports, od.copied);
     const n = Object.keys(od.copied).length;
@@ -288,7 +307,7 @@ export async function runLog(env, force) {
       if (fu) save.trustee_photos_url = fu;
     }
     await stateSet(env, save);
-    return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, photos_copied: n - before, photos_pending: od.pending, webUrl: res.webUrl || null };
+    return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, images_diag: images.diag || [], photos_copied: n - before, photos_pending: od.pending, webUrl: res.webUrl || null };
   } catch (e) {
     const msg = (e && e.code === 'not_connected') ? 'not connected' : String((e && e.message) || e).substring(0, 200);
     await stateSet(env, { trustee_log_err: msg }).catch(() => {});
