@@ -662,6 +662,25 @@
       "q",
       "t",
       "ty"
+    ],
+    "tour_hazards": [
+      "action",
+      "closed_d",
+      "d",
+      "dept",
+      "descr",
+      "due",
+      "id",
+      "loc",
+      "location_id",
+      "n",
+      "notes",
+      "photo_url",
+      "resp",
+      "s",
+      "sev",
+      "tour_no",
+      "ts"
     ]
   }
 }

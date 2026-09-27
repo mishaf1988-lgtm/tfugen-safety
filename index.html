@@ -1380,6 +1380,21 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 </div>
 
 <!-- TOOLBOX TALKS PAGE -->
+<div id="pg-thz" class="page">
+  <div class="row">
+    <div class="page-title">&#128270; &#1505;&#1497;&#1493;&#1512;&#1497; &#1502;&#1508;&#1490;&#1506;&#1497;&#1501; <span>&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div>
+    <button class="btn btn-p" onclick="thzNew()">+ &#1502;&#1508;&#1490;&#1506;</button>
+  </div>
+  <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 8px">
+    <select id="thz-f-s" onchange="thzFilter('s',this.value)" style="min-height:40px"><option value="notclosed">&#1500;&#1488; &#1504;&#1505;&#1490;&#1512;&#1493;</option><option value="overdue">&#1506;&#1489;&#1512;&#1493; &#1488;&#1514; &#1492;&#1497;&#1506;&#1491;</option><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option><option value="">&#1492;&#1499;&#1500;</option></select>
+    <select id="thz-f-dept" onchange="thzFilter('dept',this.value)" style="min-height:40px"></select>
+  </div>
+  <div id="thz-sum" style="font-size:13px;color:var(--t2);margin:0 0 10px"></div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr>
+    <th scope="col">&#1502;&#1505;"&#1491;</th><th scope="col">&#1505;&#1497;&#1493;&#1512;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492; / &#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1497;&#1506;&#1491;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col"></th>
+  </tr></thead><tbody id="tb-thz"></tbody></table></div></div>
+  <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1497;&#1493;&#1512;&#1497; &#1502;&#1508;&#1490;&#1506;&#1497;&#1501;</div>
+</div>
 <div id="pg-toolbox" class="page">
   <div class="row">
     <div class="page-title">&#128483; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
@@ -1987,7 +2002,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ppe')" data-kw="מגן אישי ציוד מגן"><span class="sic">&#9939;</span>PPE</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')" data-kw="ציוד מלגזה דוד קיטור תקופתית"><span class="sic">&#128295;</span>בדיקות ציוד</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ctr')" data-kw="ספקים"><span class="sic">&#129309;</span>קבלנים</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ins')" data-kw="סיור"><span class="sic">&#128270;</span>סיורי בטיחות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','thz')" data-kw="סיור סיורי מפגעים ממונה מחלקה"><span class="sic">&#128270;</span>סיורי מפגעים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;</span>שיחות בטיחות</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','trustees')" data-kw="נאמן נאמני trustees ניקוד פרס משימות חודשיות"><span class="sic">&#129466;</span>נאמני בטיחות</button>
@@ -2703,6 +2718,29 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TOOLBOX TALKS MODAL -->
+<div class="overlay" id="ov-thz" onclick="closeModal('m-thz')"></div>
+<div class="modal" id="m-thz" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-thz')">&#10005;</button>
+  <div class="modal-title">&#128270; &#1502;&#1508;&#1490;&#1506; &#1502;&#1505;&#1497;&#1493;&#1512;</div>
+  <div class="fgrid">
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1512;</label><input type="date" id="thz-d"></div>
+    <div class="field"><label>&#1502;&#1505;&#1508;&#1512; &#1505;&#1497;&#1493;&#1512;</label><input type="number" id="thz-tour" min="1"></div>
+    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492; *</label><select id="thz-dept"><option>&#1502;&#1506;&#1510;&#1489;&#1497;&#1501;</option><option>&#1497;&#1497;&#1510;&#1493;&#1512; &#1496;&#1493;&#1490;&#1504;&#1497;&#1501;</option><option>&#1495;&#1493;&#1502;&#1512; &#1490;&#1500;&#1501;</option><option>&#1514;&#1493;&#1510;&#1490;</option><option>&#1502;&#1506;&#1489;&#1491;&#1493;&#1514;</option></select></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="thz-loc"></div>
+    <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; &#1492;&#1502;&#1508;&#1490;&#1506; *</label><textarea id="thz-descr" rows="2"></textarea></div>
+    <div class="field"><label>&#1512;&#1502;&#1514; &#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="thz-sev"><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option></select></div>
+    <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><select id="thz-resp"><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
+    <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1504;&#1491;&#1512;&#1513;&#1514;</label><textarea id="thz-action" rows="2"></textarea></div>
+    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><input type="date" id="thz-due"></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="thz-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492;</label><input type="date" id="thz-closed"></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="thz-notes" rows="2"></textarea></div>
+    <div class="field fw"><label>&#128247; &#1514;&#1502;&#1493;&#1504;&#1492;</label>
+      <div id="thz-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('thz-attach-area','thz')">&#128247; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-thz')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svThz()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
 <div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
 <div class="modal" id="m-toolbox" style="display:none">
   <button class="close-btn" onclick="closeModal('m-toolbox')">&#10005;</button>
@@ -3186,7 +3224,7 @@ var _isAdmin=false;
 // date in May while the app shipped many times a week, and a restored backup
 // named a version that had not been current for months.
 var APP_VER='2026.09.20';
-var DB={record_history:[],mgmt_reviews:[],docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
+var DB={record_history:[],mgmt_reviews:[],docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],tour_hazards:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -3248,7 +3286,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.tour_hazards)DB.tour_hazards=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-22.v1';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -3259,7 +3297,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -3621,7 +3659,7 @@ function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'de
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
 // re-render on any change because they aggregate across many tables.
-var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types',trustees:'trustee_reports'};
+var _PAGE_PRIMARY={eqi:'equip_inspections',nm:'near_miss',round:'rounds',users:'app_users',docs:'docs',aud:'auds',ncr:'ncr',inc:'inc',tr:'tr',rsk:'rsk',emp:'emp',ptw:'ptw',ppe:'ppe',hearing:'hearing_tests',ins:'ins',drl:'drl',ctr:'ctr',wst:'wst',hzm:'hzm',env:'env',leg:'leg',toolbox:'toolbox',thz:'tour_hazards',easp:'env_aspects',loc:'locations',prj:'projects',itp:'inspection_types',itype:'issue_types',trustees:'trustee_reports'};
 // Lookup tables — names appear in almost every list, so a change in them
 // can affect any rendered page. Never skip a re-render for these.
 var _LOOKUP_TBLS={locations:1,projects:1,issue_types:1,inspection_types:1,app_users:1,emp:1,trustees:1};
@@ -3692,7 +3730,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var done=0;
   function finish(){
     done++;
@@ -3751,7 +3789,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -3993,7 +4031,7 @@ function forceSync(){
 // rows never reached the server \u2014 but named for what it does, and warning in
 // the direction that can actually lose someone else's work.
 function _forceUpload(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var totalRowsToPush=0;
   syncTbls.forEach(function(t){var r=DB[t];if(r&&r.length)totalRowsToPush+=r.length;});
   if(totalRowsToPush===0){toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');return;}
@@ -4043,7 +4081,7 @@ var _delPending={tbl:null,id:null};
 // Tables CLAUDE.md says must not casually lose rows: ncr is 375 production
 // records, ncr_ai and trustee_reports are history keyed by version / month.
 var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea',record_history:'\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d7\u05d9\u05d3\u05d5\u05e9\u05d9\u05dd',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};
-var _DEL_TBL_LABEL={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea'};
+var _DEL_TBL_LABEL={tour_hazards:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea'};
 // What the user is about to destroy, in words. A red trash on the tasks page
 // deletes the NCR behind the row, not the row \u2014 that is deliberate, but it
 // must not be a surprise.
@@ -4109,7 +4147,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();},trustee_tasks:function(){if(typeof _truTasksRender==='function')_truTasksRender();if(typeof _truRender==='function')_truRender();if(typeof rTrustees==='function')rTrustees();}};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,tour_hazards:rThz,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();},trustee_tasks:function(){if(typeof _truTasksRender==='function')_truTasksRender();if(typeof _truRender==='function')_truRender();if(typeof rTrustees==='function')rTrustees();}};
 
   delRow(tbl,id,fn[tbl]||function(){});
 }
@@ -4121,7 +4159,7 @@ var _navGroup={
   docs:'modules',aud:'modules',tr:'modules',hearing:'modules',leg:'modules',
   rsk:'modules',ptw:'modules',ppe:'modules',ctr:'modules',
   wst:'modules',hzm:'modules',env:'modules',
-  emp:'modules',drl:'modules',ins:'modules',lg:'modules',users:'modules',audit:'modules'
+  emp:'modules',drl:'modules',ins:'modules',thz:'modules',lg:'modules',users:'modules',audit:'modules'
 };
 // Pages that only the admin account can open. Non-admin users are
 // redirected to the dashboard with a toast, even if they try
@@ -4146,7 +4184,7 @@ function _role(){
 // subset). The reporter list is intentionally narrow: the home dash, the
 // task queue, and the four creation flows that an employee actually files.
 var _MANAGER_PAGES = {dash:1,tasks:1,ncr:1,inc:1,nm:1,round:1,toolbox:1,eqi:1,exp:1,
-  ppe:1,tr:1,docs:1,ctr:1,med:1,ins:1,drl:1,wst:1,hzm:1,env:1,leg:1,easp:1,rsk:1,emp:1,
+  ppe:1,tr:1,docs:1,ctr:1,med:1,ins:1,thz:1,drl:1,wst:1,hzm:1,env:1,leg:1,easp:1,rsk:1,emp:1,
   ptw:1,'ptw-view':1,hearing:1,view:1,cal:1,loc:1,prj:1,itp:1,itype:1,'emp-home':1,menu:1,lg:1,trustees:1};
 // What a reporter may open. Narrowed 2026-09-22, by Michael's choice, to the
 // pages that actually work for them.
@@ -4525,7 +4563,7 @@ window._lockNow=function(){
 
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents,trustees:rTrustees};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,thz:rThz,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents,trustees:rTrustees};
   if(m[CUR])m[CUR]();
 }
 // Agent Dashboard — central hub for AI capabilities. Admin-only.
@@ -4643,7 +4681,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-em":"em","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-em":"em","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -9536,6 +9574,102 @@ window._roundEdit=function(id){
 };
 // ---- END NEAR-MISS + ROUND ----
 
+// ---- TOUR HAZARDS (סיורי מפגעים, ממונה) ----
+// 27/09 (DECISIONS): the manager's weekly/monthly tours, one row per hazard,
+// separate from the trustees. Same columns as the sheet "מאגר מפגעים" in the
+// folder-13 file, which the server will write from this table (stage 3).
+var _THZ_DEPTS=['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd','\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd','\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd','\u05ea\u05d5\u05e6\u05d2','\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
+var _THZ_RESP=['\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4','\u05d0\u05d7\u05d6\u05e7\u05d4','\u05d7\u05e9\u05de\u05dc','\u05d4\u05e0\u05d3\u05e1\u05d4','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'];
+var _THZ_SEV=['\u05d2\u05d1\u05d5\u05d4\u05d4','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea','\u05e0\u05de\u05d5\u05db\u05d4'];
+var _THZ_ST=['\u05e4\u05ea\u05d5\u05d7','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05e1\u05d2\u05d5\u05e8'];
+var _THZ_CLOSED='\u05e1\u05d2\u05d5\u05e8';
+var _thzF={s:'notclosed',dept:''};
+function _thzOpts(id,list,withAll,allLabel){
+  var el=g(id);if(!el||el.options.length)return;
+  el.innerHTML=(withAll?'<option value="">'+esc(allLabel)+'</option>':'')+list.map(function(v){return '<option>'+esc(v)+'</option>';}).join('');
+}
+function _thzToday(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});}
+// "חדש" = from the latest tour of that department, like column N in the sheet.
+function _thzLatestTour(){
+  var m={};(DB.tour_hazards||[]).forEach(function(r){var t=+r.tour_no||0;if(!m[r.dept]||t>m[r.dept])m[r.dept]=t;});return m;
+}
+function _thzOverdue(r){return r.s!==_THZ_CLOSED&&r.due&&du(r.due)<0;}
+function thzFilter(k,v){_thzF[k]=v;rThz();}
+function rThz(){
+  var tb=g('tb-thz');if(!tb)return;
+  _thzOpts('thz-f-dept',_THZ_DEPTS,true,'\u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea');
+  var all=DB.tour_hazards||[];
+  var open=all.filter(function(r){return r.s!==_THZ_CLOSED;});
+  var sum=g('thz-sum');
+  if(sum)sum.innerHTML='<b>'+open.length+'</b> \u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5'
+    +' | <b style="color:var(--red)">'+open.filter(_thzOverdue).length+'</b> \u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05d4\u05d9\u05e2\u05d3'
+    +' | <b>'+open.filter(function(r){return r.sev==='\u05d2\u05d1\u05d5\u05d4\u05d4';}).length+'</b> \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'
+    +' | '+all.length+' \u05e1\u05d4"\u05db';
+  var rows=all.filter(function(r){
+    if(_thzF.dept&&r.dept!==_thzF.dept)return false;
+    if(_thzF.s==='notclosed')return r.s!==_THZ_CLOSED;
+    if(_thzF.s==='overdue')return _thzOverdue(r);
+    if(_thzF.s)return r.s===_thzF.s;
+    return true;
+  });
+  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et" data-label="">&#128270;<br>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d4\u05e6\u05d2\u05d4<br><button class="et-cta" onclick="thzNew()">+ \u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9</button></td></tr>';return;}
+  var latest=_thzLatestTour();
+  tb.innerHTML=rows.slice().sort(function(a,b){return (+b.n||0)-(+a.n||0);}).map(function(r){
+    var isNew=(+r.tour_no||0)===latest[r.dept];
+    var due=r.due?fd(r.due):'\u05d7\u05e1\u05e8';
+    if(_thzOverdue(r))due='<span style="color:var(--red);font-weight:700">'+fd(r.due)+'<br><small>\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8 '+(-du(r.due))+' \u05d9\u05de\u05d9\u05dd</small></span>';
+    var sevC=r.sev==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'bR':(r.sev==='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea'?'bY':'bG');
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tour_hazards" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tour_hazards" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    return '<tr><td>'+esc(r.n||'')+'</td>'
+      +'<td>'+(r.d?fd(r.d):'<span style="color:var(--t3)">\u05d7\u05e1\u05e8</span>')+'<div style="font-size:10px;color:var(--t3)">\u05e1\u05d9\u05d5\u05e8 '+esc(r.tour_no||'')+(isNew?' | \u05d7\u05d3\u05e9':'')+'</div></td>'
+      +'<td>'+esc(r.dept||'')+'<div style="font-size:10px;color:var(--t3)">'+esc(r.loc||'')+'</div></td>'
+      +'<td style="max-width:220px;word-break:break-word">'+esc(String(r.descr||'').substring(0,90))+'</td>'
+      +'<td><span class="b '+sevC+'">'+esc(r.sev||'')+'</span></td>'
+      +'<td>'+esc(r.resp||'')+'</td>'
+      +'<td>'+due+'</td>'
+      +'<td>'+sb(r.s)+(r.s===_THZ_CLOSED&&r.closed_d?'<div style="font-size:10px;color:var(--t3)">'+fd(r.closed_d)+'</div>':'')+'</td>'
+      +'<td>'+viewBtn+' '+delBtn+'</td></tr>';
+  }).join('');
+}
+function _thzFill(){
+  _thzOpts('thz-dept',_THZ_DEPTS,false);_thzOpts('thz-resp',_THZ_RESP,false);
+  _thzOpts('thz-sev',_THZ_SEV,false);_thzOpts('thz-s',_THZ_ST,false);
+}
+function thzNew(){
+  _thzFill();openModal('m-thz');
+  var all=DB.tour_hazards||[];
+  var last=all.slice().sort(function(a,b){return (+b.n||0)-(+a.n||0);})[0];
+  // A tour usually yields several hazards in one sitting: keep its date,
+  // number and department so only the finding itself needs typing.
+  var v={'thz-d':last&&last.d||_thzToday(),'thz-tour':last&&last.tour_no||'','thz-dept':last&&last.dept||_THZ_DEPTS[0],'thz-loc':'','thz-descr':'','thz-sev':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea','thz-resp':'\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4','thz-action':'','thz-due':'','thz-s':'\u05e4\u05ea\u05d5\u05d7','thz-closed':'','thz-notes':''};
+  Object.keys(v).forEach(function(id){var el=g(id);if(el)el.value=v[id];});
+  if(typeof _attachClear==='function')_attachClear('thz-attach-area');
+}
+function svThz(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
+  var descr=gv('thz-descr');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var dept=gv('thz-dept');if(!dept){toast('\u05de\u05d7\u05dc\u05e7\u05d4 \u05d4\u05d9\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var s=gv('thz-s')||'\u05e4\u05ea\u05d5\u05d7';
+  var closed=gv('thz-closed')||null;
+  if(s===_THZ_CLOSED&&!closed)closed=_thzToday();
+  if(s!==_THZ_CLOSED)closed=null;
+  var editId=_svEditId('tour_hazards');
+  var r={id:editId||('th-'+gid()),d:gv('thz-d')||null,tour_no:parseInt(gv('thz-tour'),10)||null,dept:dept,loc:gv('thz-loc')||null,
+    descr:descr,sev:gv('thz-sev')||null,resp:gv('thz-resp')||null,action:gv('thz-action')||null,due:gv('thz-due')||null,
+    s:s,closed_d:closed,notes:gv('thz-notes')||null};
+  var ph=_attachUrls['thz-attach-area'];if(ph)r.photo_url=ph;
+  if(!editId){
+    r.n=(DB.tour_hazards||[]).reduce(function(m,x){return Math.max(m,+x.n||0);},0)+1;
+    r.photo_url=ph||null;r.ts=new Date().toISOString();
+  }
+  if(!DB.tour_hazards)DB.tour_hazards=[];
+  _svPut('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8: '+descr.substring(0,30));sdb();
+  closeModal('m-thz');
+  if(typeof _attachClear==='function')_attachClear('thz-attach-area');
+  toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');rThz();
+}
+
 // ---- TOOLBOX TALKS ----
 function rToolbox(){
   var tb=g('tb-toolbox');if(!tb)return;
@@ -13147,6 +13281,7 @@ var VIEW_CONFIG={
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
+  tour_hazards:{title:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',back:'thz',fields:[['\u05de\u05e1"\u05d3','n'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','d'],['\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','tour_no'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','descr'],['\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','resp'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','action'],['\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','closed_d'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05de\u05d7\u05dc\u05e7\u05d5\u05ea','dep'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes'],['\u05de\u05d6\u05d4\u05d4 Vitre','ext_id']],photo:'file_url'},
   env_aspects:{title:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'easp',fields:[['\u05d4\u05d9\u05d1\u05d8','aspect'],['\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df','activity'],['\u05e9\u05dc\u05d1 \u05d7\u05d9\u05d9\u05dd','lifecycle'],['\u05e9\u05dc\u05d9\u05d8\u05d4/\u05d4\u05e9\u05e4\u05e2\u05d4','control_type'],['\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e9\u05e4\u05e2\u05d4','direction'],['\u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d4\u05d4\u05d9\u05d1\u05d8','impact'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','p_curr'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05e4\u05d5\u05e2\u05dc','sv_curr'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea','additional_controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','p_pot'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','sv_pot'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],['\u05d0\u05d7\u05e8\u05d0\u05d9','owner'],['\u05dc\u05d5\u05d6','review_date'],['\u05d4\u05e1\u05d1\u05e8 \u05dc\u05d0\u05d9 \u05d1\u05d9\u05e6\u05d5\u05e2','explanation'],['\u05d4\u05e4\u05e0\u05d9\u05d4 \u05dc\u05d7\u05d5\u05e7','legal_ref'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
@@ -21255,7 +21390,7 @@ function _buildOpenTasksDigest(wantSections){
 // in two formats: a JSON file (full fidelity, used for restore) and an
 // Excel workbook (one sheet per table, for human review).
 // All tables in DB are included automatically.
-var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+var _BACKUP_TABLES=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
 var _BACKUP_RUNNING=false;
 function _ensureXlsxLib(){
   if(typeof XLSX!=='undefined')return Promise.resolve();
