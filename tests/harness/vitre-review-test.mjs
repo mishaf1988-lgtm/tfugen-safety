@@ -28,6 +28,7 @@ function world(o) {
       return json(id === 'manager' ? [{ role: 'מנהל', active: true }] : []);
     }
     if (u.includes('/review/getSchema')) return json({ reviewId: 11997, categories: [{ questions: [{ dataKey: 'q1', title: 'x', answers: [{ dataKey: 'a1', text: 'y' }] }] }] });
+    if (u.includes('/appointmetResult/get-review-result/')) return json({ appointmentId: 3612206, actionId: 3367883, questions: [{ dataKey: 'photo', value: 'reviews/2026/abc.jpg' }] });
     if (u.includes('/review/submit')) return json(w.submitStatus === 200 ? { id: 777, title: 't', status: 'Draft', previewUrl: 'https://app.vitre.io/formResults/x' } : { message: 'comment required' }, w.submitStatus);
     return json({ message: 'unexpected ' + u }, 404);
   };
@@ -95,6 +96,22 @@ console.log('review_schema: admin-only read');
   check('schema returned', r.status === 200 && r.json.schema.reviewId === 11997, r.json);
   r = await run('GET', 'op=review_schema&id=42');
   check('another id can be READ (read is harmless)', w.calls.some(c => /reviewId=42/.test(c.u)));
+}
+
+console.log('review_result: admin-only read of one stored submission (27/09)');
+{
+  let w = world({ email: 'manager@tfugen.local' });
+  let r = await run('GET', 'op=review_result&id=3612206');
+  check('non-admin refused', r.status === 403 && !w.calls.some(c => c.u.includes('hbinov')), r);
+  w = world({});
+  r = await run('GET', 'op=review_result');
+  check('id required (400)', r.status === 400, r);
+  r = await run('GET', 'op=review_result&id=3612206');
+  const rr = w.calls.find(c => c.u.includes('/appointmetResult/get-review-result/3612206'));
+  check('reads get-review-result of that appointment, GET only', rr && rr.method === 'GET', w.calls.map(c => c.u));
+  check('answers with the stored result', r.status === 200 && r.json.appointmentId === 3612206 && r.json.result.questions[0].dataKey === 'photo', r.json);
+  r = await run('POST', 'op=review_result&id=3612206', {});
+  check('POST refused (405)', r.status === 405, r);
 }
 
 console.log('notify: staff-callable, locked to the notification form, system submitter');
