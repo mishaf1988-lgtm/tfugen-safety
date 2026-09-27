@@ -17905,42 +17905,78 @@ window._hazExportXlsx=function(){
     toast('\u05d9\u05d5\u05e6\u05d0 ✓ '+rows.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd ('+openN+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd)');
   })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
 };
-// ---- live reports log in OneDrive (Michael, 27/09) ----
-// One fixed file, /Apps/Tapugan Safety/<reports>/<reports log>.xlsx, rewritten
-// whenever the hazard list changes: a new report, a status change, a closure.
-// It is the same sheet as _hazExportXlsx, so the file never disagrees with the
-// manual export. The browser pushes it (DECISIONS 2026-09-21: a server cannot
-// hold the OneDrive token), so it updates only while a manager who is
-// connected to OneDrive has the app open. The signature is kept only after a
-// successful upload, so a failed push (file open in Excel = 423) retries.
-var HAZ_OD_FOLDER='\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd',HAZ_OD_FILE='\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd.xlsx';
-var _HAZ_OD_BUSY=false;
-function _hazSig(aoa){var s=JSON.stringify(aoa),h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return String(h)+':'+s.length;}
-window._hazOdTick=function(){
-  if(_HAZ_OD_BUSY)return Promise.resolve('busy');
+// ---- trustee reports log: Excel, pushed to OneDrive (Michael, 27/09) ----
+// Every trustee report that was sent, one row each: clean checks, findings,
+// and the task-8 closure reports. A finding shows open/closed, and when it is
+// closed by a task-8 "after" report, the closure date and who closed it.
+// The browser pushes the file (DECISIONS 2026-09-21: a server cannot hold the
+// OneDrive token), so it updates only while a manager connected to OneDrive
+// has the app open. The signature is saved only after a successful upload, so
+// a failed push (file open in Excel = 423) retries on the next tick.
+var TRU_OD_FOLDER='\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',TRU_OD_FILE='\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd.xlsx';
+var _TRU_OD_BUSY=false;
+function _truLogAoa(){
+  var reps=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
+  var closer={};
+  reps.forEach(function(r){if(parseInt(r.t,10)===TRUSTEE_TASK_CLOSE&&r.ref){var c=closer[r.ref];if(!c||String(r.ts||r.d||'')<String(c.ts||c.d||''))closer[r.ref]=r;}});
+  var dayMs=86400000;
+  var rows=reps.slice().sort(function(x,y){return String(y.ts||y.d||'').localeCompare(String(x.ts||x.d||''));});
+  var aoa=[['\u05ea\u05d0\u05e8\u05d9\u05da','\u05e0\u05d0\u05de\u05df','\u05de\u05e1\u05e4\u05e8 \u05de\u05e9\u05d9\u05de\u05d4','\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4','\u05d0\u05d6\u05d5\u05e8','\u05e1\u05d5\u05d2 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7','\u05de\u05de\u05e6\u05d0','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05e4\u05ea\u05d5\u05d7 / \u05e1\u05d2\u05d5\u05e8','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9','\u05d9\u05de\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7 / \u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4','\u05d4\u05e2\u05e8\u05ea \u05de\u05e0\u05d4\u05dc','\u05ea\u05de\u05d5\u05e0\u05d4','\u05de\u05d6\u05d4\u05d4']];
+  rows.forEach(function(r){
+    var n=parseInt(r.t,10),tk=_truTask(n),isClose=n===TRUSTEE_TASK_CLOSE,isF=!isClose&&r.ok===false;
+    var kind=isClose?'\u05e1\u05d2\u05d9\u05e8\u05ea \u05de\u05de\u05e6\u05d0':(r.ok===false?'\u05dc\u05d9\u05e7\u05d5\u05d9':'\u05ea\u05e7\u05d9\u05df');
+    var closed=isF&&r.s===TRUSTEE_S_CLOSED,c=isF?closer[r.id]:null;
+    var start=Date.parse(r.ts||r.d||''),days='';
+    if(isF&&!isNaN(start)){
+      var end=closed?Date.parse((c&&(c.ts||c.d))||''):Date.now();
+      if(!isNaN(end))days=Math.max(0,Math.floor((end-start)/dayMs));
+    }
+    aoa.push([fd(r.d||String(r.ts||'').substring(0,10)),r.u||'',isNaN(n)?'':n,tk?tk.t:'',
+      r.loc||(r.location_id?_locName(r.location_id):''),kind,r.f||'',r.s||'',
+      isF?(closed?'\u05e1\u05d2\u05d5\u05e8':'\u05e4\u05ea\u05d5\u05d7'):'-',
+      closed&&c?fd(c.d||String(c.ts||'').substring(0,10)):'',closed&&c?(c.u||''):'',
+      days,r.mgr_note||'',r.photo_url||'',r.id]);
+  });
+  return aoa;
+}
+function _truLogBlob(aoa){
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd');
+  var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function _truSig(aoa){var s=JSON.stringify(aoa),h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return String(h)+':'+s.length;}
+// Manual download of the same file, from the trustee manager menu.
+window._truLogExportXlsx=function(){
+  var aoa=_truLogAoa();
+  if(aoa.length<2){toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  _ensureXlsxLib().then(function(){
+    _saveFile(_truLogBlob(aoa),'tapugan-trustee-log-'+new Date().toISOString().substring(0,10)+'.xlsx');
+    toast('\u05d9\u05d5\u05e6\u05d0 \u2713 '+(aoa.length-1)+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');
+  })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
+};
+window._truOdTick=function(){
+  if(_TRU_OD_BUSY)return Promise.resolve('busy');
   var tok=(typeof _odToken==='function')?_odToken():null;
   if(!tok||!tok.account)return Promise.resolve('offline');
-  var rows;try{rows=_hazRows();}catch(e){return Promise.resolve('norows');}
-  if(!rows.length)return Promise.resolve('empty');
-  var aoa=_hazAoa(rows),sig=_hazSig(aoa),last='';
-  try{last=localStorage.getItem('tfgn_haz_od_sig')||'';}catch(e){}
+  var aoa;try{aoa=_truLogAoa();}catch(e){return Promise.resolve('norows');}
+  if(aoa.length<2)return Promise.resolve('empty');
+  var sig=_truSig(aoa),last='';
+  try{last=localStorage.getItem('tfgn_tru_od_sig')||'';}catch(e){}
   if(sig===last)return Promise.resolve('same');
-  _HAZ_OD_BUSY=true;
+  _TRU_OD_BUSY=true;
   return _ensureXlsxLib().then(function(){
-    var wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'\u05de\u05e4\u05d2\u05e2\u05d9\u05dd');
-    var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    return _odPushFile(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),HAZ_OD_FOLDER,HAZ_OD_FILE);
+    return _odPushFile(_truLogBlob(aoa),TRU_OD_FOLDER,TRU_OD_FILE);
   }).then(function(){
-    try{localStorage.setItem('tfgn_haz_od_sig',sig);localStorage.setItem('tfgn_haz_od_last',new Date().toISOString());}catch(e){}
-    dlog('[haz-od] pushed '+rows.length+' rows');
+    try{localStorage.setItem('tfgn_tru_od_sig',sig);localStorage.setItem('tfgn_tru_od_last',new Date().toISOString());}catch(e){}
+    dlog('[tru-od] pushed '+(aoa.length-1)+' rows');
     return 'pushed';
-  })['catch'](function(e){dlog('[haz-od] failed: '+((e&&e.message)||e));return 'failed';})
-  .then(function(r){_HAZ_OD_BUSY=false;return r;});
+  })['catch'](function(e){dlog('[tru-od] failed: '+((e&&e.message)||e));return 'failed';})
+  .then(function(r){_TRU_OD_BUSY=false;return r;});
 };
-document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){_hazOdTick();},20000);});
-window.addEventListener('focus',function(){setTimeout(function(){_hazOdTick();},3000);});
-setInterval(function(){_hazOdTick();},2*60*1000);
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){_truOdTick();},20000);});
+window.addEventListener('focus',function(){setTimeout(function(){_truOdTick();},3000);});
+setInterval(function(){_truOdTick();},2*60*1000);
 // ---- roster editor (manager): public.trustees ----
 function _truRosterOpen(){_truRosterRender();openModal('m-tru-roster');}
 function _truRosterRender(){
@@ -18222,6 +18258,7 @@ function _truMgrMenu(anchor){
     item('\ud83d\udccb','\u05e7\u05d8\u05dc\u05d5\u05d2 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea',_truTasksOpen);
     item('\ud83c\udfc6','\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9 + \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4',_truWinnerOpen);
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
+    item('\ud83d\udcd7','\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05db\u05dc \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, \u05e4\u05ea\u05d5\u05d7 / \u05e1\u05d2\u05d5\u05e8)',_truLogExportXlsx);
     item('\u26a0','\u05d9\u05d9\u05e6\u05d5\u05d0 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd + \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2)',_hazExportXlsx);
     item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
     sep();
