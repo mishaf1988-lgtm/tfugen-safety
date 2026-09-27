@@ -120,5 +120,20 @@ console.log('\n5. log locked (open in Excel): the copies are still remembered');
   check('retry writes the log without re-uploading the photo', r2.pushed === true && w2.photoPuts.length === 0, r2);
 }
 
+console.log('\n6. copies done while the log was locked, then unlocked: the log is rewritten');
+{
+  const reps = [rep('z1', '2026-09-23')];
+  const w = world(reps);
+  await runLog(ENV, false); // clean first write, no copies before (fresh world copies z1)
+  // As live on 27/09: a signature from before the copies, copies saved later.
+  const oldSig = world(reps, { state: { trustee_log_sig: 'x' } }); await runLog(ENV, false);
+  const st = { ...oldSig.state };
+  const sigNoPhotos = st.trustee_log_sig;
+  const w3 = world(reps, { state: { ...st, trustee_photos: JSON.stringify({ z1: 'https://tapugancoil-my.sharepoint.com/p/NEW' }) } });
+  const r3 = await runLog(ENV, false);
+  check('a changed OneDrive link rewrites the log', r3.pushed === true && w3.lastLog.indexOf('p/NEW') >= 0, r3);
+  check('and saves a new signature', w3.state.trustee_log_sig && w3.state.trustee_log_sig !== sigNoPhotos);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
