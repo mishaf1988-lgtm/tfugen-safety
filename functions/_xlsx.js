@@ -58,13 +58,15 @@ function sheetXml(aoa, widths, links, tallRows, hasDrawing) {
   aoa.forEach((row, ri) => {
     let cells = '';
     row.forEach((v, ci) => {
+      let isLink = false;
       if (v && typeof v === 'object' && 'text' in v) {
-        if (v.link) links.push({ ref: colName(ci) + (ri + 1), url: v.link });
+        if (v.link) { links.push({ ref: colName(ci) + (ri + 1), url: v.link, text: v.text }); isLink = true; }
         v = v.text;
       }
       if (v === null || v === undefined || v === '') return;
       const ref = colName(ci) + (ri + 1);
-      const style = ri === 0 ? ' s="1"' : '';
+      // s=2: blue underlined, so a link looks like one (Michael saw black text, 27/09).
+      const style = ri === 0 ? ' s="1"' : isLink ? ' s="2"' : '';
       if (typeof v === 'number' && isFinite(v)) cells += '<c r="' + ref + '"' + style + '><v>' + v + '</v></c>';
       else cells += '<c r="' + ref + '"' + style + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>';
     });
@@ -75,7 +77,7 @@ function sheetXml(aoa, widths, links, tallRows, hasDrawing) {
   for (let i = 0; i < ncol; i++) cols += '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + ((widths && widths[i]) || 14) + '" customWidth="1"/>';
   const lastRef = colName(ncol - 1) + nrow;
   let hl = '';
-  links.forEach((l, i) => { hl += '<hyperlink ref="' + l.ref + '" r:id="rIdL' + (i + 1) + '"/>'; });
+  links.forEach((l, i) => { hl += '<hyperlink ref="' + l.ref + '" r:id="rIdL' + (i + 1) + '" display="' + xmlEsc(l.text || '') + '"/>'; });
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
     + '<sheetViews><sheetView workbookViewId="0" rightToLeft="1">'
@@ -154,14 +156,16 @@ function files(aoa, sheetName, widths, images) {
       + '</Relationships>'],
     ['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-      + '<fonts count="2"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font></fonts>'
+      + '<fonts count="3"><font><sz val="11"/><name val="Arial"/></font><font><b/><sz val="11"/><name val="Arial"/></font>'
+      + '<font><u/><sz val="11"/><color rgb="FF0563C1"/><name val="Arial"/></font></fonts>'
       + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
       + '<fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/><bgColor indexed="64"/></patternFill></fill></fills>'
       + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
-      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-      + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-      + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>'
-      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+      + '<cellStyleXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+      + '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
+      + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="1" applyFont="1"/></cellXfs>'
+      + '<cellStyles count="2"><cellStyle name="Normal" xfId="0" builtinId="0"/><cellStyle name="Hyperlink" xfId="1" builtinId="8"/></cellStyles>'
       + '</styleSheet>'],
     ['xl/worksheets/sheet1.xml', sheet],
     ...extra,
