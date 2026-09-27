@@ -33,6 +33,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
+import { makeCloseToken, closeUrl } from '../_closelink.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -325,12 +326,19 @@ async function sendEmail(env, to, row, task, src) {
   const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
   // A [TS-<id>] reply tag belongs here if mail-inbox.js is ever switched on
   // (needs admin consent for Mail.Read, DECISIONS 2026-09-27).
+  // 27/09: a signed "mark as handled" link instead of reply-to-close. Opens a
+  // short form (close-hazard.js); GET writes nothing, so link scanners are harmless.
+  // Trustee findings only, and only when TRUSTEE_NOTIFY_SECRET is set.
+  const closeTok = src.event === 'trustee_hazard' && row.id ? await makeCloseToken(env, row.id) : null;
+  const closeBtn = closeTok
+    ? '<a href="' + esc(closeUrl(APP_URL, closeTok)) + '" style="background:#15803d;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;margin-left:8px;display:inline-block;margin-bottom:8px">\u2705 \u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc</a> '
+    : '';
   const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
     + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן - ניהול הבטיחות</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
     + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
-    + '<p style="margin-top:16px"><a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
+    + '<p style="margin-top:16px">' + closeBtn + '<a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
     + '</div><div style="background:#f9fafb;padding:10px;text-align:center;font-size:11px;color:#9ca3af;border-radius:0 0 8px 8px">' + esc(src.footer) + '</div></div>';
   // 2026-09-27: through Outlook as the account connected in /api/ms-auth, when
   // it granted Mail.Send. That is the only way the mail reaches an address at
