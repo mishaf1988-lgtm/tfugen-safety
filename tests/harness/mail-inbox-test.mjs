@@ -57,7 +57,7 @@ check('"לא טופל עדיין" is negated', classify(msg('m1', 'RE: ' + tag('
 check('done word only in the quoted alert does not count', classify(msg('m1', 'RE: ' + tag('abc123'), 'avi@tapugan.co.il', 'אני בודק\nFrom: sviva\nדלת סגורה')).skip === 'no done word');
 check('no tag -> ignored', classify(msg('m1', 'RE: something', 'avi@tapugan.co.il', 'טופל')).skip === 'no tag');
 check('replyText cuts at the quoted part', replyText('תוקן\n\nמאת: sviva\nשלום') === 'תוקן');
-check('SCOPES asks for Mail.Read', / Mail\.Read( |$)/.test(SCOPES));
+check('SCOPES does NOT ask for Mail.Read (tenant needs admin consent; would block every sign-in)', !/Mail\.Read/.test(SCOPES));
 
 console.log('\n2. a reply with a phone photo closes the finding');
 {

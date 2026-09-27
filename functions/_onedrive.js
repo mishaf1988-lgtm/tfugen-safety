@@ -23,8 +23,11 @@ export const PROVIDER = 'onedrive_server';
 // What a NEW sign-in asks for. Mail.Send added 2026-09-27 (Michael: trustee
 // alerts to the organisational mailbox; Resend without a verified domain only
 // delivers to its own account address).
-// Mail.Read added 2026-09-27: a reply "טופל" to a trustee alert closes it (mail-inbox.js).
-export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send Mail.Read';
+// Mail.Read is NOT asked (2026-09-27): the Tapugan tenant requires admin
+// consent for it, and asking would turn every new sign-in into "admin approval
+// required", taking the OneDrive log and the alert mails down with it.
+// mail-inbox.js stays dormant until an admin grants it (DECISIONS 2026-09-27).
+export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send';
 // A refresh must ask only for what was actually granted, never for SCOPES:
 // asking a refresh for a scope nobody consented to fails the refresh, and with
 // it the OneDrive log. So it asks for the scopes stored with the token.
