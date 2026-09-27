@@ -21,7 +21,7 @@
 // alone, so the next call tries again, and records the error for the tile.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { buildXlsx, XLSX_TYPE } from '../_xlsx.js';
+import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, stateGet, stateSet, tokenRow, hasMail } from '../_onedrive.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
@@ -36,7 +36,18 @@ const TASKS = {
 };
 export const HEADER = ['\u05ea\u05d0\u05e8\u05d9\u05da', '\u05e0\u05d0\u05de\u05df', '\u05de\u05e1\u05e4\u05e8 \u05de\u05e9\u05d9\u05de\u05d4', '\u05e9\u05dd \u05d4\u05de\u05e9\u05d9\u05de\u05d4', '\u05d0\u05d6\u05d5\u05e8', '\u05e1\u05d5\u05d2 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7', '\u05de\u05de\u05e6\u05d0', '\u05e1\u05d8\u05d8\u05d5\u05e1',
   '\u05e4\u05ea\u05d5\u05d7 / \u05e1\u05d2\u05d5\u05e8', '\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4', '\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9', '\u05d9\u05de\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7 / \u05e2\u05d3 \u05e1\u05d2\u05d9\u05e8\u05d4', '\u05d4\u05e2\u05e8\u05ea \u05de\u05e0\u05d4\u05dc', '\u05ea\u05de\u05d5\u05e0\u05d4', '\u05de\u05d6\u05d4\u05d4'];
-const WIDTHS = [11, 16, 8, 24, 24, 11, 40, 9, 10, 11, 16, 10, 30, 30, 14];
+const WIDTHS = [11, 16, 8, 24, 24, 11, 40, 9, 10, 11, 16, 10, 30, 20, 14];
+const PHOTO_COL = 13, ID_COL = 14, OPEN_COL = 8;
+// Photos in the file (Michael, 27/09): open findings and the last 90 days are
+// embedded as thumbnails; every photo cell links to the full picture. The
+// bucket is private, so the stored /object/public/ URL does not open: the link
+// is a signed URL (a year), refreshed each time the file is written. Caps keep
+// one write inside the Worker's limits: 50 subrequests, and CPU (zipping 3MB
+// measured ~12ms, the free plan allows 10ms). A thumbnail from Supabase image
+// transforms (~20KB) is tried first; if the plan has none, the original.
+// Open findings take the budget first, then the newest.
+const PHOTO_DAYS = 90, MAX_IMAGES = 15, MAX_IMAGE_BYTES = 1536 * 1024, SIGN_SECONDS = 365 * 86400, THUMB_W = 240;
+const PHOTO_TEXT = '\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d1\u05d2\u05d5\u05d3\u05dc \u05de\u05dc\u05d0';
 const DAY = 86400000;
 
 function fdx(d) {
@@ -99,6 +110,76 @@ export async function signature(aoa) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// {bucket, path} of a photo URL in our own Storage; null for anything else.
+export function storagePath(url, base) {
+  const u = String(url || '');
+  if (u.indexOf(base + '/storage/v1/object/') !== 0) return null;
+  const m = u.substring(base.length).match(/^\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^/?]+)\/([^?]+)/);
+  return m ? { bucket: m[1], path: decodeURIComponent(m[2]) } : null;
+}
+
+// Replaces the photo cells with {text, link} and returns the thumbnails to
+// embed. Never throws: a photo that fails is a row without a picture.
+export async function attachPhotos(env, aoa, reports, now) {
+  now = now || Date.now();
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  const hdr = { apikey: key, Authorization: 'Bearer ' + key };
+  const byId = {};
+  (reports || []).forEach((r) => { if (r && r.id) byId[r.id] = r; });
+  const rows = [];
+  for (let i = 1; i < aoa.length; i++) {
+    const sp = storagePath(aoa[i][PHOTO_COL], base);
+    if (sp) rows.push({ i, sp });
+  }
+  // One call signs every photo, per bucket.
+  const signed = {};
+  const buckets = {};
+  rows.forEach((x) => { (buckets[x.sp.bucket] = buckets[x.sp.bucket] || []).push(x.sp.path); });
+  for (const b of Object.keys(buckets)) {
+    try {
+      const r = await fetch(base + '/storage/v1/object/sign/' + encodeURIComponent(b), {
+        method: 'POST', headers: { ...hdr, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b] }),
+      });
+      const j = r.ok ? await r.json() : [];
+      (Array.isArray(j) ? j : []).forEach((e) => {
+        if (e && e.signedURL && !e.error) signed[b + '/' + e.path] = /^https?:/.test(e.signedURL) ? e.signedURL : base + '/storage/v1' + e.signedURL;
+      });
+    } catch (e) { /* links stay as they were */ }
+  }
+  const want = [];
+  for (const x of rows) {
+    const link = signed[x.sp.bucket + '/' + x.sp.path];
+    if (link) aoa[x.i][PHOTO_COL] = { text: PHOTO_TEXT, link };
+    const rep = byId[aoa[x.i][ID_COL]] || {};
+    const t = Date.parse(rep.ts || rep.d || '');
+    x.open = aoa[x.i][OPEN_COL] === '\u05e4\u05ea\u05d5\u05d7';
+    if (x.open || (!isNaN(t) && now - t <= PHOTO_DAYS * DAY)) want.push(x);
+  }
+  want.sort((a, b) => (a.open === b.open ? a.i - b.i : a.open ? -1 : 1));
+  const images = [];
+  let bytes = 0, thumbs = true;
+  for (const x of want) {
+    if (images.length >= MAX_IMAGES || bytes >= MAX_IMAGE_BYTES) break;
+    const obj = encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/');
+    try {
+      let r = null;
+      if (thumbs) {
+        r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain', { headers: hdr });
+        if (!r.ok) { thumbs = false; r = null; } // no transforms on this plan: stop asking
+      }
+      if (!r) r = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr });
+      if (!r.ok) continue;
+      const b = new Uint8Array(await r.arrayBuffer());
+      if (!imageInfo(b) || bytes + b.length > MAX_IMAGE_BYTES) continue;
+      bytes += b.length;
+      images.push({ row: x.i, col: PHOTO_COL, bytes: b });
+    } catch (e) { /* no picture for this row */ }
+  }
+  return images;
+}
+
 async function readAll(env, path) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
@@ -130,9 +211,11 @@ export async function runLog(env, force) {
   }
   try {
     const { token } = await accessToken(env);
-    const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS), XLSX_TYPE);
+    // After the signature: signed links change on every write, the content does not.
+    const images = await attachPhotos(env, aoa, reports);
+    const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS, images), XLSX_TYPE);
     await stateSet(env, { trustee_log_sig: sig, trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' });
-    return { ok: true, pushed: true, rows: aoa.length - 1, webUrl: res.webUrl || null };
+    return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, webUrl: res.webUrl || null };
   } catch (e) {
     const msg = (e && e.code === 'not_connected') ? 'not connected' : String((e && e.message) || e).substring(0, 200);
     await stateSet(env, { trustee_log_err: msg }).catch(() => {});
