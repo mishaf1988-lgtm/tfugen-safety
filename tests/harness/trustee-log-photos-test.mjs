@@ -94,6 +94,7 @@ check('drawing part + rels', txt.indexOf('xl/drawings/drawing1.xml') >= 0 && txt
 check('one media file per image', (txt.match(/xl\/media\/image\d+\.jpeg/g) || []).length === images.length * 2, images.length);
 check('content types for jpeg + drawing', txt.indexOf('Extension="jpeg"') >= 0 && txt.indexOf('drawing+xml') >= 0);
 check('hyperlinks written as external rels', txt.indexOf('TargetMode="External"') >= 0 && txt.indexOf('<hyperlinks>') >= 0);
+check('link cells use the Hyperlink style (blue, underlined)', (txt.match(/<c r="N\d+" s="2" t="inlineStr">/g) || []).length === 5 && txt.indexOf('builtinId="8"') >= 0 && txt.indexOf('<u/>') >= 0);
 check('image rows are tall', (txt.match(/customHeight="1"/g) || []).length === images.length);
 const plain = Buffer.from(buildXlsx(aoa.map((r) => r.map((v) => (v && typeof v === 'object' ? v.text : v))), 'x')).toString('latin1');
 check('no images = no drawing part (old file shape)', plain.indexOf('drawing') < 0 && plain.indexOf('hyperlink') < 0);
