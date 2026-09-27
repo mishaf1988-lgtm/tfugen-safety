@@ -106,6 +106,6 @@ const ask = { model: 'gemini', max_tokens: 600, system: 'מערכת', messages: 
     check('event-stream with the text', /text\/event-stream/.test(r.headers.get('Content-Type')) && t.indexOf('שלום') > 0 && t.indexOf('message_stop') > 0);
   }
 
-  console.log(`\n${pass}/${pass + fail} passed`);
+  console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();

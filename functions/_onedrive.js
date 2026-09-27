@@ -158,6 +158,15 @@ export async function putFile(token, folder, name, bytes, type) {
   return { webUrl: j.webUrl || null, size: j.size || null };
 }
 
+// webUrl of a folder (or file) by path; null when it is not there.
+export async function itemUrl(token, path) {
+  const seg = String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=webUrl', { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) return null;
+  const j = await r.json().catch(() => ({}));
+  return j.webUrl || null;
+}
+
 // Send an HTML mail as the connected account (Graph /me/sendMail, 202 on success).
 export async function sendMail(token, to, subject, html) {
   const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
