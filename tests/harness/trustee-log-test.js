@@ -67,6 +67,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window._popMenu = function (a, id, build) { try { build(function (i, l, cb) { labels.push({ l, cb }); }, function () {}); } catch (e) {} };
     try { _truMgrMenu(null); } catch (e) {}
     window._popMenu = origPop;
+    const lg = document.getElementById('login'); if (lg) lg.style.display = 'none';
+    const app = document.getElementById('app'); if (app) app.style.display = 'block';
+    window._currentUser = { username: 'admin' }; try { _applyRoleGates(); } catch (e) {}
+    try { goPage('dash'); } catch (e) {}
+    try { rDash(); } catch (e) { r.dashErr = String(e); }
+    const tile = document.querySelector('#dash-qa #dash-tru-log button');
+    r.tileText = tile ? tile.textContent.replace(/\s+/g, ' ') : null;
+    r.tileVisible = !!(tile && tile.offsetParent);
+    r.tileWired = !!(tile && /_truLogExportXlsx/.test(tile.getAttribute('onclick') || ''));
+    r.qaCount = document.querySelectorAll('#dash-qa .qa-btn').length;
     r.menu = labels.some((x) => x.cb === window._truLogExportXlsx && /נאמנים/.test(x.l));
     return r;
   });
@@ -97,6 +107,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('an empty list never overwrites the file', out.empty === 'empty', out.empty);
   console.log('\n4. reachable');
   check('manual download is on the trustee manager menu', out.menu);
+  console.log('\n5. home screen');
+  check('the log tile is on the home screen', out.tileVisible, out.tileText);
+  check('...shows total reports and open findings (5 reports, 1 open)', /5 דיווחים/.test(out.tileText || '') && /1 ליקויים פתוחים/.test(out.tileText || ''), out.tileText);
+  check('...and downloads the log', out.tileWired);
+  check('...without adding a 7th quick-action tile', out.qaCount === 6, out.qaCount);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
