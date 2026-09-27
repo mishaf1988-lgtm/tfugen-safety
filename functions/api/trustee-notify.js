@@ -32,6 +32,7 @@
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const META_API_VERSION = 'v25.0';
@@ -314,7 +315,6 @@ async function signPhoto(serviceKey, publicUrl) {
 }
 
 async function sendEmail(env, to, row, task, src) {
-  if (!env.RESEND_KEY) return 'error: email not configured (RESEND_KEY missing in Cloudflare env)';
   const who = esc(row.u), loc = esc(row.loc || 'לא צוין'), finding = esc(row.f || 'ללא תיאור');
   const date = esc(row.d || '');
   // A photo that cannot be opened is worse than no photo: it reads as a broken
@@ -330,6 +330,22 @@ async function sendEmail(env, to, row, task, src) {
     + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
     + '<p style="margin-top:16px"><a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
     + '</div><div style="background:#f9fafb;padding:10px;text-align:center;font-size:11px;color:#9ca3af;border-radius:0 0 8px 8px">' + esc(src.footer) + '</div></div>';
+  // 2026-09-27: through Outlook as the account connected in /api/ms-auth, when
+  // it granted Mail.Send. That is the only way the mail reaches an address at
+  // the factory's own domain: Resend without a verified domain delivers only to
+  // its account owner. Resend stays as the fallback.
+  let outlookErr = null;
+  if (odConfigured(env)) {
+    try {
+      const tr = await tokenRow(env);
+      if (hasMail(tr)) {
+        const { token } = await accessToken(env);
+        await sendMail(token, to, subject, html);
+        return 'sent';
+      }
+    } catch (e) { outlookErr = String((e && e.message) || e).substring(0, 140); }
+  }
+  if (!env.RESEND_KEY) return 'error: ' + (outlookErr || 'email not configured (RESEND_KEY missing in Cloudflare env)');
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
@@ -347,7 +363,7 @@ async function sendEmail(env, to, row, task, src) {
       return 'error: Resend שולח רק אל ' + (own || 'כתובת החשבון')
         + ' כל עוד אין דומיין מאומת. או לשים את הכתובת הזו כיעד, או לאמת דומיין ב-resend.com/domains ולהגדיר RESEND_FROM ב-Cloudflare';
     }
-    return 'error: Resend ' + r.status + ' ' + t.substring(0, 160);
+    return 'error: ' + (outlookErr ? outlookErr + ' / ' : '') + 'Resend ' + r.status + ' ' + t.substring(0, 160);
   } catch (e) {
     return 'error: network ' + String(e && e.message || e).substring(0, 120);
   }

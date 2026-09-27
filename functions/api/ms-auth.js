@@ -13,7 +13,7 @@
 // account to the factory's server by sending a manager a link.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, CF_PROD } from '../_shared.js';
-import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow } from '../_onedrive.js';
+import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow, hasMail } from '../_onedrive.js';
 
 const REDIRECT = CF_PROD + '/api/ms-auth';
 const STATE_TTL_MS = 15 * 60 * 1000;
@@ -95,7 +95,7 @@ export async function onRequest(context) {
     if (!odConfigured(env)) return jsonResp({ configured: false, connected: false }, 200, cors);
     try {
       const row = await tokenRow(env);
-      return jsonResp({ configured: true, connected: !!(row && row.refresh_token), email: row ? row.user_email : null, since: row ? row.updated_at : null }, 200, cors);
+      return jsonResp({ configured: true, connected: !!(row && row.refresh_token), email: row ? row.user_email : null, since: row ? row.updated_at : null, mail: hasMail(row) }, 200, cors);
     } catch (e) {
       return jsonResp({ configured: true, connected: false, error: String(e.message || e) }, 200, cors);
     }

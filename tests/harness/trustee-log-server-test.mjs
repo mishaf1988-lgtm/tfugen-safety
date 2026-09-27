@@ -8,6 +8,8 @@
 import { onRequest, buildAoa, runLog, HEADER, LOG_FOLDER, LOG_FILE } from './_build/trustee-log.mjs';
 import { onRequest as msAuth, makeState, checkState } from './_build/ms-auth.mjs';
 import { buildXlsx } from './_build/_xlsx.mjs';
+import { refreshScopes, hasMail } from './_build/_onedrive.mjs';
+import { onRequest as notify } from './_build/trustee-notify.mjs';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
@@ -63,7 +65,13 @@ function world(o) {
       if (o.putStatus && o.putStatus !== 200) return json({ error: { code: 'resourceLocked', message: 'The resource you are attempting to access is locked' } }, o.putStatus);
       return json({ webUrl: 'https://tapugan-my.sharepoint.com/x.xlsx', size: 1234 });
     }
+    if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') {
+      w.mails = w.mails || []; w.mails.push({ auth: init.headers.Authorization, body: JSON.parse(body) });
+      return o.mailFail ? json({ error: { code: 'ErrorAccessDenied', message: 'Access is denied' } }, 403) : new Response(null, { status: 202 });
+    }
+    if (u.startsWith('https://api.resend.com/')) { w.resend = (w.resend || 0) + 1; return json({ id: 'em' }); }
     if (u.startsWith('https://graph.microsoft.com/v1.0/me')) return json({ mail: 'sviva@tapugan.co.il' });
+    if (u.startsWith(SB + '/rest/v1/')) return json([]);
     return json({ error: 'unexpected ' + u }, 599);
   };
   return w;
@@ -191,6 +199,44 @@ console.log('\n5. the one-time sign-in');
   res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth?code=abc&state=' + encodeURIComponent(good)), env: ENV });
   check('a real callback stores the refresh token and returns to the app', res.status === 302 && /\?ms=ok$/.test(res.headers.get('Location')) && w.saved[0] && w.saved[0].refresh_token === 'rt2' && w.saved[0].user_email === 'sviva@tapugan.co.il', [res.headers.get('Location'), w.saved]);
   check('...exchanging the code with the same redirect address', w.tokenReq.grant_type === 'authorization_code' && w.tokenReq.code === 'abc' && w.tokenReq.redirect_uri === 'https://tapugan-safety.pages.dev/api/ms-auth', w.tokenReq);
+}
+
+console.log('\n6. alert mail through Outlook (Mail.Send)');
+{
+  check('a refresh asks only for what was granted, never for Mail.Send it did not get',
+    refreshScopes('Files.ReadWrite User.Read profile openid email') === 'offline_access Files.ReadWrite User.Read', refreshScopes('Files.ReadWrite User.Read profile openid email'));
+  check('...and keeps Mail.Send once granted', /Mail\.Send/.test(refreshScopes('Files.ReadWrite Mail.Send User.Read')));
+  check('...and falls back to the base set when nothing is stored', refreshScopes('') === 'offline_access User.Read Files.ReadWrite' && !/Mail/.test(refreshScopes(null)));
+  check('hasMail reads the stored scope', hasMail({ scope: 'Files.ReadWrite Mail.Send' }) && !hasMail({ scope: 'Files.ReadWrite User.Read' }) && !hasMail(null));
+  let w = world();
+  await runLog(ENV, true);
+  check('the OneDrive refresh of an account without Mail.Send does not ask for it', w.tokenReq && !/Mail\.Send/.test(w.tokenReq.scope), w.tokenReq && w.tokenReq.scope);
+  world();
+  const res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer mgr', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
+  const j = await res.json();
+  check('a new sign-in asks for Mail.Send', /Mail\.Send/.test(new URL(j.url).searchParams.get('scope')), j.url);
+  const nreq = (b) => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { Authorization: 'Bearer mgr', 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+  const tokM = [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt1', access_token: 'at-live', expires_at: new Date(Date.now() + 3e6).toISOString(), scope: 'Files.ReadWrite Mail.Send User.Read' }];
+  const NENV = { ...ENV, RESEND_KEY: 're_x' };
+  w = world({ tokens: tokM });
+  let r = await notify({ request: nreq({ test: true, whatsapp: false, email: true, email_to: 'sviva@tapugan.co.il' }), env: NENV });
+  let jj = await r.json();
+  check('with Mail.Send: the alert goes out through Outlook, to the organisational address', jj.email === 'sent' && w.mails && w.mails.length === 1 && w.mails[0].body.message.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && w.mails[0].auth === 'Bearer at-live', [jj, w.mails]);
+  check('...with the same Hebrew body, and Resend is not used', /הודעת בדיקה/.test(w.mails[0].body.message.body.content) && w.mails[0].body.message.body.contentType === 'HTML' && !w.resend, w.resend);
+  w = world({ tokens: [{ ...tokM[0], scope: 'Files.ReadWrite User.Read' }] });
+  r = await notify({ request: nreq({ test: true, whatsapp: false, email: true, email_to: 'mishaf1988@gmail.com' }), env: NENV });
+  jj = await r.json();
+  check('without Mail.Send: Resend, as before', jj.email === 'sent' && w.resend === 1 && !w.mails, [jj, w.resend]);
+  w = world({ tokens: tokM, mailFail: true });
+  r = await notify({ request: nreq({ test: true, whatsapp: false, email: true, email_to: 'sviva@tapugan.co.il' }), env: NENV });
+  jj = await r.json();
+  check('Outlook refuses: falls back to Resend instead of losing the alert', w.mails.length === 1 && w.resend === 1 && jj.email === 'sent', [jj, w.resend]);
+  w = world({ tokens: tokM, mailFail: true });
+  r = await notify({ request: nreq({ test: true, whatsapp: false, email: true, email_to: 'sviva@tapugan.co.il' }), env: ENV });
+  jj = await r.json();
+  check('Outlook refuses and no Resend key: the error says why', /outlook 403/.test(jj.email), jj.email);
+  r = await call(ENV, { op: 'status' }, { Authorization: 'Bearer mgr' });
+  check('status tells the tile whether mail is allowed', r.j.mail === true || r.j.mail === false, r.j);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

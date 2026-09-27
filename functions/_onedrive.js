@@ -20,7 +20,21 @@
 // deleted on 2026-05-10.
 
 export const PROVIDER = 'onedrive_server';
-export const SCOPES = 'offline_access User.Read Files.ReadWrite';
+// What a NEW sign-in asks for. Mail.Send added 2026-09-27 (Michael: trustee
+// alerts to the organisational mailbox; Resend without a verified domain only
+// delivers to its own account address).
+export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send';
+// A refresh must ask only for what was actually granted, never for SCOPES:
+// asking a refresh for a scope nobody consented to fails the refresh, and with
+// it the OneDrive log. So it asks for the scopes stored with the token.
+const BASE_SCOPES = 'offline_access User.Read Files.ReadWrite';
+export function refreshScopes(granted) {
+  const g = String(granted || '').split(/\s+/).filter((x) => x && !/^(openid|profile|email)$/i.test(x));
+  if (!g.length) return BASE_SCOPES;
+  if (g.indexOf('offline_access') < 0) g.unshift('offline_access');
+  return g.join(' ');
+}
+export function hasMail(row) { return !!(row && /(^|\s)Mail\.Send(\s|$)/i.test(String(row.scope || ''))); }
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 
 export function odConfigured(env) {
@@ -119,12 +133,12 @@ export async function accessToken(env) {
   const row = await tokenRow(env);
   if (!row || !row.refresh_token) { const e = new Error('not connected'); e.code = 'not_connected'; throw e; }
   if (row.access_token && row.expires_at && Date.parse(row.expires_at) > Date.now() + 60000) {
-    return { token: row.access_token, email: row.user_email };
+    return { token: row.access_token, email: row.user_email, scope: row.scope || '' };
   }
-  const t = await tokenCall(env, { grant_type: 'refresh_token', refresh_token: row.refresh_token });
+  const t = await tokenCall(env, { grant_type: 'refresh_token', refresh_token: row.refresh_token, scope: refreshScopes(row.scope) });
   // Microsoft rotates the refresh token; keep the new one, or the old one if none came back.
-  await saveTokens(env, row.user_email, { ...t, refresh_token: t.refresh_token || row.refresh_token });
-  return { token: t.access_token, email: row.user_email };
+  await saveTokens(env, row.user_email, { ...t, refresh_token: t.refresh_token || row.refresh_token, scope: t.scope || row.scope });
+  return { token: t.access_token, email: row.user_email, scope: t.scope || row.scope || '' };
 }
 
 // PUT a file by path under the user's OneDrive root. Replaces an existing
@@ -142,4 +156,20 @@ export async function putFile(token, folder, name, bytes, type) {
     throw e;
   }
   return { webUrl: j.webUrl || null, size: j.size || null };
+}
+
+// Send an HTML mail as the connected account (Graph /me/sendMail, 202 on success).
+export async function sendMail(token, to, subject, html) {
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: { subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: to } }] },
+      saveToSentItems: false,
+    }),
+  });
+  if (r.status === 202 || r.ok) return true;
+  const j = await r.json().catch(() => ({}));
+  const msg = (j && j.error && (j.error.message || j.error.code)) || '';
+  throw new Error('outlook ' + r.status + (msg ? ': ' + String(msg).substring(0, 140) : ''));
 }
