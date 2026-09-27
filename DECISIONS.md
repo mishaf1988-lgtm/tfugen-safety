@@ -170,6 +170,11 @@
 **תאימות לאחור**: בלי `src` זה `trustee_reports`, כך שהטריגר מ-2026-09-19 ממשיך לעבוד בלי שינוי.
 **קישורים**: PR #702, `migrations/2026-09-21_near_miss_notify_webhook.sql` (הורצה ואומתה חי 21/09).
 
+## 2026-09-27 — מייל התראה דרך Outlook של sviva, Resend כגיבוי
+
+**החלטה**: מיכאל רוצה את התראות הנאמנים ב-sviva@tapugan.co.il. Resend בלי דומיין מאומת מוסר רק לבעל החשבון, אז `trustee-notify` שולח דרך Graph `/me/sendMail` עם אותו חיבור שרת (Delegated Mail.Send), ו-Resend נשאר גיבוי.
+**כלל שנלמד**: רענון טוקן מבקש רק את ה-scope שנשמר (`refreshScopes`), ו-`tokenRow` חייב לבחור את עמודת `scope`. בלי זה Mail.Send לא נראה ונמחק ברענון הבא.
+
 ## 2026-09-27 — יומן הנאמנים: השרת כותב ל-OneDrive (הופך את 2026-09-21)
 
 **החלטה**: מיכאל ראה שהקובץ לא נוצר מהטלפון (לא מחובר ל-OneDrive) ואמר «כן, תעשה את זה דרך השרת». נבנה רישום Azure נפרד (confidential client עם client secret), הרשאות Delegated `Files.ReadWrite` + `offline_access`, refresh token ב-`oauth_tokens` בשרת בלבד. טריגר STATEMENT על `trustee_reports` קורא ל-`/api/trustee-log` שכותב את הקובץ.
