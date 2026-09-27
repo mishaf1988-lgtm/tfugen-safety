@@ -18023,8 +18023,6 @@ function _truLogHomeRender(noFetch){
     // right to send, and a new sign-in is the only way to add it.
     // Photos folder in OneDrive (27/09): every trustee photo is copied there once.
     if(S.photosUrl&&/^https:\/\/[a-z0-9-]+(-my)?\.sharepoint\.com\//i.test(S.photosUrl))btn+='<button class="btn btn-s btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="window.open(_truSrv.photosUrl,\'_blank\',\'noopener\')">\ud83d\udcc1 \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d1-OneDrive</button>';
-    // Mail.Read (27/09): replying "\u05d8\u05d5\u05e4\u05dc" to an alert closes it; needs one more consent.
-    if(S.mail!==false&&S.mailRead===false)btn+='<button class="btn btn-p btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truSrvConnect()">\ud83d\udce5 \u05d0\u05e9\u05e8 \u05e1\u05d2\u05d9\u05e8\u05ea \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05d1\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05de\u05d9\u05d9\u05dc (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d7\u05d3\u05e9)</button>';
     if(S.mail===false)btn+='<button class="btn btn-p btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truSrvConnect()">\ud83d\udce7 \u05d0\u05e9\u05e8 \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05de-Outlook (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d7\u05d3\u05e9)</button>';
   }else if(S&&S.configured){
     st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05e9\u05e8\u05ea \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d7\u05d3 \u05e4\u05e2\u05de\u05d9)</span>';
