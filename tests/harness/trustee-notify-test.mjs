@@ -255,5 +255,18 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     r = await mk('', { SUPABASE_SERVICE_ROLE_KEY: 'srv' });
     check('a plain GET is still 405', r.status === 405, r.status);
   }
+  console.log('\n9. close link (27/09): a signed "mark as handled" button, trustee findings only');
+  { const envS = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec' };
+    const hs = { 'x-notify-secret': 'nsec' };
+    let w = world({ row: fresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'r1' }, hs), env: envS });
+    let resend = w.calls.find((c) => c.u.includes('resend'));
+    const m = resend && resend.body.html.match(/\/api\/close-hazard\?k=([^"]+)"/);
+    check('trustee finding: the mail has the close button with a token for this finding', !!m && /^r1\.[0-9a-z]+\.[A-Za-z0-9_-]{43}$/.test(decodeURIComponent(m[1])) && /\u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc/.test(resend.body.html), resend && resend.body.html.slice(0, 300));
+    w = world({ row: fresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'r1' }), env });
+    resend = w.calls.find((c) => c.u.includes('resend'));
+    check('no secret configured: no button (never an unsigned link)', resend && !/close-hazard/.test(resend.body.html));
+    w = world({ nm: nmFresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'n1', src: 'near_miss' }, hs), env: envS });
+    resend = w.calls.find((c) => c.u.includes('resend'));
+    check('near-miss: no close button', resend && !/close-hazard/.test(resend.body.html)); }
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
