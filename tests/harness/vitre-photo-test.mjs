@@ -1,6 +1,7 @@
 // The finding's photo inside the Vitre notification form (26/09).
 //
-// Swagger, read through op=swagger the same day: POST /file/uploadImage takes
+// Swagger, read through op=swagger the same day (and the probe of 27/09, which
+// showed uploadImage storing nothing and uploadFile answering a path): POST /file/uploadFile takes
 // multipart/form-data with one field `file` and answers a plain string (the
 // stored path); /review/submit's data is { questionDataKey: string }, so that
 // string is the answer to the form's image question. The DataKey comes from
@@ -56,7 +57,7 @@ const run = async (body, env) => {
 };
 const NOTE = { to: '599', title: 'ליקוי: x', details: 'd', photo: PHOTO };
 const submitted = (w) => { const c = w.calls.find(c => c.u.includes('/review/submit')); return c ? JSON.parse(c.body) : null; };
-const uploads = (w) => w.calls.filter(c => c.u.includes('/file/uploadImage'));
+const uploads = (w) => w.calls.filter(c => c.u.includes('/file/uploadFile'));
 const storageGets = (w) => w.calls.filter(c => c.u.startsWith(SB + '/storage/v1/object/'));
 const WITH_KEY = Object.assign({}, BASE, { VITRE_PHOTO_KEY: 'photo' });
 
@@ -72,7 +73,7 @@ console.log('\n1. VITRE_PHOTO_KEY unset: the photo is left out, the SMS still go
   check('no photo in the body: photo is null, nothing else changes', r2.status === 200 && r2.json.photo === null, r2.json);
 }
 
-console.log('\n2. key set: Storage -> uploadImage (multipart, field `file`) -> data[key] = the string');
+console.log('\n2. key set: Storage -> uploadFile (multipart, field `file`) -> data[key] = the string');
 {
   const w = world();
   const r = await run(NOTE, WITH_KEY);
@@ -80,7 +81,7 @@ console.log('\n2. key set: Storage -> uploadImage (multipart, field `file`) -> d
   const sg = storageGets(w)[0];
   check('the photo is read from OUR Storage with the service key', sg && sg.u === SB + '/storage/v1/object/incidents-photos/tru/abc.jpg' && sg.headers.Authorization === 'Bearer srv', sg && sg.u);
   const up = uploads(w)[0];
-  check('one upload to /file/uploadImage', uploads(w).length === 1 && up.method === 'POST', uploads(w).length);
+  check('one upload to /file/uploadFile (never uploadImage: it stores nothing, 27/09)', uploads(w).length === 1 && up.method === 'POST' && !w.calls.some(c => c.u.includes('uploadImage')), w.calls.map(c => c.u));
   check('with the Vitre keys and no hand-written Content-Type (boundary is fetch\'s)', up && up.headers['X-api-key-id'] === 'kid' && !up.headers['Content-Type'], up && up.headers);
   const file = up && up.body instanceof FormData ? up.body.get('file') : null;
   check('the body is multipart with one field `file`', !!file && [...up.body.keys()].join(',') === 'file', up && [...(up.body.keys ? up.body.keys() : [])]);
@@ -93,7 +94,7 @@ console.log('\n2. key set: Storage -> uploadImage (multipart, field `file`) -> d
   check('the keys are never in the response', !JSON.stringify(r.json).includes('ksecret') && !JSON.stringify(r.json).includes('srv'));
 }
 
-console.log('\n3. uploadImage answering bare text, a different key name');
+console.log('\n3. uploadFile answering bare text, a different key name');
 {
   const w = world({ uploadBody: 'files/x.jpg' });
   const r = await run(NOTE, Object.assign({}, BASE, { VITRE_PHOTO_KEY: 'q_photo-1' }));
@@ -179,7 +180,7 @@ console.log('\n8. photo_probe (27/09): re-upload, PUT onto an existing submissio
   check('admin: 200', r.status === 200, r.json);
   const put = w.calls.find(c => c.u.includes('/review/submit'));
   check('PUT /review/submit with createdBy=9001 and the appointment id, no reviewId (no new submission)', put && put.method === 'PUT' && /createdBy=9001/.test(put.u) && /appointmentId=3612206/.test(put.u) && !/reviewId/.test(put.u), put && put.u);
-  check('the value follows the template: uploadImage string + "|"', put && JSON.parse(put.body).data.photo === 'reviews/2026/abc.jpg|', put && put.body);
+  check('the value follows the template: uploadFile string + "|"', put && JSON.parse(put.body).data.photo === 'reviews/2026/abc.jpg|', put && put.body);
   check('uploaded once from OUR Storage', uploads(w).length === 1 && storageGets(w).length === 1);
   check('reports what Vitre stored under the key', r.json.stored && r.json.stored.questionType === 'MediaUploadTemplate' && r.json.stored.answers[0].text === 'reviews/2026/abc.jpg|', r.json.stored);
   check('echoes upload value, sent value and template', r.json.upload.value === 'reviews/2026/abc.jpg' && r.json.sent === 'reviews/2026/abc.jpg|' && r.json.template === '{v}|', r.json);
@@ -209,6 +210,30 @@ console.log('\n8. photo_probe (27/09): re-upload, PUT onto an existing submissio
   check('raw: bytes as the body, image Content-Type, {name} = the filename', up && up.u.endsWith('/file/upload/x.jpg') && !(up.body instanceof FormData) && up.headers['Content-Type'] === 'image/jpeg', up && [up.u, up.headers]);
   r = await probe({ appointmentId: 3612206, photo: PHOTO, endpoint: '/task/close', put: false });
   check('endpoint outside /file/ refused (400)', r.status === 400, r.json);
+
+  // round 3 (27/09): a NEW submission of the notification form (PUT is readonly)
+  w = world({ email: 'admin@tfugen.local' });
+  r = await probe({ photo: PHOTO, template: '{v}|', submit: true });
+  const sub = w.calls.find(c => c.u.includes('/review/submit'));
+  check('submit:true -> POST /review/submit to form 11998 by 9001, no appointmentId needed', r.status === 200 && sub && sub.method === 'POST' && /reviewId=11998/.test(sub.u) && /createdBy=9001/.test(sub.u) && !w.calls.some(c => c.method === 'PUT'), w.calls.map(c => c.method + ' ' + c.u));
+  const sd = sub && JSON.parse(sub.body).data;
+  check('data: to=599 by default, a test title, the shaped photo', sd && sd.to === '599' && /למחיקה/.test(sd.title) && sd.photo === 'reviews/2026/abc.jpg|', sd);
+  check('reads back the NEW appointment (id from the submit reply)', w.calls.some(c => c.u.includes('/get-review-result/777')) && r.json.submitted && r.json.submitted.appointmentId === 777 && r.json.stored, r.json);
+  r = await probe({ photo: PHOTO, submit: true, to: 'abc' });
+  check('submit with a bad `to` refused (400)', r.status === 400, r.json);
+}
+
+console.log('\n9. VITRE_PHOTO_TEMPLATE shapes the notify answer without a deploy');
+{
+  let w = world();
+  let r = await run(NOTE, Object.assign({}, WITH_KEY, { VITRE_PHOTO_TEMPLATE: '{v}|' }));
+  check('template applied: uploadFile string + "|"', r.status === 200 && submitted(w).data.photo === 'reviews/2026/abc.jpg|' && r.json.photo.value === 'reviews/2026/abc.jpg|', submitted(w));
+  w = world();
+  r = await run(NOTE, Object.assign({}, WITH_KEY, { VITRE_PHOTO_TEMPLATE: 'no placeholder' }));
+  check('template without {v} is ignored: the plain string', submitted(w).data.photo === 'reviews/2026/abc.jpg', submitted(w));
+  w = world();
+  r = await run(NOTE, WITH_KEY);
+  check('unset: the plain string', submitted(w).data.photo === 'reviews/2026/abc.jpg', submitted(w));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
