@@ -22,7 +22,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
-import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail } from '../_onedrive.js';
+import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead } from '../_onedrive.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
 // Every trustee photo is also copied, once, into this folder (Michael, 27/09:
@@ -334,7 +334,7 @@ export async function onRequest(context) {
       const st = await stateGet(env, ['trustee_log_at', 'trustee_log_err', 'trustee_log_url', 'trustee_photos_url']).catch(() => ({}));
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       return jsonResp({
-        configured: odConfigured(env), connected: !!(row && row.refresh_token), email: row ? row.user_email : null, mail: hasMail(row),
+        configured: odConfigured(env), connected: !!(row && row.refresh_token), email: row ? row.user_email : null, mail: hasMail(row), mailRead: hasMailRead(row),
         last: st.trustee_log_at ? st.trustee_log_at.value : null,
         error: st.trustee_log_err && st.trustee_log_err.value ? st.trustee_log_err.value : null,
         webUrl: st.trustee_log_url && st.trustee_log_url.value ? st.trustee_log_url.value : null,

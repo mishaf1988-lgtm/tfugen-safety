@@ -92,6 +92,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     const log = w.calls.find((c) => c.u.includes('notifications_log'));
     check('the function reads trustee_tasks for the row\u2019s number', w.calls.some((c) => /trustee_tasks\?n=eq\.5/.test(c.u)), w.calls.map((c) => c.u));
     check('WhatsApp carries the renamed task, not the frozen wording', meta.length && /עמדות כיבוי אש ומטפים/.test(meta[meta.length - 1].body.template.components[0].parameters.map((p) => p.text).join('|')), meta.map((m) => m.body.template.components[0].parameters));
+    check('the trustee subject carries [TS-<id>] so a reply can close it', resend && /\[TS-[A-Za-z0-9_-]+\]$/.test(resend.body.subject), resend && resend.body.subject);
     check('...and so does the email subject', resend && /עמדות כיבוי אש ומטפים/.test(resend.body.subject + resend.body.html), resend && resend.body.subject);
     check('...and the log line, which is what the manager reads back later', log && /עמדות כיבוי אש ומטפים/.test(JSON.stringify(log.body)), log && log.body[0]);
   }
@@ -159,6 +160,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('the reporter, the place and the description survive the different column names',
       /משה לוי/.test(resend.body.subject) && /רציף העמסה/.test(resend.body.html) && /משטח כמעט נפל/.test(resend.body.html), resend && resend.body.subject);
     check('severity and type become the line under the name', /חומרה גבוהה, ציוד הרמה/.test(resend.body.html), resend && resend.body.html.substring(0, 400));
+    check('a near-miss subject has no [TS-] reply tag (only trustee findings close by reply)', resend && !/\[TS-/.test(resend.body.subject), resend && resend.body.subject);
     check('the mail is headed as a near-miss, not as a trustee finding', /כמעט ונפגע/.test(resend.body.subject) && !/ליקוי מנאמן/.test(resend.body.subject), resend && resend.body.subject);
     // There is no approved near-miss template. Trying the trustee one first
     // would burn a call on a guaranteed refusal.

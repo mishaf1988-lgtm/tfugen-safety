@@ -23,7 +23,8 @@ export const PROVIDER = 'onedrive_server';
 // What a NEW sign-in asks for. Mail.Send added 2026-09-27 (Michael: trustee
 // alerts to the organisational mailbox; Resend without a verified domain only
 // delivers to its own account address).
-export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send';
+// Mail.Read added 2026-09-27: a reply "טופל" to a trustee alert closes it (mail-inbox.js).
+export const SCOPES = 'offline_access User.Read Files.ReadWrite Mail.Send Mail.Read';
 // A refresh must ask only for what was actually granted, never for SCOPES:
 // asking a refresh for a scope nobody consented to fails the refresh, and with
 // it the OneDrive log. So it asks for the scopes stored with the token.
@@ -34,6 +35,7 @@ export function refreshScopes(granted) {
   if (g.indexOf('offline_access') < 0) g.unshift('offline_access');
   return g.join(' ');
 }
+export function hasMailRead(row) { return !!(row && /(^|\s)Mail\.Read(\s|$)/i.test(String(row.scope || ''))); }
 export function hasMail(row) { return !!(row && /(^|\s)Mail\.Send(\s|$)/i.test(String(row.scope || ''))); }
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 
