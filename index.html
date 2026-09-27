@@ -2637,7 +2637,7 @@ id="m-ncr" style="display:none">
   <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
     <button class="btn btn-s" style="min-height:44px" onclick="closeModal('m-tru-route')">סגור</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRoutePdf()">&#128196; PDF</button>
-    <button class="btn btn-s" style="min-height:44px" data-vitre-btn onclick="_truRouteVitre()" title="Vitre &#1508;&#1493;&#1514;&#1495;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1500;&#1504;&#1502;&#1506;&#1503; &#1493;&#1513;&#1493;&#1500;&#1495;&#1514; &#1500;&#1493; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1504;&#1502;&#1506;&#1503; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1489;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1506;&#1501; &#1502;&#1505;&#1508;&#1512; &#1506;&#1493;&#1489;&#1491;.">&#128242; SMS &#1491;&#1512;&#1498; Vitre</button>
+    <button class="btn btn-s" style="min-height:44px;display:none" data-vitre-btn onclick="_truRouteVitre()" title="Vitre &#1508;&#1493;&#1514;&#1495;&#1514; &#1502;&#1513;&#1497;&#1502;&#1492; &#1500;&#1504;&#1502;&#1506;&#1503; &#1493;&#1513;&#1493;&#1500;&#1495;&#1514; &#1500;&#1493; SMS &#1493;&#1502;&#1497;&#1497;&#1500;. &#1492;&#1504;&#1502;&#1506;&#1503; &#1495;&#1497;&#1497;&#1489; &#1500;&#1492;&#1497;&#1493;&#1514; &#1489;&#1512;&#1513;&#1497;&#1502;&#1514; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1506;&#1501; &#1502;&#1505;&#1508;&#1512; &#1506;&#1493;&#1489;&#1491;.">&#128242; SMS &#1491;&#1512;&#1498; Vitre</button>
     <button class="btn btn-s" style="min-height:44px" onclick="_truRouteMail()">&#9993;&#65039; מייל</button>
     <button class="btn btn-p" style="min-height:44px;flex:1 1 100%;background:#25D366;border-color:#25D366" onclick="_truRouteWa()">&#128241; וואטסאפ</button>
   </div>
@@ -16169,7 +16169,7 @@ function _applyRoleGates(){
   var waCard=g('dash-wa-test');
   if(waCard) waCard.style.display = isAdmin ? '' : 'none';
   var vitreCard=g('dash-vitre-test');
-  if(vitreCard) vitreCard.style.display = isAdmin ? '' : 'none';
+  if(vitreCard) vitreCard.style.display = (isAdmin&&typeof _VITRE_TOOLS_ON!=='undefined'&&_VITRE_TOOLS_ON) ? '' : 'none';
   var secauditCard=g('dash-secaudit');
   if(secauditCard) secauditCard.style.display = isAdmin ? '' : 'none';
   // Hide the bnav "modules" entry from reporters — none of the
@@ -17716,7 +17716,13 @@ function _truRouteVitreRecipient(f){
 // server side stays gated by VITRE_NOTIFY_ENABLED=1 in Cloudflare, so a
 // page with the flag on and a server without the variable answers 403 and
 // the toast says so. Set both to false / unset to pause again.
-var _VITRE_SMS_ON=true;
+// 2026-09-27: Michael stopped the Vitre SMS channel ("too many interfaces";
+// DECISIONS 2026-09-27). false = button hidden, notify and close never called.
+// Refreshers still sync from Vitre (_vitreAutoSync); that stays for now.
+var _VITRE_SMS_ON=false;
+// The admin "Vitre tools" card on the dashboard (ping / schema / Swagger /
+// photo probe). Off with the channel; flip to true to debug the sync.
+var _VITRE_TOOLS_ON=false;
 function _truRouteVitre(){
   if(!_VITRE_SMS_ON){toast('\u05e2\u05e8\u05d5\u05e5 Vitre \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05de\u05d5\u05e4\u05e2\u05dc');return;}
   var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
