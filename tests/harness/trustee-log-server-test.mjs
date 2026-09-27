@@ -45,7 +45,11 @@ function world(o) {
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) {
       if (m === 'POST') { const r = JSON.parse(body); w.saved.push(r); w.tokens = [r]; return new Response(null, { status: 201 }); }
       if (m === 'DELETE') return new Response(null, { status: 204 });
-      return json(w.tokens || []);
+      // Honour ?select= like PostgREST does: a column the code forgets to ask
+      // for must come back missing, or a bug like the missing `scope` (27/09)
+      // passes here and fails in production.
+      const sel = (new URL(u).searchParams.get('select') || '').split(',').filter(Boolean);
+      return json((w.tokens || []).map((row) => sel.length ? Object.fromEntries(sel.filter((k) => k in row).map((k) => [k, row[k]])) : row));
     }
     if (u.startsWith(SB + '/auth/v1/user')) {
       const tok = String(init.headers.Authorization || '').replace('Bearer ', '');
@@ -236,7 +240,15 @@ console.log('\n6. alert mail through Outlook (Mail.Send)');
   jj = await r.json();
   check('Outlook refuses and no Resend key: the error says why', /outlook 403/.test(jj.email), jj.email);
   r = await call(ENV, { op: 'status' }, { Authorization: 'Bearer mgr' });
-  check('status tells the tile whether mail is allowed', r.j.mail === true || r.j.mail === false, r.j);
+  w = world({ tokens: [{ ...tokM[0], access_token: null, expires_at: null }] });
+  await runLog(ENV, true);
+  check('a refresh of an account that granted Mail.Send keeps asking for it (scope read back from the DB)', w.tokenReq && /Mail\.Send/.test(w.tokenReq.scope), w.tokenReq && w.tokenReq.scope);
+  w = world({ tokens: tokM });
+  r = await call(ENV, { op: 'status' }, { Authorization: 'Bearer mgr' });
+  check('status says mail is allowed once Mail.Send is stored', r.j.mail === true, r.j);
+  w = world({ tokens: [{ ...tokM[0], scope: 'Files.ReadWrite User.Read' }] });
+  r = await call(ENV, { op: 'status' }, { Authorization: 'Bearer mgr' });
+  check('...and not allowed without it', r.j.mail === false, r.j);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

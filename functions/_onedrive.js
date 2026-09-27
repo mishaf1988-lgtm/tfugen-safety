@@ -80,7 +80,7 @@ export async function stateSet(env, obj) {
 // ---- token store: public.oauth_tokens ----
 export async function tokenRow(env) {
   const s = sb(env);
-  const r = await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&select=user_email,refresh_token,access_token,expires_at,updated_at&order=updated_at.desc&limit=1', { headers: s.h });
+  const r = await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&select=user_email,refresh_token,access_token,expires_at,scope,updated_at&order=updated_at.desc&limit=1', { headers: s.h });
   if (!r.ok) throw new Error('token store read failed (' + r.status + ')');
   const rows = await r.json();
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
