@@ -27,7 +27,7 @@ function world(o) {
     const rec = { u, method: (init && init.method) || 'GET', headers: h, body: init && init.body };
     w.calls.push(rec);
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
-    if (u.startsWith(SB + '/auth/v1/user')) return json({ id: 'u1', email: 'manager@tfugen.local', is_anonymous: false });
+    if (u.startsWith(SB + '/auth/v1/user')) return json({ id: 'u1', email: o.email || 'manager@tfugen.local', is_anonymous: false });
     if (u.startsWith(SB + '/rest/v1/app_users')) return json([{ role: 'מנהל', active: true }]);
     if (u.startsWith(SB + '/storage/v1/object/')) {
       const st = o.storageStatus || 200;
@@ -40,6 +40,8 @@ function world(o) {
       const body = o.uploadBody !== undefined ? o.uploadBody : JSON.stringify('reviews/2026/abc.jpg');
       return new Response(body, { status: st, headers: { 'Content-Type': st === 200 ? 'text/plain' : 'application/json' } });
     }
+    if (u.includes('/appointmetResult/get-review-result/')) return json({ appointmentId: 3612206, questions: [{ dataKey: 'photo', questionType: 'MediaUploadTemplate', status: o.storedStatus || 'Answered', selectedAnswers: [{ text: o.storedText !== undefined ? o.storedText : 'reviews/2026/abc.jpg|', externalId: '' }] }] });
+    if (u.includes('/review/submit') && rec.method === 'PUT') return json({ id: 3612206, status: 'Draft' });
     if (u.includes('/review/submit')) return json({ id: 777, status: 'Draft', previewUrl: 'https://app.vitre.io/formResults/x' });
     return json({ message: 'unexpected ' + u }, 404);
   };
@@ -158,6 +160,41 @@ console.log('\n7. client sends the finding\'s photo link (index.html)');
   check('the notify body carries photo=_truRoutePhoto(r) when there is one', /var ph=_truRoutePhoto\(r\);if\(ph\)body\.photo=ph;/.test(src));
   check('a dropped photo is shown to the user (not a skipped one)', /pho\.ok===false&&!pho\.skipped/.test(src) && /\\u05d4\\u05ea\\u05de\\u05d5\\u05e0\\u05d4 \\u05dc\\u05d0 \\u05e6\\u05d5\\u05e8\\u05e4\\u05d4/.test(src));
   check('a pending: upload is never sent (photo helper filters it)', /function _truRoutePhoto\(r\)\{var p=String\(r\.photo_url\|\|''\);return \(p&&p\.indexOf\('pending:'\)!==0\)\?p:'';\}/.test(html));
+}
+
+console.log('\n8. photo_probe (27/09): re-upload, PUT onto an existing submission in a chosen shape, read back');
+{
+  const probe = async (body, env, email) => {
+    const r = await onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/vitre?op=photo_probe', {
+      method: 'POST', headers: { origin: 'https://tapugan-safety.pages.dev', authorization: 'Bearer tok', 'content-type': 'application/json' },
+      body: JSON.stringify(body) }), env: env || WITH_KEY });
+    let j = null; try { j = await r.json(); } catch (e) {}
+    return { status: r.status, json: j };
+  };
+  let w = world({});
+  let r = await probe({ appointmentId: 3612206, photo: PHOTO, template: '{v}|' });
+  check('a manager (non-admin) is refused, nothing reaches Vitre', r.status === 403 && !w.calls.some(c => c.u.includes('hbinov')), r.json);
+  w = world({ email: 'admin@tfugen.local' });
+  r = await probe({ appointmentId: 3612206, photo: PHOTO, template: '{v}|' });
+  check('admin: 200', r.status === 200, r.json);
+  const put = w.calls.find(c => c.u.includes('/review/submit'));
+  check('PUT /review/submit with createdBy=9001 and the appointment id, no reviewId (no new submission)', put && put.method === 'PUT' && /createdBy=9001/.test(put.u) && /appointmentId=3612206/.test(put.u) && !/reviewId/.test(put.u), put && put.u);
+  check('the value follows the template: uploadImage string + "|"', put && JSON.parse(put.body).data.photo === 'reviews/2026/abc.jpg|', put && put.body);
+  check('uploaded once from OUR Storage', uploads(w).length === 1 && storageGets(w).length === 1);
+  check('reports what Vitre stored under the key', r.json.stored && r.json.stored.questionType === 'MediaUploadTemplate' && r.json.stored.answers[0].text === 'reviews/2026/abc.jpg|', r.json.stored);
+  check('echoes upload value, sent value and template', r.json.upload.value === 'reviews/2026/abc.jpg' && r.json.sent === 'reviews/2026/abc.jpg|' && r.json.template === '{v}|', r.json);
+  r = await probe({ appointmentId: 3612206, photo: PHOTO }, undefined, 'admin');
+  const put2 = w.calls.filter(c => c.u.includes('/review/submit')).pop();
+  check('no template = the bare string', JSON.parse(put2.body).data.photo === 'reviews/2026/abc.jpg', put2.body);
+  w = world({ email: 'admin@tfugen.local' });
+  r = await probe({ appointmentId: 3612206, photo: 'https://evil.example/x.jpg' });
+  check('foreign photo link refused (400), nothing fetched', r.status === 400 && storageGets(w).length === 0 && uploads(w).length === 0, r.json);
+  r = await probe({ photo: PHOTO });
+  check('appointmentId required (400)', r.status === 400, r.json);
+  r = await probe({ appointmentId: 3612206, photo: PHOTO }, BASE);
+  check('VITRE_PHOTO_KEY unset -> 400, not a silent skip', r.status === 400 && /VITRE_PHOTO_KEY/.test(r.json.error), r.json);
+  r = await probe({ appointmentId: 3612206, photo: PHOTO }, Object.assign({}, WITH_KEY, { VITRE_NOTIFY_ENABLED: '0' }));
+  check('paused channel -> 403', r.status === 403, r.json);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
