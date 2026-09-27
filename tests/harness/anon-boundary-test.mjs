@@ -20,7 +20,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const load = async (rel) => {
   const src = fs.readFileSync(path.join(ROOT, rel), 'utf8')
     // a data: module resolves specifiers as URLs, so this must be file://
-    .replace(/from '\.\.\/_shared\.js'/, "from '" + pathToFileURL(path.join(ROOT, 'functions/_shared.js')).href + "'");
+    .replace(/from '\.\.\/(_[a-z]+)\.js'/g, (m, mod) => "from '" + pathToFileURL(path.join(ROOT, 'functions/' + mod + '.js')).href + "'");
   return import('data:text/javascript;charset=utf-8,' + encodeURIComponent(src));
 };
 

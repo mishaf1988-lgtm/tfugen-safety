@@ -22,7 +22,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE } from '../_xlsx.js';
-import { odConfigured, accessToken, putFile, stateGet, stateSet, tokenRow } from '../_onedrive.js';
+import { odConfigured, accessToken, putFile, stateGet, stateSet, tokenRow, hasMail } from '../_onedrive.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
 export const LOG_FILE = '\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd.xlsx';
@@ -159,7 +159,7 @@ export async function onRequest(context) {
       const st = await stateGet(env, ['trustee_log_at', 'trustee_log_err', 'trustee_log_url']).catch(() => ({}));
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       return jsonResp({
-        configured: odConfigured(env), connected: !!(row && row.refresh_token), email: row ? row.user_email : null,
+        configured: odConfigured(env), connected: !!(row && row.refresh_token), email: row ? row.user_email : null, mail: hasMail(row),
         last: st.trustee_log_at ? st.trustee_log_at.value : null,
         error: st.trustee_log_err && st.trustee_log_err.value ? st.trustee_log_err.value : null,
         webUrl: st.trustee_log_url && st.trustee_log_url.value ? st.trustee_log_url.value : null,

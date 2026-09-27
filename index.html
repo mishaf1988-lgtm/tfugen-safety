@@ -17988,6 +17988,9 @@ function _truLogHomeRender(noFetch){
     if(S.error)st='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d9\u05d7 \u05dc\u05e2\u05d3\u05db\u05df \u05d0\u05ea OneDrive: '+esc(String(S.error).substring(0,80))+'</span>';
     else if(S.last)st='\u2601\ufe0f \u05de\u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d4\u05e9\u05e8\u05ea. \u05e2\u05d5\u05d3\u05db\u05df: '+_truTimeHtml(S.last);
     else st='\u2601\ufe0f \u05d4\u05e9\u05e8\u05ea \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive, \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d9\u05d9\u05db\u05ea\u05d1 \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d1\u05d0';
+    // Mail.Send came later (27/09): an account connected before it has no
+    // right to send, and a new sign-in is the only way to add it.
+    if(S.mail===false)btn+='<button class="btn btn-p btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truSrvConnect()">\ud83d\udce7 \u05d0\u05e9\u05e8 \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05de-Outlook (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05de\u05d7\u05d3\u05e9)</button>';
   }else if(S&&S.configured){
     st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05e9\u05e8\u05ea \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d7\u05d3 \u05e4\u05e2\u05de\u05d9)</span>';
     btn='<button class="btn btn-p btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truSrvConnect()">\ud83d\udd17 \u05d7\u05d1\u05e8 \u05d0\u05ea OneDrive \u05dc\u05e9\u05e8\u05ea</button>';
