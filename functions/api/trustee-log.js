@@ -22,9 +22,17 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
-import { odConfigured, accessToken, putFile, stateGet, stateSet, tokenRow, hasMail } from '../_onedrive.js';
+import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail } from '../_onedrive.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
+// Every trustee photo is also copied, once, into this folder (Michael, 27/09:
+// "why not keep the photos in OneDrive, there is room"): the company's own
+// archive, a link that does not expire, opened only by a signed-in account.
+export const PHOTO_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/\u05ea\u05de\u05d5\u05e0\u05d5\u05ea';
+// Copies per write: each is a download + an upload, inside the 50-subrequest
+// budget with the 15 thumbnails. The rest go on the next write (the signature
+// is not saved while copies are pending, so the next trigger writes again).
+const MAX_COPIES = 6;
 export const LOG_FILE = '\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd.xlsx';
 const SHEET = '\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd';
 const TASK_CLOSE = 8;
@@ -120,8 +128,9 @@ export function storagePath(url, base) {
 
 // Replaces the photo cells with {text, link} and returns the thumbnails to
 // embed. Never throws: a photo that fails is a row without a picture.
-export async function attachPhotos(env, aoa, reports, now) {
+export async function attachPhotos(env, aoa, reports, now, od) {
   now = now || Date.now();
+  // od: {token, copied: {reportId: webUrl}} to copy photos to OneDrive; absent = links only.
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
   const hdr = { apikey: key, Authorization: 'Bearer ' + key };
@@ -148,9 +157,34 @@ export async function attachPhotos(env, aoa, reports, now) {
       });
     } catch (e) { /* links stay as they were */ }
   }
+  // Copy to OneDrive what is not there yet; link the OneDrive file when it is.
+  let copies = 0, pending = 0;
+  const orig = {}; // bytes downloaded for a copy, reused as the thumbnail
+  for (const x of rows) {
+    const id = aoa[x.i][ID_COL];
+    if (!od || !od.token || id in od.copied) continue;
+    if (copies >= MAX_COPIES) { pending++; continue; }
+    copies++;
+    try {
+      const r = await fetch(base + '/storage/v1/object/authenticated/' + encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/'), { headers: hdr });
+      // Gone from Storage (404) or not a picture: remember it as '' so it is not
+      // retried on every write; its row keeps the Storage link.
+      if (r.status === 404 || r.status === 400) { od.copied[id] = ''; continue; }
+      if (!r.ok) { pending++; continue; }
+      const b = new Uint8Array(await r.arrayBuffer());
+      const info = imageInfo(b);
+      if (!info) { od.copied[id] = ''; continue; }
+      orig[id] = b;
+      const rep0 = byId[id] || {};
+      const day = String(rep0.d || rep0.ts || '').substring(0, 10) || 'undated';
+      const res = await putFile(od.token, PHOTO_FOLDER, day + '_' + String(id).replace(/[^A-Za-z0-9_-]/g, '') + '.' + (info.ext === 'png' ? 'png' : 'jpg'), b, 'image/' + info.ext);
+      if (res && res.webUrl) od.copied[id] = res.webUrl;
+    } catch (e) { pending++; /* retried on the next write */ }
+  }
+  if (od) od.pending = pending;
   const want = [];
   for (const x of rows) {
-    const link = signed[x.sp.bucket + '/' + x.sp.path];
+    const link = (od && od.copied[aoa[x.i][ID_COL]]) || signed[x.sp.bucket + '/' + x.sp.path];
     if (link) aoa[x.i][PHOTO_COL] = { text: PHOTO_TEXT, link };
     const rep = byId[aoa[x.i][ID_COL]] || {};
     const t = Date.parse(rep.ts || rep.d || '');
@@ -164,6 +198,11 @@ export async function attachPhotos(env, aoa, reports, now) {
     if (images.length >= MAX_IMAGES || bytes >= MAX_IMAGE_BYTES) break;
     const obj = encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/');
     try {
+      const have = orig[aoa[x.i][ID_COL]];
+      if (have && !thumbs) {
+        if (bytes + have.length > MAX_IMAGE_BYTES) continue;
+        bytes += have.length; images.push({ row: x.i, col: PHOTO_COL, bytes: have }); continue;
+      }
       let r = null;
       if (thumbs) {
         r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain', { headers: hdr });
@@ -206,16 +245,37 @@ export async function runLog(env, force) {
   if (aoa.length < 2) return { ok: true, pushed: false, reason: 'empty', rows: 0 };
   const sig = await signature(aoa);
   if (!force) {
-    const st = await stateGet(env, ['trustee_log_sig']);
-    if (st.trustee_log_sig && st.trustee_log_sig.value === sig) return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
+    const st = await stateGet(env, ['trustee_log_sig', 'trustee_photos']);
+    // Unchanged AND every photo already in OneDrive = nothing to do. A photo
+    // not yet copied (the ones from before 27/09, or a failed copy) makes it
+    // write anyway, so copying never waits for the next report.
+    let copied = {};
+    try { copied = JSON.parse((st.trustee_photos && st.trustee_photos.value) || '{}') || {}; } catch (e) {}
+    const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+    const missing = (reports || []).some((r) => r && r.id && storagePath(r.photo_url, base) && !(r.id in copied));
+    if (st.trustee_log_sig && st.trustee_log_sig.value === sig && !missing) return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
   }
   try {
     const { token } = await accessToken(env);
+    const st2 = await stateGet(env, ['trustee_photos', 'trustee_photos_url']).catch(() => ({}));
+    let copied = {};
+    try { copied = JSON.parse((st2.trustee_photos && st2.trustee_photos.value) || '{}') || {}; } catch (e) { copied = {}; }
+    const before = Object.keys(copied).length;
+    const od = { token, copied, pending: 0 };
     // After the signature: signed links change on every write, the content does not.
-    const images = await attachPhotos(env, aoa, reports);
+    const images = await attachPhotos(env, aoa, reports, Date.now(), od);
     const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS, images), XLSX_TYPE);
-    await stateSet(env, { trustee_log_sig: sig, trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' });
-    return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, webUrl: res.webUrl || null };
+    const save = { trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' };
+    // Copies still pending: keep the old signature so the next trigger writes again.
+    if (!od.pending) save.trustee_log_sig = sig;
+    const n = Object.keys(od.copied).length;
+    if (n !== before) save.trustee_photos = JSON.stringify(od.copied);
+    if (n && !(st2.trustee_photos_url && st2.trustee_photos_url.value)) {
+      const fu = await itemUrl(token, PHOTO_FOLDER).catch(() => null);
+      if (fu) save.trustee_photos_url = fu;
+    }
+    await stateSet(env, save);
+    return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, photos_copied: n - before, photos_pending: od.pending, webUrl: res.webUrl || null };
   } catch (e) {
     const msg = (e && e.code === 'not_connected') ? 'not connected' : String((e && e.message) || e).substring(0, 200);
     await stateSet(env, { trustee_log_err: msg }).catch(() => {});
@@ -239,13 +299,14 @@ export async function onRequest(context) {
     const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     if (body.op === 'status') {
-      const st = await stateGet(env, ['trustee_log_at', 'trustee_log_err', 'trustee_log_url']).catch(() => ({}));
+      const st = await stateGet(env, ['trustee_log_at', 'trustee_log_err', 'trustee_log_url', 'trustee_photos_url']).catch(() => ({}));
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       return jsonResp({
         configured: odConfigured(env), connected: !!(row && row.refresh_token), email: row ? row.user_email : null, mail: hasMail(row),
         last: st.trustee_log_at ? st.trustee_log_at.value : null,
         error: st.trustee_log_err && st.trustee_log_err.value ? st.trustee_log_err.value : null,
         webUrl: st.trustee_log_url && st.trustee_log_url.value ? st.trustee_log_url.value : null,
+        photosUrl: st.trustee_photos_url && st.trustee_photos_url.value ? st.trustee_photos_url.value : null,
         folder: LOG_FOLDER, file: LOG_FILE,
       }, 200, cors);
     }
@@ -257,6 +318,15 @@ export async function onRequest(context) {
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {
     const r = await runLog(env, force);
+    // More photos than one write may copy: call ourselves again (a new request,
+    // a new subrequest budget) until none is pending. Only after progress, so a
+    // photo that keeps failing cannot loop.
+    if (r && r.photos_pending > 0 && r.photos_copied > 0 && context.waitUntil) {
+      const h = { 'Content-Type': 'application/json' };
+      if (env.TRUSTEE_NOTIFY_SECRET) h['x-notify-secret'] = env.TRUSTEE_NOTIFY_SECRET;
+      context.waitUntil(fetch(new URL('/api/trustee-log', request.url).toString(), { method: 'POST', headers: h, body: '{}' }).catch(() => {}));
+      r.continued = true;
+    }
     // Which deploy answered: lets a check after an env change tell the new
     // deployment from the old one (Cloudflare Pages sets CF_PAGES_COMMIT_SHA).
     r.commit = String(env.CF_PAGES_COMMIT_SHA || '').substring(0, 7) || null;

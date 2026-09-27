@@ -42,6 +42,6 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
-  console.log(`\n${pass}/${pass + fail} passed`);
+  console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })();
