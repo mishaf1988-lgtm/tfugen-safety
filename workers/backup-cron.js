@@ -36,7 +36,7 @@
 const TABLES = [
   'docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl',
   'ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds',
-  'hearing_tests','tasks','app_users','toolbox','env_aspects','page_files',
+  'hearing_tests','tasks','app_users','toolbox','tour_hazards','env_aspects','page_files',
   'locations','saved_views','notification_prefs','custom_props','projects',
   'inspection_types','issue_types',
   // the trustee programme
