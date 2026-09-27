@@ -954,6 +954,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="qa-btn" data-qa-mgr="1" onclick="openNewNcrModal()"><span class="qa-ic">&#9888;&#65039;</span><span>NCR חדש</span></button>
     <button class="qa-btn" onclick="openModal('m-nm')"><span class="qa-ic">&#9889;</span><span>כמעט ונפגע</span></button>
     <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO &#8212; &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
+    <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-tru-log"></div></div>
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="min-height:40px;display:flex;align-items:center;padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
@@ -6058,6 +6059,8 @@ function rDash(){
   // Phase 2 Agent 2 — refresh password reset request inbox on every
   // dashboard render. Cheap (1 SELECT, hidden if no rows / non-admin).
   if(typeof _pwReqLoad==='function')_pwReqLoad();
+  // Trustee reports log (Excel) tile on the home screen (Michael, 27/09).
+  if(typeof _truLogHomeRender==='function')try{_truLogHomeRender();}catch(e){}
   // Always update the topbar/bnav badges (cheap, user expects them fresh).
   _dashBadges();
   // Home-only CSS hooks (floating AI button hidden on home) — P1#1.
@@ -17955,6 +17958,18 @@ window._truLogExportXlsx=function(){
     toast('\u05d9\u05d5\u05e6\u05d0 \u2713 '+(aoa.length-1)+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');
   })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
 };
+// Home-screen tile: the same file, one tap from the dashboard.
+function _truLogHomeRender(){
+  var box=g('dash-tru-log');if(!box)return;
+  var reps=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
+  var openN=reps.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
+  var last='';try{last=localStorage.getItem('tfgn_tru_od_last')||'';}catch(e){}
+  var od=last?'<div style="font-size:11px;color:var(--t2)">\u2601\ufe0f \u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05e2\u05e0\u05df: <bdi dir="ltr">'+esc(fd(last.substring(0,10)))+' '+esc(new Date(last).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}))+'</bdi></div>':'';
+  box.innerHTML='<button class="btn btn-s" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right" onclick="_truLogExportXlsx()" aria-label="\u05d4\u05d5\u05e8\u05d3 \u05d0\u05ea \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd">'
+    +'<span style="display:flex;flex-direction:column;align-items:flex-start;min-width:0"><strong>\ud83d\udcd7 \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd (\u05d0\u05e7\u05e1\u05dc)</strong>'
+    +'<span style="font-size:12px;color:var(--t2)">'+reps.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, '+openN+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>'+od+'</span>'
+    +'<span style="white-space:nowrap;font-weight:700">\u2b07\ufe0f \u05d4\u05d5\u05e8\u05d3</span></button>';
+}
 window._truOdTick=function(){
   if(_TRU_OD_BUSY)return Promise.resolve('busy');
   var tok=(typeof _odToken==='function')?_odToken():null;
