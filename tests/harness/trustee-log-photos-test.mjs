@@ -82,6 +82,24 @@ check('open findings fetched before newer closed ones', calls.get[0] === 'bad.jp
   check('capped at 15 images, thumbnails used, no originals', im2.length === 15 && renders === 15 && gets === 0, { n: im2.length, renders, gets });
 }
 
+{
+  // A thumbnail that is WebP (not embeddable): the original is used instead.
+  const saved = globalThis.fetch; const webp = new Uint8Array([0x52,0x49,0x46,0x46,1,2,3,4,0x57,0x45,0x42,0x50, ...new Array(20).fill(0)]);
+  let asked = '';
+  globalThis.fetch = async (url, init) => {
+    url = String(url);
+    if (url.indexOf('/render/image/authenticated/') > 0) { asked = url; return new Response(webp, { status: 200, headers: { 'content-type': 'image/webp' } }); }
+    if (url.indexOf('/object/authenticated/') > 0) return new Response(JPG, { status: 200, headers: { 'content-type': 'image/jpeg' } });
+    return saved(url, init);
+  };
+  const one = [{ id: 'w1', u: 'a', t: 1, d: iso(1).slice(0, 10), ts: iso(1), ok: false, s: 'פתוח', f: 'x', photo_url: pub('w1.jpg') }];
+  const a3 = buildAoa(one, [], [], now);
+  const im3 = await attachPhotos(env, a3, one, now);
+  globalThis.fetch = saved;
+  check('thumbnail asked with format=origin', asked.indexOf('format=origin') > 0, asked);
+  check('WebP thumbnail -> original embedded, diag says so', im3.length === 1 && imageInfo(im3[0].bytes).ext === 'jpeg' && im3.diag.some((d) => d.type === 'image/webp' && d.info === null), im3.diag);
+}
+
 console.log('\n2. storagePath');
 check('public URL parsed', JSON.stringify(storagePath(pub('a/b.jpg'), SB)) === JSON.stringify({ bucket: 'incidents-photos', path: 'a/b.jpg' }));
 check('other host refused', storagePath('https://x.supabase.co/storage/v1/object/public/b/c.jpg', SB) === null);
