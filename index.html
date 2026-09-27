@@ -17905,6 +17905,42 @@ window._hazExportXlsx=function(){
     toast('\u05d9\u05d5\u05e6\u05d0 ✓ '+rows.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd ('+openN+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd)');
   })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
 };
+// ---- live reports log in OneDrive (Michael, 27/09) ----
+// One fixed file, /Apps/Tapugan Safety/<reports>/<reports log>.xlsx, rewritten
+// whenever the hazard list changes: a new report, a status change, a closure.
+// It is the same sheet as _hazExportXlsx, so the file never disagrees with the
+// manual export. The browser pushes it (DECISIONS 2026-09-21: a server cannot
+// hold the OneDrive token), so it updates only while a manager who is
+// connected to OneDrive has the app open. The signature is kept only after a
+// successful upload, so a failed push (file open in Excel = 423) retries.
+var HAZ_OD_FOLDER='\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd',HAZ_OD_FILE='\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd.xlsx';
+var _HAZ_OD_BUSY=false;
+function _hazSig(aoa){var s=JSON.stringify(aoa),h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return String(h)+':'+s.length;}
+window._hazOdTick=function(){
+  if(_HAZ_OD_BUSY)return Promise.resolve('busy');
+  var tok=(typeof _odToken==='function')?_odToken():null;
+  if(!tok||!tok.account)return Promise.resolve('offline');
+  var rows;try{rows=_hazRows();}catch(e){return Promise.resolve('norows');}
+  if(!rows.length)return Promise.resolve('empty');
+  var aoa=_hazAoa(rows),sig=_hazSig(aoa),last='';
+  try{last=localStorage.getItem('tfgn_haz_od_sig')||'';}catch(e){}
+  if(sig===last)return Promise.resolve('same');
+  _HAZ_OD_BUSY=true;
+  return _ensureXlsxLib().then(function(){
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(aoa),'\u05de\u05e4\u05d2\u05e2\u05d9\u05dd');
+    var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    return _odPushFile(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),HAZ_OD_FOLDER,HAZ_OD_FILE);
+  }).then(function(){
+    try{localStorage.setItem('tfgn_haz_od_sig',sig);localStorage.setItem('tfgn_haz_od_last',new Date().toISOString());}catch(e){}
+    dlog('[haz-od] pushed '+rows.length+' rows');
+    return 'pushed';
+  })['catch'](function(e){dlog('[haz-od] failed: '+((e&&e.message)||e));return 'failed';})
+  .then(function(r){_HAZ_OD_BUSY=false;return r;});
+};
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){_hazOdTick();},20000);});
+window.addEventListener('focus',function(){setTimeout(function(){_hazOdTick();},3000);});
+setInterval(function(){_hazOdTick();},2*60*1000);
 // ---- roster editor (manager): public.trustees ----
 function _truRosterOpen(){_truRosterRender();openModal('m-tru-roster');}
 function _truRosterRender(){
