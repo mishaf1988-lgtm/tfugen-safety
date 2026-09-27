@@ -264,12 +264,14 @@ export async function runLog(env, force) {
     const od = { token, copied, pending: 0 };
     // After the signature: signed links change on every write, the content does not.
     const images = await attachPhotos(env, aoa, reports, Date.now(), od);
+    // Save the copies before the log upload: a locked log (423, open in Excel)
+    // must not lose them, or they are uploaded again next time.
+    if (Object.keys(od.copied).length !== before) await stateSet(env, { trustee_photos: JSON.stringify(od.copied) }).catch(() => {});
     const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS, images), XLSX_TYPE);
     const save = { trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' };
     // Copies still pending: keep the old signature so the next trigger writes again.
     if (!od.pending) save.trustee_log_sig = sig;
     const n = Object.keys(od.copied).length;
-    if (n !== before) save.trustee_photos = JSON.stringify(od.copied);
     if (n && !(st2.trustee_photos_url && st2.trustee_photos_url.value)) {
       const fu = await itemUrl(token, PHOTO_FOLDER).catch(() => null);
       if (fu) save.trustee_photos_url = fu;
