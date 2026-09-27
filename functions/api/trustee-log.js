@@ -219,6 +219,17 @@ export async function attachPhotos(env, aoa, reports, now, od) {
   return images;
 }
 
+// The saved signature covers the content AND which photos the file links to
+// in OneDrive: copying a photo changes its link, so the file must be written
+// again even though no report changed (seen live 27/09: copies done, log
+// locked, next run said "unchanged" and the links stayed on Storage).
+async function logSig(sig, reports, copied) {
+  const ids = (reports || []).map((r) => r && r.id).filter((id) => id && copied[id]).sort();
+  const s = sig + '|' + ids.map((id) => id + '=' + copied[id]).join(',');
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function readAll(env, path) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
@@ -253,7 +264,7 @@ export async function runLog(env, force) {
     try { copied = JSON.parse((st.trustee_photos && st.trustee_photos.value) || '{}') || {}; } catch (e) {}
     const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
     const missing = (reports || []).some((r) => r && r.id && storagePath(r.photo_url, base) && !(r.id in copied));
-    if (st.trustee_log_sig && st.trustee_log_sig.value === sig && !missing) return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
+    if (st.trustee_log_sig && st.trustee_log_sig.value === await logSig(sig, reports, copied) && !missing) return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
   }
   try {
     const { token } = await accessToken(env);
@@ -270,7 +281,7 @@ export async function runLog(env, force) {
     const res = await putFile(token, LOG_FOLDER, LOG_FILE, buildXlsx(aoa, SHEET, WIDTHS, images), XLSX_TYPE);
     const save = { trustee_log_at: new Date().toISOString(), trustee_log_err: '', trustee_log_url: res.webUrl || '' };
     // Copies still pending: keep the old signature so the next trigger writes again.
-    if (!od.pending) save.trustee_log_sig = sig;
+    if (!od.pending) save.trustee_log_sig = await logSig(sig, reports, od.copied);
     const n = Object.keys(od.copied).length;
     if (n && !(st2.trustee_photos_url && st2.trustee_photos_url.value)) {
       const fu = await itemUrl(token, PHOTO_FOLDER).catch(() => null);
