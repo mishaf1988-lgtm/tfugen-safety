@@ -353,12 +353,12 @@ export async function onRequest({ request, env }) {
   const url = new URL(request.url);
   const op = (url.searchParams.get('op') || 'ping').toLowerCase();
   // POST exists for the two ops that submit a form; everything else stays a GET.
-  const POST_OPS = { review_submit_test: 1, notify: 1, close: 1 };
+  const POST_OPS = { review_submit_test: 1, notify: 1, close: 1, photo_probe: 1 };
   if (request.method === 'POST' && !POST_OPS[op]) return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (request.method === 'GET' && POST_OPS[op]) return jsonResp({ error: 'POST required' }, 405, cors);
   // The form ops are admin-only: the schema names people, the submission writes to Vitre.
   const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
-  if ((op === 'review_schema' || op === 'review_result' || op === 'review_submit_test' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
+  if ((op === 'review_schema' || op === 'review_result' || op === 'review_submit_test' || op === 'photo_probe' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
 
   const ID = env.VITRE_API_KEY_ID;
   const SECRET = env.VITRE_API_KEY_SECRET;
@@ -507,6 +507,44 @@ export async function onRequest({ request, env }) {
     if (!r.ok) return upstreamError(r, cors);
     const cut = JSON.parse(JSON.stringify(r.json, (k, x) => (typeof x === 'string' && x.length > 400) ? x.slice(0, 400) + '...' : x));
     return jsonResp({ appointmentId: id, result: cut }, 200, cors);
+  }
+  // Photo format probe (admin, 27/09). The media question of form 11998 stored
+  // "|" for the plain uploadImage string, and the form cannot be filled from
+  // the mobile app to see a real media answer. So: upload the finding's photo
+  // again, PUT it onto an EXISTING submission (no new task, no new SMS from
+  // the rule) in the shape `template` gives ({v} = the uploadImage string),
+  // and read back what Vitre stored under VITRE_PHOTO_KEY.
+  if (op === 'photo_probe') {
+    if (String(env.VITRE_NOTIFY_ENABLED || '') !== '1') return jsonResp({ error: 'notify is paused (VITRE_NOTIFY_ENABLED is not 1)' }, 403, cors);
+    let body = null;
+    try { body = await request.json(); } catch (e) { return jsonResp({ error: 'invalid JSON body' }, 400, cors); }
+    const apptId = parseInt(body && body.appointmentId, 10);
+    if (!apptId) return jsonResp({ error: 'appointmentId required' }, 400, cors);
+    const photoKey = String(env.VITRE_PHOTO_KEY || '').trim();
+    if (!/^[A-Za-z0-9_-]{1,60}$/.test(photoKey)) return jsonResp({ error: 'VITRE_PHOTO_KEY unset' }, 400, cors);
+    const obj = ownStorageObject(env, String((body && body.photo) || ''));
+    if (!obj) return jsonResp({ error: 'photo must be a link to the app\'s own Storage' }, 400, cors);
+    const template = String((body && body.template) || '{v}').slice(0, 300);
+    const got = await fetchOwnPhoto(env, obj);
+    if (!got.ok) return jsonResp({ error: 'storage: ' + got.error }, 502, cors);
+    const up = await vitreUploadImage(env, got);
+    if (!up.ok) return jsonResp({ error: 'uploadImage ' + (up.status || 'unreachable') + ': ' + up.error }, 502, cors);
+    const value = template.split('{v}').join(up.value);
+    const createdBy = String(env.VITRE_NOTIFY_CREATED_BY || VITRE_NOTIFY_CREATED_BY_DEFAULT);
+    const data = {}; data[photoKey] = value;
+    const put = await vitrePut(env, '/review/submit?createdBy=' + encodeURIComponent(createdBy) + '&appointmentId=' + apptId, { data });
+    const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + apptId);
+    let stored = null;
+    if (rr.ok && rr.json && Array.isArray(rr.json.questions)) {
+      const q = rr.json.questions.find(x => x && x.dataKey === photoKey);
+      if (q) stored = { questionType: q.questionType || null, status: q.status || null, answers: (q.selectedAnswers || []).map(a => ({ text: String(a.text == null ? '' : a.text).slice(0, 400), externalId: a.externalId || '' })) };
+    }
+    return jsonResp({
+      appointmentId: apptId, key: photoKey, template, sent: value.slice(0, 400), bytes: got.bytes.byteLength,
+      upload: { status: up.status, value: up.value.slice(0, 400) },
+      put: { status: put.status, ok: put.ok, result: put.json, text: put.text, networkError: put.networkError },
+      stored, readStatus: rr.status
+    }, put.ok ? 200 : 502, cors);
   }
   // The Swagger document itself, sliced (see swaggerDoc above). Without ?path:
   // an index of METHOD + path + summary (?q= filters it). With ?path: every
