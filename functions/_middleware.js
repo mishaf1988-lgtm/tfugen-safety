@@ -34,7 +34,9 @@ const DEFAULT_ALLOWED = 'IL';
 // in Israel. Geo-blocking this path would silently break every hazard alert:
 // the trustee's report would save and nobody would ever be told. It carries
 // its own authentication and does not become weaker for being reachable.
-const MACHINE_PATHS = ['/api/trustee-notify'];
+// /api/trustee-log (2026-09-27) is the same kind of caller: the trustee_reports
+// statement trigger, rebuilding the OneDrive log, with the same secret.
+const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log'];
 
 // Headers Pages applies to static assets from /_headers. A response that comes
 // back through next() should still carry them, but this does not depend on

@@ -17934,10 +17934,10 @@ function _truLogAoa(){
       var end=closed?Date.parse((c&&(c.ts||c.d))||''):Date.now();
       if(!isNaN(end))days=Math.max(0,Math.floor((end-start)/dayMs));
     }
-    aoa.push([fd(r.d||String(r.ts||'').substring(0,10)),r.u||'',isNaN(n)?'':n,tk?tk.t:'',
+    aoa.push([((r.d||r.ts)?fd(r.d||String(r.ts||'').substring(0,10)):''),r.u||'',isNaN(n)?'':n,tk?tk.t:'',
       r.loc||(r.location_id?_locName(r.location_id):''),kind,r.f||'',r.s||'',
       isF?(closed?'\u05e1\u05d2\u05d5\u05e8':'\u05e4\u05ea\u05d5\u05d7'):'-',
-      closed&&c?fd(c.d||String(c.ts||'').substring(0,10)):'',closed&&c?(c.u||''):'',
+      closed&&c&&(c.d||c.ts)?fd(c.d||String(c.ts||'').substring(0,10)):'',closed&&c?(c.u||''):'',
       days,r.mgr_note||'',r.photo_url||'',r.id]);
   });
   return aoa;
@@ -17959,28 +17959,85 @@ window._truLogExportXlsx=function(){
   })['catch'](function(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d0\u05e7\u05e1\u05dc: '+((e&&e.message)||e));});
 };
 // Home-screen tile: the same file, one tap from the dashboard.
-function _truLogHomeRender(){
+// Server-side OneDrive (27/09, Michael: "do it through the server"): when the
+// server is connected, /api/trustee-log rewrites the file after every report
+// from a database trigger, whether or not anyone has the app open. The tile
+// asks the server for its state; the in-browser push below stays only as the
+// fallback for while the server is not connected.
+var _truSrv=null,_truSrvAt=0,_truSrvBusy=false;
+function _truApi(path,body){
+  return fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})})
+    .then(function(r){return r.json().catch(function(){return {error:'HTTP '+r.status};}).then(function(j){if(!r.ok&&!j.error)j.error='HTTP '+r.status;return j;});});
+}
+function _truSrvRefresh(force){
+  if(_truSrvBusy||(!force&&Date.now()-_truSrvAt<60000))return;
+  if(typeof _sbToken==='undefined'||!_sbToken)return;
+  _truSrvBusy=true;_truSrvAt=Date.now();
+  _truApi('/api/trustee-log',{op:'status'}).then(function(j){
+    if(j&&typeof j.configured==='boolean')_truSrv=j;
+  })['catch'](function(){}).then(function(){_truSrvBusy=false;try{_truLogHomeRender(true);}catch(e){}});
+}
+function _truTimeHtml(iso){return '<bdi dir="ltr">'+esc(fd(String(iso).substring(0,10)))+' '+esc(new Date(iso).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}))+'</bdi>';}
+function _truLogHomeRender(noFetch){
   var box=g('dash-tru-log');if(!box)return;
   var reps=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
   var openN=reps.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
-  var last='',err='';try{last=localStorage.getItem('tfgn_tru_od_last')||'';err=localStorage.getItem('tfgn_tru_od_err')||'';}catch(e){}
-  var tok=(typeof _odToken==='function')?_odToken():null,conn=!!(tok&&tok.account);
-  var st;
-  if(!conn)st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive, \u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7</span>';
-  else if(err)st='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc-OneDrive \u05e0\u05db\u05e9\u05dc\u05d4: '+esc(err.substring(0,80))+'</span>';
-  else if(last)st='\u2601\ufe0f \u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05e2\u05e0\u05df: <bdi dir="ltr">'+esc(fd(last.substring(0,10)))+' '+esc(new Date(last).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}))+'</bdi>';
-  else st='\u2601\ufe0f \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05dc-OneDrive';
+  var st,btn='<button class="btn btn-s btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truOdNow()">\u2601\ufe0f \u05e9\u05dc\u05d7 \u05dc-OneDrive \u05e2\u05db\u05e9\u05d9\u05d5</button>';
+  var S=_truSrv;
+  if(S&&S.configured&&S.connected){
+    if(S.error)st='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d9\u05d7 \u05dc\u05e2\u05d3\u05db\u05df \u05d0\u05ea OneDrive: '+esc(String(S.error).substring(0,80))+'</span>';
+    else if(S.last)st='\u2601\ufe0f \u05de\u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d4\u05e9\u05e8\u05ea. \u05e2\u05d5\u05d3\u05db\u05df: '+_truTimeHtml(S.last);
+    else st='\u2601\ufe0f \u05d4\u05e9\u05e8\u05ea \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive, \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d9\u05d9\u05db\u05ea\u05d1 \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d1\u05d0';
+  }else if(S&&S.configured){
+    st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05e9\u05e8\u05ea \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive (\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d7\u05d3 \u05e4\u05e2\u05de\u05d9)</span>';
+    btn='<button class="btn btn-p btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truSrvConnect()">\ud83d\udd17 \u05d7\u05d1\u05e8 \u05d0\u05ea OneDrive \u05dc\u05e9\u05e8\u05ea</button>';
+  }else{
+    var last='',err='';try{last=localStorage.getItem('tfgn_tru_od_last')||'';err=localStorage.getItem('tfgn_tru_od_err')||'';}catch(e){}
+    var tok=(typeof _odToken==='function')?_odToken():null,conn=!!(tok&&tok.account);
+    if(!conn)st='<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive, \u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7</span>';
+    else if(err)st='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc-OneDrive \u05e0\u05db\u05e9\u05dc\u05d4: '+esc(err.substring(0,80))+'</span>';
+    else if(last)st='\u2601\ufe0f \u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05e2\u05e0\u05df: '+_truTimeHtml(last);
+    else st='\u2601\ufe0f \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05dc-OneDrive';
+  }
   box.innerHTML='<button class="btn btn-s" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:right" onclick="_truLogExportXlsx()" aria-label="\u05d4\u05d5\u05e8\u05d3 \u05d0\u05ea \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd">'
     +'<span style="display:flex;flex-direction:column;align-items:flex-start;min-width:0"><strong>\ud83d\udcd7 \u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd (\u05d0\u05e7\u05e1\u05dc)</strong>'
     +'<span style="font-size:12px;color:var(--t2)">'+reps.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, '+openN+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd</span>'
     +'<span style="font-size:11px;color:var(--t2)">'+st+'</span></span>'
-    +'<span style="white-space:nowrap;font-weight:700">\u2b07\ufe0f \u05d4\u05d5\u05e8\u05d3</span></button>'
-    +'<button class="btn btn-s btn-sm" style="width:100%;min-height:44px;margin-top:6px;font-size:13px" onclick="_truOdNow()">\u2601\ufe0f \u05e9\u05dc\u05d7 \u05dc-OneDrive \u05e2\u05db\u05e9\u05d9\u05d5</button>';
+    +'<span style="white-space:nowrap;font-weight:700">\u2b07\ufe0f \u05d4\u05d5\u05e8\u05d3</span></button>'+btn;
+  if(!noFetch)_truSrvRefresh();
 }
+// One-time sign-in: the server hands back a Microsoft sign-in link it signed.
+window._truSrvConnect=function(){
+  if(!confirm('\u05d7\u05d9\u05d1\u05d5\u05e8 \u05d7\u05d3 \u05e4\u05e2\u05de\u05d9: \u05d9\u05d9\u05e4\u05ea\u05d7 \u05d3\u05e3 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05e9\u05dc Microsoft. \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05e2\u05dd \u05d4\u05d7\u05e9\u05d1\u05d5\u05df \u05e9\u05d1\u05d5 \u05d4\u05e7\u05d5\u05d1\u05e5 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e4\u05d9\u05e2 (sviva). \u05d0\u05d7\u05e8\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05ea\u05d7\u05d6\u05d5\u05e8 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.\n\n\u05dc\u05d4\u05de\u05e9\u05d9\u05da?'))return;
+  toast('\ud83d\udd17 \u05e4\u05d5\u05ea\u05d7 \u05d0\u05ea Microsoft...');
+  return _truApi('/api/ms-auth',{op:'start'}).then(function(j){
+    if(j&&j.url){location.href=j.url;return 'redirect';}
+    toast('\u26a0\ufe0f \u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05d0 \u05d4\u05ea\u05d7\u05d9\u05dc: '+((j&&j.error)||'?'));return 'failed';
+  })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05d0 \u05d4\u05ea\u05d7\u05d9\u05dc: '+((e&&e.message)||e));return 'failed';});
+};
+// Back from Microsoft: /?ms=ok or /?ms=err&why=...
+function _truMsReturn(){
+  var q;try{q=new URLSearchParams(location.search);}catch(e){return;}
+  var ms=q.get('ms');if(!ms)return;
+  if(ms==='ok')toast('\u2705 OneDrive \u05d7\u05d5\u05d1\u05e8 \u05dc\u05e9\u05e8\u05ea. \u05de\u05e2\u05db\u05e9\u05d9\u05d5 \u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05ea\u05e2\u05d3\u05db\u05df \u05dc\u05d1\u05d3 \u05d0\u05d7\u05e8\u05d9 \u05db\u05dc \u05d3\u05d9\u05d5\u05d5\u05d7');
+  else toast('\u26a0\ufe0f \u05d7\u05d9\u05d1\u05d5\u05e8 OneDrive \u05e0\u05db\u05e9\u05dc: '+String(q.get('why')||'').substring(0,120));
+  try{q.delete('ms');q.delete('why');var qs=q.toString();history.replaceState(null,'',location.pathname+(qs?'?'+qs:'')+location.hash);}catch(e){}
+  setTimeout(function(){_truSrvRefresh(true);},3000);
+}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(_truMsReturn,1500);});
 // The tile's button: push now, ignoring the "nothing changed" check, and say
-// what happened. The automatic push is silent, so this is how a manager finds
-// out why the file is not in OneDrive.
+// what happened. Through the server when it is connected, else from here.
 window._truOdNow=function(){
+  if(_truSrv&&_truSrv.connected){
+    toast('\u2601\ufe0f \u05d4\u05e9\u05e8\u05ea \u05e9\u05d5\u05dc\u05d7 \u05dc-OneDrive...');
+    return _truApi('/api/trustee-log',{force:true}).then(function(j){
+      if(j&&j.pushed)toast('\u2705 \u05e0\u05e9\u05dc\u05d7. \u05d1-OneDrive: Apps > Tapugan Safety > \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+      else if(j&&j.reason==='empty')toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4');
+      else toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+((j&&j.error)||'?')+(j&&j.locked?' (\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e4\u05ea\u05d5\u05d7 \u05d1\u05d0\u05e7\u05e1\u05dc, \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1)':''));
+      _truSrvRefresh(true);
+      return j&&j.pushed?'pushed':'failed';
+    })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+((e&&e.message)||e));return 'failed';});
+  }
   var tok=(typeof _odToken==='function')?_odToken():null;
   if(!tok||!tok.account){toast('\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive. \u05ea\u05e4\u05e8\u05d9\u05d8 ... > \u2601\ufe0f \u05d7\u05d9\u05d1\u05d5\u05e8 OneDrive > \u05d4\u05ea\u05d7\u05d1\u05e8, \u05d5\u05d0\u05d6 \u05e9\u05d5\u05d1');return Promise.resolve('offline');}
   toast('\u2601\ufe0f \u05e9\u05d5\u05dc\u05d7 \u05dc-OneDrive...');
@@ -17989,11 +18046,12 @@ window._truOdNow=function(){
     else if(r==='empty')toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4');
     else if(r==='busy')toast('\u05e9\u05dc\u05d9\u05d7\u05d4 \u05db\u05d1\u05e8 \u05e8\u05e6\u05d4, \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2');
     else{var e='';try{e=localStorage.getItem('tfgn_tru_od_err')||'';}catch(x){}toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+(e||r));}
-    _truLogHomeRender();
+    _truLogHomeRender(true);
     return r;
   });
 };
 window._truOdTick=function(force){
+  if(_truSrv&&_truSrv.connected)return Promise.resolve('server');
   if(_TRU_OD_BUSY)return Promise.resolve('busy');
   var tok=(typeof _odToken==='function')?_odToken():null;
   if(!tok||!tok.account)return Promise.resolve('offline');
@@ -18010,7 +18068,7 @@ window._truOdTick=function(force){
     dlog('[tru-od] pushed '+(aoa.length-1)+' rows');
     return 'pushed';
   })['catch'](function(e){var msg=String((e&&e.message)||e).substring(0,200);dlog('[tru-od] failed: '+msg);try{localStorage.setItem('tfgn_tru_od_err',msg);}catch(x){}return 'failed';})
-  .then(function(r){_TRU_OD_BUSY=false;try{_truLogHomeRender();}catch(e){}return r;});
+  .then(function(r){_TRU_OD_BUSY=false;try{_truLogHomeRender(true);}catch(e){}return r;});
 };
 document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){_truOdTick();},20000);});
 window.addEventListener('focus',function(){setTimeout(function(){_truOdTick();},3000);});
