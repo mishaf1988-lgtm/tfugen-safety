@@ -174,6 +174,9 @@ export async function onRequest(context) {
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {
     const r = await runLog(env, force);
+    // Which deploy answered: lets a check after an env change tell the new
+    // deployment from the old one (Cloudflare Pages sets CF_PAGES_COMMIT_SHA).
+    r.commit = String(env.CF_PAGES_COMMIT_SHA || '').substring(0, 7) || null;
     return jsonResp(r, 200, cors);
   } catch (e) {
     return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors);
