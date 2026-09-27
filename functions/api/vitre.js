@@ -220,14 +220,22 @@ async function fetchOwnPhoto(env, obj) {
 }
 // POST /file/uploadImage. Returns { ok, status, value } where value is the string
 // Vitre answered (JSON-quoted or bare text), or { ok:false, error }.
-async function vitreUploadImage(env, photo) {
+// opts (photo_probe only): endpoint under /file/, multipart field name, or
+// raw=true to send the bytes as the body with the image's Content-Type.
+async function vitreUploadImage(env, photo, opts) {
+  const o = opts || {};
+  const endpoint = o.endpoint || '/file/uploadImage';
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), UPSTREAM_TIMEOUT_MS);
   try {
-    const form = new FormData();
-    form.append('file', new Blob([photo.bytes], { type: photo.ct }), photo.name);
-    // No Content-Type here: fetch writes the multipart boundary itself.
-    const resp = await fetch(VITRE_BASE + '/file/uploadImage', { method: 'POST', headers: vitreHeaders(env), body: form, signal: ctrl.signal });
+    let body, headers = vitreHeaders(env);
+    if (o.raw) { body = photo.bytes; headers = Object.assign({ 'Content-Type': photo.ct }, headers); }
+    else {
+      body = new FormData();
+      body.append(o.field || 'file', new Blob([photo.bytes], { type: photo.ct }), photo.name);
+      // No Content-Type here: fetch writes the multipart boundary itself.
+    }
+    const resp = await fetch(VITRE_BASE + endpoint, { method: 'POST', headers, body, signal: ctrl.signal });
     const text = await resp.text();
     let json = null;
     try { json = text ? JSON.parse(text) : null; } catch (e) {}
@@ -525,10 +533,21 @@ export async function onRequest({ request, env }) {
     const obj = ownStorageObject(env, String((body && body.photo) || ''));
     if (!obj) return jsonResp({ error: 'photo must be a link to the app\'s own Storage' }, 400, cors);
     const template = String((body && body.template) || '{v}').slice(0, 300);
+    // How to upload (27/09 round 1: the stock call answered "|", i.e. no file
+    // seen): endpoint under /file/, multipart field name, or raw body; the
+    // filename may be overridden (e.g. to try an extension Vitre likes).
+    const endpoint = String((body && body.endpoint) || '/file/uploadImage').trim();
+    if (!/^\/file\/[A-Za-z0-9_\-\/.{}]{1,80}$/.test(endpoint)) return jsonResp({ error: 'endpoint must be a /file/... path' }, 400, cors);
+    const field = String((body && body.field) || 'file').trim().slice(0, 40);
+    const raw = !!(body && body.raw);
+    const doPut = !(body && body.put === false);
     const got = await fetchOwnPhoto(env, obj);
     if (!got.ok) return jsonResp({ error: 'storage: ' + got.error }, 502, cors);
-    const up = await vitreUploadImage(env, got);
-    if (!up.ok) return jsonResp({ error: 'uploadImage ' + (up.status || 'unreachable') + ': ' + up.error }, 502, cors);
+    if (body && body.filename) got.name = String(body.filename).slice(0, 80);
+    const up = await vitreUploadImage(env, got, { endpoint: endpoint.split('{name}').join(encodeURIComponent(got.name)), field, raw });
+    const out = { appointmentId: apptId, key: photoKey, template, bytes: got.bytes.byteLength, ct: got.ct, filename: got.name, how: { endpoint, field: raw ? null : field, raw },
+      upload: { status: up.status, ok: up.ok, value: up.ok ? up.value.slice(0, 400) : null, error: up.ok ? null : up.error } };
+    if (!up.ok || !doPut) return jsonResp(out, up.ok ? 200 : 502, cors);
     const value = template.split('{v}').join(up.value);
     const createdBy = String(env.VITRE_NOTIFY_CREATED_BY || VITRE_NOTIFY_CREATED_BY_DEFAULT);
     const data = {}; data[photoKey] = value;
@@ -539,12 +558,10 @@ export async function onRequest({ request, env }) {
       const q = rr.json.questions.find(x => x && x.dataKey === photoKey);
       if (q) stored = { questionType: q.questionType || null, status: q.status || null, answers: (q.selectedAnswers || []).map(a => ({ text: String(a.text == null ? '' : a.text).slice(0, 400), externalId: a.externalId || '' })) };
     }
-    return jsonResp({
-      appointmentId: apptId, key: photoKey, template, sent: value.slice(0, 400), bytes: got.bytes.byteLength,
-      upload: { status: up.status, value: up.value.slice(0, 400) },
-      put: { status: put.status, ok: put.ok, result: put.json, text: put.text, networkError: put.networkError },
-      stored, readStatus: rr.status
-    }, put.ok ? 200 : 502, cors);
+    out.sent = value.slice(0, 400);
+    out.put = { status: put.status, ok: put.ok, result: put.json, text: put.text, networkError: put.networkError };
+    out.stored = stored; out.readStatus = rr.status;
+    return jsonResp(out, put.ok ? 200 : 502, cors);
   }
   // The Swagger document itself, sliced (see swaggerDoc above). Without ?path:
   // an index of METHOD + path + summary (?q= filters it). With ?path: every
