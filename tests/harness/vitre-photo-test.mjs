@@ -35,7 +35,7 @@ function world(o) {
       const big = o.storageBytes || JPEG;
       return new Response(big, { status: 200, headers: { 'Content-Type': o.storageType || 'image/jpeg' } });
     }
-    if (u.includes('/file/uploadImage')) {
+    if (u.includes('/file/upload')) {
       const st = o.uploadStatus || 200;
       const body = o.uploadBody !== undefined ? o.uploadBody : JSON.stringify('reviews/2026/abc.jpg');
       return new Response(body, { status: st, headers: { 'Content-Type': st === 200 ? 'text/plain' : 'application/json' } });
@@ -195,6 +195,20 @@ console.log('\n8. photo_probe (27/09): re-upload, PUT onto an existing submissio
   check('VITRE_PHOTO_KEY unset -> 400, not a silent skip', r.status === 400 && /VITRE_PHOTO_KEY/.test(r.json.error), r.json);
   r = await probe({ appointmentId: 3612206, photo: PHOTO }, Object.assign({}, WITH_KEY, { VITRE_NOTIFY_ENABLED: '0' }));
   check('paused channel -> 403', r.status === 403, r.json);
+
+  // round 2 (27/09): choose the upload shape, upload only
+  w = world({ email: 'admin@tfugen.local' });
+  r = await probe({ appointmentId: 3612206, photo: PHOTO, endpoint: '/file/uploadFile', field: 'files', put: false });
+  let up = w.calls.find(c => c.u.includes('/file/upload'));
+  check('endpoint and field name follow the body; no PUT when put:false', r.status === 200 && up && up.u.endsWith('/file/uploadFile') && !w.calls.some(c => c.method === 'PUT'), w.calls.map(c => c.method + ' ' + c.u));
+  check('the multipart carries the chosen field', up && up.body instanceof FormData && up.body.get('files') && !up.body.get('file'), up && [...up.body.keys()]);
+  check('reply says how it uploaded', r.json.how.endpoint === '/file/uploadFile' && r.json.how.field === 'files' && r.json.upload.value === 'reviews/2026/abc.jpg' && r.json.put === undefined, r.json);
+  w = world({ email: 'admin@tfugen.local' });
+  r = await probe({ appointmentId: 3612206, photo: PHOTO, endpoint: '/file/upload/{name}', raw: true, filename: 'x.jpg', put: false });
+  up = w.calls.find(c => c.u.includes('/file/upload'));
+  check('raw: bytes as the body, image Content-Type, {name} = the filename', up && up.u.endsWith('/file/upload/x.jpg') && !(up.body instanceof FormData) && up.headers['Content-Type'] === 'image/jpeg', up && [up.u, up.headers]);
+  r = await probe({ appointmentId: 3612206, photo: PHOTO, endpoint: '/task/close', put: false });
+  check('endpoint outside /file/ refused (400)', r.status === 400, r.json);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
