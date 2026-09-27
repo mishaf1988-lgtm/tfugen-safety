@@ -43,6 +43,7 @@ function world(reports, o) {
         w.photoPuts.push({ u, type: init.headers['Content-Type'] });
         return json({ webUrl: 'https://tapugancoil-my.sharepoint.com/p/' + w.photoPuts.length });
       }
+      if (m === 'PUT' && o.logLocked) { w.logPuts++; return json({ error: { code: 'resourceLocked', message: 'locked' } }, 423); }
       if (m === 'PUT') { w.logPuts++; w.lastLog = Buffer.from(body).toString('latin1'); return json({ webUrl: 'https://tapugancoil-my.sharepoint.com/log.xlsx' }); }
       if (m === 'GET') { w.folderGet = u; return json({ webUrl: 'https://tapugancoil-my.sharepoint.com/folder' }); }
     }
@@ -104,6 +105,19 @@ console.log('\n4. more than 6 photos: pending, continues by itself');
   const w2 = world(reps, { state: w.state });
   const r2 = await runLog(ENV, false);
   check('the follow-up copies the last 2 and saves the signature', w2.photoPuts.length === 2 && r2.photos_pending === 0 && !!w2.state.trustee_log_sig, r2);
+}
+
+console.log('\n5. log locked (open in Excel): the copies are still remembered');
+{
+  const reps = [rep('k1', '2026-09-23')];
+  const w = world(reps, { logLocked: true });
+  const r = await runLog(ENV, false);
+  check('log upload failed as locked', r.ok === false && r.locked === true, r);
+  check('photo copied and remembered anyway', w.photoPuts.length === 1 && JSON.parse(w.state.trustee_photos || '{}').k1, w.state);
+  check('signature not saved, so the next trigger retries the log', !w.state.trustee_log_sig);
+  const w2 = world(reps, { state: w.state });
+  const r2 = await runLog(ENV, false);
+  check('retry writes the log without re-uploading the photo', r2.pushed === true && w2.photoPuts.length === 0, r2);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
