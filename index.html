@@ -14445,6 +14445,21 @@ function _askBuildSnapshot(){
   });
   exp.sort(function(a,b){return a.days_left-b.days_left;});
   s.expirations_30d=exp.slice(0,15);
+  // Trustee reports (27/09): findings open/closed, and the open ones by age.
+  var tru=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
+  var truF=tru.filter(function(r){return parseInt(r.t,10)!==TRUSTEE_TASK_CLOSE&&r.ok===false;});
+  var truOpen=truF.filter(function(r){return r.s!==TRUSTEE_S_CLOSED;});
+  s.counts.trustee_reports_total=tru.length;
+  s.counts.trustee_reports_30d=tru.filter(function(r){var t=Date.parse(r.ts||r.d||'');return !isNaN(t)&&(nowMs-t)/86400000<=30;}).length;
+  s.counts.trustee_findings_open=truOpen.length;
+  s.counts.trustee_findings_closed=truF.length-truOpen.length;
+  s.trustee_open_findings=truOpen.map(function(r){
+    var t=Date.parse(r.ts||r.d||''),tk=_truTask(parseInt(r.t,10));
+    return {date:r.d||String(r.ts||'').substring(0,10)||null,trustee:r.u||'',task:tk?tk.t:'',
+      area:String(r.loc||(r.location_id?_locName(r.location_id):'')).substring(0,40),
+      finding:String(r.f||'').substring(0,80),days_open:isNaN(t)?null:Math.max(0,Math.floor((nowMs-t)/86400000)),
+      manager_note:String(r.mgr_note||'').substring(0,60)};
+  }).sort(function(a,b){return (b.days_open||0)-(a.days_open||0);}).slice(0,15);
   return s;
 }
 window._askSend=function(){
