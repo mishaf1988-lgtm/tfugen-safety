@@ -1,6 +1,7 @@
-// Cloudflare Pages Function — AI proxy.
-// Routes to Cloudflare Workers AI (free tier) by default; routes to Anthropic
-// for legacy claude-* model names if the env.ANTHROPIC_KEY is set.
+// Cloudflare Pages Function — AI proxy for every provider, not only Claude
+// (the name is historical). Routes "@cf/..." to Cloudflare Workers AI (free),
+// "gemini" to Google Gemini (env.GEMINI_API_KEY, falls back to Workers AI),
+// and claude-* to Anthropic (env.ANTHROPIC_KEY).
 //
 // Why two providers: Anthropic's Claude is higher quality but costs money.
 // Workers AI is free up to 10K neurons/day and binds natively to this Pages
@@ -22,8 +23,80 @@ const ALLOWED_MODELS = [
   // Anthropic (paid — only if ANTHROPIC_KEY env var is set)
   'claude-sonnet-4-6',
   'claude-haiku-4-5',
-  'claude-haiku-4-5-20251001'
+  'claude-haiku-4-5-20251001',
+  // Google Gemini (paid, prepaid AI Studio credit). The client asks for the
+  // alias; the real model is env.GEMINI_MODEL, so upgrading is a dashboard
+  // change. Any Gemini failure (no key, no credit, timeout) falls back to
+  // GEMINI_FALLBACK, so the assistant keeps answering. Michael, 2026-09-27.
+  'gemini'
 ];
+const GEMINI_DEFAULT_MODEL = 'gemini-flash-latest';
+const GEMINI_FALLBACK = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+// Thinking tokens count against maxOutputTokens: a 600-token budget can be
+// spent entirely on thinking and return an empty answer.
+const GEMINI_MIN_OUT = 2048;
+const GEMINI_TIMEOUT_MS = 25000;
+
+async function runGemini(parsed, model, key) {
+  const contents = [];
+  for (const m of parsed.messages || []) {
+    let c = m && m.content;
+    if (Array.isArray(c)) {
+      if (c.find((b) => b && b.type && b.type !== 'text')) throw new Error('file block not supported on the Gemini route');
+      c = c.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('\n');
+    }
+    contents.push({ role: m && m.role === 'assistant' ? 'model' : 'user', parts: [{ text: typeof c === 'string' ? c : String(c == null ? '' : c) }] });
+  }
+  const reqBody = { contents, generationConfig: { maxOutputTokens: Math.max(parsed.max_tokens || 0, GEMINI_MIN_OUT) } };
+  if (typeof parsed.system === 'string' && parsed.system.trim()) reqBody.systemInstruction = { parts: [{ text: parsed.system }] };
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+    body: JSON.stringify(reqBody),
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS)
+  });
+  const t = await r.text();
+  if (!r.ok) throw new Error('Gemini ' + r.status + ': ' + t.substring(0, 200));
+  const j = JSON.parse(t);
+  const cand = j && j.candidates && j.candidates[0];
+  const parts = (cand && cand.content && cand.content.parts) || [];
+  const text = parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join('');
+  if (!text.trim()) throw new Error('Gemini empty answer (' + ((cand && cand.finishReason) || 'no candidate') + ')');
+  return text;
+}
+
+// One text answer in the Anthropic shape the client parses, as JSON or as the
+// SSE event sequence for a client that asked for a stream.
+function textResponse(text, model, stream, cors, extra) {
+  const out = {
+    id: 'cf_' + Date.now().toString(36),
+    type: 'message',
+    role: 'assistant',
+    model: model,
+    content: [{ type: 'text', text: text }],
+    stop_reason: 'end_turn',
+    usage: { input_tokens: 0, output_tokens: 0 },
+    ...(extra || {})
+  };
+  if (!stream) return jsonResp(out, 200, cors);
+  const enc = new TextEncoder();
+  const ev = (name, obj) => enc.encode('event: ' + name + '\ndata: ' + JSON.stringify(obj) + '\n\n');
+  const sse = new ReadableStream({
+    start(c) {
+      c.enqueue(ev('message_start', { type: 'message_start', message: { ...out, content: [] } }));
+      c.enqueue(ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
+      c.enqueue(ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: text } }));
+      c.enqueue(ev('content_block_stop', { type: 'content_block_stop', index: 0 }));
+      c.enqueue(ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 0 } }));
+      c.enqueue(ev('message_stop', { type: 'message_stop' }));
+      c.close();
+    }
+  });
+  return new Response(sse, {
+    status: 200,
+    headers: { ...cors, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }
+  });
+}
 const MAX_TOKENS_CAP = 16000;
 const MAX_BODY_BYTES = 25000000;
 
@@ -63,6 +136,20 @@ export async function onRequest({ request, env }) {
   }
   if (typeof parsed.max_tokens !== 'number' || parsed.max_tokens > MAX_TOKENS_CAP) {
     parsed.max_tokens = Math.min(parsed.max_tokens || MAX_TOKENS_CAP, MAX_TOKENS_CAP);
+  }
+
+  // Gemini first; on any failure, answer from Workers AI and say so.
+  let fallbackFrom = null;
+  if (parsed.model === 'gemini') {
+    const gm = env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
+    try {
+      if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not set');
+      const text = await runGemini(parsed, gm, env.GEMINI_API_KEY);
+      return textResponse(text, 'gemini:' + gm, parsed.stream, cors);
+    } catch (e) {
+      fallbackFrom = { model: 'gemini:' + gm, reason: String((e && e.message) || e).substring(0, 300) };
+      parsed.model = GEMINI_FALLBACK;
+    }
   }
 
   // Route to Workers AI (free) for "@cf/..." models.
@@ -138,41 +225,9 @@ export async function onRequest({ request, env }) {
       // Anthropic shape ({content:[{type:"text",text:"..."}]}) so the 14
       // client-side handlers don't need to change.
       const text = (aiResp && (aiResp.response || (aiResp.result && aiResp.result.response))) || '';
-      const out = {
-        id: 'cf_' + Date.now().toString(36),
-        type: 'message',
-        role: 'assistant',
-        model: parsed.model,
-        content: [{ type: 'text', text: text }],
-        stop_reason: 'end_turn',
-        usage: { input_tokens: 0, output_tokens: 0 }
-      };
-
-      // A client that asked for a stream is reading SSE and will find nothing
-      // in a JSON body. Workers AI answered in one piece — emit that one piece
-      // as the Anthropic event sequence the client already parses, so the
-      // streaming call sites work against either provider.
-      if (parsed.stream) {
-        const enc = new TextEncoder();
-        const ev = (name, obj) => enc.encode('event: ' + name + '\ndata: ' + JSON.stringify(obj) + '\n\n');
-        const sse = new ReadableStream({
-          start(c) {
-            c.enqueue(ev('message_start', { type: 'message_start', message: { ...out, content: [] } }));
-            c.enqueue(ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
-            c.enqueue(ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: text } }));
-            c.enqueue(ev('content_block_stop', { type: 'content_block_stop', index: 0 }));
-            c.enqueue(ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 0 } }));
-            c.enqueue(ev('message_stop', { type: 'message_stop' }));
-            c.close();
-          }
-        });
-        return new Response(sse, {
-          status: 200,
-          headers: { ...cors, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' }
-        });
-      }
-
-      return jsonResp(out, 200, cors);
+      // A client that asked for a stream is reading SSE: textResponse emits
+      // the one piece as the Anthropic event sequence it already parses.
+      return textResponse(text, parsed.model, parsed.stream, cors, fallbackFrom ? { fallback_from: fallbackFrom } : null);
     } catch (err) {
       const m = String((err && err.message) || err);
       // Workers AI free tier = 10K neurons/day. When exceeded, the binding

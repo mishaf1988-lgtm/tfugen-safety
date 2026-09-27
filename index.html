@@ -14412,6 +14412,16 @@ window._askQuick=function(q){
   var inp=g('ask-input');if(inp)inp.value=q;
   _askSend();
 };
+// Conversation memory (27/09): the last few questions and answers go with each
+// new question, so a follow-up ("and the second one?") has its context. Only
+// the newest turn carries the data snapshot; older turns are the bare Q and A.
+var _ASK_TURNS=[],_ASK_TURNS_MAX=4;
+function _askMessages(turns,prompt){
+  var m=[];
+  turns.forEach(function(t){m.push({role:'user',content:t.q});m.push({role:'assistant',content:t.a});});
+  m.push({role:'user',content:prompt});
+  return m;
+}
 function _askBuildSnapshot(){
   var todayDate=new Date().toISOString().split('T')[0];
   var nowMs=Date.now();
@@ -14473,13 +14483,14 @@ window._askSend=function(){
   hist.scrollTop=hist.scrollHeight;
   inp.value='';
   var snap=_askBuildSnapshot();
+  var turns=_ASK_TURNS.slice(-_ASK_TURNS_MAX);
   var aiPrompt='\u05d0\u05ea\u05d4 \u05e2\u05d5\u05d6\u05e8 AI \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05ea\u05e2\u05e9\u05d9\u05d9\u05ea\u05d9\u05ea \u05d1\u05d9\u05e9\u05e8\u05d0\u05dc. \u05e2\u05e0\u05d4 \u05e2\u05dc \u05d4\u05e9\u05d0\u05dc\u05d4 \u05e9\u05dc \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea, **\u05d0\u05da \u05d5\u05e8\u05e7 \u05e2\u05dc \u05e1\u05de\u05da \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5**. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05d0\u05dd \u05d4\u05e9\u05d0\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05db\u05dc\u05dc\u05ea \u05d1\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05e9\u05e6\u05d5\u05e8\u05e4\u05d5, \u05d0\u05de\u05d5\u05e8: "\u05d0\u05d9\u05df \u05dc\u05d9 \u05d0\u05ea \u05d4\u05e0\u05ea\u05d5\u05df \u05d4\u05d6\u05d4 \u05db\u05e8\u05d2\u05e2".\n\n'+
     '\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e7\u05e6\u05e8\u05d4 \u05d5\u05de\u05d3\u05d5\u05d9\u05e7\u05ea (1-3 \u05de\u05e9\u05e4\u05d8\u05d9\u05dd, \u05d0\u05d5 \u05e8\u05e9\u05d9\u05de\u05d4 \u05d0\u05dd \u05de\u05ea\u05d0\u05d9\u05dd). \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05de\u05e1\u05e4\u05e8\u05d9\u05dd \u05de\u05d3\u05d5\u05d9\u05e7\u05d9\u05dd \u05de\u05ea\u05d5\u05da \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05d0\u05dd \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9 — \u05e6\u05d8\u05d8 \u05e9\u05de\u05d5\u05ea \u05d0\u05d7\u05e8\u05d0\u05d9\u05dd / \u05de\u05e1\u05e4\u05e8\u05d9 NCR / \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd.\n\n'+
     '\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd (\u05d0\u05e6\u05dc\u05da \u05dc\u05e7\u05e8\u05d9\u05d0\u05d4 \u05d1\u05dc\u05d1\u05d3):\n'+JSON.stringify(snap,null,2)+'\n\n'+
     '\u05d4\u05e9\u05d0\u05dc\u05d4:\n'+q;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({
-    model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,
-    messages:[{role:'user',content:aiPrompt}]
+    model:'gemini',max_tokens:600,
+    messages:_askMessages(turns,aiPrompt)
   })}).then(function(r){return r.text().then(function(t){return{ok:r.ok,status:r.status,txt:t};});})
     .then(function(res){
       var pend=hist.querySelector('[data-pending="1"]');if(pend)pend.remove();
@@ -14488,6 +14499,8 @@ window._askSend=function(){
       var content=dj.content&&dj.content[0]?dj.content[0].text:'';
       if(!content){hist.innerHTML+='<div class="et" style="padding:8px;font-size:12px">\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4</div>';return;}
       hist.innerHTML+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:6px auto 6px 0;max-width:90%;color:#1a1d23;white-space:pre-wrap;line-height:1.6">🤖 '+esc(content)+'</div>';
+      if(dj.fallback_from)hist.innerHTML+='<div style="color:var(--t3);font-size:10px;margin:-2px 0 6px">\u05e2\u05e0\u05d4 \u05de\u05d5\u05d3\u05dc \u05d2\u05d9\u05d1\u05d5\u05d9 (Gemini \u05dc\u05d0 \u05d6\u05de\u05d9\u05df)</div>';
+      _ASK_TURNS.push({q:q,a:content});if(_ASK_TURNS.length>_ASK_TURNS_MAX)_ASK_TURNS.shift();
       hist.scrollTop=hist.scrollHeight;
     }).catch(function(e){
       var pend=hist.querySelector('[data-pending="1"]');if(pend)pend.remove();
