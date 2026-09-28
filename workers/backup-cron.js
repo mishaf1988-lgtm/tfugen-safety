@@ -47,6 +47,30 @@ const TABLES = [
   'record_history','mgmt_reviews'
 ];
 
+// Tables with no `ts` column (checked against the live schema 28/09). They are
+// read without `order=ts`, in ONE request. The old code tried `order=ts` first
+// and fell back on the 400, which cost these 15 tables two requests each.
+const NO_TS = new Set(['auds','ctr','docs','drl','emp','env','hzm','inc','ins','leg','med','ppe','rsk','tr','wst']);
+
+// Cloudflare caps the subrequests (fetch calls) of one invocation: 50 on the
+// Free plan, far more on Paid. 45 tables + upload + list + delete fits in 50
+// only because of NO_TS. The budget below makes the limit visible instead of
+// fatal: tables are read until only RESERVE requests are left, so the upload
+// always happens, and any table skipped for budget is named in `errors` (which
+// turns ok false and /health 'failing'). Cowork found this 28/09 before the
+// deploy: without it, 62 requests would have lost the upload itself.
+// SUBREQ_LIMIT (env, optional) raises it on a Paid plan.
+const RESERVE = 3; // upload + list + delete
+function makeBudget(env) {
+  const limit = parseInt(env && env.SUBREQ_LIMIT, 10) || 50;
+  return { limit, used: 0, left() { return this.limit - this.used; } };
+}
+function bfetch(budget, url, init) {
+  if (budget.used >= budget.limit) throw new Error('subrequest budget exhausted');
+  budget.used++;
+  return fetch(url, init);
+}
+
 export default {
   // Cron entrypoint — Cloudflare calls this on the schedule.
   async scheduled(event, env, ctx) {
@@ -65,6 +89,19 @@ export default {
       let last = LAST_RUN;
       if (!last && env.BACKUP_STATE) {
         try { const raw = await env.BACKUP_STATE.get('last_run'); if (raw) last = JSON.parse(raw); } catch (e) { /* fall through to unknown */ }
+      }
+      if (!last) {
+        // No KV binding and a cold instance: the newest file in the bucket is
+        // the evidence (one list request; this is a separate invocation).
+        try {
+          const lr = await fetch(`${env.SUPABASE_URL}/storage/v1/object/list/backups`, {
+            method: 'POST',
+            headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefix: '', limit: 1, sortBy: { column: 'name', order: 'desc' } })
+          });
+          const top = lr.ok ? (await lr.json())[0] : null;
+          if (top && top.created_at) last = { at: top.created_at, ok: true, filename: top.name, errors: null, from: 'bucket' };
+        } catch (e) { /* unknown below */ }
       }
       if (!last) {
         return new Response(JSON.stringify({ status: 'unknown', detail: 'no run recorded by this worker yet' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
@@ -113,9 +150,15 @@ async function runBackup(env) {
   };
 
   const errors = [];
+  const budget = makeBudget(env);
   for (const table of TABLES) {
+    if (budget.left() <= RESERVE) {
+      errors.push({ table, error: 'skipped: subrequest budget (' + budget.limit + ')' });
+      snapshot[table] = [];
+      continue;
+    }
     try {
-      const rows = await fetchAllRows(env, table);
+      const rows = await fetchAllRows(env, table, budget);
       snapshot[table] = rows;
       if (rows.length > 0) {
         snapshot._meta.table_count++;
@@ -134,7 +177,7 @@ async function runBackup(env) {
   const filename = `tapugan-backup-${stamp}.json`;
   const body = JSON.stringify(snapshot, null, 2);
 
-  const uploadResp = await fetch(`${env.SUPABASE_URL}/storage/v1/object/backups/${filename}`, {
+  const uploadResp = await bfetch(budget, `${env.SUPABASE_URL}/storage/v1/object/backups/${filename}`, {
     method: 'POST',
     headers: {
       apikey: env.SUPABASE_SERVICE_KEY,
@@ -153,9 +196,9 @@ async function runBackup(env) {
   // Failures here don't fail the backup run — the new snapshot already
   // landed and that's the critical path.
   let pruneInfo = null;
-  if (uploadOk) {
+  if (uploadOk && budget.left() >= 2) {
     try {
-      pruneInfo = await pruneOldBackups(env, 15);
+      pruneInfo = await pruneOldBackups(env, 15, budget);
     } catch (e) {
       pruneInfo = { error: String(e && e.message || e) };
     }
@@ -169,7 +212,8 @@ async function runBackup(env) {
     errors,
     upload_status: uploadResp.status,
     upload_body: uploadText.substring(0, 200),
-    prune: pruneInfo,
+    prune: pruneInfo || (uploadOk ? { skipped: 'subrequest budget' } : null),
+    subrequests: budget.used,
     duration_ms: Date.now() - start
   };
   // Remember it. Until now the only trace of a run was a Cloudflare log line,
@@ -196,8 +240,8 @@ const STALE_MS = 36 * 3600 * 1000;
 // Keep only the latest `keep` snapshot files in the bucket, sorted by
 // filename DESC (filenames embed the ISO timestamp so lexical sort
 // matches chronological sort). Older files are deleted in one batch.
-async function pruneOldBackups(env, keep) {
-  const listResp = await fetch(`${env.SUPABASE_URL}/storage/v1/object/list/backups`, {
+async function pruneOldBackups(env, keep, budget) {
+  const listResp = await bfetch(budget, `${env.SUPABASE_URL}/storage/v1/object/list/backups`, {
     method: 'POST',
     headers: {
       apikey: env.SUPABASE_SERVICE_KEY,
@@ -217,7 +261,7 @@ async function pruneOldBackups(env, keep) {
   const toDelete = items.slice(keep).map(i => i.name);
   // Supabase Storage delete API: DELETE /storage/v1/object/<bucket>
   // with body {prefixes: ["file1", "file2"]}
-  const delResp = await fetch(`${env.SUPABASE_URL}/storage/v1/object/backups`, {
+  const delResp = await bfetch(budget, `${env.SUPABASE_URL}/storage/v1/object/backups`, {
     method: 'DELETE',
     headers: {
       apikey: env.SUPABASE_SERVICE_KEY,
@@ -237,37 +281,27 @@ async function pruneOldBackups(env, keep) {
 // Supabase REST returns at most 1000 rows per request by default, so
 // page through the table for safety. Most Tapugan tables have fewer
 // than 100 rows but ncr/audit_log can grow. We use range headers.
-async function fetchAllRows(env, table) {
+// A NO_TS table is read unordered in one request per page. For the others,
+// order=ts is tried and, if the column turns out to be missing after all
+// (a schema change), the page is re-read unordered.
+async function fetchAllRows(env, table, budget) {
   const all = [];
   const pageSize = 1000;
+  const h = (from, to) => ({
+    apikey: env.SUPABASE_SERVICE_KEY,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+    Range: `${from}-${to}`
+  });
+  let ordered = !NO_TS.has(table);
   let from = 0;
   while (true) {
     const to = from + pageSize - 1;
-    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}?select=*&order=ts.desc.nullslast`, {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        Range: `${from}-${to}`,
-        Prefer: 'count=exact'
-      }
-    });
-    if (!r.ok) {
-      // If the table doesn't exist or doesn't have a `ts` column for ordering,
-      // fall back to no-ordering and don't fail the whole backup.
-      const r2 = await fetch(`${env.SUPABASE_URL}/rest/v1/${table}?select=*`, {
-        headers: {
-          apikey: env.SUPABASE_SERVICE_KEY,
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-          Range: `${from}-${to}`
-        }
-      });
-      if (!r2.ok) throw new Error(`${table}: ${r2.status} ${(await r2.text()).substring(0, 80)}`);
-      const rows = await r2.json();
-      all.push(...rows);
-      if (rows.length < pageSize) break;
-      from += pageSize;
-      continue;
+    let r = await bfetch(budget, `${env.SUPABASE_URL}/rest/v1/${table}?select=*${ordered ? '&order=ts.desc.nullslast' : ''}`, { headers: h(from, to) });
+    if (!r.ok && ordered) {
+      ordered = false;
+      r = await bfetch(budget, `${env.SUPABASE_URL}/rest/v1/${table}?select=*`, { headers: h(from, to) });
     }
+    if (!r.ok) throw new Error(`${table}: ${r.status} ${(await r.text()).substring(0, 80)}`);
     const rows = await r.json();
     all.push(...rows);
     if (rows.length < pageSize) break;
