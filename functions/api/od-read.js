@@ -9,9 +9,10 @@
 // "שולחן העבודה/ניהול בטיחות/" and cannot leave it. Without sheet: the tab
 // names. With sheet: rows from..to (default 1..60), columns A..(cols, max 26).
 // A .pptx: its slides, shape texts, tables and chart series (_pptx.js).
+// part: one XML part of the file as text (60KB at a time, from offset).
 import { jsonResp } from '../_shared.js';
 import { odConfigured, accessToken } from '../_onedrive.js';
-import { readSheetRows, sheetNames } from '../_xlsxpatch.js';
+import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
 
 export const ROOT = 'שולחן העבודה/ניהול בטיחות/';
@@ -38,6 +39,14 @@ export async function onRequest(context) {
     const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
     const bytes = new Uint8Array(await r.arrayBuffer());
+    // One XML part as text (to see how a slide or chart is built), capped.
+    if (body.part) {
+      const e = readZip(bytes).find((x) => x.name === String(body.part));
+      if (!e || !/\.(xml|rels)$/.test(e.name)) return jsonResp({ ok: false, error: 'no such xml part' }, 200, {});
+      const t = await entryText(e);
+      const from = Math.max(0, +body.offset || 0);
+      return jsonResp({ ok: true, path: full, part: e.name, length: t.length, offset: from, text: t.substring(from, from + 60000) }, 200, {});
+    }
     if (/\.pptx$/i.test(full)) return jsonResp({ ok: true, path: full, deck: await pptxOutline(bytes) }, 200, {});
     const sheets = await sheetNames(bytes);
     if (!body.sheet) return jsonResp({ ok: true, path: full, sheets }, 200, {});

@@ -55,6 +55,12 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   j = await res.json();
   const sl = j.deck && j.deck.slides[0];
   check('a .pptx: slides, shape text, chart series with categories and values, the embedded workbook', j.ok && sl && sl.shapes[0].name === 'כותרת 1' && sl.shapes[0].text[0] === '21 ימים ללא תאונה' && sl.charts[0].kinds[0] === 'bar' && sl.charts[0].series[0].name === 'נסגרו' && sl.charts[0].series[0].cats.join() === 'מעצבים,תוצג' && sl.charts[0].series[0].vals.join() === '4,5' && sl.charts[0].series[0].ref === 'Sheet1!$B$2:$B$3' && sl.charts[0].embedded === 'ppt/embeddings/Microsoft_Excel_Worksheet.xlsx', j);
+  res = await onRequest({ request: req(S, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', part: 'ppt/charts/chart1.xml' }), env: ENV });
+  j = await res.json();
+  check('one xml part as text', j.ok && j.part === 'ppt/charts/chart1.xml' && /<c:barChart>/.test(j.text) && j.length === j.text.length, j);
+  res = await onRequest({ request: req(S, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', part: 'ppt/media/image1.png' }), env: ENV });
+  j = await res.json();
+  check('a part that is not xml: refused', !j.ok, j);
   check('other file types still refused', safePath('a/b.docx') === null && !!safePath('a/b.pptx'));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
