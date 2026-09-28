@@ -1,0 +1,199 @@
+// Cloudflare Pages Function: the folder-13 hazard workbook, kept up to date by
+// the server (28/09, Michael: "the existing file, same sheets and macros",
+// "one merged report, the notes say manager or trustee", "everything in the
+// safety-management folder and in the cloud"). DECISIONS 2026-09-28.
+//
+// The EXISTING files in sviva's OneDrive (synced to the office PC):
+//   שולחן העבודה/ניהול בטיחות/13_סיורי מפגעים/2026/ניהול סיורי מפגעים.xlsm
+//   ... and its twin ניהול סיורי מפגעים.xlsx
+// Only rows 2..206, columns A..M of the sheet "מאגר מפגעים" are rewritten
+// (functions/_xlsxpatch.js). Everything else stays: the macro, the formulas
+// (columns N/O, and every report sheet, recalculated when Excel opens the
+// file), validation, formatting, "נמענים", "דוח לשליחה".
+//
+// The rows, one merged register:
+//   * every manager tour hazard (tour_hazards), by מס"ד; notes start with
+//     "דיווח ממונה";
+//   * every trustee finding (trustee_reports, a ליקוי on tasks 1-7), numbered
+//     נ-1, נ-2 ... by report time; notes start with "דיווח נאמן: <name>".
+//     A trustee has no severity, responsible or target: בינונית, מנהל המחלקה
+//     and report date + 3 days (Michael, 28/09). Department = the part of the
+//     location before " · ". Closed = s נסגר, closing date from the task-8
+//     report that closed it.
+//
+// Nothing a person typed is lost: before the first write the file is copied to
+// ארכיון/לפני כתיבה ראשונה מהאפליקציה, and whenever the file changed since the
+// server last wrote it (someone saved it in Excel), that version is copied to
+// ארכיון/גרסאות שנדרסו before it is replaced.
+//
+// Callers: statement triggers on tour_hazards / trustee_reports and a
+// 15-minute pg_cron tick (x-notify-secret), and the app (op:'status',
+// force:true; admin/manager session). One file per request (CPU budget): the
+// xlsm, then the request calls itself for the xlsx.
+
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { odConfigured, accessToken, stateGet, stateSet, tokenRow } from '../_onedrive.js';
+import { patchSheetRows } from '../_xlsxpatch.js';
+
+export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
+export const FILES = {
+  xlsm: { name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm', type: 'application/vnd.ms-excel.sheet.macroEnabled.12' },
+  xlsx: { name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+};
+const SHEET = '\u05de\u05d0\u05d2\u05e8 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
+const LAST_COL = 12, MAX_ROW = 206, DATE_COLS = [1, 9, 11];
+export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
+// Spellings in the locations list / trustee screens -> the sheet's departments.
+const DEPT_ALIAS = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea' };
+const TRUSTEE_DUE_DAYS = 3;
+const DAY = 86400000;
+
+const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+const d10 = (v) => (v ? String(v).substring(0, 10) : '');
+const dt = (v) => (d10(v) ? { date: d10(v) } : null);
+const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
+
+export function trusteeDept(loc) {
+  const head = String(loc || '').split('\u00b7')[0].trim();
+  const d = DEPT_ALIAS[head] || head;
+  return { dept: d, loc: String(loc || '').indexOf('\u00b7') >= 0 ? String(loc).split('\u00b7').slice(1).join('\u00b7').trim() : String(loc || '') };
+}
+
+// Pure: the merged register, as rows of columns A..M.
+export function buildRows(hazards, reports) {
+  const rows = [];
+  (hazards || []).filter((r) => r && r.id).slice().sort((a, b) => (+a.n || 0) - (+b.n || 0)).forEach((r) => {
+    rows.push([r.n == null ? '' : +r.n, dt(r.d), r.tour_no == null ? '' : +r.tour_no, r.dept || '', r.loc || '', r.descr || '',
+      r.sev || '', (r.resp || '') + (r.resp2 ? ' + ' + r.resp2 : ''), r.action || '', dt(r.due), r.s || '', dt(r.closed_d),
+      '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05de\u05d5\u05e0\u05d4' + (r.notes ? '. ' + r.notes : '')]);
+  });
+  const reps = (reports || []).filter((r) => r && r.id);
+  const closer = {};
+  reps.forEach((r) => {
+    if (+r.t === 8 && r.ref) { const c = closer[r.ref]; if (!c || String(r.ts || r.d) < String(c.ts || c.d)) closer[r.ref] = r; }
+  });
+  const findings = reps.filter((r) => r.ok === false && +r.t >= 1 && +r.t <= 7)
+    .sort((a, b) => String(a.ts || a.d || '').localeCompare(String(b.ts || b.d || '')));
+  findings.forEach((r, k) => {
+    const { dept, loc } = trusteeDept(r.loc);
+    const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
+    const c = closer[r.id];
+    rows.push(['\u05e0-' + (k + 1), dt(r.d), '', dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '',
+      d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
+      closed && c ? dt(c.d || c.ts) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
+  });
+  return rows;
+}
+
+async function sha(s) {
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function readAll(env, path) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const r = await fetch(base + path + '&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+  if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
+  const j = await r.json();
+  return Array.isArray(j) ? j : [];
+}
+async function graphPut(token, folder, name, bytes, type) {
+  const r = await fetch(G + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type }, body: bytes });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error('onedrive ' + r.status + (j && j.error ? ': ' + String(j.error.message || j.error.code).substring(0, 160) : '')); e.status = r.status; throw e; }
+  return j;
+}
+function stampName(name, iso) {
+  const i = name.lastIndexOf('.');
+  return name.substring(0, i) + ' - ' + iso.replace('T', ' ').substring(0, 16).replace(':', '-') + name.substring(i);
+}
+
+export async function runFile(env, which, force) {
+  const f = FILES[which]; if (!f) throw new Error('unknown file');
+  const [hazards, reports] = await Promise.all([
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
+    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,ts&order=ts.asc'),
+  ]);
+  const rows = buildRows(hazards, reports);
+  const sig = await sha(JSON.stringify(rows));
+  const K = 'hazard_' + which + '_';
+  const st = await stateGet(env, [K + 'sig', K + 'ctag']).catch(() => ({}));
+  if (!force && st[K + 'sig'] && st[K + 'sig'].value === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: rows.length };
+  const now = new Date().toISOString();
+  try {
+    const { token } = await accessToken(env);
+    const mr = await fetch(G + seg(FOLDER) + '/' + encodeURIComponent(f.name) + '?select=id,cTag,lastModifiedDateTime,size,webUrl,@microsoft.graph.downloadUrl', { headers: { Authorization: 'Bearer ' + token } });
+    if (mr.status === 404) throw Object.assign(new Error('the file is not in the folder: ' + FOLDER + '/' + f.name), { status: 404 });
+    if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
+    const meta = await mr.json();
+    const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
+    if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
+    const orig = new Uint8Array(await dl.arrayBuffer());
+    // Keep what a person saved, before replacing it.
+    const ours = st[K + 'ctag'] && st[K + 'ctag'].value;
+    let kept = null;
+    if (!ours || ours !== meta.cTag) {
+      const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
+      await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
+      kept = folder;
+    }
+    const out = await patchSheetRows(orig, rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
+    const put = await graphPut(token, FOLDER, f.name, out, f.type);
+    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
+    return { ok: true, file: which, pushed: true, rows: rows.length, managers: hazards.length, trustees: rows.length - hazards.length, kept, webUrl: put.webUrl || null };
+  } catch (e) {
+    const msg = e && e.code === 'not_connected' ? 'not connected'
+      : e && e.status === 423 ? '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e4\u05ea\u05d5\u05d7 \u05d1-Excel. \u05d9\u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05d9\u05e1\u05d2\u05e8 (\u05d1\u05d3\u05d9\u05e7\u05d4 \u05db\u05dc 15 \u05d3\u05e7\u05d5\u05ea).'
+        : String((e && e.message) || e).substring(0, 200);
+    await stateSet(env, { [K + 'err']: msg, [K + 'err_at']: now }).catch(() => {});
+    return { ok: false, file: which, pushed: false, error: msg, locked: !!(e && e.status === 423) };
+  }
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const allowed = defaultAllowedOrigins(env);
+  const cors = corsHeaders(request.headers.get('Origin') || '', allowed, 'POST,OPTIONS');
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+  if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ error: 'server misconfigured' }, 500, cors);
+  let body = {}; try { body = await request.json(); } catch (e) {}
+  let force = false;
+  if (/^Bearer\s+\S/i.test(request.headers.get('authorization') || '')) {
+    const who = await requireRole(request, env, ['admin', 'manager']);
+    if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+    if (body.op === 'status') {
+      const keys = [];
+      Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
+      const s = await stateGet(env, keys).catch(() => ({}));
+      const v = (k) => (s[k] && s[k].value) || null;
+      let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
+      const files = {};
+      Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url') }; });
+      return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files }, 200, cors);
+    }
+    force = body.force === true;
+  } else {
+    const want = env.TRUSTEE_NOTIFY_SECRET;
+    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    force = body.force === true;
+  }
+  if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
+  const which = body.file === 'xlsx' ? 'xlsx' : 'xlsm';
+  try {
+    const r = await runFile(env, which, force);
+    // The twin, in its own request (its own CPU and subrequest budget).
+    if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
+      context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ file: 'xlsx', force }),
+      }).catch(() => {}));
+      r.next = 'xlsx';
+    }
+    r.commit = String(env.CF_PAGES_COMMIT_SHA || '').substring(0, 7) || null;
+    return jsonResp(r, 200, cors);
+  } catch (e) {
+    return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors);
+  }
+}

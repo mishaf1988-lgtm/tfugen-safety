@@ -1,0 +1,166 @@
+// The folder-13 workbook (28/09): the server rewrites the register rows of the
+// EXISTING xlsm and must leave everything else alone. Builds a small workbook
+// shaped like the real one (a report sheet with a formula, the register with
+// formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
+// the real hazard-file.js with Graph and Supabase mocked, and reads the result.
+import { onRequest, runFile, buildRows, trusteeDept } from './_build/hazard-file.mjs';
+import { readZip, writeZip, entryText, serial } from './_build/_xlsxpatch.mjs';
+
+let pass = 0, fail = 0;
+const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
+const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDRIVE_CLIENT_SECRET: 'cs', TRUSTEE_NOTIFY_SECRET: 'nsec' };
+
+async function deflate(u8) {
+  const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(s).arrayBuffer());
+}
+function crc(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) { c ^= buf[i]; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; } return (c ^ 0xFFFFFFFF) >>> 0; }
+const VBA = new Uint8Array(3000).map((_, i) => (i * 37) % 251);
+const reg = (rows) => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr codeName="x" filterMode="1"/><sheetData>'
+  + '<row r="1"><c r="A1" t="inlineStr"><is><t>מס"ד</t></is></c><c r="N1" t="inlineStr"><is><t>חדש/ישן</t></is></c></row>' + rows
+  + '</sheetData><autoFilter ref="A1:M8"><filterColumn colId="3"><filters><filter val="מעצבים"/></filters></filterColumn></autoFilter>'
+  + '<dataValidations count="1"><dataValidation type="list" sqref="G2:G8"><formula1>"גבוהה,בינונית,נמוכה"</formula1></dataValidation></dataValidations></worksheet>';
+const N = (r) => '<c r="N' + r + '" t="str"><f t="array" ref="N' + r + '">IF($A' + r + '="","","x")</f><v>x</v></c><c r="O' + r + '"><f>ROW()</f><v>' + r + '</v></c>';
+function regRows() {
+  let x = '<row r="2"><c r="A2" s="3"><v>1</v></c><c r="B2" s="10"/><c r="D2" s="8" t="inlineStr"><is><t>ישן</t></is></c><c r="J2" s="14"><v>46181</v></c><c r="K2" s="3"/><c r="L2" s="3"/>' + N(2) + '</row>';
+  x += '<row r="3" hidden="1"><c r="A3" s="3"><f>A2+1</f><v>2</v></c><c r="B3" s="24"><v>46287</v></c><c r="L3" s="24"><v>46290</v></c>' + N(3) + '</row>';
+  for (let r = 4; r <= 8; r++) x += '<row r="' + r + '"' + (r === 5 ? ' hidden="1"' : '') + '><c r="A' + r + '" s="3"/><c r="B' + r + '" s="3"/><c r="J' + r + '" s="8"/>' + N(r) + '</row>';
+  return x;
+}
+async function fixture() {
+  const t = (name, text) => ({ name, text });
+  const vbaZ = await deflate(VBA);
+  const sheet1 = '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><f>COUNTIF(\'מאגר מפגעים\'!$K$2:$K$8,"פתוח")</f><v>0</v></c></row></sheetData></worksheet>';
+  return writeZip([
+    t('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/xl/calcChain.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="x"/></Types>'),
+    t('_rels/.rels', '<Relationships/>'),
+    t('xl/workbook.xml', '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="דוח מרכז" sheetId="1" r:id="rId1"/><sheet name="מאגר מפגעים" sheetId="3" r:id="rId2"/></sheets><calcPr calcId="191029"/></workbook>'),
+    t('xl/_rels/workbook.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="w" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="w" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain" Target="calcChain.xml"/></Relationships>'),
+    t('xl/worksheets/sheet1.xml', sheet1),
+    t('xl/worksheets/sheet2.xml', reg(regRows())),
+    t('xl/calcChain.xml', '<calcChain><c r="A3" i="2"/></calcChain>'),
+    { name: 'xl/vbaProject.bin', method: 8, crc: crc(VBA), csize: vbaZ.length, usize: VBA.length, raw: vbaZ, time: 0, date: 0x21 },
+  ]);
+}
+const HZ = [
+  { id: 'th-2', n: 2, d: '2026-09-22', tour_no: 10, dept: 'מעצבים', loc: 'כניסה', descr: 'ג\'ריקן', sev: 'בינונית', resp: 'מנהל המחלקה', resp2: 'בטיחות', action: 'לפנות', due: '2026-09-25', s: 'פתוח', closed_d: null, notes: null },
+  { id: 'th-1', n: 1, d: null, tour_no: 1, dept: 'מעצבים', loc: 'חדר חשמל', descr: 'פתוח', sev: 'בינונית', resp: 'חשמל', due: '2026-06-08', s: 'סגור', closed_d: null, notes: 'לא טופל' },
+];
+const TR = [
+  { id: 'a', u: 'מוסא', t: 1, d: '2026-09-23', loc: 'חומר גלם · רחבת קירור', ok: false, s: 'פתוח', f: 'פנס', ts: '2026-09-23T08:00:00Z' },
+  { id: 'b', u: 'מוסא', t: 2, d: '2026-09-24', loc: 'מעוצבים · מחסן', ok: false, s: 'נסגר', f: 'שמן', ts: '2026-09-24T08:00:00Z', mgr_note: 'טופל' },
+  { id: 'c', u: 'רונית', t: 8, d: '2026-09-26', ok: true, ref: 'b', ts: '2026-09-26T08:00:00Z' },
+  { id: 'ok', u: 'מוסא', t: 3, d: '2026-09-25', ok: true, s: 'תקין', ts: '2026-09-25T08:00:00Z' },
+];
+
+function world(o) {
+  o = o || {};
+  const w = { state: Object.assign({}, o.state || {}), puts: [], file: o.file, calls: [], meta: { cTag: o.cTag || 'c1' } };
+  globalThis.fetch = async (url, init) => {
+    const u = String(url), m = (init && init.method) || 'GET';
+    w.calls.push(m + ' ' + decodeURIComponent(u));
+    const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+    if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(o.hazards || HZ);
+    if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json(o.reports || TR);
+    if (u.startsWith(SB + '/rest/v1/server_state')) {
+      if (m === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
+    }
+    if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]);
+    if (u.startsWith('https://graph.microsoft.com/') && m === 'GET') {
+      if (o.missing) return json({ error: { code: 'itemNotFound' } }, 404);
+      return json({ id: 'i1', cTag: w.meta.cTag, lastModifiedDateTime: '2026-09-28T10:37:00Z', webUrl: 'https://od/file', '@microsoft.graph.downloadUrl': 'https://dl/file' });
+    }
+    if (u === 'https://dl/file') return new Response(w.file, { status: 200 });
+    if (u.startsWith('https://graph.microsoft.com/') && m === 'PUT') {
+      if (o.locked && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceLocked', message: 'locked' } }, 423);
+      w.puts.push({ path: decodeURIComponent(u.split('/root:/')[1]), body: init.body });
+      return json({ cTag: 'c-ours-' + w.puts.length, webUrl: 'https://od/file' });
+    }
+    return json({ error: 'unexpected ' + u }, 599);
+  };
+  return w;
+}
+const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.name === name));
+
+(async () => {
+  console.log('\n1. the merged register');
+  const rows = buildRows(HZ, TR);
+  check('managers first, by מס"ד, then the trustee findings (not the clean check, not the task-8 closure)', rows.length === 4 && rows[0][0] === 1 && rows[1][0] === 2 && rows[2][0] === 'נ-1' && rows[3][0] === 'נ-2', rows.map((r) => r[0]));
+  check('manager notes start with "דיווח ממונה"; a shared responsible is "X + Y"', rows[0][12] === 'דיווח ממונה. לא טופל' && rows[1][12] === 'דיווח ממונה' && rows[1][7] === 'מנהל המחלקה + בטיחות', [rows[0][12], rows[1][7]]);
+  check('no tour date stays empty (never invented)', rows[0][1] === null);
+  check('trustee: department from the location, the rest is the place', rows[2][3] === 'חומר גלם' && rows[2][4] === 'רחבת קירור' && trusteeDept('מעוצבים · מחסן').dept === 'מעצבים', [rows[2][3], rows[2][4]]);
+  check('trustee: בינונית, מנהל המחלקה, target = report + 3 days', rows[2][6] === 'בינונית' && rows[2][7] === 'מנהל המחלקה' && rows[2][9].date === '2026-09-26', rows[2]);
+  check('trustee notes: "דיווח נאמן: <name>" + manager note', rows[2][12] === 'דיווח נאמן: מוסא' && rows[3][12] === 'דיווח נאמן: מוסא. טופל', [rows[2][12], rows[3][12]]);
+  check('closed trustee finding: סגור, closing date from the task-8 report', rows[3][10] === 'סגור' && rows[3][11].date === '2026-09-26', rows[3]);
+
+  console.log('\n2. first write into the existing workbook');
+  const src = await fixture();
+  let w = world({ file: src });
+  let r = await runFile(ENV, 'xlsm', false);
+  check('written', r.ok && r.pushed && r.rows === 4, r);
+  const backup = w.puts.find((p) => /לפני כתיבה ראשונה מהאפליקציה/.test(p.path));
+  const main = w.puts.find((p) => /^שולחן העבודה\/ניהול בטיחות\/13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path));
+  check('the original was backed up first, byte for byte', backup && Buffer.compare(Buffer.from(backup.body), Buffer.from(src)) === 0 && w.puts.indexOf(backup) < w.puts.indexOf(main), w.puts.map((p) => p.path));
+  const out = main.body;
+  const z = readZip(out);
+  const x = await sheetOf(out, 'xl/worksheets/sheet2.xml');
+  check('register rows written (inline strings), old text gone', x.includes('<t xml:space="preserve">ג\'ריקן</t>') && x.includes('נ-1') && !x.includes('>ישן<'), x.slice(0, 300));
+  check('formula columns N/O untouched on every row', (x.match(/<f t="array" ref="N\d+">/g) || []).length === 7 && (x.match(/<f>ROW\(\)<\/f>/g) || []).length === 7);
+  check('a formula in the data columns (A3 = A2+1) becomes the value', !/<c r="A3"[^>]*><f>/.test(x) && /<c r="A3" s="3"><v>2<\/v><\/c>/.test(x), (x.match(/<c r="A3".*?<\/c>/) || [])[0]);
+  check('dates are serials with a date style taken from the same column', x.includes('<c r="B3" s="24"><v>' + serial('2026-09-22') + '</v></c>') && x.includes('<c r="J2" s="14"><v>' + serial('2026-06-08') + '</v></c>') && x.includes('<c r="L5" s="24"><v>' + serial('2026-09-26') + '</v></c>'), (x.match(/<row r="5".*?<\/row>/) || [])[0]);
+  check('text keeps the cell style of that column', /<c r="D2" s="8" t="inlineStr">/.test(x));
+  check('rows hidden by the old filter are shown; the filter stays, its selection goes', !/hidden="1"/.test(x) && /<autoFilter ref="A1:M8"\/>/.test(x) && !/filterMode/.test(x));
+  check('data validation kept', x.includes('<formula1>"גבוהה,בינונית,נמוכה"</formula1>'));
+  check('rows past the data are blank in A..M', /<row r="6"[^>]*><c r="A6" s="3"\/>/.test(x) && !/<c r="[A-M]7"[^>]*>[^<]/.test(x));
+  const vba = z.find((e) => e.name === 'xl/vbaProject.bin');
+  check('the macro is copied as-is (same compressed bytes, CRC)', vba && vba.method === 8 && vba.crc === crc(VBA) && vba.usize === VBA.length);
+  check('the other sheet is untouched', (await sheetOf(out, 'xl/worksheets/sheet1.xml')).includes('COUNTIF('));
+  check('calcChain removed (entry, relationship, content type)', !z.some((e) => e.name === 'xl/calcChain.xml') && !(await sheetOf(out, 'xl/_rels/workbook.xml.rels')).includes('calcChain') && !(await sheetOf(out, '[Content_Types].xml')).includes('calcChain'));
+  check('Excel is told to recalculate on open', (await sheetOf(out, 'xl/workbook.xml')).includes('<calcPr calcId="191029" fullCalcOnLoad="1"/>'));
+  check('state: signature and our cTag saved', w.state.hazard_xlsm_sig && w.state.hazard_xlsm_ctag === 'c-ours-2' && w.state.hazard_xlsm_err === '', w.state);
+
+  console.log('\n3. the next runs');
+  const s1 = Object.assign({}, w.state);
+  w = world({ file: out, state: s1, cTag: 'c-ours-2' });
+  r = await runFile(ENV, 'xlsm', false);
+  check('same data: nothing downloaded, nothing written', r.pushed === false && r.reason === 'unchanged' && w.puts.length === 0 && !w.calls.some((c) => c.includes('graph.microsoft.com')), r);
+  w = world({ file: out, state: s1, cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', tour_no: 11, dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  check('new hazard in the app: written, no backup (file still ours)', r.pushed && w.puts.length === 1 && !w.puts.some((p) => /ארכיון/.test(p.path)), w.puts.map((p) => p.path));
+  w = world({ file: out, state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  check('file saved in Excel since our write: that version goes to ארכיון/גרסאות שנדרסו first', r.pushed && w.puts[0] && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 2026-09-28 10-37\.xlsm/.test(w.puts[0].path), w.puts.map((p) => p.path));
+  w = world({ file: out, state: s1, cTag: 'c-ours-2', locked: true, hazards: HZ.slice(0, 1) });
+  r = await runFile(ENV, 'xlsm', false);
+  check('open in Excel (423): a clear Hebrew message, signature not saved (retried)', !r.ok && r.locked && /פתוח ב-Excel/.test(r.error) && w.state.hazard_xlsm_sig === s1.hazard_xlsm_sig, r);
+  w = world({ file: out, missing: true });
+  r = await runFile(ENV, 'xlsx', true);
+  check('file not in the folder: says where it looked', !r.ok && /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsx/.test(r.error), r);
+  const many = Array.from({ length: 8 }, (_, i) => ({ id: 'm' + i, n: i + 1, dept: 'תוצג', descr: 'x', s: 'פתוח' }));
+  w = world({ file: src, hazards: many, reports: [] });
+  r = await runFile(ENV, 'xlsm', true);
+  check('more rows than the sheet holds: refused, file not written', !r.ok && /too many rows/.test(r.error) && !w.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)), r);
+
+  console.log('\n4. who may call it, and the twin');
+  w = world({ file: src });
+  const req = (h, b) => new Request('https://tapugan-safety.pages.dev/api/hazard-file', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, h || {}), body: JSON.stringify(b || {}) });
+  let res = await onRequest({ request: req(), env: ENV });
+  check('no secret -> 403', res.status === 403);
+  res = await onRequest({ request: req(), env: { ...ENV, TRUSTEE_NOTIFY_SECRET: '' } });
+  check('secret not configured -> still 403 (never open)', res.status === 403);
+  const waits = [];
+  res = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }), env: ENV, waitUntil: (p) => waits.push(p) });
+  let j = await res.json();
+  await Promise.all(waits);
+  check('with the secret: the xlsm, then a call for the xlsx', j.ok && j.file === 'xlsm' && j.next === 'xlsx' && w.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/hazard-file')), j);
+  const w2 = world({ file: src });
+  const waits2 = [];
+  res = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { file: 'xlsx' }), env: ENV, waitUntil: (p) => waits2.push(p) });
+  j = await res.json();
+  check('the xlsx call writes the xlsx and does not chain again', j.ok && j.file === 'xlsx' && !j.next && waits2.length === 0 && w2.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsx:/.test(p.path)), j);
+
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });
