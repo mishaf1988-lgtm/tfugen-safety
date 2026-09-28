@@ -145,7 +145,15 @@ function ymdOfText(t) {
   return y + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
 }
 
-// Read back columns A..lastCol of rows 2..maxRow (what a person saved in
+// The tab names, in workbook order.
+export async function sheetNames(bytes) {
+  const wb = await entryText(readZip(bytes).find((e) => e.name === 'xl/workbook.xml'));
+  const out = []; const re = /<sheet [^>]*name="([^"]+)"/g; let m;
+  while ((m = re.exec(wb))) out.push(xmlUnesc(m[1]));
+  return out;
+}
+
+// Read back columns A..lastCol of rows minRow (default 2)..maxRow (what a person saved in
 // Excel). Returns [{r, v:[...]}] for the rows that have anything there:
 // strings trimmed, numbers as numbers, and in dateCols a 'YYYY-MM-DD' string
 // (from Excel's serial day or from a typed date). A cell that cannot be read
@@ -161,7 +169,7 @@ export async function readSheetRows(bytes, opts) {
   const rowRe = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let rm;
   while ((rm = rowRe.exec(xml))) {
     const r = +((/\br="(\d+)"/.exec(rm[1]) || [])[1] || 0);
-    if (r < 2 || r > opts.maxRow || !rm[2]) continue;
+    if (r < (opts.minRow || 2) || r > opts.maxRow || !rm[2]) continue;
     const v = []; let any = false;
     const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let cm;
     while ((cm = cellRe.exec(rm[2]))) {
