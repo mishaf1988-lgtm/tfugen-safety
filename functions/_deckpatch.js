@@ -88,7 +88,7 @@ export function setList(xml, name, sections, more, report) {
     const nRuns = (tmpl.match(/<a:r>/g) || []).length;
     const asRuns = (it) => (Array.isArray(it) ? it : nRuns > 1 ? [String(it)].concat(Array(nRuns - 1).fill('')) : it);
     let items = sec.items.length ? sec.items.slice() : [sec.empty];
-    if (items.length > room) { const rest = items.length - (room - 1); items = items.slice(0, room - 1).concat([more(rest)]); }
+    if (items.length > room) { const rest = items.length - (room - 1); items = items.slice(0, room - 1).concat([(sec.more || more)(rest)]); }
     items.forEach((it) => out.push(patchPara(tmpl, asRuns(it))));
     for (let q = items.length; q < room; q++) out.push(patchPara(tmpl, Array(nRuns).fill('')));
   });
@@ -143,8 +143,22 @@ export function deckContent(m, rows, meetingDate) {
     const cut = t.substring(0, n - 3); const sp = cut.lastIndexOf(' ');
     return (sp > n / 2 ? cut.substring(0, sp) : cut).replace(/[\s,:;-]+$/, '') + '...';
   };
-  const head = (t) => String(t || '').split(' - ')[0].trim();
-  const item = (r, n) => [r[3], ' - ' + short((r[4] ? r[4] + ': ' : '') + head(r[5]), n)];
+  // Never inside parentheses: "מסוע (חיבור שני מסועים - יציאה)" stays whole.
+  const head = (t) => {
+    t = String(t || ''); let depth = 0;
+    for (let i = 0; i < t.length; i++) {
+      const ch = t[i];
+      if (ch === '(') depth++; else if (ch === ')') depth = Math.max(0, depth - 1);
+      else if (!depth && t.substr(i, 3) === ' - ') return t.substring(0, i).trim();
+    }
+    return t.trim();
+  };
+  // One line in its box, like the deck's own items: n counts the department.
+  // The hazard matters more than where: a location that does not fit with it is left out.
+  const item = (r, n) => {
+    const room = Math.max(20, n - String(r[3] || '').length - 3), d = head(r[5]), l = r[4] ? head(r[4]) : '';
+    return [r[3], ' - ' + short(l && (l + ': ' + d).length <= room ? l + ': ' + d : d, room)];
+  };
   const closedMonth = {}; rows.forEach((r) => { if (d10(r[11]).substring(0, 7) === month) closedMonth[r[3]] = (closedMonth[r[3]] || 0) + 1; });
   const closedList = Object.keys(closedMonth).sort((p, q) => closedMonth[q] - closedMonth[p]).map((d) => d + ': ' + (closedMonth[d] === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : closedMonth[d] + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5'));
   const nClosedMonth = Object.values(closedMonth).reduce((s, x) => s + x, 0);
@@ -157,7 +171,7 @@ export function deckContent(m, rows, meetingDate) {
     s1: {
       Header: [(t) => t.replace(/20\d{2}/, y).replace(/\d{2}\.\d{2}\.\d{4}/, meetingDate.substring(8, 10) + '.' + meetingDate.substring(5, 7) + '.' + y)],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', listDepts('closedThisWeek').join(', ') || '-'],
-      OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: ' + short(head(oldestHigh[5]), 34) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
+      OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, ' + short(head(oldestHigh[5]), 42 - String(hi).length - 15) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
       NewNote: [nw === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9 \u05d0\u05d7\u05d3 \u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2' : nw ? nw + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2',
         nw ? listDepts('newThisWeek').join(', ') + ', ' + (!nc ? '\u05db\u05d5\u05dc\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' : !no ? '\u05db\u05d5\u05dc\u05dd \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5' : (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ' \u05d5' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05d5\u05ea\u05e8 \u05e4\u05ea\u05d5\u05d7' : '-' + no + ' \u05e0\u05d5\u05ea\u05e8\u05d5 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')) : '-'],
       bars: {
@@ -186,9 +200,9 @@ export function deckContent(m, rows, meetingDate) {
       Card0: [String(h.total.total)],
       Card1: [String(h.total.closed)],
       Card2: [String(h.total.open), '\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd - ' + [hi ? hi + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4' : '', med ? med + ' \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : '', low ? low + ' \u05e0\u05de\u05d5\u05db\u05d4' : ''].filter(Boolean).join(', ')],
-      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 70)), empty: '\u05d0\u05d9\u05df', room: 5 },
-        { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9', room: 3 }],
-      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 80)), empty: '\u05d0\u05d9\u05df', room: 12 }],
+      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 62)), empty: '\u05d0\u05d9\u05df', room: 5 },
+        { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9', room: 3, more: (n) => ['\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea', ''] }],
+      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 68)), empty: '\u05d0\u05d9\u05df', room: 12 }],
     },
   };
 }
