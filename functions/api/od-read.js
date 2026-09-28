@@ -11,7 +11,7 @@
 // A .pptx: its slides, shape texts, tables and chart series (_pptx.js).
 // part: one XML part of the file as text (60KB at a time, from offset).
 import { jsonResp } from '../_shared.js';
-import { odConfigured, accessToken } from '../_onedrive.js';
+import { odConfigured, accessToken, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
 
@@ -29,9 +29,20 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   const want = env.TRUSTEE_NOTIFY_SECRET;
-  if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, {});
-  if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   let body = {}; try { body = await request.json(); } catch (e) {}
+  // The file itself (to render the deck and compare it with the archive,
+  // 28/09): a one-off token, never the server secret. It is put in
+  // server_state (od_raw_token + od_raw_exp) from the database by whoever may
+  // run SQL there, lasts minutes, and allows only this download.
+  const rawTok = request.headers.get('x-raw-token') || '';
+  let rawOk = false;
+  if (body.raw === true && rawTok.length >= 32) {
+    const st = await stateGet(env, ['od_raw_token', 'od_raw_exp']).catch(() => ({}));
+    const t = st.od_raw_token && st.od_raw_token.value, x = st.od_raw_exp && st.od_raw_exp.value;
+    rawOk = !!t && t === rawTok && !!x && Date.parse(x) > Date.now();
+  }
+  if (!rawOk && (!want || (request.headers.get('x-notify-secret') || '') !== want)) return jsonResp({ error: 'forbidden' }, 403, {});
+  if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   const full = safePath(body.path);
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
@@ -39,6 +50,10 @@ export async function onRequest(context) {
     const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
     const bytes = new Uint8Array(await r.arrayBuffer());
+    if (body.raw === true) {
+      if (!rawOk) return jsonResp({ error: 'forbidden' }, 403, {});
+      return new Response(bytes, { status: 200, headers: { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' } });
+    }
     // One XML part as text (to see how a slide or chart is built), capped.
     if (body.part) {
       const e = readZip(bytes).find((x) => x.name === String(body.part));

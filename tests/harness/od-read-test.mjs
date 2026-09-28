@@ -61,6 +61,23 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   res = await onRequest({ request: req(S, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', part: 'ppt/media/image1.png' }), env: ENV });
   j = await res.json();
   check('a part that is not xml: refused', !j.ok, j);
+  const TOK = 'a'.repeat(40);
+  const rawWorld = (state) => { globalThis.fetch = async (url, init) => { const u = String(url); if (u.startsWith(SB + '/rest/v1/server_state')) return new Response(JSON.stringify(Object.keys(state).map((k) => ({ key: k, value: state[k] }))), { status: 200 }); if (u.startsWith(SB)) return new Response(JSON.stringify([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 }); return new Response(deck, { status: 200 }); }; };
+  rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
+  const rawBytes = new Uint8Array(await res.arrayBuffer());
+  check('raw download with a valid one-off token: the file bytes', res.status === 200 && rawBytes.length === deck.length, [res.status, rawBytes.length]);
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx' }), env: ENV });
+  check('the token opens only the raw download, not the other reads', res.status === 403);
+  rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
+  check('an expired token: refused', res.status === 403);
+  rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
+  res = await onRequest({ request: req({ 'x-raw-token': 'b'.repeat(40) }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
+  check('a wrong token: refused', res.status === 403);
+  rawWorld({});
+  res = await onRequest({ request: req({ 'x-raw-token': '' }, { path: 'x.pptx', raw: true }), env: ENV });
+  check('no token stored: refused (never open by default)', res.status === 403);
   check('other file types still refused', safePath('a/b.docx') === null && !!safePath('a/b.pptx'));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
