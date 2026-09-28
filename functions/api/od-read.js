@@ -15,7 +15,7 @@ import { odConfigured, accessToken } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
 
-export const ROOT = 'שולחן העבודה/ניהול בטיחות/';
+export const ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 

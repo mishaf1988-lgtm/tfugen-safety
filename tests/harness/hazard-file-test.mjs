@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -223,6 +223,31 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
   check('the file exactly as the server wrote it: no edits', !ed.hazards.length && !ed.reports.length && !ed.fresh.length, ed);
+
+  // 28/09 review fixes
+  const lastDup = { rows: last1.rows.concat([last1.rows[1].slice()]), ids: last1.ids.concat(['h:th-X']) };
+  ed = diffEdits(back, lastDup, HZ.concat([{ id: 'th-X', n: 2, dept: 'מעצבים', descr: 'כפול', s: 'פתוח' }]), TR, '2026-09-28');
+  check('a number used twice in the last write: that row is skipped, not applied to either record', !ed.hazards.some((x) => x.id === 'th-2' || x.id === 'th-X'), ed.hazards);
+  const shifted = back.map((b) => (b.v[0] === 'נ-1' ? { r: b.r, v: b.v.slice().map((x, i) => (i === 5 ? 'ליקוי אחר לגמרי' : i === 1 ? '2026-09-01' : x)) } : b));
+  ed = diffEdits(shifted, last1, HZ, TR, '2026-09-28');
+  check('a row whose description and date no longer match the record (stale copy, נ-k shift): skipped', !ed.reports.some((x) => x.id === 'a'), ed.reports);
+  const aiApp = TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { action: 'המלצת העוזר' }) : r));
+  ed = diffEdits(back, last1, HZ, aiApp, '2026-09-28');
+  check('the assistant filled an empty action in the same run, the person typed one in Excel: the person wins', (ed.reports.find((x) => x.id === 'a') || {}).action === 'להחליף פנס', ed.reports);
+  const closedHz = HZ.map((h) => (h.id === 'th-1' ? Object.assign({}, h, { s: 'סגור', closed_d: '2026-09-01' }) : h));
+  const lastC = { rows: buildRows(closedHz, TR), ids: last1.ids };
+  const reopened = (await readSheetRows(await patchSheetRows(out, buildRows(closedHz, TR).map((x, i) => (i === 0 ? Object.assign(x.slice(), { 10: 'פתוח', 11: null }) : x)), { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }));
+  ed = diffEdits(reopened, lastC, closedHz, TR, '2026-09-28');
+  const ro = ed.hazards.find((x) => x.id === 'th-1');
+  check('reopened in Excel: status פתוח and no closing date', ro && ro.s === 'פתוח' && ro.closed_d === null, ro);
+  const many30 = Array.from({ length: 30 }, (_, i) => ({ id: 'm' + i, n: i + 1, d: '2026-09-01', dept: 'תוצג', descr: 'x' + i, s: 'פתוח' }));
+  const reg30 = buildRegister(many30, []);
+  const file30 = reg30.rows.map((x, i) => ({ r: i + 2, v: Object.assign(x.slice(), { 10: 'סגור', 11: '2026-09-28', 1: x[1] && x[1].date, 9: x[9] && x[9].date }) }));
+  const w30 = world({ hazards: many30, reports: [] });
+  const ed30 = diffEdits(file30, { rows: reg30.rows, ids: reg30.ids }, many30, [], '2026-09-28');
+  check('30 edits found (over the 25-write budget)', ed30.hazards.length === 30, ed30.hazards.length);
+  const ap = await applyEdits(ENV, ed30, many30.map((x) => Object.assign({}, x)), []);
+  check('applyEdits writes 25, says which, and leaves the rest pending (they are not marked done)', ap.pending && ap.written.length === 25 && (w30.hz || []).filter((x) => x.m === 'PATCH').length === 25 && !ap.written.includes('h:m29'), [ap.pending, ap.written.length]);
 
   w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel' });
   r = await runFile(ENV, 'xlsm', false);

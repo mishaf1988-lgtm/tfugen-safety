@@ -34,7 +34,10 @@ export function patchPara(p, next) {
   }
   const nt = Array.isArray(next) ? next.join('') : typeof next === 'function' ? next(old) : String(next);
   if (nt === old) return p;
-  if (skel(nt) === skel(old)) {
+  // Digits only when each number sits whole in one run (PowerPoint may split
+  // "12" into "1" + "2"; 28/09 review).
+  const groups = runs.reduce((n, r) => n + (r.t.match(/\d+/g) || []).length, 0);
+  if (skel(nt) === skel(old) && groups === (nt.match(/\d+/g) || []).length) {
     const nums = nt.match(/\d+/g) || []; let k = 0;
     return p.replace(RUN, (all, pr, t) => '<a:r>' + pr + '<a:t>' + esc(unesc(t).replace(/\d+/g, () => nums[k++])) + '</a:t></a:r>');
   }
@@ -78,10 +81,16 @@ export function setList(xml, name, sections, more, report) {
     const sec = sections[k], tmpl = sp.paras[h + 1] && h + 1 < end ? sp.paras[h + 1] : null;
     out.push(patchPara(sp.paras[h], sec.header));
     if (!tmpl) return;
-    const room = Math.max(1, end - h - 1);
+    // The room never shrinks: unused lines stay as empty lines with the
+    // item's runs, and sec.room (the deck's own first layout) is the floor
+    // (28/09 review: a week with 0 items used to leave one line for good).
+    const room = Math.max(1, end - h - 1, sec.room || 0);
+    const nRuns = (tmpl.match(/<a:r>/g) || []).length;
+    const asRuns = (it) => (Array.isArray(it) ? it : nRuns > 1 ? [String(it)].concat(Array(nRuns - 1).fill('')) : it);
     let items = sec.items.length ? sec.items.slice() : [sec.empty];
     if (items.length > room) { const rest = items.length - (room - 1); items = items.slice(0, room - 1).concat([more(rest)]); }
-    items.forEach((it) => out.push(patchPara(tmpl, it)));
+    items.forEach((it) => out.push(patchPara(tmpl, asRuns(it))));
+    for (let q = items.length; q < room; q++) out.push(patchPara(tmpl, Array(nRuns).fill('')));
   });
   return xml.substring(0, s.start) + sp.pre + out.join('') + sp.post + xml.substring(s.end);
 }
@@ -177,9 +186,9 @@ export function deckContent(m, rows, meetingDate) {
       Card0: [String(h.total.total)],
       Card1: [String(h.total.closed)],
       Card2: [String(h.total.open), '\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd - ' + [hi ? hi + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4' : '', med ? med + ' \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : '', low ? low + ' \u05e0\u05de\u05d5\u05db\u05d4' : ''].filter(Boolean).join(', ')],
-      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 70)), empty: '\u05d0\u05d9\u05df' },
-        { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9' }],
-      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 80)), empty: '\u05d0\u05d9\u05df' }],
+      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 70)), empty: '\u05d0\u05d9\u05df', room: 5 },
+        { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9', room: 3 }],
+      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 80)), empty: '\u05d0\u05d9\u05df', room: 12 }],
     },
   };
 }
