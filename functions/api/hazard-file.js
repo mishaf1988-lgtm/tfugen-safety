@@ -117,7 +117,7 @@ async function sha(s) {
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
-async function readAll(env, path) {
+export async function readAll(env, path) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
   const r = await fetch(base + path + '&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });

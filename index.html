@@ -114,6 +114,14 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 #mf .mf-chip.on{border-color:var(--pr,#1d4ed8);background:#eff6ff}
 #mf input,#mf textarea,#mf select{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:2px solid var(--border);border-radius:10px;font-family:inherit;background:var(--bg,#fff);color:var(--tx)}
 #mf .mf-save{width:100%;min-height:54px;margin-top:18px;font-size:17px;font-weight:900}
+#hzr{position:fixed;inset:0;z-index:9000;background:var(--bg,#fff);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#hzr .hz-in{max-width:720px;margin:0 auto;padding:12px 16px 40px}
+#hzr .hz-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:10px 0}
+#hzr .hz-card label{display:flex;gap:8px;align-items:center;font-weight:700;font-size:15px}
+#hzr .hz-card input{width:20px;height:20px}
+#hzr .hz-rc{font-size:12px;color:var(--t2);margin-top:4px;word-break:break-all}
+#hzr .hz-row{font-size:13px;padding:3px 0;border-top:1px dashed var(--border)}
+#hzr .hz-old{background:#fff2cc}
 #mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
 /* ---- APP SHELL ---- */
@@ -1398,6 +1406,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row">
     <div class="page-title">&#128270; &#1505;&#1497;&#1493;&#1512;&#1497; &#1502;&#1508;&#1490;&#1506;&#1497;&#1501; <span>&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div>
     <button class="btn btn-p" onclick="thzNew()">+ &#1502;&#1508;&#1490;&#1506;</button>
+    <button class="btn btn-s" onclick="hzrOpen()">&#128231; &#1491;&#1493;&#1495; &#1500;&#1502;&#1495;&#1500;&#1511;&#1493;&#1514;</button>
     <button class="btn btn-s" onclick="mgrFieldOpen()">&#128203; &#1502;&#1510;&#1489; &#1505;&#1497;&#1493;&#1512;</button>
   </div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 8px">
@@ -9803,6 +9812,54 @@ function mgrFieldSave(){
   _attachUrls['mf-attach-area']=null;
   toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');_mfRender();
   var d=g('mf-descr');if(d)d.focus();
+}
+
+// ---- Report to each department (stage 4, 28/09): replaces the workbook
+// macro. The server (hazard-report.js) builds each report from the merged
+// register and the workbook's own "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" / "\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4"; here the manager
+// sees who gets what, ticks departments and sends (Michael: "\u05e8\u05e7 \u05db\u05e4\u05ea\u05d5\u05e8").
+var _hzr=null;
+function hzrOpen(){
+  var ov=g('hzr');if(!ov){ov=document.createElement('div');ov.id='hzr';document.body.appendChild(ov);}
+  ov.style.display='block';_hzr={loading:true};_hzrRender();
+  _truApi('/api/hazard-report',{op:'preview'}).then(function(j){_hzr=j&&j.reports?j:{error:(j&&j.error)||'\u05d4\u05d8\u05e2\u05d9\u05e0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'};})['catch'](function(){_hzr={error:'\u05d4\u05d8\u05e2\u05d9\u05e0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'};}).then(_hzrRender);
+}
+function hzrClose(){var ov=g('hzr');if(ov)ov.style.display='none';}
+function _hzrRender(){
+  var ov=g('hzr');if(!ov)return;
+  var h='<div class="hz-in"><div class="mf-top" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0;font-size:19px">&#128231; \u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea</h2><button type="button" class="btn btn-s" onclick="hzrClose()">\u05e1\u05d2\u05d5\u05e8</button></div>';
+  if(!_hzr||_hzr.loading){ov.innerHTML=h+'<p>\u05d8\u05d5\u05e2\u05df \u05d0\u05ea \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d5\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05de\u05d4\u05e7\u05d5\u05d1\u05e5...</p></div>';return;}
+  if(_hzr.error){ov.innerHTML=h+'<p style="color:var(--er,#b91c1c)">'+esc(_hzr.error)+'</p></div>';return;}
+  h+='<p style="font-size:13px;color:var(--t2)">\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d5\u05d4\u05e0\u05d5\u05e1\u05d7 \u05e0\u05dc\u05e7\u05d7\u05d9\u05dd \u05de\u05d4\u05d2\u05d9\u05dc\u05d9\u05d5\u05e0\u05d5\u05ea "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" \u05d5"\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4" \u05d1\u05e7\u05d5\u05d1\u05e5. \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d5\u05e6\u05d0 \u05de-Outlook \u05e9\u05dc sviva \u05d5\u05e0\u05e9\u05de\u05e8 \u05d1\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05e9\u05dc\u05d7\u05d5.</p>';
+  if(_hzr.result){
+    var rs=_hzr.result;
+    h+='<div class="hz-card">'+(rs.sent||[]).map(function(x){return '<div>&#9989; '+esc(x.dept)+': \u05e0\u05e9\u05dc\u05d7 \u05dc-'+x.to.length+' \u05e0\u05de\u05e2\u05e0\u05d9\u05dd ('+x.count+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd)</div>';}).join('')
+      +(rs.skipped||[]).map(function(x){return '<div>&#9898; '+esc(x.dept)+': '+esc(x.why)+'</div>';}).join('')
+      +(rs.failed||[]).map(function(x){return '<div style="color:var(--er,#b91c1c)">&#10060; '+esc(x.dept)+': '+esc(x.error)+'</div>';}).join('')+'</div>';
+  }
+  if(!_hzr.canSend)h+='<p style="color:var(--er,#b91c1c)">\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05de\u05d7\u05d5\u05d1\u05e8. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7\u05d5\u05ea, \u05dc\u05d0 \u05dc\u05e9\u05dc\u05d5\u05d7.</p>';
+  (_hzr.reports||[]).forEach(function(r){
+    var can=r.count>0&&r.to.length>0;
+    h+='<div class="hz-card"><label><input type="checkbox" class="hz-pick" data-d="'+esc(r.dept)+'"'+(can?' checked':' disabled')+'> '+esc(r.dept)+' - '+r.count+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'+(r.old?' ('+r.old+' \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd)':'')+'</label>'
+      +'<div class="hz-rc">\u05d0\u05dc: '+(r.to.length?esc(r.to.join(', ')):'<b>\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd</b>')+'</div>'
+      +'<div class="hz-rc">\u05e2\u05d5\u05ea\u05e7: '+esc(r.cc.join(', '))+'</div>'
+      +(r.count?'<details style="margin-top:6px"><summary style="font-size:13px">\u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd</summary>'+r.rows.map(function(x){return '<div class="hz-row'+(x.old?' hz-old':'')+'"><b>'+esc(x.n)+'</b> '+esc(x.descr)+' <span style="color:var(--t2)">('+esc(x.resp)+', '+esc(x.status)+(x.due?', \u05d9\u05e2\u05d3 '+esc(x.due):'')+')</span></div>';}).join('')+'</details>':'')
+      +'</div>';
+  });
+  h+='<button type="button" class="btn btn-p" style="width:100%;min-height:50px;font-size:16px;font-weight:900" onclick="hzrSend()"'+(_hzr.canSend&&!_hzr.busy?'':' disabled')+'>'+(_hzr.busy?'\u05e9\u05d5\u05dc\u05d7...':'&#128231; \u05e9\u05dc\u05d7 \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea')+'</button></div>';
+  ov.innerHTML=h;
+}
+function hzrSend(){
+  if(_viewBlock())return;
+  var ds=Array.prototype.slice.call(document.querySelectorAll('#hzr .hz-pick')).filter(function(x){return x.checked;}).map(function(x){return x.dataset.d;});
+  if(!ds.length){toast('\u05dc\u05d0 \u05e1\u05d5\u05de\u05e0\u05d4 \u05d0\u05e3 \u05de\u05d7\u05dc\u05e7\u05d4');return;}
+  if(!confirm('\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05dc-'+ds.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea: '+ds.join(', ')+'?'))return;
+  _hzr.busy=true;_hzrRender();
+  _truApi('/api/hazard-report',{op:'send',depts:ds}).then(function(j){
+    _hzr.busy=false;_hzr.result=j||{failed:[{dept:'',error:'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
+    if(j&&j.error&&!j.sent){_hzr.result={failed:[{dept:'',error:j.error}]};}
+    try{addLog('\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7: '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
+  })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);
 }
 
 // ---- TOOLBOX TALKS ----
