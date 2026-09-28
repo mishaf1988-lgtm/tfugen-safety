@@ -172,6 +172,24 @@ export async function itemUrl(token, path) {
   return j.webUrl || null;
 }
 
+// Several recipients and copies, kept in Sent Items (the department report,
+// 28/09: it replaces the workbook macro, which sent from Outlook).
+export async function sendMailTo(token, to, cc, subject, html) {
+  const list = (a) => (a || []).map((x) => ({ emailAddress: { address: x } }));
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: { subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) },
+      saveToSentItems: true,
+    }),
+  });
+  if (r.status === 202 || r.ok) return true;
+  const j = await r.json().catch(() => ({}));
+  const msg = (j && j.error && (j.error.message || j.error.code)) || '';
+  throw new Error('outlook ' + r.status + (msg ? ': ' + String(msg).substring(0, 140) : ''));
+}
+
 // Send an HTML mail as the connected account (Graph /me/sendMail, 202 on success).
 export async function sendMail(token, to, subject, html) {
   const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
