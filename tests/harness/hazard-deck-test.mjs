@@ -129,6 +129,15 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   check('patching again with the same data changes nothing (no rewrite loop)', again.changed.length === 0 && again.bytes === out.bytes, again.changed);
   check('keyboard characters only in what the server writes', !/[—–־«»…]/.test(s1 + s2 + s3));
 
+  const long = [row(20, '2026-09-22', 'מעצבים', 'מחסן חומרים מסוכנים', 'מחסן החומרים עמוס - חומרים לא הוחזרו למחסן המרכזי ואינם מאוחסנים על מאצרה', 'גבוהה', null, 'פתוח', null),
+    row(21, '2026-09-23', 'מעצבים', 'מסוע אריזה (חיבור שני מסועים - יציאה לרובוט)', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)];
+  const ref2 = '2026-09-29', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
+  const c2x = deckContent(m2, long, ref2);
+  const it = c2x.s3.high[0].items.map((x) => x.join(''));
+  check('descriptions: the part before " - ", cut at a word, never mid-word', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - מסוע אריזה \(חיבור שני מסועים - יציאה לרובוט\): נקודות צביטה חשופות\.\.\.$/.test(it[1]), it);
+  check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[1] === 'מעצבים, כולם עדיין פתוחים', c2x.s1.NewNote);
+  check('the oldest high: its short part only', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, הוותיק: מחסן החומרים עמוס', c2x.s1.OpenNote);
+
   console.log('\n4. the meeting date');
   check('Sunday to Wednesday: this week\'s Tuesday; Thursday on: next week\'s', defaultMeeting('2026-09-27') === '2026-09-29' && defaultMeeting('2026-09-28') === '2026-09-29' && defaultMeeting('2026-09-30') === '2026-09-29' && defaultMeeting('2026-10-01') === '2026-10-06' && defaultMeeting('2026-10-03') === '2026-10-06');
   check('a date set in the app wins while current (e.g. Wednesday), an old one does not', meetingDate('2026-09-28', '2026-09-30') === '2026-09-30' && meetingDate('2026-10-05', '2026-09-30') === '2026-10-06');
