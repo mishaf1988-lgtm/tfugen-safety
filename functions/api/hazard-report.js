@@ -13,7 +13,8 @@
 //   * the opening and closing lines: L1 / L2 of "\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4".
 // Sent from sviva's Outlook (Graph, Mail.Send), kept in Sent Items.
 // Only on request (Michael: "\u05e8\u05e7 \u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4"): admin/manager session.
-// POST {op:'preview'} -> every department; {op:'send', depts:[...]}.
+// POST {op:'preview'} -> every department; {op:'send', depts:[...], test?}.
+// test: true sends each report to the connected account only.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet } from '../_onedrive.js';
 import { readSheetRows } from '../_xlsxpatch.js';
@@ -106,15 +107,23 @@ export async function onRequest(context) {
     if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), reports: reports.map((x) => Object.assign({}, x, { html: undefined })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];
+    // A test (28/09, Michael: "for now, only to me"): the same mail, to the
+    // connected account only, no copies; the real recipients are listed at the top.
+    const test = body.test === true;
+    const me = row.user_email;
+    if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
     const sent = [], skipped = [], failed = [];
     for (const rep of reports) {
       if (want.indexOf(rep.dept) < 0) continue;
       if (!rep.count) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' }); continue; }
-      if (!rep.to.length) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
-      try { await sendMailTo(token, rep.to, rep.cc, rep.title, rep.html); sent.push({ dept: rep.dept, to: rep.to, cc: rep.cc, count: rep.count }); }
+      if (!test && !rep.to.length) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
+      const to = test ? [me] : rep.to, cc = test ? [] : rep.cc;
+      const subject = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + rep.title;
+      const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(rep.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(rep.cc.join(', ')) + '</div>' + rep.html : rep.html;
+      try { await sendMailTo(token, to, cc, subject, html); sent.push({ dept: rep.dept, to, cc, count: rep.count, test }); }
       catch (e) { failed.push({ dept: rep.dept, error: String((e && e.message) || e).substring(0, 160) }); }
     }
-    await stateSet(env, { hazard_report_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
+    if (!test) await stateSet(env, { hazard_report_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
     return jsonResp({ ok: !failed.length, sent, skipped, failed }, 200, cors);
   } catch (e) {
     return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors);
