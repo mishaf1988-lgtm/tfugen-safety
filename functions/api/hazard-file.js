@@ -69,6 +69,15 @@ const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).t
 export const isFinding = (r) => !!r && r.ok === false && +r.t >= 1 && +r.t <= 7;
 export const notRelevant = (r) => /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String((r && r.mgr_note) || ''));
 
+// Routing a finding from the trustees screen (WhatsApp / mail / Vitre SMS)
+// writes it into the note, not a task: "\u05e0\u05d5\u05ea\u05d1 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05e2\u05d3 30/09/2026 (\u05de\u05d9\u05d9\u05dc ...)".
+// The last such date is the finding's target (28/09, \u05e0-2 and \u05e0-4).
+export function routedNote(note) {
+  const re = /\u05e0\u05d5\u05ea\u05d1[^()]*?\u05e2\u05d3 (\d{1,2})\/(\d{1,2})\/(\d{4})/g; let m, last = null;
+  while ((m = re.exec(String(note || '')))) last = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+  return last;
+}
+
 export function trusteeDept(loc) {
   const head = String(loc || '').split('\u00b7')[0].trim();
   const d = DEPT_ALIAS[head] || head;
@@ -114,7 +123,7 @@ export function buildRegister(hazards, reports, tasks) {
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
     rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
-      routed[r.id] ? dt(routed[r.id].due) : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
+      routed[r.id] ? dt(routed[r.id].due) : routedNote(r.mgr_note) ? { date: routedNote(r.mgr_note) } : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);
   });

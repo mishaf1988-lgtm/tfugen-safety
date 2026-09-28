@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -119,6 +119,9 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
 
   const rt = buildRows(HZ, TR, [{ id: 't1', source_table: 'trustee_reports', source_id: 'a', due: '2026-09-20', ts: '2026-09-23T10:00:00Z' }, { id: 't2', source_table: 'trustee_reports', source_id: 'a', due: '2026-10-04', ts: '2026-09-24T10:00:00Z' }, { id: 't3', source_table: 'ncr', source_id: 'b', due: '2026-12-01' }]);
   check('a routed finding is due when its (latest) task is due, others report + 3 days', rt[2][9].date === '2026-10-04' && rt[3][9].date === '2026-09-27', [rt[2][9], rt[3][9]]);
+  check('routed in the note (WhatsApp / mail / Vitre): its "עד" date, the last one', routedNote('נותב לאחזקה עד 30/09/2026 (מייל 23/09/2026)') === '2026-09-30' && routedNote('נותב לאחזקה - מיכאל פרייליך עד 04/10/2026 (Vitre SMS #3612206 27/09/2026)') === '2026-10-04' && routedNote('נותב לחשמל עד 1/10/2026 (x). נותב לאחזקה עד 05/10/2026 (y)') === '2026-10-05' && routedNote('בדיקה של חשמלאים') === null && routedNote(null) === null);
+  const rn = buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (מייל 23/09/2026)' }) : r)));
+  check('a finding routed in its note is due on that date; a task wins over the note', rn[2][9].date === '2026-10-04' && buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (x)' }) : r)), [{ source_table: 'trustee_reports', source_id: 'a', due: '2026-10-09', ts: 'z' }])[2][9].date === '2026-10-09', rn[2][9]);
   console.log('\n1b. the assistant fills a missing corrective action');
   {
     const AENV = { ...ENV, GEMINI_API_KEY: 'g' };
