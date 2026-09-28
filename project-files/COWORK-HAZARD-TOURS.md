@@ -51,11 +51,19 @@
 
 את התאריכים יעדכן מיכאל במסך באפליקציה, לא באקסל.
 
-## משימה 7 (לא חובה, רק באישור מיכאל): עדכון Worker הגיבוי
+## משימה 7 (רק באישור מיכאל): עדכון Worker הגיבוי
 
-הגיבוי הלילי לא כולל עדיין את `tour_hazards`. העדכון:
+הגיבוי הלילי לא כולל עדיין 12 טבלאות, בהן `tour_hazards`, הנאמנים, `ncr_ai` ו-`audit_log`.
+**עודכן 28.09 אחרי הממצא של Cowork (מגבלת 50 בקשות):** הקוד ב-GitHub קורא עכשיו 15 טבלאות בלי `ts` בבקשה אחת, ולכן ריצה מלאה היא 48 בקשות. אם הגבול בכל זאת מתקרב, הקוד מדלג על טבלאות ומדווח עליהן, ולא על ההעלאה. לכן זה בטוח גם בתוכנית החינמית, ולא צריך לבדוק באיזו תוכנית החשבון.
+
 1. לפתוח את dash.cloudflare.com > Workers & Pages > `tapugan-backup-cron` > Edit code.
-2. להחליף את כל הקוד בתוכן העדכני של `workers/backup-cron.js` מ-GitHub, מהכתובת:
-   `https://github.com/mishaf1988-lgtm/tfugen-safety/blob/main/workers/backup-cron.js` (כפתור Raw, ואז העתקה של הכל).
-3. Deploy. אחר כך לפתוח את `https://tapugan-backup-cron.mishaf1988.workers.dev/health`. **מיד אחרי הפריסה צפוי** `{"status":"unknown",...}` (קוד 503): הגרסה החדשה עוד לא רצה. זה תקין. אחרי הריצה הבאה (06:00) אמור להופיע `"status":"ok"`, ו-Claude Code יאמת את קובץ הגיבוי.
-4. **לא לגעת** במשתני הסביבה (Settings > Variables) ולא בשעת ה-cron.
+2. להחליף את כל הקוד בתוכן העדכני של `workers/backup-cron.js` מ-GitHub:
+   `https://github.com/mishaf1988-lgtm/tfugen-safety/blob/main/workers/backup-cron.js` (כפתור Raw, ואז להעתיק הכל). לוודא שבקוד מופיעה השורה `const NO_TS = new Set(`. אם היא לא מופיעה, זו גרסה ישנה, ולכן לעצור.
+3. Deploy.
+4. **ריצת בדיקה מיד:** במסך העריכה, Schedule (או "Trigger scheduled event"), ואז להריץ.
+5. לבדוק את התוצאה:
+   - בלוג הריצה (Logs) לא מופיעה השגיאה "Too many subrequests".
+   - `https://tapugan-backup-cron.mishaf1988.workers.dev/health` מחזיר `"status":"ok"` עם שם קובץ מהיום.
+   - לדווח ל-Claude Code, והוא יאמת ב-Supabase שקובץ הגיבוי החדש גדול מ-166KB.
+6. **לא לגעת** במשתני הסביבה (Settings > Variables) ולא בשעת ה-cron.
+7. **אם משהו נכשל:** Deployments > הגרסה הקודמת > Rollback, ולדווח.
