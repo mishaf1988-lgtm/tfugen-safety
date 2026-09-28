@@ -30,6 +30,9 @@
 // server last wrote it (someone saved it in Excel), that version is copied to
 // ארכיון/גרסאות שנדרסו before it is replaced.
 //
+// Two-way (28/09): a person who saves the file in Excel changes the app. See
+// diffEdits below: action / status / closing date / notes, and new rows.
+//
 // Callers: statement triggers on tour_hazards / trustee_reports and a
 // 15-minute pg_cron tick (x-notify-secret), and the app (op:'status',
 // force:true; admin/manager session). One file per request (CPU budget): the
@@ -37,7 +40,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow } from '../_onedrive.js';
-import { patchSheetRows, sheetsDigest } from '../_xlsxpatch.js';
+import { patchSheetRows, sheetsDigest, readSheetRows } from '../_xlsxpatch.js';
 import { suggestAction } from '../_ai.js';
 
 export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
@@ -73,12 +76,16 @@ export function trusteeDept(loc) {
 }
 
 // Pure: the merged register, as rows of columns A..M.
-export function buildRows(hazards, reports) {
-  const rows = [];
+export function buildRows(hazards, reports) { return buildRegister(hazards, reports).rows; }
+// ... and, per row, the record behind it ('h:<id>' / 't:<id>'), so a row a
+// person edited in Excel can be traced back (the trustee numbers נ-k move).
+export function buildRegister(hazards, reports) {
+  const rows = [], ids = [];
   (hazards || []).filter((r) => r && r.id).slice().sort((a, b) => (+a.n || 0) - (+b.n || 0)).forEach((r) => {
     rows.push([r.n == null ? '' : +r.n, dt(r.d), r.tour_no == null ? '' : +r.tour_no, r.dept || '', r.loc || '', r.descr || '',
       r.sev || '', (r.resp || '') + (r.resp2 ? ' + ' + r.resp2 : ''), r.action || '', dt(r.due), r.s || '', dt(r.closed_d),
       '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05de\u05d5\u05e0\u05d4' + (r.notes ? '. ' + r.notes : '')]);
+    ids.push('h:' + r.id);
   });
   const reps = (reports || []).filter((r) => r && r.id);
   const closer = {};
@@ -100,9 +107,10 @@ export function buildRows(hazards, reports) {
     const c = closer[r.id];
     rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
       d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
-      closed && c ? dt(c.d || c.ts) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
+      closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
+    ids.push('t:' + r.id);
   });
-  return rows;
+  return { rows, ids };
 }
 
 async function sha(s) {
@@ -128,11 +136,123 @@ function stampName(name, iso) {
   return name.substring(0, i) + ' - ' + iso.replace('T', ' ').substring(0, 16).replace(':', '-') + name.substring(i);
 }
 
+// ---- Excel -> app (28/09, Michael: "if I close in the file, the app has to
+// update, and the other way round, fully automatic") ----
+// When a person saved the file since the server last wrote it, the register
+// rows are read back and compared with what the server wrote then
+// (hazard_<file>_last). Only columns I (action), K (status), L (closing date)
+// and M (notes) are taken (Michael: "סגירה + פעולה + הערות"); description,
+// department, severity and the rest stay as in the app. A field that changed
+// in the app too since that write keeps the app's value (the file version is
+// in the archive). A new row with a description becomes a new manager hazard.
+// Rows deleted in Excel are not deleted in the app.
+const S_OPEN = 'פתוח', S_WIP = 'בטיפול', S_DONE = 'סגור', TR_CLOSED = 'נסגר';
+const PULL_COLS = [8, 10, 11, 12];
+const MAX_PULL = 25; // database writes per run (subrequests); the rest next run
+const norm = (v) => (v == null ? '' : typeof v === 'object' && v.date ? v.date : String(v).replace(/\r\n?/g, '\n').trim());
+const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+const orNull = (t) => (t ? t : null);
+const stripMgr = (t) => orNull(String(t || '').replace(/^דיווח ממונה\.?\s*/, '').trim());
+const stripTrustee = (t) => orNull(String(t || '').replace(/^דיווח נאמן:[^.]*\.?\s*/, '').trim());
+function stripTour(t) {
+  t = String(t || '').trim();
+  const m = /^([\s\S]*?)\s*\(סיור נאמן:[^)]*\)$/.exec(t);
+  if (m) return orNull(m[1].trim());
+  return /^סיור נאמן:/.test(t) ? null : orNull(t);
+}
+function takeField(kind, ci, fv, patch) {
+  if (ci === 8) { patch.action = kind === 'h' ? orNull(fv) : stripTour(fv); return true; }
+  if (ci === 10) {
+    if ([S_OPEN, S_WIP, S_DONE].indexOf(fv) < 0) return false;
+    patch.s = kind === 'h' ? fv : (fv === S_DONE ? TR_CLOSED : S_OPEN); return true;
+  }
+  if (ci === 11) { if (fv && !isYmd(fv)) return false; patch.closed_d = orNull(fv); return true; }
+  if (ci === 12) { if (kind === 'h') patch.notes = stripMgr(fv); else patch.mgr_note = stripTrustee(fv); return true; }
+  return false;
+}
+
+// Pure. fileRows = readSheetRows(); last = {rows, ids} of the server's last write.
+export function diffEdits(fileRows, last, hazards, reports, today) {
+  const cur = buildRegister(hazards, reports);
+  const curBy = {}; cur.ids.forEach((id, i) => { curBy[id] = cur.rows[i]; });
+  const lastBy = {};
+  (last.ids || []).forEach((id, i) => { const k = norm(((last.rows || [])[i] || [])[0]); if (k) lastBy[k] = { id, row: last.rows[i], i }; });
+  const hById = {}, rById = {};
+  (hazards || []).forEach((h) => { hById[h.id] = h; });
+  (reports || []).forEach((r) => { rById[r.id] = r; });
+  const hz = {}, tr = {}, fresh = [], pulled = [], seen = new Set();
+  const usedN = new Set((hazards || []).map((h) => +h.n).filter((n) => n > 0));
+  let maxN = Math.max(0, ...usedN);
+  (fileRows || []).forEach(({ v }) => {
+    const key = norm(v[0]);
+    const hit = key && lastBy[key];
+    if (hit) {
+      if (seen.has(key)) return; seen.add(key);
+      const kind = hit.id.charAt(0), id = hit.id.substring(2);
+      const c = curBy[hit.id]; if (!c) return; // gone from the app since
+      PULL_COLS.forEach((ci) => {
+        const fv = norm(v[ci]), lv = norm(hit.row[ci]);
+        if (fv === lv || norm(c[ci]) !== lv) return; // not edited, or the app changed it too
+        const patch = kind === 'h' ? (hz[id] = hz[id] || {}) : (tr[id] = tr[id] || {});
+        if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci] });
+      });
+      return;
+    }
+    const descr = norm(v[5]);
+    if (/^נ-/.test(key) || !descr) return;
+    // Already created from this row on an earlier run (the file is rewritten
+    // only after the database writes all went through).
+    if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === norm(v[3]))) return;
+    let n = /^\d+$/.test(key) && !usedN.has(+key) ? +key : maxN + 1;
+    usedN.add(n); maxN = Math.max(maxN, n);
+    const rs = norm(v[7]).split(/\s*\+\s*/);
+    const st = [S_OPEN, S_WIP, S_DONE].indexOf(norm(v[10])) >= 0 ? norm(v[10]) : S_OPEN;
+    const dOf = (x) => (isYmd(norm(x)) ? norm(x) : null);
+    const num = (x) => (/^\d+$/.test(norm(x)) ? +norm(x) : null);
+    fresh.push({ id: 'th-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6), n, d: dOf(v[1]), tour_no: num(v[2]),
+      dept: norm(v[3]), loc: orNull(norm(v[4])), descr, sev: orNull(norm(v[6])), resp: orNull(rs[0] || ''), resp2: orNull(rs[1] || ''),
+      action: orNull(norm(v[8])), due: dOf(v[9]), s: st, closed_d: dOf(v[11]) || (st === S_DONE ? today : null), notes: stripMgr(norm(v[12])) });
+  });
+  // Closed in Excel without a date: today, as when closing in the app.
+  Object.keys(hz).forEach((id) => { const p = hz[id]; if (p.s === S_DONE && !('closed_d' in p) && !hById[id].closed_d) p.closed_d = today; });
+  Object.keys(tr).forEach((id) => { const p = tr[id]; if (p.s === TR_CLOSED && !('closed_d' in p) && !rById[id].closed_d) p.closed_d = today; });
+  const list = (o) => Object.keys(o).filter((id) => Object.keys(o[id]).length).map((id) => Object.assign({ id }, o[id]));
+  return { hazards: list(hz), reports: list(tr), fresh, pulled };
+}
+
+// Writes the edits (new hazards first, in one request), updates the arrays in
+// memory. More than MAX_PULL writes: the rest waits for the next run, and the
+// file is not rewritten until then (it would drop them).
+async function applyEdits(env, ed, hazards, reports) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+  let budget = MAX_PULL, done = { created: 0, hazards: 0, reports: 0 };
+  if (ed.fresh.length) {
+    const r = await fetch(base + 'tour_hazards', { method: 'POST', headers: h, body: JSON.stringify(ed.fresh) });
+    if (!r.ok) throw new Error('new hazards from the file failed (' + r.status + ')');
+    ed.fresh.forEach((x) => hazards.push(x)); done.created = ed.fresh.length; budget--;
+  }
+  const one = async (table, arr, list, k) => {
+    for (const p of list) {
+      if (budget <= 0) return false;
+      const body = Object.assign({}, p); delete body.id;
+      const r = await fetch(base + table + '?id=eq.' + encodeURIComponent(p.id), { method: 'PATCH', headers: h, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(table + ' update from the file failed (' + r.status + ')');
+      const rec = arr.find((x) => x.id === p.id); if (rec) Object.assign(rec, body);
+      budget--; done[k]++;
+    }
+    return true;
+  };
+  const all = (await one('tour_hazards', hazards, ed.hazards, 'hazards')) && (await one('trustee_reports', reports, ed.reports, 'reports'));
+  done.pending = !all;
+  return done;
+}
+
 export async function runFile(env, which, force) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
   const [hazards, reports] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,ts&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
   ]);
   // Every finding gets a recommended corrective action (Michael, 28/09): the
   // ones still without one are asked from the assistant, a few per run, and
@@ -148,11 +268,11 @@ export async function runFile(env, which, force) {
       if (up.ok) r.action = a;
     } catch (e) { /* next run */ }
   }
-  const rows = buildRows(hazards, reports);
-  const sig = await sha(JSON.stringify(rows));
+  let reg = buildRegister(hazards, reports);
+  let sig = await sha(JSON.stringify(reg.rows));
   const K = 'hazard_' + which + '_';
-  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets']).catch(() => ({}));
-  if (!force && st[K + 'sig'] && st[K + 'sig'].value === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: rows.length };
+  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last']).catch(() => ({}));
+  const val = (k) => (st[K + k] && st[K + k].value) || '';
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
@@ -160,26 +280,51 @@ export async function runFile(env, which, force) {
     if (mr.status === 404) throw Object.assign(new Error('the file is not in the folder: ' + FOLDER + '/' + f.name), { status: 404 });
     if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
     const meta = await mr.json();
+    const ours = val('ctag');
+    // Nothing new on either side: one metadata read, nothing downloaded.
+    if (!force && ours && ours === meta.cTag && val('sig') === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    // Keep what a person saved, before replacing it. The cTag alone is not
-    // enough: OneDrive changes it after our own upload (28/09, a copy landed in
+    // Did a person save it since our last write? The cTag alone is not enough:
+    // OneDrive changes it after our own upload (28/09, a copy landed in
     // גרסאות שנדרסו with nobody touching the file), so the sheets are compared too.
-    const ours = st[K + 'ctag'] && st[K + 'ctag'].value;
-    const oursSheets = st[K + 'sheets'] && st[K + 'sheets'].value;
-    const sameSheets = !!oursSheets && ours !== meta.cTag && oursSheets === await sheetsDigest(orig).catch(() => '');
+    const changed = !!ours && ours !== meta.cTag;
+    const personSaved = changed && (!val('sheets') || val('sheets') !== await sheetsDigest(orig).catch(() => ''));
+    if (!force && !personSaved && val('sig') === sig) {
+      if (changed) await stateSet(env, { [K + 'ctag']: meta.cTag || '' });
+      return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
+    }
+    // Excel -> app first, so the rewrite carries what the person changed.
+    let pulled = null;
+    let last = null; try { last = val('last') ? JSON.parse(val('last')) : null; } catch (e) { last = null; }
+    if (personSaved && last && Array.isArray(last.rows) && Array.isArray(last.ids)) {
+      const fileRows = await readSheetRows(orig, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
+      const ed = diffEdits(fileRows, last, hazards, reports, now.substring(0, 10));
+      if (ed.fresh.length || ed.hazards.length || ed.reports.length) {
+        pulled = await applyEdits(env, ed, hazards, reports);
+        // If the write below fails (file open in Excel), the next run must not
+        // take these cells as edited again, nor as changed in the app.
+        ed.pulled.forEach((p) => { if (last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
+        await stateSet(env, { [K + 'last']: JSON.stringify(last) });
+        if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
+        reg = buildRegister(hazards, reports);
+        sig = await sha(JSON.stringify(reg.rows));
+      }
+    }
+    // Keep what a person saved, before replacing it.
     let kept = null;
-    if (!ours || (ours !== meta.cTag && !sameSheets)) {
-      const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
+    if (!ours || personSaved) {
+      const folder = FOLDER + '/ארכיון/' + (ours ? 'גרסאות שנדרסו' : 'לפני כתיבה ראשונה מהאפליקציה');
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }
-    const out = await patchSheetRows(orig, rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
+    const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
-    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
-    return { ok: true, file: which, pushed: true, rows: rows.length, managers: hazards.length, trustees: rows.length - hazards.length, kept, webUrl: put.webUrl || null };
+    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids }),
+      [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
+    return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
       : e && e.status === 423 ? '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e4\u05ea\u05d5\u05d7 \u05d1-Excel. \u05d9\u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05d9\u05e1\u05d2\u05e8 (\u05d1\u05d3\u05d9\u05e7\u05d4 \u05db\u05dc 15 \u05d3\u05e7\u05d5\u05ea).'

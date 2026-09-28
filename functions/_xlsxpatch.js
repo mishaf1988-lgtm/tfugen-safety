@@ -128,6 +128,66 @@ async function sheetPath(entries, sheetName) {
   return 'xl/' + t[1].replace(/^\/?xl\//, '').replace(/^\.\//, '');
 }
 
+function xmlUnesc(s) {
+  return String(s).replace(/&(#x[0-9a-fA-F]+|#\d+|lt|gt|quot|apos|amp);/g, (m, e) => (e === 'lt' ? '<' : e === 'gt' ? '>' : e === 'quot' ? '"' : e === 'apos' ? "'" : e === 'amp' ? '&'
+    : String.fromCodePoint(e[1] === 'x' ? parseInt(e.substring(2), 16) : parseInt(e.substring(1), 10))));
+}
+// The text of an <si> / <is>: all its <t> runs (rich text has several).
+const runText = (x) => { let t = ''; const re = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let m; while ((m = re.exec(x || ''))) t += xmlUnesc(m[1]); return t; };
+const ymdOfSerial = (n) => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000).toISOString().substring(0, 10);
+// A date a person typed as text: 28/09/2026, 28.9.26, 2026-09-28.
+function ymdOfText(t) {
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+  if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+  m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2}|\d{4})$/.exec(t);
+  if (!m) return null;
+  const y = m[3].length === 2 ? '20' + m[3] : m[3];
+  return y + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+}
+
+// Read back columns A..lastCol of rows 2..maxRow (what a person saved in
+// Excel). Returns [{r, v:[...]}] for the rows that have anything there:
+// strings trimmed, numbers as numbers, and in dateCols a 'YYYY-MM-DD' string
+// (from Excel's serial day or from a typed date). A cell that cannot be read
+// as a date in a date column comes back as its text.
+export async function readSheetRows(bytes, opts) {
+  const entries = readZip(bytes);
+  const path = await sheetPath(entries, opts.sheet);
+  const xml = await entryText(entries.find((e) => e.name === path));
+  const ssE = entries.find((e) => e.name === 'xl/sharedStrings.xml');
+  const shared = [];
+  if (ssE) { const ss = await entryText(ssE); const re = /<si\b[^>]*>([\s\S]*?)<\/si>|<si\s*\/>/g; let m; while ((m = re.exec(ss))) shared.push(runText(m[1] || '')); }
+  const dateCols = opts.dateCols || [], out = [];
+  const rowRe = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let rm;
+  while ((rm = rowRe.exec(xml))) {
+    const r = +((/\br="(\d+)"/.exec(rm[1]) || [])[1] || 0);
+    if (r < 2 || r > opts.maxRow || !rm[2]) continue;
+    const v = []; let any = false;
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let cm;
+    while ((cm = cellRe.exec(rm[2]))) {
+      const ref = /\br="([A-Z]+)\d+"/.exec(cm[1]); if (!ref) continue;
+      const ci = colIndex(ref[1]); if (ci > opts.lastCol) continue;
+      const t = ((/\bt="([^"]+)"/.exec(cm[1]) || [])[1]) || 'n';
+      const inner = cm[2] || '';
+      const raw = (/<v>([\s\S]*?)<\/v>/.exec(inner) || [])[1];
+      let val = null;
+      if (t === 's') val = raw == null ? null : shared[+raw];
+      else if (t === 'inlineStr') val = runText((/<is>([\s\S]*?)<\/is>/.exec(inner) || [])[1]);
+      else if (t === 'str' || t === 'e') val = raw == null ? null : xmlUnesc(raw);
+      else if (t === 'b') val = raw == null ? null : raw === '1';
+      else if (raw != null && raw !== '') val = +raw;
+      if (typeof val === 'string') { val = val.replace(/\r\n?/g, '\n').trim(); if (val === '') val = null; }
+      if (val != null && dateCols.indexOf(ci) >= 0) {
+        if (typeof val === 'number' && val > 0) val = ymdOfSerial(val);
+        else if (typeof val === 'string') val = ymdOfText(val) || val;
+      }
+      if (val != null) { v[ci] = val; any = true; }
+    }
+    if (any) out.push({ r, v });
+  }
+  return out;
+}
+
 // rows: array of arrays of values for columns A.. (null/'' = empty cell;
 // number; string; {date:'YYYY-MM-DD'}). Returns the new workbook bytes.
 // opts: {sheet, lastCol (0-based, e.g. 12 = M), maxRow (e.g. 206), dateCols

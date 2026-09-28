@@ -3,9 +3,9 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
-import { readZip, writeZip, entryText, serial } from './_build/_xlsxpatch.mjs';
+import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -63,7 +63,10 @@ function world(o) {
     const u = String(url), m = (init && init.method) || 'GET';
     w.calls.push(m + ' ' + decodeURIComponent(u));
     const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
-    if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(o.hazards || HZ);
+    if (u.startsWith(SB + '/rest/v1/tour_hazards')) {
+      if (m === 'PATCH' || m === 'POST') { w.hz = (w.hz || []).concat([{ m, u: decodeURIComponent(u), body: JSON.parse(init.body) }]); return new Response(null, { status: o.hzFail ? 500 : m === 'POST' ? 201 : 204 }); }
+      return json(o.hazards || HZ);
+    }
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) {
       if (m === 'PATCH') { w.patches = (w.patches || []).concat([{ u: decodeURIComponent(u), body: JSON.parse(init.body) }]); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
       return json(o.reports || TR);
@@ -164,7 +167,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const s1 = Object.assign({}, w.state);
   w = world({ file: out, state: s1, cTag: 'c-ours-2' });
   r = await runFile(ENV, 'xlsm', false);
-  check('same data: nothing downloaded, nothing written', r.pushed === false && r.reason === 'unchanged' && w.puts.length === 0 && !w.calls.some((c) => c.includes('graph.microsoft.com')), r);
+  check('same data, file untouched: one metadata read, nothing downloaded or written', r.pushed === false && r.reason === 'unchanged' && w.puts.length === 0 && w.calls.filter((c) => c.includes('graph.microsoft.com')).length === 1 && !w.calls.includes('GET https://dl/file'), w.calls.filter((c) => /graph|dl\/file/.test(c)));
   w = world({ file: out, state: s1, cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', tour_no: 11, dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   check('new hazard in the app: written, no backup (file still ours)', r.pushed && w.puts.length === 1 && !w.puts.some((p) => /ארכיון/.test(p.path)), w.puts.map((p) => p.path));
@@ -187,6 +190,54 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   w = world({ file: src, hazards: many, reports: [] });
   r = await runFile(ENV, 'xlsm', true);
   check('more rows than the sheet holds: refused, file not written', !r.ok && /too many rows/.test(r.error) && !w.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)), r);
+
+  console.log('\n3b. Excel -> app (closing in the file updates the app)');
+  check('state: the rows and the record behind each saved', (() => { const l = JSON.parse(s1.hazard_xlsm_last || '{}'); return l.rows && l.rows.length === 4 && l.ids.join() === 'h:th-1,h:th-2,t:a,t:b'; })(), s1.hazard_xlsm_last);
+  const base = buildRows(HZ, TR).map((x) => x.slice());
+  base[1][10] = 'סגור';                                   // hazard 2 closed, no date
+  base[0][12] = 'דיווח ממונה. נבדק שוב';                   // hazard 1 notes
+  base[2][10] = 'סגור'; base[2][11] = { date: '2026-09-27' }; // trustee finding נ-1 closed with a date
+  base[2][8] = 'להחליף פנס (סיור נאמן: מוסא)';              // ... and its action
+  base[1][5] = 'תיאור ששונה ב-Excel';                       // description: not taken
+  base.push(['', { date: '2026-09-28' }, 12, 'תוצג', 'מחסן', 'כבל חשוף', 'גבוהה', 'חשמל + אחזקה', 'לבודד', null, 'פתוח', null, '']);
+  const xEdited = await patchSheetRows(out, base, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  const back = await readSheetRows(xEdited, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  check('the file is read back: numbers, text, dates as YYYY-MM-DD', back.length === 5 && back[0].v[0] === 1 && back[2].v[0] === 'נ-1' && back[2].v[11] === '2026-09-27' && back[4].v[5] === 'כבל חשוף', back.map((b) => b.v.slice(0, 2)));
+  const last1 = JSON.parse(s1.hazard_xlsm_last);
+  let ed = diffEdits(back, last1, HZ, TR, '2026-09-28');
+  const e2 = ed.hazards.find((x) => x.id === 'th-2'), e1 = ed.hazards.find((x) => x.id === 'th-1'), ea = ed.reports.find((x) => x.id === 'a');
+  check('manager hazard closed in Excel without a date: סגור, closed today', e2 && e2.s === 'סגור' && e2.closed_d === '2026-09-28' && !('descr' in e2), e2);
+  check('notes edited: taken without the "דיווח ממונה" prefix', e1 && e1.notes === 'נבדק שוב' && Object.keys(e1).length === 2, e1);
+  check('trustee finding closed: נסגר, its date, the action without "(סיור נאמן: ...)"', ea && ea.s === 'נסגר' && ea.closed_d === '2026-09-27' && ea.action === 'להחליף פנס', ea);
+  check('a new row becomes a manager hazard with the next מס"ד, both responsibles', ed.fresh.length === 1 && ed.fresh[0].n === 3 && ed.fresh[0].resp === 'חשמל' && ed.fresh[0].resp2 === 'אחזקה' && ed.fresh[0].sev === 'גבוהה' && ed.fresh[0].d === '2026-09-28' && /^th-/.test(ed.fresh[0].id), ed.fresh);
+  const hzApp = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { s: 'בטיפול' }) : h));
+  ed = diffEdits(back, last1, hzApp, TR, '2026-09-28');
+  check('changed in the app too since the last write: the app wins for that field', !ed.hazards.some((x) => x.id === 'th-2' && 's' in x), ed.hazards);
+  ed = diffEdits(back, last1, HZ.concat([{ id: 'th-9', n: 3, dept: 'תוצג', descr: 'כבל חשוף', s: 'פתוח' }]), TR, '2026-09-28');
+  check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
+  ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
+  check('the file exactly as the server wrote it: no edits', !ed.hazards.length && !ed.reports.length && !ed.fresh.length, ed);
+
+  w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel' });
+  r = await runFile(ENV, 'xlsm', false);
+  const hp = (w.hz || []).filter((x) => x.m === 'PATCH'), hn = (w.hz || []).filter((x) => x.m === 'POST');
+  check('the run: new hazard posted first, then the edits patched', hn.length === 1 && hp.length === 2 && w.hz[0].m === 'POST' && (w.patches || []).some((x) => /id=eq\.a/.test(x.u) && x.body.s === 'נסגר'), w.hz);
+  check('the person\'s version is archived, then the file is rewritten from the updated app', r.pushed && r.kept && /גרסאות שנדרסו/.test(w.puts[0].path) && r.pulled && r.pulled.created === 1 && r.pulled.hazards === 2 && r.pulled.reports === 1, r);
+  const x2 = await readSheetRows(w.puts[1].body, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  check('the rewritten file: hazard 2 closed with today, the old description back, the new hazard as 3, trustee closed with its date', (() => {
+    const b = (k) => x2.find((q) => q.v[0] === k);
+    return b(2) && b(2).v[10] === 'סגור' && b(2).v[11] === new Date().toISOString().substring(0, 10) && b(2).v[5] === "ג'ריקן" && b(3) && b(3).v[5] === 'כבל חשוף' && b('נ-1').v[10] === 'סגור' && b('נ-1').v[11] === '2026-09-27';
+  })(), x2.map((q) => [q.v[0], q.v[5], q.v[10], q.v[11]]));
+  w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel', hzFail: true });
+  r = await runFile(ENV, 'xlsm', false);
+  check('a database write fails: error, the file is not rewritten', !r.ok && !w.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)), r);
+  w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel', locked: true });
+  r = await runFile(ENV, 'xlsm', false);
+  const lastAfter = JSON.parse(w.state.hazard_xlsm_last);
+  check('file open in Excel: the edits are in the app, and the saved baseline takes them (not pulled twice)', !r.ok && r.locked && lastAfter.rows[1][10] === 'סגור' && lastAfter.rows[2][8] === 'להחליף פנס (סיור נאמן: מוסא)', lastAfter.rows[1]);
+  w = world({ file: out, state: s1, cTag: 'onedrive-bumped-only' });
+  r = await runFile(ENV, 'xlsm', false);
+  check('cTag bumped by OneDrive, same data: nothing written, the new cTag remembered', !r.pushed && r.reason === 'unchanged' && !w.puts.length && w.state.hazard_xlsm_ctag === 'onedrive-bumped-only', r);
 
   console.log('\n4. who may call it, and the twin');
   w = world({ file: src });
