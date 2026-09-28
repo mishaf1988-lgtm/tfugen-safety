@@ -6,8 +6,8 @@
 // How: the workbook is a zip. Entries we do not touch are copied as their
 // original compressed bytes (same CRC, same size, no recompression). The few
 // we change (the sheet, workbook.xml, [Content_Types].xml, workbook.xml.rels)
-// are inflated with DecompressionStream, edited as text, and stored
-// uncompressed. calcChain.xml is dropped (it lists formula cells, and a cell
+// are inflated with DecompressionStream, edited as text, and deflated again
+// (stored uncompressed they tripled the file, 89KB -> 281KB, 28/09). calcChain.xml is dropped (it lists formula cells, and a cell
 // that was a formula and is now a value makes Excel report a damaged file),
 // and workbook.xml asks Excel to recalculate everything when the file opens,
 // so the report sheets follow the new rows.
@@ -61,16 +61,35 @@ export async function entryText(e) {
   return dec.decode(new Uint8Array(await new Response(stream).arrayBuffer()));
 }
 
-// e.text set = rewritten (stored); otherwise the original bytes are copied.
-export function writeZip(entries) {
+async function deflate(u8) {
+  const stream = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+// Digest of every worksheet's XML. Excel rewrites these when a person saves;
+// OneDrive's own processing after an upload changes the cTag but not these.
+export async function sheetsDigest(bytes) {
+  const texts = [];
+  for (const e of readZip(bytes).filter((x) => /^xl\/worksheets\/[^/]+\.xml$/.test(x.name)).sort((a, b) => (a.name < b.name ? -1 : 1))) texts.push(e.name + '\n' + await entryText(e));
+  const h = await crypto.subtle.digest('SHA-256', enc.encode(texts.join('\n')));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// e.text set = rewritten (deflated); otherwise the original bytes are copied.
+export async function writeZip(entries) {
   const parts = [], central = [];
+  const packed = await Promise.all(entries.map(async (e) => {
+    if (e.text == null) return null;
+    const plain = enc.encode(e.text);
+    return { plain, z: await deflate(plain) };
+  }));
   let offset = 0;
   const u16 = (v) => [v & 0xFF, (v >>> 8) & 0xFF];
   const u32 = (v) => [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF];
-  entries.forEach((e) => {
+  entries.forEach((e, i) => {
     const nameB = enc.encode(e.name);
     let data, method, crc, csize, usize, flags = (e.flags || 0) & 0x0800; // keep only the UTF-8 name flag
-    if (e.text != null) { data = enc.encode(e.text); method = 0; crc = crc32(data); csize = usize = data.length; }
+    if (e.text != null) { const pk = packed[i]; data = pk.z; method = 8; crc = crc32(pk.plain); csize = data.length; usize = pk.plain.length; }
     else { data = e.raw; method = e.method; crc = e.crc; csize = e.csize; usize = e.usize; }
     const time = e.time || 0, date = e.date || 0x21;
     const head = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(flags), ...u16(method), ...u16(time), ...u16(date),
