@@ -156,6 +156,9 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('calcChain removed (entry, relationship, content type)', !z.some((e) => e.name === 'xl/calcChain.xml') && !(await sheetOf(out, 'xl/_rels/workbook.xml.rels')).includes('calcChain') && !(await sheetOf(out, '[Content_Types].xml')).includes('calcChain'));
   check('Excel is told to recalculate on open', (await sheetOf(out, 'xl/workbook.xml')).includes('<calcPr calcId="191029" fullCalcOnLoad="1"/>'));
   check('state: signature and our cTag saved', w.state.hazard_xlsm_sig && w.state.hazard_xlsm_ctag === 'c-ours-2' && w.state.hazard_xlsm_err === '', w.state);
+  check('state: digest of the sheets we wrote saved', /^[0-9a-f]{64}$/.test(w.state.hazard_xlsm_sheets || ''), w.state.hazard_xlsm_sheets);
+  const edited = z.filter((e) => ['xl/worksheets/sheet2.xml', 'xl/workbook.xml', '[Content_Types].xml', 'xl/_rels/workbook.xml.rels'].includes(e.name));
+  check('rewritten parts are deflated again, not stored (28/09: file tripled)', edited.length === 4 && edited.every((e) => e.method === 8), edited.map((e) => e.name + ':' + e.method));
 
   console.log('\n3. the next runs');
   const s1 = Object.assign({}, w.state);
@@ -165,7 +168,13 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   w = world({ file: out, state: s1, cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', tour_no: 11, dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   check('new hazard in the app: written, no backup (file still ours)', r.pushed && w.puts.length === 1 && !w.puts.some((p) => /ארכיון/.test(p.path)), w.puts.map((p) => p.path));
-  w = world({ file: out, state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  w = world({ file: out, state: s1, cTag: 'onedrive-bumped', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  check('cTag changed by OneDrive but the sheets are ours: written, no copy to גרסאות שנדרסו', r.pushed && w.puts.length === 1 && !r.kept, w.puts.map((p) => p.path));
+  const saved = readZip(out).map((e) => (e.name === 'xl/worksheets/sheet2.xml' ? { name: e.name, text: null } : e));
+  saved.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = (await sheetOf(out, 'xl/worksheets/sheet2.xml')).replace('</sheetData>', '<row r="99"><c r="A99"><v>7</v></c></row></sheetData>');
+  const personFile = await writeZip(saved);
+  w = world({ file: personFile, state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   check('file saved in Excel since our write: that version goes to ארכיון/גרסאות שנדרסו first', r.pushed && w.puts[0] && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 2026-09-28 10-37\.xlsm/.test(w.puts[0].path), w.puts.map((p) => p.path));
   w = world({ file: out, state: s1, cTag: 'c-ours-2', locked: true, hazards: HZ.slice(0, 1) });

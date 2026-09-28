@@ -37,7 +37,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow } from '../_onedrive.js';
-import { patchSheetRows } from '../_xlsxpatch.js';
+import { patchSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { suggestAction } from '../_ai.js';
 
 export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
@@ -151,7 +151,7 @@ export async function runFile(env, which, force) {
   const rows = buildRows(hazards, reports);
   const sig = await sha(JSON.stringify(rows));
   const K = 'hazard_' + which + '_';
-  const st = await stateGet(env, [K + 'sig', K + 'ctag']).catch(() => ({}));
+  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets']).catch(() => ({}));
   if (!force && st[K + 'sig'] && st[K + 'sig'].value === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: rows.length };
   const now = new Date().toISOString();
   try {
@@ -163,17 +163,22 @@ export async function runFile(env, which, force) {
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    // Keep what a person saved, before replacing it.
+    // Keep what a person saved, before replacing it. The cTag alone is not
+    // enough: OneDrive changes it after our own upload (28/09, a copy landed in
+    // גרסאות שנדרסו with nobody touching the file), so the sheets are compared too.
     const ours = st[K + 'ctag'] && st[K + 'ctag'].value;
+    const oursSheets = st[K + 'sheets'] && st[K + 'sheets'].value;
+    const sameSheets = !!oursSheets && ours !== meta.cTag && oursSheets === await sheetsDigest(orig).catch(() => '');
     let kept = null;
-    if (!ours || ours !== meta.cTag) {
+    if (!ours || (ours !== meta.cTag && !sameSheets)) {
       const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }
     const out = await patchSheetRows(orig, rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
-    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
+    const outSheets = await sheetsDigest(out).catch(() => '');
+    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
     return { ok: true, file: which, pushed: true, rows: rows.length, managers: hazards.length, trustees: rows.length - hazards.length, kept, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
