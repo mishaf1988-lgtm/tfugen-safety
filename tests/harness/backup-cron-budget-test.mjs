@@ -46,6 +46,7 @@ console.log('\n1. the whole list fits the Free plan');
   const w = world();
   const r = await run();
   check('45 tables backed up, no errors', r.ok && r.table_count === 45 && r.errors.length === 0, r.errors);
+  check('a complete backup has a plain name (no -partial)', /^tapugan-backup-[0-9_-]+\.json$/.test(r.filename) && !/partial/.test(r.filename), r.filename);
   check('uploaded once', w.uploads === 1);
   check('pruned (16 files, keep 15): one deleted', w.deleted && w.deleted.length === 1, w.deleted);
   check('at most 50 requests (' + w.calls.length + ')', w.calls.length <= 50 && r.subrequests === w.calls.length, w.calls.length);
@@ -62,6 +63,7 @@ console.log('\n2. when it does not fit, the upload still happens and says what i
   const skipped = r.errors.filter((e) => /subrequest budget/.test(e.error)).map((e) => e.table);
   check('skipped tables are named, and ok is false', skipped.length > 0 && r.ok === false, r.errors);
   check('prune is skipped rather than overrunning', w.deleted === null, r.prune);
+  check('the file name says -partial', /-partial\.json$/.test(r.filename), r.filename);
 }
 {
   const w = world({ bigAudit: true });
@@ -82,6 +84,26 @@ console.log('\n3. /health without KV reads the bucket');
   const h = await W2.fetch(new Request('https://w/health'), ENV);
   const j = await h.json();
   check('fresh file in the bucket -> 200 ok, not "unknown"', h.status === 200 && j.status === 'ok' && /tapugan-backup/.test(j.filename) && w.calls.length === 1, j);
+}
+
+{
+  const W3 = (await import('data:text/javascript;charset=utf-8,' + encodeURIComponent(src + '\n// cold 2'))).default;
+  const w = world({ files: 1 });
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (u, i) => String(u).includes('/object/list/backups')
+    ? new Response(JSON.stringify([{ name: 'tapugan-backup-2026-09-28_03-00-00-partial.json', created_at: new Date().toISOString() }]), { status: 200 })
+    : realFetch(u, i);
+  const h = await W3.fetch(new Request('https://w/health'), ENV);
+  const j = await h.json();
+  check('newest file is -partial -> /health 503 failing, not ok', h.status === 503 && j.status === 'failing', j);
+}
+{
+  world();
+  const logs = []; const orig = console.log; console.log = (m) => logs.push(m);
+  let p; await W.scheduled({}, ENV, { waitUntil: (x) => { p = x; } }); await p;
+  console.log = orig;
+  const line = logs.map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).find(Boolean);
+  check('the cron run logs one summary line (ok, tables, errors)', line && line.ok === true && line.table_count === 45 && Array.isArray(line.errors), line);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

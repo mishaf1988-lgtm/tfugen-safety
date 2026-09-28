@@ -58,12 +58,12 @@
 
 1. לפתוח את dash.cloudflare.com > Workers & Pages > `tapugan-backup-cron` > Edit code.
 2. להחליף את כל הקוד בתוכן העדכני של `workers/backup-cron.js` מ-GitHub:
-   `https://github.com/mishaf1988-lgtm/tfugen-safety/blob/main/workers/backup-cron.js` (כפתור Raw, ואז להעתיק הכל). לוודא שבקוד מופיעה השורה `const NO_TS = new Set(`. אם היא לא מופיעה, זו גרסה ישנה, ולכן לעצור.
+   `https://github.com/mishaf1988-lgtm/tfugen-safety/blob/main/workers/backup-cron.js` (כפתור Raw, ואז להעתיק הכל). לוודא שבקוד מופיעות גם השורה `const NO_TS = new Set(` וגם המילה `-partial`. אם אחת מהן חסרה, זו גרסה ישנה, ולכן לעצור.
 3. Deploy.
 4. **ריצת בדיקה מיד:** במסך העריכה, Schedule (או "Trigger scheduled event"), ואז להריץ.
 5. לבדוק את התוצאה:
-   - בלוג הריצה (Logs) לא מופיעה השגיאה "Too many subrequests".
+   - בלוג הריצה (Logs) מופיעה שורת סיכום עם `"ok":true`, `"table_count":45` ו-`"errors":[]`, ולא מופיעה השגיאה "Too many subrequests". צריך להעתיק את השורה הזו לדוח.
    - `https://tapugan-backup-cron.mishaf1988.workers.dev/health` מחזיר `"status":"ok"` עם שם קובץ מהיום.
-   - לדווח ל-Claude Code, והוא יאמת ב-Supabase שקובץ הגיבוי החדש גדול מ-166KB.
+   - לדווח ל-Claude Code, והוא יאמת ב-Supabase ששם הקובץ החדש לא מסתיים ב-`-partial.json` (אחרת חסרה טבלה) ושהוא גדול מ-166KB.
 6. **לא לגעת** במשתני הסביבה (Settings > Variables) ולא בשעת ה-cron.
 7. **אם משהו נכשל:** Deployments > הגרסה הקודמת > Rollback, ולדווח.
