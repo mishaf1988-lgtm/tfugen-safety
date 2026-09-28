@@ -90,12 +90,20 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   check('different wording: the text goes into the first run, formatting kept', other.includes('<a:t>מעבדות</a:t>') && other.includes('E6F4E6'), other);
   check('text is escaped (a quote mark and < in a description)', patchPara(P(R('x', 1, 1, '0')), 'מט"ש <b>').includes('<a:t>מט"ש &lt;b&gt;</a:t>'));
 
+  const split = patchPara(P(R('1', 1500, 1, 'FFFFFF'), R('2 מפגעים', 1500, 1, 'FFFFFF')), '5 מפגעים');
+  check('a number split across two runs ("1" + "2"): written whole, never "undefined"', !/undefined/.test(split) && split.includes('<a:t>5 מפגעים</a:t>'), split);
+
   console.log('\n2. lists');
   const rep = [];
   const lx = setList(slide3, 'MedSevPanel', [{ match: /^מפגעים פתוחים בחומרה בינונית/, header: 'מפגעים פתוחים בחומרה בינונית (5)', items: [['א', ' - 1'], ['ב', ' - 2'], ['ג', ' - 3'], ['ד', ' - 4'], ['ה', ' - 5']], empty: 'אין' }], (n) => ['ועוד ' + n + ' מפגעים', ''], rep);
   const med = lx.substring(lx.indexOf('name="MedSevPanel"'));
   check('more items than the deck had room for (3): two, then "ועוד 3 מפגעים", cloned from the first item', (med.match(/<a:p>/g) || []).length === 4 && med.includes('<a:t>א</a:t>') && med.includes('<a:t>ב</a:t>') && med.includes('<a:t>ועוד 3 מפגעים</a:t>') && !med.includes('<a:t>ג</a:t>') && (med.match(/sz="1200"/g) || []).length >= 4, med.slice(0, 600));
   check('the header count updated', med.includes('<a:t>מפגעים פתוחים בחומרה בינונית (5)</a:t>'));
+  const secs = (items) => [{ match: /^מפגעים פתוחים בחומרה בינונית/, header: 'מפגעים פתוחים בחומרה בינונית (' + items.length + ')', items, empty: 'אין' }];
+  const zero = setList(slide3, 'MedSevPanel', secs([]), (n) => ['ועוד ' + n, ''], []);
+  const back3 = setList(zero, 'MedSevPanel', secs([['א', ' - 1'], ['ב', ' - 2'], ['ג', ' - 3']]), (n) => ['ועוד ' + n, ''], []);
+  const m3 = back3.substring(back3.indexOf('name="MedSevPanel"'));
+  check('a week with no items does not shrink the list: the next week shows all 3, dept still bold', m3.includes('<a:t>א</a:t>') && m3.includes('<a:t>ב</a:t>') && m3.includes('<a:t>ג</a:t>') && !m3.includes('ועוד') && /b="1"[^>]*>[\s\S]{0,120}<a:t>ג<\/a:t>/.test(m3), m3.slice(0, 900));
 
   console.log('\n3. the whole deck');
   const ref = '2026-09-29';
@@ -120,7 +128,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const s3 = await partText(out.bytes, 'ppt/slides/slide3.xml');
   check('slide 3 cards: total 9, closed 2, open 7 by severity', s3.includes('<a:t>9</a:t>') && s3.includes('<a:t>2</a:t>') && s3.includes('<a:t>פתוחים - 2 בחומרה גבוהה, 5 בינונית</a:t>'), s3.slice(s3.indexOf('Card2'), s3.indexOf('Card2') + 500));
   check('slide 3 high list: 2 open high items as "dept" + " - loc: text"; closures of September by department', s3.includes('<a:t>מפגעים פתוחים בחומרה גבוהה (2)</a:t>') && s3.includes('<a:t> - קילופים: בריחת קיטור בחלק העליון של הארובה</a:t>') && s3.includes('<a:t> פעולות סגירה - ספטמבר 2026 (2)</a:t>') && s3.includes('<a:t>ייצור טוגנים: מפגע אחד נסגר</a:t>') && s3.includes('<a:t>חומר גלם: מפגע אחד נסגר</a:t>'), s3.slice(s3.indexOf('HighSevPanel'), s3.indexOf('HighSevPanel') + 1500));
-  check('slide 3 medium list: 5 items in room for 3 -> two and "ועוד 3 מפגעים"', s3.includes('<a:t>מפגעים פתוחים בחומרה בינונית (5)</a:t>') && s3.includes('<a:t>ועוד 3 מפגעים</a:t>'));
+  check('slide 3 medium list: room is the deck\'s own 12, so all 5 show, the rest empty lines', s3.includes('<a:t>מפגעים פתוחים בחומרה בינונית (5)</a:t>') && !s3.includes('ועוד') && s3.includes('<a:t> - סולם</a:t>'), s3.slice(s3.indexOf('MedSevPanel'), s3.indexOf('MedSevPanel') + 800));
   const zs = readZip(src), zo = readZip(out.bytes);
   const same = (n) => { const a = zs.find((e) => e.name === n), b = zo.find((e) => e.name === n); return a && b && a.crc === b.crc && a.csize === b.csize && Buffer.from(a.raw).equals(Buffer.from(b.raw)); };
   check('slide 4 (near misses), the picture and everything else: byte for byte the same', same('ppt/slides/slide4.xml') && same('ppt/media/image1.png') && same('ppt/presentation.xml') && same('[Content_Types].xml'));

@@ -69,6 +69,15 @@ const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).t
 export const isFinding = (r) => !!r && r.ok === false && +r.t >= 1 && +r.t <= 7;
 export const notRelevant = (r) => /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String((r && r.mgr_note) || ''));
 
+// Routing a finding from the trustees screen (WhatsApp / mail / Vitre SMS)
+// writes it into the note, not a task: "\u05e0\u05d5\u05ea\u05d1 \u05dc\u05d0\u05d7\u05d6\u05e7\u05d4 \u05e2\u05d3 30/09/2026 (\u05de\u05d9\u05d9\u05dc ...)".
+// The last such date is the finding's target (28/09, \u05e0-2 and \u05e0-4).
+export function routedNote(note) {
+  const re = /\u05e0\u05d5\u05ea\u05d1[^()]*?\u05e2\u05d3 (\d{1,2})\/(\d{1,2})\/(\d{4})/g; let m, last = null;
+  while ((m = re.exec(String(note || '')))) last = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0');
+  return last;
+}
+
 export function trusteeDept(loc) {
   const head = String(loc || '').split('\u00b7')[0].trim();
   const d = DEPT_ALIAS[head] || head;
@@ -114,7 +123,7 @@ export function buildRegister(hazards, reports, tasks) {
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
     rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
-      routed[r.id] ? dt(routed[r.id].due) : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
+      routed[r.id] ? dt(routed[r.id].due) : routedNote(r.mgr_note) ? { date: routedNote(r.mgr_note) } : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);
   });
@@ -155,19 +164,19 @@ export function stampName(name, iso) {
 // in the app too since that write keeps the app's value (the file version is
 // in the archive). A new row with a description becomes a new manager hazard.
 // Rows deleted in Excel are not deleted in the app.
-const S_OPEN = 'פתוח', S_WIP = 'בטיפול', S_DONE = 'סגור', TR_CLOSED = 'נסגר';
+const S_OPEN = '\u05e4\u05ea\u05d5\u05d7', S_WIP = '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc', S_DONE = '\u05e1\u05d2\u05d5\u05e8', TR_CLOSED = '\u05e0\u05e1\u05d2\u05e8';
 const PULL_COLS = [8, 10, 11, 12];
 const MAX_PULL = 25; // database writes per run (subrequests); the rest next run
 const norm = (v) => (v == null ? '' : typeof v === 'object' && v.date ? v.date : String(v).replace(/\r\n?/g, '\n').trim());
 const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
 const orNull = (t) => (t ? t : null);
-const stripMgr = (t) => orNull(String(t || '').replace(/^דיווח ממונה\.?\s*/, '').trim());
-const stripTrustee = (t) => orNull(String(t || '').replace(/^דיווח נאמן:[^.]*\.?\s*/, '').trim());
+const stripMgr = (t) => orNull(String(t || '').replace(/^\u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05de\u05d5\u05e0\u05d4\.?\s*/, '').trim());
+const stripTrustee = (t) => orNull(String(t || '').replace(/^\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df:[^.]*\.?\s*/, '').trim());
 function stripTour(t) {
   t = String(t || '').trim();
-  const m = /^([\s\S]*?)\s*\(סיור נאמן:[^)]*\)$/.exec(t);
+  const m = /^([\s\S]*?)\s*\(\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df:[^)]*\)$/.exec(t);
   if (m) return orNull(m[1].trim());
-  return /^סיור נאמן:/.test(t) ? null : orNull(t);
+  return /^\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df:/.test(t) ? null : orNull(t);
 }
 function takeField(kind, ci, fv, patch) {
   if (ci === 8) { patch.action = kind === 'h' ? orNull(fv) : stripTour(fv); return true; }
@@ -185,7 +194,11 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   const cur = buildRegister(hazards, reports);
   const curBy = {}; cur.ids.forEach((id, i) => { curBy[id] = cur.rows[i]; });
   const lastBy = {};
-  (last.ids || []).forEach((id, i) => { const k = norm(((last.rows || [])[i] || [])[0]); if (k) lastBy[k] = { id, row: last.rows[i], i }; });
+  // A number that appears twice in the last write cannot say which record it
+  // is: those rows are skipped rather than applied to the wrong one (28/09 review).
+  const dup = new Set();
+  (last.ids || []).forEach((id, i) => { const k = norm(((last.rows || [])[i] || [])[0]); if (!k) return; if (lastBy[k]) dup.add(k); lastBy[k] = { id, row: last.rows[i], i }; });
+  dup.forEach((k) => { delete lastBy[k]; });
   const hById = {}, rById = {};
   (hazards || []).forEach((h) => { hById[h.id] = h; });
   (reports || []).forEach((r) => { rById[r.id] = r; });
@@ -194,21 +207,32 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   let maxN = Math.max(0, ...usedN);
   (fileRows || []).forEach(({ v }) => {
     const key = norm(v[0]);
+    if (key && dup.has(key)) return;
     const hit = key && lastBy[key];
     if (hit) {
       if (seen.has(key)) return; seen.add(key);
+      // The same record? A stale copy saved over a renumbered file would
+      // otherwise put one finding's edits on another (נ-k shift when a
+      // finding is marked not relevant). Description, or date + department + location.
+      const lr = hit.row;
+      const same = norm(v[5]) === norm(lr[5]) || (norm(v[1]) === norm(lr[1]) && norm(v[3]) === norm(lr[3]) && norm(v[4]) === norm(lr[4]));
+      if (!same) return;
       const kind = hit.id.charAt(0), id = hit.id.substring(2);
       const c = curBy[hit.id]; if (!c) return; // gone from the app since
       PULL_COLS.forEach((ci) => {
         const fv = norm(v[ci]), lv = norm(hit.row[ci]);
-        if (fv === lv || norm(c[ci]) !== lv) return; // not edited, or the app changed it too
+        if (fv === lv) return; // not edited
+        // Changed in the app too: the app wins, except the trustee action the
+        // assistant filled in the same run over an empty one (28/09 review).
+        const aiFilled = kind === 't' && ci === 8 && stripTour(lv) === null;
+        if (norm(c[ci]) !== lv && !aiFilled) return;
         const patch = kind === 'h' ? (hz[id] = hz[id] || {}) : (tr[id] = tr[id] || {});
-        if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci] });
+        if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci], id: hit.id });
       });
       return;
     }
     const descr = norm(v[5]);
-    if (/^נ-/.test(key) || !descr) return;
+    if (/^\u05e0-/.test(key) || !descr) return;
     // Already created from this row on an earlier run (the file is rewritten
     // only after the database writes all went through).
     if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === norm(v[3]))) return;
@@ -223,8 +247,9 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
       action: orNull(norm(v[8])), due: dOf(v[9]), s: st, closed_d: dOf(v[11]) || (st === S_DONE ? today : null), notes: stripMgr(norm(v[12])) });
   });
   // Closed in Excel without a date: today, as when closing in the app.
-  Object.keys(hz).forEach((id) => { const p = hz[id]; if (p.s === S_DONE && !('closed_d' in p) && !hById[id].closed_d) p.closed_d = today; });
-  Object.keys(tr).forEach((id) => { const p = tr[id]; if (p.s === TR_CLOSED && !('closed_d' in p) && !rById[id].closed_d) p.closed_d = today; });
+  // ... and reopened in Excel: no closing date, as in the app (28/09 review).
+  Object.keys(hz).forEach((id) => { const p = hz[id]; if (!('s' in p) || 'closed_d' in p) return; if (p.s === S_DONE) { if (!hById[id].closed_d) p.closed_d = today; } else p.closed_d = null; });
+  Object.keys(tr).forEach((id) => { const p = tr[id]; if (!('s' in p) || 'closed_d' in p) return; if (p.s === TR_CLOSED) { if (!rById[id].closed_d) p.closed_d = today; } else p.closed_d = null; });
   const list = (o) => Object.keys(o).filter((id) => Object.keys(o[id]).length).map((id) => Object.assign({ id }, o[id]));
   return { hazards: list(hz), reports: list(tr), fresh, pulled };
 }
@@ -232,10 +257,10 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
 // Writes the edits (new hazards first, in one request), updates the arrays in
 // memory. More than MAX_PULL writes: the rest waits for the next run, and the
 // file is not rewritten until then (it would drop them).
-async function applyEdits(env, ed, hazards, reports) {
+export async function applyEdits(env, ed, hazards, reports) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
   const h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-  let budget = MAX_PULL, done = { created: 0, hazards: 0, reports: 0 };
+  let budget = MAX_PULL, done = { created: 0, hazards: 0, reports: 0, written: [] };
   if (ed.fresh.length) {
     const r = await fetch(base + 'tour_hazards', { method: 'POST', headers: h, body: JSON.stringify(ed.fresh) });
     if (!r.ok) throw new Error('new hazards from the file failed (' + r.status + ')');
@@ -248,7 +273,7 @@ async function applyEdits(env, ed, hazards, reports) {
       const r = await fetch(base + table + '?id=eq.' + encodeURIComponent(p.id), { method: 'PATCH', headers: h, body: JSON.stringify(body) });
       if (!r.ok) throw new Error(table + ' update from the file failed (' + r.status + ')');
       const rec = arr.find((x) => x.id === p.id); if (rec) Object.assign(rec, body);
-      budget--; done[k]++;
+      budget--; done[k]++; done.written.push((table === 'tour_hazards' ? 'h:' : 't:') + p.id);
     }
     return true;
   };
@@ -315,7 +340,10 @@ export async function runFile(env, which, force) {
         pulled = await applyEdits(env, ed, hazards, reports);
         // If the write below fails (file open in Excel), the next run must not
         // take these cells as edited again, nor as changed in the app.
-        ed.pulled.forEach((p) => { if (last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
+        // Only cells of records actually written: the rest (over the per-run
+        // budget) must still look edited on the next run (28/09 review).
+        const done = new Set(pulled.written);
+        ed.pulled.forEach((p) => { if (done.has(p.id) && last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
         if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
         reg = buildRegister(hazards, reports, tasks);
@@ -325,7 +353,7 @@ export async function runFile(env, which, force) {
     // Keep what a person saved, before replacing it.
     let kept = null;
     if (!ours || personSaved) {
-      const folder = FOLDER + '/ארכיון/' + (ours ? 'גרסאות שנדרסו' : 'לפני כתיבה ראשונה מהאפליקציה');
+      const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }

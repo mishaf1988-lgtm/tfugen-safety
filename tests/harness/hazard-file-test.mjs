@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -119,6 +119,9 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
 
   const rt = buildRows(HZ, TR, [{ id: 't1', source_table: 'trustee_reports', source_id: 'a', due: '2026-09-20', ts: '2026-09-23T10:00:00Z' }, { id: 't2', source_table: 'trustee_reports', source_id: 'a', due: '2026-10-04', ts: '2026-09-24T10:00:00Z' }, { id: 't3', source_table: 'ncr', source_id: 'b', due: '2026-12-01' }]);
   check('a routed finding is due when its (latest) task is due, others report + 3 days', rt[2][9].date === '2026-10-04' && rt[3][9].date === '2026-09-27', [rt[2][9], rt[3][9]]);
+  check('routed in the note (WhatsApp / mail / Vitre): its "עד" date, the last one', routedNote('נותב לאחזקה עד 30/09/2026 (מייל 23/09/2026)') === '2026-09-30' && routedNote('נותב לאחזקה - מיכאל פרייליך עד 04/10/2026 (Vitre SMS #3612206 27/09/2026)') === '2026-10-04' && routedNote('נותב לחשמל עד 1/10/2026 (x). נותב לאחזקה עד 05/10/2026 (y)') === '2026-10-05' && routedNote('בדיקה של חשמלאים') === null && routedNote(null) === null);
+  const rn = buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (מייל 23/09/2026)' }) : r)));
+  check('a finding routed in its note is due on that date; a task wins over the note', rn[2][9].date === '2026-10-04' && buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (x)' }) : r)), [{ source_table: 'trustee_reports', source_id: 'a', due: '2026-10-09', ts: 'z' }])[2][9].date === '2026-10-09', rn[2][9]);
   console.log('\n1b. the assistant fills a missing corrective action');
   {
     const AENV = { ...ENV, GEMINI_API_KEY: 'g' };
@@ -220,6 +223,31 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
   check('the file exactly as the server wrote it: no edits', !ed.hazards.length && !ed.reports.length && !ed.fresh.length, ed);
+
+  // 28/09 review fixes
+  const lastDup = { rows: last1.rows.concat([last1.rows[1].slice()]), ids: last1.ids.concat(['h:th-X']) };
+  ed = diffEdits(back, lastDup, HZ.concat([{ id: 'th-X', n: 2, dept: 'מעצבים', descr: 'כפול', s: 'פתוח' }]), TR, '2026-09-28');
+  check('a number used twice in the last write: that row is skipped, not applied to either record', !ed.hazards.some((x) => x.id === 'th-2' || x.id === 'th-X'), ed.hazards);
+  const shifted = back.map((b) => (b.v[0] === 'נ-1' ? { r: b.r, v: b.v.slice().map((x, i) => (i === 5 ? 'ליקוי אחר לגמרי' : i === 1 ? '2026-09-01' : x)) } : b));
+  ed = diffEdits(shifted, last1, HZ, TR, '2026-09-28');
+  check('a row whose description and date no longer match the record (stale copy, נ-k shift): skipped', !ed.reports.some((x) => x.id === 'a'), ed.reports);
+  const aiApp = TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { action: 'המלצת העוזר' }) : r));
+  ed = diffEdits(back, last1, HZ, aiApp, '2026-09-28');
+  check('the assistant filled an empty action in the same run, the person typed one in Excel: the person wins', (ed.reports.find((x) => x.id === 'a') || {}).action === 'להחליף פנס', ed.reports);
+  const closedHz = HZ.map((h) => (h.id === 'th-1' ? Object.assign({}, h, { s: 'סגור', closed_d: '2026-09-01' }) : h));
+  const lastC = { rows: buildRows(closedHz, TR), ids: last1.ids };
+  const reopened = (await readSheetRows(await patchSheetRows(out, buildRows(closedHz, TR).map((x, i) => (i === 0 ? Object.assign(x.slice(), { 10: 'פתוח', 11: null }) : x)), { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }));
+  ed = diffEdits(reopened, lastC, closedHz, TR, '2026-09-28');
+  const ro = ed.hazards.find((x) => x.id === 'th-1');
+  check('reopened in Excel: status פתוח and no closing date', ro && ro.s === 'פתוח' && ro.closed_d === null, ro);
+  const many30 = Array.from({ length: 30 }, (_, i) => ({ id: 'm' + i, n: i + 1, d: '2026-09-01', dept: 'תוצג', descr: 'x' + i, s: 'פתוח' }));
+  const reg30 = buildRegister(many30, []);
+  const file30 = reg30.rows.map((x, i) => ({ r: i + 2, v: Object.assign(x.slice(), { 10: 'סגור', 11: '2026-09-28', 1: x[1] && x[1].date, 9: x[9] && x[9].date }) }));
+  const w30 = world({ hazards: many30, reports: [] });
+  const ed30 = diffEdits(file30, { rows: reg30.rows, ids: reg30.ids }, many30, [], '2026-09-28');
+  check('30 edits found (over the 25-write budget)', ed30.hazards.length === 30, ed30.hazards.length);
+  const ap = await applyEdits(ENV, ed30, many30.map((x) => Object.assign({}, x)), []);
+  check('applyEdits writes 25, says which, and leaves the rest pending (they are not marked done)', ap.pending && ap.written.length === 25 && (w30.hz || []).filter((x) => x.m === 'PATCH').length === 25 && !ap.written.includes('h:m29'), [ap.pending, ap.written.length]);
 
   w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel' });
   r = await runFile(ENV, 'xlsm', false);

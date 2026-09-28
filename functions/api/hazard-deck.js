@@ -17,6 +17,8 @@ import { meetingHazards, meetingAccidents } from '../_meeting.js';
 import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
+// Bump when deckContent/patchDeck change what they write.
+export const DECK_VERSION = 4;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
@@ -46,7 +48,9 @@ export async function runDeck(env, force) {
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
   const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date) };
-  const sig = await sha(JSON.stringify([date, m, rows]));
+  // The code's version is in the signature too: a wording fix must reach the
+  // deck without waiting for the data to change (28/09, PR #918).
+  const sig = await sha(JSON.stringify([date, m, rows, DECK_VERSION]));
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
