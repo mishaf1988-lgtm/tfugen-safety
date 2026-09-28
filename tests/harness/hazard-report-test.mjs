@@ -43,6 +43,8 @@ const ROWS = [
   check('from an earlier tour: "<status> - מסיור קודם!", highlighted; latest tour not', g.rows[0].status === 'בטיפול - מסיור קודם!' && g.rows[0].old && !g.rows[1].old && g.old === 1, g.rows.map((r) => r.status));
   check('the mail: title, opening and closing lines from the sheet, dates DD/MM/YYYY, text escaped', /דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם/.test(g.html) && g.html.includes('שלום, להלן המפגעים.') && g.html.includes('בברכה, ממונה בטיחות') && g.html.includes('31/08/2026') && g.html.includes('&lt;b&gt;') && !g.html.includes('<b>'), g.html.slice(0, 200));
   check('keyboard characters only in what the server writes (no long dash, no arrows)', !/[—–־←-⇿«»“”…]/.test(g.html.replace(/שלום, להלן המפגעים\.|בברכה, ממונה בטיחות/g, '')));
+  const go = buildReport('חומר גלם', ROWS, rc, texts, '2026-09-28');
+  check('past its target: "עבר היעד" in red under the date, counted', go.overdue === 2 && go.rows[0].overdue && !go.rows[1].overdue && (go.html.match(/עבר היעד/g) || []).length === 2, go.rows.map((r) => [r.n, r.due, r.overdue]));
   const m = buildReport('מעצבים', ROWS, rc, texts);
   check('shared "מנהל המחלקה + חשמל": חשמל and שלומי added once', m.to.join() === 'Roman@tapugan.co.il,tech_manager@tapugan.co.il,shlomi@tapugan.co.il', m.to);
   const t = buildReport('תוצג', ROWS, rc, texts);
@@ -70,6 +72,7 @@ const ROWS = [
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope || 'Files.ReadWrite Mail.Send' }]);
       if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(HZ);
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
+      if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'GET') { w.read = decodeURIComponent(u); return new Response(book, { status: 200 }); }

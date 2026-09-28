@@ -67,6 +67,7 @@ function world(o) {
       if (m === 'PATCH' || m === 'POST') { w.hz = (w.hz || []).concat([{ m, u: decodeURIComponent(u), body: JSON.parse(init.body) }]); return new Response(null, { status: o.hzFail ? 500 : m === 'POST' ? 201 : 204 }); }
       return json(o.hazards || HZ);
     }
+    if (u.startsWith(SB + '/rest/v1/tasks')) return json(o.tasks || []);
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) {
       if (m === 'PATCH') { w.patches = (w.patches || []).concat([{ u: decodeURIComponent(u), body: JSON.parse(init.body) }]); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
       return json(o.reports || TR);
@@ -116,6 +117,8 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('cleanAction: one line, no numbering / bold / long dash, keyboard characters only', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד') === 'לתקן את הפנס - ולוודא', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד'));
   check('cleanAction: too short / empty -> null', cleanAction('') === null && cleanAction('ok') === null);
 
+  const rt = buildRows(HZ, TR, [{ id: 't1', source_table: 'trustee_reports', source_id: 'a', due: '2026-09-20', ts: '2026-09-23T10:00:00Z' }, { id: 't2', source_table: 'trustee_reports', source_id: 'a', due: '2026-10-04', ts: '2026-09-24T10:00:00Z' }, { id: 't3', source_table: 'ncr', source_id: 'b', due: '2026-12-01' }]);
+  check('a routed finding is due when its (latest) task is due, others report + 3 days', rt[2][9].date === '2026-10-04' && rt[3][9].date === '2026-09-27', [rt[2][9], rt[3][9]]);
   console.log('\n1b. the assistant fills a missing corrective action');
   {
     const AENV = { ...ENV, GEMINI_API_KEY: 'g' };

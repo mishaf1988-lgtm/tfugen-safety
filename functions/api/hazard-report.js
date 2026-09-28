@@ -5,7 +5,8 @@
 //     register (manager + trustees, hazard-file.js buildRegister), columns
 //     \u05de\u05e1"\u05d3 / \u05de\u05d9\u05e7\u05d5\u05dd / \u05ea\u05d9\u05d0\u05d5\u05e8 / \u05d7\u05d5\u05de\u05e8\u05d4 / \u05d0\u05d7\u05e8\u05d0\u05d9 / \u05e4\u05e2\u05d5\u05dc\u05d4 / \u05d9\u05e2\u05d3 / \u05e1\u05d8\u05d8\u05d5\u05e1. A hazard from
 //     an earlier tour of the department (its tour number below the latest)
-//     says "<status> - \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd!" and is highlighted, like column N.
+//     says "<status> - \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd!" and is highlighted, like column N. Past its
+//     target: "\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3" in red under the date (28/09).
 //   * \u05d0\u05dc: the department's managers (sheet "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd", part 1), plus \u05d0\u05d7\u05d6\u05e7\u05d4 /
 //     \u05d7\u05e9\u05de\u05dc / \u05d4\u05e0\u05d3\u05e1\u05d4 when one of the rows is theirs (part 2), plus the
 //     \u05d4\u05e0\u05d3\u05e1\u05d4 row (\u05e9\u05dc\u05d5\u05de\u05d9, their manager) when a row is for \u05d0\u05d7\u05d6\u05e7\u05d4 or \u05d7\u05e9\u05de\u05dc.
@@ -18,7 +19,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet } from '../_onedrive.js';
 import { readSheetRows } from '../_xlsxpatch.js';
-import { FOLDER, FILES, DEPTS, buildRegister, readAll } from './hazard-file.js';
+import { FOLDER, FILES, DEPTS, buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -46,12 +47,14 @@ export function parseRecipients(rows) {
 }
 
 // Pure: one department's report from the register rows.
-export function buildReport(dept, rows, rcpt, texts) {
+export function buildReport(dept, rows, rcpt, texts, today) {
   const mine = rows.filter((r) => r[3] === dept);
   const latest = mine.reduce((m, r) => Math.max(m, +r[2] || 0), 0);
   const open = mine.filter((r) => r[10] !== S_DONE).map((r) => {
     const old = !!latest && (+r[2] || 0) > 0 && +r[2] < latest;
-    return { n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old };
+    const dueY = r[9] && typeof r[9] === 'object' ? r[9].date : '';
+    const overdue = !!today && !!dueY && dueY < today;
+    return { n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue };
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
@@ -70,15 +73,16 @@ export function buildReport(dept, rows, rcpt, texts) {
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
     + '<table style="border-collapse:collapse;width:100%"><tr>' + th.map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
-    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + '</td>').join('') + '</tr>').join('')
+    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + '</tr>').join('')
     + '</table><p>' + esc(texts.sign || DEFAULT_SIGN).replace(/\n/g, '<br>') + '</p></div>';
-  return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, html };
+  return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
 
 async function loadAll(env, token) {
-  const [hazards, reports] = await Promise.all([
+  const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, TASKS_Q),
   ]);
   const r = await fetch(G + seg(FOLDER + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
   if (!r.ok) throw new Error('the workbook could not be read (onedrive ' + r.status + ')');
@@ -86,7 +90,7 @@ async function loadAll(env, token) {
   const rc = await readSheetRows(book, { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] });
   const tx = await readSheetRows(book, { sheet: '\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4', minRow: 1, maxRow: 2, lastCol: 11, dateCols: [] });
   const t1 = tx.find((x) => x.r === 1), t2 = tx.find((x) => x.r === 2);
-  return { rows: buildRegister(hazards, reports).rows, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] } };
+  return { rows: buildRegister(hazards, reports, tasks).rows, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] } };
 }
 
 export async function onRequest(context) {
@@ -103,7 +107,8 @@ export async function onRequest(context) {
     if (!row || !row.refresh_token) return jsonResp({ ok: false, error: 'OneDrive \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8' }, 200, cors);
     const { token } = await accessToken(env);
     const data = await loadAll(env, token);
-    const reports = DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const reports = DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
     if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), reports: reports.map((x) => Object.assign({}, x, { html: undefined })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];
