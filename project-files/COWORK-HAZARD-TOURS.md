@@ -57,5 +57,5 @@
 1. לפתוח את dash.cloudflare.com > Workers & Pages > `tapugan-backup-cron` > Edit code.
 2. להחליף את כל הקוד בתוכן העדכני של `workers/backup-cron.js` מ-GitHub, מהכתובת:
    `https://github.com/mishaf1988-lgtm/tfugen-safety/blob/main/workers/backup-cron.js` (כפתור Raw, ואז העתקה של הכל).
-3. Deploy. אחר כך לפתוח את `https://tapugan-backup-cron.mishaf1988.workers.dev/health` ולבדוק שהוא מחזיר תשובה תקינה.
+3. Deploy. אחר כך לפתוח את `https://tapugan-backup-cron.mishaf1988.workers.dev/health`. **מיד אחרי הפריסה צפוי** `{"status":"unknown",...}` (קוד 503): הגרסה החדשה עוד לא רצה. זה תקין. אחרי הריצה הבאה (06:00) אמור להופיע `"status":"ok"`, ו-Claude Code יאמת את קובץ הגיבוי.
 4. **לא לגעת** במשתני הסביבה (Settings > Variables) ולא בשעת ה-cron.
