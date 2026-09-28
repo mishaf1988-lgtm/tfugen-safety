@@ -17647,6 +17647,8 @@ function rTrustees(){
     var after=(DB.trustee_reports||[]).find(function(x){return x.t===8&&x.ref===r.id;});
     var afterHtml=after?'<div style="font-size:11px;color:#15803d">\u2713 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" '+fd(after.d)+' ('+esc(after.u)+')'+(after.photo_url?' <a data-sign="'+escU(after.photo_url)+'" target="_blank">\ud83d\udcf7</a>':'')+'</div>':'';
     var note=r.mgr_note?'<div style="font-size:11px;color:var(--t2)">\ud83d\udccc '+esc(r.mgr_note)+'</div>':'';
+    // 28/09: the recommended corrective action (filled by the server's assistant, the manager decides).
+    if(_truIsHazard(r)&&r.action)note+='<div style="font-size:11px;color:var(--t2)">\ud83d\udee0 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea: '+esc(r.action)+'</div>';
     var tsk=_truTaskFor(r.id);
     // ...and what happened to it. A finding whose task is \u05d4\u05d5\u05e9\u05dc\u05dd but which is
     // still \u05e4\u05ea\u05d5\u05d7 is exactly the state 4.4 was about, so it is named here.
@@ -17676,6 +17678,7 @@ function _truRowMenu(anchor,id){
       }
       item('\ud83d\udcdd',_truTaskFor(id)?'\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e9\u05d9\u05de\u05d4':'\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4 (\u05e0\u05d9\u05ea\u05d5\u05d1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d4)',function(){if(_truTaskFor(id))goPage('tasks');else _truMgrSpawnTask(id);});
       item('\ud83d\udccc','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',function(){_truMgrNote(id);});
+      item('\ud83d\udee0','\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea',function(){_truMgrAction(id);});
       item('\ud83d\udce4','\u05e9\u05dc\u05d7 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc (\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 / \u05de\u05d9\u05d9\u05dc / PDF)',function(){_truRouteOpen(id);});
       sep();
     }
@@ -17996,6 +17999,16 @@ function _truMgrNoteSave(id){
   var r=_truFind(id);if(!r)return;
   var ta=g('tru-note-ta');r.mgr_note=String(ta?ta.value:'').trim()||null;
   sbUpd('trustee_reports',r);sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
+}
+// The recommended corrective action of a finding: the server fills it in
+// (trustee_reports.action, from the assistant); the manager changes it here.
+// It goes into "פעולה נדרשת" of the folder-13 register and the department report.
+function _truMgrAction(id){
+  var r=_truFind(id);if(!r)return;
+  var v=prompt('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea (\u05e0\u05db\u05e0\u05e1\u05ea \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d5\u05dc\u05d3\u05d5\u05d7 \u05dc\u05de\u05d7\u05dc\u05e7\u05d4):',r.action||'');
+  if(v===null)return;
+  r.action=String(v).trim()||null;
+  sbUpd('trustee_reports',r);sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();
 }
 function _truMgrNoteCancel(){var ed=g('tru-note-ed');if(ed)ed.remove();}
 // Manual routing (decision 2): the manager turns a finding into a task for

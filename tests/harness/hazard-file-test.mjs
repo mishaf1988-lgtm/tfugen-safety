@@ -4,6 +4,7 @@
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
 import { onRequest, runFile, buildRows, trusteeDept } from './_build/hazard-file.mjs';
+import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
@@ -52,6 +53,7 @@ const TR = [
   { id: 'b', u: 'מוסא', t: 2, d: '2026-09-24', loc: 'מעוצבים · מחסן', ok: false, s: 'נסגר', f: 'שמן', ts: '2026-09-24T08:00:00Z', mgr_note: 'טופל' },
   { id: 'c', u: 'רונית', t: 8, d: '2026-09-26', ok: true, ref: 'b', ts: '2026-09-26T08:00:00Z' },
   { id: 'ok', u: 'מוסא', t: 3, d: '2026-09-25', ok: true, s: 'תקין', ts: '2026-09-25T08:00:00Z' },
+  { id: 'nr', u: 'מוסא', t: 3, d: '2026-09-28', loc: 'חומר גלם · חדרי קירור', ok: false, s: 'נסגר', f: 'אין כריזה צבע אדום', ts: '2026-09-28T08:00:00Z', mgr_note: 'לא רלוונטי (מיכאל 28/09): הוסר מהדוח' },
 ];
 
 function world(o) {
@@ -62,7 +64,15 @@ function world(o) {
     w.calls.push(m + ' ' + decodeURIComponent(u));
     const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(o.hazards || HZ);
-    if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json(o.reports || TR);
+    if (u.startsWith(SB + '/rest/v1/trustee_reports')) {
+      if (m === 'PATCH') { w.patches = (w.patches || []).concat([{ u: decodeURIComponent(u), body: JSON.parse(init.body) }]); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
+      return json(o.reports || TR);
+    }
+    if (u.startsWith('https://generativelanguage.googleapis.com/')) {
+      w.ai = (w.ai || 0) + 1;
+      if (o.aiFail) return json({ error: 'x' }, 500);
+      return json({ candidates: [{ content: { parts: [{ text: '1. **לתקן את הפנס** — ולוודא תאורה תקינה\nעוד שורה' }] } }] });
+    }
     if (u.startsWith(SB + '/rest/v1/server_state')) {
       if (m === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
@@ -96,6 +106,30 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('closed trustee finding: סגור, closing date from the task-8 report', rows[3][10] === 'סגור' && rows[3][11].date === '2026-09-26', rows[3]);
   check('trustee: "סיור נאמן: <name>" in פעולה נדרשת (the column the department report shows)', rows[2][8] === 'סיור נאמן: מוסא', rows[2][8]);
   check('trustee: tour number = the department\'s latest tour on or before the finding (so not "מסיור קודם")', rows[3][2] === 10 && rows[2][2] === '', [rows[2][2], rows[3][2]]);
+
+  check('a finding marked "לא רלוונטי" is not in the register (and never deleted)', !rows.some((x) => x[5] === 'אין כריזה צבע אדום'), rows.map((x) => x[5]));
+  const withA = buildRows(HZ, TR.map((x) => (x.id === 'a' ? { ...x, action: 'להחליף את הפנס' } : x)));
+  check('with a corrective action: "<action> (סיור נאמן: <name>)"', withA[2][8] === 'להחליף את הפנס (סיור נאמן: מוסא)', withA[2][8]);
+  check('cleanAction: one line, no numbering / bold / long dash, keyboard characters only', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד') === 'לתקן את הפנס - ולוודא', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד'));
+  check('cleanAction: too short / empty -> null', cleanAction('') === null && cleanAction('ok') === null);
+
+  console.log('\n1b. the assistant fills a missing corrective action');
+  {
+    const AENV = { ...ENV, GEMINI_API_KEY: 'g' };
+    let wa = world({ file: await fixture() });
+    const ra = await runFile(AENV, 'xlsm', true);
+    const p = (wa.patches || [])[0];
+    check('open finding without one: asked once, saved with action=is.null (never over the manager\'s text)', wa.ai === 1 && p && /trustee_reports\?id=eq\.a&action=is\.null/.test(p.u) && p.body.action === 'לתקן את הפנס - ולוודא תאורה תקינה', [wa.ai, p]);
+    check('closed and not-relevant findings are not asked', !(wa.patches || []).some((x) => /id=eq\.(b|nr)/.test(x.u)));
+    const regx = await sheetOf(wa.puts.find((q) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(q.path)).body, 'xl/worksheets/sheet2.xml');
+    check('...and it is in this very write', regx.includes('לתקן את הפנס - ולוודא תאורה תקינה (סיור נאמן: מוסא)'), ra);
+    wa = world({ file: await fixture(), aiFail: true });
+    const rb = await runFile(AENV, 'xlsm', true);
+    check('assistant down: the file is still written, without the action (next run tries again)', rb.ok && rb.pushed && !(wa.patches || []).length, rb);
+    wa = world({ file: await fixture() });
+    await runFile(ENV, 'xlsm', true);
+    check('no GEMINI_API_KEY: no call at all', !wa.ai);
+  }
 
   console.log('\n2. first write into the existing workbook');
   const src = await fixture();

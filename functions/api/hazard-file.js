@@ -19,7 +19,9 @@
 //     A trustee has no severity, responsible or target: בינונית, מנהל המחלקה
 //     and report date + 3 days (Michael, 28/09). "פעולה נדרשת" says
 //     "סיור נאמן: <name>", because the department report (the macro) sends
-//     columns A..K and not the notes. Department = the part of the
+//     columns A..K and not the notes. When the finding has a recommended
+//     corrective action (trustee_reports.action, filled by the assistant, edited
+//     by the manager) it comes first: "<action> (סיור נאמן: <name>)". Department = the part of the
 //     location before " · ". Closed = s נסגר, closing date from the task-8
 //     report that closed it.
 //
@@ -36,6 +38,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow } from '../_onedrive.js';
 import { patchSheetRows } from '../_xlsxpatch.js';
+import { suggestAction } from '../_ai.js';
 
 export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
 export const FILES = {
@@ -48,6 +51,7 @@ export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e
 // Spellings in the locations list / trustee screens -> the sheet's departments.
 const DEPT_ALIAS = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea' };
 const TRUSTEE_DUE_DAYS = 3;
+const MAX_AI = 3; // assistant calls per run (subrequest budget)
 const DAY = 86400000;
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -55,6 +59,12 @@ const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).
 const d10 = (v) => (v ? String(v).substring(0, 10) : '');
 const dt = (v) => (d10(v) ? { date: d10(v) } : null);
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
+
+// A trustee finding (a ליקוי on tasks 1-7). One the manager marked "not
+// relevant" (mgr_note starts with it; rows are never deleted, CLAUDE.md) stays
+// in the history and out of the register (28/09, the Tzeva Adom finding).
+export const isFinding = (r) => !!r && r.ok === false && +r.t >= 1 && +r.t <= 7;
+export const notRelevant = (r) => /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String((r && r.mgr_note) || ''));
 
 export function trusteeDept(loc) {
   const head = String(loc || '').split('\u00b7')[0].trim();
@@ -75,7 +85,7 @@ export function buildRows(hazards, reports) {
   reps.forEach((r) => {
     if (+r.t === 8 && r.ref) { const c = closer[r.ref]; if (!c || String(r.ts || r.d) < String(c.ts || c.d)) closer[r.ref] = r; }
   });
-  const findings = reps.filter((r) => r.ok === false && +r.t >= 1 && +r.t <= 7)
+  const findings = reps.filter((r) => isFinding(r) && !notRelevant(r))
     .sort((a, b) => String(a.ts || a.d || '').localeCompare(String(b.ts || b.d || '')));
   // A trustee finding belongs to the period of the department's latest tour
   // held on or before it. Column C gets that tour's number, so the sheet's own
@@ -88,7 +98,7 @@ export function buildRows(hazards, reports) {
     const { dept, loc } = trusteeDept(r.loc);
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
-    rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || ''),
+    rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
       d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed && c ? dt(c.d || c.ts) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
   });
@@ -122,8 +132,22 @@ export async function runFile(env, which, force) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
   const [hazards, reports] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,ts&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,ts&order=ts.asc'),
   ]);
+  // Every finding gets a recommended corrective action (Michael, 28/09): the
+  // ones still without one are asked from the assistant, a few per run, and
+  // saved on the report, where the manager can change it. A failure leaves it
+  // for the next run (every 15 minutes).
+  const todo = reports.filter((r) => isFinding(r) && !notRelevant(r) && !r.action && r.s !== '\u05e0\u05e1\u05d2\u05e8').slice(0, MAX_AI);
+  for (const r of todo) {
+    const a = await suggestAction(env, r);
+    if (!a) continue;
+    try {
+      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      const up = await fetch(base + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(r.id) + '&action=is.null', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ action: a }) });
+      if (up.ok) r.action = a;
+    } catch (e) { /* next run */ }
+  }
   const rows = buildRows(hazards, reports);
   const sig = await sha(JSON.stringify(rows));
   const K = 'hazard_' + which + '_';
