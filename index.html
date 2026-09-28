@@ -102,6 +102,19 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 .login-sep::before,.login-sep::after{content:'';flex:1;height:1px;background:#dde0e6}
 #login-emp-btn{width:100%;padding:13px;background:#fff;color:var(--tx);border:2px solid var(--ok);border-radius:8px;font-size:14px;font-weight:900;font-family:'Heebo',Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}
 #login-emp-btn:active{background:#f0fdf4}
+#login-mgr-btn{width:100%;margin-top:8px;padding:13px;background:#fff;color:var(--tx);border:2px solid var(--pr,#1d4ed8);border-radius:8px;font-size:14px;font-weight:900;font-family:'Heebo',Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}
+#mf{position:fixed;inset:0;z-index:9000;background:var(--bg,#fff);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#mf .mf-in{max-width:560px;margin:0 auto;padding:12px 16px 40px}
+#mf .mf-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+#mf h2{margin:0;font-size:19px}
+#mf .mf-sub{font-size:13px;color:var(--t2);margin-bottom:12px}
+#mf label{display:block;font-weight:700;font-size:13px;margin:12px 0 6px}
+#mf .mf-chips{display:flex;flex-wrap:wrap;gap:8px}
+#mf .mf-chip{flex:1 1 30%;min-height:46px;padding:8px;border:2px solid var(--border);border-radius:10px;background:var(--bg,#fff);font-size:14px;font-weight:700;font-family:inherit;color:var(--tx)}
+#mf .mf-chip.on{border-color:var(--pr,#1d4ed8);background:#eff6ff}
+#mf input,#mf textarea,#mf select{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:2px solid var(--border);border-radius:10px;font-family:inherit;background:var(--bg,#fff);color:var(--tx)}
+#mf .mf-save{width:100%;min-height:54px;margin-top:18px;font-size:17px;font-weight:900}
+#mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
 /* ---- APP SHELL ---- */
 #app{display:none;height:100%}
@@ -764,6 +777,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <a onclick="_openForgotPwModal()" style="display:block;margin-top:4px;padding:13px 8px;font-size:13px;color:#555;text-decoration:underline;cursor:pointer;text-align:center">&#1513;&#1499;&#1495;&#1514;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492;?</a>
     <div class="login-sep">&#1488;&#1493;</div>
     <button id="login-emp-btn" onclick="doEmpLogin()"><span style="font-size:18px">🦺</span> &#1491;&#1497;&#1493;&#1493;&#1495; &#1504;&#1488;&#1502;&#1504;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
+    <button id="login-mgr-btn" type="button" onclick="mgrFieldLogin()"><span style="font-size:18px">&#128203;</span> &#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <p style="margin-top:16px;font-size:10px;color:#aaa">&#169; &#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498; | &#1514;&#1506;&#1513;&#1497;&#1493;&#1514; &#1514;&#1508;&#1493;&#1490;&#1503; 2026</p>
   </div>
 </div>
@@ -1384,6 +1398,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row">
     <div class="page-title">&#128270; &#1505;&#1497;&#1493;&#1512;&#1497; &#1502;&#1508;&#1490;&#1506;&#1497;&#1501; <span>&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div>
     <button class="btn btn-p" onclick="thzNew()">+ &#1502;&#1508;&#1490;&#1506;</button>
+    <button class="btn btn-s" onclick="mgrFieldOpen()">&#128203; &#1502;&#1510;&#1489; &#1505;&#1497;&#1493;&#1512;</button>
   </div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:0 0 8px">
     <select id="thz-f-s" onchange="thzFilter('s',this.value)" style="min-height:40px"><option value="notclosed">&#1500;&#1488; &#1504;&#1505;&#1490;&#1512;&#1493;</option><option value="overdue">&#1506;&#1489;&#1512;&#1493; &#1488;&#1514; &#1492;&#1497;&#1506;&#1491;</option><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option><option value="">&#1492;&#1499;&#1500;</option></select>
@@ -9704,6 +9719,92 @@ function svThz(){
   toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');rThz();
 }
 
+// ---- Safety manager field mode (28/09, Michael: "on the login screen another
+// button, the safety manager's interface, where I report from, with my admin
+// password"; chose "quick hazard report on a tour"). The same account and
+// password as the full app; the button only says where to land after login.
+// One screen for the phone: department, location, the hazard, photo, severity,
+// responsible. Saved as a tour_hazards row like the \u270e form, so it reaches the
+// folder-13 file the same way. Date = today; tour number = the one already
+// used today for that department, else the next one (tour numbers run across
+// departments). Also reachable from the app: #mf in the address, or the
+// button on the tours screen.
+var MF_KEY='ts_mgr_field',_mf={dept:'',sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',n:0};
+function _mfWanted(){
+  var w=false;try{w=sessionStorage.getItem(MF_KEY)==='1';}catch(e){}
+  return w||location.hash==='#mf';
+}
+function mgrFieldLogin(){
+  try{sessionStorage.setItem(MF_KEY,'1');}catch(e){}
+  var e=g('pw-err');if(e)e.innerHTML='<span style="color:var(--t2)">\u05db\u05e0\u05d9\u05e1\u05d4 \u05e2\u05dd \u05e9\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d5\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05da. \u05d0\u05d7\u05e8\u05d9 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05e0\u05e4\u05ea\u05d7 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd.</span>';
+  var u=g('uname');if(u&&!u.value){u.focus();}else{var p=g('pw');if(p)p.focus();}
+}
+function _mfTour(dept){
+  var t=_thzToday(),all=DB.tour_hazards||[];
+  var same=all.filter(function(r){return r.dept===dept&&r.d===t&&r.tour_no;})[0];
+  if(same)return +same.tour_no;
+  return all.reduce(function(m,r){return Math.max(m,+r.tour_no||0);},0)+1;
+}
+function mgrFieldOpen(){
+  try{sessionStorage.removeItem(MF_KEY);}catch(e){}
+  if(location.hash==='#mf'){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
+  var ov=g('mf');if(!ov){ov=document.createElement('div');ov.id='mf';document.body.appendChild(ov);}
+  ov.style.display='block';_mfRender();
+}
+function mgrFieldClose(){
+  var ov=g('mf');if(ov)ov.style.display='none';
+  if(typeof _attachClear==='function')_attachClear('mf-attach-area');
+  if(typeof goPage==='function')goPage('thz');
+}
+function _mfChips(list,cur,fn){
+  return '<div class="mf-chips">'+list.map(function(v){return '<button type="button" class="mf-chip'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" onclick="'+fn+'(this.dataset.v)">'+esc(v)+'</button>';}).join('')+'</div>';
+}
+function _mfPickDept(v){_mf.dept=v;_mfKeep();_mfRender();}
+function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfRender();}
+// Keep what was typed across a re-render (a chip tap redraws the screen).
+function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
+function _mfRender(){
+  var ov=g('mf');if(!ov)return;
+  var photo=_attachUrls['mf-attach-area'];
+  var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' \u00b7 '+esc(_mf.dept)+' \u00b7 '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' \u00b7 \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
+  ov.innerHTML='<div class="mf-in">'
+    +'<div class="mf-top"><h2>&#128203; \u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2 \u05d1\u05e1\u05d9\u05d5\u05e8</h2><button type="button" class="btn btn-s" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>'
+    +'<div class="mf-sub">'+sub+'</div>'
+    +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
+    +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" value="'+esc(_mf['mf-loc']||'')+'">'
+    +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3">'+esc(_mf['mf-descr']||'')+'</textarea>'
+    +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area"></div>'
+    +'<label>\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4</label>'+_mfChips(_THZ_SEV,_mf.sev,'_mfPickSev')
+    +'<label for="mf-resp">\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><select id="mf-resp">'+_THZ_RESP.map(function(v){return '<option'+(v===(_mf.resp||_THZ_RESP[0])?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select>'
+    +'<label for="mf-action">\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea</label><textarea id="mf-action" rows="2">'+esc(_mf['mf-action']||'')+'</textarea>'
+    +'<label for="mf-due">\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><input type="date" id="mf-due" value="'+esc(_mf['mf-due']||'')+'">'
+    +'<button type="button" class="btn btn-p mf-save" onclick="mgrFieldSave()">&#128190; \u05e9\u05de\u05d5\u05e8, \u05de\u05e4\u05d2\u05e2 \u05d4\u05d1\u05d0</button>'
+    +(_mf.n?'<div class="mf-done">\u05e0\u05e9\u05de\u05e8\u05d5 '+_mf.n+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05d6\u05d5 &#10003;</div>':'')
+    +'</div>';
+  // The photo slot: the helper draws the button; a photo already picked stays.
+  if(photo){_attachUrls['mf-attach-area']=photo;var a=g('mf-attach-area');if(a)a.innerHTML='<div class="mf-done">&#128247; \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e6\u05d5\u05e8\u05e4\u05d4</div>';}
+  else if(typeof _attachClear==='function')_attachClear('mf-attach-area');
+}
+function mgrFieldSave(){
+  if(_viewBlock())return;
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
+  _mfKeep();
+  if(!_mf.dept){toast('\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');return;}
+  var descr=String(_mf['mf-descr']||'').trim();if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
+  var all=DB.tour_hazards||(DB.tour_hazards=[]);
+  var r={id:'th-'+gid(),n:all.reduce(function(m,x){return Math.max(m,+x.n||0);},0)+1,d:_thzToday(),tour_no:_mfTour(_mf.dept),dept:_mf.dept,
+    loc:String(_mf['mf-loc']||'').trim()||null,descr:descr,sev:_mf.sev||null,resp:_mf.resp||_THZ_RESP[0],resp2:null,
+    action:String(_mf['mf-action']||'').trim()||null,due:_mf['mf-due']||null,s:'\u05e4\u05ea\u05d5\u05d7',closed_d:null,notes:null,
+    photo_url:_attachUrls['mf-attach-area']||null,ts:new Date().toISOString()};
+  _svPut('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8: '+descr.substring(0,30));sdb();
+  // Next hazard of the same tour: department, severity and responsible stay.
+  _mf.n++;_mf['mf-loc']='';_mf['mf-descr']='';_mf['mf-action']='';_mf['mf-due']='';
+  if(typeof _attachClear==='function')_attachClear('mf-attach-area');
+  _attachUrls['mf-attach-area']=null;
+  toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');_mfRender();
+  var d=g('mf-descr');if(d)d.focus();
+}
+
 // ---- TOOLBOX TALKS ----
 function rToolbox(){
   var tb=g('tb-toolbox');if(!tb)return;
@@ -16900,6 +17001,7 @@ function _finishLogin(lb){
   if(typeof _lockStamp==='function')_lockStamp();
   ldb();if(empIsOn()){CUR='emp-home';if(typeof _truEmpHome==='function')_truEmpHome(true);}else rDash();sbSync();_rtStart();
   setTimeout(_fetchCurrentUserProfile,900);
+  if(_mfWanted())setTimeout(mgrFieldOpen,400);
 }
 // ---- SAFETY TRUSTEES (\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) \u2014 catalogue + scoring ----
 // Source: "\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05d4\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05d5\u05ea" (16.09.2026). One row in
