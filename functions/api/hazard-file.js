@@ -17,7 +17,9 @@
 //   * every trustee finding (trustee_reports, a ליקוי on tasks 1-7), numbered
 //     נ-1, נ-2 ... by report time; notes start with "דיווח נאמן: <name>".
 //     A trustee has no severity, responsible or target: בינונית, מנהל המחלקה
-//     and report date + 3 days (Michael, 28/09). Department = the part of the
+//     and report date + 3 days (Michael, 28/09). "פעולה נדרשת" says
+//     "סיור נאמן: <name>", because the department report (the macro) sends
+//     columns A..K and not the notes. Department = the part of the
 //     location before " · ". Closed = s נסגר, closing date from the task-8
 //     report that closed it.
 //
@@ -75,11 +77,18 @@ export function buildRows(hazards, reports) {
   });
   const findings = reps.filter((r) => r.ok === false && +r.t >= 1 && +r.t <= 7)
     .sort((a, b) => String(a.ts || a.d || '').localeCompare(String(b.ts || b.d || '')));
+  // A trustee finding belongs to the period of the department's latest tour
+  // held on or before it. Column C gets that tour's number, so the sheet's own
+  // "חדש/ישן" formula (N) calls a finding made after the last tour "חדש" and
+  // the report to the department does not flag it "מסיור קודם!" (28/09).
+  const tours = {};
+  (hazards || []).forEach((h) => { if (h && h.dept && h.d && h.tour_no != null) (tours[h.dept] = tours[h.dept] || []).push({ n: +h.tour_no, d: d10(h.d) }); });
+  const tourFor = (dept, day) => (tours[dept] || []).filter((t) => t.d <= day).reduce((m, t) => (t.n > m ? t.n : m), 0) || '';
   findings.forEach((r, k) => {
     const { dept, loc } = trusteeDept(r.loc);
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
-    rows.push(['\u05e0-' + (k + 1), dt(r.d), '', dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '',
+    rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || ''),
       d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed && c ? dt(c.d || c.ts) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
   });

@@ -94,6 +94,8 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('trustee: בינונית, מנהל המחלקה, target = report + 3 days', rows[2][6] === 'בינונית' && rows[2][7] === 'מנהל המחלקה' && rows[2][9].date === '2026-09-26', rows[2]);
   check('trustee notes: "דיווח נאמן: <name>" + manager note', rows[2][12] === 'דיווח נאמן: מוסא' && rows[3][12] === 'דיווח נאמן: מוסא. טופל', [rows[2][12], rows[3][12]]);
   check('closed trustee finding: סגור, closing date from the task-8 report', rows[3][10] === 'סגור' && rows[3][11].date === '2026-09-26', rows[3]);
+  check('trustee: "סיור נאמן: <name>" in פעולה נדרשת (the column the department report shows)', rows[2][8] === 'סיור נאמן: מוסא', rows[2][8]);
+  check('trustee: tour number = the department\'s latest tour on or before the finding (so not "מסיור קודם")', rows[3][2] === 10 && rows[2][2] === '', [rows[2][2], rows[3][2]]);
 
   console.log('\n2. first write into the existing workbook');
   const src = await fixture();
