@@ -126,8 +126,16 @@ export function deckContent(m, rows, meetingDate) {
   const sevOf = (s) => open.filter((r) => r[6] === s);
   const d10 = (v) => (v && typeof v === 'object' ? v.date : v) || '';
   const oldestHigh = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').slice().sort((p, q) => String(d10(p[1]) || '9').localeCompare(String(d10(q[1]) || '9')))[0];
-  const short = (t, n) => { t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.substring(0, n - 3).trim() + '...' : t; };
-  const item = (r, n) => [r[3], ' - ' + short((r[4] ? r[4] + ': ' : '') + r[5], n)];
+  // Short, like the hand-written deck: the part of a description before its
+  // " - " (the hazard, not the explanation), cut at a word, never mid-word.
+  const short = (t, n) => {
+    t = String(t || '').replace(/\s+/g, ' ').trim();
+    if (t.length <= n) return t;
+    const cut = t.substring(0, n - 3); const sp = cut.lastIndexOf(' ');
+    return (sp > n / 2 ? cut.substring(0, sp) : cut).replace(/[\s,:;-]+$/, '') + '...';
+  };
+  const head = (t) => String(t || '').split(' - ')[0].trim();
+  const item = (r, n) => [r[3], ' - ' + short((r[4] ? r[4] + ': ' : '') + head(r[5]), n)];
   const closedMonth = {}; rows.forEach((r) => { if (d10(r[11]).substring(0, 7) === month) closedMonth[r[3]] = (closedMonth[r[3]] || 0) + 1; });
   const closedList = Object.keys(closedMonth).sort((p, q) => closedMonth[q] - closedMonth[p]).map((d) => d + ': ' + (closedMonth[d] === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : closedMonth[d] + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5'));
   const nClosedMonth = Object.values(closedMonth).reduce((s, x) => s + x, 0);
@@ -140,9 +148,9 @@ export function deckContent(m, rows, meetingDate) {
     s1: {
       Header: [(t) => t.replace(/20\d{2}/, y).replace(/\d{2}\.\d{2}\.\d{4}/, meetingDate.substring(8, 10) + '.' + meetingDate.substring(5, 7) + '.' + y)],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', listDepts('closedThisWeek').join(', ') || '-'],
-      OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: ' + short(oldestHigh[5], 30) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
+      OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: ' + short(head(oldestHigh[5]), 34) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
       NewNote: [nw === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9 \u05d0\u05d7\u05d3 \u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2' : nw ? nw + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2',
-        nw ? listDepts('newThisWeek').join(', ') + ', ' + (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ' \u05d5' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05d5\u05ea\u05e8 \u05e4\u05ea\u05d5\u05d7' : '-' + no + ' \u05e0\u05d5\u05ea\u05e8\u05d5 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd') : '-'],
+        nw ? listDepts('newThisWeek').join(', ') + ', ' + (!nc ? '\u05db\u05d5\u05dc\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' : !no ? '\u05db\u05d5\u05dc\u05dd \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5' : (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ' \u05d5' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05d5\u05ea\u05e8 \u05e4\u05ea\u05d5\u05d7' : '-' + no + ' \u05e0\u05d5\u05ea\u05e8\u05d5 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')) : '-'],
       bars: {
         '\u05e1\u05d2\u05d5\u05e8': Object.fromEntries(h.byDept.map((d) => [d.dept, d.closed - d.newClosed])),
         '\u05e4\u05ea\u05d5\u05d7': Object.fromEntries(h.byDept.map((d) => [d.dept, d.openPrior])),
