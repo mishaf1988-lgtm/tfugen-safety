@@ -96,6 +96,9 @@ const ROWS = [
   check('send: one mail per department asked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
   check('the mail: אל + עותק, subject, the sheet\'s own opening and closing, kept in Sent Items', mail && mail.toRecipients.length === 4 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ') && c.w.mails[0].saveToSentItems === true, mail && mail.subject);
   check('the send is logged', /חומר גלם/.test(c.w.state.hazard_report_last || ''), c.w.state);
+  c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם'], test: true });
+  const tm = c.w.mails[0] && c.w.mails[0].message;
+  check('test send: only to the connected account, no copies, subject "בדיקה - ", real recipients listed on top, not logged', c.j.ok && tm && tm.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !tm.ccRecipients.length && tm.subject === 'בדיקה - דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && tm.body.content.includes('gelem@tapugan.co.il, Igal@tapugan.co.il') && !c.w.state.hazard_report_last && c.j.sent[0].test === true, tm && tm.subject);
   c = await call({ email: 'admin@tfugen.local', scope: 'Files.ReadWrite' }, { op: 'send', depts: ['חומר גלם'] });
   check('no Mail.Send permission: a clear error, nothing sent', !c.j.ok && /Mail\.Send/.test(c.j.error) && !c.w.mails.length, c.j);
   c = await call({ email: 'admin@tfugen.local', mailFail: true }, { op: 'send', depts: ['חומר גלם'] });

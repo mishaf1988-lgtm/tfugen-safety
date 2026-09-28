@@ -44,6 +44,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('asks before sending, naming the departments', /לשלוח את הדוח ל-1 מחלקות: מעצבים/.test(page._dlg || ''), page._dlg);
   check('sends only the ticked departments', s.calls[1] && s.calls[1][1].op === 'send' && s.calls[1][1].depts.join() === 'מעצבים', s.calls);
   check('shows what was sent', /מעצבים: נשלח ל-1 נמענים \(2 מפגעים\)/.test(s.text), s.text.slice(0, 200));
+  await page.evaluate(() => { hzrOpen(); });
+  await page.waitForTimeout(100);
+  const t = await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#hzr button')).find((x) => /שלח לי לבדיקה/.test(x.textContent)); hzrSend(true); return { has: !!b }; });
+  await page.waitForTimeout(100);
+  const tc = await page.evaluate(() => window._calls.slice(-1)[0]);
+  check('a "שלח לי לבדיקה" button: asks, then sends with test:true', t.has && tc[1].op === 'send' && tc[1].test === true && /לבדיקה, רק אליך/.test(page._dlg || ''), [tc, page._dlg]);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
