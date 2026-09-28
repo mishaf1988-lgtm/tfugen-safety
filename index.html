@@ -122,6 +122,16 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 #hzr .hz-rc{font-size:12px;color:var(--t2);margin-top:4px;word-break:break-all}
 #hzr .hz-row{font-size:13px;padding:3px 0;border-top:1px dashed var(--border)}
 #hzr .hz-old{background:#fff2cc}
+#mtg{position:fixed;inset:0;z-index:9000;background:var(--bg,#fff);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#mtg .hz-in{max-width:760px;margin:0 auto;padding:12px 16px 40px}
+#mtg table{border-collapse:collapse;width:100%;font-size:13px}
+#mtg th,#mtg td{border:1px solid var(--border);padding:5px 4px;text-align:center}
+#mtg th{background:var(--bg2,#f5f7fa);font-size:12px}
+#mtg td:first-child,#mtg th:first-child{text-align:right}
+#mtg .mt-tot td{font-weight:900}
+#mtg .mt-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:12px 0;font-size:14px;line-height:1.6}
+#mtg .mt-big{font-size:28px;font-weight:900}
+#mtg .mt-wrap{overflow-x:auto}
 #mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
 /* ---- APP SHELL ---- */
@@ -1406,6 +1416,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="row">
     <div class="page-title">&#128270; &#1505;&#1497;&#1493;&#1512;&#1497; &#1502;&#1508;&#1490;&#1506;&#1497;&#1501; <span>&#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div>
     <button class="btn btn-p" onclick="thzNew()">+ &#1502;&#1508;&#1490;&#1506;</button>
+    <button class="btn btn-s" onclick="mtgOpen()">&#128202; &#1504;&#1514;&#1493;&#1504;&#1497; &#1497;&#1513;&#1497;&#1489;&#1492;</button>
     <button class="btn btn-s" onclick="hzrOpen()">&#128231; &#1491;&#1493;&#1495; &#1500;&#1502;&#1495;&#1500;&#1511;&#1493;&#1514;</button>
     <button class="btn btn-s" onclick="mgrFieldOpen()">&#128203; &#1502;&#1510;&#1489; &#1505;&#1497;&#1493;&#1512;</button>
   </div>
@@ -2279,6 +2290,8 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="i-project-id" class="inp"></select></div>
     <div class="field"><label>&#127919; &#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</label><select id="i-issue-type-id" class="inp"></select></div>
     <div class="field"><label>&#1497;&#1502;&#1497; &#1488;&#1489;&#1491;&#1503;</label><input type="number" id="i-dy" placeholder="0" min="0"></div>
+    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="i-dept" list="i-dept-list"><datalist id="i-dept-list"></datalist></div>
+    <div class="field"><label>&#1491;&#1497;&#1493;&#1493;&#1495; (&#1496;&#1493;&#1508;&#1505; 250)</label><select id="i-rep"><option value="">&#1500;&#1488; &#1497;&#1491;&#1493;&#1506;</option><option value="true">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="false">&#1500;&#1488; &#1502;&#1491;&#1493;&#1493;&#1495;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="i-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1495;&#1511;&#1497;&#1512;&#1492;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
     <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label><div id="inc-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('inc-attach-area','inc')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div></div>
@@ -3260,7 +3273,7 @@ function gf(id){return parseFloat(gv(id))||0;}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,4);}
 function esc(s){if(s===undefined||s===null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function escU(u){if(!u)return '';var s=String(u).trim();if(/^(https?:|mailto:|tel:)/i.test(s))return esc(s);if(/^data:image\//i.test(s))return esc(s);return '';}
-function fd(d){if(!d)return '&#8212;';try{var p=d.split('T')[0].split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return esc(d);}}
+function fd(d){if(!d)return '&#8212;';try{if(/T\d{2}:\d{2}.*([Zz]|[+-]\d{2}:?\d{2})$/.test(d)){var t=new Date(d);if(!isNaN(t))return t.toLocaleDateString('en-GB',{timeZone:'Asia/Jerusalem'});}var p=d.split('T')[0].split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return esc(d);}}
 function du(d){if(!d)return 9999;try{return Math.ceil((new Date(d)-new Date())/86400000);}catch(e){return 9999;}}
 function eb(d){
   if(!d)return '<span class="b bX" title="\u05dc\u05dc\u05d0 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4 \u2014 \u05d4\u05e4\u05e8\u05d9\u05d8 \u05d0\u05d9\u05e0\u05d5 \u05e0\u05d9\u05ea\u05df \u05dc\u05de\u05e2\u05e7\u05d1">\u2014 \u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da</span>';
@@ -5124,7 +5137,7 @@ function openNewIncModal(){
   if(typeof _locPopulate==='function')_locPopulate('i-location-id',null);
   var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(null);
   var itSel=g('i-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function')itSel.innerHTML=_itypeOptionsHtml(null);
-  openModal('m-inc');
+  openModal('m-inc');if(typeof _incDeptList==='function')_incDeptList();
   if(typeof _incDraftCheck==='function')_incDraftCheck();
   if(typeof _incDraftStart==='function')_incDraftStart();
 }
@@ -5133,7 +5146,7 @@ function openNewIncModal(){
 // i-id (= new incident), restores on next open if a draft exists.
 var _INC_DRAFT_KEY='tfgn_inc_draft_v1';
 var _INC_DRAFT_TIMER=null;
-var _INC_DRAFT_FIELDS=['i-d','i-dt','i-ty','i-sv','i-location-id','i-l','i-project-id','i-issue-type-id','i-dy','i-st','i-r'];
+var _INC_DRAFT_FIELDS=['i-d','i-dt','i-ty','i-sv','i-location-id','i-l','i-project-id','i-issue-type-id','i-dy','i-st','i-r','i-dept','i-rep'];
 function _incDraftSnapshot(){
   var snap={};
   _INC_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el)snap[f]=el.value||'';});
@@ -5180,6 +5193,23 @@ function _incDraftCheck(){
     _incDraftClear();
   }
 }
+// inc.dt is a timestamptz: Supabase returns it in UTC. The form's
+// datetime-local wants Israeli local time, and an empty one is null (rule 2),
+// never '' (Postgres rejects it and the row never syncs).
+function _incLocalDt(v){
+  if(!v)return '';
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v))return v;
+  var t=new Date(v);if(isNaN(t))return '';
+  return t.toLocaleString('sv-SE',{timeZone:'Asia/Jerusalem'}).replace(' ','T').substring(0,16);
+}
+function _incIsoDt(v){if(!v)return null;var t=new Date(v);return isNaN(t)?null:t.toISOString();}
+// Department suggestions: the plant's departments and those already used.
+function _incDeptList(){
+  var dl=g('i-dept-list');if(!dl)return;
+  var seen={},list=[];
+  (_THZ_DEPTS||[]).concat((DB.inc||[]).map(function(x){return x.dept;})).forEach(function(x){if(x&&!seen[x]){seen[x]=1;list.push(x);}});
+  dl.innerHTML=list.map(function(x){return '<option value="'+esc(x)+'">';}).join('');
+}
 function editInc(id){
   var rec=(DB.inc||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -5187,6 +5217,7 @@ function editInc(id){
   setIf('i-id',rec.id);
   setIf('i-d',rec.d);setIf('i-dt',rec.dt);setIf('i-ty',rec.ty);setIf('i-sv',rec.sv);
   setIf('i-l',rec.l);setIf('i-dy',rec.dy);setIf('i-st',rec.s);setIf('i-r',rec.r);
+  setIf('i-dt',_incLocalDt(rec.dt));setIf('i-dept',rec.dept);setIf('i-rep',rec.reported==null?'':String(!!rec.reported));_incDeptList();
   if(typeof _locPopulate==='function')_locPopulate('i-location-id',rec.location_id||null);
   var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(rec.project_id||null);
   var itSel=g('i-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function')itSel.innerHTML=_itypeOptionsHtml(rec.issue_type_id||null);
@@ -5200,11 +5231,13 @@ function svInc(){
   var d=gv('i-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d9\u05d0\u05d5\u05e8');return;}
   var existingId=gv('i-id');
   var isEdit=!!existingId;
-  var r={id:isEdit?existingId:gid(),d:d,dt:gv('i-dt'),ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,issue_type_id:gv('i-issue-type-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
+  var r={id:isEdit?existingId:gid(),d:d,dt:_incIsoDt(gv('i-dt')),dept:gv('i-dept')||null,reported:gv('i-rep')===''?null:gv('i-rep')==='true',ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,issue_type_id:gv('i-issue-type-id')||null,dy:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   if(isEdit){
     // Preserve fields not in the modal \u2014 five_why is the most notable.
     var prev=(DB.inc||[]).find(function(x){return x.id===existingId;})||{};
     if(prev.five_why)r.five_why=prev.five_why;
+    // Imported from the accidents workbook (28/09): not in the form, kept.
+    ['w','dept_group','src','created_at'].forEach(function(k){if(prev[k]!=null&&r[k]==null)r[k]=prev[k];});
     DB.inc=DB.inc.map(function(x){return x.id===existingId?r:x;});
     sbUpd('inc',r);
     addLog('\u05ea\u05e7\u05e8\u05d9\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+d.substring(0,30));
@@ -5216,7 +5249,7 @@ function svInc(){
   if(!isEdit && typeof _notifyEvent==='function' && (r.sv==='\u05d7\u05de\u05d5\u05e8'||r.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9')){
     _notifyEvent('incident_critical',{title:(r.l||'\u05ea\u05e7\u05e8\u05d9\u05ea')+' \u2014 '+String(r.r||'').substring(0,40),id:r.id});
   }
-  ['i-id','i-d','i-l','i-r','i-dy','i-dt'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  ['i-id','i-d','i-l','i-r','i-dy','i-dt','i-dept','i-rep'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('inc-attach-area');
   if(typeof _incDraftClear==='function')_incDraftClear();
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
@@ -9775,7 +9808,7 @@ function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due'].forEach(function(i
 function _mfRender(){
   var ov=g('mf');if(!ov)return;
   var photo=_attachUrls['mf-attach-area'];
-  var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' \u00b7 '+esc(_mf.dept)+' \u00b7 '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' \u00b7 \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
+  var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' | \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
   ov.innerHTML='<div class="mf-in">'
     +'<div class="mf-top"><h2>&#128203; \u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2 \u05d1\u05e1\u05d9\u05d5\u05e8</h2><button type="button" class="btn btn-s" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>'
     +'<div class="mf-sub">'+sub+'</div>'
@@ -9860,6 +9893,60 @@ function hzrSend(){
     if(j&&j.error&&!j.sent){_hzr.result={failed:[{dept:'',error:j.error}]};}
     try{addLog('\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7: '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
   })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);
+}
+
+// ---- Meeting data (stage 5, 28/09): the numbers for the safety-committee
+// slides, computed by the server (meeting-data.js / _meeting.js) from the
+// merged register and from inc, instead of copied by hand. The week is
+// Sunday..Saturday before the meeting date. The two downloads keep the shape
+// of the files the slides were built from (weekly-hazards.json, accidents_YYYY.json).
+var _mtg=null;
+function mtgOpen(){
+  var ov=g('mtg');if(!ov){ov=document.createElement('div');ov.id='mtg';document.body.appendChild(ov);}
+  ov.style.display='block';mtgLoad(_thzToday());
+}
+function mtgClose(){var ov=g('mtg');if(ov)ov.style.display='none';}
+function mtgLoad(ref){
+  _mtg={loading:true,ref:ref};_mtgRender();
+  _truApi('/api/meeting-data',{ref:ref}).then(function(j){_mtg=j&&j.ok?j:{error:(j&&j.error)||'\u05d4\u05d8\u05e2\u05d9\u05e0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4',ref:ref};})['catch'](function(){_mtg={error:'\u05d4\u05d8\u05e2\u05d9\u05e0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4',ref:ref};}).then(_mtgRender);
+}
+function _mtgDl(name,obj){_saveFile(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),name,name);}
+function mtgDownload(which){
+  if(!_mtg||!_mtg.hazards)return;
+  var h=_mtg.hazards,a=_mtg.accidents,meta={generatedAt:_mtg.generatedAt,source:'Tapugan Safety (tour_hazards + trustee_reports, inc)',reference:_mtg.ref};
+  if(which==='hz')_mtgDl('weekly-hazards.json',{week:h.week,summary:{openNow:h.summary.openNow,openedThisWeek:h.summary.openedThisWeek,closedThisWeek:h.summary.closedThisWeek,pastDue:h.summary.pastDue,bySeverity:h.summary.bySeverity},
+    byDept:h.byDept.map(function(x){return {dept:x.dept,closed:x.closed,openPrior:x.openPrior,newThisWeek:x.newThisWeek};}),closedThisWeek:h.closedThisWeek,openedThisWeek:h.openedThisWeek,
+    meta:Object.assign({totalAllTime:h.meta.totalAllTime},meta)});
+  else{var sm={};sm['total'+a.year]=a.summary.total;sm.reported=a.summary.reported;sm.notReported=a.summary.notReported;sm.onSite=a.summary.onSite;sm.offSite=a.summary.offSite;
+    _mtgDl('accidents_'+a.year+'.json',{summary:sm,byMonth:a.byMonth,byYear:a.byYear,lastAccident:a.lastAccident,daysSinceLastAccident:a.daysSinceLastAccident,meta:meta});}
+}
+function _mtgRender(){
+  var ov=g('mtg');if(!ov)return;
+  var ref=(_mtg&&_mtg.ref)||_thzToday();
+  var h='<div class="hz-in"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0;font-size:19px">&#128202; \u05e0\u05ea\u05d5\u05e0\u05d9 \u05d9\u05e9\u05d9\u05d1\u05ea \u05d5\u05e2\u05d3\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</h2><button type="button" class="btn btn-s" onclick="mtgClose()">\u05e1\u05d2\u05d5\u05e8</button></div>'
+    +'<div style="display:flex;gap:8px;align-items:end;margin:10px 0"><label style="flex:1;font-size:13px;font-weight:700">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4<input type="date" id="mtg-ref" value="'+esc(ref)+'" style="width:100%;padding:10px;font-size:16px;border:2px solid var(--border);border-radius:10px;box-sizing:border-box"></label><button type="button" class="btn btn-p" style="min-height:46px" onclick="mtgLoad(g(\'mtg-ref\').value||_thzToday())">\u05d7\u05e9\u05d1</button></div>';
+  if(!_mtg||_mtg.loading){ov.innerHTML=h+'<p>\u05de\u05d7\u05e9\u05d1...</p></div>';return;}
+  if(_mtg.error){ov.innerHTML=h+'<p style="color:var(--er,#b91c1c)">'+esc(_mtg.error)+'</p></div>';return;}
+  var x=_mtg.hazards,a=_mtg.accidents;
+  h+='<div class="mt-box"><b>\u05de\u05e4\u05d2\u05e2\u05d9\u05dd, \u05e9\u05d1\u05d5\u05e2 '+fd(x.week.start)+' \u05e2\u05d3 '+fd(x.week.end)+'</b> (\u05d0\'-\u05e9\' \u05e9\u05dc\u05e4\u05e0\u05d9 \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4)</div>'
+    +'<div class="mt-wrap"><table><tr><th>\u05de\u05d7\u05dc\u05e7\u05d4</th><th>\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd (\u05de\u05e6\u05d8\u05d1\u05e8)</th><th>\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea</th><th>\u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e1\u05da \u05d0\u05d9 \u05e4\u05e2\u05dd</th><th>\u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d3\u05e9\u05d9\u05dd - \u05e0\u05e1\u05d2\u05e8\u05d5</th></tr>'
+    +x.byDept.concat([x.total]).map(function(r,i,arr){return '<tr'+(i===arr.length-1?' class="mt-tot"':'')+'><td>'+esc(r.dept)+'</td><td>'+r.closed+'</td><td>'+r.open+'</td><td>'+r.newThisWeek+'</td><td>'+r.closedThisWeek+'</td><td>'+r.total+'</td><td>'+r.newClosed+'</td></tr>';}).join('')
+    +'</table></div>'
+    +(x.check?'':'<p style="color:var(--er,#b91c1c)">\u05d1\u05d3\u05d9\u05e7\u05d4: \u05e1\u05d2\u05d5\u05e8 + \u05e4\u05ea\u05d5\u05d7 \u05dc\u05d0 \u05e9\u05d5\u05d5\u05d4 \u05dc\u05e1\u05da</p>')
+    +'<div class="mt-box">\u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d4\u05d1\u05d5\u05dc\u05d8\u05ea: \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 <b>'+esc(x.standout.closedThisWeek||'-')+'</b>, \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 <b>'+esc(x.standout.newThisWeek||'-')+'</b>, \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea <b>'+esc(x.standout.open||'-')+'</b><br>'
+    +'\u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d3\u05e9\u05d9\u05dd \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2: \u05e0\u05e1\u05d2\u05e8\u05d5 <b>'+x.summary.newClosed+'</b>, \u05e0\u05d5\u05ea\u05e8\u05d5 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd <b>'+x.summary.newStillOpen+'</b><br>'
+    +'\u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05d4\u05d9\u05e2\u05d3: <b>'+x.summary.pastDue+'</b> | \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05e4\u05d9 \u05d7\u05d5\u05de\u05e8\u05d4: \u05d2\u05d1\u05d5\u05d4\u05d4 '+x.summary.bySeverity.high+', \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea '+x.summary.bySeverity.medium+', \u05e0\u05de\u05d5\u05db\u05d4 '+x.summary.bySeverity.low+'<br>'
+    +'\u05d4\u05d7\u05d5\u05d3\u05e9: \u05e0\u05e4\u05ea\u05d7\u05d5 '+x.month.openedThisMonth+', \u05e0\u05e1\u05d2\u05e8\u05d5 '+x.month.closedThisMonth+' | \u05d7\u05d5\u05d3\u05e9 \u05e7\u05d5\u05d3\u05dd: \u05e0\u05e4\u05ea\u05d7\u05d5 '+x.month.openedPrevMonth+', \u05e0\u05e1\u05d2\u05e8\u05d5 '+x.month.closedPrevMonth+'</div>'
+    +'<details class="mt-box"><summary>\u05e0\u05e4\u05ea\u05d7\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 ('+x.openedThisWeek.length+') \u05d5\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 ('+x.closedThisWeek.length+')</summary>'
+    +'<b>\u05e0\u05e4\u05ea\u05d7\u05d5:</b><br>'+(x.openedThisWeek.map(function(r){return esc(r.id)+' '+esc(r.dept)+': '+esc(r.shortDescription);}).join('<br>')||'-')
+    +'<br><b>\u05e0\u05e1\u05d2\u05e8\u05d5:</b><br>'+(x.closedThisWeek.map(function(r){return esc(r.id)+' '+esc(r.dept)+': '+esc(r.shortDescription);}).join('<br>')||'-')+'</details>'
+    +'<div class="mt-box"><b>\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea '+a.year+'</b><br><span class="mt-big">'+(a.daysSinceLastAccident==null?'-':a.daysSinceLastAccident)+'</span> \u05d9\u05de\u05d9\u05dd \u05dc\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05d4'
+    +(a.lastAccident?' (\u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 '+fd(a.lastAccident.date)+', '+esc(a.lastAccident.shortDescription||'')+(a.lastAccident.dept?', '+esc(a.lastAccident.dept):'')+')':'')+'<br>'
+    +'\u05e1\u05d4"\u05db \u05d4\u05e9\u05e0\u05d4: <b>'+a.summary.total+'</b> | \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.reported+', \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.notReported+' | \u05d1\u05de\u05e4\u05e2\u05dc '+a.summary.onSite+', \u05d1\u05d3\u05e8\u05da / \u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc '+a.summary.offSite+'<br>'
+    +'\u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9: '+a.byMonth.map(function(m){return esc(m.month)+' '+m.count;}).join(', ')+'<br>'
+    +'\u05e9\u05e0\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d5\u05ea: '+Object.keys(a.byYear).map(function(y){return y+': '+a.byYear[y];}).join(', ')+'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-s" onclick="mtgDownload(\'hz\')">\u05d4\u05d5\u05e8\u05d3 weekly-hazards.json</button><button type="button" class="btn btn-s" onclick="mtgDownload(\'acc\')">\u05d4\u05d5\u05e8\u05d3 accidents_'+a.year+'.json</button></div></div>';
+  ov.innerHTML=h;
 }
 
 // ---- TOOLBOX TALKS ----

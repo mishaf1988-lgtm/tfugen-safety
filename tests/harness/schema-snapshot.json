@@ -1,5 +1,5 @@
 {
-  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix)",
+  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix); inc / tour_hazards / trustee_reports refreshed 2026-09-28 (closed_d, inc dept/dept_group/reported/src)",
   "_howto": "refresh with: SELECT table_name, string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' GROUP BY table_name;",
   "tables": {
     "app_users": [
@@ -249,6 +249,8 @@
     "inc": [
       "created_at",
       "d",
+      "dept",
+      "dept_group",
       "dt",
       "dy",
       "file_url",
@@ -260,7 +262,9 @@
       "p",
       "project_id",
       "r",
+      "reported",
       "s",
+      "src",
       "sv",
       "ty",
       "w"
@@ -609,6 +613,7 @@
     ],
     "trustee_reports": [
       "action",
+      "closed_d",
       "d",
       "f",
       "id",
