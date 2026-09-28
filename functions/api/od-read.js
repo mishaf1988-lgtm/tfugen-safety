@@ -8,9 +8,11 @@
 // as hazard-file; called from the database with pg_net). path is relative to
 // "שולחן העבודה/ניהול בטיחות/" and cannot leave it. Without sheet: the tab
 // names. With sheet: rows from..to (default 1..60), columns A..(cols, max 26).
+// A .pptx: its slides, shape texts, tables and chart series (_pptx.js).
 import { jsonResp } from '../_shared.js';
 import { odConfigured, accessToken } from '../_onedrive.js';
 import { readSheetRows, sheetNames } from '../_xlsxpatch.js';
+import { pptxOutline } from '../_pptx.js';
 
 export const ROOT = 'שולחן העבודה/ניהול בטיחות/';
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -18,7 +20,7 @@ const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).
 
 export function safePath(p) {
   const parts = String(p || '').split('/').filter(Boolean);
-  if (!parts.length || parts.some((x) => x === '..' || x === '.') || !/\.xls[xm]$/i.test(parts[parts.length - 1])) return null;
+  if (!parts.length || parts.some((x) => x === '..' || x === '.') || !/\.(xls[xm]|pptx)$/i.test(parts[parts.length - 1])) return null;
   return ROOT + parts.join('/');
 }
 
@@ -36,6 +38,7 @@ export async function onRequest(context) {
     const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
     const bytes = new Uint8Array(await r.arrayBuffer());
+    if (/\.pptx$/i.test(full)) return jsonResp({ ok: true, path: full, deck: await pptxOutline(bytes) }, 200, {});
     const sheets = await sheetNames(bytes);
     if (!body.sheet) return jsonResp({ ok: true, path: full, sheets }, 200, {});
     const from = Math.max(1, +body.from || 1), to = Math.min(from + 199, +body.to || 60);
