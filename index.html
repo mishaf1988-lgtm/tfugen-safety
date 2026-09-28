@@ -9917,7 +9917,34 @@ function hzrAskYes(){
 var _mtg=null;
 function mtgOpen(){
   var ov=g('mtg');if(!ov){ov=document.createElement('div');ov.id='mtg';document.body.appendChild(ov);}
-  ov.style.display='block';mtgLoad(_thzToday());
+  ov.style.display='block';_mtgDeck={loading:true};
+  // The deck's meeting date is the default here, so both show the same week.
+  _truApi('/api/hazard-deck',{op:'status'}).then(function(j){_mtgDeck=j&&j.ok?j:{error:(j&&j.error)||'-'};})['catch'](function(){_mtgDeck={error:'-'};}).then(function(){mtgLoad((_mtgDeck&&_mtgDeck.date)||_thzToday());});
+}
+// ---- the committee deck (hazard-deck.js): status, meeting date, update now ----
+var _mtgDeck=null;
+function mtgDeckDate(){
+  var v=(g('mtg-ref')||{}).value;if(!v){toast('\u05d1\u05d7\u05e8 \u05ea\u05d0\u05e8\u05d9\u05da');return;}
+  _mtgDeck={loading:true};_mtgRender();
+  _truApi('/api/hazard-deck',{op:'setDate',date:v}).then(function(j){_mtgDeck=j&&j.ok?j:{error:(j&&j.error)||'\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'};if(j&&j.ok)toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4 \u05d1\u05de\u05e6\u05d2\u05ea: '+fd(j.date));})['catch'](function(){_mtgDeck={error:'\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'};}).then(function(){_mtgRender();mtgDeckNow(true);});
+}
+function mtgDeckNow(quiet){
+  _mtgDeck=Object.assign({},_mtgDeck||{},{busy:true});_mtgRender();
+  _truApi('/api/hazard-deck',{force:true}).then(function(j){
+    if(!quiet)toast(j&&j.ok?'\u05d4\u05de\u05e6\u05d2\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4 \u2713':((j&&j.error)||'\u05d4\u05e2\u05d3\u05db\u05d5\u05df \u05e0\u05db\u05e9\u05dc'));
+    return _truApi('/api/hazard-deck',{op:'status'});
+  }).then(function(j){_mtgDeck=j&&j.ok?j:_mtgDeck;})['catch'](function(){toast('\u05d4\u05e2\u05d3\u05db\u05d5\u05df \u05e0\u05db\u05e9\u05dc');}).then(function(){if(_mtgDeck)_mtgDeck.busy=false;_mtgRender();});
+}
+function _mtgDeckHtml(){
+  var d=_mtgDeck;if(!d)return '';
+  if(d.loading)return '<div class="mt-box">\u05d4\u05de\u05e6\u05d2\u05ea: \u05d8\u05d5\u05e2\u05df...</div>';
+  return '<div class="mt-box"><b>&#128253; \u05d4\u05de\u05e6\u05d2\u05ea \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 13</b> ('+esc(d.name||'')+')<br>'
+    +'\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4 \u05d1\u05de\u05e6\u05d2\u05ea: <b>'+(d.date?fd(d.date):'-')+'</b> | \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+(d.last?esc(new Date(d.last).toLocaleString('he-IL',{timeZone:'Asia/Jerusalem'})):'\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0')
+    +(d.error?'<br><span style="color:var(--er,#b91c1c)">'+esc(d.error)+'</span>':'')
+    +'<br><span style="font-size:12px;color:var(--t2)">\u05de\u05ea\u05e2\u05d3\u05db\u05e0\u05ea \u05dc\u05d1\u05d3 \u05d1\u05db\u05dc \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd. \u05e8\u05e7 \u05d4\u05de\u05e1\u05e4\u05e8\u05d9\u05dd, \u05d4\u05d2\u05e8\u05e4\u05d9\u05dd \u05d5\u05d4\u05e8\u05e9\u05d9\u05de\u05d5\u05ea \u05de\u05e9\u05ea\u05e0\u05d9\u05dd, \u05d4\u05e2\u05d9\u05e6\u05d5\u05d1 \u05e0\u05e9\u05d0\u05e8.</span>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-s" onclick="mtgDeckDate()"'+(d.busy?' disabled':'')+'>\u05e7\u05d1\u05e2 \u05d0\u05ea \u05d4\u05ea\u05d0\u05e8\u05d9\u05da \u05e9\u05dc\u05de\u05e2\u05dc\u05d4 \u05db\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4</button>'
+    +'<button type="button" class="btn btn-p" onclick="mtgDeckNow()"'+(d.busy?' disabled':'')+'>'+(d.busy?'\u05de\u05e2\u05d3\u05db\u05df...':'\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05de\u05e6\u05d2\u05ea \u05e2\u05db\u05e9\u05d9\u05d5')+'</button>'
+    +(d.webUrl?'<a class="btn btn-s" href="'+esc(d.webUrl)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e6\u05d2\u05ea</a>':'')+'</div></div>';
 }
 function mtgClose(){var ov=g('mtg');if(ov)ov.style.display='none';}
 function mtgLoad(ref){
@@ -9959,6 +9986,7 @@ function _mtgRender(){
     +'\u05e1\u05d4"\u05db \u05d4\u05e9\u05e0\u05d4: <b>'+a.summary.total+'</b> | \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.reported+', \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.notReported+' | \u05d1\u05de\u05e4\u05e2\u05dc '+a.summary.onSite+', \u05d1\u05d3\u05e8\u05da / \u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc '+a.summary.offSite+'<br>'
     +'\u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9: '+a.byMonth.map(function(m){return esc(m.month)+' '+m.count;}).join(', ')+'<br>'
     +'\u05e9\u05e0\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d5\u05ea: '+Object.keys(a.byYear).map(function(y){return y+': '+a.byYear[y];}).join(', ')+'</div>'
+    +_mtgDeckHtml()
     +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-s" onclick="mtgDownload(\'hz\')">\u05d4\u05d5\u05e8\u05d3 weekly-hazards.json</button><button type="button" class="btn btn-s" onclick="mtgDownload(\'acc\')">\u05d4\u05d5\u05e8\u05d3 accidents_'+a.year+'.json</button></div></div>';
   ov.innerHTML=h;
 }
