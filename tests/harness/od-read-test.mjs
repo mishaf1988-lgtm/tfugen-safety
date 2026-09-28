@@ -42,6 +42,21 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   j = await res.json();
   check('a sheet: from row 1, shared strings (rich text too), inline text, numbers', j.ok && j.rows.length === 2 && j.rows[0].v[1] === 'מייל ראשי' && j.rows[1].v[0] === 'תוצג' && j.rows[1].v[1] === 'a@b.co' && j.rows[1].v[2] === 46293, j.rows);
 
+  const deck = await writeZip([
+    { name: 'ppt/presentation.xml', text: '<p:presentation><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst></p:presentation>' },
+    { name: 'ppt/_rels/presentation.xml.rels', text: '<Relationships><Relationship Id="rId2" Type="s" Target="slides/slide1.xml"/></Relationships>' },
+    { name: 'ppt/slides/slide1.xml', text: '<p:sld><p:sp><p:nvSpPr><p:cNvPr id="2" name="כותרת 1"/></p:nvSpPr><p:txBody><a:p><a:r><a:t>21 ימים</a:t></a:r><a:r><a:t> ללא תאונה</a:t></a:r></a:p></p:txBody></p:sp><p:graphicFrame><a:graphic><a:graphicData><c:chart r:id="rId3"/></a:graphicData></a:graphic></p:graphicFrame></p:sld>' },
+    { name: 'ppt/slides/_rels/slide1.xml.rels', text: '<Relationships><Relationship Id="rId3" Target="../charts/chart1.xml"/></Relationships>' },
+    { name: 'ppt/charts/chart1.xml', text: '<c:chartSpace><c:chart><c:plotArea><c:barChart><c:ser><c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>נסגרו</c:v></c:pt></c:strCache></c:strRef></c:tx><c:cat><c:strRef><c:strCache><c:pt idx="0"><c:v>מעצבים</c:v></c:pt><c:pt idx="1"><c:v>תוצג</c:v></c:pt></c:strCache></c:strRef></c:cat><c:val><c:numRef><c:f>Sheet1!$B$2:$B$3</c:f><c:numCache><c:pt idx="0"><c:v>4</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numCache></c:numRef></c:val></c:ser></c:barChart></c:plotArea></c:chart><c:externalData r:id="rId1"/></c:chartSpace>' },
+    { name: 'ppt/charts/_rels/chart1.xml.rels', text: '<Relationships><Relationship Id="rId1" Target="../embeddings/Microsoft_Excel_Worksheet.xlsx"/></Relationships>' },
+  ]);
+  globalThis.fetch = async (url) => (String(url).startsWith(SB) ? new Response(JSON.stringify([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 }) : new Response(deck, { status: 200 }));
+  res = await onRequest({ request: req(S, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx' }), env: ENV });
+  j = await res.json();
+  const sl = j.deck && j.deck.slides[0];
+  check('a .pptx: slides, shape text, chart series with categories and values, the embedded workbook', j.ok && sl && sl.shapes[0].name === 'כותרת 1' && sl.shapes[0].text[0] === '21 ימים ללא תאונה' && sl.charts[0].kinds[0] === 'bar' && sl.charts[0].series[0].name === 'נסגרו' && sl.charts[0].series[0].cats.join() === 'מעצבים,תוצג' && sl.charts[0].series[0].vals.join() === '4,5' && sl.charts[0].series[0].ref === 'Sheet1!$B$2:$B$3' && sl.charts[0].embedded === 'ppt/embeddings/Microsoft_Excel_Worksheet.xlsx', j);
+  check('other file types still refused', safePath('a/b.docx') === null && !!safePath('a/b.pptx'));
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });
