@@ -608,6 +608,7 @@
       "w"
     ],
     "trustee_reports": [
+      "action",
       "d",
       "f",
       "id",
