@@ -17,7 +17,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.waitForTimeout(700);
   await page.evaluate(() => {
     window.addLog = function () {}; window._calls = [];
-    const rep = (dept, count, to, old) => ({ dept, title: 't', to, cc: ['sviva@tapugan.co.il'], count, old: old || 0, rows: Array.from({ length: count }, (_, i) => ({ n: i + 1, descr: 'מפגע ' + i, resp: 'אחזקה', status: i < (old || 0) ? 'פתוח - מסיור קודם!' : 'פתוח', due: '01/10/2026', old: i < (old || 0) })) });
+    const rep = (dept, count, to, old) => ({ dept, title: 't', to, cc: ['sviva@tapugan.co.il'], count, old: old || 0, overdue: count ? 1 : 0, rows: Array.from({ length: count }, (_, i) => ({ n: i + 1, descr: 'מפגע ' + i, resp: 'אחזקה', status: i < (old || 0) ? 'פתוח - מסיור קודם!' : 'פתוח', due: '01/10/2026', old: i < (old || 0), overdue: i === 0 })) });
     window._truApi = function (p, b) {
       window._calls.push([p, b]);
       if (b.op === 'preview') return Promise.resolve({ ok: true, canSend: true, reports: [rep('מעצבים', 2, ['Roman@tapugan.co.il'], 1), rep('תוצג', 0, ['Igal@tapugan.co.il']), rep('מעבדות', 1, [])] });
@@ -36,20 +36,21 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('asks the server for the preview', v.calls[0][0] === '/api/hazard-report' && v.calls[0][1].op === 'preview', v.calls);
   check('a department with open hazards and a recipient: ticked', v.picks[0].d === 'מעצבים' && v.picks[0].on && !v.picks[0].dis, v.picks);
   check('nothing open, or no recipient: cannot be ticked', v.picks[1].dis && v.picks[2].dis && !v.picks[1].on, v.picks);
-  check('shows אל / עותק, the count and "מסיור קודם"', /אל: Roman@tapugan\.co\.il/.test(v.text) && /עותק: sviva@tapugan\.co\.il/.test(v.text) && /2 פתוחים \(1 מסיור קודם\)/.test(v.text) && /אין נמען בגיליון נמענים/.test(v.text), v.text.slice(0, 300));
+  check('shows אל / עותק, the count and "מסיור קודם"', /אל: Roman@tapugan\.co\.il/.test(v.text) && /עותק: sviva@tapugan\.co\.il/.test(v.text) && /2 פתוחים \(1 מסיור קודם\), 1 עברו את היעד/.test(v.text) && /עבר היעד/.test(v.text) && /אין נמען בגיליון נמענים/.test(v.text), v.text.slice(0, 300));
   check('fits a phone', v.wide <= 375, v.wide);
-  await page.evaluate(() => hzrSend());
+  const ask = await page.evaluate(() => { hzrSend(); const a = document.getElementById('hzr-ask'); return { text: a ? a.textContent : '', calls: window._calls.length }; });
+  check('asks inside the page (no browser dialog), nothing sent yet', /לשלוח את הדוח ל-1 מחלקות: מעצבים/.test(ask.text) && ask.calls === 1 && !page._dlg, ask);
+  await page.evaluate(() => hzrAskYes());
   await page.waitForTimeout(100);
   const s = await page.evaluate(() => ({ calls: window._calls.slice(), text: document.getElementById('hzr').textContent }));
-  check('asks before sending, naming the departments', /לשלוח את הדוח ל-1 מחלקות: מעצבים/.test(page._dlg || ''), page._dlg);
   check('sends only the ticked departments', s.calls[1] && s.calls[1][1].op === 'send' && s.calls[1][1].depts.join() === 'מעצבים', s.calls);
   check('shows what was sent', /מעצבים: נשלח ל-1 נמענים \(2 מפגעים\)/.test(s.text), s.text.slice(0, 200));
   await page.evaluate(() => { hzrOpen(); });
   await page.waitForTimeout(100);
-  const t = await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#hzr button')).find((x) => /שלח לי לבדיקה/.test(x.textContent)); hzrSend(true); return { has: !!b }; });
+  const t = await page.evaluate(() => { const b = Array.from(document.querySelectorAll('#hzr button')).find((x) => /שלח לי לבדיקה/.test(x.textContent)); hzrSend(true); const a = document.getElementById('hzr-ask'); const txt = a ? a.textContent : ''; hzrAskYes(); return { has: !!b, txt }; });
   await page.waitForTimeout(100);
   const tc = await page.evaluate(() => window._calls.slice(-1)[0]);
-  check('a "שלח לי לבדיקה" button: asks, then sends with test:true', t.has && tc[1].op === 'send' && tc[1].test === true && /לבדיקה, רק אליך/.test(page._dlg || ''), [tc, page._dlg]);
+  check('a "שלח לי לבדיקה" button: asks, then sends with test:true', t.has && tc[1].op === 'send' && tc[1].test === true && /לבדיקה, רק אליך/.test(t.txt), [tc, t.txt]);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

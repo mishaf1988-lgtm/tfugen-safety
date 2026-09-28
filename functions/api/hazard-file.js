@@ -76,11 +76,19 @@ export function trusteeDept(loc) {
 }
 
 // Pure: the merged register, as rows of columns A..M.
-export function buildRows(hazards, reports) { return buildRegister(hazards, reports).rows; }
+export function buildRows(hazards, reports, tasks) { return buildRegister(hazards, reports, tasks).rows; }
 // ... and, per row, the record behind it ('h:<id>' / 't:<id>'), so a row a
 // person edited in Excel can be traced back (the trustee numbers נ-k move).
-export function buildRegister(hazards, reports) {
+export function buildRegister(hazards, reports, tasks) {
   const rows = [], ids = [];
+  // A finding the manager routed to someone (a task with a due date) is due
+  // then, not report + 3 days (28/09, the נ-4 case: routed "עד 04/10").
+  const routed = {};
+  (tasks || []).forEach((t) => {
+    if (!t || t.source_table !== 'trustee_reports' || !t.source_id || !t.due) return;
+    const c = routed[t.source_id];
+    if (!c || String(t.ts || '') > String(c.ts || '')) routed[t.source_id] = t;
+  });
   (hazards || []).filter((r) => r && r.id).slice().sort((a, b) => (+a.n || 0) - (+b.n || 0)).forEach((r) => {
     rows.push([r.n == null ? '' : +r.n, dt(r.d), r.tour_no == null ? '' : +r.tour_no, r.dept || '', r.loc || '', r.descr || '',
       r.sev || '', (r.resp || '') + (r.resp2 ? ' + ' + r.resp2 : ''), r.action || '', dt(r.due), r.s || '', dt(r.closed_d),
@@ -106,7 +114,7 @@ export function buildRegister(hazards, reports) {
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
     rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
-      d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
+      routed[r.id] ? dt(routed[r.id].due) : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);
   });
@@ -117,6 +125,7 @@ async function sha(s) {
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+export const TASKS_Q = 'tasks?select=id,due,source_table,source_id,ts&source_table=eq.trustee_reports';
 export async function readAll(env, path) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
@@ -250,9 +259,10 @@ async function applyEdits(env, ed, hazards, reports) {
 
 export async function runFile(env, which, force) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
-  const [hazards, reports] = await Promise.all([
+  const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, TASKS_Q),
   ]);
   // Every finding gets a recommended corrective action (Michael, 28/09): the
   // ones still without one are asked from the assistant, a few per run, and
@@ -268,7 +278,7 @@ export async function runFile(env, which, force) {
       if (up.ok) r.action = a;
     } catch (e) { /* next run */ }
   }
-  let reg = buildRegister(hazards, reports);
+  let reg = buildRegister(hazards, reports, tasks);
   let sig = await sha(JSON.stringify(reg.rows));
   const K = 'hazard_' + which + '_';
   const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last']).catch(() => ({}));
@@ -308,7 +318,7 @@ export async function runFile(env, which, force) {
         ed.pulled.forEach((p) => { if (last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
         if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
-        reg = buildRegister(hazards, reports);
+        reg = buildRegister(hazards, reports, tasks);
         sig = await sha(JSON.stringify(reg.rows));
       }
     }

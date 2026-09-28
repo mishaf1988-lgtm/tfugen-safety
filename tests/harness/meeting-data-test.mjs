@@ -71,6 +71,7 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
     if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json([{ id: 'h1', n: 1, d: '2026-09-14', tour_no: 1, dept: 'תוצג', descr: 'x', s: 'פתוח' }]);
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
     if (u.startsWith(SB + '/rest/v1/inc')) return json(inc);
+    if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
     return json({}, 599);
   };
   const req = (h, b) => new Request('https://tapugan-safety.pages.dev/api/meeting-data', { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, h), body: JSON.stringify(b || {}) });
