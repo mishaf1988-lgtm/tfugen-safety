@@ -18,7 +18,7 @@ import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 // Bump when deckContent/patchDeck change what they write.
-export const DECK_VERSION = 4;
+export const DECK_VERSION = 5;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();

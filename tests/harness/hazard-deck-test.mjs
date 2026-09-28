@@ -114,7 +114,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const s1 = await partText(out.bytes, 'ppt/slides/slide1.xml');
   check('slide 1 header: the meeting date, the rest of the header as it was', s1.includes('   |   ישיבה שבועית · 29.09.2026') && s1.includes('מפגעים ומוכנות חירום - 2026'));
   // week 20-26.09: nothing new, nothing closed; open = 7 (all not closed)
-  check('slide 1 notes from the data (week 20.09-26.09)', s1.includes('<a:t>לא נסגרו מפגעים השבוע</a:t>') && s1.includes('<a:t>7 מפגעים פתוחים, הטיפול נמשך</a:t>') && s1.includes('<a:t>2 בחומרה גבוהה, הוותיק: מנדף לא אפקטיבי</a:t>') && s1.includes('<a:t>לא נפתחו מפגעים חדשים השבוע</a:t>'), s1.slice(s1.indexOf('ClosedNote'), s1.indexOf('ClosedNote') + 900));
+  check('slide 1 notes from the data (week 20.09-26.09)', s1.includes('<a:t>לא נסגרו מפגעים השבוע</a:t>') && s1.includes('<a:t>7 מפגעים פתוחים, הטיפול נמשך</a:t>') && s1.includes('<a:t>2 בחומרה גבוהה, מנדף לא אפקטיבי</a:t>') && s1.includes('<a:t>לא נפתחו מפגעים חדשים השבוע</a:t>'), s1.slice(s1.indexOf('ClosedNote'), s1.indexOf('ClosedNote') + 900));
   const c1 = await partText(out.bytes, 'ppt/charts/chart1.xml');
   const serVals = (x, name) => { const s = x.substring(x.indexOf('<c:v>' + name + '</c:v>')); const v = s.substring(s.indexOf('<c:val>'), s.indexOf('</c:val>')); return (v.match(/<c:v>([^<]*)<\/c:v>/g) || []).map((q) => q.replace(/<\/?c:v>/g, '')).join(','); };
   // order in the chart: ייצור טוגנים, מעצבים, חומר גלם, תוצג, מעבדות
@@ -142,9 +142,14 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const ref2 = '2026-09-29', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
   const c2x = deckContent(m2, long, ref2);
   const it = c2x.s3.high[0].items.map((x) => x.join(''));
-  check('descriptions: the part before " - ", cut at a word, never mid-word', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - מסוע אריזה \(חיבור שני מסועים - יציאה לרובוט\): נקודות צביטה חשופות\.\.\.$/.test(it[1]), it);
+  check('descriptions: the part before " - " (never inside parentheses), cut at a word, one line with the department', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - נקודות צביטה חשופות/.test(it[1]) && !/\(/.test(it[1]) && it.every((x) => x.length <= 62), it);
   check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[1] === 'מעצבים, כולם עדיין פתוחים', c2x.s1.NewNote);
-  check('the oldest high: its short part only', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, הוותיק: מחסן החומרים עמוס', c2x.s1.OpenNote);
+  check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
+
+  const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
+  const cc = deckContent({ hazards: meetingHazards(manyClosed, ref2), accidents: meetingAccidents(INC, ref2) }, manyClosed, ref2);
+  const zs3 = setList(slide3, 'HighSevPanel', cc.s3.high, (n) => ['ועוד ' + n + ' מפגעים', ''], []);
+  check('closures by department, more than the 3 lines: "ועוד N מחלקות" (not מפגעים)', zs3.includes('<a:t>ועוד 3 מחלקות</a:t>'), zs3.slice(zs3.indexOf('פעולות'), zs3.indexOf('פעולות') + 900));
 
   console.log('\n4. the meeting date');
   check('Sunday to Wednesday: this week\'s Tuesday; Thursday on: next week\'s', defaultMeeting('2026-09-27') === '2026-09-29' && defaultMeeting('2026-09-28') === '2026-09-29' && defaultMeeting('2026-09-30') === '2026-09-29' && defaultMeeting('2026-10-01') === '2026-10-06' && defaultMeeting('2026-10-03') === '2026-10-06');
