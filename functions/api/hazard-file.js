@@ -57,8 +57,8 @@ const TRUSTEE_DUE_DAYS = 3;
 const MAX_AI = 3; // assistant calls per run (subrequest budget)
 const DAY = 86400000;
 
-const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
-const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
+export const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+export const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const d10 = (v) => (v ? String(v).substring(0, 10) : '');
 const dt = (v) => (d10(v) ? { date: d10(v) } : null);
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
@@ -134,13 +134,13 @@ export async function readAll(env, path) {
   const j = await r.json();
   return Array.isArray(j) ? j : [];
 }
-async function graphPut(token, folder, name, bytes, type) {
+export async function graphPut(token, folder, name, bytes, type) {
   const r = await fetch(G + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type }, body: bytes });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error('onedrive ' + r.status + (j && j.error ? ': ' + String(j.error.message || j.error.code).substring(0, 160) : '')); e.status = r.status; throw e; }
   return j;
 }
-function stampName(name, iso) {
+export function stampName(name, iso) {
   const i = name.lastIndexOf('.');
   return name.substring(0, i) + ' - ' + iso.replace('T', ' ').substring(0, 16).replace(':', '-') + name.substring(i);
 }
@@ -383,6 +383,14 @@ export async function onRequest(context) {
         body: JSON.stringify({ file: 'xlsx', force }),
       }).catch(() => {}));
       r.next = 'xlsx';
+    }
+    // After the twin, the committee deck (hazard-deck.js), in its own request.
+    if (which === 'xlsx' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
+      context.waitUntil(fetch(new URL('/api/hazard-deck', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ force }),
+      }).catch(() => {}));
+      r.next = 'deck';
     }
     r.commit = String(env.CF_PAGES_COMMIT_SHA || '').substring(0, 7) || null;
     return jsonResp(r, 200, cors);

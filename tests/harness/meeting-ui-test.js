@@ -23,6 +23,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const dept = (d, c, o, n, cw, t, nc, op) => ({ dept: d, closed: c, open: o, newThisWeek: n, closedThisWeek: cw, total: t, newClosed: nc, openPrior: op });
     window._truApi = function (p, b) {
       window._calls.push([p, b]);
+      if (p === '/api/hazard-deck') return Promise.resolve(b.op === 'status' || b.op === 'setDate' ? { ok: true, name: 'מצגת שבועית.חודשית.pptx', date: b.op === 'setDate' ? b.date : '2026-09-29', last: '2026-09-28T16:00:00Z', webUrl: 'https://od/deck' } : { ok: true, pushed: true });
       return Promise.resolve({ ok: true, ref: b.ref, generatedAt: '2026-09-28T10:00:00Z',
         hazards: { week: { start: '2026-09-13', end: '2026-09-19', reference: b.ref },
           summary: { openNow: 20, openedThisWeek: 6, closedThisWeek: 10, pastDue: 16, bySeverity: { high: 4, medium: 14, low: 2 }, newClosed: 5, newStillOpen: 1 },
@@ -41,11 +42,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const trs = Array.from(ov.querySelectorAll('table tr')).map((tr) => Array.from(tr.children).map((c) => c.textContent).join('|'));
       mtgDownload('hz'); mtgDownload('acc');
       document.getElementById('mtg-ref').value = '2026-09-22'; mtgLoad('2026-09-22');
-      setTimeout(() => res({ btn, trs, text: ov.textContent, calls: window._calls, dl: window._dl, wide: ov.scrollWidth, dot: /·|—/.test(ov.textContent) }), 50);
+      setTimeout(() => {
+        const deckTxt = ov.textContent;
+        mtgDeckDate();
+        setTimeout(() => res({ btn, trs, text: ov.textContent, deckTxt, calls: window._calls, dl: window._dl, wide: ov.scrollWidth, dot: /·|—/.test(deckTxt) }), 80);
+      }, 50);
     }, 50));
   });
   check('a "נתוני ישיבה" button on the tours screen', m.btn);
-  check('asks for today by default, then for the date picked', m.calls[0][0] === '/api/meeting-data' && /^\d{4}-\d{2}-\d{2}$/.test(m.calls[0][1].ref) && m.calls[1][1].ref === '2026-09-22', m.calls);
+  const md = m.calls.filter((c) => c[0] === '/api/meeting-data');
+  check('opens on the deck\'s meeting date, then the date picked', m.calls[0][0] === '/api/hazard-deck' && m.calls[0][1].op === 'status' && md[0][1].ref === '2026-09-29' && md[1][1].ref === '2026-09-22', m.calls);
+  check('the deck box: meeting date, last update, the buttons', /המצגת בתיקייה 13/.test(m.deckTxt) && /תאריך הישיבה במצגת: 29\/09\/2026/.test(m.deckTxt) && /עדכן את המצגת עכשיו/.test(m.deckTxt), m.deckTxt.slice(-400));
+  const dk = m.calls.filter((c) => c[0] === '/api/hazard-deck');
+  check('"קבע את התאריך" saves the date picked, then updates the deck', dk.some((c) => c[1].op === 'setDate' && c[1].date === '2026-09-22') && dk.some((c) => c[1].force === true), dk);
   check('the table of "סיכום שבועי למצגת": header, 5 departments, total', m.trs.length === 7 && /^מחלקה\|סגורים \(מצטבר\)/.test(m.trs[0]) && m.trs[6] === 'סה"כ|32|20|6|10|52|5', m.trs);
   check('week, standouts, past due, days without an accident', /שבוע 13\/09\/2026 עד 19\/09\/2026/.test(m.text) && /פתוחים כעת חומר גלם/.test(m.text) && /עברו את היעד: 16/.test(m.text) && /21 ימים ללא תאונה/.test(m.text), m.text.slice(0, 400));
   check('keyboard characters only (no middle dot, no long dash)', !m.dot);

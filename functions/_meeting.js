@@ -89,6 +89,7 @@ export const offSite = (l) => /\u05d1\u05d3\u05e8\u05da|\u05de\u05d7\u05d5\u05e5
 function nature(x) { const m = /\u05de\u05d4\u05d5\u05ea \u05d4\u05e4\u05d2\u05d9\u05e2\u05d4: ([^.]+)/.exec(String(x.r || '')); return (m ? m[1] : String(x.d || '')).replace(/\s+/g, ' ').substring(0, 80); }
 export function meetingAccidents(inc, ref) {
   const y = +ref.substring(0, 4);
+  const wk = weekBefore(ref);
   const all = (inc || []).map((x) => Object.assign({}, x, { day: ilDay(x.dt) })).filter((x) => x.day && x.day <= ref);
   const yr = all.filter((x) => +x.day.substring(0, 4) === y);
   const refMonth = +ref.substring(5, 7);
@@ -100,7 +101,8 @@ export function meetingAccidents(inc, ref) {
     summary: { total: yr.length, reported: yr.filter((x) => x.reported === true).length, notReported: yr.filter((x) => x.reported === false).length, onSite: yr.filter((x) => !offSite(x.l)).length, offSite: yr.filter((x) => offSite(x.l)).length },
     byMonth,
     byYear: { [y - 2]: all.filter((x) => +x.day.substring(0, 4) === y - 2).length, [y - 1]: all.filter((x) => +x.day.substring(0, 4) === y - 1).length },
-    lastAccident: last ? { date: last.day, dept: last.dept || null, shortDescription: nature(last), location: last.l || null, reported: last.reported == null ? null : !!last.reported } : null,
+    lastAccident: last ? { date: last.day, dept: last.dept || null, shortDescription: nature(last), location: last.l || null, reported: last.reported == null ? null : !!last.reported, offSite: offSite(last.l) } : null,
+    inWeek: all.filter((x) => x.day >= wk.start && x.day <= wk.end).length,
     daysSinceLastAccident: last ? diffDays(ref, last.day) : null,
   };
 }

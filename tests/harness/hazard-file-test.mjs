@@ -258,7 +258,8 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const waits2 = [];
   res = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { file: 'xlsx' }), env: ENV, waitUntil: (p) => waits2.push(p) });
   j = await res.json();
-  check('the xlsx call writes the xlsx and does not chain again', j.ok && j.file === 'xlsx' && !j.next && waits2.length === 0 && w2.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsx:/.test(p.path)), j);
+  await Promise.all(waits2);
+  check('the xlsx call writes the xlsx, then calls for the deck (not the xlsx again)', j.ok && j.file === 'xlsx' && j.next === 'deck' && waits2.length === 1 && w2.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsx:/.test(p.path)) && w2.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/hazard-deck')), j);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
