@@ -74,7 +74,12 @@ function bfetch(budget, url, init) {
 export default {
   // Cron entrypoint — Cloudflare calls this on the schedule.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runBackup(env));
+    // One summary line in Logs: the dashboard shows it after a test run, and
+    // it is the only place a skipped table is visible without opening the file.
+    ctx.waitUntil(runBackup(env).then((r) => console.log(JSON.stringify({
+      ok: r.ok, filename: r.filename, table_count: r.table_count, total_rows: r.total_rows,
+      subrequests: r.subrequests, errors: r.errors, upload_status: r.upload_status
+    }))));
   },
 
   // HTTP entrypoint — used for manual testing. Requires the
@@ -100,7 +105,7 @@ export default {
             body: JSON.stringify({ prefix: '', limit: 1, sortBy: { column: 'name', order: 'desc' } })
           });
           const top = lr.ok ? (await lr.json())[0] : null;
-          if (top && top.created_at) last = { at: top.created_at, ok: true, filename: top.name, errors: null, from: 'bucket' };
+          if (top && top.created_at) last = { at: top.created_at, ok: !/-partial\.json$/.test(top.name), filename: top.name, errors: null, from: 'bucket' };
         } catch (e) { /* unknown below */ }
       }
       if (!last) {
@@ -174,7 +179,11 @@ async function runBackup(env) {
   // Upload as `tapugan-backup-2026-05-06_03-00-00.json` to the `backups`
   // bucket. The bucket must exist (private) — see setup doc.
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').substring(0, 19);
-  const filename = `tapugan-backup-${stamp}.json`;
+  // A backup with errors (a skipped or unreadable table) says so in its NAME,
+  // so it is visible from outside without downloading it: from /health (which
+  // without KV only sees the bucket listing) and from SQL on storage.objects.
+  // Lexical order still follows the timestamp, so pruning is unaffected.
+  const filename = `tapugan-backup-${stamp}${errors.length ? '-partial' : ''}.json`;
   const body = JSON.stringify(snapshot, null, 2);
 
   const uploadResp = await bfetch(budget, `${env.SUPABASE_URL}/storage/v1/object/backups/${filename}`, {
