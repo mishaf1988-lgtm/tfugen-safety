@@ -110,6 +110,31 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   console.log('\n4. wired in');
   check('VIEW_CONFIG, delete label, DB key, backup list', out.view && out.del && out.inDb && out.inBackup);
   check('modules menu opens the new page; the old empty "ins" entry is gone', out.menu);
+
+  console.log('\n5. "לא נקלט מהקובץ": reasons, dates, "טופל" (upgrade review 9, 29/09)');
+  const dr = await page.evaluate(async () => {
+    const calls = [];
+    window._truApi = function (p, b) { calls.push([p, b]); return Promise.resolve({ ok: true, left: 0 }); };
+    window.toast = function () {};
+    const div = document.getElementById('thz-file') || (() => { const d = document.createElement('div'); d.id = 'thz-file'; document.body.appendChild(d); return d; })();
+    const a = { n: 'נ-9', r: 12, ci: -1, val: 'ליקוי מהקובץ', why: 'tru_new', at: '2026-09-20T08:00:00Z' };
+    const b = { n: '4', r: 5, ci: 6, val: 'גבוהה', why: 'keep', id: 'h:th-4', at: '2026-09-29T08:00:00Z' };
+    _thzFile = { configured: true, connected: true, files: {
+      xlsm: { last: new Date().toISOString(), dropped: { at: '2026-09-29T08:00:00Z', items: [a, b] } },
+      xlsx: { dropped: { at: '2026-09-29T08:00:00Z', items: [a] } } } };
+    _thzFileRender();
+    const box = () => document.getElementById('thz-dropped');
+    const res = { txt: box() && box().textContent, btns: box() ? box().querySelectorAll('button').length : 0 };
+    const bt = box() && box().querySelector('button[data-k^="נ-9"]'); if (bt) bt.click();
+    await new Promise((r) => setTimeout(r, 50));
+    res.calls = calls.map((c) => c[1]);
+    res.after = box() && box().textContent;
+    return res;
+  });
+  check('an item older than a week is still listed (the list collects), with its date', /ליקוי מהקובץ/.test(dr.txt || '') && /20\/09\/2026/.test(dr.txt), dr.txt);
+  check('each item says why it was not taken', /ליקוי נאמן נפתח רק מהאפליקציה/.test(dr.txt || '') && /עמודה שנקבעת באפליקציה/.test(dr.txt) && /\(2\)/.test(dr.txt), dr.txt);
+  check('the same item in both files is listed once, with a "טופל" button per item', dr.btns === 2, dr.btns);
+  check('"טופל" dismisses it in both files, and it leaves the list', dr.calls.length === 2 && dr.calls.every((c) => c.op === 'dismiss' && c.key === 'נ-9|-1|ליקוי מהקובץ') && dr.calls.map((c) => c.file).sort().join() === 'xlsm,xlsx' && !/ליקוי מהקובץ/.test(dr.after || '') && /גבוהה/.test(dr.after), [dr.calls, dr.after]);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

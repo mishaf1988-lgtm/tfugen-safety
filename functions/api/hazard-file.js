@@ -187,6 +187,10 @@ const S_OPEN = '\u05e4\u05ea\u05d5\u05d7', S_WIP = '\u05d1\u05d8\u05d9\u05e4\u05
 const PULL_COLS = [5, 8, 9, 10, 11, 12];
 const KEEP_COLS = [1, 2, 3, 4, 6, 7];
 const MAX_DROPPED = 30;
+// The "not taken" list (29/09/2026, upgrade review 9): it collects across saves
+// instead of being replaced by the last one; an item leaves by itself once the
+// app holds that value, when marked handled (op:'dismiss'), or after KEEP_DROPPED_DAYS.
+const MAX_KEPT = 40, KEEP_DROPPED_DAYS = 30;
 const MAX_PULL = 25; // database writes per run (subrequests); the rest next run
 const norm = (v) => (v == null ? '' : typeof v === 'object' && v.date ? v.date : String(v).replace(/\r\n?/g, '\n').trim());
 const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -254,15 +258,23 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   // Michael: a change in the file must not vanish without a word). Shown on the
   // tours screen; a copy of the file is kept only when this is not empty.
   const dropped = [];
-  const drop = (key, r, ci, val) => { if (dropped.length < MAX_DROPPED) dropped.push({ n: key, r, ci, val: String(val == null ? '' : val).substring(0, 80) }); };
+  const drop = (key, r, ci, val, why, id) => { if (dropped.length < MAX_DROPPED) dropped.push({ n: key, r, ci, val: String(val == null ? '' : val).substring(0, 80), why, id: id || null }); };
+  // Rows skipped as a whole used to vanish without a word (29/09/2026, upgrade
+  // review 9). They are listed only when the row holds something the last
+  // write did not: an untouched row skipped every run is not news.
+  const lastAll = {};
+  (last.ids || []).forEach((id, i) => { const k = norm(((last.rows || [])[i] || [])[0]); if (k) (lastAll[k] = lastAll[k] || []).push((last.rows || [])[i]); });
+  const sameRow = (v, lr) => !!lr && PULL_COLS.concat(KEEP_COLS).every((ci) => norm(v[ci]) === norm(lr[ci]));
+  const asWritten = (key, v) => (lastAll[key] || []).some((lr) => sameRow(v, lr));
+  const curDescr = new Set(cur.rows.map((x) => norm(x[5])));
   const usedN = new Set((hazards || []).map((h) => +h.n).filter((n) => n > 0));
   let maxN = Math.max(0, ...usedN);
   (fileRows || []).forEach(({ r, v }) => {
     const key = norm(v[0]);
-    if (key && dup.has(key)) return;
+    if (key && dup.has(key)) { if (!asWritten(key, v)) drop(key, r, -1, v[5], 'dup'); return; }
     const hit = key && lastBy[key];
     if (hit) {
-      if (seen.has(key)) return; seen.add(key);
+      if (seen.has(key)) { if (!asWritten(key, v)) drop(key, r, -1, v[5], 'seen'); return; } seen.add(key);
       // The same record? A stale copy saved over a renumbered file would
       // otherwise put one finding's edits on another (נ-k shift when a
       // finding is marked not relevant). Description, or date + department + location.
@@ -270,19 +282,20 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
       const same = norm(v[5]) === norm(lr[5]) || (norm(v[1]) === norm(lr[1]) && norm(v[3]) === norm(lr[3]) && norm(v[4]) === norm(lr[4]));
       // Trustee rows (נ-k) are renumbered by the app, so a mismatch there is
       // a stale copy, not an edit; a manager row keeps its number.
-      if (!same) { if (!/^\u05e0-/.test(key)) drop(key, r, -1, v[5]); return; }
+      // A trustee row that is simply another finding's row shifted is a stale copy: silent.
+      if (!same) { if (!/^\u05e0-/.test(key) || !curDescr.has(norm(v[5]))) drop(key, r, -1, v[5], 'nomatch'); return; }
       const kind = hit.id.charAt(0), id = hit.id.substring(2);
-      const c = curBy[hit.id]; if (!c) return; // gone from the app since
+      const c = curBy[hit.id]; if (!c) { if (!sameRow(v, lr)) drop(key, r, -1, v[5], 'gone'); return; } // gone from the app since
       // Columns the app never takes from the file (description, department...):
       // an edit there is lost on the rewrite, unless the app already has it.
-      KEEP_COLS.forEach((ci) => { const fv = norm(v[ci]); if (fv !== norm(lr[ci]) && fv !== norm(c[ci])) drop(key, r, ci, fv); });
+      KEEP_COLS.forEach((ci) => { const fv = norm(v[ci]); if (fv !== norm(lr[ci]) && fv !== norm(c[ci])) drop(key, r, ci, fv, 'keep', hit.id); });
       PULL_COLS.forEach((ci) => {
         const fv = norm(v[ci]), lv = norm(hit.row[ci]);
         if (fv === lv) return; // not edited
         // Changed in the app too: the app wins, except the trustee action the
         // assistant filled in the same run over an empty one (28/09 review).
         const aiFilled = kind === 't' && ci === 8 && stripTour(lv) === null;
-        if (norm(c[ci]) !== lv && !aiFilled) { if (fv !== norm(c[ci])) drop(key, r, ci, fv); return; }
+        if (norm(c[ci]) !== lv && !aiFilled) { if (fv !== norm(c[ci])) drop(key, r, ci, fv, 'both', hit.id); return; }
         // A value this cell had in an earlier write of ours: a copy of the
         // file opened before that write and saved over it, not an edit
         // (29/09: 44/46/47 closed in the app, reopened by the old copy still
@@ -290,15 +303,19 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
         if (wasOurs(last, hit.id, ci, fv)) return;
         const patch = kind === 'h' ? (hz[id] = hz[id] || {}) : (tr[id] = tr[id] || {});
         if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci], id: hit.id });
-        else drop(key, r, ci, fv);
+        else drop(key, r, ci, fv, kind === 't' && (ci === 5 || ci === 9) ? 'tru_col' : 'bad', hit.id);
       });
       return;
     }
     const descr = norm(v[5]);
-    if (/^\u05e0-/.test(key) || !descr) return;
+    // A trustee finding is opened by the trustee, never from the file.
+    if (/^\u05e0-/.test(key)) { if (descr) drop(key, r, -1, descr, 'tru_new'); return; }
+    if (!descr) { if ([1, 3, 4, 6, 8, 9, 12].filter((ci) => norm(v[ci])).length >= 2) drop(key, r, 5, '', 'nodescr'); return; }
     // Already created from this row on an earlier run (the file is rewritten
-    // only after the database writes all went through).
-    if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === norm(v[3]))) return;
+    // only after the database writes all went through). The tour date is part
+    // of it: a recurring hazard typed in an old one's words on a new tour used
+    // to match the old one and was dropped from the file (upgrade review 9).
+    if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === norm(v[3]) && norm(h.d) === (isYmd(norm(v[1])) ? norm(v[1]) : ''))) return;
     let n = /^\d+$/.test(key) && !usedN.has(+key) ? +key : maxN + 1;
     usedN.add(n); maxN = Math.max(maxN, n);
     const rs = norm(v[7]).split(/\s*\+\s*/);
@@ -415,6 +432,31 @@ export function logEntry(last, reg, o) {
     nd ? '\u05e2\u05d5\u05d3\u05db\u05df. ' + nd + ' \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d5, \u05e2\u05d5\u05ea\u05e7 \u05d1\u05d0\u05e8\u05db\u05d9\u05d5\u05df / \u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05e2\u05d5\u05d3\u05db\u05df'];
 }
 
+// Pure. The stored "not taken" list after this run: the earlier items plus the
+// new ones (one per row/column/value), less those the app now holds, those
+// marked handled, and those older than KEEP_DROPPED_DAYS.
+export const dropKey = (x) => [x.n, x.ci, x.val].join('|');
+export function mergeDropped(prevItems, items, reg, hazards, reports, nowIso, opt) {
+  opt = opt || {};
+  const regBy = {}, regByN = {}; reg.ids.forEach((id, i) => { regBy[id] = reg.rows[i]; const n = norm(reg.rows[i][0]); if (n) regByN[n] = regBy[n] ? null : reg.rows[i]; });
+  const gone = new Set(opt.dismissed || []);
+  const descrs = new Set((hazards || []).map((h) => norm(h.descr)).concat((reports || []).map((r) => norm(r.f))));
+  const t0 = Date.parse(nowIso) - KEEP_DROPPED_DAYS * 86400000;
+  const resolved = (x) => {
+    // Items stored before 29/09 carry no record id: found by their number.
+    if (x.ci >= 0 && (x.id || regByN[x.n])) { const row = x.id ? regBy[x.id] : regByN[x.n]; return !row || norm(row[x.ci]) === norm(x.val) || (x.ci === 8 && stripTour(norm(row[x.ci])) === orNull(norm(x.val))); }
+    if (x.why === 'nodescr' || !x.val) return false;
+    return x.why !== 'gone' && descrs.has(norm(x.val)) && x.why !== 'seen' && x.why !== 'dup';
+  };
+  // Newest first; an item seen again keeps when it was first seen and takes the new row number.
+  const by = new Map();
+  (prevItems || []).forEach((x) => { if (x && !by.has(dropKey(x))) by.set(dropKey(x), Object.assign({}, x, { at: x.at || opt.prevAt || nowIso })); });
+  (items || []).forEach((x) => { if (!x) return; const k = dropKey(x), p = by.get(k); by.delete(k); by.set(k, Object.assign({}, x, { at: (p && p.at) || nowIso })); });
+  const out = [];
+  by.forEach((x, k) => { if (gone.has(k) || Date.parse(x.at) < t0 || resolved(x)) return; out.push(x); });
+  return out.reverse().slice(0, MAX_KEPT);
+}
+
 // Writes the edits (new hazards first, in one request), updates the arrays in
 // memory. More than MAX_PULL writes: the rest waits for the next run, and the
 // file is not rewritten until then (it would drop them).
@@ -467,7 +509,7 @@ export async function runFile(env, which, force) {
   let reg = buildRegister(hazards, reports, tasks);
   let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';
-  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last']).catch(() => ({}));
+  const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last', K + 'dropped', K + 'dismissed']).catch(() => ({}));
   const val = (k) => (st[K + k] && st[K + k].value) || '';
   const now = new Date().toISOString();
   try {
@@ -491,13 +533,19 @@ export async function runFile(env, which, force) {
       if (changed) await stateSet(env, { [K + 'ctag']: meta.cTag || '' });
       return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     }
+    let prevD = null, dismissed = []; try { prevD = JSON.parse(val('dropped') || 'null'); } catch (e) { prevD = null; }
+    try { dismissed = JSON.parse(val('dismissed') || '[]'); } catch (e) { dismissed = []; }
+    const prevDropped = (prevD && prevD.items) || [];
+    const saveDropped = async (rg) => {
+      const items = mergeDropped(prevDropped, ed ? ed.dropped : [], rg, hazards, reports, now, { dismissed, prevAt: prevD && prevD.at });
+      if (ed || JSON.stringify(items) !== JSON.stringify(prevDropped)) await stateSet(env, { [K + 'dropped']: JSON.stringify({ at: now, items }) });
+    };
     // Excel -> app first, so the rewrite carries what the person changed.
     let pulled = null;
     let last = null, ed = null; try { last = val('last') ? JSON.parse(val('last')) : null; } catch (e) { last = null; }
     if (personSaved && last && Array.isArray(last.rows) && Array.isArray(last.ids)) {
       const fileRows = await readSheetRows(orig, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
       ed = diffEdits(fileRows, last, hazards, reports, now.substring(0, 10));
-      await stateSet(env, { [K + 'dropped']: JSON.stringify({ at: now, items: ed.dropped }) });
       if (ed.fresh.length || ed.hazards.length || ed.reports.length) {
         pulled = await applyEdits(env, ed, hazards, reports);
         // If the write below fails (file open in Excel), the next run must not
@@ -507,11 +555,12 @@ export async function runFile(env, which, force) {
         const done = new Set(pulled.written);
         ed.pulled.forEach((p) => { if (done.has(p.id) && last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
-        if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
+        if (pulled.pending) { await saveDropped(buildRegister(hazards, reports, tasks)); return { ok: true, file: which, pushed: false, reason: 'pulling', pulled }; }
         reg = buildRegister(hazards, reports, tasks);
         sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
       }
     }
+    await saveDropped(reg);
     // Keep what a person saved, before replacing it: the first time, and when
     // a change in the file was not taken (ed.dropped). Otherwise everything
     // the person changed is in the app already and a copy would only pile up
@@ -636,6 +685,19 @@ export async function onRequest(context) {
       const dj = (k) => { try { return JSON.parse(v('hazard_' + k + '_dropped') || 'null'); } catch (e) { return null; } };
       Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url'), dropped: dj(k) }; });
       return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files }, 200, cors);
+    }
+    // "\u05d8\u05d5\u05e4\u05dc" on an item of the not-taken list.
+    if (body.op === 'dismiss') {
+      const f = body.file === 'xlsx' ? 'xlsx' : 'xlsm', k = String(body.key || '').substring(0, 300), sk = 'hazard_' + f + '_dropped', dk = 'hazard_' + f + '_dismissed';
+      const s = await stateGet(env, [sk, dk]).catch(() => ({}));
+      let d = null, ds = []; try { d = JSON.parse((s[sk] && s[sk].value) || 'null'); } catch (e) { d = null; }
+      try { ds = JSON.parse((s[dk] && s[dk].value) || '[]'); } catch (e) { ds = []; }
+      const items = ((d && d.items) || []).filter((x) => dropKey(x) !== k);
+      // Also remembered apart, so a run that read the list a moment before
+      // does not bring the item back.
+      if (k && ds.indexOf(k) < 0) ds = ds.concat([k]).slice(-100);
+      await stateSet(env, { [sk]: JSON.stringify({ at: (d && d.at) || new Date().toISOString(), items }), [dk]: JSON.stringify(ds) });
+      return jsonResp({ ok: true, left: items.length }, 200, cors);
     }
     force = body.force === true;
   } else {
