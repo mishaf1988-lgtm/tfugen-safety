@@ -59,8 +59,32 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     document.getElementById('mf-descr').value = 'מטף חסר';
     mgrFieldSave(); res.second = ins[1];
     _mfPickDept('מעצבים'); document.getElementById('mf-descr').value = 'עוד אחד'; mgrFieldSave(); res.third = ins[2];
-    res.done = ov.querySelector('.mf-done') && ov.querySelector('.mf-done').textContent;
+    res.list = ov.querySelector('.mf-tour') && ov.querySelector('.mf-tour').textContent;
     res.today = today;
+    // open hazards of the department: earlier tours, not this one
+    DB.tour_hazards.push({ id: 'th-3', n: 3, d: '2026-09-10', tour_no: 8, dept: 'מעצבים', descr: 'פתוח מסיור קודם', loc: 'קו 2', s: 'פתוח', due: '2026-09-15' },
+      { id: 'th-4', n: 4, d: '2026-09-10', tour_no: 8, dept: 'מעצבים', descr: 'כבר סגור', s: 'סגור' });
+    _mfRender();
+    document.getElementById('mf-descr').value = 'בכתיבה';
+    const op = () => ov.querySelector('.mf-open');
+    res.openTxt = op() && op().textContent;
+    res.openRows = op() ? op().querySelectorAll('.mf-oi').length : 0;
+    const n0 = ins.length;
+    _mfPickDept('מעצבים'); // same dept: nothing reset
+    mgrFieldClosePrev('th-3');
+    res.closeUpd = ins.slice(n0).find((x) => x[0] === 'upd:tour_hazards');
+    res.afterClose = op() && op().textContent;
+    res.keptTyping = document.getElementById('mf-descr').value;
+    mgrFieldReopen('th-3');
+    res.reopen = ins.slice(-1)[0];
+    res.afterReopen = op() && op().textContent;
+    _mfPickDept('חומר גלם');
+    res.none = ov.querySelector('.mf-list') && ov.querySelector('.mf-list').textContent;
+    _mfPickDept('מעצבים');
+    mgrFieldFinish();
+    res.finish = ov.textContent;
+    mgrFieldNewTour();
+    res.reset = !ov.querySelectorAll('.mf-chips')[0].querySelector('.on') && !ov.querySelector('.mf-open');
     mgrFieldClose(); res.closed = ov.style.display === 'none' && window._went === 'thz';
     res.tourBtn = !!document.querySelector('#pg-thz [onclick="mgrFieldOpen()"]');
     return res;
@@ -78,7 +102,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('after saving: the hazard fields clear, the department stays', out.cleared && out.keptDept === 'תוצג', out.keptDept);
   check('the next hazard of the same tour: same tour number, next מס"ד', out.second && out.second[1].tour_no === 11 && out.second[1].n === 9 && out.second[1].sev === 'גבוהה', out.second);
   check('a department already toured today keeps that tour number (10)', out.third && out.third[1].tour_no === 10 && out.third[1].dept === 'מעצבים', out.third);
-  check('a count of what was saved', /נשמרו 3/.test(out.done || ''), out.done);
+  check('the tour list: this tour\'s hazards, the one saved earlier today included', /מפגעי הסיור הזה \(2\)/.test(out.list || '') && /מהסיור של היום/.test(out.list) && /עוד אחד/.test(out.list) && /סיום סיור/.test(out.list), out.list);
+  check('open hazards of the department from earlier tours, closed ones left out', out.openRows === 1 && /מפגעים פתוחים במעצבים \(1\)/.test(out.openTxt || '') && /פתוח מסיור קודם/.test(out.openTxt) && /קו 2/.test(out.openTxt) && !/כבר סגור/.test(out.openTxt), out.openTxt);
+  check('an overdue one is marked', /באיחור/.test(out.openTxt || ''), out.openTxt);
+  const cu = out.closeUpd && out.closeUpd[1];
+  check('"נסגר" updates the row: closed, closed today', cu && cu.id === 'th-3' && cu.s === 'סגור' && cu.closed_d === out.today, cu);
+  check('it stays listed with "בטל", the count drops, the typing survives', /\(0\)/.test(out.afterClose || '') && /בטל/.test(out.afterClose) && out.keptTyping === 'בכתיבה', [out.afterClose, out.keptTyping]);
+  check('"בטל" reopens it: open, closed_d null', out.reopen && out.reopen[1].s === 'פתוח' && out.reopen[1].closed_d === null && /\(1\)/.test(out.afterReopen || ''), out.reopen);
+  check('a department with nothing open says so', /אין מפגעים פתוחים/.test(out.none || ''), out.none);
+  check('"סיום סיור": tour, department, count and severities', /הסיור נשמר/.test(out.finish) && /סיור מס' 10/.test(out.finish) && /2 מפגעים/.test(out.finish), out.finish);
+  check('"סיור חדש" starts clean', out.reset);
   check('"למערכת" closes it and shows the tours screen', out.closed);
   check('the tours screen has a button to open it too', out.tourBtn);
   check('no page errors', errors.length === 0, errors);

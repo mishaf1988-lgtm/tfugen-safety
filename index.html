@@ -132,6 +132,13 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 #mtg .mt-box{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:12px 0;font-size:14px;line-height:1.6}
 #mtg .mt-big{font-size:28px;font-weight:900}
 #mtg .mt-wrap{overflow-x:auto}
+#mf .mf-list{margin-top:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px}
+#mf .mf-li{padding:4px 0;border-top:1px dashed var(--border)}
+#mf .mf-open summary{cursor:pointer;padding:2px 0 6px}
+#mf .mf-oi{display:flex;align-items:center;gap:8px;padding:8px 0}
+#mf .mf-ot{flex:1;min-width:0;word-break:break-word}
+#mf .mf-ob{flex:0 0 auto;min-height:42px;min-width:84px;font-weight:900}
+#mf .mf-closed .mf-ot{text-decoration:line-through;color:var(--t2)}
 #mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
 /* ---- APP SHELL ---- */
@@ -9801,7 +9808,7 @@ function mgrFieldClose(){
 function _mfChips(list,cur,fn){
   return '<div class="mf-chips">'+list.map(function(v){return '<button type="button" class="mf-chip'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" onclick="'+fn+'(this.dataset.v)">'+esc(v)+'</button>';}).join('')+'</div>';
 }
-function _mfPickDept(v){_mf.dept=v;_mfKeep();_mfRender();}
+function _mfPickDept(v){if(v!==_mf.dept)_mf.closedNow={};_mf.dept=v;_mfKeep();_mfRender();}
 function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfRender();}
 // Keep what was typed across a re-render (a chip tap redraws the screen).
 function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
@@ -9810,9 +9817,10 @@ function _mfRender(){
   var photo=_attachUrls['mf-attach-area'];
   var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' | \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
   ov.innerHTML='<div class="mf-in">'
-    +'<div class="mf-top"><h2>&#128203; \u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2 \u05d1\u05e1\u05d9\u05d5\u05e8</h2><button type="button" class="btn btn-s" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>'
+    +'<div class="mf-top"><h2>&#128203; \u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05e1\u05d9\u05d5\u05e8</h2><button type="button" class="btn btn-s" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>'
     +'<div class="mf-sub">'+sub+'</div>'
     +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
+    +_mfOpenHtml()
     +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" value="'+esc(_mf['mf-loc']||'')+'">'
     +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3">'+esc(_mf['mf-descr']||'')+'</textarea>'
     +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area"></div>'
@@ -9821,12 +9829,79 @@ function _mfRender(){
     +'<label for="mf-action">\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea</label><textarea id="mf-action" rows="2">'+esc(_mf['mf-action']||'')+'</textarea>'
     +'<label for="mf-due">\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><input type="date" id="mf-due" value="'+esc(_mf['mf-due']||'')+'">'
     +'<button type="button" class="btn btn-p mf-save" onclick="mgrFieldSave()">&#128190; \u05e9\u05de\u05d5\u05e8, \u05de\u05e4\u05d2\u05e2 \u05d4\u05d1\u05d0</button>'
-    +(_mf.n?'<div class="mf-done">\u05e0\u05e9\u05de\u05e8\u05d5 '+_mf.n+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05d6\u05d5 &#10003;</div>':'')
+    +_mfTourHtml()
     +'</div>';
   // The photo slot: the helper draws the button; a photo already picked stays.
   if(photo){_attachUrls['mf-attach-area']=photo;var a=g('mf-attach-area');if(a)a.innerHTML='<div class="mf-done">&#128247; \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e6\u05d5\u05e8\u05e4\u05d4</div>';}
   else if(typeof _attachClear==='function')_attachClear('mf-attach-area');
 }
+// Open hazards of the department (Michael, 29/09: "during the tour, see the
+// ones not closed yet in that department and check which were fixed"). Every
+// hazard of an earlier tour still open is listed right under the department
+// chips; "\u2714 \u05e0\u05e1\u05d2\u05e8" closes it (closed today), "\u05d1\u05d8\u05dc" reopens a mistaken tap. The
+// change is an update of the same row, so the file in folder 13 follows.
+function _mfOpenItems(){
+  if(!_mf.dept)return [];
+  var t=_mfTour(_mf.dept),today=_thzToday();
+  return (DB.tour_hazards||[]).filter(function(r){
+    if(r.dept!==_mf.dept)return false;
+    if(+r.tour_no===t&&r.d===today)return false;
+    return r.s!==_THZ_CLOSED||(r.closed_d===today&&(_mf.closedNow||{})[r.id]);
+  }).sort(function(a,b){return (+a.n||0)-(+b.n||0);});
+}
+function _mfOpenHtml(){
+  if(!_mf.dept)return '';
+  var items=_mfOpenItems(),open=items.filter(function(r){return r.s!==_THZ_CLOSED;}).length;
+  if(!items.length)return '<div class="mf-list" style="color:var(--t2)">\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05d1'+esc(_mf.dept)+'.</div>';
+  return '<details class="mf-list mf-open" open><summary><b>\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1'+esc(_mf.dept)+' ('+open+')</b> <span style="font-size:12px;color:var(--t2)">\u05d1\u05d3\u05d5\u05e7 \u05d0\u05dd \u05ea\u05d5\u05e7\u05e0\u05d5</span></summary>'
+    +items.map(function(r){
+      var closed=r.s===_THZ_CLOSED,late=_thzOverdue(r);
+      return '<div class="mf-li mf-oi'+(closed?' mf-closed':'')+'"><div class="mf-ot">'+esc(r.n)+'. '+esc(String(r.descr||'').substring(0,80))
+        +'<div style="font-size:12px;color:var(--t2)">'+(r.loc?esc(r.loc)+' | ':'')+'\u05e1\u05d9\u05d5\u05e8 '+esc(r.tour_no||'-')+', '+fd(r.d)+(r.sev?' | '+esc(r.sev):'')
+        +(r.due?' | \u05d9\u05e2\u05d3 '+fd(r.due):'')+(late?' <b style="color:var(--er,#b91c1c)">\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</b>':'')+'</div></div>'
+        +(closed?'<button type="button" class="btn btn-s mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldReopen(this.dataset.id)">\u05d1\u05d8\u05dc</button>'
+          :'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u2714 \u05e0\u05e1\u05d2\u05e8</button>')
+        +'</div>';
+    }).join('')+'</details>';
+}
+function _mfSetState(id,closed){
+  if(_viewBlock())return;
+  var r=(DB.tour_hazards||[]).find(function(x){return x.id===id;});if(!r)return;
+  _mfKeep();
+  r.s=closed?_THZ_CLOSED:'\u05e4\u05ea\u05d5\u05d7';r.closed_d=closed?_thzToday():null;
+  _mf.closedNow=_mf.closedNow||{};if(closed)_mf.closedNow[id]=1;
+  sbUpd('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8 '+(closed?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.descr||'').substring(0,30));sdb();
+  toast(closed?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');_mfRender();
+}
+function mgrFieldClosePrev(id){_mfSetState(id,true);}
+function mgrFieldReopen(id){_mfSetState(id,false);}
+// A tour has several hazards (Michael, 29/09): the ones of this tour (this
+// department, today, this tour number, saved from any screen) are listed
+// under the form, and "\u05e1\u05d9\u05d5\u05dd \u05e1\u05d9\u05d5\u05e8" sums it up. Each is saved as it is typed,
+// so a closed browser or a lost signal never loses the ones before it.
+function _mfTourItems(){
+  if(!_mf.dept)return [];
+  var t=_mfTour(_mf.dept),today=_thzToday();
+  return (DB.tour_hazards||[]).filter(function(r){return r.dept===_mf.dept&&+r.tour_no===t&&r.d===today;}).sort(function(a,b){return (+a.n||0)-(+b.n||0);});
+}
+function _mfTourHtml(){
+  var items=_mfTourItems();if(!items.length)return '';
+  return '<div class="mf-list mf-tour"><b>\u05de\u05e4\u05d2\u05e2\u05d9 \u05d4\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d6\u05d4 ('+items.length+'):</b>'
+    +items.map(function(r){return '<div class="mf-li">'+esc(r.n)+'. '+esc(String(r.descr||'').substring(0,60))+' <span style="color:var(--t2)">('+esc(r.sev||'-')+')</span></div>';}).join('')
+    +'<button type="button" class="btn btn-s" style="width:100%;min-height:46px;margin-top:10px;font-weight:900" onclick="mgrFieldFinish()">&#10004; \u05e1\u05d9\u05d5\u05dd \u05e1\u05d9\u05d5\u05e8</button></div>';
+}
+function mgrFieldFinish(){
+  var ov=g('mf');if(!ov)return;
+  var items=_mfTourItems(),cnt={};
+  items.forEach(function(r){cnt[r.sev||'-']=(cnt[r.sev||'-']||0)+1;});
+  var sev=_THZ_SEV.filter(function(v){return cnt[v];}).map(function(v){return cnt[v]+' '+v;}).join(', ');
+  ov.innerHTML='<div class="mf-in"><h2>&#10004; \u05d4\u05e1\u05d9\u05d5\u05e8 \u05e0\u05e9\u05de\u05e8</h2>'
+    +'<div class="mf-list" style="font-size:15px">\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())+'<br><b>'+items.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd</b>'+(sev?' ('+esc(sev)+')':'')
+    +'<br><span style="font-size:13px;color:var(--t2)">\u05d4\u05dd \u05db\u05d1\u05e8 \u05d1\u05de\u05e2\u05e8\u05db\u05ea, \u05d5\u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 13 \u05d5\u05d1\u05de\u05e6\u05d2\u05ea \u05ea\u05d5\u05da \u05d3\u05e7\u05d4.</span></div>'
+    +'<button type="button" class="btn btn-p mf-save" onclick="mgrFieldNewTour()">&#128203; \u05e1\u05d9\u05d5\u05e8 \u05d7\u05d3\u05e9</button>'
+    +'<button type="button" class="btn btn-s" style="width:100%;min-height:46px;margin-top:10px" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>';
+}
+function mgrFieldNewTour(){_mf={dept:'',sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',n:0};_mfRender();}
 function mgrFieldSave(){
   if(_viewBlock())return;
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
