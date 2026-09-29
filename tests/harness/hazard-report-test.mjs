@@ -71,7 +71,9 @@ const ROWS = [
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope || 'Files.ReadWrite Mail.Send' }]);
-      if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(HZ);
+      if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(o.hz || HZ);
+      if (u.startsWith(SB + '/storage/v1/object/sign/')) return json(JSON.parse(init.body).paths.map((p) => ({ path: p, signedURL: '/object/sign/incidents-photos/' + p + '?token=t' })));
+      if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0, 17, 8, 0, 48, 0, 64, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 0xFF, 0xD9]), { status: 200 }); }
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
@@ -103,6 +105,16 @@ const ROWS = [
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם'], test: true });
   const tm = c.w.mails[0] && c.w.mails[0].message;
   check('test send: only to the connected account, no copies, subject "בדיקה - ", real recipients listed on top, not logged', c.j.ok && tm && tm.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !tm.ccRecipients.length && tm.subject === 'בדיקה - דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && tm.body.content.includes('gelem@tapugan.co.il, Igal@tapugan.co.il') && !c.w.state.hazard_report_last && c.j.sent[0].test === true, tm && tm.subject);
+  check('no photos: no photo column, no attachments', !/<th[^>]*>תמונה<\/th>/.test(mail.body.content) && !mail.attachments, Object.keys(mail));
+  // 29/09/2026: the hazards' photos go with the report, inline.
+  const PHU = SB + '/storage/v1/object/public/incidents-photos/tour/x.jpg';
+  c = await call({ email: 'admin@tfugen.local', hz: HZ.map((h, i) => (i === 0 ? Object.assign({}, h, { photo_url: PHU }) : h)) }, { op: 'send', depts: ['חומר גלם'] });
+  const pm = c.w.mails[0] && c.w.mails[0].message;
+  const att = (pm && pm.attachments) || [];
+  const cidIn = pm && (/src="cid:([^"]+)"/.exec(pm.body.content) || [])[1];
+  check('a hazard with a photo: a "תמונה" column, the picture attached inline and shown by its cid; the row without a photo has an empty cell', c.j.ok && att.length === 1 && att[0].isInline === true && att[0]['@odata.type'] === '#microsoft.graph.fileAttachment' && att[0].contentType === 'image/jpeg' && att[0].contentBytes.length > 10 && cidIn === att[0].contentId && /<th[^>]*>תמונה<\/th>/.test(pm.body.content) && c.j.sent[0].photos === 1 && c.w.thumbs === 1, [c.j, att.map((a) => a.contentId), cidIn]);
+  c = await call({ email: 'admin@tfugen.local', hz: HZ.map((h) => Object.assign({}, h, { photo_url: PHU })) }, { op: 'preview' });
+  check('preview: no photos fetched, no internals sent to the page', c.j.ok && !c.w.thumbs && !JSON.stringify(c.j).includes('"src"'), c.w.thumbs);
   c = await call({ email: 'admin@tfugen.local', scope: 'Files.ReadWrite' }, { op: 'send', depts: ['חומר גלם'] });
   check('no Mail.Send permission: a clear error, nothing sent', !c.j.ok && /Mail\.Send/.test(c.j.error) && !c.w.mails.length, c.j);
   c = await call({ email: 'admin@tfugen.local', mailFail: true }, { op: 'send', depts: ['חומר גלם'] });

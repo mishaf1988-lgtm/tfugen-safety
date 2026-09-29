@@ -196,6 +196,172 @@ export async function readSheetRows(bytes, opts) {
   return out;
 }
 
+// ---- Pictures in one column of an existing sheet (29/09/2026, Michael: every
+// hazard's photo in the file too) ----
+// P: {col (0-based), header, width, text, pics: [{row, bytes, link}], links:
+// [{row, link}]}. Rows are sheet row numbers. Each picture sits in its cell
+// and moves and hides with the row (twoCellAnchor, so a filtered-out row takes
+// its picture with it); clicking it opens the full photo. A row with a link and
+// no picture gets the text, linked. What this code wrote before (pictures named
+// TS-photo, hyperlinks in that column) is replaced; anything else in the
+// drawing is kept.
+const RELNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const PIC_NAME = 'TS-photo';
+const EMU = 9525, PIC_H = 70, PIC_MAX_W = 110;
+const EMPTY_RELS = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+export function picInfo(b) {
+  if (b[0] === 0x89 && b[1] === 0x50) return { ext: 'png', w: (b[16] << 24 | b[17] << 16 | b[18] << 8 | b[19]) >>> 0, h: (b[20] << 24 | b[21] << 16 | b[22] << 8 | b[23]) >>> 0 };
+  if (b[0] !== 0xFF || b[1] !== 0xD8) return null;
+  for (let i = 2; i + 9 < b.length;) {
+    if (b[i] !== 0xFF) { i++; continue; }
+    const m = b[i + 1], len = b[i + 2] << 8 | b[i + 3];
+    if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) return { ext: 'jpeg', h: b[i + 5] << 8 | b[i + 6], w: b[i + 7] << 8 | b[i + 8] };
+    i += 2 + len;
+  }
+  return null;
+}
+function resolvePart(from, target) {
+  if (target.charAt(0) === '/') return target.substring(1);
+  const parts = from.split('/'); parts.pop();
+  target.split('/').forEach((t) => { if (t === '..') parts.pop(); else if (t !== '.') parts.push(t); });
+  return parts.join('/');
+}
+function relTarget(rels, id) {
+  const m = new RegExp('<Relationship\\b[^>]*\\bId="' + id + '"[^>]*>').exec(rels);
+  return m ? (/\bTarget="([^"]+)"/.exec(m[0]) || [])[1] : null;
+}
+function freeId(rels, prefix) { let i = 1; while (new RegExp('\\bId="' + prefix + i + '"').test(rels)) i++; return prefix + i; }
+function addRel(rels, id, type, target, external) {
+  return rels.replace('</Relationships>', '<Relationship Id="' + id + '" Type="' + RELNS + '/' + type + '" Target="' + xmlEsc(target) + '"' + (external ? ' TargetMode="External"' : '') + '/></Relationships>');
+}
+// Insert el before the first of the given tags (schema order), else before </worksheet>.
+function insertBefore(xml, el, tags) {
+  let at = -1;
+  tags.forEach((t) => { const i = xml.indexOf('<' + t); if (i >= 0 && (at < 0 || i < at)) at = i; });
+  if (at < 0) at = xml.lastIndexOf('</worksheet>');
+  return xml.substring(0, at) + el + xml.substring(at);
+}
+const AFTER_HYPERLINKS = ['printOptions', 'pageMargins', 'pageSetup', 'headerFooter', 'rowBreaks', 'colBreaks', 'customProperties', 'cellWatches', 'ignoredErrors', 'smartTags', 'drawing', 'legacyDrawing', 'legacyDrawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
+const AFTER_DRAWING = ['legacyDrawing', 'legacyDrawingHF', 'drawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
+function setCell(inner, ref, ci, cellXml) {
+  inner = inner.replace(new RegExp('<c r="' + ref + '"[^>]*?(?:/>|>[\\s\\S]*?</c>)'), '');
+  if (!cellXml) return inner;
+  const cRe = /<c r="([A-Z]+)\d+"/g; let m, at = -1;
+  while ((m = cRe.exec(inner))) if (colIndex(m[1]) > ci) { at = m.index; break; }
+  return at < 0 ? inner + cellXml : inner.substring(0, at) + cellXml + inner.substring(at);
+}
+async function addPictures(entries, path, xml, P, maxRow) {
+  const L = colName(P.col);
+  const get = (n) => entries.find((e) => e.name === n);
+  const relsPath = path.replace(/([^/]+)$/, '_rels/$1.rels');
+  let relsE = get(relsPath);
+  let rels = relsE ? await entryText(relsE) : EMPTY_RELS;
+  if (!/xmlns:r=/.test(xml.substring(0, 600))) xml = xml.replace(/<worksheet\b/, '<worksheet xmlns:r="' + RELNS + '"');
+  // The column's cells: header, the linked text, nothing else (a picture covers its cell).
+  const txt = {}; (P.links || []).forEach((l) => { txt[l.row] = l; });
+  const hasPic = {}; (P.pics || []).forEach((p) => { hasPic[p.row] = 1; });
+  let hdrStyle = '';
+  xml = xml.replace(/<row\b([^>]*?)(\/>|>([\s\S]*?)<\/row>)/g, (all, attrs, close, inner) => {
+    const r = +((/\br="(\d+)"/.exec(attrs) || [])[1] || 0);
+    if (r < 1 || r > maxRow) return all;
+    inner = inner || '';
+    let cell = '';
+    if (r === 1) {
+      // The header takes the style of the last styled header cell (O1 in the real file).
+      const st = (inner.match(/<c r="[A-Z]+1"[^>]*\bs="\d+"/g) || []).pop(); hdrStyle = st ? ' s="' + /\bs="(\d+)"/.exec(st)[1] + '"' : '';
+      cell = '<c r="' + L + '1"' + hdrStyle + ' t="inlineStr"><is><t>' + xmlEsc(P.header) + '</t></is></c>';
+    } else if (txt[r] && !hasPic[r]) cell = '<c r="' + L + r + '" t="inlineStr"><is><t>' + xmlEsc(P.text) + '</t></is></c>';
+    const out = setCell(inner, L + r, P.col, cell);
+    return out === inner && close === '/>' ? all : '<row' + attrs + '>' + out + '</row>';
+  });
+  // Column width.
+  const cn = P.col + 1;
+  const colEl = '<col min="' + cn + '" max="' + cn + '" width="' + P.width + '" customWidth="1"/>';
+  if (/<cols>/.test(xml)) {
+    const inCols = /<cols>([\s\S]*?)<\/cols>/.exec(xml)[1];
+    const covering = new RegExp('<col\\b[^>]*\\bmin="(\\d+)"[^>]*\\bmax="(\\d+)"[^>]*/>', 'g'); let m, taken = false;
+    while ((m = covering.exec(inCols))) if (+m[1] <= cn && +m[2] >= cn) taken = true;
+    if (!taken) {
+      const list = inCols.match(/<col\b[^>]*\/>/g) || [];
+      let at = list.findIndex((c) => +(/\bmin="(\d+)"/.exec(c) || [])[1] > cn);
+      if (at < 0) at = list.length;
+      list.splice(at, 0, colEl);
+      xml = xml.replace(/<cols>[\s\S]*?<\/cols>/, '<cols>' + list.join('') + '</cols>');
+    }
+  } else xml = xml.replace(/<sheetData/, '<cols>' + colEl + '</cols><sheetData');
+  // Hyperlinks in the column: the old ones out (with their relationships), the new in.
+  const hlRe = new RegExp('<hyperlink\\b[^>]*\\bref="' + L + '\\d+"[^>]*/>', 'g');
+  (xml.match(hlRe) || []).forEach((h) => { const id = (/\br:id="([^"]+)"/.exec(h) || [])[1]; if (id) rels = rels.replace(new RegExp('<Relationship\\b[^>]*\\bId="' + id + '"[^>]*/>'), ''); });
+  xml = xml.replace(hlRe, '').replace(/<hyperlinks>\s*<\/hyperlinks>/, '');
+  let hl = '';
+  (P.links || []).forEach((l) => { const id = freeId(rels, 'rIdP'); rels = addRel(rels, id, 'hyperlink', l.link, true); hl += '<hyperlink ref="' + L + l.row + '" r:id="' + id + '"/>'; });
+  if (hl) xml = /<hyperlinks>/.test(xml) ? xml.replace('</hyperlinks>', hl + '</hyperlinks>') : insertBefore(xml, '<hyperlinks>' + hl + '</hyperlinks>', AFTER_HYPERLINKS);
+  // The drawing: the sheet's own, or a new one.
+  const ctE = get('[Content_Types].xml');
+  let ct = await entryText(ctE);
+  let dPath, dXml;
+  const dm = /<drawing\b[^>]*\br:id="([^"]+)"[^>]*\/>/.exec(xml);
+  if (dm && relTarget(rels, dm[1])) { dPath = resolvePart(path, relTarget(rels, dm[1])); dXml = get(dPath) ? await entryText(get(dPath)) : null; }
+  if (!dXml) {
+    if (!(P.pics || []).length) { if (relsE || rels !== EMPTY_RELS) setText(entries, relsPath, rels); ctE.text = ct; return xml; }
+    let n = 1; while (get('xl/drawings/drawing' + n + '.xml')) n++;
+    dPath = 'xl/drawings/drawing' + n + '.xml';
+    dXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"></xdr:wsDr>';
+    const id = freeId(rels, 'rIdD');
+    rels = addRel(rels, id, 'drawing', '../drawings/drawing' + n + '.xml');
+    xml = xml.replace(/<drawing\b[^>]*\/>/, '');
+    xml = insertBefore(xml, '<drawing r:id="' + id + '"/>', AFTER_DRAWING);
+    ct = ct.replace('</Types>', '<Override PartName="/' + dPath + '" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+  }
+  const dRelsPath = dPath.replace(/([^/]+)$/, '_rels/$1.rels');
+  let dRels = get(dRelsPath) ? await entryText(get(dRelsPath)) : EMPTY_RELS;
+  if (!/xmlns:r=/.test(dXml.substring(0, 800))) dXml = dXml.replace(/<xdr:wsDr\b/, '<xdr:wsDr xmlns:r="' + RELNS + '"');
+  // Out with our old pictures, their relationships and media.
+  const anchorRe = /<xdr:(twoCellAnchor|oneCellAnchor|absoluteAnchor)\b[\s\S]*?<\/xdr:\1>/g;
+  const gone = [];
+  dXml = dXml.replace(anchorRe, (a) => { if (a.indexOf('name="' + PIC_NAME) < 0) return a; (a.match(/r:(?:embed|id)="([^"]+)"/g) || []).forEach((x) => gone.push(/"([^"]+)"/.exec(x)[1])); return ''; });
+  gone.forEach((id) => {
+    if (new RegExp('r:(?:embed|id)="' + id + '"').test(dXml)) return;
+    const t = relTarget(dRels, id);
+    dRels = dRels.replace(new RegExp('<Relationship\\b[^>]*\\bId="' + id + '"[^>]*/>'), '');
+    if (t && !/^https?:/.test(t) && dRels.indexOf('"' + t + '"') < 0) { const mp = resolvePart(dPath, t); const i = entries.findIndex((e) => e.name === mp); if (i >= 0) entries.splice(i, 1); }
+  });
+  // In with the new ones.
+  let maxId = 1; (dXml.match(/<xdr:cNvPr\b[^>]*\bid="(\d+)"/g) || []).forEach((x) => { maxId = Math.max(maxId, +/id="(\d+)"/.exec(x)[1]); });
+  let add = '', k = 0;
+  const exts = new Set();
+  for (const p of P.pics || []) {
+    const info = picInfo(p.bytes); if (!info || !info.w || !info.h) continue;
+    k++; exts.add(info.ext);
+    let mn = 1; while (get('xl/media/tsphoto' + mn + '.' + info.ext)) mn++;
+    const media = 'xl/media/tsphoto' + mn + '.' + info.ext;
+    entries.push({ name: media, method: 0, crc: crc32(p.bytes), csize: p.bytes.length, usize: p.bytes.length, raw: p.bytes });
+    const imgId = freeId(dRels, 'rIdI'); dRels = addRel(dRels, imgId, 'image', '../media/tsphoto' + mn + '.' + info.ext);
+    let link = '';
+    if (p.link) { const hid = freeId(dRels, 'rIdH'); dRels = addRel(dRels, hid, 'hyperlink', p.link, true); link = '<a:hlinkClick r:id="' + hid + '"/>'; }
+    const h = PIC_H, w = Math.max(1, Math.min(PIC_MAX_W, Math.round(PIC_H * info.w / info.h)));
+    const r0 = p.row - 1, id = maxId + k;
+    add += '<xdr:twoCellAnchor editAs="twoCell"><xdr:from><xdr:col>' + P.col + '</xdr:col><xdr:colOff>' + 3 * EMU + '</xdr:colOff><xdr:row>' + r0 + '</xdr:row><xdr:rowOff>' + 3 * EMU + '</xdr:rowOff></xdr:from>'
+      + '<xdr:to><xdr:col>' + P.col + '</xdr:col><xdr:colOff>' + (3 + w) * EMU + '</xdr:colOff><xdr:row>' + r0 + '</xdr:row><xdr:rowOff>' + (3 + h) * EMU + '</xdr:rowOff></xdr:to>'
+      + '<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="' + id + '" name="' + PIC_NAME + ' ' + p.row + '">' + link + '</xdr:cNvPr><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr>'
+      + '<xdr:blipFill><a:blip r:embed="' + imgId + '"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>'
+      + '<xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + w * EMU + '" cy="' + h * EMU + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>';
+  }
+  dXml = dXml.replace('</xdr:wsDr>', add + '</xdr:wsDr>');
+  exts.forEach((e) => { if (!new RegExp('<Default Extension="' + e + '"', 'i').test(ct)) ct = ct.replace('</Types>', '<Default Extension="' + e + '" ContentType="image/' + e + '"/></Types>'); });
+  ctE.text = ct;
+  setText(entries, dPath, dXml);
+  setText(entries, dRelsPath, dRels);
+  setText(entries, relsPath, rels);
+  return xml;
+}
+function setText(entries, name, text) {
+  const e = entries.find((x) => x.name === name);
+  if (e) e.text = text; else entries.push({ name, text });
+}
+// Row height (points) that holds a picture.
+export const PIC_ROW_PT = Math.ceil((PIC_H + 8) * 0.75);
+
 // Appends rows after the last row with data: A = the next number in column
 // A, then the texts; each cell takes the style of the cell above it. Empty
 // prepared rows in the way are replaced. logRows: arrays of strings (B..).
@@ -338,7 +504,7 @@ export async function patchSheetRows(bytes, rows, opts) {
     let a2 = attrs.replace(/\s+hidden="1"/, '');
     // The row's height follows its text (Michael, 29/09/2026: long text was cut
     // off, the rows kept the height of the text they had before).
-    if (widths && rows[r - 2]) a2 = a2.replace(/\s+(ht|customHeight)="[^"]*"/g, '') + ' ht="' + rowHeight(rows[r - 2], widths) + '" customHeight="1"';
+    if (widths && rows[r - 2]) a2 = a2.replace(/\s+(ht|customHeight)="[^"]*"/g, '') + ' ht="' + Math.max(rowHeight(rows[r - 2], widths), (opts.minHeights && opts.minHeights[r]) || 0) + '" customHeight="1"';
     return '<row' + a2 + '>' + out + '</row>';
   });
   // A data row with no row in the sheet would be dropped without a word.
@@ -346,6 +512,7 @@ export async function patchSheetRows(bytes, rows, opts) {
   // The filter itself stays (arrows on the header), its old selection goes.
   xml = xml.replace(/(<autoFilter\b[^>]*?)>[\s\S]*?<\/autoFilter>/, '$1/>').replace(/\s+filterMode="1"/, '');
   if (opts.show) xml = applyShow(xml, rows, opts.show, maxRow);
+  if (opts.pictures) xml = await addPictures(entries, path, xml, opts.pictures, maxRow);
   sheet.text = xml;
   // A line in another sheet of the same workbook (the "Claude Log"), in the
   // same pass so the file is zipped once.

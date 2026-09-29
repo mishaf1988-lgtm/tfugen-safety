@@ -218,13 +218,15 @@ export async function itemUrl(token, path) {
 
 // Several recipients and copies, kept in Sent Items (the department report,
 // 28/09: it replaces the workbook macro, which sent from Outlook).
-export async function sendMailTo(token, to, cc, subject, html) {
+// attachments (optional): Graph fileAttachment objects, e.g. inline pictures
+// (isInline + contentId, shown where the html says cid:<contentId>).
+export async function sendMailTo(token, to, cc, subject, html, attachments) {
   const list = (a) => (a || []).map((x) => ({ emailAddress: { address: x } }));
   const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      message: { subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) },
+      message: Object.assign({ subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) }, attachments && attachments.length ? { attachments } : {}),
       saveToSentItems: true,
     }),
   });

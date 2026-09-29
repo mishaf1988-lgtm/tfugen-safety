@@ -17,6 +17,9 @@ async function deflate(u8) {
   return new Uint8Array(await new Response(s).arrayBuffer());
 }
 function crc(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) { c ^= buf[i]; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; } return (c ^ 0xFFFFFFFF) >>> 0; }
+// The smallest thing picInfo reads as a 64x48 JPEG.
+const JPEG = new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x30, 0x00, 0x40, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1, 0xFF, 0xD9]);
+const PH = (n) => SB + '/storage/v1/object/public/incidents-photos/tour/' + n + '.jpg';
 const VBA = new Uint8Array(3000).map((_, i) => (i * 37) % 251);
 const reg = (rows) => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr codeName="x" filterMode="1"/><sheetData>'
   + '<row r="1"><c r="A1" t="inlineStr"><is><t>מס"ד</t></is></c><c r="N1" t="inlineStr"><is><t>חדש/ישן</t></is></c></row>' + rows
@@ -96,6 +99,8 @@ function world(o) {
       return json({ id: 'i1', cTag: w.meta.cTag, lastModifiedDateTime: '2026-09-28T10:37:00Z', webUrl: 'https://od/file', '@microsoft.graph.downloadUrl': 'https://dl/file' });
     }
     if (u === 'https://dl/file') return new Response(w.file, { status: 200 });
+    if (u.startsWith(SB + '/storage/v1/object/sign/')) { w.signs = (w.signs || 0) + 1; return json(JSON.parse(init.body).paths.map((p) => ({ path: p, signedURL: '/object/sign/incidents-photos/' + p + '?token=t' }))); }
+    if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(o.badThumb ? new Uint8Array([1, 2, 3]) : JPEG, { status: 200 }); }
     if (u.startsWith('https://graph.microsoft.com/') && m === 'PUT') {
       if (o.locked && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceLocked', message: 'locked' } }, 423);
       w.puts.push({ path: decodeURIComponent(u.split('/root:/')[1]), body: init.body });
@@ -353,6 +358,57 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   j = await res.json();
   await Promise.all(waits2);
   check('the xlsx call writes the xlsx, then calls for the deck (not the xlsx again)', j.ok && j.file === 'xlsx' && j.next === 'deck' && waits2.length === 1 && w2.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsx:/.test(p.path)) && w2.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/hazard-deck')), j);
+
+  console.log('\n8b. photos in column P (29/09/2026): manager and trustee photos alike');
+  {
+    const HZp = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { photo_url: PH('open') }) : Object.assign({}, h, { photo_url: PH('closed-old') })));
+    const TRp = TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { photo_url: PH('trustee') }) : r.id === 'b' ? Object.assign({}, r, { photo_url: 'pending:abc' }) : r));
+    let pw = world({ file: await fixture(), hazards: HZp, reports: TRp });
+    let pr = await runFile(ENV, 'xlsm', true);
+    const main = pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path));
+    const z = readZip(main.body), names = z.map((e) => e.name);
+    const sx = await sheetOf(main.body, 'xl/worksheets/sheet2.xml');
+    const dx = await sheetOf(main.body, 'xl/drawings/drawing1.xml');
+    const drels = await sheetOf(main.body, 'xl/drawings/_rels/drawing1.xml.rels');
+    const srels = await sheetOf(main.body, 'xl/worksheets/_rels/sheet2.xml.rels');
+    const ct = await sheetOf(main.body, '[Content_Types].xml');
+    const rowOf = (id) => { const l = JSON.parse(pw.state.hazard_xlsm_last); return l.ids.indexOf(id) + 2; };
+    check('written, one sign call for all, a thumbnail per open / recent photo (the closed June one: none)', pr.ok && pr.pushed && pw.signs === 1 && pw.thumbs === 2, [pr, pw.signs, pw.thumbs]);
+    check('two pictures in a new drawing, each moving and hiding with its row, clickable to the full photo', (dx.match(/<xdr:twoCellAnchor editAs="twoCell">/g) || []).length === 2 && (dx.match(/name="TS-photo \d+"/g) || []).length === 2 && (dx.match(/<a:hlinkClick r:id="rIdH\d+"\/>/g) || []).length === 2 && /TargetMode="External"/.test(drels) && names.filter((n) => /^xl\/media\/tsphoto\d+\.jpeg$/.test(n)).length === 2, dx.slice(0, 300));
+    check('the pictures sit in P on the rows of th-2 and trustee finding a', dx.includes('name="TS-photo ' + rowOf('h:th-2') + '"') && dx.includes('name="TS-photo ' + rowOf('t:a') + '"') && /<xdr:from><xdr:col>15<\/xdr:col>/.test(dx), dx.match(/name="TS-photo \d+"/g));
+    check('the sheet points at the drawing, the package knows it and the jpeg type', /<drawing r:id="rIdD1"\/><\/worksheet>/.test(sx) && /Target="\.\.\/drawings\/drawing1\.xml"/.test(srels) && ct.includes('/xl/drawings/drawing1.xml') && /<Default Extension="jpeg"/.test(ct), [sx.slice(-200), srels, ct.slice(-300)]);
+    check('P1 "תמונה", P as wide as a picture; the closed one gets "פתיחה בגודל מלא" linked; pending (not uploaded) photos nothing', /<c r="P1"[^>]*><is><t>תמונה<\/t>/.test(sx) && /<col min="16" max="16" width="17" customWidth="1"\/>/.test(sx) && sx.includes('<c r="P' + rowOf('h:th-1') + '" t="inlineStr"><is><t>פתיחה בגודל מלא</t>') && (sx.match(/<hyperlink ref="P\d+"/g) || []).length === 3 && !sx.includes('<c r="P' + rowOf('t:b') + '"'), sx.match(/<hyperlinks>[\s\S]*<\/hyperlinks>/));
+    check('a row with a picture is tall enough for it', +((new RegExp('<row r="' + rowOf('h:th-2') + '"[^>]*\\bht="([\\d.]+)"').exec(sx)) || [])[1] >= 59);
+    check('the register filter and data are as before (A..M untouched by the pictures)', /<autoFilter ref="A1:M8"><filterColumn colId="10">/.test(sx) && sx.includes("ג'ריקן"));
+    // Next write: th-2's photo removed in the app. The old pictures go, media too; no duplicate links.
+    const s1p = Object.assign({}, pw.state);
+    pw = world({ file: main.body, state: s1p, cTag: s1p.hazard_xlsm_ctag, hazards: HZp.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { photo_url: null }) : h)), reports: TRp });
+    pr = await runFile(ENV, 'xlsm', false);
+    const m2 = pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path));
+    check('a photo removed in the app: the file is written again (photos are in the signature)', pr.pushed && !!m2, pr);
+    const d2 = await sheetOf(m2.body, 'xl/drawings/drawing1.xml'), s2 = await sheetOf(m2.body, 'xl/worksheets/sheet2.xml'), r2 = await sheetOf(m2.body, 'xl/drawings/_rels/drawing1.xml.rels');
+    check('rewritten: one picture, one media file, its relationships only, links not doubled, one drawing element', (d2.match(/TS-photo/g) || []).length === 1 && readZip(m2.body).filter((e) => /^xl\/media\//.test(e.name)).length === 1 && (r2.match(/<Relationship /g) || []).length === 2 && (s2.match(/<hyperlink ref="P\d+"/g) || []).length === 2 && (s2.match(/<drawing /g) || []).length === 1, [d2.length, r2]);
+    // Someone's own picture in the drawing (saved in Excel): kept.
+    const own = readZip(m2.body).map((e) => (e.name === 'xl/drawings/drawing1.xml' ? { name: e.name, text: null } : e));
+    own.find((e) => e.name === 'xl/drawings/drawing1.xml').text = d2.replace('</xdr:wsDr>', '<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="1" cy="1"/><xdr:sp><xdr:nvSpPr><xdr:cNvPr id="40" name="My logo"/></xdr:nvSpPr></xdr:sp><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>');
+    pw = world({ file: await writeZip(own), hazards: HZp, reports: TRp });
+    pr = await runFile(ENV, 'xlsm', true);
+    const d3 = await sheetOf(pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).body, 'xl/drawings/drawing1.xml');
+    check('a drawing someone added to (their own shape): theirs kept, ours replaced, ids do not clash', d3.includes('name="My logo"') && (d3.match(/TS-photo/g) || []).length === 2 && !/cNvPr id="40" name="TS/.test(d3), d3.match(/cNvPr id="\d+" name="[^"]+"/g));
+    // The real sheet has cell comments: a legacyDrawing and a rels file already.
+    const withNotes = readZip(await fixture()).map((e) => (e.name === 'xl/worksheets/sheet2.xml' ? { name: e.name, text: null } : e));
+    withNotes.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = reg(regRows()).replace('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">', '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">').replace('</worksheet>', '<legacyDrawing r:id="rId1"/></worksheet>');
+    withNotes.push({ name: 'xl/worksheets/_rels/sheet2.xml.rels', text: '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing" Target="../drawings/vmlDrawing1.vml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" Target="../comments1.xml"/></Relationships>' });
+    pw = world({ file: await writeZip(withNotes), hazards: HZp, reports: TRp });
+    pr = await runFile(ENV, 'xlsm', true);
+    const nb = pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).body;
+    const ns = await sheetOf(nb, 'xl/worksheets/sheet2.xml'), nr = await sheetOf(nb, 'xl/worksheets/_rels/sheet2.xml.rels');
+    check('a sheet with comments: the drawing goes before legacyDrawing, the comment relationships stay, ids do not clash', /<drawing r:id="(rIdD1)"\/><legacyDrawing r:id="rId1"\/>/.test(ns) && nr.includes('vmlDrawing1.vml') && nr.includes('comments1.xml') && /Id="rIdD1"[^>]*drawing1\.xml/.test(nr) && /<hyperlinks>[\s\S]*<\/hyperlinks><drawing/.test(ns) && (ns.match(/xmlns:r=/g) || []).length === 1, [ns.slice(-400), nr]);
+    pw = world({ file: await fixture(), hazards: HZp, reports: TRp, badThumb: true });
+    pr = await runFile(ENV, 'xlsm', true);
+    const s4 = await sheetOf(pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).body, 'xl/worksheets/sheet2.xml');
+    check('thumbnails that are not a picture: no drawing at all, every photo still linked as text', pr.pushed && !/<drawing /.test(s4) && (s4.match(/פתיחה בגודל מלא/g) || []).length === 3, pr);
+  }
 
   console.log('\n9. the archive: a copy each month, copies older than 30 days deleted (29/09/2026)');
   const arch = (o) => {
