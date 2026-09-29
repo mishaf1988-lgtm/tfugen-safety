@@ -17,8 +17,8 @@
 // POST {op:'preview'} -> every department; {op:'send', depts:[...], test?}.
 // test: true sends each report to the connected account only.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet } from '../_onedrive.js';
-import { readSheetRows } from '../_xlsxpatch.js';
+import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
+import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { FOLDER, FILES, DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb } from './hazard-file.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -108,7 +108,13 @@ async function loadAll(env, token) {
   const t1 = tx.find((x) => x.r === 1), t2 = tx.find((x) => x.r === 2);
   const reg = buildRegister(hazards, reports, tasks);
   const urls = new Map(); reg.ids.forEach((id, i) => { const u = photoOf(id, hazards, reports); if (u) urls.set(reg.rows[i], u); });
-  return { rows: reg.rows, urls, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] } };
+  // A save in Excel the server has not taken yet (upgrade review 16, 29/09): the
+  // sheets differ from the ones the server last wrote (hazard-file.js keeps
+  // their digest). A report sent now would list what the manager just closed there.
+  const st = await stateGet(env, ['hazard_xlsm_sheets']).catch(() => ({}));
+  const ours = st.hazard_xlsm_sheets && st.hazard_xlsm_sheets.value;
+  const unsynced = !!ours && ours !== await sheetsDigest(book).catch(() => ours);
+  return { rows: reg.rows, urls, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
 }
 
 export async function onRequest(context) {
@@ -127,8 +133,9 @@ export async function onRequest(context) {
     const data = await loadAll(env, token);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     const reports = DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
-    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), reports: reports.map((x) => Object.assign({}, x, { html: undefined })) }, 200, cors);
+    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, reports: reports.map((x) => Object.assign({}, x, { html: undefined })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
+    if (data.unsynced && body.anyway !== true) return jsonResp({ ok: false, unsynced: true, error: '\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05e7\u05dc\u05d5\u05d8 \u05d0\u05d5\u05ea\u05d4 \u05e7\u05d5\u05d3\u05dd.' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];
     // A test (28/09, Michael: "for now, only to me"): the same mail, to the
     // connected account only, no copies; the real recipients are listed at the top.

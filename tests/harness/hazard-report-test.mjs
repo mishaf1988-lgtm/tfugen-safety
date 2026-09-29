@@ -3,7 +3,7 @@
 // od-read on 28/09); the חומר גלם case is the one the macro itself showed in
 // "דוח לשליחה" that day: אל gelem, Igal, vitaly, shlomi; עותק sviva, tzachi.
 import { onRequest, parseRecipients, buildReport } from './_build/hazard-report.mjs';
-import { writeZip } from './_build/_xlsxpatch.mjs';
+import { writeZip, sheetsDigest } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -76,6 +76,7 @@ const ROWS = [
       if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0, 17, 8, 0, 48, 0, 64, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 0xFF, 0xD9]), { status: 200 }); }
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
+      if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json(o.sheets ? [{ key: 'hazard_xlsm_sheets', value: o.sheets, updated_at: 'x' }] : []);
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'GET') { w.read = decodeURIComponent(u); return new Response(book, { status: 200 }); }
@@ -119,6 +120,19 @@ const ROWS = [
   check('no Mail.Send permission: a clear error, nothing sent', !c.j.ok && /Mail\.Send/.test(c.j.error) && !c.w.mails.length, c.j);
   c = await call({ email: 'admin@tfugen.local', mailFail: true }, { op: 'send', depts: ['חומר גלם'] });
   check('Outlook refuses: reported per department', !c.j.ok && c.j.failed.length === 1 && /outlook 500/.test(c.j.failed[0].error), c.j);
+
+  // upgrade review 16 (29/09): a save in Excel not taken yet
+  const same = await sheetsDigest(book);
+  c = await call({ email: 'admin@tfugen.local', sheets: same }, { op: 'preview' });
+  check('the file as the server last wrote it: not flagged', c.j.ok && c.j.unsynced === false, c.j.unsynced);
+  c = await call({ email: 'admin@tfugen.local', sheets: 'digest-of-an-older-write' }, { op: 'preview' });
+  check('a save in Excel since the last write: the preview says "unsynced"', c.j.ok && c.j.unsynced === true, c.j.unsynced);
+  c = await call({ email: 'admin@tfugen.local', sheets: 'digest-of-an-older-write' }, { op: 'send', depts: ['חומר גלם'] });
+  check('... and a send without "anyway" is refused, nothing mailed', !c.j.ok && c.j.unsynced && /לא נקלטה/.test(c.j.error) && !c.w.mails.length, c.j);
+  c = await call({ email: 'admin@tfugen.local', sheets: 'digest-of-an-older-write' }, { op: 'send', depts: ['חומר גלם'], anyway: true });
+  check('... with "anyway" (the manager saw the warning): sent', c.j.ok && c.w.mails.length === 1, c.j);
+  c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
+  check('no digest stored yet (never written): not flagged', c.j.ok && c.j.unsynced === false, c.j.unsynced);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
