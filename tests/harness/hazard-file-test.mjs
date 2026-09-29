@@ -164,7 +164,13 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('a formula in the data columns (A3 = A2+1) becomes the value', !/<c r="A3"[^>]*><f>/.test(x) && /<c r="A3" s="3"><v>2<\/v><\/c>/.test(x), (x.match(/<c r="A3".*?<\/c>/) || [])[0]);
   check('dates are serials with a date style taken from the same column', x.includes('<c r="B3" s="24"><v>' + serial('2026-09-22') + '</v></c>') && x.includes('<c r="J2" s="14"><v>' + serial('2026-06-08') + '</v></c>') && x.includes('<c r="L5" s="24"><v>' + serial('2026-09-26') + '</v></c>'), (x.match(/<row r="5".*?<\/row>/) || [])[0]);
   check('text keeps the cell style of that column', /<c r="D2" s="8" t="inlineStr">/.test(x));
-  check('rows hidden by the old filter are shown; the filter stays, its selection goes', !/hidden="1"/.test(x) && /<autoFilter ref="A1:M8"\/>/.test(x) && !/filterMode/.test(x));
+  // Michael, 29/09: after every write the filter shows only what is still open.
+  const kOf = (r) => ((new RegExp('<c r="K' + r + '"[^>]*><is><t[^>]*>([^<]*)<').exec(x)) || [])[1] || '';
+  const hid = (r) => new RegExp('<row r="' + r + '"[^>]*hidden="1"').test(x);
+  const ks = [2, 3, 4, 5].map(kOf);
+  check('the fixture has both open and closed rows', ks.includes('סגור') && ks.some((k) => k === 'פתוח' || k === 'בטיפול'), ks);
+  check('the old filter selection is gone; the filter is on K (פתוח, בטיפול, blanks)', !x.includes('<filter val="מעצבים"') && /<autoFilter ref="A1:M8"><filterColumn colId="10"><filters blank="1"><filter val="פתוח"\/><filter val="בטיפול"\/><\/filters><\/filterColumn><\/autoFilter>/.test(x) && /<sheetPr codeName="x" filterMode="1"\/>|<sheetPr filterMode="1" codeName="x"\/>/.test(x), (x.match(/<autoFilter[\s\S]*?(\/>|<\/autoFilter>)/) || [])[0]);
+  check('closed rows hidden, open / in-progress and empty rows shown', [2, 3, 4, 5].every((r, i) => hid(r) === (ks[i] === 'סגור')) && [6, 7, 8].every((r) => !hid(r)), [2, 3, 4, 5, 6, 7, 8].map(hid));
   check('data validation kept', x.includes('<formula1>"גבוהה,בינונית,נמוכה"</formula1>'));
   check('rows past the data are blank in A..M', /<row r="6"[^>]*><c r="A6" s="3"\/>/.test(x) && !/<c r="[A-M]7"[^>]*>[^<]/.test(x));
   const vba = z.find((e) => e.name === 'xl/vbaProject.bin');

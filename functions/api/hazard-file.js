@@ -50,6 +50,9 @@ export const FILES = {
 };
 const SHEET = '\u05de\u05d0\u05d2\u05e8 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
 const LAST_COL = 12, MAX_ROW = 206, DATE_COLS = [1, 9, 11];
+// In the signature: a change in how the file is written (29/09: the filter on
+// open hazards) reaches it once, without waiting for the data to change.
+const FILE_VERSION = 2;
 export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
 // Spellings in the locations list / trustee screens -> the sheet's departments.
 const DEPT_ALIAS = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea' };
@@ -333,7 +336,7 @@ export async function runFile(env, which, force) {
     } catch (e) { /* next run */ }
   }
   let reg = buildRegister(hazards, reports, tasks);
-  let sig = await sha(JSON.stringify(reg.rows));
+  let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows]));
   const K = 'hazard_' + which + '_';
   const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last']).catch(() => ({}));
   const val = (k) => (st[K + k] && st[K + k].value) || '';
@@ -376,7 +379,7 @@ export async function runFile(env, which, force) {
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
         if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
         reg = buildRegister(hazards, reports, tasks);
-        sig = await sha(JSON.stringify(reg.rows));
+        sig = await sha(JSON.stringify([FILE_VERSION, reg.rows]));
       }
     }
     // Keep what a person saved, before replacing it.
@@ -386,7 +389,7 @@ export async function runFile(env, which, force) {
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }
-    const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
+    const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] } });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
     await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
