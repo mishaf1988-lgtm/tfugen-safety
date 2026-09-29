@@ -126,7 +126,7 @@ export const FIXED_YEARS = { 2024: 9 };
 
 // m = /api/meeting-data result for the meeting date; rows = register rows
 // (for the open lists and the month's closures).
-export function deckContent(m, rows, meetingDate) {
+export function deckContent(m, rows, meetingDate, opts) {
   const h = m.hazards, a = m.accidents;
   const y = meetingDate.substring(0, 4), month = meetingDate.substring(0, 7);
   const by = {}; h.byDept.forEach((d) => { by[d.dept] = d; });
@@ -168,6 +168,33 @@ export function deckContent(m, rows, meetingDate) {
   const nw = h.total.newThisWeek, nc = h.summary.newClosed, no = h.summary.newStillOpen;
   const hi = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').length, med = sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').length, low = sevOf('\u05e0\u05de\u05d5\u05db\u05d4').length;
   const last = a.lastAccident;
+  // Slide 3 is the monthly report (Michael, 29/09: "updated for the month,
+  // at the start of each month"): the state at the end of that month and its
+  // closures, then left alone until the next month begins.
+  const buildS3 = (rep) => {
+    const end = rep + '-31';
+    const asOf = rows.filter((r) => !d10(r[1]) || d10(r[1]) <= end).map((r) => {
+      if (r[10] !== S_DONE_) return r;
+      const cd = d10(r[11]);
+      return !cd || cd <= end ? r : Object.assign(r.slice(), { 10: 'פתוח' });
+    });
+    const openM = asOf.filter((r) => r[10] !== S_DONE_);
+    const sevM = (x) => openM.filter((r) => r[6] === x);
+    const hiM = sevM('גבוהה').length, medM = sevM('בינונית').length, lowM = sevM('נמוכה').length;
+    const cm = {}; asOf.forEach((r) => { if (d10(r[11]).substring(0, 7) === rep && r[10] === S_DONE_) cm[r[3]] = (cm[r[3]] || 0) + 1; });
+    const cl = Object.keys(cm).sort((p, q) => cm[q] - cm[p]).map((d) => d + ': ' + (cm[d] === 1 ? 'מפגע אחד נסגר' : cm[d] + ' מפגעים נסגרו'));
+    const nCl = Object.values(cm).reduce((a2, x) => a2 + x, 0);
+    const yR = rep.substring(0, 4);
+    return {
+      Card0: [String(asOf.length)],
+      Card1: [String(asOf.length - openM.length)],
+      Card2: [String(openM.length), 'פתוחים - ' + [hiM ? hiM + ' בחומרה גבוהה' : '', medM ? medM + ' בינונית' : '', lowM ? lowM + ' נמוכה' : ''].filter(Boolean).join(', ')],
+      high: [{ match: /^מפגעים פתוחים בחומרה גבוהה/, header: 'מפגעים פתוחים בחומרה גבוהה (' + hiM + ')', items: sevM('גבוהה').map((r) => item(r, 76)), empty: 'אין', room: 5 },
+        { match: /פעולות סגירה/, header: (t) => (/^\s/.test(t) ? ' ' : '') + 'פעולות סגירה - ' + HEB_MONTHS[+rep.substring(5, 7) - 1] + ' ' + yR + ' (' + nCl + ')', items: cl, empty: 'לא נסגרו מפגעים בחודש', room: 3, more: (n) => ['ועוד ' + n + ' מחלקות', ''] }],
+      med: [{ match: /^מפגעים פתוחים בחומרה בינונית/, header: 'מפגעים פתוחים בחומרה בינונית (' + medM + ')', items: sevM('בינונית').map((r) => item(r, 76)), empty: 'אין', room: 12 }],
+    };
+  };
+  const S_DONE_ = '\u05e1\u05d2\u05d5\u05e8';
   return {
     s1: {
       Header: [(t) => t.replace(/20\d{2}/, y).replace(/\d{2}\.\d{2}\.\d{4}/, meetingDate.substring(8, 10) + '.' + meetingDate.substring(5, 7) + '.' + y)],
@@ -197,14 +224,7 @@ export function deckContent(m, rows, meetingDate) {
         vals: [FIXED_YEARS[+y - 2] != null ? FIXED_YEARS[+y - 2] : a.byYear[+y - 2] || 0, FIXED_YEARS[+y - 1] != null ? FIXED_YEARS[+y - 1] : a.byYear[+y - 1] || 0].concat(a.byMonth.map((x) => x.count)),
       },
     },
-    s3: {
-      Card0: [String(h.total.total)],
-      Card1: [String(h.total.closed)],
-      Card2: [String(h.total.open), '\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd - ' + [hi ? hi + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4' : '', med ? med + ' \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : '', low ? low + ' \u05e0\u05de\u05d5\u05db\u05d4' : ''].filter(Boolean).join(', ')],
-      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 76)), empty: '\u05d0\u05d9\u05df', room: 5 },
-        { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9', room: 3, more: (n) => ['\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea', ''] }],
-      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 76)), empty: '\u05d0\u05d9\u05df', room: 12 }],
-    },
+    s3: opts && opts.s3Month ? buildS3(opts.s3Month) : null,
   };
 }
 
@@ -220,7 +240,7 @@ export async function patchDeck(bytes, c) {
   await edit('ppt/charts/chart1.xml', (x) => setBars(x, c.s1.bars, c.s1.axisMax, report));
   await edit(SLIDE(2), (x) => shapes(x, { Header: c.s2.Header, NoAccBadge: c.s2.NoAccBadge, Y2026Box: c.s2.Y2026Box, DaysSafeText: c.s2.DaysSafeText, NoChangeNote: c.s2.NoChangeNote }));
   await edit('ppt/charts/chart2.xml', (x) => setLine(x, c.s2.line.cats, c.s2.line.vals, report));
-  await edit(SLIDE(3), (x) => {
+  if (c.s3) await edit(SLIDE(3), (x) => {
     x = shapes(x, { Card0: c.s3.Card0, Card1: c.s3.Card1, Card2: c.s3.Card2 });
     x = setList(x, 'HighSevPanel', c.s3.high, more, report);
     return setList(x, 'MedSevPanel', c.s3.med, more, report);
