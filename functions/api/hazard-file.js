@@ -40,7 +40,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
-import { patchSheetRows, sheetsDigest, readSheetRows } from '../_xlsxpatch.js';
+import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { suggestAction } from '../_ai.js';
 
 export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
@@ -53,7 +53,7 @@ const LAST_COL = 12, MAX_ROW = 206, DATE_COLS = [1, 9, 11];
 // In the signature: a change in how the file is written (29/09/2026: the filter
 // on open hazards, then row heights that fit the text) reaches the file once,
 // without waiting for the data to change.
-const FILE_VERSION = 3;
+const FILE_VERSION = 4;
 export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
 // Spellings in the locations list / trustee screens -> the sheet's departments.
 const DEPT_ALIAS = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea' };
@@ -311,6 +311,71 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   return { hazards: list(hz), reports: list(tr), fresh, pulled, dropped };
 }
 
+// ---- Photos (29/09/2026, Michael: every hazard's photo in the file, the
+// manager's and the trustees' alike, and in the report mail) ----
+// Column P of the register: a small picture for what the filter shows (open /
+// in progress) and anything from the last 90 days, a "full size" link for
+// every photo. A run fetches at most MAX_PICS thumbnails (the free plan's
+// subrequests); the rest get the link only.
+export const PHOTO_COL = 15, MAX_PICS = 12, PIC_DAYS = 90, THUMB_W = 240, SIGN_SECONDS = 365 * 86400;
+const PHOTO_HEADER = '\u05ea\u05de\u05d5\u05e0\u05d4', PHOTO_TEXT = '\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d1\u05d2\u05d5\u05d3\u05dc \u05de\u05dc\u05d0';
+export function storagePath(url, base) {
+  const u = String(url || '');
+  if (u.indexOf(base + '/storage/v1/object/') !== 0) return null;
+  const m = u.substring(base.length).match(/^\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^/?]+)\/([^?]+)/);
+  return m ? { bucket: m[1], path: decodeURIComponent(m[2]) } : null;
+}
+// 'h:<id>' / 't:<id>' -> the record's photo URL, if it has one in our Storage.
+export function photoOf(id, hazards, reports) {
+  const k = String(id || ''), rid = k.substring(2);
+  const rec = k.charAt(0) === 'h' ? (hazards || []).find((x) => x.id === rid) : (reports || []).find((x) => x.id === rid);
+  return rec && rec.photo_url && !/^pending:/.test(rec.photo_url) ? rec.photo_url : null;
+}
+const sbBase = (env) => env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const sbHdr = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY });
+// url -> a link that opens the photo for a year (one call per bucket).
+export async function signPhotos(env, urls) {
+  const base = sbBase(env), out = {}, buckets = {};
+  (urls || []).forEach((u) => { const sp = storagePath(u, base); if (sp) (buckets[sp.bucket] = buckets[sp.bucket] || []).push({ u, path: sp.path }); });
+  for (const b of Object.keys(buckets)) {
+    try {
+      const r = await fetch(base + '/storage/v1/object/sign/' + encodeURIComponent(b), { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, sbHdr(env)), body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b].map((x) => x.path) }) });
+      const j = r.ok ? await r.json() : [];
+      (Array.isArray(j) ? j : []).forEach((e) => {
+        if (!e || !e.signedURL || e.error) return;
+        const hit = buckets[b].find((x) => x.path === e.path); if (!hit) return;
+        out[hit.u] = /^https?:/.test(e.signedURL) ? e.signedURL : base + '/storage/v1' + e.signedURL;
+      });
+    } catch (e) { /* no links for this bucket this time */ }
+  }
+  return out;
+}
+// A small JPEG/PNG of the photo (Supabase image transform), or null.
+export async function fetchThumb(env, url, width) {
+  const base = sbBase(env), sp = storagePath(url, base); if (!sp) return null;
+  const obj = encodeURIComponent(sp.bucket) + '/' + sp.path.split('/').map(encodeURIComponent).join('/');
+  try {
+    // format=origin: otherwise WebP, which Excel does not show (trustee-log.js, 27/09).
+    const r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + (width || THUMB_W) + '&quality=60&resize=contain&format=origin', { headers: sbHdr(env) });
+    if (!r.ok) return null;
+    const b = new Uint8Array(await r.arrayBuffer());
+    return picInfo(b) ? b : null;
+  } catch (e) { return null; }
+}
+// Which register rows get a picture: open / in progress first, then the last
+// PIC_DAYS days, up to max. Pure.
+export function pickPhotoRows(reg, hazards, reports, today, max) {
+  const all = [];
+  reg.ids.forEach((id, i) => {
+    const url = photoOf(id, hazards, reports); if (!url) return;
+    const row = reg.rows[i], open = norm(row[10]) !== S_DONE;
+    const d = norm(row[1]), recent = isYmd(d) && d >= addDays(today, -PIC_DAYS);
+    all.push({ i, row: i + 2, url, open, recent });
+  });
+  const want = all.filter((x) => x.open || x.recent).sort((a, b) => (a.open === b.open ? a.i - b.i : a.open ? -1 : 1)).slice(0, max);
+  return { all, want };
+}
+
 // ---- The "Claude Log" sheet (29/09/2026, Michael: "it is important for the
 // record"): one line per write that changed something, in the columns the
 // sheet already has: #, date, the request (where the change came from), the
@@ -375,8 +440,8 @@ export async function applyEdits(env, ed, hazards, reports) {
 export async function runFile(env, which, force) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
   const [hazards, reports, tasks] = await Promise.all([
-    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
+    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
   // Every finding gets a recommended corrective action (Michael, 28/09): the
@@ -394,7 +459,7 @@ export async function runFile(env, which, force) {
     } catch (e) { /* next run */ }
   }
   let reg = buildRegister(hazards, reports, tasks);
-  let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows]));
+  let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';
   const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last']).catch(() => ({}));
   const val = (k) => (st[K + k] && st[K + k].value) || '';
@@ -438,7 +503,7 @@ export async function runFile(env, which, force) {
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
         if (pulled.pending) return { ok: true, file: which, pushed: false, reason: 'pulling', pulled };
         reg = buildRegister(hazards, reports, tasks);
-        sig = await sha(JSON.stringify([FILE_VERSION, reg.rows]));
+        sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
       }
     }
     // Keep what a person saved, before replacing it: the first time, and when
@@ -452,8 +517,13 @@ export async function runFile(env, which, force) {
       kept = folder;
     }
     const entry = logEntry(last, reg, { now, personSaved, dropped: ed ? ed.dropped : [] });
+    const ph = pickPhotoRows(reg, hazards, reports, now.substring(0, 10), MAX_PICS);
+    const links = await signPhotos(env, ph.all.map((x) => x.url));
+    const pics = [], minHeights = {};
+    for (const x of ph.want) { const b = await fetchThumb(env, x.url); if (b) { pics.push({ row: x.row, bytes: b, link: links[x.url] || null }); minHeights[x.row] = PIC_ROW_PT; } }
     const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true,
-      log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null });
+      log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null, minHeights,
+      pictures: { col: PHOTO_COL, header: PHOTO_HEADER, width: 17, text: PHOTO_TEXT, pics, links: ph.all.filter((x) => links[x.url]).map((x) => ({ row: x.row, link: links[x.url] })) } });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
     await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),

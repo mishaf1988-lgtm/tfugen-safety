@@ -19,7 +19,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet } from '../_onedrive.js';
 import { readSheetRows } from '../_xlsxpatch.js';
-import { FOLDER, FILES, DEPTS, buildRegister, readAll, TASKS_Q } from './hazard-file.js';
+import { FOLDER, FILES, DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb } from './hazard-file.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -32,6 +32,12 @@ const DEFAULT_OPEN = '\u05e9\u05dc\u05d5\u05dd, \u05dc\u05d4\u05dc\u05df \u05d4\
 // something other than a "בברכה" line, which the signature already opens with.
 export const SIGNATURE = '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><span style="color:#e00000;font-weight:bold">\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da.</span><br>\u05de\u05e0\u05d4\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea(\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea) // <span style="color:#e00000;font-weight:bold">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df \u05d1\u05e2&quot;\u05de</span><br><span style="font-size:12px"><span style="font-weight:bold">\u05e0\u05d9\u05d9\u05d3:</span> 0547940073 / <span style="font-weight:bold">\u05de\u05e9\u05e8\u05d3:</span> 08-6808365 / <a href="mailto:sviva@tapugan.co.il" style="font-weight:bold">sviva@tapugan.co.il</a></span><br><div style="border-top:2px solid #f5c400;width:340px;margin:12px 0"></div><a href="https://www.tapugan.co.il" style="color:#e00000;font-weight:bold">www.tapugan.co.il</a></div>';
 const REGARDS = /^\s*\u05d1\u05d1\u05e8\u05db\u05d4/;
+const PHOTO_TH = '\u05ea\u05de\u05d5\u05e0\u05d4', PHOTO_LINK = '\u05ea\u05de\u05d5\u05e0\u05d4';
+// Pictures in a send: at most this many in all (each is a download, and the
+// free plan counts them), this wide, attached inline so Outlook shows them
+// without "download pictures". The rest get a link.
+const MAIL_PICS = 20, MAIL_PIC_W = 400;
+function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 const emails = (t) => String(t || '').split(/[,;\s]+/).map((x) => x.trim()).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const fd = (v) => { const d = v && typeof v === 'object' ? v.date : v; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
@@ -51,14 +57,18 @@ export function parseRecipients(rows) {
 }
 
 // Pure: one department's report from the register rows.
-export function buildReport(dept, rows, rcpt, texts, today) {
+// photos (optional): Map register row -> {cid} (a picture in the mail) or
+// {link} (a link to it), 29/09/2026: the report carries the hazards' photos.
+export function buildReport(dept, rows, rcpt, texts, today, photos) {
   const mine = rows.filter((r) => r[3] === dept);
   const latest = mine.reduce((m, r) => Math.max(m, +r[2] || 0), 0);
   const open = mine.filter((r) => r[10] !== S_DONE).map((r) => {
     const old = !!latest && (+r[2] || 0) > 0 && +r[2] < latest;
     const dueY = r[9] && typeof r[9] === 'object' ? r[9].date : '';
     const overdue = !!today && !!dueY && dueY < today;
-    return { n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue };
+    const ph = photos && photos.get(r) ? photos.get(r) : null;
+    // src: the register row it came from (not sent to the page), to find its photo.
+    return Object.defineProperty({ n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph }, 'src', { value: r });
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
@@ -72,20 +82,22 @@ export function buildReport(dept, rows, rcpt, texts, today) {
   const title = '\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc - \u05de\u05d7\u05dc\u05e7\u05ea ' + dept;
   const th = ['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
+  const anyPhoto = open.some((r) => r.photo);
+  const photoTd = (r) => (!anyPhoto ? '' : '<td style="' + cell + '">' + (r.photo && r.photo.cid ? '<img src="cid:' + r.photo.cid + '" width="140" alt="" style="display:block;border:0">' : r.photo && r.photo.link ? '<a href="' + esc(r.photo.link) + '">' + PHOTO_LINK + '</a>' : '') + '</td>');
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
     + '<h2 style="margin:0 0 10px">' + esc(title) + '</h2>'
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
-    + '<table style="border-collapse:collapse;width:100%"><tr>' + th.map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
-    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + '</tr>').join('')
+    + '<table style="border-collapse:collapse;width:100%"><tr>' + th.concat(anyPhoto ? [PHOTO_TH] : []).map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
+    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + '</tr>').join('')
     + '</table>' + (texts.sign && !REGARDS.test(texts.sign) ? '<p>' + esc(texts.sign).replace(/\n/g, '<br>') + '</p>' : '') + SIGNATURE + '</div>';
   return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
 
 async function loadAll(env, token) {
   const [hazards, reports, tasks] = await Promise.all([
-    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
+    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
   const r = await fetch(G + seg(FOLDER + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
@@ -94,7 +106,9 @@ async function loadAll(env, token) {
   const rc = await readSheetRows(book, { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] });
   const tx = await readSheetRows(book, { sheet: '\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4', minRow: 1, maxRow: 2, lastCol: 11, dateCols: [] });
   const t1 = tx.find((x) => x.r === 1), t2 = tx.find((x) => x.r === 2);
-  return { rows: buildRegister(hazards, reports, tasks).rows, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] } };
+  const reg = buildRegister(hazards, reports, tasks);
+  const urls = new Map(); reg.ids.forEach((id, i) => { const u = photoOf(id, hazards, reports); if (u) urls.set(reg.rows[i], u); });
+  return { rows: reg.rows, urls, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] } };
 }
 
 export async function onRequest(context) {
@@ -121,15 +135,31 @@ export async function onRequest(context) {
     const test = body.test === true;
     const me = row.user_email;
     if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
+    // The photos of the rows being sent: pictures for the first MAIL_PICS, links for the rest.
+    const inSend = reports.filter((r) => want.indexOf(r.dept) >= 0 && r.count);
+    const need = []; inSend.forEach((r) => r.rows.forEach((x) => { const u = x.src && data.urls.get(x.src); if (u) need.push(u); }));
+    const links = need.length ? await signPhotos(env, need) : {};
+    const pics = {}; let k = 0;
+    for (const u of need) { if (u in pics) continue; if (k >= MAIL_PICS) { pics[u] = null; continue; } k++; pics[u] = await fetchThumb(env, u, MAIL_PIC_W); }
     const sent = [], skipped = [], failed = [];
-    for (const rep of reports) {
+    for (const rep0 of reports) {
+      let rep = rep0, attachments = [];
+      if (inSend.indexOf(rep0) >= 0 && rep0.rows.some((x) => x.src && data.urls.get(x.src))) {
+        const photos = new Map();
+        rep0.rows.forEach((x, i) => {
+          const u = x.src && data.urls.get(x.src); if (!u) return;
+          if (pics[u]) { const cid = 'ph' + rep0.dept.length + '-' + i + '@tapugan'; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
+          else if (links[u]) photos.set(x.src, { link: links[u] });
+        });
+        rep = buildReport(rep0.dept, data.rows, data.rcpt, data.texts, today, photos);
+      }
       if (want.indexOf(rep.dept) < 0) continue;
       if (!rep.count) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' }); continue; }
       if (!test && !rep.to.length) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
       const to = test ? [me] : rep.to, cc = test ? [] : rep.cc;
       const subject = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + rep.title;
       const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(rep.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(rep.cc.join(', ')) + '</div>' + rep.html : rep.html;
-      try { await sendMailTo(token, to, cc, subject, html); sent.push({ dept: rep.dept, to, cc, count: rep.count, test }); }
+      try { await sendMailTo(token, to, cc, subject, html, attachments); sent.push({ dept: rep.dept, to, cc, count: rep.count, test, photos: attachments.length }); }
       catch (e) { failed.push({ dept: rep.dept, error: String((e && e.message) || e).substring(0, 160) }); }
     }
     if (!test) await stateSet(env, { hazard_report_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
