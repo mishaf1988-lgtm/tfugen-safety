@@ -196,6 +196,39 @@ export async function readSheetRows(bytes, opts) {
   return out;
 }
 
+// Appends rows after the last row with data: A = the next number in column
+// A, then the texts; each cell takes the style of the cell above it. Empty
+// prepared rows in the way are replaced. logRows: arrays of strings (B..).
+export function appendLog(xml, logRows) {
+  const rowRe = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let m, last = 0, turn = 0, tmpl = {};
+  while ((m = rowRe.exec(xml))) {
+    const r = +((/\br="(\d+)"/.exec(m[1]) || [])[1] || 0), inner = m[2] || '';
+    if (!/<v>|<is>/.test(inner)) continue;
+    if (r > last) {
+      last = r; tmpl = {};
+      const cRe = /<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>)/g; let c;
+      while ((c = cRe.exec(inner))) { const sm = /\bs="(\d+)"/.exec(c[2]); if (sm) tmpl[c[1]] = sm[1]; }
+    }
+    const a = /<c r="A\d+"[^>]*><v>(\d+)<\/v><\/c>/.exec(inner);
+    if (a && +a[1] > turn) turn = +a[1];
+  }
+  const first = last + 1, end = last + logRows.length;
+  const st = (col) => (tmpl[col] ? ' s="' + tmpl[col] + '"' : '');
+  let add = '';
+  logRows.forEach((vals, k) => {
+    const r = first + k;
+    add += '<row r="' + r + '"><c r="A' + r + '"' + st('A') + '><v>' + (turn + k + 1) + '</v></c>';
+    vals.forEach((v, i) => { const col = String.fromCharCode(66 + i); add += '<c r="' + col + r + '"' + st(col) + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>'; });
+    add += '</row>';
+  });
+  // Drop the rows being replaced, then put the new ones before the first row after them.
+  xml = xml.replace(rowRe, (all, attrs) => { const r = +((/\br="(\d+)"/.exec(attrs) || [])[1] || 0); return r >= first && r <= end ? '' : all; });
+  let done = false;
+  xml = xml.replace(rowRe, (all, attrs) => { const r = +((/\br="(\d+)"/.exec(attrs) || [])[1] || 0); if (!done && r > end) { done = true; return add + all; } return all; });
+  if (!done) xml = /<sheetData\/>/.test(xml) ? xml.replace('<sheetData/>', '<sheetData>' + add + '</sheetData>') : xml.replace('</sheetData>', add + '</sheetData>');
+  return xml;
+}
+
 // Column widths (0-based index -> width in characters) from <cols>.
 function colWidths(xml) {
   const w = {}; const re = /<col\b[^>]*?\bmin="(\d+)"[^>]*?\bmax="(\d+)"[^>]*?\bwidth="([\d.]+)"/g; let m;
@@ -314,6 +347,13 @@ export async function patchSheetRows(bytes, rows, opts) {
   xml = xml.replace(/(<autoFilter\b[^>]*?)>[\s\S]*?<\/autoFilter>/, '$1/>').replace(/\s+filterMode="1"/, '');
   if (opts.show) xml = applyShow(xml, rows, opts.show, maxRow);
   sheet.text = xml;
+  // A line in another sheet of the same workbook (the "Claude Log"), in the
+  // same pass so the file is zipped once.
+  if (opts.log && opts.log.rows && opts.log.rows.length) {
+    const lp = await sheetPath(entries, opts.log.sheet).catch(() => null);
+    const le = lp && entries.find((e) => e.name === lp);
+    if (le) le.text = appendLog(await entryText(le), opts.log.rows);
+  }
 
   const wbE = entries.find((e) => e.name === 'xl/workbook.xml');
   let wb = await entryText(wbE);
