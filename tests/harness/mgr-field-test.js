@@ -26,6 +26,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const hook = await page.evaluate(() => /_mfWanted\(\)\)setTimeout\(mgrFieldOpen/.test(String(_finishLogin)));
   check('after a successful login the report screen opens', hook);
 
+  await page.evaluate(() => { window.__realToast = window.toast; });
   console.log('\n2. reporting');
   const out = await page.evaluate(() => {
     window.sdb = function () {}; window.addLog = function () {}; window.goPage = function (p) { window._went = p; };
@@ -160,6 +161,62 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the tours screen has a button to open it too', out.tourBtn);
   check('after signing in: first line of the ⋯ menu, and a line in the ☰ menu, open it again', out.topBtn && out.sheetBtn, [out.topBtn, out.sheetBtn]);
   check('no extra top-bar button (no room at 360px with ←)', out.noTopBtn);
+
+  console.log('\n3. messages, sync state and locking (upgrade review 3, 29/09)');
+  const st = await page.evaluate(async () => {
+    const res = {};
+    // a toast raised while #mf is open must be drawn above it
+    window.toast = window.__realToast || window.toast;
+    mgrFieldOpen();
+    const ov = document.getElementById('mf');
+    toast('בחר מחלקה');
+    const t = document.querySelector('.toast');
+    const zt = +getComputedStyle(t).zIndex, zm = +getComputedStyle(ov).zIndex;
+    res.toastZ = [zt, zm];
+    t.style.pointerEvents = 'auto';               // elementFromPoint skips pointer-events:none
+    const r = t.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    res.toastOnTop = !!top && (top === t || t.contains(top));
+    t.remove();
+    // sync line: queue empty -> in the cloud; pending ops -> N waiting
+    localStorage.setItem(OB_KEY, '[]'); _obMem.length = 0;
+    _mfRender(); res.syncOk = document.getElementById('mf-sync').textContent;
+    const today = _thzToday();
+    DB.tour_hazards = [
+      { id: 'th-a', n: 1, d: today, tour_no: 20, dept: 'תוצג', descr: 'א', sev: 'גבוהה', s: 'פתוח' },
+      { id: 'th-b', n: 2, d: today, tour_no: 20, dept: 'תוצג', descr: 'ב', sev: 'נמוכה', s: 'פתוח' },
+      { id: 'th-c', n: 3, d: today, tour_no: 20, dept: 'תוצג', descr: 'ג', sev: 'נמוכה', s: 'פתוח' },
+    ];
+    _mf = { dept: 'תוצג', sev: 'בינונית', n: 0 };
+    localStorage.setItem(OB_KEY, JSON.stringify([
+      { op: 'ins', tbl: 'tour_hazards', row: { id: 'th-b' } }, { op: 'upd', tbl: 'tour_hazards', row: { id: 'th-c' } },
+      { op: 'ins', tbl: 'audit_log', row: { id: 'x' } }]));
+    _obBadge();                                   // the outbox changed: the line follows
+    res.syncWait = document.getElementById('mf-sync').textContent;
+    mgrFieldFinish();
+    res.finishWait = ov.textContent;
+    localStorage.setItem(OB_KEY, '[]'); _obBadge();   // drained: the finish screen redraws by itself
+    res.finishDone = ov.textContent;
+    // locking closes #mf, keeps the typing, and the login comes back to it
+    mgrFieldNewTour(); _mfPickDept('תוצג');
+    document.getElementById('mf-descr').value = 'באמצע הקלדה';
+    window._rtStop = function () {};
+    _lockNow();
+    res.lockHidden = ov.style.display === 'none';
+    res.lockLogin = getComputedStyle(document.getElementById('login')).display !== 'none';
+    res.lockWanted = _mfWanted();
+    mgrFieldOpen();
+    res.lockKept = document.getElementById('mf-descr') && document.getElementById('mf-descr').value;
+    mgrFieldClose();
+    return res;
+  });
+  check('a toast is drawn above the tour screen (was 999 under 9000)', st.toastZ[0] > st.toastZ[1] && st.toastOnTop, st.toastZ);
+  check('sync line: an empty outbox says "בענן"', /בענן/.test(st.syncOk || ''), st.syncOk);
+  check('sync line: pending ops say how many wait on the phone, redrawn from _obBadge', /3 ממתינים לשליחה/.test(st.syncWait || ''), st.syncWait);
+  check('"סיום סיור" says how many of this tour are still on the phone (2 of 3), not "already in the system"', /2 מתוך 3 עדיין בטלפון/.test(st.finishWait || '') && !/כולם בענן/.test(st.finishWait), st.finishWait);
+  check('when the outbox drains the finish screen changes to "כולם בענן" by itself', /כולם בענן/.test(st.finishDone || '') && !/עדיין בטלפון/.test(st.finishDone), st.finishDone);
+  check('locking closes the tour screen and shows the login', st.lockHidden && st.lockLogin, st);
+  check('after the lock, logging in returns to the tour with the typing kept', st.lockWanted && st.lockKept === 'באמצע הקלדה', st);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
