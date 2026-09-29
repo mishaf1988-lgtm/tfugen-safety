@@ -174,6 +174,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'GET') { if (o.missing) return json({}, 404); return json({ cTag: w.cTag, lastModifiedDateTime: '2026-09-22T06:23:00Z', webUrl: 'https://od/deck', '@microsoft.graph.downloadUrl': 'https://dl/deck' }); }
       if (u === 'https://dl/deck') return new Response(w.file, { status: 200 });
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'PUT') {
+        if (o.conflict && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceModified', message: 'The resource has changed since the caller last read it' } }, 409);
         if (o.locked && !/%D7%90%D7%A8%D7%9B%D7%99%D7%95%D7%9F/.test(u)) return json({ error: { code: 'resourceLocked' } }, 423);
         w.puts.push({ path: decodeURIComponent(u.split('/root:/')[1]), body: init.body }); return json({ cTag: 'c-ours-' + w.puts.length, webUrl: 'https://od/deck' });
       }
@@ -198,6 +199,9 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   w = world({ file: src, locked: true });
   r = await runDeck(ENV, false);
   check('open in PowerPoint (423): a clear message, retried by the next run', !r.ok && r.locked && /המצגת פתוחה/.test(r.error) && w.state.deck_err, r);
+  w = world({ file: src, conflict: true });
+  r = await runDeck(ENV, false);
+  check('a parallel run wrote a moment ago (409): not recorded as an error, retried', !r.ok && r.retry && !w.state.deck_err, [r, w.state.deck_err]);
   w = world({ file: src, missing: true });
   r = await runDeck(ENV, false);
   check('no deck in the folder: says where it looked', !r.ok && /מצגת שבועית\.חודשית\.pptx/.test(r.error), r);
