@@ -51,6 +51,36 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.waitForTimeout(100);
   const tc = await page.evaluate(() => window._calls.slice(-1)[0]);
   check('a "שלח לי לבדיקה" button: asks, then sends with test:true', t.has && tc[1].op === 'send' && tc[1].test === true && /לבדיקה, רק אליך/.test(t.txt), [tc, t.txt]);
+
+  console.log('\n  upgrade review 16: a save in Excel not taken yet');
+  const un = await page.evaluate(async () => {
+    const rep = (dept, count, to) => ({ dept, title: 't', to, cc: [], count, old: 0, overdue: 0, rows: [] });
+    let pulled = false; window._calls = [];
+    window._truApi = function (p, b) {
+      window._calls.push([p, b]);
+      if (p === '/api/hazard-file') { pulled = true; return Promise.resolve({ ok: true, pushed: true, pulled: { hazards: 1 } }); }
+      if (b.op === 'preview') return Promise.resolve({ ok: true, canSend: true, unsynced: !pulled, reports: [rep('מעצבים', 2, ['Roman@tapugan.co.il']), rep('תוצג', 1, ['Igal@tapugan.co.il'])] });
+      return Promise.resolve({ ok: true, sent: [], skipped: [], failed: [] });
+    };
+    hzrOpen(); await new Promise((r) => setTimeout(r, 60));
+    const res = { banner: (document.getElementById('hzr-unsynced') || {}).textContent || '' };
+    document.querySelector('#hzr .hz-pick[data-d="תוצג"]').checked = false;   // the manager unticks one
+    hzrSend(); res.askWarn = (document.getElementById('hzr-ask') || {}).textContent || '';
+    hzrAskNo();
+    document.querySelector('#hzr .hz-pick[data-d="תוצג"]').checked = false;
+    hzrPullNow(); await new Promise((r) => setTimeout(r, 80));
+    res.calls = window._calls.map((c) => [c[0], c[1].op || '']);
+    res.bannerAfter = !!document.getElementById('hzr-unsynced');
+    res.ask = (document.getElementById('hzr-ask') || {}).textContent || '';
+    hzrAskYes(); await new Promise((r) => setTimeout(r, 50));
+    res.send = window._calls.slice(-1)[0][1];
+    return res;
+  });
+  check('a banner "קלוט עכשיו ואז שלח" when the file has a save not taken yet', /עוד לא נקלטה/.test(un.banner) && /קלוט עכשיו ואז שלח/.test(un.banner), un.banner);
+  check('sending anyway: the confirmation says the report goes by what is in the app', /הדוח ייצא לפי מה שבאפליקציה/.test(un.askWarn), un.askWarn);
+  check('"קלוט עכשיו": runs the file sync, reloads the preview, the banner is gone', JSON.stringify(un.calls.slice(-2)) === JSON.stringify([['/api/hazard-file', ''], ['/api/hazard-report', 'preview']]) && !un.bannerAfter, un.calls);
+  check('"... ואז שלח": goes straight to the confirmation, with the departments that were ticked', /מעצבים/.test(un.ask) && !/תוצג/.test(un.ask), un.ask);
+  check('after taking it, the send is a normal one (no "anyway")', un.send && un.send.op === 'send' && un.send.anyway === false && un.send.depts.join() === 'מעצבים', un.send);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

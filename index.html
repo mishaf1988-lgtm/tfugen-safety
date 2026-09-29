@@ -10051,11 +10051,17 @@ function _hzrRender(){
   if(!_hzr||_hzr.loading){ov.innerHTML=h+'<p>\u05d8\u05d5\u05e2\u05df \u05d0\u05ea \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d5\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05de\u05d4\u05e7\u05d5\u05d1\u05e5...</p></div>';return;}
   if(_hzr.error){ov.innerHTML=h+'<p style="color:var(--er,#b91c1c)">'+esc(_hzr.error)+'</p></div>';return;}
   h+='<p style="font-size:13px;color:var(--t2)">\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d5\u05d4\u05e0\u05d5\u05e1\u05d7 \u05e0\u05dc\u05e7\u05d7\u05d9\u05dd \u05de\u05d4\u05d2\u05d9\u05dc\u05d9\u05d5\u05e0\u05d5\u05ea "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" \u05d5"\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4" \u05d1\u05e7\u05d5\u05d1\u05e5. \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d5\u05e6\u05d0 \u05de-Outlook \u05e9\u05dc sviva \u05d5\u05e0\u05e9\u05de\u05e8 \u05d1\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05e9\u05dc\u05d7\u05d5.</p>';
+  // A save in Excel not taken yet (upgrade review 16, 29/09): the report would
+  // list what was just closed in the file. "Take it now, then send".
+  if(_hzr.unsynced)h+='<div class="hz-card" id="hzr-unsynced" style="border:2px solid #d97706;background:#fffbeb"><div style="font-weight:900;margin-bottom:4px">\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4</div><div style="font-size:13px">\u05d0\u05dd \u05ea\u05e9\u05dc\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5, \u05d4\u05de\u05e0\u05d4\u05dc\u05d9\u05dd \u05e2\u05dc\u05d5\u05dc\u05d9\u05dd \u05dc\u05e7\u05d1\u05dc \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05db\u05d1\u05e8 \u05e1\u05d2\u05e8\u05ea \u05d0\u05d5 \u05e9\u05d9\u05e0\u05d9\u05ea \u05d1\u05e7\u05d5\u05d1\u05e5.</div>'
+    +(_hzr.pullErr?'<div style="font-size:13px;color:var(--er,#b91c1c);margin-top:4px">'+esc(_hzr.pullErr)+'</div>':'')
+    +'<button type="button" class="btn btn-p" style="width:100%;min-height:46px;margin-top:8px;font-weight:900" onclick="hzrPullNow()"'+(_hzr.pulling?' disabled':'')+'>'+(_hzr.pulling?'\u05e7\u05d5\u05dc\u05d8 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5...':'\u05e7\u05dc\u05d5\u05d8 \u05e2\u05db\u05e9\u05d9\u05d5 \u05d5\u05d0\u05d6 \u05e9\u05dc\u05d7')+'</button></div>';
   if(_hzr.ask){
     var a=_hzr.ask;
     h+='<div class="hz-card" id="hzr-ask" style="border:2px solid var(--pr,#1d4ed8);background:#eff6ff"><div style="font-weight:900;font-size:15px;margin-bottom:6px">'
       +(a.test?'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4, \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da, \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05dc: ':'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05dc-'+a.ds.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea: ')+esc(a.ds.join(', '))+'?</div>'
       +(a.test?'<div style="font-size:13px">\u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d2\u05d9\u05e2 \u05e8\u05e7 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05de\u05d7\u05d5\u05d1\u05e8, \u05d1\u05dc\u05d9 \u05e2\u05d5\u05ea\u05e7. \u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d4\u05d0\u05de\u05d9\u05ea\u05d9\u05d9\u05dd \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05e8\u05d0\u05e9\u05d5.</div>':'<div style="font-size:13px">\u05db\u05dc \u05de\u05d7\u05dc\u05e7\u05d4 \u05ea\u05e7\u05d1\u05dc \u05de\u05d9\u05d9\u05dc \u05e0\u05e4\u05e8\u05d3 \u05dc\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05e9\u05dc\u05d4, \u05e2\u05dd \u05e2\u05d5\u05ea\u05e7 \u05e7\u05d1\u05d5\u05e2.</div>')
+      +(_hzr.unsynced?'<div style="font-size:13px;color:#92400e;margin-top:6px">\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4: \u05d4\u05d3\u05d5\u05d7 \u05d9\u05d9\u05e6\u05d0 \u05dc\u05e4\u05d9 \u05de\u05d4 \u05e9\u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05db\u05e9\u05d9\u05d5.</div>':'')
       +'<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-p" style="flex:1;min-height:44px" onclick="hzrAskYes()">\u05d0\u05d9\u05e9\u05d5\u05e8, \u05e9\u05dc\u05d7</button><button type="button" class="btn btn-s" style="flex:1;min-height:44px" onclick="hzrAskNo()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div></div>';
   }
   if(_hzr.result){
@@ -10085,12 +10091,29 @@ function hzrSend(test){
   // screen readers and automation that check it (28/09, Chrome test).
   _hzr.ask={test:!!test,ds:ds};_hzrRender();
 }
+function _hzrPicks(){return Array.prototype.slice.call(document.querySelectorAll('#hzr .hz-pick')).filter(function(x){return x.checked;}).map(function(x){return x.dataset.d;});}
+function hzrPullNow(){
+  if(_viewBlock()||!_hzr||_hzr.pulling)return;
+  var picks=_hzrPicks(),fail='\u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4';
+  _hzr.pulling=true;_hzr.pullErr=null;_hzrRender();
+  _truApi('/api/hazard-file',{})['catch'](function(){return {ok:false,error:fail};}).then(function(r){
+    var err=r&&r.ok===false?(r.error||fail):(r&&r.reason==='busy'?'\u05e8\u05d9\u05e6\u05d4 \u05d0\u05d7\u05e8\u05ea \u05e9\u05dc \u05d4\u05e7\u05d5\u05d1\u05e5 \u05d1\u05d0\u05de\u05e6\u05e2. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.':null);
+    return _truApi('/api/hazard-report',{op:'preview'}).then(function(j){
+      _hzr=j&&j.reports?j:{error:(j&&j.error)||fail};
+      if(_hzr.unsynced)_hzr.pullErr=err||'\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.';
+      _hzrRender();
+      if(!_hzr.reports)return;
+      document.querySelectorAll('#hzr .hz-pick').forEach(function(x){if(!x.disabled)x.checked=picks.indexOf(x.dataset.d)>=0;});
+      if(!_hzr.unsynced&&picks.length)hzrSend();
+    });
+  })['catch'](function(){_hzr={error:fail};_hzrRender();});
+}
 function hzrAskNo(){if(_hzr)_hzr.ask=null;_hzrRender();}
 function hzrAskYes(){
   var a=_hzr&&_hzr.ask;if(!a)return;
   _hzr.ask=null;_hzr.busy=true;_hzrRender();
-  _truApi('/api/hazard-report',{op:'send',depts:a.ds,test:a.test}).then(function(j){
-    _hzr.busy=false;_hzr.result=j||{failed:[{dept:'',error:'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
+  _truApi('/api/hazard-report',{op:'send',depts:a.ds,test:a.test,anyway:!!_hzr.unsynced}).then(function(j){
+    _hzr.busy=false;if(j&&j.unsynced)_hzr.unsynced=true;_hzr.result=j||{failed:[{dept:'',error:'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
     if(j&&j.error&&!j.sent){_hzr.result={failed:[{dept:'',error:j.error}]};}
     try{addLog('\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7'+(a.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
   })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);
