@@ -32,7 +32,7 @@
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
+import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -41,6 +41,13 @@ const APP_URL = 'https://tapugan-safety.pages.dev';
 const PREFS_ID = 'admin@tfugen.local';
 const EVENT = 'trustee_hazard';
 const MAX_AGE_MS = 48 * 3600 * 1000;
+// Retrying (29/09/2026, upgrade review 10): one attempt used to be all a
+// hazard got. The 15-minute tick (hazard-file.js) calls op:'retry': a hazard
+// the trigger never delivered (notified_at still null) is sent, and one whose
+// every channel failed is tried again, up to MAX_TRIES in all; then a
+// 'notify_failed' line in notifications_log puts it on the app's home screen.
+const FAIL_KEY = 'notify_fail', MAX_TRIES = 3, RETRY_MS = 14 * 60 * 1000, MAX_RETRY_RUN = 5, SETTLE_MS = 3 * 60 * 1000;
+const anySent = (res) => !!res && (res.whatsapp === 'sent' || res.email === 'sent');
 // The template this system is meant to send on. Until it exists and is
 // approved in Meta, the approved incident template carries the message -- and
 // carries it badly: its fixed text reads «🚨 תקרית בטיחות ... נא לטפל מיידית»,
@@ -151,6 +158,10 @@ export async function onRequest({ request, env }) {
   if (env.TRUSTEE_NOTIFY_SECRET && request.headers.get('x-notify-secret') !== env.TRUSTEE_NOTIFY_SECRET) {
     return jsonResp({ error: 'forbidden' }, 403, cors);
   }
+  if (body.op === 'retry') {
+    if (!env.TRUSTEE_NOTIFY_SECRET) return jsonResp({ error: 'forbidden' }, 403, cors);
+    return jsonResp(await retrySweep(env, sb), 200, cors);
+  }
   const id = clean(body.id, 64);
   if (!id || /[^A-Za-z0-9_-]/.test(id)) return jsonResp({ error: 'id required' }, 400, cors);
   // The table name reaches the query string, so it is picked from the map by
@@ -185,23 +196,82 @@ export async function onRequest({ request, env }) {
 
   const task = await lineFor(sb, src, row);
   const res = await deliver(env, prefs, row, task, src);
-  const title = clean((row.u || '') + ' — ' + task + (row.f ? ': ' + row.f : ''), 120);
-  const logs = [];
-  if (res.whatsapp) logs.push({ channel: res.whatsapp === 'sent' ? 'whatsapp' : 'whatsapp_error', detail: res.whatsapp });
-  if (res.email) logs.push({ channel: res.email === 'sent' ? 'email' : 'email_error', detail: res.email });
-  if (logs.length) {
-    try {
-      await sb('notifications_log', {
-        method: 'POST', headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify(logs.map((l) => ({
-          id: 'tn' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          user_email: 'server', event_type: src.event, channel: l.channel,
-          payload: { id: row.id, title, detail: l.detail }, ts: new Date().toISOString()
-        })))
-      });
-    } catch (e) { /* the message went out; a missing log line is not worth a failure */ }
+  await logDelivery(sb, src, row, task, res);
+  if (!anySent(res)) {
+    try { const m = await failGet(env); await noteFail(sb, m, srcKey, src, row, task, res); await stateSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* the retry sweep also finds it by its log */ }
   }
   return jsonResp({ ok: true, ...res }, 200, cors);
+}
+
+function titleOf(row, task) { return clean((row.u || '') + ' — ' + task + (row.f ? ': ' + row.f : ''), 120); }
+async function logRows(sb, rows) {
+  if (!rows.length) return;
+  try {
+    await sb('notifications_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows.map((l) => Object.assign({
+      id: 'tn' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), user_email: 'server', ts: new Date().toISOString() }, l))) });
+  } catch (e) { /* the message went out; a missing log line is not worth a failure */ }
+}
+async function logDelivery(sb, src, row, task, res) {
+  const title = titleOf(row, task), logs = [];
+  if (res.whatsapp) logs.push({ channel: res.whatsapp === 'sent' ? 'whatsapp' : 'whatsapp_error', detail: res.whatsapp });
+  if (res.email) logs.push({ channel: res.email === 'sent' ? 'email' : 'email_error', detail: res.email });
+  await logRows(sb, logs.map((l) => ({ event_type: src.event, channel: l.channel, payload: { id: row.id, title, detail: l.detail } })));
+}
+async function failGet(env) {
+  const st = await stateGet(env, [FAIL_KEY]).catch(() => ({}));
+  try { const m = JSON.parse((st[FAIL_KEY] && st[FAIL_KEY].value) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; }
+}
+// One more failed attempt on the map; the third gives up and says so in the log.
+async function noteFail(sb, m, srcKey, src, row, task, res) {
+  const k = srcKey + ':' + row.id, p = m[k] || {};
+  const detail = clean([res.whatsapp, res.email].filter(Boolean).join(' | '), 200);
+  const e = { tries: (p.tries || 0) + 1, last: new Date().toISOString(), err: detail, title: titleOf(row, task) };
+  if (e.tries >= MAX_TRIES) {
+    e.gave_up = true;
+    await logRows(sb, [{ event_type: src.event, channel: 'notify_failed', payload: { id: row.id, src: srcKey, title: e.title, detail, tries: e.tries } }]);
+  }
+  m[k] = e;
+}
+async function retrySweep(env, sb) {
+  const prefs = await loadPrefs(sb);
+  if (!(prefs.whatsapp && prefs.whatsapp_to) && !(prefs.email && prefs.email_to)) return { ok: true, skipped: 'no recipient configured' };
+  const m = await failGet(env), now = Date.now(), out = { ok: true, tried: 0, sent: 0, failed: 0, gave_up: 0 };
+  const since = new Date(now - MAX_AGE_MS).toISOString(), until = new Date(now - SETTLE_MS).toISOString();
+  const one = async (srcKey, raw, claim) => {
+    const src = SOURCES[srcKey];
+    if (claim) {
+      const c = await sb(srcKey + '?id=eq.' + encodeURIComponent(raw.id) + '&notified_at=is.null', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ notified_at: new Date().toISOString() }) });
+      const got = c.ok ? await c.json() : [];
+      if (!Array.isArray(got) || !got.length) return;
+    }
+    const row = src.norm(raw), task = await lineFor(sb, src, row);
+    const res = await deliver(env, prefs, row, task, src);
+    out.tried++;
+    await logDelivery(sb, src, row, task, res);
+    if (anySent(res)) { out.sent++; delete m[srcKey + ':' + raw.id]; return; }
+    out.failed++; await noteFail(sb, m, srcKey, src, row, task, res);
+    if (m[srcKey + ':' + raw.id].gave_up) out.gave_up++;
+  };
+  const read = async (q) => { try { const r = await sb(q); const j = r.ok ? await r.json() : []; return Array.isArray(j) ? j : []; } catch (e) { return []; } };
+  // 1. never delivered: the trigger's call did not arrive, or failed before the claim.
+  const win = '&notified_at=is.null&ts=gte.' + encodeURIComponent(since) + '&ts=lte.' + encodeURIComponent(until) + '&order=ts.asc&limit=' + MAX_RETRY_RUN;
+  const lost = (await read('trustee_reports?ok=eq.false' + win + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
+    .concat((await read('near_miss?select=' + SOURCES.near_miss.select + win)).map((r) => ['near_miss', r]));
+  for (const [k, r] of lost) { if (out.tried >= MAX_RETRY_RUN) break; await one(k, r, true); }
+  // 2. delivered and failed on every channel: again, 15 minutes apart.
+  for (const k of Object.keys(m)) {
+    if (out.tried >= MAX_RETRY_RUN) break;
+    const e = m[k]; if (!e || e.gave_up || now - Date.parse(e.last || 0) < RETRY_MS) continue;
+    const [srcKey, id] = [k.split(':')[0], k.split(':').slice(1).join(':')];
+    if (!Object.prototype.hasOwnProperty.call(SOURCES, srcKey) || /[^A-Za-z0-9_-]/.test(id)) { delete m[k]; continue; }
+    const rows = await read(srcKey + '?id=eq.' + encodeURIComponent(id) + '&select=' + SOURCES[srcKey].select);
+    if (!rows[0]) { delete m[k]; continue; }
+    await one(srcKey, rows[0], false);
+  }
+  // Given-up entries are kept a week (so a failure is not retried forever), then dropped.
+  Object.keys(m).forEach((k) => { if (m[k] && m[k].gave_up && now - Date.parse(m[k].last || 0) > 7 * 86400000) delete m[k]; });
+  try { await stateSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* next tick */ }
+  return out;
 }
 
 // The manager's saved settings: notification_prefs[admin].prefs.trustee_hazard

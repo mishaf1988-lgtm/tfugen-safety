@@ -435,6 +435,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   let j = await res.json();
   await Promise.all(waits);
   check('with the secret: the xlsm, then a call for the xlsx', j.ok && j.file === 'xlsm' && j.next === 'xlsx' && w.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/hazard-file')), j);
+  check('... and the notification retry rides the same tick (trustee-notify op:retry, upgrade review 10)', w.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/trustee-notify')), w.calls.filter((c) => c.startsWith('POST https://tapugan')));
   const w2 = world({ file: src });
   const waits2 = [];
   res = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { file: 'xlsx' }), env: ENV, waitUntil: (p) => waits2.push(p) });

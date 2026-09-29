@@ -13,6 +13,7 @@ function world(opts) {
     const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false } : { error: 'bad' }, st.authOk ? 200 : 401);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'GET') return json(st.row ? [st.row] : []);
+    if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH' && opts.lost) return json([{ id: 'x' }]);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; return json([{ id: st.row.id }]); }
     // near_miss, added 2026-09-21. Same shape of read and claim, different
     // table and different column names -- which is the whole risk.
@@ -27,7 +28,16 @@ function world(opts) {
       return json(t ? [{ t }] : []);
     }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json(st.prefs ? [{ prefs: st.prefs }] : []);
-    if (u.startsWith(SB + '/rest/v1/notifications_log')) return new Response('', { status: 201 });
+    if (u.startsWith(SB + '/rest/v1/notifications_log')) { if (method === 'POST') (st.logs = st.logs || []).push(...body); return new Response('', { status: 201 }); }
+    // server_state: the retry map (upgrade review 10)
+    if (u.startsWith(SB + '/rest/v1/server_state')) {
+      st.state = st.state || Object.assign({}, opts.state || {});
+      if (method === 'POST') { body.forEach((r) => { st.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      return json(Object.keys(st.state).map((k) => ({ key: k, value: st.state[k], updated_at: 'x' })));
+    }
+    // the sweep's lists of rows never notified
+    if (u.startsWith(SB + '/rest/v1/trustee_reports?ok=eq.false') && method === 'GET') return json(opts.lost || []);
+    if (u.startsWith(SB + '/rest/v1/near_miss?select=') && method === 'GET') return json(opts.lostNm || []);
     if (u.includes('graph.facebook.com')) {
       if (st.metaFail) return json({ error: { code: 190, message: 'Invalid OAuth access token' } }, 401);
       if (body.template.name === 'tfugen_safety_report' && st.dedicatedMissing) return json({ error: { code: 132001, message: 'Template name does not exist in the translation' } }, 404);
@@ -268,5 +278,50 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     w = world({ nm: nmFresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'n1', src: 'near_miss' }, hs), env: envS });
     resend = w.calls.find((c) => c.u.includes('resend'));
     check('near-miss: no close button', resend && !/close-hazard/.test(resend.body.html)); }
+
+  console.log('\n10. retrying a failed alert (upgrade review 10, 29/09)');
+  { const envS = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec' }, hs = { 'x-notify-secret': 'nsec' };
+    const K = 'trustee_reports:r1';
+    let w = world({ row: fresh(), prefs: prefsOn, metaFail: true, resendOk: false });
+    await onRequest({ request: req({ id: 'r1' }, hs), env: envS });
+    let m = JSON.parse((w.st.state || {}).notify_fail || '{}');
+    check('every channel failed on the first try: noted for a retry (1 try), no "failed" alert yet', m[K] && m[K].tries === 1 && !m[K].gave_up && !(w.st.logs || []).some((l) => l.channel === 'notify_failed'), m);
+    w = world({ row: fresh(), prefs: prefsOn });
+    await onRequest({ request: req({ id: 'r1' }, hs), env: envS });
+    check('sent on the first try: nothing noted', !JSON.parse((w.st.state || {}).notify_fail || '{}')[K], w.st.state);
+    const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+    const row0 = Object.assign(fresh(), { notified_at: ago(20) });
+    w = world({ row: row0, prefs: prefsOn, state: { notify_fail: JSON.stringify({ [K]: { tries: 1, last: ago(5) } }) } });
+    let j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('retry: not before 15 minutes have passed', j.ok && j.tried === 0 && !w.calls.some((c) => c.u.includes('graph.facebook.com')), j);
+    w = world({ row: row0, prefs: prefsOn, state: { notify_fail: JSON.stringify({ [K]: { tries: 1, last: ago(16) } }) } });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    m = JSON.parse(w.st.state.notify_fail);
+    check('retry after 15 minutes, delivered now: sent, taken off the list, logged as sent', j.tried === 1 && j.sent === 1 && !m[K] && (w.st.logs || []).some((l) => l.channel === 'whatsapp' && l.payload.id === 'r1'), [j, m]);
+    w = world({ row: row0, prefs: prefsOn, metaFail: true, resendOk: false, state: { notify_fail: JSON.stringify({ [K]: { tries: 1, last: ago(16) } }) } });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    m = JSON.parse(w.st.state.notify_fail);
+    check('retry fails again: 2 tries, still no "failed" alert', j.failed === 1 && m[K].tries === 2 && !m[K].gave_up && !(w.st.logs || []).some((l) => l.channel === 'notify_failed'), m);
+    w = world({ row: row0, prefs: prefsOn, metaFail: true, resendOk: false, state: { notify_fail: JSON.stringify({ [K]: { tries: 2, last: ago(16) } }) } });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    m = JSON.parse(w.st.state.notify_fail);
+    const nf = (w.st.logs || []).find((l) => l.channel === 'notify_failed');
+    check('the third failure: gives up and logs "notify_failed" with the finding and the error', j.gave_up === 1 && m[K].tries === 3 && m[K].gave_up && nf && nf.payload.id === 'r1' && nf.payload.tries === 3 && /דנה/.test(nf.payload.title) && nf.payload.detail, [m, nf]);
+    w = world({ row: row0, prefs: prefsOn, state: { notify_fail: JSON.stringify({ [K]: { tries: 3, gave_up: true, last: ago(60) } }) } });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('after giving up: not tried a fourth time', j.tried === 0, j);
+    const lost = Object.assign(fresh(), { id: 'r7', ts: ago(10) });
+    w = world({ prefs: prefsOn, lost: [lost] });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    const q = w.calls.find((c) => c.u.includes('trustee_reports?ok=eq.false'));
+    check('a finding the trigger never delivered (notified_at empty, 3 min to 48 h old): claimed and sent', j.tried === 1 && j.sent === 1 && q && /notified_at=is\.null/.test(q.u) && /ts=gte\./.test(q.u) && /ts=lte\./.test(q.u) && w.calls.some((c) => c.method === 'PATCH' && /id=eq\.r7&notified_at=is\.null/.test(c.u)), [j, q && q.u]);
+    w = world({ prefs: prefsOn });
+    let res = await onRequest({ request: req({ op: 'retry' }), env: envS });
+    check('retry without the secret: 403', res.status === 403);
+    res = await onRequest({ request: req({ op: 'retry' }), env });
+    check('retry when no secret is configured on the server: 403 (never open)', res.status === 403);
+    w = world({ prefs: null });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('no recipient configured: nothing tried', j.skipped === 'no recipient configured', j); }
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
