@@ -153,6 +153,12 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const zs3 = setList(slide3, 'HighSevPanel', cc.s3.high, (n) => ['ועוד ' + n + ' מפגעים', ''], []);
   check('closures by department, more than the 3 lines: "ועוד N מחלקות" (not מפגעים)', zs3.includes('<a:t>ועוד 3 מחלקות</a:t>'), zs3.slice(zs3.indexOf('פעולות'), zs3.indexOf('פעולות') + 900));
 
+  // Michael 29/09: a hazard of this week closed since is green, not orange.
+  const wkRows = [row(44, '2026-09-22', 'מעצבים', '', 'ג\'ריקן', 'בינונית', null, 'סגור', '2026-09-23'), row(45, '2026-09-22', 'מעצבים', '', 'קופסה', 'בינונית', null, 'פתוח', null),
+    row(46, '2026-09-22', 'מעצבים', '', 'ארון', 'בינונית', null, 'סגור', '2026-09-23'), row(7, '2026-09-01', 'מעצבים', '', 'חדר חשמל', 'בינונית', null, 'פתוח', null), row(2, '2026-09-01', 'מעצבים', '', 'ישן', 'בינונית', null, 'סגור', '2026-09-10')];
+  const wb = deckContent({ hazards: meetingHazards(wkRows, '2026-09-29'), accidents: meetingAccidents(INC, '2026-09-29') }, wkRows, '2026-09-29', { s3Month: '2026-09' }).s1.bars;
+  check('this week\'s closed hazards are counted green (closed), orange = new and still open', wb['סגור']['מעצבים'] === 3 && wb['חדש השבוע']['מעצבים'] === 1 && wb['פתוח']['מעצבים'] === 1 && wb['Totals']['מעצבים'] === 5, wb);
+
   // slide 3 = monthly (Michael 29/09)
   const noS3 = await patchDeck(src, deckContent(m, ROWS, ref));
   const same3 = (() => { const a = readZip(src).find((e) => e.name === 'ppt/slides/slide3.xml'), b = readZip(noS3.bytes).find((e) => e.name === 'ppt/slides/slide3.xml'); return a.crc === b.crc && Buffer.from(a.raw).equals(Buffer.from(b.raw)); })();
