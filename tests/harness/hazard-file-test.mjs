@@ -199,7 +199,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const personFile = await writeZip(saved);
   w = world({ file: personFile, state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
-  check('file saved in Excel since our write: that version goes to ארכיון/גרסאות שנדרסו first', r.pushed && w.puts[0] && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 2026-09-28 10-37\.xlsm/.test(w.puts[0].path), w.puts.map((p) => p.path));
+  check('file saved in Excel since our write: that version goes to ארכיון/גרסאות שנדרסו first', r.pushed && w.puts[0] && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 28-09-2026 13\.37\.xlsm/.test(w.puts[0].path), w.puts.map((p) => p.path));
   w = world({ file: out, state: s1, cTag: 'c-ours-2', locked: true, hazards: HZ.slice(0, 1) });
   r = await runFile(ENV, 'xlsm', false);
   check('open in Excel (423): a clear Hebrew message, signature not saved (retried)', !r.ok && r.locked && /פתוח ב-Excel/.test(r.error) && w.state.hazard_xlsm_sig === s1.hazard_xlsm_sig, r);

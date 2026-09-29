@@ -199,7 +199,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   }
   let w = world({ file: src });
   let r = await runDeck(ENV, false);
-  check('first run: the deck as it was is copied to ארכיון/מצגות, then the updated deck replaces it in folder 13', r.ok && r.pushed && w.puts.length === 2 && /13_סיורי מפגעים\/2026\/ארכיון\/מצגות\/מצגת שבועית\.חודשית - 2026-09-22 06-23\.pptx/.test(w.puts[0].path) && /13_סיורי מפגעים\/2026\/מצגת שבועית\.חודשית\.pptx:\/content/.test(w.puts[1].path), w.puts.map((p) => p.path));
+  check('first run: the deck as it was is copied to ארכיון/מצגות, then the updated deck replaces it in folder 13', r.ok && r.pushed && w.puts.length === 2 && /13_סיורי מפגעים\/2026\/ארכיון\/מצגות\/מצגת שבועית\.חודשית - 22-09-2026 09\.23\.pptx/.test(w.puts[0].path) && /13_סיורי מפגעים\/2026\/מצגת שבועית\.חודשית\.pptx:\/content/.test(w.puts[1].path), w.puts.map((p) => p.path));
   const s1st = Object.assign({}, w.state);
   const prevM = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 0)).toISOString().substring(0, 7);
   check('the first run of a month writes slide 3 for the month that ended, and remembers it', w.state.deck_s3_month === prevM && (await partText(w.puts[1].body, 'ppt/slides/slide3.xml')) !== slide3, w.state.deck_s3_month);
