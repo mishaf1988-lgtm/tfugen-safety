@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -78,7 +78,15 @@ function world(o) {
       return json({ candidates: [{ content: { parts: [{ text: '1. **לתקן את הפנס** — ולוודא תאורה תקינה\nעוד שורה' }] } }] });
     }
     if (u.startsWith(SB + '/rest/v1/server_state')) {
-      if (m === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      const pref = (init && init.headers && init.headers.Prefer) || '';
+      if (m === 'POST') { JSON.parse(init.body).forEach((r) => { if (/ignore-duplicates/.test(pref) && r.key in w.state) return; w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (m === 'PATCH') {
+        // the lease: take it only when free; give it back only with its token
+        const du = decodeURIComponent(u), key = /key=eq\.([^&]+)/.exec(du)[1], body = JSON.parse(init.body), cur = w.state[key] || '';
+        if (/&or=/.test(du)) { if (o.lockHeld || cur) return json([]); w.state[key] = body.value; w.locks = (w.locks || 0) + 1; return json([{ key }]); }
+        const tok = /&value=eq\.(.+)$/.exec(du); if (tok && tok[1] === cur) w.state[key] = body.value;
+        return new Response(null, { status: 204 });
+      }
       return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
     }
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]);
@@ -287,6 +295,16 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   w = world({ file: out, state: s1, cTag: 'onedrive-bumped-only' });
   r = await runFile(ENV, 'xlsm', false);
   check('cTag bumped by OneDrive, same data: nothing written, the new cTag remembered', !r.pushed && r.reason === 'unchanged' && !w.puts.length && w.state.hazard_xlsm_ctag === 'onedrive-bumped-only', r);
+
+  console.log('\n3c. one run per file (29/09: overlapping runs wrote an old copy)');
+  w = world({ file: src, lockHeld: true });
+  r = await runFileLocked(ENV, 'xlsm', true);
+  check('file busy with another run: nothing read or written, a mark left for it', r.reason === 'busy' && !w.puts.length && !!w.state.hazard_xlsm_dirty, r);
+  w = world({ file: src });
+  const pr = [runFileLocked(ENV, 'xlsm', true), runFileLocked(ENV, 'xlsm', true)];
+  const both = await Promise.all(pr);
+  const nPush = w.puts.filter((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).length;
+  check('two at once: one waits (busy), the holder runs again for it, and the lease is given back', both.some((x) => x.reason === 'busy') && nPush >= 2 && w.state.hazard_xlsm_lock === '', [both.map((x) => x.reason || x.pushed), nPush, w.state.hazard_xlsm_lock]);
 
   console.log('\n4. who may call it, and the twin');
   w = world({ file: src });

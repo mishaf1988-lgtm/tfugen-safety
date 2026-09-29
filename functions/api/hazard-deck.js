@@ -11,7 +11,7 @@
 // Callers: the hazard-file chain (x-notify-secret) and the app: {op:'status'},
 // {op:'setDate', date}, {force:true} (admin/manager session).
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
+import { odConfigured, accessToken, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { FOLDER, G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingHazards, meetingAccidents } from '../_meeting.js';
 import { deckContent, patchDeck } from '../_deckpatch.js';
@@ -117,6 +117,10 @@ export async function onRequest(context) {
     }
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
-  try { return jsonResp(await runDeck(env, body.force === true), 200, cors); }
+  // One deck run at a time: an older one finishing last would put old numbers back (29/09).
+  try {
+    const r = await runLeased(env, 'deck', 120000, () => runDeck(env, body.force === true));
+    return jsonResp(r && r.busy ? { ok: true, pushed: false, reason: 'busy' } : r, 200, cors);
+  }
   catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }
 }

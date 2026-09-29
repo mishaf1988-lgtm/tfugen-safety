@@ -901,9 +901,6 @@ body.emp-mode #emp-mode-badge{display:inline-block}
          goPage; this is the affordance for it. Right-pointing, because the
          layout is right-to-left. Hidden on the home page. -->
     <button class="bell" id="back-btn" title="&#1495;&#1494;&#1512;&#1492;" aria-label="&#1495;&#1494;&#1512;&#1492;" onclick="goBack()" style="display:none">&#8594;</button>
-    <!-- Michael 2026-09-29: after signing in there was no way back to the
-         field report screen except the tours page. One tap from any page. -->
-    <button class="bell" id="mf-btn" title="&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;" aria-label="&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;" onclick="mgrFieldOpen()">&#128203;</button>
     <button class="bell" id="home-btn" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" aria-label="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" onclick="goHome()">&#127968;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <!-- The bell used to open the SETTINGS screen and looked identical whether
@@ -10593,6 +10590,10 @@ window._topMoreMenu=function(anchor){
   function closeMenu(){if(menu.parentNode)menu.parentNode.removeChild(menu);document.removeEventListener('click',outside,true);document.removeEventListener('keydown',keyEsc,true);}
   function outside(e){if(!menu.contains(e.target)&&e.target!==anchor)closeMenu();}
   function keyEsc(e){if(e.key==='Escape')closeMenu();}
+  // Michael 2026-09-29: after signing in there was no way back to the field
+  // report screen. First in this menu (the top bar has no room for another
+  // button at 360px) and in \u2630.
+  if(typeof _role==='function'&&_role()!=='reporter')item('&#128203;','\u05de\u05de\u05e9\u05e7 \u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05e1\u05d9\u05d5\u05e8)',function(){mgrFieldOpen();});
   item('\u2601','\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05de\u05dc\u05d0 (\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d4\u05e2\u05e0\u05df)',function(){if(typeof forceSync==='function')forceSync();});
   if(typeof _isAdminUser==='function'&&_isAdminUser())item('\u2b06','\u05d4\u05e2\u05dc\u05d4 \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05dc\u05e9\u05e8\u05ea',function(){if(typeof _forceUpload==='function')_forceUpload();});
   if(typeof _role==='function'&&_role()!=='reporter')item('\ud83e\ude7a','\u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea',function(){if(typeof _sysStateOpen==='function')_sysStateOpen();});
