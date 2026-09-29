@@ -1013,6 +1013,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div id="dash-pwreq-list" style="font-size:12px"></div>
   </div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
+  <div id="dash-notify-fail"></div>
   <div id="dash-health" style="margin:0 0 10px"></div>
   <div id="dash-alerts"></div>
 
@@ -6185,6 +6186,7 @@ function rDash(){
   // they navigate there (rPage \u2192 rDash). Saves ~30-100ms per save handler
   // call from sv* / del* helpers across the app.
   if(CUR!=='dash') return;
+  try{_nfHomeRender();}catch(e){}
   // Safety health score (rough composite)
   try{
     var dh=g('dash-health');
@@ -12782,7 +12784,38 @@ function _sysChkRecipient(){
 
 // 2. Did anything actually go out? The settings can be perfect while every
 // send is refused at the far end -- which is exactly what Resend was doing.
+// An alert the server gave up on (trustee-notify.js, three attempts 15
+// minutes apart; upgrade review 10, 29/09): a 'notify_failed' line in
+// notifications_log, not followed by a successful send of the same report.
+// Last 7 days; "\u05e8\u05d0\u05d9\u05ea\u05d9" hides one on this device.
+var NF_SEEN_KEY='ts_nf_seen';
+function _nfSeen(){try{return JSON.parse(localStorage.getItem(NF_SEEN_KEY)||'{}')||{};}catch(e){return {};}}
+function _notifFailed(){
+  var log=DB.notifications_log||[],seen=_nfSeen(),t0=new Date(Date.now()-7*864e5).toISOString();
+  return log.filter(function(r){
+    if(!r||r.channel!=='notify_failed'||String(r.ts||'')<t0)return false;
+    var id=r.payload&&r.payload.id;if(!id||seen[r.id])return false;
+    return !log.some(function(x){return x&&(x.channel==='whatsapp'||x.channel==='email')&&x.payload&&x.payload.id===id&&String(x.ts||'')>String(r.ts||'');});
+  }).sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
+}
+function _nfHomeRender(){
+  var box=g('dash-notify-fail');if(!box)return;
+  var mine=typeof _role==='function'&&(_role()==='admin'||_role()==='manager');
+  var list=mine?_notifFailed():[];
+  if(!list.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="card" style="border:2px solid #dc2626;background:#fef2f2;padding:12px;margin:0 0 10px">'
+    +'<div style="font-weight:900;color:#b91c1c;margin-bottom:4px">\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 ('+list.length+')</div>'
+    +'<div style="font-size:13px;margin-bottom:6px">\u05d4\u05e9\u05e8\u05ea \u05e0\u05d9\u05e1\u05d4 3 \u05e4\u05e2\u05de\u05d9\u05dd \u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05da \u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d5\u05de\u05d9\u05d9\u05dc \u05e2\u05dc \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d0\u05dc\u05d4 \u05d5\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d9\u05d7. \u05e4\u05ea\u05d7 \u05d0\u05d5\u05ea\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d5\u05d1\u05d3\u05d5\u05e7 \u05d1\u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05dc\u05de\u05d4 \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05ea.</div>'
+    +list.map(function(r){var p=r.payload||{},nm=r.event_type==='near_miss'||p.src==='near_miss';
+      return '<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed #fca5a5"><div style="flex:1;min-width:0;font-size:13px;word-break:break-word">'+esc(String(p.title||'').substring(0,110))
+        +' <span style="color:var(--t2);font-size:12px">('+fd(String(r.ts||'').substring(0,10))+')</span></div>'
+        +'<button type="button" class="btn btn-s" style="min-height:40px" data-id="'+esc(String(p.id))+'" onclick="'+(nm?"showView('near_miss',this.dataset.id)":"goPage('trustees')")+'">\u05e4\u05ea\u05d7</button>'
+        +'<button type="button" class="btn btn-s" style="min-height:40px" data-l="'+esc(String(r.id))+'" onclick="nfSeen(this.dataset.l)">\u05e8\u05d0\u05d9\u05ea\u05d9</button></div>';}).join('')+'</div>';
+}
+function nfSeen(lid){var s=_nfSeen();s[lid]=1;try{localStorage.setItem(NF_SEEN_KEY,JSON.stringify(s));}catch(e){}_nfHomeRender();}
 function _sysChkDelivery(){
+  var nf=typeof _notifFailed==='function'?_notifFailed():[];
+  if(nf.length){var p0=nf[0].payload||{};return _sysRow(SYS_BAD,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d0\u05d7\u05e8\u05d9 3 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea'+(nf.length>1?' ('+nf.length+')':'')+': '+String(p0.title||'').substring(0,80)+'. '+String(p0.detail||'').substring(0,120),'\u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05de\u05e1\u05e4\u05e8 \u05d4\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05d5\u05d4\u05de\u05d9\u05d9\u05dc \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea, \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4');}
   var rows=(DB.notifications_log||[]).slice().sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
   if(!rows.length)return _sysRow(SYS_WARN,'\u05e9\u05dc\u05d9\u05d7\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea.','\u05dc\u05dc\u05d7\u05d5\u05e5 «\u05e9\u05dc\u05d7 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4» \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05d4\u05ea\u05e8\u05d0\u05d5\u05ea');
   var ok=null,bad=null;

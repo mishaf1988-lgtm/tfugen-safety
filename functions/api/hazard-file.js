@@ -719,6 +719,14 @@ export async function onRequest(context) {
         body: JSON.stringify({ op: 'archive' }),
       }).catch(() => {}));
     }
+    // The notification retry (trustee-notify.js op:'retry', upgrade review 10)
+    // rides the same 15-minute tick, in its own request.
+    if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
+      context.waitUntil(fetch(new URL('/api/trustee-notify', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ op: 'retry' }),
+      }).catch(() => {}));
+    }
     const r = await runFileLocked(env, which, force);
     // The twin, in its own request (its own CPU and subrequest budget).
     if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
