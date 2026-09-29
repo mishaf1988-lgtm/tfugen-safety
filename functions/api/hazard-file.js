@@ -152,9 +152,20 @@ export async function graphPut(token, folder, name, bytes, type) {
   if (!r.ok) { const e = new Error('onedrive ' + r.status + (j && j.error ? ': ' + String(j.error.message || j.error.code).substring(0, 160) : '')); e.status = r.status; throw e; }
   return j;
 }
+// Archive copies are named with the date as Michael reads it, DD-MM-YYYY, and
+// Israel time (29/09/2026: "write dates like in Hebrew in the archive too").
+// A file name cannot hold "/", so "-" between the parts and "." in the time.
 export function stampName(name, iso) {
   const i = name.lastIndexOf('.');
-  return name.substring(0, i) + ' - ' + iso.replace('T', ' ').substring(0, 16).replace(':', '-') + name.substring(i);
+  const d = new Date(iso);
+  let stamp = iso.replace('T', ' ').substring(0, 16).replace(':', '-');
+  if (!isNaN(d)) {
+    const p = {};
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(d).forEach((x) => { p[x.type] = x.value; });
+    stamp = p.day + '-' + p.month + '-' + p.year + ' ' + p.hour + '.' + p.minute;
+  }
+  return name.substring(0, i) + ' - ' + stamp + name.substring(i);
 }
 
 // ---- Excel -> app (28/09, Michael: "if I close in the file, the app has to
