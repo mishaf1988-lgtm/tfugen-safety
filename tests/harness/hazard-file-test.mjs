@@ -214,13 +214,13 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('saved in Excel, nothing there that the app does not take: rewritten, no copy (29/09/2026)', r.pushed && w.puts.length === 1 && !r.kept && JSON.parse(w.state.hazard_xlsm_dropped).items.length === 0, w.puts.map((p) => p.path));
   // A description edited in the file: the app does not take it, so the copy is kept and it is listed.
   const saved2 = readZip(out).map((e) => (e.name === 'xl/worksheets/sheet2.xml' ? { name: e.name, text: null } : e));
-  saved2.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = (await sheetOf(out, 'xl/worksheets/sheet2.xml')).replace(/(<c r="F2"[^>]*><is><t[^>]*>)[^<]*/, '$1תיאור שתוקן בקובץ');
+  saved2.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = (await sheetOf(out, 'xl/worksheets/sheet2.xml')).replace(/(<c r="G2"[^>]*><is><t[^>]*>)[^<]*/, '$1גבוהה');
   w = world({ file: await writeZip(saved2), state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
   const dr = JSON.parse(w.state.hazard_xlsm_dropped || '{}');
   const logP = await sheetOf(w.puts[w.puts.length - 1].body, 'xl/worksheets/sheet9.xml');
   check('Claude Log after a save in Excel: says so, and that 1 change was not taken', logP.includes('שמירה בקובץ Excel') && logP.includes('1 שינויים בקובץ לא נקלטו'), logP.slice(-600));
-  check('description edited in Excel: not taken, listed (row, column F, the text), and the file goes to גרסאות שנדרסו first', r.pushed && dr.items && dr.items.length === 1 && dr.items[0].ci === 5 && dr.items[0].r === 2 && dr.items[0].val === 'תיאור שתוקן בקובץ' && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 28-09-2026 13\.37\.xlsm/.test(w.puts[0].path), [dr, w.puts.map((p) => p.path)]);
+  check('severity edited in Excel: not taken, listed (row, column G, the text), and the file goes to גרסאות שנדרסו first', r.pushed && dr.items && dr.items.length === 1 && dr.items[0].ci === 6 && dr.items[0].r === 2 && dr.items[0].val === 'גבוהה' && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 28-09-2026 13\.37\.xlsm/.test(w.puts[0].path), [dr, w.puts.map((p) => p.path)]);
   w = world({ file: out, state: s1, cTag: 'c-ours-2', locked: true, hazards: HZ.slice(0, 1) });
   r = await runFile(ENV, 'xlsm', false);
   check('open in Excel (423): a clear Hebrew message, signature not saved (retried)', !r.ok && r.locked && /פתוח ב-Excel/.test(r.error) && w.state.hazard_xlsm_sig === s1.hazard_xlsm_sig, r);
@@ -247,7 +247,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const last1 = JSON.parse(s1.hazard_xlsm_last);
   let ed = diffEdits(back, last1, HZ, TR, '2026-09-28');
   const e2 = ed.hazards.find((x) => x.id === 'th-2'), e1 = ed.hazards.find((x) => x.id === 'th-1'), ea = ed.reports.find((x) => x.id === 'a');
-  check('manager hazard closed in Excel without a date: סגור, closed today', e2 && e2.s === 'סגור' && e2.closed_d === '2026-09-28' && !('descr' in e2), e2);
+  check('manager hazard closed in Excel without a date: סגור, closed today', e2 && e2.s === 'סגור' && e2.closed_d === '2026-09-28' && e2.descr === 'תיאור ששונה ב-Excel', e2);
   check('notes edited: taken without the "דיווח ממונה" prefix', e1 && e1.notes === 'נבדק שוב' && Object.keys(e1).length === 2, e1);
   check('trustee finding closed: נסגר, its date, the action without "(סיור נאמן: ...)"', ea && ea.s === 'נסגר' && ea.closed_d === '2026-09-27' && ea.action === 'להחליף פנס', ea);
   check('a new row becomes a manager hazard with the next מס"ד, both responsibles', ed.fresh.length === 1 && ed.fresh[0].n === 3 && ed.fresh[0].resp === 'חשמל' && ed.fresh[0].resp2 === 'אחזקה' && ed.fresh[0].sev === 'גבוהה' && ed.fresh[0].d === '2026-09-28' && /^th-/.test(ed.fresh[0].id), ed.fresh);
@@ -259,7 +259,13 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
   check('the file exactly as the server wrote it: no edits, nothing reported as not taken', !ed.hazards.length && !ed.reports.length && !ed.fresh.length && ed.dropped.length === 0, ed);
   ed = diffEdits(back, last1, HZ, TR, '2026-09-28');
-  check('closing / notes / a new row are taken and not reported; only the description edited in Excel is (row 3, F)', ed.dropped.length === 1 && ed.dropped[0].ci === 5 && ed.dropped[0].r === 3 && ed.dropped[0].val === 'תיאור ששונה ב-Excel', ed.dropped);
+  check('closing / notes / description / a new row are all taken, nothing reported as not taken', ed.dropped.length === 0, ed.dropped);
+  const trD = back.map((b) => (b.v[0] === 'נ-1' ? { r: b.r, v: b.v.map((x, i) => (i === 5 ? 'שונה בקובץ' : i === 9 ? '2026-12-01' : x)) } : b));
+  ed = diffEdits(trD, last1, HZ, TR, '2026-09-28');
+  check('a trustee finding: its description (what the trustee reported) and due are not taken, and are reported', !ed.reports.some((x) => 'descr' in x || 'due' in x || 'f' in x) && ed.dropped.some((d) => d.ci === 5 && d.val === 'שונה בקובץ') && ed.dropped.some((d) => d.ci === 9), ed);
+  const dueE = back.map((b) => (b.v[0] === 1 ? { r: b.r, v: b.v.map((x, i) => (i === 9 ? '2026-11-15' : i === 5 ? '' : x)) } : b));
+  ed = diffEdits(dueE, last1, HZ, TR, '2026-09-28');
+  check('a manager hazard: a due date set in Excel is taken; an emptied description is not (never blank it)', ed.hazards.some((x) => x.id === 'th-1' && x.due === '2026-11-15' && !('descr' in x)) && ed.dropped.some((d) => d.ci === 5 && d.val === ''), ed);
   ed = diffEdits(back, last1, hzApp, TR, '2026-09-28');
   check('a status changed in both the app and the file: the file value is reported (the app wins)', ed.dropped.some((d) => d.ci === 10 && d.val === 'סגור'), ed.dropped);
   const badSt = back.map((b) => (b.v[0] === 1 ? { r: b.r, v: b.v.map((x, i) => (i === 10 ? 'גמור' : x)) } : b));
@@ -313,11 +319,11 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   r = await runFile(ENV, 'xlsm', false);
   const hp = (w.hz || []).filter((x) => x.m === 'PATCH'), hn = (w.hz || []).filter((x) => x.m === 'POST');
   check('the run: new hazard posted first, then the edits patched', hn.length === 1 && hp.length === 2 && w.hz[0].m === 'POST' && (w.patches || []).some((x) => /id=eq\.a/.test(x.u) && x.body.s === 'נסגר'), w.hz);
-  check('the person\'s version is archived, then the file is rewritten from the updated app', r.pushed && r.kept && /גרסאות שנדרסו/.test(w.puts[0].path) && r.pulled && r.pulled.created === 1 && r.pulled.hazards === 2 && r.pulled.reports === 1, r);
-  const x2 = await readSheetRows(w.puts[1].body, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
-  check('the rewritten file: hazard 2 closed with today, the old description back, the new hazard as 3, trustee closed with its date', (() => {
+  check('everything the person changed was taken (description too, since 29/09/2026): no copy kept, the file is rewritten from the updated app', r.pushed && !r.kept && w.puts.length === 1 && r.pulled && r.pulled.created === 1 && r.pulled.hazards === 2 && r.pulled.reports === 1, r);
+  const x2 = await readSheetRows(w.puts[0].body, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  check('the rewritten file: hazard 2 closed with today, the description as fixed in Excel, the new hazard as 3, trustee closed with its date', (() => {
     const b = (k) => x2.find((q) => q.v[0] === k);
-    return b(2) && b(2).v[10] === 'סגור' && b(2).v[11] === new Date().toISOString().substring(0, 10) && b(2).v[5] === "ג'ריקן" && b(3) && b(3).v[5] === 'כבל חשוף' && b('נ-1').v[10] === 'סגור' && b('נ-1').v[11] === '2026-09-27';
+    return b(2) && b(2).v[10] === 'סגור' && b(2).v[11] === new Date().toISOString().substring(0, 10) && b(2).v[5] === 'תיאור ששונה ב-Excel' && b(3) && b(3).v[5] === 'כבל חשוף' && b('נ-1').v[10] === 'סגור' && b('נ-1').v[11] === '2026-09-27';
   })(), x2.map((q) => [q.v[0], q.v[5], q.v[10], q.v[11]]));
   w = world({ file: xEdited, state: s1, cTag: 'saved-in-excel', hzFail: true });
   r = await runFile(ENV, 'xlsm', false);

@@ -173,15 +173,19 @@ export function stampName(name, iso) {
 // update, and the other way round, fully automatic") ----
 // When a person saved the file since the server last wrote it, the register
 // rows are read back and compared with what the server wrote then
-// (hazard_<file>_last). Only columns I (action), K (status), L (closing date)
-// and M (notes) are taken (Michael: "סגירה + פעולה + הערות"); description,
-// department, severity and the rest stay as in the app. A field that changed
+// (hazard_<file>_last). Columns I (action), K (status), L (closing date) and
+// M (notes) are taken (Michael, 28/09: "סגירה + פעולה + הערות"), and since
+// 29/09/2026 F (description) and J (due) of the manager's hazards; department,
+// severity and the rest stay as in the app (listed as not taken). A field that changed
 // in the app too since that write keeps the app's value (the file version is
 // in the archive). A new row with a description becomes a new manager hazard.
 // Rows deleted in Excel are not deleted in the app.
 const S_OPEN = '\u05e4\u05ea\u05d5\u05d7', S_WIP = '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc', S_DONE = '\u05e1\u05d2\u05d5\u05e8', TR_CLOSED = '\u05e0\u05e1\u05d2\u05e8';
-const PULL_COLS = [8, 10, 11, 12];
-const KEEP_COLS = [1, 2, 3, 4, 5, 6, 7, 9];
+// 29/09/2026 (Michael fixed typos and set due dates in the file, and they
+// were lost): the description (F) and the due date (J) too, for the manager's
+// own hazards; a trustee's description is what the trustee reported.
+const PULL_COLS = [5, 8, 9, 10, 11, 12];
+const KEEP_COLS = [1, 2, 3, 4, 6, 7];
 const MAX_DROPPED = 30;
 const MAX_PULL = 25; // database writes per run (subrequests); the rest next run
 const norm = (v) => (v == null ? '' : typeof v === 'object' && v.date ? v.date : String(v).replace(/\r\n?/g, '\n').trim());
@@ -196,6 +200,8 @@ function stripTour(t) {
   return /^\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df:/.test(t) ? null : orNull(t);
 }
 function takeField(kind, ci, fv, patch) {
+  if (ci === 5) { if (kind !== 'h' || !fv) return false; patch.descr = fv; return true; }
+  if (ci === 9) { if (kind !== 'h' || (fv && !isYmd(fv))) return false; patch.due = orNull(fv); return true; }
   if (ci === 8) { patch.action = kind === 'h' ? orNull(fv) : stripTour(fv); return true; }
   if (ci === 10) {
     if ([S_OPEN, S_WIP, S_DONE].indexOf(fv) < 0) return false;
