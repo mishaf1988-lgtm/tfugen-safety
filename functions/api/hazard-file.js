@@ -367,6 +367,8 @@ export async function runFile(env, which, force) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
       : e && e.status === 423 ? '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e4\u05ea\u05d5\u05d7 \u05d1-Excel. \u05d9\u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05d9\u05e1\u05d2\u05e8 (\u05d1\u05d3\u05d9\u05e7\u05d4 \u05db\u05dc 15 \u05d3\u05e7\u05d5\u05ea).'
         : String((e && e.message) || e).substring(0, 200);
+    // 409 = a parallel run wrote the file a moment ago: not an error (29/09).
+    if (e && e.status === 409) return { ok: false, file: which, pushed: false, retry: true, error: 'conflict' };
     await stateSet(env, { [K + 'err']: msg, [K + 'err_at']: now }).catch(() => {});
     return { ok: false, file: which, pushed: false, error: msg, locked: !!(e && e.status === 423) };
   }

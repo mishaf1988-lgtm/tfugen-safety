@@ -82,6 +82,9 @@ export async function runDeck(env, force) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
       : e && e.status === 423 ? '\u05d4\u05de\u05e6\u05d2\u05ea \u05e4\u05ea\u05d5\u05d7\u05d4. \u05ea\u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d0\u05d7\u05e8\u05d9 \u05e9\u05ea\u05d9\u05e1\u05d2\u05e8 (\u05d1\u05d3\u05d9\u05e7\u05d4 \u05db\u05dc 15 \u05d3\u05e7\u05d5\u05ea).'
         : String((e && e.message) || e).substring(0, 200);
+    // 409 = a parallel run (trigger + cron) wrote the file a moment ago: not
+    // an error, the next run compares again (29/09, left a false error behind).
+    if (e && e.status === 409) return { ok: false, pushed: false, retry: true, error: 'conflict', date };
     await stateSet(env, { deck_err: msg, deck_err_at: now }).catch(() => {});
     return { ok: false, pushed: false, error: msg, locked: !!(e && e.status === 423), date };
   }
