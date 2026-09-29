@@ -2302,7 +2302,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="i-dept" list="i-dept-list"><datalist id="i-dept-list"></datalist></div>
     <div class="field"><label>&#1491;&#1497;&#1493;&#1493;&#1495; (&#1496;&#1493;&#1508;&#1505; 250)</label><select id="i-rep"><option value="">&#1500;&#1488; &#1497;&#1491;&#1493;&#1506;</option><option value="true">&#1502;&#1491;&#1493;&#1493;&#1495;</option><option value="false">&#1500;&#1488; &#1502;&#1491;&#1493;&#1493;&#1495;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="i-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1495;&#1511;&#1497;&#1512;&#1492;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
-    <div class="field fw"><label>&#1490;&#1493;&#1512;&#1501; &#1513;&#1493;&#1512;&#1513;</label><textarea id="i-r"></textarea></div>
+    <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="i-r"></textarea></div>
     <div class="field fw"><label>&#128247;&#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</label><div id="inc-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('inc-attach-area','inc')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-inc')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="inc-ai-btn" onclick="_incAI()" style="background:#7c3aed;border-color:#7c3aed">&#129302; &#1505;&#1493;&#1493;&#1490;/&#1495;&#1493;&#1502;&#1512;&#1492; AI</button><button class="btn btn-p" onclick="svInc()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -13679,7 +13679,7 @@ var VIEW_CONFIG={
     ['\u05e0\u05d9\u05ea\u05d5\u05d7 5-Why','five_why'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
   inc:{title:'\u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd',back:'inc',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','dt'],['\u05ea\u05d9\u05d0\u05d5\u05e8','d'],['\u05e1\u05d5\u05d2','ty'],
-    ['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05de\u05d9\u05e7\u05d5\u05dd','l'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e2\u05d5\u05d1\u05d3','w'],['\u05d3\u05d9\u05d5\u05d5\u05d7 (\u05d8\u05d5\u05e4\u05e1 250)','reported'],['\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df','dy'],['\u05d4\u05e2\u05e8\u05d5\u05ea','r']]},
+    ['\u05d7\u05d5\u05de\u05e8\u05d4','sv'],['\u05de\u05d9\u05e7\u05d5\u05dd','l'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e2\u05d5\u05d1\u05d3','w'],['\u05d3\u05d9\u05d5\u05d5\u05d7 (\u05d8\u05d5\u05e4\u05e1 250)','reported'],['\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df','dy'],['\u05d4\u05e2\u05e8\u05d5\u05ea','r'],['\u05d2\u05d5\u05e8\u05dd \u05e9\u05d5\u05e8\u05e9','rc']]},
   tr:{title:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea',back:'tr',fields:[
     ['\u05e2\u05d5\u05d1\u05d3','w'],['\u05d4\u05d3\u05e8\u05db\u05d4','n'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','c'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05ea\u05e4\u05d5\u05d2\u05d4','e'],['\u05e6\u05d9\u05d5\u05df','sc'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
@@ -14170,7 +14170,7 @@ window._incFiveWhyGenerate=function(rec){
     '\u05e1\u05d5\u05d2: '+(rec.ty||'?')+'\n'+
     '\u05d7\u05d5\u05de\u05e8\u05d4: '+(rec.sv||'?')+'\n'+
     '\u05de\u05d9\u05e7\u05d5\u05dd: '+(rec.l||'?')+'\n'+
-    '\u05d2\u05d5\u05e8\u05dd \u05e9\u05d5\u05e8\u05e9 \u05de\u05d5\u05e6\u05e2 (\u05dc\u05e4\u05e0\u05d9 AI): '+(rec.r||'(\u05e8\u05d9\u05e7)');
+    '\u05d2\u05d5\u05e8\u05dd \u05e9\u05d5\u05e8\u05e9 \u05de\u05d5\u05e6\u05e2 (\u05dc\u05e4\u05e0\u05d9 AI): '+(rec.rc||'(\u05e8\u05d9\u05e7)');
   var aiPrompt='\u05d0\u05ea\u05d4 \u05d9\u05d5\u05e2\u05e5 ISO 45001. \u05d1\u05d4\u05d9\u05e0\u05ea\u05df \u05ea\u05e7\u05e8\u05d9\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4, \u05e6\u05d5\u05e8 \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05de\u05d5\u05d1\u05e0\u05d4 \u2014 5 \u05e9\u05d0\u05dc\u05d5\u05ea "\u05dc\u05de\u05d4?" \u05e2\u05dd \u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05db\u05dc \u05d0\u05d7\u05ea, \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea. \u05d4\u05e9\u05ea\u05de\u05e9 \u05d1\u05d3\u05e4\u05d5\u05e1 \u05d4\u05d6\u05d4:\n\n'+
     '1. \u05dc\u05de\u05d4 \u05d6\u05d4 \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 1]\n\n'+
     '2. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 2]\n\n'+
@@ -14227,7 +14227,7 @@ window._invPick=function(id){
   var locTxt=(rec.location_id&&typeof _locName==='function'?_locName(rec.location_id):'')||rec.l||'';
   if(facts)facts.innerHTML=row('\u05ea\u05d0\u05e8\u05d9\u05da',fd(String(rec.dt||rec.d||'').substring(0,10)))+row('\u05e1\u05d5\u05d2',rec.ty)+row('\u05d7\u05d5\u05de\u05e8\u05d4',rec.sv)+row('\u05de\u05d9\u05e7\u05d5\u05dd',locTxt)+row('\u05ea\u05d9\u05d0\u05d5\u05e8',rec.d);
   if(fw)fw.value=rec.five_why||'';
-  if(rc)rc.value=rec.r||'';
+  if(rc)rc.value=rec.rc||'';
 };
 window._invAI=function(){
   var rec=window._invCur;if(!rec){toast('\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea');return;}
@@ -14254,7 +14254,9 @@ window._invSave=function(){
   var fw=(gv('inv-fw')||'').trim(),rc=(gv('inv-rc')||'').trim();
   if(!fw){if(err)err.textContent='\u05d0\u05d9\u05df \u05e0\u05d9\u05ea\u05d5\u05d7 5-Why \u05dc\u05e9\u05de\u05d5\u05e8';return;}
   rec.five_why=fw;
-  if(rc)rec.r=rc;
+  // Its own column (29/09/2026): rec.r is the accident's notes, and writing
+  // the root cause there replaced them.
+  rec.rc=rc||null;
   if(typeof sbUpd==='function')sbUpd('inc',rec);
   sdb();
   addLog('\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea \u05e0\u05e9\u05de\u05e8\u05d4: '+String(rec.d||'').substring(0,30));
@@ -14810,7 +14812,7 @@ window._aiTodayPlan=function(){
     return new Date(t.due).getTime()<nowMs;
   }).slice(0,10);
   var openCritNcr=(DB.ncr||[]).filter(function(n){return (n.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9'||n.sv==='\u05d2\u05d1\u05d5\u05d4')&&n.s!=='\u05e1\u05d2\u05d5\u05e8';}).slice(0,10);
-  var openInc=(DB.inc||[]).filter(function(i){return i.st!=='\u05e1\u05d2\u05d5\u05e8';}).slice(0,5);
+  var openInc=(DB.inc||[]).filter(function(i){return i.s!=='\u05e1\u05d2\u05d5\u05e8';}).slice(0,5);
   // Items expiring within 7 days.
   var endW=nowMs+7*86400000;
   var expSoon=[];
@@ -15027,7 +15029,7 @@ function _askBuildSnapshot(){
     ncr_open:(DB.ncr||[]).filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length,
     ncr_critical:(DB.ncr||[]).filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8'&&(n.sv==='\u05e7\u05e8\u05d9\u05d8\u05d9'||n.p==='\u05e7\u05e8\u05d9\u05d8\u05d9');}).length,
     inc_total:(DB.inc||[]).length,
-    inc_open:(DB.inc||[]).filter(function(i){return i.st!=='\u05e1\u05d2\u05d5\u05e8';}).length,
+    inc_open:(DB.inc||[]).filter(function(i){return i.s!=='\u05e1\u05d2\u05d5\u05e8';}).length,
     nm_total:(DB.near_miss||[]).length,
     tasks_total:(DB.tasks||[]).length,
     tasks_open:(DB.tasks||[]).filter(function(t){return t.status!=='\u05d4\u05d5\u05e9\u05dc\u05dd'&&t.status!=='\u05d1\u05d5\u05d8\u05dc';}).length,

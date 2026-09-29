@@ -27,6 +27,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       { id: 'h3', u: 'יוסי', t: 5, d: iso(40).slice(0, 10), ts: iso(40), loc: 'חצר', f: 'שלט חסר', ok: false, s: 'פתוח' },
       { u: 'בלי מזהה', t: 5, ok: false, s: 'פתוח' }
     ];
+    // 29/09/2026: accidents keep their status in s (not st), so a closed one is not open.
+    DB.inc = [{ id: 'a1', s: 'סגור' }, { id: 'a2', s: 'סגור' }, { id: 'a3', s: 'בחקירה' }];
     const s = _askBuildSnapshot();
     return { c: s.counts, list: s.trustee_open_findings, json: JSON.stringify(s) };
   });
@@ -38,6 +40,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('open list sorted oldest first', out.list.length === 2 && out.list[0].finding === 'שלט חסר' && out.list[0].days_open === 40, out.list);
   check('open list carries trustee, task name, area, manager note', out.list[1].trustee === 'יוסי' && out.list[1].task === 'עמדות כיבוי אש' && out.list[1].area === 'רציף' && out.list[1].manager_note === 'נותב לאחזקה', out.list[1]);
   check('closed finding not in the open list', !out.list.some((r) => r.finding === 'מטף חסום'));
+  check('open accidents: only the one not closed (status field s)', out.c.inc_open === 1, out.c);
   check('existing snapshot keys still there', out.c.ncr_total !== undefined && out.c.tasks_open !== undefined);
   check('no page errors', errors.length === 0, errors);
 
