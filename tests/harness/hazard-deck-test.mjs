@@ -109,7 +109,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const ref = '2026-09-29';
   const m = { hazards: meetingHazards(ROWS, ref), accidents: meetingAccidents(INC, ref) };
   const src = await deck();
-  const out = await patchDeck(src, deckContent(m, ROWS, ref));
+  const out = await patchDeck(src, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
   check('nothing reported missing', out.report.length === 0, out.report);
   const s1 = await partText(out.bytes, 'ppt/slides/slide1.xml');
   check('slide 1 header: the meeting date, the rest of the header as it was', s1.includes('   |   ישיבה שבועית · 29.09.2026') && s1.includes('מפגעים ומוכנות חירום - 2026'));
@@ -133,25 +133,34 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const same = (n) => { const a = zs.find((e) => e.name === n), b = zo.find((e) => e.name === n); return a && b && a.crc === b.crc && a.csize === b.csize && Buffer.from(a.raw).equals(Buffer.from(b.raw)); };
   check('slide 4 (near misses), the picture and everything else: byte for byte the same', same('ppt/slides/slide4.xml') && same('ppt/media/image1.png') && same('ppt/presentation.xml') && same('[Content_Types].xml'));
   check('only the five parts that hold data were rewritten', out.changed.sort().join() === 'ppt/charts/chart1.xml,ppt/charts/chart2.xml,ppt/slides/slide1.xml,ppt/slides/slide2.xml,ppt/slides/slide3.xml', out.changed);
-  const again = await patchDeck(out.bytes, deckContent(m, ROWS, ref));
+  const again = await patchDeck(out.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
   check('patching again with the same data changes nothing (no rewrite loop)', again.changed.length === 0 && again.bytes === out.bytes, again.changed);
   check('keyboard characters only in what the server writes', !/[—–־«»…]/.test(s1 + s2 + s3));
 
   const long = [row(20, '2026-09-22', 'מעצבים', 'מחסן חומרים מסוכנים', 'מחסן החומרים עמוס - חומרים לא הוחזרו למחסן המרכזי ואינם מאוחסנים על מאצרה', 'גבוהה', null, 'פתוח', null),
     row(21, '2026-09-23', 'מעצבים', 'מסוע אריזה (חיבור שני מסועים - יציאה לרובוט)', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)];
   const ref2 = '2026-09-29', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
-  const c2x = deckContent(m2, long, ref2);
+  const c2x = deckContent(m2, long, ref2, { s3Month: '2026-09' });
   const it = c2x.s3.high[0].items.map((x) => x.join(''));
-  const full = deckContent(m2, [row(40, '2026-09-22', 'ייצור טוגנים', '', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)], ref2).s3.high[0].items[0].join('');
+  const full = deckContent(m2, [row(40, '2026-09-22', 'ייצור טוגנים', '', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)], ref2, { s3Month: '2026-09' }).s3.high[0].items[0].join('');
   check('a line as long as the 22/09 deck\'s own (72 characters) is not shortened', full === 'ייצור טוגנים - נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', full);
   check('descriptions: the part before " - " (never inside parentheses), cut at a word, one line with the department', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - נקודות צביטה חשופות/.test(it[1]) && !/\(/.test(it[1]) && it.every((x) => x.length <= 76), it);
   check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[1] === 'מעצבים, כולם עדיין פתוחים', c2x.s1.NewNote);
   check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
-  const cc = deckContent({ hazards: meetingHazards(manyClosed, ref2), accidents: meetingAccidents(INC, ref2) }, manyClosed, ref2);
+  const cc = deckContent({ hazards: meetingHazards(manyClosed, ref2), accidents: meetingAccidents(INC, ref2) }, manyClosed, ref2, { s3Month: '2026-09' });
   const zs3 = setList(slide3, 'HighSevPanel', cc.s3.high, (n) => ['ועוד ' + n + ' מפגעים', ''], []);
   check('closures by department, more than the 3 lines: "ועוד N מחלקות" (not מפגעים)', zs3.includes('<a:t>ועוד 3 מחלקות</a:t>'), zs3.slice(zs3.indexOf('פעולות'), zs3.indexOf('פעולות') + 900));
+
+  // slide 3 = monthly (Michael 29/09)
+  const noS3 = await patchDeck(src, deckContent(m, ROWS, ref));
+  const same3 = (() => { const a = readZip(src).find((e) => e.name === 'ppt/slides/slide3.xml'), b = readZip(noS3.bytes).find((e) => e.name === 'ppt/slides/slide3.xml'); return a.crc === b.crc && Buffer.from(a.raw).equals(Buffer.from(b.raw)); })();
+  check('mid-month: slide 3 is left exactly as it is (slides 1-2 still updated)', same3 && noS3.changed.includes('ppt/slides/slide1.xml') && !noS3.changed.includes('ppt/slides/slide3.xml'), noS3.changed);
+  const mo = [row(1, '2026-08-10', 'תוצג', '', 'נסגר באוקטובר', 'גבוהה', null, 'סגור', '2026-10-02'), row(2, '2026-08-11', 'תוצג', '', 'נסגר באוגוסט', 'בינונית', null, 'סגור', '2026-08-20'), row(3, '2026-09-05', 'תוצג', '', 'נפתח בספטמבר', 'בינונית', null, 'פתוח', null), row(4, null, 'מעבדות', '', 'ישן בלי תאריך', 'נמוכה', null, 'פתוח', null)];
+  const aug = deckContent({ hazards: meetingHazards(mo, '2026-10-06'), accidents: meetingAccidents(INC, '2026-10-06') }, mo, '2026-10-06', { s3Month: '2026-08' }).s3;
+  check('the month\'s report is as of its end: closed later = open then, opened after = not counted, no date = counted', aug.Card0[0] === '3' && aug.Card1[0] === '1' && aug.Card2[0] === '2' && aug.Card2[1] === 'פתוחים - 1 בחומרה גבוהה, 1 נמוכה' && aug.high[1].items.join() === 'תוצג: מפגע אחד נסגר', aug);
+  check('the closures header names that month', typeof aug.high[1].header === 'function' && aug.high[1].header(' x') === ' פעולות סגירה - אוגוסט 2026 (1)', aug.high[1].header(' x'));
 
   console.log('\n4. the meeting date');
   check('Sunday to Wednesday: this week\'s Tuesday; Thursday on: next week\'s', defaultMeeting('2026-09-27') === '2026-09-29' && defaultMeeting('2026-09-28') === '2026-09-29' && defaultMeeting('2026-09-30') === '2026-09-29' && defaultMeeting('2026-10-01') === '2026-10-06' && defaultMeeting('2026-10-03') === '2026-10-06');
@@ -186,6 +195,8 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   let r = await runDeck(ENV, false);
   check('first run: the deck as it was is copied to ארכיון/מצגות, then the updated deck replaces it in folder 13', r.ok && r.pushed && w.puts.length === 2 && /13_סיורי מפגעים\/2026\/ארכיון\/מצגות\/מצגת שבועית\.חודשית - 2026-09-22 06-23\.pptx/.test(w.puts[0].path) && /13_סיורי מפגעים\/2026\/מצגת שבועית\.חודשית\.pptx:\/content/.test(w.puts[1].path), w.puts.map((p) => p.path));
   const s1st = Object.assign({}, w.state);
+  const prevM = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 0)).toISOString().substring(0, 7);
+  check('the first run of a month writes slide 3 for the month that ended, and remembers it', w.state.deck_s3_month === prevM && (await partText(w.puts[1].body, 'ppt/slides/slide3.xml')) !== slide3, w.state.deck_s3_month);
   const written = w.puts[1].body;
   w = world({ file: written, state: s1st, cTag: 'c-ours-2' });
   r = await runDeck(ENV, false);

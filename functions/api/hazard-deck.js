@@ -18,7 +18,7 @@ import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 // Bump when deckContent/patchDeck change what they write.
-export const DECK_VERSION = 6;
+export const DECK_VERSION = 7;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
@@ -37,7 +37,7 @@ async function sha(s) {
 
 export async function runDeck(env, force) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc] = await Promise.all([
@@ -48,9 +48,13 @@ export async function runDeck(env, force) {
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
   const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date) };
+  // Slide 3 = the month that ended, written once when a new month begins
+  // (Michael, 29/09), then left as it is until the next one.
+  const prevMonth = addDays(today.substring(0, 7) + '-01', -1).substring(0, 7);
+  const s3Month = val('deck_s3_month') === prevMonth ? null : prevMonth;
   // The code's version is in the signature too: a wording fix must reach the
   // deck without waiting for the data to change (28/09, PR #918).
-  const sig = await sha(JSON.stringify([date, m, rows, DECK_VERSION]));
+  const sig = await sha(JSON.stringify([date, m, rows, DECK_VERSION, s3Month || val('deck_s3_month')]));
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
@@ -62,12 +66,12 @@ export async function runDeck(env, force) {
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date));
+    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month }));
     // Nothing to change in the file (OneDrive bumped the cTag after our last
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
     if (!changed.length && !force) {
-      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date });
+      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, ...(s3Month ? { deck_s3_month: s3Month } : {}) });
       return { ok: true, pushed: false, reason: 'already up to date', date, report };
     }
     let kept = null;
@@ -76,7 +80,7 @@ export async function runDeck(env, force) {
       await graphPut(token, kept, stampName(DECK.name, (meta.lastModifiedDateTime || now)), orig, DECK.type);
     }
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_at: now, deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_at: now, ...(s3Month ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
