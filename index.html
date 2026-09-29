@@ -9667,6 +9667,17 @@ function thzFilter(k,v){_thzF[k]=v;rThz();}
 // rows of the existing xlsm/xlsx after every change. This line says when it
 // last did, and offers "now".
 var _thzFile=null,_thzFileAt=0,_thzFileBusy=false;
+// Changes a person made in the file that the server did not take (hazard-file.js
+// diffEdits, 29/09/2026): listed so they do not vanish; a week at most.
+var _THZ_COLS=['','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','\u05de\u05d7\u05dc\u05e7\u05ea \u05e1\u05d9\u05d5\u05e8','\u05de\u05d9\u05e7\u05d5\u05dd','\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea','\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','\u05d4\u05e2\u05e8\u05d5\u05ea'];
+function _thzDroppedHtml(files){
+  var seen={},items=[];
+  ['xlsm','xlsx'].forEach(function(k){var d=(files[k]||{}).dropped;if(!d||!d.items||!d.items.length||Date.now()-Date.parse(d.at)>7*864e5)return;
+    d.items.forEach(function(x){var key=x.r+'|'+x.ci+'|'+x.val;if(seen[key])return;seen[key]=1;items.push(x);});});
+  if(!items.length)return '';
+  return '<div style="color:var(--warn);margin-top:6px">\u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc\u05d0 \u05e7\u05dc\u05d8\u05d4. \u05d0\u05dd \u05d4\u05dd \u05e9\u05dc\u05da, \u05ea\u05e7\u05df \u05d0\u05d5\u05ea\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 (\u05d4\u05e7\u05d5\u05d1\u05e5 \u05d9\u05d7\u05d6\u05d5\u05e8 \u05dc\u05e2\u05e8\u05da \u05e9\u05dc \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4). \u05e2\u05d5\u05ea\u05e7 \u05e9\u05dc \u05d4\u05e7\u05d5\u05d1\u05e5 \u05db\u05e4\u05d9 \u05e9\u05e9\u05de\u05e8\u05ea \u05e0\u05e9\u05de\u05e8 \u05d1\u05d0\u05e8\u05db\u05d9\u05d5\u05df, \u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5:<ul style="margin:4px 0 0;padding-inline-start:18px">'+items.map(function(x){
+    return '<li>\u05e9\u05d5\u05e8\u05d4 '+esc(String(x.r))+(x.n?' ('+esc(String(x.n))+')':'')+': '+(x.ci<0?'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4':esc(_THZ_COLS[x.ci]||''))+(x.val?' "'+esc(x.val)+'"':'')+'</li>';}).join('')+'</ul></div>';
+}
 function _thzFileRender(){
   var el=g('thz-file');if(!el)return;
   var j=_thzFile;
@@ -9676,6 +9687,7 @@ function _thzFileRender(){
   var h='\ud83d\udcc1 <b>\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm</b> (\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 13): ';
   h+=f.last?'\u05e2\u05d5\u05d3\u05db\u05df '+_truTimeHtml(f.last):'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05db\u05ea\u05d1 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4';
   if(f.error&&(!f.last||String(f.errorAt||'')>String(f.last)))h+='<div style="color:var(--red);margin-top:4px">'+esc(f.error)+'</div>';
+  h+=_thzDroppedHtml(j.files||{});
   h+='<div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">';
   if(f.webUrl)h+='<a class="btn btn-s btn-sm" href="'+esc(f.webUrl)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5</a>';
   h+='<button class="btn btn-s btn-sm" onclick="thzFileNow()"'+(_thzFileBusy?' disabled':'')+'>'+(_thzFileBusy?'\u05de\u05e2\u05d3\u05db\u05df...':'\u2601\ufe0f \u05e2\u05d3\u05db\u05df \u05e2\u05db\u05e9\u05d9\u05d5')+'</button></div>';
