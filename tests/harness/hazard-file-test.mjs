@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows, rowHeight } from './_build/_xlsxpatch.mjs';
 
@@ -254,7 +254,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const hzApp = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { s: 'בטיפול' }) : h));
   ed = diffEdits(back, last1, hzApp, TR, '2026-09-28');
   check('changed in the app too since the last write: the app wins for that field', !ed.hazards.some((x) => x.id === 'th-2' && 's' in x), ed.hazards);
-  ed = diffEdits(back, last1, HZ.concat([{ id: 'th-9', n: 3, dept: 'תוצג', descr: 'כבל חשוף', s: 'פתוח' }]), TR, '2026-09-28');
+  ed = diffEdits(back, last1, HZ.concat([{ id: 'th-9', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'כבל חשוף', s: 'פתוח' }]), TR, '2026-09-28');
   check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
   check('the file exactly as the server wrote it: no edits, nothing reported as not taken', !ed.hazards.length && !ed.reports.length && !ed.fresh.length && ed.dropped.length === 0, ed);
@@ -335,6 +335,83 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   w = world({ file: out, state: s1, cTag: 'onedrive-bumped-only' });
   r = await runFile(ENV, 'xlsm', false);
   check('cTag bumped by OneDrive, same data: nothing written, the new cTag remembered', !r.pushed && r.reason === 'unchanged' && !w.puts.length && w.state.hazard_xlsm_ctag === 'onedrive-bumped-only', r);
+
+  console.log('\n3b2. rows skipped as a whole are listed, and the list collects (upgrade review 9, 29/09)');
+  const row = (k, arr) => ({ r: 90 + back.length, v: Object.assign(Array(13).fill(null), arr, { 0: k }) });
+  const why = (e, w) => e.dropped.filter((d) => d.why === w);
+  // a recurring hazard, typed in the old one's words on a new tour
+  let ex = diffEdits(back.concat([row('', { 1: '2026-09-29', 3: 'מעצבים', 5: 'ג\'ריקן', 10: 'פתוח' })]), last1, HZ, TR, '2026-09-29');
+  check('a recurring hazard in an old one\'s words on a new tour date: created (it used to vanish)', ex.fresh.some((f) => f.descr === 'ג\'ריקן' && f.d === '2026-09-29'), ex.fresh);
+  ex = diffEdits(back.concat([row('', { 1: '2026-09-22', 3: 'מעצבים', 5: 'ג\'ריקן' })]), last1, HZ, TR, '2026-09-29');
+  check('... the same words, department and date (already created on an earlier run): not created twice, not listed', !ex.fresh.some((f) => f.descr === 'ג\'ריקן') && !ex.dropped.length, [ex.fresh, ex.dropped]);
+  ex = diffEdits(back.concat([row('נ-9', { 3: 'תוצג', 5: 'ליקוי שהוקלד בקובץ' })]), last1, HZ, TR, '2026-09-29');
+  check('a new נ- row typed in the file: listed "tru_new" (a trustee finding opens only from the app)', why(ex, 'tru_new').length === 1 && why(ex, 'tru_new')[0].val === 'ליקוי שהוקלד בקובץ', ex.dropped);
+  ex = diffEdits(back.concat([row('', { 3: 'תוצג', 4: 'מחסן', 6: 'גבוהה' })]), last1, HZ, TR, '2026-09-29');
+  check('a row with a department and a place but no description: listed "nodescr"', why(ex, 'nodescr').length === 1 && why(ex, 'nodescr')[0].ci === 5, ex.dropped);
+  ex = diffEdits(back.concat([row('', { 10: 'פתוח' })]), last1, HZ, TR, '2026-09-29');
+  check('... a row with only a status in it (an empty line): not listed', !why(ex, 'nodescr').length, ex.dropped);
+  const asOut = await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  const b1 = back.find((b) => b.v[0] === 1), o1 = asOut.find((b) => b.v[0] === 1);
+  ex = diffEdits(back.concat([{ r: 95, v: Object.assign(b1.v.slice(), { 12: 'עותק ששונה' }) }]), last1, HZ, TR, '2026-09-29');
+  check('the same number on two rows, the second one different: listed "seen"', why(ex, 'seen').length === 1 && why(ex, 'seen')[0].n === '1', ex.dropped);
+  ex = diffEdits(asOut.concat([{ r: 95, v: o1.v.slice() }]), last1, HZ, TR, '2026-09-29');
+  check('... the second an exact copy: not listed', !why(ex, 'seen').length, ex.dropped);
+  ex = diffEdits(back, last1, HZ.filter((h) => h.id !== 'th-2'), TR, '2026-09-29');
+  check('edited in Excel, deleted from the app meanwhile: listed "gone"', why(ex, 'gone').length === 1 && why(ex, 'gone')[0].n === '2', ex.dropped);
+  ex = diffEdits(asOut, last1, HZ.filter((h) => h.id !== 'th-2'), TR, '2026-09-29');
+  check('... not edited: not listed', !why(ex, 'gone').length, ex.dropped);
+  ex = diffEdits(back, lastDup, HZ.concat([{ id: 'th-X', n: 2, dept: 'מעצבים', descr: 'כפול', s: 'פתוח' }]), TR, '2026-09-29');
+  check('a number used twice in the last write, the row edited in Excel: listed "dup"', why(ex, 'dup').length === 1, ex.dropped);
+  ex = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), lastDup, HZ.concat([{ id: 'th-X', n: 2, dept: 'מעצבים', descr: 'כפול', s: 'פתוח' }]), TR, '2026-09-29');
+  check('... not edited: not listed', !why(ex, 'dup').length, ex.dropped);
+  ex = diffEdits(shifted, last1, HZ, TR, '2026-09-29');
+  check('a נ- row whose words match no finding: listed "nomatch"', why(ex, 'nomatch').length === 1, ex.dropped);
+  const shifted2 = back.map((b) => (b.v[0] === 'נ-1' ? { r: b.r, v: b.v.slice().map((x, i) => (i === 5 ? 'שמן' : i === 1 ? '2026-09-24' : x)) } : b));
+  ex = diffEdits(shifted2, last1, HZ, TR, '2026-09-29');
+  check('... a נ- row that is another finding\'s row shifted (stale copy): not listed', !why(ex, 'nomatch').length, ex.dropped);
+  const sevE = back.map((b) => (b.v[0] === 2 ? { r: b.r, v: b.v.map((x, i) => (i === 6 ? 'גבוהה' : x)) } : b));
+  ex = diffEdits(sevE, last1, HZ, TR, '2026-09-29');
+  const it = ex.dropped.find((d) => d.ci === 6);
+  check('a cell the app does not take: listed with its reason and the record it belongs to', it && it.why === 'keep' && it.id === 'h:th-2', it);
+
+  const reg0 = buildRegister(HZ, TR), NOW = '2026-09-29T12:00:00Z';
+  const itm = { n: '2', r: 3, ci: 6, val: 'גבוהה', why: 'keep', id: 'h:th-2', at: '2026-09-28T09:00:00Z' };
+  let mg = mergeDropped([itm], [], reg0, HZ, TR, NOW);
+  check('the list collects: an earlier item stays when the next save has nothing new', mg.length === 1 && mg[0].at === itm.at, mg);
+  mg = mergeDropped([itm], [Object.assign({}, itm, { r: 4, at: undefined }), { n: '1', r: 2, ci: 12, val: 'x', why: 'both', id: 'h:th-1' }], reg0, HZ, TR, NOW);
+  check('the same row/column/value twice is one item, keeping when it was first seen; new ones are added', mg.length === 2 && mg.filter((x) => x.ci === 6).length === 1 && mg.find((x) => x.ci === 6).at === itm.at && mg.find((x) => x.ci === 12).at === NOW, mg);
+  const HZs = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { sev: 'גבוהה' }) : h));
+  mg = mergeDropped([itm], [], buildRegister(HZs, TR), HZs, TR, NOW);
+  check('the value reached the app (severity set to גבוהה there): the item leaves by itself', mg.length === 0, mg);
+  const legacy = { n: '2', r: 3, ci: 6, val: 'גבוהה' };
+  check('an item stored before today (no record id): found by its number, leaves once the app has the value', mergeDropped([legacy], [], buildRegister(HZs, TR), HZs, TR, NOW).length === 0 && mergeDropped([legacy], [], reg0, HZ, TR, NOW, { prevAt: '2026-09-29T08:00:00Z' })[0].at === '2026-09-29T08:00:00Z');
+  check('older than 30 days: dropped from the list', mergeDropped([Object.assign({}, itm, { at: '2026-08-20T09:00:00Z' })], [], reg0, HZ, TR, NOW).length === 0);
+  check('marked handled (its key in the dismissed list): gone, and a run does not bring it back', mergeDropped([itm], [itm], reg0, HZ, TR, NOW, { dismissed: [dropKey(itm)] }).length === 0);
+  check('a new-row item leaves once a record with those words exists in the app', mergeDropped([{ n: 'נ-9', r: 9, ci: -1, val: 'פנס', why: 'tru_new' }], [], reg0, HZ, TR, NOW).length === 0 && mergeDropped([{ n: 'נ-9', r: 9, ci: -1, val: 'משהו אחר', why: 'tru_new' }], [], reg0, HZ, TR, NOW).length === 1);
+
+  // end to end: a save in Excel adds to what was listed before; a change in the app clears what it fixed
+  const oldItem = { n: 'נ-9', r: 9, ci: -1, val: 'ליקוי ישן', why: 'tru_new', at: '2026-09-28T10:00:00Z' };
+  w = world({ file: await writeZip(saved2), state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: '2026-09-28T10:00:00Z', items: [oldItem] }) }), cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  let st2 = JSON.parse(w.state.hazard_xlsm_dropped || '{}').items || [];
+  check('a save in Excel: the new item is added, the one from before is still listed (it used to be replaced)', r.pushed && st2.length === 2 && st2.some((x) => x.val === 'ליקוי ישן') && st2.some((x) => x.ci === 6 && x.why === 'keep'), st2);
+  const fixItem = { n: '3', r: 4, ci: 5, val: 'חדש מתוקן', why: 'keep', id: 'h:th-3', at: '2026-09-28T10:00:00Z' };
+  w = world({ file: out, state: Object.assign({}, s1, { hazard_xlsm_dropped: JSON.stringify({ at: '2026-09-28T10:00:00Z', items: [oldItem, fixItem] }) }), cTag: 'c-ours-2', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש מתוקן', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  st2 = JSON.parse(w.state.hazard_xlsm_dropped || '{}').items || [];
+  check('a change in the app only (no Excel save): what it fixed leaves the list, the rest stays', r.pushed && st2.length === 1 && st2[0].val === 'ליקוי ישן', st2);
+  // "טופל": op dismiss (admin or manager)
+  w = world({ state: { hazard_xlsm_dropped: JSON.stringify({ at: NOW, items: [oldItem, itm] }) } });
+  const wf = globalThis.fetch;
+  globalThis.fetch = async (u, init) => (String(u).includes('/auth/v1/user') ? new Response(JSON.stringify({ email: 'admin@tfugen.local' }), { status: 200 }) : wf(u, init));
+  const dreq = (b) => new Request('https://x/api/hazard-file', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer t', Origin: 'https://tapugan-safety.pages.dev' }, body: JSON.stringify(b) });
+  const dres = await (await onRequest({ request: dreq({ op: 'dismiss', file: 'xlsm', key: dropKey(oldItem) }), env: ENV })).json();
+  const after = JSON.parse(w.state.hazard_xlsm_dropped).items;
+  check('"טופל" removes that one item and remembers it apart', dres.ok && dres.left === 1 && after.length === 1 && after[0].ci === 6 && JSON.parse(w.state.hazard_xlsm_dismissed)[0] === dropKey(oldItem), [dres, after, w.state.hazard_xlsm_dismissed]);
+  globalThis.fetch = async (u, init) => (String(u).includes('/auth/v1/user') ? new Response('{}', { status: 401 }) : wf(u, init));
+  const bad = await onRequest({ request: dreq({ op: 'dismiss', file: 'xlsm', key: dropKey(itm) }), env: ENV });
+  check('... without a valid session: refused, nothing removed', bad.status === 401 && JSON.parse(w.state.hazard_xlsm_dropped).items.length === 1, bad.status);
+  globalThis.fetch = wf;
 
   console.log('\n3c. one run per file (29/09: overlapping runs wrote an old copy)');
   w = world({ file: src, lockHeld: true });
