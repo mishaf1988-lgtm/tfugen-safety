@@ -39,7 +39,7 @@
 // xlsm, then the request calls itself for the xlsx.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { odConfigured, accessToken, stateGet, stateSet, tokenRow } from '../_onedrive.js';
+import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows } from '../_xlsxpatch.js';
 import { suggestAction } from '../_ai.js';
 
@@ -403,6 +403,13 @@ export async function runFile(env, which, force) {
   }
 }
 
+// One run per file at a time (runLeased, _onedrive.js).
+const LEASE_MS = 120000;
+export async function runFileLocked(env, which, force) {
+  const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => runFile(env, which, force));
+  return r && r.busy ? { ok: true, file: which, pushed: false, reason: 'busy' } : r;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
@@ -434,7 +441,7 @@ export async function onRequest(context) {
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   const which = body.file === 'xlsx' ? 'xlsx' : 'xlsm';
   try {
-    const r = await runFile(env, which, force);
+    const r = await runFileLocked(env, which, force);
     // The twin, in its own request (its own CPU and subrequest budget).
     if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
       context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {

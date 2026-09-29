@@ -82,6 +82,50 @@ export async function stateSet(env, obj) {
   });
 }
 
+// A lease in server_state, so two runs never write the same file at once
+// (29/09: five closures in three minutes started five runs; one that read
+// the table before the last closures finished after the others, and its copy
+// of the file read as "reopened in Excel" on the next run). Value = the ISO
+// time it was taken; a lease older than leaseMs is free (a crashed run).
+// Returns the token, null when held, or 'open' when the lock itself cannot be
+// used (then the run goes ahead, as before this lock).
+export async function stateLock(env, key, leaseMs) {
+  const s = sb(env);
+  const now = Date.now(), iso = new Date(now).toISOString(), cutoff = new Date(now - leaseMs).toISOString();
+  try {
+    await fetch(s.url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...s.h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify([{ key, value: '', updated_at: iso }]) });
+    const r = await fetch(s.url + '/rest/v1/server_state?key=eq.' + encodeURIComponent(key) + '&or=' + encodeURIComponent('(value.is.null,value.eq."",value.lt."' + cutoff + '")'),
+      { method: 'PATCH', headers: { ...s.h, Prefer: 'return=representation' }, body: JSON.stringify({ value: iso, updated_at: iso }) });
+    if (!r.ok) return 'open';
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length ? iso : null;
+  } catch (e) { return 'open'; }
+}
+export async function stateUnlock(env, key, token) {
+  if (!token || token === 'open') return;
+  const s = sb(env);
+  await fetch(s.url + '/rest/v1/server_state?key=eq.' + encodeURIComponent(key) + '&value=eq.' + encodeURIComponent(token),
+    { method: 'PATCH', headers: { ...s.h, Prefer: 'return=minimal' }, body: JSON.stringify({ value: '', updated_at: new Date().toISOString() }) }).catch(() => {});
+}
+
+// One run of fn per name at a time. A run that finds it busy leaves a mark
+// and returns {busy}; the holder goes again when it sees a mark newer than its
+// own start, so the last change is never left out (the 15-minute cron is the
+// backstop if that run dies).
+export async function runLeased(env, name, leaseMs, fn, depth) {
+  const lk = name + '_lock', dk = name + '_dirty';
+  const tok = await stateLock(env, lk, leaseMs);
+  if (!tok) { await stateSet(env, { [dk]: new Date().toISOString() }).catch(() => {}); return { busy: true }; }
+  let r, start, rounds = 0;
+  const marked = async () => { const st = await stateGet(env, [dk]).catch(() => ({})); const d = st[dk] && st[dk].value; return !!d && d >= start; };
+  try {
+    do { start = new Date().toISOString(); r = await fn(); } while (++rounds < 3 && await marked());
+  } finally { await stateUnlock(env, lk, tok); }
+  // A mark left between the last check and the unlock: once more.
+  if (tok !== 'open' && !depth && rounds < 3 && await marked()) return runLeased(env, name, leaseMs, fn, 1);
+  return r;
+}
+
 // ---- token store: public.oauth_tokens ----
 export async function tokenRow(env) {
   const s = sb(env);
