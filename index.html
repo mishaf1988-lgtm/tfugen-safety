@@ -140,6 +140,10 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 #mf .mf-ob{flex:0 0 auto;min-height:42px;min-width:84px;font-weight:900}
 #mf .mf-tru{border-inline-start:3px solid #f59e0b;padding-inline-start:6px}
 #mf .mf-closed .mf-ot{text-decoration:line-through;color:var(--t2)}
+#mf .mf-sync{font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px;margin-bottom:10px}
+#mf .mf-sync.ok{background:#f0fdf4;color:#15803d}
+#mf .mf-sync.wait{background:#fffbeb;color:#92400e}
+#mf .mf-sync.bad{background:#fef2f2;color:#b91c1c}
 #mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
 /* ---- APP SHELL ---- */
@@ -622,6 +626,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
 /* ---- TOAST ---- */
 .toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#1a1d23;color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;z-index:999;pointer-events:none;white-space:normal;max-width:calc(100vw - 32px);text-align:center;line-height:1.4;animation:toast-in .4s cubic-bezier(.34,1.56,.64,1);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+/* above #mf/#hzr/#mtg (9000) and the row menus (9999): a toast under the tour screen
+   hid "choose a department" and "waiting for the photo" (29/09, upgrade review 3) */
+.toast{z-index:10050}
 .toast.ok{background:linear-gradient(135deg,#15803d,#22c55e)}
 .toast.err{background:linear-gradient(135deg,#991515,#dc2626)}
 .toast.warn{background:linear-gradient(135deg,#92400e,#d97706);color:#fff}
@@ -3523,6 +3530,7 @@ function _obBadge(state){
   var es=document.getElementById('emp-sync'),esc=document.getElementById('emp-sync-count');
   if(es)es.style.display=n>0?'':'none';
   if(esc)esc.textContent=String(n);
+  try{if(typeof _mfSyncRefresh==='function')_mfSyncRefresh();}catch(e){}
   if(!p)return;
   var ic=document.getElementById('sync-pill-icon'),tx=document.getElementById('sync-pill-txt');
   p.classList.remove('on','ok','err');
@@ -4583,6 +4591,7 @@ window._lockNow=function(){
   try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
+  try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
   var ls=g('login');if(ls)ls.style.display='flex';
   var pw=g('pw');if(pw){pw.value='';setTimeout(function(){try{pw.focus();}catch(e){}},100);}
@@ -9812,12 +9821,41 @@ function mgrFieldOpen(){
   try{sessionStorage.removeItem(MF_KEY);}catch(e){}
   if(location.hash==='#mf'){try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}}
   var ov=g('mf');if(!ov){ov=document.createElement('div');ov.id='mf';document.body.appendChild(ov);}
-  ov.style.display='block';_mfRender();
+  ov.style.display='block';_mf.finished=false;_mfRender();
 }
 function mgrFieldClose(){
-  var ov=g('mf');if(ov)ov.style.display='none';
+  _mf.finished=false;var ov=g('mf');if(ov)ov.style.display='none';
   if(typeof _attachClear==='function')_attachClear('mf-attach-area');
   if(typeof goPage==='function')goPage('thz');
+}
+// Where the saves are (29/09, upgrade review 3): each hazard is saved on the
+// phone first and sent by the outbox, so on a weak signal the screen used to
+// say "saved" while the rows were still only here. The line under the title
+// says which, and _obBadge redraws it as the outbox drains.
+function _mfPendIds(){
+  var s={};(_obGet()||[]).concat(_obMem||[]).forEach(function(op){
+    if(!op||op.tbl!=='tour_hazards')return;var id=op.op==='del'?op.id:(op.row&&op.row.id);if(id)s[id]=1;});
+  return s;
+}
+function _mfSyncHtml(){
+  var n=(_obGet()||[]).length+(_obMem||[]).length+(_phN||0);
+  if(typeof _sbAuthRejected==='function'&&_sbAuthRejected())return '<div id="mf-sync" class="mf-sync bad">\u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05e4\u05d2. \u05d4\u05e9\u05de\u05d9\u05e8\u05d5\u05ea \u05e0\u05e9\u05d0\u05e8\u05d5\u05ea \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05e2\u05d3 \u05db\u05e0\u05d9\u05e1\u05d4 \u05de\u05d7\u05d3\u05e9.</div>';
+  if(!n)return '<div id="mf-sync" class="mf-sync ok">\u05d1\u05e2\u05e0\u05df, \u05d4\u05db\u05dc \u05e0\u05e9\u05dc\u05d7</div>';
+  return '<div id="mf-sync" class="mf-sync wait">'+n+' \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4, \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df'+(navigator.onLine===false?' (\u05d0\u05d9\u05df \u05e8\u05e9\u05ea)':'')+'</div>';
+}
+function _mfSyncRefresh(){
+  var ov=document.getElementById('mf');if(!ov||ov.style.display==='none')return;
+  if(_mf.finished){mgrFieldFinish();return;}
+  var el=document.getElementById('mf-sync');if(el)el.outerHTML=_mfSyncHtml();
+}
+// Locking (idle, or the lock button) hides the app behind the login screen;
+// #mf sits above it (9000 over 1000), so it stayed open on a locked phone.
+// The typed hazard is kept, and the login lands back here.
+function _mfOnLock(){
+  var ov=document.getElementById('mf');if(!ov||ov.style.display==='none')return;
+  try{_mfKeep();}catch(e){}
+  ov.style.display='none';
+  try{sessionStorage.setItem(MF_KEY,'1');}catch(e){}
 }
 function _mfChips(list,cur,fn){
   return '<div class="mf-chips">'+list.map(function(v){return '<button type="button" class="mf-chip'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" onclick="'+fn+'(this.dataset.v)">'+esc(v)+'</button>';}).join('')+'</div>';
@@ -9832,7 +9870,7 @@ function _mfRender(){
   var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' | \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
   ov.innerHTML='<div class="mf-in">'
     +'<div class="mf-top"><h2>&#128203; \u05d3\u05d9\u05d5\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05e1\u05d9\u05d5\u05e8</h2><button type="button" class="btn btn-s" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>'
-    +'<div class="mf-sub">'+sub+'</div>'
+    +'<div class="mf-sub">'+sub+'</div>'+_mfSyncHtml()
     +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
     +_mfOpenHtml()
     +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" value="'+esc(_mf['mf-loc']||'')+'">'
@@ -9949,16 +9987,17 @@ function _mfTourHtml(){
 }
 function mgrFieldFinish(){
   var ov=g('mf');if(!ov)return;
-  var items=_mfTourItems(),cnt={};
+  _mf.finished=true;
+  var items=_mfTourItems(),cnt={},pend=_mfPendIds(),left=items.filter(function(r){return pend[r.id];}).length;
   items.forEach(function(r){cnt[r.sev||'-']=(cnt[r.sev||'-']||0)+1;});
   var sev=_THZ_SEV.filter(function(v){return cnt[v];}).map(function(v){return cnt[v]+' '+v;}).join(', ');
-  ov.innerHTML='<div class="mf-in"><h2>&#10004; \u05d4\u05e1\u05d9\u05d5\u05e8 \u05e0\u05e9\u05de\u05e8</h2>'
+  ov.innerHTML='<div class="mf-in"><h2>&#10004; \u05d4\u05e1\u05d9\u05d5\u05e8 \u05e0\u05e9\u05de\u05e8</h2>'+_mfSyncHtml()
     +'<div class="mf-list" style="font-size:15px">\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())+'<br><b>'+items.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd</b>'+(sev?' ('+esc(sev)+')':'')
-    +'<br><span style="font-size:13px;color:var(--t2)">\u05d4\u05dd \u05db\u05d1\u05e8 \u05d1\u05de\u05e2\u05e8\u05db\u05ea, \u05d5\u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 13 \u05d5\u05d1\u05de\u05e6\u05d2\u05ea \u05ea\u05d5\u05da \u05d3\u05e7\u05d4.</span></div>'
+    +'<br>'+(left||(_phN||0)?'<span style="font-size:14px;font-weight:700;color:#92400e">'+(left?left+' \u05de\u05ea\u05d5\u05da '+items.length+' \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05d8\u05dc\u05e4\u05d5\u05df':'')+((_phN||0)?(left?', ':'')+_phN+' \u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea':'')+'. \u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05db\u05e9\u05ea\u05d4\u05d9\u05d4 \u05e8\u05e9\u05ea. \u05dc\u05d0 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05e2\u05d3 \u05e9\u05d9\u05d5\u05e4\u05d9\u05e2 \"\u05d1\u05e2\u05e0\u05df\".</span>':'<span style="font-size:13px;color:var(--t2)">\u05db\u05d5\u05dc\u05dd \u05d1\u05e2\u05e0\u05df, \u05d5\u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 13 \u05d5\u05d1\u05de\u05e6\u05d2\u05ea \u05ea\u05d5\u05da \u05d3\u05e7\u05d4.</span>')+'</div>'
     +'<button type="button" class="btn btn-p mf-save" onclick="mgrFieldNewTour()">&#128203; \u05e1\u05d9\u05d5\u05e8 \u05d7\u05d3\u05e9</button>'
     +'<button type="button" class="btn btn-s" style="width:100%;min-height:46px;margin-top:10px" onclick="mgrFieldClose()">\u05dc\u05de\u05e2\u05e8\u05db\u05ea</button></div>';
 }
-function mgrFieldNewTour(){_mf={dept:'',sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',n:0};_mfRender();}
+function mgrFieldNewTour(){_mf={dept:'',sev:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',n:0,finished:false};_mfRender();}
 function mgrFieldSave(){
   if(_viewBlock())return;
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
@@ -19028,6 +19067,7 @@ function empToggle(on){
       _isAdmin=false;
       try{_rtStop();}catch(e){}try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
       _sbToken=null;_sbAuthPromise=null;
+      try{_mfOnLock();}catch(e){}
       var app=g('app');if(app)app.style.display='none';
       var ls=g('login');if(ls)ls.style.display='flex';
       setTimeout(function(){var p=g('pw');if(p){p.value='';p.focus();}},100);
@@ -19298,6 +19338,7 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
 
 (function(){
   function showLogin(){
+    try{_mfOnLock();}catch(e){}
     var ls=g('login');if(ls)ls.style.display='flex';
     setTimeout(function(){var p=g('pw');if(p)p.focus();},100);
   }
