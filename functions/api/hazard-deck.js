@@ -35,7 +35,7 @@ async function sha(s) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function runDeck(env, force) {
+export async function runDeck(env, force, s3Now) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
@@ -51,7 +51,10 @@ export async function runDeck(env, force) {
   // Slide 3 = the month that ended, written once when a new month begins
   // (Michael, 29/09), then left as it is until the next one.
   const prevMonth = addDays(today.substring(0, 7) + '-01', -1).substring(0, 7);
-  const s3Month = val('deck_s3_month') === prevMonth ? null : prevMonth;
+  // s3Now (a month, on request): that month so far, once (Michael, 29/09:
+  // "update it so it is current" before the meeting). deck_s3_month is left
+  // alone, so the month that ended is still written when the next one begins.
+  const s3Month = s3Now || (val('deck_s3_month') === prevMonth ? null : prevMonth);
   // The code's version is in the signature too: a wording fix must reach the
   // deck without waiting for the data to change (28/09, PR #918).
   const sig = await sha(JSON.stringify([date, m, rows, DECK_VERSION, s3Month || val('deck_s3_month')]));
@@ -71,7 +74,7 @@ export async function runDeck(env, force) {
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
     if (!changed.length && !force) {
-      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, ...(s3Month ? { deck_s3_month: s3Month } : {}) });
+      await stateSet(env, { deck_sig: sig, deck_ctag: meta.cTag || '', deck_week: date, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}) });
       return { ok: true, pushed: false, reason: 'already up to date', date, report };
     }
     let kept = null;
@@ -80,7 +83,7 @@ export async function runDeck(env, force) {
       await graphPut(token, kept, stampName(DECK.name, (meta.lastModifiedDateTime || now)), orig, DECK.type);
     }
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_at: now, ...(s3Month ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
@@ -119,7 +122,8 @@ export async function onRequest(context) {
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   // One deck run at a time: an older one finishing last would put old numbers back (29/09).
   try {
-    const r = await runLeased(env, 'deck', 120000, () => runDeck(env, body.force === true));
+    const s3Now = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(body.s3 || '')) ? body.s3 : null;
+    const r = await runLeased(env, 'deck', 120000, () => runDeck(env, body.force === true || !!s3Now, s3Now));
     return jsonResp(r && r.busy ? { ok: true, pushed: false, reason: 'busy' } : r, 200, cors);
   }
   catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }

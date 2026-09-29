@@ -213,6 +213,13 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   w = world({ file: src, state: s1st, cTag: 'someone-saved-old' });
   r = await runDeck(ENV, false);
   check('same meeting date, the file changed: rewritten, not archived again', r.pushed && w.puts.length === 1 && !/ארכיון/.test(w.puts[0].path), w.puts.map((p) => p.path));
+  // Michael 29/09: slide 3 now, for this month so far, once
+  const curM = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).substring(0, 7);
+  w = world({ file: written, state: s1st, cTag: 'c-ours-2' });
+  r = await runDeck(ENV, true, curM);
+  const s3now = r.pushed && (await partText(w.puts[w.puts.length - 1].body, 'ppt/slides/slide3.xml'));
+  const moName = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][+curM.substring(5) - 1];
+  check('slide 3 on request: this month so far, and the month-end write is still due (deck_s3_month kept)', !!s3now && s3now.includes('פעולות סגירה - ' + moName) && !(await partText(written, 'ppt/slides/slide3.xml')).includes('פעולות סגירה - ' + moName) && w.state.deck_s3_month === s1st.deck_s3_month, [r.pushed, w.state.deck_s3_month]);
   w = world({ file: src, locked: true });
   r = await runDeck(ENV, false);
   check('open in PowerPoint (423): a clear message, retried by the next run', !r.ok && r.locked && /המצגת פתוחה/.test(r.error) && w.state.deck_err, r);
