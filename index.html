@@ -138,6 +138,7 @@ body.hc #login-btn:hover,body.hc #login-btn:active{transform:none}
 #mf .mf-oi{display:flex;align-items:center;gap:8px;padding:8px 0}
 #mf .mf-ot{flex:1;min-width:0;word-break:break-word}
 #mf .mf-ob{flex:0 0 auto;min-height:42px;min-width:84px;font-weight:900}
+#mf .mf-tru{border-inline-start:3px solid #f59e0b;padding-inline-start:6px}
 #mf .mf-closed .mf-ot{text-decoration:line-through;color:var(--t2)}
 #mf .mf-done{font-size:13px;color:var(--ok,#15803d);margin-top:10px;text-align:center}
 
@@ -9808,7 +9809,7 @@ function mgrFieldClose(){
 function _mfChips(list,cur,fn){
   return '<div class="mf-chips">'+list.map(function(v){return '<button type="button" class="mf-chip'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" onclick="'+fn+'(this.dataset.v)">'+esc(v)+'</button>';}).join('')+'</div>';
 }
-function _mfPickDept(v){if(v!==_mf.dept)_mf.closedNow={};_mf.dept=v;_mfKeep();_mfRender();}
+function _mfPickDept(v){if(v!==_mf.dept){_mf.closedNow={};_mf.ask=null;}_mf.dept=v;_mfKeep();_mfRender();}
 function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfRender();}
 // Keep what was typed across a re-render (a chip tap redraws the screen).
 function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
@@ -9840,37 +9841,80 @@ function _mfRender(){
 // hazard of an earlier tour still open is listed right under the department
 // chips; "\u2714 \u05e0\u05e1\u05d2\u05e8" closes it (closed today), "\u05d1\u05d8\u05dc" reopens a mistaken tap. The
 // change is an update of the same row, so the file in folder 13 follows.
+// The trustees' findings too (Michael, 29/09: "I do want to see what the
+// trustees opened"): the same ones the folder-13 register shows as \u05e0-k (a
+// \u05dc\u05d9\u05e7\u05d5\u05d9 on tasks 1-7, not marked "\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9"), matched to the department by
+// the part of loc before "\u00b7", due = the routed task, else "\u05e0\u05d5\u05ea\u05d1 ... \u05e2\u05d3" in the
+// note, else report + 3 days. Closing one goes through _truMgrSetStatus, the
+// row menu's "\u05e1\u05de\u05df \u05e0\u05e1\u05d2\u05e8", which also closes its Vitre task, so it asks once.
+var _MF_TRU_ALIAS={'\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd':'\u05de\u05e2\u05e6\u05d1\u05d9\u05dd','\u05ea\u05d5\u05e6"\u05d2':'\u05ea\u05d5\u05e6\u05d2','\u05de\u05e2\u05d1\u05d3\u05d4':'\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'};
+function _mfTruDept(loc){var h=String(loc||'').split('\u00b7')[0].trim();return _MF_TRU_ALIAS[h]||h;}
+function _mfTruFindings(){
+  return (DB.trustee_reports||[]).filter(function(r){return r&&r.ok===false&&+r.t>=1&&+r.t<=7&&!/^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String(r.mgr_note||''));})
+    .sort(function(a,b){return String(a.ts||a.d||'').localeCompare(String(b.ts||b.d||''));});
+}
+function _mfTruDue(r){
+  var t=(DB.tasks||[]).filter(function(x){return x&&x.source_table==='trustee_reports'&&x.source_id===r.id&&x.due;})
+    .sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));})[0];
+  if(t)return String(t.due).substring(0,10);
+  var re=/\u05e0\u05d5\u05ea\u05d1[^()]*?\u05e2\u05d3 (\d{1,2})\/(\d{1,2})\/(\d{4})/g,m,last=null;
+  while((m=re.exec(String(r.mgr_note||''))))last=m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  if(last)return last;
+  var d=String(r.d||'').substring(0,10);if(!d)return null;
+  return new Date(Date.parse(d+'T12:00:00Z')+3*86400000).toISOString().substring(0,10);
+}
 function _mfOpenItems(){
   if(!_mf.dept)return [];
-  var t=_mfTour(_mf.dept),today=_thzToday();
-  return (DB.tour_hazards||[]).filter(function(r){
+  var t=_mfTour(_mf.dept),today=_thzToday(),now=_mf.closedNow||{},out=[];
+  (DB.tour_hazards||[]).filter(function(r){
     if(r.dept!==_mf.dept)return false;
     if(+r.tour_no===t&&r.d===today)return false;
-    return r.s!==_THZ_CLOSED||(r.closed_d===today&&(_mf.closedNow||{})[r.id]);
-  }).sort(function(a,b){return (+a.n||0)-(+b.n||0);});
+    return r.s!==_THZ_CLOSED||now[r.id];
+  }).sort(function(a,b){return (+a.n||0)-(+b.n||0);}).forEach(function(r){
+    out.push({k:'h',id:r.id,num:r.n,descr:r.descr,loc:r.loc,when:'\u05e1\u05d9\u05d5\u05e8 '+(r.tour_no||'-')+', '+fd(r.d),sev:r.sev,due:r.due,closed:r.s===_THZ_CLOSED});
+  });
+  _mfTruFindings().forEach(function(r,k){
+    if(_mfTruDept(r.loc)!==_mf.dept)return;
+    var closed=r.s===TRUSTEE_S_CLOSED;if(closed&&!now[r.id])return;
+    var loc=String(r.loc||'').indexOf('\u00b7')>=0?String(r.loc).split('\u00b7').slice(1).join('\u00b7').trim():'';
+    out.push({k:'t',id:r.id,num:'\u05e0-'+(k+1),descr:r.f,loc:loc,when:'\u05e0\u05d0\u05de\u05df '+(r.u||'')+', '+fd(String(r.d||r.ts||'').substring(0,10)),sev:null,due:_mfTruDue(r),closed:closed});
+  });
+  return out;
 }
 function _mfOpenHtml(){
   if(!_mf.dept)return '';
-  var items=_mfOpenItems(),open=items.filter(function(r){return r.s!==_THZ_CLOSED;}).length;
-  if(!items.length)return '<div class="mf-list" style="color:var(--t2)">\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05d1'+esc(_mf.dept)+'.</div>';
+  var items=_mfOpenItems(),open=items.filter(function(r){return !r.closed;}).length;
+  if(!items.length)return '<div class="mf-list" style="color:var(--t2)">\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05d0\u05d5 \u05de\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1'+esc(_mf.dept)+'.</div>';
   return '<details class="mf-list mf-open" open><summary><b>\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1'+esc(_mf.dept)+' ('+open+')</b> <span style="font-size:12px;color:var(--t2)">\u05d1\u05d3\u05d5\u05e7 \u05d0\u05dd \u05ea\u05d5\u05e7\u05e0\u05d5</span></summary>'
     +items.map(function(r){
-      var closed=r.s===_THZ_CLOSED,late=_thzOverdue(r);
-      return '<div class="mf-li mf-oi'+(closed?' mf-closed':'')+'"><div class="mf-ot">'+esc(r.n)+'. '+esc(String(r.descr||'').substring(0,80))
-        +'<div style="font-size:12px;color:var(--t2)">'+(r.loc?esc(r.loc)+' | ':'')+'\u05e1\u05d9\u05d5\u05e8 '+esc(r.tour_no||'-')+', '+fd(r.d)+(r.sev?' | '+esc(r.sev):'')
-        +(r.due?' | \u05d9\u05e2\u05d3 '+fd(r.due):'')+(late?' <b style="color:var(--er,#b91c1c)">\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</b>':'')+'</div></div>'
-        +(closed?'<button type="button" class="btn btn-s mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldReopen(this.dataset.id)">\u05d1\u05d8\u05dc</button>'
-          :'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u2714 \u05e0\u05e1\u05d2\u05e8</button>')
-        +'</div>';
+      var late=!r.closed&&r.due&&du(r.due)<0,ask=_mf.ask===r.id;
+      var btn=r.closed?'<button type="button" class="btn btn-s mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldReopen(this.dataset.id)">\u05d1\u05d8\u05dc</button>'
+        :ask?'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u05dc\u05e1\u05d2\u05d5\u05e8?</button>'
+        :'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u2714 \u05e0\u05e1\u05d2\u05e8</button>';
+      return '<div class="mf-li mf-oi'+(r.closed?' mf-closed':'')+(r.k==='t'?' mf-tru':'')+'"><div class="mf-ot">'+esc(r.num)+'. '+esc(String(r.descr||'').substring(0,80))
+        +'<div style="font-size:12px;color:var(--t2)">'+(r.loc?esc(r.loc)+' | ':'')+esc(r.when)+(r.sev?' | '+esc(r.sev):'')
+        +(r.due?' | \u05d9\u05e2\u05d3 '+fd(r.due):'')+(late?' <b style="color:var(--er,#b91c1c)">\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</b>':'')+'</div>'
+        +(ask?'<div style="font-size:12px;color:var(--er,#b91c1c)">\u05d9\u05d9\u05e1\u05d2\u05e8 \u05d2\u05dd \u05d1\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre. \u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</div>':'')+'</div>'
+        +btn+'</div>';
     }).join('')+'</details>';
 }
 function _mfSetState(id,closed){
   if(_viewBlock())return;
-  var r=(DB.tour_hazards||[]).find(function(x){return x.id===id;});if(!r)return;
-  _mfKeep();
-  r.s=closed?_THZ_CLOSED:'\u05e4\u05ea\u05d5\u05d7';r.closed_d=closed?_thzToday():null;
-  _mf.closedNow=_mf.closedNow||{};if(closed)_mf.closedNow[id]=1;
-  sbUpd('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8 '+(closed?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.descr||'').substring(0,30));sdb();
+  _mfKeep();_mf.closedNow=_mf.closedNow||{};
+  var t=typeof _truFind==='function'&&_truFind(id);
+  if(t){
+    // A trustee finding with an open Vitre task: first tap asks, the second
+    // closes (both here and in Vitre). Without one it closes at once.
+    var vit=typeof _truVitreApptOf==='function'&&_truVitreApptOf(t)&&!_truVitreClosedIn(t)&&!(typeof _VITRE_SMS_ON!=='undefined'&&!_VITRE_SMS_ON);
+    if(closed&&vit&&_mf.ask!==id){_mf.ask=id;_mfRender();return;}
+    _mf.ask=null;if(closed)_mf.closedNow[id]=1;
+    _truMgrSetStatus(id,closed?TRUSTEE_S_CLOSED:TRUSTEE_S_OPEN,true);
+  }else{
+    var r=(DB.tour_hazards||[]).find(function(x){return x.id===id;});if(!r)return;
+    r.s=closed?_THZ_CLOSED:'\u05e4\u05ea\u05d5\u05d7';r.closed_d=closed?_thzToday():null;
+    if(closed)_mf.closedNow[id]=1;
+    sbUpd('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8 '+(closed?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.descr||'').substring(0,30));sdb();
+  }
   toast(closed?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');_mfRender();
 }
 function mgrFieldClosePrev(id){_mfSetState(id,true);}
