@@ -50,9 +50,9 @@ export const FILES = {
 };
 const SHEET = '\u05de\u05d0\u05d2\u05e8 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
 const LAST_COL = 12, MAX_ROW = 206, DATE_COLS = [1, 9, 11];
-// In the signature: a change in how the file is written (29/09/2026: the filter on
-// open hazards, then row heights that fit the text) reaches it once. Was:
-// open hazards) reaches it once, without waiting for the data to change.
+// In the signature: a change in how the file is written (29/09/2026: the filter
+// on open hazards, then row heights that fit the text) reaches the file once,
+// without waiting for the data to change.
 const FILE_VERSION = 3;
 export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
 // Spellings in the locations list / trustee screens -> the sheet's departments.
