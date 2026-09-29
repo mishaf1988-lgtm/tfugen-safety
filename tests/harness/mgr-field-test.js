@@ -78,8 +78,36 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     mgrFieldReopen('th-3');
     res.reopen = ins.slice(-1)[0];
     res.afterReopen = op() && op().textContent;
-    _mfPickDept('חומר גלם');
+    _mfPickDept('תוצג');
     res.none = ov.querySelector('.mf-list') && ov.querySelector('.mf-list').textContent;
+    // trustee findings of the department
+    window.fetch = function () { window._vitre = (window._vitre || 0) + 1; return new Promise(function () {}); };
+    DB.tasks = [{ id: 'tk1', source_table: 'trustee_reports', source_id: 'tr-2', due: '2026-10-04', ts: '2026-09-28' }];
+    DB.trustee_reports = [
+      { id: 'tr-0', ok: false, t: 2, loc: 'חומר גלם · מחסן', f: 'לא רלוונטי כאן', u: 'דני', d: '2026-09-01', s: 'פתוח', mgr_note: 'לא רלוונטי: אזעקה' },
+      { id: 'tr-1', ok: false, t: 3, loc: 'חומר גלם · רמפה', f: 'משטח שבור', u: 'דני', d: '2026-09-20', ts: '2026-09-20T08:00:00Z', s: 'פתוח', mgr_note: 'Vitre SMS #55 · נותב לאחזקה עד 30/09/2026 (מייל)' },
+      { id: 'tr-2', ok: false, t: 4, loc: 'חומר גלם', f: 'נורה שרופה', u: 'רוני', d: '2026-09-22', ts: '2026-09-22T08:00:00Z', s: 'פתוח' },
+      { id: 'tr-3', ok: true, t: 4, loc: 'חומר גלם', f: 'תקין', d: '2026-09-22', s: 'תקין' },
+      { id: 'tr-4', ok: false, t: 5, loc: 'מעוצבים · קו 1', f: 'במחלקה אחרת', u: 'רוני', d: '2026-09-23', ts: '2026-09-23T08:00:00Z', s: 'פתוח' },
+    ];
+    _mfPickDept('חומר גלם');
+    res.tru = op() && op().textContent;
+    res.truRows = op() ? op().querySelectorAll('.mf-tru').length : 0;
+    const n1 = ins.length;
+    window._VITRE_SMS_ON = true; // off in production today; the ask path must still work when it is on
+    mgrFieldClosePrev('tr-1');
+    res.ask = op() && op().textContent; res.askIns = ins.length - n1;
+    mgrFieldClosePrev('tr-1');
+    res.truUpd = ins.slice(n1).find((x) => x[0] === 'upd:trustee_reports');
+    res.truAfter = op() && op().textContent;
+    window._VITRE_SMS_ON = false;
+    mgrFieldReopen('tr-1');
+    res.truReopen = ins.slice(-1)[0];
+    const n2 = ins.length;
+    mgrFieldClosePrev('tr-2');
+    res.noVitre = ins.slice(n2).find((x) => x[0] === 'upd:trustee_reports');
+    _mfPickDept('מעצבים');
+    res.alias = op() && op().textContent;
     _mfPickDept('מעצבים');
     mgrFieldFinish();
     res.finish = ov.textContent;
@@ -109,6 +137,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('"נסגר" updates the row: closed, closed today', cu && cu.id === 'th-3' && cu.s === 'סגור' && cu.closed_d === out.today, cu);
   check('it stays listed with "בטל", the count drops, the typing survives', /\(0\)/.test(out.afterClose || '') && /בטל/.test(out.afterClose) && out.keptTyping === 'בכתיבה', [out.afterClose, out.keptTyping]);
   check('"בטל" reopens it: open, closed_d null', out.reopen && out.reopen[1].s === 'פתוח' && out.reopen[1].closed_d === null && /\(1\)/.test(out.afterReopen || ''), out.reopen);
+  check('trustee findings of the department: not-relevant, OK and other departments left out', out.truRows === 2 && /\(2\)/.test(out.tru || '') && /נ-1\. משטח שבור/.test(out.tru) && /נ-2\. נורה שרופה/.test(out.tru) && /רמפה/.test(out.tru) && /נאמן דני/.test(out.tru) && !/לא רלוונטי כאן|תקין|במחלקה אחרת/.test(out.tru), out.tru);
+  check('trustee due: the routed note (30/09), the routed task (04/10)', /יעד 30\/09\/2026/.test(out.tru || '') && /יעד 04\/10\/2026/.test(out.tru), out.tru);
+  check('closing a trustee finding asks first (it closes Vitre too), nothing written yet', /לסגור\?/.test(out.ask || '') && /Vitre/.test(out.ask) && out.askIns === 0, out.ask);
+  const tu = out.truUpd && out.truUpd[1];
+  check('the second tap closes it: נסגר, closed today, stays listed with "בטל"', tu && tu.id === 'tr-1' && tu.s === 'נסגר' && tu.closed_d === out.today && /\(1\)/.test(out.truAfter || '') && /בטל/.test(out.truAfter), [tu, out.truAfter]);
+  check('"בטל" reopens the trustee finding, closed_d null', out.truReopen && out.truReopen[0] === 'upd:trustee_reports' && out.truReopen[1].s === 'פתוח' && out.truReopen[1].closed_d === null, out.truReopen);
+  check('no Vitre task: one tap closes it', out.noVitre && out.noVitre[1].id === 'tr-2' && out.noVitre[1].s === 'נסגר', out.noVitre);
+  check('"מעוצבים" in a trustee loc counts as מעצבים', /במחלקה אחרת/.test(out.alias || ''), out.alias);
   check('a department with nothing open says so', /אין מפגעים פתוחים/.test(out.none || ''), out.none);
   check('"סיום סיור": tour, department, count and severities', /הסיור נשמר/.test(out.finish) && /סיור מס' 10/.test(out.finish) && /2 מפגעים/.test(out.finish), out.finish);
   check('"סיור חדש" starts clean', out.reset);
