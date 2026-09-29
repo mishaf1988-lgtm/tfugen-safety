@@ -203,9 +203,12 @@ export function deckContent(m, rows, meetingDate, opts) {
       NewNote: [nw === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9 \u05d0\u05d7\u05d3 \u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2' : nw ? nw + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2',
         nw ? listDepts('newThisWeek').join(', ') + ', ' + (!nc ? '\u05db\u05d5\u05dc\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' : !no ? '\u05db\u05d5\u05dc\u05dd \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5' : (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ' \u05d5' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05d5\u05ea\u05e8 \u05e4\u05ea\u05d5\u05d7' : '-' + no + ' \u05e0\u05d5\u05ea\u05e8\u05d5 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')) : '-'],
       bars: {
-        '\u05e1\u05d2\u05d5\u05e8': Object.fromEntries(h.byDept.map((d) => [d.dept, d.closed - d.newClosed])),
+        // A hazard of this week that is already closed is green, not orange
+        // (Michael, 29/09: closed ones "should turn green"). Orange = new and
+        // still open; the three still add up to the department's total.
+        '\u05e1\u05d2\u05d5\u05e8': Object.fromEntries(h.byDept.map((d) => [d.dept, d.closed])),
         '\u05e4\u05ea\u05d5\u05d7': Object.fromEntries(h.byDept.map((d) => [d.dept, d.openPrior])),
-        '\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2': Object.fromEntries(h.byDept.map((d) => [d.dept, d.newThisWeek])),
+        '\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2': Object.fromEntries(h.byDept.map((d) => [d.dept, d.newThisWeek - d.newClosed])),
         'Totals': Object.fromEntries(h.byDept.map((d) => [d.dept, d.total])),
       },
       axisMax: Math.max(1, Math.ceil(maxTotal * 1.25 * 10) / 10),
