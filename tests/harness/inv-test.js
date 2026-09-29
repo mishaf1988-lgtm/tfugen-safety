@@ -56,8 +56,8 @@ const FIVE_WHY = '1. למה זה קרה?\n   המלגזה נסעה מהר\n2. ל
   await page.screenshot({ path: OUT + '/inv-modal-375.png' });
 
   console.log('\n3. save');
-  const saved = await page.evaluate(() => { document.getElementById('inv-rc').value = 'אין בעלים לנהלי ציוד נייד'; _invSave(); const rec = DB.inc.find(r => r.id === 'i1'); return { fw: rec.five_why, r: rec.r, calls: window.__calls.filter(c => c[0] === 'sbUpd') }; });
-  check('saved to the existing fields inc.five_why and inc.r', /5\. למה/.test(saved.fw) && saved.r === 'אין בעלים לנהלי ציוד נייד', { r: saved.r });
+  const saved = await page.evaluate(() => { const rec0 = DB.inc.find(r => r.id === 'i1'); rec0.r = 'הערות מהקובץ'; document.getElementById('inv-rc').value = 'אין בעלים לנהלי ציוד נייד'; _invSave(); const rec = DB.inc.find(r => r.id === 'i1'); return { fw: rec.five_why, r: rec.r, rc: rec.rc, calls: window.__calls.filter(c => c[0] === 'sbUpd') }; });
+  check('saved to inc.five_why and its own column inc.rc; the notes in inc.r are left as they were (29/09/2026: they were replaced)', /5\. למה/.test(saved.fw) && saved.rc === 'אין בעלים לנהלי ציוד נייד' && saved.r === 'הערות מהקובץ', { r: saved.r, rc: saved.rc });
   check('sbUpd("inc", rec) called once', saved.calls.length === 1 && saved.calls[0][1] === 'inc' && saved.calls[0][2] === 'rec:i1', saved.calls);
 
   console.log('\n4. follow-ups');
