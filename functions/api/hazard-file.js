@@ -311,6 +311,39 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   return { hazards: list(hz), reports: list(tr), fresh, pulled, dropped };
 }
 
+// ---- The "Claude Log" sheet (29/09/2026, Michael: "it is important for the
+// record"): one line per write that changed something, in the columns the
+// sheet already has: #, date, the request (where the change came from), the
+// action, the details, the outcome. ----
+const LOG_SHEET = 'Claude Log';
+const COL_NAMES = ['','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','\u05de\u05d7\u05dc\u05e7\u05ea \u05e1\u05d9\u05d5\u05e8','\u05de\u05d9\u05e7\u05d5\u05dd','\u05ea\u05d9\u05d0\u05d5\u05e8','\u05d7\u05d5\u05de\u05e8\u05d4','\u05d0\u05d7\u05e8\u05d0\u05d9','\u05e4\u05e2\u05d5\u05dc\u05d4','\u05d9\u05e2\u05d3','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','\u05d4\u05e2\u05e8\u05d5\u05ea'];
+const LOG_MAX = 12; // changes spelled out in one line; the rest counted
+const short = (t, n) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > n ? t.substring(0, n - 3) + '...' : t; };
+const dispVal = (v) => { const x = norm(v); return isYmd(x) ? x.substring(8, 10) + '/' + x.substring(5, 7) + '/' + x.substring(0, 4) : x; };
+export function logEntry(last, reg, o) {
+  if (!last || !Array.isArray(last.ids)) return null;
+  const was = {}; last.ids.forEach((id, i) => { was[id] = (last.rows || [])[i]; });
+  const out = [];
+  reg.ids.forEach((id, i) => {
+    const b = reg.rows[i], a = was[id], n = norm(b[0]);
+    if (!a) { out.push('\u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9 ' + n + ': ' + short(b[5], 60)); return; }
+    const ch = [];
+    [10, 11, 8, 12, 9, 5, 6, 7, 3, 4].forEach((ci) => { if (norm(a[ci]) !== norm(b[ci])) ch.push(COL_NAMES[ci] + ' ' + (norm(a[ci]) ? '\u05de-"' + short(dispVal(a[ci]), 30) + '" ' : '') + '\u05dc-"' + short(dispVal(b[ci]), 30) + '"'); });
+    if (ch.length) out.push('\u05de\u05e4\u05d2\u05e2 ' + n + ': ' + ch.join(', '));
+  });
+  if (!out.length && !(o.dropped && o.dropped.length)) return null;
+  const at = new Date(o.now);
+  const p = {}; new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at).forEach((x) => { p[x.type] = x.value; });
+  const when = p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute;
+  const details = out.slice(0, LOG_MAX).join('; ') + (out.length > LOG_MAX ? '; \u05d5\u05e2\u05d5\u05d3 ' + (out.length - LOG_MAX) : '');
+  const nd = (o.dropped || []).length;
+  return [when,
+    o.personSaved ? '\u05e9\u05de\u05d9\u05e8\u05d4 \u05d1\u05e7\u05d5\u05d1\u05e5 Excel (\u05d4\u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e0\u05e7\u05dc\u05d8\u05d5 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4)' : '\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 (\u05de\u05de\u05d5\u05e0\u05d4 / \u05e0\u05d0\u05de\u05df)',
+    '\u05d4\u05e9\u05e8\u05ea \u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05de\u05d0\u05d2\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5',
+    details || '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05de\u05d0\u05d2\u05e8',
+    nd ? '\u05e2\u05d5\u05d3\u05db\u05df. ' + nd + ' \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d5, \u05e2\u05d5\u05ea\u05e7 \u05d1\u05d0\u05e8\u05db\u05d9\u05d5\u05df / \u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05e2\u05d5\u05d3\u05db\u05df'];
+}
+
 // Writes the edits (new hazards first, in one request), updates the arrays in
 // memory. More than MAX_PULL writes: the rest waits for the next run, and the
 // file is not rewritten until then (it would drop them).
@@ -418,7 +451,9 @@ export async function runFile(env, which, force) {
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }
-    const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true });
+    const entry = logEntry(last, reg, { now, personSaved, dropped: ed ? ed.dropped : [] });
+    const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true,
+      log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
     await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
