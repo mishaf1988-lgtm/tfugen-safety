@@ -196,6 +196,30 @@ export async function readSheetRows(bytes, opts) {
   return out;
 }
 
+// show {col, vals}: the header filter selects vals in that column, and data
+// rows with another value there are hidden, as Excel would show it (Michael,
+// 29/09: "leave the filter on the open ones only"). Empty rows stay visible, so
+// a new hazard typed there is seen. Without an autoFilter in the sheet: no-op.
+function applyShow(xml, rows, show, maxRow) {
+  const af = /<autoFilter\b([^>]*?)\/>/.exec(xml);
+  const ref = af && /\bref="([A-Z]+)\d+:[A-Z]+\d+"/.exec(af[1]);
+  if (!ref) return xml;
+  const colId = show.col - colIndex(ref[1]);
+  if (colId < 0) return xml;
+  const f = '<filterColumn colId="' + colId + '"><filters blank="1">'
+    + show.vals.map((v) => '<filter val="' + xmlEsc(v) + '"/>').join('') + '</filters></filterColumn>';
+  xml = xml.replace(af[0], '<autoFilter' + af[1] + '>' + f + '</autoFilter>');
+  xml = xml.replace(/<row\b([^>]*?)(\/?>)/g, (all, attrs, end) => {
+    const rm = /\br="(\d+)"/.exec(attrs); const r = rm ? +rm[1] : 0;
+    const v = r >= 2 && r <= maxRow && rows[r - 2] ? rows[r - 2][show.col] : null;
+    if (v === null || v === undefined || v === '' || show.vals.indexOf(v) >= 0) return all;
+    return '<row' + attrs + ' hidden="1"' + end;
+  });
+  return /<sheetPr\b/.test(xml)
+    ? xml.replace(/<sheetPr\b/, '<sheetPr filterMode="1"')
+    : xml.replace(/(<worksheet\b[^>]*>)/, '$1<sheetPr filterMode="1"/>');
+}
+
 // rows: array of arrays of values for columns A.. (null/'' = empty cell;
 // number; string; {date:'YYYY-MM-DD'}). Returns the new workbook bytes.
 // opts: {sheet, lastCol (0-based, e.g. 12 = M), maxRow (e.g. 206), dateCols
@@ -262,6 +286,7 @@ export async function patchSheetRows(bytes, rows, opts) {
   for (let i = 0; i < rows.length; i++) if (!seen.has(i + 2)) throw new Error('too many rows for the sheet (row ' + (i + 2) + ' is not prepared)');
   // The filter itself stays (arrows on the header), its old selection goes.
   xml = xml.replace(/(<autoFilter\b[^>]*?)>[\s\S]*?<\/autoFilter>/, '$1/>').replace(/\s+filterMode="1"/, '');
+  if (opts.show) xml = applyShow(xml, rows, opts.show, maxRow);
   sheet.text = xml;
 
   const wbE = entries.find((e) => e.name === 'xl/workbook.xml');
