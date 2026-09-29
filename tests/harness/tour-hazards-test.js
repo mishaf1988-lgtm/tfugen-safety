@@ -135,6 +135,59 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   check('each item says why it was not taken', /ליקוי נאמן נפתח רק מהאפליקציה/.test(dr.txt || '') && /עמודה שנקבעת באפליקציה/.test(dr.txt) && /\(2\)/.test(dr.txt), dr.txt);
   check('the same item in both files is listed once, with a "טופל" button per item', dr.btns === 2, dr.btns);
   check('"טופל" dismisses it in both files, and it leaves the list', dr.calls.length === 2 && dr.calls.every((c) => c.op === 'dismiss' && c.key === 'נ-9|-1|ליקוי מהקובץ') && dr.calls.map((c) => c.file).sort().join() === 'xlsm,xlsx' && !/ליקוי מהקובץ/.test(dr.after || '') && /גבוהה/.test(dr.after), [dr.calls, dr.after]);
+
+  console.log('\n6. overdue hazards in "היום", escalation, "חסר יעד" (upgrade review 2, 29/09)');
+  const od = await page.evaluate(() => {
+    const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().substring(0, 10);
+    window._currentUser = { username: 'admin' }; if (typeof _applyRoleGates === 'function') _applyRoleGates();
+    DB.tasks = []; DB.rounds = [{ id: 'rd', d: new Date().toISOString().split('T')[0] }];
+    DB.tour_hazards = [
+      { id: 'a', n: 1, dept: 'תוצג', descr: 'גבוהה 10 ימים', sev: 'גבוהה', resp: 'אחזקה', due: ago(10), s: 'פתוח' },
+      { id: 'b', n: 2, dept: 'תוצג', descr: 'בינונית 10 ימים', sev: 'בינונית', resp: 'אחזקה', due: ago(10), s: 'פתוח' },
+      { id: 'c', n: 3, dept: 'מעצבים', descr: 'נמוכה 40 ימים', sev: 'נמוכה', resp: 'חשמל', due: ago(40), s: 'בטיפול' },
+      { id: 'd', n: 4, dept: 'מעצבים', descr: 'גבוהה 5 ימים', sev: 'גבוהה', resp: 'הנדסה', due: ago(5), s: 'פתוח' },
+      { id: 'e', n: 5, dept: 'מעצבים', descr: 'בלי יעד', sev: 'נמוכה', resp: 'הנדסה', due: null, s: 'פתוח' },
+      { id: 'f', n: 6, dept: 'מעצבים', descr: 'סגור באיחור', sev: 'גבוהה', resp: 'הנדסה', due: ago(50), s: 'סגור' },
+    ];
+    DB.trustee_reports = [
+      { id: 't1', u: 'דני', t: 1, ok: false, s: 'פתוח', d: ago(12), ts: ago(12) + 'T08:00:00Z', loc: 'מעבדה · מדף', f: 'נאמן באיחור' },
+      { id: 't2', u: 'דני', t: 1, ok: false, s: 'פתוח', d: ago(12), ts: ago(12) + 'T08:00:00Z', loc: 'תוצג · רמפה', f: 'עם משימה' },
+      { id: 't3', u: 'דני', t: 1, ok: false, s: 'פתוח', d: ago(1), ts: ago(1) + 'T08:00:00Z', loc: 'תוצג · רמפה', f: 'עוד לא באיחור' },
+    ];
+    DB.tasks = [{ id: 'k1', title: 'x', source_table: 'trustee_reports', source_id: 't2', due: ago(-5), status: 'פתוח' }];
+    const late = _hzLateAll();
+    const res = { ids: late.map((x) => x.id + (x.esc ? '!' : '')) };
+    _renderToday();
+    res.today = Array.from(document.querySelectorAll('#today-items .today-item')).map((x) => x.textContent);
+    goPage('thz'); rThz();
+    res.sum = document.getElementById('thz-sum').textContent;
+    const fs = document.getElementById('thz-f-s');
+    res.opts = Array.from(fs.options).map((o) => o.value);
+    thzFilter('s', 'esc'); res.escRows = document.querySelectorAll('#tb-thz tr').length; res.escTxt = document.getElementById('tb-thz').textContent;
+    thzFilter('s', 'nodue'); res.nodueTxt = document.getElementById('tb-thz').textContent;
+    thzFilter('s', 'notclosed');
+    res.rowsTxt = document.getElementById('tb-thz').textContent;
+    // the Today row opens the tours screen on "overdue"
+    goPage('dash'); _todayClick('thz', 'overdue'); res.clickF = [window.CUR, document.getElementById('thz-f-s').value];
+    // the daily scan: overdue hazards go to the manager, not to a department
+    const evs = []; const keep = window._notifyEvent; window._notifyEvent = (k, p) => evs.push([k, p]);
+    Object.keys(localStorage).filter((k) => /^tfgn_notif_/.test(k)).forEach((k) => localStorage.removeItem(k));
+    try { sessionStorage.clear(); } catch (e) {}
+    _notifDailyScan(); window._notifyEvent = keep;
+    res.scan = evs.filter((e) => e[0] === 'task_overdue').map((e) => e[1]);
+    thzFilter('s', 'notclosed');
+    return res;
+  });
+  check('overdue: tour hazards and an open trustee finding past its due, oldest first; closed, routed-to-a-task and not-yet-due ones left out', od.ids.join() === 'c!,a!,b,t1,d', od.ids);
+  check('escalation: high severity over 7 days (a) and any hazard over 30 (c); high at 5 days (d) and medium at 10 (b) not', od.ids.includes('a!') && od.ids.includes('c!') && od.ids.includes('d') && od.ids.includes('b'), od.ids);
+  const lateRow = od.today.find((t) => /מפגעים באיחור/.test(t)) || '';
+  check('"היום": one line, 5 overdue, 2 escalated, by responsible, the oldest in days, badge "הסלמה"', /5 מפגעים באיחור \(2 בהסלמה\)/.test(lateRow) && /אחזקה 2/.test(lateRow) && /הוותיק: 40 ימים/.test(lateRow) && /הסלמה/.test(lateRow), od.today);
+  check('"היום": a line for tour hazards without a due, badge "חסר יעד"', od.today.some((t) => /מפגע סיור אחד בלי יעד לטיפול/.test(t) && /חסר יעד/.test(t)), od.today);
+  check('tours screen: counts escalated and without a due on top', /2 בהסלמה/.test(od.sum) && /1 בלי יעד/.test(od.sum), od.sum);
+  check('tours screen: filters "בהסלמה" and "בלי יעד"', od.opts.includes('esc') && od.opts.includes('nodue') && od.escRows === 2 && /גבוהה 10 ימים/.test(od.escTxt) && /נמוכה 40 ימים/.test(od.escTxt) && /בלי יעד/.test(od.nodueTxt) && !/גבוהה 10/.test(od.nodueTxt), [od.escRows, od.nodueTxt.slice(0, 80)]);
+  check('rows: a "הסלמה" tag and a "חסר יעד" tag', /הסלמה/.test(od.rowsTxt) && /חסר יעד/.test(od.rowsTxt), od.rowsTxt.slice(0, 200));
+  check('the "היום" line opens the tours screen filtered on overdue', od.clickF[0] === 'thz' && od.clickF[1] === 'overdue', od.clickF);
+  check('daily scan: overdue hazards in the overdue alert, with no assignee (to the manager, never the department)', od.scan.some((p) => p.src === 'tour_hazards' && /מפגע סיור 3/.test(p.title) && p.assignee === null), od.scan);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
