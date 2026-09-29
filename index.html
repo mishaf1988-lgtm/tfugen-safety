@@ -901,6 +901,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
          goPage; this is the affordance for it. Right-pointing, because the
          layout is right-to-left. Hidden on the home page. -->
     <button class="bell" id="back-btn" title="&#1495;&#1494;&#1512;&#1492;" aria-label="&#1495;&#1494;&#1512;&#1492;" onclick="goBack()" style="display:none">&#8594;</button>
+    <!-- Michael 2026-09-29: after signing in there was no way back to the
+         field report screen except the tours page. One tap from any page. -->
+    <button class="bell" id="mf-btn" title="&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;" aria-label="&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;" onclick="mgrFieldOpen()">&#128203;</button>
     <button class="bell" id="home-btn" title="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" aria-label="&#1491;&#1507; &#1492;&#1489;&#1497;&#1514;" onclick="goHome()">&#127968;</button>
     <span id="sync-pill" class="sync-pill" title="&#1504;&#1497;&#1496;&#1493;&#1512; &#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#8212; &#1492;&#1511;&#1500;&#1511; &#1500;&#1488;&#1489;&#1495;&#1493;&#1503;" onclick="syncDiag()" style="cursor:pointer"><span id="sync-pill-icon">&#8635;</span><span id="sync-pill-txt">0</span></span>
     <!-- The bell used to open the SETTINGS screen and looked identical whether
@@ -2046,6 +2049,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ppe')" data-kw="מגן אישי ציוד מגן"><span class="sic">&#9939;</span>PPE</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','eqi')" data-kw="ציוד מלגזה דוד קיטור תקופתית"><span class="sic">&#128295;</span>בדיקות ציוד</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','ctr')" data-kw="ספקים"><span class="sic">&#129309;</span>קבלנים</button>
+    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');mgrFieldOpen()" data-kw="ממשק ממונה הבטיחות דיווח סיור מפגע"><span class="sic">&#128203;</span>&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','thz')" data-kw="סיור סיורי מפגעים ממונה מחלקה"><span class="sic">&#128270;</span>סיורי מפגעים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;</span>שיחות בטיחות</button>

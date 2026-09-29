@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -223,6 +223,24 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
   check('the file exactly as the server wrote it: no edits', !ed.hazards.length && !ed.reports.length && !ed.fresh.length, ed);
+
+  // 29/09: an old copy still open in Excel saved over the file (44/46/47 reopened)
+  const HZc = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { s: 'סגור', closed_d: '2026-09-23' }) : h));
+  const regC = buildRegister(HZc, TR);
+  const oldC = supersede(last1, regC, '2026-09-29T07:36:00Z');
+  check('what the app replaced is remembered: th-2 was פתוח, no closing date', JSON.stringify(oldC['h:th-2|10']) === JSON.stringify([['פתוח', '2026-09-29T07:36:00Z']]) && oldC['h:th-2|11'] && oldC['h:th-2|11'][0][0] === '', oldC);
+  const staleRows = await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] });
+  ed = diffEdits(staleRows, { rows: regC.rows, ids: regC.ids }, HZc, TR, '2026-09-29');
+  check('(without it, the stale copy reads as "reopened in Excel": the bug)', ed.hazards.some((x) => x.id === 'th-2' && x.s === 'פתוח'), ed.hazards);
+  ed = diffEdits(staleRows, { rows: regC.rows, ids: regC.ids, old: oldC }, HZc, TR, '2026-09-29');
+  check('with it: the stale copy changes nothing, the app keeps סגור', !ed.hazards.some((x) => x.id === 'th-2'), ed.hazards);
+  const realEdit = staleRows.map((b) => (b.v[0] === 2 ? { r: b.r, v: b.v.map((x, i) => (i === 10 ? 'בטיפול' : i === 11 ? null : x)) } : b));
+  ed = diffEdits(realEdit, { rows: regC.rows, ids: regC.ids, old: oldC }, HZc, TR, '2026-09-29');
+  check('a real edit to a value never written before is still taken (בטיפול)', ed.hazards.some((x) => x.id === 'th-2' && x.s === 'בטיפול'), ed.hazards);
+  const later = supersede({ rows: regC.rows, ids: regC.ids, old: oldC }, regC, '2026-09-30T08:00:00Z');
+  check('after 24 hours it is forgotten', !later['h:th-2|10'], later);
+  const back2 = supersede({ rows: regC.rows, ids: regC.ids, old: oldC }, buildRegister(HZ, TR), '2026-09-29T08:00:00Z');
+  check('reopened in the app: פתוח is current again, so it is not "old"; סגור is', !(back2['h:th-2|10'] || []).some((x) => x[0] === 'פתוח') && (back2['h:th-2|10'] || []).some((x) => x[0] === 'סגור'), back2);
 
   // 28/09 review fixes
   const lastDup = { rows: last1.rows.concat([last1.rows[1].slice()]), ids: last1.ids.concat(['h:th-X']) };

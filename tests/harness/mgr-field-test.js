@@ -115,6 +115,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     res.reset = !ov.querySelectorAll('.mf-chips')[0].querySelector('.on') && !ov.querySelector('.mf-open');
     mgrFieldClose(); res.closed = ov.style.display === 'none' && window._went === 'thz';
     res.tourBtn = !!document.querySelector('#pg-thz [onclick="mgrFieldOpen()"]');
+    res.topBtn = !!document.querySelector('.topbar #mf-btn[onclick="mgrFieldOpen()"]');
+    res.sheetBtn = Array.from(document.querySelectorAll('#m-modules-sheet .sheet-btn')).some((b) => /mgrFieldOpen/.test(b.getAttribute('onclick')) && /ממשק ממונה הבטיחות/.test(b.textContent));
+    const tb = document.querySelector('.topbar'); res.topFits = tb && tb.scrollWidth <= tb.clientWidth + 1;
     return res;
   });
   check('opens full screen; the landing flag is used once', out.open, out.open);
@@ -150,6 +153,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('"סיור חדש" starts clean', out.reset);
   check('"למערכת" closes it and shows the tours screen', out.closed);
   check('the tours screen has a button to open it too', out.tourBtn);
+  check('after signing in: a 📋 button in the top bar and a line in the ☰ menu open it again', out.topBtn && out.sheetBtn, [out.topBtn, out.sheetBtn]);
+  check('the top bar still fits a 375px phone', out.topFits);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

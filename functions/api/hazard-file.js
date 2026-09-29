@@ -190,6 +190,30 @@ function takeField(kind, ci, fv, patch) {
 }
 
 // Pure. fileRows = readSheetRows(); last = {rows, ids} of the server's last write.
+// Values this app wrote to a cell and then replaced, kept for STALE_MS in
+// last.old ('<id>|<col>' -> [[value, iso]]), so a stale copy saved over the
+// file is told apart from a person's edit. The cost: undoing in Excel, within
+// that window, a change just made in the app is not taken; do it in the app.
+const STALE_MS = 24 * 3600 * 1000;
+function wasOurs(last, id, ci, fv) {
+  const w = last && last.old && last.old[id + '|' + ci];
+  return !!w && w.some((x) => x[0] === fv);
+}
+export function supersede(prev, reg, nowIso) {
+  const t0 = Date.parse(nowIso) - STALE_MS, old = {};
+  Object.entries((prev && prev.old) || {}).forEach(([k, arr]) => { const keep = (arr || []).filter((x) => Date.parse(x[1]) >= t0); if (keep.length) old[k] = keep; });
+  const was = {}; ((prev && prev.ids) || []).forEach((id, i) => { if (prev.rows && prev.rows[i]) was[id] = prev.rows[i]; });
+  reg.ids.forEach((id, i) => {
+    const a = was[id], b = reg.rows[i]; if (!a || !b) return;
+    PULL_COLS.forEach((ci) => {
+      const k = id + '|' + ci, ov = norm(a[ci]), nv = norm(b[ci]);
+      if (ov !== nv && !(old[k] || []).some((x) => x[0] === ov)) (old[k] = old[k] || []).push([ov, nowIso]);
+      if (old[k]) { old[k] = old[k].filter((x) => x[0] !== nv); if (!old[k].length) delete old[k]; }
+    });
+  });
+  return old;
+}
+
 export function diffEdits(fileRows, last, hazards, reports, today) {
   const cur = buildRegister(hazards, reports);
   const curBy = {}; cur.ids.forEach((id, i) => { curBy[id] = cur.rows[i]; });
@@ -226,6 +250,11 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
         // assistant filled in the same run over an empty one (28/09 review).
         const aiFilled = kind === 't' && ci === 8 && stripTour(lv) === null;
         if (norm(c[ci]) !== lv && !aiFilled) return;
+        // A value this cell had in an earlier write of ours: a copy of the
+        // file opened before that write and saved over it, not an edit
+        // (29/09: 44/46/47 closed in the app, reopened by the old copy still
+        // open in Excel). The app keeps its value; the rewrite fixes the file.
+        if (wasOurs(last, hit.id, ci, fv)) return;
         const patch = kind === 'h' ? (hz[id] = hz[id] || {}) : (tr[id] = tr[id] || {});
         if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci], id: hit.id });
       });
@@ -360,7 +389,7 @@ export async function runFile(env, which, force) {
     const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
-    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids }),
+    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
       [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
     return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null };
   } catch (e) {
