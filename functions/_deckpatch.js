@@ -154,6 +154,7 @@ export function deckContent(m, rows, meetingDate) {
     return t.trim();
   };
   // One line in its box, like the deck's own items: n counts the department.
+  // 76 = the longest one-line item of the 22/09 deck (Chrome check 29/09).
   // The hazard matters more than where: a location that does not fit with it is left out.
   const item = (r, n) => {
     const room = Math.max(20, n - String(r[3] || '').length - 3), d = head(r[5]), l = r[4] ? head(r[4]) : '';
@@ -200,9 +201,9 @@ export function deckContent(m, rows, meetingDate) {
       Card0: [String(h.total.total)],
       Card1: [String(h.total.closed)],
       Card2: [String(h.total.open), '\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd - ' + [hi ? hi + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4' : '', med ? med + ' \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea' : '', low ? low + ' \u05e0\u05de\u05d5\u05db\u05d4' : ''].filter(Boolean).join(', ')],
-      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 62)), empty: '\u05d0\u05d9\u05df', room: 5 },
+      high: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4 (' + hi + ')', items: sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').map((r) => item(r, 76)), empty: '\u05d0\u05d9\u05df', room: 5 },
         { match: /\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4/, header: (t) => (/^\s/.test(t) ? ' ' : '') + '\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e1\u05d2\u05d9\u05e8\u05d4 - ' + HEB_MONTHS[+month.substring(5, 7) - 1] + ' ' + y + ' (' + nClosedMonth + ')', items: closedList, empty: '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9', room: 3, more: (n) => ['\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea', ''] }],
-      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 68)), empty: '\u05d0\u05d9\u05df', room: 12 }],
+      med: [{ match: /^\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea/, header: '\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea (' + med + ')', items: sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').map((r) => item(r, 76)), empty: '\u05d0\u05d9\u05df', room: 12 }],
     },
   };
 }

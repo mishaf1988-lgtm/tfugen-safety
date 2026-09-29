@@ -142,7 +142,9 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const ref2 = '2026-09-29', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
   const c2x = deckContent(m2, long, ref2);
   const it = c2x.s3.high[0].items.map((x) => x.join(''));
-  check('descriptions: the part before " - " (never inside parentheses), cut at a word, one line with the department', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - נקודות צביטה חשופות/.test(it[1]) && !/\(/.test(it[1]) && it.every((x) => x.length <= 62), it);
+  const full = deckContent(m2, [row(40, '2026-09-22', 'ייצור טוגנים', '', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)], ref2).s3.high[0].items[0].join('');
+  check('a line as long as the 22/09 deck\'s own (72 characters) is not shortened', full === 'ייצור טוגנים - נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', full);
+  check('descriptions: the part before " - " (never inside parentheses), cut at a word, one line with the department', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - נקודות צביטה חשופות/.test(it[1]) && !/\(/.test(it[1]) && it.every((x) => x.length <= 76), it);
   check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[1] === 'מעצבים, כולם עדיין פתוחים', c2x.s1.NewNote);
   check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
 
