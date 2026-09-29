@@ -3,7 +3,7 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
 
@@ -199,7 +199,14 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const personFile = await writeZip(saved);
   w = world({ file: personFile, state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
   r = await runFile(ENV, 'xlsm', false);
-  check('file saved in Excel since our write: that version goes to ארכיון/גרסאות שנדרסו first', r.pushed && w.puts[0] && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 28-09-2026 13\.37\.xlsm/.test(w.puts[0].path), w.puts.map((p) => p.path));
+  check('saved in Excel, nothing there that the app does not take: rewritten, no copy (29/09/2026)', r.pushed && w.puts.length === 1 && !r.kept && JSON.parse(w.state.hazard_xlsm_dropped).items.length === 0, w.puts.map((p) => p.path));
+  // A description edited in the file: the app does not take it, so the copy is kept and it is listed.
+  const saved2 = readZip(out).map((e) => (e.name === 'xl/worksheets/sheet2.xml' ? { name: e.name, text: null } : e));
+  saved2.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = (await sheetOf(out, 'xl/worksheets/sheet2.xml')).replace(/(<c r="F2"[^>]*><is><t[^>]*>)[^<]*/, '$1תיאור שתוקן בקובץ');
+  w = world({ file: await writeZip(saved2), state: s1, cTag: 'someone-saved', hazards: HZ.concat([{ id: 'th-3', n: 3, d: '2026-09-28', dept: 'תוצג', descr: 'חדש', s: 'פתוח' }]) });
+  r = await runFile(ENV, 'xlsm', false);
+  const dr = JSON.parse(w.state.hazard_xlsm_dropped || '{}');
+  check('description edited in Excel: not taken, listed (row, column F, the text), and the file goes to גרסאות שנדרסו first', r.pushed && dr.items && dr.items.length === 1 && dr.items[0].ci === 5 && dr.items[0].r === 2 && dr.items[0].val === 'תיאור שתוקן בקובץ' && /ארכיון\/גרסאות שנדרסו\/ניהול סיורי מפגעים - 28-09-2026 13\.37\.xlsm/.test(w.puts[0].path), [dr, w.puts.map((p) => p.path)]);
   w = world({ file: out, state: s1, cTag: 'c-ours-2', locked: true, hazards: HZ.slice(0, 1) });
   r = await runFile(ENV, 'xlsm', false);
   check('open in Excel (423): a clear Hebrew message, signature not saved (retried)', !r.ok && r.locked && /פתוח ב-Excel/.test(r.error) && w.state.hazard_xlsm_sig === s1.hazard_xlsm_sig, r);
@@ -236,7 +243,14 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   ed = diffEdits(back, last1, HZ.concat([{ id: 'th-9', n: 3, dept: 'תוצג', descr: 'כבל חשוף', s: 'פתוח' }]), TR, '2026-09-28');
   check('a new row already created on an earlier run is not created again', ed.fresh.length === 0, ed.fresh);
   ed = diffEdits(await readSheetRows(out, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 8, dateCols: [1, 9, 11] }), last1, HZ, TR, '2026-09-28');
-  check('the file exactly as the server wrote it: no edits', !ed.hazards.length && !ed.reports.length && !ed.fresh.length, ed);
+  check('the file exactly as the server wrote it: no edits, nothing reported as not taken', !ed.hazards.length && !ed.reports.length && !ed.fresh.length && ed.dropped.length === 0, ed);
+  ed = diffEdits(back, last1, HZ, TR, '2026-09-28');
+  check('closing / notes / a new row are taken and not reported; only the description edited in Excel is (row 3, F)', ed.dropped.length === 1 && ed.dropped[0].ci === 5 && ed.dropped[0].r === 3 && ed.dropped[0].val === 'תיאור ששונה ב-Excel', ed.dropped);
+  ed = diffEdits(back, last1, hzApp, TR, '2026-09-28');
+  check('a status changed in both the app and the file: the file value is reported (the app wins)', ed.dropped.some((d) => d.ci === 10 && d.val === 'סגור'), ed.dropped);
+  const badSt = back.map((b) => (b.v[0] === 1 ? { r: b.r, v: b.v.map((x, i) => (i === 10 ? 'גמור' : x)) } : b));
+  ed = diffEdits(badSt, last1, HZ, TR, '2026-09-28');
+  check('a status the app does not know ("גמור"): reported, not written', ed.dropped.some((d) => d.ci === 10 && d.val === 'גמור') && !ed.hazards.some((x) => x.id === 'th-1' && 's' in x), ed);
 
   // 29/09: an old copy still open in Excel saved over the file (44/46/47 reopened)
   const HZc = HZ.map((h) => (h.id === 'th-2' ? Object.assign({}, h, { s: 'סגור', closed_d: '2026-09-23' }) : h));
@@ -330,6 +344,55 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   j = await res.json();
   await Promise.all(waits2);
   check('the xlsx call writes the xlsx, then calls for the deck (not the xlsx again)', j.ok && j.file === 'xlsx' && j.next === 'deck' && waits2.length === 1 && w2.puts.some((p) => /2026\/ניהול סיורי מפגעים\.xlsx:/.test(p.path)) && w2.calls.some((c) => c.startsWith('POST https://tapugan-safety.pages.dev/api/hazard-deck')), j);
+
+  console.log('\n9. the archive: a copy each month, copies older than 30 days deleted (29/09/2026)');
+  const arch = (o) => {
+    const a = { state: Object.assign({}, o.state || {}), puts: [], dels: [], calls: [] };
+    globalThis.fetch = async (url, init) => {
+      const u = String(url), m = (init && init.method) || 'GET', du = decodeURIComponent(u);
+      a.calls.push(m + ' ' + du);
+      const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+      if (u.startsWith(SB + '/rest/v1/server_state')) {
+        if (m === 'POST') { JSON.parse(init.body).forEach((r) => { a.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+        return json(Object.keys(a.state).map((k) => ({ key: k, value: a.state[k], updated_at: 'x' })));
+      }
+      if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]);
+      if (m === 'GET' && /ארכיון\/חודשי\//.test(du)) return o.monthlyThere ? json({ id: 'x' }) : json({ error: {} }, 404);
+      if (m === 'GET' && /גרסאות שנדרסו:\/children/.test(du)) return json({ value: o.children || [] });
+      if (m === 'GET' && /2026\/ניהול סיורי מפגעים\.xlsm\?/.test(du)) return json({ id: 'f', '@microsoft.graph.downloadUrl': 'https://dl/file' });
+      if (u === 'https://dl/file') return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+      if (m === 'PUT') { a.puts.push(du.split('/root:/')[1]); return json({ cTag: 'c' }); }
+      if (m === 'DELETE') { a.dels.push(du.split('/items/')[1]); return new Response(null, { status: 204 }); }
+      return json({ error: 'unexpected ' + u }, 599);
+    };
+    return a;
+  };
+  check('month name: "- 09-2026.xlsm"', stampMonth('ניהול סיורי מפגעים.xlsm', '2026-09') === 'ניהול סיורי מפגעים - 09-2026.xlsm');
+  let aw = arch({});
+  let ar = await runArchive(ENV, new Date('2026-09-29T12:00:00Z'));
+  check('first run in the middle of a month: no copy (the month is not over), remembers August', !aw.puts.length && aw.state.hazard_snap_month === '2026-08' && ar.snap === 'from next month', [ar, aw.puts]);
+  aw = arch({ state: { hazard_snap_month: '2026-08', hazard_prune_day: '2026-09-29' } });
+  ar = await runArchive(ENV, new Date('2026-09-29T15:00:00Z'));
+  check('same day, same month: nothing to do, not even a token', ar.reason === 'nothing to do' && !aw.calls.some((c) => /graph|oauth/.test(c)), aw.calls);
+  const kids = [
+    { id: 'old1', name: 'ניהול סיורי מפגעים - 28-08-2026 16.56.xlsm', createdDateTime: '2026-08-28T13:56:00Z', file: {} },
+    { id: 'old2', name: 'ניהול סיורי מפגעים - 2026-08-20 10-00.xlsx', createdDateTime: '2026-08-20T10:00:00Z', file: {} },
+    { id: 'new1', name: 'ניהול סיורי מפגעים - 29-09-2026 11.36.xlsm', createdDateTime: '2026-09-29T08:36:00Z', file: {} },
+    { id: 'other', name: 'הערות שלי.xlsx', createdDateTime: '2026-01-01T00:00:00Z', file: {} },
+    { id: 'dir', name: 'ניהול סיורי מפגעים - 01-01-2026 10.00.xlsm', createdDateTime: '2026-01-01T00:00:00Z', folder: {} },
+  ];
+  aw = arch({ state: { hazard_snap_month: '2026-08', hazard_prune_day: '2026-09-30' }, children: kids });
+  ar = await runArchive(ENV, new Date('2026-10-01T00:20:00Z'));
+  check('1/10 (Israel): the xlsm is copied to ארכיון/חודשי as "- 09-2026.xlsm", September remembered', aw.puts.length === 1 && /2026\/ארכיון\/חודשי\/ניהול סיורי מפגעים - 09-2026\.xlsm:\/content/.test(aw.puts[0]) && aw.state.hazard_snap_month === '2026-09', [aw.puts, aw.state]);
+  check('only the server\'s own copies older than 30 days are deleted: not the new one, not another file, not a folder', aw.dels.join() === 'old1,old2' && aw.state.hazard_prune_day === '2026-10-01', aw.dels);
+  check('nothing outside גרסאות שנדרסו is listed or deleted', aw.calls.filter((c) => /children/.test(c)).every((c) => /ארכיון\/גרסאות שנדרסו:\/children/.test(c)) && aw.calls.filter((c) => /^DELETE/.test(c)).length === 2, aw.calls);
+  aw = arch({ state: { hazard_snap_month: '2026-08', hazard_prune_day: '2026-10-01' }, monthlyThere: true });
+  ar = await runArchive(ENV, new Date('2026-10-01T09:00:00Z'));
+  check('the month\'s copy already there: not written again', !aw.puts.length && ar.snap === 'already there' && aw.state.hazard_snap_month === '2026-09', ar);
+  const lots = Array.from({ length: 25 }, (_, i) => ({ id: 'o' + i, name: 'ניהול סיורי מפגעים - 01-08-2026 10.' + String(i).padStart(2, '0') + '.xlsm', createdDateTime: '2026-08-01T07:00:00Z', file: {} }));
+  aw = arch({ state: { hazard_snap_month: '2026-09', hazard_prune_day: '2026-10-01' }, children: lots });
+  ar = await runArchive(ENV, new Date('2026-10-02T09:00:00Z'));
+  check('more than 20 old copies: 20 deleted, the day not marked, so the rest go on the next run', aw.dels.length === 20 && aw.state.hazard_prune_day === '2026-10-01', [aw.dels.length, aw.state.hazard_prune_day]);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

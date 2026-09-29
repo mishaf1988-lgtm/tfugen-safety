@@ -180,6 +180,8 @@ export function stampName(name, iso) {
 // Rows deleted in Excel are not deleted in the app.
 const S_OPEN = '\u05e4\u05ea\u05d5\u05d7', S_WIP = '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc', S_DONE = '\u05e1\u05d2\u05d5\u05e8', TR_CLOSED = '\u05e0\u05e1\u05d2\u05e8';
 const PULL_COLS = [8, 10, 11, 12];
+const KEEP_COLS = [1, 2, 3, 4, 5, 6, 7, 9];
+const MAX_DROPPED = 30;
 const MAX_PULL = 25; // database writes per run (subrequests); the rest next run
 const norm = (v) => (v == null ? '' : typeof v === 'object' && v.date ? v.date : String(v).replace(/\r\n?/g, '\n').trim());
 const isYmd = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -241,9 +243,14 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   (hazards || []).forEach((h) => { hById[h.id] = h; });
   (reports || []).forEach((r) => { rById[r.id] = r; });
   const hz = {}, tr = {}, fresh = [], pulled = [], seen = new Set();
+  // What a person changed in the file and the app did not take (29/09/2026,
+  // Michael: a change in the file must not vanish without a word). Shown on the
+  // tours screen; a copy of the file is kept only when this is not empty.
+  const dropped = [];
+  const drop = (key, r, ci, val) => { if (dropped.length < MAX_DROPPED) dropped.push({ n: key, r, ci, val: String(val == null ? '' : val).substring(0, 80) }); };
   const usedN = new Set((hazards || []).map((h) => +h.n).filter((n) => n > 0));
   let maxN = Math.max(0, ...usedN);
-  (fileRows || []).forEach(({ v }) => {
+  (fileRows || []).forEach(({ r, v }) => {
     const key = norm(v[0]);
     if (key && dup.has(key)) return;
     const hit = key && lastBy[key];
@@ -254,16 +261,21 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
       // finding is marked not relevant). Description, or date + department + location.
       const lr = hit.row;
       const same = norm(v[5]) === norm(lr[5]) || (norm(v[1]) === norm(lr[1]) && norm(v[3]) === norm(lr[3]) && norm(v[4]) === norm(lr[4]));
-      if (!same) return;
+      // Trustee rows (נ-k) are renumbered by the app, so a mismatch there is
+      // a stale copy, not an edit; a manager row keeps its number.
+      if (!same) { if (!/^\u05e0-/.test(key)) drop(key, r, -1, v[5]); return; }
       const kind = hit.id.charAt(0), id = hit.id.substring(2);
       const c = curBy[hit.id]; if (!c) return; // gone from the app since
+      // Columns the app never takes from the file (description, department...):
+      // an edit there is lost on the rewrite, unless the app already has it.
+      KEEP_COLS.forEach((ci) => { const fv = norm(v[ci]); if (fv !== norm(lr[ci]) && fv !== norm(c[ci])) drop(key, r, ci, fv); });
       PULL_COLS.forEach((ci) => {
         const fv = norm(v[ci]), lv = norm(hit.row[ci]);
         if (fv === lv) return; // not edited
         // Changed in the app too: the app wins, except the trustee action the
         // assistant filled in the same run over an empty one (28/09 review).
         const aiFilled = kind === 't' && ci === 8 && stripTour(lv) === null;
-        if (norm(c[ci]) !== lv && !aiFilled) return;
+        if (norm(c[ci]) !== lv && !aiFilled) { if (fv !== norm(c[ci])) drop(key, r, ci, fv); return; }
         // A value this cell had in an earlier write of ours: a copy of the
         // file opened before that write and saved over it, not an edit
         // (29/09: 44/46/47 closed in the app, reopened by the old copy still
@@ -271,6 +283,7 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
         if (wasOurs(last, hit.id, ci, fv)) return;
         const patch = kind === 'h' ? (hz[id] = hz[id] || {}) : (tr[id] = tr[id] || {});
         if (takeField(kind, ci, fv, patch)) pulled.push({ i: hit.i, ci, val: v[ci] == null ? '' : v[ci], id: hit.id });
+        else drop(key, r, ci, fv);
       });
       return;
     }
@@ -294,7 +307,7 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
   Object.keys(hz).forEach((id) => { const p = hz[id]; if (!('s' in p) || 'closed_d' in p) return; if (p.s === S_DONE) { if (!hById[id].closed_d) p.closed_d = today; } else p.closed_d = null; });
   Object.keys(tr).forEach((id) => { const p = tr[id]; if (!('s' in p) || 'closed_d' in p) return; if (p.s === TR_CLOSED) { if (!rById[id].closed_d) p.closed_d = today; } else p.closed_d = null; });
   const list = (o) => Object.keys(o).filter((id) => Object.keys(o[id]).length).map((id) => Object.assign({ id }, o[id]));
-  return { hazards: list(hz), reports: list(tr), fresh, pulled };
+  return { hazards: list(hz), reports: list(tr), fresh, pulled, dropped };
 }
 
 // Writes the edits (new hazards first, in one request), updates the arrays in
@@ -375,10 +388,11 @@ export async function runFile(env, which, force) {
     }
     // Excel -> app first, so the rewrite carries what the person changed.
     let pulled = null;
-    let last = null; try { last = val('last') ? JSON.parse(val('last')) : null; } catch (e) { last = null; }
+    let last = null, ed = null; try { last = val('last') ? JSON.parse(val('last')) : null; } catch (e) { last = null; }
     if (personSaved && last && Array.isArray(last.rows) && Array.isArray(last.ids)) {
       const fileRows = await readSheetRows(orig, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
-      const ed = diffEdits(fileRows, last, hazards, reports, now.substring(0, 10));
+      ed = diffEdits(fileRows, last, hazards, reports, now.substring(0, 10));
+      await stateSet(env, { [K + 'dropped']: JSON.stringify({ at: now, items: ed.dropped }) });
       if (ed.fresh.length || ed.hazards.length || ed.reports.length) {
         pulled = await applyEdits(env, ed, hazards, reports);
         // If the write below fails (file open in Excel), the next run must not
@@ -393,9 +407,12 @@ export async function runFile(env, which, force) {
         sig = await sha(JSON.stringify([FILE_VERSION, reg.rows]));
       }
     }
-    // Keep what a person saved, before replacing it.
+    // Keep what a person saved, before replacing it: the first time, and when
+    // a change in the file was not taken (ed.dropped). Otherwise everything
+    // the person changed is in the app already and a copy would only pile up
+    // (29/09/2026: 10 copies in a day and a half).
     let kept = null;
-    if (!ours || personSaved) {
+    if (!ours || (personSaved && (!ed || ed.dropped.length))) {
       const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
@@ -415,6 +432,67 @@ export async function runFile(env, which, force) {
     await stateSet(env, { [K + 'err']: msg, [K + 'err_at']: now }).catch(() => {});
     return { ok: false, file: which, pushed: false, error: msg, locked: !!(e && e.status === 423) };
   }
+}
+
+// ---- The archive (29/09/2026, Michael: "the archive keeps too many files";
+// reports months back must still be there) ----
+// Once a month: a copy of the xlsm as it stood when the month ended, in
+// ארכיון/חודשי, named with the month (09-2026). Once a day: copies in
+// ארכיון/גרסאות שנדרסו older than 30 days are deleted (to the OneDrive
+// recycle bin). Nothing else in the archive is touched.
+const ARCHIVE = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df';
+export const MONTHLY = ARCHIVE + '/\u05d7\u05d5\u05d3\u05e9\u05d9';
+export const OVERWRITTEN = ARCHIVE + '/\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5';
+const KEEP_DAYS = 30, MAX_PRUNE = 20;
+// Only the server's own copies: the file's name, " - ", a stamp, xlsm/xlsx.
+const COPY_RE = /^\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd - [\d .-]+\.xls[xm]$/;
+export async function runArchive(env, now) {
+  const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const prevMonth = addDays(today.substring(0, 7) + '-01', -1).substring(0, 7);
+  const st = await stateGet(env, ['hazard_snap_month', 'hazard_prune_day']).catch(() => ({}));
+  const val = (k) => (st[k] && st[k].value) || '';
+  const out = { ok: true };
+  // First run: this month is not over, so nothing to copy until it is.
+  if (!val('hazard_snap_month')) { await stateSet(env, { hazard_snap_month: prevMonth }); out.snap = 'from next month'; }
+  const doSnap = !out.snap && val('hazard_snap_month') !== prevMonth, doPrune = val('hazard_prune_day') !== today;
+  if (!doSnap && !doPrune) return Object.assign(out, { reason: 'nothing to do' });
+  const { token } = await accessToken(env);
+  const auth = { Authorization: 'Bearer ' + token };
+  if (doSnap) {
+    const f = FILES.xlsm, name = stampMonth(f.name, prevMonth);
+    const ex = await fetch(G + seg(MONTHLY) + '/' + encodeURIComponent(name) + '?select=id', { headers: auth });
+    if (ex.status === 404) {
+      const mr = await fetch(G + seg(FOLDER) + '/' + encodeURIComponent(f.name) + '?select=id,@microsoft.graph.downloadUrl', { headers: auth });
+      if (!mr.ok) throw new Error('onedrive ' + mr.status);
+      const dl = await fetch((await mr.json())['@microsoft.graph.downloadUrl']);
+      if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
+      await graphPut(token, MONTHLY, name, new Uint8Array(await dl.arrayBuffer()), f.type);
+      out.snap = name;
+    } else if (ex.ok) out.snap = 'already there';
+    else throw new Error('onedrive ' + ex.status);
+    await stateSet(env, { hazard_snap_month: prevMonth });
+  }
+  if (doPrune) {
+    const lr = await fetch(G + seg(OVERWRITTEN) + ':/children?$select=id,name,createdDateTime,file&$top=200', { headers: auth });
+    const items = lr.status === 404 ? [] : lr.ok ? ((await lr.json()).value || []) : null;
+    if (!items) throw new Error('onedrive ' + lr.status);
+    const cut = now.getTime() - KEEP_DAYS * DAY;
+    const old = items.filter((x) => x.file && COPY_RE.test(x.name || '') && Date.parse(x.createdDateTime) < cut);
+    const gone = [];
+    for (const x of old.slice(0, MAX_PRUNE)) {
+      const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id), { method: 'DELETE', headers: auth });
+      if (d.ok || d.status === 404) gone.push(x.name);
+    }
+    out.pruned = gone;
+    // More than a run's worth: the rest on the next run, not tomorrow.
+    await stateSet(env, old.length > MAX_PRUNE ? { hazard_prune_report: gone.length + ' deleted' } : { hazard_prune_day: today, hazard_prune_report: gone.length + ' deleted' });
+  }
+  return out;
+}
+// "name - 09-2026.xlsm" for the month 2026-09.
+export function stampMonth(name, ym) {
+  const i = name.lastIndexOf('.');
+  return name.substring(0, i) + ' - ' + ym.substring(5, 7) + '-' + ym.substring(0, 4) + name.substring(i);
 }
 
 // One run per file at a time (runLeased, _onedrive.js).
@@ -438,12 +516,13 @@ export async function onRequest(context) {
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     if (body.op === 'status') {
       const keys = [];
-      Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
+      Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url', 'dropped'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
       const s = await stateGet(env, keys).catch(() => ({}));
       const v = (k) => (s[k] && s[k].value) || null;
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       const files = {};
-      Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url') }; });
+      const dj = (k) => { try { return JSON.parse(v('hazard_' + k + '_dropped') || 'null'); } catch (e) { return null; } };
+      Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url'), dropped: dj(k) }; });
       return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files }, 200, cors);
     }
     force = body.force === true;
@@ -453,8 +532,19 @@ export async function onRequest(context) {
     force = body.force === true;
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
+  if (body.op === 'archive') {
+    try { return jsonResp(await runArchive(env, new Date()), 200, cors); } catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }
+  }
   const which = body.file === 'xlsx' ? 'xlsx' : 'xlsm';
   try {
+    // The archive housekeeping (runArchive), in its own request; it does
+    // nothing on most runs (one state read).
+    if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
+      context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ op: 'archive' }),
+      }).catch(() => {}));
+    }
     const r = await runFileLocked(env, which, force);
     // The twin, in its own request (its own CPU and subrequest budget).
     if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
