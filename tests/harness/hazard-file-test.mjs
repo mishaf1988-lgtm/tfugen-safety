@@ -5,7 +5,7 @@
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
 import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
-import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows } from './_build/_xlsxpatch.mjs';
+import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows, rowHeight } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -170,6 +170,9 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   const ks = [2, 3, 4, 5].map(kOf);
   check('the fixture has both open and closed rows', ks.includes('סגור') && ks.some((k) => k === 'פתוח' || k === 'בטיפול'), ks);
   check('the old filter selection is gone; the filter is on K (פתוח, בטיפול, blanks)', !x.includes('<filter val="מעצבים"') && /<autoFilter ref="A1:M8"><filterColumn colId="10"><filters blank="1"><filter val="פתוח"\/><filter val="בטיפול"\/><\/filters><\/filterColumn><\/autoFilter>/.test(x) && /<sheetPr codeName="x" filterMode="1"\/>|<sheetPr filterMode="1" codeName="x"\/>/.test(x), (x.match(/<autoFilter[\s\S]*?(\/>|<\/autoFilter>)/) || [])[0]);
+  const htOf = (r) => +((new RegExp('<row r="' + r + '"[^>]*\\bht="([\\d.]+)"').exec(x)) || [])[1];
+  check('written rows get a height that fits their text, marked custom; rows past the data keep theirs', [2, 3, 4, 5].every((r) => htOf(r) >= 18 && new RegExp('<row r="' + r + '"[^>]*customHeight="1"').test(x)) && !/<row r="7"[^>]*customHeight/.test(x), [2, 3, 4, 5, 7].map(htOf));
+  check('row height: short text one line, long text more lines at the column width, never past 409', rowHeight(['a', 'קצר'], { 1: 20 }) === 18 && rowHeight(['x'.repeat(100)], { 0: 45.7 }) === 33 && rowHeight(['שורה\nשנייה\nשלישית'], { 0: 45 }) === 48 && rowHeight(['x'.repeat(10000)], { 0: 10 }) === 409 && rowHeight([{ date: '2026-09-29' }, 7], {}) === 18);
   check('closed rows hidden, open / in-progress and empty rows shown', [2, 3, 4, 5].every((r, i) => hid(r) === (ks[i] === 'סגור')) && [6, 7, 8].every((r) => !hid(r)), [2, 3, 4, 5, 6, 7, 8].map(hid));
   check('data validation kept', x.includes('<formula1>"גבוהה,בינונית,נמוכה"</formula1>'));
   check('rows past the data are blank in A..M', /<row r="6"[^>]*><c r="A6" s="3"\/>/.test(x) && !/<c r="[A-M]7"[^>]*>[^<]/.test(x));

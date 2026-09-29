@@ -196,6 +196,28 @@ export async function readSheetRows(bytes, opts) {
   return out;
 }
 
+// Column widths (0-based index -> width in characters) from <cols>.
+function colWidths(xml) {
+  const w = {}; const re = /<col\b[^>]*?\bmin="(\d+)"[^>]*?\bmax="(\d+)"[^>]*?\bwidth="([\d.]+)"/g; let m;
+  const cols = (/<cols>([\s\S]*?)<\/cols>/.exec(xml) || [])[1] || '';
+  while ((m = re.exec(cols))) for (let c = +m[1]; c <= Math.min(+m[2], 64); c++) w[c - 1] = +m[3];
+  return w;
+}
+// Points for a row of wrapped text: the most lines any cell needs at its
+// column's width (about 1.1 characters per width unit), 15pt a line, at least
+// one line, at most Excel's 409.
+const LINE_PT = 15, MIN_PT = 15, MAX_PT = 409;
+export function rowHeight(vals, widths) {
+  let lines = 1;
+  vals.forEach((v, ci) => {
+    if (v == null || typeof v === 'object' || typeof v === 'number') return;
+    const per = Math.max(4, Math.floor((widths[ci] || 8.43) * 1.1));
+    const n = String(v).split('\n').reduce((k, part) => k + Math.max(1, Math.ceil(part.length / per)), 0);
+    if (n > lines) lines = n;
+  });
+  return Math.min(MAX_PT, Math.max(MIN_PT, lines * LINE_PT + 3));
+}
+
 // show {col, vals}: the header filter selects vals in that column, and data
 // rows with another value there are hidden, as Excel would show it (Michael,
 // 29/09: "leave the filter on the open ones only"). Empty rows stay visible, so
@@ -249,6 +271,7 @@ export async function patchSheetRows(bytes, rows, opts) {
   const dataCell = new RegExp('<c r="[A-' + String.fromCharCode(65 + lastCol) + ']\\d+"[^>]*[^/]>');
   const seen = new Set();
   const rowRe = /<row\b([^>]*?)(\/>|>([\s\S]*?)<\/row>)/g;
+  const widths = opts.fitRows ? colWidths(xml) : null;
   xml = xml.replace(rowRe, (all, attrs, close, inner) => {
     const rm = /\br="(\d+)"/.exec(attrs); const r = rm ? +rm[1] : 0;
     if (r < 2 || r > maxRow) return all;
@@ -279,7 +302,10 @@ export async function patchSheetRows(bytes, rows, opts) {
     }
     cells.filter((c) => c.ci > lastCol).forEach((c) => { out += c.xml; });
     // Rows hidden by the old filter would hide the wrong hazards now.
-    const a2 = attrs.replace(/\s+hidden="1"/, '');
+    let a2 = attrs.replace(/\s+hidden="1"/, '');
+    // The row's height follows its text (Michael, 29/09/2026: long text was cut
+    // off, the rows kept the height of the text they had before).
+    if (widths && rows[r - 2]) a2 = a2.replace(/\s+(ht|customHeight)="[^"]*"/g, '') + ' ht="' + rowHeight(rows[r - 2], widths) + '" customHeight="1"';
     return '<row' + a2 + '>' + out + '</row>';
   });
   // A data row with no row in the sheet would be dropped without a word.
