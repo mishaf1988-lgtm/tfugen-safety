@@ -1652,6 +1652,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
       <div class="kpi kpi-g"><div class="kpi-label">מסמכים בתוקף</div><div class="kpi-val" id="mr-docs-pct">0%</div><div class="kpi-sub" id="mr-docs-sub">-</div></div>
       <div class="kpi kpi-g"><div class="kpi-label">בדיקות ציוד תקפות</div><div class="kpi-val" id="mr-eqi-pct">0%</div><div class="kpi-sub" id="mr-eqi-sub">-</div></div>
       <div class="kpi kpi-b"><div class="kpi-label">שיחות בטיחות (תקופה)</div><div class="kpi-val" id="mr-tlk-q">0</div></div>
+      <div class="kpi kpi-o"><div class="kpi-label">מפגעי סיור (תקופה)</div><div class="kpi-val" id="mr-hz-q">0</div><div class="kpi-sub" id="mr-hz-sub">-</div></div>
+      <div class="kpi kpi-b"><div class="kpi-label">ליקויי נאמנים (תקופה)</div><div class="kpi-val" id="mr-tru-q">0</div><div class="kpi-sub" id="mr-tru-sub">-</div></div>
     </div>
   </div>
   <div class="card"><div class="card-title">&#128221; &#1504;&#1512;&#1496;&#1497;&#1489; &#1505;&#1511;&#1497;&#1512;&#1492; AI <span style="font-size:10px;color:var(--t3);font-weight:600">(&#1502;&#1493;&#1499;&#1503; &#1500;&#1492;&#1506;&#1514;&#1511;&#1492; &#1500;&#1508;&#1512;&#1493;&#1496;&#1493;&#1511;&#1493;&#1500;)</span></div>
@@ -7330,10 +7332,47 @@ function _isoExpiry(tbl){
   });
   return {ok:ok,gone:gone,none:none,total:(DB[tbl]||[]).length};
 }
+// Upgrade review 14 (30/09/2026): the report, the management review, the
+// annual report and the export counted the old modules (ins, rounds, ncr),
+// which are empty, and never saw the tour hazards, the trustees, or whether an
+// incident was investigated. One count, read by all of them. inFn decides
+// whether a date is in the window; the default is the last 12 months.
+var _TB_STALE_DAYS=14;
+function _incInvestigated(r){return !!(r&&((r.rc&&String(r.rc).trim())||(r.five_why&&String(r.five_why).trim())));}
+function _opsEvidence(inFn){
+  if(!inFn){
+    var cut=new Date();cut.setMonth(cut.getMonth()-_ISO_RECENT_MONTHS);var c=cut.toISOString().substring(0,10);
+    inFn=function(v){return !!v&&String(v).substring(0,10)>=c;};
+  }
+  var th=DB.tour_hazards||[],tours={},hz=0,hzClosed=0;
+  th.forEach(function(r){
+    if(!r||!inFn(r.d))return;
+    hz++;tours[(r.dept||'')+'|'+(r.tour_no||r.d)]=1;
+    if(r.s===_THZ_CLOSED)hzClosed++;
+  });
+  var fnd=(typeof _mfTruFindings==='function')?_mfTruFindings():[];
+  var inc=(DB.inc||[]).filter(function(r){return r&&inFn(r.dt||r.d);});
+  var tbLast=(DB.toolbox||[]).reduce(function(m,r){var v=r&&r.d?String(r.d).substring(0,10):'';return v>m?v:m;},'');
+  return {
+    tours:Object.keys(tours).length,hz:hz,hzClosed:hzClosed,hzTotal:th.length,
+    hzOpen:th.filter(function(r){return r&&r.s!==_THZ_CLOSED;}).length,
+    hzLate:th.filter(function(r){return r&&_thzOverdue(r);}).length,
+    truReports:(DB.trustee_reports||[]).filter(function(r){return r&&inFn(r.d||r.ts);}).length,
+    truFind:fnd.filter(function(r){return inFn(r.d||r.ts);}).length,
+    truOpen:fnd.filter(function(r){return r.s!==TRUSTEE_S_CLOSED;}).length,
+    inc:inc.length,incInv:inc.filter(_incInvestigated).length,
+    tb:(DB.toolbox||[]).filter(function(r){return r&&inFn(r.d);}).length,tbLast:tbLast
+  };
+}
 function _isoClauses(){
   var C=[];
   function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||''});}
   var both='45001 + 14001',s45='45001',s14='14001';
+  // Grey = a register this app does not keep (Michael, 30/09/2026: drills and
+  // internal audits live in folders). Not a pass and not a fail: the evidence
+  // is elsewhere, and the sheet says where to look.
+  function ext(what){return '\u05dc\u05d0 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: '+what+'. \u05dc\u05d4\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05e8\u05d0\u05d9\u05d4 \u05de\u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4';}
+  var ev=_opsEvidence();
 
   // 5.4 — worker participation. The trustee programme is the evidence.
   var truN=_isoCount('trustees'),truR=_isoCount('trustee_reports');
@@ -7343,13 +7382,13 @@ function _isoClauses(){
   var truMonth=(typeof _truRowMonth==='function'&&typeof _truThisMonth==='function')
     ? (DB.trustee_reports||[]).filter(function(r){return _truRowMonth(r)===_truThisMonth();}).length : 0;
   add(s45,'5.4','\u05d4\u05e9\u05ea\u05ea\u05e4\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d5\u05d4\u05ea\u05d9\u05d9\u05e2\u05e6\u05d5\u05ea',
-    truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u00b7 '+truMonth+' \u05d4\u05d7\u05d5\u05d3\u05e9',
+    truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8, '+truMonth+' \u05d4\u05d7\u05d5\u05d3\u05e9',
     truN?(truMonth?'ok':'warn'):'bad',
     truN?(truMonth?'':'\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9'):'\u05dc\u05d0 \u05de\u05d5\u05e0\u05d5 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
 
   // 6.1.2 — hazard identification and risk assessment.
   var rskN=_isoCount('rsk');
-  add(both,'6.1.2','\u05d6\u05d9\u05d4\u05d5\u05d9 \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d4\u05e2\u05e8\u05db\u05ea\u05dd',rskN+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd',rskN?'ok':'bad',rskN?'':'\u05de\u05e8\u05e9\u05dd \u05d4\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e8\u05d9\u05e7');
+  add(both,'6.1.2','\u05d6\u05d9\u05d4\u05d5\u05d9 \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d4\u05e2\u05e8\u05db\u05ea\u05dd',rskN+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd',rskN?'ok':'na',rskN?'':ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd'));
 
   // 6.1.2 (14001) — environmental aspects.
   var easpN=_isoCount('env_aspects');
@@ -7358,49 +7397,79 @@ function _isoClauses(){
   // 6.1.3 — legal and other requirements.
   var legN=_isoCount('leg');
   var legSrc=(DB.leg||[]).filter(function(r){return r.src_url;}).length;
-  add(both,'6.1.3','\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05d5\u05d0\u05d7\u05e8\u05d5\u05ea',legN+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05ea\u05e7\u05e0\u05d5\u05ea \u00b7 '+legSrc+' \u05e2\u05dd \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05e7\u05d5\u05e8',legN?(legSrc?'ok':'warn'):'bad',
-    legN?(legSrc?'':'\u05d0\u05e3 \u05d7\u05d5\u05e7 \u05d0\u05d9\u05e0\u05d5 \u05de\u05e7\u05d5\u05e9\u05e8 \u05dc\u05e0\u05d5\u05e1\u05d7 \u05d4\u05de\u05e7\u05d5\u05e8'):'\u05de\u05e8\u05e9\u05dd \u05d4\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05e8\u05d9\u05e7');
+  add(both,'6.1.3','\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05d5\u05d0\u05d7\u05e8\u05d5\u05ea',legN+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05ea\u05e7\u05e0\u05d5\u05ea, '+legSrc+' \u05e2\u05dd \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05e7\u05d5\u05e8',legN?(legSrc?'ok':'warn'):'bad',
+    legN?(legSrc?'':'\u05d0\u05e3 \u05d7\u05d5\u05e7 \u05d0\u05d9\u05e0\u05d5 \u05de\u05e7\u05d5\u05e9\u05e8 \u05dc\u05e0\u05d5\u05e1\u05d7 \u05d4\u05de\u05e7\u05d5\u05e8'):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05d5\u05ea'));
+  // 6.2 - objectives. No module holds them.
+  add(both,'6.2','\u05d9\u05e2\u05d3\u05d9\u05dd \u05d5\u05ea\u05db\u05e0\u05d5\u05df \u05dc\u05d4\u05e9\u05d2\u05ea\u05dd','\u05d0\u05d9\u05df \u05de\u05d5\u05d3\u05d5\u05dc \u05d9\u05e2\u05d3\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4','na',ext('\u05d9\u05e2\u05d3\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05e1\u05d1\u05d9\u05d1\u05d4'));
 
   // 7.2 — competence. Training with a live expiry date.
   var tr=_isoExpiry('tr');
-  add(both,'7.2','\u05db\u05e9\u05d9\u05e8\u05d5\u05ea \u05d5\u05d4\u05d3\u05e8\u05db\u05d4',tr.total+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u00b7 '+tr.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3 \u00b7 '+tr.gone+' \u05e4\u05d2\u05d5',
-    tr.total?(tr.gone?'warn':'ok'):'bad',
-    tr.total?(tr.gone?(tr.gone+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e4\u05d2\u05d5 \u05d5\u05dc\u05d0 \u05d7\u05d5\u05d3\u05e9\u05d5'):''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4');
+  // The weekly refreshers from Vitre are training too (Michael, 30/09/2026).
+  // One that stops arriving is how a broken import shows up here.
+  var trGap=[];
+  if(tr.gone)trGap.push(tr.gone+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e4\u05d2\u05d5 \u05d5\u05dc\u05d0 \u05d7\u05d5\u05d3\u05e9\u05d5');
+  if(ev.tbLast&&-du(ev.tbLast)>_TB_STALE_DAYS)trGap.push('\u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8 \u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05de\u05d0\u05d6 '+fd(ev.tbLast)+', \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre');
+  var trHas=tr.total||ev.tb;
+  add(both,'7.2','\u05db\u05e9\u05d9\u05e8\u05d5\u05ea \u05d5\u05d4\u05d3\u05e8\u05db\u05d4',(tr.total?tr.total+' \u05d4\u05d3\u05e8\u05db\u05d5\u05ea, '+tr.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3, '+tr.gone+' \u05e4\u05d2\u05d5, ':'')+ev.tb+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e2\u05d9\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'+(ev.tbLast?', \u05d0\u05d7\u05e8\u05d5\u05df '+fd(ev.tbLast):''),
+    trHas?(trGap.length?'warn':'ok'):'bad',
+    trHas?trGap.join(', '):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d5\u05d0\u05d9\u05df \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4');
 
   // 7.4 — communication and awareness: toolbox talks.
   var tbN=_isoCount('toolbox'),tbR=_isoRecent('toolbox','d');
-  add(both,'7.4','\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea \u05d5\u05de\u05d5\u05d3\u05e2\u05d5\u05ea',tbN+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+tbR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',tbN?(tbR?'ok':'warn'):'bad',
+  add(both,'7.4','\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea \u05d5\u05de\u05d5\u05d3\u05e2\u05d5\u05ea',tbN+' \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+tbR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',tbN?(tbR?'ok':'warn'):'bad',
     tbN?(tbR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+
+  // 7.5 - documented information: the binding documents and their expiry.
+  var dc=_isoExpiry('docs');
+  add(both,'7.5','\u05de\u05d9\u05d3\u05e2 \u05de\u05ea\u05d5\u05e2\u05d3 (\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05de\u05d7\u05d9\u05d9\u05d1\u05d9\u05dd)',dc.total+' \u05de\u05e1\u05de\u05db\u05d9\u05dd, '+dc.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3, '+dc.gone+' \u05e4\u05d2\u05d5',
+    dc.total?(dc.gone?'warn':'ok'):'na',
+    dc.total?(dc.gone?dc.gone+' \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05de\u05d7\u05d9\u05d9\u05d1\u05d9\u05dd \u05e4\u05d2\u05d5':''):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d4\u05de\u05d7\u05d9\u05d9\u05d1\u05d9\u05dd'));
 
   // 8.1 — operational control: permits, PPE, statutory equipment inspections.
   var ptwN=_isoCount('ptw'),ppe=_isoExpiry('ppe'),eqi=_isoExpiry('equip_inspections');
-  add(both,'8.1','\u05d1\u05e7\u05e8\u05d4 \u05ea\u05e4\u05e2\u05d5\u05dc\u05d9\u05ea',ptwN+' \u05d4\u05d9\u05ea\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4 \u00b7 '+ppe.total+' \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u00b7 '+eqi.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u00b7 '+eqi.gone+' \u05e4\u05d2\u05d5',
-    eqi.total?((eqi.gone||eqi.none)?'warn':'ok'):'bad',
-    eqi.total?[(eqi.gone?eqi.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05e4\u05d2\u05d5 \u2014 \u05d4\u05e4\u05e8\u05ea \u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea':''),(eqi.none?eqi.none+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05db\u05dc\u05dc':'')].filter(Boolean).join(' · '):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05d5\u05ea');
+  add(both,'8.1','\u05d1\u05e7\u05e8\u05d4 \u05ea\u05e4\u05e2\u05d5\u05dc\u05d9\u05ea',ptwN+' \u05d4\u05d9\u05ea\u05e8\u05d9 \u05e2\u05d1\u05d5\u05d3\u05d4, '+ppe.total+' \u05e4\u05e8\u05d9\u05d8\u05d9 \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df, '+eqi.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3, '+eqi.gone+' \u05e4\u05d2\u05d5',
+    eqi.total?((eqi.gone||eqi.none)?'warn':'ok'):'na',
+    eqi.total?[(eqi.gone?eqi.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05e4\u05d2\u05d5 - \u05d4\u05e4\u05e8\u05ea \u05e4\u05e7\u05d5\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea':''),(eqi.none?eqi.none+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05db\u05dc\u05dc':'')].filter(Boolean).join(', '):ext('\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05d5\u05ea'));
 
   // 8.1 (14001) — waste and hazardous materials.
   var wstN=_isoCount('wst'),wstR=_isoRecent('wst','d'),hzmN=_isoCount('hzm');
-  add(s14,'8.1','\u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',wstN+' \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u00b7 '+wstR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u00b7 '+hzmN+' \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',
-    (wstN||hzmN)?(wstR?'ok':'warn'):'bad',
-    (wstN||hzmN)?(wstR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05e4\u05d9\u05e0\u05d5\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05d0\u05d9\u05df \u05de\u05e8\u05e9\u05dd \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd');
+  add(s14,'8.1','\u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',wstN+' \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea, '+wstR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4, '+hzmN+' \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',
+    (wstN||hzmN)?(wstR?'ok':'warn'):'na',
+    (wstN||hzmN)?(wstR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05e4\u05d9\u05e0\u05d5\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):ext('\u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05de\u05e8\u05e9\u05dd \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd'));
 
   // 8.2 — emergency preparedness: drills.
   var drlN=_isoCount('drl'),drlR=_isoRecent('drl','d');
-  add(both,'8.2','\u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d5\u05ea\u05d2\u05d5\u05d1\u05d4 \u05dc\u05de\u05e6\u05d1\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd',drlN+' \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd \u00b7 '+drlR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',drlN?(drlR?'ok':'warn'):'bad',
-    drlN?(drlR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd');
+  add(both,'8.2','\u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d5\u05ea\u05d2\u05d5\u05d1\u05d4 \u05dc\u05de\u05e6\u05d1\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd',drlN+' \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd, '+drlR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',drlN?(drlR?'ok':'warn'):'na',
+    drlN?(drlR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):ext('\u05ea\u05e8\u05d2\u05d9\u05dc\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd'));
 
   // 9.1 — monitoring and measurement: safety rounds, inspections, health.
   var insN=_isoCount('ins'),insR=_isoRecent('ins','d');
   var rndR=_isoRecent('rounds','d',3);
   var medX=_isoExpiry('med'),hearN=_isoCount('hearing_tests');
-  add(both,'9.1','\u05e0\u05d9\u05d8\u05d5\u05e8, \u05de\u05d3\u05d9\u05d3\u05d4 \u05d5\u05e0\u05d9\u05ea\u05d5\u05d7',insN+' \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u00b7 '+insR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u00b7 '+rndR+' \u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d1\u05e8\u05d1\u05e2\u05d5\u05df \u00b7 '+medX.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u00b7 '+hearN+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',
-    (insR||rndR)?((medX.gone)?'warn':'ok'):'bad',
-    (insR||rndR)?(medX.gone?medX.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u05e4\u05d2\u05d5':''):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8 \u05d0\u05d5 \u05e1\u05d1\u05d1 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4');
+  // The department tours (tour_hazards) and the trustees' rounds are where the
+  // monitoring happens now; ins and rounds are kept for a plant that uses them.
+  var mon=ev.tours||ev.truReports||insR||rndR;
+  add(both,'9.1','\u05e0\u05d9\u05d8\u05d5\u05e8, \u05de\u05d3\u05d9\u05d3\u05d4 \u05d5\u05e0\u05d9\u05ea\u05d5\u05d7',[ev.tours+' \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea, '+ev.hz+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05d6\u05d5\u05d4\u05d5, '+ev.truReports+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd, '+ev.truFind+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd (\u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4)',
+      insN?insN+' \u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+insR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4':'',rndR?rndR+' \u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d1\u05e8\u05d1\u05e2\u05d5\u05df':'',
+      medX.total?medX.total+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea':'',hearN?hearN+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4':''].filter(Boolean).join(', '),
+    mon?((medX.gone)?'warn':'ok'):'bad',
+    mon?(medX.gone?medX.gone+' \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea \u05e4\u05d2\u05d5':''):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05e1\u05d9\u05d5\u05e8 \u05d0\u05d5 \u05e1\u05d1\u05d1 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4');
+
+  // 9.1.2 - evaluation of compliance: svLeg stamps c_date when it is done.
+  var legEvR=_isoRecent('leg','c_date');
+  add(both,'9.1.2','\u05d4\u05e2\u05e8\u05db\u05ea \u05e2\u05de\u05d9\u05d3\u05d4 \u05d1\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea',legN+' \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea, '+legEvR+' \u05d4\u05d5\u05e2\u05e8\u05db\u05d5 \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',
+    legN?(legEvR>=legN?'ok':'warn'):'na',
+    legN?(legEvR>=legN?'':(legN-legEvR)+' \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05dc\u05d0 \u05d4\u05d5\u05e2\u05e8\u05db\u05d5 \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):ext('\u05d4\u05e2\u05e8\u05db\u05ea \u05d4\u05e6\u05d9\u05d5\u05ea'));
 
   // 9.2 — internal audit.
   var audN=_isoCount('auds'),audR=_isoRecent('auds','d');
-  add(both,'9.2','\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',audN+' \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u00b7 '+audR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',audN?(audR?'ok':'warn'):'bad',
-    audN?(audR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd');
+  add(both,'9.2','\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',audN+' \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea, '+audR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',audN?(audR?'ok':'warn'):'na',
+    audN?(audR?'':'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):ext('\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05dd'));
+
+  // 9.3 - management review: the reviews saved from the management review page.
+  var mrN=_isoCount('mgmt_reviews'),mrR=_isoRecent('mgmt_reviews','ts');
+  add(both,'9.3','\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',mrN+' \u05e1\u05e7\u05d9\u05e8\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea, '+mrR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',mrN?(mrR?'ok':'warn'):'bad',
+    mrN?(mrR?'':'\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):'\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea');
 
   // 10.2 — nonconformity and corrective action, and whether anyone checked
   // that the corrective action worked. This is the clause the app is built
@@ -7413,9 +7482,22 @@ function _isoClauses(){
   // A reopened NCR is a corrective action that did not hold. \u00a710.2 is the
   // clause that asks whether it worked, so the count belongs here.
   var reopened=(typeof _reopenedNcrs==='function')?_reopenedNcrs().length:0;
-  add(both,'10.2','\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05d5\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea',ncrN+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u00b7 '+ncrOpen+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea \u00b7 '+verified+' \u05d0\u05d5\u05de\u05ea\u05d5 \u05dc\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea'+(reopened?(' \u00b7 '+reopened+' \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9'):'')+' \u00b7 '+incN+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u00b7 '+nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',
-    ncrN?(capaDue?'warn':'ok'):'bad',
-    ncrN?(capaDue?capaDue+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d9\u05d5\u05ea\u05e8 \u05de-30 \u05d9\u05d5\u05dd \u05d5\u05d0\u05d9\u05e9 \u05dc\u05d0 \u05d1\u05d3\u05e7 \u05d0\u05dd \u05e2\u05d1\u05d3\u05d5':''):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4');
+  // Since the reset of 18/09 ncr is empty on purpose; the hazards, the
+  // trustees' findings and the incidents carry this clause. An incident with
+  // no root cause and no 5-why is amber with its number (Michael, 30/09/2026).
+  var g102=[];
+  if(capaDue)g102.push(capaDue+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05de\u05ea\u05e7\u05e0\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5 \u05dc\u05e4\u05e0\u05d9 \u05d9\u05d5\u05ea\u05e8 \u05de-30 \u05d9\u05d5\u05dd \u05d5\u05d0\u05d9\u05e9 \u05dc\u05d0 \u05d1\u05d3\u05e7 \u05d0\u05dd \u05e2\u05d1\u05d3\u05d5');
+  if(ev.hzLate)g102.push(ev.hzLate+' \u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d9\u05e2\u05d3');
+  if(ev.inc&&ev.incInv<ev.inc)g102.push(ev.incInv+' \u05de-'+ev.inc+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05e0\u05d7\u05e7\u05e8\u05d5 (\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 \u05d0\u05d5 5 \u05dc\u05de\u05d4)');
+  var has102=ncrN||ev.hzTotal||incN;
+  add(both,'10.2','\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05d5\u05d0\u05d9\u05de\u05d5\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea',[
+      ncrN?ncrN+' \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea, '+ncrOpen+' \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea, '+verified+' \u05d0\u05d5\u05de\u05ea\u05d5 \u05dc\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea'+(reopened?(', '+reopened+' \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9'):''):'',
+      ev.hzTotal?ev.hzTotal+' \u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8, '+ev.hzOpen+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, '+ev.hzLate+' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8':'',
+      ev.truOpen?ev.truOpen+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd':'',
+      incN+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea, '+ev.inc+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4, '+ev.incInv+' \u05e0\u05d7\u05e7\u05e8\u05d5',
+      nmN?nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2':''].filter(Boolean).join(', '),
+    has102?(g102.length?'warn':'ok'):'bad',
+    has102?g102.join(', '):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d0\u05d5 \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea');
   return C;
 }
 // ---- 6.13 ----
@@ -7564,12 +7646,13 @@ window.safetyTrendReport=function(){
 window.isoAuditReport=function(){
   var C=_isoClauses();
   var now=new Date();
-  var stamp=now.toLocaleDateString('he-IL')+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  var stamp=fd(_thzToday())+' '+now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
   var logoSrc=(document.querySelector('.topbar-left img')||{}).src||'';
   var nOk=C.filter(function(c){return c.st==='ok';}).length;
   var nWarn=C.filter(function(c){return c.st==='warn';}).length;
   var nBad=C.filter(function(c){return c.st==='bad';}).length;
-  var icon={ok:'✅',warn:'⚠️',bad:'❌'};
+  var nNa=C.filter(function(c){return c.st==='na';}).length;
+  var icon={ok:'✅',warn:'⚠️',bad:'❌',na:'⚪'};
   var body=C.map(function(c,i){
     return '<tr class="'+c.st+'">'+
       '<td class="num">'+(i+1)+'</td>'+
@@ -7577,10 +7660,10 @@ window.isoAuditReport=function(){
       '<td><b>'+esc(c.title)+'</b></td>'+
       '<td>'+esc(c.ev)+'</td>'+
       '<td class="st">'+icon[c.st]+'</td>'+
-      '<td class="gap">'+(c.gap?esc(c.gap):'—')+'</td>'+
+      '<td class="gap">'+(c.gap?esc(c.gap):'-')+'</td>'+
     '</tr>';
   }).join('');
-  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _rptMsg(b,txt,bad){var n=document.getElementById(\'rpt-msg\');if(!n){n=document.createElement(\'div\');n.id=\'rpt-msg\';n.className=\'no-print noprint\';n.style.cssText=\'position:static;top:auto;left:auto;margin:10px 0;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.7\';var h=document.querySelector(\'.head\');if(h&&h.parentNode)h.parentNode.insertBefore(n,h.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}n.style.border=\'1px solid \'+(bad?\'#fcd34d\':\'#cfe3cf\');n.style.background=bad?\'#fffbeb\':\'#f6faf6\';n.style.color=bad?\'#92400e\':\'#166534\';n.innerHTML=txt;return n;}function _rptSafari(){return \'\u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;text-decoration:none">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';}function _rptStandalone(){try{if(navigator.standalone===true)return true;if(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches)return true;}catch(e){}return false;}function _rptLibs(cb){var need=[];if(typeof html2canvas===\'undefined\')need.push(\'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js\');if(!(window.jspdf&&window.jspdf.jsPDF))need.push(\'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js\');if(!need.length)return cb();var left=need.length,over=false;var fail=function(){if(over)return;over=true;cb(new Error(\'libs\'));};need.forEach(function(src){var sc=document.createElement(\'script\');sc.src=src;sc.onload=function(){if(over)return;if(--left===0){over=true;cb();}};sc.onerror=fail;document.head.appendChild(sc);});setTimeout(fail,25000);}function _rptPdf(btn){var was=btn?btn.textContent:\'\';if(btn){btn.disabled=true;btn.textContent=\'\u05de\u05db\u05d9\u05df PDF...\';}var done=function(){if(btn){btn.disabled=false;btn.textContent=was;}};var oops=function(){done();_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d9\u05d9\u05e6\u05e8 PDF \u05db\u05d0\u05df. \'+_rptSafari(),1);};_rptLibs(function(err){if(err)return oops();var hid=[].slice.call(document.querySelectorAll(\'.no-print,.noprint\'));hid.forEach(function(el){el.setAttribute(\'data-pdf-prev\',el.style.display||\'\');el.style.display=\'none\';});var bs=document.body.style,pw0=bs.width,pm0=bs.margin,pb0=bs.background,pp0=bs.padding;bs.width=\'703px\';bs.margin=\'0 auto\';bs.background=\'#ffffff\';bs.padding=\'0 12px\';var back=function(){hid.forEach(function(el){el.style.display=el.getAttribute(\'data-pdf-prev\')||\'\';});bs.width=pw0;bs.margin=pm0;bs.background=pb0;bs.padding=pp0;};try{html2canvas(document.body,{scale:2,backgroundColor:\'#ffffff\',useCORS:true,logging:false,windowWidth:703,width:703}).then(function(cv){back();try{var PDF=window.jspdf.jsPDF,pdf=new PDF({unit:\'mm\',format:\'a4\',orientation:\'portrait\'});var M=12,PW=210,PH=297,iw=PW-M*2,usable=PH-M*2;var totalMm=cv.height*iw/cv.width;var pages=Math.max(1,Math.ceil(totalMm/usable-0.001));var sliceH=Math.ceil(cv.height/pages);for(var i=0;i<pages;i++){var h=Math.min(sliceH,cv.height-sliceH*i);if(h<=0)break;var c=document.createElement(\'canvas\');c.width=cv.width;c.height=h;var x=c.getContext(\'2d\');x.fillStyle=\'#ffffff\';x.fillRect(0,0,c.width,c.height);x.drawImage(cv,0,-sliceH*i);if(i)pdf.addPage();pdf.addImage(c.toDataURL(\'image/jpeg\',0.92),\'JPEG\',M,M,iw,h*iw/cv.width);try{pdf.setDrawColor(204,31,31);pdf.setLineWidth(0.4);pdf.rect(7,7,PW-14,PH-14);pdf.setFontSize(8);pdf.setTextColor(120,120,120);pdf.text(String(i+1)+\' / \'+pages,PW/2,PH-4.5,{align:\'center\'});}catch(eF){}}var blob=pdf.output(\'blob\');done();_rptDeliver(blob,btn);}catch(e2){oops();}})[\'catch\'](function(){back();oops();});}catch(e3){back();oops();}});}function _rptDeliver(blob,btn){try{if(window.__rptUrl)URL.revokeObjectURL(window.__rptUrl);}catch(e){}window.__rptBlob=blob;window.__rptName=\'tapugan-report-\'+new Date().toISOString().substring(0,10)+\'.pdf\';window.__rptUrl=URL.createObjectURL(blob);_rptMsg(btn,\'<b>\u05d4-PDF \u05de\u05d5\u05db\u05df.</b>\'+\'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">\'+\'<button type="button" id="rpt-open" onclick="_rptOpen()" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da</button>\'+\'<button type="button" id="rpt-share" onclick="_rptShare()" style="display:inline-block;background:#0d9488;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8</button>\'+\'</div>\',0);}function _rptOpen(){var u=window.__rptUrl;if(!u)return;var w=null;try{w=window.open(u,\'_blank\');}catch(e){}if(!w){try{_rptGo(u);}catch(e2){_rptMsg(null,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da. \u05e0\u05e1\u05d5 "\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8".\',1);}}}function _rptGo(u){location.href=u;}function _rptShare(){var b=window.__rptBlob,n=window.__rptName;if(!b)return;try{var f=new File([b],n,{type:\'application/pdf\'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:document.title||n})[\'catch\'](function(err){if(err&&err.name===\'AbortError\')return;_rptDownload(b,n,null);});return;}}catch(e){}_rptDownload(b,n,null);}function _rptDownload(blob,name,btn){try{var u=URL.createObjectURL(blob);var a=document.createElement(\'a\');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){try{URL.revokeObjectURL(u);a.remove();}catch(e){}},500);}catch(e){_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4-PDF. \'+_rptSafari(),1);}}function _rptBack(){var h=1;try{h=history.length;}catch(e){}if(h>1){try{history.back();return;}catch(e1){}}try{window.close();}catch(e2){}setTimeout(function(){try{var o=location.origin;if(o&&o!==\'null\')location.href=o;}catch(e3){}},400);}function _rptBackBtn(){if(document.getElementById(\'rpt-back\')||!document.body)return;try{var st=document.createElement(\'style\');st.textContent=\'@media print{#rpt-back,#rpt-msg{display:none!important}}\';document.head.appendChild(st);}catch(e){}var b=document.createElement(\'button\');b.id=\'rpt-back\';b.type=\'button\';b.className=\'no-print noprint\';b.setAttribute(\'onclick\',\'_rptBack()\');b.textContent=\'\u2192 \u05d7\u05d6\u05e8\u05d4\';b.style.cssText=\'position:fixed;top:8px;right:8px;left:auto;z-index:1001;margin:0;background:#5a6070;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer\';document.body.appendChild(b);}if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',_rptBackBtn);else _rptBackBtn();function _tryPrint(b){if(!_rptStandalone()){try{window.print();return;}catch(e){}}_rptPdf(b);}<\/script><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+' · '+stamp+'</title>'+
+  var html='<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _rptMsg(b,txt,bad){var n=document.getElementById(\'rpt-msg\');if(!n){n=document.createElement(\'div\');n.id=\'rpt-msg\';n.className=\'no-print noprint\';n.style.cssText=\'position:static;top:auto;left:auto;margin:10px 0;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.7\';var h=document.querySelector(\'.head\');if(h&&h.parentNode)h.parentNode.insertBefore(n,h.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}n.style.border=\'1px solid \'+(bad?\'#fcd34d\':\'#cfe3cf\');n.style.background=bad?\'#fffbeb\':\'#f6faf6\';n.style.color=bad?\'#92400e\':\'#166534\';n.innerHTML=txt;return n;}function _rptSafari(){return \'\u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;text-decoration:none">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';}function _rptStandalone(){try{if(navigator.standalone===true)return true;if(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches)return true;}catch(e){}return false;}function _rptLibs(cb){var need=[];if(typeof html2canvas===\'undefined\')need.push(\'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js\');if(!(window.jspdf&&window.jspdf.jsPDF))need.push(\'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js\');if(!need.length)return cb();var left=need.length,over=false;var fail=function(){if(over)return;over=true;cb(new Error(\'libs\'));};need.forEach(function(src){var sc=document.createElement(\'script\');sc.src=src;sc.onload=function(){if(over)return;if(--left===0){over=true;cb();}};sc.onerror=fail;document.head.appendChild(sc);});setTimeout(fail,25000);}function _rptPdf(btn){var was=btn?btn.textContent:\'\';if(btn){btn.disabled=true;btn.textContent=\'\u05de\u05db\u05d9\u05df PDF...\';}var done=function(){if(btn){btn.disabled=false;btn.textContent=was;}};var oops=function(){done();_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d9\u05d9\u05e6\u05e8 PDF \u05db\u05d0\u05df. \'+_rptSafari(),1);};_rptLibs(function(err){if(err)return oops();var hid=[].slice.call(document.querySelectorAll(\'.no-print,.noprint\'));hid.forEach(function(el){el.setAttribute(\'data-pdf-prev\',el.style.display||\'\');el.style.display=\'none\';});var bs=document.body.style,pw0=bs.width,pm0=bs.margin,pb0=bs.background,pp0=bs.padding;bs.width=\'703px\';bs.margin=\'0 auto\';bs.background=\'#ffffff\';bs.padding=\'0 12px\';var back=function(){hid.forEach(function(el){el.style.display=el.getAttribute(\'data-pdf-prev\')||\'\';});bs.width=pw0;bs.margin=pm0;bs.background=pb0;bs.padding=pp0;};try{html2canvas(document.body,{scale:2,backgroundColor:\'#ffffff\',useCORS:true,logging:false,windowWidth:703,width:703}).then(function(cv){back();try{var PDF=window.jspdf.jsPDF,pdf=new PDF({unit:\'mm\',format:\'a4\',orientation:\'portrait\'});var M=12,PW=210,PH=297,iw=PW-M*2,usable=PH-M*2;var totalMm=cv.height*iw/cv.width;var pages=Math.max(1,Math.ceil(totalMm/usable-0.001));var sliceH=Math.ceil(cv.height/pages);for(var i=0;i<pages;i++){var h=Math.min(sliceH,cv.height-sliceH*i);if(h<=0)break;var c=document.createElement(\'canvas\');c.width=cv.width;c.height=h;var x=c.getContext(\'2d\');x.fillStyle=\'#ffffff\';x.fillRect(0,0,c.width,c.height);x.drawImage(cv,0,-sliceH*i);if(i)pdf.addPage();pdf.addImage(c.toDataURL(\'image/jpeg\',0.92),\'JPEG\',M,M,iw,h*iw/cv.width);try{pdf.setDrawColor(204,31,31);pdf.setLineWidth(0.4);pdf.rect(7,7,PW-14,PH-14);pdf.setFontSize(8);pdf.setTextColor(120,120,120);pdf.text(String(i+1)+\' / \'+pages,PW/2,PH-4.5,{align:\'center\'});}catch(eF){}}var blob=pdf.output(\'blob\');done();_rptDeliver(blob,btn);}catch(e2){oops();}})[\'catch\'](function(){back();oops();});}catch(e3){back();oops();}});}function _rptDeliver(blob,btn){try{if(window.__rptUrl)URL.revokeObjectURL(window.__rptUrl);}catch(e){}window.__rptBlob=blob;window.__rptName=\'tapugan-report-\'+new Date().toISOString().substring(0,10)+\'.pdf\';window.__rptUrl=URL.createObjectURL(blob);_rptMsg(btn,\'<b>\u05d4-PDF \u05de\u05d5\u05db\u05df.</b>\'+\'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">\'+\'<button type="button" id="rpt-open" onclick="_rptOpen()" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da</button>\'+\'<button type="button" id="rpt-share" onclick="_rptShare()" style="display:inline-block;background:#0d9488;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8</button>\'+\'</div>\',0);}function _rptOpen(){var u=window.__rptUrl;if(!u)return;var w=null;try{w=window.open(u,\'_blank\');}catch(e){}if(!w){try{_rptGo(u);}catch(e2){_rptMsg(null,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da. \u05e0\u05e1\u05d5 "\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8".\',1);}}}function _rptGo(u){location.href=u;}function _rptShare(){var b=window.__rptBlob,n=window.__rptName;if(!b)return;try{var f=new File([b],n,{type:\'application/pdf\'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:document.title||n})[\'catch\'](function(err){if(err&&err.name===\'AbortError\')return;_rptDownload(b,n,null);});return;}}catch(e){}_rptDownload(b,n,null);}function _rptDownload(blob,name,btn){try{var u=URL.createObjectURL(blob);var a=document.createElement(\'a\');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){try{URL.revokeObjectURL(u);a.remove();}catch(e){}},500);}catch(e){_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4-PDF. \'+_rptSafari(),1);}}function _rptBack(){var h=1;try{h=history.length;}catch(e){}if(h>1){try{history.back();return;}catch(e1){}}try{window.close();}catch(e2){}setTimeout(function(){try{var o=location.origin;if(o&&o!==\'null\')location.href=o;}catch(e3){}},400);}function _rptBackBtn(){if(document.getElementById(\'rpt-back\')||!document.body)return;try{var st=document.createElement(\'style\');st.textContent=\'@media print{#rpt-back,#rpt-msg{display:none!important}}\';document.head.appendChild(st);}catch(e){}var b=document.createElement(\'button\');b.id=\'rpt-back\';b.type=\'button\';b.className=\'no-print noprint\';b.setAttribute(\'onclick\',\'_rptBack()\');b.textContent=\'\u2192 \u05d7\u05d6\u05e8\u05d4\';b.style.cssText=\'position:fixed;top:8px;right:8px;left:auto;z-index:1001;margin:0;background:#5a6070;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer\';document.body.appendChild(b);}if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',_rptBackBtn);else _rptBackBtn();function _tryPrint(b){if(!_rptStandalone()){try{window.print();return;}catch(e){}}_rptPdf(b);}<\/script><title>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea - ISO 45001 / ISO 14001'+', '+stamp+'</title>'+
   '<style>'+
     '@page{size:A4;margin:12mm}'+
     'body{font-family:Arial,Heebo,sans-serif;color:#1a1d23;font-size:12px;margin:0}'+
@@ -7592,6 +7675,7 @@ window.isoAuditReport=function(){
     '.summary .pill.bad{background:#fee2e2;border-color:#cc1f1f;color:#991b1b}'+
     '.summary .pill.warn{background:#fef3c7;border-color:#b45309;color:#92400e}'+
     '.summary .pill.ok{background:#dcfce7;border-color:#16a34a;color:#15803d}'+
+    '.summary .pill.na{background:#f3f4f6;border-color:#9ca3af;color:#4b5563}'+
     'table{width:100%;border-collapse:collapse;font-size:11px}'+
     'th{background:#cc1f1f;color:#fff;text-align:right;padding:7px;border:1px solid #cc1f1f}'+
     'td{padding:6px 7px;border:1px solid #ddd;vertical-align:top}'+
@@ -7600,6 +7684,7 @@ window.isoAuditReport=function(){
     'td.st{text-align:center;width:34px;font-size:15px}'+
     'td.gap{color:#991b1b}'+
     'tr.ok td.gap{color:#5a6070}'+
+    'tr.na td{color:#6b7280}tr.na td.gap{color:#6b7280}'+
     'tr{page-break-inside:avoid}'+
     '.note{margin-top:12px;font-size:10px;color:#5a6070;background:#f8fafc;border-right:3px solid #cc1f1f;padding:8px 10px;line-height:1.7}'+
     '.foot{margin-top:16px;display:flex;justify-content:space-between;font-size:10px;color:#5a6070;border-top:1px solid #ddd;padding-top:10px}'+
@@ -7609,19 +7694,20 @@ window.isoAuditReport=function(){
   '</style></head><body>'+
   '<button class="no-print" onclick="_tryPrint(this)">'+'\u05e9\u05de\u05d5\u05e8 \u05db-PDF / \u05d4\u05d3\u05e4\u05e1'+'</button>'+
   '<div class="head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+
-    '<div><h1>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u2014 ISO 45001 / ISO 14001'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df \u00b7 \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
+    '<div><h1>'+'\u05d3\u05d5\u05d7 \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea - ISO 45001 / ISO 14001'+'</h1><div class="sub">'+'\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df, \u05d4\u05d5\u05e4\u05e7 \u05d1: '+stamp+'</div></div></div>'+
   '<div class="summary">'+
     '<span class="pill ok">'+'\u05de\u05db\u05d5\u05e1\u05d4:'+' <b>'+nOk+'</b></span>'+
     (nWarn?'<span class="pill warn">'+'\u05e4\u05e2\u05e8:'+' <b>'+nWarn+'</b></span>':'')+
     (nBad?'<span class="pill bad">'+'\u05d7\u05e1\u05e8:'+' <b>'+nBad+'</b></span>':'')+
+    (nNa?'<span class="pill na">'+'\u05de\u05d7\u05d5\u05e5 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4:'+' <b>'+nNa+'</b></span>':'')+
     '<span class="pill">'+'\u05e1\u05e2\u05d9\u05e4\u05d9\u05dd:'+' <b>'+C.length+'</b></span>'+
   '</div>'+
   '<table><thead><tr><th>#</th><th>'+'\u05e1\u05e2\u05d9\u05e3'+'</th><th>'+'\u05d3\u05e8\u05d9\u05e9\u05ea \u05d4\u05ea\u05e7\u05df'+'</th><th>'+'\u05d4\u05e8\u05d0\u05d9\u05d4 \u05d1\u05de\u05e2\u05e8\u05db\u05ea'+'</th><th>'+'\u05de\u05e6\u05d1'+'</th><th>'+'\u05de\u05d4 \u05d7\u05e1\u05e8'+'</th></tr></thead><tbody>'+body+'</tbody></table>'+
-  '<div class="note">'+'\u05d4\u05d3\u05d5\u05d7 \u05de\u05d5\u05e4\u05e7 \u05de\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d4\u05d7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e8\u05d2\u05e2 \u05d4\u05d4\u05e4\u05e7\u05d4. \u05e1\u05e2\u05d9\u05e3 \u05de\u05e1\u05d5\u05de\u05df \u05db\u05de\u05db\u05d5\u05e1\u05d4 \u05e8\u05e7 \u05db\u05e9\u05d9\u05e9 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05d2\u05dd \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05d1-12 \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd \u2014 \u05de\u05e8\u05e9\u05dd \u05e9\u05d4\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e0\u05d4\u05dc \u05d0\u05d9\u05e0\u05d5 \u05e8\u05d0\u05d9\u05d4. \u05d4\u05d3\u05d5\u05d7 \u05d0\u05d9\u05e0\u05d5 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea: \u05d4\u05d5\u05d0 \u05de\u05e8\u05d0\u05d4 \u05d0\u05d9\u05e4\u05d4 \u05d4\u05e8\u05d0\u05d9\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea \u05d5\u05d0\u05d9\u05e4\u05d4 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05e9\u05d4\u05de\u05d1\u05e7\u05e8 \u05de\u05d2\u05d9\u05e2.'+'</div>'+
+  '<div class="note">'+'\u05d4\u05d3\u05d5\u05d7 \u05de\u05d5\u05e4\u05e7 \u05de\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d4\u05d7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e8\u05d2\u05e2 \u05d4\u05d4\u05e4\u05e7\u05d4. \u05e1\u05e2\u05d9\u05e3 \u05de\u05e1\u05d5\u05de\u05df \u05db\u05de\u05db\u05d5\u05e1\u05d4 \u05e8\u05e7 \u05db\u05e9\u05d9\u05e9 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05d5\u05d2\u05dd \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea \u05d1-12 \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd - \u05de\u05e8\u05e9\u05dd \u05e9\u05d4\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e0\u05d4\u05dc \u05d0\u05d9\u05e0\u05d5 \u05e8\u05d0\u05d9\u05d4. \u05d4\u05d3\u05d5\u05d7 \u05d0\u05d9\u05e0\u05d5 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05dc\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea: \u05d4\u05d5\u05d0 \u05de\u05e8\u05d0\u05d4 \u05d0\u05d9\u05e4\u05d4 \u05d4\u05e8\u05d0\u05d9\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea \u05d5\u05d0\u05d9\u05e4\u05d4 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e9\u05dc\u05d9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05e9\u05d4\u05de\u05d1\u05e7\u05e8 \u05de\u05d2\u05d9\u05e2. \u05e1\u05e2\u05d9\u05e3 \u05d1\u05d0\u05e4\u05d5\u05e8 \u05de\u05e0\u05d5\u05d4\u05dc \u05de\u05d7\u05d5\u05e5 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u05d4\u05e8\u05d0\u05d9\u05d4 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d5\u05dc\u05d0 \u05d1\u05de\u05e2\u05e8\u05db\u05ea.'+'</div>'+
   '<div class="foot"><div>'+'\u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9: '+'<span class="line"></span></div><div>'+'\u05ea\u05d0\u05e8\u05d9\u05da: '+'<span class="line"></span></div></div>'+
   '</body></html>';
   var w=window.open('','_blank');
-  if(!w){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd \u2014 \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
+  if(!w){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd - \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
   w.document.write(html);w.document.close();
 };
 function _eqiPrintAll(){
@@ -10545,7 +10631,12 @@ function rMr(){
   // on the page either: 14 NCRs this quarter, good or bad?
   function _cnt(per){
     var inc=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,per);});
+    // Tour hazards, trustees' findings and investigated incidents: the same
+    // count the ISO sheet reads (_opsEvidence, upgrade review 14).
+    var ops=_opsEvidence(function(v){return _mrInPeriod(v,per);});
     return {
+      hz:ops.hz,hzClosed:ops.hzClosed,hzOpen:ops.hzOpen,hzLate:ops.hzLate,
+      truFind:ops.truFind,truOpen:ops.truOpen,incInv:ops.incInv,
       ncrNew:ncrAll.filter(function(n){return _mrInPeriod(_ncrOpenedAt(n)||n.ts,per);}).length,
       ncrClosed:ncrAll.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8'&&_mrInPeriod(n.cd||n.close_date,per);}).length,
       inc:inc.length,
@@ -10574,7 +10665,7 @@ function rMr(){
   var incQ=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,p);});
   g('mr-inc-q').textContent=incQ.length;
   var lostDays=cur.lostDays;
-  g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df';
+  g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df, '+cur.incInv+' \u05e0\u05d7\u05e7\u05e8\u05d5';
   g('mr-nm-q').textContent=cur.nm;
   setD('mr-d-ncr-new',cur.ncrNew,prev.ncrNew,false);
   setD('mr-d-ncr-closed',cur.ncrClosed,prev.ncrClosed,true);
@@ -10598,6 +10689,8 @@ function rMr(){
   g('mr-eqi-pct').textContent=eqP.pct+'%';g('mr-eqi-sub').textContent=eqP.v+' / '+eqP.t;
   g('mr-tlk-q').textContent=cur.tlk;
   setD('mr-d-tlk',cur.tlk,prev.tlk,true);
+  var hzQ=g('mr-hz-q');if(hzQ){hzQ.textContent=cur.hz;g('mr-hz-sub').textContent=cur.hzClosed+' \u05e0\u05e1\u05d2\u05e8\u05d5, '+cur.hzOpen+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, '+cur.hzLate+' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8';}
+  var truQ=g('mr-tru-q');if(truQ){truQ.textContent=cur.truFind;g('mr-tru-sub').textContent=cur.truOpen+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd';}
   var top5=openS.filter(function(n){return n.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'||n.p==='\u05d2\u05d1\u05d5\u05d4';}).sort(function(a,b){var ad=a.sd||a.src_date||'';var bd=b.sd||b.src_date||'';return ad>bd?-1:1;}).slice(0,5);
   if(top5.length){
     g('mr-top-ncr').innerHTML=top5.map(function(n){
@@ -14814,6 +14907,9 @@ window._annualISOReport=function(){
     toolbox_talks:tlkYear.length,
     trainings_completed:trYear.length,
     tasks_completed:tasksDone.length,
+    tour_hazards:(function(){var o=_opsEvidence(inLastYear);return {tours:o.tours,found:o.hz,closed:o.hzClosed,open_now:o.hzOpen,late_now:o.hzLate};})(),
+    trustees:(function(){var o=_opsEvidence(inLastYear);return {reports:o.truReports,findings:o.truFind,open_now:o.truOpen};})(),
+    incidents_investigated:(DB.inc||[]).filter(function(i){return inLastYear(i.dt||i.d)&&_incInvestigated(i);}).length,
     compliance:{
       tr_pct:pctValid('tr'),
       docs_pct:pctValid('docs'),
@@ -14834,7 +14930,7 @@ window._annualISOReport=function(){
     // "אל תמציא נתונים" the model could only invent it or write "לא נמצא" in
     // the headline KPI section of a document that goes to an external auditor.
     '## 2. \u05d1\u05d9\u05e6\u05d5\u05e2\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (KPIs)\n(\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df, \u05de\u05e1\u05e4\u05e8 \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea, \u05d0\u05d7\u05d5\u05d6 \u05e1\u05d2\u05d9\u05e8\u05ea NCRs \u05d1\u05d6\u05de\u05df, \u05de\u05d2\u05de\u05d5\u05ea. \u05d0\u05dc \u05ea\u05d7\u05e9\u05d1 LTIF — \u05d0\u05d9\u05df \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05e9\u05e2\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4)\n\n'+
-    '## 3. \u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd\n(\u05de\u05d0\u05d2\u05e8 \u05d4\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd — \u05de\u05e1\u05e4\u05e8, \u05de\u05e1\u05e4\u05e8 \u05d1-RPN \u05d2\u05d1\u05d5\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e9\u05e0\u05e0\u05e7\u05d8\u05d5)\n\n'+
+    '## 3. \u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd\n(\u05de\u05d0\u05d2\u05e8 \u05d4\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd - \u05de\u05e1\u05e4\u05e8, \u05de\u05e1\u05e4\u05e8 \u05d1-RPN \u05d2\u05d1\u05d5\u05d4, \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e9\u05e0\u05e0\u05e7\u05d8\u05d5; \u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05d6\u05d5\u05d4\u05d5, \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d5\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8; \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea)\n\n'+
     '## 4. \u05e1\u05e7\u05d9\u05e8\u05d4 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05ea (ISO 14001:6.1.2)\n(\u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd \u05de\u05d4\u05d5\u05ea\u05d9\u05d9\u05dd, \u05de\u05e6\u05d1 \u05ea\u05d0\u05d9\u05de\u05d5\u05ea \u05dc\u05d7\u05d5\u05e7)\n\n'+
     '## 5. \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea (ISO 45001:7.2)\n(\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e6\u05e2\u05d5, \u05d0\u05d7\u05d5\u05d6 \u05e6\u05d9\u05d5\u05ea, \u05e4\u05e2\u05e8\u05d9\u05dd \u05e9\u05d6\u05d5\u05d4\u05d5)\n\n'+
     '## 6. \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05d5\u05dc\u05e7\u05d7\u05d9\u05dd\n(\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05d7\u05de\u05d5\u05e8\u05d5\u05ea, near-miss, \u05d7\u05e7\u05d9\u05e8\u05ea \u05e9\u05d5\u05e8\u05e9 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4)\n\n'+
@@ -14911,6 +15007,13 @@ window._mrAINarrative=function(){
     '- \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3: '+kpis.docsPct+' ('+kpis.docsSub+')\n'+
     '- \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05ea\u05e7\u05e4\u05d5\u05ea: '+kpis.eqiPct+' ('+kpis.eqiSub+')\n'+
     '- \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+kpis.tlkQ+
+    (function(){
+      var c=window._mrCounts&&window._mrCounts.cur;if(!c)return '';
+      return '\n\n\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05d5\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4:'
+        +'\n- \u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05d6\u05d5\u05d4\u05d5: '+c.hz+' ('+c.hzClosed+' \u05e0\u05e1\u05d2\u05e8\u05d5; \u05db\u05e8\u05d2\u05e2 '+c.hzOpen+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, '+c.hzLate+' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8)'
+        +'\n- \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+c.truFind+' (\u05db\u05e8\u05d2\u05e2 '+c.truOpen+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd)'
+        +'\n- \u05ea\u05e7\u05e8\u05d9\u05d5\u05ea \u05e9\u05e0\u05d7\u05e7\u05e8\u05d5 (\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 \u05d0\u05d5 5 \u05dc\u05de\u05d4): '+c.incInv+' \u05de\u05ea\u05d5\u05da '+c.inc;
+    })()+
     // The prompt below asks whether the trend is better than the previous
     // quarter, under a hard rule saying not to invent numbers \u2014 and until now
     // the context carried only the current quarter. The model could produce a
@@ -14926,7 +15029,9 @@ window._mrAINarrative=function(){
         +line('\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',c.cur.inc,c.prev.inc)
         +line('\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',c.cur.lostDays,c.prev.lostDays)
         +line('\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',c.cur.nm,c.prev.nm)
-        +line('\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',c.cur.tlk,c.prev.tlk);
+        +line('\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',c.cur.tlk,c.prev.tlk)
+        +line('\u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05d6\u05d5\u05d4\u05d5',c.cur.hz,c.prev.hz)
+        +line('\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd',c.cur.truFind,c.prev.truFind);
       if(c.cur.reopened||c.prev.reopened){
         out+='\n- \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05ea \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9 (\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea \u05e9\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7\u05d4): '+c.cur.reopened+' (\u05e8\u05d1\u05e2\u05d5\u05df \u05e7\u05d5\u05d3\u05dd '+c.prev.reopened+')';
       }
@@ -16007,16 +16112,18 @@ window._exportXlsx=function(){
       var wb=XLSX.utils.book_new();
       // Order: most-business-relevant first so Excel opens on a useful sheet.
       var tableOrder=[
-        'ncr','inc','near_miss','tasks','rsk','rounds','toolbox','trustee_reports','trustees','trustee_winners',
+        'ncr','inc','near_miss','tasks','tour_hazards','rsk','rounds','toolbox','trustee_reports','trustees','trustee_winners','trustee_tasks',
         'equip_inspections','ppe','tr','docs','ctr','med',
         'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
         'emp','app_users','locations','projects','inspection_types','issue_types',
         'audit_log','notifications_log','ncr_ai','ncr_comments','ncr_patterns',
-        'page_files','saved_views','notification_prefs','custom_props'
+        'page_files','saved_views','notification_prefs','custom_props','mgmt_reviews'
       ];
       // Hebrew sheet names per table — Excel requires <=31 chars, no special chars.
       var sheetName={
         ncr:'NCR',inc:'\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',tasks:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea',
+        tour_hazards:'\u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd',trustees:'\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
+        trustee_winners:'\u05d6\u05d5\u05db\u05d9 \u05d4\u05d7\u05d5\u05d3\u05e9',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05e0\u05d0\u05de\u05e0\u05d9\u05dd',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05d5\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',
         rsk:'\u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd',rounds:'\u05e1\u05d9\u05d5\u05e8\u05d9 \u05d1\u05d5\u05e7\u05e8',toolbox:'\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
         equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea',docs:'\u05de\u05e1\u05de\u05db\u05d9\u05dd',
         ctr:'\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',med:'\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e8\u05e4\u05d5\u05d0\u05d9\u05d5\u05ea',env_aspects:'\u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd',
