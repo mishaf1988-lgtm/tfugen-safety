@@ -3,6 +3,8 @@
 // shaped like the real one (a report sheet with a formula, the register with
 // formula columns N/O, a hidden row and a filter, calcChain, a "macro"), runs
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
+import fs from 'fs';
+import path from 'path';
 import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows, rowHeight } from './_build/_xlsxpatch.mjs';
@@ -96,6 +98,9 @@ function world(o) {
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]);
     if (u.startsWith('https://graph.microsoft.com/') && m === 'GET') {
       if (o.missing) return json({ error: { code: 'itemNotFound' } }, 404);
+      // o.years: the years whose folder holds the files; another year's file
+      // exists only once something was PUT there (the roll-over, review 24).
+      if (o.years) { const du = decodeURIComponent(u).split('?')[0], y = /13_סיורי מפגעים\/(\d{4})\//.exec(du); if (y && o.years.indexOf(+y[1]) < 0 && !w.puts.some((p) => du.endsWith(p.path.replace(/:\/content$/, '')))) return json({ error: { code: 'itemNotFound' } }, 404); }
       return json({ id: 'i1', cTag: w.meta.cTag, lastModifiedDateTime: '2026-09-28T10:37:00Z', webUrl: 'https://od/file', '@microsoft.graph.downloadUrl': 'https://dl/file' });
     }
     if (u === 'https://dl/file') return new Response(w.file, { status: 200 });
@@ -542,6 +547,58 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   aw = arch({ state: { hazard_snap_month: '2026-09', hazard_prune_day: '2026-10-01' }, children: lots });
   ar = await runArchive(ENV, new Date('2026-10-02T09:00:00Z'));
   check('more than 20 old copies: 20 deleted, the day not marked, so the rest go on the next run', aw.dels.length === 20 && aw.state.hazard_prune_day === '2026-10-01', [aw.dels.length, aw.state.hazard_prune_day]);
+
+  console.log('\n10. a file per year (upgrade review 24, Michael 30/09/2026)');
+  {
+    const { yearReg, ilYear, folderFor, FIRST_YEAR, FULL_WARN, yearItem } = await import('./_build/hazard-file.mjs');
+    check('Israel year: 31/12 22:30 UTC is already 2027 there', ilYear('2026-12-31T22:30:00Z') === 2027 && ilYear('2026-12-31T21:30:00Z') === 2026);
+    check('the folder is 13_סיורי מפגעים/<year>', /13_סיורי מפגעים\/2027$/.test(folderFor(2027)) && FIRST_YEAR === 2026);
+    const R = (d, s, c) => [1, d ? { date: d } : null, 1, 'מעצבים', '', 'x', '', '', '', null, s, c ? { date: c } : null, ''];
+    const all = { rows: [R('2026-05-01', 'סגור', '2026-06-01'), R('2026-11-01', 'פתוח', null), R('2026-12-20', 'סגור', '2027-01-03'), R('2027-01-05', 'פתוח', null), R(null, 'סגור', null), R('2026-10-01', 'בטיפול', null)], ids: ['a', 'b', 'c', 'd', 'e', 'f'] };
+    check('2026: every row, as today', yearReg(all, 2026).rows.length === 6);
+    const y7 = yearReg(all, 2027);
+    check('2027: this year\'s, all still open (פתוח / בטיפול) and those closed in 2027; not those closed in 2026', y7.ids.join() === 'b,c,d,f', y7.ids);
+    check('...ids stay with their rows', y7.rows[1][11].date === '2027-01-03' && y7.ids[1] === 'c');
+
+    // Roll-over: 01/01/2027, the 2027 folder is empty.
+    const file = await fixture();
+    let wy = world({ file, years: [2026] });
+    let r = await runFile(ENV, 'xlsm', false, { now: '2027-01-01T06:00:00Z' });
+    const p27 = wy.puts.filter((p) => /13_סיורי מפגעים\/2027\/ניהול סיורי מפגעים\.xlsm:\/content$/.test(p.path));
+    check('the 2026 file is copied into 2027 as it is, then written there', r.ok && r.pushed && p27.length >= 2 && Buffer.from(p27[0].body).equals(Buffer.from(file)), [r, wy.puts.map((p) => p.path)]);
+    check('nothing is written into the 2026 folder\'s file', !wy.puts.some((p) => /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)), wy.puts.map((p) => p.path));
+    check('the 2027 file: the open hazard and the open trustee finding, not those closed in 2026', r.rows === 2 && wy.state.hazard_xlsm_rows === '2' && wy.state.hazard_xlsm_year === '2027', [r.rows, wy.state.hazard_xlsm_rows]);
+    wy = world({ file, years: [2026, 2027] });
+    r = await runFile(ENV, 'xlsm', false, { now: '2027-01-01T06:15:00Z' });
+    check('2027 file already there: last year\'s is not read or copied', r.ok && !wy.calls.some((c) => /13_סיורי מפגעים\/2026\//.test(c)), wy.calls.filter((c) => /graph/.test(c)));
+    wy = world({ file, years: [2026] });
+    r = await runFile(ENV, 'xlsm', false, { now: '2026-12-31T20:00:00Z' });
+    check('in 2026: the 2026 folder, every row (4), no copy anywhere', r.ok && r.rows === 4 && wy.puts.every((p) => /\/2026\//.test(p.path)), [r.rows, wy.puts.map((p) => p.path)]);
+    wy = world({ file, years: [] });
+    const yi = await yearItem('t', 'ניהול סיורי מפגעים.xlsm', 'x', 2026, 'id');
+    check('the first year never copies from 2025', yi.mr.status === 404 && !yi.rolled && !wy.puts.length);
+
+    // Full: more rows than the sheet has prepared.
+    const many = Array.from({ length: 206 }, (_, i) => ({ id: 'm' + i, n: i + 1, d: '2026-09-01', tour_no: 1, dept: 'מעצבים', loc: '', descr: 'מפגע ' + i, sev: 'נמוכה', resp: '', due: null, s: 'פתוח', closed_d: null, notes: '' }));
+    wy = world({ file, years: [2026], hazards: many, reports: [] });
+    r = await runFileLocked(ENV, 'xlsm', true, { now: '2026-12-01T06:00:00Z' });
+    check('full: a Hebrew error (the tours screen and the watchdog show it), the file not written', !r.ok && /הקובץ מלא: 206 שורות/.test(r.error || '') && /הקובץ מלא/.test(wy.state.hazard_xlsm_err || '') && !wy.puts.some((p) => /\/ניהול סיורי מפגעים\.xlsm:\/content$/.test(p.path) && !/ארכיון/.test(p.path)), [r, wy.state.hazard_xlsm_err]);
+    check('the warning is at 80% of the 205 rows (164)', FULL_WARN === 164 && Math.ceil(205 * 0.8) === FULL_WARN);
+
+    // The monthly copy of December 2026 comes from, and goes to, 2026.
+    aw = arch({ state: { hazard_snap_month: '2026-11', hazard_prune_day: '2027-01-01' } });
+    ar = await runArchive(ENV, new Date('2027-01-01T08:00:00Z'));
+    check('1/1/2027: December\'s copy is read from 2026 and kept in 2026/ארכיון/חודשי', aw.puts.length === 1 && /2026\/ארכיון\/חודשי\/ניהול סיורי מפגעים - 12-2026\.xlsm:\/content/.test(aw.puts[0]) && aw.calls.some((c) => /GET .*2026\/ניהול סיורי מפגעים\.xlsm\?/.test(c)), [aw.puts, aw.calls.filter((c) => /xlsm\?/.test(c))]);
+    aw = arch({ state: { hazard_snap_month: '2026-12', hazard_prune_day: '2027-01-01' } });
+    ar = await runArchive(ENV, new Date('2027-01-02T08:00:00Z'));
+    check('from 2027 the old copies of both years are cleaned', aw.calls.some((c) => /2027\/ארכיון\/גרסאות שנדרסו:\/children/.test(c)) && aw.calls.some((c) => /2026\/ארכיון\/גרסאות שנדרסו:\/children/.test(c)), aw.calls.filter((c) => /children/.test(c)));
+
+    const src = (f) => fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), '../../functions/', f), 'utf8');
+    const hd = src('api/hazard-deck.js'), hr = src('api/hazard-report.js'), wd = src('_watchdog.js'), hf = src('api/hazard-file.js');
+    check('the deck moves with the year (yearItem), and is written in that year\'s folder', /yearItem\(token, DECK\.name, DECK\.type, ilYear/.test(hd) && /const FOLDER = folderFor\(ilYear/.test(hd) && !/import \{[^}]*\bFOLDER\b/.test(hd));
+    check('the department report reads this year\'s workbook, last year\'s until the copy exists', /book0\(ilYear\(\)\)/.test(hr) && /r\.status === 404\) r = await book0\(ilYear\(\) - 1\)/.test(hr));
+    check('the watchdog\'s numbers are the file\'s (205 rows, warn at 164)', /FILE_ROWS = 205, FULL_WARN = 164/.test(wd) && /MAX_ROW = 206/.test(hf));
+  }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
