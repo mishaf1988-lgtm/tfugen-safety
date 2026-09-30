@@ -23826,6 +23826,9 @@ function _odMirrorRecord(tbl,rec){
   }
 })();
 function _fileUpload(file,prefix,cb){
+  // No x-upsert (30/09/2026, upgrade review 19): the name is unique, and replacing
+  // a photo is for admin / manager only (storage policy), so a reporter's
+  // upload must never take the replace path.
   var isImg=/^image\//i.test(file.type);
   var fname=prefix+'-'+Date.now()+(isImg?'.jpg':('-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')));
   var url=SBU+'/storage/v1/object/'+_PHOTO_BUCKET+'/'+fname;
@@ -23833,7 +23836,7 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     _sbAuth().then(function(){
       if(!_sbToken)throw new Error('no session');
-      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'x-upsert':'true','cache-control':'max-age=31536000'},body:body});
+      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body});
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
