@@ -80,6 +80,7 @@ window.supabase = { createClient: function () {
       if (/sw\.js$/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: '' });
       return r.abort();
     });
+    if (o.clock) await p.clock.install();
     await p.goto(ORIGIN + '/', { waitUntil: 'commit' });
     // Wait for the boot to decide: only showLogin/hideLogin set an inline
     // display on #login, and the stylesheet default is flex.
@@ -306,6 +307,53 @@ window.supabase = { createClient: function () {
       return { isAdmin: _isAdmin, stamp: localStorage.getItem(k) };
     }, SEEN_KEY);
     check('tapping on the login screen does not start the clock', !r.isAdmin && !r.stamp, r);
+    await p.close();
+  }
+
+  // 30/09/2026 (Michael: «open for an hour, and it did not lock»): the check
+  // ran only when the page came back from the background. A page left open
+  // on the screen was never checked, and the first tap after the idle time
+  // renewed the stamp instead of locking.
+  console.log('\n8b. left open on the screen');
+  const age = (p, min) => p.evaluate(([k, ms]) => localStorage.setItem(k, String(Date.now() - ms)), [SEEN_KEY, min * MIN]);
+  {
+    const p = await boot({ idleMin: 1, clock: true });
+    await age(p, 45);
+    await p.clock.runFor(61000);
+    const r = await state(p);
+    check('open and untouched past 30 minutes: locks by itself', r.app === 'none' && r.isAdmin === false && r.signedOut > 0, r);
+    await p.close();
+  }
+  {
+    const p = await boot({ idleMin: 1, clock: true });
+    await age(p, 10);
+    await p.clock.runFor(61000);
+    const r = await state(p);
+    check('...but not before (10 minutes)', r.app === 'block' && r.isAdmin === true && r.signedOut === 0, r);
+    await p.close();
+  }
+  {
+    const p = await boot({ idleMin: 1 });
+    await age(p, 45);
+    const r = await p.evaluate(async () => {
+      let reached = 0;
+      document.body.addEventListener('pointerdown', () => { reached++; });
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      await new Promise((r2) => setTimeout(r2, 60));
+      return { reached, app: getComputedStyle(document.getElementById('app')).display, isAdmin: _isAdmin };
+    });
+    check('the first tap after 30 idle minutes locks, not renews', r.app === 'none' && r.isAdmin === false, r);
+    check('...and the tap does not reach the page', r.reached === 0, r);
+    await p.close();
+  }
+  {
+    // "every open" locks at boot, so sign in on 30 and switch while inside.
+    const p = await boot({ idleMin: 1, clock: true });
+    await p.evaluate((k) => localStorage.setItem(k, JSON.stringify({ lockMin: -1 })), PREFS_KEY);
+    await age(p, 5);
+    await p.clock.runFor(61000);
+    const r = await state(p);
+    check('"every open": reading on the screen for 5 minutes is not locked by the minute check', r.mins === -1 && r.isAdmin === true && r.app === 'block', r);
     await p.close();
   }
 
