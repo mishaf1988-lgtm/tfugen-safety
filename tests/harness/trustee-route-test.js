@@ -128,6 +128,7 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
     /חשמל - דני/.test(pdf.html) && /30\/09\/2026/.test(pdf.html) && /פנסי אזהרה/.test(pdf.html) && /חומר גלם/.test(pdf.html) && /על ידי לב/.test(pdf.html)
     && /<img id="wo-photo" src="https:\/\/sb\.co\/[^"]*r1\.jpg\?sig=1" alt="" style="display:block/.test(pdf.html) && /טופל בתאריך/.test(pdf.html) && /שם וחתימה/.test(pdf.html) && /תמונת "אחרי"/.test(pdf.html), (pdf.html || '').slice(0, 200));
   check('the toolbar shows on screen (not no-print, which the print window hides), is off on paper, and offers share / print / back', /class="wo-tools noprint"/.test(pdf.html) && !/class="no-print"/.test(pdf.html) && /@media print\{\.wo-tools/.test(pdf.html) && /_rptPdf\(this\)/.test(pdf.html) && /_tryPrint\(this\)/.test(pdf.html) && /_rptBack\(\)/.test(pdf.html), (pdf.html || '').slice(0, 600));
+  check('the company logo sits in the header, by an absolute URL', /<img src="[^"]*\/logo\.jpg" alt="" style="height:52px/.test(pdf.html), (pdf.html || '').match(/<img[^>]*logo[^>]*>/));
   check('the labels are painted readable (the app th rule is white on red)', /<th style="[^"]*color:#333/.test(pdf.html), (pdf.html || '').match(/<th[^>]*>/));
   check('the text is keyboard-only', !NON_KEYBOARD.test(pdf.html.replace(/<[^>]+>/g, '')), (pdf.html || '').replace(/<[^>]+>/g, '').match(NON_KEYBOARD));
   check('the note records the PDF send', pdf.upd === 1 && /\(PDF /.test(pdf.note), pdf.note);
