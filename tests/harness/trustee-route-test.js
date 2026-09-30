@@ -116,6 +116,8 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
     // today. This check asserts 30/09/2026 -- and passed on 23/09 only because
     // a week from THAT day was 30/09. From 24/09 main was red. Pin it.
     document.getElementById('tru-route-due').value = '2026-09-30';
+    // the signed link is cached by the route window; here _sign is stubbed so the test is offline
+    window._sign = function (u, cb) { cb(u ? u + '?sig=1' : ''); };
     window.__pdf = null; window._printViaWindow = function (on, hdr, title) { window.__pdf = { html: on.innerHTML, title }; return true; };
     window.__upd = [];
     _truRoutePdf();
@@ -124,8 +126,10 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
   check('titled as a work order for the finding', /הוראת עבודה - פנסי אזהרה/.test(pdf.title || ''), pdf.title);
   check('carries who, due, finding, area, reporter, the photo, signature lines and the after-photo instruction',
     /חשמל - דני/.test(pdf.html) && /30\/09\/2026/.test(pdf.html) && /פנסי אזהרה/.test(pdf.html) && /חומר גלם/.test(pdf.html) && /על ידי לב/.test(pdf.html)
-    && /<img src="https:\/\/sb\.co\/[^"]*r1\.jpg"/.test(pdf.html) && /טופל בתאריך/.test(pdf.html) && /שם וחתימה/.test(pdf.html) && /תמונת "אחרי"/.test(pdf.html), (pdf.html || '').slice(0, 200));
-  check('the print toolbar is hidden on paper (no-print) and the text is keyboard-only', /class="no-print"/.test(pdf.html) && !NON_KEYBOARD.test(pdf.html.replace(/<[^>]+>/g, '')), (pdf.html || '').replace(/<[^>]+>/g, '').match(NON_KEYBOARD));
+    && /<img id="wo-photo" src="https:\/\/sb\.co\/[^"]*r1\.jpg\?sig=1" alt="" style="display:block/.test(pdf.html) && /טופל בתאריך/.test(pdf.html) && /שם וחתימה/.test(pdf.html) && /תמונת "אחרי"/.test(pdf.html), (pdf.html || '').slice(0, 200));
+  check('the toolbar shows on screen (not no-print, which the print window hides), is off on paper, and offers share / print / back', /class="wo-tools noprint"/.test(pdf.html) && !/class="no-print"/.test(pdf.html) && /@media print\{\.wo-tools/.test(pdf.html) && /_rptPdf\(this\)/.test(pdf.html) && /_tryPrint\(this\)/.test(pdf.html) && /_rptBack\(\)/.test(pdf.html), (pdf.html || '').slice(0, 600));
+  check('the labels are painted readable (the app th rule is white on red)', /<th style="[^"]*color:#333/.test(pdf.html), (pdf.html || '').match(/<th[^>]*>/));
+  check('the text is keyboard-only', !NON_KEYBOARD.test(pdf.html.replace(/<[^>]+>/g, '')), (pdf.html || '').replace(/<[^>]+>/g, '').match(NON_KEYBOARD));
   check('the note records the PDF send', pdf.upd === 1 && /\(PDF /.test(pdf.note), pdf.note);
 
   console.log('\n6. a photo still waiting offline is not sent as a dead link');

@@ -16387,11 +16387,13 @@ function _printViaWindow(on,hdr,title){
     +'<title>'+esc(title)+'</title><style>'+css
     +'body{margin:0;padding:12px;background:#fff}'
     +'.page{display:block!important}'
-    +'.topbar,.bnav,.fab,.no-print,.modal,.overlay,#ai-fab,#emp-fab{display:none!important}'
+    +'.topbar,.bnav,.fab,.no-print:not(#rpt-msg),.modal,.overlay,#ai-fab,#emp-fab{display:none!important}'
     +'</style></head><body>'+hdrHtml+on.innerHTML+'</body></html>';
   try{w.document.open();w.document.write(html);w.document.close();}
   catch(e){toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4');return false;}
-  return true;
+  // The window itself, so a caller can still reach into it (the work order
+  // drops the signed photo in once the signature arrives). Truthy, as before.
+  return w;
 }
 window._viewCopy=function(tbl,id){
   try{
@@ -18727,6 +18729,8 @@ function _truRoutePhoto(r){var p=String(r.photo_url||'');return (p&&p.indexOf('p
 function _truRouteOpen(id){
   var r=_truFind(id);if(!r)return;
   _truRouteId=id;
+  // Warm the photo's signed link now, so the work order can carry it at once.
+  try{var p0=_truRoutePhoto(r);if(p0)_sign(p0,function(){});}catch(e){}
   var t=_truTask(r.t);
   var sum=g('tru-route-sum');
   if(sum)sum.innerHTML='<strong>'+esc(r.f||'')+'</strong><br>'+esc(_truLocOf(r))+' \u00b7 '+esc(t?t.t:'')+' \u00b7 '+fd(r.d)+(r.u?' \u00b7 '+esc(r.u):'');
@@ -18859,11 +18863,23 @@ function _truRouteVitre(){
 }
 function _truRoutePdfHtml(r,f){
   var t=_truTask(r.t),p=_truRoutePhoto(r),today=new Date().toISOString().substring(0,10);
-  function row(k,v){return v?'<tr><th style="text-align:right;padding:8px 10px;border:1px solid #ddd;background:#f6f6f6;width:130px;font-size:13px">'+k+'</th><td style="padding:8px 10px;border:1px solid #ddd;font-size:14px">'+v+'</td></tr>':'';}
+  // The bucket is private: the stored URL answers 400, so the photo was the
+  // browser's broken-image icon (Michael, 30/09/2026). _sign answers at once
+  // when the link is cached (the route window warms it), else _truRoutePdf
+  // drops it in after the page is open.
+  var signed='';if(p)_sign(p,function(x){signed=x||'';});
+  // color set inline: the app's th rule (white on red) came along with the
+  // stylesheet and painted the labels white on grey.
+  function row(k,v){return v?'<tr><th style="text-align:right;padding:8px 10px;border:1px solid #ddd;background:#f6f6f6;color:#333;width:130px;font-size:13px">'+k+'</th><td style="padding:8px 10px;border:1px solid #ddd;font-size:14px">'+v+'</td></tr>':'';}
   return '<div style="max-width:720px;margin:0 auto;padding:8px;color:#111">'
-    +'<div class="no-print" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.6">'
-    +'<button onclick="_tryPrint(this)" style="font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:0;background:#b91c1c;color:#fff;min-height:44px">\u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 PDF</button>'
-    +'<span style="margin-right:10px">\u05d1\u05d0\u05d9\u05d9\u05e4\u05d5\u05df: \u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05d9\u05ea\u05d5\u05e3, "\u05d4\u05d3\u05e4\u05e1", \u05d5\u05d0\u05d6 \u05e6\u05d1\u05d9\u05d8\u05d4 \u05e2\u05dc \u05d4\u05ea\u05e6\u05d5\u05d2\u05d4 \u05db\u05d3\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05db-PDF \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7.</span></div>'
+    // The toolbar was class no-print, which the print window hides on screen
+    // too (that rule is for app pages): no button, no way back, no share.
+    // noprint hides it on paper and during the PDF capture only.
+    +'<style>@media print{.wo-tools,#rpt-msg{display:none!important}}</style>'
+    +'<div class="wo-tools noprint" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.6">'
+    +'<button type="button" onclick="_rptPdf(this)" style="font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:0;background:#b91c1c;color:#fff;min-height:44px">\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8 PDF</button>'
+    +'<button type="button" onclick="_tryPrint(this)" style="font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:1px solid #b91c1c;background:#fff;color:#b91c1c;min-height:44px">\u05d4\u05d3\u05e4\u05e1</button>'
+    +'<button type="button" onclick="_rptBack()" style="font:inherit;font-weight:700;padding:10px 16px;border-radius:8px;border:1px solid #999;background:#fff;color:#333;min-height:44px;margin-right:auto">\u05d7\u05d6\u05e8\u05d4</button></div>'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #b91c1c;padding-bottom:8px;margin-bottom:14px">'
     +'<div><div style="font-size:24px;font-weight:900">\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4</div><div style="font-size:12px;color:#555">\u05ea\u05e4\u05d5\u05d2\u05df - \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div></div>'
     +'<div style="font-size:12px;color:#555;text-align:left">\u05de\u05e1\u05e4\u05e8: '+esc(r.id)+'<br>\u05d4\u05d5\u05e4\u05e7: '+fd(today)+'</div></div>'
@@ -18876,7 +18892,7 @@ function _truRoutePdfHtml(r,f){
     +row('\u05d3\u05d5\u05d5\u05d7',fd(r.d)+(r.u?' \u05e2\u05dc \u05d9\u05d3\u05d9 '+esc(r.u):''))
     +row('\u05d4\u05e0\u05d7\u05d9\u05d5\u05ea',esc(f.notes||''))
     +'</table>'
-    +(p?'<img src="'+esc(p)+'" alt="" style="display:block;max-width:100%;max-height:440px;border-radius:8px;margin:14px auto 0">':'')
+    +(p?'<img id="wo-photo" src="'+esc(signed)+'" alt="" style="display:'+(signed?'block':'none')+';max-width:100%;max-height:440px;border-radius:8px;margin:14px auto 0">':'')
     +'<div style="display:flex;gap:16px;margin-top:22px;font-size:13px">'
     +'<div style="flex:1;border:1px solid #bbb;border-radius:8px;padding:12px;min-height:64px">\u05d8\u05d5\u05e4\u05dc \u05d1\u05ea\u05d0\u05e8\u05d9\u05da: ____________</div>'
     +'<div style="flex:1;border:1px solid #bbb;border-radius:8px;padding:12px;min-height:64px">\u05e9\u05dd \u05d5\u05d7\u05ea\u05d9\u05de\u05d4: ____________</div></div>'
@@ -18886,7 +18902,11 @@ function _truRoutePdfHtml(r,f){
 function _truRoutePdf(){
   var r=_truFind(_truRouteId);if(!r)return;var f=_truRouteRead();
   var d=document.createElement('div');d.innerHTML=_truRoutePdfHtml(r,f);
-  if(_printViaWindow(d,null,'\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 - '+(r.f||'')))_truRouteNote(r,f,'PDF');
+  var w=_printViaWindow(d,null,'\u05d4\u05d5\u05e8\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 - '+(r.f||''));
+  if(!w)return;
+  var p=_truRoutePhoto(r);
+  if(p&&w!==true)_sign(p,function(x){try{var im=w.document.getElementById('wo-photo');if(im&&x&&!im.getAttribute('src')){im.src=x;im.style.display='block';}}catch(e){}});
+  _truRouteNote(r,f,'PDF');
 }
 function _truMgrNote(id){
   var r=_truFind(id);if(!r)return;
