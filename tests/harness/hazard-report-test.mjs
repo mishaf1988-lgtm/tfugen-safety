@@ -96,7 +96,8 @@ const ROWS = [
   check('viewer: refused, nothing sent', c.status === 403 && !c.w.mails.length, c);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   const pg = c.j && c.j.reports && c.j.reports.find((x) => x.dept === 'חומר גלם');
-  check('preview: 5 departments, recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 5 && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
+  check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
+  check('אחזקה with no row in the recipients sheet: no one to send to (sending skips it, never guesses)', c.j.reports[5].to.length === 0, c.j.reports[5]);
   check('reads the folder-13 xlsm', /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:\/content/.test(c.w.read || ''), c.w.read);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם', 'תוצג'] });
   const mail = c.w.mails[0] && c.w.mails[0].message;

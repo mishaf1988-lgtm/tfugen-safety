@@ -97,15 +97,28 @@ export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e
 // the file) -> the report's department. ONE map, the same object as AREA_DEPT
 // in index.html (area-dept-map-test.mjs fails if they differ). Spellings of
 // the departments, and the areas Michael assigned on 29/09/2026: packing and
-// peeling to production, the lab to the labs; yard, waste water and
-// infrastructure to no department (null): only he sees them, in red.
-export const AREA_DEPT = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': null, '\u05e9\u05e4\u05db\u05d9\u05dd': null, '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': null };
+// peeling to production, the lab to the labs. Yard, waste water and
+// infrastructure were "no department" until 30/09/2026, when Michael moved
+// them to maintenance («a classic finding for maintenance»): אחזקה is a sixth
+// department of the department report (REPORT_DEPTS). The deck and the
+// meeting data keep the five (DEPTS): the deck's chart has five columns.
+// An area not in the map is still no department (null), shown in red.
+export const AREA_DEPT = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05e9\u05e4\u05db\u05d9\u05dd': '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': '\u05d0\u05d7\u05d6\u05e7\u05d4' };
+export const MAINT = '\u05d0\u05d7\u05d6\u05e7\u05d4';
+export const REPORT_DEPTS = DEPTS.concat([MAINT]);
 export const NO_DEPT = '\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4';
 // A department of the report, or null (no department / an area not in the map).
+// Several areas ("A + B", a trustee picked two; 30/09/2026): maintenance when one of them
+// is a maintenance area (Michael: that finding is maintenance's), else the
+// first one that has a department.
 export function deptOf(name) {
   const h = String(name || '').trim();
-  if (DEPTS.indexOf(h) >= 0) return h;
-  return Object.prototype.hasOwnProperty.call(AREA_DEPT, h) ? AREA_DEPT[h] : null;
+  if (REPORT_DEPTS.indexOf(h) >= 0) return h;
+  if (Object.prototype.hasOwnProperty.call(AREA_DEPT, h)) return AREA_DEPT[h];
+  const parts = h.split(/\s*\+\s*/).filter(Boolean);
+  if (parts.length < 2) return null;
+  const ds = parts.map((x) => deptOf(x));
+  return ds.indexOf(MAINT) >= 0 ? MAINT : ds.find((d) => d) || null;
 }
 const TRUSTEE_DUE_DAYS = 3;
 const MAX_AI = 3; // assistant calls per run (subrequest budget)
@@ -138,7 +151,8 @@ export function trusteeDept(loc) {
   const d = deptOf(head);
   // No department: "\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4" in column D (no department's report takes it), the area kept in E.
   if (!d) return { dept: NO_DEPT, loc: head && rest !== head ? head + (rest ? ' \u00b7 ' + rest : '') : rest };
-  return { dept: d, loc: rest };
+  // Two areas ("A + B"): both kept in the place column, the department is one of them.
+  return { dept: d, loc: /\+/.test(head) && rest !== head ? head + (rest ? ' \u00b7 ' + rest : '') : rest };
 }
 
 // Pure: the merged register, as rows of columns A..M.
