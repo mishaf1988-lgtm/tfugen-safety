@@ -18,8 +18,8 @@ for m in _xlsx _onedrive _closelink _xlsxpatch _ai _meeting _pptx _deckpatch _wa
 sed -i "s#'./api/hazard-file.js'#'./hazard-file.mjs'#" _build/_meeting.mjs
 sed -i "s#'./_xlsxpatch.js'#'./_xlsxpatch.mjs'#" _build/_pptx.mjs _build/_deckpatch.mjs
 sed -i "s#'./_onedrive.js'#'./_onedrive.mjs'#" _build/_watchdog.mjs
-for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read hazard-report meeting-data hazard-deck; do
-  sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
+for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read hazard-report meeting-data hazard-deck weekly-digest; do
+  sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 filter="${1:-}"; fail=0
 # The only two scripts that legitimately print a report instead of a pass/fail
