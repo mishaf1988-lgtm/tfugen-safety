@@ -3353,10 +3353,64 @@ function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x)
 var _APP_BUILD='2026-09-22.v1';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+// ---- Cloudflare Turnstile (30/09/2026, security review, finding 4) ----
+// Anyone holding the publishable key can mint anonymous sessions for free;
+// Turnstile makes each one cost a bot check. Empty key = OFF: no script, no
+// widget, every sign-in exactly as before. The Sitekey is public and belongs
+// here; the Secret goes ONLY into Supabase > Authentication > Bot and Abuse
+// Protection. Once that toggle is on, Supabase demands the token on EVERY
+// sign-in (the anonymous kiosk AND the password login), so the order is:
+// key here > deploy > toggle. Turning the toggle off restores everything
+// without a code change. Tokens are single-use and expire in 5 minutes, so a
+// fresh widget runs before each sign-in. It stays invisible unless Cloudflare
+// decides it needs the person to click.
+var TURNSTILE_SITEKEY='';
+var _tsLoad=null,_tsWidget=null;
+function _captchaScript(){
+  if(typeof turnstile!=='undefined')return Promise.resolve();
+  if(_tsLoad)return _tsLoad;
+  _tsLoad=new Promise(function(res,rej){
+    var s=document.createElement('script');
+    s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async=true;s.defer=true;
+    var t=setTimeout(function(){rej(new Error('turnstile timeout'));},8000);
+    s.onload=function(){clearTimeout(t);res();};
+    s.onerror=function(){clearTimeout(t);rej(new Error('turnstile load failed'));};
+    document.head.appendChild(s);
+  }).catch(function(e){_tsLoad=null;throw e;});
+  return _tsLoad;
+}
+// Resolves with a token, or null when the key is empty or the widget cannot
+// run (offline, blocked). Never rejects: the sign-in goes ahead without a
+// token and Supabase says clearly whether it needed one.
+function _captcha(){
+  if(!TURNSTILE_SITEKEY)return Promise.resolve(null);
+  return _captchaScript().then(function(){
+    return new Promise(function(res){
+      var el=g('captcha');
+      if(!el){el=document.createElement('div');el.id='captcha';el.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:10060;';document.body.appendChild(el);}
+      var done=false,t=null;
+      function fin(tok){if(done)return;done=true;clearTimeout(t);res(tok||null);}
+      t=setTimeout(function(){fin(null);},120000);
+      try{
+        if(_tsWidget!==null){try{turnstile.remove(_tsWidget);}catch(e){}_tsWidget=null;}
+        _tsWidget=turnstile.render(el,{sitekey:TURNSTILE_SITEKEY,appearance:'interaction-only',language:'auto',callback:function(tok){fin(tok);},'error-callback':function(){fin(null);},'expired-callback':function(){fin(null);}});
+      }catch(e){fin(null);}
+    });
+  }).catch(function(){return null;});
+}
+// Password sign-in credentials, with the token attached when there is one.
+function _pwCreds(email,pw,tok){var c={email:email,password:pw};if(tok)c.options={captchaToken:tok};return c;}
+// Page open: pick up a saved session (so the token is ready before the first
+// read) WITHOUT minting an anonymous user. Until 30/09/2026 every visit to the
+// login screen, and every lock and unlock, created one (1,122 rows in
+// auth.users); the kiosk gets its anonymous session at its own gate, where
+// _sbAuth runs.
+function _sbWarm(){_sbBoot();if(!_sbClient)return Promise.resolve(null);return _sbClient.auth.getSession().then(function(r){var s=r.data&&r.data.session;if(s)_sbToken=s.access_token;return s||null;}).catch(function(){return null;});}
 var SB_ON=false;
 var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
 function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
-function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _sbClient.auth.signInAnonymously().then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
+function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
@@ -4011,7 +4065,7 @@ document.addEventListener('keydown',function(ev){
     t.click();
   }
 });
-document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbAuth().catch(function(){});_autoAriaLabels();setTimeout(_autoAriaLabels,1500);setTimeout(function(){if(typeof _odIsConnected==='function'&&_odIsConnected()&&typeof _odAutoPollStart==='function')_odAutoPollStart();},2000);});
+document.addEventListener('DOMContentLoaded',function(){_obSanitize();_obBadge();_sbWarm();_autoAriaLabels();setTimeout(_autoAriaLabels,1500);setTimeout(function(){if(typeof _odIsConnected==='function'&&_odIsConnected()&&typeof _odAutoPollStart==='function')_odAutoPollStart();},2000);});
 // Last-resort cache reset: unregister every Service Worker, delete every
 // Cache Storage entry, then hard-reload. Triggered from syncDiag.
 window._forceFreshLoad=function(){
@@ -17123,7 +17177,7 @@ window._changePwSubmit=function(){
   // Verify current password, then update.
   // Checking the current password signs in again, and for someone with a second
   // factor that new session is password-only: the code is asked for again here.
-  _sbClient.auth.signInWithPassword({email:email,password:cur}).then(_mfaAfterPw).then(function(r){
+  _captcha().then(function(tok){return _sbClient.auth.signInWithPassword(_pwCreds(email,cur,tok));}).then(_mfaAfterPw).then(function(r){
     if(r&&r.mfaCancelled)throw new Error('mfa-cancel');
     if(r.error||!r.data||!r.data.session)throw new Error('bad-current');
     _sbToken=r.data.session.access_token;
@@ -17590,7 +17644,7 @@ function doLogin(){
       :'\u05e1\u05e4\u05e8\u05d9\u05d9\u05ea \u05d4\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4 (Supabase). \u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3; \u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8 \u2014 \u05d7\u05e1\u05dd \u05e8\u05e9\u05ea \u05d0\u05d5 \u05d7\u05d5\u05e1\u05dd \u05e4\u05e8\u05e1\u05d5\u05de\u05d5\u05ea.',true);
     return;
   }
-  _sbClient.auth.signInWithPassword({email:email,password:val}).then(_mfaAfterPw).then(function(r){
+  _captcha().then(function(tok){return _sbClient.auth.signInWithPassword(_pwCreds(email,val,tok));}).then(_mfaAfterPw).then(function(r){
     if(r&&r.mfaCancelled){
       try{_sbClient.auth.signOut();}catch(e){}
       _sbToken=null;_sbAuthPromise=null;

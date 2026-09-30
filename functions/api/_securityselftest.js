@@ -207,7 +207,7 @@ export async function onRequest({ request }) {
         pushCheck({
           id: 'anonymous_session',
           expected: 'a throwaway anonymous session to test with',
-          got: 'could not create one (anonymous sign-in may be off, which is itself good news)',
+          got: 'could not create one (anonymous sign-in may be off, or CAPTCHA is on and this endpoint has no token: both are good news)',
           verdict: '⚠'
         });
       } else {
@@ -499,8 +499,11 @@ export async function onRequest({ request }) {
         pushCheck({
           id: 'anon_signin',
           expected: 'an anonymous session can be created (this is what the kiosk does)',
-          got: anonTok ? 'got a token' : ('no token — HTTP ' + su.status),
-          verdict: verdict(!!anonTok)
+          // With CAPTCHA on (Turnstile, 30/09/2026) Supabase refuses a
+          // sign-in without a token, and this endpoint cannot solve one.
+          // That refusal is the protection working, not a failure.
+          got: anonTok ? 'got a token' : ('no token — HTTP ' + su.status + (su.status === 400 || su.status === 403 || su.status === 422 ? ' (CAPTCHA on? then the anonymous checks below did not run)' : '')),
+          verdict: anonTok ? '✓' : '⚠'
         });
       } catch (e) {
         pushCheck({ id: 'anon_signin', expected: 'anonymous sign-in', got: 'fetch failed', verdict: '⚠' });
