@@ -119,8 +119,11 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     const div = document.getElementById('thz-file') || (() => { const d = document.createElement('div'); d.id = 'thz-file'; document.body.appendChild(d); return d; })();
     const a = { n: 'נ-9', r: 12, ci: -1, val: 'ליקוי מהקובץ', why: 'tru_new', at: '2026-09-20T08:00:00Z' };
     const b = { n: '4', r: 5, ci: 6, val: 'גבוהה', why: 'keep', id: 'h:th-4', at: '2026-09-29T08:00:00Z' };
+    // Chrome check 30/09: an item stored before the reasons, already fixed in the app, stayed listed
+    DB.tour_hazards = (DB.tour_hazards || []).concat([{ id: 'hz9', n: 9, dept: 'תוצג', descr: 'כבר תוקן', due: '2026-10-01', s: 'פתוח' }]);
+    const held = { n: '9', r: 10, ci: 9, val: '2026-10-01' }, legacy = { n: '9', r: 10, ci: 9, val: '2026-10-20' };
     _thzFile = { configured: true, connected: true, files: {
-      xlsm: { last: new Date().toISOString(), dropped: { at: '2026-09-29T08:00:00Z', items: [a, b] } },
+      xlsm: { last: new Date().toISOString(), dropped: { at: '2026-09-29T08:00:00Z', items: [a, b, held, legacy] } },
       xlsx: { dropped: { at: '2026-09-29T08:00:00Z', items: [a] } } } };
     _thzFileRender();
     const box = () => document.getElementById('thz-dropped');
@@ -132,8 +135,9 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     return res;
   });
   check('an item older than a week is still listed (the list collects), with its date', /ליקוי מהקובץ/.test(dr.txt || '') && /20\/09\/2026/.test(dr.txt), dr.txt);
-  check('each item says why it was not taken', /ליקוי נאמן נפתח רק מהאפליקציה/.test(dr.txt || '') && /עמודה שנקבעת באפליקציה/.test(dr.txt) && /\(2\)/.test(dr.txt), dr.txt);
-  check('the same item in both files is listed once, with a "טופל" button per item', dr.btns === 2, dr.btns);
+  check('each item says why it was not taken', /ליקוי נאמן נפתח רק מהאפליקציה/.test(dr.txt || '') && /עמודה שנקבעת באפליקציה/.test(dr.txt) && /\(3\)/.test(dr.txt), dr.txt);
+  check('an item the app already holds is not listed; an older item without a reason says so; a date reads DD/MM/YYYY', !/01\/10\/2026/.test(dr.txt || '') && /"20\/10\/2026"/.test(dr.txt) && /נרשם לפני שנוספו הסיבות/.test(dr.txt) && !/2026-10-20/.test(dr.txt), dr.txt);
+  check('the same item in both files is listed once, with a "טופל" button per item', dr.btns === 3, dr.btns);
   check('"טופל" dismisses it in both files, and it leaves the list', dr.calls.length === 2 && dr.calls.every((c) => c.op === 'dismiss' && c.key === 'נ-9|-1|ליקוי מהקובץ') && dr.calls.map((c) => c.file).sort().join() === 'xlsm,xlsx' && !/ליקוי מהקובץ/.test(dr.after || '') && /גבוהה/.test(dr.after), [dr.calls, dr.after]);
 
   console.log('\n6. overdue hazards in "היום", escalation, "חסר יעד" (upgrade review 2, 29/09)');
@@ -181,7 +185,7 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   check('overdue: tour hazards and an open trustee finding past its due, oldest first; closed, routed-to-a-task and not-yet-due ones left out', od.ids.join() === 'c!,a!,b,t1,d', od.ids);
   check('escalation: high severity over 7 days (a) and any hazard over 30 (c); high at 5 days (d) and medium at 10 (b) not', od.ids.includes('a!') && od.ids.includes('c!') && od.ids.includes('d') && od.ids.includes('b'), od.ids);
   const lateRow = od.today.find((t) => /מפגעים באיחור/.test(t)) || '';
-  check('"היום": one line, 5 overdue, 2 escalated, by responsible, the oldest in days, badge "הסלמה"', /5 מפגעים באיחור \(2 בהסלמה\)/.test(lateRow) && /אחזקה 2/.test(lateRow) && /הוותיק: 40 ימים/.test(lateRow) && /הסלמה/.test(lateRow), od.today);
+  check('"היום": one line, 5 overdue, 2 escalated, by responsible, the oldest in days, badge "הסלמה"', /5 מפגעים באיחור \(2 בהסלמה\)/.test(lateRow) && /4 מסיורים, 1 מליקויי נאמנים/.test(lateRow) && /אחזקה 2/.test(lateRow) && /מנהל המחלקה 1/.test(lateRow) && !/מעבדה 1|מעבדות 1/.test(lateRow) && /הוותיק: 40 ימים/.test(lateRow) && /הסלמה/.test(lateRow), od.today);
   check('"היום": a line for tour hazards without a due, badge "חסר יעד"', od.today.some((t) => /מפגע סיור אחד בלי יעד לטיפול/.test(t) && /חסר יעד/.test(t)), od.today);
   check('tours screen: counts escalated and without a due on top', /2 בהסלמה/.test(od.sum) && /1 בלי יעד/.test(od.sum), od.sum);
   check('tours screen: filters "בהסלמה" and "בלי יעד"', od.opts.includes('esc') && od.opts.includes('nodue') && od.escRows === 2 && /גבוהה 10 ימים/.test(od.escTxt) && /נמוכה 40 ימים/.test(od.escTxt) && /בלי יעד/.test(od.nodueTxt) && !/גבוהה 10/.test(od.nodueTxt), [od.escRows, od.nodueTxt.slice(0, 80)]);
