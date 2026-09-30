@@ -124,6 +124,8 @@ export async function onRequest(context) {
   try {
     const s3Now = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(body.s3 || '')) ? body.s3 : null;
     const r = await runLeased(env, 'deck', 120000, () => runDeck(env, body.force === true || !!s3Now, s3Now));
+    // Proof of life for the sync watchdog (_watchdog.js).
+    if (r && r.ok && !r.busy) await stateSet(env, { deck_ok_at: new Date().toISOString() }).catch(() => {});
     return jsonResp(r && r.busy ? { ok: true, pushed: false, reason: 'busy' } : r, 200, cors);
   }
   catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }

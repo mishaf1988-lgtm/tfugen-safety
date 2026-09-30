@@ -42,6 +42,7 @@ import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_s
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { suggestAction } from '../_ai.js';
+import { runWatch, WATCH_KEY } from '../_watchdog.js';
 
 export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
 export const FILES = {
@@ -704,7 +705,11 @@ export function stampMonth(name, ym) {
 const LEASE_MS = 120000;
 export async function runFileLocked(env, which, force) {
   const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => runFile(env, which, force));
-  return r && r.busy ? { ok: true, file: which, pushed: false, reason: 'busy' } : r;
+  if (r && r.busy) return { ok: true, file: which, pushed: false, reason: 'busy' };
+  // Proof of life for the sync watchdog (_watchdog.js): a run that finished,
+  // written or unchanged, means the file and the app agree.
+  if (r && r.ok) await stateSet(env, { ['hazard_' + which + '_ok_at']: new Date().toISOString() }).catch(() => {});
+  return r;
 }
 
 export async function onRequest(context) {
@@ -722,13 +727,17 @@ export async function onRequest(context) {
     if (body.op === 'status') {
       const keys = [];
       Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url', 'dropped'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
+      keys.push(WATCH_KEY);
       const s = await stateGet(env, keys).catch(() => ({}));
       const v = (k) => (s[k] && s[k].value) || null;
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       const files = {};
       const dj = (k) => { try { return JSON.parse(v('hazard_' + k + '_dropped') || 'null'); } catch (e) { return null; } };
       Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url'), dropped: dj(k) }; });
-      return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files }, 200, cors);
+      // The sync watchdog's open problems, for the home screen: also when the
+      // mail could not go out (the Microsoft connection is what broke).
+      let watch = null; try { const w = JSON.parse(v(WATCH_KEY) || 'null'); if (w) watch = { at: w.at, mailErr: w.mail_err || '', open: Object.keys(w.open || {}).map((k) => ({ key: k, title: w.open[k].title, detail: w.open[k].detail, since: w.open[k].since })) }; } catch (e) { watch = null; }
+      return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files, watch }, 200, cors);
     }
     // "\u05d8\u05d5\u05e4\u05dc" on an item of the not-taken list.
     if (body.op === 'dismiss') {
@@ -750,6 +759,11 @@ export async function onRequest(context) {
     force = body.force === true;
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
+  // The sync watchdog (upgrade review 12): the tick's own request, below.
+  if (body.op === 'watch') {
+    if (/^Bearer\s+\S/i.test(request.headers.get('authorization') || '')) return jsonResp({ error: 'forbidden' }, 403, cors);
+    try { return jsonResp(await runWatch(env, new URL('/', request.url).toString()), 200, cors); } catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }
+  }
   if (body.op === 'archive') {
     try { return jsonResp(await runArchive(env, new Date()), 200, cors); } catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }
   }
@@ -761,6 +775,14 @@ export async function onRequest(context) {
       context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
         body: JSON.stringify({ op: 'archive' }),
+      }).catch(() => {}));
+    }
+    // The sync watchdog (_watchdog.js), in its own request: it reads what the
+    // previous runs left, so it does not wait for this one.
+    if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
+      context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': env.TRUSTEE_NOTIFY_SECRET },
+        body: JSON.stringify({ op: 'watch' }),
       }).catch(() => {}));
     }
     // The notification retry (trustee-notify.js op:'retry', upgrade review 10)

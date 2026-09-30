@@ -335,6 +335,8 @@ export async function onRequest(context) {
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {
     const r = await runLog(env, force);
+    // Proof of life for the sync watchdog (_watchdog.js).
+    if (r && r.ok) await stateSet(env, { trustee_log_ok_at: new Date().toISOString() }).catch(() => {});
     // More photos than one write may copy: call ourselves again (a new request,
     // a new subrequest budget) until none is pending. Only after progress, so a
     // photo that keeps failing cannot loop.
