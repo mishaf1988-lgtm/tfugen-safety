@@ -15456,7 +15456,7 @@ function _askBuildSnapshot(){
   s.expirations_30d=exp.slice(0,15);
   // Trustee reports (27/09): findings open/closed, and the open ones by age.
   var tru=(DB.trustee_reports||[]).filter(function(r){return r&&r.id;});
-  var truF=tru.filter(function(r){return parseInt(r.t,10)!==TRUSTEE_TASK_CLOSE&&r.ok===false;});
+  var truF=tru.filter(function(r){return parseInt(r.t,10)!==TRUSTEE_TASK_CLOSE&&r.ok===false&&!(typeof _truNotRel==='function'&&_truNotRel(r));});
   var truOpen=truF.filter(function(r){return r.s!==TRUSTEE_S_CLOSED;});
   s.counts.trustee_reports_total=tru.length;
   s.counts.trustee_reports_30d=tru.filter(function(r){var t=Date.parse(r.ts||r.d||'');return !isNaN(t)&&(nowMs-t)/86400000<=30;}).length;
@@ -17819,21 +17819,30 @@ function _truSyncNumbers(){
 function _truMonthKey(d){return String(d||'').substring(0,7);}
 function _truThisMonth(){return new Date().toISOString().substring(0,7);}
 function _truRowMonth(r){return r.m||_truMonthKey(r.d);}
-function _truIsHazard(r){var t=parseInt(r.t,10);return r.ok===false&&!!_truTask(t)&&t!==TRUSTEE_TASK_CLOSE;}
+// «לא ליקוי» (30/09/2026, Michael: a trustee reports something that is not a
+// deficiency, for the points): the manager marks it and the app treats it as
+// if it was never reported: no task credit, no closing points, out of every
+// count, list and the ISO evidence; shown grey. Written in the convention the
+// server already reads (hazard-file.js notRelevant, _mfTruFindings here):
+// closed + a manager note starting «לא רלוונטי». The number (נ-k) stays.
+function _truNotRel(r){return !!r&&/^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String(r.mgr_note||''));}
+function _truIsHazard(r){var t=parseInt(r.t,10);return r.ok===false&&!!_truTask(t)&&t!==TRUSTEE_TASK_CLOSE&&!_truNotRel(r);}
 // All reports of one month (any trustee).
 function _truRows(m){return (DB.trustee_reports||[]).filter(function(r){return r&&_truRowMonth(r)===m;});}
 // Score card for one trustee in one month \u2014 exactly the rules in the document:
 // 10 per distinct task reported (max 80), 2 per hazard reported that month
 // and closed (max 20), eligible for the prize from 5 tasks.
 function _truScore(u,m){
-  var rows=_truRows(m).filter(function(r){return (r.u||'')===u;});
+  var all=_truRows(m).filter(function(r){return (r.u||'')===u;});
+  // A finding marked «לא ליקוי» earns nothing: not the task, not the closing.
+  var rows=all.filter(function(r){return !_truNotRel(r);}),notRel=all.length-rows.length;
   var tasks={};rows.forEach(function(r){var t=parseInt(r.t,10);if(_truTask(t))tasks[t]=1;});
   var nTasks=Object.keys(tasks).length;
   var closed=rows.filter(function(r){return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;}).length;
   var open=rows.filter(function(r){return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;}).length;
   var ptsTasks=Math.min(nTasks*TRUSTEE_PTS_TASK,_truMaxTaskPts());
   var ptsClosed=Math.min(closed*TRUSTEE_PTS_CLOSED,TRUSTEE_MAX_CLOSED_PTS);
-  return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=_truMinTasks(),reports:rows.length};
+  return {u:u,m:m,tasks:tasks,nTasks:nTasks,closed:closed,open:open,ptsTasks:ptsTasks,ptsClosed:ptsClosed,total:ptsTasks+ptsClosed,eligible:nTasks>=_truMinTasks(),reports:rows.length,notRel:notRel};
 }
 // ---- phase 2: the announced monthly winner ----
 // One row per month in DB.trustee_winners, id 'win_YYYY-MM' so re-announcing
@@ -17955,6 +17964,7 @@ function _truBack(){
 function _truMonthLabel(m){try{var p=String(m).split('-');return new Date(parseInt(p[0],10),parseInt(p[1],10)-1,1).toLocaleDateString('he-IL',{month:'long',year:'numeric'});}catch(e){return m;}}
 function _truStatusBadge(r){
   if(r.ok!==false)return '<span class="b bG">\u05ea\u05e7\u05d9\u05df</span>';
+  if(_truNotRel(r))return '<span class="b" style="background:#e5e7eb;color:#4b5563" title="\u05dc\u05d0 \u05e0\u05d7\u05e9\u05d1 \u05dc\u05e0\u05d9\u05e7\u05d5\u05d3">\u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9</span>';
   return r.s===TRUSTEE_S_CLOSED?'<span class="b bG">\u05e0\u05e1\u05d2\u05e8</span>':'<span class="b bR">\u05e4\u05ea\u05d5\u05d7</span>';
 }
 function _truDaysLeft(){var d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate();}
@@ -18458,12 +18468,12 @@ function rTrustees(){
   _truSyncNumbers();
   var mEl=g('tru-mgr-month');if(mEl)mEl.textContent=_truMonthLabel(m);
   var rows=_truRows(m);
-  var open=0,closed=0,okN=0;
-  rows.forEach(function(r){if(_truIsHazard(r)){if(r.s===TRUSTEE_S_CLOSED)closed++;else open++;}else okN++;});
+  var open=0,closed=0,okN=0,nr=0;
+  rows.forEach(function(r){if(_truIsHazard(r)){if(r.s===TRUSTEE_S_CLOSED)closed++;else open++;}else if(_truNotRel(r))nr++;else okN++;});
   var sum=g('tru-mgr-summary');
   if(sum){
     function pill(key,label,n,color,bg,txt){var on=(_truMgrF===key);return '<button onclick="_truMgrSetFilter(\''+key+'\')" title="\u05dc\u05d7\u05e5 \u05dc\u05e1\u05d9\u05e0\u05d5\u05df" style="font-family:inherit;cursor:pointer;border-radius:16px;padding:10px 12px;min-height:44px;font-size:13px;font-weight:700;border:2px solid '+color+';background:'+(on?color:bg)+';color:'+(on?'#fff':txt)+'">'+label+': '+n+'</button>';}
-    sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('unver','\u05e0\u05e1\u05d2\u05e8\u05d5, \u05d8\u05e8\u05dd \u05e0\u05d1\u05d3\u05e7\u05d5',_truUnverified(m).length,'#b45309','#fef3c7','#92400e')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
+    sum.innerHTML=pill('open','\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',open,'#cc1f1f','#fce4e4','#991b1b')+pill('closed','\u05e0\u05e1\u05d2\u05e8\u05d5',closed,'#16a34a','#dcfce7','#15803d')+pill('unver','\u05e0\u05e1\u05d2\u05e8\u05d5, \u05d8\u05e8\u05dd \u05e0\u05d1\u05d3\u05e7\u05d5',_truUnverified(m).length,'#b45309','#fef3c7','#92400e')+pill('ok','\u05ea\u05e7\u05d9\u05e0\u05d9\u05dd',okN,'#2563eb','#dbeafe','#1e40af')+(nr?pill('notrel','\u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9',nr,'#6b7280','#e5e7eb','#374151'):'')+pill('all','\u05d4\u05db\u05dc',rows.length,'#475569','#f1f5f9','#334155');
   }
   var board=_truBoard(m);
   var bEl=g('tru-mgr-board');
@@ -18480,7 +18490,7 @@ function rTrustees(){
     else bEl.innerHTML=winHtml+board.map(function(x,i){
       var medal=i===0?'\ud83e\udd47':i===1?'\ud83e\udd48':i===2?'\ud83e\udd49':(i+1)+'.';
       var chips=_truTasksActive().map(function(t){return '<span title="'+esc(t.t)+'" style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:11px;font-weight:700;'+(x.tasks[t.n]?'background:#16a34a;color:#fff':'background:#f1f5f9;color:#94a3b8')+'">'+t.n+'</span>';}).join(' ');
-      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+_truMinTasks()+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
+      return '<div class="tru-board-row" data-tru-u="'+esc(x.u)+'" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0"><div style="font-size:20px;width:30px;text-align:center;flex:none">'+medal+'</div><div style="flex:1;min-width:0"><strong>'+esc(x.u)+'</strong> '+(x.eligible?'<span class="b bG">\u05d6\u05db\u05d0\u05d9/\u05ea \u05dc\u05e4\u05e8\u05e1</span>':'<span class="b bY">'+x.nTasks+'/'+_truMinTasks()+' \u05dc\u05d6\u05db\u05d0\u05d5\u05ea</span>')+'<div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap">'+chips+'</div><div style="font-size:11px;color:var(--t2);margin-top:3px">\u05de\u05e9\u05d9\u05de\u05d5\u05ea '+x.ptsTasks+' \u00b7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 '+x.closed+' (+'+x.ptsClosed+') \u00b7 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd '+x.open+(x.notRel?' \u00b7 <span style="color:#b45309" title="\u05dc\u05d0 \u05e0\u05d7\u05e9\u05d1 \u05dc\u05e0\u05d9\u05e7\u05d5\u05d3">\u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9 '+x.notRel+'</span>':'')+(x.wins?'':' \u00b7 \u05d8\u05e8\u05dd \u05d6\u05db\u05d4')+'</div></div><div style="font-size:24px;font-weight:900;flex:none">'+x.total+'</div></div>';
     }).join('');
   }
   var cov=g('tru-mgr-cov'),covCard=g('tru-mgr-cov-card');
@@ -18499,7 +18509,8 @@ function rTrustees(){
     if(_truMgrF==='open')return _truIsHazard(r)&&r.s!==TRUSTEE_S_CLOSED;
     if(_truMgrF==='closed')return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED;
     if(_truMgrF==='unver')return _truIsHazard(r)&&r.s===TRUSTEE_S_CLOSED&&!r.verified_by;
-    if(_truMgrF==='ok')return !_truIsHazard(r);
+    if(_truMgrF==='ok')return !_truIsHazard(r)&&!_truNotRel(r);
+    if(_truMgrF==='notrel')return _truNotRel(r);
     return true;
   }).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">'+(_truMgrF==='open'?'\u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea')+'</td></tr>';return;}
@@ -18542,6 +18553,10 @@ function _truRowMenu(anchor,id){
       item('\ud83d\udccc','\u05d4\u05e2\u05e8\u05ea \u05e0\u05d9\u05ea\u05d5\u05d1',function(){_truMgrNote(id);});
       item('\ud83d\udee0','\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea',function(){_truMgrAction(id);});
       item('\ud83d\udce4','\u05e9\u05dc\u05d7 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc (\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 / \u05de\u05d9\u05d9\u05dc / PDF)',function(){_truRouteOpen(id);});
+      item('\ud83d\udeab','\u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9 (\u05dc\u05d0 \u05e0\u05d7\u05e9\u05d1 \u05dc\u05e0\u05d9\u05e7\u05d5\u05d3)',function(){_truMgrNotRel(id);});
+      sep();
+    }else if(_truNotRel(r)){
+      item('\u21a9','\u05d4\u05d7\u05d6\u05e8 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e4\u05ea\u05d5\u05d7',function(){_truMgrNotRelUndo(id);});
       sep();
     }
     item('\ud83d\uddd1','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
@@ -18613,6 +18628,34 @@ function _truMgrSetStatus(id,st,quiet){
   try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05de\u05de\u05e6\u05d0 '+(st===TRUSTEE_S_CLOSED?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.f||'').substring(0,30));}catch(e){}
   if(quiet)return;
   toast(st===TRUSTEE_S_CLOSED?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');
+  rTrustees();rDash();
+}
+// «לא ליקוי»: the manager says the finding is not a real deficiency. Written
+// in the convention the server already reads (closed + «לא רלוונטי: why»), so
+// the file in folder 13, the department report and the AI drop it too. Vitre
+// gets the close like any other, so a routed SMS task does not stay open over
+// nothing. An earlier routing note is kept after the reason; undo strips the
+// prefix and reopens.
+function _truMgrNotRel(id){
+  var r=_truFind(id);if(!r)return;
+  var why=prompt('\u05dc\u05de\u05d4 \u05d6\u05d4 \u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9? (\u05d4\u05e0\u05d0\u05de\u05df \u05dc\u05d0 \u05d9\u05e7\u05d1\u05dc \u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05e2\u05dc \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4)','\u05de\u05e6\u05d1 \u05ea\u05e7\u05d9\u05df, \u05d0\u05d9\u05df \u05dc\u05d9\u05e7\u05d5\u05d9');
+  if(why===null)return;why=String(why).trim();
+  if(!why){toast('\u05e6\u05e8\u05d9\u05da \u05dc\u05db\u05ea\u05d5\u05d1 \u05dc\u05de\u05d4');return;}
+  var old=String(r.mgr_note||'').trim();
+  r.mgr_note='\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9: '+why+(old?' \u00b7 '+old:'');
+  r.s=TRUSTEE_S_CLOSED;r.closed_d=r.closed_d||_thzToday();
+  sbUpd('trustee_reports',r);sdb();_truVitreClose(r);
+  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9: '+String(r.f||'').substring(0,30)+' ('+why.substring(0,40)+')');}catch(e){}
+  toast('\u05e1\u05d5\u05de\u05df \u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9. \u05dc\u05d0 \u05e0\u05d7\u05e9\u05d1 \u05dc\u05e0\u05d9\u05e7\u05d5\u05d3');
+  rTrustees();rDash();
+}
+function _truMgrNotRelUndo(id){
+  var r=_truFind(id);if(!r||!_truNotRel(r))return;
+  var rest=String(r.mgr_note||'').replace(/^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9:?[^\u00b7]*(\u00b7\s*)?/,'').trim();
+  r.mgr_note=rest||null;r.s=TRUSTEE_S_OPEN;r.closed_d=null;
+  sbUpd('trustee_reports',r);sdb();
+  try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2014 \u05d4\u05d5\u05d7\u05d6\u05e8 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9: '+String(r.f||'').substring(0,30));}catch(e){}
+  toast('\u05d4\u05d5\u05d7\u05d6\u05e8 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e4\u05ea\u05d5\u05d7');
   rTrustees();rDash();
 }
 // ---- a task closes; the finding it came from does not ----
