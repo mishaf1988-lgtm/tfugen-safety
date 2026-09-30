@@ -9,6 +9,8 @@
 //   GET /api/vitre?op=trainings&page=N          one page (200) of tasks whose title contains the refresher needle; hasMore for paging
 //   GET /api/vitre?op=training&id=N[&copy=1]    one task as a toolbox row (presenter, date, depts); copy=1 also copies the photo to our Storage
 //   GET /api/vitre?op=training_photo&id=N       fresh 5-minute link to the task's photo, served from Vitre's storage
+//   POST /api/vitre?op=sync                     daily refresher import, run by pg_cron (x-notify-secret) or the admin
+//   GET /api/vitre?op=sync_status               staff: what the last daily import did (home-screen line)
 //   GET /api/vitre?op=review_schema&id=N        admin: schema of one form (question/answer dataKeys)
 //   GET /api/vitre?op=swagger[&path=/x][&q=..][&fresh=1]  admin: Vitre's own Swagger doc; no path = index of every path, path = that path + the models it references
 //   POST /api/vitre?op=review_submit_test       admin: ONE submission of the notification TEST form (id locked below)
@@ -28,6 +30,7 @@
 // Never in code, never in the browser. Same posture as META_ACCESS_TOKEN / RESEND_KEY.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE } from '../_shared.js';
+import { stateGet, stateSet, stateLock, stateUnlock } from '../_onedrive.js';
 
 const VITRE_BASE = 'https://publicapi.hbinov.com';
 const API_VERSION = '1.0';
@@ -348,6 +351,134 @@ function pickImage(list) {
   return list.find(f => /\.(jpe?g|png|webp|heic)(\?|$)/i.test(String(f.name || f.url || ''))) || list[0] || null;
 }
 
+// ---- Weekly refresher: list, detail, and the daily import from the server ----
+// The refresher form's tasks carry this word ("refresher") in their title.
+const TR_NEEDLE = '\u05e8\u05d9\u05e2\u05e0\u05d5\u05df';
+const TR_PAGE_SIZE = 200, TR_MAX_PAGES = 60;
+// The same words as index.html _VITRE_TR_TOPIC and _vitreTrRow, so a row the
+// server writes cannot be told apart from one the manual import wrote.
+const TR_TOPIC = '\u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9 (Vitre)';
+const TR_DONE = '\u05e0\u05de\u05e1\u05e8\u05d4';
+const SYNC_KEY = 'vitre_sync';
+// Each new refresher costs three Vitre calls (task, review result, files), and
+// a Pages Function may make 50 subrequests. 10 a run is 30 calls, plus the
+// pages, the lock and the toolbox read and write; a bigger backlog finishes
+// on the next runs (pending says how many are left).
+const SYNC_MAX_NEW = 10;
+
+async function trainingsPage(env, page, needle) {
+  const r = await vitreGet(env, '/task/get?PageNumber=' + page + '&PageSize=' + TR_PAGE_SIZE);
+  if (!r.ok || !Array.isArray(r.json)) return { ok: false, upstream: r };
+  const n = String(needle || TR_NEEDLE).toLowerCase();
+  const rows = r.json.filter(t => String(t.title || '').toLowerCase().includes(n)).map(t => ({
+    id: t.id, title: t.title || null, createDate: t.createDate || null, closeDate: t.closeDate || null,
+    responsibleUserId: t.responsibleUserId || null
+  }));
+  return { ok: true, rows, scanned: r.json.length, hasMore: r.json.length >= TR_PAGE_SIZE };
+}
+
+async function trainingDetail(env, id) {
+  const detail = await vitreGet(env, '/task/get/' + id);
+  if (!detail.ok || !detail.json) return { ok: false, upstream: detail };
+  const d = detail.json;
+  const out = {
+    id, title: d.title || d.displayName || null, createDate: d.createDate || null, closeDate: d.closeDate || null,
+    presenter: (d.createdByUser && d.createdByUser.displayName) || (d.responsibleUser && d.responsibleUser.displayName) || null,
+    presenterEmail: (d.createdByUser && d.createdByUser.email) || null,
+    appointmentId: d.closedByAppointmentId || d.generatedByAppointmentId || null,
+    depts: [], presenterExtId: null, reviewResult: null, photoUrl: null, photoError: null, files: 0
+  };
+  if (out.appointmentId) {
+    const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + out.appointmentId);
+    if (rr.ok && rr.json) {
+      out.reviewResult = JSON.parse(JSON.stringify(rr.json, (k, x) => (typeof x === 'string' && x.length > 300) ? x.slice(0, 300) + '...' : x));
+      out.depts = extractSelectedAnswers(rr.json);
+      out.presenterExtId = extractPresenterExtId(rr.json);
+    } else out.reviewError = rr.status || rr.networkError || null;
+  }
+  const files = await vitreGet(env, '/task/getFiles/' + id);
+  const list = files.ok && files.json && Array.isArray(files.json.files) ? files.json.files : [];
+  out.files = list.length;
+  return { ok: true, out, list };
+}
+
+// One toolbox row, the same shape as index.html _vitreTrRow (t = list entry,
+// v = trainingDetail().out). The id follows the app's gid().
+function trRow(t, v) {
+  const d = String(v.createDate || t.createDate || '').slice(0, 10);
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    d: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null,
+    topic: TR_TOPIC, presenter: v.presenter || null, attendees: null, s: TR_DONE,
+    notes: '\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #' + t.id + (v.files ? '' : ' \u00b7 \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
+    file_url: null, ts: new Date().toISOString(),
+    dep: v.depts && v.depts.length ? v.depts.join(', ') : null, ext_id: String(t.id)
+  };
+}
+
+// Daily import (Michael, 30/09/2026: "once a day, with no dependency on
+// anything"): pg_cron calls op=sync at 06:00 Israel time. Walks every page of
+// the task list (oldest-first, no date filter in the API), keeps the
+// refreshers whose Vitre id is not yet in toolbox.ext_id, and inserts them.
+// The result goes to server_state for the home-screen line, error included,
+// so a quiet failure is visible the next morning.
+async function runSync(env) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+  const res = { at: new Date().toISOString(), ok: false, found: 0, added: 0, failed: 0, pending: 0, newest: null, pages: 0, error: null };
+  try {
+    if (!key) throw new Error('missing SUPABASE_SERVICE_ROLE_KEY');
+    if (!env.VITRE_API_KEY_ID || !env.VITRE_API_KEY_SECRET) throw new Error('missing VITRE_API_KEY_ID / VITRE_API_KEY_SECRET');
+    const all = [];
+    let page = 1;
+    for (;;) {
+      const r = await trainingsPage(env, page, TR_NEEDLE);
+      if (!r.ok) throw new Error('vitre ' + (r.upstream.status || r.upstream.networkError || 'unreachable') + ' on page ' + page);
+      all.push(...r.rows);
+      res.pages = page;
+      if (!r.hasMore || page >= TR_MAX_PAGES) break;
+      page++;
+    }
+    res.found = all.length;
+    all.forEach(t => { const c = String(t.createDate || '').slice(0, 10); if (c && (!res.newest || c > res.newest)) res.newest = c; });
+    const h = { apikey: key, Authorization: 'Bearer ' + key };
+    const ex = await fetch(SUPABASE_URL + '/rest/v1/toolbox?select=ext_id&ext_id=not.is.null&limit=100000', { headers: h });
+    if (!ex.ok) throw new Error('toolbox read ' + ex.status);
+    const have = {};
+    (await ex.json()).forEach(x => { if (x && x.ext_id) have[String(x.ext_id)] = 1; });
+    const seen = {}, todo = [];
+    all.forEach(t => { const k = String(t.id); if (!seen[k] && !have[k]) { seen[k] = 1; todo.push(t); } });
+    const now = todo.slice(0, SYNC_MAX_NEW);
+    res.pending = todo.length - now.length;
+    const rows = [];
+    for (const t of now) {
+      const v = await trainingDetail(env, t.id);
+      if (v.ok) rows.push(trRow(t, v.out)); else res.failed++;
+    }
+    if (rows.length) {
+      const ins = await fetch(SUPABASE_URL + '/rest/v1/toolbox', {
+        method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(rows)
+      });
+      if (!ins.ok) throw new Error('toolbox insert ' + ins.status + ' ' + (await ins.text()).slice(0, 200));
+      res.added = rows.length;
+    }
+    res.ok = res.failed === 0;
+    if (res.failed) res.error = res.failed + ' refresher(s) could not be read from Vitre';
+  } catch (e) {
+    res.error = String(e && e.message || e).slice(0, 300);
+  }
+  await stateSet(env, { [SYNC_KEY]: JSON.stringify(res) }).catch(() => {});
+  return res;
+}
+
+// One run at a time: the cron and an admin pressing the button at the same
+// minute would both see the same refreshers as new and insert them twice.
+async function runSyncLeased(env) {
+  const tok = await stateLock(env, SYNC_KEY + '_lock', 5 * 60 * 1000);
+  if (!tok) return { ok: true, busy: true };
+  try { return await runSync(env); } finally { await stateUnlock(env, SYNC_KEY + '_lock', tok); }
+}
+
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
@@ -355,6 +486,14 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (request.method !== 'GET' && request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
+  // The daily import (30/09/2026) comes from pg_cron: no Origin, no user, the
+  // shared secret from the Vault instead, as /api/trustee-log and /api/mail-inbox.
+  const url0 = new URL(request.url);
+  if (request.method === 'POST' && (url0.searchParams.get('op') || '').toLowerCase() === 'sync' && !/^Bearer\s+\S/i.test(request.headers.get('authorization') || '')) {
+    const want = env.TRUSTEE_NOTIFY_SECRET;
+    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    return jsonResp(await runSyncLeased(env), 200, cors);
+  }
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
 
   // Employee rows carry phone numbers. Trustees sign in anonymously and must
@@ -367,12 +506,12 @@ export async function onRequest({ request, env }) {
   const url = new URL(request.url);
   const op = (url.searchParams.get('op') || 'ping').toLowerCase();
   // POST exists for the two ops that submit a form; everything else stays a GET.
-  const POST_OPS = { review_submit_test: 1, notify: 1, close: 1, photo_probe: 1 };
+  const POST_OPS = { review_submit_test: 1, notify: 1, close: 1, photo_probe: 1, sync: 1 };
   if (request.method === 'POST' && !POST_OPS[op]) return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (request.method === 'GET' && POST_OPS[op]) return jsonResp({ error: 'POST required' }, 405, cors);
   // The form ops are admin-only: the schema names people, the submission writes to Vitre.
   const isAdmin = !!(who.user && who.user.email === ADMIN_EMAIL);
-  if ((op === 'review_schema' || op === 'review_result' || op === 'review_submit_test' || op === 'photo_probe' || op === 'swagger') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
+  if ((op === 'review_schema' || op === 'review_result' || op === 'review_submit_test' || op === 'photo_probe' || op === 'swagger' || op === 'sync') && !isAdmin) return jsonResp({ error: 'admin only' }, 403, cors);
 
   const ID = env.VITRE_API_KEY_ID;
   const SECRET = env.VITRE_API_KEY_SECRET;
@@ -729,16 +868,11 @@ export async function onRequest({ request, env }) {
 
   // One page of the task list, filtered by title. hasMore lets the caller loop.
   if (op === 'trainings') {
-    const needle = (url.searchParams.get('title') || 'ריענון').toLowerCase();
+    const needle = (url.searchParams.get('title') || TR_NEEDLE).toLowerCase();
     const page = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
-    const pageSize = 200;
-    const r = await vitreGet(env, '/task/get?PageNumber=' + page + '&PageSize=' + pageSize);
-    if (!r.ok || !Array.isArray(r.json)) return upstreamError(r, cors);
-    const rows = r.json.filter(t => String(t.title || '').toLowerCase().includes(needle)).map(t => ({
-      id: t.id, title: t.title || null, createDate: t.createDate || null, closeDate: t.closeDate || null,
-      responsibleUserId: t.responsibleUserId || null
-    }));
-    return jsonResp({ page, pageSize, scanned: r.json.length, hasMore: r.json.length >= pageSize, rows }, 200, cors);
+    const r = await trainingsPage(env, page, needle);
+    if (!r.ok) return upstreamError(r.upstream, cors);
+    return jsonResp({ page, pageSize: TR_PAGE_SIZE, scanned: r.scanned, hasMore: r.hasMore, rows: r.rows }, 200, cors);
   }
 
   // One task, ready to become a toolbox row: presenter, date, ticked departments
@@ -746,33 +880,15 @@ export async function onRequest({ request, env }) {
   if (op === 'training') {
     const id = parseInt(url.searchParams.get('id'), 10);
     if (!id) return jsonResp({ error: 'id required' }, 400, cors);
-    const detail = await vitreGet(env, '/task/get/' + id);
-    if (!detail.ok || !detail.json) return upstreamError(detail, cors);
-    const d = detail.json;
-    const out = {
-      id, title: d.title || d.displayName || null, createDate: d.createDate || null, closeDate: d.closeDate || null,
-      presenter: (d.createdByUser && d.createdByUser.displayName) || (d.responsibleUser && d.responsibleUser.displayName) || null,
-      presenterEmail: (d.createdByUser && d.createdByUser.email) || null,
-      appointmentId: d.closedByAppointmentId || d.generatedByAppointmentId || null,
-      depts: [], presenterExtId: null, reviewResult: null, photoUrl: null, photoError: null, files: 0
-    };
-    if (out.appointmentId) {
-      const rr = await vitreGet(env, '/appointmetResult/get-review-result/' + out.appointmentId);
-      if (rr.ok && rr.json) {
-        out.reviewResult = JSON.parse(JSON.stringify(rr.json, (k, x) => (typeof x === 'string' && x.length > 300) ? x.slice(0, 300) + '...' : x));
-        out.depts = extractSelectedAnswers(rr.json);
-        out.presenterExtId = extractPresenterExtId(rr.json);
-      } else out.reviewError = rr.status || rr.networkError || null;
-    }
+    const r = await trainingDetail(env, id);
+    if (!r.ok) return upstreamError(r.upstream, cors);
+    const out = r.out, list = r.list;
     // Michael, 23/09: Vitre stays the storage (he pays for it); our Supabase
     // free tier does not take 236+ phone photos. So by default only COUNT the
     // attachments; the viewer fetches a fresh link with op=training_photo when
     // someone opens the row. ?copy=1 copies the first image into our bucket
     // (kept for a future "bring my photos home" button). The Vitre URL is a
     // short-lived SAS link, so a copy has to happen right after listing.
-    const files = await vitreGet(env, '/task/getFiles/' + id);
-    const list = files.ok && files.json && Array.isArray(files.json.files) ? files.json.files : [];
-    out.files = list.length;
     const img = pickImage(list);
     if (img && img.url && url.searchParams.get('copy') === '1') {
       const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
@@ -815,5 +931,14 @@ export async function onRequest({ request, env }) {
       all: list.map(f => ({ name: f.name || null, url: f.url || null })) }, 200, cors);
   }
 
-  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe | trainings | training | training_photo)' }, 400, cors);
+  // What the last daily import did, for the home-screen line.
+  if (op === 'sync_status') {
+    const st = await stateGet(env, [SYNC_KEY]).catch(() => ({}));
+    let last = null;
+    try { last = st[SYNC_KEY] && st[SYNC_KEY].value ? JSON.parse(st[SYNC_KEY].value) : null; } catch (e) { last = null; }
+    return jsonResp({ last }, 200, cors);
+  }
+  if (op === 'sync') return jsonResp(await runSyncLeased(env), 200, cors);
+
+  return jsonResp({ error: 'unknown op (ping | employees | tasks | orgunits | training_probe | trainings | training | training_photo | sync | sync_status)' }, 400, cors);
 }

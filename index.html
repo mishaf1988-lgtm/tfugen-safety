@@ -1002,6 +1002,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="qa-btn" onclick="openModal('m-nm')"><span class="qa-ic">&#9889;</span><span>כמעט ונפגע</span></button>
     <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO &#8212; &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
     <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-tru-log"></div></div>
+    <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-vitre-sync"></div></div>
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="min-height:40px;display:flex;align-items:center;padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
@@ -6203,8 +6204,8 @@ window._dashHideEmptySection=function(){
 function rDash(){
   if(typeof _truHandleDeepLink==='function')try{_truHandleDeepLink();}catch(e){}
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
-  // Vitre refreshers -> toolbox, once a day, admin only, silent unless something new (#601).
-  if(typeof _vitreAutoSync==='function')setTimeout(_vitreAutoSync,4000);
+  // Vitre refreshers -> toolbox: the server imports them every morning (30/09/2026); this shows how it went.
+  if(typeof _vitreSyncHomeRender==='function')try{_vitreSyncHomeRender();}catch(e){}
   // Phase 2 Agent 2 — refresh password reset request inbox on every
   // dashboard render. Cheap (1 SELECT, hidden if no rows / non-admin).
   if(typeof _pwReqLoad==='function')_pwReqLoad();
@@ -18701,7 +18702,7 @@ function _truRouteVitreRecipient(f){
 // the toast says so. Set both to false / unset to pause again.
 // 2026-09-27: Michael stopped the Vitre SMS channel ("too many interfaces";
 // DECISIONS 2026-09-27). false = button hidden, notify and close never called.
-// Refreshers still sync from Vitre (_vitreAutoSync); that stays for now.
+// Refreshers still sync from Vitre (the server's daily op=sync); that stays for now.
 var _VITRE_SMS_ON=false;
 // The admin "Vitre tools" card on the dashboard (ping / schema / Swagger /
 // photo probe). Off with the channel; flip to true to debug the sync.
@@ -20017,7 +20018,6 @@ function _vitreTrColsOk(){
 }
 window._vitreTrPreview=function(){
   if(!_isAdminUser()){toast('\u05d9\u05d9\u05d1\u05d5\u05d0 \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd: \u05d0\u05d3\u05de\u05d9\u05df \u05d1\u05dc\u05d1\u05d3');return;}
-  if(_vitreAutoBusy){toast('\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05e8\u05e5 \u05db\u05e8\u05d2\u05e2, \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2');return;}
   var box=g('dash-vitre-result');
   var say=function(t){if(box){box.textContent=t;box.dataset.auto='';}};
   say('\u23f3 \u05d1\u05d5\u05d3\u05e7 \u05e2\u05de\u05d5\u05d3\u05d5\u05ea \u05d1\u05d8\u05d1\u05dc\u05ea \u05e9\u05d9\u05d7\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea...');
@@ -20164,62 +20164,32 @@ function _vitreTrScanNew(say){
   return step();
 }
 
-// ---- Daily auto sync: Vitre refreshers -> toolbox, silent, admin only ----
-// STATUS #601 \u00ab\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e9\u05d5\u05d8\u05e3\u00bb: when an admin opens the dashboard, at most once a
-// day (localStorage flag, set only after a successful run), scan the Vitre
-// task list and import just the refreshers we do not have yet. No preview,
-// no employee sync (Michael picked 51 of 159; new employees stay manual).
-// Toast only when something new arrived; a quiet day stays quiet.
-// The manual button stays and refuses to open while this is running, and this
-// does not start while the manual preview is open: both read DB.toolbox.ext_id
-// to decide what is new, so two writers at once could duplicate a row.
-var _vitreAutoBusy=false,_vitreAutoTried=false;
-window._vitreAutoSync=function(){
-  try{
-    if(_vitreAutoBusy||_vitreAutoTried||_vitreTr)return;
-    if(!SB_ON||!navigator.onLine)return;                 // toolbox not pulled from the server yet: "new" would mean "everything"
-    if(typeof _isAdminUser!=='function'||!_isAdminUser())return;
-    var flag='tfgn_vitre_sync_'+new Date().toISOString().substring(0,10);
-    if(_scanSeen(flag))return;
-  }catch(e){return;}
-  _vitreAutoBusy=true;_vitreAutoTried=true;             // one attempt per page load, even if Vitre is down
-  var box=g('dash-vitre-result');
-  var note=function(t){if(box&&(!box.textContent||box.dataset.auto==='1')){box.textContent=t;box.dataset.auto='1';}};
-  var flag='tfgn_vitre_sync_'+new Date().toISOString().substring(0,10);
-  var ok=0,fail=0,todo=[];
-  var finish=function(err){
-    _vitreAutoBusy=false;
-    if(err){note('\u26a0\ufe0f \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05e0\u05db\u05e9\u05dc: '+(err&&err.message||err));console.warn('vitre auto sync',err);return;}
-    _scanMark(flag);
-    var when=new Date();var hhmm=('0'+when.getHours()).slice(-2)+':'+('0'+when.getMinutes()).slice(-2);
-    note('\ud83d\udd04 \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre \u05d4\u05d9\u05d5\u05dd '+hhmm+': '+(ok?ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd':'\u05d0\u05d9\u05df \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd')+(fail?', '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
-    if(!ok&&!fail)return;
-    addLog('\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9 \u05de-Vitre: '+ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05de\u05e9\u05db\u05d5'+(fail?', '+fail+' \u05e0\u05db\u05e9\u05dc\u05d5':''));
-    sdb();
-    if(CUR==='toolbox'&&typeof rToolbox==='function')rToolbox();
-    if(typeof rDash==='function')try{rDash();}catch(e){}
-    if(ok)toast('\ud83d\udd04 '+ok+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05e0\u05de\u05e9\u05db\u05d5 \u05de-Vitre',{ok:true});
-  };
-  var next=function(){
-    if(!todo.length){finish();return;}
-    var t=todo.shift();
-    _vitreGet('op=training&id='+encodeURIComponent(t.id)).then(function(v){
-      var k=String(t.id);
-      if((DB.toolbox||[]).some(function(r){return String(r.ext_id||'')===k;}))return;   // arrived meanwhile (other device / realtime)
-      var r=_vitreTrRow(t,v);
-      if(!DB.toolbox)DB.toolbox=[];
-      DB.toolbox.push(r);sbIns('toolbox',r);ok++;
-    }).catch(function(err){fail++;console.warn('vitre auto sync',t.id,err);}).then(next);
-  };
-  _vitreTrColsOk().then(function(cols){
-    if(!cols)throw new Error('toolbox.dep / ext_id missing');
-    return _vitreTrScanNew();
-  }).then(function(res){
-    var have={};(DB.toolbox||[]).forEach(function(r){if(r.ext_id)have[String(r.ext_id)]=1;});
-    var seen={};
-    res.rows.forEach(function(t){var k=String(t.id);if(seen[k]||have[k])return;seen[k]=1;todo.push(t);});
-    next();
-  }).catch(finish);
+// ---- Daily import from Vitre: runs on the server, this only shows it ----
+// Michael, 30/09/2026: "once a day, with no dependency on anything". pg_cron
+// calls /api/vitre?op=sync at 06:00 Israel time (migration
+// 2026-09-30_vitre_sync_cron.sql); it replaced the old _vitreAutoSync that ran
+// only when an admin opened this screen. The line reads op=sync_status: red
+// when the last run failed or no run happened for more than a day.
+var _vitreSyncSt=null,_vitreSyncAt=0,_vitreSyncBusy=false;
+function _vitreSyncLine(last){
+  if(!last||!last.at)return '<span style="color:#b45309">\u26a0\ufe0f \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05d9\u05d5\u05de\u05d9 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5 (\u05e8\u05e5 \u05db\u05dc \u05d1\u05d5\u05e7\u05e8 \u05d1-06:00)</span>';
+  var when=_truTimeHtml(last.at),old=Date.now()-new Date(last.at).getTime()>26*3600*1000;
+  var newest=last.newest?' \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05df \u05d4\u05d0\u05d7\u05e8\u05d5\u05df \u05d1-Vitre: <bdi dir="ltr">'+esc(fd(last.newest))+'</bdi>.':'';
+  if(last.error&&!last.added)return '<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de-Vitre \u05e0\u05db\u05e9\u05dc '+when+': '+esc(String(last.error).substring(0,80))+'</span>';
+  var t='\u05e8\u05e5 '+when+': '+(last.added?last.added+' \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd':'\u05d0\u05d9\u05df \u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd')+(last.pending?', \u05e2\u05d5\u05d3 '+last.pending+' \u05d9\u05d9\u05db\u05e0\u05e1\u05d5 \u05d1\u05d9\u05d5\u05dd \u05d4\u05d1\u05d0':'')+'.'+newest;
+  if(last.error)t+=' <span style="color:#b91c1c">\u26a0\ufe0f '+esc(String(last.error).substring(0,80))+'</span>';
+  if(old)t='<span style="color:#b91c1c">\u26a0\ufe0f \u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05dc\u05d0 \u05e8\u05e5 \u05d9\u05d5\u05ea\u05e8 \u05de\u05d9\u05d5\u05dd.</span> \u05d0\u05d7\u05e8\u05d5\u05df: '+t;
+  return t;
+}
+window._vitreSyncHomeRender=function(noFetch){
+  var box=g('dash-vitre-sync');if(!box)return;
+  var S=_vitreSyncSt;
+  box.innerHTML=S?'<div style="font-size:12px;color:var(--t2);padding:6px 10px;border:1px solid var(--bd,#e5e7eb);border-radius:8px;text-align:right">\ud83d\udd04 <strong>\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d9\u05d5\u05de\u05d9 \u05de-Vitre</strong> \u00b7 '+_vitreSyncLine(S.last)+'</div>':'';
+  if(noFetch||_vitreSyncBusy||Date.now()-_vitreSyncAt<10*60000)return;
+  if(typeof _sbToken==='undefined'||!_sbToken)return;
+  _vitreSyncBusy=true;_vitreSyncAt=Date.now();
+  _vitreGet('op=sync_status').then(function(j){if(j&&typeof j==='object'&&'last' in j)_vitreSyncSt=j;})
+    ['catch'](function(){}).then(function(){_vitreSyncBusy=false;try{_vitreSyncHomeRender(true);}catch(e){}});
 };
 
 // ---- Notification test (23/09 evening): does an API submission fire Vitre's SMS/email? ----
