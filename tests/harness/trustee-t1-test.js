@@ -38,8 +38,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
   console.log('\n2. catalogue');
   const cat = await page.evaluate(() => ({ n: TRUSTEE_TASKS.length, nums: TRUSTEE_TASKS.map(t => t.n).join(','), full: TRUSTEE_TASKS.every(t => t.t && t.how && t.icon), t8: _truTask(8).t, t9: _truTask(9), names: TRUSTEE_TASKS.map(t => t.t) }));
-  check('8 tasks numbered 1..8, each with a title, "what to do" text and icon', cat.n === 8 && cat.nums === '1,2,3,4,5,6,7,8' && cat.full, cat);
-  check('titles match the document (1 סיור מפגעים … 8 מעקב סגירה)', /סיור מפגעים/.test(cat.names[0]) && /מקלחות חירום/.test(cat.names[1]) && /דרכי מילוט/.test(cat.names[2]) && /סולמות/.test(cat.names[3]) && /כיבוי אש/.test(cat.names[4]) && /מגיני מכונות/.test(cat.names[5]) && /עזרה ראשונה/.test(cat.names[6]) && cat.t8 === 'מעקב סגירה' && cat.t9 === null, cat.names);
+  check('9 tasks numbered 1..9 (task 9 electrical, 30/09/2026), each with a title, "what to do" text and icon', cat.n === 9 && cat.nums === '1,2,3,4,5,6,7,8,9' && cat.full, cat);
+  check('titles match the document (1 סיור מפגעים … 8 מעקב סגירה)', /סיור מפגעים/.test(cat.names[0]) && /מקלחות חירום/.test(cat.names[1]) && /דרכי מילוט/.test(cat.names[2]) && /סולמות/.test(cat.names[3]) && /כיבוי אש/.test(cat.names[4]) && /מגיני מכונות/.test(cat.names[5]) && /עזרה ראשונה/.test(cat.names[6]) && cat.t8 === 'מעקב סגירה' && cat.t9 && /חשמל/.test(cat.t9.t), cat.names);
 
   console.log('\n3. scoring (document rules)');
   const sc = await page.evaluate(() => {

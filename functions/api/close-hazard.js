@@ -117,7 +117,7 @@ async function loadHazard(env, id) {
 
 function isFinding(f) {
   const t = parseInt(f.t, 10);
-  return f.ok === false && t >= 1 && t <= 7;
+  return f.ok === false && t >= 1 && t !== TASK_CLOSE;
 }
 
 // A problem with the link itself, before any finding is looked at.

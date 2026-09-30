@@ -57,6 +57,20 @@ check('...not a dip in the floor or a notice board', trusteeResp('אחזקה', '
 const mrep = buildReport('אחזקה', buildRegister([], [tr('x', 'חצר · שער', 'כבל חשמל חשוף')], []).rows, { depts: {}, resp: { 'אחזקה': ['vitaly@x'], 'חשמל': ['slava@x'], 'הנדסה': ['shlomi@x'] }, cc: [] }, {}, '2026-09-30');
 check('the maintenance report still goes to all three when the finding is electrical', mrep.to.join() === 'vitaly@x,slava@x,shlomi@x' && mrep.rows[0].resp === 'חשמל', [mrep.to, mrep.rows[0] && mrep.rows[0].resp]);
 
+console.log('\n3c. task 9, electrical panels and faults (30/09/2026)');
+{
+  const t9 = (id, loc, f) => Object.assign(tr(id, loc, f), { t: 9 });
+  const r9 = buildRegister([], [t9('p', 'אריזה · קו 3', 'לוח פתוח'), t9('q', 'חצר · שער', 'שקע שבור')], []);
+  const rowP = r9.rows.find((r) => r[5] === 'לוח פתוח'), rowQ = r9.rows.find((r) => r[5] === 'שקע שבור');
+  check('a task-9 report is a finding: it is in the register, numbered', !!rowP && !!rowQ && /^נ-/.test(String(rowP && rowP[0])), r9.rows.map((r) => r[0]));
+  check('in a production department: the manager AND electrical, even with no electrical word', rowP && rowP[7] === 'מנהל המחלקה + חשמל', rowP && rowP[7]);
+  check('in maintenance: electrical', rowQ && rowQ[7] === 'חשמל', rowQ && rowQ[7]);
+  check('task 8 (the closing photo) is still not a finding', !buildRegister([], [Object.assign(tr('z', 'אריזה · קו 3', 'x'), { t: 8 })], []).rows.length);
+  const rc = { depts: { 'ייצור טוגנים': ['prod@x'] }, resp: { 'אחזקה': ['vitaly@x'], 'חשמל': ['slava@x'], 'הנדסה': ['shlomi@x'] }, cc: [] };
+  const prep = buildReport('ייצור טוגנים', r9.rows, rc, {}, '2026-09-30');
+  check('the production report goes to its manager, electrical and engineering', prep.to.join() === 'prod@x,slava@x,shlomi@x', prep.to);
+}
+
 console.log('\n4. a row typed in Excel');
 const last = { rows: [], ids: [] };
 const row = (dept, descr) => ({ r: 9, v: ['', '2026-09-30', 12, dept, 'מחסן', descr, 'גבוהה', 'אחזקה', '', null, 'פתוח', null, ''] });
