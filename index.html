@@ -10009,7 +10009,7 @@ function _mfOpenItems(){
     if(_mfTruDept(r.loc)!==_mf.dept)return;
     var closed=r.s===TRUSTEE_S_CLOSED;if(closed&&!now[r.id])return;
     var loc=String(r.loc||'').indexOf('\u00b7')>=0?String(r.loc).split('\u00b7').slice(1).join('\u00b7').trim():'';
-    out.push({k:'t',id:r.id,num:'\u05e0-'+(k+1),descr:r.f,loc:loc,when:'\u05e0\u05d0\u05de\u05df '+(r.u||'')+', '+fd(String(r.d||r.ts||'').substring(0,10)),sev:null,due:_mfTruDue(r),closed:closed});
+    out.push({k:'t',id:r.id,num:'\u05e0-'+(r.num||k+1),descr:r.f,loc:loc,when:'\u05e0\u05d0\u05de\u05df '+(r.u||'')+', '+fd(String(r.d||r.ts||'').substring(0,10)),sev:null,due:_mfTruDue(r),closed:closed});
   });
   return out;
 }

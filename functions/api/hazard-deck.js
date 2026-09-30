@@ -44,7 +44,7 @@ export async function runDeck(env, force, s3Now, opt) {
   const date = meetingDate(today, val('deck_meeting_date'));
   const [hazards, reports, tasks, inc] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     readAll(env, 'inc?select=id,dt,d,l,dept,reported,r,ty&order=dt.asc'),
   ]);
