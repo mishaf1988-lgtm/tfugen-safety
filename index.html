@@ -1387,6 +1387,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s btn-sm" onclick="_truMgrShift(0)">החודש</button>
   </div>
   <div id="tru-mgr-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
+  <div id="tru-nodept"></div>
   <div class="card">
     <div class="card-title">&#127942; לוח ניקוד <span id="tru-mgr-scorenote" style="font-weight:400;font-size:11px;color:var(--t2)">10 לכל משימה (מקס׳ 80) · 2 לכל מפגע שנסגר (מקס׳ 20) · זכאות לפרס מ-5 משימות</span></div>
     <div id="tru-mgr-board"></div>
@@ -1442,6 +1443,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="thz-sum" style="font-size:13px;color:var(--t2);margin:0 0 10px"></div>
   <div id="thz-file" style="font-size:12px;color:var(--t2);margin:0 0 10px;padding:8px 10px;background:var(--bg2,#f5f7fa);border-radius:8px"></div>
+  <div id="thz-nodept"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th scope="col">&#1502;&#1505;"&#1491;</th><th scope="col">&#1505;&#1497;&#1493;&#1512;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492; / &#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1497;&#1506;&#1491;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col"></th>
   </tr></thead><tbody id="tb-thz"></tbody></table></div></div>
@@ -9721,7 +9723,7 @@ var _thzFile=null,_thzFileAt=0,_thzFileBusy=false;
 var _THZ_COLS=['','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','\u05de\u05d7\u05dc\u05e7\u05ea \u05e1\u05d9\u05d5\u05e8','\u05de\u05d9\u05e7\u05d5\u05dd','\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea','\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','\u05e1\u05d8\u05d8\u05d5\u05e1','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','\u05d4\u05e2\u05e8\u05d5\u05ea'];
 // The list collects across saves (29/09/2026, upgrade review 9): the server
 // keeps each item until the app holds the value, "\u05d8\u05d5\u05e4\u05dc" is tapped, or 30 days.
-var _THZ_WHY={keep:'\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05e0\u05e7\u05d1\u05e2\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05ea\u05e7\u05df \u05e9\u05dd',both:'\u05e9\u05d5\u05e0\u05d4 \u05d2\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05e0\u05e9\u05d0\u05e8 \u05d4\u05e2\u05e8\u05da \u05e9\u05dc \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',bad:'\u05e2\u05e8\u05da \u05e9\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e7\u05dc\u05d5\u05d8 (\u05ea\u05d0\u05e8\u05d9\u05da \u05d0\u05d5 \u05e1\u05d8\u05d8\u05d5\u05e1)',tru_col:'\u05d1\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05de\u05ea\u05e7\u05e0\u05d9\u05dd \u05d0\u05ea \u05d6\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',nomatch:'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05ea \u05dc\u05de\u05e4\u05d2\u05e2 \u05e2\u05dd \u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05d4',dup:'\u05d4\u05de\u05e1\u05e4\u05e8 \u05de\u05d5\u05e4\u05d9\u05e2 \u05e4\u05e2\u05de\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5',seen:'\u05d0\u05d5\u05ea\u05d5 \u05de\u05e1\u05e4\u05e8 \u05d1\u05e9\u05ea\u05d9 \u05e9\u05d5\u05e8\u05d5\u05ea, \u05e0\u05e7\u05dc\u05d8\u05d4 \u05e8\u05e7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4',gone:'\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',tru_new:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e0\u05e4\u05ea\u05d7 \u05e8\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05d0 \u05de\u05d4\u05e7\u05d5\u05d1\u05e5',nodescr:'\u05e9\u05d5\u05e8\u05d4 \u05d1\u05dc\u05d9 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2, \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7 \u05de\u05e4\u05d2\u05e2'};
+var _THZ_WHY={keep:'\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05e0\u05e7\u05d1\u05e2\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05ea\u05e7\u05df \u05e9\u05dd',both:'\u05e9\u05d5\u05e0\u05d4 \u05d2\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05e0\u05e9\u05d0\u05e8 \u05d4\u05e2\u05e8\u05da \u05e9\u05dc \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',bad:'\u05e2\u05e8\u05da \u05e9\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e7\u05dc\u05d5\u05d8 (\u05ea\u05d0\u05e8\u05d9\u05da \u05d0\u05d5 \u05e1\u05d8\u05d8\u05d5\u05e1)',tru_col:'\u05d1\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05de\u05ea\u05e7\u05e0\u05d9\u05dd \u05d0\u05ea \u05d6\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',nomatch:'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05ea \u05dc\u05de\u05e4\u05d2\u05e2 \u05e2\u05dd \u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05d4',dup:'\u05d4\u05de\u05e1\u05e4\u05e8 \u05de\u05d5\u05e4\u05d9\u05e2 \u05e4\u05e2\u05de\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5',seen:'\u05d0\u05d5\u05ea\u05d5 \u05de\u05e1\u05e4\u05e8 \u05d1\u05e9\u05ea\u05d9 \u05e9\u05d5\u05e8\u05d5\u05ea, \u05e0\u05e7\u05dc\u05d8\u05d4 \u05e8\u05e7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4',gone:'\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',tru_new:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e0\u05e4\u05ea\u05d7 \u05e8\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05d0 \u05de\u05d4\u05e7\u05d5\u05d1\u05e5',nodescr:'\u05e9\u05d5\u05e8\u05d4 \u05d1\u05dc\u05d9 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2, \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7 \u05de\u05e4\u05d2\u05e2',dept:'\u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2\u05d4 \u05d1\u05d3\u05d5\u05d7, \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7 \u05de\u05e4\u05d2\u05e2. \u05dc\u05ea\u05e7\u05df \u05dc\u05d0\u05d7\u05ea \u05de-5 \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea'};
 function _thzDropKey(x){return [x.n,x.ci,x.val].join('|');}
 // The app already holds the value (fixed there since): not shown, even before
 // the server's next run clears it (Chrome check 30/09: six such items stayed).
@@ -9783,6 +9785,7 @@ function thzFileNow(){
 }
 function rThz(){
   var tb=g('tb-thz');if(!tb)return;
+  try{var nd=g('thz-nodept');if(nd)nd.innerHTML=_truNoDeptHtml();}catch(e){}
   _thzFileRefresh(false);
   _thzOpts('thz-f-dept',_THZ_DEPTS,true,'\u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea');
   var all=DB.tour_hazards||[];
@@ -9968,8 +9971,23 @@ function _mfRender(){
 // the part of loc before "\u00b7", due = the routed task, else "\u05e0\u05d5\u05ea\u05d1 ... \u05e2\u05d3" in the
 // note, else report + 3 days. Closing one goes through _truMgrSetStatus, the
 // row menu's "\u05e1\u05de\u05df \u05e0\u05e1\u05d2\u05e8", which also closes its Vitre task, so it asks once.
-var _MF_TRU_ALIAS={'\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd':'\u05de\u05e2\u05e6\u05d1\u05d9\u05dd','\u05ea\u05d5\u05e6"\u05d2':'\u05ea\u05d5\u05e6\u05d2','\u05de\u05e2\u05d1\u05d3\u05d4':'\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'};
-function _mfTruDept(loc){var h=String(loc||'').split('\u00b7')[0].trim();return _MF_TRU_ALIAS[h]||h;}
+// Area -> department: ONE map, the same object as AREA_DEPT in
+// functions/api/hazard-file.js (area-dept-map-test.mjs compares them).
+// null = no department: the finding reaches no department's report and is
+// listed in red for the manager (upgrade review 4, Michael 29/09/2026).
+var AREA_DEPT={ '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': null, '\u05e9\u05e4\u05db\u05d9\u05dd': null, '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': null };
+var NO_DEPT='\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4';
+function deptOf(name){var h=String(name||'').trim();if(_THZ_DEPTS.indexOf(h)>=0)return h;return Object.prototype.hasOwnProperty.call(AREA_DEPT,h)?AREA_DEPT[h]:null;}
+function _mfTruDept(loc){return deptOf(String(loc||'').split('\u00b7')[0]);}
+// Open trustee findings with no department (an area mapped to none, or not in
+// the map): shown in red on the trustees and tours screens.
+function _truNoDept(){return (typeof _mfTruFindings==='function'?_mfTruFindings():[]).filter(function(r){return r.s!==TRUSTEE_S_CLOSED&&!_mfTruDept(r.loc);});}
+function _truNoDeptHtml(){
+  var l=_truNoDept();if(!l.length)return '';
+  return '<div class="card" style="border:2px solid #dc2626;background:#fef2f2;padding:10px 12px;margin:0 0 10px"><div style="font-weight:900;color:#b91c1c">\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4 ('+l.length+')</div>'
+    +'<div style="font-size:12px;margin:2px 0 6px">\u05d4\u05d0\u05d6\u05d5\u05e8 \u05dc\u05d0 \u05e9\u05d9\u05d9\u05da \u05dc\u05d0\u05e3 \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05d3\u05d5\u05d7, \u05d5\u05dc\u05db\u05df \u05d4\u05dd \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05d9\u05dd \u05dc\u05d0\u05e3 \u05de\u05e0\u05d4\u05dc. \u05e8\u05e7 \u05d0\u05ea\u05d4 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05d5\u05ea\u05dd.</div>'
+    +l.map(function(r){return '<div style="font-size:13px;padding:4px 0;border-top:1px dashed #fca5a5">'+esc(String(r.loc||'\u05d1\u05dc\u05d9 \u05d0\u05d6\u05d5\u05e8'))+': '+esc(String(r.f||'').substring(0,90))+' <span style="color:var(--t2);font-size:12px">('+esc(r.u||'')+', '+fd(String(r.d||r.ts||'').substring(0,10))+')</span></div>';}).join('')+'</div>';
+}
 function _mfTruFindings(){
   return (DB.trustee_reports||[]).filter(function(r){return r&&r.ok===false&&+r.t>=1&&+r.t<=7&&!/^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String(r.mgr_note||''));})
     .sort(function(a,b){return String(a.ts||a.d||'').localeCompare(String(b.ts||b.d||''));});
@@ -18185,6 +18203,7 @@ function _truGo(id,filter){
 }
 function rTrustees(){
   var m=_truMgrMonth();
+  try{var nd=g('tru-nodept');if(nd)nd.innerHTML=_truNoDeptHtml();}catch(e){}
   _truSyncNumbers();
   var mEl=g('tru-mgr-month');if(mEl)mEl.textContent=_truMonthLabel(m);
   var rows=_truRows(m);

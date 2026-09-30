@@ -55,8 +55,20 @@ const LAST_COL = 12, MAX_ROW = 206, DATE_COLS = [1, 9, 11];
 // without waiting for the data to change.
 const FILE_VERSION = 4;
 export const DEPTS = ['\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea'];
-// Spellings in the locations list / trustee screens -> the sheet's departments.
-const DEPT_ALIAS = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea' };
+// Area (the part of a trustee's loc before "\u00b7", or column D of a row typed in
+// the file) -> the report's department. ONE map, the same object as AREA_DEPT
+// in index.html (area-dept-map-test.mjs fails if they differ). Spellings of
+// the departments, and the areas Michael assigned on 29/09/2026: packing and
+// peeling to production, the lab to the labs; yard, waste water and
+// infrastructure to no department (null): only he sees them, in red.
+export const AREA_DEPT = { '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': null, '\u05e9\u05e4\u05db\u05d9\u05dd': null, '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': null };
+export const NO_DEPT = '\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4';
+// A department of the report, or null (no department / an area not in the map).
+export function deptOf(name) {
+  const h = String(name || '').trim();
+  if (DEPTS.indexOf(h) >= 0) return h;
+  return Object.prototype.hasOwnProperty.call(AREA_DEPT, h) ? AREA_DEPT[h] : null;
+}
 const TRUSTEE_DUE_DAYS = 3;
 const MAX_AI = 3; // assistant calls per run (subrequest budget)
 const DAY = 86400000;
@@ -84,8 +96,11 @@ export function routedNote(note) {
 
 export function trusteeDept(loc) {
   const head = String(loc || '').split('\u00b7')[0].trim();
-  const d = DEPT_ALIAS[head] || head;
-  return { dept: d, loc: String(loc || '').indexOf('\u00b7') >= 0 ? String(loc).split('\u00b7').slice(1).join('\u00b7').trim() : String(loc || '') };
+  const rest = String(loc || '').indexOf('\u00b7') >= 0 ? String(loc).split('\u00b7').slice(1).join('\u00b7').trim() : String(loc || '');
+  const d = deptOf(head);
+  // No department: "\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4" in column D (no department's report takes it), the area kept in E.
+  if (!d) return { dept: NO_DEPT, loc: head && rest !== head ? head + (rest ? ' \u00b7 ' + rest : '') : rest };
+  return { dept: d, loc: rest };
 }
 
 // Pure: the merged register, as rows of columns A..M.
@@ -311,11 +326,16 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
     // A trustee finding is opened by the trustee, never from the file.
     if (/^\u05e0-/.test(key)) { if (descr) drop(key, r, -1, descr, 'tru_new'); return; }
     if (!descr) { if ([1, 3, 4, 6, 8, 9, 12].filter((ci) => norm(v[ci])).length >= 2) drop(key, r, 5, '', 'nodescr'); return; }
+    // Column D names a department of the report, through the same map. A row
+    // whose department the app does not know (or an area with none) is not
+    // opened: it goes to the not-taken list (upgrade review 4, 30/09/2026).
+    const dept = deptOf(v[3]);
+    if (!dept) { drop(key, r, 3, norm(v[3]), 'dept'); return; }
     // Already created from this row on an earlier run (the file is rewritten
     // only after the database writes all went through). The tour date is part
     // of it: a recurring hazard typed in an old one's words on a new tour used
     // to match the old one and was dropped from the file (upgrade review 9).
-    if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === norm(v[3]) && norm(h.d) === (isYmd(norm(v[1])) ? norm(v[1]) : ''))) return;
+    if ((hazards || []).concat(fresh).some((h) => norm(h.descr) === descr && norm(h.dept) === dept && norm(h.d) === (isYmd(norm(v[1])) ? norm(v[1]) : ''))) return;
     let n = /^\d+$/.test(key) && !usedN.has(+key) ? +key : maxN + 1;
     usedN.add(n); maxN = Math.max(maxN, n);
     const rs = norm(v[7]).split(/\s*\+\s*/);
@@ -323,7 +343,7 @@ export function diffEdits(fileRows, last, hazards, reports, today) {
     const dOf = (x) => (isYmd(norm(x)) ? norm(x) : null);
     const num = (x) => (/^\d+$/.test(norm(x)) ? +norm(x) : null);
     fresh.push({ id: 'th-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6), n, d: dOf(v[1]), tour_no: num(v[2]),
-      dept: norm(v[3]), loc: orNull(norm(v[4])), descr, sev: orNull(norm(v[6])), resp: orNull(rs[0] || ''), resp2: orNull(rs[1] || ''),
+      dept, loc: orNull(norm(v[4])), descr, sev: orNull(norm(v[6])), resp: orNull(rs[0] || ''), resp2: orNull(rs[1] || ''),
       action: orNull(norm(v[8])), due: dOf(v[9]), s: st, closed_d: dOf(v[11]) || (st === S_DONE ? today : null), notes: stripMgr(norm(v[12])) });
   });
   // Closed in Excel without a date: today, as when closing in the app.

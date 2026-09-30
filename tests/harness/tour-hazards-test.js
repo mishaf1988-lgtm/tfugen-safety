@@ -192,6 +192,29 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   check('rows: a "הסלמה" tag and a "חסר יעד" tag', /הסלמה/.test(od.rowsTxt) && /חסר יעד/.test(od.rowsTxt), od.rowsTxt.slice(0, 200));
   check('the "היום" line opens the tours screen filtered on overdue', od.clickF[0] === 'thz' && od.clickF[1] === 'overdue', od.clickF);
   check('daily scan: overdue hazards in the overdue alert, with no assignee (to the manager, never the department)', od.scan.some((p) => p.src === 'tour_hazards' && /מפגע סיור 3/.test(p.title) && p.assignee === null), od.scan);
+
+  console.log('\n7. trustee findings with no department (upgrade review 4, 30/09)');
+  const nd = await page.evaluate(() => {
+    const now = new Date().toISOString();
+    window._currentUser = { username: 'admin' }; if (typeof _applyRoleGates === 'function') _applyRoleGates();
+    DB.tasks = [];
+    DB.trustee_reports = [
+      { id: 'y1', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'חצר · שער אחורי', f: 'בור פתוח בחצר' },
+      { id: 'y2', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'אחזקה · סדנה', f: 'כבל חשוף בסדנה' },
+      { id: 'y3', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'אריזה · קו 3', f: 'משטח שבור באריזה' },
+      { id: 'y4', u: 'דני', t: 1, ok: false, s: 'נסגר', d: now.substring(0, 10), ts: now, loc: 'שפכים', f: 'סגור בשפכים' },
+    ];
+    const res = { map: [_mfTruDept('אריזה · קו 3'), _mfTruDept('קילופים'), _mfTruDept('מעבדה'), _mfTruDept('חצר'), _mfTruDept('אחזקה'), _mfTruDept('מעוצבים')] };
+    goPage('thz'); rThz(); res.thz = (document.getElementById('thz-nodept') || {}).textContent || '';
+    goPage('trustees'); rTrustees(); res.tru = (document.getElementById('tru-nodept') || {}).textContent || '';
+    DB.trustee_reports = DB.trustee_reports.filter((r) => r.id === 'y3');
+    goPage('thz'); rThz(); res.none = (document.getElementById('thz-nodept') || {}).textContent;
+    return res;
+  });
+  check('the app\'s map: packing and peeling -> ייצור טוגנים, lab -> מעבדות, yard and unknown areas -> none, spellings kept', JSON.stringify(nd.map) === JSON.stringify(['ייצור טוגנים', 'ייצור טוגנים', 'מעבדות', null, null, 'מעצבים']), nd.map);
+  check('tours screen: a red box with the open findings that reach no department (yard, an unknown area), not the packing one or a closed one', /ליקויי נאמנים בלי מחלקה \(2\)/.test(nd.thz) && /בור פתוח בחצר/.test(nd.thz) && /כבל חשוף בסדנה/.test(nd.thz) && !/משטח שבור/.test(nd.thz) && !/סגור בשפכים/.test(nd.thz), nd.thz);
+  check('trustees screen: the same box', /ליקויי נאמנים בלי מחלקה \(2\)/.test(nd.tru) && /בור פתוח בחצר/.test(nd.tru), nd.tru);
+  check('none left: no box', nd.none === '', nd.none);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
