@@ -4607,9 +4607,21 @@ window._lockNow=function(){
     if(!force&&now-last<60000)return;                 // once a minute is enough
     last=now;_lockStamp();
   }
+  // 30/09/2026 (Michael: open for an hour and it did not lock): the check ran
+  // only when the page came back from the background. Left open on the
+  // screen it never ran, and the first tap afterwards renewed the stamp
+  // instead of locking. Now a tap after the idle time locks (and does not
+  // reach the page), and a check every minute locks a page left open.
+  // -1 ("every open") is left to the resume check: a minute of reading is not
+  // leaving the app.
+  function idleOver(){var min=_lockMinutes();return _isAdmin&&min>0&&_lockExpired('resume');}
   ['pointerdown','keydown'].forEach(function(ev){
-    document.addEventListener(ev,function(){seen(false);},true);
+    document.addEventListener(ev,function(e){
+      if(idleOver()){try{e.preventDefault();e.stopPropagation();}catch(x){}_lockNow();return;}
+      seen(false);
+    },true);
   });
+  setInterval(function(){if(idleOver())_lockNow();},60000);
   function resumed(){
     if(_isAdmin&&_lockExpired('resume'))_lockNow();
     else seen(true);
