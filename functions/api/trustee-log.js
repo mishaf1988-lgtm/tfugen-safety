@@ -22,7 +22,7 @@
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
-import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead } from '../_onedrive.js';
+import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead, runLeased } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
@@ -259,7 +259,7 @@ export async function runLog(env, force) {
   if (aoa.length < 2) return { ok: true, pushed: false, reason: 'empty', rows: 0 };
   const sig = await signature(aoa);
   if (!force) {
-    const st = await stateGet(env, ['trustee_log_sig', 'trustee_photos']);
+    const st = await stateGet(env, ['trustee_log_sig', 'trustee_photos', 'trustee_log_err']);
     // Unchanged AND every photo already in OneDrive = nothing to do. A photo
     // not yet copied (the ones from before 27/09, or a failed copy) makes it
     // write anyway, so copying never waits for the next report.
@@ -267,7 +267,12 @@ export async function runLog(env, force) {
     try { copied = JSON.parse((st.trustee_photos && st.trustee_photos.value) || '{}') || {}; } catch (e) {}
     const base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
     const missing = (reports || []).some((r) => r && r.id && storagePath(r.photo_url, base) && !(r.id in copied));
-    if (st.trustee_log_sig && st.trustee_log_sig.value === await logSig(sig, reports, copied) && !missing) return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
+    if (st.trustee_log_sig && st.trustee_log_sig.value === await logSig(sig, reports, copied) && !missing) {
+      // The log matches the data, so an error left by an earlier run is over
+      // (30/09/2026: a 409 from a parallel run stayed on the screen for good).
+      if (st.trustee_log_err && st.trustee_log_err.value) await stateSet(env, { trustee_log_err: '' }).catch(() => {});
+      return { ok: true, pushed: false, reason: 'unchanged', rows: aoa.length - 1 };
+    }
   }
   try {
     const { token } = await accessToken(env);
@@ -294,6 +299,9 @@ export async function runLog(env, force) {
     await stateSet(env, save);
     return { ok: true, pushed: true, rows: aoa.length - 1, images: images.length, images_diag: images.diag || [], photos_copied: n - before, photos_pending: od.pending, webUrl: res.webUrl || null };
   } catch (e) {
+    // 409 = a parallel run (a report's trigger + the cron) wrote the log a
+    // moment ago: not an error, as in hazard-file.js and hazard-deck.js.
+    if (e && e.status === 409) return { ok: false, pushed: false, retry: true, error: 'conflict', rows: aoa.length - 1 };
     const msg = (e && e.code === 'not_connected') ? 'not connected' : String((e && e.message) || e).substring(0, 200);
     await stateSet(env, { trustee_log_err: msg }).catch(() => {});
     return { ok: false, pushed: false, error: msg, locked: !!(e && e.status === 423), rows: aoa.length - 1 };
@@ -334,7 +342,9 @@ export async function onRequest(context) {
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {
-    const r = await runLog(env, force);
+    // One run at a time, like the register files and the deck (30/09/2026).
+    const r0 = await runLeased(env, 'trustee_log', 120000, () => runLog(env, force));
+    const r = r0 && r0.busy ? { ok: true, pushed: false, reason: 'busy' } : r0;
     // Proof of life for the sync watchdog (_watchdog.js).
     if (r && r.ok) await stateSet(env, { trustee_log_ok_at: new Date().toISOString() }).catch(() => {});
     // More photos than one write may copy: call ourselves again (a new request,

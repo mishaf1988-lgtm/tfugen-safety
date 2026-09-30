@@ -251,5 +251,20 @@ console.log('\n6. alert mail through Outlook (Mail.Send)');
   check('...and not allowed without it', r.j.mail === false, r.j);
 }
 
+console.log('\n409 from a parallel run (30/09/2026: the error stayed on the screen)');
+{
+  let w = world({ putStatus: 409 });
+  let r = await runLog(ENV, true);
+  check('409: not an error, nothing written to trustee_log_err', r.ok === false && r.retry === true && !w.state.trustee_log_err, [r, w.state.trustee_log_err]);
+  w = world({ putStatus: 423 });
+  r = await runLog(ENV, true);
+  check('...a real failure (423, open in Excel) is still recorded', !!w.state.trustee_log_err && r.locked === true, w.state.trustee_log_err);
+  w = world();
+  await runLog(ENV, true);
+  w.state.trustee_log_err = 'onedrive 409: The resource has changed';
+  r = await runLog(ENV, false);
+  check('the next run finds the log up to date: the old error is cleared', r.reason === 'unchanged' && w.state.trustee_log_err === '', [r, w.state.trustee_log_err]);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
