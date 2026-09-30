@@ -120,6 +120,17 @@ export function deptOf(name) {
   const ds = parts.map((x) => deptOf(x));
   return ds.indexOf(MAINT) >= 0 ? MAINT : ds.find((d) => d) || null;
 }
+// Who handles a trustee finding (column H): the department's manager, and in
+// the maintenance department maintenance or electrical by the finding
+// (Michael 30/09/2026: «all these are maintenance's or electrical's,
+// depending on the finding»). Electrical = a word of ELEC in the text (not
+// \u00ab\u05e9\u05e7\u05e2\u00bb or \u00ab\u05dc\u05d5\u05d7\u00bb alone: a dip in the floor, a notice board).
+export const ELEC = ['\u05d7\u05e9\u05de\u05dc', '\u05db\u05d1\u05dc', '\u05ea\u05d0\u05d5\u05e8\u05d4', '\u05e0\u05d5\u05e8\u05d4', '\u05de\u05e0\u05d5\u05e8\u05d4', '\u05e4\u05e0\u05e1', '\u05d4\u05d0\u05e8\u05e7\u05d4', '\u05de\u05e4\u05e1\u05e7'];
+export function trusteeResp(dept, text) {
+  if (dept !== MAINT) return '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
+  const t = String(text || '');
+  return ELEC.some((w) => t.indexOf(w) >= 0) ? '\u05d7\u05e9\u05de\u05dc' : MAINT;
+}
 const TRUSTEE_DUE_DAYS = 3;
 const MAX_AI = 3; // assistant calls per run (subrequest budget)
 const DAY = 86400000;
@@ -193,7 +204,7 @@ export function buildRegister(hazards, reports, tasks) {
     const { dept, loc } = trusteeDept(r.loc);
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
-    rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
+    rows.push(['\u05e0-' + (k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', trusteeResp(dept, r.f), (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
       routed[r.id] ? dt(routed[r.id].due) : routedNote(r.mgr_note) ? { date: routedNote(r.mgr_note) } : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);
