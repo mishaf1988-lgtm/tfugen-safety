@@ -164,7 +164,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
   { const w = world({ nm: nmFresh(), prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'n1', src: 'near_miss' }), env }); const j = await r.json();
     const meta = w.calls.filter(c => c.u.includes('graph.facebook.com')); const resend = w.calls.find(c => c.u.includes('resend')); const log = w.calls.find(c => c.u.includes('notifications_log'));
     check('200, both channels', r.status === 200 && j.whatsapp === 'sent' && j.email === 'sent', j);
-    check('it reads near_miss, not trustee_reports', w.calls.some(c => /rest\/v1\/near_miss\?id=eq\.n1/.test(c.u)) && !w.calls.some(c => c.u.includes('trustee_reports')), w.calls.map(c => c.u));
+    check('it reads near_miss, not trustee_reports', w.calls.some(c => /rest\/v1\/near_miss\?id=eq\.n1/.test(c.u)) && !w.calls.some(c => c.u.includes('trustee_reports?id=')), w.calls.map(c => c.u));
     // rep/descr/area, not u/f/loc. Getting this wrong sends a message with the
     // reporter and the hazard both blank, which still looks like it worked.
     check('the reporter, the place and the description survive the different column names',

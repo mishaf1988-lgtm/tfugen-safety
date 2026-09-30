@@ -48,6 +48,13 @@ const MAX_AGE_MS = 48 * 3600 * 1000;
 // 'notify_failed' line in notifications_log puts it on the app's home screen.
 const FAIL_KEY = 'notify_fail', MAX_TRIES = 3, RETRY_MS = 14 * 60 * 1000, MAX_RETRY_RUN = 5, SETTLE_MS = 3 * 60 * 1000;
 const anySent = (res) => !!res && (res.whatsapp === 'sent' || res.email === 'sent');
+// Daily ceiling (30/09/2026, upgrade review 18, Michael chose 15): after 15
+// hazards claimed since midnight Israel time, the 16th sends ONE notice
+// instead of itself ("from now until tomorrow, only in the app") and the rest
+// of the day sends nothing. The rows are saved and reach the file as always;
+// only the phone stops ringing. Real use so far: at most 2 in a day. The
+// insert ceiling for anonymous sessions is in migrations/2026-09-30_anon_write_cap.sql.
+const DAILY_CAP = 15, CAP_KEY = 'notify_cap_day';
 // The template this system is meant to send on. Until it exists and is
 // approved in Meta, the approved incident template carries the message -- and
 // carries it badly: its fixed text reads «🚨 תקרית בטיחות ... נא לטפל מיידית»,
@@ -193,6 +200,8 @@ export async function onRequest({ request, env }) {
   });
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || !claimed.length) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
+  const capped = await capGate(env, sb, prefs, src, row);
+  if (capped) return jsonResp({ ok: true, skipped: capped }, 200, cors);
 
   const task = await lineFor(sb, src, row);
   const res = await deliver(env, prefs, row, task, src);
@@ -243,6 +252,7 @@ async function retrySweep(env, sb) {
       const c = await sb(srcKey + '?id=eq.' + encodeURIComponent(raw.id) + '&notified_at=is.null', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ notified_at: new Date().toISOString() }) });
       const got = c.ok ? await c.json() : [];
       if (!Array.isArray(got) || !got.length) return;
+      if (await capGate(env, sb, prefs, src, src.norm(raw))) return;
     }
     const row = src.norm(raw), task = await lineFor(sb, src, row);
     const res = await deliver(env, prefs, row, task, src);
@@ -272,6 +282,48 @@ async function retrySweep(env, sb) {
   Object.keys(m).forEach((k) => { if (m[k] && m[k].gave_up && now - Date.parse(m[k].last || 0) > 7 * 86400000) delete m[k]; });
   try { await stateSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* next tick */ }
   return out;
+}
+
+// Midnight Israel time today, as an ISO instant, and today's date there.
+function ilDay(now) { return new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); }
+function ilDayStart(now) {
+  const wall = Date.parse(new Date(now).toLocaleString('sv-SE', { timeZone: 'Asia/Jerusalem' }).replace(' ', 'T') + 'Z');
+  const off = Math.round((wall - now) / 60000) * 60000;
+  return new Date(Date.parse(ilDay(now) + 'T00:00:00Z') - off).toISOString();
+}
+// The one notice that replaces the 16th alert of the day.
+const CAP_SRC = {
+  event: 'notify_cap', emoji: '🔕', title: 'הרבה דיווחים היום', subject: 'הגבלת התראות יומית',
+  whoLabel: 'מאת', lineLabel: 'מה קרה', lineText: (row, line) => esc(line), kindLabel: () => 'הגבלת התראות יומית',
+  footer: 'נשלח אוטומטית פעם אחת ביום, כשעוברים ' + DAILY_CAP + ' התראות. באפליקציה: מודולים > נאמני בטיחות',
+};
+// null = send as usual. Otherwise the row is not sent and the reason is returned;
+// the first row over the ceiling sends CAP_SRC's notice in its place.
+async function capGate(env, sb, prefs, src, row) {
+  const now = Date.now(), since = encodeURIComponent(ilDayStart(now));
+  let n = 0;
+  try {
+    for (const q of ['trustee_reports?ok=eq.false&', 'near_miss?']) {
+      const r = await sb(q + 'notified_at=gte.' + since + '&select=id&limit=' + (DAILY_CAP * 4));
+      const j = r.ok ? await r.json() : [];
+      n += Array.isArray(j) ? j.length : 0;
+    }
+  } catch (e) { return null; }   // a failed count never costs a real alert
+  if (n <= DAILY_CAP) return null;
+  const day = ilDay(now);
+  const st = await stateGet(env, [CAP_KEY]).catch(() => ({}));
+  if (st[CAP_KEY] && st[CAP_KEY].value === day) {
+    await logRows(sb, [{ event_type: src.event, channel: 'capped', payload: { id: row.id, n } }]);
+    return 'daily cap';
+  }
+  try { await stateSet(env, { [CAP_KEY]: day }); } catch (e) { /* worst case the notice goes twice */ }
+  const [y, m, d] = day.split('-');
+  const note = { id: row.id, u: 'מערכת הבטיחות', loc: 'כל המפעל', d: d + '/' + m + '/' + y, photo_url: null,
+    f: 'היום כבר נשלחו ' + DAILY_CAP + ' התראות על מפגעים. עד מחר לא יישלחו עוד התראות. הדיווחים נשמרים כרגיל ונמצאים באפליקציה ובקובץ.' };
+  const line = 'יותר מ-' + DAILY_CAP + ' דיווחים היום';
+  const res = await deliver(env, prefs, note, line, CAP_SRC);
+  await logDelivery(sb, CAP_SRC, note, line, res);
+  return 'daily cap (notice sent)';
 }
 
 // The manager's saved settings: notification_prefs[admin].prefs.trustee_hazard
