@@ -1014,6 +1014,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   </div>
   <div id="dash-insights" style="margin:0 0 10px"></div>
   <div id="dash-notify-fail"></div>
+  <div id="dash-sync-watch"></div>
   <div id="dash-health" style="margin:0 0 10px"></div>
   <div id="dash-alerts"></div>
 
@@ -6217,6 +6218,7 @@ function rDash(){
   // call from sv* / del* helpers across the app.
   if(CUR!=='dash') return;
   try{_nfHomeRender();}catch(e){}
+  try{_swHomeRender();}catch(e){}
   // Safety health score (rough composite)
   try{
     var dh=g('dash-health');
@@ -12856,6 +12858,43 @@ function _nfHomeRender(){
         +' <span style="color:var(--t2);font-size:12px">('+fd(String(r.ts||'').substring(0,10))+')</span></div>'
         +'<button type="button" class="btn btn-s" style="min-height:40px" data-id="'+esc(String(p.id))+'" onclick="'+(nm?"showView('near_miss',this.dataset.id)":"goPage('trustees')")+'">\u05e4\u05ea\u05d7</button>'
         +'<button type="button" class="btn btn-s" style="min-height:40px" data-l="'+esc(String(r.id))+'" onclick="nfSeen(this.dataset.l)">\u05e8\u05d0\u05d9\u05ea\u05d9</button></div>';}).join('')+'</div>';
+}
+// The sync watchdog (upgrade review 12, 30/09/2026; _watchdog.js): what it
+// found open, from /api/hazard-file op:'status'. It mails Michael too, but the
+// mail goes through the same Microsoft connection, so the home screen is the
+// place that still says something when that connection is what broke, and
+// when the 15-minute check itself has stopped (no run for 45 minutes).
+var _swState=null,_swAt=0,_swBusy=false;
+function _swProblems(j,nowMs){
+  if(!j||typeof j.configured!=='boolean'||!j.configured)return [];
+  var out=[],w=j.watch;
+  if(!j.connected&&!(w&&(w.open||[]).some(function(x){return x.key==='od';})))out.push({title:'\u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc-OneDrive \u05e0\u05e4\u05dc',detail:'\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea \u05dc\u05d0 \u05de\u05ea\u05e2\u05d3\u05db\u05e0\u05d9\u05dd \u05e2\u05d3 \u05e9\u05de\u05ea\u05d7\u05d1\u05e8\u05d9\u05dd \u05de\u05d7\u05d3\u05e9'});
+  if(w){
+    (w.open||[]).forEach(function(x){out.push({title:x.title,detail:x.detail});});
+    var t=Date.parse(w.at||'');
+    if(t&&nowMs-t>45*60000)out.push({title:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05dc\u05d0 \u05e8\u05e6\u05d4',detail:'\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(new Date(t).toISOString().substring(0,10))+' '+new Date(t).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'. \u05d4\u05e1\u05d1\u05d1 \u05e9\u05dc 15 \u05d4\u05d3\u05e7\u05d5\u05ea \u05d1\u05e9\u05e8\u05ea \u05e0\u05e2\u05e6\u05e8.'});
+    if(w.mailErr&&out.length)out.push({title:'\u05d4\u05d4\u05ea\u05e8\u05d0\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05d4',detail:String(w.mailErr).substring(0,120)});
+  }
+  return out;
+}
+function _swHomeRender(){
+  var box=g('dash-sync-watch');if(!box)return;
+  var mine=typeof _role==='function'&&(_role()==='admin'||_role()==='manager');
+  if(!mine){box.innerHTML='';return;}
+  if(!_swBusy&&Date.now()-_swAt>5*60000&&typeof _sbToken!=='undefined'&&_sbToken){
+    _swBusy=true;_swAt=Date.now();
+    _truApi('/api/hazard-file',{op:'status'}).then(function(j){if(j&&typeof j.configured==='boolean')_swState=j;})['catch'](function(){}).then(function(){_swBusy=false;_swPaint();});
+  }
+  _swPaint();
+}
+function _swPaint(){
+  var box=g('dash-sync-watch');if(!box)return;
+  var list=_swProblems(_swState,Date.now());
+  if(!list.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="card" style="border:2px solid #dc2626;background:#fef2f2;padding:12px;margin:0 0 10px">'
+    +'<div style="font-weight:900;color:#b91c1c;margin-bottom:4px">\u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e2\u05dd \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea ('+list.length+')</div>'
+    +list.map(function(x){return '<div style="padding:6px 0;border-top:1px dashed #fca5a5;font-size:13px;word-break:break-word"><b>'+esc(x.title)+'</b>'+(x.detail?'<br><span style="color:var(--t2)">'+esc(x.detail)+'</span>':'')+'</div>';}).join('')
+    +'<button type="button" class="btn btn-s" style="min-height:40px;margin-top:6px" onclick="goPage(\'thz\')">\u05dc\u05de\u05e1\u05da \u05d4\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd</button></div>';
 }
 function nfSeen(lid){var s=_nfSeen();s[lid]=1;try{localStorage.setItem(NF_SEEN_KEY,JSON.stringify(s));}catch(e){}_nfHomeRender();}
 function _sysChkDelivery(){
