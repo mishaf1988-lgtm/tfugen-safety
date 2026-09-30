@@ -131,6 +131,14 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('trustee: tour number = the department\'s latest tour on or before the finding (so not "מסיור קודם")', rows[3][2] === 10 && rows[2][2] === '', [rows[2][2], rows[3][2]]);
 
   check('a finding marked "לא רלוונטי" is not in the register (and never deleted)', !rows.some((x) => x[5] === 'אין כריזה צבע אדום'), rows.map((x) => x[5]));
+  // Upgrade review 23 (30/09/2026): נ-k is trustee_reports.num, fixed once. A
+  // finding marked not relevant leaves a gap; the later ones keep their number.
+  {
+    const fixed = TR.map((r, i) => ({ ...r, num: 10 + i }));
+    const nums = buildRows(HZ, fixed).filter((x) => /^נ-/.test(x[0])).map((x) => x[0]);
+    const want = fixed.filter((r) => r.ok === false && +r.t >= 1 && +r.t <= 7 && !/^\s*לא רלוונטי/.test(r.mgr_note || '')).sort((a, b) => String(a.ts).localeCompare(String(b.ts))).map((r) => 'נ-' + r.num);
+    check('נ-k comes from num (fixed), not from the position; a not-relevant finding leaves a gap', nums.length === want.length && nums.every((n, i) => n === want[i]) && nums[0] !== 'נ-1', { nums, want });
+  }
   const withA = buildRows(HZ, TR.map((x) => (x.id === 'a' ? { ...x, action: 'להחליף את הפנס' } : x)));
   check('with a corrective action: "<action> (סיור נאמן: <name>)"', withA[2][8] === 'להחליף את הפנס (סיור נאמן: מוסא)', withA[2][8]);
   check('cleanAction: one line, no numbering / bold / long dash, keyboard characters only', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד') === 'לתקן את הפנס - ולוודא', cleanAction('1. **לתקן את הפנס** — ולוודא\nעוד'));

@@ -104,7 +104,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos) {
 async function loadAll(env, token) {
   const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
   // This year's workbook; in the first minutes of a year, before the tick has
