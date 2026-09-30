@@ -76,7 +76,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     document.getElementById('tru-me-other').value = 'אורחת'; _truSetMe('אורחת');
     return { opts, stored, score, otherShown, stored2: localStorage.getItem('tfgn_trustee_name'), sel: document.getElementById('tru-me').value };
   });
-  check('trustee screen picker: same roster; picking גלינה stores the name and shows her 10 points; "אחר" reveals the text input and keeps the typed name', e.opts.includes('גלינה') && !e.opts.includes('לב') && e.stored === 'גלינה' && e.score === '10/100' && e.otherShown && e.stored2 === 'אורחת' && e.sel === '__other__', e);
+  check('trustee screen picker: same roster; picking גלינה stores the name and shows her 10 points; "אחר" reveals the text input and keeps the typed name', e.opts.includes('גלינה') && !e.opts.includes('לב') && e.stored === 'גלינה' && e.score === '10/110' && e.otherShown && e.stored2 === 'אורחת' && e.sel === '__other__', e);
 
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));

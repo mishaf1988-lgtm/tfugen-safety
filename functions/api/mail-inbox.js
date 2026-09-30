@@ -110,7 +110,7 @@ async function closeOne(env, token, msg, c) {
   const f = Array.isArray(rows) && rows[0];
   if (!f) return { result: 'unknown finding' };
   const t = parseInt(f.t, 10);
-  if (f.ok !== false || !(t >= 1 && t <= 7)) return { result: 'not a finding' };
+  if (f.ok !== false || !(t >= 1 && t !== TASK_CLOSE)) return { result: 'not a finding' };
   if (f.s === S_CLOSED) return { result: 'already closed' };
 
   let photoUrl = null;

@@ -14,7 +14,7 @@
 // The rows, one merged register:
 //   * every manager tour hazard (tour_hazards), by מס"ד; notes start with
 //     "דיווח ממונה";
-//   * every trustee finding (trustee_reports, a ליקוי on tasks 1-7), numbered
+//   * every trustee finding (trustee_reports, a ליקוי on any task but 8), numbered
 //     נ-1, נ-2 ... by report time; notes start with "דיווח נאמן: <name>".
 //     A trustee has no severity, responsible or target: בינונית, מנהל המחלקה
 //     and report date + 3 days (Michael, 28/09). "פעולה נדרשת" says
@@ -126,7 +126,12 @@ export function deptOf(name) {
 // depending on the finding»). Electrical = a word of ELEC in the text (not
 // \u00ab\u05e9\u05e7\u05e2\u00bb or \u00ab\u05dc\u05d5\u05d7\u00bb alone: a dip in the floor, a notice board).
 export const ELEC = ['\u05d7\u05e9\u05de\u05dc', '\u05db\u05d1\u05dc', '\u05ea\u05d0\u05d5\u05e8\u05d4', '\u05e0\u05d5\u05e8\u05d4', '\u05de\u05e0\u05d5\u05e8\u05d4', '\u05e4\u05e0\u05e1', '\u05d4\u05d0\u05e8\u05e7\u05d4', '\u05de\u05e4\u05e1\u05e7'];
-export function trusteeResp(dept, text) {
+// Task 9 (electrical panels and faults, 30/09/2026) is always electrical's,
+// and the department manager's too (Michael: «\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05de\u05d7\u05dc\u05e7\u05ea \u05d7\u05e9\u05de\u05dc»):
+// "\u05d7\u05e9\u05de\u05dc" in column H is what adds electrical and engineering to the report.
+export const TASK_ELEC = 9;
+export function trusteeResp(dept, text, task) {
+  if (+task === TASK_ELEC) return dept === MAINT ? '\u05d7\u05e9\u05de\u05dc' : '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4 + \u05d7\u05e9\u05de\u05dc';
   if (dept !== MAINT) return '\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
   const t = String(text || '');
   return ELEC.some((w) => t.indexOf(w) >= 0) ? '\u05d7\u05e9\u05de\u05dc' : MAINT;
@@ -141,10 +146,11 @@ const d10 = (v) => (v ? String(v).substring(0, 10) : '');
 const dt = (v) => (d10(v) ? { date: d10(v) } : null);
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 
-// A trustee finding (a ליקוי on tasks 1-7). One the manager marked "not
+// A trustee finding (a ליקוי on any task but 8, the closing one; task 9
+// electrical since 30/09/2026). One the manager marked "not
 // relevant" (mgr_note starts with it; rows are never deleted, CLAUDE.md) stays
 // in the history and out of the register (28/09, the Tzeva Adom finding).
-export const isFinding = (r) => !!r && r.ok === false && +r.t >= 1 && +r.t <= 7;
+export const isFinding = (r) => !!r && r.ok === false && +r.t >= 1 && +r.t !== 8;
 export const notRelevant = (r) => /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String((r && r.mgr_note) || ''));
 
 // Routing a finding from the trustees screen (WhatsApp / mail / Vitre SMS)
@@ -207,7 +213,7 @@ export function buildRegister(hazards, reports, tasks) {
     const { dept, loc } = trusteeDept(r.loc);
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
-    rows.push(['\u05e0-' + (r.num || k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', trusteeResp(dept, r.f), (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
+    rows.push(['\u05e0-' + (r.num || k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', trusteeResp(dept, r.f, r.t), (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
       routed[r.id] ? dt(routed[r.id].due) : routedNote(r.mgr_note) ? { date: routedNote(r.mgr_note) } : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);

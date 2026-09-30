@@ -37,15 +37,15 @@ const REPORTS = [
     _applyRoleGates(); goPage('trustees');
   }, { tasks, reports: REPORTS });
 
-  console.log('\n1. the catalogue falls back to the built-in 8 until the migration runs');
+  console.log('\n1. the catalogue falls back to the built-in 9 until the migration runs');
   {
     await boot(null);
     const r = await page.evaluate(() => ({
       n: _truTasks().length, nums: _truTasks().map((t) => t.n),
       seeded: _truTasksSeeded(), max: _truMaxTaskPts(), min: _truMinTasks(),
     }));
-    check('an empty trustee_tasks table still yields the 8 tasks from index.html', r.n === 8 && r.nums.join() === '1,2,3,4,5,6,7,8' && !r.seeded, r);
-    check('the ceiling is 8×10=80 and eligibility is 5, exactly as before', r.max === 80 && r.min === 5, r);
+    check('an empty trustee_tasks table still yields the 9 tasks from index.html', r.n === 9 && r.nums.join() === '1,2,3,4,5,6,7,8,9' && !r.seeded, r);
+    check('the ceiling is 9×10=90 and eligibility is 5, as before', r.max === 90 && r.min === 5, r);
     const warned = await page.evaluate(() => { _truTasksOpen(); const w = document.getElementById('tru-tasks-warn'); const btns = document.querySelectorAll('#tru-tasks-list button').length; closeModal('m-tru-tasks'); return { shown: getComputedStyle(w).display !== 'none', txt: w.textContent, btns: btns }; });
     check('the editor says so plainly and offers no edit buttons it cannot honour', warned.shown && /trustee_tasks/.test(warned.txt) && warned.btns === 0, warned);
   }

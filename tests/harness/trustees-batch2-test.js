@@ -396,7 +396,7 @@ let DIALOGS = [];
       _truRender();
       return { btn: (g('tru-n-btn') || {}).textContent, card: (g('tru-score') || {}).textContent };
     });
-    check('with the built-in eight it says 8 and /100 again — nothing was hard-coded the other way', eight.btn === '8' && /\/100/.test(eight.card), eight);
+    check('with the built-in nine it says 9 and /110 again — nothing was hard-coded the other way', eight.btn === '9' && /\/110/.test(eight.card), eight);
   }
 
   await page.evaluate(() => { try { localStorage.removeItem('tfgn_trustee_name'); } catch (e) {} });

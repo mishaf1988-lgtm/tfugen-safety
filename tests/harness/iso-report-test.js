@@ -299,6 +299,22 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('the annual report is handed the tour-hazard numbers', r.ann, r);
   }
 
+  console.log('\n12. task 9 (electrical) is a finding in the app too');
+  {
+    const r = await page.evaluate(() => {
+      __wipe(); DB.trustee_tasks = [];
+      DB.trustee_reports = [
+        { id: 'e9', u: 'דני', t: 9, d: __iso(-2), ok: false, s: 'פתוח', f: 'לוח פתוח' },
+        { id: 'c8', u: 'דני', t: 8, d: __iso(-1), ok: true, ref: 'x', f: 'אחרי' },
+      ];
+      return { f: _mfTruFindings().map((x) => x.id), task: !!_truTask(9), hz: _truIsHazard(DB.trustee_reports[0]), open: _opsEvidence().truOpen, max: _truMaxTaskPts() };
+    });
+    check('a task-9 report is in the findings list, the closing photo is not', r.f.join() === 'e9', r.f);
+    check('task 9 is in the catalogue and counts as a hazard', r.task && r.hz, r);
+    check('the ISO sheet counts it as an open trustee finding', r.open === 1, r.open);
+    check('nine tasks, 90 task points', r.max === 90, r.max);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
