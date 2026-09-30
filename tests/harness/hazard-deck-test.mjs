@@ -145,7 +145,18 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const full = deckContent(m2, [row(40, '2026-09-22', 'ייצור טוגנים', '', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)], ref2, { s3Month: '2026-09' }).s3.high[0].items[0].join('');
   check('a line as long as the 22/09 deck\'s own (72 characters) is not shortened', full === 'ייצור טוגנים - נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', full);
   check('descriptions: the part before " - " (never inside parentheses), cut at a word, one line with the department', it[0] === 'מעצבים - מחסן חומרים מסוכנים: מחסן החומרים עמוס' && /^מעצבים - נקודות צביטה חשופות/.test(it[1]) && !/\(/.test(it[1]) && it.every((x) => x.length <= 76), it);
-  check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[1] === 'מעצבים, כולם עדיין פתוחים', c2x.s1.NewNote);
+  check('new this week, none closed yet: "כולם עדיין פתוחים" (not "0 נסגרו")', c2x.s1.NewNote[0] === '2 מפגעים חדשים, כולם עדיין פתוחים' && c2x.s1.NewNote[1] === 'נפתחו השבוע: מעצבים', c2x.s1.NewNote);
+  // 30/09/2026 (Michael: slide 1 said «8 new hazards» when some were closed;
+  // chose «all on one line»): what became of them is in the first line.
+  const nn = (rs) => deckContent({ hazards: meetingHazards(rs, ref2), accidents: meetingAccidents(INC, ref2) }, rs, ref2, {}).s1.NewNote;
+  const wk = (n, dept, s) => row(n, '2026-09-22', dept, '', 'מפגע ' + n, 'בינונית', null, s, s === 'סגור' ? '2026-09-23' : null);
+  const mix = [1, 2, 3, 4, 5].map((n) => wk(n, 'מעצבים', 'סגור')).concat([6, 7, 8].map((n) => wk(n, 'חומר גלם', 'פתוח')));
+  check('8 new, 5 closed: "8 מפגעים חדשים: 5 נסגרו, 3 פתוחים"', nn(mix)[0] === '8 מפגעים חדשים: 5 נסגרו, 3 פתוחים', nn(mix));
+  check('...and the departments on the second line', /^נפתחו השבוע: /.test(nn(mix)[1]) && /מעצבים/.test(nn(mix)[1]) && /חומר גלם/.test(nn(mix)[1]), nn(mix));
+  check('all closed: "כולם כבר נסגרו"', nn(mix.slice(0, 5))[0] === '5 מפגעים חדשים, כולם כבר נסגרו', nn(mix.slice(0, 5)));
+  check('one of each: "אחד נסגר, אחד פתוח"', nn([mix[0], mix[7]])[0] === '2 מפגעים חדשים: אחד נסגר, אחד פתוח', nn([mix[0], mix[7]]));
+  check('a single one: "מפגע חדש אחד, כבר נסגר" / "נפתח השבוע: מעצבים"', nn([mix[0]])[0] === 'מפגע חדש אחד, כבר נסגר' && nn([mix[0]])[1] === 'נפתח השבוע: מעצבים' && nn([mix[7]])[0] === 'מפגע חדש אחד, עדיין פתוח', [nn([mix[0]]), nn([mix[7]])]);
+  check('the first line never says "N new" alone when some are closed', !/^\d+ מפגעים חדשים נפתחו השבוע$/.test(nn(mix)[0]));
   check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
