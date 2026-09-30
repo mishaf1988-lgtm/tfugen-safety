@@ -8592,31 +8592,6 @@ function _eqiNormCode(s){
   if(!t||t==='-'||t==='—'||t==='*')return '';
   return t;
 }
-// Extract a JSON object from Claude's text response. Handles markdown code
-// fences, leading/trailing prose, and nested braces.
-function _eqiPdfExtractJson(txt){
-  if(!txt)return null;
-  var s=String(txt);
-  s=s.replace(/```(?:json)?\s*/gi,'').replace(/```/g,'');
-  var start=s.indexOf('{');
-  while(start>=0){
-    var depth=0,inStr=false,esc=false;
-    for(var i=start;i<s.length;i++){
-      var ch=s[i];
-      if(esc){esc=false;continue;}
-      if(ch==='\\'){esc=true;continue;}
-      if(ch==='"'){inStr=!inStr;continue;}
-      if(inStr)continue;
-      if(ch==='{')depth++;
-      else if(ch==='}'){depth--;if(depth===0){
-        var candidate=s.substring(start,i+1);
-        try{return JSON.parse(candidate);}catch(e){break;}
-      }}
-    }
-    start=s.indexOf('{',start+1);
-  }
-  return null;
-}
 function _eqiPdfAnalyzeOne(file,srcIdx){
   return new Promise(function(resolve,reject){
   // Multi-item prompt — extracts shared metadata + per-item identifiers.
@@ -11925,14 +11900,6 @@ tb.innerHTML=rows.map(function(n){
   '</tr>';
 }).join('');
 }
-function ncrTab(t){
-window._ncrFilter=t;
-['all','saf','env'].forEach(function(k){
-  var el=g('ncr-tab-'+k);
-  if(el)el.className='btn '+(t===k?'btn-p':'btn-s');
-});
-rNcr();
-}
 // ---- 1.11 ----
 // \u05de\u05d4 \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05db\u05d9 \u05e9\u05db\u05d9\u05d7\u05d4 \u05dc\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05d0\u05e6\u05dc\u05db\u05dd? is the question an ISO audit opens
 // with, and with 375 records the root cause was 375 free-text strings: no
@@ -11976,10 +11943,6 @@ function _locFilterOptionsHtml(currentId,placeholder){
     html+='<option value="'+esc(it.id)+'"'+sel+'>'+pad+arrow+esc(it.name)+'</option>';
   });
   return html;
-}
-function ncrStatusChange(){
-var s=g('ncr-s'),w=g('ncr-close-wrap');
-if(s&&w)w.style.display=(s.value==='\u05e1\u05d2\u05d5\u05e8')?'block':'none';
 }
 
 function ncrTab(t){

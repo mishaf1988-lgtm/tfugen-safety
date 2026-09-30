@@ -154,13 +154,37 @@ async function sha(s) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 export const TASKS_Q = 'tasks?select=id,due,source_table,source_id,ts&source_table=eq.trustee_reports';
+// 30/09/2026 (upgrade review, item 30): this asked for 5000 rows, but
+// PostgREST caps every response at db-max-rows (1000) without an error. With
+// order=n.asc / ts.asc it is the NEWEST hazards and reports that would have
+// been cut from the file, the department report, the deck and the meeting
+// data once a table passed 1000 rows. It now reads page by page, and id is
+// added to the order so a page boundary on equal values (same ts, same n)
+// neither repeats nor skips a row. Every table read here has an id column.
+// trustee-log.js had its own paged copy; it now uses this one.
+export const READ_PAGE = 1000, READ_MAX_PAGES = 20;
+export function pagedPath(path, off) {
+  const q = path.indexOf('?') >= 0 ? path : path + '?';
+  const m = /([?&])order=([^&]*)/.exec(q);
+  let out = q;
+  if (!m) out = q + (q.endsWith('?') ? '' : '&') + 'order=id.asc';
+  else if (!/(^|,)id\./.test(m[2])) out = q.replace(m[0], m[1] + 'order=' + m[2] + ',id.asc');
+  return out + '&limit=' + READ_PAGE + '&offset=' + off;
+}
 export async function readAll(env, path) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
-  const r = await fetch(base + path + '&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
-  if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
-  const j = await r.json();
-  return Array.isArray(j) ? j : [];
+  const out = [];
+  for (let page = 0; page < READ_MAX_PAGES; page++) {
+    const r = await fetch(base + pagedPath(path, page * READ_PAGE), { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
+    const j = await r.json();
+    if (!Array.isArray(j)) return out;
+    out.push(...j);
+    if (j.length < READ_PAGE) return out;
+  }
+  // A cut list would be written as if it were the whole register.
+  throw new Error('read ' + path.split('?')[0] + ': more than ' + READ_PAGE * READ_MAX_PAGES + ' rows');
 }
 export async function graphPut(token, folder, name, bytes, type) {
   const r = await fetch(G + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type }, body: bytes });
