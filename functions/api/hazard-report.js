@@ -19,7 +19,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
-import { FOLDER, FILES, DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb } from './hazard-file.js';
+import { FILES, DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb, ilYear, folderFor } from './hazard-file.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
@@ -100,7 +100,11 @@ async function loadAll(env, token) {
     readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
-  const r = await fetch(G + seg(FOLDER + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+  // This year's workbook; in the first minutes of a year, before the tick has
+  // copied it into the new folder, last year's (upgrade review 24).
+  const book0 = (y) => fetch(G + seg(folderFor(y) + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+  let r = await book0(ilYear());
+  if (r.status === 404) r = await book0(ilYear() - 1);
   if (!r.ok) throw new Error('the workbook could not be read (onedrive ' + r.status + ')');
   const book = new Uint8Array(await r.arrayBuffer());
   const rc = await readSheetRows(book, { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] });

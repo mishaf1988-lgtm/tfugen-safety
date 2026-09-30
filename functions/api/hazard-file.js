@@ -44,7 +44,44 @@ import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from
 import { suggestAction } from '../_ai.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
 
-export const FOLDER = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd/2026';
+export const FOLDER_BASE = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
+// A file per year (upgrade review 24, Michael 30/09/2026: «a new file every
+// year», numbering continues): the folder is 13_.../<year>, Israel time. On
+// the first run of a year the server copies last year's file, as it is, into
+// the new folder (yearItem), and last year's stops being written.
+export const FIRST_YEAR = 2026;
+export const ilYear = (d) => +new Date(d || Date.now()).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).substring(0, 4);
+export const folderFor = (y) => FOLDER_BASE + '/' + y;
+// The first year's folder. Runs use folderFor(ilYear()), so the year is
+// read when they run, not when the module was loaded.
+export const FOLDER = folderFor(FIRST_YEAR);
+// The file of `year` in its folder; when it is not there yet and last year's
+// is, last year's is copied in first, as it is (a change typed there and not
+// yet taken is taken from the copy on this run). Returns the metadata response.
+export async function yearItem(token, name, type, year, select) {
+  const auth = { Authorization: 'Bearer ' + token };
+  const get = (y, sel) => fetch(G + seg(folderFor(y)) + '/' + encodeURIComponent(name) + '?select=' + sel, { headers: auth });
+  let mr = await get(year, select);
+  if (mr.status !== 404 || year <= FIRST_YEAR) return { mr, rolled: false };
+  const pr = await get(year - 1, 'id,@microsoft.graph.downloadUrl');
+  if (!pr.ok) return { mr, rolled: false };
+  const dl = await fetch((await pr.json())['@microsoft.graph.downloadUrl']);
+  if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
+  await graphPut(token, folderFor(year), name, new Uint8Array(await dl.arrayBuffer()), type);
+  mr = await get(year, select);
+  return { mr, rolled: true };
+}
+// The rows of the file of `year`: that year's hazards, everything still open,
+// and what was closed in that year. A hazard closed in an earlier year stays
+// in that year's file and in the app. The first year keeps everything.
+export const FULL_WARN = 164;
+export function yearReg(reg, year) {
+  if (year <= FIRST_YEAR) return reg;
+  const y = (v) => { const d = v && typeof v === 'object' ? v.date : v; return d ? +String(d).substring(0, 4) : 0; };
+  const rows = [], ids = [];
+  reg.rows.forEach((r, i) => { if (y(r[1]) >= year || r[10] !== '\u05e1\u05d2\u05d5\u05e8' || y(r[11]) >= year) { rows.push(r); ids.push(reg.ids[i]); } });
+  return { rows, ids };
+}
 export const FILES = {
   xlsm: { name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm', type: 'application/vnd.ms-excel.sheet.macroEnabled.12' },
   xlsx: { name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsx', type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
@@ -530,8 +567,9 @@ export async function applyEdits(env, ed, hazards, reports) {
   return done;
 }
 
-export async function runFile(env, which, force) {
+export async function runFile(env, which, force, opt) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
+  const year = ilYear((opt && opt.now) || Date.now()), FOLDER = folderFor(year);
   const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
@@ -551,7 +589,7 @@ export async function runFile(env, which, force) {
       if (up.ok) r.action = a;
     } catch (e) { /* next run */ }
   }
-  let reg = buildRegister(hazards, reports, tasks);
+  let reg = yearReg(buildRegister(hazards, reports, tasks), year);
   let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';
   const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last', K + 'dropped', K + 'dismissed']).catch(() => ({}));
@@ -559,7 +597,7 @@ export async function runFile(env, which, force) {
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
-    const mr = await fetch(G + seg(FOLDER) + '/' + encodeURIComponent(f.name) + '?select=id,cTag,lastModifiedDateTime,size,webUrl,@microsoft.graph.downloadUrl', { headers: { Authorization: 'Bearer ' + token } });
+    const { mr } = await yearItem(token, f.name, f.type, year, 'id,cTag,lastModifiedDateTime,size,webUrl,@microsoft.graph.downloadUrl');
     if (mr.status === 404) throw Object.assign(new Error('the file is not in the folder: ' + FOLDER + '/' + f.name), { status: 404 });
     if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
     const meta = await mr.json();
@@ -600,8 +638,8 @@ export async function runFile(env, which, force) {
         const done = new Set(pulled.written);
         ed.pulled.forEach((p) => { if (done.has(p.id) && last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
-        if (pulled.pending) { await saveDropped(buildRegister(hazards, reports, tasks)); return { ok: true, file: which, pushed: false, reason: 'pulling', pulled }; }
-        reg = buildRegister(hazards, reports, tasks);
+        if (pulled.pending) { await saveDropped(yearReg(buildRegister(hazards, reports, tasks), year)); return { ok: true, file: which, pushed: false, reason: 'pulling', pulled }; }
+        reg = yearReg(buildRegister(hazards, reports, tasks), year);
         sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
       }
     }
@@ -621,13 +659,16 @@ export async function runFile(env, which, force) {
     const links = await signPhotos(env, ph.all.map((x) => x.url));
     const pics = [], minHeights = {};
     for (const x of ph.want) { const b = await fetchThumb(env, x.url); if (b) { pics.push({ row: x.row, bytes: b, link: links[x.url] || null }); minHeights[x.row] = PIC_ROW_PT; } }
+    // Full: a Hebrew error the tours screen and the watchdog show, not
+    // patchSheetRows' English one (upgrade review 24).
+    if (reg.rows.length > MAX_ROW - 1) throw new Error('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05dc\u05d0: ' + reg.rows.length + ' \u05e9\u05d5\u05e8\u05d5\u05ea, \u05d5\u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05de\u05d5\u05db\u05e0\u05d5\u05ea ' + (MAX_ROW - 1) + '. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d1\u05ea\u05d1\u05e0\u05d9\u05ea.');
     const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true,
       log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null, minHeights,
       pictures: { col: PHOTO_COL, header: PHOTO_HEADER, width: 17, text: PHOTO_TEXT, pics, links: ph.all.filter((x) => links[x.url]).map((x) => ({ row: x.row, link: links[x.url] })) } });
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
     await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
-      [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '' });
+      [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '', [K + 'rows']: String(reg.rows.length), [K + 'year']: String(year) });
     return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
@@ -646,9 +687,11 @@ export async function runFile(env, which, force) {
 // ארכיון/חודשי, named with the month (09-2026). Once a day: copies in
 // ארכיון/גרסאות שנדרסו older than 30 days are deleted (to the OneDrive
 // recycle bin). Nothing else in the archive is touched.
-const ARCHIVE = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df';
-export const MONTHLY = ARCHIVE + '/\u05d7\u05d5\u05d3\u05e9\u05d9';
-export const OVERWRITTEN = ARCHIVE + '/\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5';
+// By year (upgrade review 24): December's copy goes to the folder of the year
+// it belongs to, from that year's file.
+const ARCHIVE = (y) => folderFor(y) + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df';
+export const MONTHLY = (y) => ARCHIVE(y) + '/\u05d7\u05d5\u05d3\u05e9\u05d9';
+export const OVERWRITTEN = (y) => ARCHIVE(y) + '/\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5';
 const KEEP_DAYS = 30, MAX_PRUNE = 20;
 // Only the server's own copies: the file's name, " - ", a stamp, xlsm/xlsx.
 const COPY_RE = /^\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd - [\d .-]+\.xls[xm]$/;
@@ -665,26 +708,29 @@ export async function runArchive(env, now) {
   const { token } = await accessToken(env);
   const auth = { Authorization: 'Bearer ' + token };
   if (doSnap) {
-    const f = FILES.xlsm, name = stampMonth(f.name, prevMonth);
-    const ex = await fetch(G + seg(MONTHLY) + '/' + encodeURIComponent(name) + '?select=id', { headers: auth });
+    const f = FILES.xlsm, name = stampMonth(f.name, prevMonth), py = +prevMonth.substring(0, 4);
+    const ex = await fetch(G + seg(MONTHLY(py)) + '/' + encodeURIComponent(name) + '?select=id', { headers: auth });
     if (ex.status === 404) {
-      const mr = await fetch(G + seg(FOLDER) + '/' + encodeURIComponent(f.name) + '?select=id,@microsoft.graph.downloadUrl', { headers: auth });
+      const mr = await fetch(G + seg(folderFor(py)) + '/' + encodeURIComponent(f.name) + '?select=id,@microsoft.graph.downloadUrl', { headers: auth });
       if (!mr.ok) throw new Error('onedrive ' + mr.status);
       const dl = await fetch((await mr.json())['@microsoft.graph.downloadUrl']);
       if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
-      await graphPut(token, MONTHLY, name, new Uint8Array(await dl.arrayBuffer()), f.type);
+      await graphPut(token, MONTHLY(py), name, new Uint8Array(await dl.arrayBuffer()), f.type);
       out.snap = name;
     } else if (ex.ok) out.snap = 'already there';
     else throw new Error('onedrive ' + ex.status);
     await stateSet(env, { hazard_snap_month: prevMonth });
   }
   if (doPrune) {
-    const lr = await fetch(G + seg(OVERWRITTEN) + ':/children?$select=id,name,createdDateTime,file&$top=200', { headers: auth });
-    const items = lr.status === 404 ? [] : lr.ok ? ((await lr.json()).value || []) : null;
-    if (!items) throw new Error('onedrive ' + lr.status);
-    const cut = now.getTime() - KEEP_DAYS * DAY;
-    const old = items.filter((x) => x.file && COPY_RE.test(x.name || '') && Date.parse(x.createdDateTime) < cut);
-    const gone = [];
+    // This year's copies and last year's (they stop growing on 1 January).
+    const y = ilYear(now), old = [], gone = [];
+    for (const yy of y > FIRST_YEAR ? [y, y - 1] : [y]) {
+      const lr = await fetch(G + seg(OVERWRITTEN(yy)) + ':/children?$select=id,name,createdDateTime,file&$top=200', { headers: auth });
+      const items = lr.status === 404 ? [] : lr.ok ? ((await lr.json()).value || []) : null;
+      if (!items) throw new Error('onedrive ' + lr.status);
+      const cut = now.getTime() - KEEP_DAYS * DAY;
+      items.filter((x) => x.file && COPY_RE.test(x.name || '') && Date.parse(x.createdDateTime) < cut).forEach((x) => old.push(x));
+    }
     for (const x of old.slice(0, MAX_PRUNE)) {
       const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id), { method: 'DELETE', headers: auth });
       if (d.ok || d.status === 404) gone.push(x.name);
@@ -703,8 +749,8 @@ export function stampMonth(name, ym) {
 
 // One run per file at a time (runLeased, _onedrive.js).
 const LEASE_MS = 120000;
-export async function runFileLocked(env, which, force) {
-  const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => runFile(env, which, force));
+export async function runFileLocked(env, which, force, opt) {
+  const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => runFile(env, which, force, opt));
   if (r && r.busy) return { ok: true, file: which, pushed: false, reason: 'busy' };
   // Proof of life for the sync watchdog (_watchdog.js): a run that finished,
   // written or unchanged, means the file and the app agree.
@@ -726,18 +772,18 @@ export async function onRequest(context) {
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     if (body.op === 'status') {
       const keys = [];
-      Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url', 'dropped'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
+      Object.keys(FILES).forEach((k) => ['at', 'err', 'err_at', 'url', 'dropped', 'rows'].forEach((x) => keys.push('hazard_' + k + '_' + x)));
       keys.push(WATCH_KEY);
       const s = await stateGet(env, keys).catch(() => ({}));
       const v = (k) => (s[k] && s[k].value) || null;
       let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) {}
       const files = {};
       const dj = (k) => { try { return JSON.parse(v('hazard_' + k + '_dropped') || 'null'); } catch (e) { return null; } };
-      Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url'), dropped: dj(k) }; });
+      Object.keys(FILES).forEach((k) => { files[k] = { name: FILES[k].name, rows: +v('hazard_' + k + '_rows') || null, maxRows: MAX_ROW - 1, warnAt: FULL_WARN, last: v('hazard_' + k + '_at'), error: v('hazard_' + k + '_err'), errorAt: v('hazard_' + k + '_err_at'), webUrl: v('hazard_' + k + '_url'), dropped: dj(k) }; });
       // The sync watchdog's open problems, for the home screen: also when the
       // mail could not go out (the Microsoft connection is what broke).
       let watch = null; try { const w = JSON.parse(v(WATCH_KEY) || 'null'); if (w) watch = { at: w.at, mailErr: w.mail_err || '', open: Object.keys(w.open || {}).map((k) => ({ key: k, title: w.open[k].title, detail: w.open[k].detail, since: w.open[k].since })) }; } catch (e) { watch = null; }
-      return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: FOLDER, files, watch }, 200, cors);
+      return jsonResp({ configured: odConfigured(env), connected: !!(row && row.refresh_token), folder: folderFor(ilYear()), files, watch }, 200, cors);
     }
     // "\u05d8\u05d5\u05e4\u05dc" on an item of the not-taken list.
     if (body.op === 'dismiss') {

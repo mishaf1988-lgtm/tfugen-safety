@@ -38,6 +38,10 @@ check('no OneDrive token: "od", and not four "stale" on top', keys(l).join() ===
 check('ok_at not written yet (first hour after this ships): nothing', assess(S({}), NOW, true, ago(30)).length === 0);
 check('...still not written an hour later: all four stale', assess(S({}), NOW, true, ago(61)).length === 4);
 
+l = assess(S({ ...fresh, hazard_xlsm_rows: '164' }), NOW, true, ago(600));
+check('the file at 164 of 205 rows (80%): "full:xlsm", with the numbers', keys(l).join() === 'full:xlsm' && /מתמלא/.test(l[0].title) && /164 שורות מתוך 205/.test(l[0].detail), l);
+check('163 rows: nothing yet', assess(S({ ...fresh, hazard_xlsm_rows: '163' }), NOW, true, ago(600)).length === 0);
+
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
 check('new problem: to mail', st.fresh.join() === 'stale:deck' && !st.done.length);

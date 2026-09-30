@@ -12,7 +12,7 @@
 // {op:'setDate', date}, {force:true} (admin/manager session).
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, runLeased } from '../_onedrive.js';
-import { FOLDER, G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q } from './hazard-file.js';
+import { G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q, ilYear, folderFor, yearItem } from './hazard-file.js';
 import { meetingHazards, meetingAccidents } from '../_meeting.js';
 import { deckContent, patchDeck } from '../_deckpatch.js';
 
@@ -35,7 +35,9 @@ async function sha(s) {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function runDeck(env, force, s3Now) {
+export async function runDeck(env, force, s3Now, opt) {
+  // The deck lives next to the year's file and moves with it (upgrade review 24).
+  const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
@@ -61,7 +63,7 @@ export async function runDeck(env, force, s3Now) {
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
-    const mr = await fetch(G + seg(FOLDER) + '/' + encodeURIComponent(DECK.name) + '?select=id,cTag,lastModifiedDateTime,webUrl,@microsoft.graph.downloadUrl', { headers: { Authorization: 'Bearer ' + token } });
+    const { mr } = await yearItem(token, DECK.name, DECK.type, ilYear((opt && opt.now) || Date.now()), 'id,cTag,lastModifiedDateTime,webUrl,@microsoft.graph.downloadUrl');
     if (mr.status === 404) throw Object.assign(new Error('the deck is not in the folder: ' + FOLDER + '/' + DECK.name), { status: 404 });
     if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
     const meta = await mr.json();
@@ -116,7 +118,7 @@ export async function onRequest(context) {
       }
       const s = await stateGet(env, ['deck_at', 'deck_err', 'deck_err_at', 'deck_url', 'deck_report', 'deck_meeting_date']).catch(() => ({}));
       const v = (k) => (s[k] && s[k].value) || null;
-      return jsonResp({ ok: true, name: DECK.name, folder: FOLDER, date: meetingDate(today, v('deck_meeting_date')), last: v('deck_at'), error: v('deck_err'), errorAt: v('deck_err_at'), webUrl: v('deck_url'), report: v('deck_report') }, 200, cors);
+      return jsonResp({ ok: true, name: DECK.name, folder: folderFor(ilYear()), date: meetingDate(today, v('deck_meeting_date')), last: v('deck_at'), error: v('deck_err'), errorAt: v('deck_err_at'), webUrl: v('deck_url'), report: v('deck_report') }, 200, cors);
     }
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);

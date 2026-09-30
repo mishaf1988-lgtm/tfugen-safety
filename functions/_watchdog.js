@@ -20,6 +20,8 @@
 import { stateGet, stateSet, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
 
 export const WATCH_KEY = 'sync_watch';
+// The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
+export const FILE_ROWS = 205, FULL_WARN = 164;
 export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 * 60 * 1000;
 export const PARTS = [
   { k: 'hazard_xlsm', name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm' },
@@ -52,7 +54,7 @@ export function ilTime(iso) {
 export function stateKeys() {
   const keys = [WATCH_KEY];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
-  FILES.forEach(([f]) => keys.push('hazard_' + f + '_dropped'));
+  FILES.forEach(([f]) => { keys.push('hazard_' + f + '_dropped'); keys.push('hazard_' + f + '_rows'); });
   return keys;
 }
 
@@ -78,6 +80,9 @@ export function assess(st, nowMs, connected, started) {
     }
   });
   FILES.forEach(([f, name]) => {
+    // 80% full (upgrade review 24): a month or two before it stops.
+    const n = +v('hazard_' + f + '_rows') || 0;
+    if (n >= FULL_WARN) out.push({ key: 'full:' + f, title: name + ': \u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05ea\u05de\u05dc\u05d0', detail: n + ' \u05e9\u05d5\u05e8\u05d5\u05ea \u05de\u05ea\u05d5\u05da ' + FILE_ROWS + '. \u05db\u05e9\u05d4\u05d5\u05d0 \u05de\u05ea\u05de\u05dc\u05d0 \u05d4\u05d5\u05d0 \u05de\u05e4\u05e1\u05d9\u05e7 \u05dc\u05d4\u05ea\u05e2\u05d3\u05db\u05df. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d1\u05ea\u05d1\u05e0\u05d9\u05ea, \u05d0\u05d5 \u05dc\u05e2\u05d1\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5 \u05d7\u05d3\u05e9 \u05dc\u05e4\u05e0\u05d9 \u05db\u05df.' });
     let d = null; try { d = JSON.parse(v('hazard_' + f + '_dropped') || 'null'); } catch (e) { d = null; }
     ((d && d.items) || []).forEach((x) => {
       if (!x) return;
