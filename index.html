@@ -9890,6 +9890,7 @@ function mgrFieldOpen(){
 function mgrFieldClose(){
   _mf.finished=false;var ov=g('mf');if(ov)ov.style.display='none';
   if(typeof _attachClear==='function')_attachClear('mf-attach-area');
+  if(_mf.closing&&typeof _attachClear==='function')_attachClear('mf-close-ph');_mf.closing=null;
   if(typeof goPage==='function')goPage('thz');
 }
 // Where the saves are (29/09, upgrade review 3): each hazard is saved on the
@@ -9927,7 +9928,7 @@ function _mfChips(list,cur,fn){
 function _mfPickDept(v){if(v!==_mf.dept){_mf.closedNow={};_mf.ask=null;}_mf.dept=v;_mfKeep();_mfRender();}
 function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfRender();}
 // Keep what was typed across a re-render (a chip tap redraws the screen).
-function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
+function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due','mf-close-note'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
 function _mfRender(){
   var ov=g('mf');if(!ov)return;
   var photo=_attachUrls['mf-attach-area'];
@@ -9950,6 +9951,8 @@ function _mfRender(){
   // The photo slot: the helper draws the button; a photo already picked stays.
   if(photo){_attachUrls['mf-attach-area']=photo;var a=g('mf-attach-area');if(a)a.innerHTML='<div class="mf-done">&#128247; \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e6\u05d5\u05e8\u05e4\u05d4</div>';}
   else if(typeof _attachClear==='function')_attachClear('mf-attach-area');
+  // The closing panel survives a redraw (a chip tapped while it is open).
+  if(_mf.closing&&g('mf-close-ph')){var cp=_attachUrls['mf-close-ph'];if(cp&&typeof _attachRender==='function')_attachRender('mf-close-ph',cp,'');else if(typeof _attachClear==='function')_attachClear('mf-close-ph');}
 }
 // Open hazards of the department (Michael, 29/09: "during the tour, see the
 // ones not closed yet in that department and check which were fixed"). Every
@@ -10003,7 +10006,7 @@ function _mfOpenItems(){
     if(+r.tour_no===t&&r.d===today)return false;
     return r.s!==_THZ_CLOSED||now[r.id];
   }).sort(function(a,b){return (+a.n||0)-(+b.n||0);}).forEach(function(r){
-    out.push({k:'h',id:r.id,num:r.n,descr:r.descr,loc:r.loc,when:'\u05e1\u05d9\u05d5\u05e8 '+(r.tour_no||'-')+', '+fd(r.d),sev:r.sev,due:r.due,closed:r.s===_THZ_CLOSED});
+    out.push({k:'h',id:r.id,num:r.n,descr:r.descr,loc:r.loc,when:'\u05e1\u05d9\u05d5\u05e8 '+(r.tour_no||'-')+', '+fd(r.d),sev:r.sev,due:r.due,closed:r.s===_THZ_CLOSED,by:r.closed_by||''});
   });
   _mfTruFindings().forEach(function(r,k){
     if(_mfTruDept(r.loc)!==_mf.dept)return;
@@ -10019,15 +10022,16 @@ function _mfOpenHtml(){
   if(!items.length)return '<div class="mf-list" style="color:var(--t2)">\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05d0\u05d5 \u05de\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1'+esc(_mf.dept)+'.</div>';
   return '<details class="mf-list mf-open" open><summary><b>\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1'+esc(_mf.dept)+' ('+open+')</b> <span style="font-size:12px;color:var(--t2)">\u05d1\u05d3\u05d5\u05e7 \u05d0\u05dd \u05ea\u05d5\u05e7\u05e0\u05d5</span></summary>'
     +items.map(function(r){
-      var late=!r.closed&&r.due&&du(r.due)<0,ask=_mf.ask===r.id;
+      var late=!r.closed&&r.due&&du(r.due)<0,ask=_mf.ask===r.id,cl=_mf.closing===r.id&&!r.closed;
       var btn=r.closed?'<button type="button" class="btn btn-s mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldReopen(this.dataset.id)">\u05d1\u05d8\u05dc</button>'
         :ask?'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u05dc\u05e1\u05d2\u05d5\u05e8?</button>'
         :'<button type="button" class="btn btn-p mf-ob" data-id="'+esc(r.id)+'" onclick="mgrFieldClosePrev(this.dataset.id)">\u2714 \u05e0\u05e1\u05d2\u05e8</button>';
       return '<div class="mf-li mf-oi'+(r.closed?' mf-closed':'')+(r.k==='t'?' mf-tru':'')+'"><div class="mf-ot">'+esc(r.num)+'. '+esc(String(r.descr||'').substring(0,80))
         +'<div style="font-size:12px;color:var(--t2)">'+(r.loc?esc(r.loc)+' | ':'')+esc(r.when)+(r.sev?' | '+esc(r.sev):'')
         +(r.due?' | \u05d9\u05e2\u05d3 '+fd(r.due):'')+(late?' <b style="color:var(--er,#b91c1c)">\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</b>':'')+'</div>'
-        +(ask?'<div style="font-size:12px;color:var(--er,#b91c1c)">\u05d9\u05d9\u05e1\u05d2\u05e8 \u05d2\u05dd \u05d1\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre. \u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</div>':'')+'</div>'
-        +btn+'</div>';
+        +(ask?'<div style="font-size:12px;color:var(--er,#b91c1c)">\u05d9\u05d9\u05e1\u05d2\u05e8 \u05d2\u05dd \u05d1\u05de\u05e9\u05d9\u05de\u05d4 \u05d1-Vitre. \u05dc\u05d7\u05e5 \u05e9\u05d5\u05d1 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8.</div>':'')
+        +(r.closed&&r.by?'<div style="font-size:12px;color:var(--t2)">\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9 '+esc(r.by)+'</div>':'')+'</div>'
+        +(cl?'':btn)+'</div>'+(cl?_mfClosePanel(r.id):'');
     }).join('')+'</details>';
 }
 function _mfSetState(id,closed){
@@ -10043,13 +10047,45 @@ function _mfSetState(id,closed){
     _truMgrSetStatus(id,closed?TRUSTEE_S_CLOSED:TRUSTEE_S_OPEN,true);
   }else{
     var r=(DB.tour_hazards||[]).find(function(x){return x.id===id;});if(!r)return;
+    // Closing evidence (upgrade review 13, 30/09/2026): who, what was done and an
+    // optional "after" photo; reopening clears them.
+    var ev=closed?(_mf.closeEv||{}):{};_mf.closeEv=null;_mf.closing=null;
     r.s=closed?_THZ_CLOSED:'\u05e4\u05ea\u05d5\u05d7';r.closed_d=closed?_thzToday():null;
+    r.closed_by=closed?(ev.by||null):null;r.close_note=closed?(ev.note||null):null;r.after_photo_url=closed?(ev.photo||null):null;
     if(closed)_mf.closedNow[id]=1;
     sbUpd('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8 '+(closed?'\u05e0\u05e1\u05d2\u05e8':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.descr||'').substring(0,30));sdb();
   }
   toast(closed?'\u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');_mfRender();
 }
-function mgrFieldClosePrev(id){_mfSetState(id,true);}
+// A tour hazard asks first: what was done and an "after" photo, both optional
+// (Michael, 30/09/2026). A trustee finding keeps its own flow (Vitre).
+function mgrFieldClosePrev(id){
+  var t=typeof _truFind==='function'&&_truFind(id);
+  if(t){_mfSetState(id,true);return;}
+  if(_viewBlock())return;
+  if(typeof _attachClear==='function')_attachClear('mf-close-ph');
+  _mfKeep();_mf.closing=id;_mf.ask=null;_mf['mf-close-note']='';_mfRender();
+  var n=g('mf-close-note');if(n)n.focus();
+}
+function _mfClosePanel(id){
+  return '<div class="mf-li" style="display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;margin:4px 0 8px">'
+    +'<label for="mf-close-note">\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4? (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)</label><textarea id="mf-close-note" rows="2" maxlength="300">'+esc(_mf['mf-close-note']||'')+'</textarea>'
+    +'<label>&#128247; \u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)</label><div id="mf-close-ph"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn btn-p" style="flex:1;min-height:44px" data-id="'+esc(id)+'" onclick="mgrFieldCloseOk(this.dataset.id)">&#10004; \u05e1\u05d2\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2</button>'
+    +'<button type="button" class="btn btn-s" style="min-height:44px" onclick="mgrFieldCloseCancel()">\u05d1\u05d8\u05dc</button></div></div>';
+}
+function mgrFieldCloseOk(id){
+  if(typeof _attachPending!=='undefined'&&_attachPending['mf-close-ph']){toast('\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e2\u05d5\u05dc\u05d4, \u05e8\u05d2\u05e2...');return;}
+  var n=g('mf-close-note'),me=typeof _meNames==='function'?_meNames()[0]:'';
+  _mf['mf-close-note']='';
+  _mf.closeEv={by:me||null,note:n?String(n.value||'').trim().substring(0,300)||null:null,photo:_attachUrls['mf-close-ph']||null};
+  _attachUrls['mf-close-ph']=null;
+  _mfSetState(id,true);
+}
+function mgrFieldCloseCancel(){
+  if(typeof _attachClear==='function')_attachClear('mf-close-ph');
+  _mf.closing=null;_mf['mf-close-note']='';_mfRender();
+}
 function mgrFieldReopen(id){_mfSetState(id,false);}
 // A tour has several hazards (Michael, 29/09): the ones of this tour (this
 // department, today, this tour number, saved from any screen) are listed
@@ -13940,7 +13976,7 @@ var VIEW_CONFIG={
   tasks:{title:'\u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05d5\u05de\u05e2\u05e7\u05d1',back:'tasks',fields:[
     ['\u05db\u05d5\u05ea\u05e8\u05ea','title'],['\u05d0\u05d7\u05e8\u05d0\u05d9','assignee'],['\u05d9\u05e2\u05d3','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],
     ['\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea','priority'],['\u05de\u05e7\u05d5\u05e8','source_table'],['\u05de\u05d6\u05d4\u05d4 \u05de\u05e7\u05d5\u05e8','source_id'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
-  tour_hazards:{title:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',back:'thz',fields:[['\u05de\u05e1"\u05d3','n'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','d'],['\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','tour_no'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','descr'],['\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','resp'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e0\u05d5\u05e1\u05e3','resp2'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','action'],['\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','closed_d'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
+  tour_hazards:{title:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',back:'thz',fields:[['\u05de\u05e1"\u05d3','n'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','d'],['\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d5\u05e8','tour_no'],['\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc'],['\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2','descr'],['\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4','sev'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','resp'],['\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e0\u05d5\u05e1\u05e3','resp2'],['\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea','action'],['\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc','due'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d2\u05d9\u05e8\u05d4','closed_d'],['\u05e0\u05e1\u05d2\u05e8 \u05e2\u05dc \u05d9\u05d3\u05d9','closed_by'],['\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4','close_note'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']],photo:'photo_url'},
   toolbox:{title:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',back:'toolbox',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e0\u05d5\u05e9\u05d0','topic'],['\u05de\u05e2\u05d1\u05d9\u05e8','presenter'],['\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd','attendees'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s'],['\u05de\u05d7\u05dc\u05e7\u05d5\u05ea','dep'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes'],['\u05de\u05d6\u05d4\u05d4 Vitre','ext_id']],photo:'file_url'},
   env_aspects:{title:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'easp',fields:[['\u05d4\u05d9\u05d1\u05d8','aspect'],['\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea/\u05de\u05ea\u05e7\u05df','activity'],['\u05e9\u05dc\u05d1 \u05d7\u05d9\u05d9\u05dd','lifecycle'],['\u05e9\u05dc\u05d9\u05d8\u05d4/\u05d4\u05e9\u05e4\u05e2\u05d4','control_type'],['\u05db\u05d9\u05d5\u05d5\u05df \u05d4\u05e9\u05e4\u05e2\u05d4','direction'],['\u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d4\u05d4\u05d9\u05d1\u05d8','impact'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05d1\u05e4\u05d5\u05e2\u05dc','p_curr'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05d1\u05e4\u05d5\u05e2\u05dc','sv_curr'],['\u05d1\u05e7\u05e8\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea','additional_controls'],['\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','p_pot'],['\u05d7\u05d5\u05de\u05e8\u05d4 \u05e4\u05d5\u05d8\u05e0\u05e6\u05d9\u05d0\u05dc\u05d9\u05ea','sv_pot'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status'],['\u05d0\u05d7\u05e8\u05d0\u05d9','owner'],['\u05dc\u05d5\u05d6','review_date'],['\u05d4\u05e1\u05d1\u05e8 \u05dc\u05d0\u05d9 \u05d1\u05d9\u05e6\u05d5\u05e2','explanation'],['\u05d4\u05e4\u05e0\u05d9\u05d4 \u05dc\u05d7\u05d5\u05e7','legal_ref'],['\u05d4\u05e2\u05e8\u05d5\u05ea','notes']]},
@@ -14078,6 +14114,10 @@ function showView(tbl,id){
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
   if(pUrl){
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a data-sign="'+escU(pUrl)+'" target="_blank"><img data-sign="'+escU(pUrl)+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
+  }
+  // The "after" photo of a closed tour hazard (upgrade review 13, 30/09/2026).
+  if(tbl==='tour_hazards'&&rec.after_photo_url&&!_phIs(rec.after_photo_url)){
+    html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc</div><a data-sign="'+escU(rec.after_photo_url)+'" target="_blank"><img data-sign="'+escU(rec.after_photo_url)+'" style="max-width:100%;max-height:260px;border-radius:8px;display:block"></a></div>';
   }
   if(rec.file_url){
     var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];

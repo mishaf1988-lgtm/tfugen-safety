@@ -14,6 +14,12 @@
 //                    trustee), and mails the manager a confirmation.
 // Same closure shape as mail-inbox.js. The Excel log follows on its own: the
 // insert fires trustee_reports_log. Nothing is deleted.
+// Tour hazards too (upgrade review 13, 30/09/2026, Michael: a "mark as
+// handled" link per hazard in the department report): a token whose id starts
+// with "th-" names a row of tour_hazards (trustee ids never have a dash). The
+// same form; the POST marks the hazard סגור with closed_d, closed_by,
+// close_note and after_photo_url, and the file in folder 13 follows through
+// the tour_hazards trigger. The photo is optional (Michael, same day).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
@@ -25,6 +31,9 @@ const BUCKET = 'incidents-photos';
 const PREFS_ID = 'admin@tfugen.local';
 const TASK_CLOSE = 8;
 const S_CLOSED = '\u05e0\u05e1\u05d2\u05e8';
+const S_H_CLOSED = '\u05e1\u05d2\u05d5\u05e8';
+const NOUN_T = '\u05dc\u05d9\u05e7\u05d5\u05d9', NOUN_H = '\u05de\u05e4\u05d2\u05e2';
+export const isHazardId = (id) => /^th-/.test(String(id || ''));
 const MAX_PHOTO = 8 * 1024 * 1024;
 
 function esc(s) {
@@ -64,7 +73,7 @@ export function page(title, inner, tone, status) {
 }
 
 function details(f) {
-  return '<p style="margin:0 0 12px"><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + esc(f.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8')
+  return '<p style="margin:0 0 12px"><strong>' + (f.noun === NOUN_H ? '\u05d4\u05de\u05e4\u05d2\u05e2' : '\u05d4\u05de\u05de\u05e6\u05d0') + ':</strong> ' + esc(f.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8')
     + '<br><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + esc(f.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df')
     + '<br><strong>\u05d3\u05d5\u05d5\u05d7:</strong> ' + esc(f.d || '') + ', ' + esc(f.u || '') + '</p>';
 }
@@ -72,7 +81,8 @@ function details(f) {
 const INPUT = 'width:100%;box-sizing:border-box;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;font-family:inherit';
 
 export function formPage(tok, f, err, who, note) {
-  return page('\u2705 \u05e1\u05d2\u05d9\u05e8\u05ea \u05dc\u05d9\u05e7\u05d5\u05d9', details(f)
+  const noun = f.noun || NOUN_T;
+  return page('\u2705 \u05e1\u05d2\u05d9\u05e8\u05ea ' + noun, details(f)
     + (err ? '<p style="color:#cc1f1f;font-weight:700;margin:0 0 10px">' + esc(err) + '</p>' : '')
     + '<form method="post" action="/api/close-hazard" enctype="multipart/form-data">'
     + '<input type="hidden" name="k" value="' + esc(tok) + '">'
@@ -82,7 +92,7 @@ export function formPage(tok, f, err, who, note) {
     + '<textarea name="note" maxlength="300" rows="3" style="' + INPUT + ';margin-bottom:12px">' + esc(note || '') + '</textarea>'
     + '<label style="display:block;font-weight:700;margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)</label>'
     + '<input type="file" name="photo" accept="image/jpeg,image/png" style="margin-bottom:16px;font-size:14px">'
-    + '<button type="submit" style="width:100%;background:#15803d;color:#fff;border:0;border-radius:8px;padding:13px;font-size:16px;font-weight:700;font-family:inherit">\u2705 \u05e1\u05d2\u05d5\u05e8 \u05dc\u05d9\u05e7\u05d5\u05d9</button>'
+    + '<button type="submit" style="width:100%;background:#15803d;color:#fff;border:0;border-radius:8px;padding:13px;font-size:16px;font-weight:700;font-family:inherit">\u2705 \u05e1\u05d2\u05d5\u05e8 ' + noun + '</button>'
     + '</form>', 'info');
 }
 
@@ -91,6 +101,18 @@ async function loadFinding(env, id) {
   if (!r.ok) throw new Error('db ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+// A tour hazard, shaped for details(): description, department and place,
+// the tour and its date.
+async function loadHazard(env, id) {
+  const r = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&select=id,n,d,tour_no,dept,loc,descr,s', { headers: sbH(env) });
+  if (!r.ok) throw new Error('db ' + r.status);
+  const rows = await r.json();
+  const h = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  if (!h) return null;
+  return { id: h.id, noun: NOUN_H, f: h.descr, loc: [h.dept, h.loc].filter(Boolean).join(' \u00b7 '), d: h.d || '',
+    u: '\u05e1\u05d9\u05d5\u05e8 ' + (h.tour_no || '') + ', \u05de\u05e1"\u05d3 ' + (h.n || ''), closed: h.s === S_H_CLOSED };
 }
 
 function isFinding(f) {
@@ -105,17 +127,17 @@ function tokenError(r) {
 }
 
 function alreadyClosed(f) {
-  return page('\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8', details(f) + '<p>\u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea.</p>', 'ok');
+  return page((f.noun === NOUN_H ? '\u05d4\u05de\u05e4\u05d2\u05e2' : '\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9') + ' \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8', details(f) + '<p>\u05d0\u05d9\u05df \u05e6\u05d5\u05e8\u05da \u05d1\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea.</p>', 'ok');
 }
 
-async function uploadPhoto(env, id, file) {
+async function uploadPhoto(env, id, file, prefix) {
   if (!file || typeof file === 'string' || !(file.size > 0)) return { url: null };
   if (file.size > MAX_PHOTO) return { url: null, note: '\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05d2\u05d3\u05d5\u05dc\u05d4 \u05de-8MB \u05d5\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4.' };
   const bytes = new Uint8Array(await file.arrayBuffer());
   const info = imageInfo(bytes);
   if (!info) return { url: null, note: '\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05d1\u05e4\u05d5\u05e8\u05de\u05d8 JPG \u05d0\u05d5 PNG \u05d5\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4.' };
   const ext = info.ext === 'png' ? 'png' : 'jpg';
-  const name = 'tru-link-' + id.replace(/[^A-Za-z0-9_-]/g, '') + '-' + Date.now() + '.' + ext;
+  const name = (prefix || 'tru-link-') + id.replace(/[^A-Za-z0-9_-]/g, '') + '-' + Date.now() + '.' + ext;
   try {
     const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/' + (ext === 'png' ? 'png' : 'jpeg'), 'x-upsert': 'false' }), body: bytes });
     if (up.ok) return { url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name };
@@ -125,6 +147,7 @@ async function uploadPhoto(env, id, file) {
 
 // Tell the manager who closed it. A courtesy: the finding is closed either way.
 async function notifyManager(env, f, who, note, hasPhoto) {
+  const hz = f.noun === NOUN_H;
   try {
     if (!odConfigured(env)) return;
     const r = await fetch(SB + '/rest/v1/notification_prefs?id=eq.' + encodeURIComponent(PREFS_ID) + '&select=prefs', { headers: sbH(env) });
@@ -136,13 +159,36 @@ async function notifyManager(env, f, who, note, hasPhoto) {
     if (!hasMail(tr)) return;
     const { token } = await accessToken(env);
     const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7">'
-      + '<p><strong>\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc.</strong></p>'
+      + '<p><strong>\u2705 ' + (hz ? '\u05d4\u05de\u05e4\u05d2\u05e2' : '\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9') + ' \u05e0\u05e1\u05d2\u05e8 \u05de\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc.</strong></p>'
       + '<p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + esc(f.f || '') + '<br><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + esc(f.loc || '')
       + '<br><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + (note ? '<br><strong>\u05de\u05d4 \u05e0\u05e2\u05e9\u05d4:</strong> ' + esc(note) : '')
       + '<br>' + (hasPhoto ? '\ud83d\udcf7 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9".' : '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.') + '</p>'
-      + '<p style="color:#6b7280;font-size:12px">\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d0\u05e7\u05e1\u05dc. ' + esc(APP_URL) + '</p></div>';
+      + '<p style="color:#6b7280;font-size:12px">' + (hz ? '\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd. ' : '\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05d0\u05e7\u05e1\u05dc. ') + esc(APP_URL) + '</p></div>';
     await sendMail(token, to, '\u2705 \u05e0\u05e1\u05d2\u05e8: ' + clean(f.f, 60), html);
   } catch (e) { /* ignore */ }
+}
+
+// POST for a tour hazard: the row itself carries the closure (no report row
+// as for a trustee finding). Guarded by s != סגור, so a second tap or a
+// closure in the app in between changes nothing.
+async function closeHazardPost(env, tok, id, form) {
+  let h;
+  try { h = await loadHazard(env, id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
+  if (!h) return page('\u05d4\u05de\u05e4\u05d2\u05e2 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'err', 404);
+  if (h.closed) return alreadyClosed(h);
+  const who = clean(form.get('who'), 60);
+  const note = clean(form.get('note'), 300);
+  if (!who) return formPage(tok, h, '\u05e6\u05e8\u05d9\u05da \u05dc\u05de\u05dc\u05d0 \u05de\u05d9 \u05d8\u05d9\u05e4\u05dc.', who, note);
+  const photo = await uploadPhoto(env, id, form.get('photo'), 'thz-link-');
+  const up = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=neq.' + encodeURIComponent(S_H_CLOSED), {
+    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+    body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: note || null, after_photo_url: photo.url }),
+  });
+  if (!up.ok) return formPage(tok, h, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + up.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
+  await notifyManager(env, h, who, note, !!photo.url);
+  return page('\u2705 \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8', details(h)
+    + '<p><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + '<br>' + (photo.url ? '\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4.' : esc(photo.note || '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.')) + '</p>'
+    + '<p>\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e3.</p>', 'ok');
 }
 
 export async function onRequest({ request, env }) {
@@ -154,6 +200,12 @@ export async function onRequest({ request, env }) {
     const t = await readCloseToken(env, tok);
     if (t.error) return tokenError(t);
     if (t.id === 'test') return page('\u05d6\u05d5 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4', '<p>\u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05e2\u05d5\u05d1\u05d3. \u05d1\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d0\u05de\u05d9\u05ea\u05d9 \u05d9\u05d9\u05e4\u05ea\u05d7 \u05db\u05d0\u05df \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e1\u05d2\u05d9\u05e8\u05d4.</p>', 'ok');
+    if (isHazardId(t.id)) {
+      let h;
+      try { h = await loadHazard(env, t.id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
+      if (!h) return page('\u05d4\u05de\u05e4\u05d2\u05e2 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05d5\u05d0 \u05e0\u05de\u05d7\u05e7. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p><p><a href="' + APP_URL + '">\u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</a></p>', 'err', 404);
+      return h.closed ? alreadyClosed(h) : formPage(tok, h);
+    }
     let f;
     try { f = await loadFinding(env, t.id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
     if (!f || !isFinding(f)) return page('\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05d5\u05d0 \u05e0\u05de\u05d7\u05e7. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p><p><a href="' + APP_URL + '">\u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</a></p>', 'err', 404);
@@ -169,6 +221,7 @@ export async function onRequest({ request, env }) {
   const t = await readCloseToken(env, tok);
   if (t.error) return tokenError(t);
   if (t.id === 'test') return page('\u05d6\u05d5 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'ok');
+  if (isHazardId(t.id)) return closeHazardPost(env, tok, t.id, form);
   let f;
   try { f = await loadFinding(env, t.id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
   if (!f || !isFinding(f)) return page('\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'err', 404);

@@ -108,6 +108,18 @@ const ROWS = [
   check('send: one mail per department asked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
   check('the mail: אל + עותק, subject, the sheet\'s own opening and closing, kept in Sent Items', mail && mail.toRecipients.length === 5 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ') && c.w.mails[0].saveToSentItems === true, mail && mail.subject);
   check('the send is logged', /חומר גלם/.test(c.w.state.hazard_report_last || ''), c.w.state);
+  // Upgrade review 13 (30/09/2026): a "mark as handled" link on every row of a
+  // real send, signed for the row's own id (close-hazard.js).
+  {
+    const hrefs = [...String(mail && mail.body.content).matchAll(/href="(https:\/\/tapugan-safety\.pages\.dev\/api\/close-hazard\?k=[^"]+)"/g)].map((x) => x[1]);
+    const ids = hrefs.map((h) => decodeURIComponent(h.split('k=')[1]).split('.')[0]);
+    check('send: one "סמן כטופל" link per row, for the row\'s own id (th- for a tour hazard)', hrefs.length === c.j.sent[0].count && ids.every((x) => x) && new Set(ids).size === ids.length && ids.some((x) => /^th-|^h/.test(x)), { hrefs: hrefs.length, ids });
+    check('the link column has its header', String(mail && mail.body.content).includes('>סגירה<'));
+  }
+  {
+    const r0 = buildReport('חומר גלם', ROWS, rc, texts);
+    check('preview / no links given: no link column', !r0.html.includes('סמן כטופל') && !r0.html.includes('>סגירה<'));
+  }
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם'], test: true });
   const tm = c.w.mails[0] && c.w.mails[0].message;
   check('test send: only to the connected account, no copies, subject "בדיקה - ", real recipients listed on top, not logged', c.j.ok && tm && tm.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !tm.ccRecipients.length && tm.subject === 'בדיקה - דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && tm.body.content.includes('gelem@tapugan.co.il, Igal@tapugan.co.il') && !c.w.state.hazard_report_last && c.j.sent[0].test === true, tm && tm.subject);
