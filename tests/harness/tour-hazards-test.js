@@ -92,7 +92,7 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   check('overdue = open with a past target (1, 3); future and missing targets out', out.overdueRows.sort().join() === '1,3', out.overdueRows);
   check('closed', out.closedRows.join() === '2', out.closedRows);
   check('department', out.deptRows.join() === '3', out.deptRows);
-  check('department list: all + the 5 departments', out.deptOpts.length === 6, out.deptOpts);
+  check('department list: all + the 5 departments + אחזקה (30/09)', out.deptOpts.length === 7 && out.deptOpts[6] === 'אחזקה', out.deptOpts);
 
   console.log('\n3. new and edit');
   check('new keeps the last tour: date, number, department; status פתוח', out.newPrefill.tour === '10' && out.newPrefill.dept === 'מעצבים' && out.newPrefill.s === 'פתוח', out.newPrefill);
@@ -200,20 +200,20 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     DB.tasks = [];
     DB.trustee_reports = [
       { id: 'y1', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'חצר · שער אחורי', f: 'בור פתוח בחצר' },
-      { id: 'y2', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'אחזקה · סדנה', f: 'כבל חשוף בסדנה' },
+      { id: 'y2', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'מחסן כללי · סדנה', f: 'כבל חשוף בסדנה' },
       { id: 'y3', u: 'דני', t: 1, ok: false, s: 'פתוח', d: now.substring(0, 10), ts: now, loc: 'אריזה · קו 3', f: 'משטח שבור באריזה' },
       { id: 'y4', u: 'דני', t: 1, ok: false, s: 'נסגר', d: now.substring(0, 10), ts: now, loc: 'שפכים', f: 'סגור בשפכים' },
     ];
-    const res = { map: [_mfTruDept('אריזה · קו 3'), _mfTruDept('קילופים'), _mfTruDept('מעבדה'), _mfTruDept('חצר'), _mfTruDept('אחזקה'), _mfTruDept('מעוצבים')] };
+    const res = { map: [_mfTruDept('אריזה · קו 3'), _mfTruDept('קילופים'), _mfTruDept('מעבדה'), _mfTruDept('חצר'), _mfTruDept('מחסן כללי'), _mfTruDept('מעוצבים'), _mfTruDept('חומר גלם + שפכים · משרד שפכים')] };
     goPage('thz'); rThz(); res.thz = (document.getElementById('thz-nodept') || {}).textContent || '';
     goPage('trustees'); rTrustees(); res.tru = (document.getElementById('tru-nodept') || {}).textContent || '';
     DB.trustee_reports = DB.trustee_reports.filter((r) => r.id === 'y3');
     goPage('thz'); rThz(); res.none = (document.getElementById('thz-nodept') || {}).textContent;
     return res;
   });
-  check('the app\'s map: packing and peeling -> ייצור טוגנים, lab -> מעבדות, yard and unknown areas -> none, spellings kept', JSON.stringify(nd.map) === JSON.stringify(['ייצור טוגנים', 'ייצור טוגנים', 'מעבדות', null, null, 'מעצבים']), nd.map);
-  check('tours screen: a red box with the open findings that reach no department (yard, an unknown area), not the packing one or a closed one', /ליקויי נאמנים בלי מחלקה \(2\)/.test(nd.thz) && /בור פתוח בחצר/.test(nd.thz) && /כבל חשוף בסדנה/.test(nd.thz) && !/משטח שבור/.test(nd.thz) && !/סגור בשפכים/.test(nd.thz), nd.thz);
-  check('trustees screen: the same box', /ליקויי נאמנים בלי מחלקה \(2\)/.test(nd.tru) && /בור פתוח בחצר/.test(nd.tru), nd.tru);
+  check('the app\'s map: packing and peeling -> ייצור טוגנים, lab -> מעבדות, yard and two areas with waste water -> אחזקה (30/09), an unknown area -> none', JSON.stringify(nd.map) === JSON.stringify(['ייצור טוגנים', 'ייצור טוגנים', 'מעבדות', 'אחזקה', null, 'מעצבים', 'אחזקה']), nd.map);
+  check('tours screen: a red box with the open findings that reach no department (an unknown area), not the yard one (אחזקה), the packing one or a closed one', /ליקויי נאמנים בלי מחלקה \(1\)/.test(nd.thz) && /כבל חשוף בסדנה/.test(nd.thz) && !/בור פתוח בחצר/.test(nd.thz) && !/משטח שבור/.test(nd.thz) && !/סגור בשפכים/.test(nd.thz), nd.thz);
+  check('trustees screen: the same box', /ליקויי נאמנים בלי מחלקה \(1\)/.test(nd.tru) && /כבל חשוף בסדנה/.test(nd.tru), nd.tru);
   check('none left: no box', nd.none === '', nd.none);
   check('no page errors', errors.length === 0, errors);
 

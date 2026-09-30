@@ -9778,7 +9778,7 @@ function rThz(){
   var tb=g('tb-thz');if(!tb)return;
   try{var nd=g('thz-nodept');if(nd)nd.innerHTML=_truNoDeptHtml();}catch(e){}
   _thzFileRefresh(false);
-  _thzOpts('thz-f-dept',_THZ_DEPTS,true,'\u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea');
+  _thzOpts('thz-f-dept',_THZ_DEPTS.concat(['\u05d0\u05d7\u05d6\u05e7\u05d4']),true,'\u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea');
   var all=DB.tour_hazards||[];
   var open=all.filter(function(r){return r.s!==_THZ_CLOSED;});
   var sum=g('thz-sum');
@@ -9818,7 +9818,7 @@ function rThz(){
   }).join('');
 }
 function _thzFill(){
-  _thzOpts('thz-dept',_THZ_DEPTS,false);_thzOpts('thz-resp',_THZ_RESP,false);
+  _thzOpts('thz-dept',_THZ_DEPTS.concat(['\u05d0\u05d7\u05d6\u05e7\u05d4']),false);_thzOpts('thz-resp',_THZ_RESP,false);
   _thzOpts('thz-sev',_THZ_SEV,false);_thzOpts('thz-s',_THZ_ST,false);
 }
 function thzNew(){
@@ -9966,9 +9966,11 @@ function _mfRender(){
 // functions/api/hazard-file.js (area-dept-map-test.mjs compares them).
 // null = no department: the finding reaches no department's report and is
 // listed in red for the manager (upgrade review 4, Michael 29/09/2026).
-var AREA_DEPT={ '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': null, '\u05e9\u05e4\u05db\u05d9\u05dd': null, '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': null };
+var AREA_DEPT={ '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05ea\u05d5\u05e6"\u05d2': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05e7\u05d9\u05dc\u05d5\u05e4\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05e6\u05e8': '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05e9\u05e4\u05db\u05d9\u05dd': '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05ea\u05e9\u05ea\u05d9\u05d5\u05ea': '\u05d0\u05d7\u05d6\u05e7\u05d4' };
 var NO_DEPT='\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4';
-function deptOf(name){var h=String(name||'').trim();if(_THZ_DEPTS.indexOf(h)>=0)return h;return Object.prototype.hasOwnProperty.call(AREA_DEPT,h)?AREA_DEPT[h]:null;}
+// Several areas ("a + b", 30/09/2026): maintenance when one of them is a
+// maintenance area, else the first with a department (as the server).
+function deptOf(name){var h=String(name||'').trim();if(_THZ_DEPTS.indexOf(h)>=0||h==='\u05d0\u05d7\u05d6\u05e7\u05d4')return h;if(Object.prototype.hasOwnProperty.call(AREA_DEPT,h))return AREA_DEPT[h];var ps=h.split(/\s*\+\s*/).filter(Boolean);if(ps.length<2)return null;var ds=ps.map(function(x){return deptOf(x);});if(ds.indexOf('\u05d0\u05d7\u05d6\u05e7\u05d4')>=0)return '\u05d0\u05d7\u05d6\u05e7\u05d4';for(var i=0;i<ds.length;i++)if(ds[i])return ds[i];return null;}
 function _mfTruDept(loc){return deptOf(String(loc||'').split('\u00b7')[0]);}
 // Open trustee findings with no department (an area mapped to none, or not in
 // the map): shown in red on the trustees and tours screens.
