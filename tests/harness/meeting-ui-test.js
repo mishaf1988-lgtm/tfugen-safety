@@ -40,16 +40,20 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     return new Promise((res) => setTimeout(() => {
       const ov = document.getElementById('mtg');
       const trs = Array.from(ov.querySelectorAll('table tr')).map((tr) => Array.from(tr.children).map((c) => c.textContent).join('|'));
+      const th0 = ov.querySelector('table th'), thc = th0 ? getComputedStyle(th0).color : '', thbg = th0 ? getComputedStyle(th0).backgroundColor : '';
       mtgDownload('hz'); mtgDownload('acc');
       document.getElementById('mtg-ref').value = '2026-09-22'; mtgLoad('2026-09-22');
       setTimeout(() => {
         const deckTxt = ov.textContent;
         mtgDeckDate();
-        setTimeout(() => res({ btn, trs, text: ov.textContent, deckTxt, calls: window._calls, dl: window._dl, wide: ov.scrollWidth, dot: /·|—/.test(deckTxt) }), 80);
+        setTimeout(() => res({ thc, thbg, btn, trs, text: ov.textContent, deckTxt, calls: window._calls, dl: window._dl, wide: ov.scrollWidth, dot: /·|—/.test(deckTxt) }), 80);
       }, 50);
     }, 50));
   });
   check('a "נתוני ישיבה" button on the tours screen', m.btn);
+  // 30/09/2026 (Michael, screenshot): the header row was white on light grey.
+  const lum = (c) => { const v = (c.match(/\d+/g) || []).slice(0, 3).map(Number); return v.length === 3 ? (0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2]) : -1; };
+  check('the table header can be read: dark text on its light background', lum(m.thc) >= 0 && lum(m.thc) < 60 && lum(m.thbg) > 180, [m.thc, m.thbg]);
   const md = m.calls.filter((c) => c[0] === '/api/meeting-data');
   check('opens on the deck\'s meeting date, then the date picked', m.calls[0][0] === '/api/hazard-deck' && m.calls[0][1].op === 'status' && md[0][1].ref === '2026-09-29' && md[1][1].ref === '2026-09-22', m.calls);
   check('the deck box: meeting date, last update, the buttons', /המצגת בתיקייה 13/.test(m.deckTxt) && /תאריך הישיבה במצגת: 29\/09\/2026/.test(m.deckTxt) && /עדכן את המצגת עכשיו/.test(m.deckTxt), m.deckTxt.slice(-400));

@@ -7,7 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { AREA_DEPT, NO_DEPT, DEPTS, REPORT_DEPTS, MAINT, deptOf, trusteeDept, buildRegister, diffEdits } from './_build/hazard-file.mjs';
+import { AREA_DEPT, NO_DEPT, DEPTS, REPORT_DEPTS, MAINT, trusteeResp, deptOf, trusteeDept, buildRegister, diffEdits } from './_build/hazard-file.mjs';
 import { buildReport } from './_build/hazard-report.mjs';
 
 let pass = 0, fail = 0;
@@ -48,6 +48,14 @@ const inAny = (f) => reps.some((r) => r.rows.some((x) => x.descr === f));
 check('the department report: packing goes to ייצור טוגנים', reps.find((r) => r.dept === 'ייצור טוגנים').rows.some((x) => x.descr === 'משטח שבור'));
 check('the department report: yard and the two-area finding go to אחזקה', ['בור פתוח', 'שטח תנועה של מלגזות'].every((f) => reps.find((r) => r.dept === 'אחזקה').rows.some((x) => x.descr === f)), reps.map((r) => [r.dept, r.count]));
 check('the department report: a no-department finding reaches no department', !inAny('כבל חשוף'), reps.map((r) => [r.dept, r.count]));
+
+console.log('\n3b. who handles a trustee finding (column H, 30/09/2026)');
+check('in a production department: מנהל המחלקה, as before', byF('משטח שבור')[7] === 'מנהל המחלקה' && trusteeResp('חומר גלם', 'פנס שבור') === 'מנהל המחלקה');
+check('maintenance: אחזקה (the 30/09 finding)', byF('שטח תנועה של מלגזות')[7] === 'אחזקה' && byF('בור פתוח')[7] === 'אחזקה', [byF('שטח תנועה של מלגזות')[7], byF('בור פתוח')[7]]);
+check('maintenance, an electrical finding: חשמל', ['כבל חשמל חשוף', 'תאורה לא עובדת בשער', 'פנס שבור', 'מפסק פתוח', 'אין הארקה'].every((f) => trusteeResp('אחזקה', f) === 'חשמל'));
+check('...not a dip in the floor or a notice board', trusteeResp('אחזקה', 'שקע ברצפה ליד השער') === 'אחזקה' && trusteeResp('אחזקה', 'לוח מודעות נפל') === 'אחזקה');
+const mrep = buildReport('אחזקה', buildRegister([], [tr('x', 'חצר · שער', 'כבל חשמל חשוף')], []).rows, { depts: {}, resp: { 'אחזקה': ['vitaly@x'], 'חשמל': ['slava@x'], 'הנדסה': ['shlomi@x'] }, cc: [] }, {}, '2026-09-30');
+check('the maintenance report still goes to all three when the finding is electrical', mrep.to.join() === 'vitaly@x,slava@x,shlomi@x' && mrep.rows[0].resp === 'חשמל', [mrep.to, mrep.rows[0] && mrep.rows[0].resp]);
 
 console.log('\n4. a row typed in Excel');
 const last = { rows: [], ids: [] };
