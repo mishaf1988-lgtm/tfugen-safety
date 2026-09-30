@@ -73,6 +73,13 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const n0 = ins.length;
     _mfPickDept('מעצבים'); // same dept: nothing reset
     mgrFieldClosePrev('th-3');
+    // Upgrade review 13 (30/09/2026): the first tap opens the closing panel
+    // (what was done, an optional "after" photo) and writes nothing.
+    res.panel = !!document.getElementById('mf-close-note') && !!document.getElementById('mf-close-ph');
+    res.panelWrites = ins.slice(n0).filter((x) => x[0] === 'upd:tour_hazards').length;
+    res.panelTyping = document.getElementById('mf-descr').value;
+    document.getElementById('mf-close-note').value = 'הוחלף';
+    mgrFieldCloseOk('th-3');
     res.closeUpd = ins.slice(n0).find((x) => x[0] === 'upd:tour_hazards');
     res.afterClose = op() && op().textContent;
     res.keptTyping = document.getElementById('mf-descr').value;
@@ -143,9 +150,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('open hazards of the department from earlier tours, closed ones left out', out.openRows === 1 && /מפגעים פתוחים במעצבים \(1\)/.test(out.openTxt || '') && /פתוח מסיור קודם/.test(out.openTxt) && /קו 2/.test(out.openTxt) && !/כבר סגור/.test(out.openTxt), out.openTxt);
   check('an overdue one is marked', /באיחור/.test(out.openTxt || ''), out.openTxt);
   const cu = out.closeUpd && out.closeUpd[1];
-  check('"נסגר" updates the row: closed, closed today', cu && cu.id === 'th-3' && cu.s === 'סגור' && cu.closed_d === out.today, cu);
+  check('"נסגר" opens the closing panel first (what was done + photo), nothing written yet, the typing survives', out.panel && out.panelWrites === 0 && out.panelTyping === 'בכתיבה', [out.panel, out.panelWrites, out.panelTyping]);
+  check('"סגור מפגע" updates the row: closed, closed today, what was done, no photo', cu && cu.id === 'th-3' && cu.s === 'סגור' && cu.closed_d === out.today && cu.close_note === 'הוחלף' && cu.after_photo_url === null, cu);
   check('it stays listed with "בטל", the count drops, the typing survives', /\(0\)/.test(out.afterClose || '') && /בטל/.test(out.afterClose) && out.keptTyping === 'בכתיבה', [out.afterClose, out.keptTyping]);
-  check('"בטל" reopens it: open, closed_d null', out.reopen && out.reopen[1].s === 'פתוח' && out.reopen[1].closed_d === null && /\(1\)/.test(out.afterReopen || ''), out.reopen);
+  check('"בטל" reopens it: open, closed_d null, the closing evidence cleared', out.reopen && out.reopen[1].s === 'פתוח' && out.reopen[1].closed_d === null && out.reopen[1].close_note === null && out.reopen[1].closed_by === null && /\(1\)/.test(out.afterReopen || ''), out.reopen);
   check('trustee findings of the department: not-relevant, OK and other departments left out', out.truRows === 2 && /\(2\)/.test(out.tru || '') && /נ-1\. משטח שבור/.test(out.tru) && /נ-2\. נורה שרופה/.test(out.tru) && /רמפה/.test(out.tru) && /נאמן דני/.test(out.tru) && !/לא רלוונטי כאן|תקין|במחלקה אחרת/.test(out.tru), out.tru);
   check('trustee due: the routed note (30/09), the routed task (04/10)', /יעד 30\/09\/2026/.test(out.tru || '') && /יעד 04\/10\/2026/.test(out.tru), out.tru);
   check('closing a trustee finding asks first (it closes Vitre too), nothing written yet', /לסגור\?/.test(out.ask || '') && /Vitre/.test(out.ask) && out.askIns === 0, out.ask);

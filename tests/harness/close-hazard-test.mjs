@@ -10,13 +10,14 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const URL0 = 'https://tapugan-safety.pages.dev/api/close-hazard';
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDRIVE_CLIENT_SECRET: 'cs', TRUSTEE_NOTIFY_SECRET: 'nsec' };
 const F1 = { id: 'mudmp1oysfpo', u: 'מוסא', t: 1, d: '2026-09-23', ok: false, s: 'פתוח', loc: 'חומר גלם · רחבת קירור', location_id: 'L1', f: 'פנס <b>תאורה</b>', tour: null };
+const H1 = { id: 'th-mumiomsmjz43', n: 51, d: '2026-09-29', tour_no: 3, dept: 'מעצבים', loc: 'קו 2', descr: 'כבל <i>חשוף</i>', s: 'פתוח' };
 // Minimal JPEG / PNG headers that imageInfo() accepts.
 const JPG = new Uint8Array(3000); JPG.set([0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x10, 0x00, 0x20, 0x03], 0);
 const PNG = new Uint8Array(100); PNG.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 32, 0, 0, 0, 16], 0);
 
 function world(o) {
   o = o || {};
-  const w = { inserts: [], patches: [], uploads: [], mails: [], reports: JSON.parse(JSON.stringify(o.reports || [F1])) };
+  const w = { inserts: [], patches: [], hpatches: [], uploads: [], mails: [], reports: JSON.parse(JSON.stringify(o.reports || [F1])), hazards: JSON.parse(JSON.stringify(o.hazards || [H1])) };
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
@@ -26,6 +27,11 @@ function world(o) {
       if (o.readFail) return new Response('x', { status: 503 });
       const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
       return json(w.reports.filter((r) => r.id === id));
+    }
+    if (u.startsWith(SB + '/rest/v1/tour_hazards')) {
+      const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
+      if (m === 'PATCH') { const b = JSON.parse(body); w.hpatches.push({ u, body: b }); if (o.hPatchFail) return new Response('x', { status: 500 }); const r = w.hazards.find((x) => x.id === id && x.s !== 'סגור'); if (r) Object.assign(r, b); return new Response(null, { status: 204 }); }
+      return json(w.hazards.filter((r) => r.id === id));
     }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json([{ prefs: { trustee_hazard: { email: true, email_to: 'sviva@tapugan.co.il' } } }]);
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
@@ -166,6 +172,35 @@ function post(fields, env) {
     check('other methods -> 405', r.status === 405);
     const r2 = await onRequest({ request: new Request(URL0 + '?k=' + tok), env: { TRUSTEE_NOTIFY_SECRET: 'nsec' } });
     check('no service key -> 500 page', r2.status === 500);
+  }
+
+  console.log('\n4. a tour hazard (upgrade review 13, 30/09/2026): the link in the department report');
+  {
+    const htok = await makeCloseToken(ENV, H1.id);
+    check('a th- id is signed', !!htok && htok.indexOf(H1.id + '.') === 0, htok);
+    let w = world();
+    let r = await get(htok); let h = await r.text();
+    check('GET: the form, for a hazard (מפגע), escaped, nothing written', r.status === 200 && /name="who" required/.test(h) && h.includes('\u05e1\u05d2\u05d9\u05e8\u05ea \u05de\u05e4\u05d2\u05e2') && h.includes('&lt;i&gt;') && w.hpatches.length === 0 && w.inserts.length === 0, h.slice(0, 300));
+    check('the photo is optional on the form', /name="photo"/.test(h) && !/name="photo"[^>]*required/.test(h));
+    r = await post({ k: htok, who: '', note: 'x' }); h = await r.text();
+    check('POST without a name: the form again, nothing written', /name="who"/.test(h) && w.hpatches.length === 0);
+    r = await post({ k: htok, who: 'ויטלי', note: 'הוחלף הכבל', photo: new File([JPG], 'a.jpg', { type: 'image/jpeg' }) }); h = await r.text();
+    const p = w.hpatches[0];
+    check('POST: one PATCH of tour_hazards, guarded by s != סגור', w.hpatches.length === 1 && /s=neq\./.test(p.u) && p.body.s === 'סגור', w.hpatches);
+    check('closed_d today, closed_by, close_note, after_photo_url stored', /^\d{4}-\d{2}-\d{2}$/.test(p.body.closed_d) && p.body.closed_by === 'ויטלי' && p.body.close_note === 'הוחלף הכבל' && /\/incidents-photos\/thz-link-th-mumiomsmjz43-/.test(p.body.after_photo_url || ''), p.body);
+    check('no trustee report row is written for a hazard', w.inserts.length === 0 && w.patches.length === 0);
+    check('the manager gets the confirmation mail', w.mails.length === 1);
+    r = await get(htok); h = await r.text();
+    check('opened again: "already closed", no form', !/<form/.test(h) && h.includes('\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8'), h.slice(0, 300));
+    w = world();
+    await post({ k: htok, who: 'ויטלי', note: '' });
+    check('without a photo or a note: closed, both null', w.hpatches.length === 1 && w.hpatches[0].body.after_photo_url === null && w.hpatches[0].body.close_note === null, w.hpatches);
+    w = world({ hazards: [] });
+    r = await get(htok);
+    check('a hazard that is gone: 404, no form', r.status === 404 && !/<form/.test(await r.text()));
+    w = world({ hPatchFail: true });
+    r = await post({ k: htok, who: 'ויטלי' }); h = await r.text();
+    check('the PATCH fails: the form again with the error, no mail', /name="who"/.test(h) && w.mails.length === 0);
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

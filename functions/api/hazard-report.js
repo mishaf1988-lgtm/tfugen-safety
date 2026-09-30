@@ -19,9 +19,12 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
+import { makeCloseToken, closeUrl } from '../_closelink.js';
 import { FILES, REPORT_DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb, ilYear, folderFor } from './hazard-file.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+const APP_URL = 'https://tapugan-safety.pages.dev';
+const CLOSE_TH = '\u05e1\u05d2\u05d9\u05e8\u05d4', CLOSE_LINK = '\u2705 \u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const OLD = ' - \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd!';
@@ -59,7 +62,9 @@ export function parseRecipients(rows) {
 // Pure: one department's report from the register rows.
 // photos (optional): Map register row -> {cid} (a picture in the mail) or
 // {link} (a link to it), 29/09/2026: the report carries the hazards' photos.
-export function buildReport(dept, rows, rcpt, texts, today, photos) {
+// links (optional): Map register row -> the signed "mark as handled" URL
+// (close-hazard.js; upgrade review 13, 30/09/2026). Only in a real send.
+export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   const mine = rows.filter((r) => r[3] === dept);
   const latest = mine.reduce((m, r) => Math.max(m, +r[2] || 0), 0);
   const open = mine.filter((r) => r[10] !== S_DONE).map((r) => {
@@ -68,7 +73,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos) {
     const overdue = !!today && !!dueY && dueY < today;
     const ph = photos && photos.get(r) ? photos.get(r) : null;
     // src: the register row it came from (not sent to the page), to find its photo.
-    return Object.defineProperty({ n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph }, 'src', { value: r });
+    return Object.defineProperty({ n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph, close: (links && links.get(r)) || null }, 'src', { value: r });
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
@@ -90,13 +95,15 @@ export function buildReport(dept, rows, rcpt, texts, today, photos) {
   const th = ['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
   const anyPhoto = open.some((r) => r.photo);
+  const anyClose = open.some((r) => r.close);
+  const closeTd = (r) => (!anyClose ? '' : '<td style="' + cell + '">' + (r.close ? '<a href="' + esc(r.close) + '" style="color:#15803d;font-weight:bold;white-space:nowrap">' + CLOSE_LINK + '</a>' : '') + '</td>');
   const photoTd = (r) => (!anyPhoto ? '' : '<td style="' + cell + '">' + (r.photo && r.photo.cid ? '<img src="cid:' + r.photo.cid + '" width="140" alt="" style="display:block;border:0">' : r.photo && r.photo.link ? '<a href="' + esc(r.photo.link) + '">' + PHOTO_LINK + '</a>' : '') + '</td>');
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
     + '<h2 style="margin:0 0 10px">' + esc(title) + '</h2>'
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
-    + '<table style="border-collapse:collapse;width:100%"><tr>' + th.concat(anyPhoto ? [PHOTO_TH] : []).map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
-    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + '</tr>').join('')
+    + '<table style="border-collapse:collapse;width:100%"><tr>' + th.concat(anyPhoto ? [PHOTO_TH] : [], anyClose ? [CLOSE_TH] : []).map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
+    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + closeTd(r) + '</tr>').join('')
     + '</table>' + (texts.sign && !REGARDS.test(texts.sign) ? '<p>' + esc(texts.sign).replace(/\n/g, '<br>') + '</p>' : '') + SIGNATURE + '</div>';
   return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
@@ -119,13 +126,14 @@ async function loadAll(env, token) {
   const t1 = tx.find((x) => x.r === 1), t2 = tx.find((x) => x.r === 2);
   const reg = buildRegister(hazards, reports, tasks);
   const urls = new Map(); reg.ids.forEach((id, i) => { const u = photoOf(id, hazards, reports); if (u) urls.set(reg.rows[i], u); });
+  const idOf = new Map(); reg.ids.forEach((id, i) => idOf.set(reg.rows[i], id));
   // A save in Excel the server has not taken yet (upgrade review 16, 29/09): the
   // sheets differ from the ones the server last wrote (hazard-file.js keeps
   // their digest). A report sent now would list what the manager just closed there.
   const st = await stateGet(env, ['hazard_xlsm_sheets']).catch(() => ({}));
   const ours = st.hazard_xlsm_sheets && st.hazard_xlsm_sheets.value;
   const unsynced = !!ours && ours !== await sheetsDigest(book).catch(() => ours);
-  return { rows: reg.rows, urls, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
+  return { rows: reg.rows, urls, idOf, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
 }
 
 export async function onRequest(context) {
@@ -162,15 +170,20 @@ export async function onRequest(context) {
     const sent = [], skipped = [], failed = [];
     for (const rep0 of reports) {
       let rep = rep0, attachments = [];
+      // "Mark as handled" per row (upgrade review 13): the register id without
+      // its kind, h:th-... for a tour hazard, t:<id> for a trustee finding;
+      // close-hazard.js tells them apart. No secret configured = no links.
+      const closeLinks = new Map();
+      if (inSend.indexOf(rep0) >= 0) for (const x of rep0.rows) { const rid = x.src && data.idOf.get(x.src); const tk = rid && await makeCloseToken(env, rid.substring(2)); if (tk) closeLinks.set(x.src, closeUrl(APP_URL, tk)); }
+      const photos = new Map();
       if (inSend.indexOf(rep0) >= 0 && rep0.rows.some((x) => x.src && data.urls.get(x.src))) {
-        const photos = new Map();
         rep0.rows.forEach((x, i) => {
           const u = x.src && data.urls.get(x.src); if (!u) return;
           if (pics[u]) { const cid = 'ph' + rep0.dept.length + '-' + i + '@tapugan'; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
           else if (links[u]) photos.set(x.src, { link: links[u] });
         });
-        rep = buildReport(rep0.dept, data.rows, data.rcpt, data.texts, today, photos);
       }
+      if (photos.size || closeLinks.size) rep = buildReport(rep0.dept, data.rows, data.rcpt, data.texts, today, photos, closeLinks);
       if (want.indexOf(rep.dept) < 0) continue;
       if (!rep.count) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' }); continue; }
       if (!test && !rep.to.length) { skipped.push({ dept: rep.dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
