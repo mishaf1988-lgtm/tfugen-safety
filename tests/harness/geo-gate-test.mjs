@@ -30,7 +30,7 @@ const { onRequest } = await import(path.join(ROOT, 'functions/_middleware.js'));
 // o.path     the path asked for
 const call = async (o) => {
   let served = 0;
-  const req = new Request('https://tapugan-safety.pages.dev' + (o.path || '/'));
+  const req = new Request('https://tapugan-safety.pages.dev' + (o.path || '/'), { method: o.method || 'GET', headers: o.headers || {} });
   if (o.country !== null) Object.defineProperty(req, 'cf', { value: { country: o.country } });
   const res = await onRequest({
     request: req,
@@ -97,6 +97,21 @@ console.log('\n5. the alert pipeline is not geo-blocked');
   // Everything else under /api is called by a browser and stays behind the gate.
   const other = await call({ country: 'US', path: '/api/wa-send' });
   check('but the browser endpoints stay behind the gate', other.status === 403 && other.served === 0, other);
+}
+
+console.log('\n5b. the daily Vitre import from pg_cron (30/09/2026), and only it');
+{
+  const sec = { 'x-notify-secret': 's' };
+  const r = await call({ country: 'US', path: '/api/vitre?op=sync', method: 'POST', headers: sec });
+  check('POST op=sync with the secret header passes from abroad', r.served === 1, r);
+  const noHdr = await call({ country: 'US', path: '/api/vitre?op=sync', method: 'POST' });
+  check('...not without the header', noHdr.served === 0 && noHdr.status === 403, noHdr);
+  const get = await call({ country: 'US', path: '/api/vitre?op=sync', headers: sec });
+  check('...not as a GET', get.served === 0, get);
+  const emp = await call({ country: 'US', path: '/api/vitre?op=employees', method: 'POST', headers: sec });
+  check('...and no other Vitre op (employee phones) with the same header', emp.served === 0, emp);
+  const notify = await call({ country: 'US', path: '/api/vitre?op=notify', method: 'POST', headers: sec });
+  check('...nor the SMS op', notify.served === 0, notify);
 }
 
 console.log('\n6. the list is changeable without a deploy');

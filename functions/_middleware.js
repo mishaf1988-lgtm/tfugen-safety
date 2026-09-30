@@ -37,6 +37,15 @@ const DEFAULT_ALLOWED = 'IL';
 // /api/trustee-log (2026-09-27) is the same kind of caller: the trustee_reports
 // statement trigger, rebuilding the OneDrive log, with the same secret.
 const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inbox', '/api/hazard-file', '/api/od-read', '/api/meeting-data', '/api/hazard-deck'];
+// The daily Vitre import (30/09/2026) is pg_cron calling POST /api/vitre?op=sync
+// with the same secret header. Only that one call is let through: the rest of
+// /api/vitre (employee phones, SMS) is a browser endpoint and stays behind the
+// gate. The endpoint still checks the secret itself; this only skips the country.
+function machineCall(request, path) {
+  if (MACHINE_PATHS.indexOf(path) >= 0) return true;
+  if (path !== '/api/vitre' || request.method !== 'POST' || !request.headers.get('x-notify-secret')) return false;
+  try { return new URL(request.url).searchParams.get('op') === 'sync'; } catch (e) { return false; }
+}
 
 // Headers Pages applies to static assets from /_headers. A response that comes
 // back through next() should still carry them, but this does not depend on
@@ -81,7 +90,7 @@ export async function onRequest(context) {
 
   let path = '/';
   try { path = new URL(request.url).pathname; } catch (e) { /* keep '/' */ }
-  if (MACHINE_PATHS.indexOf(path) >= 0) return next();
+  if (machineCall(request, path)) return next();
 
   const country = (request.cf && request.cf.country) || null;
   const allowed = String((env && env.ALLOWED_COUNTRIES) || DEFAULT_ALLOWED)
