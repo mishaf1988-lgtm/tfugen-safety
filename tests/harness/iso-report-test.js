@@ -165,7 +165,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         len: written.length,
         rtl: /dir="rtl"/.test(written),
         title: /ISO 45001/.test(written) && /ISO 14001/.test(written),
-        rows: (written.match(/<tr class="(ok|warn|bad)">/g) || []).length,
+        rows: (written.match(/<tr class="(ok|warn|bad|na)">/g) || []).length,
         hasPrint: /window\.print\(\)/.test(written),
         signature: /הוכן על ידי/.test(written),
         caveat: /אינו תחליף לביקורת/.test(written),
@@ -219,6 +219,84 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     });
     check('the menu item calls it', inMenu.wired, inMenu);
     check('...behind a manager-or-above check', inMenu.gated, inMenu);
+  }
+
+  console.log('\n9. upgrade review 14: the sheet reads where the work is done now');
+  {
+    const r = await page.evaluate(() => {
+      __wipe(); DB.tour_hazards = []; DB.mgmt_reviews = []; DB.docs = [];
+      const empty = { c91: __by('9.1').st, c102: __by('10.2').st, c82: __by('8.2').st, c92: __by('9.2').st,
+        c62: __by('6.2').st, c93: __by('9.3').st, c75: __by('7.5').st, c912: __by('9.1.2').st, gap82: __by('8.2').gap };
+      DB.tour_hazards = [
+        { id: 'h1', d: __iso(-20), dept: 'A', tour_no: 3, s: 'פתוח', due: __iso(-5) },   // late
+        { id: 'h2', d: __iso(-20), dept: 'A', tour_no: 3, s: 'סגור', closed_d: __iso(-2) },
+        { id: 'h3', d: __iso(-60), dept: 'B', tour_no: 1, s: 'פתוח', due: __iso(10) },
+      ];
+      DB.inc = [
+        { id: 'i1', dt: __iso(-30), ty: 'x' },
+        { id: 'i2', dt: __iso(-40), ty: 'x', rc: 'סיבה' },
+        { id: 'i3', dt: __iso(-500), ty: 'x' },        // older than a year: not asked about
+      ];
+      const ev = _opsEvidence();
+      const c91 = __by('9.1'), c102 = __by('10.2');
+      DB.tour_hazards[0].s = 'סגור'; DB.inc[0].five_why = 'למה 1';
+      const clean = __by('10.2');
+      return { empty, ev, c91, c102, clean };
+    });
+    check('with nothing recorded, 9.1 and 10.2 are still red', r.empty.c91 === 'bad' && r.empty.c102 === 'bad', r.empty);
+    check('drills and internal audits the app does not keep are grey, not red', r.empty.c82 === 'na' && r.empty.c92 === 'na', r.empty);
+    check('...and the grey row says where the evidence is', /מהתיקייה/.test(r.empty.gap82), r.empty.gap82);
+    check('new rows 6.2, 7.5 and 9.1.2 are on the sheet, grey while empty', r.empty.c62 === 'na' && r.empty.c75 === 'na' && r.empty.c912 === 'na', r.empty);
+    check('9.3 is red until a management review is saved', r.empty.c93 === 'bad', r.empty);
+    check('two department tours are counted from the hazards (dept + tour number)', r.ev.tours === 2, r.ev);
+    check('the late hazard is counted once', r.ev.hzLate === 1 && r.ev.hzOpen === 2, r.ev);
+    check('incidents: 2 in the last year, 1 investigated', r.ev.inc === 2 && r.ev.incInv === 1, r.ev);
+    check('tour hazards alone turn 9.1 green', r.c91.st === 'ok' && /2 סיורי מחלקות/.test(r.c91.ev), r.c91);
+    check('10.2 is amber, naming the late hazard and the uninvestigated incident', r.c102.st === 'warn' && /1 מפגעי סיור עברו/.test(r.c102.gap) && /1 מ-2 תאונות/.test(r.c102.gap), r.c102);
+    check('closing it and investigating the incident turns 10.2 green', r.clean.st === 'ok', r.clean);
+  }
+
+  console.log('\n10. 7.2 counts the weekly refreshers, and notices when they stop');
+  {
+    const r = await page.evaluate(() => {
+      __wipe();
+      const none = __by('7.2').st;
+      DB.toolbox = [{ id: 't1', d: __iso(-3), topic: 'ריענון' }];
+      const fresh = __by('7.2');
+      DB.toolbox = [{ id: 't1', d: __iso(-24), topic: 'ריענון' }];
+      const stale = __by('7.2');
+      return { none, fresh, stale };
+    });
+    check('no training and no refreshers is red', r.none === 'bad', r.none);
+    check('a refresher this week is green', r.fresh.st === 'ok' && /1 ריענונים/.test(r.fresh.ev), r.fresh);
+    check('none for 24 days is amber, with the date and a pointer to the import', r.stale.st === 'warn' && /Vitre/.test(r.stale.gap) && /\d\d\/\d\d\/\d{4}/.test(r.stale.gap), r.stale);
+  }
+
+  console.log('\n11. the sheet is keyboard-only, and the others read the same counts');
+  {
+    const r = await page.evaluate(() => {
+      __wipe();
+      let written = '';
+      const realOpen = window.open;
+      window.open = function () { return { document: { write: function (h) { written = h; }, close: function () {} } }; };
+      isoAuditReport();
+      window.open = realOpen;
+      const text = written.replace(/<style[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, ' ');
+      const src = [...document.querySelectorAll('script')].map((s) => s.textContent).join('');
+      DB.tour_hazards = [{ id: 'h1', d: new Date().toISOString().substring(0, 10), dept: 'A', tour_no: 1, s: 'פתוח' }];
+      let mr = null;
+      try { rMr(); mr = g('mr-hz-q') && g('mr-hz-q').textContent; } catch (e) { mr = 'ERR ' + e.message; }
+      return {
+        dash: /[—·]/.test(text), grey: /מחוץ לאפליקציה/.test(written), naRow: /<tr class="na">/.test(written),
+        exp: /'tour_hazards'/.test(src.slice(src.indexOf('var tableOrder=['), src.indexOf('var tableOrder=[') + 600)),
+        mr: mr, ann: /tour_hazards:\(function\(\)\{var o=_opsEvidence\(inLastYear\)/.test(src),
+      };
+    });
+    check('no long dash or middle dot anywhere in the printed text', !r.dash, r);
+    check('grey rows and a grey pill are printed', r.grey && r.naRow, r);
+    check('the Excel export includes the tour hazards', r.exp, r);
+    check('the management review shows the tour hazards of the quarter', r.mr === '1', r.mr);
+    check('the annual report is handed the tour-hazard numbers', r.ann, r);
   }
 
   await browser.close();
