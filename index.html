@@ -5786,9 +5786,9 @@ function _renderToday(){
       var hzEsc=hzL.filter(function(x){return x.esc;}).length,byR={};
       hzL.forEach(function(x){byR[x.resp]=(byR[x.resp]||0)+1;});
       var hzR=Object.keys(byR).sort(function(a,b){return byR[b]-byR[a];}).slice(0,3).map(function(k){return k+' '+byR[k];}).join(', ');
-      var onlyT=hzL.every(function(x){return x.k==='t';});
+      var onlyT=hzL.every(function(x){return x.k==='t';}),nT=hzL.filter(function(x){return x.k==='t';}).length;
       items.push({priority:1,icon:'\u26a0\ufe0f',title:(hzL.length===1?'\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8':hzL.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8')+(hzEsc?' ('+hzEsc+' \u05d1\u05d4\u05e1\u05dc\u05de\u05d4)':''),
-        sub:'\u05dc\u05e4\u05d9 \u05d0\u05d7\u05e8\u05d0\u05d9: '+hzR+' | \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: '+hzL[0].late+' \u05d9\u05de\u05d9\u05dd',
+        sub:(nT&&!onlyT?(hzL.length-nT)+' \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd, '+nT+' \u05de\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd | ':'')+'\u05dc\u05e4\u05d9 \u05d0\u05d7\u05e8\u05d0\u05d9: '+hzR+' | \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7: '+hzL[0].late+' \u05d9\u05de\u05d9\u05dd',
         badge:hzEsc?'\u05d4\u05e1\u05dc\u05de\u05d4':'\u05d0\u05d9\u05d7\u05d5\u05e8',badgeCls:'red',fn:onlyT?'page':'thz',a1:onlyT?'trustees':'overdue',a2:''});
     }
     var hzN=(DB.tour_hazards||[]).filter(_thzNoDue).length;
@@ -9706,7 +9706,7 @@ function _hzLateAll(){
       if(r.s===TRUSTEE_S_CLOSED||routed[r.id])return;
       var age=typeof _truAgeDays==='function'?_truAgeDays(r):null;if(age!==null&&age>=TRUSTEE_STALE_DAYS)return;
       var due=_mfTruDue(r);if(!due||du(due)>=0)return;
-      var late=-du(due);out.push({k:'t',id:r.id,late:late,sev:'',resp:_mfTruDept(r.loc)||'\u05e0\u05d0\u05de\u05e0\u05d9\u05dd',esc:_thzEsc(late,''),descr:r.f});
+      var late=-du(due);out.push({k:'t',id:r.id,late:late,sev:'',resp:'\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4',esc:_thzEsc(late,''),descr:r.f});
     });
   }
   return out.sort(function(a,b){return b.late-a.late;});
@@ -9723,14 +9723,24 @@ var _THZ_COLS=['','\u05ea\u05d0\u05e8\u05d9\u05da \u05e1\u05d9\u05d5\u05e8','\u0
 // keeps each item until the app holds the value, "\u05d8\u05d5\u05e4\u05dc" is tapped, or 30 days.
 var _THZ_WHY={keep:'\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05e0\u05e7\u05d1\u05e2\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05ea\u05e7\u05df \u05e9\u05dd',both:'\u05e9\u05d5\u05e0\u05d4 \u05d2\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05e0\u05e9\u05d0\u05e8 \u05d4\u05e2\u05e8\u05da \u05e9\u05dc \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',bad:'\u05e2\u05e8\u05da \u05e9\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e7\u05dc\u05d5\u05d8 (\u05ea\u05d0\u05e8\u05d9\u05da \u05d0\u05d5 \u05e1\u05d8\u05d8\u05d5\u05e1)',tru_col:'\u05d1\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05de\u05ea\u05e7\u05e0\u05d9\u05dd \u05d0\u05ea \u05d6\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',nomatch:'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05ea\u05d5\u05d0\u05de\u05ea \u05dc\u05de\u05e4\u05d2\u05e2 \u05e2\u05dd \u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05d4',dup:'\u05d4\u05de\u05e1\u05e4\u05e8 \u05de\u05d5\u05e4\u05d9\u05e2 \u05e4\u05e2\u05de\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5',seen:'\u05d0\u05d5\u05ea\u05d5 \u05de\u05e1\u05e4\u05e8 \u05d1\u05e9\u05ea\u05d9 \u05e9\u05d5\u05e8\u05d5\u05ea, \u05e0\u05e7\u05dc\u05d8\u05d4 \u05e8\u05e7 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4',gone:'\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05dc\u05d0 \u05e7\u05d9\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',tru_new:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df \u05e0\u05e4\u05ea\u05d7 \u05e8\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05dc\u05d0 \u05de\u05d4\u05e7\u05d5\u05d1\u05e5',nodescr:'\u05e9\u05d5\u05e8\u05d4 \u05d1\u05dc\u05d9 \u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2, \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7 \u05de\u05e4\u05d2\u05e2'};
 function _thzDropKey(x){return [x.n,x.ci,x.val].join('|');}
+// The app already holds the value (fixed there since): not shown, even before
+// the server's next run clears it (Chrome check 30/09: six such items stayed).
+var _THZ_DROP_F={1:'d',2:'tour_no',3:'dept',4:'loc',5:'descr',6:'sev',8:'action',9:'due',10:'s',11:'closed_d',12:'notes'};
+function _thzDropHeld(x){
+  var f=_THZ_DROP_F[x.ci];if(!f)return false;
+  var id=x.id&&/^h:/.test(x.id)?x.id.substring(2):null;
+  var r=(DB.tour_hazards||[]).find(function(h){return id?h.id===id:(/^\d+$/.test(String(x.n))&&+h.n===+x.n);});
+  return !!r&&String(r[f]==null?'':r[f]).trim()===String(x.val==null?'':x.val).trim();
+}
 function _thzDroppedHtml(files){
   var seen={},items=[];
   ['xlsm','xlsx'].forEach(function(k){var d=(files[k]||{}).dropped;if(!d||!d.items||!d.items.length)return;
-    d.items.forEach(function(x){var key=_thzDropKey(x);if(seen[key]){seen[key].files.push(k);return;}var it=Object.assign({},x,{files:[k],at:x.at||d.at});seen[key]=it;items.push(it);});});
+    d.items.forEach(function(x){if(_thzDropHeld(x))return;var key=_thzDropKey(x);if(seen[key]){seen[key].files.push(k);return;}var it=Object.assign({},x,{files:[k],at:x.at||d.at});seen[key]=it;items.push(it);});});
   if(!items.length)return '';
   return '<div id="thz-dropped" style="color:var(--warn);margin-top:6px"><b>\u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8 \u05de\u05d4\u05e7\u05d5\u05d1\u05e5 ('+items.length+')</b>: \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc\u05d0 \u05e7\u05dc\u05d8\u05d4. \u05ea\u05e7\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d5\u05d4\u05e4\u05e8\u05d9\u05d8 \u05d9\u05d9\u05e8\u05d3 \u05de\u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05dc\u05d1\u05d3, \u05d0\u05d5 \u05dc\u05d7\u05e5 \u05d8\u05d5\u05e4\u05dc. \u05e2\u05d5\u05ea\u05e7 \u05e9\u05dc \u05d4\u05e7\u05d5\u05d1\u05e5 \u05db\u05e4\u05d9 \u05e9\u05e9\u05de\u05e8\u05ea \u05e0\u05e9\u05de\u05e8 \u05d1\u05d0\u05e8\u05db\u05d9\u05d5\u05df, \u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5.<ul style="margin:4px 0 0;padding-inline-start:18px">'+items.map(function(x){
-    var why=_THZ_WHY[x.why]||(x.ci<0?'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4':'');
-    return '<li style="margin-bottom:4px">\u05e9\u05d5\u05e8\u05d4 '+esc(String(x.r))+(x.n?' ('+esc(String(x.n))+')':'')+': '+(x.ci>=0?esc(_THZ_COLS[x.ci]||'')+' ':'')+(x.val?'"'+esc(x.val)+'"':'')
+    var why=_THZ_WHY[x.why]||(x.ci<0?'\u05d4\u05e9\u05d5\u05e8\u05d4 \u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4':'\u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8 (\u05e0\u05e8\u05e9\u05dd \u05dc\u05e4\u05e0\u05d9 \u05e9\u05e0\u05d5\u05e1\u05e4\u05d5 \u05d4\u05e1\u05d9\u05d1\u05d5\u05ea)');
+    var val=/^\d{4}-\d{2}-\d{2}$/.test(String(x.val||''))?fd(x.val):x.val;
+    return '<li style="margin-bottom:4px">\u05e9\u05d5\u05e8\u05d4 '+esc(String(x.r))+(x.n?' ('+esc(String(x.n))+')':'')+': '+(x.ci>=0?esc(_THZ_COLS[x.ci]||'')+' ':'')+(val?'"'+esc(val)+'"':'')
       +(why?' <span style="color:var(--t2)">- '+esc(why)+'</span>':'')+(x.at?' <span style="color:var(--t2);font-size:12px">('+fd(String(x.at).substring(0,10))+')</span>':'')
       +' <button type="button" class="btn btn-s" style="min-height:32px;padding:2px 10px;font-size:12px" data-k="'+esc(_thzDropKey(x))+'" data-f="'+esc(x.files.join(','))+'" onclick="thzDropDone(this)">\u05d8\u05d5\u05e4\u05dc</button></li>';}).join('')+'</ul></div>';
 }
@@ -12937,7 +12947,7 @@ function _sysChkLocations(){
 // Things the browser genuinely cannot check. Listed as unchecked rather than
 // dressed up as green, because a false all-clear is worse than a gap.
 var SYS_MANUAL=[
-  ['\u05d4\u05d2\u05e0\u05d4 \u05de\u05e4\u05e0\u05d9 \u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05e9\u05d3\u05dc\u05e4\u05d5','\u05de\u05d5\u05e4\u05e2\u05dc \u05d1\u05de\u05de\u05e9\u05e7 Supabase, \u05ea\u05d7\u05ea Authentication. \u05e0\u05d1\u05d3\u05e7 \u05db\u05db\u05d1\u05d5\u05d9 \u05d1-21/09.'],
+  ['\u05d4\u05d2\u05e0\u05d4 \u05de\u05e4\u05e0\u05d9 \u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05e9\u05d3\u05dc\u05e4\u05d5','\u05d4\u05d4\u05d2\u05d3\u05e8\u05d4 \u05e0\u05de\u05e6\u05d0\u05ea \u05d1\u05de\u05de\u05e9\u05e7 Supabase, \u05ea\u05d7\u05ea Authentication. \u05d1\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 (21/09/2026) \u05d4\u05d9\u05d0 \u05d4\u05d9\u05d9\u05ea\u05d4 \u05db\u05d1\u05d5\u05d9\u05d4.'],
   ['\u05d3\u05d5\u05de\u05d9\u05d9\u05df \u05de\u05d0\u05d5\u05de\u05ea \u05dc\u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc','\u05d1\u05dc\u05d9 \u05d6\u05d4 \u05d4\u05de\u05d9\u05d9\u05dc \u05de\u05d2\u05d9\u05e2 \u05e8\u05e7 \u05dc\u05db\u05ea\u05d5\u05d1\u05ea \u05e9\u05d0\u05d9\u05ea\u05d4 \u05e0\u05e4\u05ea\u05d7 \u05d7\u05e9\u05d1\u05d5\u05df Resend. \u05e8\u05d0\u05d4 project-files/IT-REQUEST-DNS.md.']
 ];
 
