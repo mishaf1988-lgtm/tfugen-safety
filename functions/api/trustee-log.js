@@ -23,6 +23,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead } from '../_onedrive.js';
+import { readAll } from './hazard-file.js';
 
 export const LOG_FOLDER = 'Apps/Tapugan Safety/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
 // Every trustee photo is also copied, once, into this folder (Michael, 27/09:
@@ -246,22 +247,6 @@ async function logSig(sig, reports, copied) {
   const s = sig + '|' + ids.map((id) => id + '=' + copied[id]).join(',');
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function readAll(env, path) {
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
-  const out = [];
-  for (let off = 0; off < 50000; off += 1000) {
-    const r = await fetch(base + path + (path.indexOf('?') >= 0 ? '&' : '?') + 'limit=1000&offset=' + off,
-      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
-    if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
-    const rows = await r.json();
-    if (!Array.isArray(rows)) break;
-    out.push(...rows);
-    if (rows.length < 1000) break;
-  }
-  return out;
 }
 
 export async function runLog(env, force) {
