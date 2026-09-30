@@ -243,11 +243,35 @@ export function pagedPath(path, off) {
   else if (!/(^|,)id\./.test(m[2])) out = q.replace(m[0], m[1] + 'order=' + m[2] + ',id.asc');
   return out + '&limit=' + READ_PAGE + '&offset=' + off;
 }
-export async function readAll(env, path) {
+// ---- Subrequest budget (upgrade review 22, 30/09/2026) ----
+// On the free plan one request may make 50 subrequests, and the 51st fetch
+// throws: on a busy day the photos vanished, the file was not written, and even
+// the error could not be recorded. A run counts what it spends (the worst case
+// for the helpers) and gives up the parts that can wait first: the assistant's
+// suggestions, edits over what is left, thumbnails. What was given up is done
+// on the next run; the tail (upload, state, error record) is always left.
+export const SUB_LIMIT = 50;
+export function subBudget(limit) {
+  return { limit: limit || SUB_LIMIT, used: 0, spend(n) { this.used += n; return this; }, left() { return this.limit - this.used; } };
+}
+// After the reads, a whole write needs at most: state read 1, token 4 (read,
+// refresh, save x2), the item 4 (with the new year's copy), download 1, pulled
+// state 1, not-taken list 1, kept copy 1, photo links 2 (one per bucket),
+// upload 1, state 1, error record 1.
+export const FILE_MIN = 18;
+// What is still to come once the edits are written (from 'pulled state' on).
+const AFTER_PULL = 8;
+// What is still to come once the thumbnails are fetched: upload, state, error record.
+const AFTER_PICS = 3;
+// The lease around a run (runLeased): lock 2, unlock 1, proof of life 1, and
+// the same again when it goes once more; 1 more per round for the mark check.
+const LEASE_COST = 7;
+export async function readAll(env, path, budget) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
   const out = [];
   for (let page = 0; page < READ_MAX_PAGES; page++) {
+    if (budget) budget.spend(1);
     const r = await fetch(base + pagedPath(path, page * READ_PAGE), { headers: { apikey: key, Authorization: 'Bearer ' + key } });
     if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
     const j = await r.json();
@@ -576,11 +600,13 @@ export function mergeDropped(prevItems, items, reg, hazards, reports, nowIso, op
 // Writes the edits (new hazards first, in one request), updates the arrays in
 // memory. More than MAX_PULL writes: the rest waits for the next run, and the
 // file is not rewritten until then (it would drop them).
-export async function applyEdits(env, ed, hazards, reports) {
+export async function applyEdits(env, ed, hazards, reports, max) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY, base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
   const h = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-  let budget = MAX_PULL, done = { created: 0, hazards: 0, reports: 0, written: [] };
+  let budget = max == null ? MAX_PULL : Math.min(MAX_PULL, max), done = { created: 0, hazards: 0, reports: 0, written: [], calls: 0 };
+  if (ed.fresh.length && budget <= 0) { done.pending = true; return done; }
   if (ed.fresh.length) {
+    done.calls++;
     const r = await fetch(base + 'tour_hazards', { method: 'POST', headers: h, body: JSON.stringify(ed.fresh) });
     if (!r.ok) throw new Error('new hazards from the file failed (' + r.status + ')');
     ed.fresh.forEach((x) => hazards.push(x)); done.created = ed.fresh.length; budget--;
@@ -589,6 +615,7 @@ export async function applyEdits(env, ed, hazards, reports) {
     for (const p of list) {
       if (budget <= 0) return false;
       const body = Object.assign({}, p); delete body.id;
+      done.calls++;
       const r = await fetch(base + table + '?id=eq.' + encodeURIComponent(p.id), { method: 'PATCH', headers: h, body: JSON.stringify(body) });
       if (!r.ok) throw new Error(table + ' update from the file failed (' + r.status + ')');
       const rec = arr.find((x) => x.id === p.id); if (rec) Object.assign(rec, body);
@@ -604,10 +631,14 @@ export async function applyEdits(env, ed, hazards, reports) {
 export async function runFile(env, which, force, opt) {
   const f = FILES[which]; if (!f) throw new Error('unknown file');
   const year = ilYear((opt && opt.now) || Date.now()), FOLDER = folderFor(year);
+  const B = (opt && opt.budget) || subBudget(), put0 = B.used, later = {};
+  // Too little left for a whole run (a later round of the lease): the next
+  // tick, with a fresh budget, does it.
+  if (B.left() < 3 + FILE_MIN) return { ok: false, file: which, pushed: false, retry: true, reason: 'budget', budget: { used: B.used } };
   const [hazards, reports, tasks] = await Promise.all([
-    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
-    readAll(env, TASKS_Q),
+    readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc', B),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc', B),
+    readAll(env, TASKS_Q, B),
   ]);
   // Every finding gets a recommended corrective action (Michael, 28/09): the
   // ones still without one are asked from the assistant, a few per run, and
@@ -615,6 +646,9 @@ export async function runFile(env, which, force, opt) {
   // for the next run (every 15 minutes).
   const todo = reports.filter((r) => isFinding(r) && !notRelevant(r) && !r.action && r.s !== '\u05e0\u05e1\u05d2\u05e8').slice(0, MAX_AI);
   for (const r of todo) {
+    // The file comes first: the rest of the suggestions wait for the next run.
+    if (B.left() < 2 + FILE_MIN) { later.ai = todo.length - todo.indexOf(r); break; }
+    B.spend(2);
     const a = await suggestAction(env, r);
     if (!a) continue;
     try {
@@ -626,10 +660,12 @@ export async function runFile(env, which, force, opt) {
   let reg = yearReg(buildRegister(hazards, reports, tasks), year);
   let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';
+  B.spend(1);
   const st = await stateGet(env, [K + 'sig', K + 'ctag', K + 'sheets', K + 'last', K + 'dropped', K + 'dismissed']).catch(() => ({}));
   const val = (k) => (st[K + k] && st[K + k].value) || '';
   const now = new Date().toISOString();
   try {
+    B.spend(4 + 4);
     const { token } = await accessToken(env);
     const { mr } = await yearItem(token, f.name, f.type, year, 'id,cTag,lastModifiedDateTime,size,webUrl,@microsoft.graph.downloadUrl');
     if (mr.status === 404) throw Object.assign(new Error('the file is not in the folder: ' + FOLDER + '/' + f.name), { status: 404 });
@@ -638,6 +674,7 @@ export async function runFile(env, which, force, opt) {
     const ours = val('ctag');
     // Nothing new on either side: one metadata read, nothing downloaded.
     if (!force && ours && ours === meta.cTag && val('sig') === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
+    B.spend(1);
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
@@ -647,7 +684,7 @@ export async function runFile(env, which, force, opt) {
     const changed = !!ours && ours !== meta.cTag;
     const personSaved = changed && (!val('sheets') || val('sheets') !== await sheetsDigest(orig).catch(() => ''));
     if (!force && !personSaved && val('sig') === sig) {
-      if (changed) await stateSet(env, { [K + 'ctag']: meta.cTag || '' });
+      if (changed) { B.spend(1); await stateSet(env, { [K + 'ctag']: meta.cTag || '' }); }
       return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     }
     let prevD = null, dismissed = []; try { prevD = JSON.parse(val('dropped') || 'null'); } catch (e) { prevD = null; }
@@ -655,7 +692,7 @@ export async function runFile(env, which, force, opt) {
     const prevDropped = (prevD && prevD.items) || [];
     const saveDropped = async (rg) => {
       const items = mergeDropped(prevDropped, ed ? ed.dropped : [], rg, hazards, reports, now, { dismissed, prevAt: prevD && prevD.at });
-      if (ed || JSON.stringify(items) !== JSON.stringify(prevDropped)) await stateSet(env, { [K + 'dropped']: JSON.stringify({ at: now, items }) });
+      if (ed || JSON.stringify(items) !== JSON.stringify(prevDropped)) { B.spend(1); await stateSet(env, { [K + 'dropped']: JSON.stringify({ at: now, items }) }); }
     };
     // Excel -> app first, so the rewrite carries what the person changed.
     let pulled = null;
@@ -664,15 +701,19 @@ export async function runFile(env, which, force, opt) {
       const fileRows = await readSheetRows(orig, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS });
       ed = diffEdits(fileRows, last, hazards, reports, now.substring(0, 10));
       if (ed.fresh.length || ed.hazards.length || ed.reports.length) {
-        pulled = await applyEdits(env, ed, hazards, reports);
+        // Edits over what is left wait for the next run, as over MAX_PULL.
+        pulled = await applyEdits(env, ed, hazards, reports, B.left() - AFTER_PULL);
+        B.spend(pulled.calls);
+        if (pulled.pending) later.edits = (pulled.created ? 0 : ed.fresh.length) + ed.hazards.length + ed.reports.length - pulled.hazards - pulled.reports;
         // If the write below fails (file open in Excel), the next run must not
         // take these cells as edited again, nor as changed in the app.
         // Only cells of records actually written: the rest (over the per-run
         // budget) must still look edited on the next run (28/09 review).
         const done = new Set(pulled.written);
         ed.pulled.forEach((p) => { if (done.has(p.id) && last.rows[p.i]) last.rows[p.i][p.ci] = p.val; });
+        B.spend(1);
         await stateSet(env, { [K + 'last']: JSON.stringify(last) });
-        if (pulled.pending) { await saveDropped(yearReg(buildRegister(hazards, reports, tasks), year)); return { ok: true, file: which, pushed: false, reason: 'pulling', pulled }; }
+        if (pulled.pending) { await saveDropped(yearReg(buildRegister(hazards, reports, tasks), year)); return { ok: true, file: which, pushed: false, reason: 'pulling', pulled, budget: Object.assign({ used: B.used - put0 }, later) }; }
         reg = yearReg(buildRegister(hazards, reports, tasks), year);
         sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
       }
@@ -685,25 +726,34 @@ export async function runFile(env, which, force, opt) {
     let kept = null;
     if (!ours || (personSaved && (!ed || ed.dropped.length))) {
       const folder = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/' + (ours ? '\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e9\u05e0\u05d3\u05e8\u05e1\u05d5' : '\u05dc\u05e4\u05e0\u05d9 \u05db\u05ea\u05d9\u05d1\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4');
+      B.spend(1);
       await graphPut(token, folder, stampName(f.name, meta.lastModifiedDateTime || now), orig, f.type);
       kept = folder;
     }
     const entry = logEntry(last, reg, { now, personSaved, dropped: ed ? ed.dropped : [] });
     const ph = pickPhotoRows(reg, hazards, reports, now.substring(0, 10), MAX_PICS);
+    B.spend(2);
     const links = await signPhotos(env, ph.all.map((x) => x.url));
     const pics = [], minHeights = {};
-    for (const x of ph.want) { const b = await fetchThumb(env, x.url); if (b) { pics.push({ row: x.row, bytes: b, link: links[x.url] || null }); minHeights[x.row] = PIC_ROW_PT; } }
+    // Thumbnails only while the tail is still left; the rest get the link now
+    // and the picture on the next run (the signature below is not kept).
+    const room = Math.max(0, B.left() - AFTER_PICS), want = ph.want.slice(0, room);
+    if (want.length < ph.want.length) later.pics = ph.want.length - want.length;
+    for (const x of want) { B.spend(1); const b = await fetchThumb(env, x.url); if (b) { pics.push({ row: x.row, bytes: b, link: links[x.url] || null }); minHeights[x.row] = PIC_ROW_PT; } }
     // Full: a Hebrew error the tours screen and the watchdog show, not
     // patchSheetRows' English one (upgrade review 24).
     if (reg.rows.length > MAX_ROW - 1) throw new Error('\u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05dc\u05d0: ' + reg.rows.length + ' \u05e9\u05d5\u05e8\u05d5\u05ea, \u05d5\u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05de\u05d5\u05db\u05e0\u05d5\u05ea ' + (MAX_ROW - 1) + '. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d1\u05ea\u05d1\u05e0\u05d9\u05ea.');
     const out = await patchSheetRows(orig, reg.rows, { sheet: SHEET, lastCol: LAST_COL, maxRow: MAX_ROW, dateCols: DATE_COLS, show: { col: 10, vals: [S_OPEN, S_WIP] }, fitRows: true,
       log: entry ? { sheet: LOG_SHEET, rows: [entry] } : null, minHeights,
       pictures: { col: PHOTO_COL, header: PHOTO_HEADER, width: 17, text: PHOTO_TEXT, pics, links: ph.all.filter((x) => links[x.url]).map((x) => ({ row: x.row, link: links[x.url] })) } });
+    B.spend(1);
     const put = await graphPut(token, FOLDER, f.name, out, f.type);
     const outSheets = await sheetsDigest(out).catch(() => '');
-    await stateSet(env, { [K + 'sig']: sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
+    B.spend(1);
+    // Pictures left for later: no signature, so the next run writes again.
+    await stateSet(env, { [K + 'sig']: later.pics ? '' : sig, [K + 'ctag']: put.cTag || '', [K + 'sheets']: outSheets, [K + 'last']: JSON.stringify({ rows: reg.rows, ids: reg.ids, old: supersede(last, reg, now) }),
       [K + 'at']: now, [K + 'err']: '', [K + 'url']: put.webUrl || meta.webUrl || '', [K + 'rows']: String(reg.rows.length), [K + 'year']: String(year) });
-    return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null };
+    return { ok: true, file: which, pushed: true, rows: reg.rows.length, managers: hazards.length, trustees: reg.rows.length - hazards.length, kept, pulled, webUrl: put.webUrl || null, budget: Object.assign({ used: B.used - put0 }, later) };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
       : e && e.status === 423 ? '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05e4\u05ea\u05d5\u05d7 \u05d1-Excel. \u05d9\u05e2\u05d5\u05d3\u05db\u05df \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d0\u05d7\u05e8\u05d9 \u05e9\u05d9\u05d9\u05e1\u05d2\u05e8 (\u05d1\u05d3\u05d9\u05e7\u05d4 \u05db\u05dc 15 \u05d3\u05e7\u05d5\u05ea).'
@@ -784,7 +834,10 @@ export function stampMonth(name, ym) {
 // One run per file at a time (runLeased, _onedrive.js).
 const LEASE_MS = 120000;
 export async function runFileLocked(env, which, force, opt) {
-  const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => runFile(env, which, force, opt));
+  const o = Object.assign({}, opt), B = o.budget = o.budget || subBudget();
+  B.spend(LEASE_COST);
+  let round = 0;
+  const r = await runLeased(env, 'hazard_' + which, LEASE_MS, () => { if (round++) B.spend(1); return runFile(env, which, force, o); });
   if (r && r.busy) return { ok: true, file: which, pushed: false, reason: 'busy' };
   // Proof of life for the sync watchdog (_watchdog.js): a run that finished,
   // written or unchanged, means the file and the app agree.
@@ -801,7 +854,9 @@ export async function onRequest(context) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ error: 'server misconfigured' }, 500, cors);
   let body = {}; try { body = await request.json(); } catch (e) {}
   let force = false;
+  const B = subBudget();
   if (/^Bearer\s+\S/i.test(request.headers.get('authorization') || '')) {
+    B.spend(2);
     const who = await requireRole(request, env, ['admin', 'manager']);
     if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
     if (body.op === 'status') {
@@ -848,6 +903,9 @@ export async function onRequest(context) {
     try { return jsonResp(await runArchive(env, new Date()), 200, cors); } catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors); }
   }
   const which = body.file === 'xlsx' ? 'xlsx' : 'xlsm';
+  // The requests fired below (archive, watch, retry and the twin; the deck
+  // after the twin) are subrequests of this one too.
+  if (context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) B.spend(which === 'xlsm' ? 4 : 1);
   try {
     // The archive housekeeping (runArchive), in its own request; it does
     // nothing on most runs (one state read).
@@ -873,7 +931,7 @@ export async function onRequest(context) {
         body: JSON.stringify({ op: 'retry' }),
       }).catch(() => {}));
     }
-    const r = await runFileLocked(env, which, force);
+    const r = await runFileLocked(env, which, force, { budget: B });
     // The twin, in its own request (its own CPU and subrequest budget).
     if (which === 'xlsm' && context.waitUntil && env.TRUSTEE_NOTIFY_SECRET) {
       context.waitUntil(fetch(new URL('/api/hazard-file', request.url).toString(), {

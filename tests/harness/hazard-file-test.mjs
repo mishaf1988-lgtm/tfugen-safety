@@ -5,7 +5,7 @@
 // the real hazard-file.js with Graph and Supabase mocked, and reads the result.
 import fs from 'fs';
 import path from 'path';
-import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey } from './_build/hazard-file.mjs';
+import { onRequest, runFile, buildRows, trusteeDept, diffEdits, buildRegister, routedNote, applyEdits, supersede, runFileLocked, runArchive, stampMonth, mergeDropped, dropKey, subBudget, SUB_LIMIT } from './_build/hazard-file.mjs';
 import { cleanAction } from './_build/_ai.mjs';
 import { readZip, writeZip, entryText, serial, patchSheetRows, readSheetRows, rowHeight } from './_build/_xlsxpatch.mjs';
 
@@ -28,13 +28,13 @@ const reg = (rows) => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w
   + '</sheetData><autoFilter ref="A1:M8"><filterColumn colId="3"><filters><filter val="מעצבים"/></filters></filterColumn></autoFilter>'
   + '<dataValidations count="1"><dataValidation type="list" sqref="G2:G8"><formula1>"גבוהה,בינונית,נמוכה"</formula1></dataValidation></dataValidations></worksheet>';
 const N = (r) => '<c r="N' + r + '" t="str"><f t="array" ref="N' + r + '">IF($A' + r + '="","","x")</f><v>x</v></c><c r="O' + r + '"><f>ROW()</f><v>' + r + '</v></c>';
-function regRows() {
+function regRows(last) {
   let x = '<row r="2"><c r="A2" s="3"><v>1</v></c><c r="B2" s="10"/><c r="D2" s="8" t="inlineStr"><is><t>ישן</t></is></c><c r="J2" s="14"><v>46181</v></c><c r="K2" s="3"/><c r="L2" s="3"/>' + N(2) + '</row>';
   x += '<row r="3" hidden="1"><c r="A3" s="3"><f>A2+1</f><v>2</v></c><c r="B3" s="24"><v>46287</v></c><c r="L3" s="24"><v>46290</v></c>' + N(3) + '</row>';
-  for (let r = 4; r <= 8; r++) x += '<row r="' + r + '"' + (r === 5 ? ' hidden="1"' : '') + '><c r="A' + r + '" s="3"/><c r="B' + r + '" s="3"/><c r="J' + r + '" s="8"/>' + N(r) + '</row>';
+  for (let r = 4; r <= (last || 8); r++) x += '<row r="' + r + '"' + (r === 5 ? ' hidden="1"' : '') + '><c r="A' + r + '" s="3"/><c r="B' + r + '" s="3"/><c r="J' + r + '" s="8"/>' + N(r) + '</row>';
   return x;
 }
-async function fixture() {
+async function fixture(last) {
   const t = (name, text) => ({ name, text });
   const vbaZ = await deflate(VBA);
   const sheet1 = '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><f>COUNTIF(\'מאגר מפגעים\'!$K$2:$K$8,"פתוח")</f><v>0</v></c></row></sheetData></worksheet>';
@@ -45,7 +45,7 @@ async function fixture() {
     t('xl/_rels/workbook.xml.rels', '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId9" Type="w" Target="worksheets/sheet9.xml"/><Relationship Id="rId1" Type="w" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="w" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/calcChain" Target="calcChain.xml"/></Relationships>'),
     t('xl/worksheets/sheet1.xml', sheet1),
     t('xl/worksheets/sheet9.xml', '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" s="1" t="inlineStr"><is><t>Turn #</t></is></c></row><row r="2"><c r="A2" s="5"><v>19</v></c><c r="B2" s="6" t="inlineStr"><is><t>22/06/2026</t></is></c></row><row r="3"/></sheetData></worksheet>'),
-    t('xl/worksheets/sheet2.xml', reg(regRows())),
+    t('xl/worksheets/sheet2.xml', reg(regRows(last))),
     t('xl/calcChain.xml', '<calcChain><c r="A3" i="2"/></calcChain>'),
     { name: 'xl/vbaProject.bin', method: 8, crc: crc(VBA), csize: vbaZ.length, usize: VBA.length, raw: vbaZ, time: 0, date: 0x21 },
   ]);
@@ -606,6 +606,64 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
     check('the deck moves with the year (yearItem), and is written in that year\'s folder', /yearItem\(token, DECK\.name, DECK\.type, ilYear/.test(hd) && /const FOLDER = folderFor\(ilYear/.test(hd) && !/import \{[^}]*\bFOLDER\b/.test(hd));
     check('the department report reads this year\'s workbook, last year\'s until the copy exists', /book0\(ilYear\(\)\)/.test(hr) && /r\.status === 404\) r = await book0\(ilYear\(\) - 1\)/.test(hr));
     check('the watchdog\'s numbers are the file\'s (205 rows, warn at 164)', /FILE_ROWS = 205, FULL_WARN = 164/.test(wd) && /MAX_ROW = 206/.test(hf));
+  }
+
+  // Upgrade review 22 (30/09/2026): the free plan's 50 subrequests. The mock
+  // throws on the 51st call, as Cloudflare does.
+  console.log('\n14. the subrequest budget');
+  {
+    const cap = (n) => { const f = globalThis.fetch; let k = 0; globalThis.fetch = async (u, i) => { if (++k > n) throw new Error('Too many subrequests.'); return f(u, i); }; return () => k; };
+    const busy = Array.from({ length: 20 }, (_, i) => ({ id: 'th-b' + i, n: i + 1, d: '2026-09-29', tour_no: 30, dept: 'מעצבים', loc: 'אולם', descr: 'מפגע ' + i, sev: 'בינונית', resp: 'מנהל המחלקה', due: '2026-10-05', s: 'פתוח', closed_d: null, notes: null, photo_url: PH('b' + i) }));
+    const trb = [0, 1, 2, 3].map((i) => ({ id: 'tb' + i, u: 'מוסא', t: 1, d: '2026-09-29', loc: 'חומר גלם · רחבה', ok: false, s: 'פתוח', f: 'ממצא ' + i, ts: '2026-09-29T0' + i + ':00:00Z' }));
+    const AENV = { ...ENV, GEMINI_API_KEY: 'g' };
+    const run = (env, force) => runFileLocked(env, 'xlsm', force, { budget: subBudget().spend(4) }); // + the four requests the tick fires
+    // A file the server wrote, then k hazards closed in Excel.
+    const base = async () => { const b = world({ file: await fixture(30), hazards: busy, reports: trb }); await runFile(ENV, 'xlsm', true); return { out: b.puts.filter((q) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(q.path)).pop().body, s1: Object.assign({}, b.state) }; };
+    const closeK = async (out, s1, k) => { const rows = JSON.parse(s1.hazard_xlsm_last).rows.map((x, i) => (i < k ? Object.assign(x.slice(), { 10: 'סגור', 11: { date: '2026-09-30' } }) : x)); return patchSheetRows(out, rows, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 206, dateCols: [1, 9, 11] }); };
+    const { out, s1 } = await base();
+    // 12 edits + 3 suggestions + 12 thumbnails.
+    const ed12 = await closeK(out, s1, 12);
+    let wb = world({ file: ed12, state: s1, cTag: 'saved-in-excel', hazards: busy.map((x) => Object.assign({}, x)), reports: trb });
+    let rb = await runFileLocked(AENV, 'xlsm', false, { budget: subBudget(1000).spend(4) });
+    check('the busy day needs more than ' + SUB_LIMIT + ' subrequests without the budget', wb.calls.length + 4 > SUB_LIMIT && rb.pushed, wb.calls.length + 4);
+    wb = world({ file: ed12, state: s1, cTag: 'saved-in-excel', hazards: busy.map((x) => Object.assign({}, x)), reports: trb });
+    let n = cap(SUB_LIMIT - 4);
+    rb = await run(AENV, false);
+    let cnt = n();
+    check('with the budget: the edits are taken and the file is written, inside 50', rb.ok && rb.pushed && rb.pulled && rb.pulled.hazards === 12 && cnt <= SUB_LIMIT - 4, { rb, cnt });
+    check('the counter never under-counts (spent >= calls made)', rb.budget && rb.budget.used + 7 >= cnt, { used: rb.budget, cnt });
+    check('thumbnails were given up first, and said so', rb.budget.pics > 0 && (wb.thumbs || 0) < 12, [rb.budget, wb.thumbs]);
+    check('no signature kept, so the next run writes again with the pictures', wb.state.hazard_xlsm_sig === '' && !!wb.state.hazard_xlsm_ok_at, wb.state.hazard_xlsm_sig);
+    const last = wb.puts.filter((q) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(q.path)).pop().body;
+    const nx = world({ file: last, state: wb.state, cTag: wb.state.hazard_xlsm_ctag, hazards: busy.map((x, i) => (i < 12 ? Object.assign({}, x, { s: 'סגור', closed_d: '2026-09-30' }) : x)), reports: trb.map((r) => Object.assign({ action: 'לתקן את הממצא' }, r)) });
+    n = cap(SUB_LIMIT - 4);
+    const rn = await run(AENV, false);
+    check('...and it does (not "unchanged"), with all 12 pictures, inside 50', rn.pushed && nx.thumbs === 12 && !rn.budget.pics && n() <= SUB_LIMIT - 4, [rn.reason, nx.thumbs, rn.budget]);
+    // 20 edits: over what is left, the rest waits (as over MAX_PULL), nothing breaks.
+    const ed20 = await closeK(out, s1, 20);
+    const hz20 = busy.map((x) => Object.assign({}, x));
+    wb = world({ file: ed20, state: s1, cTag: 'saved-in-excel', hazards: hz20, reports: trb.map((r) => Object.assign({ action: 'לתקן' }, r)) });
+    n = cap(SUB_LIMIT - 4);
+    rb = await run(ENV, false);
+    cnt = n();
+    check('20 edits: part taken, the rest waits for the next run, inside 50, no error', rb.ok && rb.reason === 'pulling' && rb.pulled.hazards > 0 && rb.pulled.hazards < 20 && rb.budget.edits === 20 - rb.pulled.hazards && cnt <= SUB_LIMIT - 4 && !wb.state.hazard_xlsm_err, { rb, cnt });
+    const got = rb.pulled.hazards;
+    const nx2 = world({ file: ed20, state: wb.state, cTag: 'saved-in-excel', hazards: busy.map((x, i) => (i < got ? Object.assign({}, x, { s: 'סגור', closed_d: '2026-09-30' }) : Object.assign({}, x))), reports: trb.map((r) => Object.assign({ action: 'לתקן' }, r)) });
+    n = cap(SUB_LIMIT - 4);
+    const r2 = await run(ENV, false);
+    check('...the next run takes the rest and writes the file, inside 50', r2.pushed && r2.pulled && r2.pulled.hazards === 20 - got && n() <= SUB_LIMIT - 4, { r2 });
+    // The file is not written at all (locked): the error is still recorded.
+    wb = world({ file: ed12, state: s1, cTag: 'saved-in-excel', hazards: busy.map((x) => Object.assign({}, x)), reports: trb, locked: true });
+    cap(SUB_LIMIT - 4);
+    rb = await run(AENV, false);
+    check('a failing run on a busy day still records its error', !rb.ok && rb.locked && !!wb.state.hazard_xlsm_err, [rb, wb.state.hazard_xlsm_err]);
+    // Edits over what is left wait, as over MAX_PULL.
+    const ed = { fresh: [], hazards: [1, 2, 3, 4, 5].map((i) => ({ id: 'th-b' + i, s: 'סגור' })), reports: [] };
+    world({ file: await fixture() });
+    const ap = await applyEdits(ENV, ed, busy.map((x) => Object.assign({}, x)), [], 2);
+    check('applyEdits with 2 left: 2 written, the rest pending', ap.hazards === 2 && ap.pending && ap.calls === 2, ap);
+    const ap0 = await applyEdits(ENV, { fresh: [{ id: 'th-new' }], hazards: [], reports: [] }, [], [], 0);
+    check('...and with none left, not even the new-hazards request', ap0.pending && ap0.calls === 0 && !ap0.created, ap0);
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
