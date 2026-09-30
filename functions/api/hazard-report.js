@@ -72,10 +72,17 @@ export function buildReport(dept, rows, rcpt, texts, today, photos) {
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
+  // Maintenance (30/09/2026, Michael: every maintenance finding, in any
+  // department, goes to Vitaly, Slava and Shlomi): the three rows of part 2 of
+  // the recipients sheet, אחזקה + חשמל + הנדסה. The same three are the
+  // maintenance department's own recipients when part 1 has no אחזקה row.
+  const MAINT_TEAM = ['\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4'];
   add(rcpt.depts[dept]);
+  if (dept === '\u05d0\u05d7\u05d6\u05e7\u05d4' && !(rcpt.depts[dept] || []).length) MAINT_TEAM.forEach((k) => add(rcpt.resp[k]));
   const who = new Set();
   open.forEach((r) => String(r.resp).split(/\s*\+\s*/).forEach((x) => { if (RESP_KEYS.indexOf(x) >= 0) who.add(x); }));
   RESP_KEYS.forEach((k) => { if (who.has(k)) add(rcpt.resp[k]); });
+  if (who.has('\u05d0\u05d7\u05d6\u05e7\u05d4')) MAINT_TEAM.forEach((k) => add(rcpt.resp[k]));
   if (who.has('\u05d0\u05d7\u05d6\u05e7\u05d4') || who.has('\u05d7\u05e9\u05de\u05dc')) add(rcpt.resp['\u05d4\u05e0\u05d3\u05e1\u05d4']);
   const cc = [];
   (rcpt.cc || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); cc.push(x); } });

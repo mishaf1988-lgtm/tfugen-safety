@@ -37,9 +37,13 @@ const ROWS = [
   check('copies: part 3; header and note rows ignored', rc.cc.join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', rc.cc);
   const texts = { open: 'שלום, להלן המפגעים.', sign: 'בברכה, ממונה בטיחות' };
   const g = buildReport('חומר גלם', ROWS, rc, texts);
-  check('חומר גלם: אל exactly as the macro put it (managers, אחזקה, שלומי)', g.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il', g.to);
+  // 30/09/2026 (Michael): a maintenance hazard goes to Vitaly, Slava and Shlomi, the
+  // three maintenance rows of the sheet; the macro sent it to Vitaly and Shlomi only.
+  check('חומר גלם: אל = the managers, then the maintenance team (vitaly, shlomi, tech_manager = Slava)', g.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il', g.to);
   check('עותק sviva + tzachi', g.cc.join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', g.cc);
-  check('a closed hazard is not in the report, and its חשמל does not add a recipient', g.count === 3 && !g.rows.some((r) => r.n === 34) && !g.to.includes('tech_manager@tapugan.co.il'), g.rows.map((r) => r.n));
+  check('a closed hazard is not in the report', g.count === 3 && !g.rows.some((r) => r.n === 34), g.rows.map((r) => r.n));
+  const onlyClosedElec = buildReport('חומר גלם', ROWS.filter((r) => r[7] !== 'אחזקה'), rc, texts);
+  check('...and its חשמל does not add a recipient (no open maintenance hazard there)', !onlyClosedElec.to.includes('tech_manager@tapugan.co.il'), onlyClosedElec.to);
   check('from an earlier tour: "<status> - מסיור קודם!", highlighted; latest tour not', g.rows[0].status === 'בטיפול - מסיור קודם!' && g.rows[0].old && !g.rows[1].old && g.old === 1, g.rows.map((r) => r.status));
   check('the mail: title, opening and closing lines from the sheet, dates DD/MM/YYYY, text escaped', /דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם/.test(g.html) && g.html.includes('שלום, להלן המפגעים.') && !g.html.includes('בברכה, ממונה בטיחות') && g.html.includes('31/08/2026') && g.html.includes('&lt;b&gt;') && !g.html.includes('<b>'), g.html.slice(0, 200));
   check('Michael\'s signature under the report: name, title, company, phones, mail, site, the yellow line; the sheet\'s "בברכה" line not repeated', g.html.includes('מיכאל פרייליך.') && g.html.includes('מנהל איכות הסביבה ובטיחות(ממונה הבטיחות) // ') && g.html.includes('תעשיות תפוגן בע&quot;מ') && g.html.includes('0547940073') && g.html.includes('08-6808365') && g.html.includes('mailto:sviva@tapugan.co.il') && g.html.includes('https://www.tapugan.co.il') && g.html.includes('#f5c400') && (g.html.match(/בברכה/g) || []).length === 1, g.html.slice(-900));
@@ -96,13 +100,13 @@ const ROWS = [
   check('viewer: refused, nothing sent', c.status === 403 && !c.w.mails.length, c);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   const pg = c.j && c.j.reports && c.j.reports.find((x) => x.dept === 'חומר גלם');
-  check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
-  check('אחזקה with no row in the recipients sheet: no one to send to (sending skips it, never guesses)', c.j.reports[5].to.length === 0, c.j.reports[5]);
+  check('preview: 6 departments (5 + אחזקה), recipients from the workbook, nothing sent', c.j.ok && c.j.reports.length === 6 && c.j.reports[5].dept === 'אחזקה' && pg.count === 2 && pg.to.join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && !c.w.mails.length && c.j.canSend, c.j);
+  check('the maintenance department with no row of its own in part 1: the maintenance team of part 2 (Vitaly, Slava, Shlomi)', c.j.reports[5].to.join() === 'vitaly@tapugan.co.il,tech_manager@tapugan.co.il,shlomi@tapugan.co.il', c.j.reports[5].to);
   check('reads the folder-13 xlsm', /13_סיורי מפגעים\/2026\/ניהול סיורי מפגעים\.xlsm:\/content/.test(c.w.read || ''), c.w.read);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם', 'תוצג'] });
   const mail = c.w.mails[0] && c.w.mails[0].message;
   check('send: one mail per department asked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
-  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing, kept in Sent Items', mail && mail.toRecipients.length === 4 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ') && c.w.mails[0].saveToSentItems === true, mail && mail.subject);
+  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing, kept in Sent Items', mail && mail.toRecipients.length === 5 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ') && c.w.mails[0].saveToSentItems === true, mail && mail.subject);
   check('the send is logged', /חומר גלם/.test(c.w.state.hazard_report_last || ''), c.w.state);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם'], test: true });
   const tm = c.w.mails[0] && c.w.mails[0].message;
