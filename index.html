@@ -17066,6 +17066,34 @@ function _resolveEmail(unameOrEmail){
   return v.toLowerCase()+'@tfugen.local';
 }
 
+// Leaked passwords (30/09/2026): Supabase checks them only on the Pro plan,
+// so the app asks the Pwned Passwords range API itself. Only the first 5
+// characters of the SHA-1 go out (k-anonymity), never the password. If the
+// service does not answer within 4 seconds the change goes ahead, as before.
+window._pwPwned=function(pw){
+  if(!window.crypto||!crypto.subtle||typeof fetch!=='function')return Promise.resolve(null);
+  return crypto.subtle.digest('SHA-1',new TextEncoder().encode(pw)).then(function(b){
+    var h=Array.prototype.map.call(new Uint8Array(b),function(x){return('0'+x.toString(16)).slice(-2);}).join('').toUpperCase();
+    var ac=typeof AbortController==='function'?new AbortController():null,t=setTimeout(function(){if(ac)ac.abort();},4000);
+    return fetch('https://api.pwnedpasswords.com/range/'+h.slice(0,5),{headers:{'Add-Padding':'true'},signal:ac?ac.signal:undefined}).then(function(r){clearTimeout(t);return r.ok?r.text():null;}).then(function(txt){
+      if(txt==null)return null;
+      var m=txt.split('\n').map(function(l){return l.trim().split(':');}).filter(function(x){return x[0]===h.slice(5);})[0];
+      return m?(+m[1]||0):0;
+    });
+  }).catch(function(){return null;});
+};
+// true = checking (again() runs when the password is not leaked); false = checked, go on.
+var _pwCleared=null;
+window._pwCheckFirst=function(pw,fail,again){
+  if(_pwCleared===pw)return false;
+  fail('\u05d1\u05d5\u05d3\u05e7 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4...');
+  _pwPwned(pw).then(function(n){
+    if(n>0)return fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d6\u05d5 \u05d4\u05d5\u05e4\u05d9\u05e2\u05d4 \u05d1\u05d3\u05dc\u05d9\u05e4\u05d5\u05ea \u05de\u05d9\u05d3\u05e2 \u05d1\u05d0\u05d9\u05e0\u05d8\u05e8\u05e0\u05d8 ('+n+' \u05e4\u05e2\u05de\u05d9\u05dd). \u05d1\u05d7\u05e8 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d0\u05d7\u05e8\u05ea.');
+    fail('');_pwCleared=pw;again();
+  });
+  return true;
+};
+
 // Self-service password change — works for every logged-in user INCLUDING
 // admin. Uses the official supabase-js updateUser({password}) flow (never
 // touches auth.users directly). Verifies the current password first by
@@ -17090,6 +17118,7 @@ window._changePwSubmit=function(){
   if(!_sbClient||!_currentUser||!_currentUser.username)return fail('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');
   var email=_resolveEmail(_currentUser.username);
   if(!email)return fail('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d6\u05d4\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05ea\u05de\u05e9');
+  if(_pwCheckFirst(nw,fail,window._changePwSubmit))return;
   var btn=g('cpw-submit');if(btn){btn.disabled=true;btn.textContent='\u05de\u05e2\u05d3\u05db\u05df...';}
   // Verify current password, then update.
   // Checking the current password signs in again, and for someone with a second
@@ -17617,6 +17646,7 @@ window._pwChangeSubmit=function(){
   if(newPw.length<10){showErr('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e6\u05e8\u05d9\u05db\u05d4 \u05dc\u05d4\u05db\u05d9\u05dc \u05dc\u05e4\u05d7\u05d5\u05ea 10 \u05ea\u05d5\u05d5\u05d9\u05dd');return;}
   if(newPw!==confirmPw){showErr('\u05d4\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05d0\u05d9\u05e0\u05df \u05d6\u05d4\u05d5\u05ea');return;}
   showErr('');
+  if(_pwCheckFirst(newPw,showErr,window._pwChangeSubmit))return;
   var btn=g('fpc-submit');if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05e2\u05d3\u05db\u05df...';}
   if(!_sbClient){showErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
   _sbClient.auth.updateUser({password:newPw,data:{must_change_password:false}}).then(function(r){
