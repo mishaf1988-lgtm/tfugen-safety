@@ -125,7 +125,9 @@ const TURNSTILE = `
   await p.waitForTimeout(200);
   s = await sb(p);
   check('the password login carries a NEW token (tokens are single-use)', s.pw.length === 1 && s.pw[0].tok === 'tok-2', s.pw);
-  check('the previous widget was removed first, the script fetched only once', s.ts.removed === 1 && p.__ts === 1, { removed: s.ts.removed, fetched: p.__ts });
+  // 01/10/2026: each widget is removed as soon as it has handed over its token
+  // (a challenge that needed a tap left its box over the bottom of the app).
+  check('each widget was removed once its token was in, the script fetched only once', s.ts.removed === 2 && s.ts.renders.length === 2 && p.__ts === 1, { removed: s.ts.removed, renders: s.ts.renders.length, fetched: p.__ts });
   await login(p);
   await p.waitForTimeout(200);
   s = await sb(p);

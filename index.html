@@ -3389,12 +3389,16 @@ function _captcha(){
     return new Promise(function(res){
       var el=g('captcha');
       if(!el){el=document.createElement('div');el.id='captcha';el.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:10060;';document.body.appendChild(el);}
-      var done=false,t=null;
-      function fin(tok){if(done)return;done=true;clearTimeout(t);res(tok||null);}
+      var done=false,t=null,mine=null;
+      // Once the token is in hand the widget has nothing left to do. A challenge
+      // that needed a tap leaves its box fixed at the bottom of the screen, over
+      // whatever is there (01/10/2026: the menu's change-password entry), so it goes.
+      function fin(tok){if(done)return;done=true;clearTimeout(t);res(tok||null);
+        setTimeout(function(){if(mine!==null&&_tsWidget===mine){try{turnstile.remove(mine);}catch(e){}_tsWidget=null;}},0);}
       t=setTimeout(function(){fin(null);},120000);
       try{
         if(_tsWidget!==null){try{turnstile.remove(_tsWidget);}catch(e){}_tsWidget=null;}
-        _tsWidget=turnstile.render(el,{sitekey:TURNSTILE_SITEKEY,appearance:'interaction-only',language:'auto',callback:function(tok){fin(tok);},'error-callback':function(){fin(null);},'expired-callback':function(){fin(null);}});
+        _tsWidget=mine=turnstile.render(el,{sitekey:TURNSTILE_SITEKEY,appearance:'interaction-only',language:'auto',callback:function(tok){fin(tok);},'error-callback':function(){fin(null);},'expired-callback':function(){fin(null);}});
       }catch(e){fin(null);}
     });
   }).catch(function(){return null;});
