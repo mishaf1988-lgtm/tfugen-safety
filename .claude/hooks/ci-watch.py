@@ -4,8 +4,9 @@
 01/10/2026: #1027 went green at 15:48 and sat unmerged, because the session
 waited for a GitHub event that never came instead of looking. Michael: "why
 did it stop". So every `git push` (Bash) and every PR opened through the
-GitHub MCP answers with the exact command to run in the background; it
-returns when the checks finish, green or red, with no event needed.
+GitHub MCP answers with the exact command to run in the background
+(ci-wait.sh, REST: `gh pr checks` uses GraphQL, which is blocked here and
+still exits 0); it returns when `tests` finishes, with no event needed.
 
 Test:  python3 tests/harness/ci-watch-test.py
 """
@@ -38,10 +39,10 @@ else:
 if not ref or ref in ("main", "HEAD"):
     print("{}"); sys.exit(0)
 
-cmd = "sleep 20; gh pr checks %s -R %s --watch --interval 30" % (ref, REPO)
+cmd = "sleep 20; bash .claude/hooks/ci-wait.sh %s %s" % (ref, REPO)
 print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PostToolUse",
     "additionalContext":
         "ci-watch (lesson 25): run now with Bash run_in_background=true: `%s` . "
-        "It returns when the checks finish. Green = merge (no expectedHeadSha); red = fix. "
+        "Exit 0 = green: merge (no expectedHeadSha); 1 = red: fix; 2 = look yourself. "
         "Do not wait for a GitHub event instead." % cmd}}))
