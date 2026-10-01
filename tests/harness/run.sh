@@ -36,6 +36,7 @@ for f in *.js *.mjs *.py; do
   [ "$f" = "visual-audit.js" ] && continue
   [ -n "$filter" ] && [[ "$f" != *"$filter"* ]] && continue
   if [ -n "$shard" ]; then i=$idx; idx=$((idx + 1)); [ $((i % ${shard#*/})) -ne "${shard%/*}" ] && continue; fi
+  ran=$((${ran:-0} + 1))
   printf '%-28s ' "$f"
   case "$f" in
     *.py) out=$(timeout 300 python3 "$f" 2>&1); rc=$? ;;
@@ -59,5 +60,7 @@ for f in *.js *.mjs *.py; do
   fi
 done
 rm -rf _build
+# A filter that matches no file used to print ALL GREEN over zero suites (01/10/2026, lesson 22).
+[ "${ran:-0}" -eq 0 ] && { echo "NO SUITE MATCHED '$filter'"; fail=1; }
 [ $fail -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
 exit $fail
