@@ -7635,6 +7635,10 @@ function _trendDelta(cur,prev,upGood){
   var up=pct>0;
   return {txt:(up?'▲ ':'▼ ')+Math.abs(pct)+'%',dir:(up===!!upGood)?'good':'bad'};
 }
+// BACKLOG 15: an empty dy is "unknown", not 0. 29 of 41 imported incidents
+// have none, so a sum that drops looked like a green improvement that the
+// data cannot show. Any period with a gap gets no direction at all.
+function _ldMissing(rows){return (rows||[]).filter(function(r){return r.dy===null||r.dy===undefined||r.dy==='';}).length;}
 function _trendIndicators(){
   var w=_trendWindows();
   var out=[];
@@ -7644,6 +7648,12 @@ function _trendIndicators(){
   var ld=function(rows){return rows.reduce(function(a,r){return a+(parseInt(r.dy,10)||0);},0);};
   num('\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea',incC.length,incP.length,false);
   num('\u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea',ld(incC),ld(incP),false,'\u05e1\u05db\u05d5\u05dd \u05e9\u05d3\u05d4 \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea \u05d1\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea');
+  var ldMissC=_ldMissing(incC),ldMissP=_ldMissing(incP);
+  if(ldMissC||ldMissP){
+    var ldRow=out[out.length-1];
+    ldRow.d={txt:'\u05d7\u05e1\u05e8\u05d9\u05dd \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd',dir:'flat'};
+    ldRow.note='\u05d1\u05dc\u05d9 \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea: '+ldMissC+' \u05de\u05ea\u05d5\u05da '+incC.length+' \u05d4\u05e9\u05e0\u05d4, '+ldMissP+' \u05de\u05ea\u05d5\u05da '+incP.length+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea. \u05e8\u05d9\u05e7 \u05d0\u05d9\u05e0\u05d5 0, \u05d5\u05dc\u05db\u05df \u05d0\u05d9\u05df \u05d4\u05e9\u05d5\u05d5\u05d0\u05d4';
+  }
 
   var nmC=_trendRows('near_miss',['d','ts'],w.from,w.to),nmP=_trendRows('near_miss',['d','ts'],w.pFrom,w.pTo);
   num('\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2',nmC.length,nmP.length,true,'\u05e2\u05dc\u05d9\u05d9\u05d4 = \u05ea\u05e8\u05d1\u05d5\u05ea \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d8\u05d5\u05d1\u05d4 \u05d9\u05d5\u05ea\u05e8, \u05dc\u05d0 \u05e1\u05db\u05e0\u05d4 \u05d2\u05d3\u05d5\u05dc\u05d4 \u05d9\u05d5\u05ea\u05e8');
@@ -10839,6 +10849,7 @@ function rMr(){
       ncrClosed:ncrAll.filter(function(n){return n.s==='\u05e1\u05d2\u05d5\u05e8'&&_mrInPeriod(n.cd||n.close_date,per);}).length,
       inc:inc.length,
       lostDays:inc.reduce(function(s,i){return s+(parseInt(i.dy)||0);},0),
+      ldMissing:_ldMissing(inc),
       nm:(DB.near_miss||[]).filter(function(m){return _mrInPeriod(m.d||m.ts,per);}).length,
       tlk:(DB.toolbox||[]).filter(function(t){return _mrInPeriod(t.d||t.ts,per);}).length,
       time:_ncrTimeStats(per.start,per.end),
@@ -10863,7 +10874,7 @@ function rMr(){
   var incQ=(DB.inc||[]).filter(function(i){return _mrInPeriod(i.dt||i.d,p);});
   g('mr-inc-q').textContent=incQ.length;
   var lostDays=cur.lostDays;
-  g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df, '+cur.incInv+' \u05e0\u05d7\u05e7\u05e8\u05d5';
+  g('mr-inc-sub').textContent=lostDays+' \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df'+(cur.ldMissing?' ('+cur.ldMissing+' \u05d1\u05dc\u05d9 \u05e0\u05ea\u05d5\u05df)':'')+', '+cur.incInv+' \u05e0\u05d7\u05e7\u05e8\u05d5';
   g('mr-nm-q').textContent=cur.nm;
   setD('mr-d-ncr-new',cur.ncrNew,prev.ncrNew,false);
   setD('mr-d-ncr-closed',cur.ncrClosed,prev.ncrClosed,true);
@@ -15245,7 +15256,9 @@ window._mrAINarrative=function(){
         +line('NCR \u05e9\u05e0\u05e4\u05ea\u05d7\u05d5',c.cur.ncrNew,c.prev.ncrNew)
         +line('NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5',c.cur.ncrClosed,c.prev.ncrClosed)
         +line('\u05ea\u05e7\u05e8\u05d9\u05d5\u05ea',c.cur.inc,c.prev.inc)
-        +line('\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',c.cur.lostDays,c.prev.lostDays)
+        +((c.cur.ldMissing||c.prev.ldMissing)
+          ?'\n- \u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df: '+c.cur.lostDays+' (\u05e8\u05d1\u05e2\u05d5\u05df \u05e7\u05d5\u05d3\u05dd '+c.prev.lostDays+'). \u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e9\u05d5\u05d5\u05ea: \u05d1-'+c.cur.ldMissing+' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e8\u05d1\u05e2\u05d5\u05df \u05d4\u05d6\u05d4 \u05d5\u05d1-'+c.prev.ldMissing+' \u05d1\u05e7\u05d5\u05d3\u05dd \u05e9\u05d3\u05d4 \u05d9\u05de\u05d9 \u05d4\u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea \u05e8\u05d9\u05e7 (\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2, \u05dc\u05d0 0). \u05d0\u05dc \u05ea\u05e1\u05d9\u05e7 \u05de\u05d2\u05de\u05d4 \u05de\u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05d6\u05d4.'
+          :line('\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df',c.cur.lostDays,c.prev.lostDays))
         +line('\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2',c.cur.nm,c.prev.nm)
         +line('\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',c.cur.tlk,c.prev.tlk)
         +line('\u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05d6\u05d5\u05d4\u05d5',c.cur.hz,c.prev.hz)
