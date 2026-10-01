@@ -142,7 +142,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('what was typed survives tapping a chip', out.keptDescr === 'כבל חשוף', out.keptDescr);
   const r = out.first && out.first[1];
   check('saved to tour_hazards: today, tour 11, next מס"ד (8), open, severity picked', out.first && out.first[0] === 'tour_hazards' && r.d === out.today && r.tour_no === 11 && r.n === 8 && r.s === 'פתוח' && r.sev === 'גבוהה' && r.dept === 'תוצג' && r.loc === 'מחסן' && r.resp === 'מנהל המחלקה', r);
-  check('empty fields are null, never ""', r && r.action === null && r.due === null && r.notes === null && r.photo_url === null && r.closed_d === null, r);
+  check('empty fields are null, never ""', r && r.action === null && r.notes === null && r.photo_url === null && r.closed_d === null, r);
+  check('high severity fills the due date by itself: today + 3 days (upgrade review 27)', r && r.due === new Date(Date.parse(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + 'T12:00:00Z') + 3 * 86400000).toISOString().substring(0, 10), r && r.due);
   check('after saving: the hazard fields clear, the department stays', out.cleared && out.keptDept === 'תוצג', out.keptDept);
   check('the next hazard of the same tour: same tour number, next מס"ד', out.second && out.second[1].tour_no === 11 && out.second[1].n === 9 && out.second[1].sev === 'גבוהה', out.second);
   check('a department already toured today keeps that tour number (10)', out.third && out.third[1].tour_no === 10 && out.third[1].dept === 'מעצבים', out.third);
@@ -225,6 +226,60 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('when the outbox drains the finish screen changes to "כולם בענן" by itself', /כולם בענן/.test(st.finishDone || '') && !/עדיין בטלפון/.test(st.finishDone), st.finishDone);
   check('locking closes the tour screen and shows the login', st.lockHidden && st.lockLogin, st);
   check('after the lock, logging in returns to the tour with the typing kept', st.lockWanted && st.lockKept === 'באמצע הקלדה', st);
+  console.log('\n4. due date in one tap, places used before, search by number (upgrade review 27, 01/10/2026)');
+  const t27 = await page.evaluate(() => {
+    const res = {}, plus = (n) => _mfDueIn(n);
+    const today = _thzToday();
+    DB.tour_hazards = [
+      { id: 'th-a', n: 31, d: '2026-09-20', tour_no: 3, dept: 'מעצבים', loc: 'מחסן חומרים', descr: 'מדף עקום', s: 'פתוח' },
+      { id: 'th-b', n: 32, d: '2026-09-28', tour_no: 4, dept: 'מעצבים', loc: 'חדר חשמל', descr: 'דלת פתוחה', s: 'פתוח' },
+      { id: 'th-c', n: 33, d: '2026-09-29', tour_no: 4, dept: 'מעצבים', loc: 'מחסן חומרים', descr: 'שפיכה', s: 'סגור' },
+      { id: 'th-d', n: 34, d: '2026-09-29', tour_no: 5, dept: 'תוצג', loc: 'רמפה', descr: 'משטח שבור', s: 'פתוח' },
+    ];
+    DB.trustee_reports = [
+      { id: 'tr-1', num: 7, u: 'מוסא', t: 4, ok: false, f: 'מאריכים למלגזה נפסלו', s: 'נסגר', d: today },
+      { id: 'tr-2', num: null, u: 'שימי', t: 8, ok: true, f: 'נפסלו לשימוש', s: 'תקין', d: today, ref: 'tr-1' },
+    ];
+    mgrFieldNewTour(); _mfPickDept('מעצבים');
+    const ov = document.getElementById('mf');
+    const dueChips = () => Array.from(ov.querySelectorAll('.mf-chips')).pop();
+    res.chips = Array.from(dueChips().children).map((b) => b.textContent);
+    res.medDefault = document.getElementById('mf-due').value === plus(14) && dueChips().querySelector('.on').textContent;
+    _mfPickSev('נמוכה'); res.low = document.getElementById('mf-due').value === plus(30);
+    _mfPickSev('גבוהה'); res.high = document.getElementById('mf-due').value === plus(3) && dueChips().querySelector('.on').textContent;
+    _mfPickDue('7'); res.week = document.getElementById('mf-due').value === plus(7) && dueChips().querySelector('.on').textContent;
+    _mfPickSev('נמוכה'); res.handKept = document.getElementById('mf-due').value === plus(7);
+    const d = document.getElementById('mf-due'); d.value = '2026-12-31'; d.dispatchEvent(new Event('change'));
+    _mfPickSev('בינונית'); res.typedKept = document.getElementById('mf-due').value === '2026-12-31' && !dueChips().querySelector('.on');
+    res.locs = Array.from(document.querySelectorAll('#mf-loc-list option')).map((o) => o.value);
+    res.locLinked = document.getElementById('mf-loc').getAttribute('list') === 'mf-loc-list';
+    _mfPickDept('תוצג'); res.locsOther = Array.from(document.querySelectorAll('#mf-loc-list option')).map((o) => o.value);
+    document.getElementById('mf-descr').value = 'בדיקה'; mgrFieldSave();
+    res.afterSave = document.getElementById('mf-due').value === plus(14);
+    const ids = (q) => _globalSearch(q).map((x) => x.tbl + ':' + x.id);
+    res.byNum = ids('32'); res.byTru = ids('נ-7'); res.byTruNum = ids('7');
+    res.byText = ids('מאריכים'); res.byLoc = ids('רמפה'); res.closure = ids('נפסלו לשימוש');
+    res.view = (_globalSearch('נ-7')[0] || {}).view;
+    let went = null; const tg = window._truGo; window._truGo = (id, f) => { went = [id, f]; };
+    showView('trustee_reports', 'tr-1'); window._truGo = tg; res.open = went;
+    mgrFieldClose && mgrFieldClose();
+    return res;
+  });
+  check('four due buttons: 3 ימים, שבוע, שבועיים, חודש', JSON.stringify(t27.chips) === JSON.stringify(['3 ימים', 'שבוע', 'שבועיים', 'חודש']), t27.chips);
+  check('medium (the default) = 14 days, and the button for it is lit', t27.medDefault === 'שבועיים', t27.medDefault);
+  check('low = 30 days, high = 3 days', t27.low && t27.high === '3 ימים', t27);
+  check('a tap on "שבוע" sets today + 7, and a severity change afterwards leaves it', t27.week === 'שבוע' && t27.handKept, t27);
+  check('a date typed by hand stays too, and no button is lit for it', t27.typedKept, t27);
+  check('places used before in this department, newest first, each once', JSON.stringify(t27.locs) === JSON.stringify(['מחסן חומרים', 'חדר חשמל']) && t27.locLinked, t27.locs);
+  check('another department, its own places', JSON.stringify(t27.locsOther) === JSON.stringify(['רמפה']), t27.locsOther);
+  check('the next hazard starts again from the severity default', t27.afterSave, t27);
+  check('search "32" finds tour hazard 32 first', t27.byNum[0] === 'tour_hazards:th-b', t27.byNum);
+  check('search "נ-7" finds trustee finding 7 and not tour hazard 7', JSON.stringify(t27.byTru) === JSON.stringify(['trustee_reports:tr-1']), t27.byTru);
+  check('search "7" alone (one digit) finds trustee finding 7', t27.byTruNum.includes('trustee_reports:tr-1'), t27.byTruNum);
+  check('search by text and by place reaches trustee findings and tour hazards', t27.byText.includes('trustee_reports:tr-1') && t27.byLoc.includes('tour_hazards:th-d'), t27);
+  check('a closure report (not a finding) is not a search result', !t27.closure.some((x) => x.startsWith('trustee_reports:')), t27.closure);
+  check('the result reads "נ-7: ..." with the trustee', /^נ-7: מאריכים/.test(t27.view || '') && /מוסא/.test(t27.view), t27.view);
+  check('opening it goes to the trustee page, all filters, that row', JSON.stringify(t27.open) === JSON.stringify(['tr-1', 'all']), t27.open);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

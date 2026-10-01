@@ -10071,11 +10071,33 @@ function _mfChips(list,cur,fn){
   return '<div class="mf-chips">'+list.map(function(v){return '<button type="button" class="mf-chip'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" onclick="'+fn+'(this.dataset.v)">'+esc(v)+'</button>';}).join('')+'</div>';
 }
 function _mfPickDept(v){if(v!==_mf.dept){_mf.closedNow={};_mf.ask=null;}_mf.dept=v;_mfKeep();_mfRender();}
-function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfRender();}
+function _mfPickSev(v){_mf.sev=v;_mfKeep();_mfDueDefault();_mfRender();}
+// Due date in one tap (upgrade review 27, Michael 01/10/2026): the iPhone
+// date wheel was the slow part of every hazard. The severity sets the date
+// (high 3 days, medium 14, low 30) until one is picked by hand.
+var _MF_DUE=[['3 \u05d9\u05de\u05d9\u05dd',3],['\u05e9\u05d1\u05d5\u05e2',7],['\u05e9\u05d1\u05d5\u05e2\u05d9\u05d9\u05dd',14],['\u05d7\u05d5\u05d3\u05e9',30]];
+var _MF_DUE_SEV={'\u05d2\u05d1\u05d5\u05d4\u05d4':3,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':14,'\u05e0\u05de\u05d5\u05db\u05d4':30};
+function _mfDueIn(n){return new Date(Date.parse(_thzToday()+'T12:00:00Z')+n*86400000).toISOString().substring(0,10);}
+function _mfDueDefault(){if(_mf.dueHand)return;var n=_MF_DUE_SEV[_mf.sev];_mf['mf-due']=n?_mfDueIn(n):'';}
+function _mfPickDue(v){_mfKeep();_mf.dueHand=true;_mf['mf-due']=_mfDueIn(+v);_mfRender();}
+function _mfDueHtml(){
+  var cur=_mf['mf-due']||'';
+  return '<div class="mf-chips">'+_MF_DUE.map(function(d){return '<button type="button" class="mf-chip'+(cur===_mfDueIn(d[1])?' on':'')+'" data-v="'+d[1]+'" onclick="_mfPickDue(this.dataset.v)">'+d[0]+'</button>';}).join('')+'</div>';
+}
+// Places already used in this department, newest first, so the same spot
+// is written the same way each time (the file and the reports group by it).
+function _mfLocList(){
+  var seen={},out=[];
+  (DB.tour_hazards||[]).filter(function(r){return r.loc&&(!_mf.dept||r.dept===_mf.dept);})
+    .sort(function(a,b){return String(b.d||'').localeCompare(String(a.d||''))||(+b.n||0)-(+a.n||0);})
+    .forEach(function(r){var k=String(r.loc).trim();if(k&&!seen[k]&&out.length<20){seen[k]=1;out.push(k);}});
+  return '<datalist id="mf-loc-list">'+out.map(function(v){return '<option value="'+esc(v)+'">';}).join('')+'</datalist>';
+}
 // Keep what was typed across a re-render (a chip tap redraws the screen).
 function _mfKeep(){['mf-loc','mf-descr','mf-action','mf-due','mf-close-note'].forEach(function(id){var el=g(id);if(el)_mf[id]=el.value;});var r=g('mf-resp');if(r)_mf.resp=r.value;}
 function _mfRender(){
   var ov=g('mf');if(!ov)return;
+  if(!_mf['mf-due']&&!_mf.dueHand)_mfDueDefault();
   var photo=_attachUrls['mf-attach-area'];
   var sub=_mf.dept?('\u05e1\u05d9\u05d5\u05e8 \u05de\u05e1\' '+_mfTour(_mf.dept)+' | '+esc(_mf.dept)+' | '+fd(_thzToday())):('\u05d4\u05d9\u05d5\u05dd '+fd(_thzToday())+' | \u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4');
   ov.innerHTML='<div class="mf-in">'
@@ -10083,13 +10105,13 @@ function _mfRender(){
     +'<div class="mf-sub">'+sub+'</div>'+_mfSyncHtml()
     +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
     +_mfOpenHtml()
-    +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" value="'+esc(_mf['mf-loc']||'')+'">'
+    +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" list="mf-loc-list" autocomplete="off" value="'+esc(_mf['mf-loc']||'')+'">'+_mfLocList()
     +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3">'+esc(_mf['mf-descr']||'')+'</textarea>'
     +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area"></div>'
     +'<label>\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4</label>'+_mfChips(_THZ_SEV,_mf.sev,'_mfPickSev')
     +'<label for="mf-resp">\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><select id="mf-resp">'+_THZ_RESP.map(function(v){return '<option'+(v===(_mf.resp||_THZ_RESP[0])?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select>'
     +'<label for="mf-action">\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea</label><textarea id="mf-action" rows="2">'+esc(_mf['mf-action']||'')+'</textarea>'
-    +'<label for="mf-due">\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><input type="date" id="mf-due" value="'+esc(_mf['mf-due']||'')+'">'
+    +'<label for="mf-due">\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label>'+_mfDueHtml()+'<input type="date" id="mf-due" onchange="_mf.dueHand=true" value="'+esc(_mf['mf-due']||'')+'">'
     +'<button type="button" class="btn btn-p mf-save" onclick="mgrFieldSave()">&#128190; \u05e9\u05de\u05d5\u05e8, \u05de\u05e4\u05d2\u05e2 \u05d4\u05d1\u05d0</button>'
     +_mfTourHtml()
     +'</div>';
@@ -10273,7 +10295,7 @@ function mgrFieldSave(){
     photo_url:_attachUrls['mf-attach-area']||null,ts:new Date().toISOString()};
   _svPut('tour_hazards',r);addLog('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8: '+descr.substring(0,30));sdb();
   // Next hazard of the same tour: department, severity and responsible stay.
-  _mf.n++;_mf['mf-loc']='';_mf['mf-descr']='';_mf['mf-action']='';_mf['mf-due']='';
+  _mf.n++;_mf['mf-loc']='';_mf['mf-descr']='';_mf['mf-action']='';_mf['mf-due']='';_mf.dueHand=false;
   if(typeof _attachClear==='function')_attachClear('mf-attach-area');
   _attachUrls['mf-attach-area']=null;
   toast('\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e9\u05de\u05e8 \u2713');_mfRender();
@@ -14139,7 +14161,7 @@ var VIEW_CONFIG={
 // reach them via showView(source_table, id), so route those to the editor
 // instead of toasting "table not supported". The modals are global, so this
 // works from any page without navigating away.
-var _VIEW_EDITOR_FALLBACK={inspection_types:'editItp',issue_types:'editItype',locations:'editLoc',projects:'editPrj'};
+var _VIEW_EDITOR_FALLBACK={trustee_reports:'_truGoAll',inspection_types:'editItp',issue_types:'editItype',locations:'editLoc',projects:'editPrj'};
 function showView(tbl,id){
   var cfg=VIEW_CONFIG[tbl];
   if(!cfg){
@@ -15847,11 +15869,18 @@ var _SEARCH_TBLS=[
   {tbl:'issue_types',label:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',icon:'🎯',fields:['name','category','notes'],view:function(r){return (r.name||'')+(r.category?' — '+r.category:'');}},
   // Risks were only searchable from the Ctrl+K search removed here — carried over
   // so that consolidating the two did not quietly drop a whole table.
-  {tbl:'rsk',label:'\u05e1\u05d9\u05db\u05d5\u05df',icon:'⚠️',fields:['d','a','o','ac'],view:function(r){return String(r.d||'').substring(0,80)+(r.a?' — '+r.a:'');}}
+  {tbl:'rsk',label:'\u05e1\u05d9\u05db\u05d5\u05df',icon:'⚠️',fields:['d','a','o','ac'],view:function(r){return String(r.d||'').substring(0,80)+(r.a?' — '+r.a:'');}},
+  // Tour hazards and trustee findings (upgrade review 27): by text, or by
+  // number: "12" finds hazard 12, "\u05e0-7" (or 7) trustee finding 7.
+  {tbl:'tour_hazards',label:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',icon:'\ud83d\udd0e',fields:['descr','loc','dept','action','resp','notes'],num:function(r,n,t){return !t&&+r.n===n;},view:function(r){return (r.n?r.n+'. ':'')+String(r.descr||'').substring(0,80)+(r.dept?' | '+r.dept:'');}},
+  {tbl:'trustee_reports',label:'\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05d0\u05de\u05df',icon:'\ud83e\uddba',only:function(r){return r.ok===false;},fields:['f','loc','u','action','mgr_note'],num:function(r,n){return +r.num===n;},view:function(r){return (r.num?'\u05e0-'+r.num+': ':'')+String(r.f||'').substring(0,80)+(r.u?' | '+r.u:'');}}
 ];
 function _globalSearch(q){
   q=String(q||'').trim().toLowerCase();
-  if(q.length<2)return [];
+  // A number alone, or "\u05e0-7": exact matches on the record number come first.
+  var nm=q.match(/^(\u05e0\s*-?\s*)?#?(\d+)$/),qn=nm?+nm[2]:null,qt=!!(nm&&nm[1]);
+  if(q.length<2&&qn==null)return [];
+  var exact=[];
   var isAdm=_isAdminUser();
   var results=[];
   // Pre-resolve location ids whose names contain q (search-by-location-name)
@@ -15866,6 +15895,8 @@ function _globalSearch(q){
     for(var i=0;i<rows.length;i++){
       var r=rows[i];
       if(cfg.tbl==='ncr'&&r.sens&&!isAdm)continue;
+      if(cfg.only&&!cfg.only(r))continue;
+      if(qn!=null&&cfg.num&&cfg.num(r,qn,qt)){exact.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});continue;}
       var matched=false;
       for(var f=0;f<cfg.fields.length;f++){
         var v=r[cfg.fields[f]];
@@ -15874,17 +15905,16 @@ function _globalSearch(q){
       // Also match if record's location_id resolves to a name containing q
       if(!matched && r.location_id && matchingLocIds[r.location_id])matched=true;
       if(matched){
-        results.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});
-        if(results.length>=50)return results;
+        if(results.length<50)results.push({tbl:cfg.tbl,id:r.id,label:cfg.label,icon:cfg.icon,view:cfg.view(r)});
       }
     }
   }
-  return results;
+  return exact.concat(results).slice(0,50);
 }
 function _gsearchRender(){
   var q=gv('gsearch-q')||'';
   var box=g('gsearch-results');if(!box)return;
-  if(q.trim().length<2){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d4\u05e7\u05dc\u05d3 2+ \u05ea\u05d5\u05d5\u05d9\u05dd</div>';return;}
+  if(q.trim().length<2&&!/^\d$/.test(q.trim())){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d4\u05e7\u05dc\u05d3 2+ \u05ea\u05d5\u05d5\u05d9\u05dd</div>';return;}
   var rs=_globalSearch(q);
   if(!rs.length){box.innerHTML='<div style="text-align:center;color:#888;padding:18px;font-size:12px">\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea</div>';return;}
   box.innerHTML=rs.map(function(r,i){
@@ -18455,6 +18485,7 @@ function _truWinnerDue(){
   var board=_truBoard(prev).filter(function(x){return x.eligible;});
   return board.length?{m:prev,top:board[0],n:board.length}:null;
 }
+window._truGoAll=function(id){_truGo(id,'all');};
 function _truGo(id,filter){
   var r=id?_truFind(id):null;
   var m=r?_truRowMonth(r):null;
