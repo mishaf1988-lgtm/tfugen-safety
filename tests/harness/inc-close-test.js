@@ -63,6 +63,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('a new incident cannot be born closed, but saves as "בחקירה"', nw.refused && nw.saved, nw);
 
+  const reset = await page.evaluate(() => {
+    editInc('b'); closeModal('m-inc'); openNewIncModal();
+    const a = { st: document.getElementById('i-st').value, id: document.getElementById('i-id').value };
+    editInc('b'); closeModal('m-inc'); _emergencyReport();
+    return { a, b: { st: document.getElementById('i-st').value, id: document.getElementById('i-id').value } };
+  });
+  check('"new incident" after editing a closed one starts open, with no id', reset.a.st === 'פתוח' && reset.a.id === '', reset.a);
+  check('emergency report after an edit is a new incident (no id), not the edited one', reset.b.id === '' && reset.b.st === 'פתוח', reset.b);
+  await page.evaluate(() => closeModal('m-inc'));
+
   console.log('\n3. work list');
   const wl = await page.evaluate(() => {
     goPage('inc'); rInc();

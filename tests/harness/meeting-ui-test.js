@@ -83,7 +83,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const form = { dt: g('i-dt').value, dept: g('i-dept').value, rep: g('i-rep').value, opts: Array.from(g('i-dept-list').options).map((o) => o.value) };
     svInc();
     const saved = ups[0] && ups[0][1];
-    g('i-dt').value = ''; g('i-d').value = 'בלי תאריך'; g('i-id').value = ''; g('i-rep').value = 'true';
+    g('i-dt').value = ''; g('i-d').value = 'בלי תאריך'; g('i-id').value = ''; g('i-rep').value = 'true'; g('i-st').value = 'פתוח';  // a new incident cannot be born closed (01/10/2026)
     const ins = []; window.sbIns = function (t, r) { ins.push(JSON.parse(JSON.stringify(r))); };
     svInc();
     DB.inc.push({ id: 'x2', d: '<img src=x onerror=alert(1)>', dt: null, ty: null, sv: null, s: 'סגור' });

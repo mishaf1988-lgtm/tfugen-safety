@@ -5230,6 +5230,8 @@ function openNewIncModal(){
   var idEl=g('i-id');if(idEl)idEl.value='';
   var t=g('m-inc-title');if(t)t.textContent='\u05d3\u05d9\u05d5\u05d5\u05d7 \u05ea\u05d0\u05d5\u05e0\u05d4 / \u05d0\u05d9\u05e8\u05d5\u05e2';
   ['i-d','i-l','i-r','i-dy','i-dt'].forEach(function(i){var el=g(i);if(el)el.value='';});
+  // Status back to the first option (open): after editing a closed incident it stayed closed (01/10/2026).
+  var stEl=g('i-st');if(stEl)stEl.selectedIndex=0;
   _attachClear('inc-attach-area');
   if(typeof _locPopulate==='function')_locPopulate('i-location-id',null);
   var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(null);
@@ -16261,7 +16263,8 @@ window._auditPack=function(){
   setTimeout(function(){try{w.focus();}catch(e){}},100);
 };
 window._emergencyReport=function(){
-  openModal('m-inc');
+  // A new incident: through openNewIncModal, which clears i-id (it used to overwrite the last edited one).
+  openNewIncModal();
   setTimeout(function(){
     var s=g('i-sv');if(s)s.value='\u05d7\u05de\u05d5\u05e8';
     var ty=g('i-ty');if(ty&&!ty.value)ty.value='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9';
