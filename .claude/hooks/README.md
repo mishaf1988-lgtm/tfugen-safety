@@ -10,6 +10,7 @@
 | `lean-harness.py` | PreToolUse על Bash | `bash tests/harness/run.sh` ירוק מחזיר שורה אחת במקום 90. אדום מחזיר את הלוג המלא. הלוג נשמר בדיסק בכל מקרה |
 | `merge-gate.py` | PreToolUse על `mcp__github__merge_pull_request` | **חוסם** מיזוג עד שבדיקת `tests` של GitHub (`.github/workflows/tests.yml`) ירוקה על ה-commit האחרון של ה-PR. קורא את ה-API הציבורי של GitHub; אם אי אפשר לקרוא, חוסם (01/10/2026, המלצה 28) |
 | `fresh-main.py` | PreToolUse על Edit/Write | **חוסם** עריכה של קובץ שהשתנה ב-`origin/main` מאז העותק המקומי (fetch לכל היותר פעם בדקה), ואומר מה להריץ. קובץ שלא השתנה ב-main: מותר גם כש-main התקדם. בלי רשת: מותר. עריכה דרך Bash לא עוברת דרכו (01/10/2026, BACKLOG 31). בדיקה: `tests/harness/fresh-main-test.py` |
+| `hebrew-reply.py` | Stop | **חוסם** סיום תור כשהתשובה למיכאל באנגלית (מעל 40 אותיות לטיניות ופחות מ-25% עברית, אחרי הסרת קוד, נתיבים וקישורים), ומבקש לכתוב אותה מחדש בעברית. לא חוסם פעמיים ברצף. לקח 13 חזר (01/10/2026). בדיקה: `tests/harness/hebrew-reply-test.py` |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
 ## חיווט ב-`.claude/settings.json`
