@@ -54,7 +54,7 @@ for f in *.js *.mjs *.py; do
     # a suite that passes every check but still exits non-zero is broken too
     [ $rc -ne 0 ] && { echo "    ...but exited $rc"; fail=1; }
   else
-    echo "$line"; fail=1; echo "$out" | grep -E "✗|HARNESS" | head -5
+    echo "$line"; fail=1; echo "$out" | grep -E "✗|FAIL|HARNESS" | head -5
   fi
 done
 rm -rf _build
