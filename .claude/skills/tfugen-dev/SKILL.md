@@ -47,7 +47,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 
 ## Workflow לכל משימה חדשה
 
-1. **קרא STATUS.md** - מצא את המשימה הבאה הלא-מסומנת
+1. **קרא STATUS.md** - רק הסעיף «🔔 פתוח עכשיו» (ראה CLAUDE.md, «קרא חכם»)
 2. **צור branch**: `routine/TASK-NAME-YYYY-MM-DD`
 3. **פתח/ערוך** את `index.html` או module רלוונטי
 4. **בדוק local** - פתח index.html בדפדפן
@@ -55,7 +55,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
    - [ ] כל 17 הטבלאות מחזירות 200 OK
    - [ ] האפליקציה נטענת ללא שגיאות console
    - [ ] עברית מוצגת נכון (לא \uXXXX raw)
-6. **עדכן STATUS.md** - סמן V על המשימה
+6. **עדכן STATUS.md** - פריט שנסגר עובר ל-`project-files/STATUS-archive.md` באותו PR
 7. **tag**: `stable-YYYY-MM-DD`
 8. **Push + PR**
 
