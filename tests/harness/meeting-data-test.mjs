@@ -45,6 +45,10 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('closed on time: closing date on or before the target, out of the closed with one', by('ייצור טוגנים').closedOnTime === 1 && by('ייצור טוגנים').closedWithDue === 1 && by('חומר גלם').closedOnTime === 0 && by('חומר גלם').closedWithDue === 2 && h.total.closedOnTime === 1 && h.total.closedWithDue === 3, [by('חומר גלם'), h.total]);
   check('days to close: mean from tour date to closing date, rounded (2, 11 and 6 = 6)', by('ייצור טוגנים').avgDaysToClose === 2 && by('חומר גלם').avgDaysToClose === 9 && h.total.avgDaysToClose === 6, [by('חומר גלם'), h.total]);
   check('a department with nothing closed: no average (null, not 0)', by('מעצבים').avgDaysToClose === null && by('מעצבים').closedWithDue === 0, by('מעצבים'));
+  // 01/10/2026 live: a trustee finding routed to "אחזקה" is not one of the five
+  // departments, so it is not in the table; the total row must still be the sum
+  const outside = meetingHazards(rows.concat([['נ-5', d('2026-09-15'), '', 'אחזקה', '', 'מעקה', 'בינונית', '', '', d('2026-09-18'), 'פתוח', null, '']]), '2026-09-22');
+  check('total row = sum of the departments, a row outside them does not change it', outside.total.late === outside.byDept.reduce((a, x) => a + x.late, 0) && outside.total.late === 2 && outside.total.closedWithDue === 3, outside.total);
   const none = meetingHazards([], '2026-09-22');
   check('nothing at all: no department stands out', none.standout.open === null && none.total.total === 0);
 
@@ -70,9 +74,9 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
 
   console.log('\n3b. trustee participation');
   const T = [{ n: 'א' }, { n: 'ב', active: true }, { n: 'ג' }, { n: 'ד' }, { n: 'ה', active: false }];
-  const R = [{ u: 'א', d: '2026-09-02' }, { u: 'א', d: '2026-09-10' }, { u: 'ב', ts: '2026-09-05T08:00:00Z' }, { u: 'ג', d: '2026-08-31' }];
+  const R = [{ u: 'א', d: '2026-09-02' }, { u: 'א', d: '2026-09-10' }, { u: 'ב', ts: '2026-09-05T08:00:00Z' }, { u: 'ג', d: '2026-08-31' }, { u: 'שימי', d: '2026-09-12', ok: true }, { u: 'ה', d: '2026-09-12' }];
   const tp = meetingTrustees(T, R, '2026-09-22');
-  check('active trustees only, each reporter once, the meeting month only', tp.active === 4 && tp.reported === 2 && tp.month === '2026-09', tp);
+  check('active trustees only, each reporter once, the meeting month only, not a manager closing from the mail link', tp.active === 4 && tp.reported === 2 && tp.month === '2026-09', tp);
   check('half of them is green', tp.level === 'ok', tp.level);
   check('under half amber, none red, no trustees red', participationLevel(8, 3) === 'warn' && participationLevel(8, 0) === 'bad' && participationLevel(0, 0) === 'bad' && participationLevel(8, 4) === 'ok');
   check('numbers only: no names in the reply', !JSON.stringify(tp).includes('א'), tp);
