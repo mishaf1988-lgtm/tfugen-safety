@@ -1,0 +1,50 @@
+name: Monthly learning metrics
+
+# Michael, 01/10/2026: "a machine that learns and grows". Once a month this
+# writes last month's row into project-files/METRICS.md (first-try failures of
+# `tests`, rounds until green, fix PRs, retro findings, new and recurring
+# lessons) and commits it straight to main. Claude reads that file at the start
+# of a session (CLAUDE.md).
+#
+# The commit is .md only, so it starts no deploy of the app and no harness run.
+# If main is ever protected with "Require status checks", this direct push will
+# be refused and the run goes red: then give github-actions a bypass, or switch
+# this job to open a PR.
+on:
+  schedule:
+    - cron: '7 4 1 * *'   # the 1st of every month, 07:07 Israel time in summer
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'YYYY-MM (empty = last month)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: metrics
+  cancel-in-progress: false
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Measure
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MONTH: ${{ inputs.month }}
+        run: python3 .github/scripts/monthly-metrics.py $MONTH
+      - name: Commit
+        run: |
+          git -c core.quotepath=off diff --quiet -- project-files/METRICS.md && { echo "no change"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add project-files/METRICS.md
+          git commit -m "Monthly metrics (automatic)"
+          git push origin HEAD:main
