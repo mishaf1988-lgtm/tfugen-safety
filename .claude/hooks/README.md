@@ -1,13 +1,14 @@
 # Hooks - חוקים שנאכפים בקוד ולא בטקסט
 
 חוק ב-`CLAUDE.md` הוא המלצה: המודל יכול לפספס אותו, והוא נעלם אחרי compaction.
-חוק ב-hook רץ על **כל** קריאה לכלי. שלושת הקבצים פה מחליפים שלוש אזהרות
+חוק ב-hook רץ על **כל** קריאה לכלי. הקבצים פה מחליפים אזהרות
 שחזרו ב-`CLAUDE.md` ובכל שיחה.
 
 | קובץ | אירוע | מה עושה |
 |---|---|---|
 | `guard-sql.py` | PreToolUse על Bash + Supabase MCP | **חוסם** `DELETE FROM` / `TRUNCATE` / `DROP TABLE` על `ncr`, `ncr_ai`, `trustee_reports` |
 | `lean-harness.py` | PreToolUse על Bash | `bash tests/harness/run.sh` ירוק מחזיר שורה אחת במקום 90. אדום מחזיר את הלוג המלא. הלוג נשמר בדיסק בכל מקרה |
+| `merge-gate.py` | PreToolUse על `mcp__github__merge_pull_request` | **חוסם** מיזוג עד שבדיקת `tests` של GitHub (`.github/workflows/tests.yml`) ירוקה על ה-commit האחרון של ה-PR. קורא את ה-API הציבורי של GitHub; אם אי אפשר לקרוא, חוסם (01/10/2026, המלצה 28) |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
 ## חיווט ב-`.claude/settings.json`

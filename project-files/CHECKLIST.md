@@ -1,52 +1,28 @@
-# TFUGEN — Checklist לפני PR
+# Checklist לפני PR
 
-## לפני Commit
+עודכן 01/10/2026 (המלצה 28). הגרסה הקודמת הפנתה ל-17 טבלאות שלא קיימות ולכתובת Vercel שנמחקה.
 
-- [ ] `git diff` — שינויים קטנים וממוקדים בלבד
-- [ ] אין עברית raw ב-strings של JS (הכל `\uXXXX`)
-- [ ] כל תאריך ריק הומר ל-`null`
-- [ ] הדפדפן פותח את index.html בלי שגיאות console
-- [ ] השתמשתי ב-askDel/showView הקיימים (לא יצרתי duplicates)
+## לפני commit
 
-## בדיקות Supabase (17 טבלאות)
+- [ ] `git fetch origin main` ו-`git log HEAD..origin/main` ריק (או עבודה על main העדכני)
+- [ ] `git diff`: שינויים קטנים וממוקדים בלבד
+- [ ] אין עברית גולמית בתוך `<script>` או בקבצי `functions/` (רק `\uXXXX`). ה-hook `raw-hebrew.py` מזהיר, `rule1-hebrew-test.js` בודק
+- [ ] תאריך ריק = `null`, לא `''`
+- [ ] טקסט לאנשים (הודעות באפליקציה, מיילים, PDF): רק תווי מקלדת, בלי מקף ארוך, בלי «»
+- [ ] בדיקה חדשה או מעודכנת לשינוי, ושבירה מכוונת שלה נכשלת
 
-וודא ש-`curl -I` על כל אחת מחזיר `HTTP/1.1 200 OK`:
+## הבדיקות
 
-- [ ] ncr
-- [ ] capa
-- [ ] incidents
-- [ ] expiries
-- [ ] audits
-- [ ] trainings
-- [ ] employees
-- [ ] equipment
-- [ ] permits
-- [ ] risks
-- [ ] documents
-- [ ] inspections
-- [ ] suppliers
-- [ ] contractors
-- [ ] workorders
-- [ ] reports
-- [ ] settings
+- [ ] מקומית, לשינוי שנוגע במשהו: `NODE_PATH=/opt/node22/lib/node_modules:/opt/node-tools/node_modules bash tests/harness/run.sh <שם>`
+- [ ] **ב-GitHub: בדיקת `tests` ירוקה על ה-PR** (`.github/workflows/tests.yml`, 4 קבוצות במקביל). זה התנאי למיזוג, וה-hook `merge-gate.py` אוכף אותו
 
-*(עדכן את הרשימה לפי הטבלאות בפועל ב-Supabase)*
+## migration / Supabase
 
-## לפני Push
+- [ ] הקובץ ב-`migrations/YYYY-MM-DD_name.sql`, בטוח להרצה חוזרת
+- [ ] הורץ דרך ה-Connector ואומת (policies / עמודות / cron.job / ספירת שורות). רק אז `[x]` ב-STATUS (כלל 7)
+- [ ] מחיקת שורות, DROP, שינוי RLS policy קיימת: אישור מפורש של מיכאל מראש
 
-- [ ] עדכנתי STATUS.md — סימנתי V על המשימה
-- [ ] שם branch בפורמט `routine/TASK-NAME-YYYY-MM-DD`
-- [ ] commit message ברור
+## אחרי מיזוג
 
-## אחרי Push
-
-- [ ] יצרתי git tag: `stable-YYYY-MM-DD`
-- [ ] דחפתי tag: `git push --tags`
-- [ ] PR פתוח ב-GitHub
-
-## בדיקת Production (אחרי merge)
-
-- [ ] https://tfugen-safety.vercel.app נטען
-- [ ] אין שגיאות console
-- [ ] המודול ששיניתי עובד
-- [ ] לא שברתי מודולים אחרים (smoke test)
+- [ ] STATUS.md עודכן (DD/MM/YYYY), ו-DECISIONS.md אם יש החלטה
+- [ ] האתר היחיד: https://tapugan-safety.pages.dev (מהענן חסום, מיכאל או Claude in Chrome בודקים)
