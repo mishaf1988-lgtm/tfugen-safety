@@ -40,7 +40,8 @@ api = "https://api.github.com/repos/%s/%s" % (owner, repo)
 try:
     pr = get("%s/pulls/%s" % (api, int(num)))
     sha = pr["head"]["sha"]
-    if ti.get("expectedHeadSha") and ti["expectedHeadSha"] != sha:
+    want = str(ti.get("expectedHeadSha") or "")
+    if want and not sha.startswith(want):  # a short sha is fine
         out("deny", "merge-gate: the PR head moved (%s), check again" % sha[:7])
     runs = get("%s/commits/%s/check-runs?check_name=%s&per_page=20" % (api, sha, CHECK)).get("check_runs", [])
 except SystemExit:

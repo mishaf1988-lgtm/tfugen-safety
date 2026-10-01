@@ -106,10 +106,15 @@ const TURNSTILE = `
     });
     await p.goto(ORIGIN + '/', { waitUntil: 'load' });
     await p.waitForFunction(() => { const l = document.getElementById('login'); return !!(l && l.style.display); }, null, { timeout: 10000 }).catch(() => {});
+    // Each step waits for the one before it (01/10/2026: on the slower GitHub
+    // runner the login went before the Turnstile box had rendered, and 5s was
+    // not enough for the second-factor screen; aal1, no token, a 30s timeout).
+    await p.waitForFunction(() => window.__ts && window.__ts.renders >= 1, null, { timeout: 20000 }).catch(() => {});
+    await p.waitForTimeout(100);   // the Turnstile callback fires 10ms after render
     await p.evaluate(() => { document.getElementById('uname').value = 'admin'; document.getElementById('pw').value = 'right-pw'; doLogin(); });
-    await p.waitForSelector('#mfa-code', { state: 'visible', timeout: 5000 }).catch(() => {});
+    await p.waitForSelector('#mfa-code', { state: 'visible', timeout: 20000 }).catch(() => {});
     await p.fill('#mfa-code', GOOD); await p.click('#mfa-ok');
-    await p.waitForFunction(() => window._sbToken === 'tok-aal2', null, { timeout: 5000 }).catch(() => {});
+    await p.waitForFunction(() => window._sbToken === 'tok-aal2', null, { timeout: 20000 }).catch(() => {});
     await p.waitForTimeout(1500);   // the profile (and the two-step re-check) lands 900ms after login
     const st = () => p.evaluate(() => {
       const mo = document.getElementById('m-changepw'), ov = document.getElementById('ov-changepw');

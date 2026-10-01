@@ -492,6 +492,18 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
     pr = await runFile(ENV, 'xlsm', true);
     const d3 = await sheetOf(pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).body, 'xl/drawings/drawing1.xml');
     check('a drawing someone added to (their own shape): theirs kept, ours replaced, ids do not clash', d3.includes('name="My logo"') && (d3.match(/TS-photo/g) || []).length === 2 && !/cNvPr id="40" name="TS/.test(d3), d3.match(/cNvPr id="\d+" name="[^"]+"/g));
+    // Saved in Excel (01/10/2026, the live xlsm opened as damaged): Excel declares
+    // r: on each <a:blip xmlns:r=...>, not on the root. Our old pictures go with
+    // their declarations; the new ones must still be declared, on the root.
+    const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const exXml = d2.replace(/<xdr:wsDr\b([^>]*)>/, (m, a) => '<xdr:wsDr' + a.replace(/\s+xmlns:r="[^"]*"/, '') + '>').replace(/<a:blip r:embed=/g, '<a:blip xmlns:r="' + R + '" r:embed=').replace(/<a:hlinkClick r:id=/g, '<a:hlinkClick xmlns:r="' + R + '" r:id=');
+    check('fixture: an Excel-style drawing, r: declared only inside the picture', !/<xdr:wsDr\b[^>]*xmlns:r=/.test(exXml) && /<a:blip xmlns:r=/.test(exXml));
+    const exE = readZip(m2.body).map((e) => (e.name === 'xl/drawings/drawing1.xml' ? { name: e.name, text: exXml } : e));
+    pw = world({ file: await writeZip(exE), hazards: HZp, reports: TRp });
+    pr = await runFile(ENV, 'xlsm', true);
+    const d4 = await sheetOf(pw.puts.find((p) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(p.path)).body, 'xl/drawings/drawing1.xml');
+    const undeclared = (d4.match(/<[a-z:]+\b[^>]*\sr:(?:embed|id)="[^"]*"[^>]*>/g) || []).filter((t) => !/xmlns:r=/.test(t)).length;
+    check('rewritten after Excel saved it: the root declares r:, so every r:embed / r:id is valid (Excel no longer drops the drawing)', /<xdr:wsDr\b[^>]*\sxmlns:r="/.test(d4) && (d4.match(/TS-photo/g) || []).length === 2 && undeclared > 0, d4.slice(0, 400));
     // The real sheet has cell comments: a legacyDrawing and a rels file already.
     const withNotes = readZip(await fixture()).map((e) => (e.name === 'xl/worksheets/sheet2.xml' ? { name: e.name, text: null } : e));
     withNotes.find((e) => e.name === 'xl/worksheets/sheet2.xml').text = reg(regRows()).replace('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">', '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">').replace('</worksheet>', '<legacyDrawing r:id="rId1"/></worksheet>');
