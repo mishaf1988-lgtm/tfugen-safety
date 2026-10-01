@@ -243,6 +243,16 @@ function insertBefore(xml, el, tags) {
 }
 const AFTER_HYPERLINKS = ['printOptions', 'pageMargins', 'pageSetup', 'headerFooter', 'rowBreaks', 'colBreaks', 'customProperties', 'cellWatches', 'ignoredErrors', 'smartTags', 'drawing', 'legacyDrawing', 'legacyDrawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
 const AFTER_DRAWING = ['legacyDrawing', 'legacyDrawingHF', 'drawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
+// Is the r: prefix declared on the ROOT element? (01/10/2026) Looking for
+// "xmlns:r=" anywhere near the top was wrong: a drawing saved by Excel declares
+// it locally, on each <a:blip xmlns:r=...>. The check found it inside an old
+// picture, the old pictures were then removed with their declarations, and the
+// new ones used r:embed / r:id undeclared. Excel called the xlsm damaged and
+// dropped xl/drawings/drawing2.xml (all the thumbnails).
+export function rootHasR(xml, tag) {
+  const m = new RegExp('<' + tag + '\\b[^>]*>').exec(xml);
+  return !!m && /\sxmlns:r=/.test(m[0]);
+}
 function setCell(inner, ref, ci, cellXml) {
   inner = inner.replace(new RegExp('<c r="' + ref + '"[^>]*?(?:/>|>[\\s\\S]*?</c>)'), '');
   if (!cellXml) return inner;
@@ -256,7 +266,7 @@ async function addPictures(entries, path, xml, P, maxRow) {
   const relsPath = path.replace(/([^/]+)$/, '_rels/$1.rels');
   let relsE = get(relsPath);
   let rels = relsE ? await entryText(relsE) : EMPTY_RELS;
-  if (!/xmlns:r=/.test(xml.substring(0, 600))) xml = xml.replace(/<worksheet\b/, '<worksheet xmlns:r="' + RELNS + '"');
+  if (!rootHasR(xml, 'worksheet')) xml = xml.replace(/<worksheet\b/, '<worksheet xmlns:r="' + RELNS + '"');
   // The column's cells: header, the linked text, nothing else (a picture covers its cell).
   const txt = {}; (P.links || []).forEach((l) => { txt[l.row] = l; });
   const hasPic = {}; (P.pics || []).forEach((p) => { hasPic[p.row] = 1; });
@@ -315,7 +325,7 @@ async function addPictures(entries, path, xml, P, maxRow) {
   }
   const dRelsPath = dPath.replace(/([^/]+)$/, '_rels/$1.rels');
   let dRels = get(dRelsPath) ? await entryText(get(dRelsPath)) : EMPTY_RELS;
-  if (!/xmlns:r=/.test(dXml.substring(0, 800))) dXml = dXml.replace(/<xdr:wsDr\b/, '<xdr:wsDr xmlns:r="' + RELNS + '"');
+  if (!rootHasR(dXml, 'xdr:wsDr')) dXml = dXml.replace(/<xdr:wsDr\b/, '<xdr:wsDr xmlns:r="' + RELNS + '"');
   // Out with our old pictures, their relationships and media.
   const anchorRe = /<xdr:(twoCellAnchor|oneCellAnchor|absoluteAnchor)\b[\s\S]*?<\/xdr:\1>/g;
   const gone = [];
