@@ -60,10 +60,8 @@ export function meetingHazards(rows, ref) {
   const month = ref.substring(0, 7);
   const prevMonth = addDays(month + '-01', -1).substring(0, 7);
   const inMonth = (v, m) => d10(v).substring(0, 7) === m;
-  const byDept = DEPTS.map((dept) => {
-    const mine = rows.filter((r) => r[3] === dept);
-    const isNew = (r) => inWk(r[1]);
-    return {
+  const isNew = (r) => inWk(r[1]);
+  const line = (dept, mine) => ({
       dept,
       closed: mine.filter((r) => r[10] === S_DONE).length,
       open: mine.filter((r) => r[10] !== S_DONE).length,
@@ -73,8 +71,13 @@ export function meetingHazards(rows, ref) {
       newClosed: mine.filter((r) => isNew(r) && r[10] === S_DONE).length,
       openPrior: mine.filter((r) => r[10] !== S_DONE && !isNew(r)).length,
       ...closing(mine, ref),
-    };
   });
+  const byDept = DEPTS.map((dept) => line(dept, rows.filter((r) => r[3] === dept)));
+  // Rows outside the five (a trustee finding routed to maintenance, one with
+  // no department): shown in the app under the total, never in the deck or
+  // in the total, which stay the workbook's (Michael 01/10/2026: "\u05db\u05df").
+  const rest = rows.filter((r) => !DEPTS.includes(r[3]));
+  const other = rest.length ? line('\u05d0\u05d7\u05e8 (' + [...new Set(rest.map((r) => r[3] || '-'))].join(', ') + ')', rest) : null;
   const sum = (k) => byDept.reduce((s, x) => s + x[k], 0);
   const total = { dept: '\u05e1\u05d4"\u05db', closed: sum('closed'), open: sum('open'), newThisWeek: sum('newThisWeek'), closedThisWeek: sum('closedThisWeek'), total: sum('total'), newClosed: sum('newClosed'), openPrior: sum('openPrior'), ...closing(rows.filter((r) => DEPTS.includes(r[3])), ref) };
   const open = rows.filter((r) => r[10] !== S_DONE);
@@ -87,7 +90,7 @@ export function meetingHazards(rows, ref) {
       bySeverity: { high: open.filter((r) => r[6] === SEV.high).length, medium: open.filter((r) => r[6] === SEV.medium).length, low: open.filter((r) => r[6] === SEV.low).length },
       newClosed: total.newClosed, newStillOpen: total.newThisWeek - total.newClosed,
     },
-    byDept, total,
+    byDept, total, other,
     standout: { closedThisWeek: standout(byDept, 'closedThisWeek'), newThisWeek: standout(byDept, 'newThisWeek'), open: standout(byDept, 'open') },
     month: {
       month, openedThisMonth: rows.filter((r) => inMonth(r[1], month)).length, closedThisMonth: rows.filter((r) => inMonth(r[11], month)).length,
