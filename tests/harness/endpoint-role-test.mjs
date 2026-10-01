@@ -13,6 +13,7 @@
 import { onRequest as waSend } from './_build/wa-send.mjs';
 import { onRequest as claude } from './_build/claude.mjs';
 import { onRequest as trusteeNotify } from './_build/trustee-notify.mjs';
+import { onRequest as waStatus } from './_build/wa-status.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -77,6 +78,15 @@ const TEST_NOTIFY = { test: true, whatsapp_to: '972501234567', email_to: 'x@y.co
   for (const [name, who, allow] of [['anonymous', ANON, false], ['reporter', REPORTER, false], ['viewer', VIEWER, false], ['manager', MANAGER, true], ['admin', ADMIN, true]]) {
     const w = world(who); const r = await call(trusteeNotify, TEST_NOTIFY);
     check(name + ' -> ' + (allow ? 'sends' : 'denied 403') + ' (' + r.status + ')', allow ? !denied(r) : (denied(r) && !w.metaSent && !w.resendCalled), r);
+  }
+
+  console.log('\n3b. wa-status: WhatsApp diagnostics (token length, ids, templates) = admin only (BACKLOG 9.29)');
+  for (const [name, who, allow] of [['anonymous', ANON, false], ['reporter', REPORTER, false], ['viewer', VIEWER, false], ['manager', MANAGER, false], ['admin', ADMIN, true]]) {
+    const w = world(who);
+    const res = await waStatus({ request: new Request(ORIGIN + '/api/wa-status', { method: 'GET', headers: { origin: ORIGIN, authorization: 'Bearer tok' } }), env: ENV });
+    let j = null; try { j = await res.json(); } catch (e) {}
+    const r = { status: res.status, json: j };
+    check(name + ' -> ' + (allow ? 'gets diagnostics' : 'denied 403') + ' (' + r.status + ')', allow ? (r.status === 200 && w.metaSent && !!(j && j.env)) : (denied(r) && !w.metaSent), r);
   }
 
   console.log('\n4b. domain-bound role (2026-09-24 red-team): a staff username on a foreign domain is nobody');

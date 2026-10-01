@@ -20870,11 +20870,12 @@ window._vitreImportApply=function(){
 window._waDiagnose=function(){
   var rEl=g('dash-wa-result');
   if(rEl)rEl.textContent='\u23f3 \u05de\u05d0\u05d1\u05d7\u05df...';
-  fetch('/api/wa-status',{method:'GET',headers:{'Accept':'application/json'}})
+  fetch('/api/wa-status',{method:'GET',headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
     .then(function(r){return r.json().then(function(j){return{status:r.status,ok:r.ok,data:j};});})
     .then(function(res){
       if(!rEl)return;
       var d=res.data||{};
+      if(!res.ok){rEl.textContent='\u274c HTTP '+res.status+': '+String(d.error||'');return;}
       var env=d.env||{};
       var meta=d.meta_api||{};
       var ok=function(v){return /^set/.test(String(v));};
