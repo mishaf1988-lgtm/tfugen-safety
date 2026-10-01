@@ -59,6 +59,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: npm i -g playwright acorn
+      - run: pip install requests
       - run: playwright install --with-deps chromium
       - run: SHARD=${{ matrix.shard }}/4 bash tests/harness/run.sh
 
