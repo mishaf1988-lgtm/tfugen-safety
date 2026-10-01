@@ -60,6 +60,11 @@ const FIVE_WHY = '1. למה זה קרה?\n   המלגזה נסעה מהר\n2. ל
   check('saved to inc.five_why and its own column inc.rc; the notes in inc.r are left as they were (29/09/2026: they were replaced)', /5\. למה/.test(saved.fw) && saved.rc === 'אין בעלים לנהלי ציוד נייד' && saved.r === 'הערות מהקובץ', { r: saved.r, rc: saved.rc });
   check('sbUpd("inc", rec) called once', saved.calls.length === 1 && saved.calls[0][1] === 'inc' && saved.calls[0][2] === 'rec:i1', saved.calls);
 
+  // Editing the incident afterwards (pencil, svInc) must not drop the root cause:
+  // rc is not a form field, and until 01/10/2026 svInc kept five_why but not rc.
+  const edited = await page.evaluate(() => { editInc('i1'); document.getElementById('i-d').value = 'מלגזה פגעה במדף (עודכן)'; svInc(); const rec = DB.inc.find(r => r.id === 'i1'); return { rc: rec.rc, fw: rec.five_why, d: rec.d }; });
+  check('editing an investigated incident keeps rc and five_why', edited.rc === 'אין בעלים לנהלי ציוד נייד' && /5\. למה/.test(edited.fw) && /עודכן/.test(edited.d), edited);
+
   console.log('\n4. follow-ups');
   const capa = await page.evaluate(() => { window.__calls = []; _invCapa(); return { calls: window.__calls, invClosed: document.getElementById('m-inv').style.display !== 'block' }; });
   check('CAPA task → openTskModal("inc","i1"), investigation modal closed', capa.calls.length === 1 && capa.calls[0].join() === 'openTskModal,inc,i1' && capa.invClosed, capa);
