@@ -28,11 +28,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         hazards: { week: { start: '2026-09-13', end: '2026-09-19', reference: b.ref },
           summary: { openNow: 20, openedThisWeek: 6, closedThisWeek: 10, pastDue: 16, bySeverity: { high: 4, medium: 14, low: 2 }, newClosed: 5, newStillOpen: 1 },
           byDept: [dept('מעצבים', 4, 6, 0, 0, 10, 0, 6), dept('ייצור טוגנים', 10, 3, 6, 6, 13, 5, 2), dept('חומר גלם', 10, 7, 0, 4, 17, 0, 7), dept('תוצג', 5, 1, 0, 0, 6, 0, 1), dept('מעבדות', 3, 3, 0, 0, 6, 0, 3)],
-          total: dept('סה"כ', 32, 20, 6, 10, 52, 5, 19), standout: { closedThisWeek: 'ייצור טוגנים', newThisWeek: 'ייצור טוגנים', open: 'חומר גלם' },
+          total: Object.assign(dept('סה"כ', 32, 20, 6, 10, 52, 5, 19), { late: 16, closedWithDue: 25, closedOnTime: 18, avgDaysToClose: 9 }), standout: { closedThisWeek: 'ייצור טוגנים', newThisWeek: 'ייצור טוגנים', open: 'חומר גלם' },
           month: { month: '2026-09', openedThisMonth: 9, closedThisMonth: 12, prevMonth: '2026-08', openedPrevMonth: 3, closedPrevMonth: 1 },
           closedThisWeek: [{ id: 40, dept: 'ייצור טוגנים', shortDescription: 'x' }], openedThisWeek: [{ id: 41, dept: 'ייצור טוגנים', shortDescription: 'y' }], check: true, meta: { totalAllTime: 52 } },
-        accidents: { year: 2026, summary: { total: 14, reported: 6, notReported: 8, onSite: 13, offSite: 1 }, byMonth: [{ month: 'ינו-26', count: 3 }], byYear: { 2024: 14, 2025: 13 },
-          lastAccident: { date: '2026-09-01', dept: 'מעוצבים', shortDescription: 'מעיכת אגודל', location: 'בדרך הביתה', reported: true }, daysSinceLastAccident: 21 } });
+        accidents: { year: 2026, summary: { total: 14, reported: 6, notReported: 8, onSite: 13, offSite: 1 }, byMonth: [{ month: 'ינו-26', count: 3 }], byYear: { 2024: 14, 2025: 13 }, lastYearToDate: 11,
+          lastAccident: { date: '2026-09-01', dept: 'מעוצבים', shortDescription: 'מעיכת אגודל', location: 'בדרך הביתה', reported: true }, daysSinceLastAccident: 21 },
+        trustees: { month: '2026-09', active: 8, reported: 3, level: 'warn' } });
     };
     goPage('thz');
     const btn = !!document.querySelector('#pg-thz [onclick="mtgOpen()"]');
@@ -59,7 +60,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the deck box: meeting date, last update, the buttons', /המצגת בתיקייה 13/.test(m.deckTxt) && /תאריך הישיבה במצגת: 29\/09\/2026/.test(m.deckTxt) && /עדכן את המצגת עכשיו/.test(m.deckTxt), m.deckTxt.slice(-400));
   const dk = m.calls.filter((c) => c[0] === '/api/hazard-deck');
   check('"קבע את התאריך" saves the date picked, then updates the deck', dk.some((c) => c[1].op === 'setDate' && c[1].date === '2026-09-22') && dk.some((c) => c[1].force === true), dk);
-  check('the table of "סיכום שבועי למצגת": header, 5 departments, total', m.trs.length === 7 && /^מחלקה\|סגורים \(מצטבר\)/.test(m.trs[0]) && m.trs[6] === 'סה"כ|32|20|6|10|52|5', m.trs);
+  check('the table of "סיכום שבועי למצגת": header, 5 departments, total', m.trs.length === 7 && /^מחלקה\|סגורים \(מצטבר\)/.test(m.trs[0]) && m.trs[6] === 'סה"כ|32|20|6|10|52|5|16|18/25 (72%)|9', m.trs);
+  // upgrade review 26 (01/10/2026): late, on time, days to close; a reply
+  // without them (an older server) shows dashes, not "undefined"
+  check('committee metrics per department: an older reply shows dashes', m.trs[1] === 'מעצבים|4|6|0|0|10|0|-|-|-' && !/undefined|NaN/.test(m.text), m.trs[1]);
+  check('accidents: the same stretch last year next to this year', /סה"כ השנה: 14 \(אשתקד באותה תקופה: 11\)/.test(m.text), m.text.slice(0, 2000));
+  check('trustees: numbers only, "3 מתוך 8 דיווחו החודש", the target when under half', /3 מתוך 8 דיווחו החודש \(היעד: לפחות חצי\)/.test(m.text), m.text.slice(0, 3000));
   check('week, standouts, past due, days without an accident', /שבוע 13\/09\/2026 עד 19\/09\/2026/.test(m.text) && /פתוחים כעת חומר גלם/.test(m.text) && /עברו את היעד: 16/.test(m.text) && /21 ימים ללא תאונה/.test(m.text), m.text.slice(0, 400));
   check('keyboard characters only (no middle dot, no long dash)', !m.dot);
   check('fits a phone (the table scrolls inside its box)', m.wide <= 375, m.wide);

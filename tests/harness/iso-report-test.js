@@ -142,12 +142,22 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const noTour = { st: __by('5.4').st, gap: __by('5.4').gap };
       // a report saved WITHOUT the m column — _truRowMonth falls back to its date
       DB.trustee_reports = [{ id: 'r1', u: 'דני', t: 1, d: new Date().toISOString().substring(0, 10), ok: true }];
-      return { none: none, noTour: noTour, withTour: __by('5.4').st, ev: __by('5.4').ev };
+      const withTour = __by('5.4').st, ev = __by('5.4').ev;
+      // upgrade review 26: participation is out of the active trustees
+      const today = new Date().toISOString().substring(0, 10);
+      DB.trustees = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'].map((n, i) => ({ id: 't' + i, n: n, active: true })).concat([{ id: 'tx', n: 'ט', active: false }]);
+      DB.trustee_reports = [{ id: 'q1', u: 'א', t: 1, d: today }, { id: 'q2', u: 'א', t: 2, d: today }, { id: 'q3', u: 'ב', t: 1, d: today }, { id: 'q4', u: 'ג', t: 1, d: today }];
+      const three = { st: __by('5.4').st, ev: __by('5.4').ev, gap: __by('5.4').gap };
+      DB.trustee_reports.push({ id: 'q5', u: 'ד', t: 1, d: today });
+      const four = __by('5.4').st;
+      return { none: none, noTour: noTour, withTour: withTour, ev: ev, three: three, four: four };
     });
     check('no trustees appointed is red', r.none === 'bad', r.none);
-    check('trustees but no tour this month is amber', r.noTour.st === 'warn', r.noTour);
+    check('trustees but no tour this month is red (none of them reported)', r.noTour.st === 'bad' && /אין דיווחי/.test(r.noTour.gap), r.noTour);
+    check('3 of 8 active trustees (one reported twice, an inactive one not counted) is amber', r.three.st === 'warn' && /3 מתוך 8 דיווחו החודש/.test(r.three.ev) && /פחות ממחצית/.test(r.three.gap), r.three);
+    check('4 of 8 (half) is green', r.four === 'ok', r.four);
     check('a tour filed this month turns it green', r.withTour === 'ok', r.withTour);
-    check('...even though that row has no m column, because _truRowMonth fills it in', /1 החודש/.test(r.ev), r.ev);
+    check('...even though that row has no m column, because _truRowMonth fills it in', /1 מתוך 1 דיווחו החודש/.test(r.ev), r.ev);
   }
 
   console.log('\n7. the sheet itself');
