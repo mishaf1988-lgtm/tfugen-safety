@@ -12,6 +12,7 @@
 | `ci-watch.py` | PostToolUse על `Bash` (`git push`) ועל `mcp__github__create_pull_request` | **מזכיר** את הפקודה להרצה ברקע: `bash .claude/hooks/ci-wait.sh <branch>` (REST; `gh pr checks` עובר דרך GraphQL, שחסום בסשן ועדיין מחזיר 0). היא חוזרת כשהבדיקות נגמרות, ואז ממזגים או מתקנים בלי לחכות לאירוע מ-GitHub (01/10/2026, לקח 25). `ci-watch-test.py` |
 | `fresh-main.py` | PreToolUse על Edit/Write | **חוסם** עריכה של קובץ שהשתנה ב-`origin/main` מאז העותק המקומי (fetch לכל היותר פעם בדקה), ואומר מה להריץ. קובץ שלא השתנה ב-main: מותר גם כש-main התקדם. בלי רשת: מותר. עריכה דרך Bash לא עוברת דרכו (01/10/2026, BACKLOG 31). בדיקה: `tests/harness/fresh-main-test.py` |
 | `hebrew-reply.py` | Stop | **חוסם** סיום תור כשהתשובה למיכאל באנגלית (מעל 40 אותיות לטיניות ופחות מ-25% עברית, אחרי הסרת קוד, נתיבים וקישורים), ומבקש לכתוב אותה מחדש בעברית. לא חוסם פעמיים ברצף. לקח 13 חזר (01/10/2026). בדיקה: `tests/harness/hebrew-reply-test.py` |
+| `supervisor.py` | Stop | **המפקח** (מיכאל, 01/10/2026: "מפקח שאם אתה עוצר הוא אומר לך להמשיך ללמוד ולעבוד"). **חוסם** סיום תור כשיש שינויים בלי commit, commits שלא ב-`origin/main`, או מיזוג בלי שנפתחה שיחה הבאה (אז: לקח? הפריט הבא או handoff). מותר לעצור כשהתשובה נגמרת בשאלה למיכאל, או כש-`ci-wait.sh` רץ ברקע. לא חוסם פעמיים ברצף. בדיקה: `tests/harness/supervisor-test.py` |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
 ## חיווט ב-`.claude/settings.json`
