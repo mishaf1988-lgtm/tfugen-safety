@@ -35,12 +35,13 @@ window.supabase = { createClient: function () {
   let mode = 'ok';
   page.on('pageerror', (e) => errs.push(e.message));
   await page.addInitScript(stub);
-  await page.route('**/*', (r) => {
+  await page.route('**/*', async (r) => {
     const u = r.request().url();
     if (u.startsWith('file://')) return r.continue();
     if (u.startsWith('https://api.pwnedpasswords.com/range/')) {
       asked.push({ u, pad: r.request().headers()['add-padding'] });
       if (mode === 'down') return r.abort();
+      if (mode === 'slow') await new Promise((res) => setTimeout(res, 500));
       const L = sha(LEAKED);
       return r.fulfill({ status: 200, contentType: 'text/plain', body: '0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n' + L.slice(5) + ':52579\r\n00D4F6E8FA6EECAD2A3AA415EEC418D38EC:0\r\n' });
     }
@@ -54,6 +55,7 @@ window.supabase = { createClient: function () {
     window.__calls.update = 0;
     window._sbToken = 'tok-stale';
     window._pendingLogin = { lb: null, email: 'admin@tfugen.local', uname: 'admin' };
+    document.getElementById('m-force-pw-change').style.display = 'block';
     document.getElementById('fpc-new').value = p;
     document.getElementById('fpc-confirm').value = p;
     _pwChangeSubmit();
@@ -86,6 +88,34 @@ window.supabase = { createClient: function () {
   check('self-service change, leaked password: not saved', o.update === 0 && /52579/.test(o.err), o);
   o = await self(CLEAN + 'y');
   check('self-service change, clean password: saved', o.update === 1, o);
+
+  // Retro 01/10/2026: the check takes time; Cancel during it, or a second tap,
+  // used to run the change anyway / twice when the answer came back.
+  mode = 'slow';
+  o = await page.evaluate(async (p) => {
+    window.__calls.update = 0; window.__calls.signIn = 0;
+    _changePwOpen();
+    document.getElementById('cpw-current').value = 'old-password-1';
+    document.getElementById('cpw-new').value = p;
+    document.getElementById('cpw-confirm').value = p;
+    _changePwSubmit();
+    closeModal('m-changepw');
+    await new Promise((r) => setTimeout(r, 1200));
+    return { update: window.__calls.update, signIn: window.__calls.signIn };
+  }, CLEAN + 'cancel');
+  check('Cancel during the check: no sign-in, no change', o.update === 0 && o.signIn === 0, o);
+  o = await page.evaluate(async (p) => {
+    window.__calls.update = 0; window.__calls.signIn = 0;
+    _changePwOpen();
+    document.getElementById('cpw-current').value = 'old-password-1';
+    document.getElementById('cpw-new').value = p;
+    document.getElementById('cpw-confirm').value = p;
+    _changePwSubmit(); _changePwSubmit();
+    await new Promise((r) => setTimeout(r, 1200));
+    return { update: window.__calls.update, signIn: window.__calls.signIn };
+  }, CLEAN + 'twice');
+  check('two taps during the check: one sign-in, one change', o.update === 1 && o.signIn === 1, o);
+  mode = 'ok';
   check('no page errors', errs.length === 0, errs);
 
   await browser.close();

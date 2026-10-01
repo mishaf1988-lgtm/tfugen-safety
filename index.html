@@ -17275,11 +17275,17 @@ window._pwPwned=function(pw){
   }).catch(function(){return null;});
 };
 // true = checking (again() runs when the password is not leaked); false = checked, go on.
-var _pwCleared=null;
-window._pwCheckFirst=function(pw,fail,again){
+// modal: closed (Cancel) while the check runs = again() never runs; a second
+// tap during the check starts no second check (retro 01/10/2026).
+var _pwCleared=null,_pwChecking=null;
+window._pwCheckFirst=function(pw,fail,again,modal){
   if(_pwCleared===pw)return false;
+  if(_pwChecking===pw)return true;
+  _pwChecking=pw;
   fail('\u05d1\u05d5\u05d3\u05e7 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4...');
   _pwPwned(pw).then(function(n){
+    _pwChecking=null;
+    var m=modal&&g(modal);if(m&&m.style.display==='none')return fail('');
     if(n>0)return fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d6\u05d5 \u05d4\u05d5\u05e4\u05d9\u05e2\u05d4 \u05d1\u05d3\u05dc\u05d9\u05e4\u05d5\u05ea \u05de\u05d9\u05d3\u05e2 \u05d1\u05d0\u05d9\u05e0\u05d8\u05e8\u05e0\u05d8 ('+n+' \u05e4\u05e2\u05de\u05d9\u05dd). \u05d1\u05d7\u05e8 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d0\u05d7\u05e8\u05ea.');
     fail('');_pwCleared=pw;again();
   });
@@ -17310,7 +17316,7 @@ window._changePwSubmit=function(){
   if(!_sbClient||!_currentUser||!_currentUser.username)return fail('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');
   var email=_resolveEmail(_currentUser.username);
   if(!email)return fail('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d6\u05d4\u05d5\u05ea \u05d0\u05ea \u05d4\u05de\u05e9\u05ea\u05de\u05e9');
-  if(_pwCheckFirst(nw,fail,window._changePwSubmit))return;
+  if(_pwCheckFirst(nw,fail,window._changePwSubmit,'m-changepw'))return;
   var btn=g('cpw-submit');if(btn){btn.disabled=true;btn.textContent='\u05de\u05e2\u05d3\u05db\u05df...';}
   // Verify current password, then update.
   // Checking the current password signs in again, and for someone with a second
@@ -17838,7 +17844,7 @@ window._pwChangeSubmit=function(){
   if(newPw.length<10){showErr('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e6\u05e8\u05d9\u05db\u05d4 \u05dc\u05d4\u05db\u05d9\u05dc \u05dc\u05e4\u05d7\u05d5\u05ea 10 \u05ea\u05d5\u05d5\u05d9\u05dd');return;}
   if(newPw!==confirmPw){showErr('\u05d4\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05d0\u05d9\u05e0\u05df \u05d6\u05d4\u05d5\u05ea');return;}
   showErr('');
-  if(_pwCheckFirst(newPw,showErr,window._pwChangeSubmit))return;
+  if(_pwCheckFirst(newPw,showErr,window._pwChangeSubmit,'m-force-pw-change'))return;
   var btn=g('fpc-submit');if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05e2\u05d3\u05db\u05df...';}
   if(!_sbClient){showErr('Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df');if(btn){btn.disabled=false;btn.textContent='✅ \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05de\u05e9\u05da';}return;}
   _sbClient.auth.updateUser({password:newPw,data:{must_change_password:false}}).then(function(r){
