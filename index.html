@@ -18300,7 +18300,12 @@ function _truFormReset(){
   _truForm={sel:{},tasks:{},lock:false,ref:null,k:0};
   Object.keys(_attachUrls).forEach(function(k){if(k.indexOf('tru-ph-')===0)delete _attachUrls[k];});
 }
-function _truFormNewItem(){return {k:(++_truForm.k),loc:'',ok:null,f:''};}
+// fx (BACKLOG 4.13): a small finding the trustee fixed on the spot. Saved as
+// the finding plus its task-8 closing row with the "after" photo, the same two
+// rows "\ud83d\udcf7 \u05e6\u05dc\u05dd \u05d0\u05d7\u05e8\u05d9" writes later, so scoring does not change.
+function _truFormNewItem(){return {k:(++_truForm.k),loc:'',ok:null,f:'',fx:false};}
+function _truPhAfterId(n,k){return _truPhId(n,k+'a');}
+function _truFormSetFx(n,k,on){_truFormSync();var it=_truFormItem(n,k);if(it)it.fx=!!on;if(!on)delete _attachUrls[_truPhAfterId(n,k)];_truFormRender();}
 function _truFormTask(n){if(!_truForm.tasks[n])_truForm.tasks[n]={items:[_truFormNewItem()]};return _truForm.tasks[n];}
 function _truFormItem(n,k){var t=_truFormTask(n);for(var i=0;i<t.items.length;i++)if(t.items[i].k===k)return t.items[i];return null;}
 function _truPhId(n,k){return 'tru-ph-'+n+'-'+k;}
@@ -18398,6 +18403,7 @@ function _truFormBlocker(){
       if(it.ok===true){if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4'+lbl};continue;}
       if(!String(it.f||'').trim())return {msg:'\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
       if(!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
+      if(it.fx&&!_attachUrls[_truPhAfterId(n,it.k)])return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9"'+lbl};
     }
   }
   return null;
@@ -18451,6 +18457,11 @@ function _truFormRender(){
         +'<div class="tru-vd"><button type="button" class="btn btn-s'+(it.ok===true?' on-ok':'')+'" data-tru-ok="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',true)">\u2705 \u05ea\u05e7\u05d9\u05df</button><button type="button" class="btn btn-s'+(it.ok===false?' on-bad':'')+'" data-tru-bad="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',false)">\u26a0\ufe0f \u05dc\u05d9\u05e7\u05d5\u05d9</button></div>'
         +(it.ok===false?'<textarea data-tru-f data-n="'+n+'" data-k="'+it.k+'" rows="2" placeholder="\u05de\u05d4 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9? *" style="width:100%;margin:4px 0">'+esc(it.f)+'</textarea>':'')
         +(it.ok===null?'':'<div style="font-size:12px;color:var(--t2);margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05d4 '+((it.ok===false||TRUSTEE_PHOTO_REQUIRED_OK)?'*':'(\u05de\u05d5\u05de\u05dc\u05e5)')+'</div><div id="'+phId+'"></div>')
+        +(it.ok===false?(function(){
+          var aPh=_truPhAfterId(n,it.k);if(it.fx)areas.push(aPh);
+          return '<label style="display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:700;margin-top:6px"><input type="checkbox" data-tru-fx="'+n+'" data-k="'+it.k+'"'+(it.fx?' checked':'')+' onchange="_truFormSetFx('+n+','+it.k+',this.checked)" style="width:22px;height:22px">\u2705 \u05ea\u05d9\u05e7\u05e0\u05ea\u05d9 \u05d1\u05de\u05e7\u05d5\u05dd</label>'
+            +(it.fx?'<div style="font-size:12px;color:#15803d;margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" *</div><div id="'+aPh+'"></div>':'');
+        })():'')
         +'</div>';
     }).join('');
     h+='<button type="button" class="btn btn-s btn-sm" style="width:100%;margin-top:8px" data-tru-add="'+n+'" onclick="_truFormAddItem('+n+')">+ \u05e2\u05d5\u05d3 \u05e2\u05de\u05d3\u05d4 / \u05de\u05e4\u05d2\u05e2 \u05d1\u05d0\u05d5\u05ea\u05d4 \u05de\u05e9\u05d9\u05de\u05d4</button>';
@@ -18460,9 +18471,9 @@ function _truFormRender(){
   _truFormStatusBind();_truFormStatus();
 }
 function _truFormToggle(n){if(_truForm.lock)return;_truFormSync();if(_truForm.sel[n]){delete _truForm.sel[n];}else{_truForm.sel[n]=1;_truFormTask(n);}_truFormRender();}
-function _truFormSetOk(n,k,ok){_truFormSync();var it=_truFormItem(n,k);if(it)it.ok=ok;_truFormRender();}
+function _truFormSetOk(n,k,ok){_truFormSync();var it=_truFormItem(n,k);if(it){it.ok=ok;if(ok!==false){it.fx=false;delete _attachUrls[_truPhAfterId(n,k)];}}_truFormRender();}
 function _truFormAddItem(n){_truFormSync();_truFormTask(n).items.push(_truFormNewItem());_truFormRender();}
-function _truFormRmItem(n,k){_truFormSync();var t=_truFormTask(n);if(t.items.length<=1)return;t.items=t.items.filter(function(it){return it.k!==k;});delete _attachUrls[_truPhId(n,k)];_truFormRender();}
+function _truFormRmItem(n,k){_truFormSync();var t=_truFormTask(n);if(t.items.length<=1)return;t.items=t.items.filter(function(it){return it.k!==k;});delete _attachUrls[_truPhId(n,k)];delete _attachUrls[_truPhAfterId(n,k)];_truFormRender();}
 // Open the tour form. n = preselected task (optional); ref = the finding a
 // task-8 "after" report closes (then task 8 is fixed and the photo mandatory).
 function _truReport(n,ref){
@@ -18518,7 +18529,17 @@ function svTru(){
       }
       if(!String(it.f||'').trim()){toast('\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
       if(!ph){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
-      rows.push(row(n,false,String(it.f).trim(),ph,detail));
+      var fnd=row(n,false,String(it.f).trim(),ph,detail);
+      rows.push(fnd);
+      if(it.fx){
+        var aPh=_attachUrls[_truPhAfterId(n,it.k)]||null;
+        if(!aPh){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+lbl);return;}
+        // Closed on insert, so trustee-notify already reads it as fixed and
+        // says so; close_ref then finds nothing left to close.
+        fnd.s=TRUSTEE_S_CLOSED;
+        var cl=row(TRUSTEE_TASK_CLOSE,true,'\u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+fnd.f.substring(0,120),aPh,'');
+        cl.ref=fnd.id;cl.loc=fnd.loc;rows.push(cl);
+      }
     }
   }
   if(!DB.trustee_reports)DB.trustee_reports=[];

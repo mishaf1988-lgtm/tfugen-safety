@@ -82,7 +82,10 @@ const SOURCES = {
     // Only a ליקוי is a hazard. A clean check is the trustee doing the job.
     skipReason: (r) => (r.ok === false ? null : 'not a hazard'),
     // One shape for the delivery code: who reported, where, what.
-    norm: (r) => r,
+    // A finding already closed when the alert goes out was fixed on the spot
+    // (BACKLOG 4.13: the form saves it closed). Said up front, so the manager
+    // does not go looking for an open hazard.
+    norm: (r) => (r.s === 'נסגר' ? Object.assign({}, r, { f: '✅ תוקן במקום: ' + (r.f || '') }) : r),
     event: 'trustee_hazard',
     emoji: '🦺',
     title: 'ליקוי חדש מנאמן בטיחות',
