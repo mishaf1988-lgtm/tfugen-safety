@@ -7438,12 +7438,18 @@ function _isoClauses(){
   // _truRowMonth falls back to the report's own date when m is missing, and
   // _truThisMonth is the same key the trustee screens use — reading r.m by
   // hand here would disagree with them on a row saved without it.
-  var truMonth=(typeof _truRowMonth==='function'&&typeof _truThisMonth==='function')
-    ? (DB.trustee_reports||[]).filter(function(r){return _truRowMonth(r)===_truThisMonth();}).length : 0;
+  // Participation = how many of the active trustees reported this month, not
+  // whether anyone did (upgrade review 26, Michael 01/10/2026: half or more is
+  // green, under half amber, none red). The same rule as the meeting data.
+  var truAct=(DB.trustees||[]).filter(function(t){return t&&t.active!==false;}).length,truWho={};
+  if(typeof _truRowMonth==='function'&&typeof _truThisMonth==='function')
+    (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u&&_truRowMonth(r)===_truThisMonth())truWho[r.u]=1;});
+  var truMonth=Math.min(Object.keys(truWho).length,truAct||Object.keys(truWho).length);
+  var truSt=!truAct||!truMonth?'bad':(truMonth*2>=truAct?'ok':'warn');
   add(s45,'5.4','\u05d4\u05e9\u05ea\u05ea\u05e4\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d5\u05d4\u05ea\u05d9\u05d9\u05e2\u05e6\u05d5\u05ea',
-    truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8, '+truMonth+' \u05d4\u05d7\u05d5\u05d3\u05e9',
-    truN?(truMonth?'ok':'warn'):'bad',
-    truN?(truMonth?'':'\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9'):'\u05dc\u05d0 \u05de\u05d5\u05e0\u05d5 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+    truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8, '+truMonth+' \u05de\u05ea\u05d5\u05da '+truAct+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9',
+    truSt,
+    !truAct?'\u05dc\u05d0 \u05de\u05d5\u05e0\u05d5 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea':!truMonth?'\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9':truSt==='warn'?'\u05e4\u05d7\u05d5\u05ea \u05de\u05de\u05d7\u05e6\u05d9\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9':'');
 
   // 6.1.2 — hazard identification and risk assessment.
   var rskN=_isoCount('rsk');
@@ -10439,6 +10445,18 @@ function mtgDownload(which){
   else{var sm={};sm['total'+a.year]=a.summary.total;sm.reported=a.summary.reported;sm.notReported=a.summary.notReported;sm.onSite=a.summary.onSite;sm.offSite=a.summary.offSite;
     _mtgDl('accidents_'+a.year+'.json',{summary:sm,byMonth:a.byMonth,byYear:a.byYear,lastAccident:a.lastAccident,daysSinceLastAccident:a.daysSinceLastAccident,meta:meta});}
 }
+// Committee metrics (upgrade review 26, Michael 01/10/2026): in the app only,
+// the deck is not touched. An older server reply without them shows dashes.
+function _mtgClosingCells(r){
+  var on=r.closedWithDue?r.closedOnTime+'/'+r.closedWithDue+' ('+Math.round(100*r.closedOnTime/r.closedWithDue)+'%)':'-';
+  return '<td>'+(r.late==null?'-':r.late)+'</td><td>'+on+'</td><td>'+(r.avgDaysToClose==null?'-':r.avgDaysToClose)+'</td>';
+}
+function _mtgTrusteesHtml(t){
+  if(!t)return '';
+  var col={ok:'#15803d',warn:'#b45309',bad:'#b91c1c'}[t.level]||'inherit';
+  return '<div class="mt-box"><b>\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+esc(_truMonthLabel(t.month))+'</b><br><span style="color:'+col+';font-weight:700">'+t.reported+' \u05de\u05ea\u05d5\u05da '+t.active+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9</span>'
+    +(t.level==='ok'?'':' (\u05d4\u05d9\u05e2\u05d3: \u05dc\u05e4\u05d7\u05d5\u05ea \u05d7\u05e6\u05d9)')+'</div>';
+}
 function _mtgRender(){
   var ov=g('mtg');if(!ov)return;
   var ref=(_mtg&&_mtg.ref)||_thzToday();
@@ -10448,8 +10466,8 @@ function _mtgRender(){
   if(_mtg.error){ov.innerHTML=h+'<p style="color:var(--er,#b91c1c)">'+esc(_mtg.error)+'</p></div>';return;}
   var x=_mtg.hazards,a=_mtg.accidents;
   h+='<div class="mt-box"><b>\u05de\u05e4\u05d2\u05e2\u05d9\u05dd, \u05e9\u05d1\u05d5\u05e2 '+fd(x.week.start)+' \u05e2\u05d3 '+fd(x.week.end)+'</b> (\u05d0\'-\u05e9\' \u05e9\u05dc\u05e4\u05e0\u05d9 \u05d4\u05d9\u05e9\u05d9\u05d1\u05d4)</div>'
-    +'<div class="mt-wrap"><table><tr><th>\u05de\u05d7\u05dc\u05e7\u05d4</th><th>\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd (\u05de\u05e6\u05d8\u05d1\u05e8)</th><th>\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea</th><th>\u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e1\u05da \u05d0\u05d9 \u05e4\u05e2\u05dd</th><th>\u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d3\u05e9\u05d9\u05dd - \u05e0\u05e1\u05d2\u05e8\u05d5</th></tr>'
-    +x.byDept.concat([x.total]).map(function(r,i,arr){return '<tr'+(i===arr.length-1?' class="mt-tot"':'')+'><td>'+esc(r.dept)+'</td><td>'+r.closed+'</td><td>'+r.open+'</td><td>'+r.newThisWeek+'</td><td>'+r.closedThisWeek+'</td><td>'+r.total+'</td><td>'+r.newClosed+'</td></tr>';}).join('')
+    +'<div class="mt-wrap"><table><tr><th>\u05de\u05d7\u05dc\u05e7\u05d4</th><th>\u05e1\u05d2\u05d5\u05e8\u05d9\u05dd (\u05de\u05e6\u05d8\u05d1\u05e8)</th><th>\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea</th><th>\u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2</th><th>\u05e1\u05da \u05d0\u05d9 \u05e4\u05e2\u05dd</th><th>\u05de\u05ea\u05d5\u05da \u05d4\u05d7\u05d3\u05e9\u05d9\u05dd - \u05e0\u05e1\u05d2\u05e8\u05d5</th><th>\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</th><th>\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df</th><th>\u05d9\u05de\u05d9\u05dd \u05dc\u05e1\u05d2\u05d9\u05e8\u05d4 (\u05de\u05de\u05d5\u05e6\u05e2)</th></tr>'
+    +x.byDept.concat([x.total]).map(function(r,i,arr){return '<tr'+(i===arr.length-1?' class="mt-tot"':'')+'><td>'+esc(r.dept)+'</td><td>'+r.closed+'</td><td>'+r.open+'</td><td>'+r.newThisWeek+'</td><td>'+r.closedThisWeek+'</td><td>'+r.total+'</td><td>'+r.newClosed+'</td>'+_mtgClosingCells(r)+'</tr>';}).join('')
     +'</table></div>'
     +(x.check?'':'<p style="color:var(--er,#b91c1c)">\u05d1\u05d3\u05d9\u05e7\u05d4: \u05e1\u05d2\u05d5\u05e8 + \u05e4\u05ea\u05d5\u05d7 \u05dc\u05d0 \u05e9\u05d5\u05d5\u05d4 \u05dc\u05e1\u05da</p>')
     +'<div class="mt-box">\u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05d4\u05d1\u05d5\u05dc\u05d8\u05ea: \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 <b>'+esc(x.standout.closedThisWeek||'-')+'</b>, \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 <b>'+esc(x.standout.newThisWeek||'-')+'</b>, \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea <b>'+esc(x.standout.open||'-')+'</b><br>'
@@ -10461,9 +10479,10 @@ function _mtgRender(){
     +'<br><b>\u05e0\u05e1\u05d2\u05e8\u05d5:</b><br>'+(x.closedThisWeek.map(function(r){return esc(r.id)+' '+esc(r.dept)+': '+esc(r.shortDescription);}).join('<br>')||'-')+'</details>'
     +'<div class="mt-box"><b>\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea '+a.year+'</b><br><span class="mt-big">'+(a.daysSinceLastAccident==null?'-':a.daysSinceLastAccident)+'</span> \u05d9\u05de\u05d9\u05dd \u05dc\u05dc\u05d0 \u05ea\u05d0\u05d5\u05e0\u05d4'
     +(a.lastAccident?' (\u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 '+fd(a.lastAccident.date)+', '+esc(a.lastAccident.shortDescription||'')+(a.lastAccident.dept?', '+esc(a.lastAccident.dept):'')+')':'')+'<br>'
-    +'\u05e1\u05d4"\u05db \u05d4\u05e9\u05e0\u05d4: <b>'+a.summary.total+'</b> | \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.reported+', \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.notReported+' | \u05d1\u05de\u05e4\u05e2\u05dc '+a.summary.onSite+', \u05d1\u05d3\u05e8\u05da / \u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc '+a.summary.offSite+'<br>'
+    +'\u05e1\u05d4"\u05db \u05d4\u05e9\u05e0\u05d4: <b>'+a.summary.total+'</b>'+(a.lastYearToDate==null?'':' (\u05d0\u05e9\u05ea\u05e7\u05d3 \u05d1\u05d0\u05d5\u05ea\u05d4 \u05ea\u05e7\u05d5\u05e4\u05d4: <b>'+a.lastYearToDate+'</b>)')+' | \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.reported+', \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea '+a.summary.notReported+' | \u05d1\u05de\u05e4\u05e2\u05dc '+a.summary.onSite+', \u05d1\u05d3\u05e8\u05da / \u05de\u05d7\u05d5\u05e5 \u05dc\u05de\u05e4\u05e2\u05dc '+a.summary.offSite+'<br>'
     +'\u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9: '+a.byMonth.map(function(m){return esc(m.month)+' '+m.count;}).join(', ')+'<br>'
     +'\u05e9\u05e0\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d5\u05ea: '+Object.keys(a.byYear).map(function(y){return y+': '+a.byYear[y];}).join(', ')+'</div>'
+    +_mtgTrusteesHtml(_mtg.trustees)
     +_mtgDeckHtml()
     +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-s" onclick="mtgDownload(\'hz\')">\u05d4\u05d5\u05e8\u05d3 weekly-hazards.json</button><button type="button" class="btn btn-s" onclick="mtgDownload(\'acc\')">\u05d4\u05d5\u05e8\u05d3 accidents_'+a.year+'.json</button></div></div>';
   ov.innerHTML=h;

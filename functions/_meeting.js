@@ -37,6 +37,22 @@ function standout(list, k) {
   return best ? best.dept : null;
 }
 
+// Committee metrics (upgrade review 26, Michael 01/10/2026: in the app only,
+// the deck stays as it is). late = open with a target before the meeting date;
+// on time = closed on or before the target, out of the closed that have one;
+// days to close = the mean from the tour date to the closing date.
+function closing(mine, ref) {
+  const done = mine.filter((r) => r[10] === S_DONE);
+  const withDue = done.filter((r) => d10(r[9]) && d10(r[11]));
+  const timed = done.filter((r) => d10(r[1]) && d10(r[11]));
+  return {
+    late: mine.filter((r) => r[10] !== S_DONE && d10(r[9]) && d10(r[9]) < ref).length,
+    closedWithDue: withDue.length,
+    closedOnTime: withDue.filter((r) => d10(r[11]) <= d10(r[9])).length,
+    avgDaysToClose: timed.length ? Math.round(timed.reduce((s, r) => s + diffDays(d10(r[11]), d10(r[1])), 0) / timed.length) : null,
+  };
+}
+
 // rows = buildRegister(...).rows (columns A..M); ref = meeting date YYYY-MM-DD.
 export function meetingHazards(rows, ref) {
   const wk = weekBefore(ref);
@@ -56,10 +72,11 @@ export function meetingHazards(rows, ref) {
       total: mine.length,
       newClosed: mine.filter((r) => isNew(r) && r[10] === S_DONE).length,
       openPrior: mine.filter((r) => r[10] !== S_DONE && !isNew(r)).length,
+      ...closing(mine, ref),
     };
   });
   const sum = (k) => byDept.reduce((s, x) => s + x[k], 0);
-  const total = { dept: '\u05e1\u05d4"\u05db', closed: sum('closed'), open: sum('open'), newThisWeek: sum('newThisWeek'), closedThisWeek: sum('closedThisWeek'), total: sum('total'), newClosed: sum('newClosed'), openPrior: sum('openPrior') };
+  const total = { dept: '\u05e1\u05d4"\u05db', closed: sum('closed'), open: sum('open'), newThisWeek: sum('newThisWeek'), closedThisWeek: sum('closedThisWeek'), total: sum('total'), newClosed: sum('newClosed'), openPrior: sum('openPrior'), ...closing(rows, ref) };
   const open = rows.filter((r) => r[10] !== S_DONE);
   const item = (r) => ({ id: r[0], dept: r[3], shortDescription: String(r[5] || '').replace(/\s+/g, ' ').substring(0, 80) });
   return {
@@ -103,6 +120,24 @@ export function meetingAccidents(inc, ref) {
     byYear: { [y - 2]: all.filter((x) => +x.day.substring(0, 4) === y - 2).length, [y - 1]: all.filter((x) => +x.day.substring(0, 4) === y - 1).length },
     lastAccident: last ? { date: last.day, dept: last.dept || null, shortDescription: nature(last), location: last.l || null, reported: last.reported == null ? null : !!last.reported, offSite: offSite(last.l) } : null,
     inWeek: all.filter((x) => x.day >= wk.start && x.day <= wk.end).length,
+    // The same stretch of last year (01/01 to the meeting's day and month), so
+    // a part year is not set against a whole one.
+    lastYearToDate: all.filter((x) => +x.day.substring(0, 4) === y - 1 && x.day.substring(5) <= ref.substring(5)).length,
     daysSinceLastAccident: last ? diffDays(ref, last.day) : null,
   };
+}
+
+// Trustee participation in the meeting's month: how many of the active
+// trustees sent at least one report. Numbers only, no names (Michael). The
+// level is the one ISO 5.4 uses: half or more green, under half amber, none red.
+export function participationLevel(active, reported) {
+  return !active || !reported ? 'bad' : reported * 2 >= active ? 'ok' : 'warn';
+}
+export function meetingTrustees(trustees, reports, ref) {
+  const m = ref.substring(0, 7);
+  const active = (trustees || []).filter((t) => t && t.active !== false).length;
+  const who = {};
+  (reports || []).forEach((r) => { if (r && r.u && d10(r.d || r.ts).substring(0, 7) === m) who[r.u] = 1; });
+  const reported = Math.min(Object.keys(who).length, active || Object.keys(who).length);
+  return { month: m, active, reported, level: participationLevel(active, reported) };
 }

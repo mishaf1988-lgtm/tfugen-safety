@@ -1,7 +1,7 @@
 // Meeting data (stage 5, 28/09): the week, the per-department table of
 // "סיכום שבועי למצגת", and the accidents of slide 2. The live numbers were
 // checked against the workbook itself (see STATUS); this pins the rules.
-import { weekBefore, meetingHazards, meetingAccidents, offSite } from './_build/_meeting.mjs';
+import { weekBefore, meetingHazards, meetingAccidents, meetingTrustees, participationLevel, offSite } from './_build/_meeting.mjs';
 import { onRequest } from './_build/meeting-data.mjs';
 
 let pass = 0, fail = 0;
@@ -40,6 +40,11 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('the department that stands out (closed / new / open)', h.standout.closedThisWeek === 'חומר גלם' && h.standout.newThisWeek === 'ייצור טוגנים' && h.standout.open === 'ייצור טוגנים', h.standout);
   check('lists of the week: id, department, short description', h.closedThisWeek.map((x) => x.id).join() === '1,4,נ-1' && h.openedThisWeek.map((x) => x.id).join() === '1,2,6,נ-1', [h.closedThisWeek, h.openedThisWeek]);
   check('the month and the month before', h.month.month === '2026-09' && h.month.openedThisMonth === 7 && h.month.prevMonth === '2026-08' && h.month.openedPrevMonth === 0, h.month);
+  // committee metrics (upgrade review 26): late, closed on time, days to close
+  check('late per department = open with a target before the meeting (as pastDue)', by('חומר גלם').late === 1 && by('תוצג').late === 1 && by('ייצור טוגנים').late === 0 && h.total.late === h.summary.pastDue, [by('חומר גלם'), h.total]);
+  check('closed on time: closing date on or before the target, out of the closed with one', by('ייצור טוגנים').closedOnTime === 1 && by('ייצור טוגנים').closedWithDue === 1 && by('חומר גלם').closedOnTime === 0 && by('חומר גלם').closedWithDue === 2 && h.total.closedOnTime === 1 && h.total.closedWithDue === 3, [by('חומר גלם'), h.total]);
+  check('days to close: mean from tour date to closing date, rounded (2, 11 and 6 = 6)', by('ייצור טוגנים').avgDaysToClose === 2 && by('חומר גלם').avgDaysToClose === 9 && h.total.avgDaysToClose === 6, [by('חומר גלם'), h.total]);
+  check('a department with nothing closed: no average (null, not 0)', by('מעצבים').avgDaysToClose === null && by('מעצבים').closedWithDue === 0, by('מעצבים'));
   const none = meetingHazards([], '2026-09-22');
   check('nothing at all: no department stands out', none.standout.open === null && none.total.total === 0);
 
@@ -60,6 +65,17 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('the two years before', a.byYear['2024'] === 1 && a.byYear['2025'] === 1, a.byYear);
   check('the last accident in Israeli time (22:30 UTC on 31.08 = 01.09), its injury, location, reported', a.lastAccident.date === '2026-09-01' && a.lastAccident.shortDescription === 'מעיכת אגודל יד ימין' && a.lastAccident.location === 'בדרך הביתה' && a.lastAccident.reported === true, a.lastAccident);
   check('days since: computed (01.09 to 22.09 = 21, as the slide said)', a.daysSinceLastAccident === 21, a.daysSinceLastAccident);
+  check('last year, the same stretch (01/01 to 22/09): 05/03/2025 counts', a.lastYearToDate === 1, a.lastYearToDate);
+  check('last year after the meeting day and month does not count', meetingAccidents([{ id: 'x', dt: '2025-09-23T09:00:00Z', l: 'x' }], '2026-09-22').lastYearToDate === 0);
+
+  console.log('\n3b. trustee participation');
+  const T = [{ n: 'א' }, { n: 'ב', active: true }, { n: 'ג' }, { n: 'ד' }, { n: 'ה', active: false }];
+  const R = [{ u: 'א', d: '2026-09-02' }, { u: 'א', d: '2026-09-10' }, { u: 'ב', ts: '2026-09-05T08:00:00Z' }, { u: 'ג', d: '2026-08-31' }];
+  const tp = meetingTrustees(T, R, '2026-09-22');
+  check('active trustees only, each reporter once, the meeting month only', tp.active === 4 && tp.reported === 2 && tp.month === '2026-09', tp);
+  check('half of them is green', tp.level === 'ok', tp.level);
+  check('under half amber, none red, no trustees red', participationLevel(8, 3) === 'warn' && participationLevel(8, 0) === 'bad' && participationLevel(0, 0) === 'bad' && participationLevel(8, 4) === 'ok');
+  check('numbers only: no names in the reply', !JSON.stringify(tp).includes('א'), tp);
   check('no accidents: nulls, no crash', meetingAccidents([], '2026-09-22').lastAccident === null);
 
   console.log('\n4. the endpoint');
@@ -72,6 +88,7 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
     if (u.startsWith(SB + '/rest/v1/inc')) return json(inc);
     if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
+    if (u.startsWith(SB + '/rest/v1/trustees')) return json([{ n: 'א' }, { n: 'ב' }]);
     return json({}, 599);
   };
   const req = (h, b) => new Request('https://tapugan-safety.pages.dev/api/meeting-data', { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, h), body: JSON.stringify(b || {}) });
@@ -79,7 +96,7 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('anonymous: refused', r.status === 401 || r.status === 403, r.status);
   r = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { ref: '2026-09-22' }), env: ENV });
   let j = await r.json();
-  check('with the server secret: the data for that meeting date', j.ok && j.ref === '2026-09-22' && j.hazards.week.start === '2026-09-13' && j.hazards.total.newThisWeek === 1 && j.accidents.daysSinceLastAccident === 21, j);
+  check('with the server secret: the data for that meeting date', j.ok && j.ref === '2026-09-22' && j.hazards.week.start === '2026-09-13' && j.hazards.total.newThisWeek === 1 && j.accidents.daysSinceLastAccident === 21 && j.trustees.active === 2 && j.trustees.reported === 0, j);
   r = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { ref: '22/09/2026' }), env: ENV });
   j = await r.json();
   check('a malformed date: today (Israel)', j.ok && /^\d{4}-\d{2}-\d{2}$/.test(j.ref) && j.ref !== '22/09/2026', j.ref);
