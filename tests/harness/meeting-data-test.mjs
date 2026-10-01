@@ -49,6 +49,8 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   // departments, so it is not in the table; the total row must still be the sum
   const outside = meetingHazards(rows.concat([['נ-5', d('2026-09-15'), '', 'אחזקה', '', 'מעקה', 'בינונית', '', '', d('2026-09-18'), 'פתוח', null, '']]), '2026-09-22');
   check('total row = sum of the departments, a row outside them does not change it', outside.total.late === outside.byDept.reduce((a, x) => a + x.late, 0) && outside.total.late === 2 && outside.total.closedWithDue === 3, outside.total);
+  check('"אחר" row for rows outside the five: named, counted, with its own metrics', outside.other && outside.other.dept === 'אחר (אחזקה)' && outside.other.total === 1 && outside.other.open === 1 && outside.other.late === 1 && outside.total.total === 8, outside.other);
+  check('no rows outside the five: no "אחר" row', h.other === null, h.other);
   const none = meetingHazards([], '2026-09-22');
   check('nothing at all: no department stands out', none.standout.open === null && none.total.total === 0);
 
