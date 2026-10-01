@@ -13,6 +13,8 @@ name: tests
 on:
   pull_request:
     branches: [main]
+    # edited: a title or description change re-runs the lessons gate
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
   workflow_dispatch:
@@ -43,6 +45,21 @@ jobs:
           echo "$files"
           if [ -n "$files" ] && ! echo "$files" | grep -qv '\.md$'; then echo "code=false" >> "$GITHUB_OUTPUT"; else echo "code=true" >> "$GITHUB_OUTPUT"; fi
 
+  # A fix PR must carry its lesson (Michael, 01/10/2026). Title and body go in
+  # through env, never into the script text: PR text is untrusted input.
+  lessons:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: git -c core.quotepath=off diff --name-only "$BASE" HEAD | python3 .github/scripts/lessons-gate.py
+
   harness:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -68,12 +85,13 @@ jobs:
       - run: SHARD=${{ matrix.shard }}/4 bash tests/harness/run.sh
 
   tests:
-    needs: [changes, harness]
+    needs: [changes, lessons, harness]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "changes=${{ needs.changes.result }} code=${{ needs.changes.outputs.code }} harness=${{ needs.harness.result }}"
+          echo "changes=${{ needs.changes.result }} code=${{ needs.changes.outputs.code }} lessons=${{ needs.lessons.result }} harness=${{ needs.harness.result }}"
           [ "${{ needs.changes.result }}" = "success" ] || exit 1
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ needs.lessons.result }}" != "success" ]; then exit 1; fi
           if [ "${{ needs.changes.outputs.code }}" = "false" ]; then exit 0; fi
           [ "${{ needs.harness.result }}" = "success" ]
