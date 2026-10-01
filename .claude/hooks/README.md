@@ -6,7 +6,7 @@
 
 | קובץ | אירוע | מה עושה |
 |---|---|---|
-| `guard-sql.py` | PreToolUse על Bash + Supabase MCP | **חוסם** `DELETE FROM` / `TRUNCATE` / `DROP TABLE` על `ncr`, `ncr_ai`, `trustee_reports` |
+| `guard-sql.py` | PreToolUse על Bash + Supabase MCP | **חוסם** `DELETE FROM` / `TRUNCATE` / `DROP TABLE` על `ncr`, `ncr_ai`, `trustee_reports`. **שואל** (01/10/2026, כי `execute_sql` מותר בלי אישור) על מחיקה, `DROP`, `ALTER ... DROP` ושינוי RLS בכל טבלה. `guard-sql-test.py` |
 | `lean-harness.py` | PreToolUse על Bash | `bash tests/harness/run.sh` ירוק מחזיר שורה אחת במקום 90. אדום מחזיר את הלוג המלא. הלוג נשמר בדיסק בכל מקרה |
 | `merge-gate.py` | PreToolUse על `mcp__github__merge_pull_request` | **חוסם** מיזוג עד שבדיקת `tests` של GitHub (`.github/workflows/tests.yml`) ירוקה על ה-commit האחרון של ה-PR. קורא את ה-API הציבורי של GitHub; אם אי אפשר לקרוא, חוסם (01/10/2026, המלצה 28) |
 | `fresh-main.py` | PreToolUse על Edit/Write | **חוסם** עריכה של קובץ שהשתנה ב-`origin/main` מאז העותק המקומי (fetch לכל היותר פעם בדקה), ואומר מה להריץ. קובץ שלא השתנה ב-main: מותר גם כש-main התקדם. בלי רשת: מותר. עריכה דרך Bash לא עוברת דרכו (01/10/2026, BACKLOG 31). בדיקה: `tests/harness/fresh-main-test.py` |
