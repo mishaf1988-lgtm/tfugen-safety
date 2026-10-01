@@ -101,9 +101,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits על main, עריכות על עוגנים שהשתנו, "ממצא" שהצד השני כבר סגר.
-הכלל: `fetch` + `reset --hard origin/main` לפני כל עריכה; `grep` ב-STATUS לפני דיווח ממצא.
-נאכף: `fresh-main.py` חוסם Edit/Write על קובץ שהשתנה ב-main (#1011). עריכה דרך Bash: טקסט.
-חזר: 0
+הכלל: `fetch` + `reset --hard origin/main` לפני כל עריכה; `grep` ב-STATUS לפני דיווח ממצא, וגם לפני שכותבים ב-handoff ש"פתוח". פריט שבוצע מסומן ✅ ב-BACKLOG באותו PR.
+נאכף: `fresh-main.py` חוסם Edit/Write על קובץ שהשתנה ב-main (#1011). עריכה דרך Bash ו-handoff: טקסט (אין דרך בקוד: מה "פתוח" בפריט חופשי ב-BACKLOG הוא שיפוט, לא שדה).
+חזר: 1. ה-handoff של 01/10/2026 15:45 מנה את 17, 10, 19, 30, 26, 16, 3 כפתוחות; כולן בוצעו, כי סעיף 9 ב-BACKLOG לא סומן. התגלה בשיחה הבאה ב-grep.
 
 ## לפני טענה או ממצא
 
