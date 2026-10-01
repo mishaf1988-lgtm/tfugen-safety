@@ -34,15 +34,15 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## לפני מיזוג
 
 **1. מיזוג בלי harness מלא (01/10/2026, #994).**
-מה קרה: migration מוזג בלי כל הבדיקות, ו-`rls-policy-test.mjs` נכשל עליו. התגלה בריצה הבאה.
-הכלל: אין מיזוג בלי `tests` ירוקה ב-GitHub, גם כשהשינוי "רק migration".
+מה קרה: migration מוזג בלי כל הבדיקות, ו-`rls-policy-test.mjs` נכשל עליו.
+הכלל: אין מיזוג בלי `tests` ירוקה, גם ל"רק migration".
 נאכף: `tests.yml` על כל PR + `merge-gate.py` חוסם `merge_pull_request` (#1006).
 חזר: 0
 
 **4. `expectedHeadSha` מקוצר (01/10/2026, #1008).**
-מה קרה: GitHub דורש 40 תווים, וה-hook השווה מקוצר למלא וחסם מיזוג תקין.
-הכלל: לא להעביר `expectedHeadSha` מקוצר. בלי השדה זה עובד.
-נאכף: ה-hook משווה לפי תחילית (#1008). מה ש-GitHub מקבל: טקסט (אין דרך בקוד: הקריאה ל-GitHub לא עוברת דרך hook שמשנה פרמטרים).
+מה קרה: ה-hook השווה SHA מקוצר למלא וחסם מיזוג תקין.
+הכלל: לא להעביר `expectedHeadSha` מקוצר.
+נאכף: ה-hook משווה לפי תחילית (#1008).
 חזר: 0
 
 ## כשמשהו נכשל
@@ -72,9 +72,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **17. commit חלקי אחרי `git stash pop` (01/10/2026, #1014).**
-מה קרה: אחרי stash ו-pop ה-staging לא חזר, וה-commit לקח רק קבצים חדשים.
-הכלל: אחרי `stash pop` להריץ שוב `git add`, ולפני push להריץ `git status --short`, שחייב להיות ריק.
-נאכף: hook ה-Stop (`stop-hook-git-check.sh`) מתריע על שינויים שלא נכנסו ל-commit. כך זה נתפס.
+מה קרה: אחרי stash ו-pop ה-commit לקח רק קבצים חדשים.
+הכלל: לפני push, `git status --short` ריק.
+נאכף: hook ה-Stop (`stop-hook-git-check.sh`).
 חזר: 0
 
 ## בדיקות שבודקות את הדבר הנכון
@@ -89,6 +89,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: `addPictures` חיפש `xmlns:r` ב-800 התווים הראשונים ולא בתגית השורש; ה-xlsm נפתח פגום.
 הכלל: לבדוק מבנה (התגית, האלמנט, התכונה), לא "מופיע איפשהו בהתחלה".
 נאכף: `rootHasR` + בדיקה בסגנון Excel ב-`hazard-file-test.mjs`.
+חזר: 0
+
+**26. ביטול שבירה מכוונת ב-`git checkout` (01/10/2026, BACKLOG 15).**
+מה קרה: ביטלתי שבירה ב-`git checkout index.html`, וזה מחק גם את התיקון. שוחזר מגיבוי.
+הכלל: לפני שבירה `cp` לגיבוי, וביטול ב-`cp` חזרה, לא ב-`git checkout`.
+נאכף: טקסט (אין דרך בקוד: hook לא יודע מה בשינוי הוא השבירה ומה התיקון).
 חזר: 0
 
 ## לפני כתיבה למקום משותף

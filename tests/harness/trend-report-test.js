@@ -107,6 +107,26 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('a column that exists nowhere counts nothing, rather than everything', r.missing === 0, r);
   }
 
+  console.log('\nBACKLOG 15: an empty lost-days field is unknown, not zero');
+  {
+    const r = await page.evaluate(() => {
+      const ldRow = () => _trendIndicators().rows.find((x) => x.label === 'ימי היעדרות');
+      // 13 of the 14 incidents of 2026 have no dy. The sum fell from 9 to 4
+      // and the sheet painted it green.
+      DB.inc = [{ id: 'i1', dt: __ago(30), dy: 4 }, { id: 'i2', dt: __ago(40), dy: null },
+                { id: 'i3', dt: __ago(400), dy: 9 }];
+      const gap = ldRow();
+      DB.inc = [{ id: 'i1', dt: __ago(30), dy: 4 }, { id: 'i2', dt: __ago(40), dy: 0 },
+                { id: 'i3', dt: __ago(400), dy: 9 }];
+      const full = ldRow();
+      return { gap, full, miss: _ldMissing([{ dy: null }, { dy: '' }, {}, { dy: 0 }, { dy: 3 }]) };
+    });
+    check('a period with an unknown value gets no direction, not green', r.gap.d.dir === 'flat' && /חסרים נתונים/.test(r.gap.d.txt), r.gap);
+    check('...and the note says how many are missing in each period', /1 מתוך 2/.test(r.gap.note) && /0 מתוך 1/.test(r.gap.note), r.gap.note);
+    check('a real 0 is data: complete periods still compare', r.full.d.dir === 'good', r.full);
+    check('null, empty and absent count as missing; 0 does not', r.miss === 3, r.miss);
+  }
+
   console.log('\n6.13 the sheet says what it is comparing');
   {
     const r = await page.evaluate(() => {
