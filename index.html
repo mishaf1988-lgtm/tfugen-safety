@@ -1446,6 +1446,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div id="thz-sum" style="font-size:13px;color:var(--t2);margin:0 0 10px"></div>
   <div id="thz-file" style="font-size:12px;color:var(--t2);margin:0 0 10px;padding:8px 10px;background:var(--bg2,#f5f7fa);border-radius:8px"></div>
   <div id="thz-nodept"></div>
+  <div id="thz-rep-card"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th scope="col">&#1502;&#1505;"&#1491;</th><th scope="col">&#1505;&#1497;&#1493;&#1512;</th><th scope="col">&#1502;&#1495;&#1500;&#1511;&#1492; / &#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">&#1514;&#1497;&#1488;&#1493;&#1512;</th><th scope="col">&#1495;&#1493;&#1502;&#1512;&#1492;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;</th><th scope="col">&#1497;&#1506;&#1491;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col"></th>
   </tr></thead><tbody id="tb-thz"></tbody></table></div></div>
@@ -2786,9 +2787,10 @@ id="m-ncr" style="display:none">
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1512;</label><input type="date" id="thz-d"></div>
     <div class="field"><label>&#1502;&#1505;&#1508;&#1512; &#1505;&#1497;&#1493;&#1512;</label><input type="number" id="thz-tour" min="1"></div>
-    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492; *</label><select id="thz-dept"><option>&#1502;&#1506;&#1510;&#1489;&#1497;&#1501;</option><option>&#1497;&#1497;&#1510;&#1493;&#1512; &#1496;&#1493;&#1490;&#1504;&#1497;&#1501;</option><option>&#1495;&#1493;&#1502;&#1512; &#1490;&#1500;&#1501;</option><option>&#1514;&#1493;&#1510;&#1490;</option><option>&#1502;&#1506;&#1489;&#1491;&#1493;&#1514;</option></select></div>
-    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="thz-loc"></div>
-    <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; &#1492;&#1502;&#1508;&#1490;&#1506; *</label><textarea id="thz-descr" rows="2"></textarea></div>
+    <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492; *</label><select id="thz-dept" onchange="_thzRepUpd('thz-rep',gv('thz-dept'),gv('thz-loc'),gv('thz-descr'),_svEditId('tour_hazards'))"><option>&#1502;&#1506;&#1510;&#1489;&#1497;&#1501;</option><option>&#1497;&#1497;&#1510;&#1493;&#1512; &#1496;&#1493;&#1490;&#1504;&#1497;&#1501;</option><option>&#1495;&#1493;&#1502;&#1512; &#1490;&#1500;&#1501;</option><option>&#1514;&#1493;&#1510;&#1490;</option><option>&#1502;&#1506;&#1489;&#1491;&#1493;&#1514;</option></select></div>
+    <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="thz-loc" oninput="_thzRepUpd('thz-rep',gv('thz-dept'),gv('thz-loc'),gv('thz-descr'),_svEditId('tour_hazards'))"></div>
+    <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; &#1492;&#1502;&#1508;&#1490;&#1506; *</label><textarea id="thz-descr" rows="2" oninput="_thzRepUpd('thz-rep',gv('thz-dept'),gv('thz-loc'),gv('thz-descr'),_svEditId('tour_hazards'))"></textarea></div>
+    <div class="field fw" id="thz-rep"></div>
     <div class="field"><label>&#1512;&#1502;&#1514; &#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="thz-sev"><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><select id="thz-resp"><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1504;&#1493;&#1505;&#1507; (&#1488;&#1501; &#1502;&#1513;&#1493;&#1514;&#1507;)</label><select id="thz-resp2"><option value="">&#1500;&#1500;&#1488;</option><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
@@ -9932,6 +9934,7 @@ function thzFileNow(){
 function rThz(){
   var tb=g('tb-thz');if(!tb)return;
   try{var nd=g('thz-nodept');if(nd)nd.innerHTML=_truNoDeptHtml();}catch(e){}
+  try{var rp=g('thz-rep-card');if(rp)rp.innerHTML=_thzRepHtml();}catch(e){}
   _thzFileRefresh(false);
   _thzOpts('thz-f-dept',_THZ_DEPTS.concat(['\u05d0\u05d7\u05d6\u05e7\u05d4']),true,'\u05db\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea');
   var all=DB.tour_hazards||[];
@@ -9985,6 +9988,7 @@ function thzNew(){
   var v={'thz-d':last&&last.d||_thzToday(),'thz-tour':last&&last.tour_no||'','thz-dept':last&&last.dept||_THZ_DEPTS[0],'thz-loc':'','thz-descr':'','thz-sev':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea','thz-resp':'\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4','thz-resp2':'','thz-action':'','thz-due':'','thz-s':'\u05e4\u05ea\u05d5\u05d7','thz-closed':'','thz-notes':''};
   Object.keys(v).forEach(function(id){var el=g(id);if(el)el.value=v[id];});
   if(typeof _attachClear==='function')_attachClear('thz-attach-area');
+  var rb=g('thz-rep');if(rb)rb.innerHTML='';
 }
 function svThz(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
@@ -10115,8 +10119,9 @@ function _mfRender(){
     +'<div class="mf-sub">'+sub+'</div>'+_mfSyncHtml()
     +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
     +_mfOpenHtml()
-    +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" list="mf-loc-list" autocomplete="off" value="'+esc(_mf['mf-loc']||'')+'">'+_mfLocList()
-    +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3">'+esc(_mf['mf-descr']||'')+'</textarea>'
+    +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" list="mf-loc-list" autocomplete="off" oninput="_thzRepUpd(\'mf-rep\',_mf.dept,g(\'mf-loc\').value,g(\'mf-descr\').value)" value="'+esc(_mf['mf-loc']||'')+'">'+_mfLocList()
+    +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3" oninput="_thzRepUpd(\'mf-rep\',_mf.dept,g(\'mf-loc\').value,g(\'mf-descr\').value)">'+esc(_mf['mf-descr']||'')+'</textarea>'
+    +'<div id="mf-rep">'+(_mf.dept?_thzRepHint(_mf.dept,_mf['mf-loc'],_mf['mf-descr']):'')+'</div>'
     +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area"></div>'
     +'<label>\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4</label>'+_mfChips(_THZ_SEV,_mf.sev,'_mfPickSev')
     +'<label for="mf-resp">\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><select id="mf-resp">'+_THZ_RESP.map(function(v){return '<option'+(v===(_mf.resp||_THZ_RESP[0])?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select>'
@@ -10161,6 +10166,78 @@ function _truNoDeptHtml(){
     +'<div style="font-size:12px;margin:2px 0 6px">\u05d4\u05d0\u05d6\u05d5\u05e8 \u05dc\u05d0 \u05e9\u05d9\u05d9\u05da \u05dc\u05d0\u05e3 \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05d3\u05d5\u05d7, \u05d5\u05dc\u05db\u05df \u05d4\u05dd \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05d9\u05dd \u05dc\u05d0\u05e3 \u05de\u05e0\u05d4\u05dc. \u05e8\u05e7 \u05d0\u05ea\u05d4 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05d5\u05ea\u05dd.</div>'
     +l.map(function(r){return '<div style="font-size:13px;padding:4px 0;border-top:1px dashed #fca5a5">'+esc(String(r.loc||'\u05d1\u05dc\u05d9 \u05d0\u05d6\u05d5\u05e8'))+': '+esc(String(r.f||'').substring(0,90))+' <span style="color:var(--t2);font-size:12px">('+esc(r.u||'')+', '+fd(String(r.d||r.ts||'').substring(0,10))+')</span></div>';}).join('')+'</div>';
 }
+// Recurring hazards (ISO 45001 10.2; Michael 01/10/2026, "a machine that
+// learns"). The same kind of hazard again and again, in one department or
+// across them, means the earlier fix did not work. A hazard has no "kind"
+// field, so the kind is read from place + description by keywords. The data on
+// 01/10/2026: electrical room or cabinet open/blocked 5 times in 4 departments,
+// fire cabinet blocked 3 times, emergency shower / eye wash / shelter 5 times;
+// the exact same department + place repeated only 3 times in 53 hazards.
+// Sources: tour_hazards and the trustees' findings (_mfTruFindings).
+var THZ_REP_DAYS=90,THZ_REP_MIN=3,THZ_PLACE_DAYS=365;
+var _THZ_KINDS=[
+  ['\u05d7\u05e9\u05de\u05dc',/\u05d7\u05e9\u05de\u05dc/],
+  ['\u05e6\u05d9\u05d5\u05d3 \u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9',/\u05db\u05d9\u05d1\u05d5\u05d9|\u05d6\u05e8\u05e0\u05d5\u05e7|\u05de\u05d8\u05e3|\u05e1\u05e4\u05e8\u05d9\u05e0\u05e7\u05dc\u05e8/],
+  ['\u05e6\u05d9\u05d5\u05d3 \u05d7\u05d9\u05e8\u05d5\u05dd',/\u05de\u05e7\u05dc\u05d7\u05ea \u05d4?\u05d7\u05d9\u05e8\u05d5\u05dd|\u05e9\u05d8\u05d9\u05e4\u05ea \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd|\u05de\u05e9\u05d8\u05e4\u05ea|\u05de\u05d9\u05d2\u05d5\u05e0\u05d9\u05ea|\u05de\u05d2\u05d5\u05e0\u05d9\u05ea|\u05de\u05e7\u05dc\u05d8|\u05de\u05e8\u05d7\u05d1 \u05de\u05d5\u05d2\u05df/],
+  ['\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',/\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd|\u05d7\u05d5\u05de"\u05e1|\u05d2'\u05e8\u05d9\u05e7\u05df|\u05d2\u05f3\u05e8\u05d9\u05e7\u05df/],
+  ['\u05e9\u05d9\u05dc\u05d5\u05d8 \u05d5\u05e1\u05d9\u05de\u05d5\u05df',/\u05e9\u05d9\u05dc\u05d5\u05d8|\u05e1\u05d9\u05de\u05d5\u05df/],
+  ['\u05de\u05e2\u05d9\u05d3\u05d4 \u05d5\u05e0\u05e4\u05d9\u05dc\u05d4',/\u05de\u05e2\u05d9\u05d3\u05d4|\u05e0\u05e4\u05d9\u05dc\u05d4|\u05e1\u05d5\u05dc\u05dd|\u05de\u05d3\u05e8\u05d2\u05d5\u05ea|\u05ea\u05e2\u05dc\u05d4|\u05e8\u05e6\u05e4/],
+  ['\u05de\u05d9\u05d2\u05d5\u05df \u05de\u05db\u05d5\u05e0\u05d5\u05ea',/\u05d7\u05dc\u05e7\u05d9\u05dd \u05e0\u05e2\u05d9\u05dd|\u05e6\u05d1\u05d9\u05d8\u05d4|\u05de\u05d9\u05d2\u05d5\u05df|\u05de\u05d2\u05df|\u05de\u05d2\u05e0\u05d9|\u05de\u05d2\u05e0\u05d9\u05dd/]
+];
+function _thzKinds(txt){var t=String(txt||'');return _THZ_KINDS.filter(function(k){return k[1].test(t);}).map(function(k){return k[0];});}
+function _thzDaysAgo(d){var x=String(d||'').substring(0,10);return x?-du(x):9999;}
+function _thzRepRows(){
+  var out=(DB.tour_hazards||[]).map(function(r){return {id:r.id,src:'thz',dept:r.dept||'',loc:r.loc||'',descr:r.descr||'',d:r.d,closed:r.s===_THZ_CLOSED};});
+  try{(typeof _mfTruFindings==='function'?_mfTruFindings():[]).forEach(function(r){out.push({id:r.id,src:'tru',dept:_mfTruDept(r.loc)||'',loc:String(r.loc||''),descr:String(r.f||''),d:String(r.d||r.ts||'').substring(0,10),closed:r.s===TRUSTEE_S_CLOSED});});}catch(e){}
+  return out;
+}
+function _thzPlaceKey(dept,loc){return String(dept||'')+'|'+String(loc||'').replace(/\s+/g,' ').trim();}
+// Kinds with THZ_REP_MIN or more in the last THZ_REP_DAYS days, most first.
+function _thzRecurring(rows){
+  var by={};
+  (rows||_thzRepRows()).forEach(function(r){if(_thzDaysAgo(r.d)>THZ_REP_DAYS)return;_thzKinds(r.loc+' '+r.descr).forEach(function(k){(by[k]=by[k]||[]).push(r);});});
+  return Object.keys(by).filter(function(k){return by[k].length>=THZ_REP_MIN;}).map(function(k){
+    var l=by[k],ds={};l.forEach(function(r){if(r.dept)ds[r.dept]=1;});
+    return {kind:k,rows:l,depts:Object.keys(ds),closed:l.filter(function(r){return r.closed;}).length};
+  }).sort(function(a,b){return b.rows.length-a.rows.length;});
+}
+// The same department and place twice or more within THZ_PLACE_DAYS.
+function _thzRepPlaces(rows){
+  var by={};
+  (rows||_thzRepRows()).forEach(function(r){if(!String(r.loc).trim()||_thzDaysAgo(r.d)>THZ_PLACE_DAYS)return;var k=_thzPlaceKey(r.dept,r.loc);(by[k]=by[k]||[]).push(r);});
+  return Object.keys(by).filter(function(k){return by[k].length>=2;}).map(function(k){return {dept:by[k][0].dept,loc:by[k][0].loc,rows:by[k]};});
+}
+function _thzRepLine(r){
+  return '<div style="font-size:12px;padding:2px 0;border-top:1px dashed #fcd34d">'+fd(r.d)+' | '+esc(r.dept||'\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4')+' | '+esc(r.loc)+': '+esc(String(r.descr).substring(0,80))
+    +(r.closed?' <b>(\u05e0\u05e1\u05d2\u05e8)</b>':'')+(r.src==='tru'?' (\u05e0\u05d0\u05de\u05df)':'')+'</div>';
+}
+// The card on the tours screen.
+function _thzRepHtml(){
+  var rows=_thzRepRows(),ks=_thzRecurring(rows),ps=_thzRepPlaces(rows);
+  if(!ks.length&&!ps.length)return '';
+  return '<div class="card" style="border:2px solid #d97706;background:#fffbeb;padding:10px 12px;margin:0 0 10px">'
+    +'<div style="font-weight:900;color:#b45309">\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d5\u05d6\u05e8\u05d9\u05dd</div>'
+    +'<div style="font-size:12px;margin:2px 0 6px">\u05d0\u05d5\u05ea\u05d5 \u05e1\u05d5\u05d2 \u05d0\u05d5 \u05d0\u05d5\u05ea\u05d5 \u05de\u05e7\u05d5\u05dd \u05e9\u05d5\u05d1 \u05d5\u05e9\u05d5\u05d1 = \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05e7\u05d5\u05d3\u05dd \u05dc\u05d0 \u05e2\u05d1\u05d3. \u05db\u05d3\u05d0\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4 \u05d5\u05dc\u05d7\u05e4\u05e9 \u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9 (ISO 45001 \u05e1\u05e2\u05d9\u05e3 10.2).</div>'
+    +ks.map(function(k){return '<details style="margin:4px 0"><summary style="cursor:pointer;font-size:13px"><b>'+esc(k.kind)+'</b>: '+k.rows.length+' \u05d1-'+THZ_REP_DAYS+' \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd, '+k.depts.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea'+(k.closed?', '+k.closed+' \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5':'')+'</summary>'+k.rows.map(_thzRepLine).join('')+'</details>';}).join('')
+    +ps.map(function(p){return '<details style="margin:4px 0"><summary style="cursor:pointer;font-size:13px"><b>'+esc(p.dept||'\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4')+', '+esc(p.loc)+'</b>: '+p.rows.length+' \u05e4\u05e2\u05de\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4</summary>'+p.rows.map(_thzRepLine).join('')+'</details>';}).join('')
+    +'</div>';
+}
+// The hint under the description while a hazard is being written. selfId: the
+// hazard being edited, so it is not counted as its own repeat.
+function _thzRepHint(dept,loc,descr,selfId){
+  var rows=_thzRepRows().filter(function(r){return !selfId||r.id!==selfId;}),out=[];
+  if(String(loc||'').trim()){
+    var key=_thzPlaceKey(dept,loc);
+    var same=rows.filter(function(r){return _thzPlaceKey(r.dept,r.loc)===key&&_thzDaysAgo(r.d)<=THZ_PLACE_DAYS;});
+    var sc=same.filter(function(r){return r.closed;}).length;
+    if(same.length)out.push('\u05d1\u05de\u05e7\u05d5\u05dd \u05d4\u05d6\u05d4 \u05e0\u05e8\u05e9\u05de\u05d5 '+same.length+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'+(sc?', '+sc+' \u05de\u05d4\u05dd \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5':'')+'. \u05d0\u05dd \u05d6\u05d4 \u05d0\u05d5\u05ea\u05d5 \u05de\u05e4\u05d2\u05e2, \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05e7\u05d5\u05d3\u05dd \u05dc\u05d0 \u05e2\u05d1\u05d3.');
+  }
+  var ks=_thzKinds(String(loc||'')+' '+String(descr||''));
+  _thzRecurring(rows).forEach(function(k){if(ks.indexOf(k.kind)>=0)out.push('\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d5\u05d2 "'+k.kind+'" \u05e0\u05e8\u05e9\u05dd '+k.rows.length+' \u05e4\u05e2\u05de\u05d9\u05dd \u05d1-'+THZ_REP_DAYS+' \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd, \u05d1-'+k.depts.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d6\u05d5 \u05d1\u05e2\u05d9\u05d4 \u05de\u05e2\u05e8\u05db\u05ea\u05d9\u05ea.');});
+  if(!out.length)return '';
+  return '<div style="font-size:12px;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:6px 8px;margin:4px 0 8px;color:#92400e">'+out.map(esc).join('<br>')+'</div>';
+}
+function _thzRepUpd(box,dept,loc,descr,selfId){var b=g(box);if(b)b.innerHTML=_thzRepHint(dept,loc,descr,selfId);}
 function _mfTruFindings(){
   return (DB.trustee_reports||[]).filter(function(r){return r&&r.ok===false&&+r.t>=1&&+r.t!==TRUSTEE_TASK_CLOSE&&!/^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/.test(String(r.mgr_note||''));})
     .sort(function(a,b){return String(a.ts||a.d||'').localeCompare(String(b.ts||b.d||''));});
