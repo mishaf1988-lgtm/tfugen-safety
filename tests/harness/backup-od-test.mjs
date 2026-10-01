@@ -130,6 +130,12 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   { odRead({}); const r = await onRequest({ request: new Request('https://x/api/backup-od', { method: 'POST', headers: { 'x-notify-secret': 'nsec' }, body: JSON.stringify({ op: 'read', name: BK[0] }) }), env: ENV });
     check('... missing in OneDrive: 502', r.status === 502, r.status); }
 
+  // Lesson 8: the browser prune of _Backups must never delete the server's folders
+  // (the lesson said this test checked it; until the retro of 01/10/2026 it did not).
+  { const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+    const m = html.match(/var browserFolders=[^\n]*/);
+    check('the browser prune of _Backups skips cron, monthly and photos', !!m && ['cron', 'monthly', 'photos'].every((f) => m[0].includes("it.name!=='" + f + "'")), m && m[0].slice(0, 200)); }
+
   console.log('\n6. the weekly mail');
   const now = Date.now();
   check('a fresh good run: no line', backupProblem(JSON.stringify({ at: new Date(now - 3600e3).toISOString(), ok: true }), now) === null);

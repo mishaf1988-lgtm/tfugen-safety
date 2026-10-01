@@ -45,6 +45,7 @@ window.supabase = { createClient: function () {
     _sbBoot();
     window._sbToken = 'tok-stale-with-flag';
     window._pendingLogin = { lb: null, email: 'admin@tfugen.local', uname: 'admin' };
+    document.getElementById('m-force-pw-change').style.display = 'block'; // doLogin opens it; a closed window stops the change (retro 01/10/2026)
     document.getElementById('fpc-new').value = 'brand-new-pw-1';
     document.getElementById('fpc-confirm').value = 'brand-new-pw-1';
     _pwChangeSubmit();
