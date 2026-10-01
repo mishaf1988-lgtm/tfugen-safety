@@ -5334,7 +5334,8 @@ function svInc(){
     var prev=(DB.inc||[]).find(function(x){return x.id===existingId;})||{};
     if(prev.five_why)r.five_why=prev.five_why;
     // Imported from the accidents workbook (28/09): not in the form, kept.
-    ['w','dept_group','src','created_at'].forEach(function(k){if(prev[k]!=null&&r[k]==null)r[k]=prev[k];});
+    // rc (root cause, its own column since 29/09/2026) is set only by the investigation, kept here too.
+    ['w','dept_group','src','created_at','rc'].forEach(function(k){if(prev[k]!=null&&r[k]==null)r[k]=prev[k];});
     DB.inc=DB.inc.map(function(x){return x.id===existingId?r:x;});
     sbUpd('inc',r);
     addLog('\u05ea\u05e7\u05e8\u05d9\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+d.substring(0,30));
@@ -14807,7 +14808,7 @@ window._invCapa=function(){
 };
 window._invNcr=function(){
   var rec=window._invCur;if(!rec){toast('\u05d1\u05d7\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea');return;}
-  var fw=(gv('inv-fw')||'').trim(),rc=(gv('inv-rc')||'').trim()||rec.r||'';
+  var fw=(gv('inv-fw')||'').trim(),rc=(gv('inv-rc')||'').trim()||rec.rc||'';
   closeModal('m-inv');
   openNewNcrModal();
   var set=function(id,v){var el=g(id);if(el&&!el.value)el.value=v;};
