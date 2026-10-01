@@ -1,6 +1,6 @@
 ---
 name: tfugen-lessons
-description: Use for every task in the tfugen-safety repo, alongside tfugen-lean. Lessons learned from real mistakes in this repo (Claude's and Michael's), grouped by the moment they apply - before merging, when something fails, before writing to a shared place, before stating a finding, and for working efficiently. Each has the rule, how it is enforced, and how often it recurred. Also holds the standing rule - every mistake that is discovered gets a new entry here in the same PR as its fix (a GitHub check enforces it).
+description: Use for every task in the tfugen-safety repo, alongside tfugen-lean. Lessons from real mistakes in this repo (Claude's and Michael's), grouped by the moment they apply - before merging, when something fails, before writing to a shared place, before a finding, efficiency. Each has the rule, how it is enforced, and how often it recurred. Standing rule: every mistake found gets an entry here in the PR that fixes it.
 ---
 
 # Lessons
@@ -101,14 +101,14 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits על main, עריכות על עוגנים שהשתנו, "ממצא" שהצד השני כבר סגר.
-הכלל: `fetch` + `reset --hard origin/main` לפני כל עריכה; `grep` ב-STATUS לפני דיווח ממצא, וגם לפני שכותבים ב-handoff ש"פתוח". פריט שבוצע מסומן ✅ ב-BACKLOG באותו PR.
-נאכף: `fresh-main.py` חוסם Edit/Write על קובץ שהשתנה ב-main (#1011). עריכה דרך Bash ו-handoff: טקסט (אין דרך בקוד: מה "פתוח" בפריט חופשי ב-BACKLOG הוא שיפוט, לא שדה).
-חזר: 1. ה-handoff של 01/10/2026 15:45 מנה שבעה פריטים כפתוחים שכבר בוצעו, כי סעיף 9 ב-BACKLOG לא סומן.
+הכלל: `fetch` + `reset --hard origin/main` לפני כל עריכה; `grep` ב-STATUS לפני ממצא. לפני שכותבים ב-handoff ש"פתוח": `grep` בקוד עצמו, לא רק ב-BACKLOG. פריט שבוצע מסומן ✅ באותו PR.
+נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" בפריט חופשי הוא שיפוט, לא שדה).
+חזר: 2. handoff של 01/10/2026 15:45 מנה שבעה פריטים שבוצעו; handoff של 19:30 מנה את 22, שהקוד שלו (`subBudget`) נכנס ב-30/09.
 
 ## לפני טענה או ממצא
 
 **9. 375 שורות ב-`ncr` (22/09/2026).**
-מה קרה: CLAUDE.md טען 375 בייצור בלי מדידה, ואז תוקן לטענה שגויה אחרת. בפועל 0 בייצור, 375 בגיבוי.
+מה קרה: CLAUDE.md טען 375 בייצור בלי מדידה. בפועל 0 בייצור, 375 בגיבוי.
 הכלל: מספר על נתונים חיים נכתב רק אחרי `count` אמיתי, עם תאריך המדידה.
 נאכף: טקסט (אין דרך בקוד: טענה בטקסט חופשי). המחיקה עצמה חסומה ב-`guard-sql.py`.
 חזר: 0
@@ -172,17 +172,23 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **13. הודעות המתנה באנגלית (01/10/2026).**
 מה קרה: הודעות קצרות בזמן המתנה נכתבו באנגלית.
 הכלל: עברית תמיד, גם "ממתין לבדיקות".
-נאכף: hook מסוג Stop, `hebrew-reply.py`: תשובה שרובה אותיות לטיניות (בלי קוד, נתיבים וקישורים) נחסמת ונכתבת מחדש בעברית. `hebrew-reply-test.py`.
-חזר: 1. ב-01/10/2026, בהמתנה ל-CI של #1018, שש הודעות יצאו באנגלית למרות הלקח. מיכאל: "אני מזכיר שאתה צריך לכתוב בעברית זה חוק".
+נאכף: hook מסוג Stop, `hebrew-reply.py`: תשובה שרובה לטינית נחסמת. `hebrew-reply-test.py`.
+חזר: 1. בהמתנה ל-CI של #1018 שש הודעות יצאו באנגלית. מיכאל: "אני מזכיר שאתה צריך לכתוב בעברית זה חוק".
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: כל הודעה נעשתה איטית ויקרה. ו"תפתח שיחה חדשה" חזר בכל סוף משימה; מיכאל: "למה שלא תעשה את זה לבד".
-הכלל: אחרי משימה שנסגרה ומוזגה, לפתוח בעצמי: handoff ב-repo, `create_session` עם הפרומפט, ו-`archive_session` לשיחה הנוכחית כפעולה האחרונה. לא לבקש ממיכאל.
+הכלל: אחרי משימה שמוזגה: handoff, `create_session`, ו-`archive_session` כפעולה האחרונה. לא לבקש ממיכאל.
 נאכף: טקסט (אין דרך בקוד: החלטה בסוף שיחה). הפרטים: CLAUDE.md, «שיחה ארוכה».
 חזר: 0
 
-**24. חיכיתי למיכאל כשהיה מה לעשות (01/10/2026, PR זה).**
+**24. חיכיתי למיכאל כשהיה מה לעשות (01/10/2026, #1027).**
 מה קרה: שאלתי "מה לקדם" כשבפריט 12 היו שני חלקים בקוד. מיכאל: "שוב אתה מחכה לי".
 הכלל: לפני ששואלים מה לקדם, לחפש בפריטים הפתוחים חלק שאפשר לעשות בקוד ולעשות אותו. לשאול רק על מה שחסום, בלי לעצור.
 נאכף: טקסט (אין דרך בקוד: זה שיפוט). המקור תוקן ב-CLAUDE.md, «שיחה ארוכה».
 חזר: 1. מיכאל כבר ביקש להמשיך לבד (לקח 14), וה-handoff הורה לשאול.
+
+**25. PR ירוק ישב בלי מיזוג (01/10/2026, PR זה).**
+מה קרה: #1027 ירוק מ-15:48; חיכיתי לאירוע שלא הגיע. מיכאל: "למה נעצר".
+הכלל: אחרי push להריץ ברקע `gh pr checks <branch> --watch`; ירוק = למזג מיד.
+נאכף: `ci-watch.py` אחרי `git push` ופתיחת PR נותן את הפקודה (`ci-watch-test.py`).
+חזר: 0
