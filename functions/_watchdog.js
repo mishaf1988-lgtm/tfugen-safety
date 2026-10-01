@@ -12,7 +12,12 @@
 //   * an error a run left (<part>_err) that has not cleared for 30 minutes;
 //   * a change typed in Excel that was not taken (hazard_<file>_dropped), with
 //     the hazard number, the column and the reason, as the tours screen says;
-//   * the OneDrive connection gone (no refresh token).
+//   * the OneDrive connection gone (no refresh token);
+//   * the Microsoft app's client secret expired (01/10/2026): every run fails
+//     with AADSTS7000222 and no run can clear it, so it is said at once, with
+//     what to do, and not as four separate errors;
+//   * the daily Vitre refresher import (vitre.js op:'sync', 06:00) that failed,
+//     or that has not run for 26 hours.
 // The mail goes out through the same Microsoft connection, so when that
 // connection is what broke, the mail cannot go: the app shows the same list
 // on the home screen (op:'status' -> watch), and says so when this check
@@ -23,6 +28,10 @@ export const WATCH_KEY = 'sync_watch';
 // The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
 export const FILE_ROWS = 205, FULL_WARN = 164;
 export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 * 60 * 1000;
+// The Vitre import runs once a day; a day and two hours without a run = the cron stopped.
+export const VITRE_KEY = 'vitre_sync', VITRE_STALE_MS = 26 * 60 * 60 * 1000;
+// Microsoft's answer when the client secret expired or was replaced.
+export const SECRET_RE = /AADSTS7000222|AADSTS7000215|invalid_client/;
 export const PARTS = [
   { k: 'hazard_xlsm', name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsm' },
   { k: 'hazard_xlsx', name: '\u05e0\u05d9\u05d4\u05d5\u05dc \u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd.xlsx' },
@@ -52,7 +61,7 @@ export function ilTime(iso) {
 }
 
 export function stateKeys() {
-  const keys = [WATCH_KEY];
+  const keys = [WATCH_KEY, VITRE_KEY];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
   FILES.forEach(([f]) => { keys.push('hazard_' + f + '_dropped'); keys.push('hazard_' + f + '_rows'); });
   return keys;
@@ -60,14 +69,17 @@ export function stateKeys() {
 
 // Pure. st = stateGet(stateKeys()); connected = the OneDrive token exists;
 // started = when the watchdog first ran (a part with no ok_at yet gets an
-// hour from then, since ok_at is new with this change).
-export function assess(st, nowMs, connected, started) {
+// hour from then, since ok_at is new with this change); vitre = the Vitre keys
+// are set, so the daily import is expected.
+export function assess(st, nowMs, connected, started, vitre) {
   const v = (k) => (st[k] && st[k].value) || '';
   const at = (k) => (st[k] && st[k].at) || '';
   const out = [];
   if (!connected) out.push({ key: 'od', title: '\u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc-OneDrive \u05e0\u05e4\u05dc', detail: '\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea \u05dc\u05d0 \u05de\u05ea\u05e2\u05d3\u05db\u05e0\u05d9\u05dd \u05e2\u05d3 \u05e9\u05de\u05ea\u05d7\u05d1\u05e8\u05d9\u05dd \u05de\u05d7\u05d3\u05e9 (\u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea > OneDrive).' });
+  if (connected && PARTS.some((p) => SECRET_RE.test(v(p.k + '_err')))) out.push({ key: 'secret', title: '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3 \u05d4\u05e1\u05d5\u05d3 \u05e9\u05dc \u05d7\u05d9\u05d1\u05d5\u05e8 Microsoft', detail: '\u05d4\u05e7\u05d1\u05e6\u05d9\u05dd, \u05d4\u05de\u05e6\u05d2\u05ea \u05d5\u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e2\u05e6\u05e8\u05d5. \u05d1-Azure Portal > App registrations > Certificates & secrets \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e1\u05d5\u05d3 \u05d7\u05d3\u05e9, \u05d5\u05d0\u05d6 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea ONEDRIVE_CLIENT_SECRET \u05d1-Cloudflare (Settings > Variables and Secrets).' });
   PARTS.forEach((p) => {
     const err = v(p.k + '_err');
+    if (SECRET_RE.test(err)) return; // said once above
     const errAt = Date.parse(v(p.k + '_err_at') || at(p.k + '_err')) || 0;
     if (err) {
       if (nowMs - errAt >= ERR_MS) out.push({ key: 'err:' + p.k, title: p.name + ': \u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e2\u05d3\u05db\u05d5\u05df', detail: String(err).substring(0, 200) + (errAt ? ' (\u05de\u05d0\u05d6 ' + ilTime(new Date(errAt).toISOString()) + ')' : '') });
@@ -79,6 +91,13 @@ export function assess(st, nowMs, connected, started) {
       out.push({ key: 'stale:' + p.k, title: p.name + ': \u05dc\u05d0 \u05d4\u05ea\u05e2\u05d3\u05db\u05df', detail: ok ? '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d4\u05de\u05d5\u05e6\u05dc\u05d7\u05ea \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(ok).toISOString()) + '. \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d5 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05dc\u05e6\u05d3 \u05d4\u05e9\u05e0\u05d9.' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05e6\u05dc\u05d7\u05ea.' });
     }
   });
+  if (vitre) {
+    let r = null; try { r = JSON.parse(v(VITRE_KEY) || 'null'); } catch (e) { r = null; }
+    const last = (r && Date.parse(r.at)) || 0;
+    const when = last ? ' (\u05d1\u05e8\u05d9\u05e6\u05d4 \u05e9\u05dc ' + ilTime(new Date(last).toISOString()) + ')' : '';
+    if (r && r.error) out.push({ key: 'vitre:err', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05e9\u05d2\u05d9\u05d0\u05d4', detail: String(r.error).substring(0, 200) + when });
+    else if (nowMs - (last || Date.parse(started) || nowMs) >= VITRE_STALE_MS) out.push({ key: 'vitre:stale', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05dc\u05d0 \u05e8\u05e5', detail: (last ? '\u05d4\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(last).toISOString()) + '. ' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e8\u05d9\u05e6\u05d4. ') + '\u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d0\u05de\u05d5\u05e8 \u05dc\u05e8\u05d5\u05e5 \u05db\u05dc \u05d1\u05d5\u05e7\u05e8 \u05d1-06:00.' });
+  }
   FILES.forEach(([f, name]) => {
     // 80% full (upgrade review 24): a month or two before it stops.
     const n = +v('hazard_' + f + '_rows') || 0;
@@ -128,7 +147,7 @@ export async function runWatch(env, appUrl) {
   let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) { row = null; }
   const connected = !!(row && row.refresh_token);
   const started = (prev && prev.started) || nowIso;
-  const list = assess(st, now.getTime(), connected, started);
+  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET));
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;
   if ((s.fresh.length || s.done.length) && connected && hasMail(row)) {
