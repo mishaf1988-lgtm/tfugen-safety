@@ -3505,7 +3505,7 @@ function _sbGetOnce(tbl,isRetry){
 // every UI render path. Adding a table here when its render code is unsure
 // will cause silent missing fields → expand cautiously, table at a time.
 var _sbCols={
-  audit_log:'id,ts,user_email,op,table_name,record_id,title',
+  audit_log:'id,ts,user_email,op,table_name,record_id,title,source,changed',
   notifications_log:'id,ts,user_email,event_type,channel,payload'
 };
 var OB_KEY='tfgn_outbox';
@@ -10918,9 +10918,13 @@ function rAudit(){
     var opColor={ins:'#16a34a',upd:'#2563eb',del:'#cc1f1f'};
     tb.innerHTML=rows.map(function(r){
       var dt=new Date(r.ts);var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
-      var u=(r.user_email||'').split('@')[0]||'—';
+      // 01/10/2026 (BACKLOG 9.20): the database writes the log itself; a
+      // server change is 'server', manual SQL 'db', a trustee 'anonymous'.
+      var _uLbl={server:'\u05e9\u05e8\u05ea',db:'\u05de\u05e1\u05d3 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd',anonymous:'\u05e0\u05d0\u05de\u05df'};
+      var u=(r.user_email||'').split('@')[0]||'—';u=_uLbl[u]||u;
       var op=opLbl[r.op]||r.op;var oc=opColor[r.op]||'#666';
       var t=r.title||'—';if(t.length>60)t=t.substring(0,60)+'…';
+      if(Array.isArray(r.changed)&&r.changed.length)t+=' - \u05e9\u05d3\u05d5\u05ea: '+r.changed.join(', ');
       var viewBtn='';
       if(r.op!=='del'&&r.record_id&&r.table_name){
         viewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.table_name)+'" data-vid="'+esc(r.record_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1512;&#1513;&#1493;&#1502;&#1492;">&#128065;</button>';

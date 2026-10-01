@@ -15,9 +15,11 @@
       "username"
     ],
     "audit_log": [
+      "changed",
       "id",
       "op",
       "record_id",
+      "source",
       "table_name",
       "title",
       "ts",
