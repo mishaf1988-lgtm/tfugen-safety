@@ -58,7 +58,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: npm i -g playwright acorn
+      # The same playwright as the cloud sessions (1.56.1): a newer Chromium reads
+      # inline styles differently and backlog-visual-test saw 0 menu separators.
+      - run: npm i -g playwright@1.56.1 acorn
       - run: pip install requests
       - run: playwright install --with-deps chromium
       - run: SHARD=${{ matrix.shard }}/4 bash tests/harness/run.sh
