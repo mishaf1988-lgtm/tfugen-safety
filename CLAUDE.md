@@ -80,6 +80,7 @@ Claude Code loads this file automatically at the start of every session in this 
 
 Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. כל קוד שיושב על branch לא מגיע למשתמש. לכן:
 
+- **מיזוג רק כשבדיקת `tests` ב-GitHub ירוקה** (01/10/2026, המלצה 28): כל PR מריץ את ה-harness ב-4 קבוצות במקביל (~3 דק'; שינוי שכולו `.md` עובר מיד). ה-hook `merge-gate.py` חוסם `merge_pull_request` עד שהבדיקה ירוקה. אדום = לתקן, לא לעקוף.
 - **בכל סיום משימה — פתח PR ומזג ל-`main` באותה הריצה** דרך `mcp__github__create_pull_request` + `mcp__github__merge_pull_request`. אסור לעצור על "המתנה לאישור מיזוג" — זה אישור עומד.
 - **לפני כל סשן דיבאג של "קוד לא מגיע":** ראשון — `git log origin/main..HEAD`. אם יש commits שלא מוזגו, מזג אותם **לפני** שמתחילים לחקור קאש/SW/דברים אחרים.
 - **חריג יחיד:** שינוי שאסור לפרסם בלי בדיקה ידנית — ציין במפורש שמשאיר על branch ובקש אישור.

@@ -22,6 +22,8 @@ for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file 
   sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 filter="${1:-}"; fail=0
+# SHARD=i/n (the GitHub workflow, 01/10/2026): only every n-th file, from i.
+shard="${SHARD:-}"; idx=0
 # The only two scripts that legitimately print a report instead of a pass/fail
 # count. Anything ELSE that prints no summary has crashed or timed out, and that
 # is a failure — it used to be reported as "(report only)" and ALL GREEN still
@@ -32,6 +34,7 @@ for f in *.js *.mjs *.py; do
   # to a folder), not a pass/fail suite. Run it by name; see README.
   [ "$f" = "visual-audit.js" ] && continue
   [ -n "$filter" ] && [[ "$f" != *"$filter"* ]] && continue
+  if [ -n "$shard" ]; then i=$idx; idx=$((idx + 1)); [ $((i % ${shard#*/})) -ne "${shard%/*}" ] && continue; fi
   printf '%-28s ' "$f"
   case "$f" in
     *.py) out=$(timeout 300 python3 "$f" 2>&1); rc=$? ;;

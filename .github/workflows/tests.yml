@@ -1,0 +1,74 @@
+# The harness on every PR to main and every push to main (upgrade review 28;
+# Michael, 01/10/2026: "yes, four groups in parallel"). Until now the tests ran
+# only when Claude remembered to run them (#994 went in red).
+#
+# Four shards of tests/harness/run.sh in parallel (SHARD=i/4), about 2-3
+# minutes instead of 7. A change that touches only .md files skips them. The
+# one check to require on main is "tests": it is green only when every shard
+# passed, or when nothing but documentation changed. The repo is public, so
+# Actions minutes cost nothing. .claude/hooks/merge-gate.py reads the same
+# check before Claude may merge.
+name: tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then base="${{ github.event.pull_request.base.sha }}"; else base="${{ github.event.before }}"; fi
+          if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null || [ "$base" = "0000000000000000000000000000000000000000" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files=$(git diff --name-only "$base" HEAD)
+          echo "$files"
+          if [ -n "$files" ] && ! echo "$files" | grep -qv '\.md$'; then echo "code=false" >> "$GITHUB_OUTPUT"; else echo "code=true" >> "$GITHUB_OUTPUT"; fi
+
+  harness:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm i -g playwright acorn
+      - run: playwright install --with-deps chromium
+      - run: SHARD=${{ matrix.shard }}/4 bash tests/harness/run.sh
+
+  tests:
+    needs: [changes, harness]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "changes=${{ needs.changes.result }} code=${{ needs.changes.outputs.code }} harness=${{ needs.harness.result }}"
+          [ "${{ needs.changes.result }}" = "success" ] || exit 1
+          if [ "${{ needs.changes.outputs.code }}" = "false" ]; then exit 0; fi
+          [ "${{ needs.harness.result }}" = "success" ]
