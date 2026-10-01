@@ -13,13 +13,22 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, locale: 'he-IL' });
   const page = await ctx.newPage();
+  // The fixtures date "this month" off the clock: yesterday, four days ago,
+  // the mid-month nudge window. On the 1st, yesterday is last month and the
+  // window is shut, so the suite went red on 01/10/2026 with no code change.
+  // Pin the page clock to noon on the 15th of the current month, never a
+  // month boundary. HARNESS_TODAY=YYYY-MM-DD stands in for the real date.
+  const today = process.env.HARNESS_TODAY ? new Date(process.env.HARNESS_TODAY + 'T12:00:00') : new Date();
+  const NOW = new Date(today.getFullYear(), today.getMonth(), 15, 12, 0, 0);
+  await page.clock.setFixedTime(NOW);
   await page.route('**/*', (r) => r.request().url().startsWith('file://') ? r.continue() : r.abort());
   const errs = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   await page.goto(HTML, { waitUntil: 'load' });
   await page.waitForTimeout(800);
-  const M = new Date().toISOString().substring(0, 7), D = new Date().toISOString().substring(0, 10);
-  const prev = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().substring(0, 7); })();
+  const M = NOW.toISOString().substring(0, 7), D = NOW.toISOString().substring(0, 10);
+  const YEAR = new RegExp(String(NOW.getFullYear()));   // the month labels, e.g. «אוקטובר 2026»
+  const prev = (() => { const d = new Date(NOW); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().substring(0, 7); })();
 
   console.log('\n1. admin opens the page: month, pills, leaderboard');
   const s1 = await page.evaluate(({ M, D, prev }) => {
@@ -28,7 +37,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     ['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','ctr','equip_inspections','near_miss','rounds','tasks','locations','projects','inspection_types','env_aspects','leg','hzm','wst','env','ins','drl','med','hearing_tests','toolbox','trustee_reports'].forEach(k => { if (!DB[k]) DB[k] = []; });
     window.__toasts = []; window.toast = function (m) { window.__toasts.push(String(m)); };
     window.__upd = []; const ou = window.sbUpd; window.sbUpd = function (t, r) { window.__upd.push({ t, id: r.id, s: r.s, note: r.mgr_note }); return ou(t, r); };
-    const r = (id, u, t, ok, s, extra) => Object.assign({ id, u, t, ok, s, d: D, m: M, loc: 'אולם טיגון', f: ok ? null : 'ממצא ' + id, ts: '2026-09-1' + (id.length % 10) + 'T08:00:00Z' }, extra || {});
+    const r = (id, u, t, ok, s, extra) => Object.assign({ id, u, t, ok, s, d: D, m: M, loc: 'אולם טיגון', f: ok ? null : 'ממצא ' + id, ts: M + '-1' + (id.length % 10) + 'T08:00:00Z' }, extra || {});
     DB.trustee_reports = [
       // דנה: tasks 1,2,3,4,5 (5 tasks → eligible), 2 hazards: one open, one closed via an "after" report
       r('d1', 'דנה', 1, false, 'פתוח', { f: 'דלת חירום חסומה', photo_url: 'https://x/d1.jpg' }), r('d2', 'דנה', 2, true, 'תקין'), r('d3', 'דנה', 3, true, 'תקין'), r('d4', 'דנה', 4, true, 'תקין'),
@@ -46,7 +55,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const board = Array.from(document.querySelectorAll('#tru-mgr-board .tru-board-row')).map(x => ({ u: x.dataset.truU, total: x.lastElementChild.textContent.trim(), elig: /זכאי/.test(x.textContent), chips: Array.from(x.querySelectorAll('span[title]')).filter(c => /16a34a/.test(c.getAttribute('style'))).length }));
     return { cur: CUR, month: document.getElementById('tru-mgr-month').textContent, pills, board, rows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length };
   }, { M, D, prev });
-  check('page opens on this month', s1.cur === 'trustees' && /2026/.test(s1.month), s1.month);
+  check('page opens on this month', s1.cur === 'trustees' && YEAR.test(s1.month), s1.month);
   // #684 added a fifth pill between נסגרו and תקינים: closed findings that
   // nobody has checked. The six closed ones start out unchecked, so it is 6.
   check('pills: 2 open, 6 closed, 6 of them unchecked, 9 ok, 17 all (last month excluded)', s1.pills.join(' ') === 'פתוחים: 2 נסגרו: 6 נסגרו, טרם נבדקו: 6 תקינים: 9 הכל: 17', s1.pills);
@@ -128,7 +137,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('CSV: BOM, file name with the month, leaderboard block (3 rows) then a blank line then 17 report rows', c1.bom && c1.dl === 'tapugan-trustees-' + M + '.csv' && /לוח ניקוד/.test(c1.head) && /"נאמן","משימות/.test(c1.boardHdr) && c1.boardRows.length === 3 && /"דנה","6","60","1","2","62","כן"/.test(c1.boardRows[0]) && c1.blank && /"נאמן","משימה","שם המשימה"/.test(c1.repHdr) && c1.nRep === 17, c1);
   const mo = await page.evaluate(() => { _truMgrShift(-1); const a = { month: document.getElementById('tru-mgr-month').textContent, rows: document.querySelectorAll('#tb-trustees tr[data-tru-row]').length, all: Array.from(document.querySelectorAll('#tru-mgr-summary button')).slice(-1)[0].textContent.trim() }; _truExportCsv(); a.toastPrev = window.__toasts.slice(-1)[0]; _truMgrShift(0); a.back = document.getElementById('tru-mgr-month').textContent; return a; });
-  check('previous month: 1 row (old1 open), all: 1; CSV still exports; "החודש" returns', mo.rows === 1 && mo.all === 'הכל: 1' && /יוצא/.test(mo.toastPrev) && /2026/.test(mo.back) && mo.month !== mo.back, mo);
+  check('previous month: 1 row (old1 open), all: 1; CSV still exports; "החודש" returns', mo.rows === 1 && mo.all === 'הכל: 1' && /יוצא/.test(mo.toastPrev) && YEAR.test(mo.back) && mo.month !== mo.back, mo);
   const hm = await page.evaluate(() => { document.getElementById('tru-mgr-more-btn').click(); const items = Array.from(document.querySelectorAll('#tru-mgr-menu button')).map(b => b.textContent.trim()); document.body.click(); return items; });
   check('header ⋯: roster · trustee link · task catalogue · winner · CSV export · trustee log to Excel · hazards to Excel · print · open the trustee screen', hm.length === 9 && /רשימת הנאמנים/.test(hm[0]) && /קישור לנאמנים/.test(hm[1]) && /קטלוג המשימות/.test(hm[2]) && /זוכה החודש/.test(hm[3]) && /CSV/.test(hm[4]) && /יומן דיווחי נאמנים/.test(hm[5]) && /מפגעים לאקסל/.test(hm[6]) && /הדפס/.test(hm[7]) && /מסך הנאמן/.test(hm[8]), hm);
   await page.waitForTimeout(300);
@@ -157,7 +166,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const sel = document.getElementById('tru-win-u');
     return { label, month: document.getElementById('tru-win-month').textContent, opts: Array.from(sel.options).map(o => o.textContent.trim()), picked: sel.value, hint: document.getElementById('tru-win-hint').textContent, hist: document.getElementById('tru-win-hist').textContent };
   });
-  check('no winner yet: board offers "הכרז זוכה"; modal opens on the shown month with the eligible leader preselected', /הכרז זוכה/.test(w1.label || '') && /2026/.test(w1.month) && w1.picked === 'דנה' && w1.opts.length === 3 && /62/.test(w1.opts[0]) && /3 נאמנים זכאים/.test(w1.hint) && /לא הוכרז אף זוכה/.test(w1.hist), w1);
+  check('no winner yet: board offers "הכרז זוכה"; modal opens on the shown month with the eligible leader preselected', /הכרז זוכה/.test(w1.label || '') && YEAR.test(w1.month) && w1.picked === 'דנה' && w1.opts.length === 3 && /62/.test(w1.opts[0]) && /3 נאמנים זכאים/.test(w1.hint) && /לא הוכרז אף זוכה/.test(w1.hist), w1);
 
   const w2 = await page.evaluate(() => {
     document.getElementById('tru-win-note').value = 'סגרה מפגע אחד';

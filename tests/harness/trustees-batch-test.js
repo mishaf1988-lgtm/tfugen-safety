@@ -42,6 +42,14 @@ const OTHER = 'דנה לוי';
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, locale: 'he-IL' });
   const page = await ctx.newPage();
+  // The fixtures date "this month" off the clock: yesterday, four days ago,
+  // the mid-month nudge window. On the 1st, yesterday is last month and the
+  // window is shut, so the suite went red on 01/10/2026 with no code change.
+  // Pin the page clock to noon on the 15th of the current month, never a
+  // month boundary. HARNESS_TODAY=YYYY-MM-DD stands in for the real date.
+  const today = process.env.HARNESS_TODAY ? new Date(process.env.HARNESS_TODAY + 'T12:00:00') : new Date();
+  const NOW = new Date(today.getFullYear(), today.getMonth(), 15, 12, 0, 0);
+  await page.clock.setFixedTime(NOW);
   page.on('dialog', (d) => d.accept().catch(() => {}));
   await page.route('**/*', (r) => r.request().url().startsWith('file://') ? r.continue() : r.abort());
   await page.goto(HTML, { waitUntil: 'load' });
