@@ -31,7 +31,9 @@ if tool == "Bash":
     cmd = inp.get("command", "") or ""
     if not re.search(r"(^|[;&|\s])git\s+push\b", cmd) or inp.get("run_in_background"):
         print("{}"); sys.exit(0)
-    ref = branch()
+    # The branch named in the push (git push -u origin <b>), else the checkout's.
+    m = re.search(r"git\s+push\b[^;&|]*?\borigin\s+(?:HEAD:)?([\w./-]+)", cmd)
+    ref = m.group(1) if m else branch()
 elif tool == "mcp__github__create_pull_request":
     ref = inp.get("head", "") or branch()
 else:

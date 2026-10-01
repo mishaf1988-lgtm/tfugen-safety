@@ -12,10 +12,10 @@ def hook(tool, inp):
     except Exception: return 'BAD:' + r.stdout + r.stderr
 
 o = hook('Bash', {'command': 'git push -q -u origin routine/x-2026-10-01'})
-check('git push: the background watch command', 'ci-wait.sh ' in o and 'run_in_background' in o, o)
+check('git push: the background watch command, for the branch pushed', 'ci-wait.sh routine/x-2026-10-01 ' in o and 'run_in_background' in o, o)
 check('...in this repo, and not gh pr checks (GraphQL, blocked here)', 'mishaf1988-lgtm/tfugen-safety' in o and 'gh pr checks' not in o, o)
-o = hook('Bash', {'command': 'git add -A && git commit -qm x && git push -q 2>&1 | tail -1'})
-check('push at the end of a chain: also', 'ci-wait.sh' in o, o)
+o = hook('Bash', {'command': 'git add -A && git commit -qm x && git push -q origin routine/z-2026-10-01 2>&1 | tail -1'})
+check('push at the end of a chain: also', 'ci-wait.sh routine/z-2026-10-01 ' in o, o)
 check('git status: nothing', hook('Bash', {'command': 'git status --short'}) == '')
 check('a word containing push (pushd): nothing', hook('Bash', {'command': 'pushd /tmp && ls'}) == '')
 check('the watch itself (background): nothing', hook('Bash', {'command': 'bash .claude/hooks/ci-wait.sh x', 'run_in_background': True}) == '')
