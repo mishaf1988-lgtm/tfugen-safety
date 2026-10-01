@@ -9,6 +9,9 @@
 --   * no session used (created / refreshed) in the last 30 days, so a phone
 --     that is still in use keeps its session
 --   * owns no file in storage.objects
+-- Approval: Michael, questionnaire 01/10/2026, explicit (a DELETE on auth.users).
+-- Rollback: a deleted anonymous user cannot be brought back, and needs no backup:
+-- no row anywhere points at it, and a phone without a session signs in anew.
 -- Safe to re-run. Undo the weekly part: select cron.unschedule('anon-users-cleanup');
 
 create schema if not exists private;
