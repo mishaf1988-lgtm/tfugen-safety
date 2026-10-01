@@ -148,6 +148,6 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - Checklist לפני PR: `project-files/CHECKLIST.md`
 - Skill מפורט: `.claude/skills/tfugen-dev/SKILL.md`
 - **Skill לחיסכון בטוקנים: `.claude/skills/tfugen-lean/SKILL.md`** — תשובות קצרות, grep צר במקום קריאת קבצים, ורשימה מפורשת של מה שאסור לחתוך בו (מערך הבדיקות, שבירה מכוונת, כלל 7)
-- **Skill לקחים: `.claude/skills/tfugen-lessons/SKILL.md`**: טעויות שהתגלו, הכלל מכל אחת ואיך נאכף. **כלל קבוע (מיכאל, 01/10/2026): כל טעות שמתגלה, של Claude או של מיכאל, נכנסת ל-skill הזה באותו PR של התיקון.** אם אפשר לאכוף בקוד, להציע hook או בדיקה
+- **Skill לקחים: `.claude/skills/tfugen-lessons/SKILL.md`**: טעויות שהתגלו, הכלל מכל אחת ואיך נאכף. **כלל קבוע (מיכאל, 01/10/2026): כל טעות שמתגלה, של Claude או של מיכאל, נכנסת ל-skill הזה באותו PR של התיקון.** נאכף ב-GitHub: PR שהכותרת שלו מתחילה ב-Fix / תיקון נכשל ב-`tests` בלי לקח או שורת `בלי לקח: <סיבה>` בתיאור. טעות שחזרה: להעלות `חזר:`, ואם הלקח בטקסט בלבד, להוסיף hook או בדיקה (`lessons-format-test.py` אוכף). אם אפשר לאכוף בקוד, להציע hook או בדיקה
 - **Skill היסטוריה: `.claude/skills/tfugen-history/SKILL.md`** — הרקע שהוצא מהקובץ הזה (Vercel, 375 רשומות ncr, התנגשויות הסנכרון, אימות ה-MCP, מדיניות הסיסמאות). לטעון רק כשמשימה נוגעת בהם
 - **Hooks: `.claude/hooks/README.md`** — החוקים שנאכפים בקוד
