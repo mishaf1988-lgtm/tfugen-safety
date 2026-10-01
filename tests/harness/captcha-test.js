@@ -19,9 +19,14 @@ const ORIGIN = 'https://tapugan.test';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
-const KEY_LINE = "var TURNSTILE_SITEKEY='';";
-if (!SRC0.includes(KEY_LINE)) { console.log('HARNESS ERROR: TURNSTILE_SITEKEY line not found (the repo default must be an empty key)'); process.exit(1); }
-const withKey = (src) => src.replace(KEY_LINE, "var TURNSTILE_SITEKEY='0x-test-key';");
+// The production key went in on 01/10/2026 (Cloudflare widget "Tapugan Safety
+// login", hostname tapugan-safety.pages.dev, Managed). The page is tested
+// both ways: with the key emptied (off) and with a stand-in key (on).
+const KEY_RE = /var TURNSTILE_SITEKEY='([^']*)';/;
+const km = KEY_RE.exec(SRC0);
+if (!km) { console.log('HARNESS ERROR: TURNSTILE_SITEKEY line not found'); process.exit(1); }
+const SRC_OFF = SRC0.replace(KEY_RE, "var TURNSTILE_SITEKEY='';");
+const withKey = (src) => src.replace(KEY_RE, "var TURNSTILE_SITEKEY='0x-test-key';");
 
 // supabase-js stand-in: records what each sign-in was called with.
 const stub = (o) => `
@@ -53,6 +58,7 @@ const TURNSTILE = `
 `;
 
 (async () => {
+  check('the repo key is empty or a real Turnstile sitekey (0x4AAAA..., no spaces)', km[1] === '' || /^0x4AAAAAA[A-Za-z0-9_-]{10,30}$/.test(km[1]), km[1]);
   const browser = await pw.chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he-IL' });
   const errs = [];
@@ -64,7 +70,7 @@ const TURNSTILE = `
     await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); localStorage.setItem('tfgn_mgr_device', '1'); } catch (e) {} });
     await p.route('**/*', async (r) => {
       const u = r.request().url();
-      if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: o.key ? withKey(SRC0) : SRC0 });
+      if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: o.key ? withKey(SRC0) : SRC_OFF });
       if (/supabase-js/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: stub(o) });
       if (/challenges\.cloudflare\.com\/turnstile/.test(u)) { p.__ts++; if (o.blockTurnstile) return r.abort(); return r.fulfill({ contentType: 'application/javascript', body: TURNSTILE }); }
       if (/\/rest\/v1\/app_users/.test(u)) return r.fulfill({ contentType: 'application/json', body: '[]' });
