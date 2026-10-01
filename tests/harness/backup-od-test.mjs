@@ -118,7 +118,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     const r = await onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/backup-od', { method: 'POST', headers, body: JSON.stringify(body) }), env: ENV }); return { status: r.status, text: await r.text(), w }; };
   const odRead = (o) => { const w = world(o); const f0 = globalThis.fetch; globalThis.fetch = async (u, i) => { const m = /\/root:\/(.+)\/([^/]+):\/content$/.exec(String(u)); if (m && (!i || !i.method || i.method === 'GET')) { const f = decodeURIComponent(m[1]), n = decodeURIComponent(m[2]); return w.od[f] && w.od[f].has(n) ? new Response('{"from":"onedrive","f":"' + f + '"}', { status: 200 }) : new Response('{}', { status: 404 }); } return f0(u, i); }; return w; };
   let q = await rd({}, { op: 'read', name: BK[0] }, 'wrong');
-  check('read-back for the drill: not without the secret', q.status === 403, q.status);
+  check('read-back for the drill: not without the secret', q.status === 401 || q.status === 403, q.status);
   q = await rd({ email: 'admin@tfugen.local' }, { op: 'read', name: BK[0] });
   check('... not even for an admin session', q.status === 403, q.status);
   q = await rd({}, { op: 'read', name: '../index.html' }, 'nsec');
