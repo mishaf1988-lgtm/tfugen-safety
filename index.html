@@ -7441,10 +7441,14 @@ function _isoClauses(){
   // Participation = how many of the active trustees reported this month, not
   // whether anyone did (upgrade review 26, Michael 01/10/2026: half or more is
   // green, under half amber, none red). The same rule as the meeting data.
-  var truAct=(DB.trustees||[]).filter(function(t){return t&&t.active!==false;}).length,truWho={};
+  // Only names on the active roster: a manager closing from the mail link
+  // files a row under their own name, and is not a trustee.
+  var truRos={},truWho={};
+  (DB.trustees||[]).forEach(function(t){if(t&&t.n&&t.active!==false)truRos[t.n]=1;});
+  var truAct=Object.keys(truRos).length;
   if(typeof _truRowMonth==='function'&&typeof _truThisMonth==='function')
-    (DB.trustee_reports||[]).forEach(function(r){if(r&&r.u&&_truRowMonth(r)===_truThisMonth())truWho[r.u]=1;});
-  var truMonth=Math.min(Object.keys(truWho).length,truAct||Object.keys(truWho).length);
+    (DB.trustee_reports||[]).forEach(function(r){if(r&&truRos[r.u]&&_truRowMonth(r)===_truThisMonth())truWho[r.u]=1;});
+  var truMonth=Object.keys(truWho).length;
   var truSt=!truAct||!truMonth?'bad':(truMonth*2>=truAct?'ok':'warn');
   add(s45,'5.4','\u05d4\u05e9\u05ea\u05ea\u05e4\u05d5\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d5\u05d4\u05ea\u05d9\u05d9\u05e2\u05e6\u05d5\u05ea',
     truN+' \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea, '+truR+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e1\u05d9\u05d5\u05e8, '+truMonth+' \u05de\u05ea\u05d5\u05da '+truAct+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05d7\u05d5\u05d3\u05e9',

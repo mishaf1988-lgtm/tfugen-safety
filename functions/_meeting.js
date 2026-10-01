@@ -76,7 +76,7 @@ export function meetingHazards(rows, ref) {
     };
   });
   const sum = (k) => byDept.reduce((s, x) => s + x[k], 0);
-  const total = { dept: '\u05e1\u05d4"\u05db', closed: sum('closed'), open: sum('open'), newThisWeek: sum('newThisWeek'), closedThisWeek: sum('closedThisWeek'), total: sum('total'), newClosed: sum('newClosed'), openPrior: sum('openPrior'), ...closing(rows, ref) };
+  const total = { dept: '\u05e1\u05d4"\u05db', closed: sum('closed'), open: sum('open'), newThisWeek: sum('newThisWeek'), closedThisWeek: sum('closedThisWeek'), total: sum('total'), newClosed: sum('newClosed'), openPrior: sum('openPrior'), ...closing(rows.filter((r) => DEPTS.includes(r[3])), ref) };
   const open = rows.filter((r) => r[10] !== S_DONE);
   const item = (r) => ({ id: r[0], dept: r[3], shortDescription: String(r[5] || '').replace(/\s+/g, ' ').substring(0, 80) });
   return {
@@ -135,9 +135,13 @@ export function participationLevel(active, reported) {
 }
 export function meetingTrustees(trustees, reports, ref) {
   const m = ref.substring(0, 7);
-  const active = (trustees || []).filter((t) => t && t.active !== false).length;
+  // Only names on the active roster count: a manager who closes a finding from
+  // the mail link files a row under their own name (01/10/2026: "\u05e9\u05d9\u05de\u05d9").
+  const roster = {};
+  (trustees || []).forEach((t) => { if (t && t.n && t.active !== false) roster[t.n] = 1; });
+  const active = Object.keys(roster).length;
   const who = {};
-  (reports || []).forEach((r) => { if (r && r.u && d10(r.d || r.ts).substring(0, 7) === m) who[r.u] = 1; });
-  const reported = Math.min(Object.keys(who).length, active || Object.keys(who).length);
+  (reports || []).forEach((r) => { if (r && roster[r.u] && d10(r.d || r.ts).substring(0, 7) === m) who[r.u] = 1; });
+  const reported = Object.keys(who).length;
   return { month: m, active, reported, level: participationLevel(active, reported) };
 }
