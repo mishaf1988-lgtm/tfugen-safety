@@ -20022,6 +20022,8 @@ function loadFromSupabase(){
 var _nad=[];
 var _naf={};
 var _naVer={};
+// Rated analyses (any version) from the last _ncrLoadAI, for _ncrFbExamples.
+var _naFb=[];
 var _SB='https://znhjtpcltrxxyfjczgvw.supabase.co';
 var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 /* ---- PWA: register service worker + install prompt ---- */
@@ -20889,6 +20891,7 @@ function _ncrLoadAI(){
   .then(function(r){if(!r.ok){console.warn('ncr_ai fetch not ok:',r.status);return [];}return r.json();})
   .then(function(rows){
     if(!Array.isArray(rows))return;
+    _naFb=rows.filter(function(r){return r.feedback==='up'||r.feedback==='down';});
     rows.forEach(function(r){
       if((_naVer[r.ncr_id]||0)>=r.version)return;
       _naf[r.ncr_id]={
@@ -21063,6 +21066,31 @@ window._ncrFb=function(id,val){
     alert('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05e9\u05de\u05d9\u05e8\u05ea \u05d4\u05de\u05e9\u05d5\u05d1: '+(err&&err.message||err));
   });
 };
+// Michael's ratings teach the next analysis (01/10/2026, "a machine that
+// learns"; the buttons exist since 30/04, until now nothing read them). Up to
+// 2 analyses rated up, same category first, then newest, go into the prompt as
+// the bar to match, and 1 rated down as what to avoid. Sources: the rated rows
+// of the last load (_naFb, older versions too) and _naf (a rating given in
+// this session, before the next load). The NCR being analysed is left out.
+var NCR_FB_UP=2,NCR_FB_DOWN=1;
+function _ncrFbExamples(n){
+  var byKey={};
+  (_naFb||[]).forEach(function(r){byKey[r.ncr_id+':'+r.version]={id:r.ncr_id,fb:r.feedback,ts:r.feedback_ts||'',a:{risk:r.risk,root_cause:r.rc,immediate_action:r.ia,corrective_actions:Array.isArray(r.ca)?r.ca:[],preventive:r.prev}};});
+  Object.keys(_naf||{}).forEach(function(id){var a=_naf[id];if(!a||!a.version)return;var k=id+':'+a.version;
+    if(a.feedback==='up'||a.feedback==='down')byKey[k]={id:id,fb:a.feedback,ts:(byKey[k]&&byKey[k].ts)||'9999',a:{risk:a.risk,root_cause:a.root_cause,immediate_action:a.immediate_action,corrective_actions:a.corrective_actions||[],preventive:a.preventive}};
+    else delete byKey[k];});
+  var cat=n&&n.category||'';
+  var all=Object.keys(byKey).map(function(k){return byKey[k];}).filter(function(e){return !n||e.id!==n.id;});
+  all.forEach(function(e){var src=(_nad||[]).find(function(x){return x.id===e.id;});e.d=src?String(src.d||''):'';e.same=!!(src&&cat&&src.category===cat);});
+  all.sort(function(a,b){return (b.same-a.same)||(b.ts>a.ts?1:b.ts<a.ts?-1:0);});
+  return {up:all.filter(function(e){return e.fb==='up';}).slice(0,NCR_FB_UP),down:all.filter(function(e){return e.fb==='down';}).slice(0,NCR_FB_DOWN)};
+}
+function _ncrFbPrompt(n){
+  var ex=_ncrFbExamples(n);if(!ex.up.length&&!ex.down.length)return '';
+  var one=function(e){return 'NCR: '+e.d.substring(0,300)+'\nAnalysis: '+JSON.stringify(e.a).substring(0,900)+'\n';};
+  return (ex.up.length?'Analyses the safety manager rated GOOD. Match their depth, concreteness and style (not their content):\n'+ex.up.map(one).join('\n')+'\n':'')
+    +(ex.down.length?'An analysis the safety manager rated NOT GOOD. Avoid what made it weak (generic, shallow, not actionable):\n'+ex.down.map(one).join('\n')+'\n':'');
+}
 window._ncrAI=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
   // E2: one busy marker, replaced on repeated clicks instead of stacking.
@@ -21092,6 +21120,7 @@ window._ncrAI=function(id){
     'Corrective action already recorded: '+(n.c||'\u2014')+'\n'+
     'Owner already assigned: '+(n.o||'\u2014')+'\n'+
     'If a field above is not \u2014, treat it as the decision already made on site: build on it, say plainly if you disagree, and do not silently replace it.\n\n'+
+    _ncrFbPrompt(n)+
     'Schema (respond in Hebrew values, JSON only, no markdown fences):\n'+
     '{\n'+
     '  "risk": "critical|high|medium|low",\n'+
