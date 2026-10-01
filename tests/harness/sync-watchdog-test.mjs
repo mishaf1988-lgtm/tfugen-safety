@@ -42,6 +42,25 @@ l = assess(S({ ...fresh, hazard_xlsm_rows: '164' }), NOW, true, ago(600));
 check('the file at 164 of 205 rows (80%): "full:xlsm", with the numbers', keys(l).join() === 'full:xlsm' && /מתמלא/.test(l[0].title) && /164 שורות מתוך 205/.test(l[0].detail), l);
 check('163 rows: nothing yet', assess(S({ ...fresh, hazard_xlsm_rows: '163' }), NOW, true, ago(600)).length === 0);
 
+// The Microsoft client secret expired (01/10/2026): Microsoft says AADSTS7000222.
+const expired = 'microsoft token: AADSTS7000222: The provided client secret keys for app are expired.';
+l = assess(S({ ...fresh, hazard_xlsm_err: expired, hazard_xlsm_err_at: ago(35), deck_err: expired, deck_err_at: ago(2) }), NOW, true, ago(600));
+check('expired secret: one "secret" problem at once, not one per part', keys(l).join() === 'secret' && /פג תוקף הסוד/.test(l[0].title) && /ONEDRIVE_CLIENT_SECRET/.test(l[0].detail) && /Certificates & secrets/.test(l[0].detail), l);
+check('...a different error is still an "err:" after 30 minutes', keys(assess(S({ ...fresh, hazard_xlsm_err: 'onedrive 423', hazard_xlsm_err_at: ago(35) }), NOW, true, ago(600))).join() === 'err:hazard_xlsm');
+
+// The daily Vitre refresher import (vitre.js op:'sync', 06:00).
+const vs = (o) => JSON.stringify({ at: ago(60), ok: true, found: 3, added: 0, failed: 0, pending: 0, error: null, ...o });
+check('Vitre ran an hour ago without error: nothing', assess(S({ ...fresh, vitre_sync: vs({}) }), NOW, true, ago(6000), true).length === 0);
+l = assess(S({ ...fresh, vitre_sync: vs({ ok: false, error: 'vitre 401 on page 1' }) }), NOW, true, ago(6000), true);
+check('Vitre import failed: "vitre:err" with the error and the time', keys(l).join() === 'vitre:err' && /Vitre/.test(l[0].title) && /401/.test(l[0].detail) && /30\/09\/2026 10:00/.test(l[0].detail), l);
+l = assess(S({ ...fresh, vitre_sync: vs({ at: ago(27 * 60) }) }), NOW, true, ago(6000), true);
+check('Vitre last ran 27 hours ago: "vitre:stale"', keys(l).join() === 'vitre:stale' && /לא רץ/.test(l[0].title) && /06:00/.test(l[0].detail), l);
+check('25 hours is not yet stale', assess(S({ ...fresh, vitre_sync: vs({ at: ago(25 * 60) }) }), NOW, true, ago(6000), true).length === 0);
+check('no Vitre run recorded, watchdog up 27 hours: stale', keys(assess(S(fresh), NOW, true, ago(27 * 60), true)).join() === 'vitre:stale');
+check('Vitre keys not set: no Vitre problem', assess(S({ ...fresh, vitre_sync: vs({ error: 'x' }) }), NOW, true, ago(6000), false).length === 0);
+check('the watchdog reads the key vitre.js writes', stateKeys().includes('vitre_sync') && /const SYNC_KEY = 'vitre_sync'/.test(src('functions/api/vitre.js')));
+check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\)\)/.test(src('functions/_watchdog.js')));
+
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
 check('new problem: to mail', st.fresh.join() === 'stale:deck' && !st.done.length);
