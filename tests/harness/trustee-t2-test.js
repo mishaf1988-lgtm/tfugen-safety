@@ -46,6 +46,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('employee mode lands straight on the trustee screen: no back button, full-interface toggle stays', e1.emp && e1.cur === 'emp-home' && e1.only && e1.back === 'none' && e1.toggle !== 'none', e1);
   check('point 1: "how it works" is open before a name is chosen and covers tasks, WhatsApp replacement, routing, scoring, monthly reset, danger', e1.introOpen && /9 משימות/.test(e1.introTxt) && /במקום בוואטסאפ/.test(e1.introTxt) && /לממונה הבטיחות לניתוב/.test(e1.introTxt) && /10 לכל משימה/.test(e1.introTxt) && /מתאפס/.test(e1.introTxt) && /סכנה מיידית/.test(e1.introTxt), e1.introTxt.slice(0, 120));
+  // Michael, 21/09/2026: text people read uses keyboard characters only (screenshot 01/10/2026 had a long dash and guillemets here).
+  check('"how it works" uses keyboard characters only: no long dash, no guillemets, no curly quotes', !/[\u2014\u2013\u05be\u00ab\u00bb\u201c\u201d\u2018\u2019\u2026\u00b7]/.test(e1.introTxt), e1.introTxt);
   await page.waitForTimeout(150);
   const e2 = { hero: await disp('#pg-emp-home .emp-hero'), grid: await disp('#pg-emp-home .emp-grid'), panel: await disp('#emp-trustee'), body: await page.evaluate(() => document.getElementById('tru-body').textContent.trim()), pulls: await page.evaluate(() => window.__pulls) };
   check('the hero and the four generic tiles are hidden; the trustee panel shows and pulled from the server', e2.hero === 'none' && e2.grid === 'none' && e2.panel !== 'none' && e2.pulls >= 1, e2);
