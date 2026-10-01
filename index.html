@@ -22623,8 +22623,9 @@ function _backupPruneOneDrive(keep){
     return Promise.all([listFolder('/_Backups/cron'),listFolder('/_Backups')]).then(function(both){
       var cronFiles=((both[0]&&both[0].value)||[]).filter(function(it){return it.file&&it.name;});
       // Top-level _Backups contains: timestamp folders (browser-side) +
-      // the `cron` subfolder (don't touch). Filter for folders only.
-      var browserFolders=((both[1]&&both[1].value)||[]).filter(function(it){return it.folder&&it.name&&it.name!=='cron';});
+      // the `cron` subfolder (don't touch), and since 01/10/2026 the server's
+      // `monthly` and `photos` (functions/api/backup-od.js). Folders only.
+      var browserFolders=((both[1]&&both[1].value)||[]).filter(function(it){return it.folder&&it.name&&it.name!=='cron'&&it.name!=='monthly'&&it.name!=='photos';});
       cronFiles.sort(function(a,b){return b.name.localeCompare(a.name);});
       browserFolders.sort(function(a,b){return b.name.localeCompare(a.name);});
       var cronToDelete=cronFiles.slice(keep);

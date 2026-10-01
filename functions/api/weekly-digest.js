@@ -130,17 +130,30 @@ export function digestSubject(d, today) {
   return 'Tapugan Safety: ' + H.title.split(' - ')[0] + ' ' + fd(today) + ' - ' + d.overdueCount + ' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8, ' + d.soon.length + ' \u05d9\u05e2\u05d3 \u05e7\u05e8\u05d5\u05d1, ' + d.trustee.length + ' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd';
 }
 
+// The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
+// problems when the last run failed or there was none for two days.
+export function backupProblem(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  const t = '\u05d2\u05d9\u05d1\u05d5\u05d9 \u05dc-OneDrive: ';
+  if (!r || !r.at) return t + '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df';
+  if (nowMs - Date.parse(r.at) > 48 * 3600 * 1000) return t + '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ' + ilTime(r.at);
+  if (!r.ok) return t + '\u05e0\u05db\u05e9\u05dc \u05d1-' + ilTime(r.at) + ' (' + String((r.errors || []).join('; ')).substring(0, 120) + ')';
+  return null;
+}
+
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const [hazards, reports, tasks, st] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY]).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od']).catch(() => ({})),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
   const watchOpen = Object.keys((watch && watch.open) || {}).map((k) => watch.open[k].title).filter(Boolean);
+  const bk = backupProblem(v('backup_od'), Date.now());
+  if (bk) watchOpen.push(bk);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
   const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
