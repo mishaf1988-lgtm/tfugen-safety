@@ -39,8 +39,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **4. `expectedHeadSha` מקוצר (01/10/2026, #1008).**
 מה קרה: SHA קצר חסם.
-הכלל: בלי `expectedHeadSha` מקוצר.
-נאכף: ה-hook משווה לפי תחילית.
+הכלל: בלי `expectedHeadSha`.
+נאכף: ה-hook.
 חזר: 0
 
 ## כשמשהו נכשל
@@ -131,7 +131,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא, ובקוד לפני "פתוח" ב-handoff. בוצע = ✅ באותו PR.
 נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
-חזר: 2 (handoff מנו פריטים שבוצעו).
+חזר: 3 (handoff מנו פריטים שבוצעו; 02/10/2026 שלח לחפש פריט בסעיף 9 כשלא נשאר).
 
 ## לפני טענה או ממצא
 
