@@ -157,7 +157,7 @@ export async function onRequest({ request, env }) {
     if (!env.AI || typeof env.AI.run !== 'function') {
       return jsonResp({
         error: 'Workers AI binding not configured',
-        hint: 'In Cloudflare Pages dashboard: Settings → Functions → Bindings → Add Binding → Workers AI. Variable name must be exactly "AI". Then redeploy.'
+        hint: 'In Cloudflare Pages dashboard: Settings > Functions > Bindings > Add Binding > Workers AI. Variable name must be exactly "AI". Then redeploy.'
       }, 500, cors);
     }
     // The client speaks Anthropic; Workers AI does not. Until 2026-09-20 the
