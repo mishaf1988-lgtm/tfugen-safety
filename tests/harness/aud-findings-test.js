@@ -97,6 +97,28 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('a past discovery date shows 15/01/2026, not "expired"', r.txt.includes('15/01/2026') && !r.txt.includes('פג'), r.txt);
   check('the delete mark is white on red, not red on red', r.color === 'rgb(255, 255, 255)' && r.color !== r.bg, r);
 
+  console.log('\n7. the delete dialog on a phone');
+  r = await page.evaluate(() => {
+    try { localStorage.removeItem('tfgn_del_pw'); } catch (e) {}
+    askDel('ncr', 'n9'); const m = g('m-del-confirm');
+    return { w: m.getBoundingClientRect().width, vw: window.innerWidth, hint: g('del-pw-hint').innerHTML, warn: g('del-warn').textContent };
+  });
+  check('it fills the phone width (was 300px)', r.w >= r.vw - 2, r);
+  check('the hint is a button, not a console command', r.hint.includes('_delPwChange') && !r.hint.includes('setDeletePassword('), r.hint);
+  check('no long dash in the warning', !r.warn.includes('\u2014'), r.warn);
+  answer = true;
+  r = await page.evaluate(() => { cancelDel(); window.prompt = (() => { let k = 0; return () => (k++ ? '4321' : '4321'); })(); _delPwChange(); return { pw: _delPw(), hint: g('del-pw-hint').style.display }; });
+  check('two matching entries set it on this device, and the hint goes away', r.pw === '4321' && r.hint === 'none', r);
+  await page.evaluate(() => { try { localStorage.removeItem('tfgn_del_pw'); } catch (e) {} });
+
+  console.log('\n8. a deleted NCR is not counted as an open finding');
+  r = await page.evaluate(() => {
+    DB.ncr = [{ id: 'k1', num: 'NCR-0021', d: 'x', s: 'פתוח' }];
+    DB.auds = [{ id: 'z1', n: 'ז', r: 'בטיחות', d: '2026-09-30', s: 'הושלם', sm: 'נפתח NCR-0020 מממצא בביקורת\nנפתח NCR-0021 מממצא בביקורת' }];
+    rAud(); return document.getElementById('tb-aud').textContent;
+  });
+  check('only the NCR that exists: 1 open of 1', r.includes('NCR: 1 פתוחים מתוך 1'), r);
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();

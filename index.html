@@ -645,6 +645,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
    for some browsers, and CSS-level fixes failed across iterations
    (#402, #406, #407, #408, #409, #434). Universal cards is the only
    layout that consistently works for all renders. */
+@media(max-width:699px){.modal{max-width:none!important}}
 @media(min-width:700px){
   .main{max-width:900px;margin:0 auto}
   .kgrid{grid-template-columns:repeat(4,1fr)}
@@ -4249,7 +4250,7 @@ function askDel(tbl,id){
   if(warn){
     if(_DEL_PROTECTED[tbl]){
       warn.style.display='';
-      warn.innerHTML='\u26a0 \u05d6\u05d5 \u05e8\u05e9\u05d5\u05de\u05ea <strong>'+esc(_DEL_PROTECTED[tbl])+'</strong> \u2014 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4 \u05d5\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d9\u05d5\u05e8\u05d3\u05ea \u05d2\u05dd \u05de\u05d4\u05e9\u05e8\u05ea.';
+      warn.innerHTML='\u26a0 \u05d6\u05d5 \u05e8\u05e9\u05d5\u05de\u05ea <strong>'+esc(_DEL_PROTECTED[tbl])+'</strong> - \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4 \u05d5\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d9\u05d5\u05e8\u05d3\u05ea \u05d2\u05dd \u05de\u05d4\u05e9\u05e8\u05ea.';
     }else warn.style.display='none';
   }
   var pw=g('del-pw');if(pw)pw.value='';
@@ -4265,9 +4266,17 @@ function _delPwHint(){
   var h=g('del-pw-hint');if(!h)return;
   if(_delPwIsDefault()){
     h.style.display='';
-    h.innerHTML='\u05e1\u05d9\u05e1\u05de\u05ea \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e9\u05d9\u05de\u05d5\u05e9. \u05dc\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4: <code>setDeletePassword(\'...\')</code>';
+    h.innerHTML='\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d9\u05d0 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc. <button type="button" class="btn btn-s btn-sm" onclick="_delPwChange()">\ud83d\udd11 \u05e9\u05e0\u05d4 \u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05d7\u05d9\u05e7\u05d4</button>';
   }else h.style.display='none';
 }
+// The hint used to say "setDeletePassword('...')": a console command, of no
+// use on a phone (02/10/2026). Two prompts, the same per-device setter.
+window._delPwChange=function(){
+  var a=prompt('\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05d7\u05d9\u05e7\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05dc\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea 4 \u05ea\u05d5\u05d5\u05d9\u05dd):');if(a===null)return;
+  var b=prompt('\u05e9\u05d5\u05d1, \u05dc\u05d0\u05d9\u05de\u05d5\u05ea:');if(b===null)return;
+  if(String(a).trim()!==String(b).trim()){toast('\u05d4\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea \u05dc\u05d0 \u05d6\u05d4\u05d5\u05ea');return;}
+  if(setDeletePassword(a))_delPwHint();
+};
 function cancelDel(){
   g('ov-del-confirm').style.display='none';
   g('m-del-confirm').style.display='none';
@@ -17085,7 +17094,8 @@ function _audFndNcrs(a,fs){
 }
 function _audNcrs(a){
   var refs=String((a&&a.sm)||'').match(/NCR-\d+/g)||[],seen={},out=[];
-  refs.forEach(function(n){if(seen[n])return;seen[n]=1;out.push((DB.ncr||[]).find(function(r){return r.num===n;})||{num:n});});
+  // A deleted NCR stays in the summary text; it is not an open finding.
+  refs.forEach(function(n){if(seen[n])return;seen[n]=1;var r=(DB.ncr||[]).find(function(x){return x.num===n;});if(r)out.push(r);});
   return out;
 }
 // After a restored draft the chains fill only empty fields: overwriting it
@@ -17441,7 +17451,7 @@ function delAllHearing(){
   var what=g('del-what');
   if(what)what.innerHTML='<strong>\u05de\u05e8\u05e9\u05dd \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05d4\u05e9\u05de\u05d9\u05e2\u05d4</strong><br><span style="color:var(--t2)">'+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u2014 \u05d4\u05db\u05dc</span>';
   var warn=g('del-warn');
-  if(warn){warn.style.display='';warn.innerHTML='\u26a0 \u05de\u05e2\u05e7\u05d1 \u05e8\u05e4\u05d5\u05d0\u05d9 \u05e1\u05d8\u05d8\u05d5\u05d8\u05d5\u05e8\u05d9 \u2014 \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4.';}
+  if(warn){warn.style.display='';warn.innerHTML='\u26a0 \u05de\u05e2\u05e7\u05d1 \u05e8\u05e4\u05d5\u05d0\u05d9 \u05e1\u05d8\u05d8\u05d5\u05d8\u05d5\u05e8\u05d9 - \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05d4\u05e4\u05d9\u05db\u05d4.';}
   var pw=g('del-pw');if(pw)pw.value='';
   var err=g('del-pw-err');if(err)err.textContent='';
   g('ov-del-confirm').style.display='block';
