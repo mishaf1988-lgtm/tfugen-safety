@@ -3151,7 +3151,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1511;&#1497;&#1513;&#1493;&#1512; (&#1504;&#1489;&#1493;/&#1495;&#1511;&#1497;&#1511;&#1492;)</label><input type="url" id="leg-src-url" placeholder="https://www.nevo.co.il/..."></div>
     <div class="field fw"><label>&#1514;&#1511;&#1510;&#1497;&#1512;</label><textarea id="leg-summary" rows="2" placeholder="1-3 &#1513;&#1493;&#1512;&#1493;&#1514; &#1506;&#1500; &#1502;&#1492; &#1492;&#1495;&#1493;&#1511; &#1502;&#1495;&#1497;&#1497;&#1489;"></textarea></div>
     <div class="field fw"><label>&#1496;&#1511;&#1505;&#1496; &#1502;&#1500;&#1488; (&#1500;&#1495;&#1497;&#1508;&#1493;&#1513; AI)</label><textarea id="leg-full-text" rows="6" placeholder="&#1492;&#1491;&#1489;&#1511; &#1499;&#1488;&#1503; &#1488;&#1514; &#1492;&#1496;&#1511;&#1505;&#1496; &#1492;&#1502;&#1500;&#1488; &#1513;&#1500; &#1492;&#1495;&#1493;&#1511;..."></textarea></div>
-    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</label><select id="leg-c"><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
+    <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</label><select id="leg-c"><option>&#1496;&#1512;&#1501; &#1492;&#1493;&#1506;&#1512;&#1498;</option><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1499;&#1493;&#1503; &#1488;&#1495;&#1512;&#1493;&#1503;</label><input type="date" id="leg-u"></div>
     <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="leg-last-review"></div>
     <!-- 3.7 — §9.1.2 wants an evaluation-of-compliance record: what was
@@ -5505,7 +5505,7 @@ function editLeg(id){
   g('leg-id').value=rec.id;
   var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
   setIf('leg-s',rec.s);setIf('leg-d',rec.d);setIf('leg-a',rec.a||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4');
-  setIf('leg-c',rec.c||'\u05de\u05e6\u05d9\u05d9\u05ea');setIf('leg-u',rec.u);setIf('leg-o',rec.o);
+  setIf('leg-c',rec.c||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da');setIf('leg-u',rec.u);setIf('leg-o',rec.o);
   setIf('leg-law-type',rec.law_type);setIf('leg-law-num',rec.law_num);
   setIf('leg-topic',rec.topic);setIf('leg-src-url',rec.src_url);
   setIf('leg-summary',rec.summary);setIf('leg-full-text',rec.full_text);
@@ -5525,7 +5525,7 @@ function svLeg(){
     s:s,
     d:gv('leg-d')||null,
     a:gv('leg-a')||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',
-    c:gv('leg-c')||'\u05de\u05e6\u05d9\u05d9\u05ea',
+    c:gv('leg-c')||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da',
     u:gv('leg-u')||null,
     o:gv('leg-o')||null,
     law_type:gv('leg-law-type')||null,
@@ -5542,7 +5542,11 @@ function svLeg(){
   // to update is a field that stays a year out of date. Only a CHANGE
   // re-stamps: editing the summary of a law does not re-date the judgement.
   var _prev=id?(DB.leg||[]).find(function(x){return x.id===id;}):null;
-  if(!_prev||_prev.c!==r.c){
+  // BACKLOG 9.6: a new law starts as 'not yet evaluated', and that is not a
+  // determination, so it gets no date or author.
+  if(r.c==='\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da'){
+    r.c_date=null;r.c_by=null;
+  }else if(!_prev||_prev.c!==r.c){
     r.c_date=new Date().toISOString().substring(0,10);
     r.c_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
   }else{
@@ -6727,10 +6731,12 @@ function rDash(){
       var YES='\u05de\u05e6\u05d9\u05d9\u05ea';
       var PART='\u05d7\u05dc\u05e7\u05d9\u05ea';
       var NO='\u05d0\u05d9\u05e0\u05d5 \u05de\u05e6\u05d9\u05d9\u05ea';
-      var relevant=laws.filter(function(l){return (l.c||YES)!==IRREL;});
+      var NE='\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da';
+      var relevant=laws.filter(function(l){return l.c!==IRREL;});
       var n=relevant.length;
       if(n>0){
-        var ok=relevant.filter(function(l){return (l.c||YES)===YES;}).length;
+        var ok=relevant.filter(function(l){return l.c===YES;}).length;
+        var ne=relevant.filter(function(l){return !l.c||l.c===NE;}).length;
         var part=relevant.filter(function(l){return l.c===PART;}).length;
         var bad=relevant.filter(function(l){return l.c===NO;}).length;
         var score=Math.round((ok/n)*100);
@@ -6743,6 +6749,7 @@ function rDash(){
               '<div>✅ \u05de\u05e6\u05d9\u05d9\u05ea: <strong>'+ok+'</strong></div>'+
               (part?'<div>⚠️ \u05d7\u05dc\u05e7\u05d9\u05ea: <strong style="color:#e07a00">'+part+'</strong></div>':'')+
               (bad?'<div>❌ \u05d0\u05d9\u05e0\u05d5 \u05de\u05e6\u05d9\u05d9\u05ea: <strong style="color:#cc1f1f">'+bad+'</strong></div>':'')+
+              (ne?'<div>⏳ \u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da: <strong>'+ne+'</strong></div>':'')+
               '<div style="color:var(--t3);margin-top:3px">\u05d1\u05e1\u05d9\u05e1: '+n+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9\u05d9\u05dd</div>'+
             '</div>'+
           '</div>'+
@@ -17265,7 +17272,8 @@ function _legReviewBadge(rec){
 // to it still said «✅ in 340 days» from last year's review. In front of an
 // auditor asking §9.1.2 «on what basis», the answer was a dropdown.
 function _legCStamp(l){
-  if(!l)return '';
+  // 'Not yet evaluated' says it itself; there is no determination to date.
+  if(!l||!l.c||l.c==='\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da')return '';
   if(!l.c_date)return '<div style="font-size:10px;color:#b45309">\u05dc\u05d0 \u05ea\u05d5\u05e2\u05d3 \u05de\u05ea\u05d9 \u05e0\u05e7\u05d1\u05e2</div>';
   var who=l.c_by?(' \u00b7 '+esc(l.c_by)):'';
   var ev=l.c_evidence_url?' \ud83d\udcce':'';
