@@ -7246,6 +7246,36 @@ function _drlNew(ty){
   ['drl-d','drl-p','drl-dur','drl-sc','drl-n'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var s=g('drl-ty');if(s&&ty)s.value=ty;
 }
+// BACKLOG 9.7: internal audits had no next date either. Same rule as the drills:
+// each area is due 12 months after its last performed audit (status not \u00ab\u05de\u05ea\u05d5\u05db\u05e0\u05df\u00bb),
+// an area never audited lands on the \u00abno date\u00bb tab, and an empty register shows
+// nothing. Computed, nothing is stored.
+var _AUD_FREQ_M=12,_AUD_PLANNED='\u05de\u05ea\u05d5\u05db\u05e0\u05df';
+function _audNext(){
+  if(!(DB.auds||[]).length)return [];
+  var s=g('a-r'),areas=[];
+  if(s)for(var k=0;k<s.options.length;k++)areas.push(s.options[k].value||s.options[k].text);
+  (DB.auds||[]).forEach(function(r){if(r.r&&areas.indexOf(r.r)<0)areas.push(r.r);});
+  return areas.map(function(ar){
+    var last=null;
+    (DB.auds||[]).forEach(function(r){if(r.r===ar&&r.d&&r.s!==_AUD_PLANNED&&(!last||String(r.d)>String(last.d)))last=r;});
+    var e=null;
+    if(last){
+      var p=String(last.d).substring(0,10).split('-'),y=+p[0],m=+p[1]-1+_AUD_FREQ_M;
+      y+=Math.floor(m/12);m=m%12;
+      var dd=Math.min(+p[2],new Date(y,m+1,0).getDate());
+      e=y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+dd).slice(-2);
+    }
+    return {name:ar,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'aud',modLabel:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',e:e,id:last?last.id:null};
+  });
+}
+// New audit of a given area, from the expiry page. Every field starts empty.
+function _audNew(ar){
+  openModal('m-aud');
+  ['a-n','a-a','a-d','a-f','a-sc','a-sm'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var s=g('a-r');if(s&&ar)s.value=ar;
+  var st=g('a-st');if(st)st.selectedIndex=0;
+}
 // BACKLOG 9.1: a statutory register with zero rows raises no expiry at all, so after
 // the 18/09 reset the expiries page and the dashboard looked "all clear". Gated on
 // SB_ON so a first paint from an empty cache, before the sync, is not a false alarm.
@@ -7277,6 +7307,7 @@ function _expCollect(){
   // job is expiry. A medical check scanned in raised a yellow dot on the
   // calendar and an alert, and appeared on no list.
   _drlNext().forEach(function(x){if(x.e)items.push(x);});
+  _audNext().forEach(function(x){if(x.e)items.push(x);});
   (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
 }
@@ -7300,6 +7331,7 @@ function _expNoDate(){
   // The register is imported from Excel in bulk, so «no date set» is the normal
   // starting state for hundreds of rows. Showing them is the point.
   _drlNext().forEach(function(x){if(!x.e)out.push(x);});
+  _audNext().forEach(function(x){if(!x.e)out.push(x);});
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
@@ -7403,7 +7435,7 @@ function rExp(){
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl',aud:'auds'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
@@ -7411,6 +7443,7 @@ function rExp(){
     var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'&#8212;';
     if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
+    if(i.mod==='aud')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dar="'+esc(i.name)+'" onclick="_audNew(this.dataset.dar)" title="\u05e8\u05e9\u05d5\u05dd \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'&#8212;')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
 }
