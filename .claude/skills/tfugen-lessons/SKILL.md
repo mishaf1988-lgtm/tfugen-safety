@@ -69,6 +69,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **38. תיקון באח אחד, האחים נשארו (02/10/2026, PR זה).** הכלל: תיקון בענף אחד של `switch`: כל הענפים, אותו PR; נאכף: `capture-form-test.js`; חזר: 0
 
+**39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).** הכלל: לפני kill לקרוא מה התהליך עושה; `ci-wait.sh` עוקב אחרי ה-head לבד, ו-pkill לפי תבנית תופס גם את עצמו; נאכף: `ci-watch.py` אומר "כבר רץ", `ci-watch-test.py`; חזר: 0
+
 ## בדיקות שבודקות את הדבר הנכון
 
 **5. דילוג "רק .md" לא עבד על שם קובץ בעברית (01/10/2026, #1010).** הכלל: `git -c core.quotepath=off`; נאכף: `tests.yml`; `fresh-main-test.py`; חזר: 0

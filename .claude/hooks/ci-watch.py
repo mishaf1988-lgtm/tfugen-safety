@@ -10,7 +10,7 @@ still exits 0); it returns when `tests` finishes, with no event needed.
 
 Test:  python3 tests/harness/ci-watch-test.py
 """
-import json, re, subprocess, sys
+import json, os, re, subprocess, sys
 
 REPO = "mishaf1988-lgtm/tfugen-safety"
 
@@ -40,6 +40,27 @@ else:
     print("{}"); sys.exit(0)
 if not ref or ref in ("main", "HEAD"):
     print("{}"); sys.exit(0)
+
+# A watcher already running on this branch follows the new head by itself (it
+# re-reads the sha every round). 02/10/2026: two watchers were killed to "restart"
+# them and the kill took the new one down too; nothing needed restarting.
+def already_watching(ref):
+    env = os.environ.get("CI_WATCH_RUNNING")
+    if env in ("0", "1"):
+        return env == "1"
+    try:
+        p = subprocess.run(["pgrep", "-f", "ci-wait.sh %s " % ref], capture_output=True, text=True, timeout=10)
+        return p.returncode == 0 and p.stdout.strip() != ""
+    except Exception:
+        return False
+
+if already_watching(ref):
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PostToolUse",
+        "additionalContext":
+            "ci-watch: ci-wait.sh כבר רץ על %s ועוקב אחרי ה-head החדש בעצמו (קורא את ה-sha בכל סבב). "
+            "לא להפעיל שוב ולא להרוג אותו; הסיום שלו יעיר את השיחה." % ref}}, ensure_ascii=False))
+    sys.exit(0)
 
 cmd = "sleep 20; bash .claude/hooks/ci-wait.sh %s %s" % (ref, REPO)
 print(json.dumps({"hookSpecificOutput": {
