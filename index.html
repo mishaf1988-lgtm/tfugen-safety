@@ -4229,15 +4229,27 @@ var _delPending={tbl:null,id:null};
 // Tables CLAUDE.md says must not casually lose rows: ncr is 375 production
 // records, ncr_ai and trustee_reports are history keyed by version / month.
 var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea',record_history:'\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d7\u05d9\u05d3\u05d5\u05e9\u05d9\u05dd',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};
-var _DEL_TBL_LABEL={tour_hazards:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea'};
+var _DEL_TBL_LABEL={tour_hazards:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea',auds:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',ctr:'\u05e7\u05d1\u05dc\u05df/\u05e1\u05e4\u05e7',drl:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',env:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',env_aspects:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',hzm:'\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df',ins:'\u05e1\u05d9\u05d5\u05e8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',leg:'\u05d7\u05d5\u05e7/\u05ea\u05e7\u05e0\u05d4',rounds:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',toolbox:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',wst:'\u05e8\u05e9\u05d5\u05de\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea',issue_types:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4'};
 // What the user is about to destroy, in words. A red trash on the tasks page
 // deletes the NCR behind the row, not the row \u2014 that is deliberate, but it
 // must not be a surprise.
 function _delDescribe(tbl,id){
   var row=(DB[tbl]||[]).filter(function(r){return r&&String(r.id)===String(id);})[0];
   var label=_DEL_TBL_LABEL[tbl]||tbl;
-  var title=row?(_audTitle(row)||''):'';
+  var title=row?(_delTitle(row)||''):'';
   return {label:label,title:title,found:!!row};
+}
+// _audTitle takes row.d before row.n, and for an audit d is the date: the dialog
+// read "auds / 2026-09-15" (02/10/2026). Text first; a date alone as DD/MM/YYYY.
+function _delTitle(row){
+  var cands=[row.title,row.topic,row.d,row.descr,row.n,row.num],dateOnly=null;
+  for(var i=0;i<cands.length;i++){
+    var v=cands[i];if(v===null||v===undefined||v==='')continue;
+    v=String(v);
+    if(/^\d{4}-\d{2}-\d{2}/.test(v)){if(!dateOnly)dateOnly=fd(v.substring(0,10));continue;}
+    return v.substring(0,80);
+  }
+  return dateOnly;
 }
 function askDel(tbl,id){
   if(_viewBlock())return;
@@ -22469,12 +22481,16 @@ function capDispatch(j){
       if(_capPhotoUrl) _attachUrls['inc-attach-area']=_capPhotoUrl;
       break;
     case 'ncr':
-      openModal('m-ncr');
+      // openNewNcrModal clears ncr-id (02/10/2026, lesson 38): a bare openModal kept
+      // the id of the last edited NCR, and saving the capture overwrote that record.
+      openNewNcrModal();
       _setIf('ncr-d',desc); _setIf('ncr-loc',area); _setIf('ncr-o',rep);
       _setIf('ncr-notes',notes); _setIf('ncr-sd',d);
+      if(typeof _ncrAutoDue==='function')_ncrAutoDue();
       break;
     case 'eqi':
       openModal('m-eqi');
+      var _eqf=g('eqi-id');if(_eqf)_eqf.value='';  // same as ncr: never keep the last edited id
       _setIf('eqi-n',desc); _setIf('eqi-loc',area); _setIf('eqi-notes',notes); _setIf('eqi-d',d);
       if(_capPhotoUrl) _attachUrls['eqi-photo-area']=_capPhotoUrl;
       break;
