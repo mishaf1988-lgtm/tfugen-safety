@@ -9,14 +9,16 @@ Before a turn ends it checks, locally and without network:
   3. a PR was merged in this session and the reply has no "הצעות לשדרוג"
      section -> block (Michael, 02/10/2026)
   4. a PR was merged in this session and no next session was opened
-     (create_session) -> block (lesson? then handoff, or the next item)
+     (create_session) -> block (lesson? then handoff, or the next item),
+     unless the handoff in the repo root says "אין קוד" (CLAUDE.md, #1099:
+     no code item without Michael = the session stays open for his answer)
 It lets the stop through when the reply ends on a question to Michael (an
 approval he must give), when ci-wait.sh is running in the background (its
 end wakes the session), and never blocks twice in a row (stop_hook_active).
 
 Test:  python3 tests/harness/supervisor-test.py
 """
-import json, os, subprocess, sys
+import json, os, re, subprocess, sys
 
 
 def git(cwd, *args):
@@ -56,6 +58,15 @@ def ci_wait_running():
     return p.returncode == 0
 
 
+def no_code_handoff(cwd):
+    """The root handoff (only one, handoff-root-test.py) says there is no code item."""
+    try:
+        names = [n for n in os.listdir(cwd) if n.startswith("handoff-") and n.endswith(".md")]
+        return any(re.search("אין (פריט )?קוד", open(os.path.join(cwd, n), encoding="utf-8").read()) for n in names)
+    except Exception:
+        return False
+
+
 def verdict(cwd, text, tools, waiting):
     if text.rstrip()[-400:].count("?"):
         return None
@@ -75,7 +86,7 @@ def verdict(cwd, text, tools, waiting):
     if merged and "הצעות לשדרוג" not in text:
         return ("המפקח: מוזג, ובסיכום אין סעיף \"💡 הצעות לשדרוג\" (tfugen-screen-review; מיכאל 02/10/2026). "
                 "להוסיף: skill לעדכן או ליצור, בדיקה או hook שיתפסו טעות שחזרה, ומה מהם נעשה לבד.")
-    if merged and not any(t.endswith("create_session") for t in tools):
+    if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd):
         return ("המפקח: מוזג, ולא נפתחה שיחה הבאה. לפני שעוצרים: היה לקח? (tfugen-lessons). "
                 "אחר כך הפריט הבא שאפשר לעשות בקוד מ-STATUS/BACKLOG (לקח 24), "
                 "או handoff + create_session + archive_session (CLAUDE.md, שיחה ארוכה).")

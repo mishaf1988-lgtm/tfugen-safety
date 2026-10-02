@@ -59,6 +59,12 @@ P = "מוזג.\n\n💡 הצעות לשדרוג\n1. בדיקה."
 r = sup.verdict(work, P, MERGED, False)
 check("blocks: lesson, next item or handoff", r and "tfugen-lessons" in r and "create_session" in r, r)
 check("after create_session: lets it through", sup.verdict(work, P, MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+H = os.path.join(work, "handoff-02-10-2026-18.20.md")
+open(H, "w", encoding="utf-8").write("### הבא בתור\nמשימה בקוד.\n")
+check("a handoff with a next item: still blocks", sup.verdict(work, P, MERGED, False) is not None)
+open(H, "w", encoding="utf-8").write("### הבא בתור\nבלי תשובה: אין פריט קוד.\n")
+check("handoff says no code item: lets it through (#1099)", sup.verdict(work, P, MERGED, False) is None)
+os.remove(H)
 check("no merge: no proposals needed", sup.verdict(work, "סיימתי.", set(), False) is None)
 
 print("\nthe hook end to end")
