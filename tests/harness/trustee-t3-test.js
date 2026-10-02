@@ -118,7 +118,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     out.items2 = Array.from(document.querySelectorAll('#tru-row-menu button')).map(b => b.textContent.trim()); document.body.click();
     return out;
   });
-  check('צור משימה: task modal prefilled (title with area + finding, source label נאמן בטיחות, notes with reporter/date/photo, due 30 days from the report, assignee = the trustee)', m3.open && /נאמן בטיחות — אולם טיגון: דלת חירום חסומה/.test(m3.title) && /נאמן בטיחות/.test(m3.src) && /דווח ע"י דנה/.test(m3.notes) && /d1\.jpg/.test(m3.notes) && m3.srcTbl === 'trustee_reports' && m3.srcId === 'd1'
+  check('צור משימה: task modal prefilled (title with area + finding, source label נאמן בטיחות, notes with reporter/date/photo, due 30 days from the report, assignee = the trustee)', m3.open && /נאמן בטיחות - אולם טיגון: דלת חירום חסומה/.test(m3.title) && /נאמן בטיחות/.test(m3.src) && /דווח ע"י דנה/.test(m3.notes) && /d1\.jpg/.test(m3.notes) && m3.srcTbl === 'trustee_reports' && m3.srcId === 'd1'
     // #609: the due date used to be blanked after openTskModal derived it,
     // so the manager opened the date wheel for a value the code knew.
     && /^\d{4}-\d{2}-\d{2}$/.test(m3.due) && m3.due === (function(){var d=new Date(D);d.setDate(d.getDate()+30);return d.toISOString().substring(0,10);})(), m3);

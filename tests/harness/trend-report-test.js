@@ -76,8 +76,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('...and a drop in them is the bad direction — that is a reporting collapse', r.nmDown === 'bad', r);
     check('no change says so rather than showing 0%', /ללא שינוי/.test(r.flat.txt) && r.flat.dir === 'flat', r.flat);
     check('nothing to compare against is not a 100% improvement', /אין בסיס/.test(r.noBase.txt) && r.noBase.dir === 'flat', r.noBase);
-    check('...and zero-against-zero says nothing at all', r.nothing.txt === '—', r.nothing);
-    check('a metric with no value is a dash, not a number', r.missing === '—', r.missing);
+    check('...and zero-against-zero says nothing at all', r.nothing.txt === '-', r.nothing);
+    check('a metric with no value is a dash, not a number', r.missing === '-', r.missing);
     check('the size of the change is shown', /50%/.test(r.pct), r.pct);
   }
 
