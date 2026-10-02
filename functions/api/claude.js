@@ -224,7 +224,12 @@ export async function onRequest({ request, env }) {
       // Translate Workers AI shape ({response: "..."} or {result: ...}) into
       // Anthropic shape ({content:[{type:"text",text:"..."}]}) so the 14
       // client-side handlers don't need to change.
-      const text = (aiResp && (aiResp.response || (aiResp.result && aiResp.result.response))) || '';
+      let text = (aiResp && (aiResp.response || (aiResp.result && aiResp.result.response))) || '';
+      // Workers AI parses an answer that is pure JSON and hands back an
+      // object, not the string. Every client then calls text.replace() and
+      // dies with "undefined is not a function" (02/10/2026, the NCR
+      // "suggest cause and action" button). Turn it back into the string.
+      if (typeof text !== 'string') text = JSON.stringify(text);
       // A client that asked for a stream is reading SSE: textResponse emits
       // the one piece as the Anthropic event sequence it already parses.
       return textResponse(text, parsed.model, parsed.stream, cors, fallbackFrom ? { fallback_from: fallbackFrom } : null);
