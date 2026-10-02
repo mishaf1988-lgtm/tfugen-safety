@@ -118,7 +118,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits על main, עריכות על עוגנים שהשתנו, "ממצא" שהצד השני כבר סגר.
-הכלל: `fetch` + `reset --hard origin/main` לפני כל עריכה; `grep` ב-STATUS לפני ממצא. לפני שכותבים ב-handoff ש"פתוח": `grep` בקוד עצמו, לא רק ב-BACKLOG. פריט שבוצע מסומן ✅ באותו PR.
+הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא, ובקוד לפני "פתוח" ב-handoff. בוצע = ✅ באותו PR.
 נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
 חזר: 2. שני handoff של 01/10/2026 (15:45, 19:30) מנו פריטים שכבר בוצעו.
 
@@ -190,11 +190,11 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `empty-reg-test.js` (סגירה מחזיקה).
 חזר: 0
 
-**32. escapes פוענחו לעברית בדרך לקובץ (02/10/2026, #1044).**
-מה קרה: ב-Edit, ואז גם בסקריפט Python ב-Bash.
-הכלל: סקריפט שממיר עברית בעצמו (`ord(c)>127`), גם בעוגן.
-נאכף: hook ה-raw-hebrew (Edit), `rule1-hebrew-test.js`; ב-`functions/` רק assert.
-חזר: 1
+**32. escape שגוי בדרך לקובץ (02/10/2026, #1044).**
+מה קרה: פוענח לעברית ב-Edit וב-Bash; וב-#1040 אימוג'י ב-5 ספרות הוצג כזבל.
+הכלל: סקריפט שממיר בעצמו (`ord(c)>127`, מעל FFFF זוג surrogate), גם בעוגן.
+נאכף: hook ה-raw-hebrew, `rule1-hebrew-test.js` (גם 5 ספרות); ב-`functions/` רק assert.
+חזר: 2
 
 ## יעילות ותקשורת
 

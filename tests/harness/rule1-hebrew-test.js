@@ -74,5 +74,12 @@ const halves = [];
 src.split('\n').forEach((l, i) => { const m = l.match(/&#5[56]\d{3};/g); if (m) halves.push('line ' + (i + 1) + ': ' + m.join('')); });
 check('no HTML entity is a lone UTF-16 surrogate half (' + halves.length + ')', halves.length === 0, halves.slice(0, 8));
 
+// An emoji above U+FFFF written as one 5-digit escape (BS u1f534) is read by JS
+// as U+1F53 and a stray "4": the review decisions card showed that instead of a
+// red circle (02/10/2026). Astral characters need a surrogate pair.
+const astral = [];
+src.split('\n').forEach((l, i) => { const m = l.match(/\\u1f[0-9a-f]{3}/gi); if (m) astral.push('line ' + (i + 1) + ': ' + m.join(' ')); });
+check('no emoji written as a 5-digit escape (' + astral.length + ')', astral.length === 0, astral.slice(0, 8));
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
