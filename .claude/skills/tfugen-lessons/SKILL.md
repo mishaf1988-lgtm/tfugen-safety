@@ -55,8 +55,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**
 מה קרה: בדיקה עודכנה באמצע ריצה: 6 כישלונות מדומים.
 הכלל: לא לערוך קוד או בדיקות עד שהריצה מסתיימת. ערכת? להריץ שוב לפני שמסיקים.
-נאכף: טקסט (אין דרך בקוד מכאן: hook על `.run.lock` דורש `.claude/hooks/`, חסום בענן).
-חזר: 1. 02/10/2026: ערכתי `index.html` באמצע `run.sh` מלא; הריצה נעצרה.
+נאכף: טקסט (אין דרך בקוד: hooks חסומים בענן).
+חזר: 1 (02/10/2026, באמצע `run.sh`).
 
 **11. "החלון נעלם" (01/10/2026, #992).**
 מה קרה: Chrome שלח Esc.
@@ -108,6 +108,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `backup-od-test.mjs`.
 חזר: 0
 
+**35. ה-mock של Workers AI החזיר רק מחרוזת (02/10/2026, PR זה).**
+מה קרה: Workers AI החזיר JSON כאובייקט; 7 כפתורי AI נפלו.
+הכלל: mock של שירות חיצוני מחזיר גם צורות מוזרות.
+נאכף: `ai-surface-test.mjs` סעיף 6.
+חזר: 0
+
 ## לפני כתיבה למקום משותף
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
@@ -120,7 +126,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא, ובקוד לפני "פתוח" ב-handoff. בוצע = ✅ באותו PR.
 נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
-חזר: 2. שני handoff של 01/10/2026 (15:45, 19:30) מנו פריטים שכבר בוצעו.
+חזר: 2 (handoff מנו פריטים שבוצעו).
 
 ## לפני טענה או ממצא
 
@@ -152,7 +158,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: לקח 8 טען בדיקה שלא קראה את `index.html` בכלל.
 הכלל: `נאכף:` רק אחרי שבירה מכוונת שנכשלת. פקודה ש-hook נותן: להריץ, גם על אדום.
 נאכף: טקסט (אין דרך בקוד: מה הבדיקה מוכיחה הוא שיפוט).
-חזר: 1. `ci-watch.py` נתן `gh pr checks`, שחסום כאן ומחזיר 0.
+חזר: 1 (`gh pr checks` חסום ומחזיר 0).
 
 **20. בדיקה אסינכרונית לפני שמירה, בלי נעילה (30/09/2026, #977).**
 מה קרה: "ביטול" עדיין החליף סיסמה.
@@ -197,7 +203,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **32. escape שגוי בדרך לקובץ (02/10/2026, #1044).**
-מה קרה: פוענח לעברית ב-Edit וב-Bash; וב-#1040 אימוג'י ב-5 ספרות הוצג כזבל.
+מה קרה: פוענח לעברית ב-Edit; אימוג'י 5 ספרות כזבל.
 הכלל: סקריפט שממיר בעצמו (`ord(c)>127`, מעל FFFF זוג surrogate), גם בעוגן.
 נאכף: hook ה-raw-hebrew, `rule1-hebrew-test.js` (גם 5 ספרות); ב-`functions/` רק assert.
 חזר: 2
@@ -232,7 +238,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: שאלתי "מה לקדם" כשבפריט 12 היו חלקים בקוד.
 הכלל: לעשות את החלק שבקוד; לשאול רק על מה שחסום.
 נאכף: טקסט (אין דרך בקוד: זה שיפוט). המקור תוקן ב-CLAUDE.md, «שיחה ארוכה».
-חזר: 1. מיכאל כבר ביקש להמשיך לבד (לקח 14), וה-handoff הורה לשאול.
+חזר: 1 (ה-handoff הורה לשאול).
 
 **34. skills שה-handoff מנה לא נטענו (02/10/2026, PR זה).**
 מה קרה: נטענו 2 מ-4; SQL רץ בלי `tfugen-db`, ונכתב `רטרו: אין` למרות האנגלית (לקח 13).

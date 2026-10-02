@@ -153,6 +153,17 @@ const req = (body) => new Request(ORIGIN + '/api/claude', {
     check('the vision model name is declared once, beside _AI_MODEL', (src.match(/var _AI_VISION=/g) || []).length === 1);
   }
 
+  console.log('\n6. a JSON answer that Workers AI already parsed comes back as a string');
+  {
+    const obj = { rc: 'סיבה', c: 'פעולה' };
+    const { env } = makeEnv(obj);
+    const r = await ai.onRequest({ request: req({ model: TEXT_MODEL, max_tokens: 100, messages: [{ role: 'user', content: 'x' }] }), env });
+    const j = await r.json();
+    const t = j.content && j.content[0] && j.content[0].text;
+    check('content[0].text is a string, so the client can call .replace on it', typeof t === 'string', t);
+    check('...and it parses back to the same object', typeof t === 'string' && JSON.parse(t).rc === 'סיבה', t);
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });
