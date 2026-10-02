@@ -72,9 +72,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).** הכלל: לפני kill לקרוא מה התהליך עושה; `ci-wait.sh` עוקב אחרי ה-head לבד, ו-pkill לפי תבנית תופס גם את עצמו; נאכף: `ci-watch.py` אומר "כבר רץ", `ci-watch-test.py`; חזר: 0
 
 **40. טקסט SQL של הרשאות בפקודת מעטפת נעל את המסנן (02/10/2026, PR זה).**
-מה קרה: heredoc עם SQL של policies נחסם, ואחריו גם `head` ו-`cat` תמימים נחסמו באותו תור.
-הכלל: SQL של policies, DROP או ALTER עובר רק דרך כלי המסד (`apply_migration`, `execute_sql`); קובץ ההגירה נכתב בכלי Write, לא ב-heredoc.
-נאכף: טקסט (אין דרך בקוד: המסנן חיצוני לסשן ול-hooks).
+מה קרה: heredoc עם SQL של policies נחסם, ואחריו גם `head` תמים.
+הכלל: SQL של policies/DROP/ALTER רק דרך `apply_migration`/`execute_sql`; קובץ ההגירה דרך Write.
+נאכף: טקסט (אין דרך בקוד: המסנן חיצוני).
 חזר: 0
 
 ## בדיקות שבודקות את הדבר הנכון
@@ -131,7 +131,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: "מפגע חוזר = אותו מיקום"; ב-DB 48 מיקומים ל-53 מפגעים.
 הכלל: תוכנית שתלויה בנתונים: קודם `count` / `group by`.
 נאכף: טקסט (אין דרך בקוד: תוכנית בצ'אט).
-חזר: 1 (02/10/2026: ספרתי policies ב-grep על קבצי ההגירות, 44; במסד החי 14. טענה על DB רק מ-`pg_policies`/`execute_sql`).
+חזר: 1 (02/10/2026: 44 policies ב-grep על ההגירות, במסד החי 14; למדוד ב-`pg_policies`).
 
 **16. מספר PR נכתב לפני שה-PR נפתח (01/10/2026, #1011).**
 מה קרה: בלקח 15 נכתב "#1011" כניחוש. נתפס לפני ה-commit והוחלף.
@@ -191,7 +191,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 7 (02/10/2026 שש פעמים, כולן שורות "מה אני עושה" באמצע תור; ה-hook תופס רק בסוף, לכן כל שורה כזו נכתבת בעברית מראש).
+חזר: 7 (02/10/2026 שש פעמים, שורות "מה אני עושה" באמצע תור; ה-hook תופס רק בסוף).
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
