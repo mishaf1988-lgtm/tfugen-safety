@@ -190,7 +190,7 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 ## Gotchas
 
-- Empty statutory registers: `_REQ_REGS` / `_emptyReqRegs()` / `_emptyRegText()` (next to `_expCollect`), shown in `#exp-empty-reg` and `#dash-alerts`. Gated on `SB_ON`. Add a register = one entry in `_REQ_REGS`.
+- Empty statutory registers: `_REQ_REGS` / `_emptyReqRegs()` / `_emptyRegText()` (next to `_expCollect`), shown in `#exp-empty-reg` and `#dash-alerts`. Gated on `SB_ON`. Add a register = one entry in `_REQ_REGS` **and** in `REQ_REGS` of `functions/api/weekly-digest.js` (the weekly mail reads them with `limit=1`; a failed read is not called empty).
 - Harness tests that call `goPage` run as `reporter` and get kicked to `dash`: stub `window._role=()=>'admin'` and `_isAdminUser=()=>true`.
 
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.

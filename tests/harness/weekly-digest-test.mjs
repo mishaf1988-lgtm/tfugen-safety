@@ -55,6 +55,10 @@ const ROWS = [
   check('a fresh deck: not red', !/color:#b91c1c[^>]*>המצגת עודכנה/.test(digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '2026-10-03T05:00:00Z', watchOpen: [] })));
   check('the link to the app, and the text escaped', h.includes('href="https://tapugan-safety.pages.dev"') && h.includes('ג&#39;ריקן') === false && h.includes("ג'ריקן"));
   check('keyboard characters only', !/[—–־«»“”…•→←]/.test(h + h2 + digestSubject(g, TODAY)), (h + h2).match(/[—–־«»“”…•→←]/));
+  const h3 = digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: ['בדיקות שמיעה', 'חומרים מסוכנים'] });
+  check('empty statutory registers: one red line near the top, the names, why it matters', /color:#b91c1c;font-weight:bold">מרשמי חובה ריקים: בדיקות שמיעה, חומרים מסוכנים\. אין מהם אף התראת תפוגה/.test(h3)
+    && h3.indexOf('מרשמי חובה ריקים') < h3.indexOf(T.overdue), h3.substring(0, 500));
+  check('no empty register: no such line', !h.includes('מרשמי חובה ריקים') && !h2.includes('מרשמי חובה ריקים'));
   check('the subject carries the counts', digestSubject(g, TODAY) === 'Tapugan Safety: סיכום שבועי 04/10/2026 - 4 באיחור, 2 יעד קרוב, 1 ליקויי נאמנים', digestSubject(g, TODAY));
 
   console.log('\n3. the endpoint');
@@ -68,6 +72,8 @@ const ROWS = [
     globalThis.fetch = async (url, init) => {
       const u = String(url), mth = (init && init.method) || 'GET';
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+      const reg = ['equip_inspections', 'hearing_tests', 'tr', 'hzm'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
+      if (reg) { if (o.regFail === reg) return json({ error: 'x' }, 500); return json((o.emptyRegs || []).includes(reg) ? [] : [{ id: 'r1' }]); }
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope || 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
@@ -101,6 +107,7 @@ const ROWS = [
   check('pg_cron (the secret): one mail to the connected account only, the counts in the answer', c.j.ok && c.j.sent && c.j.to === 'sviva@tapugan.co.il' && c.w.mails.length === 1 && m.toRecipients.length === 1 && m.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il'
     && c.j.counts.open === 3 && c.j.counts.overdue === 2 && c.j.counts.trustee === 1, c.j);
   check('the mail: the overdue hazard under אחזקה, the trustee finding, the committee block with a real meeting date', /אחזקה \(1\)/.test(m.body.content) && /נ-1/.test(m.body.content) && new RegExp(T.meeting + '\\d{2}/\\d{2}/\\d{4}').test(m.body.content), m.subject);
+  check('every register has rows: no empty-register line, count 0', !/מרשמי חובה ריקים/.test(m.body.content) && c.j.counts.emptyRegs === 0, c.j.counts);
   check('the run is recorded: ok, to, at, counts', rec && rec.ok && rec.to === 'sviva@tapugan.co.il' && rec.at && rec.counts.overdue === 2, rec);
   c = await call({ state: { [STATE_KEY]: JSON.stringify({ at: new Date(Date.now() - 3600e3).toISOString(), ok: true }) } }, {}, 'nsec');
   check('the second cron slot an hour later: skipped, no second mail', c.j.ok && /^sent /.test(c.j.skipped || '') && !c.w.mails.length, c.j);
@@ -112,6 +119,12 @@ const ROWS = [
   check('a week later: sent again', c.j.ok && c.j.sent, c.j);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   check('admin preview: the data and the html, nothing sent, nothing recorded', c.j.ok && c.j.html && c.j.digest && c.j.counts.open === 3 && c.j.subject && !c.w.mails.length && !c.w.state[STATE_KEY], Object.keys(c.j));
+  c = await call({ emptyRegs: ['hearing_tests', 'hzm'] }, {}, 'nsec');
+  const m2 = c.w.mails[0] && c.w.mails[0].message;
+  check('two registers empty: the red line in the mail, in the order of the app, counted', m2 && /מרשמי חובה ריקים: בדיקות שמיעה, חומרים מסוכנים\./.test(m2.body.content) && c.j.counts.emptyRegs === 2, c.j.counts);
+  c = await call({ emptyRegs: ['tr'], regFail: 'equip_inspections' }, {}, 'nsec');
+  const m3 = c.w.mails[0] && c.w.mails[0].message;
+  check('a register read that fails is not called empty, and does not stop the mail', c.j.ok && c.j.sent && m3 && /מרשמי חובה ריקים: הדרכות\./.test(m3.body.content) && !/בדיקות ציוד/.test(m3.body.content.split('מרשמי חובה ריקים')[1].split('</p>')[0]), c.j);
   c = await call({ email: 'admin@tfugen.local' }, {});
   check('admin without op: a preview too', c.j.ok && !c.w.mails.length);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send' });

@@ -80,12 +80,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **5. דילוג "רק .md" לא עבד על שם קובץ בעברית (01/10/2026, #1010).**
 מה קרה: `git diff` החזיר עברית במירכאות.
-הכלל: `git -c core.quotepath=off` לכל `git diff` / `ls-files` שמסננים.
+הכלל: `git -c core.quotepath=off` כשמסננים שמות קבצים.
 נאכף: `tests.yml`; `fresh-main-test.py`.
 חזר: 0
 
 **7. בדיקת XML לפי חלון טקסט במקום לפי מבנה (01/10/2026, #1008).**
-מה קרה: `xmlns:r` חופש בחלון טקסט; xlsm פגום.
+מה קרה: `xmlns:r` לא נמצא; xlsm פגום.
 הכלל: לבדוק מבנה, לא "מופיע בהתחלה".
 נאכף: `rootHasR`, `hazard-file-test.mjs`.
 חזר: 0
@@ -190,11 +190,11 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `empty-reg-test.js` (סגירה מחזיקה).
 חזר: 0
 
-**32. כלי Edit פענח `\uXXXX` לעברית גולמית (02/10/2026, PR זה).**
-מה קרה: `\u05d1...` שנכתב ב-Edit נשמר כעברית ב-`<script>`.
-הכלל: JS עם `\uXXXX` לכתוב בסקריפט Python.
-נאכף: hook ה-raw-hebrew (PostToolUse) ו-`rule1-hebrew-test.js`.
-חזר: 0
+**32. escapes פוענחו לעברית בדרך לקובץ (02/10/2026, #1044).**
+מה קרה: ב-Edit, ואז גם בסקריפט Python ב-Bash.
+הכלל: סקריפט שממיר עברית בעצמו (`ord(c)>127`), גם בעוגן.
+נאכף: hook ה-raw-hebrew (Edit), `rule1-hebrew-test.js`; ב-`functions/` רק assert.
+חזר: 1
 
 ## יעילות ותקשורת
 

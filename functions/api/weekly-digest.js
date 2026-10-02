@@ -15,7 +15,10 @@
 //   * before the committee: the next meeting date (hazard-deck.js), when the
 //     deck was last written, the sync problems the watchdog holds open
 //     (_watchdog.js), and the three hazards to raise (highest severity, then
-//     the most overdue).
+//     the most overdue);
+//   * the statutory registers with no row at all (BACKLOG 9.1, the same four
+//     as _REQ_REGS in index.html): an empty register raises no expiry, so the
+//     rest of the mail would read "all clear" while nothing is tracked.
 // pg_cron calls POST /api/weekly-digest every Sunday at 07:00 Israel time
 // (migrations/2026-10-01_weekly_digest_cron.sql) with x-notify-secret; an
 // admin can ask for {op:'preview'} (the data, no mail) or {op:'send'} (the same
@@ -33,6 +36,8 @@ export const STATE_KEY = 'weekly_digest';
 export const APP_URL = 'https://tapugan-safety.pages.dev';
 export const SOON_DAYS = 7, TOPICS = 3, REPEAT_MS = 20 * 3600 * 1000;
 const DAY = 86400000;
+// The same four as _REQ_REGS in index.html: [table, label].
+export const REQ_REGS = [['equip_inspections', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3'], ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'], ['tr', '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'], ['hzm', '\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd']];
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const SEV_RANK = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 2, '\u05e0\u05de\u05d5\u05db\u05d4': 1 };
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -78,6 +83,8 @@ const H = {
   sync: '\u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea: ', topics: '\u05e0\u05d5\u05e9\u05d0\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea:',
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
+  emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
+  emptyWhy: '. \u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.',
 };
 export const T = H;
 
@@ -100,13 +107,15 @@ function table(items, opt) {
     }).join('') + '</table>';
 }
 
-// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles] }.
+// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles], emptyRegs: [labels] }.
 export function digestHtml(d, today, meta) {
   const m = meta || {};
   const h2 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + (n != null ? ' (' + n + ')' : '') + '</h3>';
   let h = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">';
   h += '<h2 style="margin:0 0 6px">' + esc(H.title) + ' ' + esc(fd(today)) + '</h2>';
   h += '<p>' + esc(H.total) + d.open + '</p>';
+  const er = m.emptyRegs || [];
+  if (er.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.emptyRegs + er.join(', ') + H.emptyWhy) + '</p>';
   h += h2(H.overdue, d.overdueCount);
   if (!d.overdue.length) h += '<p style="color:#555">' + H.none + '</p>';
   d.overdue.forEach((g) => { h += '<p style="margin:8px 0 4px;font-weight:bold">' + esc(g.resp || '-') + ' (' + g.items.length + ')</p>' + table(g.items); });
@@ -130,6 +139,22 @@ export function digestSubject(d, today) {
   return 'Tapugan Safety: ' + H.title.split(' - ')[0] + ' ' + fd(today) + ' - ' + d.overdueCount + ' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8, ' + d.soon.length + ' \u05d9\u05e2\u05d3 \u05e7\u05e8\u05d5\u05d1, ' + d.trustee.length + ' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd';
 }
 
+// One row is enough to know a register is not empty. A read that fails says
+// nothing (null), so a passing network error is not reported as an empty register.
+export async function emptyRegs(env) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const res = await Promise.all(REQ_REGS.map(async ([t, label]) => {
+    try {
+      const r = await fetch(base + t + '?select=*&limit=1', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return Array.isArray(j) && !j.length ? label : null;
+    } catch (e) { return null; }
+  }));
+  return res.filter(Boolean);
+}
+
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
 // problems when the last run failed or there was none for two days.
 export function backupProblem(raw, nowMs) {
@@ -143,11 +168,12 @@ export function backupProblem(raw, nowMs) {
 
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [hazards, reports, tasks, st] = await Promise.all([
+  const [hazards, reports, tasks, st, empty] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od']).catch(() => ({})),
+    emptyRegs(env),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -155,7 +181,7 @@ async function build(env) {
   const bk = backupProblem(v('backup_od'), Date.now());
   if (bk) watchOpen.push(bk);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
@@ -176,7 +202,7 @@ export async function onRequest(context) {
   const op = bySecret ? 'send' : body.op === 'send' ? 'send' : 'preview';
   try {
     const b = await build(env);
-    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length };
+    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length };
     if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last }, 200, cors);
     const lastAt = b.last && b.last.ok && b.last.at ? Date.parse(b.last.at) : 0;
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true) return jsonResp({ ok: true, skipped: 'sent ' + b.last.at, counts }, 200, cors);
