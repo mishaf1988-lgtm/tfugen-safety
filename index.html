@@ -5078,6 +5078,8 @@ function openNewNcrModal(){
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display='none';
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
   var _rb=g('ncr-repeat');if(_rb){_rb.style.display='none';_rb.innerHTML='';}
+  // A chain that was cancelled must not link the next NCR (they set it again after this).
+  _nmChainPending=null;_audChainPending=null;
   openModal('m-ncr');
   // Draft autosave \u2014 only for new NCRs (no ncr-id). Check for stale draft.
   if(typeof _ncrDraftCheck==='function')_ncrDraftCheck();
@@ -5209,7 +5211,8 @@ function svNcr(){
   var cat = (a==='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4') ? 'env' : 'saf';
   var rec={
     id:id||(NCRI++).toString(36)+Date.now().toString(36),
-    num:id?DB.ncr.find(function(r){return r.id===id;})||{} && (DB.ncr.find(function(r){return r.id===id;})||{num:''}).num:_ncrNextNum(),
+    // Was A||{} && B, which is A||({}&&B): an edit sent the whole old record as num (02/10/2026).
+    num:id?((_prev&&_prev.num)||''):_ncrNextNum(),
     d:d, a:a, category:cat,
     loc:gv('ncr-loc')||'',
     location_id:gv('ncr-location-id')||null,
@@ -5238,10 +5241,12 @@ function svNcr(){
     }
   }
   var _nmLinked=(typeof _nmChainApply==='function')?_nmChainApply(rec):null;
+  var _audLinked=id?null:_audChainApply(rec);_audChainPending=null;
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' NCR: '+d.substring(0,30));
   if(typeof _ncrDraftClear==='function')_ncrDraftClear();
   sdb();closeModal('m-ncr');rNcr();rDash();
   if(_nmLinked&&typeof rNm==='function')try{rNm();}catch(e){}
+  if(_audLinked)try{rAud();}catch(e){}
   toast(_nmLinked?'\u05e0\u05e9\u05de\u05e8 ✓ \u05d5\u05d4\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05e1\u05d5\u05de\u05df \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'\u05e0\u05e9\u05de\u05e8 ✓');
 }
 
@@ -12197,7 +12202,7 @@ function rDocs(){
 function rAud(){
   var tb=g('tb-aud');if(!tb)return;
   if(!DB.auds.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udd0d<br>\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-aud\')">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
-  tb.innerHTML=DB.auds.map(function(a){return '<tr><td><strong>'+esc(a.n)+'</strong></td><td>'+(a.a?esc(a.a):'&#8212;')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(a.sc)+'%</span>':'&#8212;')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+esc(a.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+esc(a.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.auds.map(function(a){var _ns=_audNcrs(a),_no=_ns.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;return '<tr><td><strong>'+esc(a.n)+'</strong>'+(_ns.length?'<div style="font-size:11px;color:'+(_no?'var(--bad)':'var(--ok)')+'">NCR: '+_no+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05ea\u05d5\u05da '+_ns.length+'</div>':'')+'</td><td>'+(a.a?esc(a.a):'&#8212;')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(a.sc)+'%</span>':'&#8212;')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+esc(a.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+esc(a.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
@@ -14580,6 +14585,9 @@ function showView(tbl,id){
   if(canReopen){
     html+='<div style="margin-top:14px"><button data-rtbl="'+esc(tbl)+'" data-rid="'+esc(id)+'" onclick="_reopen(this.dataset.rtbl,this.dataset.rid)" style="width:100%;background:#fff7ed;border:1px solid #f59e0b;border-radius:8px;color:#b45309;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#128275; \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button></div>';
   }
+  if(tbl==='auds'){
+    html+='<div style="margin-top:10px"><button data-aid="'+esc(id)+'" onclick="_chainAudToNcr(this.dataset.aid)" style="width:100%;background:#fef2f2;border:1px solid #cc1f1f;border-radius:8px;color:#991b1b;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\u26a0\ufe0f \u05e4\u05ea\u05d7 NCR \u05de\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button></div>';
+  }
   if(tbl==='near_miss'&&rec.sev==='\u05d7\u05de\u05d5\u05e8'){
     html+='<div style="margin-top:10px"><button data-nmid="'+esc(id)+'" onclick="_chainNmToNcr(this.dataset.nmid)" style="width:100%;background:#fef2f2;border:1px solid #cc1f1f;border-radius:8px;color:#991b1b;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">&#9888;\ufe0f \u05e4\u05ea\u05d7 NCR \u05de\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d6\u05d4</button></div>';
   }
@@ -16875,6 +16883,37 @@ window._capaVerify=function(id){
 // draft is filled, consumed by svNcr when the NCR is actually saved \u2014 so
 // abandoning the form changes nothing.
 var _nmChainPending=null;
+// BACKLOG 9.7: a finding in an internal audit becomes an NCR. Same pattern as
+// the near-miss: the form opens filled, and on save the NCR number is written
+// into the audit summary (sm), so the link survives a sync with no new column.
+var _audChainPending=null;
+function _audChainApply(rec){
+  var aId=_audChainPending;_audChainPending=null;
+  if(!aId||!rec)return null;
+  var a=(DB.auds||[]).find(function(r){return r.id===aId;});
+  if(!a)return null;
+  var line='\u05e0\u05e4\u05ea\u05d7 '+(rec.num||'NCR')+' \u05de\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea';
+  if(String(a.sm||'').indexOf(line)<0)a.sm=(a.sm?a.sm+'\n':'')+line;
+  sbUpd('auds',a);
+  return a;
+}
+function _audNcrs(a){
+  var refs=String((a&&a.sm)||'').match(/NCR-\d+/g)||[],seen={},out=[];
+  refs.forEach(function(n){if(seen[n])return;seen[n]=1;out.push((DB.ncr||[]).find(function(r){return r.num===n;})||{num:n});});
+  return out;
+}
+window._chainAudToNcr=function(aId){
+  var a=(DB.auds||[]).find(function(r){return r.id===aId;});
+  if(!a){toast('\u05d4\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
+  goPage('ncr');openNewNcrModal();
+  var setIf=function(elId,val){var el=g(elId);if(el&&val)el.value=val;};
+  setIf('ncr-d','\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd ('+(a.n||'')+'): ');
+  setIf('ncr-sd',a.d||new Date().toISOString().split('T')[0]);
+  setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd: '+(a.n||'')+(a.d?' '+fd(a.d):''));
+  if(a.r==='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')setIf('ncr-a','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+  _audChainPending=aId;
+  var d=g('ncr-d');if(d)try{d.focus();}catch(e){}
+};
 function _nmChainApply(rec){
   var nmId=_nmChainPending;_nmChainPending=null;
   if(!nmId||!rec)return null;
