@@ -1,8 +1,12 @@
 # .claude/skills/tfugen-lessons/SKILL.md stays usable (Michael, 01/10/2026):
 # every lesson has its fields, a lesson that recurred is enforced in code or
 # says why it cannot be, and the file stays short enough to be read.
+# 02/10/2026: lessons already enforced in code move, as one line, to
+# project-files/lessons-archive.md; the numbering is shared and continuous
+# across both files, and the archive holds only one-line lessons with חזר: 0.
 import os, re, sys
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.claude', 'skills', 'tfugen-lessons', 'SKILL.md')
+A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'project-files', 'lessons-archive.md')
 MAX = 14 * 1024
 FIELDS = ('מה קרה:', 'הכלל:', 'נאכף:', 'חזר:')
 HEAD = re.compile(r'^\*\*(\d+)\. .+ \((\d\d/\d\d/\d{4}|[^)]*\d\d/\d\d/\d{4}[^)]*)(, [^)]*)?\)\.\*\*$')
@@ -26,11 +30,17 @@ def lessons(text):
             cur['lines'].append(l)
     return out
 
-def problems(text):
+def problems(text, archive=''):
     errs = []
     if len(text.encode('utf-8')) > MAX: errs.append('file is %d bytes, over %d: prune (rule 3)' % (len(text.encode('utf-8')), MAX))
     ls = lessons(text); nums = []
     if not ls: errs.append('no lessons found')
+    for x in lessons(archive):
+        s = SHORT.match(x['head'])
+        if not s: errs.append('archive: not a one-line lesson enforced in code: ' + x['head'][:60]); continue
+        nums.append(int(s.group(1)))
+        if x['lines']: errs.append('archive lesson %s has a body' % s.group(1))
+        if s.group(4) != '0': errs.append('archive lesson %s recurred (חזר: %s): move it back to the lessons file with a full body' % (s.group(1), s.group(4)))
     for x in ls:
         s = SHORT.match(x['head'])
         if s:
@@ -55,8 +65,11 @@ def problems(text):
     return errs
 
 real = open(P, encoding='utf-8').read()
-check('the real file has no problems', problems(real) == [], problems(real))
+real_a = open(A, encoding='utf-8').read()
+check('the real files have no problems', problems(real, real_a) == [], problems(real, real_a))
 check('the real file has lessons', len(lessons(real)) >= 10, len(lessons(real)))
+check('the archive has lessons', len(lessons(real_a)) >= 1, len(lessons(real_a)))
+check('the archive alone has a gap (numbers are shared with the lessons file)', problems(real_a) != [])
 
 ok = '**1. x (01/10/2026, #1).**\nמה קרה: a\nהכלל: b\nנאכף: טקסט בלבד.\nחזר: 0\n'
 check('a valid lesson passes', problems(ok) == [], problems(ok))
@@ -74,6 +87,14 @@ check('a one-line lesson enforced in code passes', problems(short) == [], proble
 check('a one-line lesson enforced by text only fails', problems(short.replace('`x-test.js`', 'טקסט')) != [])
 check('a one-line lesson with a body fails', problems(short + 'מה קרה: a\n') != [])
 check('a one-line lesson that recurred is still a lesson (number counted)', problems(short + '\n' + ok.replace('**1.', '**2.')) == [])
+arch2 = short.replace('**1.', '**2.')
+check('an archived one-line lesson fills the gap', problems(ok, arch2) == [], problems(ok, arch2))
+check('the same number in both files fails', problems(ok, short) != [])
+check('an archive number that leaves a gap fails', problems(ok, short.replace('**1.', '**3.')) != [])
+check('an archive lesson with a body fails', problems(ok, arch2 + 'מה קרה: a\n') != [])
+check('an archive lesson that recurred fails', problems(ok, arch2.replace('חזר: 0', 'חזר: 1')) != [])
+check('an archive lesson enforced by text only fails', problems(ok, arch2.replace('`x-test.js`', 'טקסט')) != [])
+check('a full-body lesson in the archive fails', problems(short, ok.replace('**1.', '**2.')) != [])
 
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
