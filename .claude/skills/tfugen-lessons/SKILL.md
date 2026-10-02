@@ -1,6 +1,6 @@
 ---
 name: tfugen-lessons
-description: Use for every task in the tfugen-safety repo, alongside tfugen-lean. Lessons from real mistakes in this repo (Claude's and Michael's), grouped by the moment they apply - before merging, when something fails, before writing to a shared place, before a finding, efficiency. Each has the rule, how it is enforced, and how often it recurred. Standing rule: every mistake found gets an entry here in the PR that fixes it.
+description: Use for every task in the tfugen-safety repo, alongside tfugen-lean. Lessons from real mistakes (Claude's and Michael's), grouped by the moment they apply, each with its rule, enforcement and recurrence. Every mistake found gets an entry here in the PR that fixes it.
 ---
 
 # Lessons
@@ -24,11 +24,11 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 כל PR נושא שורה `רטרו: <תשובה>` בתיאור (`lessons-gate.py` חוסם בלעדיה). שלוש שאלות:
 1. מה נכשל בניסיון הראשון (בדיקה, push, הנחה)?
-2. מה מיכאל תיקן או אמר "לא לזה התכוונתי"? **המקור הכי חשוב**: תיקון בשיחה לא עובר דרך PR של Fix.
+2. מה מיכאל תיקן או אמר "לא לזה התכוונתי"? **המקור הכי חשוב.**
 3. מה לקח יותר סבבים ממה שצריך?
 אין תשובה = `רטרו: אין`, ולא ממציאים. יש תשובה שהיא טעות = לקח חדש כאן באותו PR.
 וגם שורת `skill:` (מה נלמד ובאיזה skill נכתב, או `אין`): skill `tfugen-learn`.
-`project-files/METRICS.md` (חודשי, אוטומטי) סופר רטרו שמצא משהו, כישלון ראשון ב-`tests` ולקחים שחזרו.
+`project-files/METRICS.md` (חודשי) סופר רטרו שמצא, כישלון ראשון ב-`tests` ולקחים שחזרו.
 
 ## לפני מיזוג
 
@@ -47,8 +47,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## כשמשהו נכשל
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
-מה קרה: `requests` חסר, playwright אחר, מכונה איטית.
-הכלל: למצוא את ההבדל (גרסה, חבילה, מהירות) ולקבע גרסאות. "flake" אינו סיבה.
+מה קרה: `requests` חסר, playwright אחר.
+הכלל: למצוא את ההבדל ולקבע גרסאות. "flake" אינו סיבה.
 נאכף: חלקית. playwright 1.56.1 ו-`requests` מקובעים ב-`tests.yml`; השאר טקסט.
 חזר: 0
 
@@ -66,7 +66,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **12. "ההתראה לא הגיעה" (30/09/2026).**
 מה קרה: `notified_at` היה מלא.
-הכלל: לפני "תיקון" התראה, לבדוק `notified_at` ויומן ההתראות. "נשלח" = הספק קיבל, לא "נמסר".
+הכלל: לפני "תיקון" התראה, `notified_at` ויומן ההתראות. "נשלח" אינו "נמסר".
 נאכף: טקסט בלבד.
 חזר: 0
 
@@ -104,7 +104,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **28. בדיקה שתלויה בשעה ביום (02/10/2026, #1036).**
 מה קרה: לפני 03:00 UTC שני ימים קיבלו אותו שם.
-הכלל: תאריכים בבדיקה מעוגן אחד ואחורה ימים שלמים. כישלון שנעלם: לשחזר עם `Date` מזויף לפני "flake".
+הכלל: תאריכים בבדיקה מעוגן אחד, ימים שלמים. כישלון שנעלם: `Date` מזויף.
 נאכף: `backup-od-test.mjs`.
 חזר: 0
 
@@ -117,7 +117,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
-מה קרה: PR אחרי 31 commits, עוגנים שהשתנו, "ממצא" שכבר נסגר.
+מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא, ובקוד לפני "פתוח" ב-handoff. בוצע = ✅ באותו PR.
 נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
 חזר: 2. שני handoff של 01/10/2026 (15:45, 19:30) מנו פריטים שכבר בוצעו.
@@ -138,7 +138,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **18. תוכנית הוצגה לפני מבט בנתונים (01/10/2026, #1016).**
 מה קרה: "מפגע חוזר = אותו מיקום"; ב-DB 48 מיקומים ל-53 מפגעים.
-הכלל: תוכנית שתלויה בנתונים: קודם `count` / `group by`. נתונים שסותרים תוכנית מאושרת: להגיד ולשנות.
+הכלל: תוכנית שתלויה בנתונים: קודם `count` / `group by`.
 נאכף: טקסט (אין דרך בקוד: תוכנית בצ'אט).
 חזר: 0
 
@@ -179,7 +179,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 1. כרטיס הלכידה פתח את הטופס ישירות.
 
 **30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
-מה קרה: העתקתי "MCP מנותק" מה-handoff; הוא עבד.
+מה קרה: "MCP מנותק" הועתק מה-handoff; הוא עבד.
 הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
 נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
 חזר: 0
@@ -219,20 +219,26 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **13. הודעות המתנה באנגלית (01/10/2026).**
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
-נאכף: `hebrew-reply.py` (Stop), `hebrew-reply-test.py`.
-חזר: 1. בהמתנה ל-CI של #1018.
+נאכף: `hebrew-reply.py` (Stop), על כל התור כטקסט אחד. בדיקה לכל קטע: מחכה לאישור.
+חזר: 2. 02/10/2026: שורות התקדמות באנגלית, הסיכום העברי "כיסה".
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
-הכלל: אחרי משימה שמוזגה: handoff, `create_session`, ו-`archive_session` כפעולה האחרונה. לא לבקש ממיכאל.
+הכלל: אחרי מיזוג: handoff, `create_session`, `archive_session` אחרון.
 נאכף: טקסט (אין דרך בקוד: החלטה בסוף שיחה). הפרטים: CLAUDE.md, «שיחה ארוכה».
 חזר: 0
 
 **24. חיכיתי למיכאל כשהיה מה לעשות (01/10/2026, #1027).**
 מה קרה: שאלתי "מה לקדם" כשבפריט 12 היו חלקים בקוד.
-הכלל: לחפש בפריטים הפתוחים חלק שאפשר לעשות בקוד ולעשות אותו; לשאול רק על מה שחסום.
+הכלל: לעשות את החלק שבקוד; לשאול רק על מה שחסום.
 נאכף: טקסט (אין דרך בקוד: זה שיפוט). המקור תוקן ב-CLAUDE.md, «שיחה ארוכה».
 חזר: 1. מיכאל כבר ביקש להמשיך לבד (לקח 14), וה-handoff הורה לשאול.
+
+**34. skills שה-handoff מנה לא נטענו (02/10/2026, PR זה).**
+מה קרה: נטענו 2 מ-4; SQL רץ בלי `tfugen-db`, ונכתב `רטרו: אין` למרות האנגלית (לקח 13).
+הכלל: כל skill שה-handoff מונה נטען לפני הפעולה הראשונה. רטרו: לעבור על השיחה, לא לזכור.
+נאכף: טקסט (אין דרך בקוד: hook לא רואה אילו skills נטענו).
+חזר: 0
 
 **25. PR ירוק ישב בלי מיזוג (01/10/2026, PR זה).**
 מה קרה: #1027 ירוק שעות בלי מיזוג.
