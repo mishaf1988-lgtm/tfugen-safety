@@ -42,7 +42,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 |---|---|---|
 | 02/10/2026 | `webapp-testing` (anthropics/skills) | לא: Playwright כללי; `self-check-test.js` ו-`visual-audit.js` כבר עושים יותר (Supabase מדומה, 390px, עברית). השיטה "לצלם ולקרוא" כבר ב-`tfugen-screen-review` |
 | 02/10/2026 | `security-guidance` (plugin רשמי) | לא: hook Stop שקורא ל-Opus בכל תור (עלות), והאזהרה על `innerHTML` תצעק על כל שורה באפליקציה הזו (יש `esc`). סקירת אבטחה נעשתה 24/09 |
-| 02/10/2026 | `supabase-postgres-best-practices` (supabase/agent-skills) | אולי: תוכן בלבד, RLS ואינדקסים ל-35 טבלאות. לפני התקנה לקרוא את הכללים ולבדוק שאינם סותרים את `tfugen-db`. פתוח למשימה הבאה שנוגעת ב-DB |
+| 02/10/2026 | `supabase-postgres-best-practices` (supabase/agent-skills) | לא הותקן כולו: 8 קטגוריות למיליוני שורות. 5 הכללים שחלים תומצתו ל-`tfugen-db` עם מדידה על ה-migrations (44 policies לא עטופות, BACKLOG 5.12). קישור לכלל המלא שם |
 
 ## מתי skill חדש ומתי לעדכן
 

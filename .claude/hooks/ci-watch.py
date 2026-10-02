@@ -32,8 +32,11 @@ if tool == "Bash":
     if not re.search(r"(^|[;&|\s])git\s+push\b", cmd) or inp.get("run_in_background"):
         print("{}"); sys.exit(0)
     # The branch named in the push (git push -u origin <b>), else the checkout's.
-    m = re.search(r"git\s+push\b[^;&|]*?\borigin\s+(?:HEAD:)?([\w./-]+)", cmd)
-    ref = m.group(1) if m else branch()
+    # The LAST push in the command: a heredoc or a test string earlier in the same
+    # command can contain "git push origin <other>" (02/10/2026, it named a test
+    # branch and the watcher was started on the wrong one).
+    ms = re.findall(r"git\s+push\b[^;&|\n]*?\borigin\s+(?:HEAD:)?([\w./-]+)", cmd)
+    ref = ms[-1] if ms else branch()
 elif tool == "mcp__github__create_pull_request":
     ref = inp.get("head", "") or branch()
 else:
