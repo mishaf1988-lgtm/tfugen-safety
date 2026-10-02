@@ -56,7 +56,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _rtApply('trustee_reports', { eventType: 'INSERT', new: { id: 'live3', u: 'רון', t: 1, ok: false, f: 'x', s: 'פתוח' } });
     return { a, b, c: window.__toasts.length, inDb: DB.trustee_reports.filter(r => /^live/.test(r.id)).length };
   });
-  check('live hazard → in-app toast with trustee + finding; a תקין row does not toast; in-app off → silent; rows still land in DB', /🦺 ליקוי חדש מנאמן: דנה — מטף ללא פלומבה/.test(rt.a) && rt.b === 1 && rt.c === 1 && rt.inDb === 3, rt);
+  check('live hazard → in-app toast with trustee + finding; a תקין row does not toast; in-app off → silent; rows still land in DB', /🦺 ליקוי חדש מנאמן: דנה - מטף ללא פלומבה/.test(rt.a) && rt.b === 1 && rt.c === 1 && rt.inDb === 3, rt);
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close(); console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);

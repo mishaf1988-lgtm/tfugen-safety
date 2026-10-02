@@ -2245,6 +2245,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field"><label>&#1510;&#1497;&#1493;&#1503; (%)</label><input type="number" id="a-sc" placeholder="85" min="0" max="100"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="a-st"><option>&#1502;&#1514;&#1493;&#1499;&#1504;&#1503;</option><option>&#1489;&#1489;&#1497;&#1510;&#1493;&#1506;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</option></select></div>
     <div class="field fw"><label>&#1505;&#1497;&#1499;&#1493;&#1501;</label><textarea id="a-sm"></textarea></div>
+    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; (&#1499;&#1500; &#1502;&#1502;&#1510;&#1488; &#1504;&#1508;&#1514;&#1495; &#1499;-NCR &#1504;&#1508;&#1512;&#1491;)</label><div id="aud-fnd"></div><button type="button" class="btn btn-s btn-sm" onclick="_audFndRow()">+ &#1502;&#1502;&#1510;&#1488;</button></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-aud')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svAud()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -3355,7 +3356,7 @@ window._sdbFlush = function(){
     // mirror, and the next ldb() loaded an app with no data in it. A stale
     // mirror is far better than none; keep what is there and say so.
     window._sdbFull=true;
-    try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05de\u05dc\u05d0 \u2014 \u05d4\u05e2\u05d5\u05ea\u05e7 \u05d4\u05de\u05e7\u05d5\u05de\u05d9 \u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df');}catch(_){}
+    try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05de\u05dc\u05d0 - \u05d4\u05e2\u05d5\u05ea\u05e7 \u05d4\u05de\u05e7\u05d5\u05de\u05d9 \u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df');}catch(_){}
   }
   _sdbTimer = null;
 };
@@ -3550,7 +3551,7 @@ function _obWarnFull(){
     +'\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e0\u05e9\u05de\u05e8\u05d9\u05dd \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d5\u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05db\u05e9\u05ea\u05d4\u05d9\u05d4 \u05e8\u05e9\u05ea \u2014 \u05d0\u05d1\u05dc \u05d0\u05dd \u05ea\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05dc\u05e4\u05e0\u05d9 \u05db\u05df, \u05d4\u05dd \u05d9\u05d0\u05d1\u05d3\u05d5.\n\n'
     +'\u05d4\u05ea\u05d7\u05d1\u05e8 \u05dc\u05e8\u05e9\u05ea \u05d5\u05d4\u05de\u05ea\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df.';
   try{alert(msg);}catch(e){}
-  try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05dc\u05d0 \u2014 \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d1\u05dc\u05d1\u05d3');}catch(e){}
+  try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05dc\u05d0 - \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d1\u05dc\u05d1\u05d3');}catch(e){}
 }
 function _obLastErr(){try{return JSON.parse(localStorage.getItem(OB_ERR_KEY)||'null');}catch(e){return null;}}
 function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e));else localStorage.removeItem(OB_ERR_KEY);}catch(x){}}
@@ -3703,7 +3704,7 @@ function _obSend(op){
                   if(!_obDropped[_k]){
                     _obDropped[_k]=1;
                     console.warn('[schema] '+op.tbl+'.'+m[1]+' missing on the server \u2014 value dropped');
-                    if(typeof toast==='function')toast('\u26a0 \u05d4\u05e2\u05de\u05d5\u05d3\u05d4 '+m[1]+' \u05d1\u05d8\u05d1\u05dc\u05d4 '+op.tbl+' \u05dc\u05d0 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1\u05e9\u05e8\u05ea \u2014 \u05d4\u05e2\u05e8\u05da \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e8\u05d9\u05e5 \u05de\u05d9\u05d2\u05e8\u05e6\u05d9\u05d4.');
+                    if(typeof toast==='function')toast('\u26a0 \u05d4\u05e2\u05de\u05d5\u05d3\u05d4 '+m[1]+' \u05d1\u05d8\u05d1\u05dc\u05d4 '+op.tbl+' \u05dc\u05d0 \u05e7\u05d9\u05d9\u05de\u05ea \u05d1\u05e9\u05e8\u05ea - \u05d4\u05e2\u05e8\u05da \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8. \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e8\u05d9\u05e5 \u05de\u05d9\u05d2\u05e8\u05e6\u05d9\u05d4.');
                   }
                 }catch(e){}
                 return _obSend(op);
@@ -3977,7 +3978,7 @@ function _rtApply(tbl,payload){
     if(DB[tbl].some(function(r){return r.id===nr.id;}))return;
     DB[tbl].unshift(nr);
     // A trustee's hazard while the manager is in the app: in-app channel only (WhatsApp/email go out from the server).
-    if(tbl==='trustee_reports'&&nr.ok===false&&typeof _notifEnabled==='function'&&_notifEnabled('trustee_hazard','inapp')){try{toast('\ud83e\uddba \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d3\u05e9 \u05de\u05e0\u05d0\u05de\u05df: '+String(nr.u||'')+(nr.f?' — '+String(nr.f).substring(0,60):''));}catch(e){}}
+    if(tbl==='trustee_reports'&&nr.ok===false&&typeof _notifEnabled==='function'&&_notifEnabled('trustee_hazard','inapp')){try{toast('\ud83e\uddba \u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d3\u05e9 \u05de\u05e0\u05d0\u05de\u05df: '+String(nr.u||'')+(nr.f?' - '+String(nr.f).substring(0,60):''));}catch(e){}}
   }else if(ev==='UPDATE'&&nr&&nr.id){
     var found=false;
     DB[tbl]=DB[tbl].map(function(r){if(r.id===nr.id){found=true;return nr;}return r;});
@@ -4130,7 +4131,7 @@ function syncDiag(){
       var keep=q.filter(function(op){return conf.indexOf(op)<0;});
       _obSet(keep);
       if(typeof sbSync==='function')sbSync(true);
-      toast('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4 \u2014 \u05de\u05d5\u05e6\u05d2\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea');
+      toast('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4 - \u05de\u05d5\u05e6\u05d2\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea');
     }
     if(typeof _obBadge==='function')_obBadge();
     return;
@@ -4372,12 +4373,12 @@ function _can(feature){
 }
 function goPage(id){
   if(_ADMIN_ONLY_PAGES[id] && !_isAdminUser()){
-    try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 — \u05e2\u05de\u05d5\u05d3 \u05d6\u05d4 \u05e0\u05d2\u05d9\u05e9 \u05e8\u05e7 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea');}catch(e){}
+    try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 - \u05e2\u05de\u05d5\u05d3 \u05d6\u05d4 \u05e0\u05d2\u05d9\u05e9 \u05e8\u05e7 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea');}catch(e){}
     id='dash';
   }
   // Reporter trying to open a manager/admin-only page: kick to dash.
   if(_role()==='reporter' && id && !_REPORTER_PAGES[id]){
-    try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 — \u05e4\u05e0\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');}catch(e){}
+    try{toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 - \u05e4\u05e0\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');}catch(e){}
     id='dash';
   }
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -4908,7 +4909,7 @@ function _genEdit(tbl,id){
     }
     _svEditing[tbl]=id;
   }finally{_genEditOpening=false;}
-  toast('\u05e2\u05e8\u05d9\u05db\u05d4 \u2014 \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05e8\u05e9\u05d5\u05de\u05d4');
+  toast('\u05e2\u05e8\u05d9\u05db\u05d4 - \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05e8\u05e9\u05d5\u05de\u05d4');
 }
 
 function openModal(id){
@@ -4919,6 +4920,7 @@ function openModal(id){
   if(!_genEditOpening)_svEditing={};
   _closeAllOpenModals(id);
   if(id==='m-drl'&&typeof _drlFndReset==='function')_drlFndReset();
+  if(id==='m-aud'&&typeof _audFndReset==='function')_audFndReset();
   // \u05de\u05d9\u05db\u05d0\u05dc, 02/10/2026: \u05d4\u05de\u05d1\u05e7\u05e8 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05dd \u05d4\u05d5\u05d0 \u05d4\u05d5\u05d0 \u05e2\u05e6\u05de\u05d5. \u05e8\u05e7 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4.
   if(id==='m-aud'&&!_genEditOpening){var _aa=g('a-a');if(_aa)_aa.value=_AUD_AUDITOR;}
   if(!document.body.style.overflow||document.body.style.overflow!=='hidden'){
@@ -5067,9 +5069,17 @@ function svDoc(){
 function svAud(){
   var n=gv('a-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e0\u05d5\u05e9\u05d0');return;}
   var r={id:_svEditId('auds')||gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d')||null,f:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};
-  _svPut('auds',r);addLog('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05d5\u05e1\u05e4\u05d4: '+n);sdb();closeModal('m-aud');
+  var fs=_audFndRead();
+  // A past date with status "planned" is almost always an audit that was done
+  // and the status was not changed (02/10/2026): then it never counts as done.
+  if(r.s==='\u05de\u05ea\u05d5\u05db\u05e0\u05df'&&r.d&&r.d<=new Date().toISOString().split('T')[0]&&confirm('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e2\u05d1\u05e8 \u05d5\u05d4\u05e1\u05d8\u05d8\u05d5\u05e1 "\u05de\u05ea\u05d5\u05db\u05e0\u05df". \u05dc\u05e1\u05de\u05df "\u05d4\u05d5\u05e9\u05dc\u05dd"?'))r.s='\u05d4\u05d5\u05e9\u05dc\u05dd';
+  var ncrs=_audFndNcrs(r,fs);
+  _svPut('auds',r);
+  ncrs.forEach(function(x){sbIns('ncr',x);});
+  if(ncrs.length&&typeof rNcr==='function')try{rNcr();}catch(e){}
+  addLog('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05d5\u05e1\u05e4\u05d4: '+n);sdb();closeModal('m-aud');
   ['a-n','a-a','a-sm'].forEach(function(i){var el=g(i);if(el)el.value='';});
-  toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rAud();
+  toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;'+(ncrs.length?' ('+ncrs.length+' NCR)':''));rAud();
 }
 function openNewNcrModal(){
   ['ncr-id','ncr-d','ncr-loc','ncr-rc','ncr-rc-cat','ncr-success-criteria','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
@@ -5096,14 +5106,17 @@ function openNewNcrModal(){
 // date, or from today when it is empty. A date typed by hand is kept: only an
 // empty field, or one this function filled itself, is replaced.
 var _NCR_DUE_DAYS={'\u05e7\u05e8\u05d9\u05d8\u05d9':1,'\u05d2\u05d1\u05d5\u05d4\u05d4':7,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':30,'\u05e0\u05de\u05d5\u05db\u05d4':60};
-function _ncrAutoDue(){
-  var u=g('ncr-u'),p=g('ncr-p');if(!u||!p)return;
-  var n=_NCR_DUE_DAYS[p.value];if(!n)return;
-  if(u.value&&u.value!==u.getAttribute('data-auto'))return;
-  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(gv('ncr-sd')||'');
+function _ncrDueFor(p,sd){
+  var n=_NCR_DUE_DAYS[p];if(!n)return null;
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(sd||'');
   var b=m?new Date(+m[1],m[2]-1,+m[3]):new Date();
   b.setDate(b.getDate()+n);
-  var v=b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');
+  return b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');
+}
+function _ncrAutoDue(){
+  var u=g('ncr-u'),p=g('ncr-p');if(!u||!p)return;
+  var v=_ncrDueFor(p.value,gv('ncr-sd'));if(!v)return;
+  if(u.value&&u.value!==u.getAttribute('data-auto'))return;
   u.value=v;u.setAttribute('data-auto',v);
 }
 // NCR draft autosave: every 5s while m-ncr is open with no ncr-id, snapshot
@@ -7987,7 +8000,7 @@ window.safetyTrendReport=function(){
   '<div class="foot"><div>'+'\u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9: '+'<span class="line"></span></div><div>'+'\u05ea\u05d0\u05e8\u05d9\u05da: '+'<span class="line"></span></div></div>'+
   '</body></html>';
   var w2=window.open('','_blank');
-  if(!w2){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd — \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
+  if(!w2){toast('\u05d4\u05d7\u05dc\u05d5\u05df \u05e0\u05d7\u05e1\u05dd - \u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8');return;}
   w2.document.write(html);w2.document.close();
 };
 window.isoAuditReport=function(){
@@ -8259,7 +8272,7 @@ window._eqiExportCsv=function(forceFilter){
   // Ascending "days until" — for the expired set that is most-overdue first.
   rows.sort(function(a,b){var ax=a.e?du(a.e):9999,bx=b.e?du(b.e):9999;return ax-bx;});
   // Empty set is a clear message, never a failure.
-  if(!rows.length){toast(f==='exp'?'\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 \u2014 \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
+  if(!rows.length){toast(f==='exp'?'\u05d0\u05d9\u05df \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e4\u05d2\u05d9 \u05ea\u05d5\u05e7\u05e3 - \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05dc\u05d9\u05d9\u05e6\u05d5\u05d0');return;}
   // Quote a single CSV field — wrap in "..." and escape internal quotes.
   function q2(v){if(v===null||v===undefined)return '';var s=String(v);return '"'+s.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
   var headers=[
@@ -11965,7 +11978,7 @@ window._credAutoDeliver=function(){
   // isn't being involved. WhatsApp delivery remains a separate manual
   // click in the same modal.
   if(typeof _msSendMail!=='function'){
-    if(typeof toast==='function')toast('⚠ \u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05d6\u05de\u05d9\u05df — \u05d4\u05e2\u05ea\u05d9\u05e7\u05d9 \u05d9\u05d3\u05e0\u05d9\u05ea');
+    if(typeof toast==='function')toast('⚠ \u05de\u05d9\u05d9\u05dc \u05dc\u05d0 \u05d6\u05de\u05d9\u05df - \u05d4\u05e2\u05ea\u05d9\u05e7\u05d9 \u05d9\u05d3\u05e0\u05d9\u05ea');
     return;
   }
   var hi='\u05e9\u05dc\u05d5\u05dd';// שלום
@@ -11986,7 +11999,7 @@ window._credAutoDeliver=function(){
   _msSendMail(email,subj,html).then(function(){
     if(typeof toast==='function')toast('✓ \u05d4\u05de\u05d9\u05d9\u05dc \u05e0\u05e9\u05dc\u05d7',{ok:true});// ✓ המייל נשלח
   }).catch(function(err){
-    if(typeof toast==='function')toast('⚠ \u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 — \u05d4\u05e2\u05ea\u05d9\u05e7\u05d9 \u05d9\u05d3\u05e0\u05d9\u05ea');// ⚠ שליחה נכשלה — העתיקי ידנית
+    if(typeof toast==='function')toast('⚠ \u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 - \u05d4\u05e2\u05ea\u05d9\u05e7\u05d9 \u05d9\u05d3\u05e0\u05d9\u05ea');// ⚠ שליחה נכשלה — העתיקי ידנית
   });
 };
 
@@ -12024,7 +12037,7 @@ function openDeleteUserDialog(){
   if(!confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05de\u05e9\u05ea\u05de\u05e9 "'+uname+'" \u05dc\u05e6\u05de\u05d9\u05ea\u05d5\u05ea?\n\n\u05db\u05dc \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e9\u05dc\u05d5 \u05d9\u05d9\u05e9\u05de\u05e8\u05d5, \u05d0\u05da \u05d4\u05d5\u05d0 \u05dc\u05d0 \u05d9\u05d5\u05db\u05dc \u05d9\u05d5\u05ea\u05e8 \u05dc\u05d4\u05d9\u05db\u05e0\u05e1.\n\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d6\u05d5 \u05dc\u05d0 \u05e0\u05d9\u05ea\u05e0\u05ea \u05dc\u05d1\u05d9\u05d8\u05d5\u05dc.')){
     return;
   }
-  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 - \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
   toast('\u05de\u05d5\u05d7\u05e7 \u05de\u05e9\u05ea\u05de\u05e9...');
   fetch('/api/delete-user',{
     method:'POST',
@@ -12064,7 +12077,7 @@ function openResetPwDialog(){
   if(!confirm('\u05dc\u05d9\u05d9\u05e6\u05e8 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05dc\u05de\u05e9\u05ea\u05de\u05e9 "'+uname+'"?\n\n\u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05ea\u05d5\u05e6\u05d2 \u05dc\u05da \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea \u05d1\u05dc\u05d1\u05d3. \u05d4\u05e9\u05de\u05d5\u05e8 \u05d5\u05d4\u05e2\u05d1\u05e8 \u05dc\u05de\u05e9\u05ea\u05de\u05e9.\n\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d9\u05e6\u05d8\u05e8\u05da \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9 \u05e2\u05dd \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4.')){
     return;
   }
-  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  if(!_sbToken){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 - \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
   toast('\u05de\u05d0\u05e4\u05e1 \u05e1\u05d9\u05e1\u05de\u05d4...');
   fetch('/api/reset-password',{
     method:'POST',
@@ -13672,7 +13685,7 @@ function _notifLogWriteCsv(serverRows){
     });
     var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     _saveFile(blob,'notifications-'+new Date().toISOString().split('T')[0]+'.csv');
-    toast(partial?'CSV \u05d4\u05d5\u05e8\u05d3 \u2014 \u05de\u05d4\u05e2\u05d5\u05ea\u05e7 \u05e9\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d1\u05dc\u05d1\u05d3 (\u05d0\u05d9\u05df \u05e8\u05e9\u05ea)':('CSV \u05d4\u05d5\u05e8\u05d3 \u2014 '+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea'));
+    toast(partial?'CSV \u05d4\u05d5\u05e8\u05d3 - \u05de\u05d4\u05e2\u05d5\u05ea\u05e7 \u05e9\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d1\u05dc\u05d1\u05d3 (\u05d0\u05d9\u05df \u05e8\u05e9\u05ea)':('CSV \u05d4\u05d5\u05e8\u05d3 - '+rows.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea'));
   }catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05d4: '+e.message);}
 }
 // _notifLogClear removed 2026-09-20. It set DB.notifications_log=[] and
@@ -13687,7 +13700,7 @@ function testNotif(){
   var prefs=_notifPrefs();
   if(!prefs.ncr_critical){toast('\u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d5 \u05e2\u05e8\u05d5\u05e6\u05d9\u05dd \u05dc-NCR \u05e7\u05e8\u05d9\u05d8\u05d9. \u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05d5\u05e9\u05de\u05d5\u05e8.');return;}
   if(prefs.ncr_critical.inapp){
-    toast('\ud83d\udd14 NCR \u05e7\u05e8\u05d9\u05d8\u05d9: \u05d1\u05d3\u05d9\u05e7\u05d4 \u2014 NCR-TEST');
+    toast('\ud83d\udd14 NCR \u05e7\u05e8\u05d9\u05d8\u05d9: \u05d1\u05d3\u05d9\u05e7\u05d4 - NCR-TEST');
     if(typeof _notifLog==='function')_notifLog('ncr_critical','inapp',{title:'\u05d1\u05d3\u05d9\u05e7\u05d4',test:true});
   }
   if(prefs.ncr_critical.email && typeof _notifLog==='function'){
@@ -14178,12 +14191,12 @@ window._renewRecord=function(tbl,id){
     +(rec[dF]?('\n\n\u05d4\u05e7\u05d5\u05d3\u05dd: '+fd(rec[dF])):''),today);
   if(nd===null)return;
   nd=String(nd).trim();
-  if(nd&&!/^\d{4}-\d{2}-\d{2}$/.test(nd)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  if(nd&&!/^\d{4}-\d{2}-\d{2}$/.test(nd)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df - YYYY-MM-DD');return;}
   var ne=prompt('\u05ea\u05e4\u05d5\u05d2\u05d4 \u05d7\u05d3\u05e9\u05d4 (YYYY-MM-DD)'
     +(rec.e?('\n\n\u05d4\u05e7\u05d5\u05d3\u05de\u05ea: '+fd(rec.e)):''),rec.e||'');
   if(ne===null)return;
   ne=String(ne).trim();
-  if(ne&&!/^\d{4}-\d{2}-\d{2}$/.test(ne)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  if(ne&&!/^\d{4}-\d{2}-\d{2}$/.test(ne)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df - YYYY-MM-DD');return;}
   if(!nd&&!ne){toast('\u05dc\u05d0 \u05d4\u05d5\u05d6\u05df \u05db\u05dc\u05d5\u05dd');return;}
   // The history row is written FIRST and carries the OLD values — that is the
   // whole point. If the record write were to fail after it, the worst case is
@@ -14202,7 +14215,7 @@ window._renewRecord=function(tbl,id){
   rec.ts=new Date().toISOString();
   sbUpd(tbl,rec);sdb();
   addLog('\u05d7\u05d9\u05d3\u05d5\u05e9 '+(_RENEWABLE[tbl]||tbl)+': '+String(rec.n||rec.ty||rec.emp_name||rec.code||'').substring(0,30));
-  toast('\u05d7\u05d5\u05d3\u05e9 — \u05d4\u05e7\u05d5\u05d3\u05dd \u05e0\u05e9\u05de\u05e8 \u05d1\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4');
+  toast('\u05d7\u05d5\u05d3\u05e9 - \u05d4\u05e7\u05d5\u05d3\u05dd \u05e0\u05e9\u05de\u05e8 \u05d1\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4');
   showView(tbl,id);
   if(typeof _rerender==='function')try{_rerender(tbl);}catch(e){}
 };
@@ -14576,11 +14589,11 @@ function showView(tbl,id){
   if(!cfg){
     var ed=_VIEW_EDITOR_FALLBACK[tbl];
     if(ed&&typeof window[ed]==='function'){window[ed](id);return;}
-    console.warn('showView: no VIEW_CONFIG for',tbl);toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e6\u05d9\u05d2 \u2014 \u05d8\u05d1\u05dc\u05d4 "'+tbl+'" \u05d0\u05d9\u05e0\u05d4 \u05e0\u05ea\u05de\u05db\u05ea');return;
+    console.warn('showView: no VIEW_CONFIG for',tbl);toast('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e6\u05d9\u05d2 - \u05d8\u05d1\u05dc\u05d4 "'+tbl+'" \u05d0\u05d9\u05e0\u05d4 \u05e0\u05ea\u05de\u05db\u05ea');return;
   }
   var db=DB[tbl]||[];
   var rec=db.find(function(r){return r.id===id;});
-  if(!rec){console.warn('showView: record not found',tbl,id);toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05dc\u05e8\u05e2\u05e0\u05df');return;}
+  if(!rec){console.warn('showView: record not found',tbl,id);toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 - \u05e0\u05e1\u05d4 \u05dc\u05e8\u05e2\u05e0\u05df');return;}
   if(tbl==='ncr'&&rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   var title=g('view-title');
   var back=g('view-back');
@@ -15071,7 +15084,7 @@ window._invAI=function(){
       var last=lines[lines.length-1]||'';
       rc.value=last.replace(/^\[|\]$/g,'').replace(/^\d+\.\s*/,'').substring(0,160);
     }
-    toast('AI \u05d4\u05e6\u05d9\u05e2 5-Why — \u05e2\u05e8\u05d5\u05da \u05d5\u05e9\u05de\u05d5\u05e8');
+    toast('AI \u05d4\u05e6\u05d9\u05e2 5-Why - \u05e2\u05e8\u05d5\u05da \u05d5\u05e9\u05de\u05d5\u05e8');
   }).catch(function(e){if(err)err.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e);})
   .then(function(){if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 5-Why (AI)';}});
 };
@@ -15108,7 +15121,7 @@ window._invNcr=function(){
   var sdEl=g('ncr-sd');if(sdEl)sdEl.value=String(rec.dt||rec.d||'').substring(0,10);  // the modal pre-fills today; the incident date wins
   set('ncr-notes','\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05e7\u05d9\u05e8\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea '+fd(String(rec.dt||rec.d||'').substring(0,10))+(fw?'\n\n5-Why:\n'+fw:''));
   if(rec.location_id&&typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id);
-  toast('\u05d8\u05d5\u05e4\u05e1 NCR \u05de\u05d5\u05dc\u05d0 \u05de\u05d4\u05d7\u05e7\u05d9\u05e8\u05d4 — \u05d1\u05d3\u05d5\u05e7 \u05d5\u05e9\u05de\u05d5\u05e8');
+  toast('\u05d8\u05d5\u05e4\u05e1 NCR \u05de\u05d5\u05dc\u05d0 \u05de\u05d4\u05d7\u05e7\u05d9\u05e8\u05d4 - \u05d1\u05d3\u05d5\u05e7 \u05d5\u05e9\u05de\u05d5\u05e8');
 };
 // AI suggestion for risk register entry. Fills probability (1-4),
 // severity (1-4) and mitigation actions based on description + topic.
@@ -15142,7 +15155,7 @@ window._rskAI=function(){
       if(sEl && parsed.s && [1,2,3,4].indexOf(parsed.s)>-1){sEl.value=String(parsed.s);changed.push('S='+parsed.s);}
       if(acEl && parsed.ac && !acEl.value.trim()){acEl.value=parsed.ac;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' · '));
-      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd — \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 \u05d3\u05d9\u05e8\u05d5\u05d2 \u05d5\u05de\u05d9\u05d8\u05d9\u05d2\u05e6\u05d9\u05d4';}
@@ -15175,12 +15188,12 @@ window._easpAI=function(){
       if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
       // Strip code fences if present
       content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
-      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON \u2014 \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON - \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
       var fillIfEmpty=function(elId,val){var el=g(elId);if(el && val && !el.value.trim())el.value=val;};
       fillIfEmpty('ea-impact',parsed.impact);
       fillIfEmpty('ea-controls',parsed.controls);
       fillIfEmpty('ea-addctrl',parsed.additional_controls);
-      toast('AI \u05de\u05d9\u05dc\u05d0 \u05e9\u05d3\u05d5\u05ea \u05e8\u05d9\u05e7\u05d9\u05dd \u2014 \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da');
+      toast('AI \u05de\u05d9\u05dc\u05d0 \u05e9\u05d3\u05d5\u05ea \u05e8\u05d9\u05e7\u05d9\u05dd - \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='\u05d4\u05e6\u05e2 \u05de\u05e9\u05de\u05e2\u05d5\u05ea \u05d5\u05d1\u05e7\u05e8\u05d5\u05ea';}
@@ -15217,13 +15230,13 @@ window._ncrAIRcAction=function(){
       var content=dj.content&&dj.content[0]?dj.content[0].text:'';
       if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
       content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
-      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON \u2014 \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
+      var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON - \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
       var rcEl=g('ncr-rc'),cEl=g('ncr-c');
       var changed=[];
       if(rcEl && parsed.rc && !rcEl.value.trim()){rcEl.value=parsed.rc;changed.push('\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9');}
       if(cEl && parsed.c && !cEl.value.trim()){cEl.value=parsed.c;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' + '));
-      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd \u2014 \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d1\u05d4 \u05d5\u05e4\u05e2\u05d5\u05dc\u05d4';}
@@ -15265,7 +15278,7 @@ window._ncrFiveWhyAI=function(){
       // Replace the textarea content. User can edit before clicking '\u05e9\u05de\u05d5\u05e8'.
       ta.value=content;
       ta.scrollTop=0;
-      toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05e0\u05d9\u05ea\u05d5\u05d7 \u2014 \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da \u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05d9\u05e8\u05d4');
+      toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05e0\u05d9\u05ea\u05d5\u05d7 - \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da \u05dc\u05e4\u05e0\u05d9 \u05e9\u05de\u05d9\u05e8\u05d4');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e0\u05d9\u05ea\u05d5\u05d7 AI';}
@@ -16172,7 +16185,7 @@ window._tskAI=function(){
         changed.push('\u05d9\u05e2\u05d3 (+'+parsed.days+' \u05d9\u05de\u05d9\u05dd)');
       }
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' · '));
-      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd — \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 \u05e2\u05d3\u05d9\u05e4\u05d5\u05ea/\u05d9\u05e2\u05d3';}
@@ -16216,7 +16229,7 @@ window._incAI=function(){
       if(svEl && parsed.sv && allowedSv.indexOf(parsed.sv)>-1){svEl.value=parsed.sv;changed.push('\u05d7\u05d5\u05de\u05e8\u05d4');}
       if(dyEl && (typeof parsed.dy==='number') && parsed.dy>=0 && !dyEl.value){dyEl.value=String(parsed.dy);changed.push('\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' · '));
-      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd — \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='🤖 \u05e1\u05d5\u05d5\u05d2/\u05d7\u05d5\u05de\u05e8\u05d4 AI';}
@@ -16264,7 +16277,7 @@ window._legAI=function(){
         if(!cur||cur==='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4'){aEl.value=parsed.a;changed.push('\u05ea\u05d7\u05d5\u05dd \u05e8\u05d0\u05e9\u05d9');}
       }
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' · '));
-      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd — \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
+      else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='🤖 \u05e0\u05ea\u05d7 \u05d5\u05e1\u05db\u05dd AI';}
@@ -16299,7 +16312,7 @@ window._toolboxAI=function(){
         if(!ok)return;
       }
       notesEl.value=content.trim();
-      toast('AI \u05d4\u05e6\u05d9\u05e2 \u05ea\u05d5\u05db\u05df — \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da');
+      toast('AI \u05d4\u05e6\u05d9\u05e2 \u05ea\u05d5\u05db\u05df - \u05e2\u05d9\u05d9\u05df \u05d5\u05e2\u05e8\u05d5\u05da');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 \u05ea\u05d5\u05db\u05df';}
@@ -16338,7 +16351,7 @@ window._nmAI=function(){
       if(typEl && parsed.typ && allowedTyp.indexOf(parsed.typ)>-1){typEl.value=parsed.typ;changed.push('\u05e1\u05d5\u05d2');}
       if(notesEl && parsed.notes && !notesEl.value.trim()){notesEl.value=parsed.notes;changed.push('\u05d4\u05e2\u05e8\u05d5\u05ea');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' \u00b7 '));
-      else toast('\u05d4\u05e9\u05d3\u05d5\u05ea \u05de\u05d5\u05dc\u05d0\u05d9\u05dd \u2014 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
+      else toast('\u05d4\u05e9\u05d3\u05d5\u05ea \u05de\u05d5\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
     })
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d5\u05d5\u05d2 \u05d5\u05d4\u05de\u05dc\u05e6\u05d5\u05ea';}
@@ -17026,6 +17039,47 @@ function _audChainApply(rec){
   sbUpd('auds',a);
   return a;
 }
+// Michael, 02/10/2026: an audit finds several things, and one NCR with all of
+// them in the description cannot close one and keep the rest open. Each row
+// here becomes its own NCR, linked by the same summary line as the single
+// "open NCR from finding" button. Editing an audit adds new rows only.
+window._audFndReset=function(){var b=g('aud-fnd');if(b){b.innerHTML='';_audFndRow();}};
+window._audFndRow=function(){
+  var box=g('aud-fnd');if(!box)return;
+  var d=document.createElement('div');d.className='aud-fr';
+  d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
+  var pri=Object.keys(_NCR_DUE_DAYS).map(function(k){return '<option'+(k==='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea'?' selected':'')+'>'+k+'</option>';}).join('');
+  d.innerHTML='<input class="aud-ft" placeholder="'+'\u05de\u05d4 \u05e0\u05de\u05e6\u05d0'+'" style="flex:2 1 180px">'
+    +'<select class="aud-fp" title="'+'\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea'+'" style="flex:1 1 90px">'+pri+'</select>'
+    +'<input class="aud-fo" placeholder="'+'\u05d0\u05d7\u05e8\u05d0\u05d9'+'" style="flex:1 1 100px">';
+  box.appendChild(d);
+};
+function _audFndRead(){
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#aud-fnd .aud-fr'),function(row){
+    var t=(row.querySelector('.aud-ft').value||'').trim();if(!t)return;
+    out.push({t:t,p:row.querySelector('.aud-fp').value,o:(row.querySelector('.aud-fo').value||'').trim()});
+  });
+  return out;
+}
+// Builds the NCRs, pushes them to DB.ncr (so each gets the next number) and
+// writes the link lines into the audit summary. The caller syncs both.
+function _audFndNcrs(a,fs){
+  if(!fs.length)return [];
+  if(!DB.ncr)DB.ncr=[];
+  var sd=a.d||new Date().toISOString().split('T')[0],out=[];
+  fs.forEach(function(x){
+    var rec={id:(NCRI++).toString(36)+Date.now().toString(36),num:_ncrNextNum(),
+      d:'\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd ('+(a.n||'')+'): '+x.t,a:'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',category:'saf',
+      loc:'',location_id:null,project_id:null,issue_type_id:null,rc:'',rc_cat:null,success_criteria:null,
+      c:'',o:x.o,u:_ncrDueFor(x.p,sd),s:'\u05e4\u05ea\u05d5\u05d7',sd:sd,cd:null,
+      notes:'\u05e0\u05d5\u05e6\u05e8 \u05de\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd: '+(a.n||'')+(a.d?' '+fd(a.d):''),five_why:null,sens:false,p:x.p,ts:new Date().toISOString()};
+    DB.ncr.push(rec);out.push(rec);
+    a.sm=(a.sm?a.sm+'\n':'')+'\u05e0\u05e4\u05ea\u05d7 '+rec.num+' \u05de\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea';
+  });
+  a.f=Math.max(a.f||0,_audNcrs(a).length);
+  return out;
+}
 function _audNcrs(a){
   var refs=String((a&&a.sm)||'').match(/NCR-\d+/g)||[],seen={},out=[];
   refs.forEach(function(n){if(seen[n])return;seen[n]=1;out.push((DB.ncr||[]).find(function(r){return r.num===n;})||{num:n});});
@@ -17084,7 +17138,7 @@ window._chainNmToNcr=function(nmId){
       // an NCR existed. Marking it \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc, with the reason in its own
       // notes, closes both holes without a schema change.
       _nmChainPending=nmId;
-      toast('\u05d8\u05d9\u05d5\u05d8\u05ea NCR \u05de\u05d5\u05dc\u05d0\u05d4 — \u05e1\u05e7\u05d5\u05e8 \u05d5\u05e9\u05de\u05d5\u05e8');
+      toast('\u05d8\u05d9\u05d5\u05d8\u05ea NCR \u05de\u05d5\u05dc\u05d0\u05d4 - \u05e1\u05e7\u05d5\u05e8 \u05d5\u05e9\u05de\u05d5\u05e8');
     },200);
   },300);
 };
@@ -17248,7 +17302,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
     '<script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>'+
     '</body></html>';
   var w=window.open('','_blank');
-  if(!w){toast('\u05d7\u05e1\u05d5\u05dd \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u2014 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05e4\u05d3\u05e3');return;}
+  if(!w){toast('\u05d7\u05e1\u05d5\u05dd \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd - \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05e4\u05d3\u05e3');return;}
   w.document.open();w.document.write(html);w.document.close();
 }
 
@@ -17316,7 +17370,7 @@ window._hearSetExp=function(id){
   var v=prompt('\u05ea\u05e7\u05e3 \u05e2\u05d3 (YYYY-MM-DD) — \u05e8\u05d9\u05e7 \u05de\u05d5\u05d7\u05e7\n\n'+(r.emp_name||'')+(r.test_date?(' \u00b7 \u05e0\u05d1\u05d3\u05e7 '+fd(r.test_date)):''),r.e||'');
   if(v===null)return;
   v=String(v).trim();
-  if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df — YYYY-MM-DD');return;}
+  if(v&&!/^\d{4}-\d{2}-\d{2}$/.test(v)){toast('\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df - YYYY-MM-DD');return;}
   r.e=v||null;                                 // CLAUDE.md rule 2: empty is null
   r.ts=new Date().toISOString();
   sbUpd('hearing_tests',r);sdb();rHearing();
@@ -17724,7 +17778,7 @@ window._pwCheckFirst=function(pw,fail,again,modal){
 window._changePwOpen=function(){
   ['cpw-current','cpw-new','cpw-confirm'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var err=g('cpw-err');if(err)err.textContent='';
-  if(!_currentUser||!_currentUser.username){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
+  if(!_currentUser||!_currentUser.username){toast('\u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 - \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9');return;}
   openModal('m-changepw');
 };
 window._changePwSubmit=function(){
@@ -18510,7 +18564,7 @@ function _truPull(manual){
   return Promise.all(tbls.map(function(t){return sbGet(t);})).then(function(res){
     var any=false;
     res.forEach(function(rows,i){if(rows===null)return;any=true;_sbMergePull(tbls[i],rows,obBefore[tbls[i]]);});
-    if(!any){if(manual)toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u2014 \u05de\u05d5\u05e6\u05d2 \u05de\u05d4 \u05e9\u05e0\u05e9\u05de\u05e8 \u05d1\u05de\u05db\u05e9\u05d9\u05e8');return false;}
+    if(!any){if(manual)toast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 - \u05de\u05d5\u05e6\u05d2 \u05de\u05d4 \u05e9\u05e0\u05e9\u05de\u05e8 \u05d1\u05de\u05db\u05e9\u05d9\u05e8');return false;}
     sdb();_truFillLists();_truRender();
     if(manual)toast('\u05e2\u05d5\u05d3\u05db\u05df \u2713');
     return true;
@@ -18879,7 +18933,7 @@ function svTru(){
   _truFormSync();
   var u=_truNameVal('tru-u','tru-u-other');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var d=gv('tru-d')||new Date().toISOString().split('T')[0];
-  var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 \u2014 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
+  var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 - \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
   var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
   if(!ns.length){toast('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea \u05d1\u05e1\u05d9\u05d5\u05e8');return;}
   var ref=_truForm.lock?_truForm.ref:null;
@@ -18897,18 +18951,18 @@ function svTru(){
     for(var j=0;j<st.items.length;j++){
       var it=st.items[j],ph=_attachUrls[_truPhId(n,it.k)]||null,lbl=(st.items.length>1?'\u05e4\u05e8\u05d9\u05d8 '+(j+1)+' \u05d1':'')+'\u05de\u05e9\u05d9\u05de\u05d4 '+n+(tt?' ('+tt.t+')':'');
       var detail=String(it.loc||'').trim();
-      if(it.ok!==true&&it.ok!==false){toast('\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
+      if(it.ok!==true&&it.ok!==false){toast('\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9 - '+lbl);return;}
       if(it.ok===true){
-        if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 '+lbl);return;}
+        if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 - '+lbl);return;}
         rows.push(row(n,true,null,ph,detail));continue;
       }
-      if(!String(it.f||'').trim()){toast('\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
-      if(!ph){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u2014 '+lbl);return;}
+      if(!String(it.f||'').trim()){toast('\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 - '+lbl);return;}
+      if(!ph){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 - '+lbl);return;}
       var fnd=row(n,false,String(it.f).trim(),ph,detail);
       rows.push(fnd);
       if(it.fx){
         var aPh=_attachUrls[_truPhAfterId(n,it.k)]||null;
-        if(!aPh){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" \u2014 '+lbl);return;}
+        if(!aPh){toast('\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" - '+lbl);return;}
         // Closed on insert, so trustee-notify already reads it as fixed and
         // says so; close_ref then finds nothing left to close.
         fnd.s=TRUSTEE_S_CLOSED;
@@ -19557,7 +19611,7 @@ function _truMgrSpawnTask(id){
 function _truExportCsv(){
   var m=_truMgrMonth();
   var rows=_truRows(m).slice().sort(function(a,b){return (a.u||'').localeCompare(b.u||'','he')||String(a.d||'').localeCompare(String(b.d||''));});
-  if(!rows.length){toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4 \u2014 \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0');return;}
+  if(!rows.length){toast('\u05d0\u05d9\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05d3\u05e9 \u05d6\u05d4 - \u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05d9\u05d9\u05e6\u05d0');return;}
   function q2(v){if(v===null||v===undefined)return '';var x=String(v);return '"'+x.replace(/"/g,'""').replace(/\n/g,' ')+'"';}
   var lines=[];
   lines.push(['\u05dc\u05d5\u05d7 \u05e0\u05d9\u05e7\u05d5\u05d3 '+m].map(q2).join(','));
@@ -19890,7 +19944,7 @@ function _truRosterEditSave(id){
   var nw=String(gv('tru-roster-en')||'').trim();
   if(!nw){toast('\u05e9\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var clash=(DB.trustees||[]).filter(function(x){return x.id!==id&&x.n===nw;})[0];
-  if(clash){toast('\u05d4\u05e9\u05dd \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 \u2014 \u05de\u05d6\u05d2 \u05d1\u05de\u05e7\u05d5\u05dd \u05dc\u05e9\u05e0\u05d5\u05ea \u05e9\u05dd');return;}
+  if(clash){toast('\u05d4\u05e9\u05dd \u05db\u05d1\u05e8 \u05d1\u05e8\u05e9\u05d9\u05de\u05d4 - \u05de\u05d6\u05d2 \u05d1\u05de\u05e7\u05d5\u05dd \u05dc\u05e9\u05e0\u05d5\u05ea \u05e9\u05dd');return;}
   var old=t.n,moved=0;
   if(old!==nw){
     var cnt=(DB.trustee_reports||[]).filter(function(r){return r&&r.u===old;}).length;
@@ -22765,11 +22819,11 @@ window._odConnect=function(){
       return;
     }
     var app=_odMsal();
-    if(!app){toast('❌ MSAL \u05dc\u05d0 \u05d0\u05d5\u05ea\u05d7\u05dc — \u05d1\u05d3\u05e7\u05d9 Client ID');return;}
+    if(!app){toast('❌ MSAL \u05dc\u05d0 \u05d0\u05d5\u05ea\u05d7\u05dc - \u05d1\u05d3\u05e7\u05d9 Client ID');return;}
     app.initialize().then(function(){
       return app.loginPopup({scopes:_OD_SCOPES,prompt:'select_account'});
     }).then(function(res){
-      if(!res||!res.accessToken){toast('\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d4 — \u05dc\u05d0 \u05d4\u05ea\u05e7\u05d1\u05dc token');return;}
+      if(!res||!res.accessToken){toast('\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d4 - \u05dc\u05d0 \u05d4\u05ea\u05e7\u05d1\u05dc token');return;}
       _odSetToken({access_token:res.accessToken,expires_at:res.expiresOn?res.expiresOn.getTime():(Date.now()+3300000),account:res.account&&res.account.username});
       _odSetUser(res.account&&res.account.username||'');
       toast('\u05de\u05d7\u05d5\u05d1\u05e8 \u05dc-OneDrive: '+(res.account&&res.account.username||''));
@@ -23875,7 +23929,7 @@ window._odRunAutoImportNow=function(){
     }
     setStatus(summary,failed>0?'#7f1d1d':'#065f46');
     if(imported>0)toast('☁️ '+imported+' \u05e7\u05d1\u05e6\u05d9\u05dd \u05d9\u05d5\u05d1\u05d0\u05d5');
-    else if(skipped>0)toast('⚠ '+skipped+' \u05e7\u05d1\u05e6\u05d9\u05dd \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc-/_review/ — AI \u05dc\u05d0 \u05d1\u05d8\u05d5\u05d7');
+    else if(skipped>0)toast('⚠ '+skipped+' \u05e7\u05d1\u05e6\u05d9\u05dd \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc-/_review/ - AI \u05dc\u05d0 \u05d1\u05d8\u05d5\u05d7');
     else if(failed>0)toast('❌ '+failed+' \u05e7\u05d1\u05e6\u05d9\u05dd \u05e0\u05db\u05e9\u05dc\u05d5');
     // Refresh the inbox listing so the user sees the updated state.
     setTimeout(function(){if(typeof window._odLoadInbox==='function')window._odLoadInbox();},2500);
@@ -23953,7 +24007,7 @@ function _odAutoImport(opts){
   if(_odPolling&&!force){
     if(force===false)return; // legacy path
     dlog('[od] auto-import already running');
-    if(opts&&opts.toastOnBusy)try{toast('⚠ \u05e1\u05e8\u05d9\u05e7\u05d4 \u05db\u05d1\u05e8 \u05e8\u05e6\u05d4 — \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05db\u05de\u05d4 \u05e9\u05e0\u05d9\u05d5\u05ea');}catch(_){}
+    if(opts&&opts.toastOnBusy)try{toast('⚠ \u05e1\u05e8\u05d9\u05e7\u05d4 \u05db\u05d1\u05e8 \u05e8\u05e6\u05d4 - \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05db\u05de\u05d4 \u05e9\u05e0\u05d9\u05d5\u05ea');}catch(_){}
     return;
   }
   _odPolling=true;
@@ -23967,7 +24021,7 @@ function _odAutoImport(opts){
     var items=((d&&d.value)||[]).filter(function(it){return it.file;});
     dlog('[od] auto-import found',items.length,'items');
     if(opts&&opts.verbose){
-      try{toast(items.length?('🔎 \u05e0\u05de\u05e6\u05d0\u05d5 '+items.length+' \u05e7\u05d1\u05e6\u05d9\u05dd — \u05de\u05e2\u05d1\u05d3\u05d9\u05dd…'):'📭 \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05d1-Inbox');}catch(_){}
+      try{toast(items.length?('🔎 \u05e0\u05de\u05e6\u05d0\u05d5 '+items.length+' \u05e7\u05d1\u05e6\u05d9\u05dd - \u05de\u05e2\u05d1\u05d3\u05d9\u05dd…'):'📭 \u05d0\u05d9\u05df \u05e7\u05d1\u05e6\u05d9\u05dd \u05d1-Inbox');}catch(_){}
     }
     if(!items.length)return;
     return items.reduce(function(chain,item){
@@ -24604,7 +24658,7 @@ function _odMirrorRecord(tbl,rec){
   if(!rec){console.warn('[od] mirror called with no rec');return;}
   if(!_odIsConnected()){
     console.warn('[od] not connected — skipping mirror for',tbl,rec.id);
-    try{toast('⚠ OneDrive \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 — \u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05d9\u05e1\u05d5\u05e0\u05db\u05e8\u05df');}catch(_){}
+    try{toast('⚠ OneDrive \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8 - \u05d4\u05e7\u05d5\u05d1\u05e5 \u05dc\u05d0 \u05d9\u05e1\u05d5\u05e0\u05db\u05e8\u05df');}catch(_){}
     return;
   }
   var prefix=tbl;if(tbl==='env_aspects')prefix='easp';
