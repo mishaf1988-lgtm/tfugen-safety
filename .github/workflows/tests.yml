@@ -65,6 +65,8 @@ jobs:
       # Same reason: a STATUS-only PR skips the harness, and a stale open item
       # that the archive already closed is exactly what such a PR adds (lesson 15).
       - run: python3 tests/harness/status-dup-test.py
+      # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).
+      - run: python3 tests/harness/handoff-root-test.py
 
   harness:
     needs: changes

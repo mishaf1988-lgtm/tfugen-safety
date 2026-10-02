@@ -82,7 +82,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff: `grep` ב-DECISIONS לפני שמתחילים.
-נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
+נאכף: `fresh-main.py` (#1011); handoff אחד בשורש: `handoff-root-test.py`. תוכן ה-handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
 חזר: 4 (handoff מנו פריטים שבוצעו או שלא נשארו; 02/10/2026 18.15: "8.2 = warn כש-drl ריקה" סותר את מיכאל בשאלון, DECISIONS 30/09: ריק = אפור, התרגילים בתיקיות. נתפס ב-grep לפני קוד).
 
 ## לפני טענה או ממצא
