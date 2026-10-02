@@ -191,6 +191,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 ## Gotchas
 
 - Empty statutory registers: `_REQ_REGS` / `_emptyReqRegs()` / `_emptyRegText()` (next to `_expCollect`), shown in `#exp-empty-reg` and `#dash-alerts`. Gated on `SB_ON`. Add a register = one entry in `_REQ_REGS` **and** in `REQ_REGS` of `functions/api/weekly-digest.js` (the weekly mail reads them with `limit=1`; a failed read is not called empty).
+- Findings / decisions as tasks: a row editor in the form (`_mrDecRow` for `m-mrsave`, `_drlFndRow` for `m-drl`), each row = one `tasks` row with `source_table` + `source_id`; add the table to `_tskSrcLabel` and `_sourceIcon`. A form with such rows resets them in `openModal` (else a cancelled row is saved next time).
+- An emoji in a JS string above U+FFFF = surrogate pair (`ud83d udd34` style), never a 5-digit escape (`rule1-hebrew-test.js` checks `u1f...`).
 - Harness tests that call `goPage` run as `reporter` and get kicked to `dash`: stub `window._role=()=>'admin'` and `_isAdminUser=()=>true`.
 
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.

@@ -3067,6 +3067,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1502;&#1513;&#1498; (&#1491;&#1511;')</label><input type="number" id="drl-dur" placeholder="30" min="0"></div>
     <div class="field"><label>&#1510;&#1497;&#1493;&#1503; (0-100)</label><input type="number" id="drl-sc" min="0" max="100" placeholder="90"></div>
     <div class="field fw"><label>&#1502;&#1505;&#1511;&#1504;&#1493;&#1514;</label><textarea id="drl-n"></textarea></div>
+    <div class="field fw"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; (&#1499;&#1500; &#1502;&#1502;&#1510;&#1488; &#1504;&#1508;&#1514;&#1495; &#1499;&#1502;&#1513;&#1497;&#1502;&#1492;)</label><div id="drl-fnd"></div><button type="button" class="btn btn-s btn-sm" onclick="_drlFndRow()">+ &#1502;&#1502;&#1510;&#1488;</button></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-drl')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svDrl()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -4914,6 +4915,7 @@ function openModal(id){
   // overwrite of the one that was being edited.
   if(!_genEditOpening)_svEditing={};
   _closeAllOpenModals(id);
+  if(id==='m-drl'&&typeof _drlFndReset==='function')_drlFndReset();
   if(!document.body.style.overflow||document.body.style.overflow!=='hidden'){
     _modalLastScrollY=window.scrollY||0;
   }
@@ -5481,8 +5483,38 @@ function svIns(){
 function svDrl(){
   var ty=gv('drl-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
   var r={id:_svEditId('drl')||gid(),ty:ty,d:gv('drl-d')||null,p:gi('drl-p'),dur:gi('drl-dur'),sc:gi('drl-sc'),n:gv('drl-n')};
-  _svPut('drl',r);addLog('\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd \u05e0\u05d5\u05e1\u05e3');sdb();closeModal('m-drl');
-  toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rDrl();
+  _svPut('drl',r);
+  var fs=_drlFndRead();if(!DB.tasks)DB.tasks=[];
+  fs.forEach(function(x){var t={id:gid(),title:x.t,assignee:x.a,due:x.u,status:_TSK_OPEN,priority:_TSK_PRI_DEF,source_table:'drl',source_id:r.id,notes:null,ts:new Date().toISOString()};DB.tasks.push(t);sbIns('tasks',t);});
+  addLog('\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd \u05e0\u05d5\u05e1\u05e3');sdb();closeModal('m-drl');
+  toast('\u05e0\u05e9\u05de\u05e8 &#10003;'+(fs.length?' ('+fs.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea)':''));rDrl();
+}
+// BACKLOG 9.7: a drill's findings had nowhere to go but the notes, so nothing
+// followed them up. Each one is now a task (source_table drl), like the
+// decisions of a management review (9.25). Editing a drill adds new findings
+// only; the ones already opened are in the tasks page.
+window._drlFndReset=function(){var b=g('drl-fnd');if(b){b.innerHTML='';_drlFndRow();}};
+window._drlFndRow=function(){
+  var box=g('drl-fnd');if(!box)return;
+  var d=document.createElement('div');d.className='drl-fr';
+  d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
+  d.innerHTML='<input class="drl-ft" placeholder="\u05de\u05de\u05e6\u05d0" style="flex:2 1 180px">'
+    +'<input class="drl-fa" placeholder="\u05d0\u05d7\u05e8\u05d0\u05d9" style="flex:1 1 100px">'
+    +'<input type="date" class="drl-fu" title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
+  box.appendChild(d);
+};
+function _drlFndRead(){
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#drl-fnd .drl-fr'),function(row){
+    var t=(row.querySelector('.drl-ft').value||'').trim();if(!t)return;
+    out.push({t:t,a:(row.querySelector('.drl-fa').value||'').trim()||null,u:row.querySelector('.drl-fu').value||null});
+  });
+  return out;
+}
+function _drlFndBadge(id){
+  var ts=(DB.tasks||[]).filter(function(t){return t&&t.source_table==='drl'&&t.source_id===id;});if(!ts.length)return '';
+  var op=ts.filter(function(t){return t.status!==_TSK_DONE&&t.status!==_TSK_CANC;}).length;
+  return '<div style="font-size:11px;color:'+(op?'var(--bad)':'var(--t3)')+'">\u05de\u05de\u05e6\u05d0\u05d9\u05dd: '+op+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05ea\u05d5\u05da '+ts.length+'</div>';
 }
 function svCtr(){
   var n=gv('ctr-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
@@ -5848,7 +5880,7 @@ function _dismissAlert(key){
 
 // ---- Dashboard "Today" — actionable checklist aggregated from all modules ----
 function _sourceIcon(tbl){
-  var m={ncr:'🚨',inc:'⚠️',near_miss:'🚫',rsk:'⚡',ppe:'🦺',tr:'🎓',docs:'📄',ctr:'🤝',equip_inspections:'🔧',round:'☀',tasks:'✅'};
+  var m={ncr:'🚨',inc:'⚠️',near_miss:'🚫',rsk:'⚡',ppe:'🦺',tr:'🎓',docs:'📄',ctr:'🤝',equip_inspections:'🔧',round:'☀',drl:'🧯',tasks:'✅'};
   return m[tbl]||'✅';
 }
 // One tap instead of four. _tskQuickStatus already does the whole job \u2014 it
@@ -11309,7 +11341,7 @@ function _tskDuplicate(id){
 }
 function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','today','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
-function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};return m[tbl]||tbl;}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',drl:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
@@ -11397,7 +11429,7 @@ function editTsk(id){
   var lbl=g('tsk-src-label'),vw=g('tsk-src-view');
   if(rec.source_table&&rec.source_id){
     var sr=(DB[rec.source_table]||[]).find(function(r){return r.id===rec.source_id;});
-    var short=sr?(sr.num||sr.n||sr.code||sr.descr||rec.source_id):rec.source_id;
+    var short=sr?(rec.source_table==='drl'?(sr.ty||'')+' '+fd(sr.d):(sr.num||sr.n||sr.code||sr.descr||rec.source_id)):rec.source_id;
     if(vw)vw.textContent=_tskSrcLabel(rec.source_table)+': '+short;
     if(lbl)lbl.style.display='';
   }else if(lbl){lbl.style.display='none';}
@@ -15491,7 +15523,7 @@ function _mrPrevDecs(){
     return {t:t,st:st};
   })};
 }
-var _MR_DEC_LBL={done:'\u2705 \u05d4\u05d5\u05e9\u05dc\u05dd',canc:'\u05d1\u05d5\u05d8\u05dc',late:'\u1f534 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8',open:'\u23f3 \u05e4\u05ea\u05d5\u05d7'};
+var _MR_DEC_LBL={done:'\u2705 \u05d4\u05d5\u05e9\u05dc\u05dd',canc:'\u05d1\u05d5\u05d8\u05dc',late:'\ud83d\udd34 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8',open:'\u23f3 \u05e4\u05ea\u05d5\u05d7'};
 function _mrPrevDecRender(){
   var card=g('mr-prev-dec-card'),box=g('mr-prev-dec');if(!card||!box)return;
   var p=_mrPrevDecs();
@@ -17332,7 +17364,7 @@ function rIns(){
 function rDrl(){
   var tb=g('tb-drl');if(!tb)return;
   if(!DB.drl.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udea8<br>\u05d0\u05d9\u05df \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-drl\')">+ \u05ea\u05e8\u05d2\u05d9\u05dc \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+esc(d.ty)+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(d.sc)+'%</span>':'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+esc(d.ty)+_drlFndBadge(d.id)+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(d.sc)+'%</span>':'&#8212;')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
 }
 function rCtr(){
   var tb=g('tb-ctr');if(!tb)return;
