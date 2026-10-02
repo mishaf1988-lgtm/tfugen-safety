@@ -130,7 +130,7 @@
 | 5.9 | ~~**אין שום בדיקה אוטומטית ל-RLS ול-Storage** — 78 מיגרציות עם «Verify» בהערות בלבד~~ **#672** | 🟠 | M | ✅ |
 | 5.10 | ~~**`2026-09-20_trustee_close_ownership.sql` — לא הורצה**~~ · **הורצה ואומתה 2026-09-21** | 🔴 | — | ✅ |
 | 5.11 | ~~**`2026-09-20_storage_trustee_scope.sql` — לא הורצה** (נכתבה היום)~~ · **הורצה ואומתה 2026-09-21** | 🔴 | — | ✅ |
-| 5.12 | **44 policies קוראות ל-`private.is_admin_manager()` לכל שורה** (לא עטופות ב-`(select ...)`), ו-`auth.jwt()` 103 פעמים לא עטוף; `equip_id` בלי אינדקס. כלל Supabase `security-rls-performance` (02/10/2026, `tfugen-db`). migration אחת שמחליפה policies = **אישור מיכאל** (CLAUDE.md, פעולה על RLS קיימת). לא דחוף: הטבלאות קטנות. אומת ב-grep על `migrations/` | 🟡 | M | |
+| 5.12 | ~~**מדיניות RLS שקוראות לפונקציה לכל שורה** (כלל Supabase `security-rls-performance`)~~ · **הורץ ואומת דרך Supabase MCP 02/10/2026** (`2026-10-02_rls_wrap_select.sql`): במסד החי היו 9 ב-public ו-5 ב-storage לא עטופות (לא 44: המספר הקודם נמדד על קבצי ההגירות, לקח 18), `equip_id` כבר מאונדקס. אחרי: 0 לא עטופות מתוך 372, גיבוי `backup_20261002.policies_before_wrap` | 🟡 | S | ✅ |
 
 ## 6. דוחות ומגמות
 
