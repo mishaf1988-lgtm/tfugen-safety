@@ -1666,6 +1666,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card"><div class="card-title">&#128193; &#1514;&#1497;&#1511; &#1505;&#1511;&#1497;&#1512;&#1493;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 / 14001 &#167;9.3.3 &#8212; &#1502;&#1497;&#1491;&#1506; &#1502;&#1514;&#1493;&#1506;&#1491; &#1513;&#1497;&#1513; &#1500;&#1513;&#1502;&#1512;)</span></div>
     <div id="mr-saved-list" style="font-size:13px"></div>
   </div>
+  <div class="card" id="mr-prev-dec-card" style="display:none"><div class="card-title">&#128204; &#1492;&#1495;&#1500;&#1496;&#1493;&#1514; &#1502;&#1492;&#1505;&#1511;&#1497;&#1512;&#1492; &#1492;&#1511;&#1493;&#1491;&#1502;&#1514; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 45001 / 14001 &#167;9.3)</span></div>
+    <div id="mr-prev-dec" style="font-size:13px"></div>
+  </div>
   <div class="card"><div class="card-title">&#128202; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497; &#1500;&#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1505;&#1502;&#1499;&#1492; <span style="font-size:10px;color:var(--t3);font-weight:600">(ISO 14001 / 45001 surveillance)</span></div>
     <div id="mr-ai-annual"><button class="btn btn-p btn-sm" onclick="_annualISOReport()" style="background:#0d9488;border-color:#0d9488">&#129302; &#1510;&#1493;&#1512; &#1491;&#1493;&#1495; &#1513;&#1504;&#1514;&#1497;</button>
       <div style="font-size:10px;color:var(--t3);margin-top:6px">12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501; &#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#8212; &#1502;&#1492;&#1493;&#1493;&#1492; &#1492;&#1499;&#1504;&#1492; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; &#1504;&#1497;&#1496;&#1493;&#1512; ISO &#1513;&#1504;&#1514;&#1497;</div>
@@ -3065,6 +3068,19 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1502;&#1505;&#1511;&#1504;&#1493;&#1514;</label><textarea id="drl-n"></textarea></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-drl')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svDrl()">&#1513;&#1502;&#1493;&#1512;</button></div>
+</div>
+
+<!-- MGMT REVIEW SAVE MODAL (BACKLOG 9.25) -->
+<div class="overlay" id="ov-mrsave" onclick="closeModal('m-mrsave')"></div>
+<div class="modal" id="m-mrsave" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-mrsave')">&#10005;</button>
+  <div class="modal-title">&#1513;&#1502;&#1497;&#1512;&#1514; &#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; &#1500;&#1514;&#1497;&#1511;</div>
+  <div class="fgrid">
+    <div class="field fw"><label>&#1504;&#1493;&#1499;&#1495;&#1497;&#1501; *</label><input id="mrs-att" placeholder="&#1513;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1511;&#1497;&#1491;&#1497;&#1501;, &#1502;&#1493;&#1508;&#1512;&#1491;&#1497;&#1501; &#1489;&#1508;&#1505;&#1497;&#1511;"></div>
+    <div class="field fw"><label>&#1492;&#1495;&#1500;&#1496;&#1493;&#1514; (&#1499;&#1500; &#1492;&#1495;&#1500;&#1496;&#1492; &#1504;&#1508;&#1514;&#1495;&#1514; &#1499;&#1502;&#1513;&#1497;&#1502;&#1492;)</label><div id="mrs-dec"></div>
+      <button class="btn btn-s btn-sm" type="button" onclick="_mrDecRow()">+ &#1492;&#1495;&#1500;&#1496;&#1492;</button></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-mrsave')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="_mrSaveConfirm()">&#1513;&#1502;&#1493;&#1512; &#1500;&#1514;&#1497;&#1511;</button></div>
 </div>
 
 <!-- CTR MODAL -->
@@ -7156,6 +7172,34 @@ function _capaDue(){
     return a!==null&&a>=CAPA_VERIFY_DAYS;
   }).sort(function(a,b){return (_capaAge(b)||0)-(_capaAge(a)||0);});
 }
+// BACKLOG 9.7: a drill has no expiry of its own, so no drill ever reached
+// this page and no reminder ever came. The next drill of a type is due
+// _DRL_FREQ_M months after the last one; a type never drilled has no date
+// and lands on the \u00abno date\u00bb tab. Computed, nothing is stored.
+var _DRL_FREQ_M=12;
+function _drlNext(){
+  var s=g('drl-ty'),types=[];
+  if(s)for(var k=0;k<s.options.length;k++)types.push(s.options[k].value||s.options[k].text);
+  (DB.drl||[]).forEach(function(r){if(r.ty&&types.indexOf(r.ty)<0)types.push(r.ty);});
+  return types.map(function(ty){
+    var last=null;
+    (DB.drl||[]).forEach(function(r){if(r.ty===ty&&r.d&&(!last||String(r.d)>String(last.d)))last=r;});
+    var e=null;
+    if(last){
+      var p=String(last.d).substring(0,10).split('-'),y=+p[0],m=+p[1]-1+_DRL_FREQ_M;
+      y+=Math.floor(m/12);m=m%12;
+      var dd=Math.min(+p[2],new Date(y,m+1,0).getDate());
+      e=y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+dd).slice(-2);
+    }
+    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'drl',modLabel:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',e:e,id:last?last.id:null};
+  });
+}
+// New drill of a given type, from the expiry page. Every field starts empty.
+function _drlNew(ty){
+  openModal('m-drl');
+  ['drl-d','drl-p','drl-dur','drl-sc','drl-n'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var s=g('drl-ty');if(s&&ty)s.value=ty;
+}
 function _expCollect(){
   var items=[];
   (DB.docs||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.o||'',mod:'docs',modLabel:'\u05de\u05e1\u05de\u05da',e:r.e,id:r.id});});
@@ -7172,6 +7216,7 @@ function _expCollect(){
   // review and in the ISO report \u2014 and not here, on the one page whose whole
   // job is expiry. A medical check scanned in raised a yellow dot on the
   // calendar and an alert, and appeared on no list.
+  _drlNext().forEach(function(x){if(x.e)items.push(x);});
   (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
 }
@@ -7194,6 +7239,7 @@ function _expNoDate(){
   take('med','med','\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',function(r){return r.n||r.t;},function(r){return r.t;});
   // The register is imported from Excel in bulk, so «no date set» is the normal
   // starting state for hundreds of rows. Showing them is the point.
+  _drlNext().forEach(function(x){if(!x.e)out.push(x);});
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
@@ -7296,13 +7342,14 @@ function rExp(){
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
-    var t=_tbl[i.mod]||'';
+    var t=i.id?(_tbl[i.mod]||''):'';
     var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'&#8212;';
+    if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'&#8212;')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
 }
@@ -11238,7 +11285,7 @@ function _tskDuplicate(id){
 }
 function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','today','open','prog','over','done'].forEach(function(k){var el=g('tsk-tab-'+k);if(el)el.className='btn '+(f===k?'btn-p':'btn-s');});rTasks();_tskBulkSync();}
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'\u2014')+'</span>';}
-function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'};return m[tbl]||tbl;}
+function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
@@ -14315,7 +14362,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05e4\u05e7\u05d9\u05d3','role'],['\u05e7\u05d5\u05e4\u05d4/\u05de\u05d7\u05dc\u05e7\u05d4','dept'],['\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4','category'],['\u05e9\u05e0\u05d4','year'],
     ['\u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05d3\u05d9\u05e7\u05d4','test_date'],['\u05ea\u05e7\u05e3 \u05e2\u05d3','e'],['\u05d1\u05d5\u05d3\u05e7','inspector'],['\u05d4\u05e2\u05e8\u05d5\u05ea/\u05d4\u05de\u05dc\u05e6\u05d5\u05ea','notes']]},
   mgmt_reviews:{title:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',back:'mr',fields:[
-    ['\u05e1\u05d5\u05d2','kind'],['\u05ea\u05e7\u05d5\u05e4\u05d4','period'],['\u05e0\u05db\u05ea\u05d1 \u05e2\u05dc \u05d9\u05d3\u05d9','created_by'],['\u05ea\u05d5\u05db\u05df','content']]},
+    ['\u05e1\u05d5\u05d2','kind'],['\u05ea\u05e7\u05d5\u05e4\u05d4','period'],['\u05e0\u05db\u05ea\u05d1 \u05e2\u05dc \u05d9\u05d3\u05d9','created_by'],['\u05e0\u05d5\u05db\u05d7\u05d9\u05dd','attendees'],['\u05d4\u05d7\u05dc\u05d8\u05d5\u05ea','decisions'],['\u05ea\u05d5\u05db\u05df','content']]},
   record_history:{title:'\u05d7\u05d9\u05d3\u05d5\u05e9',back:'exp',fields:[
     ['\u05de\u05e8\u05e9\u05dd','table_name'],['\u05ea\u05e4\u05d5\u05d2\u05d4 \u05e7\u05d5\u05d3\u05de\u05ea','e_old'],['\u05ea\u05e4\u05d5\u05d2\u05d4 \u05d7\u05d3\u05e9\u05d4','e_new'],
     ['\u05d1\u05d9\u05e6\u05d5\u05e2 \u05e7\u05d5\u05d3\u05dd','d_old'],['\u05d7\u05d5\u05d3\u05e9 \u05e2\u05dc \u05d9\u05d3\u05d9','changed_by'],['\u05d4\u05e2\u05e8\u05d4','note']]},
@@ -14378,7 +14425,7 @@ function showView(tbl,id){
     // etc.) instead of the internal Supabase UUID.
     if(f[1]==='source_id'&&rec.source_table&&val&&val!=='-'){
       var srcRec=(DB[rec.source_table]||[]).find(function(r){return r.id===val;});
-      if(srcRec)val=srcRec.num||srcRec.code||srcRec.title||srcRec.n||val;
+      if(srcRec)val=srcRec.num||srcRec.code||srcRec.title||srcRec.n||srcRec.period||val;
     }
     html+='<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0"><span style="color:#888;min-width:100px;flex-shrink:0">'+esc(f[0])+'</span><strong>'+(valHtml!==null?valHtml:(val==='\u2713'||val==='\u2717'||val==='-'?val:esc(val)))+'</strong></div>';
   });
@@ -15259,7 +15306,7 @@ window._mrAINarrative=function(){
     '- \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05ea\u05e7\u05e4\u05d5\u05ea: '+kpis.trPct+' ('+kpis.trSub+')\n'+
     '- \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3: '+kpis.docsPct+' ('+kpis.docsSub+')\n'+
     '- \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3 \u05ea\u05e7\u05e4\u05d5\u05ea: '+kpis.eqiPct+' ('+kpis.eqiSub+')\n'+
-    '- \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+kpis.tlkQ+
+    '- \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+kpis.tlkQ+_mrPrevDecText()+
     (function(){
       var c=window._mrCounts&&window._mrCounts.cur;if(!c)return '';
       return '\n\n\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05d5\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4:'
@@ -15348,33 +15395,110 @@ window._mrAINarrative=function(){
 // requires be RETAINED as documented information — existed only in the
 // clipboard of whoever pressed copy, and only until they copied something
 // else. There is no such table in any of the 80 migrations.
+// BACKLOG 9.25: the saved review had no attendees and no decisions, and
+// nothing followed it up. Saving now asks for both; each decision becomes a
+// task (source_table mgmt_reviews), and the next review shows what became of it.
+// The decisions are also kept as text on the review, as decided on the day.
+function _mrSaveContent(kind){return (kind==='annual'?window._annualISORaw:window._mrAIRaw)||'';}
 window._mrSaveReview=function(kind){
-  var content=(kind==='annual'?window._annualISORaw:window._mrAIRaw)||'';
-  if(!content){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e9\u05de\u05d5\u05e8 — \u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 \u05e7\u05d5\u05d3\u05dd');return;}
+  if(!_mrSaveContent(kind)){toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e9\u05de\u05d5\u05e8, \u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 \u05e7\u05d5\u05d3\u05dd');return;}
+  window._mrSaveKind=kind;
+  var a=g('mrs-att');if(a)a.value='';
+  var box=g('mrs-dec');if(box)box.innerHTML='';
+  _mrDecRow();
+  openModal('m-mrsave');
+};
+window._mrDecRow=function(){
+  var box=g('mrs-dec');if(!box)return;
+  var d=document.createElement('div');d.className='mrs-row';
+  d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
+  d.innerHTML='<input class="mrs-t" placeholder="\u05d4\u05d7\u05dc\u05d8\u05d4" style="flex:2 1 180px">'
+    +'<input class="mrs-a" placeholder="\u05d0\u05d7\u05e8\u05d0\u05d9" style="flex:1 1 100px">'
+    +'<input type="date" class="mrs-u" title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
+  box.appendChild(d);
+};
+function _mrDecRead(){
+  var out=[];
+  Array.prototype.forEach.call(document.querySelectorAll('#mrs-dec .mrs-row'),function(row){
+    var t=(row.querySelector('.mrs-t').value||'').trim();if(!t)return;
+    out.push({t:t,a:(row.querySelector('.mrs-a').value||'').trim()||null,u:row.querySelector('.mrs-u').value||null});
+  });
+  return out;
+}
+window._mrSaveConfirm=function(){
+  var kind=window._mrSaveKind,content=_mrSaveContent(kind);
+  if(!kind||!content){closeModal('m-mrsave');toast('\u05d0\u05d9\u05df \u05de\u05d4 \u05dc\u05e9\u05de\u05d5\u05e8, \u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 \u05e7\u05d5\u05d3\u05dd');return;}
+  var att=(gv('mrs-att')||'').trim();
+  if(!att){alert('\u05d9\u05e9 \u05dc\u05de\u05dc\u05d0 \u05e0\u05d5\u05db\u05d7\u05d9\u05dd');return;}
+  var decs=_mrDecRead();
   var period=(kind==='annual')
     ? String(new Date().getFullYear())
     : ((typeof _mrPeriod==='function'&&(_mrPeriod(typeof _MR_OFFSET!=='undefined'?_MR_OFFSET:0)||{}).label)||'');
   var rec={
     id:gid(),kind:(kind==='annual'?'annual':'review'),period:period||null,
-    content:content,
+    content:content,attendees:att,
+    decisions:decs.length?decs.map(function(x,n){return (n+1)+'. '+x.t+(x.a?' - \u05d0\u05d7\u05e8\u05d0\u05d9: '+x.a:'')+(x.u?' - \u05d9\u05e2\u05d3: '+fd(x.u):'');}).join('\n'):null,
     kpis:(function(){try{return JSON.stringify(window._mrAIKpis||null);}catch(e){return null;}})(),
     created_by:(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null,
     ts:new Date().toISOString()
   };
+  window._mrSaveKind=null;
   if(!DB.mgmt_reviews)DB.mgmt_reviews=[];
   DB.mgmt_reviews.push(rec);
   sbIns('mgmt_reviews',rec);
+  if(!DB.tasks)DB.tasks=[];
+  decs.forEach(function(x){
+    var t={id:gid(),title:x.t,assignee:x.a,due:x.u,status:_TSK_OPEN,priority:_TSK_PRI_DEF,source_table:'mgmt_reviews',source_id:rec.id,notes:null,ts:new Date().toISOString()};
+    DB.tasks.push(t);sbIns('tasks',t);
+  });
   sdb();
+  closeModal('m-mrsave');
   addLog('\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4: '+(period||''));
-  toast('\u05e0\u05e9\u05de\u05e8 \u05dc\u05ea\u05d9\u05e7 \u2713');
+  toast('\u05e0\u05e9\u05de\u05e8 \u05dc\u05ea\u05d9\u05e7 \u2713'+(decs.length?' ('+decs.length+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea)':''));
   _mrReviewsRender();
 };
+// The decisions of the latest saved review, with what became of each task.
+function _mrPrevDecs(){
+  var r=_mrReviewsList()[0];if(!r)return null;
+  var ts=(DB.tasks||[]).filter(function(t){return t.source_table==='mgmt_reviews'&&t.source_id===r.id;});
+  var today=new Date().toISOString().substring(0,10);
+  return {rev:r,tasks:ts.map(function(t){
+    var st=t.status===_TSK_DONE?'done':t.status===_TSK_CANC?'canc':(t.due&&t.due<today?'late':'open');
+    return {t:t,st:st};
+  })};
+}
+var _MR_DEC_LBL={done:'\u2705 \u05d4\u05d5\u05e9\u05dc\u05dd',canc:'\u05d1\u05d5\u05d8\u05dc',late:'\u1f534 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8',open:'\u23f3 \u05e4\u05ea\u05d5\u05d7'};
+function _mrPrevDecRender(){
+  var card=g('mr-prev-dec-card'),box=g('mr-prev-dec');if(!card||!box)return;
+  var p=_mrPrevDecs();
+  if(!p){card.style.display='none';return;}
+  card.style.display='';
+  var when='';try{when=fd(String(p.rev.ts).substring(0,10));}catch(e){}
+  if(!p.tasks.length){box.innerHTML='<div style="color:var(--t2)">\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4 \u05de-'+esc(when)+' \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d5 \u05d4\u05d7\u05dc\u05d8\u05d5\u05ea.</div>';return;}
+  var done=p.tasks.filter(function(x){return x.st==='done';}).length;
+  box.innerHTML='<div style="color:var(--t2);margin-bottom:6px">\u05e1\u05e7\u05d9\u05e8\u05d4 \u05de-'+esc(when)+': '+done+' \u05de\u05ea\u05d5\u05da '+p.tasks.length+' \u05d4\u05d5\u05e9\u05dc\u05de\u05d5</div>'
+    +p.tasks.map(function(x){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0">'
+        +'<span style="flex:1;min-width:0">'+esc(x.t.title||'')
+        +'<div style="font-size:11px;color:var(--t3)">'+(x.t.assignee?esc(x.t.assignee):'\u05dc\u05dc\u05d0 \u05d0\u05d7\u05e8\u05d0\u05d9')+(x.t.due?' \u00b7 \u05d9\u05e2\u05d3 '+fd(x.t.due):'')+'</div></span>'
+        +'<span style="font-size:12px;white-space:nowrap">'+_MR_DEC_LBL[x.st]+'</span>'
+        +'<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(x.t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>'
+        +'</div>';
+    }).join('');
+}
+// Same list, as text for the AI narrative (it reads the previous decisions too).
+function _mrPrevDecText(){
+  var p=_mrPrevDecs();if(!p||!p.tasks.length)return '';
+  return '\n\n\u05d4\u05d7\u05dc\u05d8\u05d5\u05ea \u05de\u05d4\u05e1\u05e7\u05d9\u05e8\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea ('+fd(String(p.rev.ts).substring(0,10))+'):'
+    +p.tasks.map(function(x){return '\n- '+(x.t.title||'')+(x.t.assignee?' (\u05d0\u05d7\u05e8\u05d0\u05d9: '+x.t.assignee+')':'')+': '+_MR_DEC_LBL[x.st].replace(/^[^\u0590-\u05ff]+/,'');}).join('');
+}
 function _mrReviewsList(){
   return (DB.mgmt_reviews||[]).slice().sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
 }
 function _mrReviewsRender(){
   var box=g('mr-saved-list');if(!box)return;
   var list=_mrReviewsList();
+  try{_mrPrevDecRender();}catch(e){}
   if(!list.length){box.innerHTML='<div style="font-size:12px;color:var(--t2)">\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d5 \u05e1\u05e7\u05d9\u05e8\u05d5\u05ea. \u05d0\u05d7\u05e8\u05d9 \u05e9\u05ea\u05d9\u05e6\u05d5\u05e8 \u05e0\u05e8\u05d8\u05d9\u05d1 — \u05dc\u05d7\u05e5 «\u05e9\u05de\u05d5\u05e8 \u05dc\u05ea\u05d9\u05e7».</div>';return;}
   box.innerHTML=list.map(function(r){
     var when='';try{when=fd(String(r.ts).substring(0,10));}catch(e){}
