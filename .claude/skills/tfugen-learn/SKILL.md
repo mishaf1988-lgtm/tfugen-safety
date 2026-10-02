@@ -47,6 +47,9 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | 02/10/2026 | `security-guidance` (plugin רשמי) | לא: hook Stop שקורא ל-Opus בכל תור (עלות), והאזהרה על `innerHTML` תצעק על כל שורה באפליקציה הזו (יש `esc`). סקירת אבטחה נעשתה 24/09 |
 | 02/10/2026 | `supabase-postgres-best-practices` (supabase/agent-skills) | לא הותקן כולו: 8 קטגוריות למיליוני שורות. 5 הכללים שחלים תומצתו ל-`tfugen-db` עם מדידה על ה-migrations (44 policies לא עטופות, BACKLOG 5.12). קישור לכלל המלא שם |
 
+## hook או בדיקה ב-CI (סקירה, 02/10/2026)
+כל hook שאוכף כלל כבר יש לו בדיקה מקבילה ב-CI: עברית גולמית (`rule1-hebrew-test.js`), SQL הרסני על הטבלאות המוגנות בקבצי migration (`rls-policy-test.mjs`), פורמט הלקחים (`lessons-format-test.py`), כלל 7 (`rule7-gate.py`). השאר הם hooks של זמן ריצה (חסימת SQL חי, קיצור פלט, המפקח, עברית בתשובה) ואין להם תחליף ב-CI. מה ש-CI כן יכול לעשות להם: לבדוק את ההגדרה שלהם (`hook-coverage.py` מתריע כש-`guard-sql` לא מכסה שם כלי). כלל חדש: קודם בדיקה ב-CI, hook רק כשצריך לעצור משהו בזמן אמת.
+
 ## מתי skill חדש ומתי לעדכן
 
 - **לעדכן** כשיש skill שהנושא שלו מתאים. עדיף שורה בקובץ קיים מאשר קובץ חדש.

@@ -71,6 +71,8 @@ jobs:
       - env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: git -c core.quotepath=off diff -U0 "$BASE" HEAD -- STATUS.md project-files/STATUS-archive.md | python3 .github/scripts/rule7-gate.py
+      # Warning only: the guard-sql.py matcher misses the UUID-prefixed SQL tool (lesson 42, fix on Michael's computer).
+      - run: python3 .github/scripts/hook-coverage.py
 
   harness:
     needs: changes
