@@ -9,6 +9,8 @@ description: How to read and change the live Supabase database of tfugen-safety 
 
 ## איזה כלי עובד
 - **עובד:** connector של claude.ai, `mcp__Supabase__*` (`execute_sql`, `apply_migration`, `list_tables`). צריך `ToolSearch` עם `select:mcp__Supabase__execute_sql,...` לפני קריאה.
+- שם הכלי משתנה בין סשנים: לפעמים `mcp__Supabase__execute_sql`, לפעמים קידומת UUID (`mcp__ea272696-...__execute_sql`, 02/10/2026). `ToolSearch` עם `execute_sql` מוצא את שניהם.
+- **לפני SQL על טבלה שלא בדקת השבוע:** `information_schema.columns` קודם. ב-02/10/2026 `emp.role` לא קיים (העמודה `r`), ו-`emp.s` הוא תאריך.
 - **project_id:** `znhjtpcltrxxyfjczgvw`.
 - **לא עובד בענן, וזה צפוי:** השרת `supabase` מ-`.mcp.json` ("requires authentication"), ו-`curl` ל-`*.supabase.co` (חסום ברשת). זה **לא** חסם, ואין לדווח עליו למיכאל (לקח 30).
 

@@ -21,13 +21,13 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. Line 967 of index.html.
 
 | Table | Purpose | Key fields (beyond `id`) |
 |---|---|---|
-| `docs` | Documents | `n`,`type`,`d`,`e`,`ref`,`notes`,`file_url` |
+| `docs` | Documents (0 rows, measured 02/10/2026) | `n`,`c`,`v`,`o`,`u`,`e`,`s`,`i`,`nt`,`file_url` (measured 02/10/2026) |
 | `auds` | Internal audits | `n` subject,`a` auditor,`r` area,`d`,`f` findings,`sc` score,`s`,`f2`,`sm` summary (measured 02/10/2026) |
 | `ncr` | Non-conformance (public 0 rows by design, 375 in `backup_ops_20260918`; measured 02/10/2026) | `num`,`d`,`a`,`p`,`o`,`u`,`s`,`c`,`rc`,`rc_cat`,`sd`,`cd`,`notes`,`location_id`,`sens`,`verified_by` |
 | `inc` | Incidents | `d`,`dt`,`ty`,`sv`,`l`,`dy`,`s`,`r`,`file_url` |
 | `tr` | Training | `w`,`n`,`c`,`d`,`e`,`sc`,`s`,`file_url` |
 | `rsk` | Risks | `n`,`type`,`p`,`sv`,`ctl`,`s` |
-| `emp` | Employees | `n`,`role`,`dept`,`ph`,`s` |
+| `emp` | Employees (51, none has `r`; measured 02/10/2026) | `n`,`r` role,`dep`,`s` (a date, not a status),`eid`,`ph`,`ext_id`,`em` |
 | `ptw` | Permit-to-work | `num`,`con`,`ds`,`de`,`ts`,`te`,`area`,`sup`,`wkr`,`desc`,`sg1n..sg4d` |
 | `ppe` | PPE | `n`,`type`,`d`,`e`,`qty` |
 | `med` | Medical | `n`,`emp`,`d`,`e`,`type`,`s` |
