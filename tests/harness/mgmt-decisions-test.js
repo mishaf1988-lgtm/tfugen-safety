@@ -111,7 +111,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const none = _expNoDate().filter((x) => x.mod === 'drl').map((x) => x.name);
       return { types, none0, coll0, coll, none };
     });
-    check('no drills: every type on «no date», none dated', r.coll0 === 0 && r.none0.length === r.types.length && r.types.length >= 5, r);
+    check('empty register (drills still in the folders): no drill rows at all', r.coll0 === 0 && r.none0.length === 0 && r.types.length >= 5, r);
     check('next = 12 months after the LAST drill of the type', JSON.stringify(r.coll[0]) === JSON.stringify([r.types[0], '2026-03-31', 'd1']), r.coll);
     check('29/02 + 12 months = 28/02', r.coll[1] && r.coll[1][1] === '2025-02-28', r.coll);
     check('a drill with no date does not count as done', r.none.indexOf(r.types[2]) >= 0 && r.coll.length === 2, r);

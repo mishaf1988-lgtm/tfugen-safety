@@ -137,6 +137,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       window._mrAIRaw = 'סקירת הנהלה: 4 חלקים, מסקנות והחלטות.';
       window.__ins = [];
       _mrSaveReview('review');
+      g('mrs-att').value = 'מיכאל'; _mrSaveConfirm();   // 9.25: attendees are asked for on save
       const rec = (DB.mgmt_reviews || [])[0] || {};
       return { n: DB.mgmt_reviews.length, kind: rec.kind, content: rec.content, by: rec.created_by, ins: window.__ins.map((x) => x[0]), id: rec.id };
     });
@@ -148,6 +149,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const annual = await page.evaluate(() => {
       window._annualISORaw = 'דוח שנתי לסקירת הסמכה';
       _mrSaveReview('annual');
+      g('mrs-att').value = 'מיכאל'; _mrSaveConfirm();
       const rec = (DB.mgmt_reviews || []).find((x) => x.kind === 'annual') || {};
       return { kind: rec.kind, period: rec.period, content: rec.content };
     });

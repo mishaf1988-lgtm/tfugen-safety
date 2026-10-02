@@ -7178,6 +7178,10 @@ function _capaDue(){
 // and lands on the \u00abno date\u00bb tab. Computed, nothing is stored.
 var _DRL_FREQ_M=12;
 function _drlNext(){
+  // An empty register means the drills are still in the folders (DECISIONS,
+  // 20/09/2026: 8.2 is \u00abna\u00bb, not red). Only once one is entered do the types
+  // never drilled show up as missing.
+  if(!(DB.drl||[]).length)return [];
   var s=g('drl-ty'),types=[];
   if(s)for(var k=0;k<s.options.length;k++)types.push(s.options[k].value||s.options[k].text);
   (DB.drl||[]).forEach(function(r){if(r.ty&&types.indexOf(r.ty)<0)types.push(r.ty);});
