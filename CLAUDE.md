@@ -160,6 +160,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 - **Skill למידה: `.claude/skills/tfugen-learn/SKILL.md`**: בסוף כל משימה Claude כותב מה נלמד ל-skill המתאים, או יוצר skill חדש, **בלי לבקש אישור** (מיכאל, 02/10/2026: "הסקייל צריך ללמוד ולהתפתח כל הזמן מכל עבודה"). בכל PR שורת `skill: <מה ואיפה>` או `skill: אין`, נבדקת ב-`lessons-gate.py`, ושם skill בלי קובץ skill שהשתנה נכשל. כלל כללי נכנס גם ל-`project-files/claude-ai-skill/` ונשלח למיכאל כ-zip להעלאה לחשבון
 - **Skill כתיבת NCR: `.claude/skills/tfugen-ncr-writing/SKILL.md`**: מה זה NCR שאפשר לעבוד איתו (ISO 45001 10.2), ואיפה הכללים יושבים ב-prompt של ה-AI
 - **Skill סקירת מסך: `.claude/skills/tfugen-screen-review/SKILL.md`**: מה לחפש בכל צילום של מיכאל גם בלי שביקש, והצעות לשדרוג skills בסוף כל משימה (מיכאל, 02/10/2026)
+- **Skill עבודה במקביל: `.claude/skills/tfugen-orchestrate/SKILL.md`**: מנהל, עובדים ושני מפקחים (בודק ומתקן) כשיש כמה משימות בלתי תלויות (מיכאל, 02/10/2026). עד 3 מסלולים, `index.html` למסלול אחד בכל סבב
 - **Skill DB: `.claude/skills/tfugen-db/SKILL.md`**: איזה כלי Supabase עובד בענן, תהליך migration (קובץ, הרצה, אימות), מה אסור
 - **Skill היסטוריה: `.claude/skills/tfugen-history/SKILL.md`** — הרקע שהוצא מהקובץ הזה (Vercel, 375 רשומות ncr, התנגשויות הסנכרון, אימות ה-MCP, מדיניות הסיסמאות). לטעון רק כשמשימה נוגעת בהם
 - **Hooks: `.claude/hooks/README.md`** — החוקים שנאכפים בקוד
