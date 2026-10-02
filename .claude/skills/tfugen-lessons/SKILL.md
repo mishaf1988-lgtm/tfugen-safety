@@ -47,7 +47,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
-הכלל: למצוא את ההבדל ולקבע גרסאות. "flake" אינו סיבה.
+הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake".
 נאכף: חלקית, גרסאות מקובעות ב-`tests.yml`.
 חזר: 0
 
@@ -65,7 +65,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **12. "ההתראה לא הגיעה" (30/09/2026).**
 מה קרה: `notified_at` היה מלא.
-הכלל: לפני "תיקון" התראה: `notified_at` ויומן ההתראות. "נשלח" אינו "נמסר".
+הכלל: לפני "תיקון" התראה: `notified_at` והיומן. "נשלח" אינו "נמסר".
 נאכף: טקסט בלבד.
 חזר: 0
 
@@ -76,8 +76,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **38. תיקון באח אחד, האחים נשארו (02/10/2026, PR זה).**
-מה קרה: `capDispatch`: ה-id נוקה ב-01/10 רק ל-`inc`; `ncr`/`eqi` נשארו ודרסו רשומה.
-הכלל: תיקון בענף אחד של `switch` או מקרים דומים: כל הענפים, אותו PR.
+מה קרה: `capDispatch`: ה-id נוקה רק ל-`inc`; `ncr`/`eqi` נשארו ודרסו רשומה.
+הכלל: תיקון בענף אחד של `switch`: כל הענפים, אותו PR.
 נאכף: `capture-form-test.js`.
 חזר: 0
 
@@ -91,7 +91,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **7. בדיקת XML לפי חלון טקסט במקום לפי מבנה (01/10/2026, #1008).**
 מה קרה: `xmlns:r` לא נמצא; xlsm פגום.
-הכלל: לבדוק מבנה, לא "מופיע בהתחלה".
+הכלל: לבדוק מבנה, לא חלון טקסט.
 נאכף: `rootHasR`, `hazard-file-test.mjs`.
 חזר: 0
 
@@ -114,7 +114,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **37. שני ממלאים על אותו טופס (02/10/2026, PR זה).**
-מה קרה: שרשרת הביקורת דרסה טיוטה משוחזרת; `eb` (תפוגה) על תאריך גילוי.
+מה קרה: שרשרת הביקורת דרסה טיוטה משוחזרת; `eb` על תאריך גילוי.
 הכלל: טופס שנפתח מכמה מקומות: מי עוד כותב לשדה? עזר לפי סוג השדה.
 נאכף: `aud-findings-test.js` סעיפים 5 ו-6.
 חזר: 0
@@ -129,7 +129,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
 מה קרה: תיקייה תחת `_Backups`; הניקוי היה מוחק.
-הכלל: לפני כתיבה למקום משותף, `grep` על כל מי שכותב ומוחק שם.
+הכלל: לפני כתיבה למקום משותף: `grep` מי כותב ומוחק שם.
 נאכף: `backup-od-test.mjs`; הכלל הכללי: טקסט.
 חזר: 0
 
@@ -252,10 +252,10 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **24. חיכיתי למיכאל כשהיה מה לעשות (01/10/2026, #1027).**
-מה קרה: שאלתי "מה לקדם" כשבפריט 12 היו חלקים בקוד.
-הכלל: לעשות את חלק הקוד; לשאול רק על החסום.
-נאכף: טקסט (אין דרך בקוד: שיפוט). תוקן ב-CLAUDE.md «שיחה ארוכה».
-חזר: 1 (ה-handoff הורה לשאול).
+מה קרה: שאלתי "מה לקדם" כשהיה קוד; שלחתי בדיקות לטלפון במקום להריץ כאן.
+הכלל: לעשות את חלק הקוד; מה שאפשר לבדוק ב-Chromium כאן, לא מבקשים ממיכאל.
+נאכף: `self-check-test.js`; השאר טקסט (שיפוט).
+חזר: 2 (handoff הורה לשאול; 02/10 "אתה יודע לבדוק לבד").
 
 **34. skills שה-handoff מנה לא נטענו (02/10/2026, PR זה).**
 מה קרה: נטענו 2 מ-4; SQL בלי `tfugen-db`; `רטרו: אין` למרות אנגלית.
