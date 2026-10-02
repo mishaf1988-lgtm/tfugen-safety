@@ -190,6 +190,9 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 ## Gotchas
 
+- Empty statutory registers: `_REQ_REGS` / `_emptyReqRegs()` / `_emptyRegText()` (next to `_expCollect`), shown in `#exp-empty-reg` and `#dash-alerts`. Gated on `SB_ON`. Add a register = one entry in `_REQ_REGS`.
+- Harness tests that call `goPage` run as `reporter` and get kicked to `dash`: stub `window._role=()=>'admin'` and `_isAdminUser=()=>true`.
+
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.
 - `showView` early-returns if `VIEW_CONFIG[tbl]` is missing — add it whenever you render the table.
 - `_obDrain` is gated by `SB_ON`. Emp-session must flip `SB_ON=true` to sync.

@@ -1113,6 +1113,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="kpi"><div class="kpi-label">&#1500;&#1500;&#1488; &#1514;&#1488;&#1512;&#1497;&#1498;</div><div class="kpi-val" id="exp-k-none">0</div><div class="kpi-sub">&#1500;&#1488; &#1504;&#1497;&#1514;&#1503; &#1500;&#1502;&#1506;&#1511;&#1489;</div></div>
     <div class="kpi kpi-b"><div class="kpi-label">&#1512;&#1489;&#1506;&#1493;&#1503;</div><div class="kpi-val" id="exp-k-90">0</div><div class="kpi-sub">&le;90 &#1497;&#1493;&#1501;</div></div>
   </div>
+  <div id="exp-empty-reg"></div>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin:10px 0">
     <button class="btn btn-p" id="exp-tab-all" onclick="expFilter('all')">&#1492;&#1499;&#1500;</button>
     <button class="btn btn-s" id="exp-tab-exp" onclick="expFilter('exp')">&#1508;&#1490;</button>
@@ -6418,9 +6419,13 @@ function rDash(){
   var expd=exp.filter(function(e){return e.x<0;}).length;
   // Alerts: only show things NOT already in the Today list (expired / round / overdue tasks all live there).
   // Critical risks is the one high-level warning we surface here, with dismiss-for-today.
-  var _dismKey='tfgn_alert_dism_'+today;
+  // `today` is declared further down in rDash (hoisted, still undefined here), so the
+  // key was tfgn_alert_dism_undefined and no dismiss reached _dismissAlert's key.
+  var _dismKey='tfgn_alert_dism_'+new Date().toISOString().split('T')[0];
   var _dism={};try{_dism=JSON.parse(localStorage.getItem(_dismKey)||'{}');}catch(e){}
   if(kc>0&&!_dism['risks'])alerts+='<div class="alert alert-r" style="display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer" onclick="if(event.target.dataset.dism){_dismissAlert(\'risks\');event.stopPropagation();}else{goPage(\'rsk\');}"><span>\u26a1 '+kc+' \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd \u05e7\u05e8\u05d9\u05d8\u05d9\u05d9\u05dd \u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc</span><button data-dism="1" style="background:transparent;border:none;color:#b91c1c;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1" aria-label="\u05e1\u05d2\u05d5\u05e8 \u05d4\u05ea\u05e8\u05d0\u05d4">\u00d7</button></div>';
+  var _er=_emptyReqRegs();
+  if(_er.length&&!_dism['emptyreg'])alerts+='<div class="alert alert-r" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span>'+_emptyRegText(_er)+'</span><button onclick="_dismissAlert(\'emptyreg\')" style="background:transparent;border:none;color:#b91c1c;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1" aria-label="\u05e1\u05d2\u05d5\u05e8 \u05d4\u05ea\u05e8\u05d0\u05d4">\u00d7</button></div>';
   var de=g('dash-exp');
   if(de)de.innerHTML=exp.length?exp.slice(0,5).map(function(e){var cls=e.x<0?'bR':(e.x<=7?'bR':'bY');var lbl=e.x<0?'\u05e4\u05d2':(e.x+'\u05d9');return '<div onclick="goPage(\'exp\')" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer"><span>'+esc(String(e.n).substring(0,35))+' <span style="color:var(--t3);font-size:10px">'+esc(e.t)+'</span></span><span class="b '+cls+'">'+lbl+'</span></div>';}).join(''):'<p class="et">\u05d0\u05d9\u05df \u05e4\u05e7\u05d9\u05e2\u05d5\u05ea \u05e7\u05e8\u05d5\u05d1\u05d5\u05ea</p>';
   var da=g('dash-auds');
@@ -7204,6 +7209,20 @@ function _drlNew(ty){
   ['drl-d','drl-p','drl-dur','drl-sc','drl-n'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var s=g('drl-ty');if(s&&ty)s.value=ty;
 }
+// BACKLOG 9.1: a statutory register with zero rows raises no expiry at all, so after
+// the 18/09 reset the expiries page and the dashboard looked "all clear". Gated on
+// SB_ON so a first paint from an empty cache, before the sync, is not a false alarm.
+var _REQ_REGS=[['equip_inspections','eqi','\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3'],['hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'],['tr','tr','\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'],['hzm','hzm','\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd']];
+function _emptyReqRegs(){
+  if(!SB_ON)return [];
+  return _REQ_REGS.filter(function(r){return !(DB[r[0]]||[]).length;});
+}
+function _emptyRegText(list){
+  var one=list.length===1;
+  return '\ud83d\udd34 <b>'+(one?'\u05de\u05e8\u05e9\u05dd \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7:':'\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd:')+'</b> '+
+    list.map(function(r){return '<a href="#" data-pg="'+r[1]+'" onclick="goPage(this.dataset.pg);event.stopPropagation();return false" style="color:inherit;text-decoration:underline">'+r[2]+'</a>';}).join(', ')+
+    '. '+(one?'\u05d0\u05d9\u05df \u05de\u05de\u05e0\u05d5 \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d5 \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.':'\u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.');
+}
 function _expCollect(){
   var items=[];
   (DB.docs||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.o||'',mod:'docs',modLabel:'\u05de\u05e1\u05de\u05da',e:r.e,id:r.id});});
@@ -7323,6 +7342,7 @@ function rExp(){
   var set=function(id,v){var el=g(id);if(el)el.textContent=v;};
   set('exp-k-exp',cExp);set('exp-k-7',c7);set('exp-k-30',c30);set('exp-k-90',c90);
   set('exp-k-none',noDate.length);
+  var er=g('exp-empty-reg');if(er){var el=_emptyReqRegs();er.innerHTML=el.length?'<div class="alert alert-r" style="margin:10px 0">'+_emptyRegText(el)+'</div>':'';}
   var f=window._expFilter||'all';
   var rows=items.filter(function(i){
     var x=du(i.e);
