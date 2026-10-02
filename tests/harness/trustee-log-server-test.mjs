@@ -163,6 +163,8 @@ console.log('\n4. who may call it');
   check('database call without the secret is refused', r.status === 403 && w.puts.length === 0, r);
   r = await call(ENV, {}, { 'x-notify-secret': 'wrong' });
   check('...and with a wrong one', r.status === 403, r);
+  r = await call({ ...ENV, TRUSTEE_NOTIFY_SECRET: '' }, {}, { 'x-notify-secret': '' });
+  check('no secret on the deployment = refused (fail closed, 02/10/2026)', r.status === 403 && w.puts.length === 0, r);
   r = await call(ENV, {}, { 'x-notify-secret': 'nsec' });
   check('with the secret it rebuilds the file', r.status === 200 && r.j.pushed === true, r);
   w = world({ state: w.state, tokens: [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt2', access_token: 'at-new', expires_at: new Date(Date.now() + 3e6).toISOString() }] });
@@ -175,7 +177,7 @@ console.log('\n4. who may call it');
   check('a manager reads the status', r.status === 200 && r.j.configured === true && r.j.connected === true && r.j.email === 'sviva@tapugan.co.il', r.j);
   r = await call({ SUPABASE_SERVICE_ROLE_KEY: 'srv' }, { op: 'status' }, { Authorization: 'Bearer mgr' });
   check('...and sees "not configured" before the Azure values are in Cloudflare', r.j.configured === false, r.j);
-  r = await call({ SUPABASE_SERVICE_ROLE_KEY: 'srv' }, {}, {});
+  r = await call({ SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec' }, {}, { 'x-notify-secret': 'nsec' });
   check('unconfigured server does nothing, says so', r.j.ok === false && /not configured/.test(r.j.error), r.j);
 }
 
