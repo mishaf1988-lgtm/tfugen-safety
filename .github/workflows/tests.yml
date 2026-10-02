@@ -62,6 +62,9 @@ jobs:
       # Here and not only in the harness: a PR of .md only (a new lesson) skips the
       # harness, and a broken lessons file then failed the next code PR (retro 01/10/2026).
       - run: python3 tests/harness/lessons-format-test.py
+      # Same reason: a STATUS-only PR skips the harness, and a stale open item
+      # that the archive already closed is exactly what such a PR adds (lesson 15).
+      - run: python3 tests/harness/status-dup-test.py
 
   harness:
     needs: changes
