@@ -179,6 +179,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `inc-close-test.js`; `inc-missing-test.js` (`openModal('m-inc')` רק ב-2).
 חזר: 1. כרטיס הלכידה פתח את הטופס ישירות.
 
+**30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
+מה קרה: ה-handoff כתב שה-MCP מנותק; העברתי למיכאל כחסם. בפועל ה-connector `mcp__Supabase__*` עבד, רק `supabase` מ-`.mcp.json` נכשל (צפוי בענן).
+הכלל: לפני "כלי לא זמין": `ToolSearch` על השם ושאילתה אחת. הודעת "requires authentication" על `supabase` לבד אינה חסם.
+נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
+חזר: 0
+
 ## יעילות ותקשורת
 
 **29. שתי הרצות `run.sh` במקביל (02/10/2026, #1036).**
