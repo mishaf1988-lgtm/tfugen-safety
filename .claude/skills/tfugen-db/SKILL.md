@@ -26,6 +26,15 @@ description: How to read and change the live Supabase database of tfugen-safety 
 4. **אימות:** `information_schema` או ספירה, ולכתוב ב-PR וב-STATUS "הורץ ואומת דרך Supabase MCP ב-DD/MM/YYYY".
 5. עמודה חדשה שהאפליקציה כותבת: ה-migration רץ **לפני** המיזוג. `sbIns` עם עמודה שלא קיימת נכשל ב-PostgREST, והשמירה כולה נופלת.
 
+## כללי Postgres של Supabase, מה שרלוונטי כאן (02/10/2026)
+מתוך `supabase/agent-skills`, skill `supabase-postgres-best-practices` (MIT, תוכן בלבד). לא הותקן כולו (8 קטגוריות, רובן על טבלאות של מיליוני שורות; כאן עשרות עד מאות). חמשת הכללים שחלים, ומה נמדד ב-118 ה-migrations:
+1. **פונקציה ב-policy עטופה ב-`(select ...)`**, אחרת היא רצה לכל שורה: `using ((select private.is_admin_manager()))`. נמדד: 29 עטופות, 44 לא; `auth.jwt()` 103 פעמים, אף אחת לא עטופה. לא דחוף בגודל הנוכחי, אבל כל policy חדשה נכתבת עטופה (BACKLOG 5.12).
+2. **`security definer` לבדיקות מורכבות**, `set search_path = ''`, ו-`revoke execute` מ-`anon`/`authenticated` על הפונקציה. `private.is_admin_manager()` כבר בנויה כך; פונקציה חדשה: אותו דפוס.
+3. **אינדקס על כל עמודה שמופיעה ב-policy או ב-FK.** נמדד: `location_id`, `project_id`, `issue_type_id`, `parent_id` מאונדקסות; `equip_id` לא (BACKLOG 5.12).
+4. **טיפוסים:** `timestamptz` ולא `timestamp` (יש 2 `timestamp` ישנים; לא לשנות בלי צורך, לא ליצור חדשים), `text` ולא `varchar(n)`, `boolean` ולא מחרוזת. שדה התפוגה `e` נשאר `date` (חוק 3).
+5. **טרנזקציה קצרה**, בלי קריאה חיצונית בתוכה; `set local statement_timeout` ב-migration ארוכה.
+לקרוא את הכלל המלא רק כשצריך: `raw.githubusercontent.com/supabase/agent-skills/main/skills/supabase-postgres-best-practices/references/<שם>.md` (למשל `security-rls-performance`, `schema-foreign-key-indexes`).
+
 ## אסור
 - בלי אישור מפורש באותה שיחה: `DROP`, `DELETE`, `TRUNCATE`, `ALTER ... DROP COLUMN`, שינוי או מחיקה של RLS policy.
 - גם עם אישור: מחיקת שורות מ-`ncr`, `ncr_ai`, `trustee_reports` (נאכף ב-`guard-sql.py`).
