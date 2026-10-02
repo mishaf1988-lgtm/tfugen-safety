@@ -1,22 +1,26 @@
 // CLAUDE.md: text people read uses keyboard characters only (Michael,
 // 2026-09-21). keyboard-only-test.js covers index.html; this one covers the
-// server: every string literal in functions/api/*.js (email subjects and
-// bodies, WhatsApp text, error and status messages, HTML the server returns).
+// server: every string literal in functions/api/*.js and in the helpers
+// functions/*.js (email subjects and bodies, WhatsApp text, meeting and deck
+// text, error and status messages, HTML the server returns). sw.js.js is left
+// out: its one big template is service-worker source, and the hits there are
+// that source's own // comments, which no person reads.
 // Comments are skipped, they are never shown to anyone. The middle dot is
 // still allowed, pending Michael's answer.
-// Checks: long dash, en dash, guillemets, curly quotes, arrows, one-character
-// ellipsis - as the raw character, as a \uXXXX escape, or as an HTML entity.
+// Checks: long dash, en dash, Hebrew maqaf, guillemets, curly quotes, arrows,
+// one-character ellipsis - as the raw character, as a \uXXXX escape, or as an HTML entity.
 const fs = require('fs');
 const path = require('path');
-const dir = path.resolve(__dirname, '../../functions/api');
+const root = path.resolve(__dirname, '../../functions');
+const SKIP = new Set(['sw.js.js']);
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ok ' + l); } else { fail++; console.log('  FAIL ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
 const BAD = new RegExp([
-  '[\\u2014\\u2013\\u00ab\\u00bb\\u201c\\u201d\\u2018\\u2019\\u2192\\u2190\\u2026]',
-  '\\\\u(?:2014|2013|00[aA][bB]|00[bB][bB]|201[cCdD89]|219[02]|2026)',
+  '[\\u2014\\u2013\\u05be\\u00ab\\u00bb\\u201c\\u201d\\u2018\\u2019\\u2192\\u2190\\u2026]',
+  '\\\\u(?:2014|2013|05[bB][eE]|00[aA][bB]|00[bB][bB]|201[cCdD89]|219[02]|2026)',
   '&(?:mdash|ndash|laquo|raquo|[lr][sd]quo|rarr|larr|hellip);',
-  '&#(?:8212|8211|171|187|821[6-9]|8594|8592|8230);'
+  '&#(?:8212|8211|1470|171|187|821[6-9]|8594|8592|8230);'
 ].join('|'));
 
 // Returns [{ text, line }] for every string literal ('...', "...", `...`).
@@ -91,16 +95,17 @@ function strings(src) {
   check('scanner: a regex with a quote does not open a string', s.some(o => o.text === 'b') && s.some(o => /—$/.test(o.text)), s);
 }
 
-const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort();
+const files = ['api', '.'].flatMap(d => fs.readdirSync(path.join(root, d))
+  .filter(f => f.endsWith('.js') && !SKIP.has(f)).sort().map(f => path.join(d, f)));
 check('there are server files to scan', files.length > 5, files.length);
 const hits = [];
 for (const f of files) {
-  const src = fs.readFileSync(path.join(dir, f), 'utf8');
+  const src = fs.readFileSync(path.join(root, f), 'utf8');
   for (const s of strings(src)) {
     const m = s.text.match(BAD);
     if (m) hits.push(f + ':' + s.line + ' ' + JSON.stringify(m[0]));
   }
 }
-check('no long dash, en dash, guillemet, curly quote, arrow or one-character ellipsis in a string literal of functions/api/*.js', hits.length === 0, hits.slice(0, 20));
+check('no long dash, en dash, maqaf, guillemet, curly quote, arrow or one-character ellipsis in a string literal of functions/api/*.js or functions/*.js', hits.length === 0, hits.slice(0, 20));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
