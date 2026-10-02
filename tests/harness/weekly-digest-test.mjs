@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, plusMonths, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -91,6 +91,9 @@ const ROWS = [
   check('per type the latest counts (פינוי done 300 days ago = not due); a planned audit does not reset the area; any review; per law; never done = no row', nm === 'ביקורת פנים/מחסן,הערכת ציות/חוק ארגון הפיקוח,תרגיל חירום/שריפה,סקירת הנהלה/סקירת הנהלה', R);
   check('the owner column says when it was last done, as on the expiry page', R[1].owner === 'הוערך: ' + plus(-366).split('-').reverse().join('/') + ' (עומד)' && /^אחרונה: \d{2}\/\d{2}\/\d{4}$/.test(R[3].owner), R);
   check('empty registers (live 02/10/2026: drl, mgmt_reviews and leg have 0 rows): no row at all', expiringOf(recurringOf({}), TODAY).length === 0);
+  check('never done (live 02/10/2026: mgmt_reviews 0 rows): only the review, only when read and empty', neverOf({ mgmt_reviews: [], drl: [], leg: [] }).join() === 'סקירת הנהלה' && !neverOf({}).length && !neverOf({ mgmt_reviews: [{ id: 'm1', ts: plus(-10) }] }).length);
+  const hn = digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: [], expFail: [], never: ['סקירת הנהלה'] });
+  check('never done: a red line before the expiry block', /<p style="color:#b91c1c;font-weight:bold">לא בוצע אף פעם: סקירת הנהלה\./.test(hn) && hn.indexOf('לא בוצע אף פעם') < hn.indexOf(T.exp), hn.substring(0, 600));
 
   console.log('\n3. the endpoint');
   const HZ = [
@@ -142,6 +145,11 @@ const ROWS = [
     && c.j.counts.open === 3 && c.j.counts.overdue === 2 && c.j.counts.trustee === 1, c.j);
   check('the mail: the overdue hazard under אחזקה, the trustee finding, the committee block with a real meeting date', /אחזקה \(1\)/.test(m.body.content) && /נ-1/.test(m.body.content) && new RegExp(T.meeting + '\\d{2}/\\d{2}/\\d{4}').test(m.body.content), m.subject);
   check('every register has rows: no empty-register line, count 0', !/מרשמי חובה ריקים/.test(m.body.content) && c.j.counts.emptyRegs === 0, c.j.counts);
+  check('no review in the table (read, empty): the never-done line, counted', /לא בוצע אף פעם: סקירת הנהלה\./.test(m.body.content) && c.j.counts.never === 1, c.j.counts);
+  c = await call({ rec: { mgmt_reviews: [{ id: 'm1', ts: plus(-30) + 'T09:00:00Z' }] } }, { force: true }, 'nsec');
+  check('a review done: no never-done line, count 0', c.w.mails[0] && !/לא בוצע אף פעם/.test(c.w.mails[0].message.body.content) && c.j.counts.never === 0, c.j.counts);
+  c = await call({ recFail: 'mgmt_reviews' }, { force: true }, 'nsec');
+  check('the review read fails: not called never done, named as not read', c.w.mails[0] && !/לא בוצע אף פעם/.test(c.w.mails[0].message.body.content) && /לא נקרא, לבדוק באפליקציה: [^<]*סקירת הנהלה/.test(c.w.mails[0].message.body.content), c.j.counts);
   check('the run is recorded: ok, to, at, counts', rec && rec.ok && rec.to === 'sviva@tapugan.co.il' && rec.at && rec.counts.overdue === 2, rec);
   c = await call({ state: { [STATE_KEY]: JSON.stringify({ at: new Date(Date.now() - 3600e3).toISOString(), ok: true }) } }, {}, 'nsec');
   check('the second cron slot an hour later: skipped, no second mail', c.j.ok && /^sent /.test(c.j.skipped || '') && !c.w.mails.length, c.j);

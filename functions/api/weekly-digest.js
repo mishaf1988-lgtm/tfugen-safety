@@ -28,7 +28,8 @@
 //     type, an internal audit per area, a management review of any kind and a
 //     compliance evaluation per law fall due 12 months after the last one, the
 //     rule of _drlNext / _audNext / _mrNext / _legNext in index.html. One never
-//     done has no date and stays on the expiry page ("no date" tab).
+//     done has no date and stays on the expiry page ("no date" tab); a
+//     management review never done is a red line of its own (neverOf).
 // pg_cron calls POST /api/weekly-digest every Sunday at 07:00 Israel time
 // (migrations/2026-10-01_weekly_digest_cron.sql) with x-notify-secret; an
 // admin can ask for {op:'preview'} (the data, no mail) or {op:'send'} (the same
@@ -70,9 +71,12 @@ const lastBy = (rows, key, ok) => { const m = {}; (rows || []).forEach((r) => { 
 export const REC_SRC = [
   ['\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd', 'drl', 'id,ty,d', (rows) => lastBy(rows, 'ty')],
   ['\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd', 'auds', 'id,r,d,s', (rows) => lastBy(rows, 'r', (r) => r.s !== '\u05de\u05ea\u05d5\u05db\u05e0\u05df')],
-  ['\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', 'mgmt_reviews', 'id,ts', (rows) => { const d = (rows || []).map((r) => ymd(String(r.ts || '').substring(0, 10))).filter(Boolean).sort().pop(); return d ? [{ name: '\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', owner: '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + fd(d), e: plusMonths(d, FREQ_M) }] : []; }],
+  ['\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', 'mgmt_reviews', 'id,ts', (rows) => { const d = (rows || []).map((r) => ymd(String(r.ts || '').substring(0, 10))).filter(Boolean).sort().pop(); return d ? [{ name: '\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', owner: '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + fd(d), e: plusMonths(d, FREQ_M) }] : []; }, true],
   ['\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea', 'leg', 'id,s,law_num,c,c_date', (rows) => (rows || []).filter((r) => ymd(r.c_date)).map((r) => ({ name: r.s || r.law_num || '', owner: '\u05d4\u05d5\u05e2\u05e8\u05da: ' + fd(r.c_date) + (r.c ? ' (' + r.c + ')' : ''), e: plusMonths(r.c_date, FREQ_M) }))],
 ];
+// The fifth field: never done is a red line of its own (the app shows 9.3 red
+// when mgmt_reviews is empty). Pure: only a table that was read and came back empty.
+export const neverOf = (sets) => REC_SRC.filter(([, t, , , red]) => red && Array.isArray((sets || {})[t]) && !sets[t].length).map(([label]) => label);
 // Pure. sets = {table: rows}; the lists expiringOf takes.
 export const recurringOf = (sets) => REC_SRC.map(([label, t, , f]) => [label, ['name'], ['owner'], f((sets || {})[t])]);
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
@@ -122,6 +126,8 @@ const H = {
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
+  never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
+  neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
   emptyWhy: '. \u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.',
 };
 export const T = H;
@@ -172,7 +178,7 @@ function expBlock(list, failed) {
   return h;
 }
 
-// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles], emptyRegs: [labels], expiring: [expiringOf], expFail: [labels] }.
+// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles], emptyRegs: [labels], expiring: [expiringOf], expFail: [labels], never: [labels] }.
 export function digestHtml(d, today, meta) {
   const m = meta || {};
   const h2 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + (n != null ? ' (' + n + ')' : '') + '</h3>';
@@ -181,6 +187,8 @@ export function digestHtml(d, today, meta) {
   h += '<p>' + esc(H.total) + d.open + '</p>';
   const er = m.emptyRegs || [];
   if (er.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.emptyRegs + er.join(', ') + H.emptyWhy) + '</p>';
+  const nv = m.never || [];
+  if (nv.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.never + nv.join(', ') + H.neverWhy) + '</p>';
   if (m.expiring) h += h2(H.exp, m.expiring.length) + expBlock(m.expiring, m.expFail);
   h += h2(H.overdue, d.overdueCount);
   if (!d.overdue.length) h += '<p style="color:#555">' + H.none + '</p>';
@@ -245,7 +253,7 @@ export async function expiries(env, today) {
       sets[t] = await r.json();
     } catch (e) { failed.push(label); }
   }));
-  return { expiring: expiringOf(lists.concat(recurringOf(sets)), today), expFail: failed };
+  return { expiring: expiringOf(lists.concat(recurringOf(sets)), today), expFail: failed, never: neverOf(sets) };
 }
 
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
@@ -275,7 +283,7 @@ async function build(env) {
   const bk = backupProblem(v('backup_od'), Date.now());
   if (bk) watchOpen.push(bk);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
@@ -296,7 +304,7 @@ export async function onRequest(context) {
   const op = bySecret ? 'send' : body.op === 'send' ? 'send' : 'preview';
   try {
     const b = await build(env);
-    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length };
+    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, never: (b.meta.never || []).length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length };
     if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last }, 200, cors);
     const lastAt = b.last && b.last.ok && b.last.at ? Date.parse(b.last.at) : 0;
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true) return jsonResp({ ok: true, skipped: 'sent ' + b.last.at, counts }, 200, cors);
