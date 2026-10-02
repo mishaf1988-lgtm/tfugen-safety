@@ -6,8 +6,9 @@ def check(label, cond, detail=None):
     global passed, failed
     if cond: passed += 1; print('  ✓ ' + label)
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
-def hook(tool, inp):
-    r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': tool, 'tool_input': inp}), capture_output=True, text=True, timeout=30)
+def hook(tool, inp, running='0'):
+    env = dict(os.environ, CI_WATCH_RUNNING=running)
+    r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': tool, 'tool_input': inp}), capture_output=True, text=True, timeout=30, env=env)
     try: return ((json.loads(r.stdout or '{}').get('hookSpecificOutput') or {}).get('additionalContext')) or ''
     except Exception: return 'BAD:' + r.stdout + r.stderr
 
@@ -25,5 +26,9 @@ check('another tool: nothing', hook('Read', {'file_path': '/x'}) == '')
 check('wired in settings.json as PostToolUse', 'ci-watch.py' in json.dumps(json.load(open(os.path.join(os.path.dirname(HOOK), '..', 'settings.json')))['hooks']['PostToolUse']))
 w = '\n'.join(l for l in open(os.path.join(os.path.dirname(HOOK), 'ci-wait.sh')).read().split('\n') if not l.lstrip().startswith('#'))
 check('ci-wait.sh: REST only (no GraphQL), red exits 1', 'gh api "repos/' in w and 'gh pr' not in w and 'exit 1' in w and 'check_name=tests' in w)
+o = hook('Bash', {'command': 'git push -q origin routine/x-2026-10-01'}, running='1')
+check('a watcher already on the branch: say it follows the head, do not start or kill', 'כבר רץ' in o and 'ci-wait.sh routine/x' not in o and 'להרוג' in o, o)
+o = hook('mcp__github__create_pull_request', {'head': 'routine/y-2026-10-01'}, running='1')
+check('PR opened while a watcher runs: same', 'כבר רץ' in o, o)
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

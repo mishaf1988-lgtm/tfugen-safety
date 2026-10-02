@@ -3,6 +3,8 @@
 # GraphQL (gh pr checks) is blocked in Claude Code sessions.
 # Usage: bash .claude/hooks/ci-wait.sh <branch> [repo]
 # Exit 0 = green, 1 = red, 2 = no run after 10 minutes / gh not usable.
+# The sha is read every round, so a watcher started before a push follows the new
+# head: never kill it to "restart" (02/10/2026, the kill took the new one down too).
 set -u
 br="${1:?branch}"; repo="${2:-mishaf1988-lgtm/tfugen-safety}"; waited=0
 while :; do
