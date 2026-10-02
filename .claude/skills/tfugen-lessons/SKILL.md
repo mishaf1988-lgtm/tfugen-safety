@@ -40,7 +40,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **4. `expectedHeadSha` מקוצר (01/10/2026, #1008).**
-מה קרה: ה-hook השווה SHA מקוצר למלא וחסם מיזוג תקין.
+מה קרה: SHA מקוצר מול מלא חסם מיזוג תקין.
 הכלל: לא להעביר `expectedHeadSha` מקוצר.
 נאכף: ה-hook משווה לפי תחילית (#1008).
 חזר: 0
@@ -48,31 +48,31 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## כשמשהו נכשל
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
-מה קרה: `requests` חסר, playwright חדש יותר, מכונה איטית.
+מה קרה: `requests` חסר, playwright אחר, מכונה איטית.
 הכלל: למצוא את ההבדל (גרסה, חבילה, מהירות) ולקבע גרסאות. "flake" אינו סיבה.
 נאכף: חלקית. playwright 1.56.1 ו-`requests` מקובעים ב-`tests.yml`; השאר טקסט.
 חזר: 0
 
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**
-מה קרה: `backup-od-test.mjs` עודכן באמצע ריצה: 6 כישלונות מדומים, ועבר בהרצה חוזרת.
+מה קרה: בדיקה עודכנה באמצע ריצה: 6 כישלונות מדומים.
 הכלל: לא לערוך קוד או בדיקות עד שהריצה מסתיימת. ערכת? להריץ שוב לפני שמסיקים.
 נאכף: טקסט בלבד.
 חזר: 0
 
 **11. "החלון נעלם" (01/10/2026, #992).**
-מה קרה: חלון "שנה סיסמה" נסגר כי Claude in Chrome שלח Esc, לא באג.
-הכלל: בבדיקה דרך כלי אוטומציה, לשלול קודם את הכלי.
+מה קרה: החלון נסגר כי Claude in Chrome שלח Esc.
+הכלל: לשלול קודם את כלי האוטומציה.
 נאכף: `changepw-wrong-test.js`.
 חזר: 0
 
 **12. "ההתראה לא הגיעה" (30/09/2026).**
-מה קרה: התראת נ-6 "לא הגיעה"; ב-DB `notified_at` מלא. מיכאל: "טעות שלי הכל הגיע".
+מה קרה: התראה "לא הגיעה"; `notified_at` היה מלא.
 הכלל: לפני "תיקון" התראה, לבדוק `notified_at` ויומן ההתראות. "נשלח" = הספק קיבל, לא "נמסר".
 נאכף: טקסט בלבד.
 חזר: 0
 
 **17. commit חלקי אחרי `git stash pop` (01/10/2026, #1014).**
-מה קרה: אחרי stash ו-pop ה-commit לקח רק קבצים חדשים.
+מה קרה: אחרי stash pop נכנסו ל-commit רק קבצים חדשים.
 הכלל: לפני push, `git status --short` ריק.
 נאכף: hook ה-Stop (`stop-hook-git-check.sh`).
 חזר: 0
@@ -86,13 +86,13 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **7. בדיקת XML לפי חלון טקסט במקום לפי מבנה (01/10/2026, #1008).**
-מה קרה: `addPictures` חיפש `xmlns:r` ב-800 תווים ולא בתגית השורש; ה-xlsm נפתח פגום.
+מה קרה: `xmlns:r` חופש ב-800 תווים ולא בתגית השורש; xlsm פגום.
 הכלל: לבדוק מבנה, לא "מופיע בהתחלה".
 נאכף: `rootHasR`, `hazard-file-test.mjs`.
 חזר: 0
 
 **26. ביטול שבירה מכוונת ב-`git checkout` (01/10/2026, BACKLOG 15).**
-מה קרה: ביטלתי שבירה ב-`git checkout index.html`, וזה מחק גם את התיקון. שוחזר מגיבוי.
+מה קרה: `git checkout index.html` ביטל את השבירה וגם את התיקון.
 הכלל: לפני שבירה `cp` לגיבוי, וביטול ב-`cp` חזרה, לא ב-`git checkout`.
 נאכף: טקסט (אין דרך בקוד: hook לא יודע מה בשינוי הוא השבירה ומה התיקון).
 חזר: 0
@@ -112,7 +112,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## לפני כתיבה למקום משותף
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
-מה קרה: `monthly`, `photos` תחת `_Backups`, והניקוי בדפדפן היה מוחק אותן.
+מה קרה: `monthly`, `photos` תחת `_Backups`; הניקוי בדפדפן היה מוחק.
 הכלל: לפני כתיבה למקום משותף, `grep` על כל מי שכותב ומוחק שם.
 נאכף: `backup-od-test.mjs`; הכלל הכללי: טקסט.
 חזר: 0
@@ -168,7 +168,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **22. "ALL GREEN" על אפס בדיקות (01/10/2026, PR זה).**
-מה קרה: `run.sh` עם מסנן שלא תפס אף קובץ הדפיס ALL GREEN.
+מה קרה: מסנן שלא תפס קובץ הדפיס ALL GREEN.
 הכלל: ירוק = שורת `N passed` של הבדיקה המכוונת.
 נאכף: `run.sh` נכשל עם `NO SUITE MATCHED`.
 חזר: 0
@@ -180,8 +180,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 1. כרטיס הלכידה פתח את הטופס ישירות.
 
 **30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
-מה קרה: ה-handoff כתב שה-MCP מנותק; העברתי למיכאל כחסם. בפועל ה-connector `mcp__Supabase__*` עבד, רק `supabase` מ-`.mcp.json` נכשל (צפוי בענן).
-הכלל: לפני "כלי לא זמין": `ToolSearch` על השם ושאילתה אחת. הודעת "requires authentication" על `supabase` לבד אינה חסם.
+מה קרה: העתקתי מה-handoff "MCP מנותק" כחסם; `mcp__Supabase__*` עבד.
+הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
 נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
 חזר: 0
 
