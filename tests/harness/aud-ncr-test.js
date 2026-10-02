@@ -58,6 +58,13 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   r = await page.evaluate(() => { const n = DB.ncr[0], num = n.num; let sent; window.sbUpd = (t, x) => { if (t === 'ncr') sent = x; }; g('ncr-id').value = n.id; g('ncr-d').value = n.d + ' עודכן'; svNcr(); return { num, sent: sent && sent.num, local: DB.ncr[0].num }; });
   check('the edit sends the same number, not the old record', typeof r.sent === 'string' && r.sent === r.num && r.local === r.num, r);
 
+  console.log('\n5. a new audit starts with Michael as the auditor; an edit keeps its own');
+  r = await page.evaluate(() => { g('a-a').value = 'אחר'; closeModal('m-aud'); openModal('m-aud'); const fresh = gv('a-a'); closeModal('m-aud');
+    _audNew('איכות סביבה'); const fromExp = gv('a-a'), area = gv('a-r'); closeModal('m-aud');
+    _genEdit('auds', 'a1'); const edit = gv('a-a'); closeModal('m-aud'); return { fresh, fromExp, area, edit }; });
+  check('"+ add" and "+ audit" on the expiry page fill מיכאל פרייליך', r.fresh === 'מיכאל פרייליך' && r.fromExp === 'מיכאל פרייליך', r);
+  check('editing audit a1 shows its own auditor (דנה)', r.edit === 'דנה', r);
+
   check('no page errors', !errs.length, errs);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

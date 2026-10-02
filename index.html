@@ -4916,6 +4916,8 @@ function openModal(id){
   if(!_genEditOpening)_svEditing={};
   _closeAllOpenModals(id);
   if(id==='m-drl'&&typeof _drlFndReset==='function')_drlFndReset();
+  // \u05de\u05d9\u05db\u05d0\u05dc, 02/10/2026: \u05d4\u05de\u05d1\u05e7\u05e8 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05dd \u05d4\u05d5\u05d0 \u05d4\u05d5\u05d0 \u05e2\u05e6\u05de\u05d5. \u05e8\u05e7 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4.
+  if(id==='m-aud'&&!_genEditOpening){var _aa=g('a-a');if(_aa)_aa.value=_AUD_AUDITOR;}
   if(!document.body.style.overflow||document.body.style.overflow!=='hidden'){
     _modalLastScrollY=window.scrollY||0;
   }
@@ -7269,10 +7271,12 @@ function _audNext(){
     return {name:ar,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'aud',modLabel:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',e:e,id:last?last.id:null};
   });
 }
-// New audit of a given area, from the expiry page. Every field starts empty.
+// Default auditor of a new internal audit (DECISIONS 02/10/2026).
+var _AUD_AUDITOR='\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da';
+// New audit of a given area, from the expiry page. Every field but the auditor starts empty.
 function _audNew(ar){
   openModal('m-aud');
-  ['a-n','a-a','a-d','a-f','a-sc','a-sm'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  ['a-n','a-d','a-f','a-sc','a-sm'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var s=g('a-r');if(s&&ar)s.value=ar;
   var st=g('a-st');if(st)st.selectedIndex=0;
 }
