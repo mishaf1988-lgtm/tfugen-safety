@@ -1638,6 +1638,9 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="card" id="mr-ontime-card" style="display:none"><div class="card-title">&#9989; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514; &#1513;&#1504;&#1505;&#1490;&#1512;&#1493; &#1489;&#1494;&#1502;&#1503; &#8212; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
     <div id="mr-ontime"></div>
   </div>
+  <div class="card" id="mr-obj-card"><div class="card-title">&#127919; &#1497;&#1506;&#1491;&#1497;&#1501; 2026</div>
+    <div id="mr-obj" style="font-size:13px"></div>
+  </div>
   <!-- The formal trend an auditor asks for. On the page, not in a modal, so
        _printPage (which prints .page.on) carries it into the PDF. -->
   <div class="card" id="mr-trend-card" style="display:none"><div class="card-title">&#128200; &#1502;&#1490;&#1502;&#1514; NCR &#8212; 12 &#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</div>
@@ -7280,6 +7283,36 @@ function _audNew(ar){
   var s=g('a-r');if(s&&ar)s.value=ar;
   var st=g('a-st');if(st)st.selectedIndex=0;
 }
+// BACKLOG 13 (Michael, 02/10/2026): a high-severity tour hazard is checked again
+// 30 days after it was closed, to see that the fix held. Pending = closed, high,
+// and recheck_d empty or older than closed_d (reopened and closed again needs a
+// new check). Hazards closed before _THZ_RCK_FROM are not asked for: they would
+// all start overdue (Michael approved "from the last 30 days on").
+var _THZ_RCK_DAYS=30,_THZ_RCK_FROM='2026-09-02',_THZ_HIGH='\u05d2\u05d1\u05d5\u05d4\u05d4';
+function _thzRckDue(r){
+  var p=String(r.closed_d).substring(0,10).split('-');
+  return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]+_THZ_RCK_DAYS)).toISOString().substring(0,10);
+}
+function _thzRecheck(){
+  return (DB.tour_hazards||[]).filter(function(r){
+    return r&&r.sev===_THZ_HIGH&&r.s===_THZ_CLOSED&&r.closed_d&&String(r.closed_d)>=_THZ_RCK_FROM&&(!r.recheck_d||String(r.recheck_d)<String(r.closed_d));
+  }).map(function(r){
+    return {name:(r.n?'#'+r.n+' ':'')+String(r.descr||'').substring(0,60),owner:'\u05e0\u05e1\u05d2\u05e8 '+fd(r.closed_d)+(r.dept?', '+r.dept:''),mod:'thz',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05dc\u05de\u05e4\u05d2\u05e2',e:_thzRckDue(r),id:r.id};
+  });
+}
+// held: recheck_d = today. Not held: the hazard reopens and its notes say why.
+function _thzRckDo(id,held){
+  var r=(DB.tour_hazards||[]).find(function(x){return x.id===id;});if(!r)return;
+  var t=_thzToday();
+  if(held)r.recheck_d=t;
+  else{
+    if(!confirm('\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7? \u05d4\u05de\u05e4\u05d2\u05e2 \u05d9\u05d9\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9.'))return;
+    r.s='\u05e4\u05ea\u05d5\u05d7';r.closed_d=null;r.closed_by=null;r.close_note=null;r.after_photo_url=null;
+    r.notes=(r.notes?r.notes+'\n':'')+'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea '+fd(t)+': \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9';
+  }
+  sbUpd('tour_hazards',r);addLog('\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea \u05dc\u05de\u05e4\u05d2\u05e2: '+(held?'\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7':'\u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9')+': '+String(r.descr||'').substring(0,30));sdb();
+  toast(held?'\u05e0\u05e8\u05e9\u05dd: \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7 \u2713':'\u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9');rExp();
+}
 // BACKLOG 9.1: a statutory register with zero rows raises no expiry at all, so after
 // the 18/09 reset the expiries page and the dashboard looked "all clear". Gated on
 // SB_ON so a first paint from an empty cache, before the sync, is not a false alarm.
@@ -7312,6 +7345,7 @@ function _expCollect(){
   // calendar and an alert, and appeared on no list.
   _drlNext().forEach(function(x){if(x.e)items.push(x);});
   _audNext().forEach(function(x){if(x.e)items.push(x);});
+  _thzRecheck().forEach(function(x){items.push(x);});
   (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
 }
@@ -7439,7 +7473,7 @@ function rExp(){
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl',aud:'auds'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl',aud:'auds',thz:'tour_hazards'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
@@ -7447,6 +7481,7 @@ function rExp(){
     var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'&#8212;';
     if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
+    if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
     if(i.mod==='aud')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dar="'+esc(i.name)+'" onclick="_audNew(this.dataset.dar)" title="\u05e8\u05e9\u05d5\u05dd \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'&#8212;')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'&#8212;')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
@@ -7600,6 +7635,41 @@ function _opsEvidence(inFn){
     tb:(DB.toolbox||[]).filter(function(r){return r&&inFn(r.d);}).length,tbLast:tbLast
   };
 }
+// BACKLOG 9.25 stage 2 (Michael, 02/10/2026, DECISIONS): four objectives for
+// 2026, each measured from data the app already keeps, so there is no table; a
+// target changes here. No data = "na", never 0%: since the 18/09 reset three of
+// the four registers are empty, and an empty register is not a missed target.
+// ok = at target, warn = up to 10 points under, bad = more.
+var _OBJ_YEAR='2026';
+var _OBJECTIVES=[
+  {k:'thz',l:'\u05de\u05e4\u05d2\u05e2\u05d9 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df',t:80},
+  {k:'ncr',l:'NCR \u05e9\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05d6\u05de\u05df',t:80},
+  {k:'rec',l:'\u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd \u05d5\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d5',t:100},
+  {k:'tr',l:'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05ea\u05d5\u05e7\u05e3',t:95}];
+function _objMeasure(){
+  var today=_thzToday();
+  function yr(v){return !!v&&String(v).substring(0,4)===_OBJ_YEAR;}
+  function d10(v){return String(v).substring(0,10);}
+  var m={};
+  var hz=(DB.tour_hazards||[]).filter(function(r){return r&&r.closed_d&&r.due&&yr(r.closed_d);});
+  m.thz=[hz.filter(function(r){return d10(r.closed_d)<=d10(r.due);}).length,hz.length];
+  var nc=(DB.ncr||[]).filter(function(r){return r&&r.s==='\u05e1\u05d2\u05d5\u05e8'&&r.cd&&r.u&&yr(r.cd);});
+  m.ncr=[nc.filter(function(r){return d10(r.cd)<=d10(r.u);}).length,nc.length];
+  var rec=_drlNext().concat(_audNext());
+  m.rec=[rec.filter(function(x){return x.e&&String(x.e)>=today;}).length,rec.length];
+  var tr=_isoExpiry('tr');m.tr=[tr.ok,tr.ok+tr.gone];
+  return _OBJECTIVES.map(function(o){
+    var n=m[o.k][0],d=m[o.k][1];
+    var st=!d?'na':(n*100>=o.t*d?'ok':(n*100>=(o.t-10)*d?'warn':'bad'));
+    return {k:o.k,l:o.l,t:o.t,n:n,d:d,p:d?Math.floor(100*n/d):null,st:st};
+  });
+}
+var _OBJ_ST={ok:['bG','\u05e2\u05d5\u05de\u05d3 \u05d1\u05d9\u05e2\u05d3'],warn:['bY','\u05e7\u05e8\u05d5\u05d1 \u05dc\u05d9\u05e2\u05d3'],bad:['bR','\u05de\u05ea\u05d7\u05ea \u05dc\u05d9\u05e2\u05d3'],na:['bX','\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd']};
+function _objHtml(){
+  return '<div class="mt-wrap"><table><tr><th>\u05d9\u05e2\u05d3</th><th>\u05de\u05d8\u05e8\u05d4</th><th>\u05d1\u05e4\u05d5\u05e2\u05dc</th><th>\u05de\u05e6\u05d1</th></tr>'+_objMeasure().map(function(o){
+    return '<tr><td>'+esc(o.l)+'</td><td>'+o.t+'%</td><td>'+(o.p===null?'-':o.p+'% ('+o.n+'/'+o.d+')')+'</td><td><span class="b '+_OBJ_ST[o.st][0]+'">'+_OBJ_ST[o.st][1]+'</span></td></tr>';
+  }).join('')+'</table></div>';
+}
 function _isoClauses(){
   var C=[];
   function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||''});}
@@ -7645,8 +7715,12 @@ function _isoClauses(){
   var legSrc=(DB.leg||[]).filter(function(r){return r.src_url;}).length;
   add(both,'6.1.3','\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d7\u05d5\u05e7\u05d9\u05d5\u05ea \u05d5\u05d0\u05d7\u05e8\u05d5\u05ea',legN+' \u05d7\u05d5\u05e7\u05d9\u05dd \u05d5\u05ea\u05e7\u05e0\u05d5\u05ea, '+legSrc+' \u05e2\u05dd \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05e7\u05d5\u05e8',legN?(legSrc?'ok':'warn'):'bad',
     legN?(legSrc?'':'\u05d0\u05e3 \u05d7\u05d5\u05e7 \u05d0\u05d9\u05e0\u05d5 \u05de\u05e7\u05d5\u05e9\u05e8 \u05dc\u05e0\u05d5\u05e1\u05d7 \u05d4\u05de\u05e7\u05d5\u05e8'):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05d5\u05ea'));
-  // 6.2 - objectives. No module holds them.
-  add(both,'6.2','\u05d9\u05e2\u05d3\u05d9\u05dd \u05d5\u05ea\u05db\u05e0\u05d5\u05df \u05dc\u05d4\u05e9\u05d2\u05ea\u05dd','\u05d0\u05d9\u05df \u05de\u05d5\u05d3\u05d5\u05dc \u05d9\u05e2\u05d3\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4','na',ext('\u05d9\u05e2\u05d3\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05e1\u05d1\u05d9\u05d1\u05d4'));
+  // 6.2 - objectives (BACKLOG 9.25 stage 2): the same measure as the review card.
+  var obj=_objMeasure(),objNa=obj.filter(function(o){return o.st==='na';}),objLow=obj.filter(function(o){return o.st==='bad'||o.st==='warn';});
+  var objGap=objLow.map(function(o){return o.l+' '+o.p+'% (\u05d9\u05e2\u05d3 '+o.t+'%)';}).join(', ');
+  if(objNa.length)objGap+=(objGap?'. ':'')+'\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd: '+objNa.map(function(o){return o.l;}).join(', ');
+  add(both,'6.2','\u05d9\u05e2\u05d3\u05d9\u05dd \u05d5\u05ea\u05db\u05e0\u05d5\u05df \u05dc\u05d4\u05e9\u05d2\u05ea\u05dd',obj.length+' \u05d9\u05e2\u05d3\u05d9\u05dd \u05dc-'+_OBJ_YEAR+', '+obj.filter(function(o){return o.st==='ok';}).length+' \u05e2\u05d5\u05de\u05d3\u05d9\u05dd \u05d1\u05d9\u05e2\u05d3',
+    objNa.length===obj.length?'na':(obj.some(function(o){return o.st==='bad';})?'bad':(objLow.length?'warn':'ok')),objGap);
 
   // 7.2 — competence. Training with a live expiry date.
   var tr=_isoExpiry('tr');
@@ -10971,6 +11045,7 @@ function rMr(){
       else if(otC)otC.style.display='none';
     }
   }catch(e){console.warn('mr-ontime failed',e);}
+  try{var obB=g('mr-obj');if(obB)obB.innerHTML=_objHtml();}catch(e){console.warn('mr-obj failed',e);}
   var today=new Date().toISOString().split('T')[0];
   var thisMonth=today.substring(0,7);
   var ncrAll=DB.ncr||[];
