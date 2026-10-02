@@ -795,6 +795,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   h1,h2,h3,.page-title,.card-title{break-after:avoid;page-break-after:avoid}
   @page{margin:10mm;size:A4 landscape}
 }
+/* Clickable list rows in the dashboard widgets were 27-33px tall (visual-audit 02/10/2026); a finger needs 40. */
+#pg-dash div[onclick][style*="border-bottom"]{min-height:40px;align-items:center}
 </style>
 </head>
 <body>

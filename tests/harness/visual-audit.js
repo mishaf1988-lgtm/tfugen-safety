@@ -51,7 +51,7 @@ const SEED = `(function(){
   var S={
     docs:rows(function(i){return {id:'seed_docs'+i,n:'נוהל בטיחות '+(i+1)+' '+L,c:'נהלים',v:'1.'+i,o:'מיכאל',u:iso(-30),e:iso([-10,20,200][i]),s:'בתוקף',i:iso(-400),nt:L,file_url:null};}),
     auds:rows(function(i){return {id:'seed_auds'+i,n:'מבדק פנימי '+L,a:'מבקר '+i,r:'ISO 45001',d:iso(-30*i),f:L,sc:80+i,s:['פתוח','סגור','פתוח'][i],f2:L,sm:L};}),
-    ncr:rows(function(i){return {id:'seed_ncr'+i,num:'NCR-2026-00'+i,d:iso(-20*i),sd:iso(-20*i),a:'ייצור טוגנים',p:['גבוה','נמוך','בינוני'][i],o:'מנהל אחזקה',f:L,u:'מיכאל',s:['פתוח','סגור','בטיפול'][i],c:L,category:'בטיחות',cd:i===1?iso(-2):null,loc:'חומר גלם',root_cause:L,immediate:L,notes:L,rc:L,ts:iso(-20*i),sens:false};}),
+    ncr:rows(function(i){return {id:'seed_ncr'+i,num:'NCR-2026-00'+i,d:L,sd:iso(-20*i),a:'ייצור טוגנים',p:['גבוה','נמוך','בינוני'][i],o:'מנהל אחזקה',f:L,u:'מיכאל',s:['פתוח','סגור','בטיפול'][i],c:L,category:'בטיחות',cd:i===1?iso(-2):null,loc:'חומר גלם',root_cause:L,immediate:L,notes:L,rc:L,ts:iso(-20*i),sens:false};}),
     inc:rows(function(i){return {id:'seed_inc'+i,d:iso(-i),dt:iso(-i),ty:'תאונת עבודה',sv:['קל','בינוני','חמור'][i],l:'ייצור טוגנים',w:'עובד '+i,dy:i,s:['פתוח','סגור','פתוח'][i],r:L,p:L,file_url:null};}),
     tr:rows(function(i){return {id:'seed_tr'+i,w:'עובד '+i,n:'הדרכת בטיחות '+L,c:'מדריך חיצוני',tr_name:'הדרכת בטיחות',d:iso(-300),e:iso([-5,15,300][i]),sc:'90',s:'הושלם',sig:null,file_url:null};}),
     rsk:rows(function(i){return {id:'seed_rsk'+i,d:'סיכון '+L,a:'ייצור טוגנים',o:'מנהל ייצור',p:i+1,sv:[5,3,2][i],ct:L,ac:L,last_review:iso(-100)};}),
