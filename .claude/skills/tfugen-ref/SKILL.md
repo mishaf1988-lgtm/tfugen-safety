@@ -200,6 +200,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 - An emoji in a JS string above U+FFFF = surrogate pair (`ud83d udd34` style), never a 5-digit escape (`rule1-hebrew-test.js` checks `u1f...`).
 - Harness tests that call `goPage` run as `reporter` and get kicked to `dash`: stub `window._role=()=>'admin'` and `_isAdminUser=()=>true`.
 
+- Server calls from the DB / cron carry `x-notify-secret` = `TRUSTEE_NOTIFY_SECRET`. Every endpoint checks it fail closed: `if (!want || header !== want) 403` (02/10/2026, the last two were `trustee-notify.js` and `trustee-log.js`). Harness tests of such an endpoint put the secret in `env` and the header in the default request. Live check: `GET /api/trustee-notify?probe=1`.
+
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.
 - `showView` early-returns if `VIEW_CONFIG[tbl]` is missing — add it whenever you render the table.
 - `_obDrain` is gated by `SB_ON`. Emp-session must flip `SB_ON=true` to sync.

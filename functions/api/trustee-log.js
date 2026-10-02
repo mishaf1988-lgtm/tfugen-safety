@@ -337,8 +337,9 @@ export async function onRequest(context) {
     }
     force = body.force === true;
   } else {
+    // Fail closed (02/10/2026), like vitre.js and mail-inbox.js: no secret = forbidden.
     const want = env.TRUSTEE_NOTIFY_SECRET;
-    if (want && (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
+    if (!want || (request.headers.get('x-notify-secret') || '') !== want) return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, cors);
   try {

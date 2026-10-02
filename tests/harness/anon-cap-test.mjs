@@ -39,7 +39,7 @@ check('the app\'s outbox keeps a refused op (remaining.push in the catch)', drai
 
 console.log('\n2. trustee-notify: 15 alerts a day, then one notice');
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'svc', META_PHONE_NUMBER_ID: 'pn', META_ACCESS_TOKEN: 'tok', RESEND_KEY: 'rk' };
+const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'svc', META_PHONE_NUMBER_ID: 'pn', META_ACCESS_TOKEN: 'tok', RESEND_KEY: 'rk', TRUSTEE_NOTIFY_SECRET: 's0' };
 const notify = await load('functions/api/trustee-notify.js');
 function world(alreadyToday, stateDay) {
   const w = { meta: [], mail: [], logs: [], state: stateDay ? { notify_cap_day: stateDay } : {}, counts: [] };
@@ -70,7 +70,7 @@ function world(alreadyToday, stateDay) {
   };
   return w;
 }
-const req = () => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'R1' }) });
+const req = () => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-notify-secret': 's0' }, body: JSON.stringify({ id: 'R1' }) });
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
 {
   const w = world(15);

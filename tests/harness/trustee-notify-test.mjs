@@ -60,8 +60,9 @@ function world(opts) {
   };
   return { calls, st };
 }
-const env = { SUPABASE_SERVICE_ROLE_KEY: 'svc', META_PHONE_NUMBER_ID: 'pn', META_ACCESS_TOKEN: 'tok', RESEND_KEY: 'rk' };
-const req = (body, headers) => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev', ...(headers || {}) }, body: JSON.stringify(body) });
+// The secret is required since 02/10/2026, so the default call carries it, as the DB trigger does.
+const env = { SUPABASE_SERVICE_ROLE_KEY: 'svc', META_PHONE_NUMBER_ID: 'pn', META_ACCESS_TOKEN: 'tok', RESEND_KEY: 'rk', TRUSTEE_NOTIFY_SECRET: 's0' };
+const req = (body, headers) => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev', 'x-notify-secret': 's0', ...(headers || {}) }, body: JSON.stringify(body) });
 const fresh = () => ({ id: 'r1', u: 'דנה', t: 5, d: '2026-09-19', loc: 'מחסן · הידרנט', f: 'ללא פלומבה', ok: false, s: 'פתוח', photo_url: SB + '/storage/v1/object/public/incidents-photos/tru-ph-5-a-1758.jpg', ts: new Date().toISOString(), notified_at: null });
 const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567', email: true, email_to: 'sviva@tapugan.co.il' } };
 
@@ -144,6 +145,9 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('with a secret configured, a call without the header is refused', j.error === 'forbidden'); 
     const j2 = await (await onRequest({ request: req({ id: 'r1' }, { 'x-notify-secret': 's3' }), env: { ...env, TRUSTEE_NOTIFY_SECRET: 's3' } })).json();
     check('…and accepted with it', j2.ok === true && j2.whatsapp === 'sent', j2); }
+  { const w = world({ row: fresh(), prefs: prefsOn }); const noSec = { ...env }; delete noSec.TRUSTEE_NOTIFY_SECRET;
+    const r = await onRequest({ request: req({ id: 'r1' }, { 'x-notify-secret': '' }), env: noSec });
+    check('no secret on the deployment = forbidden (fail closed), nothing sent', r.status === 403 && !w.calls.some(c => c.u.includes('graph.facebook') || c.u.includes('resend')), w.calls.map(c => c.u)); }
   { const r = await onRequest({ request: req({ id: 'r1' }), env: { META_ACCESS_TOKEN: 'x' } }); check('missing service key → 500', r.status === 500); }
   { const w = world({ row: fresh(), prefs: prefsOn, dedicatedMissing: false }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json(); const meta = w.calls.filter(c => c.u.includes('graph.facebook.com'));
     check('once the dedicated template exists it is used directly: reporter / kind / location / finding', j.whatsapp === 'sent' && meta.length === 1 && meta[0].body.template.name === 'tfugen_safety_report' && meta[0].body.template.components[0].parameters.map(p => p.text).join('|') === 'דנה|ליקוי בסיור נאמן: עמדות כיבוי אש|מחסן · הידרנט|ללא פלומבה', meta.map(m => m.body.template)); }
@@ -272,9 +276,11 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     let resend = w.calls.find((c) => c.u.includes('resend'));
     const m = resend && resend.body.html.match(/\/api\/close-hazard\?k=([^"]+)"/);
     check('trustee finding: the mail has the close button with a token for this finding', !!m && /^r1\.[0-9a-z]+\.[A-Za-z0-9_-]{43}$/.test(decodeURIComponent(m[1])) && /\u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc/.test(resend.body.html), resend && resend.body.html.slice(0, 300));
-    w = world({ row: fresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'r1' }), env });
+    // Since 02/10/2026 a deployment without the secret refuses the call, so no mail and no unsigned link.
+    const noSec = { ...env }; delete noSec.TRUSTEE_NOTIFY_SECRET;
+    w = world({ row: fresh(), prefs: prefsOn }); const r0 = await onRequest({ request: req({ id: 'r1' }), env: noSec });
     resend = w.calls.find((c) => c.u.includes('resend'));
-    check('no secret configured: no button (never an unsigned link)', resend && !/close-hazard/.test(resend.body.html));
+    check('no secret configured: refused, no mail (never an unsigned link)', r0.status === 403 && !resend);
     w = world({ nm: nmFresh(), prefs: prefsOn }); await onRequest({ request: req({ id: 'n1', src: 'near_miss' }, hs), env: envS });
     resend = w.calls.find((c) => c.u.includes('resend'));
     check('near-miss: no close button', resend && !/close-hazard/.test(resend.body.html)); }
@@ -318,7 +324,8 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     w = world({ prefs: prefsOn });
     let res = await onRequest({ request: req({ op: 'retry' }), env: envS });
     check('retry without the secret: 403', res.status === 403);
-    res = await onRequest({ request: req({ op: 'retry' }), env });
+    const envNo = { ...env }; delete envNo.TRUSTEE_NOTIFY_SECRET;
+    res = await onRequest({ request: req({ op: 'retry' }), env: envNo });
     check('retry when no secret is configured on the server: 403 (never open)', res.status === 403);
     w = world({ prefs: null });
     j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();

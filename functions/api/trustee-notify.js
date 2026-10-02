@@ -20,13 +20,12 @@
 //                                 POST /api/trustee-notify   {"test":true, ...}
 //      with a Supabase session in `Authorization: Bearer` (same gate as wa-send).
 //
-// Trust model for (1): no shared secret is required. A caller can only make
-// us look up a row by id; the row must exist, be a hazard, be recent and not
-// yet notified — notified_at is claimed atomically, so each hazard notifies
-// once — and the recipient comes from the manager's own settings row in
-// notification_prefs, never from the request. Optional hardening: set
-// TRUSTEE_NOTIFY_SECRET in the Pages env and send the same value from the DB
-// trigger as the x-notify-secret header.
+// Trust model for (1): TRUSTEE_NOTIFY_SECRET is required (02/10/2026; before
+// that it was optional and a missing secret left the path open). The DB
+// trigger sends it as the x-notify-secret header. On top of it: the row must
+// exist, be a hazard, be recent and not yet notified (notified_at is claimed
+// atomically, so each hazard notifies once), and the recipient comes from the
+// manager's own settings row in notification_prefs, never from the request.
 //
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
@@ -165,11 +164,13 @@ export async function onRequest({ request, env }) {
   }
 
   // ---- (1) a real hazard, referenced by id ----
-  if (env.TRUSTEE_NOTIFY_SECRET && request.headers.get('x-notify-secret') !== env.TRUSTEE_NOTIFY_SECRET) {
+  // Fail closed (02/10/2026): no secret on the deployment = nobody gets in.
+  // Until then a missing secret left this path open to anyone. The secret has
+  // been set since 25/09 (?probe=1), so the live behaviour does not change.
+  if (!env.TRUSTEE_NOTIFY_SECRET || request.headers.get('x-notify-secret') !== env.TRUSTEE_NOTIFY_SECRET) {
     return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (body.op === 'retry') {
-    if (!env.TRUSTEE_NOTIFY_SECRET) return jsonResp({ error: 'forbidden' }, 403, cors);
     return jsonResp(await retrySweep(env, sb), 200, cors);
   }
   const id = clean(body.id, 64);
