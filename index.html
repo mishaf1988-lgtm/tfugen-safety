@@ -5335,6 +5335,9 @@ function svInc(){
   // BACKLOG 15: a new incident needs a severity. An old one without it is edited
   // as is ("חסרים נתונים"): forcing a choice there would invent the data.
   if(!isEdit&&!gv('i-sv')){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05d7\u05d5\u05de\u05e8\u05d4');return;}
+  // BACKLOG 15: 4+ lost days must be reported (form 250). Ask when "\u05d3\u05d9\u05d5\u05d5\u05d7" is left empty;
+  // OK saves as is (unknown stays unknown), Cancel goes back to the field.
+  if(gv('i-dy')!==''&&gi('i-dy')>=4&&gv('i-rep')===''&&!confirm('4 \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea \u05d0\u05d5 \u05d9\u05d5\u05ea\u05e8: \u05d4\u05d0\u05dd \u05d3\u05d5\u05d5\u05d7 \u05dc\u05d1\u05d9\u05d8\u05d5\u05d7 \u05dc\u05d0\u05d5\u05de\u05d9 (\u05d8\u05d5\u05e4\u05e1 250)?\n\n\u05d1\u05d9\u05d8\u05d5\u05dc: \u05d7\u05d6\u05e8\u05d4 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05d1\u05e9\u05d3\u05d4 "\u05d3\u05d9\u05d5\u05d5\u05d7".\n\u05d0\u05d9\u05e9\u05d5\u05e8: \u05dc\u05e9\u05de\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05dc\u05e1\u05de\u05df (\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2).')){var re=g('i-rep');if(re)re.focus();return;}
   var r={id:isEdit?existingId:gid(),d:d,dt:_incIsoDt(gv('i-dt')),dept:gv('i-dept')||null,reported:gv('i-rep')===''?null:gv('i-rep')==='true',ty:gv('i-ty'),sv:gv('i-sv'),l:gv('i-l'),location_id:gv('i-location-id')||null,project_id:gv('i-project-id')||null,issue_type_id:gv('i-issue-type-id')||null,dy:gv('i-dy')===''?null:gi('i-dy'),s:gv('i-st'),r:gv('i-r'),file_url:_attachUrls['inc-attach-area']||null};
   var prevInc=isEdit?((DB.inc||[]).find(function(x){return x.id===existingId;})||{}):{};
   if(r.s==='\u05e1\u05d2\u05d5\u05e8'&&prevInc.s!=='\u05e1\u05d2\u05d5\u05e8'){
@@ -12354,6 +12357,9 @@ window._incStaleAge=function(r){
   var age=Math.floor((Date.now()-d.getTime())/86400000);
   return age>=7?age:0;
 };
+// BACKLOG 15: an incident left "\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4" over 30 days since the event is late, oldest first.
+function _incLateAge(r){if(!r||r.s!=='\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4')return 0;var d=new Date(r.dt);if(isNaN(d))return 0;var age=Math.floor((Date.now()-d.getTime())/86400000);return age>30?age:0;}
+function _incLate(){return (DB.inc||[]).filter(function(r){return _incLateAge(r)>0;}).sort(function(a,b){return String(a.dt||'').localeCompare(String(b.dt||''));});}
 // BACKLOG 15: incidents with no severity or no lost days (empty is unknown, not 0), oldest first.
 function _incMissing(){return (DB.inc||[]).filter(function(r){return r&&(!r.sv||_ldMissing([r]));}).sort(function(a,b){return String(a.dt||'').localeCompare(String(b.dt||''));});}
 function rInc(){
@@ -12370,6 +12376,7 @@ function rInc(){
       var staleR=allInc.filter(function(r){return _incStaleAge(r)>0;}).length;
       var todo=_incTodo();
       var miss=_incMissing();
+      var late=_incLate();
       iS.innerHTML=
         '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+allInc.length+'</strong></span>'+
         (openR?'<span style="background:#fef3c7;border:1px solid #b45309;border-radius:14px;padding:3px 10px;color:#92400e">\u05e4\u05ea\u05d5\u05d7: <strong>'+openR+'</strong></span>':'')+
@@ -12377,6 +12384,7 @@ function rInc(){
         (sevR?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05d7\u05de\u05d5\u05e8: <strong>'+sevR+'</strong></span>':'')+
         (staleR?'<span style="background:#fde2e2;border:1px solid #b91c1c;border-radius:14px;padding:3px 10px;color:#7f1d1d" title="\u05d7\u05de\u05d5\u05e8/\u05e7\u05e8\u05d9\u05d8\u05d9 \u05e4\u05ea\u05d5\u05d7 7+ \u05d9\u05de\u05d9\u05dd">🔍 \u05d7\u05e1\u05e8 \u05d7\u05e7\u05d9\u05e8\u05d4: <strong>'+staleR+'</strong></span>':'')+
         (todo.length?'<span data-iid="'+esc(todo[0].id)+'" onclick="_invOpen(this.dataset.iid)" style="cursor:pointer;background:#ccfbf1;border:1px solid #0f766e;border-radius:14px;padding:3px 10px;color:#115e59" title="\u05dc\u05d7\u05d9\u05e6\u05d4 \u05e4\u05d5\u05ea\u05d7\u05ea \u05d0\u05ea \u05d4\u05d7\u05e7\u05d9\u05e8\u05d4 \u05e9\u05dc \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7\u05d4 \u05de\u05d1\u05d9\u05e0\u05d9\u05d4\u05df">📝 '+new Date().getFullYear()+' \u05d1\u05dc\u05d9 \u05d7\u05e7\u05d9\u05e8\u05d4: <strong>'+todo.length+'</strong></span>':'')+
+        (late.length?'<span data-iid="'+esc(late[0].id)+'" onclick="_invOpen(this.dataset.iid)" style="cursor:pointer;background:#ffedd5;border:1px solid #c2410c;border-radius:14px;padding:3px 10px;color:#9a3412" title="\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4 \u05de\u05e2\u05dc 30 \u05d9\u05d5\u05dd \u05de\u05d4\u05d0\u05d9\u05e8\u05d5\u05e2. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e4\u05d5\u05ea\u05d7\u05ea \u05d0\u05ea \u05d4\u05d7\u05e7\u05d9\u05e8\u05d4 \u05d4\u05d5\u05d5\u05ea\u05d9\u05e7\u05d4">⏰ \u05d7\u05e7\u05d9\u05e8\u05d4 \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8: <strong>'+late.length+'</strong> ('+_incLateAge(late[0])+' \u05d9\u05de\u05d9\u05dd)</span>':'')+
         (miss.length?'<span data-eid="'+esc(miss[0].id)+'" onclick="editInc(this.dataset.eid)" style="cursor:pointer;background:#f3f4f6;border:1px solid #6b7280;border-radius:14px;padding:3px 10px;color:#374151" title="\u05d1\u05dc\u05d9 \u05d7\u05d5\u05de\u05e8\u05d4 \u05d0\u05d5 \u05d1\u05dc\u05d9 \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e4\u05d5\u05ea\u05d7\u05ea \u05d0\u05ea \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4">⚠️ \u05d7\u05e1\u05e8\u05d9\u05dd \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd: <strong>'+miss.length+'</strong></span>':'')+
         (lostDays?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df: <strong>'+lostDays+'</strong></span>':'');
     }

@@ -5,6 +5,12 @@
 #        bash tests/harness/run.sh trustee    (only files matching a substring)
 set -u
 cd "$(dirname "$0")"
+# One run at a time (lesson 29, 02/10/2026): the end removes the shared _build, and a
+# second run.sh beside a full one crashed 30 mjs suites in it. A lock left by a dead run is taken over.
+if ! mkdir .run.lock 2>/dev/null; then
+  if kill -0 "$(cat .run.lock/pid 2>/dev/null)" 2>/dev/null; then echo "HARNESS ERROR: run.sh already running (pid $(cat .run.lock/pid)). One test alone: node <file>"; exit 1; fi
+fi
+echo $$ > .run.lock/pid; trap 'rm -rf .run.lock' EXIT
 export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}"
 # the function unit test imports ESM copies of the Cloudflare function + shared helpers
 mkdir -p _build

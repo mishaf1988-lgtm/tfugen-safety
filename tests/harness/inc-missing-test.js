@@ -2,7 +2,8 @@
 // "missing data", not "קל" / 0. The incidents screen counts them in a pill that
 // opens the oldest for editing; a new incident needs a severity; an empty
 // lost-days field is saved as null (svInc saved it as 0 until 01/10/2026);
-// the capture card fills the real i-* form fields.
+// the capture card fills the real i-* form fields; "בחקירה" over 30 days is
+// late; 4+ lost days with no report answer asks before saving.
 const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
@@ -83,6 +84,48 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('no _setIf on the nonexistent inc-* ids', !/_setIf\('inc-(dt|d|sv|l|r)'/.test(src));
     check('openModal("m-inc") only in openNewIncModal and editInc (lesson 23)', (src.match(/openModal\('m-inc'\)/g) || []).length === 2);
     check('the inc case opens through openNewIncModal (clears i-id)', /case 'inc':\s*\n(\s*\/\/.*\n)*\s*openNewIncModal\(\);\s*\n\s*_setIf\('i-dt'/.test(src));
+  }
+
+  console.log('\n6. "בחקירה" over 30 days is late');
+  {
+    const r = await page.evaluate(() => {
+      const day = (n) => new Date(Date.now() - n * 86400000).toISOString();
+      DB.inc = [
+        { id: 'late60', d: 'א', dt: day(60), sv: 'קל', dy: 0, s: 'בחקירה' },
+        { id: 'late40', d: 'ב', dt: day(40), sv: 'קל', dy: 0, s: 'בחקירה' },
+        { id: 'fresh', d: 'ג', dt: day(10), sv: 'קל', dy: 0, s: 'בחקירה' },
+        { id: 'open90', d: 'ד', dt: day(90), sv: 'קל', dy: 0, s: 'פתוח' },
+      ];
+      closeModal('m-inc'); rInc();
+      const pill = Array.from(document.querySelectorAll('#inc-summary span')).find(s => /חקירה באיחור/.test(s.textContent));
+      if (pill) pill.click();
+      return { txt: pill ? pill.textContent : '', inv: document.getElementById('m-inv').style.display === 'block', sel: g('inv-inc').value };
+    });
+    check('counts only "בחקירה" over 30 days (2), shows the oldest age', /חקירה באיחור: 2 \(60 ימים\)/.test(r.txt), r.txt);
+    check('click opens the investigation of the oldest', r.inv && r.sel === 'late60', r);
+    await page.evaluate(() => closeModal('m-inv'));
+  }
+
+  console.log('\n7. 4+ lost days with "דיווח" empty asks before saving');
+  {
+    const r = await page.evaluate(() => {
+      const out = {};
+      window.__conf = []; window.confirm = (m) => { window.__conf.push(String(m)); return false; };
+      editInc('late40'); g('i-dy').value = '5'; g('i-rep').value = '';
+      window.__upd = []; svInc();
+      out.cancel = { asked: window.__conf.length, saved: window.__upd.length, focus: document.activeElement && document.activeElement.id };
+      window.confirm = (m) => { window.__conf.push(String(m)); return true; };
+      svInc(); out.ok = window.__upd[0];
+      window.__conf = []; window.__upd = []; editInc('late40'); g('i-dy').value = '5'; g('i-rep').value = 'false'; svInc();
+      out.marked = { asked: window.__conf.length, saved: window.__upd.length };
+      window.__conf = []; window.__upd = []; editInc('late40'); g('i-dy').value = '3'; g('i-rep').value = ''; svInc();
+      out.three = { asked: window.__conf.length, saved: window.__upd.length };
+      return out;
+    });
+    check('Cancel: asked, nothing saved, focus on i-rep', r.cancel.asked === 1 && r.cancel.saved === 0 && r.cancel.focus === 'i-rep', r.cancel);
+    check('OK: saved with reported null (unknown stays unknown)', r.ok && r.ok.dy === 5 && r.ok.reported === null, r.ok);
+    check('already marked: no question', r.marked.asked === 0 && r.marked.saved === 1, r.marked);
+    check('3 days: no question', r.three.asked === 0 && r.three.saved === 1, r.three);
   }
 
   check('no page errors', !errs.length, errs);

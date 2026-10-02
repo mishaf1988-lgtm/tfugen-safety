@@ -16,8 +16,11 @@
 const fs = require('fs');
 const path = require('path');
 let acorn;
-for (const p of ['acorn', path.join(require('child_process').execSync('npm root -g').toString().trim(), 'eslint/node_modules/acorn')]) {
-  try { acorn = require(p); break; } catch (e) { /* next */ }
+// Last: the module behind an `acorn` command on PATH (bin/acorn -> the package),
+// for a sandbox that ships it outside npm root -g (/opt/node-tools, 02/10/2026).
+const binAcorn = () => path.resolve(fs.realpathSync(require('child_process').execSync('command -v acorn', { shell: '/bin/sh' }).toString().trim()), '../..');
+for (const p of ['acorn', () => path.join(require('child_process').execSync('npm root -g').toString().trim(), 'eslint/node_modules/acorn'), binAcorn]) {
+  try { acorn = require(typeof p === 'function' ? p() : p); break; } catch (e) { /* next */ }
 }
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
