@@ -72,12 +72,12 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `sbIns/sbUpd/sbDel` | 3806-3808 | queue Supabase ops (`sbIns`/`sbUpd` are wrapped again by `window.sbIns=` 24844 / `window.sbUpd=` 24849) |
 | `sbSync(silent)` | 3882 | pull all tables → DB |
 | `askDel(tbl,id)` | 4256 | delete with confirm |
-| `goPage(id)` | 4399 | show page |
+| `goPage(id)` | 4399 | show page (wrapped again by `window.goPage=` 25039 and `_g=goPage;window.goPage=` 25180) |
 | `rPage()` | 4747 | re-render current page |
 | `openModal(id)` | 4940 | show modal |
 | `closeModal(id)` | 5057 | hide modal |
 | `rDash()` | 6401 | dashboard render |
-| `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext` |
+| `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext`/`_thzRecheck` |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
