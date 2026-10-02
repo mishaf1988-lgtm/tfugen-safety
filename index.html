@@ -5099,6 +5099,7 @@ function openNewNcrModal(){
   _nmChainPending=null;_audChainPending=null;
   openModal('m-ncr');
   // Draft autosave \u2014 only for new NCRs (no ncr-id). Check for stale draft.
+  _ncrDraftRestored=false;
   if(typeof _ncrDraftCheck==='function')_ncrDraftCheck();
   if(typeof _ncrDraftStart==='function')_ncrDraftStart();
 }
@@ -5123,6 +5124,7 @@ function _ncrAutoDue(){
 // the form fields to localStorage. On modal re-open, offer to restore if a
 // draft exists. Cleared on successful svNcr or explicit cancel.
 var _NCR_DRAFT_KEY='tfgn_ncr_draft_v1';
+var _ncrDraftRestored=false;
 var _NCR_DRAFT_TIMER=null;
 var _NCR_DRAFT_FIELDS=['ncr-d','ncr-a','ncr-p','ncr-loc','ncr-location-id','ncr-project-id','ncr-issue-type-id','ncr-rc','ncr-rc-cat','ncr-success-criteria','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-notes','ncr-five-why'];
 function _ncrDraftSnapshot(){
@@ -5166,6 +5168,7 @@ function _ncrDraftCheck(){
   var ok=confirm('\u05de\u05e6\u05d0\u05ea\u05d9 \u05d8\u05d9\u05d5\u05d8\u05ea NCR \u05dc\u05d0 \u05e9\u05de\u05d5\u05e8\u05d4 \u05de\u05dc\u05e4\u05e0\u05d9 '+ageLabel+':\n\n"'+preview+'..."\n\n\u05dc\u05e9\u05d7\u05d6\u05e8 \u05d0\u05ea \u05d4\u05d8\u05d9\u05d5\u05d8\u05d4?');
   if(ok){
     Object.keys(d.snap).forEach(function(f){var el=g(f);if(el)el.value=d.snap[f]||'';});
+    _ncrDraftRestored=true;
     if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
     toast('\u05d8\u05d9\u05d5\u05d8\u05d4 \u05e9\u05d5\u05d7\u05d6\u05e8\u05d4 \u05de '+ageLabel);
   }else{
@@ -12291,13 +12294,13 @@ function rTasks(){
     if(r.isVirtual){
       var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1502;&#1511;&#1493;&#1512;">&#128065;</button>';
       var promoteBtn='<button class="btn btn-d btn-sm" data-stbl="'+esc(r.source_table)+'" data-sid="'+esc(r.source_id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" title="&#1492;&#1508;&#1493;&#1498; &#1500;&#1502;&#1513;&#1497;&#1502;&#1492; &#1506;&#1510;&#1502;&#1488;&#1497;&#1514;">&#10133;</button>';
-      var srcDelBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="'+esc(r.source_table)+'" data-did="'+esc(r.source_id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1514; &#1512;&#1513;&#1493;&#1502;&#1514; &#1492;&#1502;&#1511;&#1493;&#1512;">&#128465;</button>';
+      var srcDelBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" data-dtbl="'+esc(r.source_table)+'" data-did="'+esc(r.source_id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1514; &#1512;&#1513;&#1493;&#1502;&#1514; &#1492;&#1502;&#1511;&#1493;&#1512;">&#128465;</button>';
       actions=srcViewBtn+' '+promoteBtn+' '+srcDelBtn;
     }else{
       var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;</button>';
       var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)" title="&#1506;&#1512;&#1497;&#1499;&#1492; / &#1506;&#1491;&#1499;&#1493;&#1503; &#1513;&#1501;">&#9998;</button>';
       var menuBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="_tskMenu(this.dataset.tid,this)" title="&#1505;&#1496;&#1496;&#1493;&#1505; &#1502;&#1492;&#1497;&#1512;">⋯</button>';
-      var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
+      var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
       actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
     var cb=r.isVirtual?'':'<input type="checkbox" name="tsk-row-cb" value="'+esc(r.id)+'" onclick="_tskBulkToggle(this.value,this.checked)" style="cursor:pointer">';
@@ -12516,7 +12519,7 @@ tb.innerHTML=rows.map(function(n){
   if(prj)loc=loc?(loc+' · 🏗️'+prj.substring(0,12)):('🏗️'+prj.substring(0,15));
   var ityp=(n.issue_type_id&&typeof _itypeName==='function')?_itypeName(n.issue_type_id):'';
   if(ityp)loc=loc?(loc+' · 🎯'+ityp.substring(0,14)):('🎯'+ityp.substring(0,18));
-  var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
+  var delBtn='<button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
   var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
   // Verification is a two-tap trip through the view modal otherwise, and the
@@ -12529,7 +12532,7 @@ tb.innerHTML=rows.map(function(n){
   return '<tr>'+
     '<td><span class="b bX" title="\u05dc\u05d7\u05e5 \u05dc\u05d4\u05e2\u05ea\u05e7\u05d4" style="cursor:pointer" onclick="event.stopPropagation();navigator.clipboard&&navigator.clipboard.writeText(this.textContent);toast(\'\u05d4\u05d5\u05e2\u05ea\u05e7\')">'+(n.num||'&#8212;')+'</span>'+priBadge+sensBadge+staleBadge+'</td>'+
     '<td style="text-align:center">'+ ico +'</td>'+
-    '<td>'+eb(n.src_date||n.sd||'')+'</td>'+
+    '<td>'+fd(n.src_date||n.sd||'')+'</td>'+
     '<td title="'+esc(loc)+'">'+ esc(loc.substring(0,30)) +'</td>'+
     '<td>'+(n.d||'').substring(0,50)+'</td>'+
     '<td>'+sb(n.s)+'</td>'+
@@ -12899,7 +12902,7 @@ function rEasp(){
     var potBadge=rpnP?'<span style="background:'+_easpRpnColor(rpnP)+';color:'+(rpnP>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_pot||'?')+'\u00d7'+(r.sv_pot||'?')+'='+rpnP+'</span>':'\u2014';
     var sb=r.status?'<span class="b bX" style="font-size:10px">'+esc(r.status)+'</span>':'\u2014';
     var clip=r.file_url?' <span title="\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3" style="font-size:11px">&#128206;</span>':'';
-    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong>'+clip+'<div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'\u2014')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'\u2014').substring(0,25))+'</td><td>'+_easpReviewBadge(r)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong>'+clip+'<div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'\u2014')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'\u2014').substring(0,25))+'</td><td>'+_easpReviewBadge(r)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
   }).join('');
 }
 function svEasp(){
@@ -12958,7 +12961,7 @@ function _locRenderNode(node,allRows){
   var counts='';
   if(nNcr)counts+=' <span class="b bR" style="font-size:9px" title="NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">NCR '+nNcr+'</span>';
   if(nNm)counts+=' <span class="b bY" style="font-size:9px" title="\u05db\u05de\u05e2\u05d8 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">\u05db\u05de\u05e2\u05d8 '+nNm+'</span>';
-  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   children.forEach(function(c){html+=_locRenderNode(c,allRows);});
   return html;
 }
@@ -13875,7 +13878,7 @@ function rItp(){
     if(r.next_due){var dd=du(r.next_due);if(dd<0)dueCol='var(--bad)';else if(dd<=30)dueCol='var(--warn)';}
     var bg=r.active?'#dcfce7':'#fce4e4';
     var act=r.active?'\u05e4\u05e2\u05d9\u05dc':'\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc';
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" style="background:#16a34a" onclick="_itpDone(\''+safeId+'\')" title="\u05d1\u05d5\u05e6\u05e2 \u2014 \u05e7\u05d3\u05dd \u05dc\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0">✓</button><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" style="background:#16a34a" onclick="_itpDone(\''+safeId+'\')" title="\u05d1\u05d5\u05e6\u05e2 \u2014 \u05e7\u05d3\u05dd \u05dc\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0">✓</button><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   }).join('');
 }
 // recur_count / recur_unit were decoration: written, read back into the form,
@@ -14122,7 +14125,7 @@ function rPrj(){
     var safeId=esc(p.id);
     var range='';
     if(p.start_date||p.end_date){range='<span style="font-size:10px;color:var(--t3)">'+(p.start_date?fd(p.start_date):'?')+' → '+(p.end_date?fd(p.end_date):'?')+'</span>';}
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1;cursor:pointer" data-pid="'+safeId+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1;cursor:pointer" data-pid="'+safeId+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:#cc1f1f;color:#fff" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
   }).join('');
 }
 function _prjOpenAdd(){
@@ -17085,11 +17088,13 @@ function _audNcrs(a){
   refs.forEach(function(n){if(seen[n])return;seen[n]=1;out.push((DB.ncr||[]).find(function(r){return r.num===n;})||{num:n});});
   return out;
 }
+// After a restored draft the chains fill only empty fields: overwriting it
+// lost the description Michael typed (02/10/2026). Otherwise they set all.
 window._chainAudToNcr=function(aId){
   var a=(DB.auds||[]).find(function(r){return r.id===aId;});
   if(!a){toast('\u05d4\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return;}
   goPage('ncr');openNewNcrModal();
-  var setIf=function(elId,val){var el=g(elId);if(el&&val)el.value=val;};
+  var setIf=function(elId,val){var el=g(elId);if(el&&val&&!(_ncrDraftRestored&&el.value))el.value=val;};
   setIf('ncr-d','\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd ('+(a.n||'')+'): ');
   setIf('ncr-sd',a.d||new Date().toISOString().split('T')[0]);
   setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd: '+(a.n||'')+(a.d?' '+fd(a.d):''));
@@ -17120,7 +17125,7 @@ window._chainNmToNcr=function(nmId){
   setTimeout(function(){
     if(typeof openNewNcrModal==='function'){openNewNcrModal();}else{openModal('m-ncr');}
     setTimeout(function(){
-      var setIf=function(elId,val){var el=g(elId);if(el&&val)el.value=val;};
+      var setIf=function(elId,val){var el=g(elId);if(el&&val&&!(_ncrDraftRestored&&el.value))el.value=val;};
       setIf('ncr-d','\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2: '+(nm.descr||'').substring(0,200));
       setIf('ncr-loc',nm.area||'');
       var locSel=g('ncr-location-id');if(locSel&&nm.location_id){locSel.value=nm.location_id;}
