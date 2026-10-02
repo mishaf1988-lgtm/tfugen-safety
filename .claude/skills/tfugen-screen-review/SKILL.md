@@ -23,7 +23,7 @@ description: Checklist for reviewing a screenshot or a flow of the tfugen-safety
 | "נשמר" בלי רשומה | `execute_sql` + יומני `edge_logs` (POST לטבלה) | NCR שלא נשמר |
 | תשובת AI כללית | ה-prompt מקבל מספיק הקשר? | סיבת שורש |
 | שם טבלה באנגלית או תאריך YYYY-MM-DD בחלון | `_DEL_TBL_LABEL` לכל `data-dtbl`; תאריך דרך `fd` (`capture-form-test.js`) | חלון מחיקה של ביקורת: "auds / 2026-09-15" |
-| טופס "חדש" שנפתח עם id של רשומה קודמת | `openModal` ישיר במקום `openNew*`; שדה id נסתר (לקח 38) | לכידה מהירה ל-NCR ולבדיקת ציוד |
+| טופס "חדש" שנפתח עם id של רשומה קודמת | `modal-id-reset-test.js` פותח כל טופס עם id נסתר מכל כניסה ציבורית עם id ישן (לקח 38) | לכידה מהירה ל-NCR ולבדיקת ציוד |
 
 ## איך בודקים
 - DB: `execute_sql` על הטבלה, ו-`query_logs` על `edge_logs` לפי `request.path` ו-`method` כדי לדעת אם השמירה בכלל יצאה מהטלפון.

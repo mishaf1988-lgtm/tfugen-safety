@@ -54,8 +54,12 @@ check("blocks: 1 commit not in main, ci-wait", r and "1 commits" in r and "ci-wa
 print("\nmerged, no next session")
 sh(work, "git", "push", "-q", "origin", "x:main"); sh(work, "git", "fetch", "-q", "origin")
 r = sup.verdict(work, "מוזג.", MERGED, False)
+check("merged without proposals: blocks and asks for the section", r and "הצעות לשדרוג" in r, r)
+P = "מוזג.\n\n💡 הצעות לשדרוג\n1. בדיקה."
+r = sup.verdict(work, P, MERGED, False)
 check("blocks: lesson, next item or handoff", r and "tfugen-lessons" in r and "create_session" in r, r)
-check("after create_session: lets it through", sup.verdict(work, "מוזג.", MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+check("after create_session: lets it through", sup.verdict(work, P, MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+check("no merge: no proposals needed", sup.verdict(work, "סיימתי.", set(), False) is None)
 
 print("\nthe hook end to end")
 tr = os.path.join(root, "t.jsonl")

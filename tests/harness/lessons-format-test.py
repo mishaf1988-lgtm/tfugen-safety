@@ -6,6 +6,9 @@ P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.claud
 MAX = 14 * 1024
 FIELDS = ('מה קרה:', 'הכלל:', 'נאכף:', 'חזר:')
 HEAD = re.compile(r'^\*\*(\d+)\. .+ \((\d\d/\d\d/\d{4}|[^)]*\d\d/\d\d/\d{4}[^)]*)(, [^)]*)?\)\.\*\*$')
+# Rule 3 (02/10/2026): a lesson already enforced in code shrinks to one line:
+# **N. title (date).** הכלל: ...; נאכף: `test`; חזר: 0
+SHORT = re.compile(r'^\*\*(\d+)\. .+ \((\d\d/\d\d/\d{4}|[^)]*\d\d/\d\d/\d{4}[^)]*)(, [^)]*)?\)\.\*\* הכלל: .+; נאכף: `[^`]+`.*; חזר: (\d+)\b.*$')
 passed = failed = 0
 def check(label, cond, detail=None):
     global passed, failed
@@ -29,6 +32,11 @@ def problems(text):
     ls = lessons(text); nums = []
     if not ls: errs.append('no lessons found')
     for x in ls:
+        s = SHORT.match(x['head'])
+        if s:
+            nums.append(int(s.group(1)))
+            if x['lines']: errs.append('lesson %s: a one-line lesson has no body' % s.group(1))
+            continue
         m = HEAD.match(x['head'])
         if not m: errs.append('bad heading: ' + x['head'][:60]); continue
         n = int(m.group(1)); nums.append(n)
@@ -61,6 +69,11 @@ check('non-number חזר fails', problems(ok.replace('חזר: 0', 'חזר: הר�
 check('duplicate number fails', problems(ok + '\n' + ok) != [])
 check('gap in numbers fails', problems(ok + '\n' + ok.replace('**1.', '**3.')) != [])
 check('over the size cap fails', problems(ok + 'x' * MAX) != [])
+short = '**1. x (01/10/2026, #1).** הכלל: b; נאכף: `x-test.js`; חזר: 0\n'
+check('a one-line lesson enforced in code passes', problems(short) == [], problems(short))
+check('a one-line lesson enforced by text only fails', problems(short.replace('`x-test.js`', 'טקסט')) != [])
+check('a one-line lesson with a body fails', problems(short + 'מה קרה: a\n') != [])
+check('a one-line lesson that recurred is still a lesson (number counted)', problems(short + '\n' + ok.replace('**1.', '**2.')) == [])
 
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

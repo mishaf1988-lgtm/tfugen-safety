@@ -30,6 +30,20 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 - להריץ את התהליך כולו ב-playwright כמו שמיכאל עושה, לא רק את השלב ששאל עליו, ולבדוק ב-DB שהשמירה הגיעה.
 - ליקוי קטן: לתקן באותו PR. גדול: לכתוב עם הצעה. בתשובה: מה נמצא ומה תוקן.
 
+## לחפש skills חדשים בחוץ (מיכאל, 02/10/2026)
+
+"אני ממליץ לך גם לחפש skills חדשים באינטרנט שיעשו לך עבודה יותר טובה, תמיד להיות מעודכן."
+- **מתי:** בכל משימת התפתחות, ולפחות פעם בחודש (עם שורת METRICS של ה-1 לחודש).
+- **איפה:** הכלים `SearchPlugins` ו-`SearchSkills` (הקטלוג של החשבון), `anthropics/skills`, `anthropics/claude-plugins-official`, `supabase/agent-skills`, הרשימה `VoltAgent/awesome-agent-skills`.
+- **איך שופטים:** (1) עושה משהו שה-harness וה-skills כאן לא עושים? (2) מה המחיר: hook שקורא ל-LLM בכל תור = טוקנים כל תור; תוכן בלבד = בטוח. (3) כולל קונפליקט עם חוקי ה-repo (אין framework, עברית `\uXXXX`)? התקנה של תוכן בלבד: לבד. hook או MCP: מיכאל.
+- **יומן** (כדי לא לבדוק פעמיים):
+
+| תאריך | skill | החלטה |
+|---|---|---|
+| 02/10/2026 | `webapp-testing` (anthropics/skills) | לא: Playwright כללי; `self-check-test.js` ו-`visual-audit.js` כבר עושים יותר (Supabase מדומה, 390px, עברית). השיטה "לצלם ולקרוא" כבר ב-`tfugen-screen-review` |
+| 02/10/2026 | `security-guidance` (plugin רשמי) | לא: hook Stop שקורא ל-Opus בכל תור (עלות), והאזהרה על `innerHTML` תצעק על כל שורה באפליקציה הזו (יש `esc`). סקירת אבטחה נעשתה 24/09 |
+| 02/10/2026 | `supabase-postgres-best-practices` (supabase/agent-skills) | אולי: תוכן בלבד, RLS ואינדקסים ל-35 טבלאות. לפני התקנה לקרוא את הכללים ולבדוק שאינם סותרים את `tfugen-db`. פתוח למשימה הבאה שנוגעת ב-DB |
+
 ## מתי skill חדש ומתי לעדכן
 
 - **לעדכן** כשיש skill שהנושא שלו מתאים. עדיף שורה בקובץ קיים מאשר קובץ חדש.
