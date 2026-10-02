@@ -58,6 +58,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('findings count = 3', r.aud.f === 3, r.aud.f);
   r = await page.evaluate(() => { rAud(); return document.getElementById('tb-aud').textContent; });
   check('the audit row: 3 open of 3', r.includes('NCR: 3 פתוחים מתוך 3'), r);
+  r = await page.evaluate(() => { const tr = document.querySelector('#tb-aud tr'); const e = tr.querySelector('[data-etbl="auds"]'); e.click(); return { has: !!e, open: g('m-aud').style.display !== 'none', n: gv('a-n'), dash: tr.textContent.indexOf('\u2014') }; });
+  check('the audit row has a pencil that opens the record for editing, and no long dash', r.has && r.open && r.n === 'בטיחות מחסן' && r.dash < 0, r);
+  await page.evaluate(() => closeModal('m-aud'));
 
   console.log('\n3. editing the audit adds only the new rows');
   r = await page.evaluate(() => {
