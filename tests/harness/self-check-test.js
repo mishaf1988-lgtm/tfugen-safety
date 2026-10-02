@@ -113,6 +113,9 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
   r = await page.evaluate(() => { goPage('dash'); rDash(); const t = g('pg-dash').textContent; const m = t.match(/טרם הוערך:\s*(\d+)/); return { line: m ? m[0] : null }; });
   await page.waitForTimeout(300); await shot('7-dash-compliance');
   say('7 dashboard compliance card: "⏳ טרם הוערך: N"', !!r.line, r);
+  // visual-audit 02/10/2026: clickable widget rows were 27-33px tall, a finger needs 40.
+  r = await page.evaluate(() => { const rows = [...document.querySelectorAll('#pg-dash div[onclick][style*="border-bottom"]')].filter(el => el.offsetParent); return { n: rows.length, low: rows.map(el => Math.round(el.getBoundingClientRect().height)).filter(h => h < 40) }; });
+  say('dashboard: clickable rows are at least 40px tall', r.n > 0 && r.low.length === 0, r);
   r = await page.evaluate(() => { const l = DB.leg[DB.leg.length - 1]; _svEditing = {}; _genEdit('leg', l.id); g('leg-c').value = 'מציית'; svLeg(); const l2 = DB.leg[DB.leg.length - 1]; return { u: l2.c_date, by: l2.c_by, today: new Date().toISOString().slice(0, 10) }; }).catch(e => ({ err: e.message }));
   say('7 switching to "מציית" fills today\'s date', r.u === r.today, r);
   await page.evaluate(() => closeModal('m-leg'));
