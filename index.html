@@ -5085,7 +5085,7 @@ function svDoc(){
   // id:gid() unconditionally \u2014 alone among the save functions \u2014 so \u2713 on an
   // existing document created a second row instead of correcting the first.
   // With _EDIT_MODS.docs there is now a \u270e to reach this from.
-  var r={id:_svEditId('docs')||gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u'),e:gv('d-e')||null,s:gv('d-s'),i:gv('d-i')||null,nt:gv('d-nt'),file_url:_attachUrls['doc-attach-area']||null};
+  var r={id:_svEditId('docs')||gid(),n:n,c:gv('d-c'),v:gv('d-v')||'1.0',o:gv('d-o'),u:gv('d-u')||null,e:gv('d-e')||null,s:gv('d-s'),i:gv('d-i')||null,nt:gv('d-nt'),file_url:_attachUrls['doc-attach-area']||null};
   _svPut('docs',r);addLog('\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8: '+n);sdb();closeModal('m-doc');
   ['d-n','d-o','d-nt','d-i'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('doc-attach-area');
@@ -5488,7 +5488,7 @@ window._rskReviewMeta=function(r){
 };
 function svEmp(){
   var n=gv('e-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:_svEditId('emp')||gid(),n:n,r:gv('e-r'),dep:gv('e-d'),s:gv('e-s'),ph:gv('e-ph'),em:gv('e-em')};
+  var r={id:_svEditId('emp')||gid(),n:n,r:gv('e-r'),dep:gv('e-d'),s:gv('e-s')||null,ph:gv('e-ph'),em:gv('e-em')};
   _svPut('emp',r);addLog('\u05e2\u05d5\u05d1\u05d3 \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-emp');
   ['e-n','e-r','e-d','e-ph','e-em'].forEach(function(i){var el=g(i);if(el)el.value='';});
   toast('\u05e2\u05d5\u05d1\u05d3 \u05e0\u05e9\u05de\u05e8 &#10003;');rEmp();
@@ -5516,11 +5516,11 @@ function svPtw(){
   if(getChk('ptw-s8'))safety.push('\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e1\u05d5\u05e4\u05d9\u05ea');
   var num=gv('ptw-num')||('PTW-'+String(DB.ptw.length+1).padStart(4,'0'));
   var r={id:_svEditId('ptw')||gid(),num:num,con:con,sup:gv('ptw-sup'),ph:gv('ptw-ph'),wkr:gv('ptw-wkr'),
-    area:gv('ptw-area'),location_id:gv('ptw-location-id')||null,dep:gv('ptw-dep'),ds:gv('ptw-ds'),de:gv('ptw-de'),
+    area:gv('ptw-area'),location_id:gv('ptw-location-id')||null,dep:gv('ptw-dep'),ds:gv('ptw-ds')||null,de:gv('ptw-de')||null,
     ts:gv('ptw-ts'),te:gv('ptw-te'),desc:gv('ptw-desc'),
     types:types.join(', '),safety:safety.join(', '),
-    sg1n:gv('ptw-sg1n'),sg1d:gv('ptw-sg1d'),sg2n:gv('ptw-sg2n'),sg2d:gv('ptw-sg2d'),
-    sg3n:gv('ptw-sg3n'),sg3d:gv('ptw-sg3d'),sg4n:gv('ptw-sg4n'),sg4d:gv('ptw-sg4d'),
+    sg1n:gv('ptw-sg1n'),sg1d:gv('ptw-sg1d')||null,sg2n:gv('ptw-sg2n'),sg2d:gv('ptw-sg2d')||null,
+    sg3n:gv('ptw-sg3n'),sg3d:gv('ptw-sg3d')||null,sg4n:gv('ptw-sg4n'),sg4d:gv('ptw-sg4d')||null,
     s:gv('ptw-st')};
   _svPut('ptw',r);
   addLog('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d4: '+num);sdb();closeModal('m-ptw');
@@ -5599,7 +5599,7 @@ function svWst(){
 }
 function svHzm(){
   var n=gv('hzm-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:_svEditId('hzm')||gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms'),em:gv('hzm-em')};
+  var r={id:_svEditId('hzm')||gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms')||null,em:gv('hzm-em')};
   _svPut('hzm',r);addLog('\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-hzm');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rHzm();
 }
@@ -5916,7 +5916,7 @@ function ptwPrint(){
   parts.push('<button onclick="_tryPrint(this)">\u05d4\u05d3\u05e4\u05e1</button>');
   parts.push('<h1>\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea - \u05ea\u05e4\u05d5\u05d2\u05df</h1>');
   parts.push('<table>');
-  parts.push('<tr><td>\u05de\u05e1\'</td><td>'+p.num+'</td><td>\u05ea\u05d0\u05e8\u05d9\u05da</td><td>'+p.ds+' - '+p.de+'</td></tr>');
+  parts.push('<tr><td>\u05de\u05e1\'</td><td>'+p.num+'</td><td>\u05ea\u05d0\u05e8\u05d9\u05da</td><td>'+fd(p.ds)+' - '+fd(p.de)+'</td></tr>');
   parts.push('<tr><td>\u05e9\u05e2\u05d5\u05ea</td><td>'+p.ts+' - '+p.te+'</td><td>\u05d0\u05d6\u05d5\u05e8</td><td>'+p.area+'/'+p.dep+'</td></tr>');
   parts.push('<tr><td>\u05e7\u05d1\u05dc\u05df</td><td>'+p.con+'</td><td>\u05d0\u05d7\u05e8\u05d0\u05d9</td><td>'+p.sup+'</td></tr>');
   parts.push('<tr><td>\u05e0\u05d9\u05d9\u05d3</td><td>'+p.ph+'</td><td>\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</td><td>'+p.wkr+'</td></tr>');
@@ -5926,10 +5926,10 @@ function ptwPrint(){
   parts.push('</table>');
   parts.push('<table>');
   parts.push('<tr><th colspan="4" scope="col">\u05d0\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd</th></tr>');
-  parts.push('<tr><td>\u05de\u05d1\u05e6\u05e2: '+p.sg1n+'</td><td>'+p.sg1d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
-  parts.push('<tr><td>\u05de\u05e4\u05e7\u05d7: '+p.sg2n+'</td><td>'+p.sg2d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
-  parts.push('<tr><td>\u05de\u05e0\u05d4\u05dc: '+p.sg3n+'</td><td>'+p.sg3d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
-  parts.push('<tr><td>\u05de\u05de\u05d5\u05e0\u05d4: '+p.sg4n+'</td><td>'+p.sg4d+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
+  parts.push('<tr><td>\u05de\u05d1\u05e6\u05e2: '+p.sg1n+'</td><td>'+fd(p.sg1d)+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
+  parts.push('<tr><td>\u05de\u05e4\u05e7\u05d7: '+p.sg2n+'</td><td>'+fd(p.sg2d)+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
+  parts.push('<tr><td>\u05de\u05e0\u05d4\u05dc: '+p.sg3n+'</td><td>'+fd(p.sg3d)+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
+  parts.push('<tr><td>\u05de\u05de\u05d5\u05e0\u05d4: '+p.sg4n+'</td><td>'+fd(p.sg4d)+'</td><td>\u05d7\u05ea\u05d9\u05de\u05d4:</td><td></td></tr>');
   parts.push('</table>');
   parts.push('<p style="text-align:center;font-size:10px;color:#999">&copy; \u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da | \u05ea\u05e4\u05d5\u05d2\u05df 2026</p>');
   parts.push('</body></html>');
