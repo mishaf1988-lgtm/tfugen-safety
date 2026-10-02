@@ -8,6 +8,10 @@ transcript before the reply goes out. Code (``` blocks and `spans`), URLs and
 paths are ignored. If what is left has a real amount of Latin text and little
 Hebrew, the stop is blocked with a reason, and Claude writes it again in Hebrew.
 
+Each text block is judged on its own (02/10/2026, recurred twice): four short
+English progress lines in one turn passed, because the long Hebrew summary at
+the end outweighed them when the turn was judged as one text.
+
 Never blocks twice in a row (stop_hook_active), so it cannot loop.
 
 Test:  python3 tests/harness/hebrew-reply-test.py
@@ -29,6 +33,11 @@ def strip(text):
 
 def last_turn_text(path):
     """Text of the assistant messages after the last real user message."""
+    return "\n".join(last_turn_blocks(path))
+
+
+def last_turn_blocks(path):
+    """Each assistant text block after the last real user message."""
     texts = []
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -49,7 +58,7 @@ def last_turn_text(path):
                     texts.append(content)
                 elif isinstance(content, list):
                     texts += [c.get("text", "") for c in content if isinstance(c, dict) and c.get("type") == "text"]
-    return "\n".join(texts)
+    return texts
 
 
 def verdict(text):
@@ -72,12 +81,13 @@ def main():
     if not path:
         sys.exit(0)
     try:
-        text = last_turn_text(path)
+        blocks = last_turn_blocks(path)
     except Exception:
         sys.exit(0)
-    ok, heb, lat = verdict(text)
-    if ok:
+    bad = [v for v in (verdict(b) for b in blocks) if not v[0]]
+    if not bad:
         sys.exit(0)
+    ok, heb, lat = bad[0]
     print(json.dumps({"decision": "block", "reason":
         "The reply to Michael is in English (%d Latin letters, %d Hebrew). CLAUDE.md and lesson 13: "
         "always Hebrew, also short waiting messages. Write the same reply again in Hebrew." % (lat, heb)}))

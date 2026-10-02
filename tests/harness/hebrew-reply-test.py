@@ -63,6 +63,10 @@ check("an English reply to an earlier message does not block the new one", r is 
 r = run([user("x"), asst("PR #1018 merged.")])
 check("a short Latin-only line is not judged", r is None, r)
 
+LONG_HE = "בוצע ומוזג. " + "בטופס ביקורת פנים חדשה שדה המבקר מתמלא בשם של מיכאל, ואפשר לשנות אותו. " * 6
+r = run([user("x"), asst("Reading the handoff: next up is the small change, then the plans."), tool_use(), tool_result(), asst(LONG_HE)])
+check("a short English progress line is blocked even when a long Hebrew summary follows", r and r.get("decision") == "block", r)
+
 r = run([user("x"), asst(EN)], active=True)
 check("stop_hook_active: never blocks twice in a row", r is None, r)
 
