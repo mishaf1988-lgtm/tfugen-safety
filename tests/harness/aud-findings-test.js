@@ -40,6 +40,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   console.log('\n1. the form opens with one empty finding row');
   let r = await page.evaluate(() => { openModal('m-aud'); const rows = document.querySelectorAll('#aud-fnd .aud-fr'); return { n: rows.length, p: rows[0] && rows[0].querySelector('.aud-fp').value }; });
   check('one row, priority medium by default', r.n === 1 && r.p === 'בינונית', r);
+  r = await page.evaluate(() => { const sel = document.querySelector('#aud-fnd .aud-fp'); const m = g('m-aud'); const t = m.querySelector('.modal-title'); return { txt: sel.options[sel.selectedIndex].text, pr: parseInt(getComputedStyle(t).paddingRight, 10), fs: m.classList.contains('is-fullscreen') }; });
+  check('the priority select says what it is', r.txt === 'עדיפות: בינונית', r.txt);
+  check('on a phone the title leaves room for the close button (iOS Safari puts them on one line)', r.fs && r.pr >= 60, r);
 
   console.log('\n2. three findings = three NCRs');
   await page.evaluate(() => { g('a-n').value = 'בטיחות מחסן'; g('a-r').value = 'בטיחות'; g('a-d').value = '2026-09-30'; g('a-st').value = 'הושלם'; g('a-sm').value = 'סיכום'; });

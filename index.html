@@ -575,7 +575,9 @@ body.hc .close-btn:hover,body.hc .close-btn:active{transform:none}
 /* Mobile fullscreen modal pattern (applied via JS on viewports <768px) */
 .modal.is-fullscreen{padding:14px 14px calc(28px + env(safe-area-inset-bottom)) 14px;border-radius:0;border-top:none}
 .modal.is-fullscreen .close-btn{position:sticky;top:0;left:auto;right:0;float:right;font-size:15px;font-weight:700;padding:10px 16px;min-height:44px;background:#fff;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.06);z-index:10;margin-left:0}
-.modal.is-fullscreen .modal-title{font-size:20px;padding-top:6px;clear:both}
+/* iOS Safari ignores the float on the sticky close button, so the title sat
+   under it (Michael, 02/10/2026): room for the button on the title's right. */
+.modal.is-fullscreen .modal-title{font-size:20px;padding-top:6px;clear:both;padding-right:64px;min-height:30px}
 .modal.is-fullscreen .modal-footer{position:sticky;bottom:0;background:#fff;padding-top:10px;margin-top:14px;border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04)}
 .fgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 /* 1fr alone cannot shrink below an input's intrinsic width, so on a 320px
@@ -17067,7 +17069,7 @@ window._audFndRow=function(){
   var box=g('aud-fnd');if(!box)return;
   var d=document.createElement('div');d.className='aud-fr';
   d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
-  var pri=Object.keys(_NCR_DUE_DAYS).map(function(k){return '<option'+(k==='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea'?' selected':'')+'>'+k+'</option>';}).join('');
+  var pri=Object.keys(_NCR_DUE_DAYS).map(function(k){return '<option value="'+k+'"'+(k==='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea'?' selected':'')+'>'+'\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea: '+k+'</option>';}).join('');
   d.innerHTML='<input class="aud-ft" placeholder="'+'\u05de\u05d4 \u05e0\u05de\u05e6\u05d0'+'" style="flex:2 1 180px">'
     +'<select class="aud-fp" title="'+'\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea'+'" style="flex:1 1 90px">'+pri+'</select>'
     +'<input class="aud-fo" placeholder="'+'\u05d0\u05d7\u05e8\u05d0\u05d9'+'" style="flex:1 1 100px">';
