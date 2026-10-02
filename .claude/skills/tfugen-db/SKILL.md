@@ -14,6 +14,8 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - **project_id:** `znhjtpcltrxxyfjczgvw`.
 - **לא עובד בענן, וזה צפוי:** השרת `supabase` מ-`.mcp.json` ("requires authentication"), ו-`curl` ל-`*.supabase.co` (חסום ברשת). זה **לא** חסם, ואין לדווח עליו למיכאל (לקח 30).
 
+- SQL של policies, DROP או ALTER: רק דרך `apply_migration`/`execute_sql`, וקובץ ההגירה דרך Write. heredoc ב-Bash עם SQL כזה נחסם ונועל גם פקודות קריאה אחריו (לקח 40).
+
 ## לפני טענה על נתונים
 - `select count(*)` אמיתי, ולכתוב את המספר עם תאריך המדידה (לקח 9).
 - מבנה טבלה: `information_schema.columns`, לא קבצי ה-migration. בקבצים יש טבלאות שנוצרו מזמן ועמודות שנוספו ידנית (למשל `tasks.parent_id`).

@@ -71,6 +71,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).** הכלל: לפני kill לקרוא מה התהליך עושה; `ci-wait.sh` עוקב אחרי ה-head לבד, ו-pkill לפי תבנית תופס גם את עצמו; נאכף: `ci-watch.py` אומר "כבר רץ", `ci-watch-test.py`; חזר: 0
 
+**40. טקסט SQL של הרשאות בפקודת מעטפת נעל את המסנן (02/10/2026, PR זה).**
+מה קרה: heredoc עם SQL של policies נחסם, ואחריו גם `head` ו-`cat` תמימים נחסמו באותו תור.
+הכלל: SQL של policies, DROP או ALTER עובר רק דרך כלי המסד (`apply_migration`, `execute_sql`); קובץ ההגירה נכתב בכלי Write, לא ב-heredoc.
+נאכף: טקסט (אין דרך בקוד: המסנן חיצוני לסשן ול-hooks).
+חזר: 0
+
 ## בדיקות שבודקות את הדבר הנכון
 
 **5. דילוג "רק .md" לא עבד על שם קובץ בעברית (01/10/2026, #1010).** הכלל: `git -c core.quotepath=off`; נאכף: `tests.yml`; `fresh-main-test.py`; חזר: 0
