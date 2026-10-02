@@ -72,10 +72,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).** הכלל: לפני kill לקרוא מה התהליך עושה; `ci-wait.sh` עוקב אחרי ה-head לבד, ו-pkill לפי תבנית תופס גם את עצמו; נאכף: `ci-watch.py` אומר "כבר רץ", `ci-watch-test.py`; חזר: 0
 
 **40. טקסט SQL של הרשאות בפקודת מעטפת נעל את המסנן (02/10/2026, PR זה).**
-מה קרה: heredoc עם SQL של policies נחסם, ואחריו גם `head` תמים.
+מה קרה: heredoc עם SQL של policies נחסם, וגם `head` אחריו.
 הכלל: SQL של policies/DROP/ALTER רק דרך `apply_migration`/`execute_sql`; קובץ ההגירה דרך Write.
 נאכף: טקסט (אין דרך בקוד: המסנן חיצוני).
 חזר: 0
+
+**41. push בלי בדיקת הפורמט (02/10/2026, PR זה).** הכלל: בדיקת CI על קובץ ששיניתי רצה לפני push; נאכף: `push-gate.py`; חזר: 0
 
 ## בדיקות שבודקות את הדבר הנכון
 
@@ -103,7 +105,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
-הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח". בוצע = ✅ אותו PR.
+הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח".
 נאכף: `fresh-main.py` (#1011). handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
 חזר: 3 (handoff מנו פריטים שבוצעו או שלא נשארו).
 
@@ -131,7 +133,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: "מפגע חוזר = אותו מיקום"; ב-DB 48 מיקומים ל-53 מפגעים.
 הכלל: תוכנית שתלויה בנתונים: קודם `count` / `group by`.
 נאכף: טקסט (אין דרך בקוד: תוכנית בצ'אט).
-חזר: 1 (02/10/2026: 44 policies ב-grep על ההגירות, במסד החי 14; למדוד ב-`pg_policies`).
+חזר: 1 (02/10/2026: 44 ב-grep על ההגירות, במסד 14; `pg_policies`).
 
 **16. מספר PR נכתב לפני שה-PR נפתח (01/10/2026, #1011).**
 מה קרה: בלקח 15 נכתב "#1011" כניחוש. נתפס לפני ה-commit והוחלף.
@@ -203,11 +205,11 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: שאלתי "מה לקדם" כשהיה קוד; שלחתי בדיקות לטלפון במקום להריץ כאן.
 הכלל: לעשות את חלק הקוד; מה שאפשר לבדוק ב-Chromium כאן, לא מבקשים ממיכאל.
 נאכף: `self-check-test.js`; השאר טקסט (שיפוט).
-חזר: 2 (handoff הורה לשאול; 02/10 "אתה יודע לבדוק לבד").
+חזר: 2 (handoff הורה לשאול; 02/10 "לבדוק לבד").
 
 **34. skills שה-handoff מנה לא נטענו (02/10/2026, PR זה).**
 מה קרה: נטענו 2 מ-4; SQL בלי `tfugen-db`; `רטרו: אין` למרות אנגלית.
-הכלל: כל skill שה-handoff מונה נטען לפני הפעולה הראשונה. רטרו: לעבור על השיחה.
+הכלל: כל skill שה-handoff מונה נטען לפני הפעולה הראשונה.
 נאכף: טקסט (אין דרך בקוד: hook לא רואה skills שנטענו).
 חזר: 0
 

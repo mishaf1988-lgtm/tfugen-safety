@@ -66,6 +66,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/merge-gate.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/push-gate.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
