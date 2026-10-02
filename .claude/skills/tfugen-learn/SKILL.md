@@ -54,5 +54,5 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 
 - skill הוא הוראות, לא יומן. מה שקרה ולמה: `DECISIONS.md` או `tfugen-history`.
 - כשמשהו נאכף ב-hook או בבדיקה, הטקסט מתקצר לשורה ("נאכף: ...").
-- `tfugen-lessons` מוגבל ל-14KB (`lessons-format-test.py`); כשמתקרבים, לגזום לקחים שכבר נאכפים בקוד.
+- `tfugen-lessons` מוגבל ל-14KB (`lessons-format-test.py`); לקח שנאכף בקוד ולא חזר מתקצר לשורה אחת ועובר ל-`project-files/lessons-archive.md` (המספור משותף, הבדיקה מונה את שני הקבצים). לא מעלים את התקרה.
 - לא לכתוב "נלמד" על משהו שלא נבדק. כלל שמבוסס על הנחה = עוד טעות שמחכה.
