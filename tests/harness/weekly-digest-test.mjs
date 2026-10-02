@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, STATE_KEY, T } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -61,6 +61,24 @@ const ROWS = [
   check('no empty register: no such line', !h.includes('מרשמי חובה ריקים') && !h2.includes('מרשמי חובה ריקים'));
   check('the subject carries the counts', digestSubject(g, TODAY) === 'Tapugan Safety: סיכום שבועי 04/10/2026 - 4 באיחור, 2 יעד קרוב, 1 ליקויי נאמנים', digestSubject(g, TODAY));
 
+  console.log('\n2b. expiries (02/10/2026): expired or within 30 days, from the tables the app scans');
+  const X = expiringOf([
+    ['מסמך', ['n'], ['o'], [{ id: 'd1', n: 'סוד Azure', o: 'מיכאל', e: plus(10) }, { id: 'd2', n: 'ישן', o: '', e: plus(-3) }]],
+    ['הדרכה', ['n'], ['w'], [{ id: 't1', n: 'גובה', w: 'דוד', e: plus(30) }, { id: 't2', n: 'רחוק', w: 'דוד', e: plus(31) }]],
+    ['קבלן', ['n'], ['c'], [{ id: 'c1', n: 'ריק', c: 'x', e: '' }, { id: 'c2', n: 'טקסט', c: 'x', e: '15/10/2026' }, { id: 'c3', n: 'בלי', c: 'x', e: null }]],
+    ['בדיקת ציוד', ['n', 'code'], ['vendor', 'loc'], [{ id: 'q1', n: '', code: 'FL-07', vendor: null, loc: 'מחסן', e: TODAY }]],
+  ], TODAY);
+  check('expired, today, within 30 days in; 31 days, empty, non-ISO and null out; the earliest first', X.map((x) => x.name + ':' + x.days).join() === 'ישן:-3,FL-07:0,סוד Azure:10,גובה:30', X);
+  check('name and owner fall back to the next column (code, loc), as _expCollect does', X[1].name === 'FL-07' && X[1].owner === 'מחסן' && X[1].label === 'בדיקת ציוד', X[1]);
+  const hx = digestHtml(g, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: X, expFail: [] });
+  check('the mail: a section with the count, above the overdue hazards', hx.includes(T.exp + ' (4)') && hx.indexOf(T.exp) < hx.indexOf(T.overdue), hx.substring(0, 300));
+  check('the row reads as Michael reads it: DD/MM/YYYY, "פג לפני 3 ימים" in red, "בעוד 10 ימים"', hx.includes('01/10/2026') && /color:#b91c1c;font-weight:bold">פג לפני 3 ימים/.test(hx) && hx.includes('בעוד 10 ימים') && hx.includes('>היום<'), hx);
+  const many = Array.from({ length: EXP_SHOW + 5 }, (_, i) => ({ id: 'm' + i, n: 'מסמך ' + i, o: '', e: plus(-1) }));
+  const hm = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: expiringOf([['מסמך', ['n'], ['o'], many]], TODAY), expFail: ['קבלן'] });
+  check('more than ' + EXP_SHOW + ' rows: the first ' + EXP_SHOW + ' and "ועוד 5"; a table not read is named', (hm.match(/מסמך \d+/g) || []).length === EXP_SHOW && hm.includes('ועוד 5') && hm.includes(T.expFail + 'קבלן'), hm.length);
+  const h0 = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: [], expFail: [] });
+  check('nothing expiring: the section says אין', new RegExp(T.exp.replace(/[()]/g, '\\$&') + ' \\(0\\)</h3><p style="color:#555">אין').test(h0), h0.substring(0, 400));
+
   console.log('\n3. the endpoint');
   const HZ = [
     { id: 'h31', n: 31, d: plus(-40, undefined), tour_no: 6, dept: 'חומר גלם', loc: 'מתקן', descr: 'מתקן', sev: 'בינונית', resp: 'אחזקה', due: plus(-20), s: 'בטיפול' },
@@ -72,6 +90,7 @@ const ROWS = [
     globalThis.fetch = async (url, init) => {
       const u = String(url), mth = (init && init.method) || 'GET';
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
+      if (u.includes('&e=lte.')) { const t = u.slice((SB + '/rest/v1/').length).split('?')[0]; (w.expUrls = w.expUrls || []).push(u); if (o.expFail === t) return json({ error: 'x' }, 500); return json((o.exp || {})[t] || []); }
       const reg = ['equip_inspections', 'hearing_tests', 'tr', 'hzm'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
       if (reg) { if (o.regFail === reg) return json({ error: 'x' }, 500); return json((o.emptyRegs || []).includes(reg) ? [] : [{ id: 'r1' }]); }
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
@@ -137,6 +156,13 @@ const ROWS = [
   c = await call({ mailFail: true }, {}, 'nsec');
   rec = null; try { rec = JSON.parse(c.w.state[STATE_KEY]); } catch (e) {}
   check('Outlook refuses: the error with its status, recorded', !c.j.ok && /outlook 500/.test(c.j.error) && rec && /outlook 500/.test(rec.error), c.j);
+
+  const now = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  c = await call({ exp: { docs: [{ id: 'd1', n: 'סוד Azure של OneDrive', o: 'מיכאל', e: plus(10, now) }], tr: [{ id: 't1', n: 'עבודה בגובה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec');
+  const mx = c.w.mails[0] && c.w.mails[0].message.body.content;
+  check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /עבודה בגובה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
+  c = await call({ expFail: 'ctr' }, {}, 'nsec');
+  check('a table that fails to read is named in the mail, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'קבלן'), c.j);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
 })();
