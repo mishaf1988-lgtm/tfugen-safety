@@ -60,6 +60,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('the saved date loads and survives a priority change', r.before === '2026-10-05' && r.after === '2026-10-05', r);
 
+  console.log('\n7. root cause and corrective action show the whole text (02/10/2026)');
+  r = await page.evaluate(() => ['ncr-rc', 'ncr-c'].map((id) => { const el = g(id); return { tag: el.tagName, rows: el.rows, fw: el.closest('.field').classList.contains('fw') }; }));
+  check('both are 3-row textareas, full width', r.every((x) => x.tag === 'TEXTAREA' && x.rows === 3 && x.fw), r);
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();
