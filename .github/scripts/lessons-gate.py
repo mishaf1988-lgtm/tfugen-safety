@@ -15,6 +15,11 @@ answer. A correction from Michael in the chat never passes through a Fix PR,
 so without this line it is never written down. monthly-metrics.py counts the
 retro lines that found something.
 
+Every PR (02/10/2026, Michael: "the skill has to keep learning from every job
+we do"): a line "skill: <what was learned and where>" or "skill: אין". Any
+answer other than none must come with a changed file under .claude/skills/ or
+project-files/claude-ai-skill/, so "learned" means written down, not said.
+
 Input: env PR_TITLE, PR_BODY; changed file names on stdin, one per line.
 Exit 0 = ok, 1 = missing lesson. Called from .github/workflows/tests.yml.
 Test: tests/harness/lessons-gate-test.py
@@ -25,6 +30,8 @@ LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 FIX = re.compile(r"^\s*(fix|hotfix|תיקון)\b", re.I)
 RETRO = re.compile(r"^\s*(retro|רטרו)\s*:\s*(\S.*)$", re.I | re.M)
 RETRO_NONE = re.compile(r"^(אין|none|-)\W*$", re.I)
+SKILL = re.compile(r"^\s*(skill|סקייל)\s*:\s*(\S.*)$", re.I | re.M)
+SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
 WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.M)
 
 
@@ -33,6 +40,14 @@ def check(title, body, files):
         return False, ("no retro line. Add to the PR description a line 'רטרו: <answer>' "
                        "(what failed on the first try, what Michael corrected, what took too "
                        "many rounds), or 'רטרו: אין'. See tfugen-lessons, section Retro.")
+    sk = SKILL.search(body or "")
+    if not sk:
+        return False, ("no skill line. Add 'skill: <what was learned, which skill was updated>' "
+                       "or 'skill: אין'. See tfugen-lessons, section Retro.")
+    if not RETRO_NONE.match(sk.group(2).strip()) and not any(f.startswith(SKILL_DIRS) for f in files):
+        return False, ("the skill line says something was learned, but no skill file changed. "
+                       "Update a SKILL.md under .claude/skills/ (or project-files/claude-ai-skill/) "
+                       "in this PR, or write 'skill: אין'.")
     if not FIX.search(title or ""):
         return True, "not a fix PR"
     if LESSONS in files:
