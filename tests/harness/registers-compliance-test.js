@@ -227,6 +227,28 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('both are on the record, the print and the PDF', view.d && view.b, view);
   }
 
+  console.log('\nBACKLOG 9.6 a new law is «טרם הוערך», not «מציית»');
+  {
+    const r = await page.evaluate(() => {
+      DB.leg = [];
+      openModal('m-leg');
+      ['leg-id', 'leg-s', 'leg-c-date', 'leg-c-by'].forEach((i) => { const el = g(i); if (el) el.value = ''; });
+      g('leg-c').selectedIndex = 0;
+      g('leg-s').value = 'חוק חדש';
+      svLeg();
+      const rec = DB.leg[0] || {};
+      rLeg();
+      const row = g('tb-leg').innerHTML;
+      DB.leg.push({ id: 'y', s: 'א', c: 'מציית' }, { id: 'n', s: 'ב', c: 'אינו מציית' });
+      rDash();
+      return { c: rec.c, date: rec.c_date, by: rec.c_by, row, dash: (g('dash-leg-compliance') || {}).innerHTML || '' };
+    });
+    check('the form opens on «טרם הוערך» and saves it', r.c === 'טרם הוערך', r);
+    check('...with no determination date or author, since nothing was determined', r.date === null && r.by === null, r);
+    check('...and the row does not say «לא תועד מתי נקבע» about it', !/לא תועד מתי נקבע/.test(r.row), r.row.slice(0, 900));
+    check('the dashboard counts it apart and not as compliant (1 of 3 = 33%)', /⏳ טרם הוערך: <strong>1</.test(r.dash) && />33</.test(r.dash), r.dash.slice(0, 900));
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
