@@ -67,6 +67,10 @@ jobs:
       - run: python3 tests/harness/status-dup-test.py
       # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).
       - run: python3 tests/harness/handoff-root-test.py
+      # CLAUDE.md rule 7 on the lines this PR adds (a STATUS PR is .md only and skips the harness).
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: git -c core.quotepath=off diff -U0 "$BASE" HEAD -- STATUS.md project-files/STATUS-archive.md | python3 .github/scripts/rule7-gate.py
 
   harness:
     needs: changes

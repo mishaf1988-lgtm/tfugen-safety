@@ -40,7 +40,7 @@ Claude Code loads this file automatically at the start of every session in this 
    - `showView(table, id)` → צפייה בפריט
 5. **אל תיצור קבצי HTML נוספים**. הכל ב-`index.html`.
 6. **אל תוסיף framework / build step / bundler**.
-7. **אין לסמן `[x]` בלי הוכחת הרצה** — פעולה ידנית ב-Supabase, migration, RLS, Storage policy או שינוי Auth תסומן כבוצעה ב-`STATUS.md` רק אחרי שהמשתמש אישר במפורש שההרצה והאימות עברו. `IF NOT EXISTS` אומר שההרצה בטוחה לחזרה, אבל לא מוכיח שהפעולה בוצעה או שהאפליקציה עובדת.
+7. **אין לסמן `[x]` בלי הוכחת הרצה** — פעולה ידנית ב-Supabase, migration, RLS, Storage policy או שינוי Auth תסומן כבוצעה ב-`STATUS.md` רק אחרי שהמשתמש אישר במפורש שההרצה והאימות עברו. `IF NOT EXISTS` אומר שההרצה בטוחה לחזרה, אבל לא מוכיח שהפעולה בוצעה או שהאפליקציה עובדת. נאכף ב-CI (`.github/scripts/rule7-gate.py`): שורת `[x]` חדשה עם קובץ migration ובלי "אומת" נכשלת.
 
 **שלושה מהחוקים נאכפים גם ב-hooks** (`.claude/hooks/`, מחווטים ב-`.claude/settings.json`): חסימת `DELETE`/`TRUNCATE`/`DROP` על `ncr`/`ncr_ai`/`trustee_reports`, אזהרה כשעריכה מוסיפה עברית גולמית ל-`<script>`, וקיצור פלט ה-harness כשהוא ירוק. hook רץ בכל קריאה; טקסט פה יכול להישכח אחרי compaction.
 
