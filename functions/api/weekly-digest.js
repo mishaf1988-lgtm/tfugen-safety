@@ -18,7 +18,12 @@
 //     the most overdue);
 //   * the statutory registers with no row at all (BACKLOG 9.1, the same four
 //     as _REQ_REGS in index.html): an empty register raises no expiry, so the
-//     rest of the mail would read "all clear" while nothing is tracked.
+//     rest of the mail would read "all clear" while nothing is tracked;
+//   * expiries (02/10/2026, Michael: "yes"): every row of the expiry tables
+//     the app scans (_expCollect: docs, tr, ppe, ctr, equip_inspections,
+//     hearing_tests, med) that expired or expires within 30 days, so a
+//     certificate or the Azure secret (a docs row) is said before it lapses,
+//     not only on the expiry page nobody opened.
 // pg_cron calls POST /api/weekly-digest every Sunday at 07:00 Israel time
 // (migrations/2026-10-01_weekly_digest_cron.sql) with x-notify-secret; an
 // admin can ask for {op:'preview'} (the data, no mail) or {op:'send'} (the same
@@ -34,10 +39,20 @@ import { WATCH_KEY, ilTime } from '../_watchdog.js';
 
 export const STATE_KEY = 'weekly_digest';
 export const APP_URL = 'https://tapugan-safety.pages.dev';
-export const SOON_DAYS = 7, TOPICS = 3, REPEAT_MS = 20 * 3600 * 1000;
+export const SOON_DAYS = 7, EXP_DAYS = 30, EXP_SHOW = 40, TOPICS = 3, REPEAT_MS = 20 * 3600 * 1000;
 const DAY = 86400000;
 // The same four as _REQ_REGS in index.html: [table, label].
 export const REQ_REGS = [['equip_inspections', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3'], ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e9\u05de\u05d9\u05e2\u05d4'], ['tr', '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'], ['hzm', '\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd']];
+// The tables _expCollect in index.html scans: [table, label, name columns, owner columns].
+export const EXP_SRC = [
+  ['docs', '\u05de\u05e1\u05de\u05da', ['n'], ['o']],
+  ['tr', '\u05d4\u05d3\u05e8\u05db\u05d4', ['n'], ['w']],
+  ['ppe', '\u05e6\u05de"\u05d2', ['ty'], ['w']],
+  ['ctr', '\u05e7\u05d1\u05dc\u05df', ['n'], ['c']],
+  ['equip_inspections', '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3', ['n', 'code'], ['vendor', 'loc']],
+  ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4', ['emp_name'], ['dept', 'role']],
+  ['med', '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea', ['n'], ['w']],
+];
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const SEV_RANK = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 2, '\u05e0\u05de\u05d5\u05db\u05d4': 1 };
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -83,6 +98,7 @@ const H = {
   sync: '\u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea: ', topics: '\u05e0\u05d5\u05e9\u05d0\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea:',
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
+  exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
   emptyWhy: '. \u05d0\u05d9\u05df \u05de\u05d4\u05dd \u05d0\u05e3 \u05d4\u05ea\u05e8\u05d0\u05ea \u05ea\u05e4\u05d5\u05d2\u05d4 \u05e2\u05d3 \u05e9\u05d9\u05d5\u05d6\u05e0\u05d5 \u05d1\u05d4\u05dd \u05e8\u05e9\u05d5\u05de\u05d5\u05ea.',
 };
@@ -107,7 +123,34 @@ function table(items, opt) {
     }).join('') + '</table>';
 }
 
-// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles], emptyRegs: [labels] }.
+// Pure. lists = [[label, nameCols, ownerCols, rows]]; the rows that expired or
+// expire within EXP_DAYS, the earliest first. An e that is not YYYY-MM-DD
+// (ctr, ppe and med keep e as text) is left out, as du() in the app does.
+export function expiringOf(lists, today) {
+  const pick = (r, cols) => cols.map((k) => r[k]).find((v) => v != null && String(v).trim() !== '') || '';
+  const out = [];
+  (lists || []).forEach(([label, nc, oc, rows]) => (rows || []).forEach((r) => {
+    const e = ymd(r && r.e); if (!e) return;
+    const days = dayDiff(today, e); if (days > EXP_DAYS) return;
+    out.push({ label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days });
+  }));
+  return out.sort((a, b) => a.days - b.days);
+}
+function expWhen(x) { return x.days < 0 ? H.expired + (-x.days) + H.days : x.days === 0 ? H.today : H.inDays + x.days + H.days; }
+function expBlock(list, failed) {
+  let h = '';
+  if (!list.length) h += '<p style="color:#555">' + H.none + '</p>';
+  else {
+    h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
+      + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name, x.owner].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
+        + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span></td></tr>').join('') + '</table>';
+    if (list.length > EXP_SHOW) h += '<p style="color:#555">' + esc(H.more + (list.length - EXP_SHOW)) + '</p>';
+  }
+  if (failed && failed.length) h += '<p style="color:#b45309">' + esc(H.expFail + failed.join(', ')) + '</p>';
+  return h;
+}
+
+// Pure. meta = { meeting: YYYY-MM-DD, deckAt: ISO or '', watchOpen: [titles], emptyRegs: [labels], expiring: [expiringOf], expFail: [labels] }.
 export function digestHtml(d, today, meta) {
   const m = meta || {};
   const h2 = (t, n) => '<h3 style="margin:14px 0 6px;color:#1f3864">' + esc(t) + (n != null ? ' (' + n + ')' : '') + '</h3>';
@@ -116,6 +159,7 @@ export function digestHtml(d, today, meta) {
   h += '<p>' + esc(H.total) + d.open + '</p>';
   const er = m.emptyRegs || [];
   if (er.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.emptyRegs + er.join(', ') + H.emptyWhy) + '</p>';
+  if (m.expiring) h += h2(H.exp, m.expiring.length) + expBlock(m.expiring, m.expFail);
   h += h2(H.overdue, d.overdueCount);
   if (!d.overdue.length) h += '<p style="color:#555">' + H.none + '</p>';
   d.overdue.forEach((g) => { h += '<p style="margin:8px 0 4px;font-weight:bold">' + esc(g.resp || '-') + ' (' + g.items.length + ')</p>' + table(g.items); });
@@ -155,6 +199,25 @@ export async function emptyRegs(env) {
   return res.filter(Boolean);
 }
 
+// Rows with an expiry up to EXP_DAYS from today, per table. A read that fails
+// is named in the mail ("not read"), so a network error never reads as "none".
+export async function expiries(env, today) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const lim = new Date(Date.parse(today + 'T12:00:00Z') + EXP_DAYS * DAY).toISOString().substring(0, 10);
+  const failed = [];
+  const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
+    try {
+      const sel = ['id', 'e'].concat(nc, oc).join(',');
+      const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
+      const j = await r.json();
+      return [label, nc, oc, Array.isArray(j) ? j : []];
+    } catch (e) { failed.push(label); return [label, nc, oc, []]; }
+  }));
+  return { expiring: expiringOf(lists, today), expFail: failed };
+}
+
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
 // problems when the last run failed or there was none for two days.
 export function backupProblem(raw, nowMs) {
@@ -168,12 +231,13 @@ export function backupProblem(raw, nowMs) {
 
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [hazards, reports, tasks, st, empty] = await Promise.all([
+  const [hazards, reports, tasks, st, empty, exp] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od']).catch(() => ({})),
     emptyRegs(env),
+    expiries(env, today),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -181,7 +245,7 @@ async function build(env) {
   const bk = backupProblem(v('backup_od'), Date.now());
   if (bk) watchOpen.push(bk);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
@@ -202,7 +266,7 @@ export async function onRequest(context) {
   const op = bySecret ? 'send' : body.op === 'send' ? 'send' : 'preview';
   try {
     const b = await build(env);
-    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length };
+    const counts = { open: b.d.open, overdue: b.d.overdueCount, soon: b.d.soon.length, noDue: b.d.noDue.length, trustee: b.d.trustee.length, emptyRegs: b.meta.emptyRegs.length, expiring: b.meta.expiring.length, expired: b.meta.expiring.filter((x) => x.days < 0).length };
     if (op !== 'send') return jsonResp({ ok: true, today: b.today, counts, digest: b.d, meta: b.meta, subject: b.subject, html: b.html, last: b.last }, 200, cors);
     const lastAt = b.last && b.last.ok && b.last.at ? Date.parse(b.last.at) : 0;
     if (lastAt && Date.now() - lastAt < REPEAT_MS && body.force !== true) return jsonResp({ ok: true, skipped: 'sent ' + b.last.at, counts }, 200, cors);
