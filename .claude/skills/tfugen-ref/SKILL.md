@@ -22,8 +22,8 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. Line 967 of index.html.
 | Table | Purpose | Key fields (beyond `id`) |
 |---|---|---|
 | `docs` | Documents | `n`,`type`,`d`,`e`,`ref`,`notes`,`file_url` |
-| `auds` | Audits | `d`,`type`,`auditor`,`scope`,`s`,`notes` |
-| `ncr` | Non-conformance (375 prod rows) | `num`,`d`,`src`,`type`,`desc`,`rc`,`c`,`o`,`u`,`s`,`due` |
+| `auds` | Internal audits | `n` subject,`a` auditor,`r` area,`d`,`f` findings,`sc` score,`s`,`f2`,`sm` summary (measured 02/10/2026) |
+| `ncr` | Non-conformance (public 0 rows by design, 375 in `backup_ops_20260918`; measured 02/10/2026) | `num`,`d`,`a`,`p`,`o`,`u`,`s`,`c`,`rc`,`rc_cat`,`sd`,`cd`,`notes`,`location_id`,`sens`,`verified_by` |
 | `inc` | Incidents | `d`,`dt`,`ty`,`sv`,`l`,`dy`,`s`,`r`,`file_url` |
 | `tr` | Training | `w`,`n`,`c`,`d`,`e`,`sc`,`s`,`file_url` |
 | `rsk` | Risks | `n`,`type`,`p`,`sv`,`ctl`,`s` |
@@ -192,6 +192,7 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 - Empty statutory registers: `_REQ_REGS` / `_emptyReqRegs()` / `_emptyRegText()` (next to `_expCollect`), shown in `#exp-empty-reg` and `#dash-alerts`. Gated on `SB_ON`. Add a register = one entry in `_REQ_REGS` **and** in `REQ_REGS` of `functions/api/weekly-digest.js` (the weekly mail reads them with `limit=1`; a failed read is not called empty).
 - Findings / decisions as tasks: a row editor in the form (`_mrDecRow` for `m-mrsave`, `_drlFndRow` for `m-drl`), each row = one `tasks` row with `source_table` + `source_id`; add the table to `_tskSrcLabel` and `_sourceIcon`. A form with such rows resets them in `openModal` (else a cancelled row is saved next time).
+- Source -> NCR link (near-miss, internal audit): no column. `_chainNmToNcr` / `_chainAudToNcr` fill the form and set `_xxChainPending`; `svNcr` writes the NCR number into the source text (`nm.notes`, `aud.sm`), read back by `/NCR-\d+/`. `openNewNcrModal` clears the pending ids, and the audit link applies only to a new NCR.
 - An emoji in a JS string above U+FFFF = surrogate pair (`ud83d udd34` style), never a 5-digit escape (`rule1-hebrew-test.js` checks `u1f...`).
 - Harness tests that call `goPage` run as `reporter` and get kicked to `dash`: stub `window._role=()=>'admin'` and `_isAdminUser=()=>true`.
 
