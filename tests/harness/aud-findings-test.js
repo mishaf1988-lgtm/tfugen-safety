@@ -77,6 +77,26 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   r = await page.evaluate(() => { openModal('m-aud'); g('a-n').value = 'ביקורת ד'; g('a-d').value = '2099-01-01'; g('a-st').value = 'מתוכנן'; svAud(); return DB.auds[DB.auds.length - 1].s; });
   check('a future planned audit is not asked about', dialogs.length === 0 && r === 'מתוכנן', { dialogs, r });
 
+  console.log('\n5. a restored draft is not overwritten by "open NCR from finding"');
+  answer = true;
+  r = await page.evaluate(() => {
+    const a = DB.auds[0];
+    localStorage.setItem('tfgn_ncr_draft_v1', JSON.stringify({ ts: Date.now(), snap: { 'ncr-d': 'ממצא בביקורת פנים (בטיחות מחסן): חדר חשמל פתוח', 'ncr-rc': 'סיבה', 'ncr-sd': '2026-09-30' } }));
+    _chainAudToNcr(a.id);
+    return { d: gv('ncr-d'), rc: gv('ncr-rc'), pend: _audChainPending === a.id };
+  });
+  check('the description typed before survives, and the link is still pending', r.d.endsWith('חדר חשמל פתוח') && r.rc === 'סיבה' && r.pend, r);
+  await page.evaluate(() => { closeModal('m-ncr'); try { localStorage.removeItem('tfgn_ncr_draft_v1'); } catch (e) {} _audChainPending = null; });
+
+  console.log('\n6. the NCR table: discovery date as a date, a visible delete mark');
+  r = await page.evaluate(() => {
+    DB.ncr = [{ id: 'n9', num: 'NCR-0009', d: 'x', a: 'בטיחות', p: 'בינונית', sd: '2026-01-15', u: '2099-01-01', s: 'פתוח' }];
+    rNcr(); const tr = document.querySelector('#tb-ncr tr'); const del = tr.querySelector('[data-dtbl="ncr"]');
+    return { txt: tr.textContent, color: getComputedStyle(del).color, bg: getComputedStyle(del).backgroundColor };
+  });
+  check('a past discovery date shows 15/01/2026, not "expired"', r.txt.includes('15/01/2026') && !r.txt.includes('פג'), r.txt);
+  check('the delete mark is white on red, not red on red', r.color === 'rgb(255, 255, 255)' && r.color !== r.bg, r);
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();
