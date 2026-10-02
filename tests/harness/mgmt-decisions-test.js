@@ -135,6 +135,48 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('«+ תרגיל» opens a clean drill form with the type set', r.v.open && r.v.ty === r.ty && r.v.n === '' && r.v.d === '', r);
     check('an overdue drill is on «expired» with a view of the last drill', r.late === 2 && (r.eye === 'd1' || r.eye === 'd3'), r);
   }
+
+  console.log('\n9.7 internal audits reach the expiry page');
+  {
+    const r = await page.evaluate(() => {
+      DB.drl = []; DB.auds = [];
+      const areas = Array.from(g('a-r').options).map((o) => o.value || o.text);
+      const coll0 = _expCollect().filter((x) => x.mod === 'aud').length + _expNoDate().filter((x) => x.mod === 'aud').length;
+      DB.auds = [
+        { id: 'a1', r: areas[0], d: '2025-03-31', s: 'הושלם' },
+        { id: 'a2', r: areas[0], d: '2024-01-10', s: 'הושלם' },
+        { id: 'a3', r: areas[0], d: '2027-01-01', s: 'מתוכנן' },
+        { id: 'a4', r: areas[1], d: '2024-02-29', s: 'ממצאים פתוחים' },
+        { id: 'a5', r: areas[2], d: '2025-05-01', s: 'מתוכנן' },
+      ];
+      const coll = _expCollect().filter((x) => x.mod === 'aud').map((x) => [x.name, x.e, x.id, x.owner]);
+      const none = _expNoDate().filter((x) => x.mod === 'aud').map((x) => x.name);
+      return { areas, coll0, coll, none };
+    });
+    check('empty register: no audit rows at all', r.coll0 === 0 && r.areas.length === 5, r);
+    check('next = 12 months after the LAST performed audit of the area', JSON.stringify(r.coll[0]) === JSON.stringify([r.areas[0], '2026-03-31', 'a1', 'אחרונה: 31/03/2025']), r.coll);
+    check('29/02 + 12 months = 28/02', r.coll[1] && r.coll[1][1] === '2025-02-28', r.coll);
+    check('a planned audit is not a performed one: its area has no date', r.none.indexOf(r.areas[2]) >= 0 && r.coll.length === 2 && r.none.length === 3, r);
+  }
+  {
+    const r = await page.evaluate(() => {
+      goPage('exp'); expFilter('none');
+      const rows = Array.from(document.querySelectorAll('#tb-exp tr')).filter((tr) => /\+ ביקורת/.test(tr.textContent));
+      const btn = rows[0] && rows[0].querySelector('[data-dar]');
+      const ar = btn && btn.dataset.dar;
+      g('a-n').value = 'ישן'; g('a-d').value = '2020-01-01'; g('a-st').selectedIndex = 2;
+      if (btn) btn.click();
+      const v = { r: g('a-r').value, n: g('a-n').value, d: g('a-d').value, st: g('a-st').selectedIndex, open: getComputedStyle(g('m-aud')).display !== 'none' };
+      closeModal('m-aud');
+      expFilter('exp');
+      const late = Array.from(document.querySelectorAll('#tb-exp tr')).filter((tr) => /\+ ביקורת/.test(tr.textContent));
+      const eye = late[0] && late[0].querySelector('[data-vt="auds"]');
+      return { n: rows.length, ar, v, late: late.length, eye: eye && eye.dataset.vi };
+    });
+    check('undated area rows carry «+ ביקורת»', r.n === 3, r);
+    check('«+ ביקורת» opens a clean audit form with the area set', r.v.open && r.v.r === r.ar && r.v.n === '' && r.v.d === '' && r.v.st === 0, r);
+    check('an overdue area is on «expired» with a view of the last audit', r.late === 2 && (r.eye === 'a1' || r.eye === 'a4'), r);
+  }
   check('no page errors', errs.length === 0, errs);
   await browser.close();
   console.log(`\n${pass} passed, ${fail} failed`);
