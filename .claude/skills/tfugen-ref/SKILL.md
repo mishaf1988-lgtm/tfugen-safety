@@ -202,6 +202,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 - Server calls from the DB / cron carry `x-notify-secret` = `TRUSTEE_NOTIFY_SECRET`. Every endpoint checks it fail closed: `if (!want || header !== want) 403` (02/10/2026, the last two were `trustee-notify.js` and `trustee-log.js`). Harness tests of such an endpoint put the secret in `env` and the header in the default request. Live check: `GET /api/trustee-notify?probe=1`.
 
+- A warning printed by a harness test is swallowed: `lean-harness.py` shortens a green run to one line. A signal that must be seen but cannot be red (too many false positives) prints `::warning title=...::` from a step in `tests.yml`; GitHub shows it on the PR (`status-dup-test.py`, 02/10/2026).
+
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.
 - `showView` early-returns if `VIEW_CONFIG[tbl]` is missing — add it whenever you render the table.
 - `_obDrain` is gated by `SB_ON`. Emp-session must flip `SB_ON=true` to sync.
