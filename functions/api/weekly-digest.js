@@ -24,6 +24,11 @@
 //     hearing_tests, med) that expired or expires within 30 days, so a
 //     certificate or the Azure secret (a docs row) is said before it lapses,
 //     not only on the expiry page nobody opened.
+//   * recurring duties in the same block (02/10/2026, BACKLOG 7): a drill per
+//     type, an internal audit per area, a management review of any kind and a
+//     compliance evaluation per law fall due 12 months after the last one, the
+//     rule of _drlNext / _audNext / _mrNext / _legNext in index.html. One never
+//     done has no date and stays on the expiry page ("no date" tab).
 // pg_cron calls POST /api/weekly-digest every Sunday at 07:00 Israel time
 // (migrations/2026-10-01_weekly_digest_cron.sql) with x-notify-secret; an
 // admin can ask for {op:'preview'} (the data, no mail) or {op:'send'} (the same
@@ -53,6 +58,23 @@ export const EXP_SRC = [
   ['hearing_tests', '\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4', ['emp_name'], ['dept', 'role']],
   ['med', '\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea', ['n'], ['w']],
 ];
+// The recurring duties, as the expiry page computes them: [label, table, select, rows -> [{name, owner, e}]].
+export const FREQ_M = 12;
+export function plusMonths(d, n) {
+  const p = ymd(d).split('-'); if (p.length < 3) return '';
+  let y = +p[0], m = +p[1] - 1 + n; y += Math.floor(m / 12); m %= 12;
+  const dd = Math.min(+p[2], new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
+  return y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + dd).slice(-2);
+}
+const lastBy = (rows, key, ok) => { const m = {}; (rows || []).forEach((r) => { const d = ymd(r.d), k = r[key]; if (d && k && (!ok || ok(r)) && !(m[k] > d)) m[k] = d; }); return Object.keys(m).map((k) => ({ name: k, owner: '\u05d0\u05d7\u05e8\u05d5\u05df: ' + fd(m[k]), e: plusMonths(m[k], FREQ_M) })); };
+export const REC_SRC = [
+  ['\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd', 'drl', 'id,ty,d', (rows) => lastBy(rows, 'ty')],
+  ['\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd', 'auds', 'id,r,d,s', (rows) => lastBy(rows, 'r', (r) => r.s !== '\u05de\u05ea\u05d5\u05db\u05e0\u05df')],
+  ['\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', 'mgmt_reviews', 'id,ts', (rows) => { const d = (rows || []).map((r) => ymd(String(r.ts || '').substring(0, 10))).filter(Boolean).sort().pop(); return d ? [{ name: '\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', owner: '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + fd(d), e: plusMonths(d, FREQ_M) }] : []; }],
+  ['\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea', 'leg', 'id,s,law_num,c,c_date', (rows) => (rows || []).filter((r) => ymd(r.c_date)).map((r) => ({ name: r.s || r.law_num || '', owner: '\u05d4\u05d5\u05e2\u05e8\u05da: ' + fd(r.c_date) + (r.c ? ' (' + r.c + ')' : ''), e: plusMonths(r.c_date, FREQ_M) }))],
+];
+// Pure. sets = {table: rows}; the lists expiringOf takes.
+export const recurringOf = (sets) => REC_SRC.map(([label, t, , f]) => [label, ['name'], ['owner'], f((sets || {})[t])]);
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const SEV_RANK = { '\u05d2\u05d1\u05d5\u05d4\u05d4': 3, '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': 2, '\u05e0\u05de\u05d5\u05db\u05d4': 1 };
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -215,7 +237,15 @@ export async function expiries(env, today) {
       return [label, nc, oc, Array.isArray(j) ? j : []];
     } catch (e) { failed.push(label); return [label, nc, oc, []]; }
   }));
-  return { expiring: expiringOf(lists, today), expFail: failed };
+  const sets = {};
+  await Promise.all(REC_SRC.map(async ([label, t, sel]) => {
+    try {
+      const r = await fetch(base + t + '?select=' + sel + '&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      if (!r.ok) throw new Error(r.status);
+      sets[t] = await r.json();
+    } catch (e) { failed.push(label); }
+  }));
+  return { expiring: expiringOf(lists.concat(recurringOf(sets)), today), expFail: failed };
 }
 
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync

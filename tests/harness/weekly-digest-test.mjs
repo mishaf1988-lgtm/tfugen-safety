@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, plusMonths, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -79,6 +79,19 @@ const ROWS = [
   const h0 = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: [], expFail: [] });
   check('nothing expiring: the section says אין', new RegExp(T.exp.replace(/[()]/g, '\\$&') + ' \\(0\\)</h3><p style="color:#555">אין').test(h0), h0.substring(0, 400));
 
+  console.log('\n2c. recurring duties (02/10/2026, BACKLOG 7): 12 months after the last one, as _drlNext/_audNext/_mrNext/_legNext');
+  check('plusMonths: 12 months on, 29/02 to 28/02, empty stays empty', plusMonths('2025-10-20', 12) === '2026-10-20' && plusMonths('2024-02-29', 12) === '2025-02-28' && plusMonths(null, 12) === '');
+  const R = expiringOf(recurringOf({
+    drl: [{ id: 'a', ty: 'פינוי', d: plus(-365 - 10) }, { id: 'b', ty: 'פינוי', d: plus(-300) }, { id: 'c', ty: 'שריפה', d: plus(-360) }, { id: 'x', ty: 'דליפה', d: null }],
+    auds: [{ id: 'u1', r: 'מחסן', d: plus(-370), s: 'בוצע' }, { id: 'u2', r: 'מחסן', d: plus(-10), s: 'מתוכנן' }],
+    mgmt_reviews: [{ id: 'm1', ts: plus(-400) + 'T09:00:00Z' }, { id: 'm2', ts: plus(-350) + 'T09:00:00Z' }],
+    leg: [{ id: 'l1', s: 'חוק ארגון הפיקוח', c: 'עומד', c_date: plus(-366) }, { id: 'l2', s: 'טרם', c_date: null }],
+  }), TODAY);
+  const nm = R.map((x) => x.label + '/' + x.name).join();
+  check('per type the latest counts (פינוי done 300 days ago = not due); a planned audit does not reset the area; any review; per law; never done = no row', nm === 'ביקורת פנים/מחסן,הערכת ציות/חוק ארגון הפיקוח,תרגיל חירום/שריפה,סקירת הנהלה/סקירת הנהלה', R);
+  check('the owner column says when it was last done, as on the expiry page', R[1].owner === 'הוערך: ' + plus(-366).split('-').reverse().join('/') + ' (עומד)' && /^אחרונה: \d{2}\/\d{2}\/\d{4}$/.test(R[3].owner), R);
+  check('empty registers (live 02/10/2026: drl, mgmt_reviews and leg have 0 rows): no row at all', expiringOf(recurringOf({}), TODAY).length === 0);
+
   console.log('\n3. the endpoint');
   const HZ = [
     { id: 'h31', n: 31, d: plus(-40, undefined), tour_no: 6, dept: 'חומר גלם', loc: 'מתקן', descr: 'מתקן', sev: 'בינונית', resp: 'אחזקה', due: plus(-20), s: 'בטיפול' },
@@ -91,6 +104,8 @@ const ROWS = [
       const u = String(url), mth = (init && init.method) || 'GET';
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
       if (u.includes('&e=lte.')) { const t = u.slice((SB + '/rest/v1/').length).split('?')[0]; (w.expUrls = w.expUrls || []).push(u); if (o.expFail === t) return json({ error: 'x' }, 500); return json((o.exp || {})[t] || []); }
+      const rec = ['drl', 'auds', 'mgmt_reviews', 'leg'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
+      if (rec) { (w.recUrls = w.recUrls || []).push(u); if (o.recFail === rec) return json({ error: 'x' }, 500); return json((o.rec || {})[rec] || []); }
       const reg = ['equip_inspections', 'hearing_tests', 'tr', 'hzm'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
       if (reg) { if (o.regFail === reg) return json({ error: 'x' }, 500); return json((o.emptyRegs || []).includes(reg) ? [] : [{ id: 'r1' }]); }
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
@@ -161,6 +176,11 @@ const ROWS = [
   c = await call({ exp: { docs: [{ id: 'd1', n: 'סוד Azure של OneDrive', o: 'מיכאל', e: plus(10, now) }], tr: [{ id: 't1', n: 'עבודה בגובה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec');
   const mx = c.w.mails[0] && c.w.mails[0].message.body.content;
   check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /עבודה בגובה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
+  c = await call({ rec: { drl: [{ id: 'd1', ty: 'פינוי חירום', d: plus(-370, now) }] } }, { op: 'send', force: true }, 'nsec');
+  const mr = c.w.mails[0] && c.w.mails[0].message.body.content;
+  check('the endpoint reads the four duty tables, and a drill past its 12 months is in the block, counted as expired', (c.w.recUrls || []).length === 4 && /תרגיל חירום<\/td><td[^>]*>פינוי חירום/.test(mr) && c.j.counts.expiring === 1 && c.j.counts.expired === 1, [c.j.counts, c.w.recUrls]);
+  c = await call({ recFail: 'leg' }, {}, 'nsec');
+  check('a duty table that fails to read is named, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'הערכת ציות'), c.j);
   c = await call({ expFail: 'ctr' }, {}, 'nsec');
   check('a table that fails to read is named in the mail, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'קבלן'), c.j);
 
