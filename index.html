@@ -7339,6 +7339,39 @@ function _audNew(ar){
   var s=g('a-r');if(s&&ar)s.value=ar;
   var st=g('a-st');if(st)st.selectedIndex=0;
 }
+// BACKLOG 7: the management review (9.3) and the evaluation of compliance (9.1.2)
+// are yearly duties too, computed like the drills. A review of any kind counts,
+// as in the ISO report. No review at all is a row (9.3 is red when empty,
+// DECISIONS 20/09/2026), once synced; an empty legal register is not (9.1.2 is na).
+// Each law is due 12 months after c_date; a law not yet evaluated has no date.
+function _plusMonths(d,n){
+  var p=String(d).substring(0,10).split('-'),y=+p[0],m=+p[1]-1+n;
+  y+=Math.floor(m/12);m=m%12;
+  var dd=Math.min(+p[2],new Date(y,m+1,0).getDate());
+  return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+dd).slice(-2);
+}
+var _MR_FREQ_M=12,_LEG_FREQ_M=12;
+function _mrNext(){
+  var last=null;
+  (DB.mgmt_reviews||[]).forEach(function(r){if(r.ts&&(!last||String(r.ts)>String(last.ts)))last=r;});
+  if(!last&&!SB_ON)return [];
+  return [{name:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.ts):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'mr',modLabel:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',e:last?_plusMonths(last.ts,_MR_FREQ_M):null,id:last?last.id:null}];
+}
+function _legNext(){
+  return (DB.leg||[]).map(function(r){
+    return {name:r.s||r.law_num||'',owner:r.c_date?'\u05d4\u05d5\u05e2\u05e8\u05da: '+fd(r.c_date)+(r.c?' ('+r.c+')':''):'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da',mod:'leg',modLabel:'\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea',e:r.c_date?_plusMonths(r.c_date,_LEG_FREQ_M):null,id:r.id};
+  });
+}
+// svLeg re-stamps c_date only when the determination changes (3.7), so a law
+// found compliant again next year needs its own "still holds" action.
+window._legReconfirm=function(id){
+  var r=(DB.leg||[]).find(function(x){return x.id===id;});
+  if(!r||!r.c_date)return;
+  if(!confirm('\u05dc\u05d0\u05e9\u05e8 \u05e9\u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 "'+(r.c||'')+'" \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4, \u05e0\u05db\u05d5\u05df \u05dc\u05d4\u05d9\u05d5\u05dd?'))return;
+  r.c_date=new Date().toISOString().substring(0,10);
+  r.c_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
+  sbUpd('leg',r);sdb();addLog('\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea \u05d7\u05d5\u05d3\u05e9\u05d4: '+(r.s||''));toast('\u05e0\u05e9\u05de\u05e8');rExp();
+};
 // BACKLOG 13 (Michael, 02/10/2026): a high-severity tour hazard is checked again
 // 30 days after it was closed, to see that the fix held. Pending = closed, high,
 // and recheck_d empty or older than closed_d (reopened and closed again needs a
@@ -7401,6 +7434,7 @@ function _expCollect(){
   // calendar and an alert, and appeared on no list.
   _drlNext().forEach(function(x){if(x.e)items.push(x);});
   _audNext().forEach(function(x){if(x.e)items.push(x);});
+  _mrNext().concat(_legNext()).forEach(function(x){if(x.e)items.push(x);});
   _thzRecheck().forEach(function(x){items.push(x);});
   (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
@@ -7426,6 +7460,7 @@ function _expNoDate(){
   // starting state for hundreds of rows. Showing them is the point.
   _drlNext().forEach(function(x){if(!x.e)out.push(x);});
   _audNext().forEach(function(x){if(!x.e)out.push(x);});
+  _mrNext().concat(_legNext()).forEach(function(x){if(!x.e)out.push(x);});
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
@@ -7538,6 +7573,8 @@ function rExp(){
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'-';
     if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
     if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
+    if(i.mod==='mr')act='<button class="btn btn-d btn-sm" onclick="goPage(\'mr\')" title="\u05dc\u05d3\u05e3 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05d4\u05e0\u05d4\u05dc\u05d4">+ \u05e1\u05e7\u05d9\u05e8\u05d4</button>';
+    if(i.mod==='leg')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'leg\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'+(i.e?' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="_legReconfirm(this.dataset.li)" title="\u05e0\u05d1\u05d3\u05e7 \u05d4\u05d9\u05d5\u05dd, \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4">\u2705 \u05d1\u05ea\u05d5\u05e7\u05e3</button>':'')+' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="editLeg(this.dataset.li)" title="\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4">\u270f\ufe0f \u05e7\u05d1\u05d9\u05e2\u05d4</button>';
     if(i.mod==='aud')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dar="'+esc(i.name)+'" onclick="_audNew(this.dataset.dar)" title="\u05e8\u05e9\u05d5\u05dd \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'-')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'-')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
