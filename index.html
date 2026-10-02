@@ -2263,7 +2263,7 @@ id="m-ncr" style="display:none">
   <div class="fgrid">
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><textarea id="ncr-d" class="inp" rows="2" oninput="if(typeof _ncrRepeatDebounced==='function')_ncrRepeatDebounced()" placeholder="&#1514;&#1488;&#1512; &#1488;&#1514; &#1492;&#1502;&#1502;&#1510;&#1488;..."></textarea></div>
     <div class="field"><label>&#1505;&#1493;&#1490;</label><select id="ncr-a" class="inp"><option value="">&#1489;&#1495;&#1512;...</option><option value="&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option value="&#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</option></select></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1490;&#1497;&#1500;&#1493;&#1497;</label><input id="ncr-sd" type="date" class="inp"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1490;&#1497;&#1500;&#1493;&#1497;</label><input id="ncr-sd" type="date" class="inp" onchange="_ncrAutoDue()"></div>
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; / &#1502;&#1495;&#1500;&#1511;&#1492;</label><select id="ncr-location-id" class="inp" onchange="if(typeof _ncrRepeatBanner==='function')_ncrRepeatBanner()"></select></div>
     <div class="field" id="ncr-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="ncr-loc" type="text" class="inp" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#127959;&#65039; &#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496;</label><select id="ncr-project-id" class="inp"></select></div>
@@ -2274,7 +2274,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1497;&#1514; &#1505;&#1497;&#1489;&#1492;</label><select id="ncr-rc-cat" class="inp"><option value="">&#1496;&#1512;&#1501; &#1505;&#1493;&#1493;&#1490;</option><option>&#1488;&#1491;&#1501;</option><option>&#1504;&#1493;&#1492;&#1500;</option><option>&#1510;&#1497;&#1493;&#1491;</option><option>&#1505;&#1489;&#1497;&#1489;&#1492;</option><option>&#1504;&#1497;&#1492;&#1493;&#1500;</option></select></div>
     <div class="field"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514; &#1504;&#1491;&#1512;&#1513;&#1514;</label><input id="ncr-c" type="text" class="inp" placeholder="&#1502;&#1492; &#1497;&#1513; &#1500;&#1506;&#1513;&#1493;&#1514;?"></div>
     <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1502;&#1500;&#1488; "&#1505;&#1497;&#1489;&#1514; &#1513;&#1493;&#1512;&#1513;" &#1493;-"&#1508;&#1506;&#1493;&#1500;&#1492; &#1502;&#1514;&#1511;&#1504;&#1514;" &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512;.</div><button type="button" id="ncr-ai-rc-btn" onclick="_ncrAIRcAction()" style="padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1505;&#1497;&#1489;&#1492; &#1493;&#1508;&#1506;&#1493;&#1500;&#1492;</button></div></div>
-    <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="ncr-p" class="inp"><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option><option selected>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
+    <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="ncr-p" class="inp" onchange="_ncrAutoDue()"><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option><option selected>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
     <!-- 1.7 — §10.2.1e wants the measure recorded when the action is decided.
          Without it the check 30 days later is a memory test («seems fine»). -->
     <div class="field fw"><label>&#1511;&#1512;&#1497;&#1496;&#1512;&#1497;&#1493;&#1503; &#1492;&#1510;&#1500;&#1495;&#1492; &#8212; &#1488;&#1497;&#1498; &#1504;&#1491;&#1506; &#1513;&#1492;&#1508;&#1506;&#1493;&#1500;&#1492; &#1506;&#1489;&#1491;&#1492;?</label><textarea id="ncr-success-criteria" rows="2" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1488;&#1508;&#1505; &#1495;&#1494;&#1512;&#1493;&#1514; &#1489;-3 &#1505;&#1489;&#1489;&#1497;&#1501; &#1512;&#1510;&#1493;&#1508;&#1497;&#1501;"></textarea></div>
@@ -5076,6 +5076,8 @@ function openNewNcrModal(){
   // a <select> ignores value=''; a new NCR starts at the default, and without
   // this it would keep whatever the previously-opened record had.
   var _pEl=g('ncr-p');if(_pEl)_pEl.value='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea';
+  var _uEl=g('ncr-u');if(_uEl)_uEl.removeAttribute('data-auto');
+  _ncrAutoDue();
   var a=g('ncr-a');if(a)a.value='';
   var s=g('ncr-s');if(s)s.value='\u05e4\u05ea\u05d5\u05d7';
   var sn=g('ncr-sens');if(sn)sn.checked=false;
@@ -5089,6 +5091,20 @@ function openNewNcrModal(){
   // Draft autosave \u2014 only for new NCRs (no ncr-id). Check for stale draft.
   if(typeof _ncrDraftCheck==='function')_ncrDraftCheck();
   if(typeof _ncrDraftStart==='function')_ncrDraftStart();
+}
+// Target date by priority (Michael, 02/10/2026): N days from the discovery
+// date, or from today when it is empty. A date typed by hand is kept: only an
+// empty field, or one this function filled itself, is replaced.
+var _NCR_DUE_DAYS={'\u05e7\u05e8\u05d9\u05d8\u05d9':1,'\u05d2\u05d1\u05d5\u05d4\u05d4':7,'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea':30,'\u05e0\u05de\u05d5\u05db\u05d4':60};
+function _ncrAutoDue(){
+  var u=g('ncr-u'),p=g('ncr-p');if(!u||!p)return;
+  var n=_NCR_DUE_DAYS[p.value];if(!n)return;
+  if(u.value&&u.value!==u.getAttribute('data-auto'))return;
+  var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(gv('ncr-sd')||'');
+  var b=m?new Date(+m[1],m[2]-1,+m[3]):new Date();
+  b.setDate(b.getDate()+n);
+  var v=b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');
+  u.value=v;u.setAttribute('data-auto',v);
 }
 // NCR draft autosave: every 5s while m-ncr is open with no ncr-id, snapshot
 // the form fields to localStorage. On modal re-open, offer to restore if a
@@ -5148,6 +5164,7 @@ function editNcr(id){
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   if(rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   g('ncr-id').value=rec.id;
+  var _uEd=g('ncr-u');if(_uEd)_uEd.removeAttribute('data-auto');
   var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
   if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id||null);
@@ -17023,6 +17040,7 @@ window._chainAudToNcr=function(aId){
   setIf('ncr-sd',a.d||new Date().toISOString().split('T')[0]);
   setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd: '+(a.n||'')+(a.d?' '+fd(a.d):''));
   if(a.r==='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')setIf('ncr-a','\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea');
+  _ncrAutoDue();
   _audChainPending=aId;
   var d=g('ncr-d');if(d)try{d.focus();}catch(e){}
 };
@@ -17056,6 +17074,7 @@ window._chainNmToNcr=function(nmId){
       setIf('ncr-sd',nm.d||new Date().toISOString().split('T')[0]);
       setIf('ncr-notes','\u05e0\u05d5\u05e6\u05e8 \u05de\u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 #'+nmId);
       var prio=g('ncr-p');if(prio&&nm.sev==='\u05d7\u05de\u05d5\u05e8')prio.value='\u05e7\u05e8\u05d9\u05d8\u05d9';
+      _ncrAutoDue();
       // ---- 1.8 ----
       // The link was a sentence in the NCR's notes and nothing else: the
       // near-miss stayed \u05e4\u05ea\u05d5\u05d7, so the task list showed TWO rows for one
