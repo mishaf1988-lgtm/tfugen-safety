@@ -9,7 +9,7 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 
 L = gate.LESSONS
-R = 'רטרו: אין\n'
+R = 'רטרו: אין\nskill: אין\n'
 ok = lambda t, b, f: gate.check(t, R + (b or ''), f)[0]
 check('not a fix PR: ok', ok('Tour screen: due date in one tap', '', ['index.html']))
 check('Fix: without lesson: blocked', not ok('Fix: the xlsm opened as damaged', '', ['functions/hazard-file.js']))
@@ -29,9 +29,9 @@ check('None title: ok', ok(None, None, []))
 raw = lambda t, b, f: gate.check(t, b, f)[0]
 check('no retro line: blocked', not raw('Tour screen', 'some text', ['index.html']))
 check('None body: blocked (no retro)', not raw(None, None, []))
-check('retro none (Hebrew): ok', raw('Tour screen', 'text\nרטרו: אין', ['index.html']))
-check('retro none (English): ok', raw('Tour screen', 'retro: none', ['index.html']))
-check('retro with a finding: ok', raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום', ['index.html']))
+check('retro none (Hebrew): ok', raw('Tour screen', 'text\nרטרו: אין\nskill: אין', ['index.html']))
+check('retro none (English): ok', raw('Tour screen', 'retro: none\nskill: אין', ['index.html']))
+check('retro with a finding: ok', raw('Tour screen', 'רטרו: מיכאל אמר שהכפתור לא במקום\nskill: אין', ['index.html']))
 check('empty retro: blocked', not raw('Tour screen', 'רטרו:   ', ['index.html']))
 check('retro inside a sentence does not count', not raw('Tour screen', 'we skipped the retro: later', ['x']))
 check('retro does not replace the lesson on a fix PR', not raw('Fix: x', 'רטרו: אין', ['x.js']))
@@ -45,6 +45,18 @@ def run(title, body, files):
 check('CLI: blocked exits 1', run('Fix: x', '', ['a.js']) == 1)
 check('CLI: lesson exits 0', run('Fix: x', '', ['a.js', L]) == 0)
 check('CLI: shell characters in title are just text', run('Fix: $(touch /tmp/pwned) `id`', '', [L]) == 0 and not os.path.exists('/tmp/pwned'))
+
+# skill line, on every PR (02/10/2026)
+S = '.claude/skills/tfugen-db/SKILL.md'
+check('no skill line: blocked', not raw('Tour screen', 'רטרו: אין', ['index.html']))
+check('skill none: ok', raw('Tour screen', 'רטרו: אין\nskill: אין', ['index.html']))
+check('Hebrew label: ok', raw('Tour screen', 'רטרו: אין\nסקייל: אין', ['index.html']))
+check('skill named but no skill file changed: blocked', not raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['index.html']))
+check('skill named with a skill file: ok', raw('Tour screen', 'רטרו: אין\nskill: tfugen-db, איך מריצים migration', ['index.html', S]))
+check('the account skill counts too', raw('Tour screen', 'רטרו: אין\nskill: כלל כללי', ['project-files/claude-ai-skill/michael-work-lessons/SKILL.md']))
+check('a file merely named skills elsewhere does not count', not raw('Tour screen', 'רטרו: אין\nskill: משהו', ['docs/.claude/skills/x.md']))
+check('empty skill line: blocked', not raw('Tour screen', 'רטרו: אין\nskill:   ', ['index.html']))
+check('skill inside a sentence does not count', not raw('Tour screen', 'רטרו: אין\nthe new skill: later', ['index.html']))
 
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

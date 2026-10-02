@@ -29,12 +29,13 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 2. מה מיכאל תיקן או אמר "לא לזה התכוונתי"? **המקור הכי חשוב**: תיקון בשיחה לא עובר דרך PR של Fix.
 3. מה לקח יותר סבבים ממה שצריך?
 אין תשובה = `רטרו: אין`, ולא ממציאים. יש תשובה שהיא טעות = לקח חדש כאן באותו PR.
+וגם שורת `skill:` (מה נלמד ובאיזה skill נכתב, או `אין`): skill `tfugen-learn`.
 `project-files/METRICS.md` (חודשי, אוטומטי) סופר רטרו שמצא משהו, כישלון ראשון ב-`tests` ולקחים שחזרו.
 
 ## לפני מיזוג
 
 **1. מיזוג בלי harness מלא (01/10/2026, #994).**
-מה קרה: migration מוזג בלי הבדיקות, ו-`rls-policy-test.mjs` נכשל עליו.
+מה קרה: migration מוזג בלי הבדיקות ונכשל.
 הכלל: אין מיזוג בלי `tests` ירוקה.
 נאכף: `tests.yml` + `merge-gate.py`.
 חזר: 0
@@ -80,7 +81,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 ## בדיקות שבודקות את הדבר הנכון
 
 **5. דילוג "רק .md" לא עבד על שם קובץ בעברית (01/10/2026, #1010).**
-מה קרה: `git diff --name-only` החזיר עברית במירכאות, ו-`\.md$` לא תפס.
+מה קרה: `git diff` החזיר עברית במירכאות; `\.md$` לא תפס.
 הכלל: `git -c core.quotepath=off` לכל `git diff` / `ls-files` שמסננים.
 נאכף: `tests.yml`; `fresh-main-test.py`.
 חזר: 0
@@ -156,13 +157,13 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 1. `ci-watch.py` נתן `gh pr checks`, שחסום כאן ומחזיר 0.
 
 **20. בדיקה אסינכרונית לפני שמירה, בלי נעילה (30/09/2026, #977).**
-מה קרה: "ביטול" בבדיקת סיסמה שדלפה עדיין החליף סיסמה, ושתי לחיצות החליפו פעמיים.
+מה קרה: "ביטול" עדיין החליף סיסמה; שתי לחיצות החליפו פעמיים.
 הכלל: אחרי `await` לבדוק שהחלון פתוח; לחיצה שנייה לא מתחילה ריצה.
 נאכף: `pwned-pw-test.js`.
 חזר: 0
 
 **21. עמודה חדשה שלא נשמרה בעריכה (01/10/2026, #1024).**
-מה קרה: `rc` עבר לעמודה משלו, ו-`svInc` לא שמר אותו בעריכה. עריכה מחקה את סיבת השורש.
+מה קרה: `svInc` לא שמר את `rc` בעריכה, ועריכה מחקה אותו.
 הכלל: עמודה שלא בטופס = לרשימת `prev[k]` בעריכה.
 נאכף: `inv-test.js`.
 חזר: 0
@@ -194,7 +195,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 0
 
 **6. יותר מדי PRs קטנים (01/10/2026, #1003 עד #1005).**
-מה קרה: חמישה PRs רק לעדכוני STATUS.
+מה קרה: חמישה PRs לעדכוני STATUS.
 הכלל: התיעוד (STATUS, DECISIONS, הלקח) נכנס לאותו PR של השינוי.
 נאכף: טקסט בלבד.
 חזר: 0
