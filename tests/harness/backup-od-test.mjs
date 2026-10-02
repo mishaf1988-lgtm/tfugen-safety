@@ -17,7 +17,10 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
 const DAY = 86400000;
 const pad = (n) => String(n).padStart(2, '0');
 const nameAt = (ms, partial) => { const d = new Date(ms); return 'tapugan-backup-' + d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + '_03-00-' + pad(d.getUTCSeconds()) + (partial ? '-partial' : '') + '.json'; };
-const at3 = (daysAgo) => { const d = new Date(Date.now() - daysAgo * DAY); d.setUTCHours(3, 0, 30, 0); return d.getTime() > Date.now() ? d.getTime() - DAY : d.getTime(); };
+// The latest 03:00:30 UTC not in the future, then whole days back. Until 02/10/2026
+// each day was shifted on its own: before 03:00:30 at3(0) moved to yesterday and
+// at3(1) was yesterday too, so two names matched and CI failed in that window.
+const at3 = (daysAgo) => { const d = new Date(); d.setUTCHours(3, 0, 30, 0); const t0 = d.getTime() > Date.now() ? d.getTime() - DAY : d.getTime(); return t0 - daysAgo * DAY; };
 const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from || 0) + i)));
 
 (async () => {
