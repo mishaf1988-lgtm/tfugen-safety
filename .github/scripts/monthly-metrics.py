@@ -23,6 +23,9 @@ import datetime, importlib.util, json, os, re, sys, urllib.request
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
 OUT = os.path.join(ROOT, 'project-files', 'METRICS.md')
 LESSONS = os.path.join(ROOT, '.claude', 'skills', 'tfugen-lessons', 'SKILL.md')
+# 02/10/2026: lessons already enforced in code live in the archive, one line each,
+# with the same numbering; a lesson dated this month may already be there.
+ARCHIVE = os.path.join(ROOT, 'project-files', 'lessons-archive.md')
 REPO = os.environ.get('GITHUB_REPOSITORY', 'mishaf1988-lgtm/tfugen-safety')
 
 _spec = importlib.util.spec_from_file_location('gate', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lessons-gate.py'))
@@ -71,6 +74,16 @@ def retro_found(body):
     if not m:
         return False
     return not gate.RETRO_NONE.match(m.group(2).strip())
+
+
+def read_lessons():
+    """The lessons file plus the archive (both carry numbered lessons)."""
+    out = ''
+    for p in (LESSONS, ARCHIVE):
+        if os.path.exists(p):
+            with open(p, encoding='utf-8') as f:
+                out += f.read() + '\n'
+    return out
 
 
 def lesson_stats(text, ym):
@@ -192,8 +205,7 @@ def main():
         sys.exit('month must be YYYY-MM, got %r' % ym)
     prs = [{'number': p['number'], 'title': p['title'], 'body': p.get('body') or '',
             'conclusions': conclusions(p['number'])} for p in merged_prs(ym)]
-    with open(LESSONS, encoding='utf-8') as f:
-        lessons = f.read()
+    lessons = read_lessons()
     row, detail = summarize(prs, lessons, ym)
     existing = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
     with open(OUT, 'w', encoding='utf-8') as f:

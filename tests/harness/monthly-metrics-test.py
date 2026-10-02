@@ -33,11 +33,13 @@ LES = '''**1. a (01/10/2026, #994).**
 '''
 check('lessons: new counts by month', mm.lesson_stats(LES, '2026-10')[0] == 2 and mm.lesson_stats(LES, '2026-09')[0] == 1, mm.lesson_stats(LES, '2026-10'))
 check('lessons: recurred counts entries above 0', mm.lesson_stats(LES, '2026-10')[1] == 2)
-real = open(mm.LESSONS, encoding='utf-8').read()
+real = mm.read_lessons()
 import re
 heads = re.findall(r'^\*\*\d+\. .*$', real, re.M)
 months = sorted({'%s-%s' % (d.group(2), d.group(1)) for d in (re.search(r'\b\d\d/(\d\d)/(\d{4})\b', h) for h in heads) if d})
 check('the real lessons file: every lesson counted in some month', len(heads) >= 16 and sum(mm.lesson_stats(real, m)[0] for m in months) == len(heads), (len(heads), months))
+only_skill = open(mm.LESSONS, encoding='utf-8').read()
+check('read_lessons includes the archive (more lessons than the skill file alone)', len(heads) > len(re.findall(r'^\*\*\d+\. .*$', only_skill, re.M)), len(heads))
 
 prs = [
     {'number': 1006, 'title': 'Tests on GitHub', 'body': 'רטרו: שלושה הבדלי סביבה', 'conclusions': ['failure', 'failure', 'failure', 'success']},
