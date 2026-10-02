@@ -17,7 +17,7 @@ Use this file as the FIRST source of truth. Only grep `index.html` if the answer
 
 ## Tables (21) — field map
 
-Stored as `DB.{name}[]` in localStorage key `tfgn2`. Line 967 of index.html.
+Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 of index.html (measured 02/10/2026).
 
 | Table | Purpose | Key fields (beyond `id`) |
 |---|---|---|
@@ -52,37 +52,39 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. Line 967 of index.html.
 
 ## Helper functions — line numbers in index.html
 
+Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `grep -n` before relying on one.
+
 | Function | Line | Purpose |
 |---|---|---|
-| `g(id)` | 970 | `document.getElementById` shortcut |
-| `gv(id)` | 971 | trimmed input `.value` |
-| `gi(id)` | 972 | int input |
-| `gf(id)` | 973 | float input |
-| `gid()` | 974 | unique id generator |
-| `fd(d)` | 975 | date → `DD/MM/YYYY` (empty → `—`) |
-| `du(d)` | 976 | days until expiry (negative = past) |
-| `eb(d)` | 977 | expiry badge HTML (green/yellow/red) |
-| `toast(msg)` | 979 | fading toast |
-| `addLog(msg)` | 980 | push to `DB.hist` |
-| `sdb()` | 981 | save DB → localStorage |
-| `ldb()` | ~982 | load DB from localStorage |
-| `_obPush/_obDrain` | 997/1018 | outbox queue |
-| `sbIns/sbUpd/sbDel` | 1038-1040 | queue Supabase ops |
-| `sbSync(silent)` | 1042 | pull all tables → DB |
-| `askDel(tbl,id)` | 1144 | delete with confirm |
-| `goPage(id)` | 1178 | show page |
-| `rPage()` | 1187 | re-render current page |
-| `openModal(id)` | 1192 | show modal |
-| `closeModal(id)` | 1226 | hide modal |
-| `rDash()` | 1441 | dashboard render |
-| `_expCollect()` | 1496 | collect expiries from 5 tables |
-| `VIEW_CONFIG` | 1836 | view field map |
-| `showView(tbl,id)` | 1890 | generic detail view |
-| `_imgCompress` | 2362 | canvas-based image resize |
-| `_PHOTO_BUCKET` | 2361 | `'incidents-photos'` |
-| `_fileUpload` | 2388 | upload to Storage |
-| `_attachUrls` | 2379 | keyed by areaId — save `photo_url` from here |
-| `_attachPick(areaId,prefix)` | 2414 | file picker + upload |
+| `g(id)` | 3321 | `document.getElementById` shortcut |
+| `gv(id)` | 3322 | trimmed input `.value` |
+| `gi(id)` | 3323 | int input |
+| `gf(id)` | 3324 | float input |
+| `gid()` | 3325 | unique id generator |
+| `fd(d)` | 3328 | date → `DD/MM/YYYY` (empty → `-`) |
+| `du(d)` | 3329 | days until expiry (negative = past, empty → 9999) |
+| `eb(d)` | 3330 | expiry badge HTML (green/yellow/red) |
+| `toast(msg,opts)` | 3334 | fading toast |
+| `addLog(msg)` | 3344 | push to `DB.hist` |
+| `sdb()` | 3372 | save DB → localStorage `tfgn2` (debounced 250ms, the write is in `window._sdbFlush=` 3350, `setItem` at 3357) |
+| `ldb()` | 3380 | load DB from localStorage |
+| `_obPush/_obDrain` | 3563/3725 | outbox queue |
+| `sbIns/sbUpd/sbDel` | 3806-3808 | queue Supabase ops (`sbIns`/`sbUpd` are wrapped again by `window.sbIns=` 24844 / `window.sbUpd=` 24849) |
+| `sbSync(silent)` | 3882 | pull all tables → DB |
+| `askDel(tbl,id)` | 4256 | delete with confirm |
+| `goPage(id)` | 4399 | show page |
+| `rPage()` | 4747 | re-render current page |
+| `openModal(id)` | 4940 | show modal |
+| `closeModal(id)` | 5057 | hide modal |
+| `rDash()` | 6401 | dashboard render |
+| `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext` |
+| `VIEW_CONFIG` | 14558 | view field map |
+| `showView(tbl,id)` | 14652 | generic detail view |
+| `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
+| `_imgCompress` | 22557 | canvas-based image resize |
+| `_attachUrls` | 22693 | keyed by areaId — save `photo_url` from here |
+| `_fileUpload` | 24852 | upload to Storage |
+| `_attachPick(areaId,prefix)` | 24887 | file picker + upload |
 
 ## Hebrew → \\uXXXX dictionary
 
