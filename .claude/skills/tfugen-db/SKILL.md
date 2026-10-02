@@ -14,6 +14,8 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - **project_id:** `znhjtpcltrxxyfjczgvw`.
 - **לא עובד בענן, וזה צפוי:** השרת `supabase` מ-`.mcp.json` ("requires authentication"), ו-`curl` ל-`*.supabase.co` (חסום ברשת). זה **לא** חסם, ואין לדווח עליו למיכאל (לקח 30).
 
+- SQL של policies, DROP או ALTER: רק דרך `apply_migration`/`execute_sql`, וקובץ ההגירה דרך Write. heredoc ב-Bash עם SQL כזה נחסם ונועל גם פקודות קריאה אחריו (לקח 40).
+
 ## לפני טענה על נתונים
 - `select count(*)` אמיתי, ולכתוב את המספר עם תאריך המדידה (לקח 9).
 - מבנה טבלה: `information_schema.columns`, לא קבצי ה-migration. בקבצים יש טבלאות שנוצרו מזמן ועמודות שנוספו ידנית (למשל `tasks.parent_id`).
@@ -27,10 +29,10 @@ description: How to read and change the live Supabase database of tfugen-safety 
 5. עמודה חדשה שהאפליקציה כותבת: ה-migration רץ **לפני** המיזוג. `sbIns` עם עמודה שלא קיימת נכשל ב-PostgREST, והשמירה כולה נופלת.
 
 ## כללי Postgres של Supabase, מה שרלוונטי כאן (02/10/2026)
-מתוך `supabase/agent-skills`, skill `supabase-postgres-best-practices` (MIT, תוכן בלבד). לא הותקן כולו (8 קטגוריות, רובן על טבלאות של מיליוני שורות; כאן עשרות עד מאות). חמשת הכללים שחלים, ומה נמדד ב-118 ה-migrations:
-1. **פונקציה ב-policy עטופה ב-`(select ...)`**, אחרת היא רצה לכל שורה: `using ((select private.is_admin_manager()))`. נמדד: 29 עטופות, 44 לא; `auth.jwt()` 103 פעמים, אף אחת לא עטופה. לא דחוף בגודל הנוכחי, אבל כל policy חדשה נכתבת עטופה (BACKLOG 5.12).
+מתוך `supabase/agent-skills`, skill `supabase-postgres-best-practices` (MIT, תוכן בלבד). לא הותקן כולו (8 קטגוריות, רובן על טבלאות של מיליוני שורות; כאן עשרות עד מאות). חמשת הכללים שחלים, ומה נמדד:
+1. **פונקציה ב-policy עטופה ב-`(select ...)`**, אחרת היא רצה לכל שורה: `using ((select private.is_admin_manager()))`. נמדד **במסד החי** (02/10/2026, `pg_policies`): 14 לא עטופות מתוך 372, תוקנו ב-`2026-10-02_rls_wrap_select.sql`; עכשיו 0. כל policy חדשה נכתבת עטופה. (הספירה מקבצי ההגירות נתנה 44: קבצים ישנים שכבר הוחלפו. טענה על המסד רק מ-`pg_policies`, לקח 18.)
 2. **`security definer` לבדיקות מורכבות**, `set search_path = ''`, ו-`revoke execute` מ-`anon`/`authenticated` על הפונקציה. `private.is_admin_manager()` כבר בנויה כך; פונקציה חדשה: אותו דפוס.
-3. **אינדקס על כל עמודה שמופיעה ב-policy או ב-FK.** נמדד: `location_id`, `project_id`, `issue_type_id`, `parent_id` מאונדקסות; `equip_id` לא (BACKLOG 5.12).
+3. **אינדקס על כל עמודה שמופיעה ב-policy או ב-FK.** נמדד במסד החי (`pg_indexes`): `location_id`, `project_id`, `issue_type_id`, `parent_id`, `equip_id` מאונדקסות.
 4. **טיפוסים:** `timestamptz` ולא `timestamp` (יש 2 `timestamp` ישנים; לא לשנות בלי צורך, לא ליצור חדשים), `text` ולא `varchar(n)`, `boolean` ולא מחרוזת. שדה התפוגה `e` נשאר `date` (חוק 3).
 5. **טרנזקציה קצרה**, בלי קריאה חיצונית בתוכה; `set local statement_timeout` ב-migration ארוכה.
 לקרוא את הכלל המלא רק כשצריך: `raw.githubusercontent.com/supabase/agent-skills/main/skills/supabase-postgres-best-practices/references/<שם>.md` (למשל `security-rls-performance`, `schema-foreign-key-indexes`).

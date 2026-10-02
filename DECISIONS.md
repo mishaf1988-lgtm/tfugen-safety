@@ -1891,3 +1891,7 @@ Anonymous sessions (emp mode) לא יכולים SELECT/UPDATE/DELETE שום דב
 ## 02/10/2026 - התפתחות: לא שגרה אוטונומית שבועית; כן חיפוש skills חודשי
 - מיכאל דחה שגרה שבועית שמריצה בדיקה עצמית וסריקה ויזואלית בשיחה חדשה ("4 לא"): עלות טוקנים קבועה. הבדיקה העצמית נשארת בתוך כל PR (`self-check-test.js`, `modal-id-reset-test.js`) ולא כשגרה.
 - מיכאל ביקש לחפש skills חדשים בחוץ ולהישאר מעודכן. הכלל והיומן: `tfugen-learn`, סעיף "לחפש skills חדשים בחוץ". תוכן בלבד מותקן לבד; hook או MCP דורשים אישור.
+
+## 02/10/2026 - RLS: קריאה לפונקציה בתוך policy תמיד עטופה ב-(select ...)
+- כלל Supabase `security-rls-performance`: בלי העטיפה הפונקציה רצה לכל שורה. 14 policies תוקנו ב-`2026-10-02_rls_wrap_select.sql` (מיכאל אישר "1+2"); גיבוי `backup_20261002.policies_before_wrap`. policy חדשה נכתבת עטופה מראש (`tfugen-db`).
+- מדידה על מסד חי נעשית ב-`pg_policies`/`pg_indexes`, לא ב-grep על `migrations/`: קבצים ישנים שכבר הוחלפו נספרים שם פעמיים (לקח 18 חזר).
