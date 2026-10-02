@@ -6,7 +6,9 @@ Claude stopped with a PR not merged, or waited for Michael with work left.
 Before a turn ends it checks, locally and without network:
   1. tracked files changed and not committed  -> block
   2. the branch has commits not in origin/main -> block (PR, ci-wait, merge)
-  3. a PR was merged in this session and no next session was opened
+  3. a PR was merged in this session and the reply has no "הצעות לשדרוג"
+     section -> block (Michael, 02/10/2026)
+  4. a PR was merged in this session and no next session was opened
      (create_session) -> block (lesson? then handoff, or the next item)
 It lets the stop through when the reply ends on a question to Michael (an
 approval he must give), when ci-wait.sh is running in the background (its
@@ -66,7 +68,14 @@ def verdict(cwd, text, tools, waiting):
     if rc == 0 and ahead not in ("", "0"):
         return ("המפקח: %s commits על ה-branch עוד לא ב-main (Cloudflare מפרסם רק את main). "
                 "לפתוח PR אם אין, להריץ ברקע ci-wait.sh ולמזג כשירוק (לקח 25)." % ahead)
-    if any(t.endswith("merge_pull_request") for t in tools) and not any(t.endswith("create_session") for t in tools):
+    merged = any(t.endswith("merge_pull_request") for t in tools)
+    # Michael, 02/10/2026 ("remember we said you must recommend new skills or
+    # upgrades"): a task summary after a merge carries the proposals section.
+    # The rule was text in tfugen-screen-review and was forgotten the same day.
+    if merged and "הצעות לשדרוג" not in text:
+        return ("המפקח: מוזג, ובסיכום אין סעיף \"💡 הצעות לשדרוג\" (tfugen-screen-review; מיכאל 02/10/2026). "
+                "להוסיף: skill לעדכן או ליצור, בדיקה או hook שיתפסו טעות שחזרה, ומה מהם נעשה לבד.")
+    if merged and not any(t.endswith("create_session") for t in tools):
         return ("המפקח: מוזג, ולא נפתחה שיחה הבאה. לפני שעוצרים: היה לקח? (tfugen-lessons). "
                 "אחר כך הפריט הבא שאפשר לעשות בקוד מ-STATUS/BACKLOG (לקח 24), "
                 "או handoff + create_session + archive_session (CLAUDE.md, שיחה ארוכה).")
