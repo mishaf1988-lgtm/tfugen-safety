@@ -219,7 +219,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **13. הודעות המתנה באנגלית (01/10/2026).**
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
-נאכף: `hebrew-reply.py` (Stop), על כל התור כטקסט אחד. בדיקה לכל קטע: מחכה לאישור.
+נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
 חזר: 2. 02/10/2026: שורות התקדמות באנגלית, הסיכום העברי "כיסה".
 
 **14. שיחה ארוכה מדי (01/10/2026).**
