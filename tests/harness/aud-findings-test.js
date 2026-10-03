@@ -56,6 +56,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('responsible, discovery date, status open', r.ncr[0].o === 'יוסי' && r.ncr[0].sd === '2026-09-30' && r.ncr.every((n) => n.s === 'פתוח'), r.ncr);
   check('the summary keeps its text and lists all three', r.aud.sm.startsWith('סיכום\n') && r.ncr.every((n) => r.aud.sm.includes('נפתח ' + n.num + ' מממצא בביקורת')), r.aud.sm);
   check('findings count = 3', r.aud.f === 3, r.aud.f);
+  // Michael, 03/10/2026: the number field is hidden, the count comes from the rows.
+  r = await page.evaluate(() => { const w = g('a-f').closest('.field'); return getComputedStyle(w).display; });
+  check('the findings number field is hidden', r === 'none', r);
   r = await page.evaluate(() => { rAud(); return document.getElementById('tb-aud').textContent; });
   check('the audit row: 3 open of 3', r.includes('NCR: 3 פתוחים מתוך 3'), r);
   r = await page.evaluate(() => { const tr = document.querySelector('#tb-aud tr'); const e = tr.querySelector('[data-etbl="auds"]'); e.click(); return { has: !!e, open: g('m-aud').style.display !== 'none', n: gv('a-n'), dash: tr.textContent.indexOf('\u2014') }; });
