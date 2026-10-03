@@ -123,11 +123,14 @@ let ACCEPT = true, DIALOGS = [];
         ['2', 'רעש', '5/2/2026', 'מנוע', '', 'בידוד', 'רון', 'בקרוב', 'לא בוצע', ''],
         ['3', 'אבק', '', 'סינון', '', 'מסנן', 'גל', '1/3/2026', 'לא בוצע', ''],
       ]) } };
-      return xlParse(wb).map(r => ({ sd: r.sd, u: r.u, src: 'src_date' in r }));
+      return xlParse(wb).map(r => ({ sd: r.sd, u: r.u, src: 'src_date' in r, keys: Object.keys(r) }));
     });
     check('the discovery date lands in sd (a real column), not src_date', rows[0] && rows[0].sd === '2026-01-05' && !rows.some(r => r.src), rows);
     check('DD/MM/YYYY is read as day/month', rows[1] && rows[1].sd === '2026-02-05' && rows[2].u === '2026-03-01', rows);
     check('an empty or unreadable date is null, never \'\' or the raw text', rows[0].u === null && rows[1].u === null && rows[2].sd === null, rows);
+    const NCRCOLS = require('./db-columns.json').ncr;
+    const extra = [...new Set(rows.flatMap(r => r.keys).filter(k => NCRCOLS.indexOf(k) < 0))];
+    check('every field the import builds has a column in ncr (tests/harness/db-columns.json)', extra.length === 0, extra);
   }
 
   console.log('\n1.6 an NCR cannot be closed with nothing in it');

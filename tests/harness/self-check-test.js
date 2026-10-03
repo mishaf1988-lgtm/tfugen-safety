@@ -125,6 +125,16 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
   await page.waitForTimeout(300); await shot('8-inc');
   say('8 incidents card "2026 בלי חקירה: N" (3 seeded; 2 without severity, all without days)', !!r.line, r);
 
+  // BACKLOG 10.1 / 03/10/2026: a key the DB has no column for is dropped by the PGRST204 self-heal
+  // (ncr.src_date lost the discovery date of every Excel import). Compare every captured payload
+  // with tests/harness/db-columns.json.
+  {
+    const COLS = require('./db-columns.json');
+    const sent = await page.evaluate(() => [].concat(window.__ins || [], window.__upd || []).map(x => ({ t: x.t, k: Object.keys(x.r || {}) })));
+    const unknown = [];
+    sent.forEach(x => { if (!COLS[x.t]) return; x.k.forEach(k => { if (COLS[x.t].indexOf(k) < 0 && unknown.indexOf(x.t + '.' + k) < 0) unknown.push(x.t + '.' + k); }); });
+    say('every saved field has a column in the DB (' + sent.length + ' payloads)', sent.length > 0 && unknown.length === 0, unknown);
+  }
   // ---- Console errors ----
   say('no page errors during the walk', errs.length === 0, errs.slice(0, 5));
   await browser.close();
