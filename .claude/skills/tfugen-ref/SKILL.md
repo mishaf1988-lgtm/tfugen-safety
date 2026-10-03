@@ -209,6 +209,7 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.
 - `showView` early-returns if `VIEW_CONFIG[tbl]` is missing — add it whenever you render the table.
 - `_obDrain` is gated by `SB_ON`. Emp-session must flip `SB_ON=true` to sync.
+- A `date` column (`docs.u`, `emp.s`, measured 03/10/2026) rejects `''` with a 4xx, so a form that sends `gv('x')` for an empty date fails the whole save silently (next line). `ptw.ds/de/sgNd` and `hzm.ms` are `text` and would store `''`. Test: `empty-dates-test.js`.
 - Outbox retries forever on 4xx — column-missing errors are silent. Check outbox badge.
 - Hebrew in JS strings must be `\uXXXX` escapes (CLAUDE.md rule).
 - `keyboard-only-test.js` (02/10/2026) fails on a long dash, «», curly quotes, `…` and maqaf in text people see (HTML text/attributes, entities, JS string literals; comments and CSS skipped). Its string scanner is a regex, so a regex literal whose character class holds `'` or `"` is read as a string: keep such characters before the quotes in the class (`[\s.’׳'"-]`, `_truNameKey`). Still allowed, pending Michael: middle dot `·` as a separator (169 on 02/10/2026) and arrows as button icons.
