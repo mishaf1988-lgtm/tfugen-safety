@@ -22,3 +22,6 @@ tools/vm-notifier/notifier.log
 __pycache__/
 *.pyc
 tests/harness/.run.lock/
+
+# Workflow agents (tfugen-orchestrate) work in git worktrees here
+.claude/worktrees/
