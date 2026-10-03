@@ -2228,7 +2228,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field"><label>&#1490;&#1512;&#1505;&#1492;</label><input id="d-v" value="1.0"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="d-o"></div>
     <div class="field"><label>&#1506;&#1491;&#1499;&#1493;&#1503;</label><input type="date" id="d-u"></div>
-    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="d-e"></div>
+    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="d-e" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="d-s"><option>&#1489;&#1514;&#1493;&#1511;&#1507;</option><option>&#1489;&#1505;&#1511;&#1497;&#1512;&#1492;</option><option>&#1502;&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1514;&#1511;&#1503; ISO</label><input id="d-i" placeholder="ISO 45001:2018"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="d-nt"></textarea></div>
@@ -2286,9 +2286,9 @@ id="m-ncr" style="display:none">
          Without it the check 30 days later is a memory test («seems fine»). -->
     <div class="field fw"><label>&#1511;&#1512;&#1497;&#1496;&#1512;&#1497;&#1493;&#1503; &#1492;&#1510;&#1500;&#1495;&#1492; - &#1488;&#1497;&#1498; &#1504;&#1491;&#1506; &#1513;&#1492;&#1508;&#1506;&#1493;&#1500;&#1492; &#1506;&#1489;&#1491;&#1492;?</label><textarea id="ncr-success-criteria" rows="2" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1488;&#1508;&#1505; &#1495;&#1494;&#1512;&#1493;&#1514; &#1489;-3 &#1505;&#1489;&#1489;&#1497;&#1501; &#1512;&#1510;&#1493;&#1508;&#1497;&#1501;"></textarea></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ncr-o" type="text" class="inp" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;..."></div>
-    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date" class="inp"></div>
+    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1489;&#1497;&#1510;&#1493;&#1506;</label><input id="ncr-u" type="date" class="inp" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ncr-s" class="inp" onchange="ncrStatusChange()"><option value="&#1508;&#1514;&#1493;&#1495;">&#1508;&#1514;&#1493;&#1495;</option><option value="&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;">&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option value="&#1505;&#1490;&#1493;&#1512;">&#1505;&#1490;&#1493;&#1512;</option></select></div>
-    <div class="field" id="ncr-close-wrap"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492; &#1489;&#1508;&#1493;&#1506;&#1500;</label><input id="ncr-cd" type="date" class="inp"></div>
+    <div class="field" id="ncr-close-wrap"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492; &#1489;&#1508;&#1493;&#1506;&#1500;</label><input id="ncr-cd" type="date" class="inp" data-nodefault></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="ncr-notes" class="inp" rows="2" placeholder="&#1492;&#1506;&#1512;&#1493;&#1514; &#1504;&#1493;&#1505;&#1508;&#1493;&#1514;..."></textarea></div>
     <div class="field fw">
       <details style="background:#fef3c7;border:1px solid #b45309;border-radius:8px;padding:6px 10px">
@@ -2351,7 +2351,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1513;&#1501; &#1492;&#1491;&#1512;&#1499;&#1492; *</label><input id="t-n"></div>
     <div class="field"><label>&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492;</label><select id="t-c"><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>ISO</option><option>&#1499;&#1497;&#1489;&#1493;&#1497; &#1488;&#1513;</option><option>&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503;</option><option>&#1504;&#1492;&#1500;&#1497;&#1501;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="t-d"></div>
-    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="t-e"></div>
+    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="t-e" data-nodefault></div>
     <div class="field"><label>&#1510;&#1497;&#1493;&#1503; (%)</label><input type="number" id="t-sc" placeholder="90" min="0" max="100"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="t-st"><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1514;&#1492;&#1500;&#1497;&#1498;</option><option>&#1508;&#1490; &#1514;&#1493;&#1511;&#1507;</option></select></div>
     <div class="field fw"><label>&#128247;&#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</label><div id="tr-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tr-attach-area','tr')">&#128247; &#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1510;&#1500;&#1501;</button></div></div>
@@ -2449,7 +2449,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1492;&#1505;&#1514;&#1489;&#1512;&#1493;&#1514; (1-4)</label><select id="r-p"><option value="1">1 - &#1504;&#1502;&#1493;&#1499;&#1492; &#1502;&#1488;&#1493;&#1491; (&#1499;&#1502;&#1506;&#1496; &#1500;&#1488; &#1497;&#1511;&#1512;&#1492;)</option><option value="2">2 - &#1504;&#1502;&#1493;&#1499;&#1492; (&#1500;&#1506;&#1497;&#1514;&#1497;&#1501; &#1512;&#1495;&#1493;&#1511;&#1493;&#1514;)</option><option value="3" selected>3 - &#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514; (&#1502;&#1491;&#1497; &#1508;&#1506;&#1501;)</option><option value="4">4 - &#1490;&#1489;&#1493;&#1492;&#1492; (&#1499;&#1500; &#1497;&#1493;&#1501;)</option></select></div>
     <div class="field"><label>&#1495;&#1493;&#1502;&#1512;&#1492; (1-4)</label><select id="r-s"><option value="1">1 - &#1513;&#1493;&#1500;&#1497;&#1514; (&#1506;&#1494;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492;)</option><option value="2">2 - &#1511;&#1500;&#1492; (&#1496;&#1497;&#1508;&#1493;&#1500; &#1512;&#1508;&#1493;&#1488;&#1497;)</option><option value="3" selected>3 - &#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514; (&#1508;&#1490;&#1497;&#1506;&#1492;/&#1502;&#1495;&#1500;&#1492; 30+ &#1497;&#1493;&#1501;)</option><option value="4">4 - &#1495;&#1502;&#1493;&#1512;&#1492; (&#1502;&#1493;&#1493;&#1514; &#1488;&#1493; &#1504;&#1499;&#1493;&#1514;)</option></select></div>
     <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492;</label><textarea id="r-ac"></textarea></div>
-    <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; (ISO 45001:6.1.2)</label><input type="date" id="r-last_review"></div>
+    <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492; (ISO 45001:6.1.2)</label><input type="date" id="r-last_review" data-nodefault></div>
     <div class="field fw" style="background:#f3eafa;border:1px solid #d8b4fe;border-radius:6px;padding:6px 10px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><div style="font-size:11px;color:#5a6070">&#129302; &#1492;-AI &#1497;&#1492;&#1510;&#1497;&#1506; P, S, &#1493;&#1508;&#1506;&#1493;&#1500;&#1493;&#1514; &#1492;&#1508;&#1495;&#1514;&#1492; &#1506;&#1500; &#1505;&#1502;&#1498; &#1492;&#1514;&#1497;&#1488;&#1493;&#1512; &#1493;&#1492;&#1514;&#1495;&#1493;&#1501;.</div><button type="button" id="rsk-ai-btn" onclick="_rskAI()" style="min-height:40px;padding:5px 12px;background:#7c3aed;border:none;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:11px">&#129302; &#1492;&#1510;&#1506; &#1491;&#1497;&#1512;&#1493;&#1490; &#1493;&#1502;&#1497;&#1496;&#1497;&#1490;&#1510;&#1497;&#1492;</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-rsk')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svRsk()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -2472,7 +2472,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1508;&#1511;&#1497;&#1491;</label><input id="e-r"></div>
     <div class="field"><label>&#1514;.&#1494; / &#1491;&#1512;&#1499;&#1493;&#1503;</label><input id="e-eid" dir="ltr" maxlength="20" autocomplete="off"></div>
     <div class="field"><label>&#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="e-d"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1492;&#1510;&#1496;&#1512;&#1508;&#1493;&#1514;</label><input type="date" id="e-s"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1492;&#1510;&#1496;&#1512;&#1508;&#1493;&#1514;</label><input type="date" id="e-s" data-nodefault></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1506;&#1494;&#1497;&#1489;&#1492;</label><input type="date" id="e-left" data-nodefault><div style="font-size:10px;color:var(--t3)">&#1512;&#1497;&#1511; = &#1506;&#1493;&#1489;&#1491; &#1508;&#1506;&#1497;&#1500;. &#1502;&#1497; &#1513;&#1506;&#1494;&#1489; &#1500;&#1488; &#1502;&#1493;&#1508;&#1497;&#1506; &#1489;&#1491;&#1507; &#1492;&#1495;&#1514;&#1497;&#1502;&#1492;, &#1493;&#1492;&#1495;&#1514;&#1497;&#1502;&#1493;&#1514; &#1513;&#1500;&#1493; &#1504;&#1513;&#1502;&#1512;&#1493;&#1514;</div></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="e-ph" type="tel"></div>
     <div class="field"><label>&#1502;&#1497;&#1497;&#1500;</label><input id="e-em" type="email" placeholder="name@co.il"></div>
@@ -2529,13 +2529,13 @@ id="m-ncr" style="display:none">
   <div class="fgrid" style="margin-top:12px;background:#f8f9fa;padding:12px;border-radius:8px">
     <div style="grid-column:1/-1;font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">&#1488;&#1497;&#1513;&#1493;&#1512;&#1497;&#1501; &#1493;&#1495;&#1514;&#1497;&#1502;&#1493;&#1514;:</div>
     <div class="field"><label>&#1513;&#1501; &#1492;&#1502;&#1489;&#1510;&#1506;</label><input id="ptw-sg1n"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1489;&#1510;&#1506;</label><input type="date" id="ptw-sg1d"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1489;&#1510;&#1506;</label><input type="date" id="ptw-sg1d" data-nodefault></div>
     <div class="field"><label>&#1513;&#1501; &#1502;&#1508;&#1511;&#1495;/&#1502;&#1494;&#1502;&#1497;&#1503;</label><input id="ptw-sg2n"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1508;&#1511;&#1495;</label><input type="date" id="ptw-sg2d"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1508;&#1511;&#1495;</label><input type="date" id="ptw-sg2d" data-nodefault></div>
     <div class="field"><label>&#1513;&#1501; &#1502;&#1504;&#1492;&#1500; &#1502;&#1495;&#1500;&#1511;&#1492;</label><input id="ptw-sg3n"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1504;&#1492;&#1500;</label><input type="date" id="ptw-sg3d"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1504;&#1492;&#1500;</label><input type="date" id="ptw-sg3d" data-nodefault></div>
     <div class="field"><label>&#1502;&#1502;&#1493;&#1504;&#1492; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</label><input id="ptw-sg4n" value="&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1502;&#1493;&#1504;&#1492;</label><input type="date" id="ptw-sg4d"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1488;&#1497;&#1513;&#1493;&#1512; &#1502;&#1502;&#1493;&#1504;&#1492;</label><input type="date" id="ptw-sg4d" data-nodefault></div>
   </div>
   <div class="fgrid" style="margin-top:10px">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ptw-st"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1489;&#1497;&#1510;&#1493;&#1506;</option><option>&#1505;&#1490;&#1493;&#1512;</option><option>&#1502;&#1489;&#1493;&#1496;&#1500;</option></select></div>
@@ -2557,7 +2557,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1506;&#1493;&#1489;&#1491;</label><input id="ppe-w"></div>
     <div class="field"><label>&#1497;&#1510;&#1512;&#1503;/&#1502;&#1508;&#1512;&#1496;</label><input id="ppe-m"></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1502;&#1505;&#1497;&#1512;&#1492;</label><input type="date" id="ppe-d"></div>
-    <div class="field"><label>&#1514;&#1493;&#1511;&#1507;/&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="ppe-e"></div>
+    <div class="field"><label>&#1514;&#1493;&#1511;&#1507;/&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="ppe-e" data-nodefault></div>
     <div class="field"><label>&#1502;&#1510;&#1489;</label><select id="ppe-c"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1491;&#1493;&#1512;&#1513; &#1492;&#1495;&#1500;&#1508;&#1492;</option><option>&#1508;&#1490;&#1493;&#1501;</option></select></div>
     <div class="field fw"><label>&#128247;&#128196; &#1514;&#1506;&#1493;&#1491;&#1514; &#1489;&#1491;&#1497;&#1511;&#1492;</label><div id="ppe-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('ppe-attach-area','ppe')">&#128247; &#128196; &#1514;&#1506;&#1493;&#1491;&#1492; / &#1514;&#1505;&#1511;&#1497;&#1512;</button></div></div>
   </div>
@@ -2582,11 +2582,11 @@ id="m-ncr" style="display:none">
       <div class="field"><label>&#1505;&#1508;&#1511; / &#1489;&#1493;&#1491;&#1511;</label><input id="eqi-pdf-vendor" class="inp"></div>
       <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="eqi-pdf-loc" class="inp"></div>
       <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input type="date" id="eqi-pdf-date" class="inp"></div>
-      <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="eqi-pdf-expiry" class="inp"></div>
+      <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1506;&#1491;</label><input type="date" id="eqi-pdf-expiry" class="inp" data-nodefault></div>
       <div class="field"><label>&#1513;&#1501; &#1492;&#1489;&#1493;&#1491;&#1511;</label><input id="eqi-pdf-inspector" class="inp"></div>
       <div class="field"><label>&#1505;&#1493;&#1490; &#1489;&#1491;&#1497;&#1511;&#1492;</label><input id="eqi-pdf-instype" class="inp"></div>
       <div class="field"><label>&#1502;&#1494;&#1502;&#1503; / &#1488;&#1490;&#1507;</label><input id="eqi-pdf-client" class="inp"></div>
-      <div class="field"><label>&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-pdf-next" class="inp"></div>
+      <div class="field"><label>&#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-pdf-next" class="inp" data-nodefault></div>
       <div class="field fw" id="eqi-pdf-report-row"><label>&#1502;&#1505;&#1508;&#1512; &#1514;&#1505;&#1511;&#1497;&#1512;</label><input id="eqi-pdf-report" class="inp"></div>
     </div>
     <div id="eqi-pdf-items-wrap" style="margin:10px 0;max-height:380px;overflow-y:auto"></div>
@@ -2608,7 +2608,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1488;&#1494;&#1493;&#1512;/&#1502;&#1497;&#1511;&#1493;&#1501;</label><select id="eqi-location-id" class="inp"></select></div>
     <div class="field" id="eqi-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="eqi-loc" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>&#1489;&#1491;&#1497;&#1511;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="eqi-d"></div>
-    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-e"></div>
+    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1489;&#1491;&#1497;&#1511;&#1492; &#1492;&#1489;&#1488;&#1492;</label><input type="date" id="eqi-e" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="eqi-s"><option>&#1514;&#1511;&#1497;&#1503;</option><option>&#1495;&#1497;&#1497;&#1489; &#1489;&#1491;&#1497;&#1511;&#1492;</option><option>&#1500;&#1488; &#1514;&#1511;&#1497;&#1503;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="eqi-notes"></textarea></div>
     <div class="field fw"><label>📎 קבצים מצורפים <span style="font-size:11px;color:var(--t3);font-weight:400">(גררי או בחרי כמה)</span></label><div id="eqi-photo-area" ondragover="event.preventDefault();this.style.background='#f0f9ff'" ondragleave="this.style.background=''" ondrop="event.preventDefault();this.style.background='';_eqiHandleDrop(event)" style="border:2px dashed #cbd5e1;border-radius:10px;padding:10px;transition:background 0.2s"></div></div>
@@ -2725,7 +2725,7 @@ id="m-ncr" style="display:none">
   <div class="field"><label>שם</label><input id="tru-route-name" placeholder="למי זה מיועד"></div>
   <div class="field"><label>טלפון (לוואטסאפ)</label><input id="tru-route-phone" type="tel" inputmode="tel" placeholder="050-0000000" style="direction:ltr;text-align:right"></div>
   <div class="field"><label>אימייל</label><input id="tru-route-email" type="email" inputmode="email" placeholder="name@example.com" style="direction:ltr;text-align:right"></div>
-  <div class="field"><label>לטיפול עד</label><input id="tru-route-due" type="date"></div>
+  <div class="field"><label>לטיפול עד</label><input id="tru-route-due" type="date" data-nodefault></div>
   <div class="field"><label>הנחיות (לא חובה)</label><textarea id="tru-route-notes" rows="2" placeholder="מה לעשות, מה לבדוק"></textarea></div>
   <div style="font-size:12px;color:var(--t2);line-height:1.5;margin:6px 0 10px">הליקוי, האזור, התאריך, קישור לתמונה, למי ועד מתי - הכל נכנס להודעה. הנמען לא צריך את האפליקציה. הממצא יסומן כמנותב והנאמן יראה את זה.</div>
   <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
@@ -2811,9 +2811,9 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><select id="thz-resp"><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1504;&#1493;&#1505;&#1507; (&#1488;&#1501; &#1502;&#1513;&#1493;&#1514;&#1507;)</label><select id="thz-resp2"><option value="">&#1500;&#1500;&#1488;</option><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
     <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1504;&#1491;&#1512;&#1513;&#1514;</label><textarea id="thz-action" rows="2"></textarea></div>
-    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><input type="date" id="thz-due" onchange="this.removeAttribute('data-auto')"></div>
+    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><input type="date" id="thz-due" onchange="this.removeAttribute('data-auto')" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="thz-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492;</label><input type="date" id="thz-closed"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492;</label><input type="date" id="thz-closed" data-nodefault></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="thz-notes" rows="2"></textarea></div>
     <div class="field fw"><label>&#128247; &#1514;&#1502;&#1493;&#1504;&#1492;</label>
       <div id="thz-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('thz-attach-area','thz')">&#128247; &#1514;&#1502;&#1493;&#1504;&#1492;</button></div>
@@ -2892,7 +2892,7 @@ id="m-ncr" style="display:none">
   <div class="fgrid">
     <div class="field fw"><label>&#1499;&#1493;&#1514;&#1512;&#1514; *</label><input id="tsk-title" placeholder="&#1500;&#1502;&#1513;&#1500;: &#1492;&#1495;&#1500;&#1507; &#1502;&#1498;&#1513;&#1493;&#1500; &#1489;&#1495;&#1491;&#1512; &#1502;&#1499;&#1493;&#1504;&#1493;&#1514;"></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="tsk-assignee" placeholder="&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497;" list="tsk-assignee-list"><datalist id="tsk-assignee-list"></datalist></div>
-    <div class="field"><label>&#1497;&#1506;&#1491;</label><input type="date" id="tsk-due"></div>
+    <div class="field"><label>&#1497;&#1506;&#1491;</label><input type="date" id="tsk-due" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tsk-status"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1492;&#1514;&#1511;&#1491;&#1502;&#1493;&#1514;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1497;&#1508;&#1493;&#1514;</label><select id="tsk-priority"><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option selected>&#1512;&#1490;&#1497;&#1500;</option><option>&#1504;&#1502;&#1493;&#1498;</option></select></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="tsk-notes" rows="2"></textarea></div>
@@ -2932,7 +2932,7 @@ id="m-ncr" style="display:none">
   <div class="fgrid">
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ea-status"><option value="">בחר...</option><option>בוצע</option><option>מבוצע בשוטף</option><option>בשוטף</option><option>בתכנון</option><option>קיים</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="ea-owner" placeholder="שם אחראי"></div>
-    <div class="field"><label>&#1500;&#1493;&#1494; &#1505;&#1511;&#1497;&#1512;&#1492;</label><input type="date" id="ea-review"></div>
+    <div class="field"><label>&#1500;&#1493;&#1494; &#1505;&#1511;&#1497;&#1512;&#1492;</label><input type="date" id="ea-review" data-nodefault></div>
     <div class="field fw"><label>&#1492;&#1505;&#1489;&#1512; &#1500;&#1488;&#1497; &#1489;&#1497;&#1510;&#1493;&#1506;</label><textarea id="ea-explanation" rows="2"></textarea></div>
     <div class="field fw"><label>&#1492;&#1508;&#1504;&#1497;&#1492; &#1500;&#1495;&#1493;&#1511;/&#1514;&#1511;&#1504;&#1492;</label><input id="ea-legal" placeholder="לדוגמה: חוק אוויר נקי 2008"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="ea-notes" rows="2"></textarea></div>
@@ -2984,7 +2984,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1513;&#1501; *</label><input id="prj-name" placeholder="לדוגמה: שדרוג קווי ייצור 2026"></div>
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512;</label><textarea id="prj-desc" rows="2"></textarea></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1492;&#1514;&#1495;&#1500;&#1492;</label><input type="date" id="prj-start"></div>
-    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1501;</label><input type="date" id="prj-end"></div>
+    <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1501;</label><input type="date" id="prj-end" data-nodefault></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="prj-status"><option>&#1508;&#1506;&#1497;&#1500;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1502;&#1493;&#1513;&#1492;&#1492;</option><option>&#1489;&#1493;&#1496;&#1500;</option></select></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-prj')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svPrj()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -3000,7 +3000,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1513;&#1501; *</label><input id="itp-name" placeholder="לדוגמה: בדיקה שנתית למלגזות"></div>
     <div class="field"><label>&#1514;&#1491;&#1497;&#1512;&#1493;&#1514;</label><input id="itp-recur-count" type="number" min="1" value="1" style="max-width:100px"></div>
     <div class="field"><label>&#1497;&#1495;&#1497;&#1491;&#1514; &#1494;&#1502;&#1503;</label><select id="itp-recur-unit"><option value="day">&#1497;&#1502;&#1497;&#1501;</option><option value="week">&#1513;&#1489;&#1493;&#1506;&#1493;&#1514;</option><option value="month">&#1495;&#1493;&#1491;&#1513;&#1497;&#1501;</option><option value="year" selected>&#1513;&#1504;&#1497;&#1501;</option></select></div>
-    <div class="field"><label>&#1502;&#1493;&#1506;&#1491; &#1489;&#1497;&#1510;&#1493;&#1506; &#1492;&#1489;&#1488;</label><input id="itp-next-due" type="date"></div>
+    <div class="field"><label>&#1502;&#1493;&#1506;&#1491; &#1489;&#1497;&#1510;&#1493;&#1506; &#1492;&#1489;&#1488;</label><input id="itp-next-due" type="date" data-nodefault></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="itp-responsible"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="itp-notes" rows="2"></textarea></div>
     <div class="field"><label><input type="checkbox" id="itp-active" checked> &#1508;&#1506;&#1497;&#1500;</label></div>
@@ -3149,7 +3149,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</label><input id="ctr-ty"></div>
     <div class="field"><label>&#1488;&#1497;&#1513; &#1511;&#1513;&#1512;</label><input id="ctr-c"></div>
     <div class="field"><label>&#1496;&#1500;&#1508;&#1493;&#1503;</label><input id="ctr-ph" type="tel"></div>
-    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</label><input type="date" id="ctr-e"></div>
+    <div class="field"><label>&#1514;&#1493;&#1511;&#1507; &#1492;&#1505;&#1499;&#1501;</label><input type="date" id="ctr-e" data-nodefault></div>
     <div class="field"><label>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</label><select id="ctr-tr"><option>&#1492;&#1493;&#1499;&#1513;&#1512;</option><option>&#1500;&#1488; &#1492;&#1493;&#1499;&#1513;&#1512;</option><option>&#1491;&#1493;&#1512;&#1513; &#1492;&#1499;&#1513;&#1512;&#1492;</option></select></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="ctr-s"><option>&#1508;&#1506;&#1497;&#1500;</option><option>&#1500;&#1488; &#1508;&#1506;&#1497;&#1500;</option><option>&#1502;&#1493;&#1513;&#1492;&#1492;</option></select></div>
     <div class="field fw"><label>&#128247;&#128196; &#1489;&#1497;&#1496;&#1493;&#1495; / &#1492;&#1505;&#1499;&#1501; / &#1492;&#1491;&#1512;&#1499;&#1492;</label><div id="ctr-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('ctr-attach-area','ctr')">&#128247; &#128196; &#1489;&#1497;&#1496;&#1493;&#1495; / &#1492;&#1505;&#1499;&#1501; / &#1492;&#1491;&#1512;&#1499;&#1492;</button></div></div>
@@ -3185,7 +3185,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1499;&#1502;&#1493;&#1514; &#1489;&#1502;&#1500;&#1488;&#1497; (&#1500;)</label><input type="number" id="hzm-q" placeholder="0" min="0"></div>
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; &#1488;&#1495;&#1505;&#1493;&#1503;</label><select id="hzm-location-id" class="inp"></select></div>
     <div class="field" id="hzm-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="hzm-loc" type="text" readonly style="opacity:0.7"></div>
-    <div class="field"><label>MSDS &#1502;&#1506;&#1493;&#1491;&#1499;&#1503;</label><input type="date" id="hzm-ms"></div>
+    <div class="field"><label>MSDS &#1502;&#1506;&#1493;&#1491;&#1499;&#1503;</label><input type="date" id="hzm-ms" data-nodefault></div>
     <div class="field fw"><label>&#1488;&#1502;&#1510;&#1506;&#1497; &#1489;&#1511;&#1512;&#1492; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><textarea id="hzm-em"></textarea></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-hzm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svHzm()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -3225,12 +3225,12 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1496;&#1511;&#1505;&#1496; &#1502;&#1500;&#1488; (&#1500;&#1495;&#1497;&#1508;&#1493;&#1513; AI)</label><textarea id="leg-full-text" rows="6" placeholder="&#1492;&#1491;&#1489;&#1511; &#1499;&#1488;&#1503; &#1488;&#1514; &#1492;&#1496;&#1511;&#1505;&#1496; &#1492;&#1502;&#1500;&#1488; &#1513;&#1500; &#1492;&#1495;&#1493;&#1511;..."></textarea></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505; &#1506;&#1502;&#1497;&#1491;&#1492;</label><select id="leg-c"><option>&#1496;&#1512;&#1501; &#1492;&#1493;&#1506;&#1512;&#1498;</option><option>&#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1495;&#1500;&#1511;&#1497;&#1514;</option><option>&#1488;&#1497;&#1504;&#1493; &#1502;&#1510;&#1497;&#1497;&#1514;</option><option>&#1500;&#1488; &#1512;&#1500;&#1493;&#1493;&#1504;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1506;&#1491;&#1499;&#1493;&#1503; &#1488;&#1495;&#1512;&#1493;&#1503;</label><input type="date" id="leg-u"></div>
-    <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="leg-last-review"></div>
+    <div class="field"><label>&#1505;&#1511;&#1497;&#1512;&#1492; &#1488;&#1495;&#1512;&#1493;&#1504;&#1492;</label><input type="date" id="leg-last-review" data-nodefault></div>
     <!-- 3.7 — §9.1.2 wants an evaluation-of-compliance record: what was
          checked, when, by whom. The status was a lone dropdown, so אינו מציית
          could become מציית with the review date still a year old. These are
          stamped by svLeg when the status changes, so they cannot drift. -->
-    <div class="field"><label>&#1504;&#1511;&#1489;&#1506; &#1489;&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="leg-c-date" readonly style="opacity:.75"></div>
+    <div class="field"><label>&#1504;&#1511;&#1489;&#1506; &#1489;&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="leg-c-date" readonly style="opacity:.75" data-nodefault></div>
     <div class="field"><label>&#1504;&#1511;&#1489;&#1506; &#1506;&#1500; &#1497;&#1491;&#1497;</label><input id="leg-c-by" readonly style="opacity:.75"></div>
     <div class="field fw"><label>&#128206; &#1512;&#1488;&#1497;&#1492; &#1500;&#1506;&#1502;&#1497;&#1491;&#1492;</label><div id="leg-evidence-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('leg-evidence-area','leg')">&#128247; &#128196; &#1510;&#1512;&#1507; &#1488;&#1497;&#1513;&#1493;&#1512; / &#1514;&#1505;&#1511;&#1497;&#1512; / &#1502;&#1491;&#1497;&#1491;&#1492;</button></div></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497;</label><input id="leg-o"></div>
@@ -3376,7 +3376,7 @@ function eb(d){
   if(!d)return '<span class="b bX" title="\u05dc\u05dc\u05d0 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4 - \u05d4\u05e4\u05e8\u05d9\u05d8 \u05d0\u05d9\u05e0\u05d5 \u05e0\u05d9\u05ea\u05df \u05dc\u05de\u05e2\u05e7\u05d1">\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da</span>';
   var x=du(d);if(x>60)return '<span class="b bG">'+fd(d)+'</span>';if(x>=0&&x<=30)return '<span class="b bY">'+x+'\u05d9</span>';if(x<0)return '<span class="b bR">\u05e4\u05d2</span>';return '<span class="b bG">'+fd(d)+'</span>';}
 function sb(s){var m={'\u05d1\u05ea\u05d5\u05e7\u05e3':'bG','\u05d4\u05d5\u05e9\u05dc\u05dd':'bG','\u05e1\u05d2\u05d5\u05e8':'bG','\u05e4\u05e2\u05d9\u05dc':'bG','\u05d1\u05e1\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05d1\u05d9\u05e6\u05d5\u05e2':'bY','\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'bY','\u05d1\u05d7\u05e7\u05d9\u05e8\u05d4':'bY','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'bY','\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05de\u05ea\u05d5\u05db\u05e0\u05df':'bB','\u05de\u05e6\u05d9\u05d9\u05ea':'bG','\u05e4\u05ea\u05d5\u05d7':'bR','\u05dc\u05d0 \u05de\u05e6\u05d9\u05d9\u05ea':'bR','\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3':'bR','\u05de\u05d1\u05d5\u05d8\u05dc':'bR','\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc':'bR'};return '<span class="b '+(m[s]||'bX')+'">'+(s?esc(s):'-')+'</span>';}
-function toast(msg,opts){var t=document.createElement('div');t.className='toast'+((opts&&opts.ok)||/✓|✅/.test(msg||'')?' ok':'');t.setAttribute('role','alert');t.setAttribute('aria-live','assertive');t.setAttribute('aria-atomic','true');t.textContent=msg;document.body.appendChild(t);if(t.classList.contains('ok')&&navigator.vibrate){try{navigator.vibrate(35);}catch(e){}}setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
+function toast(msg,opts){msg=String(msg==null?'':msg).replace(/&#(\d+);/g,function(m,n){return String.fromCodePoint(+n);});var t=document.createElement('div');t.className='toast'+((opts&&opts.ok)||/✓|✅/.test(msg||'')?' ok':'');t.setAttribute('role','alert');t.setAttribute('aria-live','assertive');t.setAttribute('aria-atomic','true');t.textContent=msg;document.body.appendChild(t);if(t.classList.contains('ok')&&navigator.vibrate){try{navigator.vibrate(35);}catch(e){}}setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},2500);}
 
 // High-contrast mode — outdoor factory light readability
 function hcToggle(){
@@ -5066,14 +5066,15 @@ function openModal(id){
     // populate assignee datalists from app_users + emp
     var edl=g('emp-names-list');
     if(edl){
-      var en=(DB.emp||[]).map(function(e){return e&&e.n;}).filter(Boolean).sort(function(a,b){return a.localeCompare(b,'he');});
+      // Who left is not offered for new PPE, medical, tasks (Michael 03/10/2026); search still finds them.
+      var en=(DB.emp||[]).filter(function(e){return !_empLeft(e);}).map(function(e){return e&&e.n;}).filter(Boolean).sort(function(a,b){return a.localeCompare(b,'he');});
       edl.innerHTML=en.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
     }
     var dl=mo.querySelector('#tsk-assignee-list');
     if(dl && !dl.options.length){
       var names={};
       (DB.app_users||[]).forEach(function(u){if(u.full_name)names[u.full_name]=1;else if(u.username)names[u.username]=1;});
-      (DB.emp||[]).forEach(function(e){if(e.n)names[e.n]=1;});
+      (DB.emp||[]).forEach(function(e){if(e.n&&!_empLeft(e))names[e.n]=1;});
       dl.innerHTML=Object.keys(names).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(n){return '<option value="'+esc(n)+'">';}).join('');
     }
     var ctxMap={'m-doc':'doc','m-aud':'aud','m-ncr':'ncr','m-inc':'inc','m-tr':'tr','m-rsk':'rsk'};
@@ -5617,7 +5618,7 @@ window._drlFndRow=function(){
   d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
   d.innerHTML='<input class="drl-ft" placeholder="\u05de\u05de\u05e6\u05d0" style="flex:2 1 180px">'
     +'<input class="drl-fa" placeholder="\u05d0\u05d7\u05e8\u05d0\u05d9" style="flex:1 1 100px">'
-    +'<input type="date" class="drl-fu" title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
+    +'<input type="date" class="drl-fu" data-nodefault title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
   box.appendChild(d);
 };
 function _drlFndRead(){
@@ -6544,7 +6545,7 @@ function rDash(){
   var ki=inc.filter(function(i){return new Date(i.dt).getFullYear()===new Date().getFullYear();}).length;
   var tt=tr.length,tv=tr.filter(function(t){return t.s==='\u05d4\u05d5\u05e9\u05dc\u05dd'&&du(t.e)>=0;}).length;
   var kn=ncr.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;
-  var ke=DB.emp.length;
+  var ke=DB.emp.filter(function(e){return !_empLeft(e);}).length;
   var kc=rsk.filter(function(r){return r.p*r.sv>=15;}).length;
   // Was the sum over the WHOLE history, captioned LTIF. LTIF is
   // lost-time injuries \u00d7 1,000,000 \u00f7 hours worked, and the app stores no
@@ -15989,7 +15990,7 @@ window._mrDecRow=function(){
   d.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px';
   d.innerHTML='<input class="mrs-t" placeholder="\u05d4\u05d7\u05dc\u05d8\u05d4" style="flex:2 1 180px">'
     +'<input class="mrs-a" placeholder="\u05d0\u05d7\u05e8\u05d0\u05d9" style="flex:1 1 100px">'
-    +'<input type="date" class="mrs-u" title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
+    +'<input type="date" class="mrs-u" data-nodefault title="\u05ea\u05d0\u05e8\u05d9\u05da \u05d9\u05e2\u05d3" style="flex:1 1 120px">';
   box.appendChild(d);
 };
 function _mrDecRead(){
@@ -19833,7 +19834,7 @@ function _truRouteMail(){
 // employee matches: a wrong recipient would get a real SMS.
 function _truRouteVitreRecipient(f){
   var ph=_vitreNormPhone(f.phone),nm=_vitreNormName(f.name);
-  var emps=(DB.emp||[]).filter(function(e){return e.ext_id;});
+  var emps=(DB.emp||[]).filter(function(e){return e.ext_id&&!_empLeft(e);});
   var hit=null;
   if(ph)hit=emps.filter(function(e){return _vitreNormPhone(e.ph)===ph;})[0]||null;
   if(!hit&&nm)hit=emps.filter(function(e){return _vitreNormName(e.n)===nm;})[0]||null;

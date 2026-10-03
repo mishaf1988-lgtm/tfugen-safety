@@ -154,11 +154,13 @@ console.log('client recipient resolver (_truRouteVitreRecipient from index.html)
 {
   const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   const cut = (a, b) => html.slice(html.indexOf(a), html.indexOf(b));
-  const src = cut('function _vitreNormPhone', 'function _vitreKind') + cut('function _truRouteVitreRecipient', 'function _truRouteVitre(');
+  const src = cut('function _vitreNormPhone', 'function _vitreKind') + cut('function _empLeft', 'function rEmp(') + cut('function _truRouteVitreRecipient', 'function _truRouteVitre(');
   const mk = new Function('DB', src + '\nreturn _truRouteVitreRecipient;');
   const emp = [{ n: 'דני כהן', ph: '0541111111', ext_id: '12' }, { n: 'מיכאל פרייליך', ph: '0547940073', ext_id: '599' }, { n: 'בלי מספר', ph: '0549999999' }];
   const find = mk({ emp });
   check('phone typed with dashes matches', find({ phone: '054-794-0073', name: '' }).ext_id === '599');
+  const findL = mk({ emp: [{ n: 'עזב', ph: '0543333333', ext_id: '77', left_d: '2026-01-01' }] });
+  check('someone who left (emp.left_d) gets no SMS, by phone or by name', findL({ phone: '0543333333', name: '' }) === null && findL({ phone: '', name: 'עזב' }) === null);
   check('phone in 972 form matches', find({ phone: '+972541111111', name: '' }).ext_id === '12');
   check('no phone: exact name matches (extra spaces ignored)', find({ phone: '', name: ' דני  כהן ' }).ext_id === '12');
   check('phone wins over a different name', find({ phone: '0547940073', name: 'דני כהן' }).ext_id === '599');
