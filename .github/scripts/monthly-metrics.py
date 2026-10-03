@@ -96,6 +96,25 @@ def lesson_stats(text, ym):
     return new, recurred
 
 
+def lessons_digest(text, ym):
+    """Michael, 03/10/2026: the monthly summary names the lessons, not only counts them.
+    New lessons dated in ym, and every lesson whose חזר: is above 0 (state on the day)."""
+    y, m = ym.split('-')
+    items = []
+    for blk in re.split(r'(?m)^(?=\*\*\d+\. )', text):
+        h = re.match(r'\*\*(\d+)\. (.+?) \(([^)]*)\)', blk)
+        if not h:
+            continue
+        r = re.search(r'חזר:\s*(\d+)', blk)
+        d = re.search(r'\b\d\d/(\d\d)/(\d{4})\b', h.group(3))
+        items.append((int(h.group(1)), h.group(2).strip(), int(r.group(1)) if r else 0, bool(d and d.group(1) == m and d.group(2) == y)))
+    items.sort()
+    new = ['- %d. %s' % (n, t) for n, t, _, isnew in items if isnew]
+    rec = ['- %d. %s: חזר %d' % (n, t, k) for n, t, k, _ in sorted(items, key=lambda x: -x[2]) if k > 0]
+    return (['', '### לקחים חדשים ב-%s/%s' % (m, y), ''] + (new or ['אין.']) +
+            ['', '### לקחים שחזרו (מצב ביום המדידה; חזר = הכלל לא עובד, צריך hook או בדיקה)', ''] + (rec or ['אין.']))
+
+
 def summarize(prs, lessons_text, ym):
     """prs: [{number, title, body, conclusions}] merged in ym."""
     n = len(prs)
@@ -123,7 +142,7 @@ def summarize(prs, lessons_text, ym):
     return row, detail
 
 
-def render(existing, row, detail, ym, now):
+def render(existing, row, detail, ym, now, extra=None):
     """Insert or replace this month's row, newest first; replace the detail block."""
     month = row.split('|')[1].strip()
     rows = []
@@ -135,6 +154,7 @@ def render(existing, row, detail, ym, now):
     y, m = ym.split('-')
     det = ['### נכשלו בפעם הראשונה ב-%s/%s' % (m, y), '']
     det += detail or ['אין.']
+    det += extra or []
     try:
         from zoneinfo import ZoneInfo
         now = now.astimezone(ZoneInfo('Asia/Jerusalem'))
@@ -209,7 +229,7 @@ def main():
     row, detail = summarize(prs, lessons, ym)
     existing = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
     with open(OUT, 'w', encoding='utf-8') as f:
-        f.write(render(existing, row, detail, ym, now))
+        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym)))
     print(row)
 
 

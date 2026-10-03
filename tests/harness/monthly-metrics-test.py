@@ -33,6 +33,12 @@ LES = '''**1. a (01/10/2026, #994).**
 '''
 check('lessons: new counts by month', mm.lesson_stats(LES, '2026-10')[0] == 2 and mm.lesson_stats(LES, '2026-09')[0] == 1, mm.lesson_stats(LES, '2026-10'))
 check('lessons: recurred counts entries above 0', mm.lesson_stats(LES, '2026-10')[1] == 2)
+# Michael, 03/10/2026: the summary names the lessons.
+dg = mm.lessons_digest(LES, '2026-10')
+check('digest: the new lessons of the month by number and title', '- 1. a' in dg and '- 3. c' in dg and '- 2. b' not in dg[:dg.index([l for l in dg if 'שחזרו' in l][0])], dg)
+check('digest: recurring lessons, most recurred first', [l for l in dg if ': חזר ' in l] == ['- 2. b: חזר 2', '- 3. c: חזר 1'], dg)
+check('digest: an empty month says אין', mm.lessons_digest(LES, '2026-07')[3] == 'אין.', mm.lessons_digest(LES, '2026-07'))
+check('render puts the digest inside the detail block', 'לקחים חדשים ב-10/2026' in mm.render('', '| 10/2026 | 1 | - | - | 0 | 0 | 0 | 0 |', [], '2026-10', datetime.datetime(2026, 11, 1, tzinfo=datetime.timezone.utc), dg).split(mm.DETAIL_START)[1])
 real = mm.read_lessons()
 import re
 heads = re.findall(r'^\*\*\d+\. .*$', real, re.M)
