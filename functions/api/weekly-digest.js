@@ -267,13 +267,28 @@ export function backupProblem(raw, nowMs) {
   return null;
 }
 
+// 03/10/2026 (Michael, option 1): private.db_columns_check() compares the DB columns with the
+// approved snapshot on the 1st of each month and writes db_columns_drift. A column with no
+// match is a field the app may be losing silently (PGRST204 self-heal). Pure.
+export function schemaProblem(raw) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  if (!r) return null;
+  const a = r.added || [], d = r.removed || [];
+  if (!a.length && !d.length) return null;
+  const list = (x) => x.slice(0, 6).join(', ') + (x.length > 6 ? ' +' + (x.length - 6) : '');
+  const parts = [];
+  if (a.length) parts.push('\u05e0\u05d5\u05e1\u05e4\u05d5 ' + a.length + ' (' + list(a) + ')');
+  if (d.length) parts.push('\u05e0\u05de\u05d7\u05e7\u05d5 ' + d.length + ' (' + list(d) + ')');
+  return '\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05de\u05d1\u05e0\u05d4 \u05d4\u05de\u05e1\u05d3: ' + parts.join(', ') + '. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05e2\u05dd Claude \u05d5\u05dc\u05d0\u05e9\u05e8';
+}
+
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const [hazards, reports, tasks, st, empty, exp] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
   ]);
@@ -282,6 +297,8 @@ async function build(env) {
   const watchOpen = Object.keys((watch && watch.open) || {}).map((k) => watch.open[k].title).filter(Boolean);
   const bk = backupProblem(v('backup_od'), Date.now());
   if (bk) watchOpen.push(bk);
+  const sc = schemaProblem(v('db_columns_drift'));
+  if (sc) watchOpen.push(sc);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
   const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
