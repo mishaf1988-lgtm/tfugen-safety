@@ -526,7 +526,7 @@ export async function onRequest({ request }) {
             const listed = Array.isArray(rows) ? rows.filter((x) => x && x.name && !/^tru-ph-/.test(x.name)) : [];
             pushCheck({
               id, expected,
-              got: 'HTTP ' + r.status + ' · ' + listed.length + ' non-kiosk file(s) visible',
+              got: 'HTTP ' + r.status + ', ' + listed.length + ' non-kiosk file(s) visible',
               verdict: verdict(listed.length === 0)
             });
           } catch (e) {
@@ -545,7 +545,7 @@ export async function onRequest({ request }) {
             pushCheck({
               id,
               expected: 'anonymous session sees 0 rows of ' + table,
-              got: 'HTTP ' + r.status + ' · ' + n + ' row(s)',
+              got: 'HTTP ' + r.status + ', ' + n + ' row(s)',
               verdict: verdict(n === 0)
             });
           } catch (e) {
