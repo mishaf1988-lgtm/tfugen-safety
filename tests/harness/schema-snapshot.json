@@ -1,5 +1,5 @@
 {
-  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix); inc / tour_hazards / trustee_reports refreshed 2026-09-28 (closed_d, inc dept/dept_group/reported/src)",
+  "_captured": "2026-09-21 from the live project znhjtpcltrxxyfjczgvw via Supabase MCP (after the drift fix); inc / tour_hazards / trustee_reports refreshed 2026-09-28 (closed_d, inc dept/dept_group/reported/src); toolbox_talks / toolbox_reads added 2026-10-03",
   "_howto": "refresh with: SELECT table_name, string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='public' GROUP BY table_name;",
   "tables": {
     "app_users": [
@@ -598,6 +598,51 @@
       "topic",
       "ts"
     ],
+    "toolbox_reads": [
+      "dept",
+      "device",
+      "emp_id",
+      "emp_name",
+      "id",
+      "lang",
+      "read_at",
+      "sig_url",
+      "talk_id",
+      "ts"
+    ],
+    "toolbox_talks": [
+      "body",
+      "body_am",
+      "body_ar",
+      "body_ru",
+      "created_by",
+      "d",
+      "file_url",
+      "id",
+      "s",
+      "title",
+      "ts"
+    ],
+    "tour_hazards": [
+      "action",
+      "closed_d",
+      "d",
+      "dept",
+      "descr",
+      "due",
+      "id",
+      "loc",
+      "location_id",
+      "n",
+      "notes",
+      "photo_url",
+      "resp",
+      "resp2",
+      "s",
+      "sev",
+      "tour_no",
+      "ts"
+    ],
     "tr": [
       "c",
       "created_at",
@@ -670,26 +715,6 @@
       "q",
       "t",
       "ty"
-    ],
-    "tour_hazards": [
-      "action",
-      "closed_d",
-      "d",
-      "dept",
-      "descr",
-      "due",
-      "id",
-      "loc",
-      "location_id",
-      "n",
-      "notes",
-      "photo_url",
-      "resp",
-      "resp2",
-      "s",
-      "sev",
-      "tour_no",
-      "ts"
     ]
   }
 }

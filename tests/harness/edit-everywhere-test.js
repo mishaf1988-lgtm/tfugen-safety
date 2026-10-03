@@ -42,7 +42,8 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
     // 15 since #654: `docs` joined, which is how the ISO procedure register
     // got a ✎ at all — svDoc used to write id:gid() unconditionally.
     // 16 since 27/09: `tour_hazards`, the manager's hazard tours, built with ✎ from day one.
-    check('all 14 are registered, plus docs and tour_hazards', r.missing.length === 0 && r.known.length === 16 && r.known.indexOf('docs') >= 0 && r.known.indexOf('tour_hazards') >= 0, r.known);
+    // 17 since 03/10/2026: `toolbox_talks`, the weekly talk each worker reads and signs.
+    check('all 14 are registered, plus docs, tour_hazards and toolbox_talks', r.missing.length === 0 && r.known.length === 17 && ['docs', 'tour_hazards', 'toolbox_talks'].every((t) => r.known.indexOf(t) >= 0), r.known);
     check('every one carries a non-empty field map', r.fieldCounts.every((x) => x[1] > 0), r.fieldCounts.filter((x) => !x[1]));
     check('the permit’s 8 work-type checkboxes are mapped too', r.ptwChecks === 8, r.ptwChecks);
     const already = await page.evaluate(() => ['ncr', 'inc', 'tasks', 'equip_inspections'].filter((t) => _EDIT_MODS[t]));
