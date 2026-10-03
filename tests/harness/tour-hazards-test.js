@@ -100,7 +100,9 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   const nr = out.newRow && out.newRow[1];
   check('saved to tour_hazards with the next n (6)', out.newRow && out.newRow[0] === 'tour_hazards' && nr.n === 6 && /^th-/.test(nr.id), out.newRow);
   check('saved as סגור with no date: closing date = today', nr && nr.s === 'סגור' && nr.closed_d === out.newRow[1].closed_d && /^\d{4}-\d{2}-\d{2}$/.test(nr.closed_d), nr);
-  check('empty fields are null, never ""', nr && nr.loc === null && nr.action === null && nr.due === null && nr.notes === null && nr.resp2 === null, nr);
+  // due is no longer empty: an empty target gets the severity default (03/10/2026).
+  check('an empty target is filled from the severity (medium: hazard date + 14)', nr && nr.due === new Date(Date.parse(nr.d + 'T12:00:00Z') + 14 * 86400000).toISOString().substring(0, 10), nr && nr.due);
+  check('empty fields are null, never ""', nr && nr.loc === null && nr.action === null && nr.notes === null && nr.resp2 === null, nr);
   check('second responsible equal to the first is dropped', out.sameResp2 === null, out.sameResp2);
   check('edit: every select keeps its options (3 severities)', out.editSevOpts === 3, out.editSevOpts);
   check('edit: fields filled from the record', out.editPrefill.descr === 'מחסן מבולגן' && out.editPrefill.s === 'סגור' && out.editPrefill.dept === 'מעצבים' && out.editPrefill.resp2 === 'בטיחות', out.editPrefill);
@@ -215,6 +217,19 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
   check('tours screen: a red box with the open findings that reach no department (an unknown area), not the yard one (אחזקה), the packing one or a closed one', /ליקויי נאמנים בלי מחלקה \(1\)/.test(nd.thz) && /כבל חשוף בסדנה/.test(nd.thz) && !/בור פתוח בחצר/.test(nd.thz) && !/משטח שבור/.test(nd.thz) && !/סגור בשפכים/.test(nd.thz), nd.thz);
   check('trustees screen: the same box', /ליקויי נאמנים בלי מחלקה \(1\)/.test(nd.tru) && /כבל חשוף בסדנה/.test(nd.tru), nd.tru);
   check('none left: no box', nd.none === '', nd.none);
+  // Michael, 03/10/2026: target by severity in the desk form (the field form's days: high 3, medium 14, low 30).
+  const due = await page.evaluate(() => {
+    const D = (id) => document.getElementById(id);
+    const add = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 86400000).toISOString().substring(0, 10);
+    thzNew(); D('thz-d').value = '2026-10-01'; D('thz-sev').value = 'בינונית'; D('thz-due').removeAttribute('data-auto'); D('thz-due').value = ''; _thzAutoDue();
+    const med = D('thz-due').value;
+    D('thz-sev').value = 'גבוהה'; _thzAutoDue(); const high = D('thz-due').value;
+    D('thz-due').value = '2026-12-31'; D('thz-due').removeAttribute('data-auto'); D('thz-sev').value = 'נמוכה'; _thzAutoDue(); const hand = D('thz-due').value;
+    return { med, high, hand, expMed: add('2026-10-01', 14), expHigh: add('2026-10-01', 3) };
+  });
+  check('desk form: medium = date + 14, high = date + 3', due.med === due.expMed && due.high === due.expHigh, due);
+  check('a target typed by hand is not overwritten when severity changes', due.hand === '2026-12-31', due);
+
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

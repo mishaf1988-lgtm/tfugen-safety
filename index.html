@@ -2246,7 +2246,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="field"><label>&#1502;&#1489;&#1511;&#1512;</label><input id="a-a"></div>
     <div class="field"><label>&#1514;&#1495;&#1493;&#1501;</label><select id="a-r"><option>&#1497;&#1497;&#1510;&#1493;&#1512;</option><option>&#1500;&#1493;&#1490;&#1497;&#1505;&#1496;&#1497;&#1511;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514;</option><option>&#1499;&#1495; &#1488;&#1491;&#1501;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="a-d"></div>
-    <div class="field"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</label><input type="number" id="a-f" placeholder="0" min="0"></div>
+    <div class="field" style="display:none"><label>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501;</label><input type="number" id="a-f" placeholder="0" min="0"></div>
     <div class="field"><label>&#1510;&#1497;&#1493;&#1503; (%)</label><input type="number" id="a-sc" placeholder="85" min="0" max="100"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="a-st"><option>&#1502;&#1514;&#1493;&#1499;&#1504;&#1503;</option><option>&#1489;&#1489;&#1497;&#1510;&#1493;&#1506;</option><option>&#1492;&#1493;&#1513;&#1500;&#1501;</option><option>&#1502;&#1502;&#1510;&#1488;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;</option></select></div>
     <div class="field fw"><label>&#1505;&#1497;&#1499;&#1493;&#1501;</label><textarea id="a-sm"></textarea></div>
@@ -2804,11 +2804,11 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501;</label><input id="thz-loc" oninput="_thzRepUpd('thz-rep',gv('thz-dept'),gv('thz-loc'),gv('thz-descr'),_svEditId('tour_hazards'))"></div>
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; &#1492;&#1502;&#1508;&#1490;&#1506; *</label><textarea id="thz-descr" rows="2" oninput="_thzRepUpd('thz-rep',gv('thz-dept'),gv('thz-loc'),gv('thz-descr'),_svEditId('tour_hazards'))"></textarea></div>
     <div class="field fw" id="thz-rep"></div>
-    <div class="field"><label>&#1512;&#1502;&#1514; &#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="thz-sev"><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option></select></div>
+    <div class="field"><label>&#1512;&#1502;&#1514; &#1495;&#1493;&#1502;&#1512;&#1492;</label><select id="thz-sev" onchange="_thzAutoDue()"><option>&#1490;&#1489;&#1493;&#1492;&#1492;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;&#1514;</option><option>&#1504;&#1502;&#1493;&#1499;&#1492;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><select id="thz-resp"><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
     <div class="field"><label>&#1488;&#1495;&#1512;&#1488;&#1497; &#1504;&#1493;&#1505;&#1507; (&#1488;&#1501; &#1502;&#1513;&#1493;&#1514;&#1507;)</label><select id="thz-resp2"><option value="">&#1500;&#1500;&#1488;</option><option>&#1502;&#1504;&#1492;&#1500; &#1492;&#1502;&#1495;&#1500;&#1511;&#1492;</option><option>&#1488;&#1495;&#1494;&#1511;&#1492;</option><option>&#1495;&#1513;&#1502;&#1500;</option><option>&#1492;&#1504;&#1491;&#1505;&#1492;</option><option>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option></select></div>
     <div class="field fw"><label>&#1508;&#1506;&#1493;&#1500;&#1492; &#1504;&#1491;&#1512;&#1513;&#1514;</label><textarea id="thz-action" rows="2"></textarea></div>
-    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><input type="date" id="thz-due"></div>
+    <div class="field"><label>&#1497;&#1506;&#1491; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><input type="date" id="thz-due" onchange="this.removeAttribute('data-auto')"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="thz-s"><option>&#1508;&#1514;&#1493;&#1495;</option><option>&#1489;&#1496;&#1497;&#1508;&#1493;&#1500;</option><option>&#1505;&#1490;&#1493;&#1512;</option></select></div>
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1490;&#1497;&#1512;&#1492;</label><input type="date" id="thz-closed"></div>
     <div class="field fw"><label>&#1492;&#1506;&#1512;&#1493;&#1514;</label><textarea id="thz-notes" rows="2"></textarea></div>
@@ -5093,8 +5093,10 @@ function svDoc(){
 }
 function svAud(){
   var n=gv('a-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e0\u05d5\u05e9\u05d0');return;}
-  var r={id:_svEditId('auds')||gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d')||null,f:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};
   var fs=_audFndRead();
+  // Michael, 03/10/2026: the number field is hidden; the count is the finding rows (an edit
+  // with no new rows keeps the stored number, filled into the hidden field by the editor).
+  var r={id:_svEditId('auds')||gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d')||null,f:fs.length?fs.length:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};
   // A past date with status "planned" is almost always an audit that was done
   // and the status was not changed (02/10/2026): then it never counts as done.
   if(r.s==='\u05de\u05ea\u05d5\u05db\u05e0\u05df'&&r.d&&r.d<=new Date().toISOString().split('T')[0]&&confirm('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e2\u05d1\u05e8 \u05d5\u05d4\u05e1\u05d8\u05d8\u05d5\u05e1 "\u05de\u05ea\u05d5\u05db\u05e0\u05df". \u05dc\u05e1\u05de\u05df "\u05d4\u05d5\u05e9\u05dc\u05dd"?'))r.s='\u05d4\u05d5\u05e9\u05dc\u05dd';
@@ -10341,9 +10343,14 @@ function thzNew(){
   // number and department so only the finding itself needs typing.
   var v={'thz-d':last&&last.d||_thzToday(),'thz-tour':last&&last.tour_no||'','thz-dept':last&&last.dept||_THZ_DEPTS[0],'thz-loc':'','thz-descr':'','thz-sev':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea','thz-resp':'\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4','thz-resp2':'','thz-action':'','thz-due':'','thz-s':'\u05e4\u05ea\u05d5\u05d7','thz-closed':'','thz-notes':''};
   Object.keys(v).forEach(function(id){var el=g(id);if(el)el.value=v[id];});
+  var du=g('thz-due');if(du)du.removeAttribute('data-auto');_thzAutoDue();
   if(typeof _attachClear==='function')_attachClear('thz-attach-area');
   var rb=g('thz-rep');if(rb)rb.innerHTML='';
 }
+// Michael, 03/10/2026: a target by severity in the desk form too, with the days the field
+// form already uses (_MF_DUE_SEV), counted from the hazard date. A date typed by hand stays.
+function _thzDueFor(sev,d){var n=_MF_DUE_SEV[sev];if(!n)return null;var b=/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d:_thzToday();return new Date(Date.parse(b+'T12:00:00Z')+n*86400000).toISOString().substring(0,10);}
+function _thzAutoDue(){var u=g('thz-due');if(!u)return;if(u.value&&u.value!==u.getAttribute('data-auto'))return;var v=_thzDueFor(gv('thz-sev'),gv('thz-d'));if(!v)return;u.value=v;u.setAttribute('data-auto',v);}
 function svThz(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('thz-descr');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
@@ -10354,7 +10361,7 @@ function svThz(){
   if(s!==_THZ_CLOSED)closed=null;
   var editId=_svEditId('tour_hazards');
   var r={id:editId||('th-'+gid()),d:gv('thz-d')||null,tour_no:parseInt(gv('thz-tour'),10)||null,dept:dept,loc:gv('thz-loc')||null,
-    descr:descr,sev:gv('thz-sev')||null,resp:gv('thz-resp')||null,resp2:(gv('thz-resp2')&&gv('thz-resp2')!==gv('thz-resp'))?gv('thz-resp2'):null,action:gv('thz-action')||null,due:gv('thz-due')||null,
+    descr:descr,sev:gv('thz-sev')||null,resp:gv('thz-resp')||null,resp2:(gv('thz-resp2')&&gv('thz-resp2')!==gv('thz-resp'))?gv('thz-resp2'):null,action:gv('thz-action')||null,due:gv('thz-due')||(editId?null:_thzDueFor(gv('thz-sev'),gv('thz-d'))),
     s:s,closed_d:closed,notes:gv('thz-notes')||null};
   var ph=_attachUrls['thz-attach-area'];if(ph)r.photo_url=ph;
   if(!editId){
