@@ -29,6 +29,7 @@ description: Checklist for reviewing a screenshot or a flow of the tfugen-safety
 - DB: `execute_sql` על הטבלה, ו-`query_logs` על `edge_logs` לפי `request.path` ו-`method` כדי לדעת אם השמירה בכלל יצאה מהטלפון.
 - תהליך: playwright ברוחב 375 או 390, כמו ב-`aud-findings-test.js` ו-`self-check-test.js`.
 - ליקוי שנמצא פעם שנייה: שורה כאן לא מספיקה, להוסיף בדיקה.
+- **דף שמוגש מהשרת** (`functions/api/talk.js` וכדומה): לבנות את המודול כמו `run.sh` (`sed` של ה-imports ל-`_build/*.mjs`), לקרוא ל-`onRequest` עם fetch מדומה, לשמור את ה-HTML ולצלם ב-375. לעבור גם על **דפי השגיאה בכל שפה** (קישור שפג, לא תקין), לא רק על הדף המוצלח (לקח 48).
 
 ## בדיקה עצמית לפני שמבקשים ממיכאל (מיכאל, 02/10/2026: "אתה יודע לבדוק לבד")
 רשימת בדיקות לטלפון היא המוצא האחרון. קודם מריצים את התהליך כאן, ורק מה שבאמת אי אפשר כאן עובר למיכאל.
