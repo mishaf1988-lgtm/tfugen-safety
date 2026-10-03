@@ -77,6 +77,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 נאכף: `fresh-main.py` (#1011); handoff אחד בשורש: `handoff-root-test.py`. תוכן ה-handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
 חזר: 4 (handoff מנו פריטים שבוצעו או שלא נשארו; 02/10/2026 18.15: "8.2 = warn כש-drl ריקה" סותר את מיכאל בשאלון, DECISIONS 30/09: ריק = אפור, התרגילים בתיקיות. נתפס ב-grep לפני קוד).
 
+**45. טבלה חדשה פתוחה לאנונימי כמה דקות (03/10/2026, #1126).**
+מה קרה: בלוק `DO $$` נתקע ב-connector של Supabase. פיצלתי: `CREATE TABLE` לבד, וה-RLS בקריאה אחרת שנתקעה גם היא. בין לבין anon יכל לקרוא ולכתוב (הטבלאות ריקות).
+הכלל: `CREATE TABLE` באותה קריאה עם `ENABLE ROW LEVEL SECURITY` ו-`REVOKE ALL ... FROM anon`, ופקודות רגילות, בלי `DO`.
+נאכף: טקסט (`tfugen-db` סעיף 8).
+חזר: 0
+
 ## לפני טענה או ממצא
 
 **9. 375 שורות ב-`ncr` (22/09/2026).**
