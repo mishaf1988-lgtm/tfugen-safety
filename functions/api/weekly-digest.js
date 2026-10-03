@@ -147,8 +147,8 @@ const talkKey = (t) => String((t && (t.d || String(t.ts || '').substring(0, 10))
 export function latestTalk(talks) {
   return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
 }
-// emps: the current employee rows (signatures of people who left are not
-// counted against today's list), or just a number.
+// emps: the current employee rows, without those who left (emp.left_d, read by talkData),
+// so signatures of people who left are not counted against today's list; or just a number.
 export function talkLine(talks, reads, emps, today) {
   if (!Array.isArray(talks)) return null;
   const t = latestTalk(talks);
@@ -177,7 +177,7 @@ export async function talkData(env) {
   const talks = await readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at&s=eq.' + encodeURIComponent(TALK_PUB));
   const t = latestTalk(talks);
   if (!t) return { talks, reads: [], emps: [] };
-  const [reads, emps] = await Promise.all([readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=eq.' + encodeURIComponent(t.id)), readAll(env, 'emp?select=id')]);
+  const [reads, emps] = await Promise.all([readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=eq.' + encodeURIComponent(t.id)), readAll(env, 'emp?select=id&or=(left_d.is.null,left_d.gt.' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + ')')]);
   return { talks, reads, emps };
 }
 

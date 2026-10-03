@@ -209,6 +209,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 - A warning printed by a harness test is swallowed: `lean-harness.py` shortens a green run to one line. A signal that must be seen but cannot be red (too many false positives) prints `::warning title=...::` from a step in `tests.yml`; GitHub shows it on the PR (`status-dup-test.py`, 02/10/2026).
 
+- `openModal` fills every EMPTY `input[type=date]` with today. A date whose empty value means something (`e-left`, the employee leaving date: empty = still working) carries `data-nodefault`, or every new employee is saved as "left today" (caught by `toolbox-talks-test.js`, 03/10/2026). `toast()` sets `textContent`: no HTML entities (`&#10003;` showed literally in "employee saved").
+- Who left: `_empLeft(e)` = `emp.left_d` up to today, Israel's day. Filtered in the weekly talk only (`_tbtEmpSet`, `_tbtEmpN`, `tbtWho`, `talk.js getEmps`, the mail's `talkData`), not yet in PPE / medical / the dashboard count. Signed version: `toolbox_reads.text_hash` = SHA-256 of `[lang, title, body, file_url]`, `textHash` in talk.js = `_tbtTextHash` in the app.
 - `_attachUrls[areaId]` is set ONLY after upload resolves. If user saves too fast → `photo_url:null`. Block save while "מעלה..." is visible.
 - `showView` early-returns if `VIEW_CONFIG[tbl]` is missing — add it whenever you render the table.
 - `_obDrain` is gated by `SB_ON`. Emp-session must flip `SB_ON=true` to sync.

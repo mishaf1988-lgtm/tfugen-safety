@@ -1,7 +1,10 @@
 // Weekly talk, stage 2 (03/10/2026): the worker's signed link. Runs the real
 // talk.js and _closelink.js with fetch mocked (Supabase REST, Storage sign and
 // upload, the auth/user and app_users role lookups).
-import { onRequest, makeTalkToken, readTalkToken, sigBytes, deviceOf, TALK_TTL_DAYS, LANGS, textOf, langsOf, OTHER, MAX_OUT, idOf } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, readTalkToken, sigBytes, deviceOf, TALK_TTL_DAYS, LANGS, textOf, langsOf, OTHER, MAX_OUT, idOf, textHash } from './_build/talk.mjs';
+import { createHash } from 'crypto';
+import { readFileSync } from 'fs';
+const COLS = JSON.parse(readFileSync(new URL('./db-columns.json', import.meta.url), 'utf8'));
 import { heName } from './_build/_ai.mjs';
 import { makeCloseToken, readCloseToken } from './_build/_closelink.mjs';
 
@@ -25,7 +28,13 @@ function world(o) {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { w.patches.push({ u, b: JSON.parse(body) }); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
     if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || ''); return json([PUB, DRAFT].filter((t) => t.id === id)); }
-    if (u.startsWith(SB + '/rest/v1/emp')) return o.empFail ? new Response('x', { status: 503 }) : json(EMPS);
+    if (u.startsWith(SB + '/rest/v1/emp')) {
+      if (o.empFail) return new Response('x', { status: 503 });
+      // PostgREST's or=(left_d.is.null,left_d.gt.DAY), as the server sends it.
+      const gt = (decodeURIComponent(u).match(/or=\(left_d\.is\.null,left_d\.gt\.(\d{4}-\d{2}-\d{2})\)/) || [])[1];
+      w.empUrls = (w.empUrls || []).concat(u);
+      return json((o.emps || EMPS).filter((e) => !gt || !e.left_d || e.left_d > gt));
+    }
     if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
       if (m === 'POST') { const r = JSON.parse(body); w.inserts.push(r); if (o.insert409) return new Response('dup', { status: 409 }); w.reads.push(r); return new Response(null, { status: 201 }); }
       const t = decodeURIComponent(u.match(/talk_id=eq\.([^&]+)/)[1]);
@@ -170,6 +179,28 @@ console.log('\n5. the manager\'s link');
   check('a draft, a reporter, no session: nothing written', w.patches.length === 0, w.patches);
   w = world({ patchFail: true }); r = await link({ op: 'link', id: 'tt1' }, 'good'); j = await r.json();
   check('the write fails: the link still comes, link_at null', r.status === 200 && !!j.url && j.link_at === null, j);
+}
+
+console.log('\n5b. who left, and the version signed (Michael, 03/10/2026)');
+{
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const emps = EMPS.concat([{ id: 'e8', n: 'עזב אתמול', dep: 'ייצור', left_d: '2026-01-01' }, { id: 'e9', n: 'עוזב מחר', dep: 'ייצור', left_d: tomorrow }, { id: 'e7', n: 'עזב היום', dep: 'ייצור', left_d: today }]);
+  const tok = await makeTalkToken(ENV, 'tt1');
+  let w = world({ emps });
+  const html = await (await get(tok)).text();
+  check('left (before or today): not on the list; leaving tomorrow: still on it', !html.includes('עזב אתמול') && !html.includes('עזב היום') && html.includes('עוזב מחר') && html.includes('אחמד כהן'), w.empUrls);
+  check('the filter is on the server read, by Israel\'s today', w.empUrls.every((u) => decodeURIComponent(u).includes('or=(left_d.is.null,left_d.gt.' + today + ')')), w.empUrls);
+  w = world({ emps });
+  let r = await post({ k: tok, emp: 'e8', ok: '1', sig: SIG });
+  check('someone who left cannot sign', w.inserts.length === 0 && r.status === 400, [r.status, w.inserts.length]);
+  w = world({ emps });
+  r = await post({ k: tok, emp: 'e1', ok: '1', sig: SIG, l: 'ar' });
+  const want = createHash('sha256').update(JSON.stringify(['ar', 'العمل على ارتفاع', 'حزام أمان </script><b>x</b>', PUB.file_url])).digest('hex');
+  check('each signature stores the SHA-256 of the version shown, in the language shown', w.inserts.length === 1 && w.inserts[0].text_hash === want && w.inserts[0].lang === 'ar', w.inserts[0]);
+  check('textHash: Hebrew = title, body and file; any change in them changes it', (await textHash(PUB, 'he')) === createHash('sha256').update(JSON.stringify(['he', PUB.title, PUB.body, PUB.file_url])).digest('hex')
+    && (await textHash({ ...PUB, body: PUB.body + '.' }, 'he')) !== (await textHash(PUB, 'he')) && (await textHash({ ...PUB, file_url: '' }, 'he')) !== (await textHash(PUB, 'he')) && (await textHash({ ...PUB, body_ru: 'x' }, 'he')) === (await textHash(PUB, 'he')));
+  check('text_hash has a column in the DB', COLS.toolbox_reads.includes('text_hash') && COLS.emp.includes('left_d'));
 }
 
 console.log('\n6. languages (stage 3)');
