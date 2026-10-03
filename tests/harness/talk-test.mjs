@@ -160,7 +160,7 @@ console.log('\n6. languages (stage 3)');
   check('Arabic: labels and the "machine translation" note', h.includes(LANGS.ar.send) && h.includes(LANGS.ar.auto) && h.includes(LANGS.ar.you));
   check('the form carries the language', h.includes('name="l" value="ar"'));
   check('language bar: only languages that have a translation', h.includes('&amp;l=ar') === false && h.includes(LANGS.he.name) && h.includes(LANGS.ar.name) && !h.includes(LANGS.ru.name) && !h.includes(LANGS.am.name));
-  check('the script gets the Arabic alerts as JSON, no raw "<"', /var T=\{"noName":"[^"]+","noSig":"[^"]+","saving":"[^"]+"\};/.test(h) && h.includes(JSON.stringify(LANGS.ar.noSig)));
+  check('the script gets the Arabic alerts as JSON, no raw "<"', /var T=\{"noName":"[^"]+","noSig":"[^"]+","saving":"[^"]+","send":"[^"]+"\};/.test(h) && h.includes(JSON.stringify(LANGS.ar.noSig)));
   r = await get(tok, null, 'ru'); h = await r.text();
   check('Russian without a translation: Hebrew page, no Russian labels', h.includes('<html lang="he" dir="rtl">') && h.includes('עבודה &lt;b&gt;בגובה') && !h.includes(LANGS.ru.send));
   r = await get(tok, null, 'xx'); h = await r.text();
@@ -179,6 +179,19 @@ console.log('\n6. languages (stage 3)');
   r = await post({ k: tok, emp: 'e1', sig: SIG, l: 'am' }); h = await r.text();
   check('missing "read and understood" in Amharic', r.status === 400 && h.includes(LANGS.am.errOkT));
   check('every language has every word', Object.keys(LANGS).every((l) => Object.keys(LANGS.he).every((k) => k === 'auto' || LANGS[l][k])), Object.keys(LANGS).map((l) => [l, Object.keys(LANGS.he).filter((k) => k !== 'auto' && !LANGS[l][k])]));
+  // review 03/10/2026: the error pages in the language the worker chose (an expired link is the common one)
+  const old = await makeTalkToken(ENV, 'tt1', Date.now() - 20 * 864e5);
+  const exRu = await get(old, ENV, 'ru'), exRuH = await exRu.text();
+  check('an expired link in Russian: 410, Russian text, ltr', exRu.status === 410 && exRuH.includes(LANGS.ru.expired) && exRuH.includes('dir="ltr"'), exRuH.slice(0, 200));
+  const badAr = await (await get('tt1.zzz.bad', ENV, 'ar')).text();
+  check('a bad link in Arabic', badAr.includes(LANGS.ar.badLink));
+  const exHe = await (await get(old)).text();
+  check('no language: Hebrew', exHe.includes(LANGS.he.expired));
+  const fd2 = new FormData(); fd2.append('k', old); fd2.append('l', 'am'); fd2.append('emp', 'e1'); fd2.append('ok', '1'); fd2.append('sig', SIG);
+  const exPost = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd2 }), env: ENV });
+  check('sending on an expired link: 410 in Amharic', exPost.status === 410 && (await exPost.text()).includes(LANGS.am.expired));
+  for (const l of Object.keys(LANGS)) check('every language has the four error texts: ' + l, ['errT', 'expired', 'badLink', 'unpub'].every((k) => String(LANGS[l][k] || '').length > 5));
+  check('a page brought back by "back" after a failed send: the button works again', /addEventListener\('pageshow',function\(e\)\{if\(e\.persisted\)\{var b=document\.getElementById\('go'\);b\.disabled=false;b\.textContent=T\.send;/.test(await (await get(tok, null, 'ru')).text()));
   for (const l of Object.keys(LANGS)) {
     const bad = Object.entries(LANGS[l]).filter(([, v]) => /[–—־«»“”‘’…·]/.test(v));
     check('keyboard characters only: ' + l, bad.length === 0, bad);
