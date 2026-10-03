@@ -64,6 +64,17 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtWhoPrint();
     res.printed = written;
     closeModal('m-tbt-who');
+    // Michael, 03/10/2026: "the documentation must be in Hebrew, whatever language the workers filled in".
+    // Workers who read in Russian and Amharic too: the who-signed window, its print and the view page stay Hebrew.
+    DB.toolbox_reads.push({ id: 'r2', talk_id: 'tt-1', emp_id: 'e1', emp_name: 'אחמד', dept: 'ייצור', lang: 'ru', device: 'phone', read_at: '2026-10-04T06:00:00Z' },
+      { id: 'r3', talk_id: 'tt-1', emp_id: 'e3', emp_name: 'יוסי', dept: 'ייצור', lang: 'am', device: 'phone', read_at: '2026-10-04T06:10:00Z' });
+    DB.toolbox_talks[0].body_ru = 'Работа\nпояс'; DB.toolbox_talks[0].body_am = 'ስራ\nጽሑፍ';
+    tbtWho('tt-1'); res.whoAll = body.textContent;
+    written = ''; tbtWhoPrint(); res.printAll = written.replace(/<script[\s\S]*?<\/script>/g, '');
+    closeModal('m-tbt-who');
+    showView('toolbox_talks', 'tt-1'); res.viewAll = document.getElementById('pg-view').textContent;
+    DB.toolbox_reads.splice(1); delete DB.toolbox_talks[0].body_ru; delete DB.toolbox_talks[0].body_am;
+    goPage('toolbox');
 
     // stage 3: translate
     openModal('m-tbt');
@@ -188,6 +199,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('checker 2: changing only the status asks nothing and saves', out.statusOnlyAsked === 0 && out.statusOnlySaved === 1, [out.statusOnlyAsked, out.statusOnlySaved]);
   check('checker 4: editing the text of a signed talk asks first; "cancel" saves nothing', out.signedAsked && out.signedSaved === 0, [out.signedAsked, out.signedSaved]);
   check('review: replacing the file of a signed talk asks first; "cancel" saves nothing', out.fileAsked && out.fileSaved === 0, [out.fileAsked, out.fileSaved]);
+  const FOREIGN = /[\u0600-\u06ff\u0400-\u04ff\u1200-\u137f]/;
+  check('documentation in Hebrew only: who-signed with ar/ru/am readers', !FOREIGN.test(out.whoAll) && /רוסית/.test(out.whoAll) && /אמהרית/.test(out.whoAll), out.whoAll);
+  check('documentation in Hebrew only: the printed list', !FOREIGN.test(out.printAll) && /אחמד/.test(out.printAll), (out.printAll.match(FOREIGN) || [])[0]);
+  check('documentation in Hebrew only: the view page shows the Hebrew text, not a translation', !FOREIGN.test(out.viewAll) && /רתמה/.test(out.viewAll), out.viewAll.slice(0, 200));
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
