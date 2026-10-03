@@ -92,9 +92,21 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.toolbox_talks.push({ id: 'tt-9', title: 'ריק', s: 'טיוטה' });
     tbtPublish('tt-9'); res.emptyPub = DB.toolbox_talks.find((x) => x.id === 'tt-9').s;
 
+    // stage 2: the link button only on a published talk; it calls /api/talk with the session
+    goPage('toolbox');
+    const rowOf = (t) => Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes(t));
+    res.linkPub = !!rowOf('עבודה בגובה').querySelector('[onclick^="tbtLink"]');
+    res.linkDraft = !!rowOf('מלגזות').querySelector('[onclick^="tbtLink"]');
+    const calls = [];
+    window._sbToken = 'tok123';
+    window.fetch = function (u, init) { calls.push([u, init]); return Promise.resolve(new Response(JSON.stringify({ url: 'https://tapugan-safety.pages.dev/api/talk?k=tt-1.x.y', days: 14 }), { status: 200 })); };
+    let shared = null;
+    Object.defineProperty(navigator, 'share', { value: function (d) { shared = d; return Promise.resolve(); }, configurable: true });
+    res.linkP = tbtLink('tt-1').then(function (r) { return { r: r, calls: calls.map((c) => [c[0], c[1].headers.Authorization, JSON.parse(c[1].body)]), shared: shared }; });
+    res.draftLink = null; tbtLink('tt-2').then(function (r) { res.draftLink = r; });
     // the view page
     showView('toolbox_talks', 'tt-1'); res.view = CUR === 'view' && document.getElementById('pg-view').textContent.includes('רתמה, עיגון');
-    return res;
+    return res.linkP.then(function (l) { res.link = l; delete res.linkP; return res; });
   });
 
   check('the card sits on the toolbox page', out.card);
@@ -115,6 +127,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('publish, and back to draft', out.pub === 'פורסמה' && out.pubUpd === 'toolbox_talks' && out.back === 'טיוטה', [out.pub, out.back]);
   check('a talk with nothing to read is not published', out.emptyPub === 'טיוטה', out.emptyPub);
   check('the view page shows the text', out.view);
+  check('link button only on a published talk', out.linkPub && !out.linkDraft, [out.linkPub, out.linkDraft]);
+  check('link: POST /api/talk op=link with the session token', out.link && out.link.calls.length === 1 && out.link.calls[0][0] === '/api/talk' && out.link.calls[0][1] === 'Bearer tok123' && out.link.calls[0][2].op === 'link' && out.link.calls[0][2].id === 'tt-1', out.link);
+  check('the share sheet gets the title and the link', out.link && out.link.r === 'shared' && /עבודה בגובה/.test(out.link.shared.text) && /api\/talk\?k=tt-1/.test(out.link.shared.text), out.link);
+  check('a draft gets no link and no request', out.draftLink === 'draft', out.draftLink);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
