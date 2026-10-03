@@ -6,6 +6,7 @@ const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
 const COLS = require('./db-columns.json');
+const TALKSRC = require('fs').readFileSync(path.resolve(__dirname, '../../functions/api/talk.js'), 'utf8');
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
@@ -69,7 +70,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.toolbox_reads.push({ id: 'r2', talk_id: 'tt-1', emp_id: 'e1', emp_name: 'אחמד', dept: 'ייצור', lang: 'ru', device: 'phone', read_at: '2026-10-04T06:00:00Z' },
       { id: 'r3', talk_id: 'tt-1', emp_id: 'e3', emp_name: 'יוסי', dept: 'ייצור', lang: 'am', device: 'phone', read_at: '2026-10-04T06:10:00Z' },
       // a worker not on the list typed his name in Russian: emp_id keeps it, emp_name is Hebrew (talk.js)
-      { id: 'r4', talk_id: 'tt-1', emp_id: 'x:123456782:иван петров', emp_name: 'איוון פטרוב', dept: 'אקמי', lang: 'ru', device: 'phone', read_at: '2026-10-04T06:20:00Z' });
+      { id: 'r4', talk_id: 'tt-1', emp_id: 'x:123456782:иван петров', id_no: '123456782', emp_name: 'איוון פטרוב', dept: 'אקמי', lang: 'ru', device: 'phone', read_at: '2026-10-04T06:20:00Z' });
     DB.toolbox_talks[0].body_ru = 'Работа\nпояс'; DB.toolbox_talks[0].body_am = 'ስራ\nጽሑፍ';
     tbtWho('tt-1'); res.whoAll = body.textContent;
     written = ''; tbtWhoPrint(); res.printAll = written.replace(/<script[\s\S]*?<\/script>/g, '');
@@ -203,7 +204,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('review: replacing the file of a signed talk asks first; "cancel" saves nothing', out.fileAsked && out.fileSaved === 0, [out.fileAsked, out.fileSaved]);
   const FOREIGN = /[\u0600-\u06ff\u0400-\u04ff\u1200-\u137f]/;
   check('documentation in Hebrew only: who-signed with ar/ru/am readers', !FOREIGN.test(out.whoAll) && /רוסית/.test(out.whoAll) && /אמהרית/.test(out.whoAll), out.whoAll);
-  check('outside the list: counted apart, marked, not as "left the list"', /חתמו: 3/.test(out.whoAll) && /מחוץ לרשימה: 1/.test(out.whoAll) && /איוון פטרוב/.test(out.whoAll) && /חתם מחוץ לרשימה, ת.ז \/ דרכון: 123456782/.test(out.whoAll) && !/לא ברשימת העובדים/.test(out.whoAll), out.whoAll);
+  check('outside the list: counted apart, marked, not as "left the list"', /חתמו: 3/.test(out.whoAll) && /מחוץ לרשימה: 1/.test(out.whoAll) && /איוון פטרוב/.test(out.whoAll) && /חתם מחוץ לרשימה/.test(out.whoAll) && /123456782/.test(out.whoAll) && !/לא ברשימת העובדים/.test(out.whoAll), out.whoAll);
+  check('who-signed and its print: an ID column and the declaration everyone signed', /ת\.ז \/ דרכון/.test(out.whoAll) && /קיבלתי הדרכה על הוראות הבטיחות/.test(out.printAll), out.whoAll.slice(0, 300));
+  check('the declaration in the app is the one on the worker\'s page (talk.js)', (() => { const m = TALKSRC.match(/he: \{[\s\S]*?\bok: '([^']+)'/); const he = m && JSON.parse('"' + m[1] + '"'); return !!he && out.whoAll.includes(he); })());
   check('documentation in Hebrew only: the printed list', !FOREIGN.test(out.printAll) && /אחמד/.test(out.printAll), (out.printAll.match(FOREIGN) || [])[0]);
   check('documentation in Hebrew only: the view page shows the Hebrew text, not a translation', !FOREIGN.test(out.viewAll) && /רתמה/.test(out.viewAll), out.viewAll.slice(0, 200));
   check('no page errors', errors.length === 0, errors);

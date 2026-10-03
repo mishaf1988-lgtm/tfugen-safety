@@ -12,7 +12,7 @@ const URL0 = 'https://tapugan-safety.pages.dev/api/talk';
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec', GEMINI_API_KEY: 'g' };
 const PUB = { id: 'tt1', d: '2026-10-04', title: 'עבודה <b>בגובה</b>', body: 'רתמה\nעיגון', file_url: SB + '/storage/v1/object/public/incidents-photos/tb-1.pdf', s: 'פורסמה', body_ar: 'العمل على ارتفاع\nحزام أمان </script><b>x</b>' };
 const DRAFT = { id: 'tt2', d: '2026-10-11', title: 'טיוטה', body: 'x', s: 'טיוטה' };
-const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור' }, { id: 'e2', n: 'דנה <לוי>', dep: 'אחזקה' }, { id: 'e3', n: 'בלי מחלקה', dep: null }];
+const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור' }, { id: 'e2', n: 'דנה <לוי>', dep: 'אחזקה' }, { id: 'e3', n: 'בלי מחלקה', dep: null, eid: '12345678-2' }];
 // A real-looking PNG of 1KB: header + padding.
 const png = new Uint8Array(1024); png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0);
 const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
@@ -53,8 +53,10 @@ function world(o) {
   return w;
 }
 const get = (k, env, l) => onRequest({ request: new Request(URL0 + '?k=' + encodeURIComponent(k) + (l ? '&l=' + l : '')), env: env || ENV });
+// Every signer types an ID (Michael, 03/10/2026); a test that is not about it gets one.
 function post(fields, ua) {
   const fd = new FormData();
+  if (!('oid' in fields)) fields = { oid: '7777777', ...fields };
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   return onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': ua || 'Mozilla/5.0 (iPhone) Mobile' } }), env: ENV });
 }
@@ -234,7 +236,7 @@ console.log('\n7. a worker not on the list (03/10/2026)');
   r = await post({ k: tok, emp: OTHER, oname: ' ', oid: '1234567', ok: '1', sig: SIG });
   check('no name typed: refused', r.status === 400 && w.inserts.length === 0);
   w = world();
-  r = await post({ k: tok, emp: OTHER, oname: 'יוסי לוי', ok: '1', sig: SIG, l: 'ru' });
+  r = await post({ k: tok, emp: OTHER, oname: 'יוסי לוי', oid: '', ok: '1', sig: SIG, l: 'ru' });
   check('no ID or passport: refused in the worker\'s language, nothing saved, no AI call', r.status === 400 && w.inserts.length === 0 && w.ai.length === 0 && (await r.text()).includes(LANGS.ru.oIdNeed));
   check('the ID box is on the page', page.includes('name="oid"') && page.includes(LANGS.he.oid));
   check('idOf: 5 to 12 letters and digits, spaces and dashes dropped', idOf(' 12345678-2 ') === '123456782' && idOf('ab 12345') === 'AB12345' && idOf('1234') === null && idOf('1234567890123') === null && idOf("1' or 1=1") === null);
@@ -246,6 +248,28 @@ console.log('\n7. a worker not on the list (03/10/2026)');
   r = await post({ k: tok, emp: 'e1', ok: '1', sig: SIG });
   check('the limit does not stop a worker from the list', r.status === 200 && w.inserts.length === 1);
   check('heName: Hebrew letters only, 60 at most', heName(' דנה  כהן ') === 'דנה כהן' && heName('Dana') === null && heName('דנה<b>') === null && heName('א'.repeat(61)) === null && heName('ג\'ורג\' בן-דוד') === "ג'ורג' בן-דוד");
+}
+
+console.log('\n8. an ID for every signer, and the declaration (03/10/2026)');
+{
+  const tok = await makeTalkToken(ENV, 'tt1');
+  let w = world();
+  const page = await (await get(tok)).text();
+  check('the ID box is outside the "not on the list" box: everyone fills it', page.indexOf('name="oid"') > 0 && page.indexOf('name="oid"') < page.indexOf('id="obox"'));
+  check('the ID on the employee card is never on the page', !page.includes('12345678-2') && !page.includes('123456782'));
+  check('the declaration next to the signature, in every language', Object.keys(LANGS).every((l) => /^.{30,}$/.test(LANGS[l].ok)) && page.includes(LANGS.he.ok) && /הוראות הבטיחות/.test(LANGS.he.ok));
+  let r = await post({ k: tok, emp: 'e1', oid: '', ok: '1', sig: SIG, l: 'ar' });
+  check('a worker from the list with no ID: refused in his language, nothing saved', r.status === 400 && w.inserts.length === 0 && (await r.text()).includes(LANGS.ar.oIdNeed));
+  r = await post({ k: tok, emp: 'e1', oid: '987-654 32', ok: '1', sig: SIG });
+  check('the ID is saved with the signature (id_no)', r.status === 200 && w.inserts[0] && w.inserts[0].id_no === '98765432', w.inserts[0]);
+  w = world();
+  r = await post({ k: tok, emp: 'e3', oid: '111111111', ok: '1', sig: SIG, l: 'ru' });
+  check('an ID that does not match the card: refused, nothing saved, no file', r.status === 403 && w.inserts.length === 0 && w.uploads.length === 0 && (await r.text()).includes(LANGS.ru.idMismatch));
+  r = await post({ k: tok, emp: 'e3', oid: '123456782', ok: '1', sig: SIG });
+  check('the ID that matches the card: saved', r.status === 200 && w.inserts.length === 1 && w.inserts[0].id_no === '123456782');
+  w = world();
+  r = await post({ k: tok, emp: OTHER, oname: 'יוסי לוי', oid: 'AB12345', ok: '1', sig: SIG });
+  check('outside the list: the ID in id_no too', w.inserts[0] && w.inserts[0].id_no === 'AB12345', w.inserts[0]);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

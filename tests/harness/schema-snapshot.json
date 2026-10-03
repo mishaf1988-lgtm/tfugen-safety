@@ -604,6 +604,7 @@
       "emp_id",
       "emp_name",
       "id",
+      "id_no",
       "lang",
       "read_at",
       "sig_url",

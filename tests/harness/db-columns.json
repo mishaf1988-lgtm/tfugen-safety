@@ -44,7 +44,7 @@
 "tasks":["assignee","closed_date","due","ext_id","id","notes","parent_id","priority","project_id","source_id","source_table","status","title","ts"],
 "toolbox":["attendees","d","dep","ext_id","file_url","id","notes","presenter","s","topic","ts"],
 "tour_hazards":["action","after_photo_url","close_note","closed_by","closed_d","d","dept","descr","due","id","loc","location_id","n","notes","photo_url","recheck_d","resp","resp2","s","sev","tour_no","ts"],
-"toolbox_reads":["dept","device","emp_id","emp_name","id","lang","read_at","sig_url","talk_id","ts"],
+"toolbox_reads":["dept","device","emp_id","emp_name","id","id_no","lang","read_at","sig_url","talk_id","ts"],
 "toolbox_talks":["body","body_am","body_ar","body_ru","created_by","d","file_url","id","s","title","ts"],
 "tr":["c","created_at","d","e","ext_id","file_url","id","n","s","sc","sig","tr_name","w"],
 "trustee_reports":["action","closed_d","d","f","id","loc","location_id","m","mgr_note","notified_at","num","ok","photo_url","ref","s","t","tour","ts","u","verified_at","verified_by"],
