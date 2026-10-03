@@ -6,7 +6,7 @@
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
 import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP } from './_build/backup-od.mjs';
-import { backupProblem } from './_build/weekly-digest.mjs';
+import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
 let pass = 0, fail = 0;
@@ -146,6 +146,12 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('a failed run: the line says failed, when (DD/MM/YYYY) and why', /^גיבוי ל-OneDrive: נכשל ב-\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} \(onedrive put x 507\)$/.test(failed), failed);
   check('no run for 3 days: "not run since"', /^גיבוי ל-OneDrive: לא רץ מאז \d{2}\/\d{2}\/\d{4}/.test(backupProblem(JSON.stringify({ at: new Date(now - 3 * DAY).toISOString(), ok: true }), now)));
   check('never ran: "not run yet"', backupProblem('', now) === 'גיבוי ל-OneDrive: לא רץ עדיין');
+  // 03/10/2026: private.db_columns_check() writes db_columns_drift; the mail names a column change.
+  check('schema: no drift, no line', schemaProblem(JSON.stringify({ at: 'x', added: [], removed: [] })) === null && schemaProblem('') === null && schemaProblem('{bad') === null);
+  const sp = schemaProblem(JSON.stringify({ at: 'x', added: ['hzm.ms'], removed: ['ncr.src_date'] }));
+  check('schema: added and removed columns are named', sp === 'שינוי במבנה המסד: נוספו 1 (hzm.ms), נמחקו 1 (ncr.src_date). לבדוק עם Claude ולאשר', sp);
+  const many = schemaProblem(JSON.stringify({ added: ['a.1', 'a.2', 'a.3', 'a.4', 'a.5', 'a.6', 'a.7', 'a.8'] }));
+  check('schema: a long list is cut at 6 with +N', /נוספו 8 \(a\.1, a\.2, a\.3, a\.4, a\.5, a\.6 \+2\)/.test(many || ''), many);
   check('keyboard characters only', !/[—–־«»“”…•→←]/.test(failed));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
