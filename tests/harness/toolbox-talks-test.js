@@ -199,6 +199,48 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const pr = await pop.evaluate(() => { const h = document.querySelector('h2').getBoundingClientRect(), b = document.getElementById('rpt-back'); const r = b ? b.getBoundingClientRect() : null; return { sw: document.documentElement.scrollWidth, over: !!r && r.bottom > h.top && r.top < h.bottom }; });
   await pop.close();
   check('print on a phone: no sideways scroll, the back button clear of the title', pr.sw <= 375 && !pr.over, pr);
+  // Michael 03/10/2026 (questionnaire): who left (emp.left_d) and the version each worker signed (text_hash)
+  const crypto = require('crypto');
+  const H = (l, title, body, file) => crypto.createHash('sha256').update(JSON.stringify([l, title, body, file || ''])).digest('hex');
+  await page.evaluate(([n, o, r]) => { window._H_new = n; window._H_old = o; window._H_ru = r; }, [H('he', 'מלגזות', 'גוף חדש', ''), H('he', 'מלגזות', 'גוף ישן', ''), H('ru', 'Погрузчики', 'текст', '')]);
+  const lh = await page.evaluate(async () => {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    DB.emp = [{ id: 'e1', n: 'פעיל', dep: 'ייצור' }, { id: 'e2', n: 'עזב', dep: 'ייצור', left_d: '2026-09-30' }, { id: 'e3', n: 'עוזב מחר', dep: 'מחסן', left_d: tomorrow }, { id: 'e4', n: 'עזב היום', dep: 'מחסן', left_d: today }];
+    DB.toolbox_talks = [{ id: 'k1', d: '2026-09-20', title: 'מלגזות', body: 'גוף חדש', body_ru: 'Погрузчики\nтекст', file_url: '', s: 'פורסמה' }, { id: 'k2', d: '2026-10-04', title: 'אחרי העזיבה', body: 'x', s: 'פורסמה' }];
+    DB.toolbox_reads = [
+      { id: 'r1', talk_id: 'k1', emp_id: 'e1', emp_name: 'פעיל', lang: 'he', read_at: '2026-09-21T06:00:00Z', text_hash: window._H_new },
+      { id: 'r2', talk_id: 'k1', emp_id: 'e2', emp_name: 'עזב', lang: 'he', read_at: '2026-09-21T06:00:00Z', text_hash: window._H_old },
+      { id: 'r3', talk_id: 'k1', emp_id: 'e3', emp_name: 'עוזב מחר', lang: 'ru', read_at: '2026-09-21T06:00:00Z', text_hash: window._H_ru },
+      { id: 'r4', talk_id: 'k1', emp_id: 'x:111:z', emp_name: 'ישן', lang: 'he', read_at: '2026-09-21T06:00:00Z' },
+    ];
+    const out = { n: _tbtEmpN(), set: Object.keys(_tbtEmpSet()).sort().join() };
+    out.marked = await tbtWho('k1');
+    const body = document.getElementById('tbt-who-body');
+    const row = (n) => Array.from(body.querySelectorAll('tr')).find((tr) => tr.querySelector('td') && tr.querySelector('td').textContent.startsWith(n));
+    out.r1 = row('פעיל').textContent; out.r2 = row('עזב').textContent; out.r3 = row('עוזב מחר').textContent; out.r4 = row('ישן').textContent;
+    out.badge = document.getElementById('tbt-who-old').textContent;
+    out.miss = body.textContent.split('לא חתמו').pop();
+    out.hHe = await _tbtTextHash(DB.toolbox_talks[0], 'he'); out.hRu = await _tbtTextHash(DB.toolbox_talks[0], 'ru');
+    closeModal('m-tbt-who');
+    goPage('emp'); out.list = Array.from(document.querySelectorAll('#tb-emp tr')).map((tr) => tr.querySelector('td').textContent);
+    showView('emp', 'e2'); out.card = (document.getElementById('emp-talks') || {}).textContent || '';
+    // the form: leaving date saved, empty = null
+    const ups = []; window.sbUpd = (t, r) => ups.push([t, JSON.parse(JSON.stringify(r))]); window.sbIns = (t, r) => ups.push([t, JSON.parse(JSON.stringify(r))]);
+    const toasts = []; window.toast = (m) => toasts.push(String(m));
+    openModal('m-emp'); document.getElementById('e-n').value = 'חדש'; svEmp(); out.newEmp = ups.pop(); out.toast = toasts.pop();
+    if (typeof _genEdit === 'function') { _genEdit('emp', 'e1'); out.editLeftEmpty = document.getElementById('e-left').value; document.getElementById('e-left').value = '2026-10-02'; svEmp(); out.edited = ups.pop(); }
+    return out;
+  });
+  check('who left (up to today) is not counted; leaving tomorrow still is', lh.n === 2 && lh.set === 'e1,e3', lh);
+  check('"who signed": who left is labelled so, not "not on the list"', /עזב ב-30\/09\/2026/.test(lh.r2) && !/לא ברשימת העובדים/.test(lh.r2), lh.r2);
+  check('"who signed": who left is not in "did not sign"', !/עזב היום/.test(lh.miss) && !/עזב,|עזב$/.test(lh.miss), lh.miss);
+  check('the app\'s hash is the server\'s (Hebrew and a translation)', lh.hHe === H('he', 'מלגזות', 'גוף חדש', '') && lh.hRu === H('ru', 'Погрузчики', 'текст', ''), [lh.hHe, lh.hRu]);
+  check('a signature on an older version is marked, the current ones and the old rows with no hash are not', lh.marked === 1 && /חתם על נוסח קודם/.test(lh.r2) && !/נוסח קודם/.test(lh.r1 + lh.r3 + lh.r4) && lh.badge === 'על נוסח קודם: 1', lh);
+  check('employee list: who left is last, with the date', /עזב 30\/09\/2026/.test(lh.list[lh.list.length - 1] + lh.list[lh.list.length - 2]) && !/עזב/.test(lh.list[0]), lh.list);
+  check('employee card: talks after the leaving date are not "missing"', /חתם על 1 מתוך 1/.test(lh.card) && !/אחרי העזיבה/.test(lh.card), lh.card);
+  check('new employee: left_d null, the toast shows a check mark not "&#10003;"', lh.newEmp && lh.newEmp[1].left_d === null && Object.keys(lh.newEmp[1]).every((k) => COLS.emp.includes(k)) && !/&#/.test(lh.toast), [lh.newEmp, lh.toast]);
+  check('edit: the leaving date opens empty and is saved', lh.editLeftEmpty === '' && lh.edited && lh.edited[1].left_d === '2026-10-02', [lh.editLeftEmpty, lh.edited]);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

@@ -89,6 +89,7 @@
       "em",
       "ext_id",
       "id",
+      "left_d",
       "n",
       "ph",
       "r",
@@ -609,6 +610,7 @@
       "read_at",
       "sig_url",
       "talk_id",
+      "text_hash",
       "ts"
     ],
     "toolbox_talks": [

@@ -96,6 +96,14 @@ export function textOf(talk, lang) {
   const i = tr.indexOf('\n');
   return i < 0 ? { lang, title: tr, body: '' } : { lang, title: tr.substring(0, i).trim(), body: tr.substring(i + 1).trim() };
 }
+// SHA-256 of the version the worker saw (Michael 03/10/2026: "hash, yes"). The app
+// computes the same (_tbtTextHash) and marks a signature on an older version.
+export async function textHash(talk, lang) {
+  const x = textOf(talk, lang);
+  const data = new TextEncoder().encode(JSON.stringify([x.lang, x.title, x.body, String((talk && talk.file_url) || '')]));
+  const h = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 export const langsOf = (talk) => ['he'].concat(['ar', 'ru', 'am'].filter((l) => String((talk && talk['body_' + l]) || '').trim()));
 
 function esc(s) {
@@ -156,8 +164,10 @@ async function getTalk(env, id) {
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
 }
+// Someone who left (emp.left_d up to today, Michael 03/10/2026) is not on the list and cannot sign.
 async function getEmps(env) {
-  const r = await fetch(SB + '/rest/v1/emp?select=id,n,dep,eid&order=n.asc', { headers: sbH(env) });
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const r = await fetch(SB + '/rest/v1/emp?select=id,n,dep,eid&or=(left_d.is.null,left_d.gt.' + today + ')&order=n.asc', { headers: sbH(env) });
   if (!r.ok) throw new Error('emp read ' + r.status);
   const rows = await r.json();
   return (Array.isArray(rows) ? rows : []).filter((e) => e && e.id && e.n);
@@ -334,7 +344,7 @@ async function signTalk(env, request) {
   }
   if (!up.ok) return bad('errSaveT', 'errSave', 502);
   const row = {
-    id, talk_id: talk.id, emp_id: String(emp.id), emp_name: emp.n, id_no: oid, dept: emp.dep || null, lang: textOf(talk, lang).lang,
+    id, talk_id: talk.id, emp_id: String(emp.id), emp_name: emp.n, id_no: oid, dept: emp.dep || null, lang: textOf(talk, lang).lang, text_hash: await textHash(talk, lang),
     sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name,
     device: deviceOf(request.headers.get('user-agent')), read_at: new Date().toISOString(),
   };
