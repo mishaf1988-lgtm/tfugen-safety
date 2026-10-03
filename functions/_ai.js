@@ -35,3 +35,35 @@ export async function suggestAction(env, finding) {
     return cleanAction(parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join(''));
   } catch (e) { return null; }
 }
+
+// A name typed by a worker who is not on the list (03/10/2026, Michael: "an
+// option for every worker", and "the documentation must be in Hebrew whatever
+// language the workers wrote in"). A name already in Hebrew letters is kept as
+// typed; any other is written in Hebrew letters by the assistant. The answer is
+// accepted only if it is Hebrew letters, spaces and . ' " - (60 at most), so a
+// "name" that tries to steer the assistant gives nothing usable. null = failed.
+export function heName(t) {
+  const s = String(t || '').replace(/\s+/g, ' ').trim().replace(/\u05f3/g, "'").replace(/\u05f4/g, '"');
+  return /^[\u05d0-\u05ea][\u05d0-\u05ea'". -]{0,59}$/.test(s) ? s : null;
+}
+export async function hebrewName(env, raw) {
+  const direct = heName(raw);
+  if (direct) return direct;
+  const key = env && env.GEMINI_API_KEY;
+  if (!key) return null;
+  const model = env.GEMINI_MODEL || DEFAULT_MODEL;
+  const text = 'Write this name of a person or of a company in Hebrew letters, the way an Israeli would spell it. Output only the name in Hebrew letters, with no notes. The name:\n' + String(raw || '').substring(0, 60);
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text }] }], generationConfig: { maxOutputTokens: 1024 } }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const parts = (j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+    const out = parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').split('\n').map((x) => x.trim()).filter(Boolean)[0];
+    return heName(out);
+  } catch (e) { return null; }
+}

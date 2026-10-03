@@ -39,11 +39,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     document.getElementById('e-r').value = 'חשמלאי';
     document.getElementById('e-ph').value = '0501234567';
     document.getElementById('e-em').value = 'yossi@tapugan.co.il';
+    document.getElementById('e-eid').value = '123456782';
     svEmp();
     const row = DB.emp[0] || {};
-    return { em: row.em, n: row.n, id: row.id };
+    return { em: row.em, n: row.n, id: row.id, eid: row.eid, eidCleared: document.getElementById('e-eid').value };
   });
   check('svEmp stores the email on the row (em)', saved.em === 'yossi@tapugan.co.il', saved);
+  // 03/10/2026: the ID the weekly talk checks a signature against (talk.js)
+  check('svEmp stores the ID (eid), and the form is cleared after', saved.eid === '123456782' && saved.eidCleared === '', saved);
 
   // the table shows an email column with the value
   const table = await page.evaluate(() => {
