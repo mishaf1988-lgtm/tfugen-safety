@@ -2826,6 +2826,17 @@ id="m-ncr" style="display:none">
   <div id="tbt-who-body"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-who')">&#1505;&#1490;&#1493;&#1512;</button><button class="btn btn-p" onclick="tbtWhoPrint()">&#128424;&#65039; &#1492;&#1491;&#1508;&#1505;</button></div>
 </div>
+<!-- WEEKLY TALK LINK (03/10/2026, BACKLOG 11.4): the link and a QR to scan from a tablet or a notice -->
+<div class="overlay" id="ov-tbt-link" onclick="closeModal('m-tbt-link')"></div>
+<div class="modal" id="m-tbt-link" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tbt-link')">&#10005;</button>
+  <div class="modal-title">&#128279; קישור להדרכה</div>
+  <div id="tbt-link-title" style="font-weight:700;font-size:14px;margin-bottom:4px"></div>
+  <div id="tbt-link-days" style="font-size:12px;color:var(--t2);margin-bottom:10px"></div>
+  <div id="tbt-link-qr" style="text-align:center;margin-bottom:10px;min-height:40px"></div>
+  <input id="tbt-link-url" readonly onclick="this.select()" style="width:100%;font:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;direction:ltr;text-align:left">
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-link')">סגור</button><button class="btn btn-s" style="min-height:44px" onclick="_tbtLinkCopy()">&#128203; העתק</button><button class="btn btn-p" style="min-height:44px;background:#25D366;border-color:#25D366" onclick="_tbtLinkShare()">&#128241; שתף</button></div>
+</div>
 <div class="overlay" id="ov-tbt" onclick="closeModal('m-tbt')"></div>
 <div class="modal" id="m-tbt" style="display:none">
   <button class="close-btn" onclick="closeModal('m-tbt')">&#10005;</button>
@@ -8422,7 +8433,7 @@ window._eqiExportExpiredCsv=function(){_eqiExportCsv('exp');};
 // through a 47-row list. Bulk-print sheet generates A4 with multiple
 // stickers ready for cutting.
 function _eqiQrLib(cb){
-  if(window.QRCode){cb();return;}
+  if(window.qrcode){cb();return;}
   var s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
   s.onload=function(){cb();};
@@ -11041,6 +11052,18 @@ function svTbt(){
 // Stage 2 (03/10/2026): a signed link to one published talk, from /api/talk
 // (manager/admin only, 14 days). On a phone the share sheet opens (WhatsApp to
 // the workers, or open it on the shared tablet); elsewhere it is copied.
+var _tbtLinkTxt='';
+// Share from a tap inside the dialog: Safari drops a share started after the fetch.
+function _tbtLinkShare(){
+  try{if(navigator.share){return navigator.share({title:'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea',text:_tbtLinkTxt}).then(function(){return 'shared';},function(){return 'cancelled';});}}catch(e){}
+  return _tbtLinkCopy();
+}
+function _tbtLinkCopy(){
+  var done=function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7. \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u2713');return 'copied';};
+  var manual=function(){var i=g('tbt-link-url');try{i.focus();i.select();i.setSelectionRange(0,999);if(document.execCommand('copy'))return done();}catch(e){}toast('\u05e1\u05de\u05df \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4\u05e2\u05ea\u05e7 \u05d9\u05d3\u05e0\u05d9\u05ea');return 'manual';};
+  try{if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(_tbtLinkTxt).then(done,manual);}catch(e){}
+  return Promise.resolve(manual());
+}
 function tbtLink(id){
   if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
   var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
@@ -11050,10 +11073,16 @@ function tbtLink(id){
   .then(function(res){return res.json().then(function(j){return {ok:res.ok,j:j};});})
   .then(function(x){
     if(!x.ok||!x.j||!x.j.url){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((x.j&&x.j.error)||'?'));return 'failed';}
-    var txt='\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd (\u05d1\u05ea\u05d5\u05e7\u05e3 '+(x.j.days||14)+' \u05d9\u05de\u05d9\u05dd):\n'+x.j.url;
-    if(navigator.share){return navigator.share({title:'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea',text:txt}).then(function(){return 'shared';},function(){return 'cancelled';});}
-    if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7. \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u2713');return 'copied';},function(){window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';});}
-    window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';
+    var days=x.j.days||14;
+    _tbtLinkTxt='\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd (\u05d1\u05ea\u05d5\u05e7\u05e3 '+days+' \u05d9\u05de\u05d9\u05dd):\n'+x.j.url;
+    g('tbt-link-title').textContent=r.title||'';
+    g('tbt-link-days').textContent='\u05d1\u05ea\u05d5\u05e7\u05e3 '+days+' \u05d9\u05de\u05d9\u05dd. \u05dc\u05e1\u05e8\u05d5\u05e7 \u05de\u05d4\u05d8\u05d0\u05d1\u05dc\u05d8, \u05dc\u05e6\u05dc\u05dd \u05dc\u05de\u05d5\u05d3\u05e2\u05d4, \u05d0\u05d5 \u05dc\u05e9\u05ea\u05e3 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4.';
+    g('tbt-link-url').value=x.j.url;
+    var box=g('tbt-link-qr');box.innerHTML='';
+    // The QR is drawn after the library loads; the link and the share button work without it.
+    _eqiQrLib(function(){if(g('tbt-link-url').value===x.j.url)box.innerHTML=_eqiQrSvg(x.j.url,220);});
+    openModal('m-tbt-link');
+    return 'shown';
   })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((e&&e.message)||e));return 'failed';});
 }
 // Stage 3 (03/10/2026): the talk translated for the workers, one AI call per

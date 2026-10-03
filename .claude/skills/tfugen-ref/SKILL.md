@@ -85,6 +85,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `_attachUrls` | 22693 | keyed by areaId — save `photo_url` from here |
 | `_fileUpload` | 24852 | upload to Storage |
 | `_attachPick(areaId,prefix)` | 24887 | file picker + upload |
+| `_eqiQrLib(cb)` / `_eqiQrSvg(text,size)` | 8435 / 8448 | load qrcode-generator once (global `qrcode`), then any text as inline SVG QR. Used by equipment stickers and the weekly talk link (`m-tbt-link`); in a harness the CDN is blocked, so stub `window.qrcode` |
 
 ## Hebrew → \\uXXXX dictionary
 
