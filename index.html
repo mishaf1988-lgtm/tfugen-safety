@@ -1463,7 +1463,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <div class="page-title">&#128483; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
     <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
   </div>
-  <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1497;&#1511;&#1512;&#1488; &#1488;&#1514; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492; &#1493;&#1497;&#1495;&#1514;&#1493;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1512;&#1511; &#1492;&#1491;&#1512;&#1499;&#1492; &#1489;&#1502;&#1510;&#1489; "&#1508;&#1493;&#1512;&#1505;&#1502;&#1492;" &#1514;&#1493;&#1510;&#1490; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; (&#1489;&#1513;&#1500;&#1489; &#1492;&#1489;&#1488;).</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
+  <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1511;&#1493;&#1512;&#1488; &#1493;&#1495;&#1493;&#1514;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1488;&#1495;&#1512;&#1497; "&#1508;&#1512;&#1505;&#1501;": &#128279; &#1511;&#1497;&#1513;&#1493;&#1512;, &#1493;&#1500;&#1513;&#1500;&#1493;&#1495; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1488;&#1493; &#1500;&#1508;&#1514;&#1493;&#1495; &#1489;&#1496;&#1488;&#1489;&#1500;&#1496;. &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1489;&#1514;&#1493;&#1511;&#1507; 14 &#1497;&#1502;&#1497;&#1501;.</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th>
     <th scope="col">&#1504;&#1493;&#1513;&#1488;</th>
@@ -10987,9 +10987,10 @@ function rTbt(){
   tb.innerHTML=rows.map(function(r){
     var n=_tbtReads(r.id),pub=r.s===_TBT_PUB;
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox_talks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var linkBtn=pub?'<button class="btn btn-p btn-sm" data-id="'+esc(r.id)+'" onclick="tbtLink(this.dataset.id)" title="\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd">\ud83d\udd17 \u05e7\u05d9\u05e9\u05d5\u05e8</button> ':'';
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span></td><td>'+n+'</td><td>'+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span></td><td>'+n+'</td><td>'+linkBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 function svTbt(){
@@ -11006,6 +11007,24 @@ function svTbt(){
   ['tbt-title','tbt-body','tbt-d'].forEach(function(id){var el=g(id);if(el)el.value='';});
   if(typeof _attachClear==='function')_attachClear('tbt-attach-area');
   toast('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rTbt();
+}
+// Stage 2 (03/10/2026): a signed link to one published talk, from /api/talk
+// (manager/admin only, 14 days). On a phone the share sheet opens (WhatsApp to
+// the workers, or open it on the shared tablet); elsewhere it is copied.
+function tbtLink(id){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
+  if(!r||r.s!==_TBT_PUB){toast('\u05e7\u05d5\u05d3\u05dd \u05dc\u05e4\u05e8\u05e1\u05dd \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4');return Promise.resolve('draft');}
+  toast('\u05de\u05db\u05d9\u05df \u05e7\u05d9\u05e9\u05d5\u05e8...');
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'link',id:id})})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,j:j};});})
+  .then(function(x){
+    if(!x.ok||!x.j||!x.j.url){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((x.j&&x.j.error)||'?'));return 'failed';}
+    var txt='\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd (\u05d1\u05ea\u05d5\u05e7\u05e3 '+(x.j.days||14)+' \u05d9\u05de\u05d9\u05dd):\n'+x.j.url;
+    if(navigator.share){return navigator.share({title:'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea',text:txt}).then(function(){return 'shared';},function(){return 'cancelled';});}
+    if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7. \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u2713');return 'copied';},function(){window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';});}
+    window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';
+  })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((e&&e.message)||e));return 'failed';});
 }
 function tbtPublish(id){
   if(_viewOnly()){_viewBlock();return;}

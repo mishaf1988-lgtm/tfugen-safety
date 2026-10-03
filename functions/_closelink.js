@@ -18,9 +18,9 @@ function b64url(u8) {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function sign(secret, msg) {
+async function sign(secret, msg, prefix) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(PREFIX + msg))));
+  return b64url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode((prefix || PREFIX) + msg))));
 }
 
 function sameString(a, b) {
@@ -31,20 +31,31 @@ function sameString(a, b) {
 }
 
 export async function makeCloseToken(env, id, nowMs) {
-  const secret = env && env.TRUSTEE_NOTIFY_SECRET;
-  if (!secret || !ID_RE.test(String(id || ''))) return null;
-  const exp = Math.floor((nowMs || Date.now()) / 1000) + CLOSE_TTL_DAYS * 24 * 3600;
-  const body = id + '.' + exp.toString(36);
-  return body + '.' + (await sign(secret, body));
+  return makeLinkToken(env, PREFIX, id, CLOSE_TTL_DAYS, nowMs);
 }
 
 // {id} when the token is ours and still valid, {error} otherwise.
 export async function readCloseToken(env, tok, nowMs) {
+  return readLinkToken(env, PREFIX, tok, nowMs);
+}
+
+// The same signed link for another purpose (03/10/2026: the weekly talk link,
+// /api/talk). Each purpose has its own prefix, so a token signed for one is
+// refused by every other.
+export async function makeLinkToken(env, prefix, id, ttlDays, nowMs) {
+  const secret = env && env.TRUSTEE_NOTIFY_SECRET;
+  if (!secret || !ID_RE.test(String(id || ''))) return null;
+  const exp = Math.floor((nowMs || Date.now()) / 1000) + ttlDays * 24 * 3600;
+  const body = id + '.' + exp.toString(36);
+  return body + '.' + (await sign(secret, body, prefix));
+}
+
+export async function readLinkToken(env, prefix, tok, nowMs) {
   const secret = env && env.TRUSTEE_NOTIFY_SECRET;
   if (!secret) return { error: 'not configured' };
   const parts = String(tok || '').split('.');
   if (parts.length !== 3 || !ID_RE.test(parts[0]) || !/^[0-9a-z]{1,10}$/.test(parts[1])) return { error: 'bad' };
-  const want = await sign(secret, parts[0] + '.' + parts[1]);
+  const want = await sign(secret, parts[0] + '.' + parts[1], prefix);
   if (!sameString(want, parts[2])) return { error: 'bad' };
   if (parseInt(parts[1], 36) * 1000 < (nowMs || Date.now())) return { error: 'expired' };
   return { id: parts[0] };
