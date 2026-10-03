@@ -19,10 +19,11 @@ const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
 
 function world(o) {
   o = o || {};
-  const w = { inserts: [], uploads: [], signs: 0, ai: [], reads: (o.reads || []).slice(), files: new Set(o.files || []) };
+  const w = { inserts: [], uploads: [], signs: 0, ai: [], reads: (o.reads || []).slice(), files: new Set(o.files || []), patches: [] };
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
+    if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { w.patches.push({ u, b: JSON.parse(body) }); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
     if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || ''); return json([PUB, DRAFT].filter((t) => t.id === id)); }
     if (u.startsWith(SB + '/rest/v1/emp')) return o.empFail ? new Response('x', { status: 503 }) : json(EMPS);
     if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
@@ -160,6 +161,15 @@ console.log('\n5. the manager\'s link');
   check('a reporter: 403', (await link({ op: 'link', id: 'tt1' }, 'rep')).status === 403);
   check('a draft: 409', (await link({ op: 'link', id: 'tt2' }, 'good')).status === 409);
   check('another site: 403', (await link({ op: 'link', id: 'tt1' }, 'good', 'https://evil.example')).status === 403);
+  // link_at (03/10/2026): written once per link made, and only for a link actually made.
+  let w = world(); const t0 = Date.now();
+  r = await link({ op: 'link', id: 'tt1' }, 'good'); j = await r.json();
+  check('a new link writes link_at on that talk', w.patches.length === 1 && /toolbox_talks\?id=eq\.tt1$/.test(w.patches[0].u) && Object.keys(w.patches[0].b).join() === 'link_at' && Date.parse(w.patches[0].b.link_at) >= t0 - 1000, w.patches);
+  check('the reply carries the same link_at', j.link_at === w.patches[0].b.link_at, j);
+  w = world(); await link({ op: 'link', id: 'tt2' }, 'good'); await link({ op: 'link', id: 'tt1' }, 'rep'); await link({ op: 'link', id: 'tt1' });
+  check('a draft, a reporter, no session: nothing written', w.patches.length === 0, w.patches);
+  w = world({ patchFail: true }); r = await link({ op: 'link', id: 'tt1' }, 'good'); j = await r.json();
+  check('the write fails: the link still comes, link_at null', r.status === 200 && !!j.url && j.link_at === null, j);
 }
 
 console.log('\n6. languages (stage 3)');
@@ -255,7 +265,10 @@ console.log('\n8. an ID for every signer, and the declaration (03/10/2026)');
   const tok = await makeTalkToken(ENV, 'tt1');
   let w = world();
   const page = await (await get(tok)).text();
-  check('the ID box is outside the "not on the list" box: everyone fills it', page.indexOf('name="oid"') > 0 && page.indexOf('name="oid"') < page.indexOf('id="obox"'));
+  const ob = page.indexOf('id="obox"'), obEnd = page.indexOf('</div>', ob), oi = page.indexOf('name="oid"');
+  check('the ID box is outside the "not on the list" box: everyone fills it', ob > 0 && oi > obEnd);
+  check('not on the list: the full name comes before the ID (review 03/10/2026)', page.indexOf('name="oname"') > 0 && page.indexOf('name="oname"') < oi);
+  check('the ID box has its label and no placeholder that repeats it (cut off in Russian)', /<label for="oid"/.test(page) && !/name="oid"[^>]*placeholder/.test(page));
   check('the ID on the employee card is never on the page', !page.includes('12345678-2') && !page.includes('123456782'));
   check('the declaration next to the signature, in every language', Object.keys(LANGS).every((l) => /^.{30,}$/.test(LANGS[l].ok)) && page.includes(LANGS.he.ok) && /הוראות הבטיחות/.test(LANGS.he.ok));
   let r = await post({ k: tok, emp: 'e1', oid: '', ok: '1', sig: SIG, l: 'ar' });

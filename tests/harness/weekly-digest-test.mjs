@@ -212,6 +212,20 @@ const ROWS = [
     const lr = [{ talk_id: 'b', emp_id: 'e1' }, { talk_id: 'b', emp_id: '3' }, { talk_id: 'b', emp_id: 'left1' }];
     check('checker 6: only signatures of current employees count, numeric ids too', talkLine(talks, lr, emps, '2026-10-05').text.endsWith(': 2 מתוך 3 חתמו'), talkLine(talks, lr, emps, '2026-10-05'));
     check('published today: not red yet', talkLine(talks, [], 10, '2026-10-04').red === false && talkLine(talks, [], 10, '2026-10-05').red === true);
+    // link_at (03/10/2026, Michael chose a column): the link runs out 14 days after it was made.
+    const lk = (at, d) => [{ id: 'b', d: d || '2026-10-04', title: 'מלגזות', s: 'פורסמה', link_at: at }];
+    const soon = talkLine(lk('2026-10-04T06:00:00Z'), reads, 10, '2026-10-12');
+    check('link runs out before the next mail, signatures missing: red, says when', soon.red && soon.text.endsWith('. הקישור לעובדים פג ב-18/10/2026 (בעוד 6 ימים). כדאי לשלוח קישור חדש למי שלא חתם'), soon);
+    check('a week and a day left: no link warning', !/הקישור/.test(talkLine(lk('2026-10-04T06:00:00Z'), reads, 10, '2026-10-10').text));
+    check('runs out today', /פג ב-12\/10\/2026 \(היום\)/.test(talkLine(lk('2026-09-28T06:00:00Z', '2026-10-10'), reads, 10, '2026-10-12').text));
+    const gone = talkLine(lk('2026-09-20T06:00:00Z'), reads, 10, '2026-10-05');
+    check('already ran out: red, make a new one', gone.red && /הקישור לעובדים פג ב-04\/10\/2026\. ליצור קישור חדש/.test(gone.text), gone);
+    const okFull = talkLine(lk('2026-10-04T06:00:00Z'), Array.from({ length: 8 }, (_, i) => ({ talk_id: 'b', emp_id: 'x' + i })), 10, '2026-10-11');
+    check('80% signed: no link warning a week before it runs out', !okFull.red && !/הקישור/.test(okFull.text), okFull);
+    check('link made late in the evening: the day is Israel\'s', /פג ב-19\/10\/2026/.test(talkLine(lk('2026-10-04T22:30:00Z', '2026-10-12'), reads, 10, '2026-10-13').text));
+    check('no link yet and nobody signed: says so', /עוד לא נוצר קישור לעובדים$/.test(talkLine(lk(null), [], 10, '2026-10-05').text) && !/קישור/.test(talkLine(lk(null), [], 10, '2026-10-04').text));
+    const fs0 = await import('fs');
+    check('TALK_LINK_DAYS here = TALK_TTL_DAYS in talk.js', /TALK_TTL_DAYS = 14;/.test(fs0.readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8')) && /TALK_LINK_DAYS = 14,/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
     const g = digestOf([], '2026-10-05');
     const h = digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [], talk: l });
     check('in the mail, before the committee block, red', /color:#b91c1c;font-weight:bold">הדרכה שבועית &quot;מלגזות&quot;/.test(h) && h.indexOf('מלגזות') < h.indexOf(T.committee), h.slice(0, 200));
