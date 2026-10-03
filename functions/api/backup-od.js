@@ -17,6 +17,11 @@
 //   _Backups/monthly  the first complete backup of each month, MONTHLY_KEEP kept
 //   _Backups/photos   every photo of incidents-photos not yet there, never pruned:
 //                     a photo deleted in the app stays here, that is the point
+//   _Backups/talks    the weekly talk and who signed it (toolbox_talks + toolbox_reads,
+//                     one read), one file a day, newest TALKS_KEEP kept (03/10/2026,
+//                     Michael: OneDrive rather than Workers Paid; the nightly worker
+//                     has no room left, backup-cron-budget-test). The signatures are
+//                     images in incidents-photos, copied with the photos.
 // The result goes to server_state.backup_od; the weekly mail names a failure.
 //
 // Cloudflare's free plan allows 50 subrequests per invocation. The token and
@@ -30,6 +35,10 @@ export const STATE_KEY = 'backup_od';
 export const BASE = 'Apps/Tapugan Safety/_Backups';
 export const DAILY = BASE + '/cron', MONTHLY = BASE + '/monthly', PHOTOS = BASE + '/photos';
 export const DAILY_KEEP = 15, MONTHLY_KEEP = 12, PHOTO_MAX = 15;
+export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
+// One request for both tables (FK toolbox_reads.talk_id). Max rows applies to the talks only.
+export const TALKS_Q = 'toolbox_talks?select=*,toolbox_reads(*)&order=id.asc';
+const TALKS_RE = /^talks-(\d{2})-(\d{2})-(\d{4})\.json$/;
 // The worker runs once a day; a newest file older than this means it stopped.
 export const FRESH_MS = 36 * 3600 * 1000;
 const RESERVE = 6; // token read + refresh + token save (2) + state write + slack
@@ -46,6 +55,18 @@ export function missing(source, have) {
 // Names to delete so that the newest `keep` stay (names embed the timestamp).
 export function pruneList(names, keep) {
   return names.slice().sort().reverse().slice(keep);
+}
+// Michael reads dates as DD-MM-YYYY (CLAUDE.md, file names in OneDrive); sorted by the date itself.
+export function talksName(today) { const [y, m, d] = String(today).split('-'); return 'talks-' + d + '-' + m + '-' + y + '.json'; }
+export function talksPrune(names, keep) {
+  const key = (n) => { const m = TALKS_RE.exec(n); return m ? m[3] + m[2] + m[1] : ''; };
+  return names.filter((n) => key(n)).sort((a, b) => key(b).localeCompare(key(a))).slice(keep);
+}
+// The rows as they are in the two tables, so a restore is two plain inserts.
+export function talksFile(rows, at) {
+  const talks = [], reads = [];
+  (Array.isArray(rows) ? rows : []).forEach((t) => { const { toolbox_reads: r, ...rest } = t || {}; talks.push(rest); (r || []).forEach((x) => reads.push(x)); });
+  return { at, tables: { toolbox_talks: talks, toolbox_reads: reads } };
 }
 // The backup to keep for the month of `today` (YYYY-MM-DD), or null when the
 // monthly folder already has one for this month or the bucket has none yet.
@@ -104,9 +125,9 @@ async function run(env) {
     const p = await f(GRAPH + '/root:/' + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { ...gh, 'Content-Type': type || r.headers.get('content-type') || 'application/octet-stream' }, body: bytes });
     if (!p.ok) throw new Error('onedrive put ' + name + ' ' + p.status);
   }
-  async function prune(items, keep) {
+  async function prune(items, keep, by) {
     let n = 0;
-    const del = new Set(pruneList(items.map((x) => x.name), keep));
+    const del = new Set((by || pruneList)(items.map((x) => x.name), keep));
     for (const it of items) {
       if (!it.id || !del.has(it.name)) continue; // id null = copied this run
       const r = await f(GRAPH + '/items/' + encodeURIComponent(it.id), { method: 'DELETE', headers: gh });
@@ -136,7 +157,23 @@ async function run(env) {
     rec.monthly.pruned = await prune(od, MONTHLY_KEEP);
   } catch (e) { err('monthly', e); }
 
-  // 3. photos: whatever the budget leaves, never pruned.
+  // 3. the weekly talk: one read, one file, before the photos take the rest of the budget.
+  try {
+    const r = await f(sbUrl + '/rest/v1/' + TALKS_Q, { headers: sbh });
+    if (!r.ok) throw new Error('read toolbox_talks ' + r.status);
+    const file = talksFile(await r.json(), rec.at);
+    const n = talksName(today);
+    const p = await f(GRAPH + '/root:/' + seg(TALKS) + '/' + encodeURIComponent(n) + ':/content', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/json' }, body: JSON.stringify(file) });
+    if (!p.ok) throw new Error('onedrive put ' + n + ' ' + p.status);
+    rec.talks = { file: n, talks: file.tables.toolbox_talks.length, reads: file.tables.toolbox_reads.length, pruned: 0 };
+    // PostgREST stops at 1000 rows: at that size a file may be short, say so.
+    if (rec.talks.talks >= 1000) err('talks', '1000 talks: the file may be cut');
+    const od = await odList(TALKS);
+    if (!od.some((x) => x.name === n)) od.push({ id: null, name: n });
+    rec.talks.pruned = await prune(od, TALKS_KEEP, talksPrune);
+  } catch (e) { err('talks', e); }
+
+  // 4. photos: whatever the budget leaves, never pruned.
   try {
     const src = await bucketList('incidents-photos');
     const od = await odList(PHOTOS);
