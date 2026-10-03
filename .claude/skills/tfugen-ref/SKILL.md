@@ -86,6 +86,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `_fileUpload` | 24852 | upload to Storage |
 | `_attachPick(areaId,prefix)` | 24887 | file picker + upload |
 | `_eqiQrLib(cb)` / `_eqiQrSvg(text,size)` | 8435 / 8448 | load qrcode-generator once (global `qrcode`), then any text as inline SVG QR. Used by equipment stickers and the weekly talk link (`m-tbt-link`); in a harness the CDN is blocked, so stub `window.qrcode` |
+| `_tbtLinkEnd(r)` / `_tbtLinkErr(st,er)` / `_empTalksSection(e)` | - | weekly talk: the link runs out `toolbox_talks.link_at` (written by `talk.js` on each link) + 14 days, Israel's day; Hebrew text for `/api/talk` link errors by status; the employee card section (👁 on an employee) listing every published talk since `emp.s` (start date), signed or not, an outside signature counted by `id_no` = `eid`. The weekly mail warns when the link runs out within 7 days and under 80% signed (`talkLine`) |
 | `hebrewName(env,raw)` / `heName(t)` (`functions/_ai.js`) | - | a name typed in any language to Hebrew letters (Gemini; Hebrew input kept as is; output accepted only if Hebrew letters, max 60). `toolbox_reads.emp_id` = `x:<ID or passport>:<name as typed>` = signed from outside the employee list; one signature per number per talk |
 
 ## Hebrew → \\uXXXX dictionary

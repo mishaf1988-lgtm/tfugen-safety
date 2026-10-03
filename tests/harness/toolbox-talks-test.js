@@ -98,8 +98,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     res.linkPub = !!rowOf('עבודה בגובה').querySelector('[onclick^="tbtLink"]');
     res.linkDraft = !!rowOf('מלגזות').querySelector('[onclick^="tbtLink"]');
     const calls = [];
+    // link_at (03/10/2026): the server's time of the new link; it runs out 14 days later, Israel's day.
+    const lkAt = new Date().toISOString(), lkEnd = new Date(Date.now() + 14 * 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).split('-').reverse().join('/');
     window._sbToken = 'tok123';
-    window.fetch = function (u, init) { calls.push([u, init]); return Promise.resolve(new Response(JSON.stringify({ url: 'https://tapugan-safety.pages.dev/api/talk?k=tt-1.x.y', days: 14 }), { status: 200 })); };
+    window.fetch = function (u, init) { calls.push([u, init]); return Promise.resolve(new Response(JSON.stringify({ url: 'https://tapugan-safety.pages.dev/api/talk?k=tt-1.x.y', days: 14, link_at: lkAt }), { status: 200 })); };
     let shared = null;
     Object.defineProperty(navigator, 'share', { value: function (d) { shared = d; return Promise.resolve(); }, configurable: true });
     // The CDN is blocked here: a stand-in for qrcode-generator records what it was asked to encode.
@@ -109,7 +111,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const m = document.getElementById('m-tbt-link');
       const out = { r: r, calls: calls.map((c) => [c[0], c[1].headers.Authorization, JSON.parse(c[1].body)]), sharedBefore: shared,
         open: !!m && m.style.display !== 'none', title: document.getElementById('tbt-link-title').textContent,
-        url: document.getElementById('tbt-link-url').value, qr: !!document.querySelector('#tbt-link-qr svg path'), qrData: qrData.slice(), cdn: document.querySelectorAll('script[src*="qrcode"]').length };
+        url: document.getElementById('tbt-link-url').value, lkEnd: lkEnd, days: document.getElementById('tbt-link-days').textContent,
+        rowTag: rowOf('עבודה בגובה').textContent, kept: DB.toolbox_talks[0].link_at === lkAt, qr: !!document.querySelector('#tbt-link-qr svg path'), qrData: qrData.slice(), cdn: document.querySelectorAll('script[src*="qrcode"]').length };
+      DB.toolbox_talks[0].link_at = '2020-01-01T08:00:00Z'; rTbt(); out.goneTag = rowOf('עבודה בגובה').textContent;
+      DB.toolbox_talks[0].s = 'טיוטה'; rTbt(); out.draftTag = rowOf('עבודה בגובה').textContent; DB.toolbox_talks[0].s = 'פורסמה'; rTbt();
       return _tbtLinkShare().then(function (s) { out.shareR = s; out.shared = shared; return out; });
     });
     res.draftLink = null; tbtLink('tt-2').then(function (r) { res.draftLink = r; });
@@ -143,7 +148,57 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('link: a QR of exactly that link is drawn in the dialog', L.qr && L.qrData.length === 1 && L.qrData[0] === L.url, L);
   check('link: a loaded QR library is not fetched again (the global is qrcode, not QRCode)', L.cdn === 0, L.cdn);
   check('the share button sends the title and the link', L.shareR === 'shared' && /עבודה בגובה/.test(L.shared.text) && /api\/talk\?k=tt-1/.test(L.shared.text), L);
+  check('link_at: kept on the talk, the row says until when, the dialog too', L.kept && L.rowTag.includes('קישור עד ' + L.lkEnd) && L.days.startsWith('בתוקף עד ' + L.lkEnd + '.'), [L.kept, L.rowTag, L.days, L.lkEnd]);
+  check('link_at: an expired link says so in the row; a draft shows no link date', /הקישור פג ב-15\/01\/2020/.test(L.goneTag || '') && !/קישור עד|הקישור פג/.test(L.draftTag || ''), [L.goneTag, L.draftTag]);
   check('a draft gets no link and no request', out.draftLink === 'draft', out.draftLink);
+  // The employee card (BACKLOG 11.5, Michael 03/10/2026): weekly talks signed and not, since the start date.
+  const card = await page.evaluate(() => {
+    DB.emp = [{ id: 'e1', n: 'דנה', eid: '012345678', s: '2026-09-01' }, { id: 'e2', n: 'יוסי', s: '2026-10-01' }, { id: 'e3', n: 'חדש' }];
+    DB.toolbox_talks = [
+      { id: 'a', d: '2026-08-20', title: 'לפני ההצטרפות', s: 'פורסמה' },
+      { id: 'b', d: '2026-09-27', title: 'עבודה בגובה', s: 'פורסמה' },
+      { id: 'c', d: '2026-10-04', title: 'מלגזות', s: 'פורסמה' },
+      { id: 'd', d: '2026-10-11', title: 'טיוטה <b>', s: 'טיוטה' },
+    ];
+    DB.toolbox_reads = [
+      { talk_id: 'b', emp_id: 'e1', read_at: '2026-09-28T06:05:00Z' },
+      { talk_id: 'c', emp_id: 'x:01234-5678:Dana', id_no: '01234-5678', read_at: '2026-10-05T07:00:00Z' },
+      { talk_id: 'b', emp_id: 'e2', read_at: '2026-09-29T06:00:00Z' },
+    ];
+    const sec = (id) => { showView('emp', id); const el = document.getElementById('emp-talks'); return el ? { text: el.textContent, rows: el.querySelectorAll('.b').length, html: el.innerHTML } : null; };
+    return { e1: sec('e1'), e2: sec('e2'), e3: sec('e3'), none: (DB.toolbox_talks = [], sec('e3')) };
+  });
+  check('card: signed 2 of the 2 since the start date (one by ID from outside the list)', card.e1 && /חתם על 2 מתוך 2/.test(card.e1.text) && card.e1.rows === 2 && !/לפני ההצטרפות/.test(card.e1.text), card.e1);
+  check('card: the time of each signature, Israel time, DD/MM/YYYY', card.e1 && card.e1.text.includes('28/09/2026 09:05') && card.e1.text.includes('05/10/2026 10:00'), card.e1 && card.e1.text);
+  check('card: a talk signed before the start date still shows; the missing one is red', card.e2 && /חתם על 1 מתוך 2/.test(card.e2.text) && /לא חתם/.test(card.e2.text) && /עבודה בגובה/.test(card.e2.text), card.e2);
+  check('card: no start date = every published talk, drafts never', card.e3 && /חתם על 0 מתוך 3/.test(card.e3.text) && !/טיוטה/.test(card.e3.text), card.e3);
+  check('card: no talks at all says so', card.none && /עוד לא פורסמה הדרכה שבועית/.test(card.none.text), card.none);
+  // review 03/10/2026: the server's English codes reach Michael in Hebrew
+  const errs2 = await page.evaluate(async () => {
+    DB.toolbox_talks = [{ id: 'tt-1', d: '2026-09-27', title: 'עבודה בגובה', body: 'x', s: 'פורסמה' }];
+    const out = {};
+    for (const [st, er] of [[401, 'no session'], [404, 'not found'], [503, 'not configured'], [500, 'boom']]) {
+      const ts = []; window.toast = (m) => ts.push(m);
+      window.fetch = () => Promise.resolve(new Response(JSON.stringify({ error: er }), { status: st }));
+      await tbtLink('tt-1'); out[st] = ts[ts.length - 1];
+    }
+    window.fetch = () => Promise.resolve(new Response('<html>bad gateway', { status: 502 }));
+    { const ts = []; window.toast = (m) => ts.push(m); out.html = await tbtLink('tt-1'); out.htmlT = ts[ts.length - 1]; }
+    return out;
+  });
+  check('link errors in Hebrew: 401, 404 (not synced yet), 503 (the secret)', /להתחבר מחדש/.test(errs2[401]) && /לחכות לסנכרון/.test(errs2[404]) && /TRUSTEE_NOTIFY_SECRET/.test(errs2[503]) && !/no session|not found|not configured/.test(errs2[401] + errs2[404] + errs2[503]), errs2);
+  check('an unknown error keeps the code; a page that is not JSON says failed with its status', /boom \(500\)/.test(errs2[500]) && errs2.html === 'failed' && /\(502\)/.test(errs2.htmlT), errs2);
+  // review 03/10/2026: on a phone the printout fits, and the back button does not cover the title
+  const [pop] = await Promise.all([page.waitForEvent('popup'), page.evaluate(() => {
+    DB.emp = [{ id: 'e1', n: 'דנה כהן', dep: 'ייצור' }];
+    DB.toolbox_reads = [{ id: 'r1', talk_id: 'tt-1', emp_id: 'e1', emp_name: 'דנה כהן', id_no: '012345678', dept: 'ייצור', lang: 'he', device: 'phone', read_at: '2026-10-03T06:00:00Z' },
+      { id: 'r2', talk_id: 'tt-1', emp_id: 'x:99887766:ivan', emp_name: 'איוון סמירנוב', id_no: '99887766', dept: 'קבלן ACME', lang: 'ru', device: 'tablet', read_at: '2026-10-03T06:05:00Z' }];
+    window.print = function () {}; tbtWho('tt-1'); tbtWhoPrint();
+  })]);
+  await pop.setViewportSize({ width: 375, height: 812 }); await pop.waitForTimeout(300);
+  const pr = await pop.evaluate(() => { const h = document.querySelector('h2').getBoundingClientRect(), b = document.getElementById('rpt-back'); const r = b ? b.getBoundingClientRect() : null; return { sw: document.documentElement.scrollWidth, over: !!r && r.bottom > h.top && r.top < h.bottom }; });
+  await pop.close();
+  check('print on a phone: no sideways scroll, the back button clear of the title', pr.sw <= 375 && !pr.over, pr);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

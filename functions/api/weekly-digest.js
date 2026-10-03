@@ -137,6 +137,11 @@ export const T = H;
 // talk was published for more than 8 days. null = nothing to say (no talk ever,
 // or the read failed: a missing line never breaks the mail).
 export const TALK_PUB = '\u05e4\u05d5\u05e8\u05e1\u05de\u05d4', TALK_STALE_DAYS = 8, TALK_MIN_SHARE = 0.8;
+// The workers' link runs out TALK_LINK_DAYS after link_at (TALK_TTL_DAYS in talk.js,
+// weekly-digest-test.mjs keeps the two equal). The mail is weekly, so it warns when the
+// link runs out before the next mail, not 3 days ahead: a Sunday mail would miss most of those.
+export const TALK_LINK_DAYS = 14, TALK_LINK_WARN = 7;
+const ilDay = (iso) => { const t = Date.parse(iso || ''); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); };
 // The talk's date, or the day it was saved when the date was left empty.
 const talkKey = (t) => String((t && (t.d || String(t.ts || '').substring(0, 10))) || '');
 export function latestTalk(talks) {
@@ -155,12 +160,21 @@ export function talkLine(talks, reads, emps, today) {
   const empN = ids ? ids.size : (+emps || 0);
   const n = new Set((Array.isArray(reads) ? reads : []).filter((r) => r && r.talk_id === t.id && (!ids || ids.has(String(r.emp_id)))).map((r) => String(r.emp_id))).size;
   // Published this morning: nobody had a chance to sign yet, so not red today.
-  const red = age >= 1 && (empN ? n < Math.ceil(empN * TALK_MIN_SHARE) : n === 0);
-  return { red, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea "' + (t.title || '') + '"' + (k ? ' (' + fd(k) + ')' : '') + ': ' + n + (empN ? ' \u05de\u05ea\u05d5\u05da ' + empN : '') + ' \u05d7\u05ea\u05de\u05d5' };
+  const short = empN ? n < Math.ceil(empN * TALK_MIN_SHARE) : n === 0;
+  let red = age >= 1 && short;
+  let text = '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea "' + (t.title || '') + '"' + (k ? ' (' + fd(k) + ')' : '') + ': ' + n + (empN ? ' \u05de\u05ea\u05d5\u05da ' + empN : '') + ' \u05d7\u05ea\u05de\u05d5';
+  // Signatures still missing and the link runs out before the next mail (or already did).
+  const end = t.link_at ? ilDay(new Date(Date.parse(t.link_at) + TALK_LINK_DAYS * DAY).toISOString()) : '';
+  if (short && end) {
+    const left = dayDiff(today, end);
+    if (left < 0) { red = true; text += '. \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05d2 \u05d1-' + fd(end) + '. \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'; }
+    else if (left <= TALK_LINK_WARN) { red = true; text += '. \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e4\u05d2 \u05d1-' + fd(end) + (left === 0 ? ' (\u05d4\u05d9\u05d5\u05dd)' : ' (\u05d1\u05e2\u05d5\u05d3 ' + left + ' \u05d9\u05de\u05d9\u05dd)') + '. \u05db\u05d3\u05d0\u05d9 \u05dc\u05e9\u05dc\u05d5\u05d7 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05de\u05d9 \u05e9\u05dc\u05d0 \u05d7\u05ea\u05dd'; }
+  } else if (n === 0 && !t.link_at && age >= 1) text += '. \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd';
+  return { red, text };
 }
 // Only the latest talk's signatures are read (the table grows by ~50 rows a week).
 export async function talkData(env) {
-  const talks = await readAll(env, 'toolbox_talks?select=id,d,title,s,ts&s=eq.' + encodeURIComponent(TALK_PUB));
+  const talks = await readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at&s=eq.' + encodeURIComponent(TALK_PUB));
   const t = latestTalk(talks);
   if (!t) return { talks, reads: [], emps: [] };
   const [reads, emps] = await Promise.all([readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=eq.' + encodeURIComponent(t.id)), readAll(env, 'emp?select=id')]);

@@ -234,8 +234,9 @@ async function showTalk(env, tok, want) {
     + '<input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig">'
     + '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
     + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>'
-    + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" placeholder="' + esc(L.oid) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
+    // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
     + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off" placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px"><input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px"></div>'
+    + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
     + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
@@ -358,7 +359,15 @@ async function makeLink(env, request) {
   if (talk.s !== S_PUB) return jsonResp({ error: 'not published' }, 409, cors);
   const tok = await makeTalkToken(env, talk.id);
   if (!tok) return jsonResp({ error: 'not configured' }, 503, cors);
-  return jsonResp({ url: talkUrl(tok), days: TALK_TTL_DAYS }, 200, cors);
+  // When the newest link runs out (03/10/2026, Michael chose a column): the weekly
+  // mail warns before it does. A failed write costs the reminder, not the link.
+  const at = new Date().toISOString();
+  let saved = false;
+  try {
+    const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ link_at: at }) });
+    saved = p.ok;
+  } catch (e) { saved = false; }
+  return jsonResp({ url: talkUrl(tok), days: TALK_TTL_DAYS, link_at: saved ? at : null }, 200, cors);
 }
 
 export async function onRequest({ request, env }) {
