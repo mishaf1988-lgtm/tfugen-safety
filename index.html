@@ -11151,14 +11151,17 @@ function tbtWho(id){
   _tbtWhoId=id;
   var reads=(DB.toolbox_reads||[]).filter(function(x){return x&&x.talk_id===id;}).sort(function(a,b){return String(a.read_at||'').localeCompare(String(b.read_at||''));});
   var signed={},cur=_tbtEmpSet();reads.forEach(function(x){signed[String(x.emp_id)]=1;});
-  var gone=reads.filter(function(x){return !cur[String(x.emp_id)];}).length;
+  // Signed from outside the list (talk.js: emp_id "x:<typed name>"), not "left the list".
+  var isOut=function(x){return String(x.emp_id||'').indexOf('x:')===0;};
+  var outN=reads.filter(isOut).length;
+  var gone=reads.filter(function(x){return !isOut(x)&&!cur[String(x.emp_id)];}).length;
   var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
   var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);
   var tm=function(v){var d=new Date(v);return isNaN(d)?'':fd(d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'});};
   var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'
-    +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone)+'</span> <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span></div>';
+    +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone-outN)+'</span>'+(outN?' <span class="b bX">\u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4: '+outN+'</span>':'')+' <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span></div>';
   h+=reads.length?'<div class="tbl-wrap"><table><thead><tr><th scope="col">\u05e9\u05dd</th><th scope="col">\u05de\u05d7\u05dc\u05e7\u05d4</th><th scope="col">\u05de\u05ea\u05d9</th><th scope="col">\u05e9\u05e4\u05d4</th><th scope="col">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr></thead><tbody>'
-    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</div>')+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
+    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd')+'</div>')+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
     +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
   if(missN)h+='<div style="font-weight:700;margin:12px 0 4px">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</div>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('');
   var b=g('tbt-who-body');if(b){b.innerHTML=h;if(typeof _signifyDom==='function')_signifyDom(b);}
