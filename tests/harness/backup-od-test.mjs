@@ -5,7 +5,7 @@
 // copied a few per run within Cloudflare's 50-subrequest budget, never
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
-import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP } from './_build/backup-od.mjs';
+import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile } from './_build/backup-od.mjs';
 import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
@@ -35,7 +35,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map() }, puts: [], dels: [], seq: 0 };
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map() }, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
     Object.keys(o.od || {}).forEach((k) => o.od[k].forEach((n) => w.od[k].set(n, 'id' + (++w.seq))));
     const buckets = { backups: o.backups || [], 'incidents-photos': o.photos || [] };
     globalThis.fetch = async (url, init) => {
@@ -44,6 +44,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
+      if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { w.talkReads.push(u); return o.talksFail ? json({ message: 'x' }, 500) : json(o.talks || []); }
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       let m = /\/storage\/v1\/object\/list\/([^/?]+)$/.exec(u);
       if (m) { const b = JSON.parse(init.body); return json(buckets[m[1]].slice().sort().slice(b.offset, b.offset + b.limit).map((n) => ({ name: n, id: 'x' + n }))); }
@@ -52,7 +53,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       m = /\/root:\/(.+):\/children/.exec(u);
       if (m) { const f = decodeURIComponent(m[1]); const map = w.od[f]; if (!map || !map.size) return json({}, 404); return json({ value: [...map].map(([n, id]) => ({ id, name: n, file: {} })) }); }
       m = /\/root:\/(.+)\/([^/]+):\/content$/.exec(u);
-      if (m && mth === 'PUT') { if (o.putFail) return json({ error: { message: 'quota' } }, 507); const f = decodeURIComponent(m[1]), n = decodeURIComponent(m[2]); w.od[f].set(n, 'id' + (++w.seq)); w.puts.push(f + '|' + n); return json({ id: 'x' }, 201); }
+      if (m && mth === 'PUT') { if (o.putFail) return json({ error: { message: 'quota' } }, 507); const f = decodeURIComponent(m[1]), n = decodeURIComponent(m[2]); w.od[f].set(n, 'id' + (++w.seq)); w.puts.push(f + '|' + n); w.bodies[f + '|' + n] = init.body; return json({ id: 'x' }, 201); }
       m = /\/items\/([^/?]+)$/.exec(u);
       if (m && mth === 'DELETE') { const id = decodeURIComponent(m[1]); for (const map of Object.values(w.od)) for (const [n, i] of map) if (i === id) { map.delete(n); w.dels.push(n); } return new Response(null, { status: 204 }); }
       return json({ error: 'unexpected ' + mth + ' ' + u }, 599);
@@ -94,7 +95,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   console.log('\n4. the next runs');
   const before = c.rec.photos.copied;
   c = await call({ backups: BK, photos: PH, od: { [DAILY]: newest15, [MONTHLY]: [firstOfMonth], [PHOTOS]: PH.slice(0, before) } }, 'nsec');
-  check('nothing new in the bucket: no daily or monthly copy', c.j.ok && !c.rec.daily.copied.length && c.rec.monthly.copied === null && !c.w.puts.some((p) => !p.startsWith(PHOTOS)), c.w.puts);
+  check('nothing new in the bucket: no daily or monthly copy', c.j.ok && !c.rec.daily.copied.length && c.rec.monthly.copied === null && !c.w.puts.some((p) => !p.startsWith(PHOTOS) && !p.startsWith(TALKS)), c.w.puts);
   check('photos: up to 15 more, none twice', c.rec.photos.copied === Math.min(15, 30 - before) && new Set(c.w.puts).size === c.w.puts.length && c.w.puts.every((p) => !PH.slice(0, before).includes(p.split('|')[1])), c.rec.photos);
   const OLD = daily(18, 1); // OneDrive has 18 from earlier days, the bucket a new one today
   c = await call({ backups: [nameAt(at3(0))], photos: [], od: { [DAILY]: OLD } }, 'nsec');
@@ -116,6 +117,27 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('OneDrive not connected: ok false, recorded', !c.j.ok && c.rec && /not connected/.test(c.rec.errors.join()), c.rec);
   c = await call({ email: 'admin@tfugen.local', backups: BK, photos: [] });
   check('admin can run it by hand', c.j.ok && c.w.od[DAILY].size === 15);
+
+  console.log('\n3. the weekly talk (03/10/2026, Michael: OneDrive, not Workers Paid)');
+  check('file name in Michael\'s date order, DD-MM-YYYY', talksName('2026-10-03') === 'talks-03-10-2026.json');
+  const TN = ['talks-01-10-2026.json', 'talks-30-09-2026.json', 'talks-02-10-2026.json', 'talks-15-08-2026.json', 'other.json'];
+  check('prune by the date, not by the name (30-09 is older than 01-10)', talksPrune(TN, 2).join() === 'talks-30-09-2026.json,talks-15-08-2026.json', talksPrune(TN, 2));
+  const f0 = talksFile([{ id: 't1', title: 'a', toolbox_reads: [{ id: 'r1', talk_id: 't1' }, { id: 'r2', talk_id: 't1' }] }, { id: 't2', title: 'b', toolbox_reads: [] }], 'AT');
+  check('the file holds the two tables as rows, ready to insert back', f0.at === 'AT' && f0.tables.toolbox_talks.length === 2 && !('toolbox_reads' in f0.tables.toolbox_talks[0]) && f0.tables.toolbox_reads.map((x) => x.id).join() === 'r1,r2', f0);
+  const TALK_ROWS = [{ id: 't1', title: 'עבודה בגובה', toolbox_reads: [{ id: 'r1', talk_id: 't1', emp_name: 'דנה', id_no: '0123' }] }];
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const OLDT = Array.from({ length: 16 }, (_, i) => talksName(new Date(Date.now() - (i + 1) * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })));
+  c = await call({ backups: BK, photos: PH, talks: TALK_ROWS, od: { [TALKS]: OLDT } }, 'nsec');
+  const tf = TALKS + '|' + talksName(today), body = JSON.parse(c.w.bodies[tf] || '{}');
+  check('one read for both tables, today\'s file written', c.j.ok && c.w.talkReads.length === 1 && /select=\*,toolbox_reads\(\*\)/.test(c.w.talkReads[0]) && !!c.w.bodies[tf], [c.j.errors, c.w.talkReads]);
+  check('the file has the talk and the signature, ID included', body.tables && body.tables.toolbox_talks[0].title === 'עבודה בגובה' && body.tables.toolbox_reads[0].id_no === '0123', body);
+  check('15 days kept, the oldest pruned, counts recorded', c.w.od[TALKS].size === TALKS_KEEP && !c.w.od[TALKS].has(OLDT[15]) && !c.w.od[TALKS].has(OLDT[14]) && c.rec.talks.pruned === 2 && c.rec.talks.talks === 1 && c.rec.talks.reads === 1, [c.w.od[TALKS].size, c.rec.talks]);
+  check('still within the 50-subrequest budget, photos take what is left', c.rec.subrequests <= 44 && c.rec.photos.copied > 0, [c.rec.subrequests, c.rec.photos]);
+  c = await call({ backups: BK, photos: [], talksFail: true }, 'nsec');
+  check('the talk read fails: named in the result (and so in the weekly mail), the rest still copied', !c.j.ok && c.rec.errors.some((e) => /^talks: read toolbox_talks 500/.test(e)) && c.w.od[DAILY].size === 15, c.rec.errors);
+  check('the weekly mail names it', /talks: read toolbox_talks/.test(backupProblem(JSON.stringify(c.rec), Date.now()) || ''), backupProblem(JSON.stringify(c.rec), Date.now()));
+  c = await call({ backups: BK, photos: [], talks: [] }, 'nsec');
+  check('no talks yet: an empty file is still written (the path is proven every day)', c.j.ok && c.rec.talks.talks === 0 && !!c.w.bodies[tf], c.rec.talks);
 
   const rd = async (o, body, secret) => { const w = world(o); const headers = { 'content-type': 'application/json' }; if (secret) headers['x-notify-secret'] = secret; else headers.authorization = 'Bearer tok';
     const r = await onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/backup-od', { method: 'POST', headers, body: JSON.stringify(body) }), env: ENV }); return { status: r.status, text: await r.text(), w }; };
