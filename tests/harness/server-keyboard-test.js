@@ -106,6 +106,16 @@ for (const f of files) {
     if (m) hits.push(f + ':' + s.line + ' ' + JSON.stringify(m[0]));
   }
 }
+// Michael, 03/10/2026: the middle dot too, except where the server reads or builds the stored
+// location format 'area · detail' (close-hazard.js, hazard-file.js): old rows carry it.
+const MID = /·|\\u00b7|&middot;|&#183;/;
+const DATA_LINE = /split\(|indexOf\(|join\(' \\u00b7 '\)|' \\u00b7 ' \+ rest/;
+const midHits = [];
+for (const f of files) {
+  const src = fs.readFileSync(path.join(root, f), 'utf8'); const lines = src.split('\n');
+  for (const s of strings(src)) if (MID.test(s.text) && !DATA_LINE.test(lines[s.line - 1] || '')) midHits.push(f + ':' + s.line);
+}
+check('no middle dot in a server string people see (the stored location format excepted)', midHits.length === 0, midHits.slice(0, 20));
 check('no long dash, en dash, maqaf, guillemet, curly quote, arrow or one-character ellipsis in a string literal of functions/api/*.js or functions/*.js', hits.length === 0, hits.slice(0, 20));
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

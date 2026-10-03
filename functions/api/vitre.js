@@ -410,7 +410,7 @@ function trRow(t, v) {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     d: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null,
     topic: TR_TOPIC, presenter: v.presenter || null, attendees: null, s: TR_DONE,
-    notes: '\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #' + t.id + (v.files ? '' : ' \u00b7 \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
+    notes: '\u05d9\u05d5\u05d1\u05d0 \u05de-Vitre, \u05de\u05e9\u05d9\u05de\u05d4 #' + t.id + (v.files ? '' : ', \u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3 \u05d1-Vitre'),
     file_url: null, ts: new Date().toISOString(),
     dep: v.depts && v.depts.length ? v.depts.join(', ') : null, ext_id: String(t.id)
   };
