@@ -4,7 +4,9 @@
 
 - **Repository:** `mishaf1988-lgtm/tfugen-safety`
 - **Connectors:** Supabase
-- **Schedule:** ב-1 לכל חודש, 06:52 שעון ישראל
+- **Schedule:** ב-1 לכל חודש, 06:52 שעון ישראל (`CRON_TZ=Asia/Jerusalem 52 6 1 * *`)
+- **התראה:** לטלפון
+- **פער = PR בלי מיזוג** (03/10/2026, הערת הסשן השני: מיזוג אוטומטי היה מאשר גם עמודה שנמחקה בטעות, והבדיקות היו מפסיקות לתפוס אותה)
 - **Prompt:** הטקסט שבין הקווים
 
 ---
@@ -15,6 +17,6 @@ select json_object_agg(table_name, cols) from (select table_name, json_agg(colum
 אם הכלי לא זמין: כתוב את זה בשורה אחת וסיים, בלי לנחש.
 3. השווה ל-tests/harness/db-columns.json (בלי המפתח _measured).
 4. אם זהה: אל תשנה כלום, וסיים בשורה אחת "עמודות המסד זהות לצילום, נבדק DD/MM/YYYY".
-5. אם שונה: עמודה או טבלה שנוספו במסד = לעדכן את הקובץ. עמודה שנמחקה מהמסד = לבדוק ב-grep אם index.html שולח אותה; אם כן, זו תקלה (השדה נמחק בשקט בכל שמירה), ולכתוב אותה בראש תיאור ה-PR ובהודעה הסופית. לעדכן את _measured לתאריך היום. branch routine/db-columns-sync-YYYY-MM-DD, להריץ node tests/harness/self-check-test.js, empty-dates-test.js, edit-everywhere-test.js, ncr-batch2-test.js, לפתוח PR עם שורות "רטרו:" ו-"skill:", להריץ ברקע bash .claude/hooks/ci-wait.sh על ה-branch, ולמזג כשירוק.
-6. לא לשנות את סכמת המסד ולא להריץ SQL שכותב.
+5. אם שונה: כתוב דוח קצר בטבלה (טבלה, עמודה, נוספה או נמחקה). עמודה שנמחקה מהמסד: בדוק ב-grep אם index.html שולח אותה, ואם כן סמן אותה כתקלה (השדה נמחק בשקט בכל שמירה). ואז עדכן את הקובץ ואת _measured לתאריך היום, ב-branch routine/db-columns-sync-YYYY-MM-DD, והרץ node tests/harness/self-check-test.js, empty-dates-test.js, edit-everywhere-test.js, ncr-batch2-test.js. פתח PR עם הדוח בראש התיאור ושורות "רטרו:" ו-"skill:". אל תמזג: מיכאל מאשר כל שינוי במבנה המסד, כדי ששינוי שנעשה בטעות לא יאושר אוטומטית.
+6. אל תשנה את סכמת המסד ואל תריץ שום SQL שכותב.
 ---
