@@ -19,8 +19,10 @@
 // things, read one published talk and sign it once per worker; the unique
 // index toolbox_reads(talk_id, emp_id) refuses a second signature, so a leaked
 // link writes at most one row per worker. The link shows the names of the
-// workers (Michael's choice: a name from a list); it shows no phone, no id
-// number and nothing about who already signed.
+// workers (Michael's choice: a name from a list); it shows no phone and no id
+// number. Choosing a name that already signed answers "already signed": that
+// tells the link holder about one worker, and asking costs a signature in that
+// worker's name when they had not signed (checker, 03/10/2026; accepted).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
@@ -163,7 +165,7 @@ var T=${JSON.stringify({ noName: L.noName, noSig: L.noSig, saving: L.saving }).r
 var c=document.getElementById('pad'),x=c.getContext('2d'),drawn=false,down=false;
 function fit(){var r=c.getBoundingClientRect();c.width=r.width;c.height=180;x.lineWidth=2.5;x.lineCap='round';x.strokeStyle='#111';drawn=false;}
 fit();
-function pt(e){var r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+function pt(e){var r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}
 c.addEventListener('pointerdown',function(e){down=true;var p=pt(e);x.beginPath();x.moveTo(p.x,p.y);c.setPointerCapture(e.pointerId);e.preventDefault();});
 c.addEventListener('pointermove',function(e){if(!down)return;var p=pt(e);x.lineTo(p.x,p.y);x.stroke();drawn=true;e.preventDefault();});
 c.addEventListener('pointerup',function(){down=false;});

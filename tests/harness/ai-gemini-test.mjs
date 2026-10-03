@@ -65,6 +65,17 @@ const ask = { model: 'gemini', max_tokens: 600, system: 'מערכת', messages: 
     check('Workers AI not called', seen.length === 0);
   }
 
+  console.log('\n1b. a text cut at the length limit says so (03/10/2026)');
+  {
+    gemini = { status: 200, body: { candidates: [{ content: { parts: [{ text: 'חצי תרגום' }] }, finishReason: 'MAX_TOKENS' }] } };
+    const { env } = mkEnv({ GEMINI_API_KEY: 'gk' });
+    const j = await (await ai.onRequest({ request: req(ask), env })).json();
+    check('stop_reason max_tokens, the text still returned', j.stop_reason === 'max_tokens' && j.content[0].text === 'חצי תרגום', j);
+    gemini = ok('שלם');
+    const j2 = await (await ai.onRequest({ request: req(ask), env })).json();
+    check('a complete answer stays end_turn', j2.stop_reason === 'end_turn', j2.stop_reason);
+  }
+
   console.log('\n2. GEMINI_MODEL overrides the model');
   {
     gemini = ok('x'); gCalls.length = 0;

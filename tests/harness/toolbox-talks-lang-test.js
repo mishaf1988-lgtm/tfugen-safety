@@ -42,6 +42,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const b = JSON.parse(init.body); calls.push(b);
       const lang = /to (\w+)\./.exec(b.messages[0].content)[1];
       if (mode === 'failRu' && lang === 'Russian') return Promise.resolve(new Response('x', { status: 500 }));
+      if (mode === 'cutAm' && lang === 'Amharic') return Promise.resolve(new Response(JSON.stringify({ content: [{ text: 'ስራ' }], stop_reason: 'max_tokens' }), { status: 200 }));
+      if (mode === 'slow') return new Promise((ok) => setTimeout(() => ok(new Response(JSON.stringify({ content: [{ text: 'LATE ' + lang }] }), { status: 200 })), 50));
       const text = { Arabic: 'العمل على ارتفاع — مهم\nنص', Russian: '«Работа» на высоте\nтекст…', Amharic: 'ስራ\nጽሑፍ' }[lang];
       return Promise.resolve(new Response(JSON.stringify(Object.assign({ content: [{ text: text }] }, mode === 'fallback' ? { fallback_from: 'gemini' } : {})), { status: 200 }));
     };
@@ -102,6 +104,47 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     res.editAsked = confirms.length;
     confirmAnswer = true;
 
+    // checker 03/10/2026, 1: a failed language must not keep the old translation next to new Hebrew
+    DB.toolbox_talks.push({ id: 'tt-5', d: '2026-10-04', title: 'ישן', body: 'טקסט ישן', s: 'טיוטה', body_ru: 'старый\nтекст' });
+    _genEdit('toolbox_talks', 'tt-5');
+    document.getElementById('tbt-body').value = 'טקסט חדש';
+    mode = 'failRu';
+    await tbtTranslate();
+    res.oldRuAfterFail = gv('tbt-ru');
+    // 5: a text cut at the length limit is a failure
+    mode = 'cutAm';
+    await tbtTranslate();
+    res.cutAm = gv('tbt-am'); res.cutToast = toasts.slice(-1)[0];
+    closeModal('m-tbt');
+    // 2: a translation still running when the form is closed and another talk opened does not land there
+    mode = 'slow';
+    _genEdit('toolbox_talks', 'tt-5');
+    document.getElementById('tbt-body').value = 'טקסט חדש';
+    const run = tbtTranslate();
+    closeModal('m-tbt');
+    _genEdit('toolbox_talks', 'tt-1');
+    const arBefore = gv('tbt-ar');
+    res.staleRun = await run;
+    res.arUntouched = gv('tbt-ar') === arBefore;
+    res.btnBack = !document.getElementById('tbt-tr-btn').disabled;
+    // ...and changing only the status asks nothing
+    confirms.length = 0;
+    document.getElementById('tbt-s').value = 'פורסמה';
+    const n0 = upd.length; svTbt();
+    res.statusOnlyAsked = confirms.length; res.statusOnlySaved = upd.length - n0;
+    // 4: tt-1 has a signature: changing its text asks first
+    _genEdit('toolbox_talks', 'tt-1');
+    document.getElementById('tbt-body').value = 'רתמה ועוד';
+    confirms.length = 0; const n1 = upd.length;
+    const realConfirm = window.confirm;
+    window.confirm = function (m) { confirms.push(String(m)); return !/כבר חתמו/.test(m); };
+    svTbt();
+    window.confirm = realConfirm;
+    res.signedAsked = confirms.some((m) => /כבר חתמו/.test(m)); res.signedSaved = upd.length - n1;
+    confirmAnswer = true;
+    closeModal('m-tbt');
+    mode = 'ok';
+
     // fallback model: said so
     openModal('m-tbt');
     document.getElementById('tbt-title').value = 'x'; document.getElementById('tbt-body').value = 'y';
@@ -131,6 +174,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('editing: translations come back into the form', out.editAr === 'العمل\nحزام', out.editAr);
   check('editing: Hebrew changed with old translations: asked', out.editAsked === 1, out.editAsked);
   check('fallback model: the manager is told the quality is lower', out.fb === 'fallback' && /גיבוי/.test(out.fbToast), out.fbToast);
+  check('checker 1: a failed language clears its old translation', out.oldRuAfterFail === '', out.oldRuAfterFail);
+  check('checker 5: a text cut at the limit is not kept, and said', out.cutAm === '' && /אמהרית/.test(out.cutToast), [out.cutAm, out.cutToast]);
+  check('checker 2: a late translation does not land in another talk, button usable', out.staleRun === 'stale' && out.arUntouched && out.btnBack, out);
+  check('checker 2: changing only the status asks nothing and saves', out.statusOnlyAsked === 0 && out.statusOnlySaved === 1, [out.statusOnlyAsked, out.statusOnlySaved]);
+  check('checker 4: editing the text of a signed talk asks first; "cancel" saves nothing', out.signedAsked && out.signedSaved === 0, [out.signedAsked, out.signedSaved]);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();

@@ -137,16 +137,34 @@ export const T = H;
 // talk was published for more than 8 days. null = nothing to say (no talk ever,
 // or the read failed: a missing line never breaks the mail).
 export const TALK_PUB = '\u05e4\u05d5\u05e8\u05e1\u05de\u05d4', TALK_STALE_DAYS = 8, TALK_MIN_SHARE = 0.8;
-export function talkLine(talks, reads, empN, today) {
+// The talk's date, or the day it was saved when the date was left empty.
+const talkKey = (t) => String((t && (t.d || String(t.ts || '').substring(0, 10))) || '');
+export function latestTalk(talks) {
+  return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
+}
+// emps: the current employee rows (signatures of people who left are not
+// counted against today's list), or just a number.
+export function talkLine(talks, reads, emps, today) {
   if (!Array.isArray(talks)) return null;
-  const pub = talks.filter((t) => t && t.s === TALK_PUB).sort((a, b) => String(b.d || '').localeCompare(String(a.d || '')));
-  if (!pub.length) return null;
-  const t = pub[0];
-  const age = t.d ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(String(t.d).substring(0, 10) + 'T12:00:00Z')) / DAY) : 0;
-  if (age > TALK_STALE_DAYS) return { red: true, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: \u05dc\u05d0 \u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d0\u05d6 ' + fd(t.d) };
-  const n = new Set((Array.isArray(reads) ? reads : []).filter((r) => r && r.talk_id === t.id).map((r) => String(r.emp_id))).size;
-  const red = empN ? n < Math.ceil(empN * TALK_MIN_SHARE) : n === 0;
-  return { red, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea "' + (t.title || '') + '"' + (t.d ? ' (' + fd(t.d) + ')' : '') + ': ' + n + (empN ? ' \u05de\u05ea\u05d5\u05da ' + empN : '') + ' \u05d7\u05ea\u05de\u05d5' };
+  const t = latestTalk(talks);
+  if (!t) return null;
+  const k = talkKey(t);
+  const age = k ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(k.substring(0, 10) + 'T12:00:00Z')) / DAY) : 0;
+  if (age > TALK_STALE_DAYS) return { red: true, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: \u05dc\u05d0 \u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d0\u05d6 ' + fd(k) };
+  const ids = Array.isArray(emps) ? new Set(emps.filter((e) => e && e.id != null).map((e) => String(e.id))) : null;
+  const empN = ids ? ids.size : (+emps || 0);
+  const n = new Set((Array.isArray(reads) ? reads : []).filter((r) => r && r.talk_id === t.id && (!ids || ids.has(String(r.emp_id)))).map((r) => String(r.emp_id))).size;
+  // Published this morning: nobody had a chance to sign yet, so not red today.
+  const red = age >= 1 && (empN ? n < Math.ceil(empN * TALK_MIN_SHARE) : n === 0);
+  return { red, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea "' + (t.title || '') + '"' + (k ? ' (' + fd(k) + ')' : '') + ': ' + n + (empN ? ' \u05de\u05ea\u05d5\u05da ' + empN : '') + ' \u05d7\u05ea\u05de\u05d5' };
+}
+// Only the latest talk's signatures are read (the table grows by ~50 rows a week).
+export async function talkData(env) {
+  const talks = await readAll(env, 'toolbox_talks?select=id,d,title,s,ts&s=eq.' + encodeURIComponent(TALK_PUB));
+  const t = latestTalk(talks);
+  if (!t) return { talks, reads: [], emps: [] };
+  const [reads, emps] = await Promise.all([readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=eq.' + encodeURIComponent(t.id)), readAll(env, 'emp?select=id')]);
+  return { talks, reads, emps };
 }
 
 function when(x) {
@@ -309,7 +327,7 @@ async function build(env) {
     stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
-    Promise.all([readAll(env, 'toolbox_talks?select=id,d,title,s'), readAll(env, 'toolbox_reads?select=talk_id,emp_id'), readAll(env, 'emp?select=id')]).catch(() => null),
+    talkData(env).catch(() => null),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -319,7 +337,7 @@ async function build(env) {
   const sc = schemaProblem(v('db_columns_drift'));
   if (sc) watchOpen.push(sc);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk[0], tk[1], (tk[2] || []).length, today) : null };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
