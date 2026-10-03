@@ -1,7 +1,7 @@
 // Weekly talk, stage 2 (03/10/2026): the worker's signed link. Runs the real
 // talk.js and _closelink.js with fetch mocked (Supabase REST, Storage sign and
 // upload, the auth/user and app_users role lookups).
-import { onRequest, makeTalkToken, readTalkToken, sigBytes, deviceOf, TALK_TTL_DAYS } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, readTalkToken, sigBytes, deviceOf, TALK_TTL_DAYS, LANGS, textOf, langsOf } from './_build/talk.mjs';
 import { makeCloseToken, readCloseToken } from './_build/_closelink.mjs';
 
 let pass = 0, fail = 0;
@@ -9,7 +9,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const URL0 = 'https://tapugan-safety.pages.dev/api/talk';
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec' };
-const PUB = { id: 'tt1', d: '2026-10-04', title: 'עבודה <b>בגובה</b>', body: 'רתמה\nעיגון', file_url: SB + '/storage/v1/object/public/incidents-photos/tb-1.pdf', s: 'פורסמה' };
+const PUB = { id: 'tt1', d: '2026-10-04', title: 'עבודה <b>בגובה</b>', body: 'רתמה\nעיגון', file_url: SB + '/storage/v1/object/public/incidents-photos/tb-1.pdf', s: 'פורסמה', body_ar: 'العمل على ارتفاع\nحزام أمان </script><b>x</b>' };
 const DRAFT = { id: 'tt2', d: '2026-10-11', title: 'טיוטה', body: 'x', s: 'טיוטה' };
 const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור' }, { id: 'e2', n: 'דנה <לוי>', dep: 'אחזקה' }, { id: 'e3', n: 'בלי מחלקה', dep: null }];
 // A real-looking PNG of 1KB: header + padding.
@@ -37,7 +37,7 @@ function world(o) {
   };
   return w;
 }
-const get = (k, env) => onRequest({ request: new Request(URL0 + '?k=' + encodeURIComponent(k)), env: env || ENV });
+const get = (k, env, l) => onRequest({ request: new Request(URL0 + '?k=' + encodeURIComponent(k) + (l ? '&l=' + l : '')), env: env || ENV });
 function post(fields, ua) {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
@@ -128,6 +128,41 @@ console.log('\n5. the manager\'s link');
   check('a reporter: 403', (await link({ op: 'link', id: 'tt1' }, 'rep')).status === 403);
   check('a draft: 409', (await link({ op: 'link', id: 'tt2' }, 'good')).status === 409);
   check('another site: 403', (await link({ op: 'link', id: 'tt1' }, 'good', 'https://evil.example')).status === 403);
+}
+
+console.log('\n6. languages (stage 3)');
+{
+  world();
+  const tok = await makeTalkToken(ENV, 'tt1');
+  let r = await get(tok, null, 'ar'); let h = await r.text();
+  check('Arabic: html lang and dir', h.includes('<html lang="ar" dir="rtl">'));
+  check('Arabic: the title is the first line of the translation, the body the rest, escaped', h.includes('>العمل على ارتفاع</h2>') && h.includes('حزام أمان &lt;/script&gt;&lt;b&gt;x&lt;/b&gt;') && !h.includes('</script><b>'));
+  check('Arabic: labels and the "machine translation" note', h.includes(LANGS.ar.send) && h.includes(LANGS.ar.auto) && h.includes(LANGS.ar.you));
+  check('the form carries the language', h.includes('name="l" value="ar"'));
+  check('language bar: only languages that have a translation', h.includes('&amp;l=ar') === false && h.includes(LANGS.he.name) && h.includes(LANGS.ar.name) && !h.includes(LANGS.ru.name) && !h.includes(LANGS.am.name));
+  check('the script gets the Arabic alerts as JSON, no raw "<"', /var T=\{"noName":"[^"]+","noSig":"[^"]+","saving":"[^"]+"\};/.test(h) && h.includes(JSON.stringify(LANGS.ar.noSig)));
+  r = await get(tok, null, 'ru'); h = await r.text();
+  check('Russian without a translation: Hebrew page, no Russian labels', h.includes('<html lang="he" dir="rtl">') && h.includes('עבודה &lt;b&gt;בגובה') && !h.includes(LANGS.ru.send));
+  r = await get(tok, null, 'xx'); h = await r.text();
+  check('an unknown language is Hebrew', h.includes('<html lang="he"'));
+  check('Russian and Amharic pages are left to right', LANGS.ru.dir === 'ltr' && LANGS.am.dir === 'ltr');
+  check('textOf / langsOf', textOf(PUB, 'ar').title === 'العمل على ارتفاع' && textOf(PUB, 'am').lang === 'he' && langsOf(PUB).join() === 'he,ar');
+  const w = world();
+  r = await post({ k: tok, emp: 'e1', ok: '1', sig: SIG, l: 'ar' }); h = await r.text();
+  check('signed in Arabic: lang=ar in the row, thanks in Arabic, "next" stays in Arabic', w.inserts[0] && w.inserts[0].lang === 'ar' && h.includes(LANGS.ar.thanks) && h.includes('&amp;l=ar'), w.inserts[0]);
+  const w2 = world();
+  await post({ k: tok, emp: 'e2', ok: '1', sig: SIG, l: 'ru' });
+  check('signed from a language with no translation: lang=he (what was shown)', w2.inserts[0] && w2.inserts[0].lang === 'he');
+  world();
+  r = await post({ k: tok, emp: '', ok: '1', sig: SIG, l: 'ru' }); h = await r.text();
+  check('a validation error in the worker\'s language (Russian), left to right', r.status === 400 && h.includes(LANGS.ru.errName) && h.includes('<html lang="ru" dir="ltr">') && !h.includes(LANGS.he.errName), h.slice(0, 300));
+  r = await post({ k: tok, emp: 'e1', sig: SIG, l: 'am' }); h = await r.text();
+  check('missing "read and understood" in Amharic', r.status === 400 && h.includes(LANGS.am.errOkT));
+  check('every language has every word', Object.keys(LANGS).every((l) => Object.keys(LANGS.he).every((k) => k === 'auto' || LANGS[l][k])), Object.keys(LANGS).map((l) => [l, Object.keys(LANGS.he).filter((k) => k !== 'auto' && !LANGS[l][k])]));
+  for (const l of Object.keys(LANGS)) {
+    const bad = Object.entries(LANGS[l]).filter(([, v]) => /[–—־«»“”‘’…·]/.test(v));
+    check('keyboard characters only: ' + l, bad.length === 0, bad);
+  }
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

@@ -132,6 +132,23 @@ const H = {
 };
 export const T = H;
 
+// The weekly talk each worker reads and signs (03/10/2026, stage 4): one line
+// for the latest published talk, red when fewer than 80% signed or when no new
+// talk was published for more than 8 days. null = nothing to say (no talk ever,
+// or the read failed: a missing line never breaks the mail).
+export const TALK_PUB = '\u05e4\u05d5\u05e8\u05e1\u05de\u05d4', TALK_STALE_DAYS = 8, TALK_MIN_SHARE = 0.8;
+export function talkLine(talks, reads, empN, today) {
+  if (!Array.isArray(talks)) return null;
+  const pub = talks.filter((t) => t && t.s === TALK_PUB).sort((a, b) => String(b.d || '').localeCompare(String(a.d || '')));
+  if (!pub.length) return null;
+  const t = pub[0];
+  const age = t.d ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(String(t.d).substring(0, 10) + 'T12:00:00Z')) / DAY) : 0;
+  if (age > TALK_STALE_DAYS) return { red: true, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: \u05dc\u05d0 \u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05de\u05d0\u05d6 ' + fd(t.d) };
+  const n = new Set((Array.isArray(reads) ? reads : []).filter((r) => r && r.talk_id === t.id).map((r) => String(r.emp_id))).size;
+  const red = empN ? n < Math.ceil(empN * TALK_MIN_SHARE) : n === 0;
+  return { red, text: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea "' + (t.title || '') + '"' + (t.d ? ' (' + fd(t.d) + ')' : '') + ': ' + n + (empN ? ' \u05de\u05ea\u05d5\u05da ' + empN : '') + ' \u05d7\u05ea\u05de\u05d5' };
+}
+
 function when(x) {
   if (x.days == null) return '';
   if (x.days > 0) return H.overdueBy + x.days + H.days;
@@ -196,6 +213,7 @@ export function digestHtml(d, today, meta) {
   h += h2(H.soon, d.soon.length) + table(d.soon);
   h += h2(H.noDue, d.noDue.length) + table(d.noDue);
   h += h2(H.trustee, d.trustee.length) + table(d.trustee.map((x) => Object.assign({}, x, { dueRep: x.due })), { age: true });
+  if (m.talk) h += '<p style="margin:8px 0' + (m.talk.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.talk.text) + '</p>';
   h += h2(H.committee);
   h += '<p style="margin:4px 0">' + esc(H.meeting) + esc(fd(m.meeting)) + '</p>';
   const deckAt = m.deckAt ? Date.parse(m.deckAt) : 0;
@@ -284,13 +302,14 @@ export function schemaProblem(raw) {
 
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [hazards, reports, tasks, st, empty, exp] = await Promise.all([
+  const [hazards, reports, tasks, st, empty, exp, tk] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
+    Promise.all([readAll(env, 'toolbox_talks?select=id,d,title,s'), readAll(env, 'toolbox_reads?select=talk_id,emp_id'), readAll(env, 'emp?select=id')]).catch(() => null),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -300,7 +319,7 @@ async function build(env) {
   const sc = schemaProblem(v('db_columns_drift'));
   if (sc) watchOpen.push(sc);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk[0], tk[1], (tk[2] || []).length, today) : null };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
