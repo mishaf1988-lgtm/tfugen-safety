@@ -99,6 +99,16 @@ const FORMS = [
   });
   say('ptw print with empty dates: no "null" / "undefined" in the page', pr.len > 0 && !pr.hasNull && !pr.hasUndef, pr);
 
+  // BACKLOG 10.1 / 03/10/2026: a key the DB has no column for is dropped by the PGRST204 self-heal
+  // (ncr.src_date lost the discovery date of every Excel import). Compare every captured payload
+  // with tests/harness/db-columns.json.
+  {
+    const COLS = require('./db-columns.json');
+    const sent = await page.evaluate(() => [].concat(window.__ins || [], window.__upd || []).map(x => ({ t: x.t, k: Object.keys(x.r || {}) })));
+    const unknown = [];
+    sent.forEach(x => { if (!COLS[x.t]) return; x.k.forEach(k => { if (COLS[x.t].indexOf(k) < 0 && unknown.indexOf(x.t + '.' + k) < 0) unknown.push(x.t + '.' + k); }); });
+    say('every saved field has a column in the DB (' + sent.length + ' payloads)', sent.length > 0 && unknown.length === 0, unknown);
+  }
   say('no page errors', errs.length === 0, errs.slice(0, 5));
   await browser.close();
   const nf = res.filter(x => !x.ok).length; console.log('\n' + res.filter(x => x.ok).length + ' passed, ' + nf + ' failed'); process.exit(nf ? 1 : 0);
