@@ -387,7 +387,7 @@ export async function onRequest({ request }) {
     pushCheck({
       id: 'rls_checks',
       expected: 'caller JWT in Authorization header',
-      got: 'no Authorization header — open from app shell or pass token to run RLS checks',
+      got: 'no Authorization header - open from app shell or pass token to run RLS checks',
       verdict: '⚠'
     });
   } else {
@@ -502,7 +502,7 @@ export async function onRequest({ request }) {
           // With CAPTCHA on (Turnstile, 30/09/2026) Supabase refuses a
           // sign-in without a token, and this endpoint cannot solve one.
           // That refusal is the protection working, not a failure.
-          got: anonTok ? 'got a token' : ('no token — HTTP ' + su.status + (su.status === 400 || su.status === 403 || su.status === 422 ? ' (CAPTCHA on? then the anonymous checks below did not run)' : '')),
+          got: anonTok ? 'got a token' : ('no token - HTTP ' + su.status + (su.status === 400 || su.status === 403 || su.status === 422 ? ' (CAPTCHA on? then the anonymous checks below did not run)' : '')),
           verdict: anonTok ? '✓' : '⚠'
         });
       } catch (e) {
@@ -557,7 +557,7 @@ export async function onRequest({ request }) {
       pushCheck({
         id: 'storage_anon_scope',
         expected: 'anonymous session limited to tru-ph-* and locked out of backups',
-        got: 'not run — add ?anon=1 (it creates one anonymous auth user, so it is opt-in)',
+        got: 'not run - add ?anon=1 (it creates one anonymous auth user, so it is opt-in)',
         verdict: '⚠'
       });
     }
@@ -598,7 +598,7 @@ export async function onRequest({ request }) {
 
   const html = `<!doctype html><html dir="rtl" lang="he"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>בדיקת אבטחה — Tapugan Safety</title>
+<title>בדיקת אבטחה - Tapugan Safety</title>
 <style>
  body{font-family:-apple-system,Arial,Heebo,sans-serif;margin:0;padding:14px;background:#f8fafc;color:#1a1d23}
  h1{font-size:17px;margin:0 0 2px}
@@ -611,10 +611,10 @@ export async function onRequest({ request }) {
  .h{font-size:13px;font-weight:700;display:flex;gap:7px;align-items:baseline}
  .v{font-size:16px}
  code{font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;direction:ltr;unicode-bidi:embed}
- /* Both of these are English — header names, status codes, policy text.
+ /* Both of these are English: header names, status codes, policy text.
     Without an explicit direction the RTL context reorders anything that
-    starts with a digit or a bracket: «401 (means H1 JWT-gate is active)»
-    rendered as «(means H1 JWT-gate is active) 401» on Michael's phone. */
+    starts with a digit or a bracket: "401 (means H1 JWT-gate is active)"
+    rendered as "(means H1 JWT-gate is active) 401" on Michael's phone. */
  .e{font-size:11px;color:#64748b;margin-top:3px;direction:ltr;unicode-bidi:embed;text-align:right}
  .g{font-size:12px;margin-top:2px;direction:ltr;unicode-bidi:embed;text-align:right}
  .n{margin-top:14px;font-size:11px;color:#64748b;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;line-height:1.7}
@@ -629,7 +629,7 @@ export async function onRequest({ request }) {
 </div>
 ${rows}
 <div class="n">
- בדיקות ה-RLS דורשות טוקן — פתח את הכתובת הזו <b>מתוך האפליקציה</b>, או הוסף כותרת Authorization.<br>
+ בדיקות ה-RLS דורשות טוקן: פתח את הכתובת הזו <b>מתוך האפליקציה</b>, או הוסף כותרת Authorization.<br>
  להוכחת המקרה האנונימי: <a href="?anon=1">?anon=1</a> (יוצר משתמש אנונימי אחד, לכן אינו רץ כברירת מחדל).<br>
  ל-JSON גולמי: <a href="?format=json">?format=json</a>
 </div>

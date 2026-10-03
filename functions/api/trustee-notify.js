@@ -216,7 +216,7 @@ export async function onRequest({ request, env }) {
   return jsonResp({ ok: true, ...res }, 200, cors);
 }
 
-function titleOf(row, task) { return clean((row.u || '') + ' — ' + task + (row.f ? ': ' + row.f : ''), 120); }
+function titleOf(row, task) { return clean((row.u || '') + ' - ' + task + (row.f ? ': ' + row.f : ''), 120); }
 async function logRows(sb, rows) {
   if (!rows.length) return;
   try {
