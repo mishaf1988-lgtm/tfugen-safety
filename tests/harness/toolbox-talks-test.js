@@ -102,7 +102,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.fetch = function (u, init) { calls.push([u, init]); return Promise.resolve(new Response(JSON.stringify({ url: 'https://tapugan-safety.pages.dev/api/talk?k=tt-1.x.y', days: 14 }), { status: 200 })); };
     let shared = null;
     Object.defineProperty(navigator, 'share', { value: function (d) { shared = d; return Promise.resolve(); }, configurable: true });
-    res.linkP = tbtLink('tt-1').then(function (r) { return { r: r, calls: calls.map((c) => [c[0], c[1].headers.Authorization, JSON.parse(c[1].body)]), shared: shared }; });
+    // The CDN is blocked here: a stand-in for qrcode-generator records what it was asked to encode.
+    const qrData = [];
+    window.qrcode = function () { let d = ''; return { addData: function (t) { d = t; qrData.push(t); }, make: function () {}, getModuleCount: function () { return 21; }, isDark: function (r, c) { return (r + c) % 2 === 0; } }; };
+    res.linkP = tbtLink('tt-1').then(function (r) {
+      const m = document.getElementById('m-tbt-link');
+      const out = { r: r, calls: calls.map((c) => [c[0], c[1].headers.Authorization, JSON.parse(c[1].body)]), sharedBefore: shared,
+        open: !!m && m.style.display !== 'none', title: document.getElementById('tbt-link-title').textContent,
+        url: document.getElementById('tbt-link-url').value, qr: !!document.querySelector('#tbt-link-qr svg path'), qrData: qrData.slice(), cdn: document.querySelectorAll('script[src*="qrcode"]').length };
+      return _tbtLinkShare().then(function (s) { out.shareR = s; out.shared = shared; return out; });
+    });
     res.draftLink = null; tbtLink('tt-2').then(function (r) { res.draftLink = r; });
     // the view page
     showView('toolbox_talks', 'tt-1'); res.view = CUR === 'view' && document.getElementById('pg-view').textContent.includes('רתמה, עיגון');
@@ -129,7 +138,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the view page shows the text', out.view);
   check('link button only on a published talk', out.linkPub && !out.linkDraft, [out.linkPub, out.linkDraft]);
   check('link: POST /api/talk op=link with the session token', out.link && out.link.calls.length === 1 && out.link.calls[0][0] === '/api/talk' && out.link.calls[0][1] === 'Bearer tok123' && out.link.calls[0][2].op === 'link' && out.link.calls[0][2].id === 'tt-1', out.link);
-  check('the share sheet gets the title and the link', out.link && out.link.r === 'shared' && /עבודה בגובה/.test(out.link.shared.text) && /api\/talk\?k=tt-1/.test(out.link.shared.text), out.link);
+  const L = out.link || {};
+  check('link: the dialog opens with the title and the link, nothing shared yet', L.r === 'shown' && L.open && L.title === 'עבודה בגובה' && /api\/talk\?k=tt-1/.test(L.url) && L.sharedBefore === null, L);
+  check('link: a QR of exactly that link is drawn in the dialog', L.qr && L.qrData.length === 1 && L.qrData[0] === L.url, L);
+  check('link: a loaded QR library is not fetched again (the global is qrcode, not QRCode)', L.cdn === 0, L.cdn);
+  check('the share button sends the title and the link', L.shareR === 'shared' && /עבודה בגובה/.test(L.shared.text) && /api\/talk\?k=tt-1/.test(L.shared.text), L);
   check('a draft gets no link and no request', out.draftLink === 'draft', out.draftLink);
   check('no page errors', errors.length === 0, errors);
 
