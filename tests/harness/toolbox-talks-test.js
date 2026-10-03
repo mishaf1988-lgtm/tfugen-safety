@@ -241,6 +241,25 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('employee card: talks after the leaving date are not "missing"', /חתם על 1 מתוך 1/.test(lh.card) && !/אחרי העזיבה/.test(lh.card), lh.card);
   check('new employee: left_d null, the toast shows a check mark not "&#10003;"', lh.newEmp && lh.newEmp[1].left_d === null && Object.keys(lh.newEmp[1]).every((k) => COLS.emp.includes(k)) && !/&#/.test(lh.toast), [lh.newEmp, lh.toast]);
   check('edit: the leaving date opens empty and is saved', lh.editLeftEmpty === '' && lh.edited && lh.edited[1].left_d === '2026-10-02', [lh.editLeftEmpty, lh.edited]);
+  // Michael 03/10/2026 ("yes" to filtering who left everywhere): name pickers, the dashboard count, the SMS recipient
+  const ev = await page.evaluate(() => {
+    DB.emp = [{ id: 'a', n: 'פעילה', ext_id: 'v1', ph: '0501111111' }, { id: 'b', n: 'עזבה', ext_id: 'v2', ph: '0502222222', left_d: '2026-01-01' }];
+    const out = {};
+    let kpi = null; const real = window._renderDashKpis; window._renderDashKpis = (c) => { kpi = c; };
+    const cur0 = CUR; CUR = 'dash'; try { rDash(); } catch (e) { out.dashErr = String(e); } CUR = cur0;
+    window._renderDashKpis = real; out.kpi = kpi && kpi.emps;
+    openModal('m-tr'); out.trList = [...document.querySelectorAll('#emp-names-list option')].map((o) => o.value); closeModal('m-tr');
+    const dl = document.getElementById('tsk-assignee-list'); if (dl) dl.innerHTML = '';
+    openModal('m-tsk'); out.tskList = dl ? [...dl.options].map((o) => o.value) : null; closeModal('m-tsk');
+    out.smsLeft = _truRouteVitreRecipient({ phone: '0502222222', name: 'עזבה' });
+    out.smsActive = (_truRouteVitreRecipient({ phone: '0501111111' }) || {}).id;
+    out.search = typeof _gsSearch === 'function' ? null : 'n/a';
+    return out;
+  });
+  check('dashboard: employees counted without who left', ev.kpi === 1, ev);
+  check('training form: the name list leaves out who left', ev.trList.includes('פעילה') && !ev.trList.includes('עזבה'), ev.trList);
+  check('task form: the assignee list leaves out who left', ev.tskList && ev.tskList.includes('פעילה') && !ev.tskList.includes('עזבה'), ev.tskList);
+  check('trustee route: no SMS to someone who left, the active one still matched', ev.smsLeft === null && ev.smsActive === 'a', ev);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
