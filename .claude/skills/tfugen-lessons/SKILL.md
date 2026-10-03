@@ -157,7 +157,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 14 (02-03/10/2026 שלוש עשרה פעמים, כולל "Track 3 first", "Adding the comparison" ב-#1114 ו-"Writing the migration file" ב-#1120, שורות "מה אני עושה" באמצע תור, האחרונות שורת המתנה לפני CI והערות פנימיות באנגלית לפני כלים ב-PR של שורות מסך הבית; ה-hook תופס רק בסוף).
+חזר: 15 (02-03/10/2026 ארבע עשרה פעמים, כולל "Track 3 first", "Adding the comparison" ב-#1114, "Writing the migration file" ב-#1120 ו-"Both breaks are caught" ב-#1125, שורות "מה אני עושה" באמצע תור, האחרונות שורת המתנה לפני CI והערות פנימיות באנגלית לפני כלים ב-PR של שורות מסך הבית; ה-hook תופס רק בסוף).
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
