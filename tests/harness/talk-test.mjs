@@ -18,7 +18,7 @@ const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
 
 function world(o) {
   o = o || {};
-  const w = { inserts: [], uploads: [], signs: 0, reads: (o.reads || []).slice() };
+  const w = { inserts: [], uploads: [], signs: 0, reads: (o.reads || []).slice(), files: new Set(o.files || []) };
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
@@ -30,7 +30,12 @@ function world(o) {
       return json(w.reads.filter((r) => r.talk_id === t && r.emp_id === e).map((r) => ({ id: r.id })));
     }
     if (u.startsWith(SB + '/storage/v1/object/sign/incidents-photos/')) { w.signs++; return json({ signedURL: '/object/sign/incidents-photos/tb-1.pdf?token=abc' }); }
-    if (u.startsWith(SB + '/storage/v1/object/incidents-photos/')) { w.uploads.push({ u, type: init.headers['Content-Type'], n: body.length, upsert: init.headers['x-upsert'] }); return o.uploadFail ? new Response('x', { status: 500 }) : json({ Key: 'x' }); }
+    if (u.startsWith(SB + '/storage/v1/object/incidents-photos/')) {
+      w.uploads.push({ u, type: init.headers['Content-Type'], n: body.length, upsert: init.headers['x-upsert'] });
+      if (o.uploadFail) return new Response('x', { status: 500 });
+      if (init.headers['x-upsert'] !== 'true' && w.files.has(u)) return o.dup400 ? json({ statusCode: '409', error: 'Duplicate', message: 'The resource already exists' }, 400) : json({ error: 'Duplicate' }, 409);
+      w.files.add(u); return json({ Key: 'x' });
+    }
     if (u === SB + '/auth/v1/user') { const tok = init.headers.Authorization.replace('Bearer ', ''); return tok === 'good' ? json({ id: 'u1', email: 'michael@tfugen.local' }) : tok === 'rep' ? json({ id: 'u2', email: 'rep@tfugen.local' }) : new Response('no', { status: 401 }); }
     if (u.startsWith(SB + '/rest/v1/app_users')) return json([u.includes('id=eq.michael') ? { role: 'מנהל', active: true } : { role: 'מדווח', active: true }]);
     return json({ error: 'unexpected ' + u }, 599);
@@ -85,10 +90,10 @@ console.log('\n3. signing');
   let w = world();
   let r = await post({ k: tok, emp: 'e1', ok: '1', sig: SIG }); let h = await r.text();
   check('signed: 200 and the worker is thanked by name', r.status === 200 && h.includes('אחמד כהן'), r.status);
-  check('one PNG upload, no upsert, named sig-<talk>-<emp>-', w.uploads.length === 1 && w.uploads[0].type === 'image/png' && w.uploads[0].upsert === 'false' && /\/sig-tt1-e1-[a-z0-9]+\.png$/.test(w.uploads[0].u), w.uploads);
+  check('one PNG upload, no upsert, fixed name sig-<talk>-<emp>.png', w.uploads.length === 1 && w.uploads[0].type === 'image/png' && w.uploads[0].upsert === 'false' && /\/sig-tt1-e1\.png$/.test(w.uploads[0].u), w.uploads);
   const row = w.inserts[0];
   check('one row in toolbox_reads with the worker from the DB, not from the form', row && row.talk_id === 'tt1' && row.emp_id === 'e1' && row.emp_name === 'אחמד כהן' && row.dept === 'ייצור' && row.lang === 'he', row);
-  check('sig_url in the app\'s public-path form', row && row.sig_url.startsWith(SB + '/storage/v1/object/public/incidents-photos/sig-tt1-e1-'));
+  check('sig_url in the app\'s public-path form', row && row.sig_url === SB + '/storage/v1/object/public/incidents-photos/sig-tt1-e1.png');
   check('device from the browser: phone', row && row.device === 'phone');
   check('"next worker" link back to the same talk (shared tablet)', h.includes('/api/talk?k=' + encodeURIComponent(tok)));
   r = await post({ k: tok, emp: 'e1', ok: '1', sig: SIG }); h = await r.text();
@@ -96,6 +101,21 @@ console.log('\n3. signing');
   w = world({ insert409: true });
   r = await post({ k: tok, emp: 'e2', ok: '1', sig: SIG });
   check('a race caught by the unique index (409) is "already signed" too', /כבר חתמת/.test(await r.text()));
+  // Two sends at the same moment: both pass the row check, the second upload
+  // hits the same file name. Simulated by the file existing and the row
+  // appearing between the first check and the re-check.
+  const FILE = SB + '/storage/v1/object/incidents-photos/sig-tt1-e2.png';
+  for (const dup400 of [false, true]) {
+    w = world({ files: [FILE], dup400 });
+    const realFetch = globalThis.fetch; let n = 0;
+    globalThis.fetch = async (url, init) => { if (String(url).includes('toolbox_reads') && !(init && init.method === 'POST') && n++ === 1) w.reads.push({ id: 'other', talk_id: 'tt1', emp_id: 'e2' }); return realFetch(url, init); };
+    r = await post({ k: tok, emp: 'e2', ok: '1', sig: SIG }); h = await r.text();
+    check('race (' + (dup400 ? '400 Duplicate' : '409') + '): second upload refused, "already signed", no insert, one file', /כבר חתמת/.test(h) && w.inserts.length === 0 && w.uploads.length === 1 && w.files.size === 1, { ins: w.inserts.length, up: w.uploads });
+  }
+  // A file with no row (an earlier insert failed): overwritten once, then the row.
+  w = world({ files: [FILE] });
+  r = await post({ k: tok, emp: 'e2', ok: '1', sig: SIG }); h = await r.text();
+  check('file without a row: one upsert, row written, "saved"', r.status === 200 && !/כבר חתמת/.test(h) && w.uploads.length === 2 && w.uploads[1].upsert === 'true' && w.inserts.length === 1 && w.inserts[0].sig_url.endsWith('/sig-tt1-e2.png'), w.uploads);
   w = world();
   check('no "read and understood": refused', (await post({ k: tok, emp: 'e1', sig: SIG })).status === 400 && w.inserts.length === 0);
   check('a name that is not on the list: refused', (await post({ k: tok, emp: 'zz', ok: '1', sig: SIG })).status === 400 && w.inserts.length === 0);
