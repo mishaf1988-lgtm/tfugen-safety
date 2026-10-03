@@ -141,6 +141,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     svTbt();
     window.confirm = realConfirm;
     res.signedAsked = confirms.some((m) => /כבר חתמו/.test(m)); res.signedSaved = upd.length - n1;
+    // review 03/10/2026: a talk can be a file only; replacing the file of a signed talk asks too
+    _genEdit('toolbox_talks', 'tt-1');
+    _attachUrls['tbt-attach-area'] = 'https://x/storage/v1/object/public/incidents-photos/new.pdf';
+    confirms.length = 0; const n2 = upd.length;
+    window.confirm = function (m) { confirms.push(String(m)); return !/כבר חתמו/.test(m); };
+    svTbt();
+    window.confirm = realConfirm;
+    res.fileAsked = confirms.some((m) => /כבר חתמו/.test(m)); res.fileSaved = upd.length - n2;
     confirmAnswer = true;
     closeModal('m-tbt');
     mode = 'ok';
@@ -179,6 +187,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('checker 2: a late translation does not land in another talk, button usable', out.staleRun === 'stale' && out.arUntouched && out.btnBack, out);
   check('checker 2: changing only the status asks nothing and saves', out.statusOnlyAsked === 0 && out.statusOnlySaved === 1, [out.statusOnlyAsked, out.statusOnlySaved]);
   check('checker 4: editing the text of a signed talk asks first; "cancel" saves nothing', out.signedAsked && out.signedSaved === 0, [out.signedAsked, out.signedSaved]);
+  check('review: replacing the file of a signed talk asks first; "cancel" saves nothing', out.fileAsked && out.fileSaved === 0, [out.fileAsked, out.fileSaved]);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
