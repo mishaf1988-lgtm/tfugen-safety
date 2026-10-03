@@ -29,14 +29,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 וגם שורת `skill:` (מה נלמד ובאיזה skill נכתב, או `אין`): skill `tfugen-learn`.
 `project-files/METRICS.md` סופר את זה חודשית.
 
-## לפני מיזוג
-
-**4. `expectedHeadSha` מקוצר (01/10/2026, #1008).**
-מה קרה: SHA קצר חסם.
-הכלל: בלי `expectedHeadSha`.
-נאכף: ה-hook.
-חזר: 0
-
 ## כשמשהו נכשל
 
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
@@ -55,12 +47,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: `notified_at` היה מלא.
 הכלל: לפני "תיקון" התראה: `notified_at` והיומן. "נשלח" אינו "נמסר".
 נאכף: טקסט בלבד.
-חזר: 0
-
-**17. commit חלקי אחרי `git stash pop` (01/10/2026, #1014).**
-מה קרה: אחרי stash pop נכנסו רק קבצים חדשים.
-הכלל: לפני push, `git status --short` ריק.
-נאכף: hook ה-Stop (`stop-hook-git-check.sh`).
 חזר: 0
 
 **40. טקסט SQL של הרשאות בפקודת מעטפת נעל את המסנן (02/10/2026, PR זה).**
@@ -160,12 +146,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 2
 
 ## יעילות ותקשורת
-
-**29. שתי הרצות `run.sh` במקביל (02/10/2026, #1036).**
-מה קרה: `run.sh` שני מחק את `_build`.
-הכלל: `run.sh` אחד בכל רגע.
-נאכף: נעילה `.run.lock` ב-`run.sh`.
-חזר: 0
 
 **6. יותר מדי PRs קטנים (01/10/2026, #1003 עד #1005).**
 מה קרה: חמישה PRs לעדכוני STATUS.
