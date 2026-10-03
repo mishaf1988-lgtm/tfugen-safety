@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -191,6 +191,32 @@ const ROWS = [
   check('a duty table that fails to read is named, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'הערכת ציות'), c.j);
   c = await call({ expFail: 'ctr' }, {}, 'nsec');
   check('a table that fails to read is named in the mail, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'קבלן'), c.j);
+
+  console.log('\nweekly talk line (03/10/2026, stage 4)');
+  {
+    const talks = [{ id: 'a', d: '2026-09-27', title: 'ישן', s: 'פורסמה' }, { id: 'b', d: '2026-10-04', title: 'מלגזות', s: 'פורסמה' }, { id: 'c', d: '2026-10-11', title: 'טיוטה', s: 'טיוטה' }];
+    const reads = [{ talk_id: 'b', emp_id: 'e1' }, { talk_id: 'b', emp_id: 'e2' }, { talk_id: 'b', emp_id: 'e2' }, { talk_id: 'a', emp_id: 'e3' }];
+    const l = talkLine(talks, reads, 10, '2026-10-05');
+    check('the latest published talk (not the draft), distinct signers, of all workers', l && l.text === 'הדרכה שבועית "מלגזות" (04/10/2026): 2 מתוך 10 חתמו', l);
+    check('under 80%: red', l && l.red === true);
+    const full = talkLine(talks, Array.from({ length: 8 }, (_, i) => ({ talk_id: 'b', emp_id: 'x' + i })), 10, '2026-10-05');
+    check('8 of 10: not red', full && full.red === false, full);
+    const stale = talkLine(talks, reads, 10, '2026-10-13');
+    check('nothing new for over 8 days: red, says since when', stale && stale.red && /לא פורסמה הדרכה חדשה מאז 04\/10\/2026/.test(stale.text), stale);
+    check('no talk ever, or the read failed: no line', talkLine([], [], 10, '2026-10-05') === null && talkLine(null, null, 0, '2026-10-05') === null);
+    check('no workers listed: count only, red only at 0', talkLine(talks, reads, 0, '2026-10-05').text.endsWith(': 2 חתמו') && talkLine(talks, [], 0, '2026-10-05').red === true);
+    // checker 03/10/2026
+    const undated = [{ id: 'a', d: '2026-09-27', title: 'ישן', s: 'פורסמה', ts: '2026-09-27T05:00:00Z' }, { id: 'n', d: null, title: 'בלי תאריך', s: 'פורסמה', ts: '2026-10-04T05:00:00Z' }];
+    check('checker 3: a talk with no date is placed by when it was saved', latestTalk(undated).id === 'n' && /בלי תאריך/.test(talkLine(undated, [], 10, '2026-10-06').text), talkLine(undated, [], 10, '2026-10-06'));
+    const emps = [{ id: 'e1' }, { id: 'e2' }, { id: 3 }];
+    const lr = [{ talk_id: 'b', emp_id: 'e1' }, { talk_id: 'b', emp_id: '3' }, { talk_id: 'b', emp_id: 'left1' }];
+    check('checker 6: only signatures of current employees count, numeric ids too', talkLine(talks, lr, emps, '2026-10-05').text.endsWith(': 2 מתוך 3 חתמו'), talkLine(talks, lr, emps, '2026-10-05'));
+    check('published today: not red yet', talkLine(talks, [], 10, '2026-10-04').red === false && talkLine(talks, [], 10, '2026-10-05').red === true);
+    const g = digestOf([], '2026-10-05');
+    const h = digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [], talk: l });
+    check('in the mail, before the committee block, red', /color:#b91c1c;font-weight:bold">הדרכה שבועית &quot;מלגזות&quot;/.test(h) && h.indexOf('מלגזות') < h.indexOf(T.committee), h.slice(0, 200));
+    check('no talk: no line in the mail', !/הדרכה שבועית/.test(digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
+  }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
 })();

@@ -2819,6 +2819,13 @@ id="m-ncr" style="display:none">
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-thz')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svThz()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
+<div class="overlay" id="ov-tbt-who" onclick="closeModal('m-tbt-who')"></div>
+<div class="modal" id="m-tbt-who" style="display:none">
+  <button class="close-btn" onclick="closeModal('m-tbt-who')">&#10005;</button>
+  <div class="modal-title">&#9997;&#65039; &#1502;&#1497; &#1495;&#1514;&#1501; &#1506;&#1500; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492;</div>
+  <div id="tbt-who-body"></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-who')">&#1505;&#1490;&#1493;&#1512;</button><button class="btn btn-p" onclick="tbtWhoPrint()">&#128424;&#65039; &#1492;&#1491;&#1508;&#1505;</button></div>
+</div>
 <div class="overlay" id="ov-tbt" onclick="closeModal('m-tbt')"></div>
 <div class="modal" id="m-tbt" style="display:none">
   <button class="close-btn" onclick="closeModal('m-tbt')">&#10005;</button>
@@ -2830,6 +2837,15 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1514;&#1493;&#1499;&#1503; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492; (&#1502;&#1492; &#1513;&#1492;&#1506;&#1493;&#1489;&#1491; &#1497;&#1511;&#1512;&#1488;)</label><textarea id="tbt-body" rows="10"></textarea></div>
     <div class="field fw"><label>&#1511;&#1493;&#1489;&#1509; (&#1500;&#1488; &#1495;&#1493;&#1489;&#1492;)</label>
       <div id="tbt-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tbt-attach-area','toolbox_talks')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div>
+    </div>
+    <div class="field fw"><label>&#1514;&#1512;&#1490;&#1493;&#1501; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label>
+      <button type="button" class="btn btn-s" id="tbt-tr-btn" style="width:100%" onclick="tbtTranslate()">&#127760; &#1514;&#1512;&#1490;&#1501; &#1500;&#1506;&#1512;&#1489;&#1497;&#1514;, &#1512;&#1493;&#1505;&#1497;&#1514; &#1493;&#1488;&#1502;&#1492;&#1512;&#1497;&#1514;</button>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">&#1514;&#1512;&#1490;&#1493;&#1501; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;. &#1492;&#1506;&#1493;&#1489;&#1491; &#1489;&#1493;&#1495;&#1512; &#1513;&#1508;&#1492; &#1489;&#1491;&#1507;. &#1489;&#1500;&#1497; &#1514;&#1512;&#1490;&#1493;&#1501; &#1492;&#1493;&#1488; &#1512;&#1493;&#1488;&#1492; &#1506;&#1489;&#1512;&#1497;&#1514;.</div>
+      <details id="tbt-tr-box" style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">&#1492;&#1514;&#1512;&#1490;&#1493;&#1502;&#1497;&#1501; (&#1513;&#1493;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492; = &#1492;&#1504;&#1493;&#1513;&#1488;)</summary>
+        <label style="font-size:11px">&#1506;&#1512;&#1489;&#1497;&#1514;</label><textarea id="tbt-ar" dir="rtl" rows="4"></textarea>
+        <label style="font-size:11px">&#1512;&#1493;&#1505;&#1497;&#1514;</label><textarea id="tbt-ru" dir="ltr" rows="4"></textarea>
+        <label style="font-size:11px">&#1488;&#1502;&#1492;&#1512;&#1497;&#1514;</label><textarea id="tbt-am" dir="ltr" rows="4"></textarea>
+      </details>
     </div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTbt()">&#1513;&#1502;&#1493;&#1512;</button></div>
@@ -4880,7 +4896,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-em":"em","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-ph":"ph","e-em":"em","e-n":"n"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -4961,6 +4977,7 @@ function openModal(id){
   if(!_genEditOpening)_svEditing={};
   _closeAllOpenModals(id);
   if(id==='m-drl'&&typeof _drlFndReset==='function')_drlFndReset();
+  if(id==='m-tbt'&&typeof _tbtTrReset==='function')_tbtTrReset();
   if(id==='m-aud'&&typeof _audFndReset==='function')_audFndReset();
   // \u05de\u05d9\u05db\u05d0\u05dc, 02/10/2026: \u05d4\u05de\u05d1\u05e7\u05e8 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea \u05e4\u05e0\u05d9\u05dd \u05d4\u05d5\u05d0 \u05d4\u05d5\u05d0 \u05e2\u05e6\u05de\u05d5. \u05e8\u05e7 \u05d1\u05e8\u05e9\u05d5\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4.
   if(id==='m-aud'&&!_genEditOpening){var _aa=g('a-a');if(_aa)_aa.value=_AUD_AUDITOR;}
@@ -10980,9 +10997,14 @@ function svToolbox(){
 // A talk with signatures is evidence: no delete button, and the FK blocks it in the DB.
 var _TBT_PUB='\u05e4\u05d5\u05e8\u05e1\u05de\u05d4',_TBT_DRAFT='\u05d8\u05d9\u05d5\u05d8\u05d4';
 function _tbtReads(id){return (DB.toolbox_reads||[]).filter(function(x){return x&&x.talk_id===id;}).length;}
+// The talk's date, or the day it was saved when the date was left empty.
+function _tbtKey(r){return (r&&(r.d||String(r.ts||'').substring(0,10)))||'';}
+// Signatures of people still on the employee list: the count next to "of N employees".
+function _tbtEmpSet(){var m={};(DB.emp||[]).forEach(function(e){if(e&&e.id!=null)m[String(e.id)]=1;});return m;}
+function _tbtSignedNow(id){var m=_tbtEmpSet(),k={};(DB.toolbox_reads||[]).forEach(function(x){if(x&&x.talk_id===id&&m[String(x.emp_id)])k[String(x.emp_id)]=1;});return Object.keys(k).length;}
 function rTbt(){
   var tb=g('tb-tbt');if(!tb)return;
-  var rows=(DB.toolbox_talks||[]).slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');});
+  var rows=(DB.toolbox_talks||[]).slice().sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
   if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="et" data-label="">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea<br><button class="et-cta" onclick="openModal(\'m-tbt\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var n=_tbtReads(r.id),pub=r.s===_TBT_PUB;
@@ -10990,7 +11012,7 @@ function rTbt(){
     var linkBtn=pub?'<button class="btn btn-p btn-sm" data-id="'+esc(r.id)+'" onclick="tbtLink(this.dataset.id)" title="\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd">\ud83d\udd17 \u05e7\u05d9\u05e9\u05d5\u05e8</button> ':'';
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span></td><td>'+n+'</td><td>'+linkBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span></td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 function svTbt(){
@@ -10999,12 +11021,20 @@ function svTbt(){
   if(!title){toast('\u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0');return;}
   var body=gv('tbt-body')||null,file=_attachUrls['tbt-attach-area']||null;
   if(!body&&!file){toast('\u05d7\u05d5\u05d1\u05d4: \u05ea\u05d5\u05db\u05df \u05d0\u05d5 \u05e7\u05d5\u05d1\u05e5, \u05db\u05d3\u05d9 \u05e9\u05d9\u05d4\u05d9\u05d4 \u05de\u05d4 \u05dc\u05e7\u05e8\u05d5\u05d0');return;}
-  var r={id:_svEditId('toolbox_talks')||gid(),d:gv('tbt-d')||null,title:title,body:body,file_url:file,s:gv('tbt-s')||_TBT_DRAFT,ts:new Date().toISOString()};
+  var tr={body_ar:gv('tbt-ar')||null,body_ru:gv('tbt-ru')||null,body_am:gv('tbt-am')||null};
+  // A translation made from an older Hebrew text would show the workers something else.
+  var editId=_svEditId('toolbox_talks'),old=editId?(DB.toolbox_talks||[]).filter(function(x){return x.id===editId;})[0]:null;
+  var srcNow=title+'\n'+(body||''),srcTr=_tbtTrSrc!==null?_tbtTrSrc:(old?(old.title||'')+'\n'+(old.body||''):null);
+  if((tr.body_ar||tr.body_ru||tr.body_am)&&srcTr!==null&&srcTr!==srcNow&&!confirm('\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05d4\u05e9\u05ea\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05ea\u05e8\u05d2\u05d5\u05dd. \u05dc\u05e9\u05de\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05dc\u05ea\u05e8\u05d2\u05dd \u05de\u05d7\u05d3\u05e9?\n(\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d7\u05d6\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e8\u05d2\u05dd)'))return;
+  // Workers already signed this text (ISO 45001 7.4 evidence): changing it makes their signatures look like signatures on the new text.
+  var nSig=editId?_tbtReads(editId):0;
+  if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
+  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,s:gv('tbt-s')||_TBT_DRAFT,ts:new Date().toISOString()};
   if(!_svEditId('toolbox_talks'))r.created_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
   _svPut('toolbox_talks',r);
   addLog('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+title.substring(0,30));sdb();
   closeModal('m-tbt');
-  ['tbt-title','tbt-body','tbt-d'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  ['tbt-title','tbt-body','tbt-d','tbt-ar','tbt-ru','tbt-am'].forEach(function(id){var el=g(id);if(el)el.value='';});_tbtTrSrc=null;
   if(typeof _attachClear==='function')_attachClear('tbt-attach-area');
   toast('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rTbt();
 }
@@ -11025,6 +11055,93 @@ function tbtLink(id){
     if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(txt).then(function(){toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d5\u05e2\u05ea\u05e7. \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u2713');return 'copied';},function(){window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';});}
     window.prompt('\u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8:',x.j.url);return 'prompt';
   })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((e&&e.message)||e));return 'failed';});
+}
+// Stage 3 (03/10/2026): the talk translated for the workers, one AI call per
+// language (Gemini, which falls back to Workers AI). Stored as body_<lang>, the
+// first line being the title; /api/talk shows it when the worker picks the language.
+var _tbtTrSrc=null,_tbtTrRun=0;
+// Each opening of the form starts afresh: a translation still running for the
+// talk that was open before must not land in this one (checker, 03/10/2026).
+function _tbtTrReset(){
+  _tbtTrSrc=null;_tbtTrRun++;
+  var b=g('tbt-tr-btn');if(b&&b.dataset.label){b.disabled=false;b.textContent=b.dataset.label;}
+}
+var _TBT_LANG={he:'\u05e2\u05d1\u05e8\u05d9\u05ea',ar:'\u05e2\u05e8\u05d1\u05d9\u05ea',ru:'\u05e8\u05d5\u05e1\u05d9\u05ea',am:'\u05d0\u05de\u05d4\u05e8\u05d9\u05ea'};
+var _TBT_DEV={phone:'\u05d8\u05dc\u05e4\u05d5\u05df',tablet:'\u05d8\u05d0\u05d1\u05dc\u05d8',other:'\u05de\u05d7\u05e9\u05d1'};
+function _tbtLangTag(r){
+  var l=['ar','ru','am'].filter(function(k){return r&&r['body_'+k];});
+  return l.length?'<div style="font-size:10px;color:var(--t3)">\ud83c\udf10 '+l.map(function(k){return _TBT_LANG[k];}).join(', ')+'</div>':'';
+}
+// Workers see what people type on a keyboard (CLAUDE.md): the AI's dashes, quotes and dots are not.
+function _tbtKbd(t){return String(t||'').replace(/[\u2013\u2014\u05be]/g,'-').replace(/[\u00ab\u00bb\u201c\u201d\u201e]/g,'"').replace(/[\u2018\u2019]/g,"'").replace(/\u2026/g,'...').replace(/\u00b7/g,',').trim();}
+function tbtTranslate(){
+  var title=gv('tbt-title'),body=gv('tbt-body');
+  if(!title||!body){toast('\u05e7\u05d5\u05d3\u05dd \u05e0\u05d5\u05e9\u05d0 \u05d5\u05ea\u05d5\u05db\u05df \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea');return Promise.resolve('empty');}
+  var btn=g('tbt-tr-btn'),src=title+'\n'+body,my=++_tbtTrRun;
+  if(btn&&!btn.dataset.label)btn.dataset.label=btn.textContent;
+  var label=btn?btn.dataset.label:'';
+  var alive=function(){var m=g('m-tbt');return my===_tbtTrRun&&!!m&&m.style.display!=='none';};
+  var names={ar:'Arabic',ru:'Russian',am:'Amharic'},failed=[],fell=false;
+  if(btn)btn.disabled=true;
+  function one(l){
+    if(btn)btn.textContent='\u23f3 '+_TBT_LANG[l]+'...';
+    var prompt='Translate this workplace safety briefing from Hebrew to '+names[l]+'. The first line is the title: keep it as the first line. Keep the line breaks and the numbering. Use short, simple words that a factory worker understands. Keep names of machines, chemicals and units as they are. Output only the translation, with no notes and no quotes.\n\n'+src;
+    return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({model:'gemini',max_tokens:8000,messages:[{role:'user',content:prompt}]})})
+    .then(function(r){return r.text().then(function(t){return {ok:r.ok,t:t};});})
+    .then(function(res){
+      if(!res.ok)throw new Error('http');
+      var dj=JSON.parse(res.t),c=dj.content&&dj.content[0]?dj.content[0].text:'';
+      if(typeof c!=='string')c=c?JSON.stringify(c):'';
+      c=_tbtKbd(c);if(!c)throw new Error('empty');
+      if(dj.stop_reason==='max_tokens')throw new Error('cut');
+      if(dj.fallback_from)fell=true;
+      if(!alive())return;
+      var el=g('tbt-'+l);if(el)el.value=c;
+    })['catch'](function(){
+      // An old translation of the old text must not stay next to the new Hebrew.
+      if(alive()){var el=g('tbt-'+l);if(el)el.value='';}
+      failed.push(_TBT_LANG[l]);
+    });
+  }
+  return one('ar').then(function(){return one('ru');}).then(function(){return one('am');}).then(function(){
+    if(!alive())return 'stale';
+    if(btn){btn.disabled=false;btn.textContent=label;}
+    _tbtTrSrc=src;
+    var box=g('tbt-tr-box');if(box)box.open=true;
+    if(failed.length)toast('\u26a0\ufe0f \u05dc\u05d0 \u05ea\u05d5\u05e8\u05d2\u05dd: '+failed.join(', ')+'. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1');
+    else if(fell)toast('\u05ea\u05d5\u05e8\u05d2\u05dd, \u05d0\u05d1\u05dc \u05d1\u05de\u05d5\u05d3\u05dc \u05d4\u05d2\u05d9\u05d1\u05d5\u05d9 (\u05d0\u05d9\u05db\u05d5\u05ea \u05e0\u05de\u05d5\u05db\u05d4 \u05d9\u05d5\u05ea\u05e8, \u05d1\u05e2\u05d9\u05e7\u05e8 \u05d1\u05d0\u05de\u05d4\u05e8\u05d9\u05ea). \u05db\u05d3\u05d0\u05d9 \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1 \u05de\u05d0\u05d5\u05d7\u05e8 \u05d9\u05d5\u05ea\u05e8');
+    else toast('\u05ea\u05d5\u05e8\u05d2\u05dd \u2713 \u05e2\u05db\u05e9\u05d9\u05d5 \u05dc\u05e9\u05de\u05d5\u05e8. \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d9\u05d1\u05d7\u05e8\u05d5 \u05e9\u05e4\u05d4 \u05d1\u05d3\u05e3');
+    return failed.length?'partial':(fell?'fallback':'ok');
+  });
+}
+// Stage 4 (03/10/2026): who signed and who did not, by department, with the signatures; printable.
+function _tbtEmpN(){return (DB.emp||[]).length;}
+var _tbtWhoId=null;
+function tbtWho(id){
+  var t=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];if(!t)return;
+  _tbtWhoId=id;
+  var reads=(DB.toolbox_reads||[]).filter(function(x){return x&&x.talk_id===id;}).sort(function(a,b){return String(a.read_at||'').localeCompare(String(b.read_at||''));});
+  var signed={},cur=_tbtEmpSet();reads.forEach(function(x){signed[String(x.emp_id)]=1;});
+  var gone=reads.filter(function(x){return !cur[String(x.emp_id)];}).length;
+  var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
+  var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);
+  var tm=function(v){var d=new Date(v);return isNaN(d)?'':fd(d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'});};
+  var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'
+    +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone)+'</span> <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span></div>';
+  h+=reads.length?'<div class="tbl-wrap"><table><thead><tr><th scope="col">\u05e9\u05dd</th><th scope="col">\u05de\u05d7\u05dc\u05e7\u05d4</th><th scope="col">\u05de\u05ea\u05d9</th><th scope="col">\u05e9\u05e4\u05d4</th><th scope="col">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr></thead><tbody>'
+    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</div>')+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
+    +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
+  if(missN)h+='<div style="font-weight:700;margin:12px 0 4px">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</div>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('');
+  var b=g('tbt-who-body');if(b){b.innerHTML=h;if(typeof _signifyDom==='function')_signifyDom(b);}
+  openModal('m-tbt-who');
+}
+function tbtWhoPrint(){
+  var b=g('tbt-who-body');if(!b)return;
+  var w=window.open('','_blank');if(!w){toast('\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05d7\u05e1\u05dd \u05d7\u05dc\u05d5\u05df. \u05dc\u05d0\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd');return;}
+  w.document.write('<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>function _rptMsg(b,txt,bad){var n=document.getElementById(\'rpt-msg\');if(!n){n=document.createElement(\'div\');n.id=\'rpt-msg\';n.className=\'no-print noprint\';n.style.cssText=\'position:static;top:auto;left:auto;margin:10px 0;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.7\';var h=document.querySelector(\'.head\');if(h&&h.parentNode)h.parentNode.insertBefore(n,h.nextSibling);else document.body.insertBefore(n,document.body.firstChild);}n.style.border=\'1px solid \'+(bad?\'#fcd34d\':\'#cfe3cf\');n.style.background=bad?\'#fffbeb\':\'#f6faf6\';n.style.color=bad?\'#92400e\':\'#166534\';n.innerHTML=txt;return n;}function _rptSafari(){return \'\u05e4\u05ea\u05d7\u05d5 \u05d0\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9, \u05d4\u05e4\u05d9\u05e7\u05d5 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05d5\u05d1, \u05d5\u05d0\u05d6 \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d5\u05d0\u05d6 \u05d4\u05d3\u05e4\u05e1.\'+\'<div style="margin-top:8px"><a href="\'+location.origin+\'" target="_blank" rel="noopener" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;text-decoration:none">\u05e4\u05ea\u05d7 \u05d1\u05e1\u05e4\u05d0\u05e8\u05d9</a></div>\';}function _rptStandalone(){try{if(navigator.standalone===true)return true;if(window.matchMedia&&window.matchMedia(\'(display-mode: standalone)\').matches)return true;}catch(e){}return false;}function _rptLibs(cb){var need=[];if(typeof html2canvas===\'undefined\')need.push(\'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js\');if(!(window.jspdf&&window.jspdf.jsPDF))need.push(\'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js\');if(!need.length)return cb();var left=need.length,over=false;var fail=function(){if(over)return;over=true;cb(new Error(\'libs\'));};need.forEach(function(src){var sc=document.createElement(\'script\');sc.src=src;sc.onload=function(){if(over)return;if(--left===0){over=true;cb();}};sc.onerror=fail;document.head.appendChild(sc);});setTimeout(fail,25000);}function _rptPdf(btn){var was=btn?btn.textContent:\'\';if(btn){btn.disabled=true;btn.textContent=\'\u05de\u05db\u05d9\u05df PDF...\';}var done=function(){if(btn){btn.disabled=false;btn.textContent=was;}};var oops=function(){done();_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d9\u05d9\u05e6\u05e8 PDF \u05db\u05d0\u05df. \'+_rptSafari(),1);};_rptLibs(function(err){if(err)return oops();var hid=[].slice.call(document.querySelectorAll(\'.no-print,.noprint\'));hid.forEach(function(el){el.setAttribute(\'data-pdf-prev\',el.style.display||\'\');el.style.display=\'none\';});var bs=document.body.style,pw0=bs.width,pm0=bs.margin,pb0=bs.background,pp0=bs.padding;bs.width=\'703px\';bs.margin=\'0 auto\';bs.background=\'#ffffff\';bs.padding=\'0 12px\';var back=function(){hid.forEach(function(el){el.style.display=el.getAttribute(\'data-pdf-prev\')||\'\';});bs.width=pw0;bs.margin=pm0;bs.background=pb0;bs.padding=pp0;};try{html2canvas(document.body,{scale:2,backgroundColor:\'#ffffff\',useCORS:true,logging:false,windowWidth:703,width:703}).then(function(cv){back();try{var PDF=window.jspdf.jsPDF,pdf=new PDF({unit:\'mm\',format:\'a4\',orientation:\'portrait\'});var M=12,PW=210,PH=297,iw=PW-M*2,usable=PH-M*2;var totalMm=cv.height*iw/cv.width;var pages=Math.max(1,Math.ceil(totalMm/usable-0.001));var sliceH=Math.ceil(cv.height/pages);for(var i=0;i<pages;i++){var h=Math.min(sliceH,cv.height-sliceH*i);if(h<=0)break;var c=document.createElement(\'canvas\');c.width=cv.width;c.height=h;var x=c.getContext(\'2d\');x.fillStyle=\'#ffffff\';x.fillRect(0,0,c.width,c.height);x.drawImage(cv,0,-sliceH*i);if(i)pdf.addPage();pdf.addImage(c.toDataURL(\'image/jpeg\',0.92),\'JPEG\',M,M,iw,h*iw/cv.width);try{pdf.setDrawColor(204,31,31);pdf.setLineWidth(0.4);pdf.rect(7,7,PW-14,PH-14);pdf.setFontSize(8);pdf.setTextColor(120,120,120);pdf.text(String(i+1)+\' / \'+pages,PW/2,PH-4.5,{align:\'center\'});}catch(eF){}}var blob=pdf.output(\'blob\');done();_rptDeliver(blob,btn);}catch(e2){oops();}})[\'catch\'](function(){back();oops();});}catch(e3){back();oops();}});}function _rptDeliver(blob,btn){try{if(window.__rptUrl)URL.revokeObjectURL(window.__rptUrl);}catch(e){}window.__rptBlob=blob;window.__rptName=\'tapugan-report-\'+new Date().toISOString().substring(0,10)+\'.pdf\';window.__rptUrl=URL.createObjectURL(blob);_rptMsg(btn,\'<b>\u05d4-PDF \u05de\u05d5\u05db\u05df.</b>\'+\'<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">\'+\'<button type="button" id="rpt-open" onclick="_rptOpen()" style="display:inline-block;background:#cc1f1f;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da</button>\'+\'<button type="button" id="rpt-share" onclick="_rptShare()" style="display:inline-block;background:#0d9488;color:#fff;padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer">\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8</button>\'+\'</div>\',0);}function _rptOpen(){var u=window.__rptUrl;if(!u)return;var w=null;try{w=window.open(u,\'_blank\');}catch(e){}if(!w){try{_rptGo(u);}catch(e2){_rptMsg(null,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da. \u05e0\u05e1\u05d5 "\u05e9\u05ea\u05e3 / \u05e9\u05de\u05d5\u05e8".\',1);}}}function _rptGo(u){location.href=u;}function _rptShare(){var b=window.__rptBlob,n=window.__rptName;if(!b)return;try{var f=new File([b],n,{type:\'application/pdf\'});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:document.title||n})[\'catch\'](function(err){if(err&&err.name===\'AbortError\')return;_rptDownload(b,n,null);});return;}}catch(e){}_rptDownload(b,n,null);}function _rptDownload(blob,name,btn){try{var u=URL.createObjectURL(blob);var a=document.createElement(\'a\');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){try{URL.revokeObjectURL(u);a.remove();}catch(e){}},500);}catch(e){_rptMsg(btn,\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4-PDF. \'+_rptSafari(),1);}}function _rptBack(){var h=1;try{h=history.length;}catch(e){}if(h>1){try{history.back();return;}catch(e1){}}try{window.close();}catch(e2){}setTimeout(function(){try{var o=location.origin;if(o&&o!==\'null\')location.href=o;}catch(e3){}},400);}function _rptBackBtn(){if(document.getElementById(\'rpt-back\')||!document.body)return;try{var st=document.createElement(\'style\');st.textContent=\'@media print{#rpt-back,#rpt-msg{display:none!important}}\';document.head.appendChild(st);}catch(e){}var b=document.createElement(\'button\');b.id=\'rpt-back\';b.type=\'button\';b.className=\'no-print noprint\';b.setAttribute(\'onclick\',\'_rptBack()\');b.textContent=\'\u2192 \u05d7\u05d6\u05e8\u05d4\';b.style.cssText=\'position:fixed;top:8px;right:8px;left:auto;z-index:1001;margin:0;background:#5a6070;color:#fff;padding:8px 14px;border:none;border-radius:8px;font-weight:700;font-family:inherit;font-size:13px;cursor:pointer\';document.body.appendChild(b);}if(document.readyState===\'loading\')document.addEventListener(\'DOMContentLoaded\',_rptBackBtn);else _rptBackBtn();function _tryPrint(b){if(!_rptStandalone()){try{window.print();return;}catch(e){}}_rptPdf(b);}<\/script><title>\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea</title><style>body{font-family:Arial,sans-serif;font-size:13px;margin:16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:4px 6px;text-align:right}.b{font-weight:700;margin-left:8px}img{height:40px}@media print{.no-print{display:none}}</style></head><body><h2>\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: \u05e8\u05e9\u05d9\u05de\u05ea \u05d7\u05d5\u05ea\u05de\u05d9\u05dd</h2><button id="tbt-pb" class="no-print" onclick="_tryPrint(this)">\u05e9\u05de\u05d5\u05e8 \u05db-PDF / \u05d4\u05d3\u05e4\u05e1</button>'+b.innerHTML+'<p style="font-size:11px;color:#666">\u05d4\u05d5\u05e4\u05e7 \u05de-Tapugan Safety, '+fd(new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+'</p></body></html>');
+  w.document.close();
+  // Print once the signatures are in (or after 5 seconds): an empty box on paper is no evidence.
+  var t0=Date.now();(function wait(){var im=Array.prototype.slice.call(w.document.images||[]);if(Date.now()-t0<5000&&im.some(function(x){return !x.complete;})){setTimeout(wait,200);return;}try{if(w._tryPrint)w._tryPrint(w.document.getElementById('tbt-pb'));else w.print();}catch(e){}})();
 }
 function tbtPublish(id){
   if(_viewOnly()){_viewBlock();return;}

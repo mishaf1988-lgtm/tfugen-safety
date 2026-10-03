@@ -96,6 +96,9 @@ fetch('/api/claude', {
 - [ ] STATUS.md עודכן
 - [ ] tag נוצר
 
+- [ ] קובץ ב-`functions/` שנערך בסקריפט: לאמת בהרצת הבדיקה שלו (`bash tests/harness/run.sh <שם>`), לא ב-`node --check`. ב-03/10/2026 `node --check` עבר על `talk.js` עם שגיאת תחביר (מודול ESM בקובץ `.js`), ורק `talk-test.mjs` תפס אותה.
+- [ ] טקסט שעובדים קוראים בשפה אחרת (`LANGS` ב-`talk.js`): כל מפתח בכל שפה, כולל הודעות שגיאה. נבדק ב-`talk-test.mjs` ("every language has every word").
+
 ## Anti-patterns (אל תעשה)
 - ❌ הוספת build step / webpack / vite
 - ❌ framework חדש (React/Vue/etc)

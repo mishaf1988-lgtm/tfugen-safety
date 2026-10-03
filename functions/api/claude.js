@@ -62,7 +62,9 @@ async function runGemini(parsed, model, key) {
   const parts = (cand && cand.content && cand.content.parts) || [];
   const text = parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join('');
   if (!text.trim()) throw new Error('Gemini empty answer (' + ((cand && cand.finishReason) || 'no candidate') + ')');
-  return text;
+  // A text cut at the length limit is reported, not passed off as complete
+  // (checker 03/10/2026: a long Amharic talk could reach workers half translated).
+  return { text, cut: !!(cand && cand.finishReason === 'MAX_TOKENS') };
 }
 
 // One text answer in the Anthropic shape the client parses, as JSON or as the
@@ -87,7 +89,7 @@ function textResponse(text, model, stream, cors, extra) {
       c.enqueue(ev('content_block_start', { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }));
       c.enqueue(ev('content_block_delta', { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: text } }));
       c.enqueue(ev('content_block_stop', { type: 'content_block_stop', index: 0 }));
-      c.enqueue(ev('message_delta', { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 0 } }));
+      c.enqueue(ev('message_delta', { type: 'message_delta', delta: { stop_reason: out.stop_reason }, usage: { output_tokens: 0 } }));
       c.enqueue(ev('message_stop', { type: 'message_stop' }));
       c.close();
     }
@@ -144,8 +146,8 @@ export async function onRequest({ request, env }) {
     const gm = env.GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
     try {
       if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not set');
-      const text = await runGemini(parsed, gm, env.GEMINI_API_KEY);
-      return textResponse(text, 'gemini:' + gm, parsed.stream, cors);
+      const g = await runGemini(parsed, gm, env.GEMINI_API_KEY);
+      return textResponse(g.text, 'gemini:' + gm, parsed.stream, cors, g.cut ? { stop_reason: 'max_tokens' } : null);
     } catch (e) {
       fallbackFrom = { model: 'gemini:' + gm, reason: String((e && e.message) || e).substring(0, 300) };
       parsed.model = GEMINI_FALLBACK;
