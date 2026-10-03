@@ -24,8 +24,8 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
     document.getElementById('login').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     window.__ins = []; window.__upd = [];
-    window.sbIns = function (t, r) { window.__ins.push({ t: t, id: r.id }); };
-    window.sbUpd = function (t, r) { window.__upd.push({ t: t, id: r.id }); };
+    window.sbIns = function (t, r) { window.__ins.push({ t: t, id: r.id }); (window.__all = window.__all || []).push({ t: t, k: Object.keys(r || {}) }); };
+    window.sbUpd = function (t, r) { window.__upd.push({ t: t, id: r.id }); (window.__all = window.__all || []).push({ t: t, k: Object.keys(r || {}) }); };
     window.sdb = function () {}; window.addLog = function () {};
     window._currentUser = { username: 'admin' }; _isAdmin = true;
     _applyRoleGates(); goPage('dash');
@@ -172,6 +172,16 @@ const TBLS = ['rsk', 'tr', 'ppe', 'emp', 'ctr', 'ins', 'drl', 'wst', 'hzm', 'env
     });
     check('a risk gets ✎ ערוך, bound to that record', r.onRsk.shown && r.onRsk.tbl === 'rsk' && r.onRsk.id === 'r1', r.onRsk);
     check('an NCR does not — it has its own editor already', !r.onNcr.shown, r.onNcr);
+  }
+
+  // 03/10/2026: every field these 14 savers send has a column in the DB (tests/harness/db-columns.json);
+  // a key with no column is dropped silently by the PGRST204 self-heal.
+  {
+    const COLS = require('./db-columns.json');
+    const sent = await page.evaluate(() => window.__all || []);
+    const tbls = [...new Set(sent.map(x => x.t))];
+    const unknown = [...new Set(sent.flatMap(x => COLS[x.t] ? x.k.filter(k => COLS[x.t].indexOf(k) < 0).map(k => x.t + '.' + k) : []))];
+    check('every saved field has a column in the DB (' + sent.length + ' saves, ' + tbls.length + ' tables)', sent.length > 0 && unknown.length === 0, unknown);
   }
 
   await browser.close();

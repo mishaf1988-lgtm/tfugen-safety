@@ -28,6 +28,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 4. **אימות:** `information_schema` או ספירה, ולכתוב ב-PR וב-STATUS "הורץ ואומת דרך Supabase MCP ב-DD/MM/YYYY".
 5. עמודה חדשה שהאפליקציה כותבת: ה-migration רץ **לפני** המיזוג, ואותו PR מוסיף אותה ל-`tests/harness/db-columns.json` (צילום `information_schema.columns`, 03/10/2026). שדה שאין לו עמודה נמחק בשקט ב-self-heal של PGRST204 (כך אבד `ncr.src_date`), ו-`self-check-test.js`, `empty-dates-test.js`, `ncr-batch2-test.js` משווים כל שמירה לצילום.
 6. לפני "השמירה נכשלה בשרת": `query_logs` על `edge_logs` (סטטוס 4xx ב-`/rest/v1/`) ועל `postgres_logs`. מהקוד אפשר לכתוב רק "הייתה נכשלת" (לקח 18).
+7. Routine שצריך את המסד: `create_trigger` מהענן נוצר בלי connectors ובלי repo (03/10/2026, נוצר ונמחק). מקימים מ-claude.ai > Routines; פרומפט מוכן: `project-files/routine-db-columns.md`.
 
 ## כללי Postgres של Supabase, מה שרלוונטי כאן (02/10/2026)
 מתוך `supabase/agent-skills`, skill `supabase-postgres-best-practices` (MIT, תוכן בלבד). לא הותקן כולו (8 קטגוריות, רובן על טבלאות של מיליוני שורות; כאן עשרות עד מאות). חמשת הכללים שחלים, ומה נמדד:
