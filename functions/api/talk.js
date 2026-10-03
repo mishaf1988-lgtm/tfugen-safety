@@ -229,6 +229,15 @@ export function sigBytes(dataUrl) {
   return u8;
 }
 
+// Storage answers an existing name with 409, or (older versions) with 400 and
+// statusCode "409" / error "Duplicate" in the body.
+async function isDuplicate(r) {
+  if (r.status === 409) return true;
+  if (r.status !== 400) return false;
+  const t = await r.text().catch(() => '');
+  return /"409"|Duplicate|already exists/i.test(t);
+}
+
 async function signTalk(env, request) {
   let form;
   try { form = await request.formData(); } catch (e) { return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.'); }
@@ -252,9 +261,21 @@ async function signTalk(env, request) {
   const dup = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&emp_id=eq.' + encodeURIComponent(emp.id) + '&select=id', { headers: sbH(env) });
   if (dup.ok) { const rows = await dup.json(); if (Array.isArray(rows) && rows.length) return done(emp.n); }
 
+  // One file name per worker and talk, uploaded without upsert: of two sends at
+  // the same moment the second is refused by Storage before its insert, so no
+  // orphan file (checker finding 8, 03/10/2026). A file with no row (an earlier
+  // insert that failed, or a row removed in the app) is overwritten once.
   const id = newId();
-  const name = 'sig-' + talk.id + '-' + String(emp.id).replace(/[^A-Za-z0-9_-]/g, '') + '-' + id + '.png';
-  const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': 'false' }), body: sig });
+  const name = 'sig-' + talk.id + '-' + String(emp.id).replace(/[^A-Za-z0-9_-]/g, '') + '.png';
+  const upload = (upsert) => fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': upsert }), body: sig });
+  let up = await upload('false');
+  if (!up.ok && await isDuplicate(up)) {
+    const again = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&emp_id=eq.' + encodeURIComponent(emp.id) + '&select=id', { headers: sbH(env) });
+    if (!again.ok) return bad('errSaveT', 'errSave', 502);
+    const rows = await again.json();
+    if (Array.isArray(rows) && rows.length) return done(emp.n);
+    up = await upload('true');
+  }
   if (!up.ok) return bad('errSaveT', 'errSave', 502);
   const row = {
     id, talk_id: talk.id, emp_id: String(emp.id), emp_name: emp.n, dept: emp.dep || null, lang: textOf(talk, lang).lang,
