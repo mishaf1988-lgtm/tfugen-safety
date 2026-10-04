@@ -137,6 +137,18 @@ function getter(pages, o) {
   check('the block in the mail: title, count, the path', html.includes(T.odNew) && html.includes('(1)') && html.includes('01/new.pdf'));
   check('no new files: "none" under the title', digestHtml(d, '2026-10-04', { odNew: [] }).includes(T.odNew + ' (0)'));
 
+  console.log('\n7. every endpoint the database calls passes the country gate');
+  // 04/10/2026: /api/od-scan went live, and pg_cron (Supabase servers, not in Israel) got
+  // the middleware's 403 page. A new cron caller must be in MACHINE_PATHS (vitre has its own rule).
+  const fs = await import('fs');
+  const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
+  const mp = (/const MACHINE_PATHS = \[([^\]]*)\]/.exec(mw) || [, ''])[1];
+  const dir = new URL('../../migrations/', import.meta.url);
+  const called = new Set();
+  fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).forEach((f) => { (fs.readFileSync(new URL(f, dir), 'utf8').match(/pages\.dev(\/api\/[a-z-]+)/g) || []).forEach((m) => called.add(m.replace('pages.dev', ''))); });
+  const missing = [...called].filter((x) => x !== '/api/vitre' && !mp.includes("'" + x + "'"));
+  check('every /api path in a migration is a machine path (' + called.size + ' found)', called.has('/api/od-scan') && !missing.length, missing);
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('HARNESS ERROR: ' + (e && e.stack || e)); process.exit(1); });
