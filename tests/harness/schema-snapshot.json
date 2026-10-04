@@ -240,6 +240,7 @@
     "hzm": [
       "created_at",
       "em",
+      "file_url",
       "hs",
       "id",
       "loc",

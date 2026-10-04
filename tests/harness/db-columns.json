@@ -14,7 +14,7 @@
 "files":["ctx","id","name","path","size","ts","type"],
 "hearing_tests":["age","category","dept","dob","e","emp_id","emp_name","gender","id","inspector","location_id","notes","role","test_date","ts","year"],
 "hist":["ic","id","ts","tx"],
-"hzm":["created_at","em","hs","id","loc","location_id","ms","n","q","un"],
+"hzm":["created_at","em","file_url","hs","id","loc","location_id","ms","n","q","un"],
 "inc":["created_at","d","dept","dept_group","dt","dy","file_url","five_why","id","issue_type_id","l","location_id","p","project_id","r","rc","reported","s","src","sv","ty","w"],
 "ins":["a","ac","created_at","d","fn","i","id","s","sc"],
 "inspection_types":["active","id","name","next_due","notes","recur_count","recur_unit","responsible","scope_table","ts"],

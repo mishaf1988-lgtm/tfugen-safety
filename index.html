@@ -3181,12 +3181,13 @@ id="m-ncr" style="display:none">
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1492;&#1495;&#1493;&#1502;&#1512; *</label><input id="hzm-n"></div>
     <div class="field"><label>&#1502;&#1505;&#1508;&#1512; UN</label><input id="hzm-un" placeholder="UN1234"></div>
-    <div class="field"><label>&#1505;&#1497;&#1499;&#1493;&#1503;</label><select id="hzm-hs"><option>&#1504;&#1502;&#1493;&#1498;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
+    <div class="field"><label>&#1505;&#1497;&#1499;&#1493;&#1503;</label><select id="hzm-hs"><option value="">-</option><option>&#1504;&#1502;&#1493;&#1498;</option><option>&#1489;&#1497;&#1504;&#1493;&#1504;&#1497;</option><option>&#1490;&#1489;&#1493;&#1492;</option><option>&#1511;&#1512;&#1497;&#1496;&#1497;</option></select></div>
     <div class="field"><label>&#1499;&#1502;&#1493;&#1514; &#1489;&#1502;&#1500;&#1488;&#1497; (&#1500;)</label><input type="number" id="hzm-q" placeholder="0" min="0"></div>
     <div class="field"><label>&#1502;&#1497;&#1511;&#1493;&#1501; &#1488;&#1495;&#1505;&#1493;&#1503;</label><select id="hzm-location-id" class="inp"></select></div>
     <div class="field" id="hzm-loc-legacy" style="display:none"><label>&#1502;&#1497;&#1511;&#1493;&#1501; (&#1496;&#1511;&#1505;&#1496; &#1497;&#1513;&#1503;)</label><input id="hzm-loc" type="text" readonly style="opacity:0.7"></div>
     <div class="field"><label>MSDS &#1502;&#1506;&#1493;&#1491;&#1499;&#1503;</label><input type="date" id="hzm-ms" data-nodefault></div>
     <div class="field fw"><label>&#1488;&#1502;&#1510;&#1506;&#1497; &#1489;&#1511;&#1512;&#1492; &#1500;&#1496;&#1497;&#1508;&#1493;&#1500;</label><textarea id="hzm-em"></textarea></div>
+    <div class="field fw"><label>&#128196; &#1490;&#1497;&#1500;&#1497;&#1493;&#1503; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514; (SDS)</label><div id="hzm-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('hzm-attach-area','hzm')">&#128206; &#1510;&#1512;&#1507; SDS</button></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-hzm')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svHzm()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
@@ -3295,6 +3296,22 @@ window.addEventListener('load', function(){
     webVitals.onFCP(function(m){ _wv.FCP = Math.round(m.value); });
   } catch(e){}
 });
+
+// 04/10/2026 (Michael: "yes" to measuring speed on his phone): once per page load, when the
+// page is hidden (INP is final then), the numbers go to audit_log as op 'vitals'. A viewer
+// cannot write; nothing is sent before sync, or when nothing was measured.
+window._wvSent=false;
+function _wvFlush(){
+  try{
+    if(window._wvSent||!SB_ON||_viewOnly())return;
+    if(!window._wv||!Object.keys(_wv).length)return;
+    window._wvSent=true;
+    var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?_currentUser.username+'@tfugen.local':null;
+    var t=Object.assign({w:window.innerWidth,sw:!!(navigator.serviceWorker&&navigator.serviceWorker.controller)},_wv);
+    _obPush({op:'ins',tbl:'audit_log',row:{user_email:u,table_name:'web_vitals',record_id:null,op:'vitals',title:JSON.stringify(t)}});
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_wvFlush();});
 
 // Catch errors that try/catch + .catch(() => {}) swallow elsewhere.
 // Capped buffer so a runaway loop can't blow memory.
@@ -4909,7 +4926,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"}},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"},"attach":"hzm-attach-area"},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -5649,8 +5666,8 @@ function svWst(){
 }
 function svHzm(){
   var n=gv('hzm-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
-  var r={id:_svEditId('hzm')||gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms')||null,em:gv('hzm-em')};
-  _svPut('hzm',r);addLog('\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-hzm');
+  var r={id:_svEditId('hzm')||gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gv('hzm-q')===''?null:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms')||null,em:gv('hzm-em'),file_url:_attachUrls['hzm-attach-area']||null};
+  _svPut('hzm',r);_attachClear('hzm-attach-area');addLog('\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-hzm');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rHzm();
 }
 function svEnv(){
@@ -14921,7 +14938,7 @@ var VIEW_CONFIG={
     ['\u05ea\u05d5\u05e7\u05e3 \u05d4\u05e1\u05db\u05dd','e'],['\u05d4\u05db\u05e9\u05e8\u05d4','tr'],['\u05e1\u05d8\u05d8\u05d5\u05e1','s']]},
   wst:{title:'\u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea',back:'wst',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e1\u05d5\u05d2','ty'],['\u05db\u05de\u05d5\u05ea (q\')','q'],['\u05e7\u05d5\u05d3','c'],['\u05d4\u05d5\u05dc\u05db\u05d4','h']]},
-  hzm:{title:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',back:'hzm',fields:[
+  hzm:{title:'\u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd',back:'hzm',photo:'file_url',fields:[
     ['\u05e9\u05dd','n'],['UN','un'],['\u05e1\u05d9\u05db\u05d5\u05df','hs'],['\u05db\u05de\u05d5\u05ea (l)','q'],['\u05de\u05d9\u05e7\u05d5\u05dd','loc']]},
   env:{title:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',back:'env',fields:[
     ['\u05ea\u05d0\u05e8\u05d9\u05da','d'],['\u05e1\u05d5\u05d2','ty'],['\u05de\u05d3\u05d3','me'],
@@ -18010,8 +18027,10 @@ function rHzm(){
       var allHzm=DB.hzm||[];
       var sevH=allHzm.filter(function(r){return r.hs==='\u05d2\u05d1\u05d5\u05d4'||r.hs==='\u05e7\u05e8\u05d9\u05d8\u05d9';}).length;
       var totalQty=allHzm.reduce(function(s,r){var q=parseFloat(r.q)||0;return s+q;},0);
+      var noSds=allHzm.filter(function(r){return !r.file_url;}).length;
       hSe.innerHTML=
         '<span style="background:#fff;border:1px solid #ddd;border-radius:14px;padding:3px 10px">\u05e1\u05d4\u05f4\u05db: <strong>'+allHzm.length+'</strong></span>'+
+        (noSds?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05d7\u05e1\u05e8 SDS: <strong>'+noSds+'</strong></span>':'')+
         (sevH?'<span style="background:#fce4e4;border:1px solid #cc1f1f;border-radius:14px;padding:3px 10px;color:#991b1b">\u05e1\u05d9\u05db\u05d5\u05df \u05d2\u05d1\u05d5\u05d4: <strong>'+sevH+'</strong></span>':'')+
         (totalQty?'<span style="background:#dbeafe;border:1px solid #2563eb;border-radius:14px;padding:3px 10px;color:#1e40af">\u05db\u05de\u05d5\u05ea \u05db\u05d5\u05dc\u05dc\u05ea: <strong>'+totalQty.toFixed(1)+' \u05dc</strong></span>':'');
     }
@@ -18040,7 +18059,8 @@ function rHzm(){
   });
   if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'-')+'</td><td><span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span></td><td>'+esc(h.q)+' \u05dc</td><td>'+(locTxt?esc(locTxt):'-')+'</td><td>'+eb(h.ms)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'-')+'</td><td>'+(h.hs?'<span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span>':'-')+'</td><td>'+(h.q==null||h.q===''?'-':esc(h.q)+' \u05dc')+'</td><td>'+(locTxt?esc(locTxt):'-')+'</td><td>'+(h.ms?fd(h.ms):'')+(h.file_url?' <a data-sign="'+escU(h.file_url)+'" target="_blank" rel="noopener" style="color:#2563eb">\ud83d\udcc4 SDS</a>':' <span style="color:#b91c1c">\u05d7\u05e1\u05e8</span>')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  if(typeof _signifyDom==='function')_signifyDom(tb);
 }
 function rEnv(){
   var tb=g('tb-env');if(!tb)return;
