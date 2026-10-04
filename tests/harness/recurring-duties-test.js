@@ -103,6 +103,34 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('"+ review" goes to the management review page', r, r);
 
+  console.log('\n5. factory measurements (04/10/2026, factory.md): stacks once a calendar year, sewage 12 months and monthly');
+  await page.evaluate(() => { DB.env = []; });
+  r = await of('env');
+  check('empty env register: no rows at all', !r.dated.length && !r.none.length, r);
+  await page.evaluate(() => {
+    DB.env = [
+      { id: 'e1', ty: 'בדיקת פליטות בארובות', d: '2025-03-10' },
+      { id: 'e2', ty: 'בדיקת פליטות בארובות', d: '2026-02-01' },
+      { id: 'e3', ty: 'דיגום שפכים חודשי', d: '2026-01-31' },
+      { id: 'e4', ty: 'צריכת מים', d: '2026-09-01' },
+    ];
+  });
+  r = await of('env');
+  const by = (l, n) => l.find((x) => x.name === n);
+  check('stacks: the latest counts, due 31/12 of the next year', by(r.dated, 'בדיקת פליטות בארובות') && by(r.dated, 'בדיקת פליטות בארובות').e === '2027-12-31' && by(r.dated, 'בדיקת פליטות בארובות').id === 'e2', r.dated);
+  check('monthly sewage: one month on, 31/01 to 28/02', by(r.dated, 'דיגום שפכים חודשי') && by(r.dated, 'דיגום שפכים חודשי').e === '2026-02-28', r.dated);
+  check('yearly sewage never measured: a no-date row "never done"', r.none.length === 1 && r.none[0].name === 'דיגום שפכים שנתי' && r.none[0].owner === 'לא בוצע אף פעם', r.none);
+  check('an ordinary measurement type is not a duty', r.dated.length === 2, r.dated);
+  r = await page.evaluate(() => {
+    goPage('exp'); expFilter('all'); rExp();
+    const b = document.querySelector('#tb-exp [data-ety="דיגום שפכים שנתי"]');
+    if (!b) return null;
+    b.click();
+    return { open: g('m-env').style.display !== 'none', ty: gv('env-ty'), d: gv('env-d') };
+  });
+  check('"+ measurement" opens the env form on that type', r && r.open && r.ty === 'דיגום שפכים שנתי', r);
+  await page.evaluate(() => closeModal('m-env'));
+
   if (process.env.SHOT) {
     await page.evaluate(() => { goPage('exp'); expFilter('all'); rExp(); });
     await page.locator('#tb-exp').locator('xpath=ancestor::div[contains(@class,"card")][1]').screenshot({ path: process.env.SHOT });

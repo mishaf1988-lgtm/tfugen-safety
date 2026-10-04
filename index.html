@@ -3198,7 +3198,7 @@ id="m-ncr" style="display:none">
   <div class="modal-title">&#1502;&#1491;&#1497;&#1491;&#1492; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="env-d"></div>
-    <div class="field"><label>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</label><select id="env-ty"><option>&#1508;&#1500;&#1497;&#1496;&#1514; &#1502;&#1494;&#1492;&#1502;&#1497;&#1501;</option><option>&#1510;&#1500;&#1497;&#1500; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514; &#1488;&#1493;&#1493;&#1497;&#1512;</option><option>&#1499;&#1502;&#1493;&#1514; &#1508;&#1505;&#1493;&#1500;&#1514;</option><option>&#1510;&#1512;&#1497;&#1499;&#1514; &#1502;&#1497;&#1501;</option><option>&#1488;&#1495;&#1512;</option></select></div>
+    <div class="field"><label>&#1505;&#1493;&#1490; &#1504;&#1497;&#1496;&#1493;&#1512;</label><select id="env-ty"><option>&#1508;&#1500;&#1497;&#1496;&#1514; &#1502;&#1494;&#1492;&#1502;&#1497;&#1501;</option><option>&#1510;&#1500;&#1497;&#1500; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</option><option>&#1488;&#1497;&#1499;&#1493;&#1514; &#1488;&#1493;&#1493;&#1497;&#1512;</option><option>&#1499;&#1502;&#1493;&#1514; &#1508;&#1505;&#1493;&#1500;&#1514;</option><option>&#1510;&#1512;&#1497;&#1499;&#1514; &#1502;&#1497;&#1501;</option><option>&#1489;&#1491;&#1497;&#1511;&#1514; &#1508;&#1500;&#1497;&#1496;&#1493;&#1514; &#1489;&#1488;&#1512;&#1493;&#1489;&#1493;&#1514;</option><option>&#1491;&#1497;&#1490;&#1493;&#1501; &#1513;&#1508;&#1499;&#1497;&#1501; &#1513;&#1504;&#1514;&#1497;</option><option>&#1491;&#1497;&#1490;&#1493;&#1501; &#1513;&#1508;&#1499;&#1497;&#1501; &#1495;&#1493;&#1491;&#1513;&#1497;</option><option>&#1488;&#1495;&#1512;</option></select></div>
     <div class="field"><label>&#1502;&#1491;&#1491;</label><input id="env-me"></div>
     <div class="field"><label>&#1514;&#1493;&#1510;&#1488;&#1492;</label><input id="env-r" placeholder="0.0"></div>
     <div class="field"><label>&#1497;&#1495;&#1497;&#1491;&#1492;</label><input id="env-u" placeholder="mg/l"></div>
@@ -7414,6 +7414,26 @@ function _legNext(){
     return {name:r.s||r.law_num||'',owner:r.c_date?'\u05d4\u05d5\u05e2\u05e8\u05da: '+fd(r.c_date)+(r.c?' ('+r.c+')':''):'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da',mod:'leg',modLabel:'\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea',e:r.c_date?_plusMonths(r.c_date,_LEG_FREQ_M):null,id:r.id};
   });
 }
+// The factory's own recurring measurements (business licence and the sewage permit,
+// factory.md 04/10/2026): stack emissions once a calendar year (next due 31/12 of the
+// year after the last), sewage composite sampling every 12 months, and monthly after
+// pre-treatment. Same rules as the drills: an empty env register shows nothing, and
+// a duty never measured lands on the no-date tab. Months 0 = calendar year.
+var _ENV_DUTIES=[['\u05d1\u05d3\u05d9\u05e7\u05ea \u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05d1\u05d0\u05e8\u05d5\u05d1\u05d5\u05ea',0],['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05e9\u05e0\u05ea\u05d9',12],['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05d7\u05d5\u05d3\u05e9\u05d9',1]];
+function _envNext(){
+  if(!(DB.env||[]).length)return [];
+  return _ENV_DUTIES.map(function(du_){
+    var ty=du_[0],last=null;
+    (DB.env||[]).forEach(function(r){if(r.ty===ty&&r.d&&(!last||String(r.d)>String(last.d)))last=r;});
+    var e=last?(du_[1]?_plusMonths(last.d,du_[1]):(+String(last.d).substring(0,4)+1)+'-12-31'):null;
+    return {name:ty,owner:last?'\u05d0\u05d7\u05e8\u05d5\u05df: '+fd(last.d):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'env',modLabel:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',e:e,id:last?last.id:null};
+  });
+}
+function _envNew(ty){
+  openModal('m-env');
+  ['env-d','env-me','env-r','env-u','env-lim'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var s=g('env-ty');if(s&&ty)s.value=ty;
+}
 // svLeg re-stamps c_date only when the determination changes (3.7), so a law
 // found compliant again next year needs its own "still holds" action.
 window._legReconfirm=function(id){
@@ -7486,7 +7506,7 @@ function _expCollect(){
   // calendar and an alert, and appeared on no list.
   _drlNext().forEach(function(x){if(x.e)items.push(x);});
   _audNext().forEach(function(x){if(x.e)items.push(x);});
-  _mrNext().concat(_legNext()).forEach(function(x){if(x.e)items.push(x);});
+  _mrNext().concat(_legNext(),_envNext()).forEach(function(x){if(x.e)items.push(x);});
   _thzRecheck().forEach(function(x){items.push(x);});
   (DB.med||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.t||'',owner:r.t||'',mod:'med',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e8\u05e4\u05d5\u05d0\u05d9\u05ea',e:r.e,id:r.id});});
   return items;
@@ -7512,7 +7532,7 @@ function _expNoDate(){
   // starting state for hundreds of rows. Showing them is the point.
   _drlNext().forEach(function(x){if(!x.e)out.push(x);});
   _audNext().forEach(function(x){if(!x.e)out.push(x);});
-  _mrNext().concat(_legNext()).forEach(function(x){if(!x.e)out.push(x);});
+  _mrNext().concat(_legNext(),_envNext()).forEach(function(x){if(!x.e)out.push(x);});
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
@@ -7616,7 +7636,7 @@ function rExp(){
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
   // these five tables, so the trip back through the module was pure navigation.
-  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl',aud:'auds',thz:'tour_hazards'};
+  var _tbl={docs:'docs',tr:'tr',ppe:'ppe',ctr:'ctr',eqi:'equip_inspections',med:'med',hearing:'hearing_tests',drl:'drl',aud:'auds',thz:'tour_hazards',env:'env'};
   var _expTotal=rows.length;
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
@@ -7627,6 +7647,7 @@ function rExp(){
     if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
     if(i.mod==='mr')act='<button class="btn btn-d btn-sm" onclick="goPage(\'mr\')" title="\u05dc\u05d3\u05e3 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05d4\u05e0\u05d4\u05dc\u05d4">+ \u05e1\u05e7\u05d9\u05e8\u05d4</button>';
     if(i.mod==='leg')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'leg\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'+(i.e?' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="_legReconfirm(this.dataset.li)" title="\u05e0\u05d1\u05d3\u05e7 \u05d4\u05d9\u05d5\u05dd, \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4">\u2705 \u05d1\u05ea\u05d5\u05e7\u05e3</button>':'')+' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="editLeg(this.dataset.li)" title="\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4">\u270f\ufe0f \u05e7\u05d1\u05d9\u05e2\u05d4</button>';
+    if(i.mod==='env')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-ety="'+esc(i.name)+'" onclick="_envNew(this.dataset.ety)" title="\u05e8\u05e9\u05d5\u05dd \u05de\u05d3\u05d9\u05d3\u05d4 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05de\u05d3\u05d9\u05d3\u05d4</button>';
     if(i.mod==='aud')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dar="'+esc(i.name)+'" onclick="_audNew(this.dataset.dar)" title="\u05e8\u05e9\u05d5\u05dd \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'-')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'-')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
   }).join('')+_capNote(_expTotal,_expShown.length,'expShowAll()',6);
