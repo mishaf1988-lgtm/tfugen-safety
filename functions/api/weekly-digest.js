@@ -344,8 +344,8 @@ export function odScanFiles(raw, nowMs) {
 
 // 04/10/2026 (Michael, "approve both"): the task on Michael's computer uploads each new
 // account skill and writes a line to UPLOAD_LOG. Its line format is not known yet, so this
-// reads it loosely: the last non-empty line as is, its date from a DD/MM/YYYY or
-// YYYY-MM-DD in it, else the file's last change. Red with no line in 8 days, a failure
+// reads it loosely: the last non-empty line as is, its date from the first DD/MM/YYYY
+// or YYYY-MM-DD in it, else the file's last change. Red with no line in 8 days, a failure
 // word in the last line, or no file. Pure.
 export const UPLOAD_STALE_DAYS = 8;
 export function logText(bytes) {
@@ -361,8 +361,9 @@ export function uploadLine(log, nowMs) {
   const last = lines[lines.length - 1];
   if (!last) return { red: true, text: t + '\u05d4\u05d9\u05d5\u05de\u05df \u05e8\u05d9\u05e7' };
   let at = null, m;
-  const all = [...last.matchAll(/(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[/.](\d{1,2})[/.](\d{4})/g)];
-  if ((m = all[all.length - 1])) at = m[1] ? m[1] + '-' + m[2] + '-' + m[3] : m[6] + '-' + m[5].padStart(2, '0') + '-' + m[4].padStart(2, '0');
+  // The first date: the line's own time. A later one is the skill's version (verified on the real
+  // log 04/10/2026: "04/10/2026 15:32 | michael-assistant | ... \u05d2\u05e8\u05e1\u05d4: 04/10/2026 (6) ...").
+  if ((m = /(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[/.](\d{1,2})[/.](\d{4})/.exec(last))) at = m[1] ? m[1] + '-' + m[2] + '-' + m[3] : m[6] + '-' + m[5].padStart(2, '0') + '-' + m[4].padStart(2, '0');
   if (!at && log.mod) at = new Date(log.mod).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const today = new Date(nowMs).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const age = at ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(at + 'T12:00:00Z')) / DAY) : null;
