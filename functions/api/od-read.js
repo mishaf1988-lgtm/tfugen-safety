@@ -10,6 +10,9 @@
 // names. With sheet: rows from..to (default 1..60), columns A..(cols, max 26).
 // A .pptx: its slides, shape texts, tables and chart series (_pptx.js).
 // part: one XML part of the file as text (60KB at a time, from offset).
+// list (04/10/2026, Michael: "scan the whole folder"): {list: '<folder>'} or
+// {list: ''} for the safety folder itself = its files and sub-folders. raw may
+// also fetch .pdf / .docx / .doc / .txt / .csv, so the documents can be read.
 import { jsonResp } from '../_shared.js';
 import { odConfigured, accessToken, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
@@ -19,10 +22,18 @@ export const ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 
-export function safePath(p) {
+export function safePath(p, raw) {
   const parts = String(p || '').split('/').filter(Boolean);
-  if (!parts.length || parts.some((x) => x === '..' || x === '.') || !/\.(xls[xm]|pptx)$/i.test(parts[parts.length - 1])) return null;
+  const ext = raw ? /\.(xls[xmx]?|pptx|pdf|docx?|txt|csv)$/i : /\.(xls[xm]|pptx)$/i;
+  if (!parts.length || parts.some((x) => x === '..' || x === '.') || !ext.test(parts[parts.length - 1])) return null;
   return ROOT + parts.join('/');
+}
+
+// A folder inside the safety folder ('' = the safety folder itself), never above it.
+export function safeDir(p) {
+  const parts = String(p || '').split('/').filter(Boolean);
+  if (parts.some((x) => x === '..' || x === '.')) return null;
+  return (ROOT + parts.join('/')).replace(/\/$/, '');
 }
 
 export async function onRequest(context) {
@@ -36,14 +47,33 @@ export async function onRequest(context) {
   // run SQL there, lasts minutes, and allows only this download.
   const rawTok = request.headers.get('x-raw-token') || '';
   let rawOk = false;
-  if (body.raw === true && rawTok.length >= 32) {
+  if ((body.raw === true || typeof body.list === 'string') && rawTok.length >= 32) {
     const st = await stateGet(env, ['od_raw_token', 'od_raw_exp']).catch(() => ({}));
     const t = st.od_raw_token && st.od_raw_token.value, x = st.od_raw_exp && st.od_raw_exp.value;
     rawOk = !!t && t === rawTok && !!x && Date.parse(x) > Date.now();
   }
   if (!rawOk && (!want || (request.headers.get('x-notify-secret') || '') !== want)) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
-  const full = safePath(body.path);
+  if (typeof body.list === 'string') {
+    const dir = safeDir(body.list);
+    if (!dir) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
+    try {
+      const { token } = await accessToken(env);
+      const items = [];
+      let next = G + seg(dir) + ':/children?$select=name,size,folder,file,lastModifiedDateTime&$top=999';
+      for (let i = 0; next && i < 10; i++) {
+        const r = await fetch(next, { headers: { Authorization: 'Bearer ' + token } });
+        if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: dir }, 200, {});
+        const j = await r.json();
+        (j.value || []).forEach((x) => items.push({ name: x.name, dir: !!x.folder, n: x.folder ? x.folder.childCount : undefined, size: x.size, mod: x.lastModifiedDateTime }));
+        next = j['@odata.nextLink'] || null;
+      }
+      return jsonResp({ ok: true, path: dir, items }, 200, {});
+    } catch (e) {
+      return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, {});
+    }
+  }
+  const full = safePath(body.path, body.raw === true);
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
     const { token } = await accessToken(env);

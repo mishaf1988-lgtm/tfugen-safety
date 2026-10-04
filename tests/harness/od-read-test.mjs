@@ -1,6 +1,6 @@
 // od-read (28/09): read one sheet of a workbook in the safety folder, server
 // to server, read-only. Graph mocked; the workbook is built by writeZip.
-import { onRequest, safePath } from './_build/od-read.mjs';
+import { onRequest, safePath, safeDir } from './_build/od-read.mjs';
 import { writeZip } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
@@ -79,6 +79,24 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   res = await onRequest({ request: req({ 'x-raw-token': '' }, { path: 'x.pptx', raw: true }), env: ENV });
   check('no token stored: refused (never open by default)', res.status === 403);
   check('other file types still refused', safePath('a/b.docx') === null && !!safePath('a/b.pptx'));
+
+  // Scan (04/10/2026): the listing and the raw download of documents.
+  check('raw may fetch documents, the parsed reads still only workbooks', !!safePath('a/b.pdf', true) && !!safePath('a/b.docx', true) && safePath('a/b.pdf') === null && safePath('a/b.exe', true) === null && safePath('../b.pdf', true) === null);
+  check('a folder stays inside the safety folder', safeDir('') === 'שולחן העבודה/ניהול בטיחות' && safeDir('12/א') === 'שולחן העבודה/ניהול בטיחות/12/א' && safeDir('../x') === null && safeDir('a/./b') === null);
+  const listed = [];
+  const listWorld = (state) => { globalThis.fetch = async (url) => { const u = String(url); listed.push(decodeURIComponent(u)); if (u.startsWith(SB + '/rest/v1/server_state')) return new Response(JSON.stringify(Object.keys(state).map((k) => ({ key: k, value: state[k] }))), { status: 200 }); if (u.startsWith(SB)) return new Response(JSON.stringify([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 }); if (u.includes('page2')) return new Response(JSON.stringify({ value: [{ name: 'היתר רעלים.pdf', size: 9, file: {} }] }), { status: 200 }); return new Response(JSON.stringify({ value: [{ name: '05_רישוי', folder: { childCount: 3 } }, { name: 'רישיון עסק.docx', size: 5, file: {} }], '@odata.nextLink': 'https://graph.microsoft.com/v1.0/page2' }), { status: 200 }); }; };
+  listWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { list: '' }), env: ENV });
+  j = await res.json();
+  check('a listing with the one-off token: folders and files, every page', j.ok && j.items.length === 3 && j.items[0].dir && j.items[0].n === 3 && j.items[1].name === 'רישיון עסק.docx' && !j.items[1].dir && j.items[2].name === 'היתר רעלים.pdf', j);
+  check('the listing reads the safety folder only (children, GET)', listed.some((c) => c.includes('/root:/שולחן העבודה/ניהול בטיחות:/children')));
+  res = await onRequest({ request: req({}, { list: '' }), env: ENV });
+  check('a listing with no token or secret: 403', res.status === 403);
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { list: '../..' }), env: ENV });
+  check('a listing above the safety folder: 400', res.status === 400);
+  listWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { list: '' }), env: ENV });
+  check('a listing with an expired token: 403', res.status === 403);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
