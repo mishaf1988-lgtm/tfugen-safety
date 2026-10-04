@@ -25,6 +25,7 @@ declare module 'claude-code' {
       isHidden: boolean
       messages: number
       warned: number
+      skillPath: string
     }
   }
 }

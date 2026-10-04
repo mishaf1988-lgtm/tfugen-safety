@@ -11,6 +11,19 @@ const meter = atom({ plugin: 'token-meter', key: 'meter' } as const, null as Met
 const isHidden = atom({ plugin: 'token-meter', key: 'isHidden' } as const, false)
 const messages = atom({ plugin: 'token-meter', key: 'messages' } as const, 0)
 const warned = atom({ plugin: 'token-meter', key: 'warned' } as const, 0)
+const skillPath = atom({ plugin: 'token-meter', key: 'skillPath' } as const, '')
+
+// Sends "update skill" only with a path (04/10/2026: the bare button sent an empty request three times)
+const submitSkill = async ($: StateDollar & Pick<CoreEngineInterface, 'ui' | 'prompt'>, value: string) => {
+  const path = value.trim().replace(/^"+|"+$/g, '')
+  if (!path) {
+    $.ui.toast('קודם להדביק בשדה את הנתיב של קובץ הסקיל')
+
+    return
+  }
+  await update($, skillPath, () => '')
+  void $.prompt.submit({ text: `עדכן סקיל: ${path}`, asUser: true })
+}
 
 // Wrapped in a left-to-right isolate so "67.7k" stays whole inside Hebrew text
 const fmt = (n: number) =>
@@ -130,6 +143,7 @@ export const register: Register = on => {
     const l = await read($, last)
     const m = await read($, meter)
     const msgs = await read($, messages)
+    const path = await read($, skillPath)
     const level = chatLevel(m?.contextPercent ?? null, msgs)
     const { Box, Button, Input, Text } = $.ui.resolve(e)
 
@@ -176,19 +190,12 @@ export const register: Register = on => {
               key="skill-path"
               placeholder="גרור לכאן קובץ סקיל או הדבק נתיב, ואז Enter"
               submitLabel="עדכן"
-              onSubmit={value => {
-                const path = value.trim().replace(/^"+|"+$/g, '')
-                if (path) {
-                  void $.prompt.submit({ text: `עדכן סקיל: ${path}`, asUser: true })
-                }
-              }}
+              value={path}
+              onInput={value => void update($, skillPath, () => value)}
+              onSubmit={value => void submitSkill($, value)}
             />
           </Box>
-          <Button
-            key="update-skill"
-            label="עדכן סקיל"
-            onPress={() => void $.prompt.submit({ text: 'עדכן סקיל', asUser: true })}
-          />
+          <Button key="update-skill" label="עדכן סקיל" onPress={() => void submitSkill($, path)} />
         </Box>
         <Box flexDirection="row" flexWrap="wrap" gap={2}>
           <Text>
