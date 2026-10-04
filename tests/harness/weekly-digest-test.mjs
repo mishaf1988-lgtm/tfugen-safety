@@ -254,6 +254,8 @@ const ROWS = [
     const now = Date.parse('2026-10-04T09:00:00Z');
     const ok = uploadLine({ text: '01/10/2026 10:00 הועלה a.zip\n04/10/2026 08:30 הועלה michael-assistant.zip\n', mod: '2026-10-04T05:30:00Z' }, now);
     check('fresh DD/MM/YYYY line: green, its date, the line', !ok.red && ok.text === 'העלאת העוזר לחשבון: שורה אחרונה מ-04/10/2026: 04/10/2026 08:30 הועלה michael-assistant.zip', ok);
+    const real = uploadLine({ text: '\ufeff04/10/2026 15:32 | michael-assistant-04-10-2026.zip | כבר בחשבון (v8, גרסה: 04/10/2026 (6)), הועבר להועלו\r\n04/10/2026 15:32 | michael-assistant | michael-assistant repo גרסה: 20/09/2026 (6) כבר בחשבון (v8)\r\n' }, now);
+    check('the real log line (04/10/2026): the line\'s date, not the version date in it; "already in the account" is not a failure', !real.red && /מ-04\/10\/2026: 04\/10\/2026 15:32 \| michael-assistant \|/.test(real.text), real);
     const iso = uploadLine({ text: '2026-09-30T08:00:00 uploaded a.zip' }, now);
     check('ISO date in the line, 4 days old: green', !iso.red && /מ-30\/09\/2026/.test(iso.text), iso);
     const old = uploadLine({ text: '25/09/2026 הועלה a.zip' }, now);
