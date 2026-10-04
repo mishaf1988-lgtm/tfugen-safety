@@ -21,6 +21,15 @@ check('changed, a later date with (1): ok', g.problem(F, V('04/10/2026', 6), V('
 check('changed, an earlier date with a big number: fails', g.problem(F, V('04/10/2026', 6), V('03/10/2026', 9)) is not None)
 check('version line removed: fails', g.problem(F, V('04/10/2026', 6), 'no line') is not None)
 check('new assistant (nothing on main): ok', g.problem(F, '', V('04/10/2026', 1)) is None)
+R = ['.claude/skills/tfugen-lessons/SKILL.md']
+RD = '.claude/skills/tfugen-lessons/'
+check('repo skills: the changed ones, each once, after the assistant', g.skill_dirs(R + ['.claude/skills/tfugen-lessons/x.md', '.claude/skills/tfugen-db/SKILL.md', 'index.html']) == [(g.DIR, True), (RD, False), ('.claude/skills/tfugen-db/', False)])
+check('repo skill without a version line on either side: ok (opt-in)', g.problem(R, 'no line', 'no line', RD, False) is None)
+check('repo skill with a line, same number as main: fails', g.problem(R, V('04/10/2026', 2), V('04/10/2026', 2), RD, False) is not None)
+check('repo skill with a line, next number: ok', g.problem(R, V('04/10/2026', 2), V('04/10/2026', 3), RD, False) is None)
+check('repo skill gets its first line: ok', g.problem(R, 'no line', V('04/10/2026', 1), RD, False) is None)
+check('repo skill loses its line: fails', g.problem(R, V('04/10/2026', 2), 'no line', RD, False) is not None)
+check('another skill changed, this one not: ok', g.problem(['.claude/skills/tfugen-db/SKILL.md'], V('04/10/2026', 2), V('04/10/2026', 2), RD, False) is None)
 d = '+++ b/tests/harness/a-test.js\n+  await p.waitForTimeout(400);\n+  await p.waitForTimeout(1200);\n-  await p.waitForTimeout(100);\n+++ b/tests/harness/b-test.js\n   await p.waitForTimeout(200);'
 check('short wait: only added lines up to 500 ms, with the file', w.short_waits(d) == [('tests/harness/a-test.js', 400)], w.short_waits(d))
 # The real repo: this PR bumps the assistant above main.

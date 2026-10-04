@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -13,6 +13,7 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
 const DAY = 86400000;
 const d = (x) => ({ date: x });
 const TODAY = '2026-10-04'; // a Sunday
+const fdNow = () => new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
 const plus = (n, from) => new Date(Date.parse((from || TODAY) + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 // Register rows, columns A..M as buildRegister writes them.
 const ROWS = [
@@ -121,6 +122,13 @@ const ROWS = [
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
       if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (u.startsWith('https://graph.microsoft.com/v1.0/me/drive/root:/') && decodeURIComponent(u).includes('סקילים להעלאה/יומן.txt')) {
+        (w.logUrls = w.logUrls || []).push(decodeURIComponent(u));
+        const L = o.upload; if (!L) return json({ error: 'not found' }, 404);
+        if (L.status) return json({ error: 'x' }, L.status);
+        if (u.includes(':/content')) return new Response(L.bytes || new TextEncoder().encode(L.text), { status: 200 });
+        return json({ lastModifiedDateTime: L.mod || null });
+      }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
       return json({ error: 'unexpected ' + u }, 599);
     };
@@ -163,6 +171,12 @@ const ROWS = [
   check('a week later: sent again', c.j.ok && c.j.sent, c.j);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   check('admin preview: the data and the html, nothing sent, nothing recorded', c.j.ok && c.j.html && c.j.digest && c.j.counts.open === 3 && c.j.subject && !c.w.mails.length && !c.w.state[STATE_KEY], Object.keys(c.j));
+  check('upload log: read from the fixed path, never written', (c.w.logUrls || []).length === 1 && c.w.logUrls[0].endsWith('/שולחן העבודה/סקילים להעלאה/יומן.txt?$select=lastModifiedDateTime'), c.w.logUrls);
+  check('no upload log yet: red line in the preview', c.j.meta.upload && c.j.meta.upload.red && /אין יומן העלאות/.test(c.j.html), c.j.meta.upload);
+  c = await call({ email: 'admin@tfugen.local', upload: { mod: new Date().toISOString(), text: 'x\r\n' + fdNow() + ' 09:12 הועלה michael-assistant.zip\r\n\r\n' } }, { op: 'preview' });
+  check('upload log with a fresh line: shown as is, not red', c.j.meta.upload && !c.j.meta.upload.red && c.j.meta.upload.text.endsWith('הועלה michael-assistant.zip') && c.w.logUrls.length === 2, c.j.meta.upload);
+  c = await call({ email: 'admin@tfugen.local', upload: { status: 500 } }, { op: 'preview' });
+  check('upload log read fails: red, says not read, the mail still builds', c.j.ok && c.j.meta.upload.red && /לא נקרא \(onedrive 500\)/.test(c.j.meta.upload.text), c.j.meta.upload);
   c = await call({ emptyRegs: ['hearing_tests', 'hzm'] }, {}, 'nsec');
   const m2 = c.w.mails[0] && c.w.mails[0].message;
   check('two registers empty: the red line in the mail, in the order of the app, counted', m2 && /מרשמי חובה ריקים: בדיקות שמיעה, חומרים מסוכנים\./.test(m2.body.content) && c.j.counts.emptyRegs === 2, c.j.counts);
@@ -233,6 +247,33 @@ const ROWS = [
     const h = digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [], talk: l });
     check('in the mail, before the committee block, red', /color:#b91c1c;font-weight:bold">הדרכה שבועית &quot;מלגזות&quot;/.test(h) && h.indexOf('מלגזות') < h.indexOf(T.committee), h.slice(0, 200));
     check('no talk: no line in the mail', !/הדרכה שבועית/.test(digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
+  }
+
+  {
+    console.log('\n9. the skill upload log line (04/10/2026)');
+    const now = Date.parse('2026-10-04T09:00:00Z');
+    const ok = uploadLine({ text: '01/10/2026 10:00 הועלה a.zip\n04/10/2026 08:30 הועלה michael-assistant.zip\n', mod: '2026-10-04T05:30:00Z' }, now);
+    check('fresh DD/MM/YYYY line: green, its date, the line', !ok.red && ok.text === 'העלאת העוזר לחשבון: שורה אחרונה מ-04/10/2026: 04/10/2026 08:30 הועלה michael-assistant.zip', ok);
+    const iso = uploadLine({ text: '2026-09-30T08:00:00 uploaded a.zip' }, now);
+    check('ISO date in the line, 4 days old: green', !iso.red && /מ-30\/09\/2026/.test(iso.text), iso);
+    const old = uploadLine({ text: '25/09/2026 הועלה a.zip' }, now);
+    check(UPLOAD_STALE_DAYS + ' days is the limit: 9 days old is red and says how long', old.red && /אין שורה חדשה 9 ימים/.test(old.text), old);
+    check('8 days old: still green', !uploadLine({ text: '26/09/2026 הועלה' }, now).red);
+    check('a line with no date: the file\'s last change (Israel\'s day)', /מ-04\/10\/2026/.test(uploadLine({ text: 'uploaded', mod: '2026-10-03T22:30:00Z' }, now).text));
+    check('no date and no change time: red', uploadLine({ text: 'uploaded' }, now).red);
+    check('last line failed (Hebrew): red', uploadLine({ text: '04/10/2026 העלאה נכשלה: Chrome סגור' }, now).red);
+    check('last line failed (English): red', uploadLine({ text: '04/10/2026 upload ERROR' }, now).red);
+    check('an old failure followed by a success: green', !uploadLine({ text: '03/10/2026 נכשל\n04/10/2026 הועלה' }, now).red);
+    check('empty file: red', uploadLine({ text: '\r\n \n' }, now).red);
+    check('no file: red', uploadLine({ missing: true }, now).red && uploadLine(null, now).red);
+    const long = uploadLine({ text: '04/10/2026 ' + 'א'.repeat(400) }, now);
+    check('a long line is cut', long.text.length < 260, long.text.length);
+    const u16 = new Uint8Array([0xff, 0xfe, ...Array.from('04/10/2026 הועלה').flatMap((ch) => [ch.charCodeAt(0) & 255, ch.charCodeAt(0) >> 8])]);
+    check('UTF-16 file (Windows PowerShell): read', logText(u16) === '04/10/2026 הועלה', logText(u16));
+    check('UTF-8 with BOM: read without it', logText(new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode('הועלה')])) === 'הועלה');
+    const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], upload: old });
+    check('in the mail, in the committee block, red', /color:#b91c1c;font-weight:bold">העלאת העוזר לחשבון/.test(h) && h.indexOf('העלאת העוזר') > h.indexOf(T.committee), h.slice(0, 120));
+    check('no upload meta: no line', !/העלאת העוזר/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
