@@ -92,6 +92,8 @@ const ROWS = [
   check('the owner column says when it was last done, as on the expiry page', R[1].owner === 'הוערך: ' + plus(-366).split('-').reverse().join('/') + ' (עומד)' && /^אחרונה: \d{2}\/\d{2}\/\d{4}$/.test(R[3].owner), R);
   check('empty registers (live 02/10/2026: drl, mgmt_reviews and leg have 0 rows): no row at all', expiringOf(recurringOf({}), TODAY).length === 0);
   check('never done (live 02/10/2026: mgmt_reviews 0 rows): only the review, only when read and empty', neverOf({ mgmt_reviews: [], drl: [], leg: [] }).join() === 'סקירת הנהלה' && !neverOf({}).length && !neverOf({ mgmt_reviews: [{ id: 'm1', ts: plus(-10) }] }).length);
+  const RE = expiringOf(recurringOf({ env: [{ id: 'v1', ty: 'דיגום שפכים חודשי', d: plus(-40) }, { id: 'v2', ty: 'דיגום שפכים שנתי', d: plus(-200) }, { id: 'v3', ty: 'בדיקת פליטות בארובות', d: (+TODAY.substring(0, 4) - 2) + '-06-01' }, { id: 'v4', ty: 'צריכת מים', d: plus(-900) }] }), TODAY);
+  check('factory measurements (04/10/2026): monthly sewage 40 days ago is due, stacks two years ago overdue since 31/12 last year, yearly sewage 200 days ago not yet, other types never', RE.map((x) => x.name).sort().join() === ['בדיקת פליטות בארובות', 'דיגום שפכים חודשי'].sort().join() && RE.find((x) => x.name === 'בדיקת פליטות בארובות').e === (+TODAY.substring(0, 4) - 1) + '-12-31', RE);
   const hn = digestHtml(e, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: [], expFail: [], never: ['סקירת הנהלה'] });
   check('never done: a red line before the expiry block', /<p style="color:#b91c1c;font-weight:bold">לא בוצע אף פעם: סקירת הנהלה\./.test(hn) && hn.indexOf('לא בוצע אף פעם') < hn.indexOf(T.exp), hn.substring(0, 600));
 
@@ -107,7 +109,7 @@ const ROWS = [
       const u = String(url), mth = (init && init.method) || 'GET';
       const json = (x, st = 200) => new Response(JSON.stringify(x), { status: st, headers: { 'Content-Type': 'application/json' } });
       if (u.includes('&e=lte.')) { const t = u.slice((SB + '/rest/v1/').length).split('?')[0]; (w.expUrls = w.expUrls || []).push(u); if (o.expFail === t) return json({ error: 'x' }, 500); return json((o.exp || {})[t] || []); }
-      const rec = ['drl', 'auds', 'mgmt_reviews', 'leg'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
+      const rec = ['drl', 'auds', 'mgmt_reviews', 'leg', 'env'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
       if (rec) { (w.recUrls = w.recUrls || []).push(u); if (o.recFail === rec) return json({ error: 'x' }, 500); return json((o.rec || {})[rec] || []); }
       const reg = ['equip_inspections', 'hearing_tests', 'tr', 'hzm'].find((t) => u.startsWith(SB + '/rest/v1/' + t + '?'));
       if (reg) { if (o.regFail === reg) return json({ error: 'x' }, 500); return json((o.emptyRegs || []).includes(reg) ? [] : [{ id: 'r1' }]); }
@@ -186,7 +188,7 @@ const ROWS = [
   check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /עבודה בגובה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
   c = await call({ rec: { drl: [{ id: 'd1', ty: 'פינוי חירום', d: plus(-370, now) }] } }, { op: 'send', force: true }, 'nsec');
   const mr = c.w.mails[0] && c.w.mails[0].message.body.content;
-  check('the endpoint reads the four duty tables, and a drill past its 12 months is in the block, counted as expired', (c.w.recUrls || []).length === 4 && /תרגיל חירום<\/td><td[^>]*>פינוי חירום/.test(mr) && c.j.counts.expiring === 1 && c.j.counts.expired === 1, [c.j.counts, c.w.recUrls]);
+  check('the endpoint reads the five duty tables, and a drill past its 12 months is in the block, counted as expired', (c.w.recUrls || []).length === 5 && /תרגיל חירום<\/td><td[^>]*>פינוי חירום/.test(mr) && c.j.counts.expiring === 1 && c.j.counts.expired === 1, [c.j.counts, c.w.recUrls]);
   c = await call({ recFail: 'leg' }, {}, 'nsec');
   check('a duty table that fails to read is named, not taken as "none"', c.w.mails[0] && c.w.mails[0].message.body.content.includes(T.expFail + 'הערכת ציות'), c.j);
   c = await call({ expFail: 'ctr' }, {}, 'nsec');

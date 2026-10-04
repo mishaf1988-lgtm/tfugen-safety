@@ -68,10 +68,14 @@ export function plusMonths(d, n) {
   return y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + dd).slice(-2);
 }
 const lastBy = (rows, key, ok) => { const m = {}; (rows || []).forEach((r) => { const d = ymd(r.d), k = r[key]; if (d && k && (!ok || ok(r)) && !(m[k] > d)) m[k] = d; }); return Object.keys(m).map((k) => ({ name: k, owner: '\u05d0\u05d7\u05e8\u05d5\u05df: ' + fd(m[k]), e: plusMonths(m[k], FREQ_M) })); };
+// The factory's measurements, as _envNext in the app: months 0 = once a calendar year.
+export const ENV_DUTIES = [['\u05d1\u05d3\u05d9\u05e7\u05ea \u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05d1\u05d0\u05e8\u05d5\u05d1\u05d5\u05ea', 0], ['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05e9\u05e0\u05ea\u05d9', 12], ['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05d7\u05d5\u05d3\u05e9\u05d9', 1]];
+const envOf = (rows) => ENV_DUTIES.map(([ty, n]) => { const d = (rows || []).filter((r) => r.ty === ty).map((r) => ymd(r.d)).filter(Boolean).sort().pop(); return d ? { name: ty, owner: '\u05d0\u05d7\u05e8\u05d5\u05df: ' + fd(d), e: n ? plusMonths(d, n) : (+d.substring(0, 4) + 1) + '-12-31' } : null; }).filter(Boolean);
 export const REC_SRC = [
   ['\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd', 'drl', 'id,ty,d', (rows) => lastBy(rows, 'ty')],
   ['\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd', 'auds', 'id,r,d,s', (rows) => lastBy(rows, 'r', (r) => r.s !== '\u05de\u05ea\u05d5\u05db\u05e0\u05df')],
   ['\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', 'mgmt_reviews', 'id,ts', (rows) => { const d = (rows || []).map((r) => ymd(String(r.ts || '').substring(0, 10))).filter(Boolean).sort().pop(); return d ? [{ name: '\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', owner: '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + fd(d), e: plusMonths(d, FREQ_M) }] : []; }, true],
+  ['\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9', 'env', 'id,ty,d', envOf],
   ['\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea', 'leg', 'id,s,law_num,c,c_date', (rows) => (rows || []).filter((r) => ymd(r.c_date)).map((r) => ({ name: r.s || r.law_num || '', owner: '\u05d4\u05d5\u05e2\u05e8\u05da: ' + fd(r.c_date) + (r.c ? ' (' + r.c + ')' : ''), e: plusMonths(r.c_date, FREQ_M) }))],
 ];
 // The fifth field: never done is a red line of its own (the app shows 9.3 red
