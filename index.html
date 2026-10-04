@@ -14985,6 +14985,8 @@ function showView(tbl,id){
     if(val===true)val='\u2713';
     else if(val===false)val='\u2717';
     else if(val===undefined||val===null||val==='')val='-';
+    // A bare date reads DD/MM/YYYY like everywhere else (it showed 2026-09-01, 04/10/2026).
+    else if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(val))val=fd(val);
     // If this is a source_id linked to another table, look up the source
     // record and show its human-readable identifier (NCR-0357, EQI-005,
     // etc.) instead of the internal Supabase UUID.
