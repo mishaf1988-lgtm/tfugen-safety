@@ -23595,6 +23595,7 @@ function _backupSyncFromStorage(){
 // /_Backups/cron/ (cron-side files) AND in /_Backups/ (browser-side
 // timestamp folders). Items are sorted by name desc — names embed the
 // ISO timestamp so lexical = chronological. Deletes oldest beyond N.
+var _BACKUP_STAMP_RE=/^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/;
 function _backupPruneOneDrive(keep){
   if(typeof keep!=='number'||keep<1)keep=15;
   return _odEnsureToken().then(function(tok){
@@ -23617,8 +23618,10 @@ function _backupPruneOneDrive(keep){
       var cronFiles=((both[0]&&both[0].value)||[]).filter(function(it){return it.file&&it.name;});
       // Top-level _Backups contains: timestamp folders (browser-side) +
       // the `cron` subfolder (don't touch), and since 01/10/2026 the server's
-      // `monthly` and `photos` (functions/api/backup-od.js). Folders only.
-      var browserFolders=((both[1]&&both[1].value)||[]).filter(function(it){return it.folder&&it.name&&it.name!=='cron'&&it.name!=='monthly'&&it.name!=='photos';});
+      // `monthly`, `photos` and `talks` (functions/api/backup-od.js). Only a
+      // timestamp folder is ours: a name list missed `talks` (04/10/2026), so
+      // any folder the server adds later is left alone by default.
+      var browserFolders=((both[1]&&both[1].value)||[]).filter(function(it){return it.folder&&_BACKUP_STAMP_RE.test(it.name||'');});
       cronFiles.sort(function(a,b){return b.name.localeCompare(a.name);});
       browserFolders.sort(function(a,b){return b.name.localeCompare(a.name);});
       var cronToDelete=cronFiles.slice(keep);
