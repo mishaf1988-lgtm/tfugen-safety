@@ -262,8 +262,9 @@ const USERS = { dani: DANI, vered: VERED };
   p = await boot({ factors: VERIFIED });
   await login(p, 'admin'); await code(p, GOOD);
   await p.evaluate(() => { _changePwOpen(); document.getElementById('cpw-current').value = 'right-pw'; document.getElementById('cpw-new').value = 'new-password-1'; document.getElementById('cpw-confirm').value = 'new-password-1'; _changePwSubmit(); });
-  await p.waitForTimeout(400);
-  s = await state(p);
+  // Wait for the state, not a fixed 400 ms: on a slow GitHub runner (04/10/2026, #1156) the
+  // re-check had not finished yet. Still fails if the code window never opens.
+  for (let i = 0; i < 25; i++) { await p.waitForTimeout(200); s = await state(p); if (s.codeWin && s.aal === 'aal1') break; }
   check('the code is asked for again', s.codeWin && s.aal === 'aal1', s);
   check('and the password is not changed on the password-only session', (await p.evaluate(() => window.__sb.updates.length)) === 0);
   await code(p, GOOD);
