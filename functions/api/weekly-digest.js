@@ -68,10 +68,14 @@ export function plusMonths(d, n) {
   return y + '-' + ('0' + (m + 1)).slice(-2) + '-' + ('0' + dd).slice(-2);
 }
 const lastBy = (rows, key, ok) => { const m = {}; (rows || []).forEach((r) => { const d = ymd(r.d), k = r[key]; if (d && k && (!ok || ok(r)) && !(m[k] > d)) m[k] = d; }); return Object.keys(m).map((k) => ({ name: k, owner: '\u05d0\u05d7\u05e8\u05d5\u05df: ' + fd(m[k]), e: plusMonths(m[k], FREQ_M) })); };
+// The factory's measurements, as _envNext in the app: months 0 = once a calendar year.
+export const ENV_DUTIES = [['\u05d1\u05d3\u05d9\u05e7\u05ea \u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05d1\u05d0\u05e8\u05d5\u05d1\u05d5\u05ea', 0], ['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05e9\u05e0\u05ea\u05d9', 12], ['\u05d3\u05d9\u05d2\u05d5\u05dd \u05e9\u05e4\u05db\u05d9\u05dd \u05d7\u05d5\u05d3\u05e9\u05d9', 1]];
+const envOf = (rows) => ENV_DUTIES.map(([ty, n]) => { const d = (rows || []).filter((r) => r.ty === ty).map((r) => ymd(r.d)).filter(Boolean).sort().pop(); return d ? { name: ty, owner: '\u05d0\u05d7\u05e8\u05d5\u05df: ' + fd(d), e: n ? plusMonths(d, n) : (+d.substring(0, 4) + 1) + '-12-31' } : null; }).filter(Boolean);
 export const REC_SRC = [
   ['\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd', 'drl', 'id,ty,d', (rows) => lastBy(rows, 'ty')],
   ['\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd', 'auds', 'id,r,d,s', (rows) => lastBy(rows, 'r', (r) => r.s !== '\u05de\u05ea\u05d5\u05db\u05e0\u05df')],
   ['\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', 'mgmt_reviews', 'id,ts', (rows) => { const d = (rows || []).map((r) => ymd(String(r.ts || '').substring(0, 10))).filter(Boolean).sort().pop(); return d ? [{ name: '\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4', owner: '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + fd(d), e: plusMonths(d, FREQ_M) }] : []; }, true],
+  ['\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9', 'env', 'id,ty,d', envOf],
   ['\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea', 'leg', 'id,s,law_num,c,c_date', (rows) => (rows || []).filter((r) => ymd(r.c_date)).map((r) => ({ name: r.s || r.law_num || '', owner: '\u05d4\u05d5\u05e2\u05e8\u05da: ' + fd(r.c_date) + (r.c ? ' (' + r.c + ')' : ''), e: plusMonths(r.c_date, FREQ_M) }))],
 ];
 // The fifth field: never done is a red line of its own (the app shows 9.3 red
@@ -125,6 +129,7 @@ const H = {
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
+  odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
   never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
   neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
@@ -253,6 +258,8 @@ export function digestHtml(d, today, meta) {
   h += '<p style="margin:4px 0' + (!deckAt || old ? ';color:#b91c1c;font-weight:bold' : '') + '">' + (deckAt ? esc(H.deckAt + ilTime(m.deckAt)) + (old ? esc(H.deckOld) : '') : esc(H.deckNever)) + '</p>';
   const w = m.watchOpen || [];
   h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
+  const on = m.odNew || [];
+  h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
   h += d.topics.length ? '<ol style="margin:0;padding-right:20px">' + d.topics.map((x) => '<li>' + esc([x.n, x.dept, x.descr].filter(Boolean).join(' - ')) + (x.sev ? ' (' + esc(x.sev) + ')' : '') + (x.days > 0 ? ', <span style="color:#b91c1c">' + esc(when(x)) + '</span>' : '') + '</li>').join('') + '</ol>' : '<p style="color:#555">' + H.none + '</p>';
   h += '<p style="color:#555;font-size:12px;margin-top:16px">' + esc(H.foot) + '<a href="' + APP_URL + '">' + esc(H.app) + '</a></p></div>';
@@ -317,6 +324,22 @@ export function backupProblem(raw, nowMs) {
   return null;
 }
 
+// 04/10/2026 (Michael, "approve all"): /api/od-scan writes server_state.od_scan every
+// night: the files added to the safety folder. A scan that failed or stopped running is
+// named with the sync problems; the files of the last 7 days get their own block. Pure.
+export function odScanProblem(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  const t = '\u05e1\u05e8\u05d9\u05e7\u05ea \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: ';
+  if (!r || !r.at) return t + '\u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df';
+  if (nowMs - Date.parse(r.at) > 3 * DAY) return t + '\u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ' + ilTime(r.at);
+  if (!r.ok) return t + '\u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-' + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')';
+  return null;
+}
+export function odScanFiles(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  return ((r && r.files) || []).filter((f) => f && f.c && nowMs - Date.parse(f.c) <= 7 * DAY);
+}
+
 // 03/10/2026 (Michael, option 1): private.db_columns_check() compares the DB columns with the
 // approved snapshot on the 1st of each month and writes db_columns_drift. A column with no
 // match is a field the app may be losing silently (PGRST204 self-heal). Pure.
@@ -338,7 +361,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -350,8 +373,10 @@ async function build(env) {
   if (bk) watchOpen.push(bk);
   const sc = schemaProblem(v('db_columns_drift'));
   if (sc) watchOpen.push(sc);
+  const os = odScanProblem(v('od_scan'), Date.now());
+  if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
