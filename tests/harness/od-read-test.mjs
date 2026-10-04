@@ -75,6 +75,15 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
   res = await onRequest({ request: req({ 'x-raw-token': 'b'.repeat(40) }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
   check('a wrong token: refused', res.status === 403);
+  rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
+  let seen = [];
+  { const f0 = globalThis.fetch; globalThis.fetch = async (url, init) => { seen.push(decodeURIComponent(String(url))); return f0(url, init); }; }
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { uploadLog: true, raw: true }), env: ENV });
+  check('upload log: the one fixed file outside the folder, with a raw token', res.status === 200 && seen.some((u) => u.endsWith('/root:/שולחן העבודה/סקילים להעלאה/יומן.txt:/content')), seen);
+  res = await onRequest({ request: req(S, { uploadLog: true }), env: ENV });
+  check('upload log with the server secret alone: refused (raw token only)', res.status === 400, res.status);
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '../סקילים להעלאה/יומן.txt', raw: true }), env: ENV });
+  check('a path out of the folder is still refused', res.status === 400, res.status);
   rawWorld({});
   res = await onRequest({ request: req({ 'x-raw-token': '' }, { path: 'x.pptx', raw: true }), env: ENV });
   check('no token stored: refused (never open by default)', res.status === 403);

@@ -19,6 +19,9 @@ import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js'
 import { pptxOutline } from '../_pptx.js';
 
 export const ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
+// The log of the skill upload task on Michael's computer (04/10/2026): one fixed file
+// outside ROOT, read by the weekly mail and, with a raw token, by {uploadLog: true, raw: true}.
+export const UPLOAD_LOG = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e1\u05e7\u05d9\u05dc\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4/\u05d9\u05d5\u05de\u05df.txt';
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 
@@ -73,7 +76,7 @@ export async function onRequest(context) {
       return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, {});
     }
   }
-  const full = safePath(body.path, body.raw === true);
+  const full = body.uploadLog === true ? (rawOk ? UPLOAD_LOG : null) : safePath(body.path, body.raw === true);
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
     const { token } = await accessToken(env);

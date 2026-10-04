@@ -42,6 +42,7 @@ import { odConfigured, accessToken, tokenRow, hasMail, sendMail, stateGet, state
 import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
+import { UPLOAD_LOG } from './od-read.js';
 
 export const STATE_KEY = 'weekly_digest';
 export const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -258,6 +259,7 @@ export function digestHtml(d, today, meta) {
   h += '<p style="margin:4px 0' + (!deckAt || old ? ';color:#b91c1c;font-weight:bold' : '') + '">' + (deckAt ? esc(H.deckAt + ilTime(m.deckAt)) + (old ? esc(H.deckOld) : '') : esc(H.deckNever)) + '</p>';
   const w = m.watchOpen || [];
   h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
+  if (m.upload) h += '<p style="margin:4px 0' + (m.upload.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.upload.text) + '</p>';
   const on = m.odNew || [];
   h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
@@ -340,6 +342,51 @@ export function odScanFiles(raw, nowMs) {
   return ((r && r.files) || []).filter((f) => f && f.c && nowMs - Date.parse(f.c) <= 7 * DAY);
 }
 
+// 04/10/2026 (Michael, "approve both"): the task on Michael's computer uploads each new
+// account skill and writes a line to UPLOAD_LOG. Its line format is not known yet, so this
+// reads it loosely: the last non-empty line as is, its date from a DD/MM/YYYY or
+// YYYY-MM-DD in it, else the file's last change. Red with no line in 8 days, a failure
+// word in the last line, or no file. Pure.
+export const UPLOAD_STALE_DAYS = 8;
+export function logText(bytes) {
+  const b = bytes || new Uint8Array(0);
+  if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder('utf-16le').decode(b.subarray(2));
+  return new TextDecoder('utf-8').decode(b).replace(/^\ufeff/, '');
+}
+export function uploadLine(log, nowMs) {
+  const t = '\u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df: ';
+  if (!log || log.missing) return { red: true, text: t + '\u05d0\u05d9\u05df \u05d9\u05d5\u05de\u05df \u05d4\u05e2\u05dc\u05d0\u05d5\u05ea (\u05d4\u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05de\u05d7\u05e9\u05d1 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df)' };
+  if (log.error) return { red: true, text: t + '\u05d4\u05d9\u05d5\u05de\u05df \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0' + ' (' + String(log.error).substring(0, 80) + ')' };
+  const lines = String(log.text || '').split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const last = lines[lines.length - 1];
+  if (!last) return { red: true, text: t + '\u05d4\u05d9\u05d5\u05de\u05df \u05e8\u05d9\u05e7' };
+  let at = null, m;
+  const all = [...last.matchAll(/(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[/.](\d{1,2})[/.](\d{4})/g)];
+  if ((m = all[all.length - 1])) at = m[1] ? m[1] + '-' + m[2] + '-' + m[3] : m[6] + '-' + m[5].padStart(2, '0') + '-' + m[4].padStart(2, '0');
+  if (!at && log.mod) at = new Date(log.mod).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const today = new Date(nowMs).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const age = at ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(at + 'T12:00:00Z')) / DAY) : null;
+  const failed = /\u05e0\u05db\u05e9\u05dc|\u05e9\u05d2\u05d9\u05d0|fail|error/i.test(last);
+  const stale = age == null || age > UPLOAD_STALE_DAYS;
+  return { red: failed || stale, text: t + (at ? '\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05de-' + fd(at) + ': ' : '') + last.substring(0, 160) + (stale && age != null ? ' (\u05d0\u05d9\u05df \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4 ' + age + ' \u05d9\u05de\u05d9\u05dd)' : '') };
+}
+export async function uploadLog(env) {
+  try {
+    const { token } = await accessToken(env);
+    const seg = UPLOAD_LOG.split('/').map(encodeURIComponent).join('/');
+    const base = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg;
+    const r = await fetch(base + '?$select=lastModifiedDateTime', { headers: { Authorization: 'Bearer ' + token } });
+    if (r.status === 404) return { missing: true };
+    if (!r.ok) return { error: 'onedrive ' + r.status };
+    const mod = (await r.json()).lastModifiedDateTime || null;
+    const c = await fetch(base + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+    if (!c.ok) return { error: 'onedrive ' + c.status };
+    return { mod, text: logText(new Uint8Array(await c.arrayBuffer())) };
+  } catch (e) {
+    return { error: String((e && e.message) || e).substring(0, 80) };
+  }
+}
+
 // 03/10/2026 (Michael, option 1): private.db_columns_check() compares the DB columns with the
 // approved snapshot on the 1st of each month and writes db_columns_drift. A column with no
 // match is a field the app may be losing silently (PGRST204 self-heal). Pure.
@@ -357,7 +404,7 @@ export function schemaProblem(raw) {
 
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [hazards, reports, tasks, st, empty, exp, tk] = await Promise.all([
+  const [hazards, reports, tasks, st, empty, exp, tk, ul] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
@@ -365,6 +412,7 @@ async function build(env) {
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
+    odConfigured(env) ? uploadLog(env) : Promise.resolve({ error: 'not configured' }),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -376,7 +424,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
