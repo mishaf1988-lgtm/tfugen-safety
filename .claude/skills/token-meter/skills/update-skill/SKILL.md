@@ -23,6 +23,8 @@ The page's own "Upload and replace" dialog is the update itself, so it is covere
 2. **Check it.** Extract it to the scratchpad (never in place). Confirm there is a `SKILL.md` with frontmatter `name` and `description`. Read the whole SKILL.md and list the other files.
    - If a skill with the same name is already loaded in this session (for example `anthropic-skills:<name>`), compare and summarize in 3–6 Hebrew bullets what changed.
    - Report anything odd: no SKILL.md, a different name than expected, scripts that reach the network or delete files. If something is odd, don't upload. Ask first.
+   - **Already uploaded?** Open `https://claude.ai/customize/skills/yours`, open the skill and read its SKILL.md with `get_page_text`. If it is the same as the file's SKILL.md (same version line and same history), don't upload. Say in one Hebrew line that this version is already in the account and that a new chat loads it. (04/10/2026: the same zip was sent twice in a row.)
+   - **Newer in the repo?** If the skill has a copy in a repo (michael-assistant: `project-files/claude-ai-skill/michael-assistant/` in `mishaf1988-lgtm/tfugen-safety`), `git fetch` and compare it with `origin/main`. If main has a newer version, merge into it before uploading. Don't overwrite it (michael-assistant lesson 34).
 
 3. **Get folder access before uploading.** Chrome's `file_upload` only accepts files from folders granted to this session. Copying the file into the scratch workspace does not help (tried 04/10/2026, rejected). So, before the upload, call `request_directory` with the folder that holds the file, for example `C:\Users\michaelf\OneDrive - tapugan.co.il\שולחן העבודה`.
 
