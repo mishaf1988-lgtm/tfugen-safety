@@ -2,7 +2,7 @@
 
 מיכאל אישר ב-04/10/2026 ("מאשר הכל"). רשימת הקבצים החדשים נבנית בלי Claude: `/api/od-scan` כל לילה (cron `od-scan`, `migrations/2026-10-04_od_scan_cron.sql`) שומר אותה ב-`server_state.od_scan`, והמייל של יום ראשון מציג את הקבצים של השבוע. ה-Routine נחוץ רק לקריאת המסמך עצמו ולעדכון העוזר.
 
-**להקים מ-claude.ai > Routines, ידנית** (מהענן `create_trigger` נוצר בלי connectors ובלי repo, `tfugen-db` סעיף 7):
+**הוקם 04/10/2026** מהשיחה במחשב דרך ה-API: `trig_013bAkaRFu8y7iEk7UsRKypk`, Sonnet 5.5, ריצה ראשונה 02/11/2026. נבדק ב-`get_trigger` מהענן: הלוח, הפרומפט, התראה לטלפון ו-connector של Supabase במקום. ה-repo לא מופיע בתשובה של `get_trigger`; אם הריצה של 02/11 לא מוצאת את CLAUDE.md, להוסיף את ה-repo ב-claude.ai > Routines. ההגדרות:
 
 - **Repository:** `mishaf1988-lgtm/tfugen-safety`
 - **Connectors:** Supabase
