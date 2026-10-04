@@ -40,7 +40,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **2. נכשל ב-GitHub ועבר מקומית (01/10/2026, #1006).**
 מה קרה: `requests` חסר, playwright אחר.
 הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake".
-נאכף: חלקית, גרסאות מקובעות ב-`tests.yml`.
+נאכף: חלקית: גרסאות ב-`tests.yml`; `short-wait-warn.py`.
 חזר: 1 (04/10/2026, #1156: `mfa-test` חיכה 400ms קבועות; עכשיו מחכה למצב. המתנה קבועה = חשד)
 
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**

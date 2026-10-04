@@ -18,7 +18,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | תהליך שלקח יותר מניסיון אחד (migration, פריסה, בדיקה) | ה-skill של התחום (`tfugen-db`, `tfugen-dev`), או skill חדש |
 | עובדה על הקוד: טבלה, עזר, מספר שורה, מחרוזת | `tfugen-ref` |
 | רקע והיסטוריה שלא צריך בכל משימה | `tfugen-history` |
-| כלל שחל על כל עבודה, לא רק על ה-repo | `project-files/claude-ai-skill/michael-assistant/references/lessons.md` (ידע מקצועי: קובץ הנושא ב-`references/`; שורה בהיסטוריה ב-`SKILL.md`), ואז zip של כל התיקייה ו-SendUserFile למיכאל עם "להעלות מחדש: Settings > Capabilities > Skills" |
+| כלל שחל על כל עבודה, לא רק על ה-repo | `project-files/claude-ai-skill/michael-assistant/references/lessons.md` (ידע מקצועי: קובץ הנושא ב-`references/`; שורה בהיסטוריה ב-`SKILL.md`), עם מספר גרסה חדש בשורה השנייה של `SKILL.md`. אחרי המיזוג ל-main, משימה במחשב של מיכאל מעלה לחשבון לבד (04/10/2026); zip ו-SendUserFile רק אם מיכאל כותב שהמשימה לא רצה |
 
 ובתיאור ה-PR שורה: `skill: <מה נלמד ואיפה נכתב>` או `skill: אין`.
 `lessons-gate.py` נכשל בלי השורה, וגם כשהשורה אומרת שנלמד משהו ואף קובץ skill לא השתנה.
