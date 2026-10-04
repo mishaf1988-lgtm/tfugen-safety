@@ -159,7 +159,11 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   // (the lesson said this test checked it; until the retro of 01/10/2026 it did not).
   { const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
     const m = html.match(/var browserFolders=[^\n]*/);
-    check('the browser prune of _Backups skips cron, monthly and photos', !!m && ['cron', 'monthly', 'photos'].every((f) => m[0].includes("it.name!=='" + f + "'")), m && m[0].slice(0, 200)); }
+    // Since 04/10/2026 only a timestamp folder is a candidate (a name list missed
+    // `talks`); backup-prune-test.js runs the function itself.
+    const re = html.match(/var _BACKUP_STAMP_RE=\/(.*)\/;/);
+    const rx = re && new RegExp(re[1]);
+    check('the browser prune of _Backups only takes timestamp folders', !!m && m[0].includes('_BACKUP_STAMP_RE.test(') && !!rx && ['cron', 'monthly', 'photos', 'talks'].every((f) => !rx.test(f)) && rx.test('2026-10-04_07-58-20'), m && m[0].slice(0, 200)); }
 
   console.log('\n6. the weekly mail');
   const now = Date.now();
