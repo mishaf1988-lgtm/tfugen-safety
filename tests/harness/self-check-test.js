@@ -18,7 +18,9 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
   page.on('pageerror', (e) => errs.push(e.message));
   page.on('dialog', (d) => { dialogs.push(d.message()); (answer ? d.accept() : d.dismiss()).catch(() => {}); });
   await page.goto(HTML, { waitUntil: 'load' }); await page.waitForTimeout(800);
-  const shot = (n) => OUT ? page.screenshot({ path: path.join(OUT, n + '.png') }) : Promise.resolve();
+  // Wait for the modal fade to end: a shot taken mid-animation shows the page through a
+  // 75% opaque modal, and reads like a broken layout (04/10/2026).
+  const shot = async (n) => { if (!OUT) return; await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 3000 }).catch(() => {}); await page.screenshot({ path: path.join(OUT, n + '.png') }); };
   await page.evaluate((dsrc) => { window.DASH_RE = new RegExp(dsrc);
     document.getElementById('login').style.display = 'none'; document.getElementById('app').style.display = 'block';
     window.__ins = []; window.sbIns = function (t, r) { window.__ins.push({ t, r: JSON.parse(JSON.stringify(r)) }); };
@@ -30,7 +32,7 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
     DB.tour_hazards = [];
     for (var i = 0; i < 38; i++) { var closed = i < 27; DB.tour_hazards.push({ id: 'h' + i, n: i + 1, descr: 'מפגע ' + (i + 1) + ' מעקה חסר', sev: i < 8 ? 'גבוהה' : 'בינונית', s: 'סגור', dept: 'ייצור', due: '2026-09-20', closed_d: closed ? '2026-09-' + String(3 + (i % 17)).padStart(2, '0') : '2026-09-28', recheck_d: null }); }
     // incidents 2026 without investigation
-    for (var j = 0; j < 3; j++) DB.inc.push({ id: 'inc' + j, d: '2026-0' + (j + 3) + '-10', dt: '2026-0' + (j + 3) + '-10', ty: 'תאונת עבודה', sv: j === 0 ? 'קל' : '', l: 'ייצור', w: 'עובד ' + j, dy: '', s: 'פתוח', r: 'נפילה', p: '' });
+    for (var j = 0; j < 3; j++) DB.inc.push({ id: 'inc' + j, d: 'נפילה במדרגות ' + j, dt: '2026-0' + (j + 3) + '-10', ty: 'תאונת עבודה', sv: j === 0 ? 'קל' : '', l: 'ייצור', w: 'עובד ' + j, dy: '', s: 'פתוח', r: 'נפילה', p: '' });
   });
 
   // ---- א. modal title vs X (Chromium only: measure room) ----
@@ -108,7 +110,7 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
 
   // ---- 7. new law = not yet assessed ----
   r = await page.evaluate(() => { const n0 = DB.leg.length; openModal('m-leg'); const c0 = gv('leg-c'); g('leg-s').value = 'תקנות חדשות לבדיקה'; const u0 = gv('leg-c-date'), o0 = gv('leg-c-by'); svLeg(); const l = DB.leg[DB.leg.length - 1]; return { c0, u0, o0, saved: DB.leg.length === n0 + 1, c: l && l.c, u: l && l.c_date, o: l && l.c_by }; }).catch(e => ({ err: e.message }));
-  await shot('7-leg');
+  await page.evaluate(() => { goPage('leg'); if (typeof rLeg === 'function') rLeg(); }); await page.waitForTimeout(200); await shot('7-leg');
   say('7 new law opens and saves as "טרם הוערך", no date, no assessor', r.c0 === 'טרם הוערך' && r.saved && r.c === 'טרם הוערך' && !r.u && !r.o, r);
   r = await page.evaluate(() => { goPage('dash'); rDash(); const t = g('pg-dash').textContent; const m = t.match(/טרם הוערך:\s*(\d+)/); return { line: m ? m[0] : null }; });
   await page.waitForTimeout(300); await shot('7-dash-compliance');
@@ -136,6 +138,10 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
     say('every saved field has a column in the DB (' + sent.length + ' payloads)', sent.length > 0 && unknown.length === 0, unknown);
   }
   // ---- Console errors ----
+  // A table header is the card label on a phone: an abbreviation ("סט.", "ימי אבד.", "מס'") reads as
+  // a typo there. Fixed for audits on 02/10 and found in 12 more tables on 04/10/2026.
+  r = await page.evaluate(() => [...document.querySelectorAll('th')].map((t) => t.textContent.replace(/\s+/g, ' ').trim()).filter((x) => /[\u0590-\u05ff][.']$/.test(x)));
+  say('no abbreviated table header (it is the card label on a phone)', r.length === 0, r);
   say('no page errors during the walk', errs.length === 0, errs.slice(0, 5));
   await browser.close();
   const nf = res.filter(x => !x.ok).length; console.log('\n' + res.filter(x => x.ok).length + ' passed, ' + nf + ' failed'); process.exit(nf ? 1 : 0);
