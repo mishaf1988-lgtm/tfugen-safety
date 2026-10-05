@@ -6,8 +6,10 @@ Claude stopped with a PR not merged, or waited for Michael with work left.
 Before a turn ends it checks, locally and without network:
   1. tracked files changed and not committed  -> block
   2. the branch has commits not in origin/main -> block (PR, ci-wait, merge)
-  3. a PR was merged in this session and the reply has no "הצעות לשדרוג"
-     section -> block (Michael, 02/10/2026)
+  3. a PR was merged since the last reply that had a "הצעות לשדרוג" section,
+     and this reply has none -> block (Michael, 02/10/2026). Only merges
+     after that reply count (05/10/2026: one merge early in a long session
+     made every later short reply carry the section again)
   4. a PR was merged in this session and no next session was opened
      (create_session) -> block (lesson? then handoff, or the next item),
      unless the handoff in the repo root says "אין קוד" (CLAUDE.md, #1099:
@@ -20,6 +22,8 @@ Test:  python3 tests/harness/supervisor-test.py
 """
 import json, os, re, subprocess, sys
 
+PROPOSALS = "הצעות לשדרוג"
+
 
 def git(cwd, *args):
     p = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True, timeout=20)
@@ -27,8 +31,9 @@ def git(cwd, *args):
 
 
 def transcript(path):
-    """(text of the assistant's last turn, tool names used in the whole session)."""
-    texts, tools = [], set()
+    """(text of the assistant's last turn, tool names used in the whole session,
+    tool names used since the last assistant text with the proposals section)."""
+    texts, tools, recent = [], set(), set()
     with open(path, encoding="utf-8") as f:
         for line in f:
             try:
@@ -46,9 +51,12 @@ def transcript(path):
                         continue
                     if c.get("type") == "text":
                         texts.append(c.get("text", ""))
+                        if PROPOSALS in c.get("text", ""):
+                            recent = set()
                     elif c.get("type") == "tool_use":
                         tools.add(c.get("name", ""))
-    return "\n".join(texts), tools
+                        recent.add(c.get("name", ""))
+    return "\n".join(texts), tools, recent
 
 
 def ci_wait_running():
@@ -67,7 +75,7 @@ def no_code_handoff(cwd):
         return False
 
 
-def verdict(cwd, text, tools, waiting):
+def verdict(cwd, text, tools, waiting, recent=None):
     if text.rstrip()[-400:].count("?"):
         return None
     if waiting:
@@ -80,10 +88,11 @@ def verdict(cwd, text, tools, waiting):
         return ("המפקח: %s commits על ה-branch עוד לא ב-main (Cloudflare מפרסם רק את main). "
                 "לפתוח PR אם אין, להריץ ברקע ci-wait.sh ולמזג כשירוק (לקח 25)." % ahead)
     merged = any(t.endswith("merge_pull_request") for t in tools)
+    merged_since = any(t.endswith("merge_pull_request") for t in (tools if recent is None else recent))
     # Michael, 02/10/2026 ("remember we said you must recommend new skills or
     # upgrades"): a task summary after a merge carries the proposals section.
     # The rule was text in tfugen-screen-review and was forgotten the same day.
-    if merged and "הצעות לשדרוג" not in text:
+    if merged_since and PROPOSALS not in text:
         return ("המפקח: מוזג, ובסיכום אין סעיף \"💡 הצעות לשדרוג\" (tfugen-screen-review; מיכאל 02/10/2026). "
                 "להוסיף: skill לעדכן או ליצור, בדיקה או hook שיתפסו טעות שחזרה, ומה מהם נעשה לבד.")
     if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd):
@@ -102,8 +111,8 @@ def main():
         sys.exit(0)
     cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or "."
     try:
-        text, tools = transcript(data["transcript_path"])
-        reason = verdict(cwd, text, tools, ci_wait_running())
+        text, tools, recent = transcript(data["transcript_path"])
+        reason = verdict(cwd, text, tools, ci_wait_running(), recent)
     except Exception:
         sys.exit(0)
     if reason:

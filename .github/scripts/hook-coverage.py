@@ -3,9 +3,9 @@
 in .claude/settings.json? 02/10/2026: the Supabase connector came with a UUID
 prefix (mcp__ea272696-...__execute_sql) and the matcher lists only
 mcp__Supabase__*, so DELETE on ncr would not have been stopped by the hook.
-A cloud session cannot change settings.json (lesson 42), so this only warns:
-a ::warning:: on every PR until a session on Michael's computer fixes it.
-Exit 0 always. Test: tests/harness/hook-coverage-test.py
+Fixed on Michael's computer 05/10/2026 (matcher mcp__.*__execute_sql), so a
+name that is not covered now fails the check (exit 1) instead of warning.
+Test: tests/harness/hook-coverage-test.py
 """
 import json, os, re, sys
 
@@ -25,8 +25,8 @@ if __name__ == "__main__":
     s = json.load(open(os.path.join(ROOT, ".claude", "settings.json"), encoding="utf-8"))
     miss = uncovered(s)
     if miss:
-        print("::warning title=guard-sql does not cover::" + ", ".join(miss) +
-              ". Fix the matcher in .claude/settings.json on Michael's computer (handoff, lesson 42).")
-    else:
-        print("guard-sql covers every SQL tool name")
+        print("::error title=guard-sql does not cover::" + ", ".join(miss) +
+              ". Fix the guard-sql matcher in .claude/settings.json (a cloud session cannot, lesson 42).")
+        sys.exit(1)
+    print("guard-sql covers every SQL tool name")
     sys.exit(0)

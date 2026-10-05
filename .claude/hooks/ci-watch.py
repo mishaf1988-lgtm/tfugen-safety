@@ -20,6 +20,21 @@ def branch():
     except Exception:
         return ""
 
+def no_heredoc(cmd):
+    """The command without heredoc bodies (05/10/2026: a test file written in a
+    heredoc contained "git push" and the hook fired on a command that pushed nothing)."""
+    out, lines, i = [], cmd.split("\n"), 0
+    while i < len(lines):
+        out.append(lines[i])
+        tags = re.findall(r"(?<!<)<<(?!<)-?\s*['\"]?([A-Za-z_]\w*)['\"]?", lines[i])
+        i += 1
+        for t in tags:
+            while i < len(lines) and lines[i].strip("\t ") != t:
+                i += 1
+            i += 1
+    return "\n".join(out)
+
+
 try:
     d = json.load(sys.stdin)
 except Exception:
@@ -28,7 +43,7 @@ tool = d.get("tool_name", "")
 inp = d.get("tool_input", {}) or {}
 ref = ""
 if tool == "Bash":
-    cmd = inp.get("command", "") or ""
+    cmd = no_heredoc(inp.get("command", "") or "")
     if not re.search(r"(^|[;&|\s])git\s+push\b", cmd) or inp.get("run_in_background"):
         print("{}"); sys.exit(0)
     # The branch named in the push (git push -u origin <b>), else the checkout's.

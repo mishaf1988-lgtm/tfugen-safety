@@ -17,4 +17,6 @@ check("lessons changed + test green: nothing", run("push-recheck.py", push, e(L,
 check("lessons not changed: test not run, nothing", run("push-recheck.py", push, e("index.html", red)) == "{}")
 check("not a push: nothing", run("push-recheck.py", {"tool_name": "Bash", "cwd": R, "tool_input": {"command": "git status"}}, e(L, red)) == "{}")
 check("'git pushd' is not a push", run("push-recheck.py", {"tool_name": "Bash", "cwd": R, "tool_input": {"command": "echo git pushx"}}, e(L, red)) == "{}")
+hd = {"tool_name": "Bash", "cwd": R, "tool_input": {"command": "cat > t <<'EOF'\ngit push origin b\nEOF\necho ok"}}
+check("git push only inside a heredoc body: nothing (05/10/2026)", run("push-recheck.py", hd, e(L, red)) == "{}")
 done()

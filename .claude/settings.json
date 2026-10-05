@@ -32,7 +32,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__Supabase__execute_sql|mcp__Supabase__apply_migration|mcp__supabase__execute_sql|mcp__supabase__apply_migration",
+        "matcher": "Bash|mcp__.*__execute_sql|mcp__.*__apply_migration",
         "hooks": [
           {
             "type": "command",
@@ -75,6 +75,15 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/push-gate.py"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*__create_pull_request",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pr-gate.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -95,6 +104,24 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ci-watch.py"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/push-recheck.py"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/hebrew-midturn.py"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -107,6 +134,16 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/supervisor.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.py"
           }
         ]
       }

@@ -32,5 +32,12 @@ o = hook('Bash', {'command': 'git push -q origin routine/x-2026-10-01'}, running
 check('a watcher already on the branch: say it follows the head, do not start or kill', 'כבר רץ' in o and 'ci-wait.sh routine/x' not in o and 'להרוג' in o, o)
 o = hook('mcp__github__create_pull_request', {'head': 'routine/y-2026-10-01'}, running='1')
 check('PR opened while a watcher runs: same', 'כבר רץ' in o, o)
+# 05/10/2026: "git push" only inside a heredoc body is not a push (it named a branch "b").
+o = hook('Bash', {'command': "cat > /tmp/t.py <<'EOF'\ngit push origin b\nEOF\npython3 /tmp/t.py"})
+check('git push only inside a heredoc body: nothing', o == '', o)
+o = hook('Bash', {'command': "cat <<-EOF > x\n\tgit push origin b\n\tEOF\necho done"})
+check('...also with <<- and a tab-indented terminator', o == '', o)
+o = hook('Bash', {'command': "grep -q x <<< 'git push origin b' && git push -q origin routine/hs-2026-10-05"})
+check('a here-string (<<<) is not a heredoc: the real push after it is seen', 'ci-wait.sh routine/hs-2026-10-05 ' in o, o)
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
