@@ -101,7 +101,7 @@ fetch('/api/claude', {
 - [ ] טקסט שעובדים קוראים בשפה אחרת (`LANGS` ב-`talk.js`): כל מפתח בכל שפה, כולל הודעות שגיאה. נבדק ב-`talk-test.mjs` ("every language has every word").
 
 ## במחשב של מיכאל (Windows, 05/10/2026)
-- `python3` שם הוא ה-stub של Microsoft Store (מדפיס "Python", exit 49), ו-Claude Code מתייחס ל-exit שאינו 0 או 2 כשגיאה שלא חוסמת. כלומר **כל hook של ה-repo כבוי בשקט** עד שיש `python3` אמיתי ב-PATH (`python3 --version` מחזיר מספר גרסה). בדיקה מהירה בתחילת שיחה במחשב.
+- `python3` שם הוא ה-stub של Microsoft Store (מדפיס "Python", exit 49), ו-Claude Code מתייחס ל-exit שאינו 0 או 2 כשגיאה שלא חוסמת. כלומר **כל hook של ה-repo כבוי בשקט** עד שיש `python3` אמיתי ב-PATH (`python3 --version` מחזיר מספר גרסה). **תוקן 05/10/2026** (מיכאל אישר): `python.exe` הועתק ל-`python3.exe` בתיקיית Python 3.12, שקודמת ל-stub ב-PATH. בדיקה מהירה בתחילת שיחה במחשב: `python3 --version`; אם חזר ה-stub (התקנה מחדש של Python), להעתיק שוב.
 - אין `node` ואין `jq`: ב-`tests/harness/` רצות רק בדיקות ה-Python; `ci-wait-test.py` צריך `jq` (ה-`gh` המזויף שלו קורא לו). ה-JS רץ ב-CI.
 - `gh` לא מחובר; `git push` עובד דרך Git Credential Manager. נתיב Windows ב-`git show origin/main:<path>` צריך `MSYS_NO_PATHCONV=1`.
 

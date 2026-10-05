@@ -21,7 +21,7 @@
 | `ci-wait.sh` | (כלי, לא hook) | מחכה לבדיקת `tests` על ה-head של branch. רק הריצה האחרונה של ה-sha קובעת, ו-cancelled לא נספרת (05/10/2026). `ci-wait-test.py` (צריך `jq`) |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
-**במחשב של מיכאל (05/10/2026):** `python3` הוא ה-stub של Microsoft Store (exit 49 = שגיאה לא חוסמת), ולכן ה-hooks לא רצים שם עד שיש `python3` אמיתי ב-PATH. לבדוק `python3 --version`.
+**במחשב של מיכאל (05/10/2026):** `python3` הוא ה-stub של Microsoft Store (exit 49 = שגיאה לא חוסמת), ולכן ה-hooks לא רצו שם. תוקן באותו יום: `python3.exe` (העתק של `python.exe`) בתיקיית Python 3.12. לבדוק `python3 --version`.
 
 ## חיווט ב-`.claude/settings.json`
 
