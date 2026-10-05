@@ -25,5 +25,7 @@ check('a push inside a longer command is still a push', hook('git add -A && git 
 env = dict(os.environ, PUSH_GATE_CHANGED=L); env.pop('PUSH_GATE_TEST', None); env.pop('CLAUDE_PROJECT_DIR', None)
 r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': 'git push origin x'}, 'cwd': os.path.dirname(os.path.abspath(__file__))}), capture_output=True, text=True, timeout=120, env=env)
 check('from tests/harness as cwd the real format test is found and run (no "No such file")', 'No such file' not in r.stdout + r.stderr, r.stdout[-300:])
+check('git push only inside a heredoc body: passes (05/10/2026)', hook("cat > t.py <<'EOF'\necho; git push origin b\nEOF\npython3 t.py", L, 1) == {})
+check('a real push after a heredoc: still checked', hook("cat > t <<'EOF'\nx\nEOF\ngit push origin x", L, 1).get('permissionDecision') == 'deny')
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

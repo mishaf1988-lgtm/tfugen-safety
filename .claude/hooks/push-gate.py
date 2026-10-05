@@ -32,12 +32,27 @@ def changed(cwd):
         return []
 
 
+def no_heredoc(cmd):
+    """The command without heredoc bodies (05/10/2026: a test file written in a
+    heredoc contained "git push" and the hook fired on a command that pushed nothing)."""
+    out, lines, i = [], cmd.split("\n"), 0
+    while i < len(lines):
+        out.append(lines[i])
+        tags = re.findall(r"(?<!<)<<(?!<)-?\s*['\"]?([A-Za-z_]\w*)['\"]?", lines[i])
+        i += 1
+        for t in tags:
+            while i < len(lines) and lines[i].strip("\t ") != t:
+                i += 1
+            i += 1
+    return "\n".join(out)
+
+
 def main():
     try:
         d = json.load(sys.stdin)
     except Exception:
         print("{}"); return
-    cmd = (d.get("tool_input") or {}).get("command", "") or ""
+    cmd = no_heredoc((d.get("tool_input") or {}).get("command", "") or "")
     if d.get("tool_name", "Bash") != "Bash" or not re.search(r"(^|[;&|\s])git\s+push\b", cmd):
         print("{}"); return
     # The repo root, not the shell's cwd (the first live run came from tests/harness
