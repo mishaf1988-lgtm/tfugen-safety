@@ -77,15 +77,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
-הכלל: hook שמדפיס לא-ASCII קובע stdout ל-UTF-8. בדיקת hooks חיה רק משיחה בתיקיית הריפו.
-נאכף: `hook-utf8-test.py`; התיקייה: טקסט.
-חזר: 0
-
-**54. כתיבה חדשה לטבלה קיימת נבדקה רק מול פונקציה מזויפת (05/10/2026, PR זה).**
-מה קרה: `op:'vitals'` ל-`audit_log`, שמקבל ins/upd/del. 400, תקוע בתור.
-הכלל: לפני PR: `pg_constraint` של הטבלה, ו-`insert` בתוך `do` שנגמר ב-`raise` (rollback).
-נאכף: `hzm-sds-test.js`; הכלל הכללי: טקסט.
-חזר: 0
+הכלל: hook קובע stdout וגם stdin ל-UTF-8; בבדיקות `encoding="utf-8"` ב-`subprocess.run` וב-`open`. בדיקה חיה רק מתיקיית הריפו, ובלי `PYTHONUTF8=1` (מסתיר).
+נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: טקסט.
+חזר: 1 (05/10, בדיקה חיה במחשב): stdin נשאר cp1255, pr-gate לא ראה "רטרו:" וחסם כל PR תקין. התגלה כש-`pr-gate-test.py` קרס בלי `PYTHONUTF8`.
 
 **26. ביטול שבירה מכוונת ב-`git checkout` (01/10/2026, BACKLOG 15).**
 מה קרה: `git checkout index.html` ביטל שבירה וגם תיקון.

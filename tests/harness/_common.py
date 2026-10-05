@@ -2,6 +2,8 @@
 install, in .claude/hooks after it), run it with a JSON stdin, count results."""
 import json, os, subprocess, sys
 
+sys.stdout.reconfigure(encoding="utf-8")  # Windows: a piped stdout is cp1255 (lesson 57)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIRS = [os.path.join(HERE, "..", "hooks"), os.path.join(HERE, "..", "..", ".claude", "hooks")]
 res = {"pass": 0, "fail": 0}
@@ -16,12 +18,12 @@ def hook(name):
 
 
 def repo_root():
-    p = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=HERE, capture_output=True, text=True)
+    p = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=HERE, capture_output=True, text=True, encoding="utf-8")
     return p.stdout.strip()
 
 
 def run(name, data, env=None, cwd=None):
-    p = subprocess.run([sys.executable, hook(name)], input=json.dumps(data, ensure_ascii=False), capture_output=True,
+    p = subprocess.run([sys.executable, hook(name)], input=json.dumps(data, ensure_ascii=False), capture_output=True, encoding="utf-8",
                        text=True, timeout=60, env=dict(os.environ, **(env or {})), cwd=cwd)
     return p.stdout.strip()
 

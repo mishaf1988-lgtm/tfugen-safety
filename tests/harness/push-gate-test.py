@@ -9,8 +9,8 @@ def check(label, cond, detail=None):
     else: failed += 1; print('  ✗ ' + label + ('  -> ' + str(detail) if detail is not None else ''))
 def fake(rc):
     fd, p = tempfile.mkstemp(suffix='.py'); os.write(fd, ('import sys; print("  ✗ file is over"); sys.exit(%d)' % rc).encode()); os.close(fd); return p
-def hook(cmd, changed, rc=0):
-    env = dict(os.environ, PUSH_GATE_CHANGED=changed, PUSH_GATE_TEST=fake(rc))
+def hook(cmd, changed, rc=0, **extra):
+    env = dict(os.environ, PUSH_GATE_CHANGED=changed, PUSH_GATE_TEST=fake(rc), **extra)
     r = subprocess.run([sys.executable, HOOK], input=json.dumps({'tool_name': 'Bash', 'tool_input': {'command': cmd}}), capture_output=True, text=True, timeout=60, env=env)
     try: return (json.loads(r.stdout or '{}').get('hookSpecificOutput') or {})
     except Exception: return {'bad': r.stdout + r.stderr}
@@ -18,6 +18,8 @@ L = '.claude/skills/tfugen-lessons/SKILL.md'
 check('not a push: passes', hook('git status', L) == {})
 check('push, lessons unchanged: passes', hook('git push -u origin x', 'index.html,STATUS.md') == {})
 check('push, lessons changed, test green: passes', hook('git push -u origin x', L + ',STATUS.md', 0) == {})
+# Windows (05/10/2026): a piped stdout is cp1255, so a green test that prints a check mark crashed and every push was denied
+check('push, test green but the console is cp1255: passes', hook('git push origin x', L, 0, PYTHONIOENCODING='cp1255') == {})
 o = hook('git push -q origin x', L, 1)
 check('push, lessons changed, test red: denied with the reason', o.get('permissionDecision') == 'deny' and 'lessons-format' in o.get('permissionDecisionReason', '') and 'file is over' in o.get('permissionDecisionReason', ''), o)
 check('a push inside a longer command is still a push', hook('git add -A && git commit -q -m x && git push origin x', L, 1).get('permissionDecision') == 'deny')

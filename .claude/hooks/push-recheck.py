@@ -10,6 +10,7 @@ Test:  python3 tests/harness/push-recheck-test.py
 """
 import json, os, re, subprocess, sys
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 TEST = "tests/harness/lessons-format-test.py"
@@ -53,7 +54,8 @@ def main():
         if LESSONS not in changed(cwd):
             print("{}"); return
         test = os.environ.get("PUSH_RECHECK_TEST") or os.path.join(cwd, TEST)
-        p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, timeout=120)
+        p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=120,
+                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))  # Windows pipe = cp1255: the test crashed on its check mark
     except Exception:
         print("{}"); return
     if p.returncode == 0:

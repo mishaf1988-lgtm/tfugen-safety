@@ -9,6 +9,7 @@ Test:  python3 tests/harness/session-start-test.py
 """
 import json, os, re, sys
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 SKILLS = ["tfugen-lean", "tfugen-lessons", "tfugen-ref"]
 MAX_HANDOFF = 3000

@@ -9,6 +9,7 @@ may be a comment or HTML inside a template string, and the model decides.
 Test:  echo '{"tool_input":{"file_path":"'$PWD'/index.html"}}' | python3 .claude/hooks/raw-hebrew.py
 """
 import json, os, re, subprocess, sys
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 d = json.load(sys.stdin)
 fp = (d.get("tool_input", {}) or {}).get("file_path", "")

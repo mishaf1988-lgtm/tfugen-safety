@@ -74,7 +74,7 @@ with open(tr, "w", encoding="utf-8") as f:
     f.write(json.dumps({"message": {"role": "assistant", "content": [{"type": "tool_use", "name": "mcp__github__merge_pull_request", "input": {}}]}}) + "\n")
     f.write(json.dumps({"message": {"role": "user", "content": [{"type": "tool_result", "content": "ok"}]}}) + "\n")
     f.write(json.dumps({"message": {"role": "assistant", "content": [{"type": "text", "text": "מוזג."}]}}) + "\n")
-run = lambda active: subprocess.run([sys.executable, HOOK], input=json.dumps({"transcript_path": tr, "cwd": work, "stop_hook_active": active}), capture_output=True, text=True, timeout=30, env=dict(os.environ, SUPERVISOR_CI_WAIT="0")).stdout
+run = lambda active: subprocess.run([sys.executable, HOOK], input=json.dumps({"transcript_path": tr, "cwd": work, "stop_hook_active": active}), capture_output=True, text=True, encoding="utf-8", timeout=30, env=dict(os.environ, SUPERVISOR_CI_WAIT="0")).stdout
 out = run(False)
 check("blocks with decision=block", '"decision": "block"' in out, out)
 check("stop_hook_active: never twice in a row", run(True) == "", run(True))
