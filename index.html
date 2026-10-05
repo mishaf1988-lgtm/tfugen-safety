@@ -3298,7 +3298,7 @@ window.addEventListener('load', function(){
 });
 
 // 04/10/2026 (Michael: "yes" to measuring speed on his phone): once per page load, when the
-// page is hidden (INP is final then), the numbers go to audit_log as op 'vitals'. A viewer
+// page is hidden (INP is final then), the numbers go to audit_log as table_name 'web_vitals', source 'vitals'. A viewer
 // cannot write; nothing is sent before sync, or when nothing was measured.
 window._wvSent=false;
 function _wvFlush(){
@@ -3308,7 +3308,8 @@ function _wvFlush(){
     window._wvSent=true;
     var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?_currentUser.username+'@tfugen.local':null;
     var t=Object.assign({w:window.innerWidth,sw:!!(navigator.serviceWorker&&navigator.serviceWorker.controller)},_wv);
-    _obPush({op:'ins',tbl:'audit_log',row:{user_email:u,table_name:'web_vitals',record_id:null,op:'vitals',title:JSON.stringify(t)}});
+    // op must be ins/upd/del (audit_log_op_check): 'vitals' was refused with 400 and stayed queued (05/10/2026).
+    _obPush({op:'ins',tbl:'audit_log',row:{user_email:u,table_name:'web_vitals',record_id:null,op:'ins',source:'vitals',title:JSON.stringify(t)}});
   }catch(e){}
 }
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_wvFlush();});
@@ -4096,6 +4097,8 @@ function _obSanitize(){
     var BAD={equip_inspections:['last_inspection_date','status']};
     var q=_obGet();var changed=false;
     q.forEach(function(op){
+      // A speed row queued before 05/10/2026 has op 'vitals', which the server refuses for ever.
+      if(op.tbl==='audit_log'&&op.row&&op.row.op==='vitals'){op.row.op='ins';op.row.source='vitals';changed=true;}
       if(!op.row||!BAD[op.tbl])return;
       BAD[op.tbl].forEach(function(k){if(Object.prototype.hasOwnProperty.call(op.row,k)){delete op.row[k];changed=true;}});
     });
@@ -11607,6 +11610,7 @@ function rAudit(){
     if(!Array.isArray(rows)||!rows.length){tb.innerHTML='<tr><td colspan="6" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
     var opLbl={ins:'\u05d9\u05e6\u05d9\u05e8\u05d4',upd:'\u05e2\u05d3\u05db\u05d5\u05df',del:'\u05de\u05d7\u05d9\u05e7\u05d4'};
     var opColor={ins:'#16a34a',upd:'#2563eb',del:'#cc1f1f'};
+    rows=rows.filter(function(r){return r.table_name!=='web_vitals';});  // speed numbers, not an action
     tb.innerHTML=rows.map(function(r){
       var dt=new Date(r.ts);var dtStr=fd(dt.toISOString().split('T')[0])+' '+dt.toTimeString().substring(0,5);
       // 01/10/2026 (BACKLOG 9.20): the database writes the log itself; a

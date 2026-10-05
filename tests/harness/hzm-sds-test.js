@@ -67,7 +67,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('vitals: nothing before sync, nothing from a viewer', r.off === 0 && r.viewer === 0, r);
   const v = r.sent[0];
-  check('vitals: sent once to audit_log as op "vitals" with the numbers', r.sent.length === 1 && v.tbl === 'audit_log' && v.row.op === 'vitals' && v.row.table_name === 'web_vitals' && JSON.parse(v.row.title).LCP === 900, r.sent);
+  check('vitals: sent once to audit_log as table web_vitals with the numbers', r.sent.length === 1 && v.tbl === 'audit_log' && v.row.table_name === 'web_vitals' && v.row.source === 'vitals' && JSON.parse(v.row.title).LCP === 900, r.sent);
+  // audit_log_op_check (live DB, 05/10/2026): op in ('ins','upd','del'). op 'vitals' was refused with 400,
+  // stayed in the queue for ever, and 0 rows arrived in a day.
+  check('vitals: row op is one the database accepts (ins/upd/del)', v && ['ins', 'upd', 'del'].includes(v.row.op), v && v.row.op);
+  r = await page.evaluate(() => {
+    _obSet([{ op: 'ins', tbl: 'audit_log', oid: 'old1', row: { table_name: 'web_vitals', op: 'vitals', title: '{}' } }]);
+    _obSanitize(); return _obGet()[0].row;
+  });
+  check('a speed row already stuck in the queue with op "vitals" is repaired', r.op === 'ins' && r.source === 'vitals', r);
   check('vitals: the page hide event sends them', /addEventListener\('visibilitychange',function\(\)\{if\(document\.visibilityState==='hidden'\)_wvFlush\(\);\}\)/.test(require('fs').readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8')));
 
   check('no page errors', !errs.length, errs);
