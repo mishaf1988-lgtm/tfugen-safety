@@ -286,7 +286,7 @@ let ACCEPT = true, DIALOGS = [];
         sent = JSON.parse((o && o.body) || '{}');
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ content: [{ text: '{"risk":"low"}' }] })) });
       };
-      window._nad = [{ id: 'a1', num: 'NCR-1', d: 'שמן', a: 'בטיחות', p: 'גבוהה', notes: 'הערה',
+      window._nad = [{ id: 'a1', num: 'NCR-1', d: 'שמן על הרצפה ליד מכונה 3', a: 'בטיחות', p: 'גבוהה', notes: 'הערה',
         rc: 'אטם סדוק', five_why: '1. למה... 5. למה', c: 'החלפת אטם', o: 'דני' }];
       window._naf = {};
       return Promise.resolve(_ncrAI('a1')).then(() => sent).catch(() => sent);
