@@ -27,6 +27,15 @@ rc, o = wait([r(1, "completed", "success"), r(2, "completed", "failure")])
 check("old success + new failure: red (exit 1)", rc == 1, (rc, o))
 rc, o = wait([r(1, "completed", "success"), r(2, "completed", "cancelled")])
 check("newest cancelled is skipped: the success decides", rc == 0, (rc, o))
+# 05/10/2026 (#1200): a cancelled workflow run leaves `tests` as "failure" while its harness
+# jobs are "cancelled"; that `tests` must not decide. Named runs with check suites, as GitHub sends them.
+s = lambda i, n, c, suite: {"id": i, "name": n, "status": "completed", "conclusion": c, "check_suite": {"id": suite}}
+rc, o = wait([s(1, "tests", "success", 10), s(5, "harness (0)", "cancelled", 11), s(6, "tests", "failure", 11)])
+check("`tests` failure of a run whose jobs were cancelled is ignored: the older success decides", rc == 0, (rc, o))
+rc, o = wait([s(1, "tests", "success", 10), s(5, "harness (0)", "success", 11), s(6, "tests", "failure", 11)])
+check("a real `tests` failure (siblings not cancelled) is red", rc == 1, (rc, o))
+rc, o = wait([s(5, "harness (0)", "cancelled", 11), s(6, "tests", "failure", 11), s(7, "lessons", "success", 11), s(9, "tests", "success", 12), s(8, "harness (0)", "success", 12)])
+check("two runs on one sha: the newest complete run decides", rc == 0, (rc, o))
 rc, o = wait([r(1, "completed", "success")])
 check("one green run: exit 0 and prints the result", rc == 0 and "completed:success" in o, (rc, o))
 done()

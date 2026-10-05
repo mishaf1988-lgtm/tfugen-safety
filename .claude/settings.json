@@ -41,6 +41,15 @@
         ]
       },
       {
+        "matcher": "Bash|mcp__.*365.*|mcp__.*__(outlook|sharepoint|onedrive|teams|graph)_.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-365.py"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
