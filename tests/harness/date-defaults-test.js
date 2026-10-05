@@ -24,7 +24,7 @@ const NONE = {
   target: ['ea-review', 'itp-next-due', 'ncr-u', 'prj-end', 'thz-due', 'tru-route-due', 'tsk-due', 'drl-fu', 'mrs-u'],
   closed: ['ncr-cd', 'thz-closed'],
   approval: ['ptw-sg1d', 'ptw-sg2d', 'ptw-sg3d', 'ptw-sg4d'],
-  claim: ['hzm-ms', 'leg-c-date', 'leg-last-review', 'r-last_review'],
+  claim: ['hzm-ms', 'leg-c-date', 'leg-last-review', 'r-last_review', 'tbt-eff-d'],
   person: ['e-left', 'e-s'],
 };
 const NONE_ALL = [].concat(...Object.values(NONE));
