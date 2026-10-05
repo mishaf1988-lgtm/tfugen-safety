@@ -33,11 +33,18 @@ for n in ['mcp__Microsoft_365__outlook_email_search', 'mcp__Microsoft_365__read_
 
 print('\nnever: send, delete, move, share')
 for n in ['mcp__Microsoft_365__outlook_send_mail', 'mcp__Microsoft_365__outlook_reply_email', 'mcp__Microsoft_365__outlook_forward_email',
-          'mcp__Microsoft_365__outlook_delete_email', 'mcp__Microsoft_365__onedrive_delete_item', 'mcp__Microsoft_365__onedrive_move_item',
-          'mcp__Microsoft_365__sharepoint_share_file', 'mcp__Microsoft_365__outlook_send_draft', 'mcp__9f8e__teams_send_chat_message',
+          'mcp__Microsoft_365__outlook_delete_email', 'mcp__Microsoft_365__onedrive_delete_item',           'mcp__Microsoft_365__sharepoint_share_file', 'mcp__Microsoft_365__outlook_send_draft', 'mcp__9f8e__teams_send_chat_message',
           'mcp__Microsoft_365__teams_reply_channel_message', 'mcp__Microsoft_365__outlook_cancel_event', 'mcp__Microsoft_365__onedrive_rename_item']:
     check(n.split('__')[-1] + ' denied', n, 'deny')
 check('a send with a path inside the safety folder is still denied', 'mcp__Microsoft_365__outlook_send_mail', 'deny', {'attachment': SAFE})
+check('mailbox settings (forwarding rules) are denied', 'mcp__Microsoft_365__outlook_update_mailbox_settings', 'deny')
+check('a mail rule is denied', 'mcp__Microsoft_365__outlook_create_rule', 'deny')
+
+print('\nmove: only into the למחיקה folder, with "בצע"')
+check('a move elsewhere is denied', 'mcp__Microsoft_365__onedrive_move_item', 'deny', {'itemId': 'x', 'destination': 'שולחן העבודה/ארכיון'})
+check('a move into למחיקה asks', 'mcp__Microsoft_365__onedrive_move_item', 'ask', {'itemId': 'x', 'destination': 'שולחן העבודה/ניהול בטיחות/למחיקה'})
+check('a mail moved into למחיקה asks', 'mcp__Microsoft_365__outlook_move_email', 'ask', {'id': 'm1', 'folder': 'למחיקה'})
+check('a copy outside asks nothing: denied', 'mcp__Microsoft_365__onedrive_copy_item', 'deny', {'to': 'x'})
 
 print('\nTeams and calendar: read only')
 for n in ['mcp__Microsoft_365__teams_create_chat', 'mcp__Microsoft_365__outlook_create_event', 'mcp__Microsoft_365__outlook_update_event',
@@ -56,6 +63,18 @@ check('an unknown 365 tool asks (fail safe)', 'mcp__Microsoft_365__graph_request
 print('\nnot the 365 connector: untouched')
 for n in ['mcp__github__create_pull_request', 'mcp__Supabase__execute_sql', 'Bash', 'mcp__github__delete_file']:
     check(n + ' passes', n, 'pass')
+
+print('\nBash: the synced OneDrive folder and curl to Graph')
+check('rm inside the synced OneDrive folder is denied', 'Bash', 'deny', {'command': 'rm -rf "/c/Users/m/OneDrive/שולחן העבודה/ניהול בטיחות/13_ועדה"'})
+check('mv inside the safety folder is denied', 'Bash', 'deny', {'command': 'mv "ניהול בטיחות/a.xlsx" "ניהול בטיחות/b.xlsx"'})
+check('Remove-Item on a OneDrive path is denied', 'Bash', 'deny', {'command': 'Remove-Item "C:\\Users\\m\\OneDrive\\x.docx"'})
+check('rm in the repo passes', 'Bash', 'pass', {'command': 'rm -rf tests/harness/_build'})
+check('a commit message that mentions rm/mv and OneDrive passes (prose, not a command)', 'Bash', 'pass', {'command': 'git commit -F - <<EOF\nrm/mv on an OneDrive path are blocked\nEOF'})
+check('ls of the OneDrive folder passes', 'Bash', 'pass', {'command': 'ls "OneDrive/שולחן העבודה"'})
+check('curl GET to Graph passes', 'Bash', 'pass', {'command': 'curl -s https://graph.microsoft.com/v1.0/me'})
+check('curl POST sendMail to Graph is denied', 'Bash', 'deny', {'command': 'curl -X POST https://graph.microsoft.com/v1.0/me/sendMail -d @m.json'})
+check('curl DELETE to Graph is denied', 'Bash', 'deny', {'command': 'curl --request DELETE https://graph.microsoft.com/v1.0/me/drive/items/1'})
+check('curl -d to Graph (a write) is denied', 'Bash', 'deny', {'command': 'curl https://graph.microsoft.com/v1.0/me/drive/root/children --data "{}"'})
 
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)
