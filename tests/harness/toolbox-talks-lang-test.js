@@ -32,7 +32,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _currentUser = { username: 'admin' };
     window._sbToken = 'tok';
     DB.emp = [{ id: 'e1', n: 'אחמד', dep: 'ייצור' }, { id: 'e2', n: 'דנה', dep: 'אחזקה' }, { id: 'e3', n: 'יוסי', dep: 'ייצור' }, { id: 'e4', n: 'רמי', dep: null }];
-    DB.toolbox_talks = [{ id: 'tt-1', d: '2026-10-04', title: 'עבודה בגובה', body: 'רתמה', s: 'פורסמה', body_ar: 'العمل\nحزام' }];
+    DB.toolbox_talks = [{ id: 'tt-1', d: '2026-10-04', title: 'עבודה בגובה', body: 'רתמה', s: 'פורסמה', trainer: 'מיכאל', trainer_qual: 'ממונה בטיחות', body_ar: 'العمل\nحزام' }];
     DB.toolbox_reads = [
       { id: 'r1', talk_id: 'tt-1', emp_id: 'e2', emp_name: 'דנה', dept: 'אחזקה', lang: 'ar', device: 'tablet', read_at: '2026-10-04T05:30:00Z', sig_url: 'https://znhjtpcltrxxyfjczgvw.supabase.co/storage/v1/object/public/incidents-photos/sig-tt-1-e2-x.png' },
     ];
@@ -119,7 +119,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     confirmAnswer = true;
 
     // checker 03/10/2026, 1: a failed language must not keep the old translation next to new Hebrew
-    DB.toolbox_talks.push({ id: 'tt-5', d: '2026-10-04', title: 'ישן', body: 'טקסט ישן', s: 'טיוטה', body_ru: 'старый\nтекст' });
+    DB.toolbox_talks.push({ id: 'tt-5', d: '2026-10-04', title: 'ישן', body: 'טקסט ישן', s: 'טיוטה', trainer: 'מיכאל', trainer_qual: 'ממונה בטיחות', body_ru: 'старый\nтекст' });
     _genEdit('toolbox_talks', 'tt-5');
     document.getElementById('tbt-body').value = 'טקסט חדש';
     mode = 'failRu';
