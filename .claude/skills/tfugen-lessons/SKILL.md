@@ -69,7 +69,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **53. "מד טוקנים בענן" בלי בדיקה בענן (04/10/2026, #1153).**
 מה קרה: ב-`.claude/skills/token-meter` בענן, `/tokens` לא מוכר.
-הכלל: "עובד" או "לא עובד" בענן רק אחרי בדיקה בסשן ענן. mod נטען מ-dev-mods (hot reload) ומצויר באפליקציה; לכל שיחה: `CLAUDE_CODE_PLUGIN_DIRS`.
+הכלל: "עובד" או "לא עובד" בענן רק אחרי בדיקה בסשן ענן (05/10: mod נטען, אבל בשיחת ענן לא מצויר).
 נאכף: טקסט (אין דרך בקוד: נראה רק מתוך הסשן).
 חזר: 1 (05/10: "mods לא נטענים בענן" נכתב בלי ניסוי)
 
@@ -77,9 +77,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
-הכלל: hook קובע stdout וגם stdin ל-UTF-8; בבדיקות `encoding="utf-8"` ב-`subprocess.run` וב-`open`. בדיקה חיה רק מתיקיית הריפו, ובלי `PYTHONUTF8=1` (מסתיר).
+הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
 נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: טקסט.
-חזר: 1 (05/10, בדיקה חיה במחשב): stdin נשאר cp1255, pr-gate לא ראה "רטרו:" וחסם כל PR תקין. התגלה כש-`pr-gate-test.py` קרס בלי `PYTHONUTF8`.
+חזר: 1 (05/10, במחשב: stdin ב-cp1255, pr-gate חסם כל PR).
 
 **26. ביטול שבירה מכוונת ב-`git checkout` (01/10/2026, BACKLOG 15).**
 מה קרה: `git checkout index.html` ביטל שבירה וגם תיקון.
@@ -92,7 +92,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff: `grep` ב-DECISIONS לפני שמתחילים.
-נאכף: `fresh-main.py` (#1011); handoff אחד בשורש: `handoff-root-test.py`. תוכן ה-handoff: טקסט (אין דרך בקוד: "פתוח" הוא שיפוט).
+נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; תוכנו: טקסט (אין דרך בקוד: שיפוט).
 חזר: 4 (handoff עם פריט שבוצע או שסותר החלטה; נתפס ב-grep).
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
@@ -176,6 +176,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 2
 
 ## יעילות ותקשורת
+
+**58. תיבה ל-Chrome עם מקום ריק לטקסט (05/10/2026, PR זה).**
+מה קרה: `<<< כאן לכתוב >>>` הודבק כמו שהוא ונשמר ב-NCR-0001.
+הכלל: תיבה שכותבת נתונים רק עם התוכן האמיתי; חסר: לבקש ממיכאל קודם.
+נאכף: טקסט (אין דרך בקוד: תיבה בצ'אט).
+חזר: 0
 
 **6. יותר מדי PRs קטנים (01/10/2026, #1003 עד #1005).**
 מה קרה: חמישה PRs לעדכוני STATUS.
