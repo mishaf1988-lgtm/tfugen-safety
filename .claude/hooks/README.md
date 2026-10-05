@@ -19,7 +19,7 @@
 | `session-start.py` | SessionStart | **מדפיס** לשיחה חדשה: skills לטעון, ה-handoff, הפריטים הפתוחים ב-STATUS, השורה האחרונה ב-METRICS (05/10/2026). `session-start-test.py` |
 | `hebrew-midturn.py` | PostToolUse על כל כלי | **מזכיר** (פעם אחת להודעה) כשהודעת הביניים האחרונה באנגלית, באותו מדד של `hebrew-reply.py`. ה-Stop hook תופס רק בסוף התור (לקח 13, 05/10/2026). `hebrew-midturn-test.py` |
 | `push-recheck.py` | PostToolUse על Bash (`git push`) | **מזהיר** אם `lessons-format-test.py` אדום אחרי ה-push: `push-gate.py` רץ לפני הפקודה ולא רואה commit שנעשה באותה פקודה (05/10/2026). `push-recheck-test.py` |
-| `ci-wait.sh` | (כלי, לא hook) | מחכה לבדיקת `tests` על ה-head של branch. רק הריצה האחרונה של ה-sha קובעת, ו-cancelled לא נספרת (05/10/2026). `ci-wait-test.py` (צריך `jq`) |
+| `ci-wait.sh` | (כלי, לא hook) | מחכה לבדיקת `tests` על ה-head של branch. רק הריצה האחרונה של ה-sha קובעת, ו-cancelled לא נספרת (05/10/2026). `tests` של ריצה שעבודה שלה בוטלה נשאר "failure" ולא "cancelled": מזוהה לפי `check_suite` ומדולג, וכל עוד יש עבודה רצה ממשיכים לחכות (#1200). `ci-wait-test.py` (צריך `jq`) |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
 **במחשב של מיכאל (05/10/2026):** `python3` הוא ה-stub של Microsoft Store (exit 49 = שגיאה לא חוסמת), ולכן ה-hooks לא רצו שם. תוקן באותו יום: `python3.exe` (העתק של `python.exe`) בתיקיית Python 3.12. לבדוק `python3 --version`.
