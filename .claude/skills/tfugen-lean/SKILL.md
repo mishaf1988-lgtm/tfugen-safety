@@ -49,7 +49,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 - **חיפוש רחב = סוכן משנה על Haiku** (`Agent` עם `model: haiku`, סוג `Explore`).
   הוא קורא את הקטעים אצלו ומחזיר רק מיקומים ומסקנה. הוא **מוצא**; להחליט, לערוך
   ולבדוק נשאר אצל המודל הראשי. לא לתת לו לשפוט נכונות.
-- **הרצות harness**: hook `lean-harness.py` כבר מקצר `bash tests/harness/run.sh`
+- **הרצות harness**: בענן `PARALLEL=4 bash tests/harness/run.sh` (4 shards ב-worktrees, כ-11 דק' במקום 45; 05/10/2026). hook `lean-harness.py` כבר מקצר `bash tests/harness/run.sh`
   לשורה אחת כשהכל ירוק, ומחזיר לוג מלא כשמשהו אדום. לא צריך `grep` ידני יותר.
 - **אל תקרא שוב קובץ שכבר נקרא בסשן.** אם ערכת אותו, ה-Edit כבר נכשל אם משהו
   לא תאם.
