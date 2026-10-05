@@ -98,7 +98,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff: `grep` ב-DECISIONS קודם.
 נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; תוכנו: טקסט (אין דרך בקוד: שיפוט).
-חזר: 4 (handoff עם פריט שבוצע או שסותר החלטה; נתפס ב-grep).
+חזר: 5 (handoff עם פריט שבוצע או שסותר החלטה; נתפס ב-grep).
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
 מה קרה: הניקוי בדפדפן דילג על רשימת שמות; `talks` (#1138) לא נכנסה אליה.
