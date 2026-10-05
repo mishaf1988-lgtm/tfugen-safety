@@ -12,11 +12,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const browser = await pw.chromium.launch();
   const page = await (await browser.newContext({ viewport: { width: 375, height: 812 }, locale: 'he-IL' })).newPage();
   const sent = [];
+  let empty = false;
   await page.route('**/*', (r) => {
     const u = r.request().url();
     // _AI is '/api/claude', relative: under file:// fetch refuses it before the
     // route sees it, so the test points _AI at an http host.
-    if (u.indexOf('/api/claude') >= 0) { sent.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: '{"rc":"אין נוהל פינוי","c":"לקבוע פינוי יומי"}' }] }) }); }
+    if (u.indexOf('/api/claude') >= 0) { sent.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: empty ? '{"rc":"","c":""}' : '{"rc":"אין נוהל פינוי","c":"לקבוע פינוי יומי"}' }] }) }); }
     if (u.startsWith('file://')) return r.continue();
     return r.abort();
   });
@@ -52,6 +53,42 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   console.log('\n2. the answer still lands in the fields');
   const r = await page.evaluate(() => ({ rc: gv('ncr-rc'), c: gv('ncr-c') }));
   check('rc and c filled from the JSON', r.rc === 'אין נוהל פינוי' && r.c === 'לקבוע פינוי יומי', r);
+
+  check('the model is told to return empty fields instead of guessing', /אין מספיק פרטים/.test(prompt) && /ואל תנחש/.test(prompt), prompt.slice(-400));
+
+  // 05/10/2026, Chrome on the live NCR-0001: the description was only the label
+  // "ממצא בביקורת פנים (בטיחות):" and the model invented a waste-management finding.
+  console.log('\n3. a description that is only a label');
+  const t = await page.evaluate(() => {
+    const toasts = []; window.toast = (m) => toasts.push(m);
+    g('ncr-rc').value = ''; g('ncr-c').value = '';
+    g('ncr-d').value = 'ממצא בביקורת פנים (בטיחות):';
+    _ncrAIRcAction();
+    return toasts;
+  });
+  await page.waitForTimeout(300);
+  check('no request is sent for a label with nothing after it', sent.length === 1, sent.length);
+  check('the user is told to write what was found', t.some((m) => /אין פרטים/.test(m)), t);
+  const t2 = await page.evaluate(() => {
+    const toasts = []; window.toast = (m) => toasts.push(m);
+    g('ncr-d').value = 'ממצא בביקורת פנים (בטיחות): מטף ליד חדר 17 לא נבדק מאז 2024';
+    _ncrAIRcAction();
+    return toasts;
+  });
+  await page.waitForTimeout(400);
+  check('a label followed by a real finding still goes out', sent.length === 2, [sent.length, t2]);
+
+  console.log('\n4. the model answers with empty fields');
+  empty = true;
+  const r4 = await page.evaluate(async () => {
+    const toasts = []; window.toast = (m) => toasts.push(m);
+    g('ncr-rc').value = ''; g('ncr-c').value = '';
+    g('ncr-d').value = 'בעיה במחסן';
+    _ncrAIRcAction();
+    await new Promise((res) => setTimeout(res, 400));
+    return { toasts, rc: gv('ncr-rc'), c: gv('ncr-c') };
+  });
+  check('empty answer: fields stay empty and the user is asked for more detail', r4.rc === '' && r4.c === '' && r4.toasts.some((m) => /השלם את התיאור/.test(m)), r4);
 
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
