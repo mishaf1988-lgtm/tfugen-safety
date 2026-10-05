@@ -48,7 +48,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 "אני ממליץ לך גם לחפש skills חדשים באינטרנט שיעשו לך עבודה יותר טובה, תמיד להיות מעודכן."
 - **מתי:** בכל משימת התפתחות, ולפחות פעם בחודש (עם שורת METRICS של ה-1 לחודש).
 - **איפה:** הכלים `SearchPlugins` ו-`SearchSkills` (הקטלוג של החשבון), `anthropics/skills`, `anthropics/claude-plugins-official`, `supabase/agent-skills`, הרשימה `VoltAgent/awesome-agent-skills`.
-- **איך שופטים:** (1) עושה משהו שה-harness וה-skills כאן לא עושים? (2) מה המחיר: hook שקורא ל-LLM בכל תור = טוקנים כל תור; תוכן בלבד = בטוח. (3) כולל קונפליקט עם חוקי ה-repo (אין framework, עברית `\uXXXX`)? התקנה של תוכן בלבד: לבד. hook או MCP: מיכאל. hook מסומן "לשיחה במחשב" כבר בהצעה: בענן שינוי ב-`.claude/hooks/` נחסם גם אחרי אישור (לקח 42). כלל שאפשר לאכוף ב-CI (`tests.yml`, `.github/scripts/`) עדיף שם, כי זה לא נחסם.
+- **איך שופטים:** (1) עושה משהו שה-harness וה-skills כאן לא עושים? (2) מה המחיר: hook שקורא ל-LLM בכל תור = טוקנים כל תור; תוכן בלבד = בטוח. (3) כולל קונפליקט עם חוקי ה-repo (אין framework, עברית `\uXXXX`)? התקנה של תוכן בלבד: לבד. hook או MCP: מיכאל. hook מסומן "לשיחה במחשב" כבר בהצעה: בענן שינוי ב-`.claude/hooks/` נחסם גם אחרי אישור (לקח 42). כלל שאפשר לאכוף ב-CI (`tests.yml`, `.github/scripts/`) עדיף שם, כי זה לא נחסם. hook שמוכן מהענן: חבילה ב-`project-files/computer-session/` (קוד, בדיקות, `settings.proposed.json`, `INSTALL.md` עם הודעה להדבקה), ו**התקנה מדומה** לפני ה-PR: `git worktree add` לעותק, להעתיק לשם, ולהריץ את כל ה-`.py` ב-`tests/harness/`. ב-05/10 זה תפס בדיקה קיימת שמחפשת טקסט מילולי (`gh api` ב-`ci-watch-test.py`) שהשינוי שבר.
 - **יומן** (כדי לא לבדוק פעמיים):
 
 | תאריך | skill | החלטה |
