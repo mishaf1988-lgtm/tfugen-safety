@@ -11076,9 +11076,10 @@ function rTbt(){
     var n=_tbtReads(r.id),pub=r.s===_TBT_PUB;
     var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox_talks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
     var linkBtn=pub?'<button class="btn btn-p btn-sm" data-id="'+esc(r.id)+'" onclick="tbtLink(this.dataset.id)" title="\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd">\ud83d\udd17 \u05e7\u05d9\u05e9\u05d5\u05e8</button> ':'';
+    var grpBtn=pub?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtGroup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05e4\u05e0\u05d9\u05dd \u05d0\u05dc \u05e4\u05e0\u05d9\u05dd: \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05da \u05e2\u05d5\u05d1\u05e8 \u05de\u05d9\u05d3 \u05dc\u05d9\u05d3">\ud83d\udc65 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4</button> ':'';
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 // 05/10/2026: the amended training regulations (in force 16/10/2026) want the trainer's
@@ -11158,6 +11159,23 @@ function tbtLink(id){
     return 'shown';
   })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+((e&&e.message)||e));return 'failed';});
 }
+// Group mode (05/10/2026): a one-day link for the phone in the manager's hand, opened
+// here and passed from worker to worker after a face-to-face briefing. The tab is
+// opened before the fetch: Safari blocks a window opened after it.
+function tbtGroup(id){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
+  if(!r||r.s!==_TBT_PUB){toast('\u05e7\u05d5\u05d3\u05dd \u05dc\u05e4\u05e8\u05e1\u05dd \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4');return Promise.resolve('draft');}
+  var w=null;try{w=window.open('','_blank');}catch(e){w=null;}
+  toast('\u05e4\u05d5\u05ea\u05d7 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4...');
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'group',id:id})})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
+  .then(function(x){
+    if(!x.ok||!x.j||!x.j.url){if(w)try{w.close();}catch(e){}toast('\u26a0\ufe0f \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4 \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d4: '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
+    if(w&&!w.closed)w.location.href=x.j.url;else location.href=x.j.url;
+    return 'opened';
+  })['catch'](function(e){if(w)try{w.close();}catch(e2){}toast('\u26a0\ufe0f \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4 \u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d4: '+((e&&e.message)||e));return 'failed';});
+}
 // Stage 3 (03/10/2026): the talk translated for the workers, one AI call per
 // language (Gemini, which falls back to Workers AI). Stored as body_<lang>, the
 // first line being the title; /api/talk shows it when the worker picks the language.
@@ -11221,6 +11239,8 @@ function _tbtEmpN(){return (DB.emp||[]).filter(function(e){return !_empLeft(e);}
 var _tbtWhoId=null;
 // The declaration next to each signature on the worker's page (talk.js LANGS.he.ok). toolbox-talks-lang-test.js keeps the two the same.
 var _TBT_DECL='\u05db\u05dc \u05d7\u05d5\u05ea\u05dd \u05d0\u05d9\u05e9\u05e8: "\u05d0\u05e0\u05d9 \u05de\u05d0\u05e9\u05e8/\u05ea \u05e9\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e0\u05d5\u05e9\u05d0 \u05d6\u05d4, \u05d4\u05d1\u05e0\u05ea\u05d9 \u05d0\u05d5\u05ea\u05df \u05d5\u05d0\u05e4\u05e2\u05dc \u05dc\u05e4\u05d9\u05d4\u05df."';
+// How each worker was briefed (05/10/2026, toolbox_reads.mode): the amended regulations tell them apart.
+var _TBT_MODE={group:'\u05e4\u05e0\u05d9\u05dd \u05d0\u05dc \u05e4\u05e0\u05d9\u05dd',link:'\u05de\u05e7\u05d5\u05d5\u05df'};
 function tbtWho(id){
   var t=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];if(!t)return;
   _tbtWhoId=id;
@@ -11235,10 +11255,10 @@ function tbtWho(id){
   var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!_empLeft(e)&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
   var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);
   var tm=function(v){var d=new Date(v);return isNaN(d)?'':fd(d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'});};
-  var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'+(t.trainer?'<div style="font-size:12px;margin-bottom:8px">\u05de\u05d3\u05e8\u05d9\u05da: '+esc(t.trainer)+(t.trainer_qual?', '+esc(t.trainer_qual):'')+'</div>':'')+'<div style="font-size:12px;margin-bottom:8px">'+esc(_TBT_DECL)+'</div>'
+  var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'+(t.trainer?'<div style="font-size:12px;margin-bottom:8px">\u05de\u05d3\u05e8\u05d9\u05da: '+esc(t.trainer)+(t.trainer_qual?', '+esc(t.trainer_qual):'')+(t.trainer_sig_url?'<div>\u05d4\u05e6\u05d4\u05e8\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05d7\u05ea\u05de\u05d4 \u05d1-'+tm(t.trainer_signed_at)+' <img data-sign="'+esc(t.trainer_sig_url)+'" alt="" style="height:36px;max-width:110px;vertical-align:middle;background:#fff;border:1px solid #e5e7eb;border-radius:4px"></div>':'<div style="color:#b45309">\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</div>')+'</div>':'')+'<div style="font-size:12px;margin-bottom:8px">'+esc(_TBT_DECL)+'</div>'
     +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone-outN)+'</span>'+(outN?' <span class="b bX">\u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4: '+outN+'</span>':'')+' <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span> <span id="tbt-who-old"></span></div>';
   h+=reads.length?'<div class="tbl-wrap"><table><thead><tr><th scope="col">\u05e9\u05dd</th><th scope="col">\u05ea.\u05d6 / \u05d3\u05e8\u05db\u05d5\u05df</th><th scope="col">\u05de\u05d7\u05dc\u05e7\u05d4</th><th scope="col">\u05de\u05ea\u05d9</th><th scope="col">\u05e9\u05e4\u05d4</th><th scope="col">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr></thead><tbody>'
-    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':(leftOf(x)||'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'))+'</div>')+'<div class="tbt-old" data-rid="'+esc(x.id||'')+'" style="font-size:10px;font-weight:700;color:#b45309"></div></td><td style="direction:ltr;text-align:right">'+esc(x.id_no||'-')+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
+    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':(leftOf(x)||'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'))+'</div>')+'<div class="tbt-old" data-rid="'+esc(x.id||'')+'" style="font-size:10px;font-weight:700;color:#b45309"></div></td><td style="direction:ltr;text-align:right">'+esc(x.id_no||'-')+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+(_TBT_MODE[x.mode]?(x.device?', ':'')+_TBT_MODE[x.mode]:'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
     +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
   if(missN)h+='<div style="font-weight:700;margin:12px 0 4px">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</div>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('');
   var b=g('tbt-who-body');if(b){b.innerHTML=h;if(typeof _signifyDom==='function')_signifyDom(b);}
