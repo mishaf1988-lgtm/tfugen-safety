@@ -6,7 +6,7 @@ from _common import run, check, done
 d = tempfile.mkdtemp()
 def tr(*texts):
     p = os.path.join(d, "t%d.jsonl" % len(os.listdir(d)))
-    with open(p, "w") as f:
+    with open(p, "w", encoding="utf-8") as f:
         f.write(json.dumps({"message": {"role": "user", "content": "תתחיל"}}) + "\n")
         for t in texts:
             f.write(json.dumps({"message": {"role": "assistant", "content": [{"type": "text", "text": t}, {"type": "tool_use", "name": "Bash"}]}}, ensure_ascii=False) + "\n")

@@ -70,7 +70,8 @@ def main():
         print("{}"); return
     test = os.environ.get("PUSH_GATE_TEST") or os.path.join(cwd, TEST)
     try:
-        p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, timeout=120)
+        p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=120,
+                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))  # Windows pipe = cp1255: the test crashed on its check mark
     except Exception as e:
         print("{}"); return
     if p.returncode == 0:
