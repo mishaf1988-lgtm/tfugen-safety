@@ -2863,7 +2863,7 @@ id="m-ncr" style="display:none">
       </details>
     </div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTbt()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTbt()">&#1513;&#1502;&#1493;&#1512;</button><button class="btn btn-p" onclick="svTbt(1)" title="&#1513;&#1493;&#1502;&#1512;, &#1502;&#1508;&#1512;&#1505;&#1501; &#1493;&#1508;&#1493;&#1514;&#1495; &#1488;&#1514; &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;">&#128228; &#1513;&#1502;&#1493;&#1512; &#1493;&#1513;&#1500;&#1495;</button></div>
 </div>
 <div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
 <div class="modal" id="m-toolbox" style="display:none">
@@ -3609,6 +3609,10 @@ function _obGet(){try{return JSON.parse(localStorage.getItem(OB_KEY)||'[]');}cat
 // alternative — what this code used to do — was to swallow the error and let
 // the save silently not exist.
 var _obMem=[];
+// 05/10/2026: the last drain, so "save and send" asks for a link only after the new
+// row reached the server (/api/talk answers 404 for a row still in the outbox).
+var _obLast=Promise.resolve();
+function _obIdle(){var p=_obLast,again=function(){return _obLast!==p?_obIdle():null;};return p.then(again,again);}
 var _obFull=false;
 function _obSet(q){
   try{localStorage.setItem(OB_KEY,JSON.stringify(q||[]));_obFull=false;return true;}
@@ -3792,7 +3796,7 @@ function _obDrain(){
   // Queued photos go first: a row then reaches the server already carrying a
   // real URL, so the hazard webhook sends a link that opens. A row that had
   // already been sent is repaired by _phResolve with an update instead.
-  if(typeof _phDrain==='function')return _phDrain().then(_obDrainOps);
+  if(typeof _phDrain==='function')return _obLast=_phDrain().then(_obDrainOps);
   return _obDrainOps();
 }
 function _obDrainOps(){
@@ -3818,7 +3822,7 @@ function _obDrainOps(){
       });
     });
   });
-  return p.then(function(){
+  return _obLast=p.then(function(){
     // Ops pushed while this drain was in flight live only in localStorage.
     // Never overwrite them with the pre-drain snapshot: drop what was sent,
     // keep the failed ones (with their updated tries) AND everything queued
@@ -11078,8 +11082,9 @@ function rTbt(){
     var linkBtn=pub?'<button class="btn btn-p btn-sm" data-id="'+esc(r.id)+'" onclick="tbtLink(this.dataset.id)" title="\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd">\ud83d\udd17 \u05e7\u05d9\u05e9\u05d5\u05e8</button> ':'';
     var grpBtn=pub?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtGroup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05e4\u05e0\u05d9\u05dd \u05d0\u05dc \u05e4\u05e0\u05d9\u05dd: \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05da \u05e2\u05d5\u05d1\u05e8 \u05de\u05d9\u05d3 \u05dc\u05d9\u05d3">\ud83d\udc65 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4</button> ':'';
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
+    var dupBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtDup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05e2\u05dd \u05d0\u05d5\u05ea\u05d5 \u05ea\u05d5\u05db\u05df">\ud83d\udccb \u05e9\u05db\u05e4\u05dc</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 // 05/10/2026: the amended training regulations (in force 16/10/2026) want the trainer's
@@ -11091,14 +11096,17 @@ function _tbtTrainerFill(){
   var last=(DB.toolbox_talks||[]).filter(function(x){return x&&x.trainer;}).sort(function(x,y){return String(y.ts||'').localeCompare(String(x.ts||''));})[0];
   if(last){a.value=last.trainer||'';q.value=last.trainer_qual||'';}
 }
-function svTbt(){
+// send (05/10/2026): "save and send" = save as published, then the link dialog (tbtLink),
+// with the same checks; the share itself starts from a tap in that dialog (Safari).
+function svTbt(send){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var title=gv('tbt-title');
   if(!title){toast('\u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0');return;}
   var body=gv('tbt-body')||null,file=_attachUrls['tbt-attach-area']||null;
   if(!body&&!file){toast('\u05d7\u05d5\u05d1\u05d4: \u05ea\u05d5\u05db\u05df \u05d0\u05d5 \u05e7\u05d5\u05d1\u05e5, \u05db\u05d3\u05d9 \u05e9\u05d9\u05d4\u05d9\u05d4 \u05de\u05d4 \u05dc\u05e7\u05e8\u05d5\u05d0');return;}
   var trainer=gv('tbt-trainer')||null,trainerQ=gv('tbt-trainer-q')||null;
-  if((gv('tbt-s')||_TBT_DRAFT)===_TBT_PUB&&(!trainer||!trainerQ)){toast(_TBT_TRAINER_MSG);return;}
+  var pub=!!send||(gv('tbt-s')||_TBT_DRAFT)===_TBT_PUB;
+  if(pub&&(!trainer||!trainerQ)){toast(_TBT_TRAINER_MSG);return;}
   var tr={body_ar:gv('tbt-ar')||null,body_ru:gv('tbt-ru')||null,body_am:gv('tbt-am')||null};
   // A translation made from an older Hebrew text would show the workers something else.
   var editId=_svEditId('toolbox_talks'),old=editId?(DB.toolbox_talks||[]).filter(function(x){return x.id===editId;})[0]:null;
@@ -11107,7 +11115,7 @@ function svTbt(){
   // Workers already signed this text (ISO 45001 7.4 evidence): changing it makes their signatures look like signatures on the new text.
   var nSig=editId?_tbtReads(editId):0;
   if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am||(old.file_url||null)!==file)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
-  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,s:gv('tbt-s')||_TBT_DRAFT,ts:new Date().toISOString()};
+  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
   if(!_svEditId('toolbox_talks'))r.created_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
   _svPut('toolbox_talks',r);
   addLog('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+title.substring(0,30));sdb();
@@ -11115,6 +11123,26 @@ function svTbt(){
   ['tbt-title','tbt-body','tbt-d','tbt-ar','tbt-ru','tbt-am','tbt-trainer','tbt-trainer-q'].forEach(function(id){var el=g(id);if(el)el.value='';});_tbtTrSrc=null;
   if(typeof _attachClear==='function')_attachClear('tbt-attach-area');
   toast('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rTbt();
+  if(send)return _obIdle().then(function(){return tbtLink(r.id);});
+}
+// 05/10/2026: a weekly talk often repeats an earlier one. "Duplicate" opens the form as a
+// NEW record (lesson 23: one opener that sets every field) with the old talk's text,
+// translations, trainer and qualification, today's date and draft status. The attached
+// file is not copied: the new record points at the same Storage object.
+function tbtDup(id){
+  if(_viewOnly()){_viewBlock();return false;}
+  var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
+  if(!r){toast('\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4');return false;}
+  openModal('m-tbt');
+  var f=_EDIT_MODS.toolbox_talks.f;
+  Object.keys(f).forEach(function(dom){var el=g(dom);if(!el)return;var v=r[f[dom]];el.value=(v===null||v===undefined)?'':v;});
+  g('tbt-d').value=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});
+  g('tbt-s').value=_TBT_DRAFT;
+  _tbtTrainerFill();
+  _tbtTrSrc=(r.title||'')+'\n'+(r.body||'');
+  if(r.file_url){_attachUrls['tbt-attach-area']=r.file_url;_attachRender('tbt-attach-area',r.file_url,String(r.file_url).split('/').pop().split('?')[0]);}
+  else _attachClear('tbt-attach-area');
+  return true;
 }
 // Stage 2 (03/10/2026): a signed link to one published talk, from /api/talk
 // (manager/admin only, 14 days). On a phone the share sheet opens (WhatsApp to
