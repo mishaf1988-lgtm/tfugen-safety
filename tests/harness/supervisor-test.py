@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Stop hook .claude/hooks/supervisor.py (Michael, 01/10/2026).
+"""The Stop hook supervisor.py (Michael, 01/10/2026). Copy of\ntests/harness/supervisor-test.py pointed at the package, plus the proposals cases.
 
 A real git repo with an origin: uncommitted work and a branch ahead of
 origin/main block; a merge with no next session blocks; a closing question to
@@ -8,7 +8,7 @@ Michael, a running ci-wait and stop_hook_active let the stop through.
 import importlib.util, json, os, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-HOOK = os.path.join(HERE, "..", "..", ".claude", "hooks", "supervisor.py")
+sys.path.insert(0, HERE); from _common import hook; HOOK = hook('supervisor.py')
 spec = importlib.util.spec_from_file_location("supervisor", HOOK)
 sup = importlib.util.module_from_spec(spec); spec.loader.exec_module(sup)
 passed = failed = 0
@@ -78,6 +78,31 @@ run = lambda active: subprocess.run([sys.executable, HOOK], input=json.dumps({"t
 out = run(False)
 check("blocks with decision=block", '"decision": "block"' in out, out)
 check("stop_hook_active: never twice in a row", run(True) == "", run(True))
+
+print("\nproposals only for a merge since the last proposals section (05/10/2026)")
+def tline(f, role, content):
+    f.write(json.dumps({"message": {"role": role, "content": content}}, ensure_ascii=False) + "\n")
+def session(parts):
+    p = os.path.join(root, "s%d.jsonl" % len(parts))
+    with open(p, "w", encoding="utf-8") as f:
+        for kind, v in parts:
+            if kind == "user": tline(f, "user", v)
+            elif kind == "tool":
+                tline(f, "assistant", [{"type": "tool_use", "name": v, "input": {}}])
+                tline(f, "user", [{"type": "tool_result", "content": "ok"}])
+            else: tline(f, "assistant", [{"type": "text", "text": v}])
+    return p
+M = "mcp__github__merge_pull_request"
+old = session([("user", "א"), ("tool", M), ("text", "מוזג. 💡 הצעות לשדרוג: אין"), ("user", "ומה עכשיו?"), ("text", "אפשר X.")])
+text, tools, recent = sup.transcript(old)
+check("merge before the last proposals: not in recent", M in tools and M not in recent, (tools, recent))
+r = sup.verdict(work, text, tools, False, recent)
+check("a later short reply is not asked for proposals again", r is None or "הצעות לשדרוג" not in r, r)
+new = session([("user", "א"), ("text", "💡 הצעות לשדרוג: אין"), ("user", "ב"), ("tool", M), ("text", "מוזג שוב.")])
+text, tools, recent = sup.transcript(new)
+r = sup.verdict(work, text, tools, False, recent)
+check("a merge after the last proposals: asked again", r is not None and "הצעות לשדרוג" in r, r)
+check("verdict without recent (old callers) still uses the whole session", "הצעות לשדרוג" in (sup.verdict(work, "מוזג.", MERGED, False) or ""))
 
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
