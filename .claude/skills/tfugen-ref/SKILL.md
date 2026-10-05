@@ -72,6 +72,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `sbIns/sbUpd/sbDel` | 3806-3808 | queue Supabase ops (`sbIns`/`sbUpd` are wrapped again by `window.sbIns=` 24844 / `window.sbUpd=` 24849) |
 | `sbSync(silent)` | 3882 | pull all tables → DB |
 | `askDel(tbl,id)` | 4256 | delete with confirm |
+| `_aiThin(t)` / `_aiFwNone(t)` | grep | AI buttons: description only a label or under 8 chars / 5-Why answer "not enough". With `_AI_THIN_MSG`, `_AI_THIN_ANS`, `_AI_THIN_RULE`, `_AI_FW_RULE` |
 | `goPage(id)` | 4399 | show page (wrapped again by `window.goPage=` 25039 and `_g=goPage;window.goPage=` 25180) |
 | `rPage()` | 4747 | re-render current page |
 | `openModal(id)` | 4940 | show modal |

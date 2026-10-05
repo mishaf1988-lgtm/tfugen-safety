@@ -30,7 +30,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
   console.log('\n2. which examples go in');
   const ex = await page.evaluate(() => {
-    _nad = [{ id: 'a', d: 'תיאור א', category: 'saf' }, { id: 'b', d: 'תיאור ב', category: 'env' }, { id: 'c', d: 'תיאור ג', category: 'saf' }, { id: 'x', d: 'החדש', category: 'saf' }];
+    _nad = [{ id: 'a', d: 'תיאור א', category: 'saf' }, { id: 'b', d: 'תיאור ב', category: 'env' }, { id: 'c', d: 'תיאור ג', category: 'saf' }, { id: 'x', d: 'החדש: כבל חשמל חשוף ליד הכניסה', category: 'saf' }];
     const e1 = _ncrFbExamples(_nad[3]);
     const env = _ncrFbExamples({ id: 'x', category: 'env' });
     const self = _ncrFbExamples(_nad[2]);

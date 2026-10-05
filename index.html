@@ -15411,11 +15411,25 @@ window._incFiveWhyEdit=function(id){
 };
 // AI-suggested 5-Why for incidents. Sends incident context to Claude,
 // shows the response in a prompt() so the user can review/edit before save.
+// 05/10/2026 (lesson 55, after #1185): every AI button that fills fields from a
+// free-text description gets the same two guards. _aiThin stops a description
+// that is only a label ("Finding in internal audit:") or a word or two before
+// it is sent; _AI_THIN_RULE gives the model a way out, empty fields instead of
+// an invented finding. _AI_FW_RULE / _aiFwNone are that way out for the
+// free-text 5-Why, which has no JSON fields to leave empty.
+function _aiThin(t){return String(t||'').replace(/^[^:\n]{0,80}:/,'').trim().length<8;}
+var _AI_THIN_MSG='\u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d0\u05d9\u05df \u05e4\u05e8\u05d8\u05d9\u05dd: \u05db\u05ea\u05d5\u05d1 \u05de\u05d4 \u05e0\u05de\u05e6\u05d0, \u05d0\u05d9\u05e4\u05d4 \u05d5\u05de\u05d4 \u05d4\u05e1\u05d9\u05db\u05d5\u05df, \u05d5\u05d0\u05d6 \u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05d4';
+var _AI_THIN_ANS='\u05d4-AI: \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd. \u05d4\u05e9\u05dc\u05dd \u05d0\u05ea \u05d4\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1';
+var _AI_THIN_RULE='\n\u05d0\u05dd \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd \u05db\u05d3\u05d9 \u05dc\u05e2\u05e0\u05d5\u05ea (\u05e8\u05e7 \u05db\u05d5\u05ea\u05e8\u05ea, \u05de\u05d9\u05dc\u05d4 \u05d0\u05d5 \u05e9\u05ea\u05d9\u05d9\u05dd), \u05d4\u05d7\u05d6\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d3\u05d5\u05ea \u05e8\u05d9\u05e7\u05d9\u05dd ("") \u05d5\u05d0\u05dc \u05ea\u05e0\u05d7\u05e9.\n';
+var _AI_FW_NONE='\u05d0\u05d9\u05df \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd';
+var _AI_FW_RULE='\n\u05d0\u05dd \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd \u05db\u05d3\u05d9 \u05dc\u05e0\u05ea\u05d7 (\u05e8\u05e7 \u05db\u05d5\u05ea\u05e8\u05ea, \u05de\u05d9\u05dc\u05d4 \u05d0\u05d5 \u05e9\u05ea\u05d9\u05d9\u05dd), \u05d4\u05d7\u05d6\u05e8 \u05e8\u05e7 \u05d0\u05ea \u05d4\u05de\u05d9\u05dc\u05d9\u05dd: \u05d0\u05d9\u05df \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd. \u05d0\u05dc \u05ea\u05de\u05e6\u05d9\u05d0 \u05de\u05de\u05e6\u05d0.\n';
+function _aiFwNone(t){t=String(t||'').trim();return t.length<60&&t.indexOf(_AI_FW_NONE)>=0;}
 // ---- Incident Investigation Agent (B1, 2026-09-18) ----
 // intake (pick an incident) → 5-Why (typed or AI-suggested) → save to the
 // EXISTING fields inc.five_why + inc.r → optional CAPA task / NCR.
 // The AI request is shared with the 5-Why button on the incident view.
 window._incFiveWhyGenerate=function(rec){
+  if(_aiThin(rec.d)){var te=new Error(_AI_THIN_MSG);te.thin=true;return Promise.reject(te);}
   var ctx='\u05ea\u05d0\u05e8\u05d9\u05da: '+(rec.dt||rec.d||'?')+'\n'+
     '\u05ea\u05d9\u05d0\u05d5\u05e8: '+(rec.d||'')+'\n'+
     '\u05e1\u05d5\u05d2: '+(rec.ty||'?')+'\n'+
@@ -15427,7 +15441,7 @@ window._incFiveWhyGenerate=function(rec){
     '2. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 2]\n\n'+
     '...\n\n'+
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 - \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9]\n\n'+
-    '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
+    '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx+'\n'+_AI_FW_RULE+'\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
   return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
@@ -15436,6 +15450,7 @@ window._incFiveWhyGenerate=function(rec){
       var d;try{d=JSON.parse(res.txt);}catch(e){throw new Error('JSON');}
       var content=d.content&&d.content[0]?d.content[0].text:'';
       if(!content)throw new Error('empty');
+      if(_aiFwNone(content)){var te=new Error(_AI_THIN_ANS);te.thin=true;throw te;}
       return content;
     });
 };
@@ -15452,7 +15467,7 @@ window._incFiveWhyAI=function(id){
     rec.five_why=v.trim()||null;
     if(typeof sbUpd==='function')sbUpd('inc',rec);
     sdb();toast('5-Why \u05e0\u05e9\u05de\u05e8 ✓');showView('inc',id);
-  }).catch(function(e){restore();toast('\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e));});
+  }).catch(function(e){restore();toast(e&&e.thin?e.message:'\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e));});
 };
 window._invCur=null;
 window._invOpen=function(id){
@@ -15495,7 +15510,7 @@ window._invAI=function(){
       rc.value=last.replace(/^\[|\]$/g,'').replace(/^\d+\.\s*/,'').substring(0,160);
     }
     toast('AI \u05d4\u05e6\u05d9\u05e2 5-Why - \u05e2\u05e8\u05d5\u05da \u05d5\u05e9\u05de\u05d5\u05e8');
-  }).catch(function(e){if(err)err.textContent='\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e);})
+  }).catch(function(e){if(err)err.textContent=e&&e.thin?e.message:'\u05e9\u05d2\u05d9\u05d0\u05ea AI: '+(e&&e.message||e);})
   .then(function(){if(btn){btn.disabled=false;btn.textContent='🤖 \u05d4\u05e6\u05e2 5-Why (AI)';}});
 };
 window._invSave=function(){
@@ -15540,13 +15555,15 @@ window._rskAI=function(){
   var btn=g('rsk-ai-btn');
   var d=gv('r-d')||'';
   if(!d){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 \u05e1\u05d9\u05db\u05d5\u05df \u05e7\u05d5\u05d3\u05dd');return;}
+  if(_aiThin(d)){toast(_AI_THIN_MSG);return;}
   if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05d7\u05e9\u05d1...';}
   var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e1\u05d9\u05db\u05d5\u05df: '+d+'\n\u05ea\u05d7\u05d5\u05dd: '+(gv('r-a')||'?');
   var aiPrompt='\u05d0\u05ea\u05d4 \u05d9\u05d5\u05e2\u05e5 ISO 45001. \u05d1\u05d4\u05d9\u05e0\u05ea\u05df \u05e1\u05d9\u05db\u05d5\u05df \u05ea\u05e2\u05e1\u05d5\u05e7\u05ea\u05d9, \u05d4\u05d7\u05d6\u05e8 JSON \u05e2\u05dd 3 \u05e9\u05d3\u05d5\u05ea:\n'+
     '{\n  "p": 1-4 (\u05d4\u05e1\u05ea\u05d1\u05e8\u05d5\u05ea: 1=\u05e0\u05de\u05d5\u05db\u05d4 \u05de\u05d0\u05d5\u05d3, 2=\u05e0\u05de\u05d5\u05db\u05d4, 3=\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea, 4=\u05d2\u05d1\u05d5\u05d4\u05d4),\n'+
     '  "s": 1-4 (\u05d7\u05d5\u05de\u05e8\u05d4: 1=\u05e9\u05d5\u05dc\u05d9\u05ea, 2=\u05e7\u05dc\u05d4, 3=\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea \u05e4\u05e6\u05d9\u05e2\u05d4/\u05de\u05d7\u05dc\u05d4 30+ \u05d9\u05d5\u05dd, 4=\u05d7\u05de\u05d5\u05e8\u05d4 - \u05de\u05d5\u05d5\u05ea \u05d0\u05d5 \u05e0\u05db\u05d5\u05ea),\n'+
     '  "ac": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea - \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d4\u05e4\u05d7\u05ea\u05d4 \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05d5\u05ea \u05e9\u05e0\u05d9\u05ea\u05df \u05dc\u05d9\u05d9\u05e9\u05dd"\n}\n\n'+
-    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n'+
+    '\u05d0\u05dd \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd \u05db\u05d3\u05d9 \u05dc\u05d3\u05e8\u05d2 (\u05e8\u05e7 \u05db\u05d5\u05ea\u05e8\u05ea, \u05de\u05d9\u05dc\u05d4 \u05d0\u05d5 \u05e9\u05ea\u05d9\u05d9\u05dd), \u05d4\u05d7\u05d6\u05e8 0 \u05d1-p \u05d5\u05d1-s \u05d5-"" \u05d1-ac, \u05d5\u05d0\u05dc \u05ea\u05e0\u05d7\u05e9.\n\n'+
     '\u05d4\u05e1\u05d9\u05db\u05d5\u05df:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
@@ -15565,6 +15582,7 @@ window._rskAI=function(){
       if(sEl && parsed.s && [1,2,3,4].indexOf(parsed.s)>-1){sEl.value=String(parsed.s);changed.push('S='+parsed.s);}
       if(acEl && parsed.ac && !acEl.value.trim()){acEl.value=parsed.ac;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(', '));
+      else if(!parsed.p&&!parsed.s&&!parsed.ac)toast(_AI_THIN_ANS);
       else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
     .catch(function(e){
@@ -15621,7 +15639,7 @@ window._ncrAIRcAction=function(){
   // 05/10/2026 (Chrome check on the live NCR-0001): a description that is only a
   // label, "\u05de\u05de\u05e6\u05d0 \u05d1\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd (\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea):" with nothing after it, passed !d, and the model invented a
   // waste-management finding. What follows the label must say something.
-  if(d.replace(/^[^:\n]{0,80}:/,'').trim().length<8){toast('\u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d0\u05d9\u05df \u05e4\u05e8\u05d8\u05d9\u05dd: \u05db\u05ea\u05d5\u05d1 \u05de\u05d4 \u05e0\u05de\u05e6\u05d0, \u05d0\u05d9\u05e4\u05d4 \u05d5\u05de\u05d4 \u05d4\u05e1\u05d9\u05db\u05d5\u05df, \u05d5\u05d0\u05d6 \u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05d4');return;}
+  if(_aiThin(d)){toast(_AI_THIN_MSG);return;}
   if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
   var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+d+'\n'+
     '\u05d0\u05d6\u05d5\u05e8: '+(gv('ncr-a')||'?')+'\n'+
@@ -15657,7 +15675,7 @@ window._ncrAIRcAction=function(){
       var changed=[];
       if(rcEl && parsed.rc && !rcEl.value.trim()){rcEl.value=parsed.rc;changed.push('\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9');}
       if(cEl && parsed.c && !cEl.value.trim()){cEl.value=parsed.c;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea');}
-      if(!parsed.rc&&!parsed.c){toast('\u05d4-AI: \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd. \u05d4\u05e9\u05dc\u05dd \u05d0\u05ea \u05d4\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1');return;}
+      if(!parsed.rc&&!parsed.c){toast(_AI_THIN_ANS);return;}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' + '));
       else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
@@ -15675,6 +15693,7 @@ window._ncrFiveWhyAI=function(){
   if(!ta){toast('\u05e9\u05d3\u05d4 \u05e0\u05d9\u05ea\u05d5\u05d7 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var d=gv('ncr-d')||'';
   if(!d){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 NCR \u05e7\u05d5\u05d3\u05dd');return;}
+  if(_aiThin(d)){toast(_AI_THIN_MSG);return;}
   if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
   var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+d+'\n'+
     '\u05d0\u05d6\u05d5\u05e8: '+(gv('ncr-a')||'?')+'\n'+
@@ -15688,7 +15707,7 @@ window._ncrFiveWhyAI=function(){
     '2. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e7\u05d5\u05d3\u05de\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 2]\n\n'+
     '...\n\n'+
     '5. \u05dc\u05de\u05d4 [\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e8\u05d1\u05d9\u05e2\u05d9\u05ea] \u05e7\u05e8\u05d4?\n   [\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e8\u05de\u05d4 5 - \u05e9\u05d5\u05e8\u05e9 \u05de\u05e2\u05e8\u05db\u05ea\u05d9 \u05e9\u05de\u05db\u05d5\u05d5\u05df \u05dc-CAPA]\n\n'+
-    '\u05d4-NCR:\n'+ctx+'\n\n\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
+    '\u05d4-NCR:\n'+ctx+'\n'+_AI_FW_RULE+'\u05d4\u05e4\u05e7 \u05e8\u05e7 \u05d0\u05ea 5 \u05d4\u05e9\u05dc\u05d1\u05d9\u05dd, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.';
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
@@ -15698,6 +15717,7 @@ window._ncrFiveWhyAI=function(){
       var dj;try{dj=JSON.parse(res.txt);}catch(e){toast('\u05e9\u05d2\u05d9\u05d0\u05ea JSON \u05de-AI');return;}
       var content=dj.content&&dj.content[0]?dj.content[0].text:'';
       if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
+      if(_aiFwNone(content)){toast(_AI_THIN_ANS);return;}
       // Replace the textarea content. User can edit before clicking '\u05e9\u05de\u05d5\u05e8'.
       ta.value=content;
       ta.scrollTop=0;
@@ -16623,6 +16643,7 @@ window._incAI=function(){
   var btn=g('inc-ai-btn');
   var d=gv('i-d')||'';
   if(!d){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 \u05ea\u05e7\u05e8\u05d9\u05ea \u05e7\u05d5\u05d3\u05dd');return;}
+  if(_aiThin(d)){toast(_AI_THIN_MSG);return;}
   if(btn){btn.disabled=true;btn.textContent='⏳ \u05de\u05d7\u05e9\u05d1...';}
   var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+d;
   var locTxt=g('i-location-id')&&g('i-location-id').selectedOptions[0]?g('i-location-id').selectedOptions[0].text:'';
@@ -16631,7 +16652,8 @@ window._incAI=function(){
     '{\n  "ty": "\u05ea\u05d0\u05d5\u05e0\u05d4 \u05e2\u05dd \u05e4\u05e6\u05d9\u05e2\u05d4" \u05d0\u05d5 "\u05ea\u05d0\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d0 \u05e4\u05e6\u05d9\u05e2\u05d4" \u05d0\u05d5 "Near Miss" \u05d0\u05d5 "\u05e0\u05d6\u05e7 \u05dc\u05e8\u05db\u05d5\u05e9" \u05d0\u05d5 "\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9",\n'+
     '  "sv": "\u05e7\u05dc" \u05d0\u05d5 "\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9" \u05d0\u05d5 "\u05d7\u05de\u05d5\u05e8" \u05d0\u05d5 "\u05e7\u05e8\u05d9\u05d8\u05d9" (\u05d7\u05d5\u05de\u05e8\u05ea \u05d4\u05ea\u05e8\u05d7\u05d9\u05e9 \u05d1\u05e4\u05d5\u05e2\u05dc),\n'+
     '  "dy": \u05de\u05e1\u05e4\u05e8 \u05e9\u05dc\u05dd \u05e9\u05dc \u05d9\u05de\u05d9 \u05d4\u05d9\u05e2\u05d3\u05e8\u05d5\u05ea \u05e6\u05e4\u05d5\u05d9\u05d9\u05dd (0 \u05d0\u05dd \u05d0\u05d9\u05df \u05e4\u05e6\u05d9\u05e2\u05d4, \u05d0\u05d7\u05e8\u05ea \u05d4\u05e2\u05e8\u05db\u05d4 \u05d2\u05e1\u05d4: 1-2 \u05d7\u05d1\u05dc\u05d4 \u05e7\u05dc\u05d4, 3-7 \u05e4\u05e6\u05d9\u05e2\u05d4 \u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea, 8-30 \u05d7\u05de\u05d5\u05e8\u05d4, 30+ \u05e7\u05e8\u05d9\u05d8\u05d9\u05ea)\n}\n\n'+
-    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n'+
+    '\u05d0\u05dd \u05d0\u05d9\u05df \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd \u05db\u05d3\u05d9 \u05dc\u05e1\u05d5\u05d5\u05d2 (\u05e8\u05e7 \u05db\u05d5\u05ea\u05e8\u05ea, \u05de\u05d9\u05dc\u05d4 \u05d0\u05d5 \u05e9\u05ea\u05d9\u05d9\u05dd), \u05d4\u05d7\u05d6\u05e8 "" \u05d1-ty \u05d5\u05d1-sv \u05d5-null \u05d1-dy, \u05d5\u05d0\u05dc \u05ea\u05e0\u05d7\u05e9.\n\n'+
     '\u05d4\u05ea\u05e7\u05e8\u05d9\u05ea:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:300,messages:[{role:'user',content:aiPrompt}]})})
@@ -16652,6 +16674,7 @@ window._incAI=function(){
       if(svEl && parsed.sv && allowedSv.indexOf(parsed.sv)>-1){svEl.value=parsed.sv;changed.push('\u05d7\u05d5\u05de\u05e8\u05d4');}
       if(dyEl && (typeof parsed.dy==='number') && parsed.dy>=0 && !dyEl.value){dyEl.value=String(parsed.dy);changed.push('\u05d9\u05de\u05d9 \u05d0\u05d1\u05d3\u05df');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(', '));
+      else if(!parsed.ty&&!parsed.sv&&typeof parsed.dy!=='number')toast(_AI_THIN_ANS);
       else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
     })
     .catch(function(e){
@@ -16677,7 +16700,8 @@ window._legAI=function(){
     '{\n  "summary": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea - \u05de\u05d4 \u05d4\u05d7\u05d5\u05e7 \u05de\u05d7\u05d9\u05d9\u05d1 \u05d0\u05ea \u05d4\u05de\u05e4\u05e2\u05dc \u05dc\u05e2\u05e9\u05d5\u05ea (\u05d1\u05dc\u05e9\u05d5\u05df \u05e4\u05e2\u05d5\u05dc\u05d4, \u05dc\u05d0 \u05d4\u05e1\u05d1\u05e8 \u05ea\u05d9\u05d0\u05d5\u05e8\u05d8\u05d9)",\n'+
     '  "topic": "\u05ea\u05ea-\u05e0\u05d5\u05e9\u05d0 \u05e7\u05e6\u05e8 (2-4 \u05de\u05d9\u05dc\u05d9\u05dd) - \u05dc\u05d3\u05d5\u05d2\u05de\u05d4: \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4 / \u05e8\u05e2\u05e9 \u05ea\u05e2\u05e1\u05d5\u05e7\u05ea\u05d9 / \u05e4\u05dc\u05d9\u05d8\u05d5\u05ea \u05dc\u05d0\u05d5\u05d5\u05d9\u05e8 / \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd / \u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9",\n'+
     '  "a": "\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4" \u05d0\u05d5 "\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4" \u05d0\u05d5 "\u05db\u05d7 \u05d0\u05d3\u05dd" \u05d0\u05d5 "\u05db\u05dc\u05dc\u05d9"\n}\n\n'+
-    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n'+
+    (fullText?'':'\u05d0\u05d9\u05df \u05d8\u05e7\u05e1\u05d8 \u05de\u05dc\u05d0. \u05d0\u05dd \u05d0\u05d9\u05e0\u05da \u05de\u05db\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7 \u05d4\u05d6\u05d4 \u05d1\u05d5\u05d5\u05d3\u05d0\u05d5\u05ea, \u05d4\u05d7\u05d6\u05e8 "" \u05d1-summary \u05d5\u05d1-topic \u05d5\u05d0\u05dc \u05ea\u05e0\u05d7\u05e9 \u05de\u05d4 \u05d4\u05d5\u05d0 \u05de\u05d7\u05d9\u05d9\u05d1.\n')+'\n'+
     '\u05d4\u05d7\u05d5\u05e7:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:600,messages:[{role:'user',content:aiPrompt}]})})
@@ -16699,6 +16723,7 @@ window._legAI=function(){
         var cur=aEl.value;
         if(!cur||cur==='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4'){aEl.value=parsed.a;changed.push('\u05ea\u05d7\u05d5\u05dd \u05e8\u05d0\u05e9\u05d9');}
       }
+      if(!fullText&&!parsed.summary){toast('\u05d4-AI \u05dc\u05d0 \u05de\u05db\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7 \u05d1\u05d5\u05d5\u05d3\u05d0\u05d5\u05ea: \u05d4\u05d3\u05d1\u05e7 \u05d0\u05ea \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05de\u05dc\u05d0 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1');return;}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(', '));
       else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
@@ -16746,6 +16771,7 @@ window._nmAI=function(){
   var btn=g('nm-ai-btn');
   var descr=gv('nm-desc')||'';
   if(!descr){toast('\u05d4\u05d6\u05df \u05ea\u05d9\u05d0\u05d5\u05e8 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05e7\u05d5\u05d3\u05dd');return;}
+  if(_aiThin(descr)){toast(_AI_THIN_MSG);return;}
   if(btn){btn.disabled=true;btn.textContent='\u23f3 \u05de\u05d7\u05e9\u05d1...';}
   var area=gv('nm-area')||'';
   var ctx='\u05ea\u05d9\u05d0\u05d5\u05e8: '+descr+(area?'\n\u05d0\u05d6\u05d5\u05e8: '+area:'');
@@ -16753,7 +16779,7 @@ window._nmAI=function(){
     '{\n  "sev": "\u05e7\u05d8\u05d9\u05df" \u05d0\u05d5 "\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9" \u05d0\u05d5 "\u05d7\u05de\u05d5\u05e8" (\u05d7\u05d5\u05de\u05e8\u05ea \u05d4\u05ea\u05e8\u05d7\u05d9\u05e9 \u05d0\u05dd \u05d4\u05d9\u05d4 \u05de\u05ea\u05de\u05de\u05e9 \u05dc\u05ea\u05d0\u05d5\u05e0\u05d4),\n'+
     '  "typ": "\u05e4\u05d9\u05d6\u05d9" \u05d0\u05d5 "\u05db\u05d9\u05de\u05d9" \u05d0\u05d5 "\u05d7\u05e9\u05de\u05dc\u05d9" \u05d0\u05d5 "\u05e9\u05e8\u05d9\u05e4\u05d4" \u05d0\u05d5 "\u05e0\u05e4\u05d9\u05dc\u05d4" \u05d0\u05d5 "\u05d0\u05d7\u05e8",\n'+
     '  "notes": "1-3 \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea - \u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d5\u05e0\u05e2\u05ea \u05e1\u05e4\u05e6\u05d9\u05e4\u05d9\u05ea \u05dc\u05d4\u05ea\u05e8\u05d7\u05e9\u05d5\u05ea \u05e2\u05ea\u05d9\u05d3\u05d9\u05d5\u05ea - \u05de\u05d4 \u05dc\u05e2\u05e9\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d1\u05d0?"\n}\n\n'+
-    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.\n\n'+
+    '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4.'+_AI_THIN_RULE+'\n'+
     '\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7:\n'+ctx;
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
     body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
@@ -16774,6 +16800,7 @@ window._nmAI=function(){
       if(typEl && parsed.typ && allowedTyp.indexOf(parsed.typ)>-1){typEl.value=parsed.typ;changed.push('\u05e1\u05d5\u05d2');}
       if(notesEl && parsed.notes && !notesEl.value.trim()){notesEl.value=parsed.notes;changed.push('\u05d4\u05e2\u05e8\u05d5\u05ea');}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(', '));
+      else if(!parsed.sev&&!parsed.typ&&!parsed.notes)toast(_AI_THIN_ANS);
       else toast('\u05d4\u05e9\u05d3\u05d5\u05ea \u05de\u05d5\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05db\u05dc\u05d5\u05dd');
     })
     .catch(function(e){
@@ -21976,7 +22003,7 @@ window._ncrSel=function(id){
   var an=_naf[id];
   if(an&&!an.err)h+=_ncrFmt(an,pc,n);
   else if(!an)h+='<button data-nid="'+esc(id)+'" onclick="_ncrAI(this.dataset.nid)" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:13px;font-weight:700;cursor:pointer">&#129302; Analyze with Claude</button>';
-  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word">AI Error:<br>'+esc((an&&an.msg)||'unknown')+'</div>'+
+  else h+='<div style="color:#ff4444;padding:12px;font-size:11px;word-break:break-word'+(an&&an.thin?';color:#b45309':'')+'">'+(an&&an.thin?'':'AI Error:<br>')+esc((an&&an.msg)||'unknown')+'</div>'+
     '<button data-nid="'+esc(id)+'" onclick="_ncrAI(this.dataset.nid)" style="width:100%;background:#1a3a5a;border:1px solid #2a6aaa;border-radius:8px;color:#4a9adf;padding:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u21bb \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
   P.innerHTML=h;
 };
@@ -22107,6 +22134,7 @@ function _ncrFbPrompt(n){
 }
 window._ncrAI=function(id){
   var n=_nad.find(function(x){return x.id===id;});if(!n)return;
+  if(_aiThin(n.d)){_naf[id]={err:true,thin:true,msg:_AI_THIN_MSG};window._ncrSel(id);return;}
   // E2: one busy marker, replaced on repeated clicks instead of stacking.
   var Pp=document.getElementById('ncr-agent-panel');
   var oldBusy=document.getElementById('ncr-ai-busy');if(oldBusy)oldBusy.remove();
@@ -22134,6 +22162,7 @@ window._ncrAI=function(id){
     'Corrective action already recorded: '+(n.c||'-')+'\n'+
     'Owner already assigned: '+(n.o||'-')+'\n'+
     'If a field above is not -, treat it as the decision already made on site: build on it, say plainly if you disagree, and do not silently replace it.\n\n'+
+    'If the description is too thin to analyse (only a label or a word or two), respond with {"insufficient":true} and nothing else. Do not invent a finding.\n\n'+
     _ncrFbPrompt(n)+
     'Schema (respond in Hebrew values, JSON only, no markdown fences):\n'+
     '{\n'+
@@ -22155,6 +22184,7 @@ window._ncrAI=function(id){
     var ja=raw.indexOf('{'),jb=raw.lastIndexOf('}');
     if(ja<0||jb<ja)throw new Error('AI returned no JSON: '+raw.substring(0,120));
     var obj=JSON.parse(raw.substring(ja,jb+1));
+    if(obj.insufficient||(!obj.root_cause&&!(obj.corrective_actions||[]).length)){_naf[id]={err:true,thin:true,msg:_AI_THIN_ANS};window._ncrSel(id);return;}
     var nextVer=(_naVer[id]||0)+1;
     var dueDate=null;
     if(typeof obj.due_days==='number'&&obj.due_days>0){
