@@ -145,7 +145,11 @@ export const register: Register = on => {
     const msgs = await read($, messages)
     const path = await read($, skillPath)
     const level = chatLevel(m?.contextPercent ?? null, msgs)
-    const { Box, Button, Input, Text } = $.ui.resolve(e)
+    const ui = $.ui.resolve(e)
+    const { Box, Button, Text } = ui
+    // The phone app has no Input (05/10/2026: the whole band was refused there), so
+    // the skill-path row is left out on mobile and the rest of the band still draws.
+    const Input = 'Input' in ui ? ui.Input : null
 
     const pct = m?.contextPercent ?? null
     const ctxColor = pct === null ? undefined : pct >= 85 ? 'red' : pct >= 60 ? 'yellow' : 'green'
@@ -183,7 +187,7 @@ export const register: Register = on => {
             <Text bold>{r.percentUsed}%</Text>
           </Box>
         ))}
-        <Box flexDirection="row" gap={1} alignItems="center">
+        {Input && <Box flexDirection="row" gap={1} alignItems="center">
           <Text dimColor>עדכון סקיל </Text>
           <Box flexGrow={1}>
             <Input
@@ -196,7 +200,7 @@ export const register: Register = on => {
             />
           </Box>
           <Button key="update-skill" label="עדכן סקיל" onPress={() => void submitSkill($, path)} />
-        </Box>
+        </Box>}
         <Box flexDirection="row" flexWrap="wrap" gap={2}>
           <Text>
             <Text dimColor>שיחה: </Text>
