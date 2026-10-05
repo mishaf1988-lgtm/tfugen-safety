@@ -9,6 +9,7 @@ Tests set PUSH_RECHECK_CHANGED and PUSH_RECHECK_TEST, like push-gate.
 Test:  python3 tests/harness/push-recheck-test.py
 """
 import json, os, re, subprocess, sys
+sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 TEST = "tests/harness/lessons-format-test.py"
