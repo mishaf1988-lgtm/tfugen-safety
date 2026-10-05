@@ -10,6 +10,7 @@ Test:  python3 tests/harness/pr-gate-test.py
 """
 import importlib.util, json, os, subprocess, sys
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 GATE = ".github/scripts/lessons-gate.py"
 

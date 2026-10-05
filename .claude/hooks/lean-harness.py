@@ -7,6 +7,7 @@ The full log is kept on disk either way.
 Test:  echo '{"tool_input":{"command":"bash tests/harness/run.sh"}}' | python3 .claude/hooks/lean-harness.py
 """
 import json, re, sys
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 d = json.load(sys.stdin)
 ti = d.get("tool_input", {}) or {}

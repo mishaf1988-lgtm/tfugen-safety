@@ -13,6 +13,7 @@ Edits made by a Bash script do not pass through here.
 Test:  python3 tests/harness/fresh-main-test.py
 """
 import json, os, subprocess, sys, time
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 EVERY = int(os.environ.get("FRESH_MAIN_EVERY", "60"))
 

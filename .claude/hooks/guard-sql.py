@@ -9,6 +9,7 @@ that can be dropped after context compaction.
 Test:  echo '{"tool_input":{"query":"TRUNCATE ncr"}}' | python3 .claude/hooks/guard-sql.py
 """
 import json, re, sys
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 d = json.load(sys.stdin)
 ti = d.get("tool_input", {}) or {}

@@ -4,10 +4,10 @@ the last METRICS row; never fails on a missing file or a tty stdin."""
 import os, subprocess, sys, tempfile
 from _common import hook, check, done
 d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "project-files"))
-open(os.path.join(d, "handoff-05-10-2026-10.00.md"), "w").write("# handoff\nהבא בתור: בדיקה X\n")
-open(os.path.join(d, "STATUS.md"), "w").write("## פתוח\n- [ ] משימה א\n- [x] סגורה\n  - [ ] משימה ב\n")
-open(os.path.join(d, "project-files", "METRICS.md"), "w").write("| חודש | כישלון |\n|---|---|\n| 09/2026 | 20% |\n| 10/2026 | 12% |\n")
-run = lambda cwd, inp="{}": subprocess.run([sys.executable, hook("session-start.py")], input=inp, capture_output=True, text=True,
+open(os.path.join(d, "handoff-05-10-2026-10.00.md"), "w", encoding="utf-8").write("# handoff\nהבא בתור: בדיקה X\n")
+open(os.path.join(d, "STATUS.md"), "w", encoding="utf-8").write("## פתוח\n- [ ] משימה א\n- [x] סגורה\n  - [ ] משימה ב\n")
+open(os.path.join(d, "project-files", "METRICS.md"), "w", encoding="utf-8").write("| חודש | כישלון |\n|---|---|\n| 09/2026 | 20% |\n| 10/2026 | 12% |\n")
+run = lambda cwd, inp="{}": subprocess.run([sys.executable, hook("session-start.py")], input=inp, capture_output=True, text=True, encoding="utf-8",
                                             timeout=30, env=dict(os.environ, CLAUDE_PROJECT_DIR=cwd))
 p = run(d); o = p.stdout
 check("exit 0", p.returncode == 0, p.stderr)
@@ -18,7 +18,7 @@ check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" 
 e = tempfile.mkdtemp()
 p = run(e, "not json")
 check("empty dir + bad stdin: exit 0, still names the skills", p.returncode == 0 and "tfugen-lean" in p.stdout, (p.returncode, p.stdout, p.stderr))
-big = tempfile.mkdtemp(); open(os.path.join(big, "handoff-x.md"), "w").write("א" * 9000)
+big = tempfile.mkdtemp(); open(os.path.join(big, "handoff-x.md"), "w", encoding="utf-8").write("א" * 9000)
 check("a long handoff is cut", "נחתך" in run(big).stdout)
 # 05/10/2026, Michael's computer: Windows stdout is cp1255, an emoji in STATUS raised
 # UnicodeEncodeError inside the try, and the session got nothing. Simulated with PYTHONIOENCODING.

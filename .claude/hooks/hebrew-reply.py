@@ -17,6 +17,7 @@ Never blocks twice in a row (stop_hook_active), so it cannot loop.
 Test:  python3 tests/harness/hebrew-reply-test.py
 """
 import json, re, sys
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 MIN_LATIN = 40      # a short line like "PR #1018 merged" is not judged
 HEB_SHARE = 0.25    # Hebrew letters / (Hebrew + Latin) below this = English reply

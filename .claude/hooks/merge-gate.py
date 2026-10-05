@@ -10,6 +10,7 @@ hour is plenty). Fails closed: if GitHub cannot be read, the merge waits.
 Test:  echo '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"mishaf1988-lgtm","repo":"tfugen-safety","pullNumber":1005}}' | python3 .claude/hooks/merge-gate.py
 """
 import json, sys, urllib.request
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 CHECK = "tests"
 

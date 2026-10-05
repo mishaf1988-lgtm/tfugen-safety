@@ -11,6 +11,7 @@ Test:  python3 tests/harness/hebrew-midturn-test.py
 """
 import hashlib, importlib.util, json, os, sys, tempfile
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
+sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
