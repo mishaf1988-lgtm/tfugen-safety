@@ -34,6 +34,8 @@ description: How to read and change the live Supabase database of tfugen-safety 
 
 9. **ייבוא נתונים מקובץ למסד מהענן** (04/10/2026, 228 שורות): `curl` ל-Supabase חסום, אז הנתונים עוברים כטקסט בתוך `execute_sql`, וכל תו מועתק. (1) המיפוי: להריץ את פונקציות האפליקציה עצמה על הקובץ (`new Function` על הקוד החתוך, ו-`xlsx` באותה גרסה כמו ב-CDN בתיקייה בסקראץ'), יבש, ולבדוק כל תאריך ב-regex. (2) פורמט דחוס: שורה לכל רשומה מופרדת ב-`|`, `\n` ו-`\p` לקידוד, id ו-ts נוצרים במסד; קובץ JSON מלא היה פי 2-3. (3) **אימות:** md5 של `string_agg(... order by x collate "C")` במסד מול אותו חישוב ב-Python (`sorted` = סדר בייטים). חתימה שונה = טעות העתקה. (4) מידע אישי (ת.ז., לידה) לא נכנס ל-repo.
 
+10. **כתיבה מסוג חדש לטבלה קיימת** (05/10/2026, לקח 54): בדיקה עם `_obPush` מזויף לא רואה את המסד. לפני PR: `select conname, pg_get_constraintdef(oid) from pg_constraint where conrelid='public.<t>'::regclass`, ו-`insert` בצורה המדויקת בתוך `do $$ begin insert ...; raise exception 'rollback'; end $$` (הכל מתבטל), ואחר כך `count` שאין שורה. ב-`audit_log`: `op` רק ins/upd/del, סוג אחר הולך ל-`source`.
+
 ## כללי Postgres של Supabase, מה שרלוונטי כאן (02/10/2026)
 מתוך `supabase/agent-skills`, skill `supabase-postgres-best-practices` (MIT, תוכן בלבד). לא הותקן כולו (8 קטגוריות, רובן על טבלאות של מיליוני שורות; כאן עשרות עד מאות). חמשת הכללים שחלים, ומה נמדד:
 1. **פונקציה ב-policy עטופה ב-`(select ...)`**, אחרת היא רצה לכל שורה: `using ((select private.is_admin_manager()))`. נמדד **במסד החי** (02/10/2026, `pg_policies`): 14 לא עטופות מתוך 372, תוקנו ב-`2026-10-02_rls_wrap_select.sql`; עכשיו 0. כל policy חדשה נכתבת עטופה. (הספירה מקבצי ההגירות נתנה 44: קבצים ישנים שכבר הוחלפו. טענה על המסד רק מ-`pg_policies`, לקח 18.)
