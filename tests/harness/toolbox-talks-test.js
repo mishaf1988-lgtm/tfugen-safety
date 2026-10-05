@@ -49,7 +49,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.toast = function (m) { toasts.push(String(m)); };
     DB.toolbox_talks = [
       { id: 'tt-1', d: '2026-09-27', title: 'עבודה בגובה', body: 'רתמה, עיגון', s: 'פורסמה' },
-      { id: 'tt-2', d: '2026-10-04', title: 'חומרים מסוכנים', body: 'גיליון בטיחות', s: 'טיוטה' },
+      { id: 'tt-2', d: '2026-10-04', title: 'חומרים מסוכנים', body: 'גיליון בטיחות', s: 'טיוטה', trainer: 'מיכאל', trainer_qual: 'ממונה בטיחות' },
     ];
     DB.toolbox_reads = [
       { id: 'r1', talk_id: 'tt-1', emp_name: 'עובד א' },
