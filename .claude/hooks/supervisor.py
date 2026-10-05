@@ -21,6 +21,7 @@ end wakes the session), and never blocks twice in a row (stop_hook_active).
 Test:  python3 tests/harness/supervisor-test.py
 """
 import json, os, re, subprocess, sys
+sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 
 PROPOSALS = "הצעות לשדרוג"
 

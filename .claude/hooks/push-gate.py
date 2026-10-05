@@ -13,6 +13,7 @@ Tests set PUSH_GATE_CHANGED (comma list of changed files) and PUSH_GATE_TEST
 Test:  python3 tests/harness/push-gate-test.py
 """
 import json, os, re, subprocess, sys
+sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 TEST = "tests/harness/lessons-format-test.py"

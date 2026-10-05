@@ -39,5 +39,13 @@ o = hook('Bash', {'command': "cat <<-EOF > x\n\tgit push origin b\n\tEOF\necho d
 check('...also with <<- and a tab-indented terminator', o == '', o)
 o = hook('Bash', {'command': "grep -q x <<< 'git push origin b' && git push -q origin routine/hs-2026-10-05"})
 check('a here-string (<<<) is not a heredoc: the real push after it is seen', 'ci-wait.sh routine/hs-2026-10-05 ' in o, o)
+# 05/10/2026: `git push origin --delete X` started `ci-wait.sh --delete` (the flag taken as the branch).
+o = hook('Bash', {'command': 'git push origin --delete routine/old-2026-10-05'})
+check('git push origin --delete <branch>: nothing (no CI on a deleted branch)', o == '', o)
+check('...and the :<branch> form: nothing', hook('Bash', {'command': 'git push origin :routine/old-2026-10-05'}) == '')
+o = hook('Bash', {'command': 'git push origin --force-with-lease routine/f-2026-10-05 2>&1 | tail -1'})
+check('a flag after origin is skipped: the branch after it is watched', 'ci-wait.sh routine/f-2026-10-05 ' in o and '--force' not in o, o)
+o = hook('Bash', {'command': 'git push -q origin HEAD:routine/h-2026-10-05'})
+check('HEAD:<branch>: the branch', 'ci-wait.sh routine/h-2026-10-05 ' in o, o)
 print('\n%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

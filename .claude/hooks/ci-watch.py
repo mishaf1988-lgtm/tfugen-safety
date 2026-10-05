@@ -11,6 +11,7 @@ still exits 0); it returns when `tests` finishes, with no event needed.
 Test:  python3 tests/harness/ci-watch-test.py
 """
 import json, os, re, subprocess, sys
+sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 
 REPO = "mishaf1988-lgtm/tfugen-safety"
 
@@ -50,8 +51,13 @@ if tool == "Bash":
     # The LAST push in the command: a heredoc or a test string earlier in the same
     # command can contain "git push origin <other>" (02/10/2026, it named a test
     # branch and the watcher was started on the wrong one).
-    ms = re.findall(r"git\s+push\b[^;&|\n]*?\borigin\s+(?:HEAD:)?([\w./-]+)", cmd)
-    ref = ms[-1] if ms else branch()
+    # Flags are not branch names (05/10/2026: `git push origin --delete X` started
+    # `ci-wait.sh --delete`), and a delete push has no CI to watch.
+    args = re.findall(r"git\s+push\b([^;&|\n]*)", cmd)[-1].split()
+    if any(a in ("--delete", "-d") or a.startswith(":") for a in args):
+        print("{}"); sys.exit(0)
+    names = [a for a in args[args.index("origin") + 1:] if not a.startswith("-") and not re.match(r"\d?>", a)] if "origin" in args else []
+    ref = re.sub(r"^\+?HEAD:", "", names[0]) if names else branch()
 elif tool == "mcp__github__create_pull_request":
     ref = inp.get("head", "") or branch()
 else:

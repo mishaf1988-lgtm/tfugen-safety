@@ -10,6 +10,7 @@ long turn does not repeat the same warning after every tool.
 Test:  python3 tests/harness/hebrew-midturn-test.py
 """
 import hashlib, importlib.util, json, os, sys, tempfile
+sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
