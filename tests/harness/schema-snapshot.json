@@ -608,6 +608,7 @@
       "id",
       "id_no",
       "lang",
+      "mode",
       "read_at",
       "sig_url",
       "talk_id",
@@ -628,6 +629,8 @@
       "title",
       "trainer",
       "trainer_qual",
+      "trainer_sig_url",
+      "trainer_signed_at",
       "ts"
     ],
     "tour_hazards": [
