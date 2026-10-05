@@ -2,6 +2,7 @@
 # Runs every harness against the repo's index.html / functions / tools.
 # Needs: node 18+, playwright (npm i -g playwright; browsers via PLAYWRIGHT_BROWSERS_PATH), python3.
 # Usage: bash tests/harness/run.sh            (all)
+#        PARALLEL=4 bash tests/harness/run.sh (all, 4 shards at once in git worktrees)
 #        bash tests/harness/run.sh trustee    (only files matching a substring)
 set -u
 cd "$(dirname "$0")"
@@ -11,6 +12,26 @@ if ! mkdir .run.lock 2>/dev/null; then
   if kill -0 "$(cat .run.lock/pid 2>/dev/null)" 2>/dev/null; then echo "HARNESS ERROR: run.sh already running (pid $(cat .run.lock/pid)). One test alone: node <file>"; exit 1; fi
 fi
 echo $$ > .run.lock/pid; trap 'rm -rf .run.lock' EXIT
+# PARALLEL=n (05/10/2026, Michael: "approve all"): n shards at once, each in its own git
+# worktree (the shared _build and the lock allow one run per tree), with the working
+# tree's uncommitted and untracked files copied in. 4 shards: about 11 minutes in the
+# cloud instead of 45. A shard that the filter leaves empty is fine when another ran.
+if [ -n "${PARALLEL:-}" ] && [ -z "${SHARD:-}" ]; then
+  n=$PARALLEL; root=$(git rev-parse --show-toplevel); tmp=$(mktemp -d); rc=0; empty=0
+  for ((i=0;i<n;i++)); do
+    git -C "$root" worktree add -q "$tmp/w$i" HEAD || { echo "HARNESS ERROR: git worktree failed"; rm -rf "$tmp"; exit 1; }
+    (cd "$root" && git ls-files -m -o --exclude-standard -z | while IFS= read -r -d '' f; do mkdir -p "$tmp/w$i/$(dirname "$f")"; cp "$f" "$tmp/w$i/$f"; done)
+    (cd "$tmp/w$i/tests/harness" && SHARD=$i/$n bash run.sh "$@" > "$tmp/s$i.log" 2>&1; echo "exit=$?" >> "$tmp/s$i.log") &
+  done; wait
+  for ((i=0;i<n;i++)); do
+    if grep -q "^NO SUITE MATCHED" "$tmp/s$i.log"; then empty=$((empty + 1)); else grep -v "^exit=\|^ALL GREEN\|^FAILURES ABOVE" "$tmp/s$i.log"; grep -q "^exit=0" "$tmp/s$i.log" || rc=1; fi
+    git -C "$root" worktree remove --force "$tmp/w$i"
+  done
+  rm -rf "$tmp"
+  [ "$empty" -eq "$n" ] && { echo "NO SUITE MATCHED '${1:-}'"; rc=1; }
+  [ $rc -eq 0 ] && echo "ALL GREEN" || echo "FAILURES ABOVE"
+  exit $rc
+fi
 export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null)}"
 # the function unit test imports ESM copies of the Cloudflare function + shared helpers
 mkdir -p _build

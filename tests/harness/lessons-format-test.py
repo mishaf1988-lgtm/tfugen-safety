@@ -7,7 +7,7 @@
 import os, re, sys
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.claude', 'skills', 'tfugen-lessons', 'SKILL.md')
 A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'project-files', 'lessons-archive.md')
-MAX = 14 * 1024
+MAX = 16 * 1024  # 14 until 05/10/2026 (Michael: "approve all"; the file sat 7 bytes under it)
 FIELDS = ('מה קרה:', 'הכלל:', 'נאכף:', 'חזר:')
 HEAD = re.compile(r'^\*\*(\d+)\. .+ \((\d\d/\d\d/\d{4}|[^)]*\d\d/\d\d/\d{4}[^)]*)(, [^)]*)?\)\.\*\*$')
 # Rule 3 (02/10/2026): a lesson already enforced in code shrinks to one line:
