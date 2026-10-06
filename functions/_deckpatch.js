@@ -27,6 +27,9 @@ export function patchPara(p, next) {
   const runs = []; let m; RUN.lastIndex = 0;
   while ((m = RUN.exec(p))) runs.push({ all: m[0], pr: m[1], t: unesc(m[2]) });
   if (!runs.length) return p;
+  // A function marked .perRun changes each run on its own (the header's date sits in a
+  // small grey run after the big red title; 06/10/2026).
+  if (typeof next === 'function' && next.perRun) { RUN.lastIndex = 0; return p.replace(RUN, (all, pr, t) => '<a:r>' + pr + '<a:t>' + esc(next(unesc(t))) + '</a:t></a:r>'); }
   const old = runs.map((r) => r.t).join('');
   if (Array.isArray(next) && next.length === runs.length) {
     let i = 0;
@@ -97,14 +100,16 @@ export function setList(xml, name, sections, more, report) {
 
 const pts = (vals) => '<c:ptCount val="' + vals.length + '"/>' + vals.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + esc(v) + '</c:v></c:pt>').join('');
 // Stacked bar by department: series values by the chart's own category order.
-export function setBars(xml, bySeries, maxAxis, report) {
+export function setBars(xml, bySeries, maxAxis, report, labels) {
   let n = 0;
   xml = xml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g, (ser) => {
     const name = unesc((/<c:tx>\s*(?:<c:strRef>[\s\S]*?<c:v>|<c:v>)([\s\S]*?)<\/c:v>/.exec(ser) || [])[1] || '');
     const vals = bySeries[name]; if (!vals) { report.push('chart series not updated: ' + name); return ser; }
     const cats = []; const cr = /<c:pt idx="(\d+)">\s*<c:v>([\s\S]*?)<\/c:v>/g; const cs = (/<c:cat>([\s\S]*?)<\/c:cat>/.exec(ser) || [])[1] || ''; let m;
-    while ((m = cr.exec(cs))) cats[+m[1]] = unesc(m[2]);
+    while ((m = cr.exec(cs))) cats[+m[1]] = unesc(m[2]).split('\n')[0];
     n++;
+    // 06/10/2026 (Michael: "how many closed in each department"): the label's second line.
+    if (labels) ser = ser.replace(/(<c:cat>\s*<c:strLit>)[\s\S]*?(<\/c:strLit>)/, (a, x, y) => x + pts(cats.map((c) => labels[c] || c)) + y);
     return ser.replace(/(<c:val>[\s\S]*?<c:numLit>(?:<c:formatCode>[\s\S]*?<\/c:formatCode>)?)[\s\S]*?(<\/c:numLit>)/, (all, a, b) => a + pts(cats.map((c) => (vals[c] == null ? 0 : vals[c]))) + b);
   });
   if (maxAxis != null) xml = xml.replace(/(<c:valAx>[\s\S]*?<c:scaling>[\s\S]*?)<c:max val="[^"]*"\/>/, '$1<c:max val="' + maxAxis + '"/>');
@@ -120,6 +125,8 @@ export function setLine(xml, cats, vals, report) {
 
 // ---- the deck's content, from the meeting data ----
 const ddmm = (ymd) => ymd.substring(8, 10) + '/' + ymd.substring(5, 7);
+// CLAUDE.md: dates people read are DD/MM/YYYY (06/10/2026: the deck said 06.10.2026).
+const dmy = (ymd) => ymd.substring(8, 10) + '/' + ymd.substring(5, 7) + '/' + ymd.substring(0, 4);
 const HEB_MONTHS = ['\u05d9\u05e0\u05d5\u05d0\u05e8', '\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8', '\u05de\u05e8\u05e5', '\u05d0\u05e4\u05e8\u05d9\u05dc', '\u05de\u05d0\u05d9', '\u05d9\u05d5\u05e0\u05d9', '\u05d9\u05d5\u05dc\u05d9', '\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8', '\u05e1\u05e4\u05d8\u05de\u05d1\u05e8', '\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8', '\u05e0\u05d5\u05d1\u05de\u05d1\u05e8', '\u05d3\u05e6\u05de\u05d1\u05e8'];
 // Michael, 28/09: 2024 stays 9 as in the deck (the 2024 file has 14 rows).
 export const FIXED_YEARS = { 2024: 9 };
@@ -131,6 +138,12 @@ export function deckContent(m, rows, meetingDate, opts) {
   const y = meetingDate.substring(0, 4), month = meetingDate.substring(0, 7);
   const by = {}; h.byDept.forEach((d) => { by[d.dept] = d; });
   const listDepts = (k) => h.byDept.filter((d) => d[k] > 0).sort((p, q) => q[k] - p[k]).map((d) => d.dept);
+  // "dept N, dept N" in one line of its card; past 38 characters the rest is "ועוד N".
+  const countDepts = (k) => {
+    const all = h.byDept.filter((d) => d[k] > 0).sort((p, q) => q[k] - p[k]).map((d) => d.dept + ' ' + d[k]);
+    for (let n = all.length; n > 0; n--) { const t = all.slice(0, n).join(', ') + (n < all.length ? ', \u05d5\u05e2\u05d5\u05d3 ' + (all.length - n) : ''); if (t.length <= 38 || n === 1) return t; }
+    return '';
+  };
   const open = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8');
   const sevOf = (s) => open.filter((r) => r[6] === s);
   const d10 = (v) => (v && typeof v === 'object' ? v.date : v) || '';
@@ -168,6 +181,7 @@ export function deckContent(m, rows, meetingDate, opts) {
   const nw = h.total.newThisWeek, nc = h.summary.newClosed, no = h.summary.newStillOpen;
   const hi = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').length, med = sevOf('\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea').length, low = sevOf('\u05e0\u05de\u05d5\u05db\u05d4').length;
   const last = a.lastAccident;
+  const yearTotal = (yy) => (FIXED_YEARS[yy] != null ? FIXED_YEARS[yy] : a.byYear[yy] || 0);
   // Slide 3 is the monthly report (Michael, 29/09: "updated for the month,
   // at the start of each month"): the state at the end of that month and its
   // closures, then left alone until the next month begins.
@@ -190,15 +204,31 @@ export function deckContent(m, rows, meetingDate, opts) {
       Card1: [String(asOf.length - openM.length)],
       Card2: [String(openM.length), 'פתוחים - ' + [hiM ? hiM + ' בחומרה גבוהה' : '', medM ? medM + ' בינונית' : '', lowM ? lowM + ' נמוכה' : ''].filter(Boolean).join(', ')],
       high: [{ match: /^מפגעים פתוחים בחומרה גבוהה/, header: 'מפגעים פתוחים בחומרה גבוהה (' + hiM + ')', items: sevM('גבוהה').map((r) => item(r, 76)), empty: 'אין', room: 5 },
-        { match: /פעולות סגירה/, header: (t) => (/^\s/.test(t) ? ' ' : '') + 'פעולות סגירה - ' + HEB_MONTHS[+rep.substring(5, 7) - 1] + ' ' + yR + ' (' + nCl + ')', items: cl, empty: 'לא נסגרו מפגעים בחודש', room: 3, more: (n) => ['ועוד ' + n + ' מחלקות', ''] }],
+        { match: /פעולות סגירה/, header: (t) => (/^\s/.test(t) ? ' ' : '') + 'פעולות סגירה - ' + HEB_MONTHS[+rep.substring(5, 7) - 1] + ' ' + yR + ' (' + nCl + ')', items: cl, empty: 'לא נסגרו מפגעים בחודש', room: 6, more: (n) => ['ועוד ' + n + ' מחלקות', ''] }],
       med: [{ match: /^מפגעים פתוחים בחומרה בינונית/, header: 'מפגעים פתוחים בחומרה בינונית (' + medM + ')', items: sevM('בינונית').map((r) => item(r, 76)), empty: 'אין', room: 12 }],
     };
   };
   const S_DONE_ = '\u05e1\u05d2\u05d5\u05e8';
+  // Slide 4 (06/10/2026, Michael: "connect it too"): near misses of the report
+  // month, and every investigation still open (near_miss.s not closed), oldest first.
+  const buildS4 = (nm, rep) => {
+    const inM = nm.filter((x) => String(x.d || '').substring(0, 7) === rep).length;
+    const open = nm.filter((x) => x.s !== S_DONE_).sort((p, q) => String(p.d || '').localeCompare(String(q.d || '')));
+    const yR = rep.substring(0, 4), cur = open.filter((x) => String(x.d || '').substring(0, 4) === yR).length, older = open.length - cur;
+    const oldest = older ? String(open[0].d || '').substring(0, 4) : '';
+    const parts = [cur ? (cur === 1 ? '\u05d0\u05d9\u05e8\u05d5\u05e2 \u05d0\u05d7\u05d3' : cur + ' \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd') + ' \u05d1-' + yR : '', older ? (older === 1 ? '1 \u05ea\u05d7\u05e7\u05d9\u05e8 \u05e4\u05ea\u05d5\u05d7' : older + ' \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd') + ' \u05de-' + oldest : ''].filter(Boolean);
+    return {
+      Event1Card: [!inM ? '\u05d4\u05d7\u05d5\u05d3\u05e9 \u05dc\u05d0 \u05d0\u05d9\u05e8\u05e2\u05d5 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9 "\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2"' : inM === 1 ? '\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d3\u05d5\u05d5\u05d7 \u05d0\u05d9\u05e8\u05d5\u05e2 "\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2" \u05d0\u05d7\u05d3' : '\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d3\u05d5\u05d5\u05d7\u05d5 ' + inM + ' \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9 "\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2"',
+        HEB_MONTHS[+rep.substring(5, 7) - 1] + ' ' + yR + ' - \u05d3\u05d5\u05d7 \u05d7\u05d5\u05d3\u05e9\u05d9'],
+      list: [{ match: /^\u05e1\u05e7\u05d9\u05e8\u05ea \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd/, header: parts.length ? '\u05e1\u05e7\u05d9\u05e8\u05ea \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd - ' + parts.join(' \u05d5-') + ':' : '\u05e1\u05e7\u05d9\u05e8\u05ea \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd: \u05d0\u05d9\u05df \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd',
+        items: open.map((x) => [x.d ? dmy(String(x.d).substring(0, 10)) : '-', ' - ' + short(x.area || '-', 30) + ': ', short(x.descr || '-', 50) + (x.s === '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc' ? ' - \u05d4\u05ea\u05d7\u05e7\u05d9\u05e8 \u05d1\u05d1\u05d9\u05e6\u05d5\u05e2' : '')]),
+        empty: ['', '', ''], room: 4, more: (n) => ['', '\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05ea\u05d7\u05e7\u05d9\u05e8\u05d9\u05dd', ''] }],
+    };
+  };
   return {
     s1: {
-      Header: [(t) => t.replace(/20\d{2}/, y).replace(/\d{2}\.\d{2}\.\d{4}/, meetingDate.substring(8, 10) + '.' + meetingDate.substring(5, 7) + '.' + y)],
-      ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', listDepts('closedThisWeek').join(', ') || '-'],
+      Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
+      ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', countDepts('closedThisWeek') || '-'],
       OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, ' + short(head(oldestHigh[5]), 42 - String(hi).length - 15) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
       // 30/09/2026 (Michael: «8 new hazards» was no longer true, some were
       // closed): the first line says what became of them, the second where.
@@ -207,7 +237,7 @@ export function deckContent(m, rows, meetingDate, opts) {
           + (nw === 1 ? (nc ? ', \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8' : ', \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7')
             : !nc ? ', \u05db\u05d5\u05dc\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd' : !no ? ', \u05db\u05d5\u05dc\u05dd \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8\u05d5'
             : ': ' + (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ', ' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e4\u05ea\u05d5\u05d7' : no + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')),
-        nw ? (nw === 1 ? '\u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2: ' : '\u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2: ') + listDepts('newThisWeek').join(', ') : '-'],
+        nw ? (nw === 1 ? '\u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2: ' : '\u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2: ') + countDepts('newThisWeek') : '-'],
       bars: {
         // A hazard of this week that is already closed is green, not orange
         // (Michael, 29/09: closed ones "should turn green"). Orange = new and
@@ -218,22 +248,24 @@ export function deckContent(m, rows, meetingDate, opts) {
         'Totals': Object.fromEntries(h.byDept.map((d) => [d.dept, d.total])),
       },
       axisMax: Math.max(1, Math.ceil(maxTotal * 1.25 * 10) / 10),
+      labels: Object.fromEntries(h.byDept.map((d) => [d.dept, d.dept + '\n\u05e0\u05e1\u05d2\u05e8\u05d5 ' + d.closedThisWeek + '\n\u05d7\u05d3\u05e9\u05d9\u05dd ' + d.newThisWeek])),
     },
     s2: {
       Header: [(t) => t.replace(/20\d{2}/, y)],
       NoAccBadge: ['\u05e1\u05d4"\u05db ' + a.summary.total + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1-' + y,
         a.summary.reported + ' \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea, ' + a.summary.notReported + ' \u05dc\u05d0 \u05de\u05d3\u05d5\u05d5\u05d7\u05d5\u05ea',
-        last ? '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ddmm(last.date) + (last.dept ? ', ' + last.dept : '') + ', ' + short(last.shortDescription, 40) : '\u05d0\u05d9\u05df \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d4\u05e9\u05e0\u05d4',
-        last ? (last.offSite ? '\u05de\u05d7\u05d5\u05e5 \u05dc\u05e9\u05d8\u05d7 \u05d4\u05de\u05e4\u05e2\u05dc - ' + short(last.location, 30) : '\u05d1\u05e9\u05d8\u05d7 \u05d4\u05de\u05e4\u05e2\u05dc - ' + short(last.location, 30)) : '-'],
-      Y2026Box: [(t) => t.replace(/20\d{2}/, y), String(a.summary.total)],
+        last ? '\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + dmy(last.date) + (last.dept ? ', ' + last.dept : '') + ', ' + short(last.shortDescription, 35) : '\u05d0\u05d9\u05df \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d4\u05e9\u05e0\u05d4',
+        last ? (last.offSite ? '\u05de\u05d7\u05d5\u05e5 \u05dc\u05e9\u05d8\u05d7 \u05d4\u05de\u05e4\u05e2\u05dc: ' + short(last.location, 30) : '\u05d1\u05e9\u05d8\u05d7 \u05d4\u05de\u05e4\u05e2\u05dc: ' + short(last.location, 30)) : '-'],
+      // 06/10/2026: the years' totals here, apart from the monthly line (a line from a
+      // year's total to one month read as a drop from 13 to 3).
+      Y2026Box: ['\u05e1\u05d4"\u05db \u05dc\u05e9\u05e0\u05d4: ' + (+y - 2) + ': ' + yearTotal(+y - 2) + ', ' + (+y - 1) + ': ' + yearTotal(+y - 1), y + ' \u05e2\u05d3 \u05d4\u05d9\u05d5\u05dd: ' + a.summary.total],
       DaysSafeText: [String(a.daysSinceLastAccident == null ? '-' : a.daysSinceLastAccident)],
       NoChangeNote: [inWeek ? (inWeek === 1 ? '\u05ea\u05d0\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8' : inWeek + ' \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05d1\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8') : '\u05dc\u05dc\u05d0 \u05e9\u05d9\u05e0\u05d5\u05d9, \u05dc\u05dc\u05d0 \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05de\u05e9\u05d1\u05d5\u05e2 \u05e9\u05e2\u05d1\u05e8'],
-      line: {
-        cats: [String(+y - 2), String(+y - 1)].concat(a.byMonth.map((x) => x.month)),
-        vals: [FIXED_YEARS[+y - 2] != null ? FIXED_YEARS[+y - 2] : a.byYear[+y - 2] || 0, FIXED_YEARS[+y - 1] != null ? FIXED_YEARS[+y - 1] : a.byYear[+y - 1] || 0].concat(a.byMonth.map((x) => x.count)),
-      },
+      line: { cats: a.byMonth.map((x) => x.month), vals: a.byMonth.map((x) => x.count) },
+      chartTitle: '\u05ea\u05d0\u05d5\u05e0\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 ' + y + ' \u05dc\u05e4\u05d9 \u05d7\u05d5\u05d3\u05e9',
     },
     s3: opts && opts.s3Month ? buildS3(opts.s3Month) : null,
+    s4: opts && opts.nearMiss && opts.repMonth ? buildS4(opts.nearMiss, opts.repMonth) : null,
   };
 }
 
@@ -246,13 +278,22 @@ export async function patchDeck(bytes, c) {
   const shapes = (xml, obj) => { Object.keys(obj).forEach((k) => { if (Array.isArray(obj[k])) xml = setShape(xml, k, obj[k], report); }); return xml; };
   const more = (n) => ['\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd', ''];
   await edit(SLIDE(1), (x) => shapes(x, { Header: c.s1.Header, ClosedNote: c.s1.ClosedNote, OpenNote: c.s1.OpenNote, NewNote: c.s1.NewNote }));
-  await edit('ppt/charts/chart1.xml', (x) => setBars(x, c.s1.bars, c.s1.axisMax, report));
-  await edit(SLIDE(2), (x) => shapes(x, { Header: c.s2.Header, NoAccBadge: c.s2.NoAccBadge, Y2026Box: c.s2.Y2026Box, DaysSafeText: c.s2.DaysSafeText, NoChangeNote: c.s2.NoChangeNote }));
-  await edit('ppt/charts/chart2.xml', (x) => setLine(x, c.s2.line.cats, c.s2.line.vals, report));
+  await edit('ppt/charts/chart1.xml', (x) => setBars(x, c.s1.bars, c.s1.axisMax, report, c.s1.labels));
+  await edit(SLIDE(2), (x) => {
+    // The brace over the 2026 months and the yellow marker went with the years (06/10/2026).
+    const brace = findShape(x, 'Y2026Brace'); if (brace) x = x.substring(0, brace.start) + x.substring(brace.end);
+    const box = findShape(x, 'Y2026Box'); if (box) x = x.substring(0, box.start) + box.xml.replace(/<a:highlight>[\s\S]*?<\/a:highlight>/g, '') + x.substring(box.end);
+    return shapes(x, { Header: c.s2.Header, NoAccBadge: c.s2.NoAccBadge, Y2026Box: c.s2.Y2026Box, DaysSafeText: c.s2.DaysSafeText, NoChangeNote: c.s2.NoChangeNote });
+  });
+  await edit('ppt/charts/chart2.xml', (x) => setLine(x, c.s2.line.cats, c.s2.line.vals, report)
+    .replace(/(<c:valAx>(?:(?!<c:majorUnit)[\s\S])*?<c:crossBetween [^>]*\/>)(?!<c:majorUnit)/, '$1<c:majorUnit val="1"/>')
+    // Room above the line for the yearly box (06/10/2026: a month of 3 sat under it).
+    .replace(/(<c:valAx>[\s\S]*?<c:scaling>(?:<c:logBase [^>]*\/>)?<c:orientation [^>]*\/>)(?:<c:max val="[^"]*"\/>)?/, '$1<c:max val="' + (Math.max(0, ...c.s2.line.vals) + 2) + '"/>').replace(/(<c:title>[\s\S]*?<a:t>)[^<]*(<\/a:t>)/, (a, p, q) => p + esc(c.s2.chartTitle) + q));
   if (c.s3) await edit(SLIDE(3), (x) => {
     x = shapes(x, { Card0: c.s3.Card0, Card1: c.s3.Card1, Card2: c.s3.Card2 });
     x = setList(x, 'HighSevPanel', c.s3.high, more, report);
     return setList(x, 'MedSevPanel', c.s3.med, more, report);
   });
+  if (c.s4) await edit(SLIDE(4), (x) => setList(shapes(x, { Event1Card: c.s4.Event1Card }), 'Event2Card', c.s4.list, more, report));
   return { bytes: changed.length ? await writeZip(entries) : bytes, report, changed };
 }
