@@ -148,7 +148,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
 
   const long = [row(20, '2026-09-22', 'מעצבים', 'מחסן חומרים מסוכנים', 'מחסן החומרים עמוס - חומרים לא הוחזרו למחסן המרכזי ואינם מאוחסנים על מאצרה', 'גבוהה', null, 'פתוח', null),
     row(21, '2026-09-23', 'מעצבים', 'מסוע אריזה (חיבור שני מסועים - יציאה לרובוט)', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)];
-  const ref2 = '2026-09-29', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
+  const ref2 = '2026-09-28', m2 = { hazards: meetingHazards(long, ref2), accidents: meetingAccidents(INC, ref2) };
   const c2x = deckContent(m2, long, ref2, { s3Month: '2026-09' });
   const it = c2x.s3.high[0].items.map((x) => x.join(''));
   const full = deckContent(m2, [row(40, '2026-09-22', 'ייצור טוגנים', '', 'נקודות צביטה חשופות בחיבור בין שני המסועים ביציאה לרובוט', 'גבוהה', null, 'פתוח', null)], ref2, { s3Month: '2026-09' }).s3.high[0].items[0].join('');
@@ -172,6 +172,17 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const five = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => wk(60 + i, dp, 'סגור'));
   const cf = deckContent({ hazards: meetingHazards(five, ref2), accidents: meetingAccidents(INC, ref2) }, five, ref2, {}).s1.ClosedNote[1];
   check('five departments do not fit one line: the rest is "ועוד N", within 38 characters', /, ועוד \d$/.test(cf) && cf.length <= 38, cf);
+  // 06/10/2026 (Michael: "the numbers in the boxes do not match"): the open card counts what the
+  // bars count; a finding with no department is named on it, not added silently.
+  const withOther = [wk(70, 'מעבדות', 'פתוח'), wk(71, 'תוצג', 'פתוח'), [ 'נ-5', { date: '2026-09-25' }, '', 'ללא מחלקה', 'משרד שפכים', 'מלגזות', 'בינונית', '', '', null, 'פתוח', null, '' ]];
+  const co = deckContent({ hazards: meetingHazards(withOther, ref2), accidents: meetingAccidents(INC, ref2) }, withOther, ref2, {}).s1;
+  const barsOpen = Object.values(co.bars['פתוח']).concat(Object.values(co.bars['חדש השבוע'])).reduce((a, x) => a + x, 0);
+  check('open card = the open in the bars (2), and the one with no department named', co.OpenNote[0] === '2 פתוחים במחלקות, ועוד 1 בלי מחלקה' && barsOpen === 2, [co.OpenNote, barsOpen]);
+  const noOther = deckContent({ hazards: meetingHazards(withOther.slice(0, 2), ref2), accidents: meetingAccidents(INC, ref2) }, withOther.slice(0, 2), ref2, {}).s1;
+  check('nothing outside the departments: the card as before', noOther.OpenNote[0] === '2 מפגעים פתוחים, הטיפול נמשך', noOther.OpenNote);
+  const today = [row(80, ref2, 'מעבדות', '', 'סימון מדרגה', 'בינונית', null, 'פתוח', null)];
+  const td = deckContent({ hazards: meetingHazards(today, ref2), accidents: meetingAccidents(INC, ref2) }, today, ref2, {}).s1;
+  check('a hazard found on the meeting day itself is new this week (orange), not old', td.bars['חדש השבוע']['מעבדות'] === 1 && td.bars['פתוח']['מעבדות'] === 0 && /^מפגע חדש אחד/.test(td.NewNote[0]), [td.bars, td.NewNote]);
   check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
@@ -182,7 +193,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   // Michael 29/09: a hazard of this week closed since is green, not orange.
   const wkRows = [row(44, '2026-09-22', 'מעצבים', '', 'ג\'ריקן', 'בינונית', null, 'סגור', '2026-09-23'), row(45, '2026-09-22', 'מעצבים', '', 'קופסה', 'בינונית', null, 'פתוח', null),
     row(46, '2026-09-22', 'מעצבים', '', 'ארון', 'בינונית', null, 'סגור', '2026-09-23'), row(7, '2026-09-01', 'מעצבים', '', 'חדר חשמל', 'בינונית', null, 'פתוח', null), row(2, '2026-09-01', 'מעצבים', '', 'ישן', 'בינונית', null, 'סגור', '2026-09-10')];
-  const wb = deckContent({ hazards: meetingHazards(wkRows, '2026-09-29'), accidents: meetingAccidents(INC, '2026-09-29') }, wkRows, '2026-09-29', { s3Month: '2026-09' }).s1.bars;
+  const wb = deckContent({ hazards: meetingHazards(wkRows, '2026-09-28'), accidents: meetingAccidents(INC, '2026-09-28') }, wkRows, '2026-09-28', { s3Month: '2026-09' }).s1.bars;
   check('this week\'s closed hazards are counted green (closed), orange = new and still open', wb['סגור']['מעצבים'] === 3 && wb['חדש השבוע']['מעצבים'] === 1 && wb['פתוח']['מעצבים'] === 1 && wb['Totals']['מעצבים'] === 5, wb);
 
   // slide 4 (Michael 06/10/2026: "connect it too")

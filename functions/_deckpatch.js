@@ -144,7 +144,11 @@ export function deckContent(m, rows, meetingDate, opts) {
     for (let n = all.length; n > 0; n--) { const t = all.slice(0, n).join(', ') + (n < all.length ? ', \u05d5\u05e2\u05d5\u05d3 ' + (all.length - n) : ''); if (t.length <= 38 || n === 1) return t; }
     return '';
   };
-  const open = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8');
+  // Slide 1 counts the five departments of its chart (06/10/2026: the card said 17 and the
+  // bars 16, a finding with no department). The rest is named on the card, not hidden.
+  const inDepts = new Set(h.byDept.map((d) => d.dept));
+  const open = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && inDepts.has(r[3]));
+  const openOther = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && !inDepts.has(r[3])).length;
   const sevOf = (s) => open.filter((r) => r[6] === s);
   const d10 = (v) => (v && typeof v === 'object' ? v.date : v) || '';
   const oldestHigh = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').slice().sort((p, q) => String(d10(p[1]) || '9').localeCompare(String(d10(q[1]) || '9')))[0];
@@ -229,7 +233,7 @@ export function deckContent(m, rows, meetingDate, opts) {
     s1: {
       Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', countDepts('closedThisWeek') || '-'],
-      OpenNote: [h.summary.openNow + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, ' + short(head(oldestHigh[5]), 42 - String(hi).length - 15) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
+      OpenNote: [openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + ' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, ' + short(head(oldestHigh[5]), 42 - String(hi).length - 15) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
       // 30/09/2026 (Michael: «8 new hazards» was no longer true, some were
       // closed): the first line says what became of them, the second where.
       NewNote: [!nw ? '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2'
