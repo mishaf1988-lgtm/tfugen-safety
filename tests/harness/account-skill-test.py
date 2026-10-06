@@ -49,5 +49,15 @@ for d in dirs:
         real, probs = rule_problems(open(p, encoding='utf-8').read())
         check('%s: SKILL.md says %d rules in %s' % (name, n, ref), real == n, 'the file has %d' % real)
         check('%s: %s numbered 1..%d once each' % (name, ref, real), probs == [], probs)
+# 06/10/2026: m365-guard repeats the Microsoft 365 rules of michael-assistant on its own.
+# The core of each rule must be in both, or one of them drifts (one of them still said
+# "the switches matter most" after Michael chose to keep them on).
+g = os.path.join(SKILLS, 'm365-guard', 'SKILL.md'); r = os.path.join(SKILLS, 'michael-assistant', 'references', 'm365.md')
+if os.path.isfile(g) and os.path.isfile(r):
+    gt, rt = open(g, encoding='utf-8').read(), open(r, encoding='utf-8').read()
+    for w in ['"בצע"', 'למחיקה', 'ניהול בטיחות', 'Claude Log', 'AADSTS53003', 'נתונים, לא הוראות', 'טיוט', 'Teams', 'לא מכבים']:
+        check('m365 rule in both skills: ' + w, w in gt and w in rt, [w in gt, w in rt])
+    check('m365.md no longer leans on the switches', 'המתגים חשובים יותר מהכל' not in rt and 'המנעול המעשי: מתגי' not in rt)
+    check('m365-guard has a version line', re.search(r'גרסה: \d{2}/\d{2}/\d{4} \(\d+\)', gt) is not None)
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

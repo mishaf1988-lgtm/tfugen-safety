@@ -42,7 +42,7 @@ def problem(changed, base_text, head_text, d=DIR, required=True):
 
 def skill_dirs(changed):
     """michael-assistant (version line required) + each changed repo skill (opt-in)."""
-    out = [(DIR, True)]
+    out = [(DIR, True), ('project-files/claude-ai-skill/m365-guard/', True)]
     for f in changed:
         m = re.match(r'(\.claude/skills/[^/]+/)', f)
         if m and (m.group(1), False) not in out:
