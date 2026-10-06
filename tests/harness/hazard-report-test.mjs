@@ -56,6 +56,14 @@ const ROWS = [
   check('nothing open: count 0', t.count === 0 && t.to.join() === 'Igal@tapugan.co.il', t);
   check('the same address in אל is not repeated in עותק', buildReport('חומר גלם', ROWS, { depts: { 'חומר גלם': ['sviva@tapugan.co.il'] }, resp: {}, cc: ['SVIVA@tapugan.co.il', 'x@y.co'] }, texts).cc.join() === 'x@y.co');
 
+  // 06/10/2026 (Michael): the open date, and the severity as a traffic light.
+  const gm = buildReport('חומר גלם', ROWS, parseRecipients(RCPT_ROWS), {}, '2026-10-01');
+  check('a "תאריך פתיחה" column right after מס"ד, DD/MM/YYYY', /<th[^>]*>מס&quot;ד<\/th><th[^>]*>תאריך פתיחה<\/th><th[^>]*>מיקום/.test(gm.html) && gm.html.includes('>17/08/2026</td>') && gm.rows[0].opened === '17/08/2026', gm.html.slice(gm.html.indexOf('<table'), gm.html.indexOf('<table') + 700));
+  check('severity cell as a traffic light: orange for בינונית, white bold text', /background:#e8710a;color:#ffffff;font-weight:bold[^"]*">&#9679; בינונית<\/td>/.test(gm.html), gm.html.match(/<td[^>]*>[^<]*בינונית<\/td>/));
+  const gh = buildReport('חומר גלם', ROWS.map((r) => (r[0] === 31 ? Object.assign(r.slice(), { 6: 'גבוהה' }) : r[0] === 33 ? Object.assign(r.slice(), { 6: 'נמוכה' }) : r)), parseRecipients(RCPT_ROWS), {}, '2026-10-01');
+  check('red for גבוהה, green for נמוכה', /background:#c00000[^"]*">&#9679; גבוהה</.test(gh.html) && /background:#2e7d32[^"]*">&#9679; נמוכה</.test(gh.html));
+  check('"עבר היעד" still under the target date (the column moved by one)', /31\/08\/2026<br><b style="color:#b91c1c">עבר היעד<\/b>/.test(gm.html));
+
   console.log('\n2. the endpoint');
   const book = await writeZip([
     { name: 'xl/workbook.xml', text: '<workbook xmlns:r="r"><sheets><sheet name="דוח לשליחה" sheetId="1" r:id="rId1"/><sheet name="נמענים" sheetId="2" r:id="rId2"/></sheets></workbook>' },
@@ -75,6 +83,8 @@ const ROWS = [
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope || 'Files.ReadWrite Mail.Send' }]);
+      if (mth === 'PATCH' && /\/rest\/v1\/(tour_hazards|trustee_reports)\?/.test(u)) { (w.patches = w.patches || []).push({ u: decodeURIComponent(u), body: JSON.parse(init.body) }); return json(o.patchMiss ? [] : [{ id: 'x' }]); }
+      if (u.startsWith('https://generativelanguage.googleapis.com/')) { w.ai = (w.ai || 0) + 1; return json({ candidates: [{ content: { parts: [{ text: 'לחדש את סימון המדרגה' }] } }] }); }
       if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(o.hz || HZ);
       if (u.startsWith(SB + '/storage/v1/object/sign/')) return json(JSON.parse(init.body).paths.map((p) => ({ path: p, signedURL: '/object/sign/incidents-photos/' + p + '?token=t' })));
       if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0, 17, 8, 0, 48, 0, 64, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 0xFF, 0xD9]), { status: 200 }); }
@@ -150,6 +160,28 @@ const ROWS = [
   check('... with "anyway" (the manager saw the warning): sent', c.j.ok && c.w.mails.length === 1, c.j);
   c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
   check('no digest stored yet (never written): not flagged', c.j.ok && c.j.unsynced === false, c.j.unsynced);
+
+  console.log('\n3. required action: suggested, saved only when approved (06/10/2026)');
+  c = await call({ email: 'admin@tfugen.local' }, { op: 'preview' });
+  const r31 = c.j.reports.find((x) => x.dept === 'חומר גלם').rows.find((x) => x.n === 31);
+  check('preview rows carry their id and "no action" when none was typed', r31 && r31.id === 'h:h31' && r31.noAction === true && r31.opened === '17/08/2026', r31);
+  c = await call({ email: 'admin@tfugen.local', hz: HZ.map((x) => Object.assign({ action: 'לייצר' }, x)) }, { op: 'preview' });
+  check('...and not when it has one', c.j.reports.find((x) => x.dept === 'חומר גלם').rows.every((x) => !x.noAction), c.j.reports.find((x) => x.dept === 'חומר גלם').rows);
+  const ENV2 = Object.assign({}, ENV, { GEMINI_API_KEY: 'g' });
+  const call2 = async (o, body) => { const w = world(o); const r = await onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/hazard-report', { method: 'POST', headers: { authorization: 'Bearer tok', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV2 }); return { status: r.status, j: await r.json().catch(() => null), w }; };
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'suggest', items: [{ id: 'h:h54', f: 'ליקוי סימון מדרגה', loc: 'מעבדה' }] });
+  check('suggest: the assistant\'s text back, nothing saved, nothing mailed', c.j && c.j.ok && c.j.suggestions[0].id === 'h:h54' && c.j.suggestions[0].action === 'לחדש את סימון המדרגה' && !(c.w.patches || []).length && !c.w.mails.length && c.w.ai === 1, c.j);
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setAction', id: 'h:h54', action: 'לחדש את סימון המדרגה' });
+  const pt = (c.w.patches || [])[0];
+  check('approve a tour hazard: saved on tour_hazards, only where the action is still empty', c.j.saved && pt && /tour_hazards\?id=eq\.h54&or=\(action\.is\.null,action\.eq\.\)/.test(pt.u) && pt.body.action === 'לחדש את סימון המדרגה' && !c.w.ai, [c.j, pt]);
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setAction', id: 't:mudmp1', action: 'להחליף את גוף התאורה' });
+  check('approve a trustee finding: saved on trustee_reports (the trustees too, Michael)', c.j.saved && /trustee_reports\?id=eq\.mudmp1&/.test((c.w.patches || [])[0].u), c.w.patches);
+  c = await call2({ email: 'admin@tfugen.local', patchMiss: true }, { op: 'setAction', id: 'h:h31', action: 'לייצר מתקן' });
+  check('someone wrote an action meanwhile: not overwritten, said so', c.j && c.j.saved === false, c.j);
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setAction', id: 'x:1;drop', action: 'לייצר' });
+  check('a bad id is refused, nothing written', c.status === 400 && !(c.w.patches || []).length, c.status);
+  c = await call2({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'setAction', id: 'h:h54', action: 'לחדש' });
+  check('viewer cannot approve', c.status === 403 && !(c.w.patches || []).length, c.status);
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
