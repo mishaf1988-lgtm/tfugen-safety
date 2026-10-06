@@ -23,7 +23,9 @@ check('version line removed: fails', g.problem(F, V('04/10/2026', 6), 'no line')
 check('new assistant (nothing on main): ok', g.problem(F, '', V('04/10/2026', 1)) is None)
 R = ['.claude/skills/tfugen-lessons/SKILL.md']
 RD = '.claude/skills/tfugen-lessons/'
-check('repo skills: the changed ones, each once, after the assistant', g.skill_dirs(R + ['.claude/skills/tfugen-lessons/x.md', '.claude/skills/tfugen-db/SKILL.md', 'index.html']) == [(g.DIR, True), (RD, False), ('.claude/skills/tfugen-db/', False)])
+G365 = 'project-files/claude-ai-skill/m365-guard/'
+check('repo skills: the changed ones, each once, after the assistant', g.skill_dirs(R + ['.claude/skills/tfugen-lessons/x.md', '.claude/skills/tfugen-db/SKILL.md', 'index.html']) == [(g.DIR, True), (G365, True), (RD, False), ('.claude/skills/tfugen-db/', False)])
+check('m365-guard (06/10/2026): changed without a version line fails, like the assistant', g.problem([G365 + 'SKILL.md'], 'גרסה: 06/10/2026 (1)', 'no line', G365, True) is not None and g.problem([G365 + 'SKILL.md'], 'גרסה: 06/10/2026 (1)', 'גרסה: 06/10/2026 (1)', G365, True) is not None and g.problem([G365 + 'SKILL.md'], 'גרסה: 06/10/2026 (1)', 'גרסה: 06/10/2026 (2)', G365, True) is None)
 check('repo skill without a version line on either side: ok (opt-in)', g.problem(R, 'no line', 'no line', RD, False) is None)
 check('repo skill with a line, same number as main: fails', g.problem(R, V('04/10/2026', 2), V('04/10/2026', 2), RD, False) is not None)
 check('repo skill with a line, next number: ok', g.problem(R, V('04/10/2026', 2), V('04/10/2026', 3), RD, False) is None)

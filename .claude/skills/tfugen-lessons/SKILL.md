@@ -46,7 +46,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: `requests` חסר, playwright אחר.
 הכלל: למצוא את ההבדל ולקבע גרסאות. לא "flake".
 נאכף: חלקית: גרסאות ב-`tests.yml`; `short-wait-warn.py`.
-חזר: 1 (04/10, `mfa-test`: המתנה קבועה = חשד)
+חזר: 2 (04/10, `mfa-test`: המתנה קבועה = חשד; 06/10, `ncr-ai-prompt-test`: 500 ms, הוחלף בהמתנה לתנאי)
 
 **3. עריכת בדיקה בזמן שה-harness רץ (01/10/2026, #1002).**
 מה קרה: בדיקה עודכנה באמצע ריצה: 6 כישלונות שווא.
