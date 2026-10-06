@@ -21,6 +21,7 @@ import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, sta
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 import { FILES, REPORT_DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb, ilYear, folderFor } from './hazard-file.js';
+import { suggestAction } from '../_ai.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -43,6 +44,8 @@ const MAIL_PICS = 20, MAIL_PIC_W = 400;
 function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
 const emails = (t) => String(t || '').split(/[,;\s]+/).map((x) => x.trim()).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// 06/10/2026 (Michael): severity as a traffic light in the mail.
+export const SEV_COLOR = { '\u05d2\u05d1\u05d5\u05d4\u05d4': '#c00000', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea': '#e8710a', '\u05e0\u05de\u05d5\u05db\u05d4': '#2e7d32' };
 const fd = (v) => { const d = v && typeof v === 'object' ? v.date : v; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 
 // Pure: the "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" sheet (readSheetRows from row 1) -> who gets what.
@@ -73,7 +76,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
     const overdue = !!today && !!dueY && dueY < today;
     const ph = photos && photos.get(r) ? photos.get(r) : null;
     // src: the register row it came from (not sent to the page), to find its photo.
-    return Object.defineProperty({ n: r[0], loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph, close: (links && links.get(r)) || null }, 'src', { value: r });
+    return Object.defineProperty({ n: r[0], opened: fd(r[1]), loc: r[4] || '', descr: r[5] || '', sev: r[6] || '', resp: r[7] || '', action: r[8] || '', due: fd(r[9]), status: (r[10] || '') + (old ? OLD : ''), old, overdue, photo: ph, close: (links && links.get(r)) || null }, 'src', { value: r });
   });
   const seen = new Set(), to = [];
   const add = (list) => (list || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); to.push(x); } });
@@ -92,7 +95,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   const cc = [];
   (rcpt.cc || []).forEach((x) => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); cc.push(x); } });
   const title = '\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc - \u05de\u05d7\u05dc\u05e7\u05ea ' + dept;
-  const th = ['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
+  const th = ['\u05de\u05e1"\u05d3', '\u05ea\u05d0\u05e8\u05d9\u05da \u05e4\u05ea\u05d9\u05d7\u05d4', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05d7\u05d5\u05de\u05e8\u05d4', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'];
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
   const anyPhoto = open.some((r) => r.photo);
   const anyClose = open.some((r) => r.close);
@@ -103,7 +106,7 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
     + '<p>' + esc(texts.open || DEFAULT_OPEN).replace(/\n/g, '<br>') + '</p>'
     + (open.some((r) => r.old) ? '<p style="color:#8a6d00">\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05e6\u05d1\u05e2 \u05d6\u05d4\u05d1 \u05d4\u05df \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05de\u05e1\u05d9\u05d5\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3\u05de\u05d9\u05dd \u05e9\u05d8\u05e8\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5.</p>' : '')
     + '<table style="border-collapse:collapse;width:100%"><tr>' + th.concat(anyPhoto ? [PHOTO_TH] : [], anyClose ? [CLOSE_TH] : []).map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>'
-    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + (i === 6 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + closeTd(r) + '</tr>').join('')
+    + open.map((r) => '<tr style="background:' + (r.old ? '#fff2cc' : '#fff') + '">' + [r.n, r.opened, r.loc, r.descr, r.sev, r.resp, r.action, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 && SEV_COLOR[x] ? ';background:' + SEV_COLOR[x] + ';color:#ffffff;font-weight:bold;text-align:center;white-space:nowrap' : i === 1 ? ';white-space:nowrap' : '') + '">' + (i === 4 && SEV_COLOR[x] ? '&#9679; ' : '') + esc(x).replace(/\n/g, '<br>') + (i === 7 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + photoTd(r) + closeTd(r) + '</tr>').join('')
     + '</table>' + (texts.sign && !REGARDS.test(texts.sign) ? '<p>' + esc(texts.sign).replace(/\n/g, '<br>') + '</p>' : '') + SIGNATURE + '</div>';
   return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
@@ -127,13 +130,15 @@ async function loadAll(env, token) {
   const reg = buildRegister(hazards, reports, tasks);
   const urls = new Map(); reg.ids.forEach((id, i) => { const u = photoOf(id, hazards, reports); if (u) urls.set(reg.rows[i], u); });
   const idOf = new Map(); reg.ids.forEach((id, i) => idOf.set(reg.rows[i], id));
+  // The action as typed (a trustee row's column also says who reported it): empty = to suggest.
+  const raw = new Map(); hazards.forEach((h) => raw.set('h:' + h.id, h.action || '')); reports.forEach((t) => raw.set('t:' + t.id, t.action || ''));
   // A save in Excel the server has not taken yet (upgrade review 16, 29/09): the
   // sheets differ from the ones the server last wrote (hazard-file.js keeps
   // their digest). A report sent now would list what the manager just closed there.
   const st = await stateGet(env, ['hazard_xlsm_sheets']).catch(() => ({}));
   const ours = st.hazard_xlsm_sheets && st.hazard_xlsm_sheets.value;
   const unsynced = !!ours && ours !== await sheetsDigest(book).catch(() => ours);
-  return { rows: reg.rows, urls, idOf, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
+  return { rows: reg.rows, urls, idOf, raw, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
 }
 
 export async function onRequest(context) {
@@ -149,10 +154,29 @@ export async function onRequest(context) {
     const row = await tokenRow(env);
     if (!row || !row.refresh_token) return jsonResp({ ok: false, error: 'OneDrive \u05dc\u05d0 \u05de\u05d7\u05d5\u05d1\u05e8' }, 200, cors);
     const { token } = await accessToken(env);
+    // 06/10/2026 (Michael: "a required action, filled automatically with my approval"):
+    // suggest = the assistant's text for each item, nothing saved; setAction = the
+    // manager approved one: saved only where the action is still empty.
+    if (body.op === 'suggest') {
+      const items = (Array.isArray(body.items) ? body.items : []).slice(0, 12);
+      const out = [];
+      for (const it of items) out.push({ id: String(it.id || ''), action: await suggestAction(env, { f: String(it.f || '').substring(0, 300), loc: String(it.loc || '').substring(0, 120) }) });
+      return jsonResp({ ok: true, suggestions: out }, 200, cors);
+    }
+    if (body.op === 'setAction') {
+      const m = /^(h|t):([\w-]{1,80})$/.exec(String(body.id || ''));
+      const text = String(body.action || '').replace(/[\u2013\u2014\u05be]/g, '-').replace(/\s+/g, ' ').trim().substring(0, 300);
+      if (!m || text.length < 4) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
+      const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
+      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]) + '&or=(action.is.null,action.eq.)', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ action: text }) });
+      const got = up.ok ? await up.json().catch(() => []) : [];
+      return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, action: text }, 200, cors);
+    }
     const data = await loadAll(env, token);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     const reports = REPORT_DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
-    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, reports: reports.map((x) => Object.assign({}, x, { html: undefined })) }, 200, cors);
+    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); return Object.assign({}, r, { id: id || null, noAction: !!id && !String(data.raw.get(id) || '').trim() }); }) })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
     if (data.unsynced && body.anyway !== true) return jsonResp({ ok: false, unsynced: true, error: '\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05e7\u05dc\u05d5\u05d8 \u05d0\u05d5\u05ea\u05d4 \u05e7\u05d5\u05d3\u05dd.' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];

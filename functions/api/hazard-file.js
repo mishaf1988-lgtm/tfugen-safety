@@ -41,7 +41,6 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
-import { suggestAction } from '../_ai.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
 
 export const FOLDER_BASE = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
@@ -137,7 +136,6 @@ export function trusteeResp(dept, text, task) {
   return ELEC.some((w) => t.indexOf(w) >= 0) ? '\u05d7\u05e9\u05de\u05dc' : MAINT;
 }
 const TRUSTEE_DUE_DAYS = 3;
-const MAX_AI = 3; // assistant calls per run (subrequest budget)
 const DAY = 86400000;
 
 export const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
@@ -640,23 +638,9 @@ export async function runFile(env, which, force, opt) {
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc', B),
     readAll(env, TASKS_Q, B),
   ]);
-  // Every finding gets a recommended corrective action (Michael, 28/09): the
-  // ones still without one are asked from the assistant, a few per run, and
-  // saved on the report, where the manager can change it. A failure leaves it
-  // for the next run (every 15 minutes).
-  const todo = reports.filter((r) => isFinding(r) && !notRelevant(r) && !r.action && r.s !== '\u05e0\u05e1\u05d2\u05e8').slice(0, MAX_AI);
-  for (const r of todo) {
-    // The file comes first: the rest of the suggestions wait for the next run.
-    if (B.left() < 2 + FILE_MIN) { later.ai = todo.length - todo.indexOf(r); break; }
-    B.spend(2);
-    const a = await suggestAction(env, r);
-    if (!a) continue;
-    try {
-      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-      const up = await fetch(base + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(r.id) + '&action=is.null', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify({ action: a }) });
-      if (up.ok) r.action = a;
-    } catch (e) { /* next run */ }
-  }
+  // 28/09 the assistant saved an action on every trustee finding by itself; since
+  // 06/10/2026 (Michael: "the trustees too, with my approval") it only suggests,
+  // in the report screen (hazard-report.js op suggest), and the manager approves.
   let reg = yearReg(buildRegister(hazards, reports, tasks), year);
   let sig = await sha(JSON.stringify([FILE_VERSION, reg.rows, reg.ids.map((id) => (photoOf(id, hazards, reports) ? 1 : 0))]));
   const K = 'hazard_' + which + '_';

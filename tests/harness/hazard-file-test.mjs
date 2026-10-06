@@ -149,19 +149,14 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
   check('routed in the note (WhatsApp / mail / Vitre): its "עד" date, the last one', routedNote('נותב לאחזקה עד 30/09/2026 (מייל 23/09/2026)') === '2026-09-30' && routedNote('נותב לאחזקה - מיכאל פרייליך עד 04/10/2026 (Vitre SMS #3612206 27/09/2026)') === '2026-10-04' && routedNote('נותב לחשמל עד 1/10/2026 (x). נותב לאחזקה עד 05/10/2026 (y)') === '2026-10-05' && routedNote('בדיקה של חשמלאים') === null && routedNote(null) === null);
   const rn = buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (מייל 23/09/2026)' }) : r)));
   check('a finding routed in its note is due on that date; a task wins over the note', rn[2][9].date === '2026-10-04' && buildRows(HZ, TR.map((r) => (r.id === 'a' ? Object.assign({}, r, { mgr_note: 'נותב לאחזקה עד 04/10/2026 (x)' }) : r)), [{ source_table: 'trustee_reports', source_id: 'a', due: '2026-10-09', ts: 'z' }])[2][9].date === '2026-10-09', rn[2][9]);
-  console.log('\n1b. the assistant fills a missing corrective action');
+  console.log('\n1b. the assistant no longer saves an action by itself (06/10/2026, Michael: with my approval)');
   {
     const AENV = { ...ENV, GEMINI_API_KEY: 'g' };
     let wa = world({ file: await fixture() });
     const ra = await runFile(AENV, 'xlsm', true);
-    const p = (wa.patches || [])[0];
-    check('open finding without one: asked once, saved with action=is.null (never over the manager\'s text)', wa.ai === 1 && p && /trustee_reports\?id=eq\.a&action=is\.null/.test(p.u) && p.body.action === 'לתקן את הפנס - ולוודא תאורה תקינה', [wa.ai, p]);
-    check('closed and not-relevant findings are not asked', !(wa.patches || []).some((x) => /id=eq\.(b|nr)/.test(x.u)));
+    check('an open finding without an action: the assistant is not asked and nothing is saved (approval in the report screen)', !wa.ai && !(wa.patches || []).length && ra.ok && ra.pushed, [wa.ai, wa.patches, ra]);
     const regx = await sheetOf(wa.puts.find((q) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(q.path)).body, 'xl/worksheets/sheet2.xml');
-    check('...and it is in this very write', regx.includes('לתקן את הפנס - ולוודא תאורה תקינה (סיור נאמן: מוסא)'), ra);
-    wa = world({ file: await fixture(), aiFail: true });
-    const rb = await runFile(AENV, 'xlsm', true);
-    check('assistant down: the file is still written, without the action (next run tries again)', rb.ok && rb.pushed && !(wa.patches || []).length, rb);
+    check('...and the file shows the finding without one', !regx.includes('לתקן את הפנס - ולוודא תאורה תקינה'), ra);
     wa = world({ file: await fixture() });
     await runFile(ENV, 'xlsm', true);
     check('no GEMINI_API_KEY: no call at all', !wa.ai);
@@ -633,8 +628,8 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
     const base = async () => { const b = world({ file: await fixture(30), hazards: busy, reports: trb }); await runFile(ENV, 'xlsm', true); return { out: b.puts.filter((q) => /2026\/ניהול סיורי מפגעים\.xlsm:/.test(q.path)).pop().body, s1: Object.assign({}, b.state) }; };
     const closeK = async (out, s1, k) => { const rows = JSON.parse(s1.hazard_xlsm_last).rows.map((x, i) => (i < k ? Object.assign(x.slice(), { 10: 'סגור', 11: { date: '2026-09-30' } }) : x)); return patchSheetRows(out, rows, { sheet: 'מאגר מפגעים', lastCol: 12, maxRow: 206, dateCols: [1, 9, 11] }); };
     const { out, s1 } = await base();
-    // 12 edits + 3 suggestions + 12 thumbnails.
-    const ed12 = await closeK(out, s1, 12);
+    // 17 edits + 12 thumbnails (the 3 suggestions of each run are gone, 06/10/2026).
+    const ed12 = await closeK(out, s1, 17);
     let wb = world({ file: ed12, state: s1, cTag: 'saved-in-excel', hazards: busy.map((x) => Object.assign({}, x)), reports: trb });
     let rb = await runFileLocked(AENV, 'xlsm', false, { budget: subBudget(1000).spend(4) });
     check('the busy day needs more than ' + SUB_LIMIT + ' subrequests without the budget', wb.calls.length + 4 > SUB_LIMIT && rb.pushed, wb.calls.length + 4);
@@ -642,7 +637,7 @@ const sheetOf = async (bytes, name) => entryText(readZip(bytes).find((e) => e.na
     let n = cap(SUB_LIMIT - 4);
     rb = await run(AENV, false);
     let cnt = n();
-    check('with the budget: the edits are taken and the file is written, inside 50', rb.ok && rb.pushed && rb.pulled && rb.pulled.hazards === 12 && cnt <= SUB_LIMIT - 4, { rb, cnt });
+    check('with the budget: the edits are taken and the file is written, inside 50', rb.ok && rb.pushed && rb.pulled && rb.pulled.hazards === 17 && cnt <= SUB_LIMIT - 4, { rb, cnt });
     check('the counter never under-counts (spent >= calls made)', rb.budget && rb.budget.used + 7 >= cnt, { used: rb.budget, cnt });
     check('thumbnails were given up first, and said so', rb.budget.pics > 0 && (wb.thumbs || 0) < 12, [rb.budget, wb.thumbs]);
     check('no signature kept, so the next run writes again with the pictures', wb.state.hazard_xlsm_sig === '' && !!wb.state.hazard_xlsm_ok_at, wb.state.hazard_xlsm_sig);
