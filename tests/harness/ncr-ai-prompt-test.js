@@ -21,6 +21,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     if (u.startsWith('file://')) return r.continue();
     return r.abort();
   });
+  // Wait for a condition, not a fixed time (06/10/2026: 500 ms passed here and failed
+  // on GitHub's slower runner, 4 shards at once; lesson 2).
+  const until = async (fn, ms = 5000) => { const t0 = Date.now(); while (!fn() && Date.now() - t0 < ms) await page.waitForTimeout(50); };
   const errs = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   await page.goto(HTML, { waitUntil: 'load' });
@@ -36,7 +39,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     g('ncr-rc-cat').value = 'אדם'; g('ncr-p').value = 'גבוהה'; g('ncr-o').value = 'יוסי';
     _ncrAIRcAction();
   });
-  await page.waitForTimeout(500);
+  await until(() => sent.length >= 1);
+  await page.waitForFunction(() => gv('ncr-rc') !== '', null, { timeout: 5000 }).catch(() => {});
 
   console.log('\n1. what the model is asked');
   const body = sent[0];
@@ -75,7 +79,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _ncrAIRcAction();
     return toasts;
   });
-  await page.waitForTimeout(400);
+  await until(() => sent.length >= 2);
   check('a label followed by a real finding still goes out', sent.length === 2, [sent.length, t2]);
 
   console.log('\n4. the model answers with empty fields');
@@ -85,7 +89,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     g('ncr-rc').value = ''; g('ncr-c').value = '';
     g('ncr-d').value = 'בעיה במחסן';
     _ncrAIRcAction();
-    await new Promise((res) => setTimeout(res, 400));
+    for (let i = 0; i < 100 && !toasts.length; i++) await new Promise((res) => setTimeout(res, 50));
     return { toasts, rc: gv('ncr-rc'), c: gv('ncr-c') };
   });
   check('empty answer: fields stay empty and the user is asked for more detail', r4.rc === '' && r4.c === '' && r4.toasts.some((m) => /השלם את התיאור/.test(m)), r4);
