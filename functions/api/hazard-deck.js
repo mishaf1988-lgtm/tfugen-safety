@@ -18,7 +18,7 @@ import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 // Bump when deckContent/patchDeck change what they write.
-export const DECK_VERSION = 9;
+export const DECK_VERSION = 10;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
@@ -39,14 +39,15 @@ export async function runDeck(env, force, s3Now, opt) {
   // The deck lives next to the year's file and moves with it (upgrade review 24).
   const FOLDER = folderFor(ilYear((opt && opt.now) || Date.now()));
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month']).catch(() => ({}));
+  const st = await stateGet(env, ['deck_sig', 'deck_ctag', 'deck_week', 'deck_meeting_date', 'deck_s3_month', 'deck_ver']).catch(() => ({}));
   const val = (k) => (st[k] && st[k].value) || '';
   const date = meetingDate(today, val('deck_meeting_date'));
-  const [hazards, reports, tasks, inc] = await Promise.all([
+  const [hazards, reports, tasks, inc, nearMiss] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     readAll(env, 'inc?select=id,dt,d,l,dept,reported,r,ty&order=dt.asc'),
+    readAll(env, 'near_miss?select=id,d,area,descr,s&order=d.asc'),
   ]);
   const rows = buildRegister(hazards, reports, tasks).rows;
   const m = { hazards: meetingHazards(rows, date), accidents: meetingAccidents(inc, date) };
@@ -56,10 +57,13 @@ export async function runDeck(env, force, s3Now, opt) {
   // s3Now (a month, on request): that month so far, once (Michael, 29/09:
   // "update it so it is current" before the meeting). deck_s3_month is left
   // alone, so the month that ended is still written when the next one begins.
-  const s3Month = s3Now || (val('deck_s3_month') === prevMonth ? null : prevMonth);
+  // A new DECK_VERSION rewrites it too, so a change of look reaches it at once (06/10/2026).
+  const s3Month = s3Now || (val('deck_s3_month') === prevMonth && val('deck_ver') === String(DECK_VERSION) ? null : prevMonth);
   // The code's version is in the signature too: a wording fix must reach the
   // deck without waiting for the data to change (28/09, PR #918).
-  const sig = await sha(JSON.stringify([date, m, rows, DECK_VERSION, s3Month || val('deck_s3_month')]));
+  // Slide 4 (near misses) is the month that ended, like slide 3, but written on every run.
+  const repMonth = s3Now || prevMonth;
+  const sig = await sha(JSON.stringify([date, m, rows, nearMiss, DECK_VERSION, s3Month || val('deck_s3_month')]));
   const now = new Date().toISOString();
   try {
     const { token } = await accessToken(env);
@@ -71,7 +75,7 @@ export async function runDeck(env, force, s3Now, opt) {
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month }));
+    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, nearMiss, repMonth }));
     // Nothing to change in the file (OneDrive bumped the cTag after our last
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
@@ -80,12 +84,14 @@ export async function runDeck(env, force, s3Now, opt) {
       return { ok: true, pushed: false, reason: 'already up to date', date, report };
     }
     let kept = null;
-    if (val('deck_week') !== date) {
+    // A new meeting date, or a new version of what the code writes (06/10/2026: the look
+    // changed): the deck as it was goes to the archive first.
+    if (val('deck_week') !== date || val('deck_ver') !== String(DECK_VERSION)) {
       kept = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/\u05de\u05e6\u05d2\u05d5\u05ea';
       await graphPut(token, kept, stampName(DECK.name, (meta.lastModifiedDateTime || now)), orig, DECK.type);
     }
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'
