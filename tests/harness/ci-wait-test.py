@@ -13,9 +13,9 @@ case "$path" in
 esac
 ''' % runs)
 os.chmod(gh, 0o755)
-def wait(rs):
+def wait(rs, repo=None):
     json.dump({"check_runs": rs}, open(runs, "w"))
-    p = subprocess.run(["bash", hook("ci-wait.sh"), "b"], capture_output=True, text=True, timeout=60,
+    p = subprocess.run(["bash", hook("ci-wait.sh"), "b"] + ([repo] if repo else []), capture_output=True, text=True, timeout=60,
                        env=dict(os.environ, PATH=d + os.pathsep + os.environ["PATH"], CI_WAIT_SLEEP="0"))
     return p.returncode, p.stdout
 r = lambda i, s, c=None: {"id": i, "status": s, "conclusion": c}
@@ -38,4 +38,12 @@ rc, o = wait([s(5, "harness (0)", "cancelled", 11), s(6, "tests", "failure", 11)
 check("two runs on one sha: the newest complete run decides", rc == 0, (rc, o))
 rc, o = wait([r(1, "completed", "success")])
 check("one green run: exit 0 and prints the result", rc == 0 and "completed:success" in o, (rc, o))
+# 07/10/2026: michael-skills has `checks`, not `tests`; an unknown repo keeps `tests`.
+n = lambda i, name, c: {"id": i, "name": name, "status": "completed", "conclusion": c}
+rc, o = wait([n(1, "checks", "success"), n(2, "tests", "failure")], "mishaf1988-lgtm/michael-skills")
+check("michael-skills: `checks` decides, `tests` is ignored", rc == 0 and "checks = completed:success" in o, (rc, o))
+rc, o = wait([n(1, "checks", "failure"), n(2, "tests", "success")], "mishaf1988-lgtm/michael-skills")
+check("michael-skills: a red `checks` is red", rc == 1, (rc, o))
+rc, o = wait([n(1, "checks", "failure"), n(2, "tests", "success")], "someone/other-repo")
+check("unknown repo: `tests` decides", rc == 0 and "tests = completed:success" in o, (rc, o))
 done()

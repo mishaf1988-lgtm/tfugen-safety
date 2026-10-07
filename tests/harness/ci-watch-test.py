@@ -25,7 +25,7 @@ check('PR opened: watch its head branch', 'ci-wait.sh routine/y-2026-10-01' in o
 check('another tool: nothing', hook('Read', {'file_path': '/x'}) == '')
 check('wired in settings.json as PostToolUse', 'ci-watch.py' in json.dumps(json.load(open(os.path.join(os.path.dirname(HOOK), '..', 'settings.json')))['hooks']['PostToolUse']))
 w = '\n'.join(l for l in open(os.path.join(os.path.dirname(HOOK), 'ci-wait.sh')).read().split('\n') if not l.lstrip().startswith('#'))
-check('ci-wait.sh: REST only (no GraphQL), red exits 1', 'gh api "repos/' in w and 'gh pr' not in w and 'exit 1' in w and 'check-runs' in w and '.name == "tests"' in w)
+check('ci-wait.sh: REST only (no GraphQL), red exits 1', 'gh api "repos/' in w and 'gh pr' not in w and 'exit 1' in w and 'check-runs' in w and '.name == $check' in w and 'check=tests' in w and 'michael-skills) check=checks' in w)
 o = hook('Bash', {'command': "python3 - <<'EOF'\ns = \"o = hook('Bash', {'command': 'git push -q origin routine/fake-2026-10-01'})\"\nEOF\ngit push -q -u origin routine/real-2026-10-02 2>&1 | tail -1"})
 check('a fake push inside a heredoc earlier in the command does not win: the real (last) push does', 'ci-wait.sh routine/real-2026-10-02 ' in o and 'fake' not in o, o)
 o = hook('Bash', {'command': 'git push -q origin routine/x-2026-10-01'}, running='1')
