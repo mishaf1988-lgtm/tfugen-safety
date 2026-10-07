@@ -70,6 +70,9 @@ const AREAS = ['doc-attach-area', 'tr-attach-area', 'ppe-attach-area', 'ctr-atta
   await page.evaluate(() => document.querySelectorAll('#od-pick-list .od-pick-row')[0].click());
   await page.waitForTimeout(200);
   check('...picked into the SDS form', await page.evaluate(() => _attachUrls['hzm-attach-area']) === 'od:S1abc|SDS כלור.pdf');
+  // Chrome check 07/10/2026: clearing the search box left "no files found" on screen.
+  const s4b = await page.evaluate(() => new Promise((res) => { _odPickOpen('tr-attach-area'); const q = document.getElementById('od-pick-q'); q.value = 'כלור'; _odPickSearch(); setTimeout(() => { const n = window.__calls.length; q.value = ''; q.dispatchEvent(new Event('input')); setTimeout(() => { res({ last: window.__calls[window.__calls.length - 1].b, more: window.__calls.length > n, path: document.getElementById('od-pick-path').textContent }); _odPickClose(); }, 150); }, 150); }));
+  check('clearing the search box goes back to the folder list', s4b.more && s4b.last.op === 'list' && /ניהול בטיחות/.test(s4b.path), s4b);
 
   console.log('\n4. a picked image name is still a link; clearing brings the button back');
   const s5 = await page.evaluate(() => { _attachRender('ppe-attach-area', 'od:F0abcd|תמונה.jpg', ''); const h = document.getElementById('ppe-attach-area').innerHTML; _attachClear('ppe-attach-area'); return { h, back: !!document.querySelector('#ppe-attach-area [data-od-pick]') }; });
@@ -84,6 +87,14 @@ const AREAS = ['doc-attach-area', 'tr-attach-area', 'ppe-attach-area', 'ctr-atta
   });
   check('no image tag for the picked file, its name and its current link shown', !v.img && /נוהל עבודה בגובה\.pdf/.test(v.txt) && v.href.length >= 1, { img: v.img, href: v.href });
 
+  // Chrome check 07/10/2026: saving a record tried to copy the picked file into the app's OneDrive folder.
+  const mir = await page.evaluate(() => new Promise((res) => {
+    const pushed = []; window._odIsConnected = () => true; window._odPushFile = (b, f, n) => { pushed.push(n); return Promise.resolve(); };
+    const signed = []; const s0 = window._sign; window._sign = (u, cb, sec) => { signed.push(u); cb(''); };
+    try { _odMirrorRecord('docs', { id: 'dz2', n: 'x', file_url: 'od:F1abc|a.pdf' }); } catch (e) {}
+    setTimeout(() => { window._sign = s0; res({ signed, pushed }); }, 400);
+  }));
+  check('the record mirror does not try to copy a picked file', !mir.signed.some((u) => /^od:/.test(u)), mir);
   check('no page errors', errs.length === 0, errs);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

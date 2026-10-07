@@ -52,8 +52,13 @@ export async function onRequest(context) {
     if (body.op === 'search') {
       const q = String(body.q || '').replace(/['\\]/g, ' ').trim().substring(0, 60);
       if (q.length < 2) return jsonResp({ ok: false, error: 'bad query' }, 400, cors);
-      const j = await get(G + '/root:/' + seg(ROOT) + ":/search(q='" + encodeURIComponent(q) + "')?$select=" + SEL + '&$top=50');
-      const items = (j.value || []).filter((x) => !x.folder && insideRoot(x.parentReference)).map((x) => {
+      // 07/10/2026 (the Chrome check): in the organisation's OneDrive a search hit carries no
+      // parentReference.path, so every hit was dropped. Each file hit is read once by id
+      // (that read has the path) and only then kept or dropped. At most 25 reads.
+      const j = await get(G + "/root/search(q='" + encodeURIComponent(q) + "')?$select=id,name,folder,file&$top=50");
+      const hits = (j.value || []).filter((x) => x && !x.folder && ID_RE.test(String(x.id || ''))).slice(0, 25);
+      const full = await Promise.all(hits.map((x) => get(G + '/items/' + encodeURIComponent(x.id) + '?$select=' + SEL).catch(() => null)));
+      const items = full.filter((x) => x && !x.folder && insideRoot(x.parentReference)).map((x) => {
         const it = item(x); let p = ''; try { p = decodeURIComponent(String(x.parentReference.path)); } catch (e) {}
         it.where = p.substring(ROOT_REF.length + 1);
         return it;
