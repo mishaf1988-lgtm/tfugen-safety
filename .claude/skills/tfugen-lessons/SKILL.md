@@ -118,7 +118,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: קישור `/public/` לתמונה בוואטסאפ, וה-bucket פרטי מ-21/04: "Bucket not found".
 הכלל: הנחה על דבר חי (bucket, RLS, הרשאה, צורת תשובה של API) נבדקת מול האמיתי לפני קוד; מוק נבנה מתשובה אמיתית. קישור שיוצא נבדק בלי התחברות.
 נאכף: `trustee-route-test.js` (אין `/object/public/`), `od-pick-test.mjs` (חיפוש בלי path, כמו האמיתי).
-חזר: 2 (07/10: מוק חיפוש Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני; Chrome מצא. 07/10: "אין repo ל-skills" בלי `list_repos`; מיכאל: "זה כבר קיים בפרטי"). ריצת ניסיון לפני העברת משימה מתוזמנת ל-repo אחר (07/10: אין לה גישה לפרטי).
+חזר: 2 (07/10: מוק Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני. 07/10: "אין repo ל-skills" בלי `list_repos`). משימה מתוזמנת ו-repo פרטי: `tfugen-ref`.
 
 **60. אי-התאמה שראיתי נשארה בפתק (06/10/2026, PR זה).**
 מה קרה: בסקיצות כתבתי "הכרטיס 13, העמודות 12" ולא תיקנתי; מיכאל מצא את זה שוב בישיבה.
@@ -182,7 +182,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
 מה קרה: "MCP מנותק" הועתק מה-handoff.
-הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת. הודעת "requires authentication" על `supabase` = הרשומה ב-`.mcp.json`, לא ה-connector.
+הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
 נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
 חזר: 1 (07/10: אמרתי למיכאל להתחבר מחדש; `mcp__Supabase__execute_sql` עבד)
 
@@ -193,6 +193,12 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 חזר: 2
 
 ## יעילות ותקשורת
+
+**64. שאלה בטקסט במקום שאלון (07/10/2026, PR זה).**
+מה קרה: שאלתי בצ'אט; מיכאל: "תשאל בשאלון, אלא אם אני מבקש אחרת".
+הכלל: שאלה, אישור או בחירה = `AskUserQuestion` (CLAUDE.md).
+נאכף: טקסט (hook ב-Stop: הצעה לשיחה במחשב, לקח 42).
+חזר: 0
 
 **58. תיבה ל-Chrome עם מקום ריק לטקסט (05/10/2026, PR זה).**
 מה קרה: `<<< כאן לכתוב >>>` הודבק כמו שהוא ל-NCR-0001.
@@ -210,7 +216,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 34 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
+חזר: 35 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
