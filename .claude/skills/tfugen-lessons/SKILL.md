@@ -216,7 +216,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 30 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
+חזר: 32 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
