@@ -25374,6 +25374,7 @@ function _odMirrorRecord(tbl,rec){
   var seenUrls={},urlsToMirror=[];
   function pushUrl(u,label){
     if(!u||seenUrls[u])return;
+    if(typeof _isOd==='function'&&_isOd(u))return;  // picked from the safety folder: already in OneDrive (07/10/2026)
     seenUrls[u]=1;urlsToMirror.push({url:u,label:label});
   }
   pushUrl(rec.photo_url,'photo');
@@ -25554,7 +25555,7 @@ function _odPickOpen(areaId){
     m.style.cssText='position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 12px';
     m.innerHTML='<div dir="rtl" style="background:var(--bg,#fff);border-radius:12px;width:100%;max-width:520px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)">'
       +'<div style="display:flex;justify-content:space-between;align-items:center"><strong>&#128193; \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</strong><button type="button" class="btn btn-sm" onclick="_odPickClose()">\u05e1\u05d2\u05d5\u05e8</button></div>'
-      +'<input id="od-pick-q" type="search" placeholder="\u05d7\u05d9\u05e4\u05d5\u05e9 \u05dc\u05e4\u05d9 \u05e9\u05dd" style="width:100%;margin:8px 0" onkeydown="if(event.key===\'Enter\')_odPickSearch()">'
+      +'<input id="od-pick-q" type="search" placeholder="\u05d7\u05d9\u05e4\u05d5\u05e9 \u05dc\u05e4\u05d9 \u05e9\u05dd" style="width:100%;margin:8px 0" onkeydown="if(event.key===\'Enter\')_odPickSearch()" oninput="if(!this.value)_odPickList(_odPickPath)">'
       +'<div id="od-pick-path" style="font-size:12px;color:var(--t3);margin:4px 0"></div><div id="od-pick-list" style="max-height:55vh;overflow:auto"></div></div>';
     document.body.appendChild(m);
   }

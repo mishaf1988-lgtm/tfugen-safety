@@ -29,11 +29,16 @@ const R = '/drive/root:/שולחן העבודה/ניהול בטיחות';
         { id: 'F2', name: 'ב תעודות.pdf', size: 10, file: {}, lastModifiedDateTime: 'x' },
         { id: 'D1', name: '12_תאונות', folder: { childCount: 4 } },
         { id: 'F1', name: 'א נוהל.docx', size: 5, file: {} }] });
+      // As the organisation's OneDrive answers (Chrome check 07/10/2026): no parentReference.path on a search hit.
       if (d.includes('/search(q=')) return json({ value: [
-        { id: 'S1', name: 'SDS אקונומיקה.pdf', file: {}, parentReference: { path: R + '/07_חומרים מסוכנים/SDS' } },
-        { id: 'S2', name: 'SDS פרטי.pdf', file: {}, parentReference: { path: '/drive/root:/שולחן העבודה/אישי' } },
-        { id: 'S3', name: 'SDS תיקייה', folder: {}, parentReference: { path: R } },
-        { id: 'S4', name: 'SDS זיוף.pdf', file: {}, parentReference: { path: R + '-זיוף' } }] });
+        { id: 'S1abc', name: 'SDS אקונומיקה.pdf', file: {}, parentReference: { id: 'p1' } },
+        { id: 'S2abc', name: 'SDS פרטי.pdf', file: {}, parentReference: { id: 'p2' } },
+        { id: 'S3abc', name: 'SDS תיקייה', folder: {}, parentReference: { id: 'p3' } },
+        { id: 'S4abc', name: 'SDS זיוף.pdf', file: {}, parentReference: { id: 'p4' } },
+        { id: 'S5abc', name: 'SDS נעלם.pdf', file: {} }] });
+      if (d.includes('/items/S1abc')) return json({ id: 'S1abc', name: 'SDS אקונומיקה.pdf', file: {}, size: 3, parentReference: { path: encodeURI(R + '/07_חומרים מסוכנים/SDS') } });
+      if (d.includes('/items/S2abc')) return json({ id: 'S2abc', name: 'SDS פרטי.pdf', file: {}, parentReference: { path: '/drive/root:/שולחן העבודה/אישי' } });
+      if (d.includes('/items/S4abc')) return json({ id: 'S4abc', name: 'SDS זיוף.pdf', file: {}, parentReference: { path: R + '-זיוף' } });
       if (d.includes('/items/IN12345')) return json({ id: 'IN12345', name: 'נוהל.docx', webUrl: 'https://tapugan-my.sharepoint.com/x/נוהל.docx', parentReference: { path: encodeURI(R + '/03_נהלים') } });
       if (d.includes('/items/OUT12345')) return json({ id: 'OUT12345', name: 'שכר.xlsx', webUrl: 'https://x/שכר.xlsx', parentReference: { path: '/drive/root:/שולחן העבודה/אישי' } });
       return json({ error: 'nf' }, 404);
@@ -68,13 +73,14 @@ const R = '/drive/root:/שולחן העבודה/ניהול בטיחות';
 
   console.log('\n3. search');
   r = await call('mgr', { op: 'search', q: 'SDS' });
-  check('files inside the safety folder only (not outside, not a look-alike folder name, not folders)', r.j.ok && r.j.items.map((x) => x.id).join() === 'S1', r.j);
+  check('files inside the safety folder only (not outside, not a look-alike folder name, not folders, not a hit that cannot be read)', r.j.ok && r.j.items.map((x) => x.id).join() === 'S1abc', r.j);
+  check('...each file hit read by id for its path (the search hit has none), folders not read', ['S1abc', 'S2abc', 'S4abc', 'S5abc'].every((id) => calls.some((c) => c.d.includes('/items/' + id + '?'))) && !calls.some((c) => c.d.includes('/items/S3abc')), calls.map((c) => c.d.slice(-60)));
   check('...with where each one sits', r.j.items[0].where === '07_חומרים מסוכנים/SDS', r.j.items[0]);
-  check('...searched under the safety folder, a GET', calls[calls.length - 1].m === 'GET' && calls[calls.length - 1].d.includes("/root:/שולחן העבודה/ניהול בטיחות:/search(q='SDS')"), calls[calls.length - 1]);
+  check('...one search of the drive, a GET', calls.filter((c) => c.d.includes("/me/drive/root/search(q='SDS')")).length === 1 && calls.every((c) => c.m === 'GET'), calls.filter((c) => c.d.includes('search')));
   r = await call('mgr', { op: 'search', q: 'a' });
   check('a one-letter query: 400', r.status === 400, r);
   r = await call('mgr', { op: 'search', q: "x') or (q='" });
-  check('a quote in the query cannot close the search expression', !calls[calls.length - 1].d.includes("x')"), calls[calls.length - 1]);
+  check('a quote in the query cannot close the search expression', calls.filter((c) => c.d.includes('/search(q=')).every((c) => !c.d.includes("x')")), calls.filter((c) => c.d.includes('/search(q=')).map((c) => c.d));
 
   console.log('\n4. url (the link of a picked file)');
   r = await call('mgr', { op: 'url', id: 'IN12345' });
