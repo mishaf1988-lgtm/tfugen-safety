@@ -33,6 +33,8 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
     window.__nav = []; window._truRouteNav = function (u) { window.__nav.push(u); };
     window.__upd = []; const realUpd = sbUpd; window.sbUpd = function (t, r) { window.__upd.push({ t, id: r.id, note: r.mgr_note }); return realUpd(t, r); };
     window._currentUser = { username: 'admin' }; _applyRoleGates();
+    // 07/10/2026: the bucket is private; signing answers with a token link (no network here).
+    window.__realSign = _sign; window.__signs = []; window._sign = function (u, cb, sec) { window.__signs.push({ u, sec: sec || 3600 }); cb(u.replace('/object/public/', '/object/sign/') + '?token=T' + (sec || 3600)); };
     try { localStorage.removeItem('tfgn_route_contacts'); } catch (e) {}
     DB.trustee_reports = [{ id: 'r1', u: 'לב', t: 1, d: '2026-09-23', m: _truThisMonth(), loc: 'חומר גלם · גשר רחבה מרכזי', ok: false,
       f: 'פנסי אזהרה מהבהב לא עובדים', photo_url: 'https://sb.co/storage/v1/object/public/incidents-photos/r1.jpg', s: 'פתוח', ts: new Date().toISOString() }];
@@ -73,8 +75,22 @@ const NON_KEYBOARD = /[–—־«»‘’“”→←•·…]/;
   check('opens wa.me with the number in international form', /^https:\/\/wa\.me\/972501234567\?text=/.test(wa.url), wa.url.slice(0, 60));
   check('the text has the finding, area, task, reporter, photo link, who, due date, instructions, id',
     /ליקוי: פנסי אזהרה/.test(wa.text) && /אזור: חומר גלם/.test(wa.text) && /משימה: 1\./.test(wa.text) && /על ידי לב/.test(wa.text)
-    && /תמונה: https:\/\/sb\.co\/.*r1\.jpg/.test(wa.text) && /לטיפול: חשמל - דני, עד 30\/09\/2026/.test(wa.text) && /הנחיות: לבדוק גם/.test(wa.text) && /מספר ממצא: r1/.test(wa.text), wa.text);
+    && /תמונה: https:\/\/sb\.co\/storage\/v1\/object\/sign\/incidents-photos\/r1\.jpg\?token=T2592000$/m.test(wa.text) && /לטיפול: חשמל - דני, עד 30\/09\/2026/.test(wa.text) && /הנחיות: לבדוק גם/.test(wa.text) && /מספר ממצא: r1/.test(wa.text), wa.text);
   check('...and only keyboard characters (no long dash, no «», no middle dot)', !NON_KEYBOARD.test(wa.text), wa.text.match(NON_KEYBOARD));
+  // 07/10/2026 (Michael: the WhatsApp photo link answered "Bucket not found"): a signed link, 30 days, never /public/.
+  check('the photo link is signed for 30 days (Michael\'s choice), not the bare /public/ address', !/object\/public\//.test(wa.text) && (await page.evaluate(() => window.__signs)).some((x) => x.sec === 2592000 && /r1\.jpg$/.test(x.u)), await page.evaluate(() => window.__signs));
+  const noSign = await page.evaluate(() => { const keep = _truPhotoLinks; _truPhotoLinks = {}; const t = _truRouteText(_truFind('r1'), _truRouteRead()); _truPhotoLinks = keep; return t; });
+  const real = await page.evaluate(async () => {
+    const bodies = []; const f0 = window.fetch, a0 = window._sbAuth, t0 = window._sbToken;
+    window._sbAuth = () => Promise.resolve(); window._sbToken = 'tok';
+    window.fetch = (u, init) => { bodies.push({ u: String(u), b: init && init.body }); return Promise.resolve(new Response(JSON.stringify({ signedURL: '/object/sign/incidents-photos/z.jpg?token=X' }), { status: 200 })); };
+    const one = (sec) => new Promise((res) => window.__realSign('https://sb.co/storage/v1/object/public/incidents-photos/z.jpg', res, sec));
+    const a = await one(), b = await one(2592000), c = await one(2592000);
+    window.fetch = f0; window._sbAuth = a0; window._sbToken = t0;
+    return { a, b, c, bodies };
+  });
+  check('the real _sign: default an hour, 30 days when asked, each cached apart (2 requests for 3 calls)', real.bodies.length === 2 && /"expiresIn":3600/.test(real.bodies[0].b) && /"expiresIn":2592000/.test(real.bodies[1].b) && /token=X/.test(real.c), real);
+  check('no signed link yet: the photo line points to the app link, no dead address', /תמונה: באפליקציה, בקישור למטה/.test(noSign) && !/r1\.jpg/.test(noSign), noSign.split('\n'));
   // 25/09: a link that opens the finding itself for anyone who has the app.
   check('the text carries a deep link to this finding (production URL off https)', /לפתיחה באפליקציה: https:\/\/tapugan-safety\.pages\.dev\/\?tru=r1/.test(wa.text), wa.text.split('\n').slice(-2));
   check('the routing note is written once, names who and until when', wa.upd.length === 1 && wa.upd[0].t === 'trustee_reports' && /נותב לחשמל - דני עד 30\/09\/2026 \(וואטסאפ/.test(wa.note), { upd: wa.upd, note: wa.note });
