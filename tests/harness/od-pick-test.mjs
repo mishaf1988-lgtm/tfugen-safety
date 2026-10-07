@@ -29,16 +29,24 @@ const R = '/drive/root:/שולחן העבודה/ניהול בטיחות';
         { id: 'F2', name: 'ב תעודות.pdf', size: 10, file: {}, lastModifiedDateTime: 'x' },
         { id: 'D1', name: '12_תאונות', folder: { childCount: 4 } },
         { id: 'F1', name: 'א נוהל.docx', size: 5, file: {} }] });
-      // As the organisation's OneDrive answers (Chrome check 07/10/2026): no parentReference.path on a search hit.
+      // As the organisation's OneDrive answers (Chrome check 07/10/2026): no parentReference.path on a search hit, only the parent's id.
+      if (d.includes(":/search(q='WIDE")) return json({ error: 'nope' }, 400);
+      if (d.includes("/search(q='WIDE")) return json({ value: [{ id: 'W1abc', name: 'WIDE.pdf', file: {}, parentReference: { id: 'P1abc' } }] });
+      if (d.includes('page=2')) return json({ value: Array.from({ length: 5 }, (_, k) => ({ id: 'M2x' + k + 'abc', name: 'נוהל ' + k + '.doc', file: {}, parentReference: { id: 'P1abc' } })), '@odata.nextLink': 'https://graph.microsoft.com/v1.0/x?page=3' });
+      if (d.includes("/search(q='MANY")) return json({ value: Array.from({ length: 150 }, (_, k) => ({ id: 'M1x' + k + 'abc', name: 'נוהל ' + k + '.doc', file: {}, parentReference: { id: 'Q' + (k % 40) + 'abcd' } })), '@odata.nextLink': 'https://graph.microsoft.com/v1.0/me/drive/search?page=2' });
       if (d.includes('/search(q=')) return json({ value: [
-        { id: 'S1abc', name: 'SDS אקונומיקה.pdf', file: {}, parentReference: { id: 'p1' } },
-        { id: 'S2abc', name: 'SDS פרטי.pdf', file: {}, parentReference: { id: 'p2' } },
-        { id: 'S3abc', name: 'SDS תיקייה', folder: {}, parentReference: { id: 'p3' } },
-        { id: 'S4abc', name: 'SDS זיוף.pdf', file: {}, parentReference: { id: 'p4' } },
+        { id: 'S1abc', name: 'SDS אקונומיקה.pdf', file: {}, size: 3, parentReference: { id: 'P1abc' } },
+        { id: 'S2abc', name: 'SDS פרטי.pdf', file: {}, parentReference: { id: 'P2abc' } },
+        { id: 'S3abc', name: 'SDS תיקייה', folder: {}, parentReference: { id: 'P1abc' } },
+        { id: 'S4abc', name: 'SDS זיוף.pdf', file: {}, parentReference: { id: 'P4abc' } },
+        { id: 'S6abc', name: 'SDS שורש.pdf', file: {}, parentReference: { id: 'P0abc' } },
         { id: 'S5abc', name: 'SDS נעלם.pdf', file: {} }] });
-      if (d.includes('/items/S1abc')) return json({ id: 'S1abc', name: 'SDS אקונומיקה.pdf', file: {}, size: 3, parentReference: { path: encodeURI(R + '/07_חומרים מסוכנים/SDS') } });
-      if (d.includes('/items/S2abc')) return json({ id: 'S2abc', name: 'SDS פרטי.pdf', file: {}, parentReference: { path: '/drive/root:/שולחן העבודה/אישי' } });
-      if (d.includes('/items/S4abc')) return json({ id: 'S4abc', name: 'SDS זיוף.pdf', file: {}, parentReference: { path: R + '-זיוף' } });
+      if (d.includes('/items/P0abc')) return json({ id: 'P0abc', name: 'ניהול בטיחות', parentReference: { path: '/drive/root:/שולחן העבודה' } });
+      if (d.includes('/items/P1abc')) return json({ id: 'P1abc', name: 'SDS', parentReference: { path: encodeURI(R + '/07_חומרים מסוכנים') } });
+      if (d.includes('/items/P2abc')) return json({ id: 'P2abc', name: 'אישי', parentReference: { path: '/drive/root:/שולחן העבודה' } });
+      if (d.includes('/items/P4abc')) return json({ id: 'P4abc', name: 'ניהול בטיחות-זיוף', parentReference: { path: '/drive/root:/שולחן העבודה' } });
+      const qm = d.match(/\/items\/(Q\d+abcd)/);
+      if (qm) return json({ id: qm[1], name: 'נהלים ' + qm[1], parentReference: { path: encodeURI(R + '/15_נהלים') } });
       if (d.includes('/items/IN12345')) return json({ id: 'IN12345', name: 'נוהל.docx', webUrl: 'https://tapugan-my.sharepoint.com/x/נוהל.docx', parentReference: { path: encodeURI(R + '/03_נהלים') } });
       if (d.includes('/items/OUT12345')) return json({ id: 'OUT12345', name: 'שכר.xlsx', webUrl: 'https://x/שכר.xlsx', parentReference: { path: '/drive/root:/שולחן העבודה/אישי' } });
       return json({ error: 'nf' }, 404);
@@ -72,11 +80,21 @@ const R = '/drive/root:/שולחן העבודה/ניהול בטיחות';
   check('a path that climbs out: 400, Graph not touched', r.status === 400 && calls.length === n0, r);
 
   console.log('\n3. search');
+  let c0 = calls.length;
   r = await call('mgr', { op: 'search', q: 'SDS' });
-  check('files inside the safety folder only (not outside, not a look-alike folder name, not folders, not a hit that cannot be read)', r.j.ok && r.j.items.map((x) => x.id).join() === 'S1abc', r.j);
-  check('...each file hit read by id for its path (the search hit has none), folders not read', ['S1abc', 'S2abc', 'S4abc', 'S5abc'].every((id) => calls.some((c) => c.d.includes('/items/' + id + '?'))) && !calls.some((c) => c.d.includes('/items/S3abc')), calls.map((c) => c.d.slice(-60)));
-  check('...with where each one sits', r.j.items[0].where === '07_חומרים מסוכנים/SDS', r.j.items[0]);
-  check('...one search of the drive, a GET', calls.filter((c) => c.d.includes("/me/drive/root/search(q='SDS')")).length === 1 && calls.every((c) => c.m === 'GET'), calls.filter((c) => c.d.includes('search')));
+  let sc = calls.slice(c0);
+  check('files inside the safety folder only (not outside, not a look-alike folder name, not folders, not a hit with no parent)', r.j.ok && r.j.items.map((x) => x.id).join() === 'S1abc,S6abc' && r.j.more === false, r.j);
+  check('...with where each one sits (a file right in the safety folder: empty)', r.j.items[0].where === '07_חומרים מסוכנים/SDS' && r.j.items[1].where === '', r.j.items);
+  check('...searched inside the safety folder, once, a GET', sc.filter((c) => c.d.includes('/search(q=')).length === 1 && sc[0].d.includes("/me/drive/root:/שולחן העבודה/ניהול בטיחות:/search(q='SDS')") && r.j.scope === 'folder', sc.map((c) => c.d));
+  check('...each parent folder read once, the files themselves not read', ['P0abc', 'P1abc', 'P2abc', 'P4abc'].every((id) => sc.filter((c) => c.d.includes('/items/' + id + '?')).length === 1) && !sc.some((c) => c.d.includes('/items/S')), sc.map((c) => c.d.slice(-50)));
+  c0 = calls.length;
+  r = await call('mgr', { op: 'search', q: 'MANY' });
+  sc = calls.slice(c0);
+  check('many hits: at most 100 shown, more:true (the app says "refine")', r.j.ok && r.j.items.length === 100 && r.j.more === true, [r.j.items && r.j.items.length, r.j.more]);
+  check('...two pages at most, at most 30 parent reads (Pages: 50 subrequests)', sc.filter((c) => c.d.includes('search')).length === 2 && sc.filter((c) => c.d.includes('/items/')).length === 30, sc.length);
+  c0 = calls.length;
+  r = await call('mgr', { op: 'search', q: 'WIDE' });
+  check('Graph refuses the folder search: the whole drive, still filtered by parent', r.j.ok && r.j.scope === 'drive' && r.j.items.map((x) => x.id).join() === 'W1abc' && r.j.items[0].where === '07_חומרים מסוכנים/SDS', r.j);
   r = await call('mgr', { op: 'search', q: 'a' });
   check('a one-letter query: 400', r.status === 400, r);
   r = await call('mgr', { op: 'search', q: "x') or (q='" });

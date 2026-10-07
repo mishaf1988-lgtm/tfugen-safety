@@ -30,7 +30,7 @@ const AREAS = ['doc-attach-area', 'tr-attach-area', 'ppe-attach-area', 'ctr-atta
       const ok = (x) => Promise.resolve(new Response(JSON.stringify(Object.assign({ ok: true }, x)), { status: 200 }));
       if (b.op === 'list' && !b.path) return ok({ path: '', items: [{ id: 'D1', name: '03_נהלים', dir: true, n: 2 }, { id: 'F0', name: 'תמונה.jpg', dir: false }] });
       if (b.op === 'list') return ok({ path: b.path, items: [{ id: 'F1abc', name: 'נוהל עבודה בגובה.pdf', dir: false }] });
-      if (b.op === 'search') return ok({ items: [{ id: 'S1abc', name: 'SDS כלור.pdf', dir: false, where: '07_חומרים/SDS' }] });
+      if (b.op === 'search') return ok({ items: [{ id: 'S1abc', name: 'SDS כלור.pdf', dir: false, where: '07_חומרים/SDS' }], more: b.q === 'נוהל' });
       if (b.op === 'url') return ok({ url: 'https://tapugan-my.sharepoint.com/f/' + b.id, name: 'x' });
       return Promise.resolve(new Response('{}', { status: 400 }));
     };
@@ -65,8 +65,16 @@ const AREAS = ['doc-attach-area', 'tr-attach-area', 'ppe-attach-area', 'ctr-atta
   console.log('\n3. search');
   await page.evaluate(() => { _odPickOpen('hzm-attach-area'); document.getElementById('od-pick-q').value = 'כלור'; _odPickSearch(); });
   await page.waitForTimeout(150);
-  const s4 = await page.evaluate(() => ({ last: window.__calls[window.__calls.length - 1], rows: [...document.querySelectorAll('#od-pick-list .od-pick-row')].map((r) => r.textContent.trim()) }));
+  const s4 = await page.evaluate(() => ({ last: window.__calls[window.__calls.length - 1], rows: [...document.querySelectorAll('#od-pick-list .od-pick-row')].map((r) => r.textContent.trim()), moreLine: !!document.getElementById('od-pick-more') }));
   check('search sends the words, rows show where each file sits', s4.last.b.op === 'search' && s4.last.b.q === 'כלור' && /SDS כלור\.pdf/.test(s4.rows[0]) && /07_חומרים\/SDS/.test(s4.rows[0]), s4);
+  check('...all the results fit: no "refine" line', !s4.moreLine, s4);
+  // 07/10/2026: 80+ files named "נוהל"; the server stops at 100 and says more:true.
+  await page.evaluate(() => { document.getElementById('od-pick-q').value = 'נוהל'; _odPickSearch(); });
+  await page.waitForFunction(() => document.getElementById('od-pick-more'), null, { timeout: 3000 }).catch(() => {});
+  const s4m = await page.evaluate(() => (document.getElementById('od-pick-more') || {}).textContent || '');
+  check('more:true: the list says there are more and to add a word', /יש עוד תוצאות/.test(s4m) && /הוסף מילה/.test(s4m), s4m);
+  await page.evaluate(() => { document.getElementById('od-pick-q').value = 'כלור'; _odPickSearch(); });
+  await page.waitForFunction(() => !document.getElementById('od-pick-more') && document.querySelector('#od-pick-list .od-pick-row'), null, { timeout: 3000 }).catch(() => {});
   await page.evaluate(() => document.querySelectorAll('#od-pick-list .od-pick-row')[0].click());
   await page.waitForTimeout(200);
   check('...picked into the SDS form', await page.evaluate(() => _attachUrls['hzm-attach-area']) === 'od:S1abc|SDS כלור.pdf');
