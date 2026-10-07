@@ -3389,7 +3389,7 @@ function gi(id){return parseInt(gv(id))||0;}
 function gf(id){return parseFloat(gv(id))||0;}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,4);}
 function esc(s){if(s===undefined||s===null)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-function escU(u){if(!u)return '';var s=String(u).trim();if(/^(https?:|mailto:|tel:)/i.test(s))return esc(s);if(/^data:image\//i.test(s))return esc(s);return '';}
+function escU(u){if(!u)return '';var s=String(u).trim();if(/^(https?:|mailto:|tel:)/i.test(s))return esc(s);if(/^data:image\//i.test(s))return esc(s);if(/^od:[A-Za-z0-9!._-]{5,120}(\||$)/.test(s))return esc(s);return '';}
 function fd(d){if(!d)return '-';try{if(/T\d{2}:\d{2}.*([Zz]|[+-]\d{2}:?\d{2})$/.test(d)){var t=new Date(d);if(!isNaN(t))return t.toLocaleDateString('en-GB',{timeZone:'Asia/Jerusalem'});}var p=d.split('T')[0].split('-');return p[2]+'/'+p[1]+'/'+p[0];}catch(e){return esc(d);}}
 function du(d){if(!d)return 9999;try{return Math.ceil((new Date(d)-new Date())/86400000);}catch(e){return 9999;}}
 function eb(d){
@@ -15301,6 +15301,7 @@ function showView(tbl,id){
     html+='</div>';
   }
   var pUrl=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
+  if(_isOd(pUrl))pUrl='';
   if(pUrl){
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4</div><a data-sign="'+escU(pUrl)+'" target="_blank"><img data-sign="'+escU(pUrl)+'" style="max-width:100%;max-height:360px;border-radius:8px;border:1px solid #dde0e6"></a></div>';
   }
@@ -15309,7 +15310,7 @@ function showView(tbl,id){
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc</div><a data-sign="'+escU(rec.after_photo_url)+'" target="_blank"><img data-sign="'+escU(rec.after_photo_url)+'" style="max-width:100%;max-height:260px;border-radius:8px;display:block"></a></div>';
   }
   if(rec.file_url){
-    var fname=(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
+    var fname=_isOd(rec.file_url)?_odName(rec.file_url):(rec.file_url.split('/').pop()||'\u05e7\u05d5\u05d1\u05e5').split('?')[0];
     html+='<div style="margin-top:12px"><div style="color:#888;font-size:11px;font-weight:700;margin-bottom:6px">\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3</div><a data-sign="'+escU(rec.file_url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f1f3;border:1px solid #dde0e6;border-radius:8px;color:#1a1d23;font-weight:700;text-decoration:none">&#128196; '+esc(fname)+'</a></div>';
   }
   if(tbl==='emp')html+=_empTalksSection(rec);
@@ -17825,6 +17826,7 @@ function printReport(tbl,id){
   var rec=(DB[tbl]||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var pUrlRaw=rec.photo_url||(cfg.photo&&rec[cfg.photo]);
+  if(_isOd(pUrlRaw))pUrlRaw='';
   // Collect URLs that need signing: the top-level photo/file plus every
   // per-item attachment (rounds). Signing them all up-front lets the print
   // window render <img src="..."> directly without runtime fetches.
@@ -17859,7 +17861,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
   });
   var fileSafe=escU(fileSigned||'');
   var photoSafe=escU(pUrl||'');
-  var fileBlock=rec.file_url&&fileSafe?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+fileSafe+'">'+esc(rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
+  var fileBlock=rec.file_url&&fileSafe?'<div class="file"><b>\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3:</b> <a href="'+fileSafe+'">'+esc(_isOd(rec.file_url)?_odName(rec.file_url):rec.file_url.split('/').pop().split('?')[0])+'</a></div>':'';
   var photoBlock=photoSafe?'<div class="photo"><img src="'+photoSafe+'" alt="photo"></div>':'';
   // Rounds: per-item card list with status, category, notes, photos.
   // Each item card avoids splitting across pages so a finding stays
@@ -18462,6 +18464,7 @@ window._changePwSubmit=function(){
 };
 
 function _applyRoleGates(){
+  try{if(typeof _odPickBtns==='function')setTimeout(_odPickBtns,0);}catch(e){}
   var role = _role();
   var isAdmin = role==='admin';
   // A viewer sees the menus a manager sees. What separates them is writing,
@@ -23298,6 +23301,19 @@ function _sign(u,cb,sec){
   sec=sec||3600;
   if(!u){cb('');return;}
   if(/^data:/i.test(u)){cb(u);return;}
+  // A file picked from the safety folder (07/10/2026): 'od:<item id>|<name>'. Its current
+  // address from the server, so the link still opens after the file is moved or renamed.
+  if(_isOd(u)){
+    var oid=String(u).slice(3).split('|')[0],ok='od/'+oid,oc=_signCache[ok];
+    if(oc&&oc.exp>Date.now()){cb(oc.url);return;}
+    _sbAuth().then(function(){
+      if(!_sbToken)throw new Error('no session');
+      return fetch('/api/od-pick',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'url',id:oid})});
+    }).then(function(r){return r&&r.ok?r.json():null;}).then(function(d){
+      if(d&&d.ok&&d.url){_signCache[ok]={url:d.url,exp:Date.now()+55*60*1000};cb(d.url);}else cb('');
+    }).catch(function(){cb('');});
+    return;
+  }
   // Pass-through for absolute http(s) URLs that aren't Supabase Storage —
   // e.g. SharePoint/OneDrive links. Without this they'd silently lose their
   // href and become unclickable.
@@ -25456,7 +25472,8 @@ function _fileUpload(file,prefix,cb){
 
 function _attachRender(areaId,url,fname){
   var area=g(areaId);if(!area)return;
-  var isImg=url&&/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
+  var isImg=url&&!_isOd(url)&&/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
+  if(_isOd(url)&&!fname)fname=_odName(url);
   var preview=isImg
     ?'<a data-sign="'+escU(url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(url)+'" style="max-width:100%;max-height:180px;border-radius:8px;margin-top:4px;display:block"></a>'
     :'<a data-sign="'+escU(url)+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:#f0f4f8;border-radius:8px;font-size:12px;margin-top:4px;text-decoration:none;color:var(--tx)">&#128196; '+(fname?esc(fname):'\u05e7\u05d5\u05d1\u05e5')+'</a>';
@@ -25500,7 +25517,92 @@ function _attachClear(areaId){
   var area=g(areaId);
   if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';
   if(typeof _truFormStatus==='function')_truFormStatus();
+  _odPickBtns();
 }
+
+// ---- pick a file already in the safety folder (07/10/2026) ----------------------------
+// Michael: "all the files in one place, not uploaded twice". In the forms of documents,
+// trainings, PPE, contractors, SDS and environmental aspects a manager may point at a file
+// that is already in the safety folder instead of uploading a copy. file_url keeps
+// 'od:<item id>|<name>'; /api/od-pick lists, searches and resolves (read only).
+var _OD_PICK_AREAS=['doc-attach-area','tr-attach-area','ppe-attach-area','ctr-attach-area','hzm-attach-area','ea-attach-area'];
+function _isOd(u){return /^od:[A-Za-z0-9!._-]{5,120}(\||$)/.test(String(u||''));}
+function _odName(u){var p=String(u||'').split('|');return p.slice(1).join('|')||'\u05e7\u05d5\u05d1\u05e5';}
+function _odPickBtns(){
+  var r=_role();if(r!=='admin'&&r!=='manager')return;
+  _OD_PICK_AREAS.forEach(function(a){
+    var area=g(a);if(!area||_attachUrls[a]||area.querySelector('[data-od-pick]'))return;
+    if(!area.querySelector('button'))return;
+    var b=document.createElement('button');b.type='button';b.className='btn btn-s';b.setAttribute('data-od-pick','1');
+    b.style.cssText='width:100%;margin-top:6px';b.innerHTML='&#128193; \u05d1\u05d7\u05e8 \u05de\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
+    b.onclick=function(){_odPickOpen(a);};area.appendChild(b);
+  });
+}
+var _odPickArea=null,_odPickPath='';
+function _odPickCall(body){
+  return _sbAuth().then(function(){
+    if(!_sbToken)throw new Error('no session');
+    return fetch('/api/od-pick',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify(body)});
+  }).then(function(r){return r.json();});
+}
+function _odPickOpen(areaId){
+  _odPickArea=areaId;
+  var m=g('m-od-pick');
+  if(!m){
+    // Its own layer over the open form (the app's modals close one another).
+    m=document.createElement('div');m.id='m-od-pick';
+    m.style.cssText='position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 12px';
+    m.innerHTML='<div dir="rtl" style="background:var(--bg,#fff);border-radius:12px;width:100%;max-width:520px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center"><strong>&#128193; \u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</strong><button type="button" class="btn btn-sm" onclick="_odPickClose()">\u05e1\u05d2\u05d5\u05e8</button></div>'
+      +'<input id="od-pick-q" type="search" placeholder="\u05d7\u05d9\u05e4\u05d5\u05e9 \u05dc\u05e4\u05d9 \u05e9\u05dd" style="width:100%;margin:8px 0" onkeydown="if(event.key===\'Enter\')_odPickSearch()">'
+      +'<div id="od-pick-path" style="font-size:12px;color:var(--t3);margin:4px 0"></div><div id="od-pick-list" style="max-height:55vh;overflow:auto"></div></div>';
+    document.body.appendChild(m);
+  }
+  g('od-pick-q').value='';
+  m.style.display='flex';
+  _odPickList('');
+}
+var _odPickItems=[];
+function _odPickRows(items,withWhere){
+  _odPickItems=items;
+  if(!items.length)return '<div style="padding:10px;color:var(--t3)">'+(withWhere?'\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e7\u05d1\u05e6\u05d9\u05dd':'\u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05e8\u05d9\u05e7\u05d4')+'</div>';
+  return items.map(function(x,k){
+    var ic=x.dir?'&#128193;':'&#128196;',sub=withWhere&&x.where?'<div style="font-size:11px;color:var(--t3)">'+esc(x.where)+'</div>':'';
+    return '<div class="od-pick-row" style="padding:8px 6px;border-bottom:1px solid var(--bd);cursor:pointer" onclick="_odPickTap('+k+')">'+ic+' '+esc(x.name)+sub+'</div>';
+  }).join('');
+}
+function _odPickTap(k){
+  var x=_odPickItems[k];if(!x)return;
+  if(x.dir){_odPickList(_odPickPath?_odPickPath+'/'+x.name:x.name);return;}
+  _odPickChoose(x.id,x.name);
+}
+function _odPickList(path){
+  _odPickPath=path||'';
+  var up=_odPickPath?'<a href="#" onclick="event.preventDefault();_odPickList(_odPickPath.split(\'/\').slice(0,-1).join(\'/\'))">\u05d7\u05d6\u05e8\u05d4</a> &nbsp; ':'';
+  g('od-pick-path').innerHTML=up+esc('\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'+(_odPickPath?' / '+_odPickPath.split('/').join(' / '):''));
+  g('od-pick-list').innerHTML='<div style="padding:10px">\u05d8\u05d5\u05e2\u05df...</div>';
+  _odPickCall({op:'list',path:_odPickPath}).then(function(d){
+    if(!d||!d.ok)throw new Error((d&&d.error)||'');
+    g('od-pick-list').innerHTML=_odPickRows(d.items||[],false);
+  }).catch(function(e){g('od-pick-list').innerHTML='<div style="padding:10px;color:#b91c1c">\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 '+esc(String((e&&e.message)||''))+'</div>';});
+}
+function _odPickSearch(){
+  var q=(g('od-pick-q').value||'').trim();if(q.length<2){_odPickList(_odPickPath);return;}
+  g('od-pick-path').textContent='\u05d7\u05d9\u05e4\u05d5\u05e9: '+q;
+  g('od-pick-list').innerHTML='<div style="padding:10px">\u05d8\u05d5\u05e2\u05df...</div>';
+  _odPickCall({op:'search',q:q}).then(function(d){
+    if(!d||!d.ok)throw new Error((d&&d.error)||'');
+    g('od-pick-list').innerHTML=_odPickRows(d.items||[],true);
+  }).catch(function(e){g('od-pick-list').innerHTML='<div style="padding:10px;color:#b91c1c">\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 '+esc(String((e&&e.message)||''))+'</div>';});
+}
+function _odPickChoose(id,name){
+  var a=_odPickArea;if(!a)return;
+  var v='od:'+id+'|'+String(name||'').replace(/[\r\n|]/g,' ');
+  _attachUrls[a]=v;_attachRender(a,v,name);
+  _odPickClose();
+}
+function _odPickClose(){var m=g('m-od-pick');if(m)m.style.display='none';}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(_odPickBtns,500);});
 
 function _attachLoad(areaId,url,prefix){
   if(url){_attachUrls[areaId]=url;_attachRender(areaId,url,'');}
