@@ -17,6 +17,12 @@ server), so the decision is by words in the tool name, not by an exact list:
   pass  : read, search, list, get, find
   ask   : anything else (fail safe)
 
+Shell tools: Bash, and PowerShell on Windows (Move-Item / Remove-Item passed unchecked there,
+07/10/2026). Same `command` field, same rules. The one exception (m365-guard (4), Michael
+07/10/2026): inside `שולחן העבודה\סקילים להעלאה` a move between the folder and its subfolders,
+with literal paths and the file name kept, and appending lines to `יומן.txt`. Delete, rename,
+overwrite and a move out of the folder stay denied there too.
+
 Test:  echo '{"tool_name":"mcp__Microsoft_365__outlook_send_mail","tool_input":{}}' | python3 .claude/hooks/guard-365.py
 """
 import json, re, sys
@@ -35,9 +41,23 @@ TRASH_FOLDER = "\u05dc\u05de\u05d7\u05d9\u05e7\u05d4"  # "למחיקה"
 # A command word followed by its arguments: "rm/mv" inside a commit message is prose, not a
 # delete (the hook blocked its own commit, 05/10/2026). A heredoc that quotes a delete still
 # trips it: write such text with Edit/Write, not through Bash.
-SHELL_DEL = re.compile(r"(^|[\s;&|(])(rm|rmdir|del|erase|rd|mv|move|Remove-Item|Move-Item|ri|rni|Rename-Item|git\s+clean)\s+\S", re.I)
+# The verb may also end a pipeline ("... | Remove-Item"), and .NET calls delete without a verb.
+SHELL_DEL = re.compile(r"(^|[\s;&|({])(rm|rmdir|del|erase|rd|mv|move|mi|Remove-Item|Move-Item|ri|rni|ren|Rename-Item|git\s+clean)(?=\s+\S|\s*($|[;|)}]))"
+                       r"|(\[(System\.)?IO\.(File|Directory)\]::(Delete|Move|Replace))", re.I)
+SHELLS = ("Bash", "PowerShell")
 ONEDRIVE_PATH = re.compile(r"OneDrive|\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4|\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea|tapugancoil-my\.sharepoint", re.I)
-GRAPH_WRITE = re.compile(r"graph\.microsoft\.com.*?(-X\s*(POST|DELETE|PATCH|PUT)|--request\s*(POST|DELETE|PATCH|PUT)|-d\s|--data|sendMail)|(-X\s*(POST|DELETE|PATCH|PUT)|--request\s*(POST|DELETE|PATCH|PUT)|-d\s|--data).*?graph\.microsoft\.com", re.I | re.S)
+# curl, and PowerShell's Invoke-RestMethod / Invoke-WebRequest (-Method Post, -Body).
+_GW = r"(-X\s*(POST|DELETE|PATCH|PUT)|--request\s*(POST|DELETE|PATCH|PUT)|-d\s|--data|-Method\s+['\"]?(POST|DELETE|PATCH|PUT)|-Body\b)"
+GRAPH_WRITE = re.compile(r"graph\.microsoft\.com.*?(" + _GW + r"|sendMail)|" + _GW + r".*?graph\.microsoft\.com", re.I | re.S)
+# m365-guard (4): the skill upload folder. A source must be inside it, a destination inside or the folder itself.
+UPLOAD_DIR = r"\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4[\\/]+\u05e1\u05e7\u05d9\u05dc\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4"
+IN_UPLOAD = re.compile(UPLOAD_DIR + r"[\\/]+[^\\/]")
+AT_UPLOAD = re.compile(UPLOAD_DIR + r"([\\/]|$)")
+SHELL_MOVE = re.compile(r"^(mv|move|mi|Move-Item)$", re.I)
+UPLOAD_LOG = "\u05d9\u05d5\u05de\u05df.txt"  # "יומן.txt": lines are only added at its end
+# On a segment that names the log: anything but an append ("Add-Content", ">>", "Out-File -Append").
+LOG_OVERWRITE = re.compile(r"(^|[\s;&|({])(Set-Content|sc|Clear-Content|clc)\b|(?<![>\d&])>(?![>&])|\bOut-File\b(?!.*-Append)", re.I)
+SEGMENTS = re.compile(r"\|\||&&|[;|\n]")
 PEOPLE_WRITE = re.compile(r"(teams|chat|channel|calendar|event|meeting)", re.I)
 WRITE = re.compile(r"create|update|write|upload|put|patch|copy|draft|edit|set|add|append|replace", re.I)
 FILEISH = re.compile(r"file|folder|drive|sharepoint|onedrive|upload|item", re.I)
@@ -48,6 +68,59 @@ def out(decision, reason):
         "hookEventName": "PreToolUse",
         "permissionDecision": decision,
         "permissionDecisionReason": "guard-365: " + reason}}))
+
+
+def _base(p):
+    return re.split(r"[\\/]+", p.rstrip("\\/"))[-1]
+
+
+def upload_move_ok(args):
+    """A move that stays inside the upload folder and keeps the file name (m365-guard (4))."""
+    toks = [t.strip("\"'") for t in re.findall(r'"[^"]*"|\'[^\']*\'|\S+', args)]
+    srcs, dst, pos, i = [], None, [], 0
+    while i < len(toks):
+        t = toks[i].lower()
+        if t in ("-destination", "-dest"):
+            dst = toks[i + 1] if i + 1 < len(toks) else None; i += 2; continue
+        if t in ("-path", "-literalpath", "-lp"):
+            if i + 1 < len(toks): srcs.append(toks[i + 1])
+            i += 2; continue
+        if t.startswith("-"):
+            if t in ("-force", "-f", "--force"):
+                return False  # overwrites a file that is already there
+            i += 1; continue
+        pos.append(toks[i]); i += 1
+    if dst is None and pos:
+        dst = pos.pop()
+    srcs += pos
+    if not srcs or not dst or any(".." in p for p in srcs + [dst]):
+        return False
+    if not AT_UPLOAD.search(dst) or not all(IN_UPLOAD.search(p) for p in srcs):
+        return False  # literal paths only: a variable could point anywhere
+    if re.search(r"[\\/]$", dst):
+        return True
+    b = _base(dst)
+    # Same name = a move; a name with no dot = a subfolder; anything else = a rename.
+    return all(_base(p) == b for p in srcs) or "." not in b
+
+
+def shell_onedrive(cmd):
+    """Why a shell command that names the synced OneDrive folder is denied, or None."""
+    for seg in SEGMENTS.split(cmd):
+        if UPLOAD_LOG in seg and LOG_OVERWRITE.search(seg):
+            return ("a shell write that overwrites or empties '%s'. m365-guard (4), Michael 07/10/2026: lines are only "
+                    "added at its end (Add-Content, >>, Out-File -Append)." % UPLOAD_LOG)
+        m = SHELL_DEL.search(seg)
+        if not m:
+            continue
+        verb = m.group(2) or ""
+        if SHELL_MOVE.match(verb) and upload_move_ok(seg[m.end(2):]):
+            continue
+        return ("a shell delete, move or rename inside the synced OneDrive folder. It reaches the cloud "
+                "through sync. Michael (05/10/2026): never delete in 365; a file to remove goes to a 'למחיקה' folder, by him. "
+                "The one exception (m365-guard (4), 07/10/2026): a move between 'סקילים להעלאה' and its subfolders, "
+                "with literal paths, the file name kept and no -Force.")
+    return None
 
 
 def strings(v, acc):
@@ -61,14 +134,15 @@ def strings(v, acc):
 
 
 def decide(name, ti):
-    if name == "Bash":
+    if name in SHELLS:
         cmd = str(ti.get("command", ""))
         if GRAPH_WRITE.search(cmd):
-            return ("deny", "a direct Graph write (curl to graph.microsoft.com with POST/DELETE/PATCH/PUT). "
+            return ("deny", "a direct Graph write (curl / Invoke-RestMethod to graph.microsoft.com with POST/DELETE/PATCH/PUT). "
                     "Michael (05/10/2026): Microsoft 365 is written only through the connector, under its rules.")
-        if SHELL_DEL.search(cmd) and ONEDRIVE_PATH.search(cmd):
-            return ("deny", "a shell delete, move or rename inside the synced OneDrive folder. It reaches the cloud "
-                    "through sync. Michael (05/10/2026): never delete in 365; a file to remove goes to a 'למחיקה' folder, by him.")
+        if ONEDRIVE_PATH.search(cmd):
+            why = shell_onedrive(cmd)
+            if why:
+                return ("deny", why)
         return None
     short = name.split("__")[-1] if "__" in name else name
     if not M365.search(name):
