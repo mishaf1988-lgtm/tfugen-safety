@@ -401,7 +401,9 @@ tbody tr:nth-child(even) td{background:rgba(15,23,42,.015)}
    text is affected. And a labelled cell with nothing in it showed a label
    over empty space; it now shows a dash like the rows that already do. */
 .tbl-wrap td{flex:1 1 100%}
-.tbl-wrap td:not([data-label]),.tbl-wrap tr:not(.cap-note)>td[data-label=""]:not(.et){flex:0 0 auto;width:auto}
+/* ...but never wider than the card: six buttons on a weekly talk ran 3 of them off the
+   left edge of a 390px phone (screen review 07/10/2026). The buttons wrap instead. */
+.tbl-wrap td:not([data-label]),.tbl-wrap tr:not(.cap-note)>td[data-label=""]:not(.et){flex:0 0 auto;width:auto;max-width:100%}
 .tbl-wrap td[data-label]:not([data-label=""]):empty::after{content:"\2014";color:var(--t3)}
 .tbl-wrap td.et{grid-column:1/-1;display:block;text-align:center;padding:20px 0}
 /* trustees findings (rTrustees): the first cell is a compact head line, no label; tighter block spacing */
@@ -8247,7 +8249,7 @@ function _eqiPrintAll(){
     if(f==='exp')return r.e&&x<0;
     if(f==='30')return r.e&&x>=0&&x<=30;
     if(f==='90')return r.e&&x>=0&&x<=90;
-    if(f==='ok')return r.s==='\u05ea\u05e7\u05d9\u05df';
+    if(f==='ok')return _eqiPass(r.s);
     return true;
   });
   if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
@@ -8428,7 +8430,7 @@ window._eqiExportCsv=function(forceFilter){
     if(f==='exp')return r.e&&x<0;
     if(f==='30')return r.e&&x>=0&&x<=30;
     if(f==='90')return r.e&&x>=0&&x<=90;
-    if(f==='ok')return r.s==='\u05ea\u05e7\u05d9\u05df';
+    if(f==='ok')return _eqiPass(r.s);
     return true;
   });
   if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
@@ -8545,7 +8547,7 @@ window._eqiPrintQrSheet=function(){
     if(f==='exp')return r.e&&x<0;
     if(f==='30')return r.e&&x>=0&&x<=30;
     if(f==='90')return r.e&&x>=0&&x<=90;
-    if(f==='ok')return r.s==='\u05ea\u05e7\u05d9\u05df';
+    if(f==='ok')return _eqiPass(r.s);
     return true;
   });
   if(q)rows=rows.filter(function(r){return ((r.code||'')+' '+(r.n||'')+' '+(r.vendor||'')+' '+(r.loc||'')).toLowerCase().indexOf(q)>=0;});
@@ -8615,6 +8617,12 @@ function _eqiHandleDeepLink(){
 }
 document.addEventListener('DOMContentLoaded',function(){_eqiHandleDeepLink();});
 
+// 07/10/2026 (screen review): the registers imported on 04/10 carry the register's own words
+// ("\u05db\u05e9\u05d9\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3\u05d4", "\u05de\u05d5\u05ea\u05e8 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9", "\u05dc\u05ea\u05e7\u05df"), never the form's "\u05ea\u05e7\u05d9\u05df". "OK" counted 0 of 48, and an
+// edit set the select to a missing value, so saving wrote "\u05ea\u05e7\u05d9\u05df" over "\u05dc\u05ea\u05e7\u05df". Read the meaning, keep the word.
+function _eqiPass(s){return /^(\u05ea\u05e7\u05d9\u05df|\u05db\u05e9\u05d9\u05e8|\u05de\u05d5\u05ea\u05e8)/.test(String(s||''));}
+function _eqiFail(s){return /^(\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05ea\u05e7\u05df|\u05d0\u05e1\u05d5\u05e8|\u05e4\u05e1\u05d5\u05dc)/.test(String(s||''));}
+function _eqiSetS(v){var el=g('eqi-s');if(!el)return;v=String(v||'');if(v&&![].some.call(el.options,function(o){return o.value===v;})){var o=document.createElement('option');o.textContent=v;el.appendChild(o);}el.value=v;}
 function rEqi(){
   var tb=g('tb-eqi');if(!tb)return;
   // Equipment-type chip bar — counts per category, click to filter.
@@ -8648,7 +8656,7 @@ function rEqi(){
         var x=r.e?du(r.e):null;
         if(x!==null&&x<0)expN++;
         if(x!==null&&x>=0&&x<=30)soonN++;
-        if(r.s==='\u05ea\u05e7\u05d9\u05df')okN++;
+        if(_eqiPass(r.s))okN++;
       });
       var curF=window._eqiFilter||'all';
       function pill(key,label,n,color,bg,txt){
@@ -8694,7 +8702,7 @@ function rEqi(){
     if(f==='exp')return r.e&&x<0;
     if(f==='30')return r.e&&x>=0&&x<=30;
     if(f==='90')return r.e&&x>=0&&x<=90;
-    if(f==='ok')return r.s==='\u05ea\u05e7\u05d9\u05df';
+    if(f==='ok')return _eqiPass(r.s);
     return true;
   });
   var q=window._eqiQ||'';
@@ -8776,7 +8784,7 @@ window._eqiClone=function(id){
     if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',r.location_id||null);
     g('eqi-d').value='';
     g('eqi-e').value='';
-    g('eqi-s').value=r.s||'\u05ea\u05e7\u05d9\u05df';
+    _eqiSetS(r.s||'\u05ea\u05e7\u05d9\u05df');
     g('eqi-notes').value='';
     _eqiFiles=[];_eqiRenderFiles();
     toast('\u05e9\u05db\u05d5\u05e4\u05dc. \u05de\u05dc\u05d0 \u05e7\u05d5\u05d3 / \u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 / \u05ea\u05d0\u05e8\u05d9\u05db\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd');
@@ -8795,7 +8803,7 @@ function eqiEdit(id){
     var elLeg=g('eqi-loc-legacy');if(elLeg)elLeg.style.display=(r.loc&&!r.location_id)?'':'none';
     g('eqi-d').value=r.d||'';
     g('eqi-e').value=r.e||'';
-    g('eqi-s').value=r.s||'\u05ea\u05e7\u05d9\u05df';
+    _eqiSetS(r.s||'\u05ea\u05e7\u05d9\u05df');
     g('eqi-notes').value=r.notes||'';
     // Load attachments. Prefer the new `attachments` array; fall back to
     // legacy single `photo_url` for records created before the migration.
@@ -21057,7 +21065,7 @@ function rEmpRecent(){
     if(me&&r.rep&&key(r.rep)!==key(me))return;
     items.push({tbl:'nm',icon:'\u26a0',label:'\u05db\u05de\u05e2\u05d8',d:r.descr||'',ts:r.ts||r.d,loop:_nmLoopHtml(r)});
   });
-  (DB.equip_inspections||[]).forEach(function(r){if(r.s==='\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df')items.push({tbl:'eqi',icon:'\ud83d\udd27',label:'\u05ea\u05e7\u05dc\u05d4',d:(r.code?r.code+' ':'')+(r.notes||r.n||''),ts:r.ts||r.d});});
+  (DB.equip_inspections||[]).forEach(function(r){if(_eqiFail(r.s))items.push({tbl:'eqi',icon:'\ud83d\udd27',label:'\u05ea\u05e7\u05dc\u05d4',d:(r.code?r.code+' ':'')+(r.notes||r.n||''),ts:r.ts||r.d});});
   (DB.rounds||[]).forEach(function(r){items.push({tbl:'round',icon:'\u2600',label:'\u05e1\u05d1\u05d1',d:(r.inspector||'')+(r.notes?' - '+r.notes:''),ts:r.ts||r.d});});
   items=items.filter(function(x){return x.ts;}).sort(function(a,b){return (b.ts||'').localeCompare(a.ts||'');}).slice(0,5);
   if(!items.length){box.style.display='none';return;}

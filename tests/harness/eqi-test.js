@@ -105,6 +105,20 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const exp = await page.evaluate(() => { goPage('exp'); expFilter('exp'); return { cur: window.CUR, k: document.getElementById('exp-k-exp').textContent }; });
   check('pg-exp expired tab still counts equipment (2)', exp.cur === 'exp' && exp.k === '2', exp);
 
+  console.log('\n4. the registers imported 04/10/2026 use their own words (screen review 07/10/2026)');
+  await page.evaluate((r) => { DB.equip_inspections = r; eqiFilter('all'); rEqi(); }, [
+    { id: 'i1', code: 'BASKET-1', s: 'כשיר לעבודה', e: '2027-01-01' },
+    { id: 'i2', code: 'SB-101', s: 'מותר לשימוש', e: '2027-01-01' },
+    { id: 'i3', code: 'CALIB-1', s: 'תקין - נצילות 91.9%', e: null },
+    { id: 'i4', code: 'FORK-9', s: 'לתקן', e: '2027-01-01' },
+  ]);
+  s = await page.evaluate(() => ({ text: document.getElementById('eqi-summary').innerText }));
+  check('"ok" counts the register words (כשיר / מותר / תקין - ...), not "לתקן": 3 of 4', /תקינים: 3/.test(s.text), s.text);
+  await page.evaluate(() => eqiEdit('i4'));
+  await page.waitForFunction(() => g('eqi-id').value === 'i4', null, { timeout: 3000 }).catch(() => {});
+  const ed = await page.evaluate(() => { const v = g('eqi-s').value; closeModal('m-eqi'); return { v, pass: _eqiPass('לתקן'), fail: _eqiFail('לתקן') && _eqiFail('לא תקין') && !_eqiFail('תקין') }; });
+  check('editing a "לתקן" row keeps "לתקן" in the form (it saved as "תקין" before)', ed.v === 'לתקן' && !ed.pass && ed.fail, ed);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
