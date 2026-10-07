@@ -25593,7 +25593,7 @@ function _odPickSearch(){
   g('od-pick-list').innerHTML='<div style="padding:10px">\u05d8\u05d5\u05e2\u05df...</div>';
   _odPickCall({op:'search',q:q}).then(function(d){
     if(!d||!d.ok)throw new Error((d&&d.error)||'');
-    g('od-pick-list').innerHTML=_odPickRows(d.items||[],true);
+    g('od-pick-list').innerHTML=_odPickRows(d.items||[],true)+(d.more?'<div id="od-pick-more" style="padding:10px;color:#92400e">\u05d9\u05e9 \u05e2\u05d5\u05d3 \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea. \u05d4\u05d5\u05e1\u05e3 \u05de\u05d9\u05dc\u05d4 \u05dc\u05d7\u05d9\u05e4\u05d5\u05e9 \u05db\u05d3\u05d9 \u05dc\u05e6\u05de\u05e6\u05dd.</div>':'');
   }).catch(function(e){g('od-pick-list').innerHTML='<div style="padding:10px;color:#b91c1c">\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 '+esc(String((e&&e.message)||''))+'</div>';});
 }
 function _odPickChoose(id,name){

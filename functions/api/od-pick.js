@@ -4,7 +4,7 @@
 //
 // POST {op, ...} with the manager's session (admin / manager only):
 //   list   {path}  the folders and files of one folder inside "שולחן העבודה/ניהול בטיחות"
-//   search {q}     files by name, inside the safety folder only
+//   search {q}     files by name, inside the safety folder only (up to 100; more:true = refine)
 //   url    {id}    the item's current webUrl and name, so a link survives a move or a rename
 // Read only: every call to Microsoft Graph is a GET. Nothing is written, moved or shared
 // (m365-guard). An item outside the safety folder is refused, even by id.
@@ -52,18 +52,30 @@ export async function onRequest(context) {
     if (body.op === 'search') {
       const q = String(body.q || '').replace(/['\\]/g, ' ').trim().substring(0, 60);
       if (q.length < 2) return jsonResp({ ok: false, error: 'bad query' }, 400, cors);
-      // 07/10/2026 (the Chrome check): in the organisation's OneDrive a search hit carries no
-      // parentReference.path, so every hit was dropped. Each file hit is read once by id
-      // (that read has the path) and only then kept or dropped. At most 25 reads.
-      const j = await get(G + "/root/search(q='" + encodeURIComponent(q) + "')?$select=id,name,folder,file&$top=50");
-      const hits = (j.value || []).filter((x) => x && !x.folder && ID_RE.test(String(x.id || ''))).slice(0, 25);
-      const full = await Promise.all(hits.map((x) => get(G + '/items/' + encodeURIComponent(x.id) + '?$select=' + SEL).catch(() => null)));
-      const items = full.filter((x) => x && !x.folder && insideRoot(x.parentReference)).map((x) => {
-        const it = item(x); let p = ''; try { p = decodeURIComponent(String(x.parentReference.path)); } catch (e) {}
-        it.where = p.substring(ROOT_REF.length + 1);
-        return it;
-      });
-      return jsonResp({ ok: true, items }, 200, cors);
+      // 07/10/2026: folder 15 alone holds 80+ files named "נוהל", and the drive-wide search kept
+      // 25 of its first 50 hits with no word that more existed. Now: search inside the safety
+      // folder (drive-wide only if Graph refuses that), up to 2 pages of 200. A hit carries no
+      // path, so each parent folder is read once (at most MAX_PAR) for "where" and to prove it
+      // sits in the safety folder. more = something was left out; the app says so.
+      const MAX_PAR = 30, MAX_HITS = 100;
+      const qs = "/search(q='" + encodeURIComponent(q) + "')?$select=id,name,size,folder,file,lastModifiedDateTime,parentReference&$top=200";
+      let scope = 'folder', j;
+      try { j = await get(G + '/root:/' + seg(ROOT) + ':' + qs); } catch (e) { scope = 'drive'; j = await get(G + '/root' + qs); }
+      let hits = j.value || [], next = j['@odata.nextLink'] || '';
+      if (next.indexOf('https://graph.microsoft.com/') === 0) { const j2 = await get(next); hits = hits.concat(j2.value || []); next = j2['@odata.nextLink'] || ''; }
+      let more = !!next;
+      hits = hits.filter((x) => x && !x.folder && ID_RE.test(String(x.id || '')) && x.parentReference && ID_RE.test(String(x.parentReference.id || '')));
+      const pids = [...new Set(hits.map((x) => x.parentReference.id))];
+      if (pids.length > MAX_PAR) more = true;
+      const where = {};
+      await Promise.all(pids.slice(0, MAX_PAR).map((id) => get(G + '/items/' + encodeURIComponent(id) + '?$select=id,name,parentReference').then((d) => {
+        let full = ''; try { full = decodeURIComponent(String((d.parentReference && d.parentReference.path) || '')) + '/' + d.name; } catch (e) { return; }
+        if (full === ROOT_REF || full.indexOf(ROOT_REF + '/') === 0) where[id] = full.substring(ROOT_REF.length + 1);
+      }).catch(() => {})));
+      const inside = hits.filter((x) => Object.prototype.hasOwnProperty.call(where, x.parentReference.id));
+      if (inside.length > MAX_HITS) more = true;
+      const items = inside.slice(0, MAX_HITS).map((x) => { const it = item(x); it.where = where[x.parentReference.id]; return it; });
+      return jsonResp({ ok: true, items, more, scope }, 200, cors);
     }
     if (body.op === 'url') {
       const id = String(body.id || '');
