@@ -4956,6 +4956,10 @@ function _svPut(tbl,r){
   arr.push(r);sbIns(tbl,r);
   return true;
 }
+// 07/10/2026 (edit round trip): set a field from a stored row. A <select> refuses a value it has
+// no option for and then reads empty, so the save wrote null over it (env_aspects.status: free
+// text like "\u05de\u05d1\u05d5\u05e6\u05e2 - ..."). Carry the stored value in as an option, as _genEdit does.
+function _selSet(el,v){if(!el)return;v=(v===null||v===undefined)?'':String(v);if(el.tagName==='SELECT'&&v!==''&&![].some.call(el.options,function(o){return o.value===v;})){var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);}el.value=v;}
 function _editableTbl(tbl){return !!_EDIT_MODS[tbl];}
 function _genEdit(tbl,id){
   var cfg=_EDIT_MODS[tbl];if(!cfg)return;
@@ -5285,7 +5289,7 @@ function editNcr(id){
   if(rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   g('ncr-id').value=rec.id;
   var _uEd=g('ncr-u');if(_uEd)_uEd.removeAttribute('data-auto');
-  var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
+  var setIf=function(elId,v){_selSet(g(elId),v||'');};
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
   if(typeof _locPopulate==='function')_locPopulate('ncr-location-id',rec.location_id||null);
   var lLeg=g('ncr-loc-legacy');if(lLeg)lLeg.style.display=(rec.loc&&!rec.location_id)?'':'none';
@@ -5480,7 +5484,7 @@ function _incDeptList(){
 function editInc(id){
   var rec=(DB.inc||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  var setIf=function(elId,v){var el=g(elId);if(el)el.value=(v==null?'':v);};
+  var setIf=function(elId,v){_selSet(g(elId),v==null?'':v);};
   setIf('i-id',rec.id);
   setIf('i-d',rec.d);setIf('i-dt',rec.dt);setIf('i-ty',rec.ty);setIf('i-sv',rec.sv);
   setIf('i-l',rec.l);setIf('i-dy',rec.dy);setIf('i-st',rec.s);setIf('i-r',rec.r);
@@ -5699,7 +5703,7 @@ function editLeg(id){
   var rec=(DB.leg||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   g('leg-id').value=rec.id;
-  var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
+  var setIf=function(elId,v){_selSet(g(elId),v||'');};
   setIf('leg-s',rec.s);setIf('leg-d',rec.d);setIf('leg-a',rec.a||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4');
   setIf('leg-c',rec.c||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da');setIf('leg-u',rec.u);setIf('leg-o',rec.o);
   setIf('leg-law-type',rec.law_type);setIf('leg-law-num',rec.law_num);
@@ -10464,9 +10468,12 @@ function svThz(){
   var dept=gv('thz-dept');if(!dept){toast('\u05de\u05d7\u05dc\u05e7\u05d4 \u05d4\u05d9\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
   var s=gv('thz-s')||'\u05e4\u05ea\u05d5\u05d7';
   var closed=gv('thz-closed')||null;
-  if(s===_THZ_CLOSED&&!closed)closed=_thzToday();
-  if(s!==_THZ_CLOSED)closed=null;
   var editId=_svEditId('tour_hazards');
+  // 07/10/2026 (edit round trip): a row that was already closed with no date (imported from the
+  // sheet) got today as its close date on any edit. Today only for a hazard closed now.
+  var was=editId?(DB.tour_hazards||[]).filter(function(x){return x.id===editId;})[0]:null;
+  if(s===_THZ_CLOSED&&!closed&&!(was&&was.s===_THZ_CLOSED&&!was.closed_d))closed=_thzToday();
+  if(s!==_THZ_CLOSED)closed=null;
   var r={id:editId||('th-'+gid()),d:gv('thz-d')||null,tour_no:parseInt(gv('thz-tour'),10)||null,dept:dept,loc:gv('thz-loc')||null,
     descr:descr,sev:gv('thz-sev')||null,resp:gv('thz-resp')||null,resp2:(gv('thz-resp2')&&gv('thz-resp2')!==gv('thz-resp'))?gv('thz-resp2'):null,action:gv('thz-action')||null,due:gv('thz-due')||(editId?null:_thzDueFor(gv('thz-sev'),gv('thz-d'))),
     s:s,closed_d:closed,notes:gv('thz-notes')||null};
@@ -13513,7 +13520,7 @@ function svEasp(){
 }
 function editEasp(id){
   var rec=(DB.env_aspects||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  var setIf=function(elId,v){var el=g(elId);if(el)el.value=v||'';};
+  var setIf=function(elId,v){_selSet(g(elId),v||'');};
   g('ea-id').value=rec.id;
   setIf('ea-aspect',rec.aspect);setIf('ea-activity',rec.activity);setIf('ea-lifecycle',rec.lifecycle);
   setIf('ea-control',rec.control_type);setIf('ea-direction',rec.direction);
