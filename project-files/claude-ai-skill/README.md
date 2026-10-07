@@ -6,7 +6,7 @@
 |---|---|
 | העוזר `michael-assistant` (כללים, `references/`) | `plugins/michael/skills/michael-assistant/` |
 | כללי 365 לכל הממשקים | `plugins/michael/skills/michael-assistant/references/m365.md` ו-`plugins/michael/skills/m365-guard/SKILL.md` |
-| הצעות לעוזר, והמיזוג היומי (א'-ה' 17:55) | `proposals/` (הכללים ב-`proposals/README.md`) |
+| הצעות לעוזר (מ-07/10/2026 מיזוג מיידי, בלי משימה יומית ובלי אישור) | `proposals/` (הכללים ב-`proposals/README.md`) |
 | `michael-work-lessons`, `ncr-capa-writing` (העוזר החליף אותם) | `archive/`, מחוץ ל-plugin |
 
 - **הגעה לחשבון:** סנכרון plugin, לבד, בכל push ל-main שם. אין zip ואין העלאה ידנית.
