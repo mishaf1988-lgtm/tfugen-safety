@@ -131,6 +131,7 @@ const H = {
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
+  nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
   never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
   neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
@@ -260,6 +261,7 @@ export function digestHtml(d, today, meta) {
   const w = m.watchOpen || [];
   h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
   if (m.upload) h += '<p style="margin:4px 0' + (m.upload.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.upload.text) + '</p>';
+  if (m.nevo) h += '<p style="margin:4px 0' + (m.nevo.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.nevo.text) + '</p>';
   const on = m.odNew || [];
   h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
@@ -426,13 +428,29 @@ export function schemaProblem(raw) {
   return '\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05de\u05d1\u05e0\u05d4 \u05d4\u05de\u05e1\u05d3: ' + parts.join(', ') + '. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05e2\u05dd Claude \u05d5\u05dc\u05d0\u05e9\u05e8';
 }
 
+// 07/10/2026 (Michael, "בצע: server_state"): once a month a Routine reads, for every law in
+// leg with a Nevo link, the "נוסח עדכני נכון ליום" date, and writes server_state.nevo_versions:
+// { at, ok, error, v: {leg id: YYYY-MM-DD}, changed: [{id, s, old, new}] }. leg.last_review is
+// Michael's compliance round and is not touched. A changed version is red until the next run;
+// a run older than NEVO_STALE_DAYS is red too (the Routine stopped). Pure.
+export const NEVO_STALE_DAYS = 40;
+export function nevoLine(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  if (!r || !r.at) return { text: H.nevo + H.nevoNever, red: false };
+  if (nowMs - Date.parse(r.at) > NEVO_STALE_DAYS * DAY) return { text: H.nevo + H.nevoStale + ilTime(r.at), red: true };
+  if (!r.ok) return { text: H.nevo + H.nevoFail + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')', red: true };
+  const ch = (r.changed || []).filter((x) => x && (x.s || x.id));
+  if (ch.length) return { text: H.nevo + H.nevoChanged + ch.slice(0, 8).map((x) => (x.s || x.id) + (x.new ? ' (' + fd(x.new) + ')' : '')).join('; ') + (ch.length > 8 ? ' +' + (ch.length - 8) : ''), red: true };
+  return { text: H.nevo + H.nevoNone + fd(String(r.at).substring(0, 10)), red: false };
+}
+
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const [hazards, reports, tasks, st, empty, exp, tk, ul] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -448,7 +466,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
