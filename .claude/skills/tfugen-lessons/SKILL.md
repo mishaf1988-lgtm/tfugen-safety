@@ -182,9 +182,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 **30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
 מה קרה: "MCP מנותק" הועתק מה-handoff.
-הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
+הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת. הודעת "requires authentication" על `supabase` = הרשומה ב-`.mcp.json`, לא ה-connector.
 נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
-חזר: 0
+חזר: 1 (07/10: אמרתי למיכאל להתחבר מחדש; `mcp__Supabase__execute_sql` עבד)
 
 **32. escape שגוי בדרך לקובץ (02/10/2026, #1044).**
 מה קרה: פוענח לעברית ב-Edit; אימוג'י 5 ספרות כזבל.
@@ -210,7 +210,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 32 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
+חזר: 33 (02-07/10, הערות ביניים; מ-05/10 `hebrew-midturn.py` תופס).
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
