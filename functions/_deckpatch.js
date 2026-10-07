@@ -100,7 +100,8 @@ export function setList(xml, name, sections, more, report) {
 
 const pts = (vals) => '<c:ptCount val="' + vals.length + '"/>' + vals.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + esc(v) + '</c:v></c:pt>').join('');
 // Stacked bar by department: series values by the chart's own category order.
-export function setBars(xml, bySeries, maxAxis, report, labels) {
+// fix: by series name, a last change to its XML; '' removes the series (07/10/2026).
+export function setBars(xml, bySeries, maxAxis, report, labels, fix) {
   let n = 0;
   xml = xml.replace(/<c:ser>[\s\S]*?<\/c:ser>/g, (ser) => {
     const name = unesc((/<c:tx>\s*(?:<c:strRef>[\s\S]*?<c:v>|<c:v>)([\s\S]*?)<\/c:v>/.exec(ser) || [])[1] || '');
@@ -110,8 +111,14 @@ export function setBars(xml, bySeries, maxAxis, report, labels) {
     n++;
     // 06/10/2026 (Michael: "how many closed in each department"): the label's second line.
     if (labels) ser = ser.replace(/(<c:cat>\s*<c:strLit>)[\s\S]*?(<\/c:strLit>)/, (a, x, y) => x + pts(cats.map((c) => labels[c] || c)) + y);
-    return ser.replace(/(<c:val>[\s\S]*?<c:numLit>(?:<c:formatCode>[\s\S]*?<\/c:formatCode>)?)[\s\S]*?(<\/c:numLit>)/, (all, a, b) => a + pts(cats.map((c) => (vals[c] == null ? 0 : vals[c]))) + b);
+    ser = ser.replace(/(<c:val>[\s\S]*?<c:numLit>(?:<c:formatCode>[\s\S]*?<\/c:formatCode>)?)[\s\S]*?(<\/c:numLit>)/, (all, a, b) => a + pts(cats.map((c) => (vals[c] == null ? 0 : vals[c]))) + b);
+    return fix && fix[name] ? fix[name](ser) : ser;
   });
+  // A removed series: the rest renumbered 0..n-1, and a hidden legend entry (by position)
+  // follows its series, or "Totals" shows up in the legend.
+  const map = {}; let k = 0;
+  xml = xml.replace(/<c:ser><c:idx val="(\d+)"\/><c:order val="\d+"\/>/g, (a, i) => { map[i] = k; return '<c:ser><c:idx val="' + k + '"/><c:order val="' + k++ + '"/>'; });
+  xml = xml.replace(/(<c:legendEntry><c:idx val=")(\d+)"/g, (a, x, i) => x + (map[i] != null ? map[i] : i) + '"');
   if (maxAxis != null) xml = xml.replace(/(<c:valAx>[\s\S]*?<c:scaling>[\s\S]*?)<c:max val="[^"]*"\/>/, '$1<c:max val="' + maxAxis + '"/>');
   if (!n) report.push('no chart series updated');
   return xml;
@@ -133,6 +140,8 @@ export const FIXED_YEARS = { 2024: 9 };
 
 // m = /api/meeting-data result for the meeting date; rows = register rows
 // (for the open lists and the month's closures).
+// "פתוחים 5" above a bar, "הכל סגור" when none is open (Excel number format, XML-escaped).
+const OPEN_FMT = '&quot;\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd &quot;#,##0;;&quot;\u05d4\u05db\u05dc \u05e1\u05d2\u05d5\u05e8&quot;';
 export function deckContent(m, rows, meetingDate, opts) {
   const h = m.hazards, a = m.accidents;
   const y = meetingDate.substring(0, 4), month = meetingDate.substring(0, 7);
@@ -243,13 +252,19 @@ export function deckContent(m, rows, meetingDate, opts) {
             : ': ' + (nc === 1 ? '\u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8' : nc + ' \u05e0\u05e1\u05d2\u05e8\u05d5') + ', ' + (no === 1 ? '\u05d0\u05d7\u05d3 \u05e4\u05ea\u05d5\u05d7' : no + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')),
         nw ? (nw === 1 ? '\u05e0\u05e4\u05ea\u05d7 \u05d4\u05e9\u05d1\u05d5\u05e2: ' : '\u05e0\u05e4\u05ea\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2: ') + countDepts('newThisWeek') : '-'],
       bars: {
-        // A hazard of this week that is already closed is green, not orange
-        // (Michael, 29/09: closed ones "should turn green"). Orange = new and
-        // still open; the three still add up to the department's total.
+        // 07/10/2026 (Michael: "16 open, but the chart shows fewer red"): one red
+        // for every open hazard, new or old, and the orange series is removed.
+        // Above each bar the open count ("פתוחים N"), so the reds add up to the card.
+        // New this week stays on the department label and on the orange card.
         '\u05e1\u05d2\u05d5\u05e8': Object.fromEntries(h.byDept.map((d) => [d.dept, d.closed])),
-        '\u05e4\u05ea\u05d5\u05d7': Object.fromEntries(h.byDept.map((d) => [d.dept, d.openPrior])),
-        '\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2': Object.fromEntries(h.byDept.map((d) => [d.dept, d.newThisWeek - d.newClosed])),
-        'Totals': Object.fromEntries(h.byDept.map((d) => [d.dept, d.total])),
+        '\u05e4\u05ea\u05d5\u05d7': Object.fromEntries(h.byDept.map((d) => [d.dept, d.open])),
+        '\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2': {},
+        'Totals': Object.fromEntries(h.byDept.map((d) => [d.dept, d.open])),
+      },
+      fix: {
+        '\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2': () => '',
+        // The hidden series sits on the bar (inBase): its label is the open count, in red.
+        Totals: (ser) => ser.replace(/(<c:dLbls><c:numFmt formatCode=")[^"]*"/, '$1' + OPEN_FMT + '"').replace(/(<c:dLbls>[\s\S]*?<a:srgbClr val=")595959"/, '$1C00000"'),
       },
       axisMax: Math.max(1, Math.ceil(maxTotal * 1.25 * 10) / 10),
       labels: Object.fromEntries(h.byDept.map((d) => [d.dept, d.dept + '\n\u05e0\u05e1\u05d2\u05e8\u05d5 ' + d.closedThisWeek + '\n\u05d7\u05d3\u05e9\u05d9\u05dd ' + d.newThisWeek])),
@@ -282,7 +297,7 @@ export async function patchDeck(bytes, c) {
   const shapes = (xml, obj) => { Object.keys(obj).forEach((k) => { if (Array.isArray(obj[k])) xml = setShape(xml, k, obj[k], report); }); return xml; };
   const more = (n) => ['\u05d5\u05e2\u05d5\u05d3 ' + n + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd', ''];
   await edit(SLIDE(1), (x) => shapes(x, { Header: c.s1.Header, ClosedNote: c.s1.ClosedNote, OpenNote: c.s1.OpenNote, NewNote: c.s1.NewNote }));
-  await edit('ppt/charts/chart1.xml', (x) => setBars(x, c.s1.bars, c.s1.axisMax, report, c.s1.labels));
+  await edit('ppt/charts/chart1.xml', (x) => setBars(x, c.s1.bars, c.s1.axisMax, report, c.s1.labels, c.s1.fix).replace(/(<a:t>[^<]*?)\s*\/\s*\u05d7\u05d3\u05e9 \u05d4\u05e9\u05d1\u05d5\u05e2(<\/a:t>)/, '$1$2'));
   await edit(SLIDE(2), (x) => {
     // The brace over the 2026 months and the yellow marker went with the years (06/10/2026).
     const brace = findShape(x, 'Y2026Brace'); if (brace) x = x.substring(0, brace.start) + x.substring(brace.end);

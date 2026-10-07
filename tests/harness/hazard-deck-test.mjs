@@ -43,10 +43,12 @@ const slide4 = SLD(SP('Event1Card', P(R('החודש לא אירעו אירועי
 const lbl = '<c:dLbls><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:showVal val="1"/></c:dLbls>';
 const cats5 = '<c:cat><c:strLit><c:ptCount val="5"/><c:pt idx="0"><c:v>ייצור טוגנים</c:v></c:pt><c:pt idx="1"><c:v>מעצבים</c:v></c:pt><c:pt idx="2"><c:v>חומר גלם</c:v></c:pt><c:pt idx="3"><c:v>תוצג</c:v></c:pt><c:pt idx="4"><c:v>מעבדות</c:v></c:pt></c:strLit></c:cat>';
 const vals = (a) => '<c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="5"/>' + a.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + v + '</c:v></c:pt>').join('') + '</c:numLit></c:val>';
-const ser = (i, name, color, a) => '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/><c:tx><c:v>' + name + '</c:v></c:tx><c:spPr><a:solidFill><a:srgbClr val="' + color + '"/></a:solidFill></c:spPr><c:invertIfNegative val="1"/>' + lbl + cats5 + vals(a) + '</c:ser>';
-const chart1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="c" xmlns:a="a"><c:chart><c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="stacked"/>'
+// Totals' label as in the real deck: grey text, at the base of the hidden bar.
+const lblT = '<c:dLbls><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:spPr><a:noFill/></c:spPr><c:txPr><a:p><a:pPr><a:defRPr sz="1400" b="1"><a:solidFill><a:srgbClr val="595959"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr><c:dLblPos val="inBase"/><c:showVal val="1"/></c:dLbls>';
+const ser = (i, name, color, a) => '<c:ser><c:idx val="' + i + '"/><c:order val="' + i + '"/><c:tx><c:v>' + name + '</c:v></c:tx><c:spPr><a:solidFill><a:srgbClr val="' + color + '"/></a:solidFill></c:spPr><c:invertIfNegative val="1"/>' + (name === 'Totals' ? lblT : lbl) + cats5 + vals(a) + '</c:ser>';
+const chart1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="c" xmlns:a="a"><c:chart><c:title><c:tx><c:rich><a:p><a:r><a:t>מפגעים לפי מחלקה - סגור / פתוח / חדש השבוע</a:t></a:r></a:p></c:rich></c:tx></c:title><c:plotArea><c:barChart><c:barDir val="col"/><c:grouping val="stacked"/>'
   + ser(0, 'סגור', '4EA72E', [5, 4, 10, 5, 3]) + ser(1, 'פתוח', 'C00000', [2, 1, 3, 1, 3]) + ser(2, 'חדש השבוע', 'ED7D31', [6, 0, 0, 0, 0]) + ser(3, 'Totals', 'FFFFFF', [13, 5, 13, 6, 6])
-  + '<c:gapWidth val="50"/><c:overlap val="100"/><c:axId val="1"/><c:axId val="2"/></c:barChart><c:catAx><c:axId val="1"/><c:scaling><c:orientation val="minMax"/></c:scaling></c:catAx><c:valAx><c:axId val="2"/><c:scaling><c:orientation val="minMax"/><c:max val="16.3"/><c:min val="0"/></c:scaling></c:valAx></c:plotArea></c:chart></c:chartSpace>';
+  + '<c:gapWidth val="50"/><c:overlap val="100"/><c:axId val="1"/><c:axId val="2"/></c:barChart><c:catAx><c:axId val="1"/><c:scaling><c:orientation val="minMax"/></c:scaling></c:catAx><c:valAx><c:axId val="2"/><c:scaling><c:orientation val="minMax"/><c:max val="16.3"/><c:min val="0"/></c:scaling></c:valAx></c:plotArea><c:legend><c:legendPos val="t"/><c:legendEntry><c:idx val="3"/><c:delete val="1"/></c:legendEntry></c:legend></c:chart></c:chartSpace>';
 const chart2 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="c" xmlns:a="a"><c:chart><c:plotArea><c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>תאונות עבודה</c:v></c:tx>' + lbl
   + '<c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>2024</c:v></c:pt><c:pt idx="1"><c:v>2025</c:v></c:pt><c:pt idx="2"><c:v>ינו-26</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="3"/><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>13</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val><c:smooth val="0"/></c:ser><c:marker val="1"/></c:lineChart><c:valAx><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling></c:valAx></c:plotArea></c:chart></c:chartSpace>';
 const IMG = new Uint8Array(4000).map((_, i) => (i * 13) % 251);
@@ -121,9 +123,15 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const c1 = await partText(out.bytes, 'ppt/charts/chart1.xml');
   const serVals = (x, name) => { const s = x.substring(x.indexOf('<c:v>' + name + '</c:v>')); const v = s.substring(s.indexOf('<c:val>'), s.indexOf('</c:val>')); return (v.match(/<c:v>([^<]*)<\/c:v>/g) || []).map((q) => q.replace(/<\/?c:v>/g, '')).join(','); };
   // order in the chart: ייצור טוגנים, מעצבים, חומר גלם, תוצג, מעבדות
-  check('chart: closed / open / new / totals per department, in the chart\'s own order', serVals(c1, 'סגור') === '1,0,1,0,0' && serVals(c1, 'פתוח') === '1,3,1,1,1' && serVals(c1, 'חדש השבוע') === '0,0,0,0,0' && serVals(c1, 'Totals') === '2,3,2,1,1', [serVals(c1, 'סגור'), serVals(c1, 'פתוח'), serVals(c1, 'Totals')]);
+  check('chart: closed / open per department, in the chart\'s own order; above the bar the open count', serVals(c1, 'סגור') === '1,0,1,0,0' && serVals(c1, 'פתוח') === '1,3,1,1,1' && serVals(c1, 'Totals') === '1,3,1,1,1', [serVals(c1, 'סגור'), serVals(c1, 'פתוח'), serVals(c1, 'Totals')]);
+  // 07/10/2026 (Michael: "16 open, but fewer red in the chart", then "remove the orange"):
+  // one red for all open, no orange series, "פתוחים N" in red above each bar.
+  check('the orange series is gone (07/10/2026), the other three stay', !c1.includes('<c:v>חדש השבוע</c:v>') && !c1.includes('ED7D31') && (c1.match(/<c:ser>/g) || []).length === 3, (c1.match(/<c:tx><c:v>[^<]*/g) || []));
+  check('series renumbered 0-2, the hidden legend entry follows Totals (or the legend says "Totals")', /<c:ser><c:idx val="2"\/><c:order val="2"\/><c:tx><c:v>Totals</.test(c1) && c1.includes('<c:legendEntry><c:idx val="2"/><c:delete val="1"/>'), c1.match(/<c:legend>[\s\S]*?<\/c:legend>/));
+  check('chart title without "new this week": "מפגעים לפי מחלקה - סגור / פתוח"', c1.includes('<a:t>מפגעים לפי מחלקה - סגור / פתוח</a:t>'), c1.match(/<c:title>[\s\S]*?<\/c:title>/));
+  check('the label above each bar: "פתוחים N" in red, "הכל סגור" for none', c1.includes('formatCode="&quot;פתוחים &quot;#,##0;;&quot;הכל סגור&quot;"') && /<c:v>Totals<\/c:v>[\s\S]*?<a:srgbClr val="C00000"\/>/.test(c1) && !c1.includes('595959'), c1.slice(c1.indexOf('<c:v>Totals'), c1.indexOf('<c:v>Totals') + 500));
   check('chart axis max follows the tallest bar (3 x 1.25 = 3.8), colours and labels untouched', c1.includes('<c:max val="3.8"/>') && c1.includes('4EA72E') && c1.includes('<c:showVal val="1"/>'), c1.match(/<c:max[^>]*>/));
-  check('chart labels: each department with this week\'s closed and new on lines of their own (06/10/2026)', c1.includes('<c:v>ייצור טוגנים\nנסגרו 0\nחדשים 0</c:v>') && (c1.match(/<c:v>תוצג\nנסגרו 0\nחדשים 0<\/c:v>/g) || []).length === 4, c1.slice(c1.indexOf('<c:cat>'), c1.indexOf('<c:cat>') + 400));
+  check('chart labels: each department with this week\'s closed and new on lines of their own (06/10/2026)', c1.includes('<c:v>ייצור טוגנים\nנסגרו 0\nחדשים 0</c:v>') && (c1.match(/<c:v>תוצג\nנסגרו 0\nחדשים 0<\/c:v>/g) || []).length === 3, c1.slice(c1.indexOf('<c:cat>'), c1.indexOf('<c:cat>') + 400));
   const again2 = await patchDeck(out.bytes, deckContent(m, ROWS, ref, { s3Month: '2026-09' }));
   check('...and the next run still finds each department by the label\'s first line', again2.report.length === 0 && again2.changed.length === 0, again2.report);
   const s2 = await partText(out.bytes, 'ppt/slides/slide2.xml');
@@ -176,13 +184,13 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   // bars count; a finding with no department is named on it, not added silently.
   const withOther = [wk(70, 'מעבדות', 'פתוח'), wk(71, 'תוצג', 'פתוח'), [ 'נ-5', { date: '2026-09-25' }, '', 'ללא מחלקה', 'משרד שפכים', 'מלגזות', 'בינונית', '', '', null, 'פתוח', null, '' ]];
   const co = deckContent({ hazards: meetingHazards(withOther, ref2), accidents: meetingAccidents(INC, ref2) }, withOther, ref2, {}).s1;
-  const barsOpen = Object.values(co.bars['פתוח']).concat(Object.values(co.bars['חדש השבוע'])).reduce((a, x) => a + x, 0);
+  const barsOpen = Object.values(co.bars['פתוח']).reduce((a, x) => a + x, 0);
   check('open card = the open in the bars (2), and the one with no department named', co.OpenNote[0] === '2 פתוחים במחלקות, ועוד 1 בלי מחלקה' && barsOpen === 2, [co.OpenNote, barsOpen]);
   const noOther = deckContent({ hazards: meetingHazards(withOther.slice(0, 2), ref2), accidents: meetingAccidents(INC, ref2) }, withOther.slice(0, 2), ref2, {}).s1;
   check('nothing outside the departments: the card as before', noOther.OpenNote[0] === '2 מפגעים פתוחים, הטיפול נמשך', noOther.OpenNote);
   const today = [row(80, ref2, 'מעבדות', '', 'סימון מדרגה', 'בינונית', null, 'פתוח', null)];
   const td = deckContent({ hazards: meetingHazards(today, ref2), accidents: meetingAccidents(INC, ref2) }, today, ref2, {}).s1;
-  check('a hazard found on the meeting day itself is new this week (orange), not old', td.bars['חדש השבוע']['מעבדות'] === 1 && td.bars['פתוח']['מעבדות'] === 0 && /^מפגע חדש אחד/.test(td.NewNote[0]), [td.bars, td.NewNote]);
+  check('a hazard found on the meeting day itself is new this week (red with the open, and on the orange card)', td.bars['פתוח']['מעבדות'] === 1 && /^מפגע חדש אחד/.test(td.NewNote[0]) && td.labels['מעבדות'].endsWith('חדשים 1'), [td.bars, td.NewNote, td.labels]);
   check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
@@ -194,7 +202,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const wkRows = [row(44, '2026-09-22', 'מעצבים', '', 'ג\'ריקן', 'בינונית', null, 'סגור', '2026-09-23'), row(45, '2026-09-22', 'מעצבים', '', 'קופסה', 'בינונית', null, 'פתוח', null),
     row(46, '2026-09-22', 'מעצבים', '', 'ארון', 'בינונית', null, 'סגור', '2026-09-23'), row(7, '2026-09-01', 'מעצבים', '', 'חדר חשמל', 'בינונית', null, 'פתוח', null), row(2, '2026-09-01', 'מעצבים', '', 'ישן', 'בינונית', null, 'סגור', '2026-09-10')];
   const wb = deckContent({ hazards: meetingHazards(wkRows, '2026-09-28'), accidents: meetingAccidents(INC, '2026-09-28') }, wkRows, '2026-09-28', { s3Month: '2026-09' }).s1.bars;
-  check('this week\'s closed hazards are counted green (closed), orange = new and still open', wb['סגור']['מעצבים'] === 3 && wb['חדש השבוע']['מעצבים'] === 1 && wb['פתוח']['מעצבים'] === 1 && wb['Totals']['מעצבים'] === 5, wb);
+  check('this week\'s closed hazards are counted green (closed); red = every open one, new or old', wb['סגור']['מעצבים'] === 3 && wb['פתוח']['מעצבים'] === 2 && wb['Totals']['מעצבים'] === 2, wb);
 
   // slide 4 (Michael 06/10/2026: "connect it too")
   const NM = [{ id: 'a', d: '2025-10-27', area: 'אזור הרובוט', descr: 'תחקיר פתוח שנגרר מ-2025', s: 'פתוח' }, { id: 'b', d: '2026-05-19', area: 'תוצ"ג / מעוצבים', descr: 'נפילת מלגזה', s: 'בטיפול' },
