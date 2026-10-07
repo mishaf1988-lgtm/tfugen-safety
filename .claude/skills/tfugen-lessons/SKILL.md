@@ -118,7 +118,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: קישור `/public/` לתמונה בוואטסאפ, וה-bucket פרטי מ-21/04: "Bucket not found".
 הכלל: הנחה על דבר חי (bucket, RLS, הרשאה, צורת תשובה של API) נבדקת מול האמיתי לפני קוד; מוק נבנה מתשובה אמיתית. קישור שיוצא נבדק בלי התחברות.
 נאכף: `trustee-route-test.js` (אין `/object/public/`), `od-pick-test.mjs` (חיפוש בלי path, כמו האמיתי).
-חזר: 2 (07/10: מוק חיפוש Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני; Chrome מצא. 07/10: "אין repo ל-skills" בלי `list_repos`; מיכאל: "זה כבר קיים בפרטי").
+חזר: 2 (07/10: מוק חיפוש Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני; Chrome מצא. 07/10: "אין repo ל-skills" בלי `list_repos`; מיכאל: "זה כבר קיים בפרטי"). ריצת ניסיון לפני העברת משימה מתוזמנת ל-repo אחר (07/10: אין לה גישה לפרטי).
 
 **60. אי-התאמה שראיתי נשארה בפתק (06/10/2026, PR זה).**
 מה קרה: בסקיצות כתבתי "הכרטיס 13, העמודות 12" ולא תיקנתי; מיכאל מצא את זה שוב בישיבה.
