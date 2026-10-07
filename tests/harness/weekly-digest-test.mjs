@@ -14,6 +14,8 @@ const DAY = 86400000;
 const d = (x) => ({ date: x });
 const TODAY = '2026-10-04'; // a Sunday
 const fdNow = () => new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
+const DAYMS = 86400000;
+const fdAgo = (n) => new Date(Date.now() - n * DAYMS).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
 const plus = (n, from) => new Date(Date.parse((from || TODAY) + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 // Register rows, columns A..M as buildRegister writes them.
 const ROWS = [
@@ -122,6 +124,11 @@ const ROWS = [
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
       if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (u.startsWith('https://graph.microsoft.com/v1.0/me/drive/root:/') && decodeURIComponent(u).includes('סקילים להעלאה:/children')) {
+        (w.dirUrls = w.dirUrls || []).push(decodeURIComponent(u));
+        const L = o.upload || {}; if (L.dirFail) return json({ error: 'x' }, 500); if (L.dirThrow) throw new Error('network');
+        return json({ value: L.children || [] });
+      }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/drive/root:/') && decodeURIComponent(u).includes('סקילים להעלאה/יומן.txt')) {
         (w.logUrls = w.logUrls || []).push(decodeURIComponent(u));
         const L = o.upload; if (!L) return json({ error: 'not found' }, 404);
@@ -175,6 +182,14 @@ const ROWS = [
   check('no upload log yet: red line in the preview', c.j.meta.upload && c.j.meta.upload.red && /אין יומן העלאות/.test(c.j.html), c.j.meta.upload);
   c = await call({ email: 'admin@tfugen.local', upload: { mod: new Date().toISOString(), text: 'x\r\n' + fdNow() + ' 09:12 הועלה michael-assistant.zip\r\n\r\n' } }, { op: 'preview' });
   check('upload log with a fresh line: shown as is, not red', c.j.meta.upload && !c.j.meta.upload.red && c.j.meta.upload.text.endsWith('הועלה michael-assistant.zip') && c.w.logUrls.length === 2, c.j.meta.upload);
+  // 07/10/2026: a zip waiting in the folder's top and a log over 24 hours old = the task is not running.
+  const stuckLog = { mod: new Date(Date.now() - 3 * DAYMS).toISOString(), text: fdAgo(3) + ' 10:20 | michael-assistant | הועלה (v13)\r\n', children: [{ name: 'm365-guard-07-10-2026.zip', file: {} }, { name: 'הועלו', folder: {} }, { name: 'ישן.zip', folder: {} }, { name: 'יומן.txt', file: {} }] };
+  c = await call({ email: 'admin@tfugen.local', upload: stuckLog }, { op: 'preview' });
+  check('stuck task: red, "לא רצה מאז" with the last line\'s date and time, the waiting zip named; folders and the log are not counted', c.j.meta.upload.red && c.j.meta.upload.text === 'העלאת העוזר לחשבון: משימת ההעלאה לא רצה מאז ' + fdAgo(3) + ' 10:20, 1 ממתינים בתיקייה: m365-guard-07-10-2026.zip' && c.w.dirUrls.length === 1 && c.w.dirUrls[0].endsWith('/שולחן העבודה/סקילים להעלאה:/children?$select=name,file&$top=200'), [c.j.meta.upload, c.w.dirUrls]);
+  c = await call({ email: 'admin@tfugen.local', upload: Object.assign({}, stuckLog, { dirFail: true }) }, { op: 'preview' });
+  check('folder listing fails: no stuck line, the mail still builds (3-day-old line, under the 8-day limit: green)', c.j.ok && !c.j.meta.upload.red && !/לא רצה מאז/.test(c.j.meta.upload.text), c.j.meta.upload);
+  c = await call({ email: 'admin@tfugen.local', upload: Object.assign({}, stuckLog, { dirThrow: true }) }, { op: 'preview' });
+  check('folder listing throws: the log line still shown, not "לא נקרא"', c.j.ok && !/לא נקרא/.test(c.j.meta.upload.text) && /10:20 \| michael-assistant/.test(c.j.meta.upload.text), c.j.meta.upload);
   c = await call({ email: 'admin@tfugen.local', upload: { status: 500 } }, { op: 'preview' });
   check('upload log read fails: red, says not read, the mail still builds', c.j.ok && c.j.meta.upload.red && /לא נקרא \(onedrive 500\)/.test(c.j.meta.upload.text), c.j.meta.upload);
   c = await call({ emptyRegs: ['hearing_tests', 'hzm'] }, {}, 'nsec');
@@ -267,6 +282,13 @@ const ROWS = [
     check('last line failed (English): red', uploadLine({ text: '04/10/2026 upload ERROR' }, now).red);
     check('an old failure followed by a success: green', !uploadLine({ text: '03/10/2026 נכשל\n04/10/2026 הועלה' }, now).red);
     check('empty file: red', uploadLine({ text: '\r\n \n' }, now).red);
+    // 07/10/2026: the real log of that day, last line 06/10/2026 10:20, a zip waiting since.
+    const realLog = '06/10/2026 10:20 | michael-assistant-06-10-2026.zip | הועלה (v13, גרסה: 06/10/2026 (17)), הועבר להועלו\r\n06/10/2026 10:20 | michael-assistant | michael-assistant repo גרסה: 06/10/2026 (17) הועלה (v13)\r\n';
+    const st = uploadLine({ text: realLog, pending: ['m365-guard-07-10-2026.zip'] }, Date.parse('2026-10-07T09:00:00Z'));
+    check('the real case (07/10 12:00, last line 06/10 10:20, one zip waiting): red, stuck', st.red && st.stuck && st.text === 'העלאת העוזר לחשבון: משימת ההעלאה לא רצה מאז 06/10/2026 10:20, 1 ממתינים בתיקייה: m365-guard-07-10-2026.zip', st);
+    check('...the same a few hours later on 06/10: under 24 hours, not stuck', !uploadLine({ text: realLog, pending: ['a.zip'] }, Date.parse('2026-10-06T17:00:00Z')).red);
+    check('...25 hours, nothing waiting: not stuck (nothing to upload is fine)', !uploadLine({ text: realLog, pending: [] }, Date.parse('2026-10-07T09:00:00Z')).stuck);
+    check('long list of waiting files: cut at 120 characters', /\.\.\.$/.test(uploadLine({ text: realLog, pending: Array.from({ length: 12 }, (_, i) => 'michael-assistant-0' + i + '.zip') }, Date.parse('2026-10-08T09:00:00Z')).text));
     check('no file: red', uploadLine({ missing: true }, now).red && uploadLine(null, now).red);
     const long = uploadLine({ text: '04/10/2026 ' + 'א'.repeat(400) }, now);
     check('a long line is cut', long.text.length < 260, long.text.length);
