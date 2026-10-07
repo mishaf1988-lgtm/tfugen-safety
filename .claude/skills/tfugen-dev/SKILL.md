@@ -104,8 +104,8 @@ fetch('/api/claude', {
 
 ## במחשב של מיכאל (Windows, 05/10/2026)
 - `python3` שם הוא ה-stub של Microsoft Store (מדפיס "Python", exit 49), ו-Claude Code מתייחס ל-exit שאינו 0 או 2 כשגיאה שלא חוסמת. כלומר **כל hook של ה-repo כבוי בשקט** עד שיש `python3` אמיתי ב-PATH (`python3 --version` מחזיר מספר גרסה). **תוקן 05/10/2026** (מיכאל אישר): `python.exe` הועתק ל-`python3.exe` בתיקיית Python 3.12, שקודמת ל-stub ב-PATH. בדיקה מהירה בתחילת שיחה במחשב: `python3 --version`; אם חזר ה-stub (התקנה מחדש של Python), להעתיק שוב.
-- אין `node` ואין `jq`: ב-`tests/harness/` רצות רק בדיקות ה-Python; `ci-wait-test.py` צריך `jq` (ה-`gh` המזויף שלו קורא לו). ה-JS רץ ב-CI.
-- `gh` לא מחובר; `git push` עובד דרך Git Credential Manager. נתיב Windows ב-`git show origin/main:<path>` צריך `MSYS_NO_PATHCONV=1`.
+- אין `node` ואין `jq`: ב-`tests/harness/` רצות רק בדיקות ה-Python; `ci-wait-test.py` צריך `jq` (ה-`gh` המזויף שלו קורא לו). ה-JS רץ ב-CI. `run.sh` מלא במחשב: `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 bash tests/harness/run.sh`, אחרת כ-15 בדיקות Python שמדפיסות ✓ נופלות על cp1255 (07/10/2026); הסינון לבדיקות Python: `grep -E "^\S+-test\.py " | grep -v " 0 failed"`.
+- `gh` מחובר מ-07/10/2026 (`mishaf1988-lgtm`, keyring), כולל ל-michael-skills הפרטי: `bash .claude/hooks/ci-wait.sh main mishaf1988-lgtm/michael-skills` עבד חי. `merge-gate.py` קורא רק `GITHUB_TOKEN`/`GH_TOKEN` מהסביבה, לא את ה-keyring. `git push` עובד דרך Git Credential Manager. נתיב Windows ב-`git show origin/main:<path>` צריך `MSYS_NO_PATHCONV=1`.
 
 ## Anti-patterns (אל תעשה)
 - ❌ הוספת build step / webpack / vite
