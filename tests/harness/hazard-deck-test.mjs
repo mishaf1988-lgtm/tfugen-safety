@@ -14,7 +14,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 
 const R = (t, sz, b, c) => '<a:r><a:rPr lang="he-IL" sz="' + sz + '"' + (b != null ? ' b="' + b + '"' : '') + ' dirty="0"><a:solidFill><a:srgbClr val="' + c + '"/></a:solidFill></a:rPr><a:t>' + t + '</a:t></a:r>';
 const P = (...runs) => '<a:p><a:pPr algn="r" rtl="1"/>' + runs.join('') + '<a:endParaRPr lang="he-IL"/></a:p>';
-const SP = (name, ...paras) => '<p:sp><p:nvSpPr><p:cNvPr id="9" name="' + name + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr wrap="square" rtlCol="1"><a:noAutofit/></a:bodyPr><a:lstStyle/>' + paras.join('') + '</p:txBody></p:sp>';
+const SP = (name, ...paras) => '<p:sp><p:nvSpPr><p:cNvPr id="9" name="' + name + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr wrap="square" tIns="25400" bIns="25400" rtlCol="1"><a:noAutofit/></a:bodyPr><a:lstStyle/>' + paras.join('') + '</p:txBody></p:sp>';
 const SLD = (...sps) => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sld xmlns:a="a" xmlns:p="p" xmlns:r="r"><p:cSld><p:spTree>' + sps.join('') + '</p:spTree></p:cSld></p:sld>';
 const slide1 = SLD(
   SP('Header', P(R('מפגעים ומוכנות חירום - 2026', 2800, 1, 'C00000'), R('   |   ישיבה שבועית · 22.09.2026', 1400, null, '595959'))),
@@ -119,7 +119,7 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const s1 = await partText(out.bytes, 'ppt/slides/slide1.xml');
   check('slide 1 header: the meeting date as DD/MM/YYYY (06/10/2026), in its own small grey run; the title as it was', s1.includes('<a:t>   |   ישיבה שבועית, 29/09/2026</a:t>') && /sz="2800"[^>]*>[\s\S]{0,120}<a:t>מפגעים ומוכנות חירום - 2026<\/a:t>/.test(s1), s1.slice(s1.indexOf('Header'), s1.indexOf('Header') + 700));
   // week 20-26.09: nothing new, nothing closed; open = 7 (all not closed)
-  check('slide 1 notes from the data (week 20.09-26.09)', s1.includes('<a:t>לא נסגרו מפגעים השבוע</a:t>') && s1.includes('<a:t>7 מפגעים פתוחים, הטיפול נמשך</a:t>') && s1.includes('<a:t>2 בחומרה גבוהה, מנדף לא אפקטיבי</a:t>') && s1.includes('<a:t>לא נפתחו מפגעים חדשים השבוע</a:t>'), s1.slice(s1.indexOf('ClosedNote'), s1.indexOf('ClosedNote') + 900));
+  check('slide 1 notes from the data (week 20.09-26.09)', s1.includes('<a:t>לא נסגרו מפגעים השבוע</a:t>') && s1.includes('<a:t>7 מפגעים פתוחים, הטיפול נמשך</a:t>') && s1.includes('<a:t>גבוהה: מעבדות - מנדף לא אפקטיבי</a:t>') && s1.includes('<a:t>גבוהה: ייצור טוגנים - בריחת קיטור') && s1.includes('<a:t>לא נפתחו מפגעים חדשים השבוע</a:t>'), s1.slice(s1.indexOf('ClosedNote'), s1.indexOf('ClosedNote') + 900));
   const c1 = await partText(out.bytes, 'ppt/charts/chart1.xml');
   const serVals = (x, name) => { const s = x.substring(x.indexOf('<c:v>' + name + '</c:v>')); const v = s.substring(s.indexOf('<c:val>'), s.indexOf('</c:val>')); return (v.match(/<c:v>([^<]*)<\/c:v>/g) || []).map((q) => q.replace(/<\/?c:v>/g, '')).join(','); };
   // order in the chart: ייצור טוגנים, מעצבים, חומר גלם, תוצג, מעבדות
@@ -191,7 +191,18 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const today = [row(80, ref2, 'מעבדות', '', 'סימון מדרגה', 'בינונית', null, 'פתוח', null)];
   const td = deckContent({ hazards: meetingHazards(today, ref2), accidents: meetingAccidents(INC, ref2) }, today, ref2, {}).s1;
   check('a hazard found on the meeting day itself is new this week (red with the open, and on the orange card)', td.bars['פתוח']['מעבדות'] === 1 && /^מפגע חדש אחד/.test(td.NewNote[0]) && td.labels['מעבדות'].endsWith('חדשים 1'), [td.bars, td.NewNote, td.labels]);
-  check('the high-severity line fits its box (42 characters, like the deck)', c2x.s1.OpenNote[1] === '2 בחומרה גבוהה, מחסן החומרים עמוס' && c2x.s1.OpenNote[1].length <= 42, c2x.s1.OpenNote);
+  // 07/10/2026 (Michael: "2 in high severity, but it does not show what they are"): a line each.
+  const on = c2x.s1.OpenNote;
+  check('two high-severity hazards: a line each, "גבוהה: dept - hazard", 50 characters at most, oldest first', on.length === 3 && on[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && on[2].startsWith('גבוהה: מעצבים - נקודות צביטה חשופות') && on[2].length <= 50 && on.exact && on.tight && on.sz.join() === '1400,1100,1100', on);
+  const cardOf = async (bytes) => { const x = await partText(bytes, 'ppt/slides/slide1.xml'); const i = x.indexOf('name="OpenNote"'); return x.substring(x.lastIndexOf('<p:sp>', i), x.indexOf('</p:sp>', i)); };
+  const twoH = await patchDeck(await deck(), c2x), card2 = await cardOf(twoH.bytes);
+  check('...in the deck: three lines, 11pt, 85% spacing, no top/bottom inset (fits the card)', (card2.match(/<a:p>/g) || []).length === 3 && (card2.match(/sz="1100"/g) || []).length === 2 && (card2.match(/<a:spcPct val="85000"\/>/g) || []).length === 3 && card2.includes('tIns="0"') && card2.includes('bIns="0"') && card2.includes('<a:t>גבוהה: מעצבים - מחסן החומרים עמוס</a:t>'), card2);
+  const oneHigh = long.slice(0, 1), c1h = deckContent({ hazards: meetingHazards(oneHigh, ref2), accidents: meetingAccidents(INC, ref2) }, oneHigh, ref2, { s3Month: '2026-09' });
+  const back = await cardOf((await patchDeck(twoH.bytes, c1h)).bytes);
+  check('a week back to one: two lines again, 13pt, the deck\'s own spacing and insets', (back.match(/<a:p>/g) || []).length === 2 && back.includes('sz="1300"') && !back.includes('lnSpc') && back.includes('tIns="25400"') && back.includes('<a:t>גבוהה: מעצבים - מחסן החומרים עמוס</a:t>'), back);
+  const three = long.concat([row(22, '2026-09-24', 'מעבדות', '', 'מנדף לא אפקטיבי', 'גבוהה', null, 'פתוח', null)]);
+  const c3h = deckContent({ hazards: meetingHazards(three, ref2), accidents: meetingAccidents(INC, ref2) }, three, ref2, { s3Month: '2026-09' }).s1.OpenNote;
+  check('three or more: the oldest, then "ועוד 2 פתוחים בחומרה גבוהה"', c3h.length === 3 && c3h[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && c3h[2] === 'ועוד 2 פתוחים בחומרה גבוהה', c3h);
 
   const manyClosed = ['מעצבים', 'ייצור טוגנים', 'חומר גלם', 'תוצג', 'מעבדות'].map((dp, i) => row(30 + i, '2026-09-01', dp, '', 'x', 'נמוכה', null, 'סגור', '2026-09-1' + i));
   const cc = deckContent({ hazards: meetingHazards(manyClosed, ref2), accidents: meetingAccidents(INC, ref2) }, manyClosed, ref2, { s3Month: '2026-09' });

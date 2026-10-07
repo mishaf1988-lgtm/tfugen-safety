@@ -66,8 +66,28 @@ function splitParas(sp) {
 export function setShape(xml, name, list, report) {
   const s = findShape(xml, name); if (!s) { report.push('missing shape ' + name); return xml; }
   const sp = splitParas(s.xml); if (!sp) return xml;
-  const paras = sp.paras.map((p, i) => (list[i] === undefined ? p : patchPara(p, list[i])));
-  return xml.substring(0, s.start) + sp.pre + paras.join('') + sp.post + xml.substring(s.end);
+  let paras = sp.paras.map((p, i) => (list[i] === undefined ? p : patchPara(p, list[i])));
+  // list.exact (07/10/2026): exactly list.length lines, extra ones cloned from the last;
+  // list.sz: a font size per line (hundredths of a point), so three lines fit the card.
+  if (list.exact) {
+    const last = sp.paras[sp.paras.length - 1];
+    paras = list.map((it, i) => (i < sp.paras.length ? paras[i] : patchPara(last, it)));
+  }
+  if (list.sz) paras = paras.map((p, i) => (list.sz[i] ? p.replace(/(<a:(?:rPr|endParaRPr|defRPr)\b[^>]*?\bsz=")\d+"/g, '$1' + list.sz[i] + '"') : p));
+  // list.tight: 85% line spacing and no top/bottom inset, so 3 lines fit the card's
+  // height (LibreOffice with a Calibri-metric font clipped the third line otherwise).
+  // Set or undone on every run, so a week back to 2 lines gets the deck's own spacing.
+  let pre = sp.pre;
+  if (list.tight !== undefined) {
+    paras = paras.map((p) => {
+      p = p.replace(/<a:lnSpc>[\s\S]*?<\/a:lnSpc>/, '').replace(/<a:pPr([^>]*?)><\/a:pPr>/, '<a:pPr$1/>');
+      if (!list.tight) return p;
+      const ln = '<a:lnSpc><a:spcPct val="85000"/></a:lnSpc>';
+      return /<a:pPr[^>]*\/>/.test(p) ? p.replace(/<a:pPr([^>]*?)\/>/, '<a:pPr$1>' + ln + '</a:pPr>') : /<a:pPr[^>]*>/.test(p) ? p.replace(/(<a:pPr[^>]*>)/, '$1' + ln) : p.replace('<a:p>', '<a:p><a:pPr>' + ln + '</a:pPr>');
+    });
+    pre = pre.replace(/<a:bodyPr\b[^>]*>/, (t) => t.replace(/\b([tb]Ins=")\d+"/g, '$1' + (list.tight ? 0 : 25400) + '"'));
+  }
+  return xml.substring(0, s.start) + pre + paras.join('') + sp.post + xml.substring(s.end);
 }
 // A shape holding sections: [{match: RegExp on the header text, header: next,
 // items: [next...], empty: text}]. Items are cloned from the section's first
@@ -160,7 +180,7 @@ export function deckContent(m, rows, meetingDate, opts) {
   const openOther = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && !inDepts.has(r[3])).length;
   const sevOf = (s) => open.filter((r) => r[6] === s);
   const d10 = (v) => (v && typeof v === 'object' ? v.date : v) || '';
-  const oldestHigh = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').slice().sort((p, q) => String(d10(p[1]) || '9').localeCompare(String(d10(q[1]) || '9')))[0];
+  const highs = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').slice().sort((p, q) => String(d10(p[1]) || '9').localeCompare(String(d10(q[1]) || '9')));
   // Short, like the hand-written deck: the part of a description before its
   // " - " (the hazard, not the explanation), cut at a word, never mid-word.
   const short = (t, n) => {
@@ -182,6 +202,16 @@ export function deckContent(m, rows, meetingDate, opts) {
   // One line in its box, like the deck's own items: n counts the department.
   // 76 = the longest one-line item of the 22/09 deck (Chrome check 29/09).
   // The hazard matters more than where: a location that does not fit with it is left out.
+  // 07/10/2026 (Michael: "2 in high severity, but it does not show what they are"): a line
+  // per open high-severity hazard, "גבוהה: dept - hazard", smaller (11pt) when there are two;
+  // more than two: the second line is "ועוד N". 50 characters fit a line at 11pt, 42 at 13pt.
+  const highLine = (r, n) => { const pre = '\u05d2\u05d1\u05d5\u05d4\u05d4: ' + (r[3] || '-') + ' - '; return pre + short(head(r[5]), Math.max(12, n - pre.length)); };
+  const highLines = (hs) => {
+    const out = !hs.length ? ['\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4']
+      : hs.length === 1 ? [highLine(hs[0], 42)]
+      : [highLine(hs[0], 50), hs.length === 2 ? highLine(hs[1], 50) : '\u05d5\u05e2\u05d5\u05d3 ' + (hs.length - 1) + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'];
+    return out;
+  };
   const item = (r, n) => {
     const room = Math.max(20, n - String(r[3] || '').length - 3), d = head(r[5]), l = r[4] ? head(r[4]) : '';
     return [r[3], ' - ' + short(l && (l + ': ' + d).length <= room ? l + ': ' + d : d, room)];
@@ -242,7 +272,7 @@ export function deckContent(m, rows, meetingDate, opts) {
     s1: {
       Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', countDepts('closedThisWeek') || '-'],
-      OpenNote: [openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + ' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', hi ? (hi === 1 ? '\u05d0\u05d7\u05d3' : hi) + ' \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4, ' + short(head(oldestHigh[5]), 42 - String(hi).length - 15) : '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'],
+      OpenNote: Object.assign([openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + ' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', ...highLines(highs)], { exact: true, sz: highs.length > 1 ? [1400, 1100, 1100] : [1500, 1300], tight: highs.length > 1 }),
       // 30/09/2026 (Michael: «8 new hazards» was no longer true, some were
       // closed): the first line says what became of them, the second where.
       NewNote: [!nw ? '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2'
