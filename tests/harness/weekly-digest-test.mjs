@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -298,6 +298,26 @@ const ROWS = [
     const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], upload: old });
     check('in the mail, in the committee block, red', /color:#b91c1c;font-weight:bold">העלאת העוזר לחשבון/.test(h) && h.indexOf('העלאת העוזר') > h.indexOf(T.committee), h.slice(0, 120));
     check('no upload meta: no line', !/העלאת העוזר/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
+  }
+
+  {
+    console.log('\nNevo versions (server_state.nevo_versions, 07/10/2026)');
+    const now = Date.parse('2026-11-03T08:00:00Z');
+    const at = '2026-11-02T05:30:00Z';
+    const j = (o) => JSON.stringify(o);
+    check('never ran: a grey line, not red', /לא רץ עדיין/.test(nevoLine(null, now).text) && !nevoLine(null, now).red);
+    check('ran, no change: grey, with the date', /אין שינוי.*02\/11\/2026/.test(nevoLine(j({ at, ok: true, changed: [] }), now).text) && !nevoLine(j({ at, ok: true, changed: [] }), now).red);
+    const ch = nevoLine(j({ at, ok: true, changed: [{ id: 'leg-nevo-61', s: 'תקנות עבודה בגובה', old: '2024-01-01', new: '2026-10-20' }] }), now);
+    check('a changed law: red, named, with the new version date', ch.red && /תקנות עבודה בגובה \(20\/10\/2026\)/.test(ch.text), ch);
+    check('failed run: red with the reason', nevoLine(j({ at, ok: false, error: 'nevo 403' }), now).red && /nevo 403/.test(nevoLine(j({ at, ok: false, error: 'nevo 403' }), now).text));
+    const old = nevoLine(j({ at: new Date(now - (NEVO_STALE_DAYS + 1) * DAY).toISOString(), ok: true, changed: [] }), now);
+    check('stale run: red (the Routine stopped)', old.red && /לא רץ מאז/.test(old.text), old);
+    check('broken JSON: treated as never ran', /לא רץ עדיין/.test(nevoLine('{oops', now).text));
+    const many = nevoLine(j({ at, ok: true, changed: Array.from({ length: 11 }, (_, i) => ({ id: 'leg-nevo-' + i, s: 'חוק ' + i })) }), now);
+    check('many changes: cut at 8 with +N', /\+3$/.test(many.text), many.text);
+    const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], nevo: ch });
+    check('in the mail, red', /color:#b91c1c;font-weight:bold">מעקב נבו/.test(h));
+    check('no nevo meta: no line', !/מעקב נבו/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
