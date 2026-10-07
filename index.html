@@ -20008,11 +20008,14 @@ function _truRouteRemember(c){
 function _truLocOf(r){return String(r.loc||(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||'').replace(/\s*\u00b7\s*/g,', ');}
 // A photo still waiting in the offline queue has no address anyone can open.
 function _truRoutePhoto(r){var p=String(r.photo_url||'');return (p&&p.indexOf('pending:')!==0)?p:'';}
+// 07/10/2026 (Michael: the photo link in WhatsApp answered "Bucket not found"): the photos bucket
+// is private since 21/04/2026, so the message carries a signed link, valid 30 days (his choice).
+var TRU_PHOTO_LINK_SEC=30*86400,_truPhotoLinks={};
 function _truRouteOpen(id){
   var r=_truFind(id);if(!r)return;
   _truRouteId=id;
   // Warm the photo's signed link now, so the work order can carry it at once.
-  try{var p0=_truRoutePhoto(r);if(p0)_sign(p0,function(){});}catch(e){}
+  try{var p0=_truRoutePhoto(r);if(p0){_sign(p0,function(){});_sign(p0,function(s){if(s)_truPhotoLinks[p0]=s;},TRU_PHOTO_LINK_SEC);}}catch(e){}
   var t=_truTask(r.t);
   var sum=g('tru-route-sum');
   if(sum)sum.innerHTML='<strong>'+esc(r.f||'')+'</strong><br>'+esc(_truLocOf(r))+', '+esc(t?t.t:'')+', '+fd(r.d)+(r.u?', '+esc(r.u):'');
@@ -20059,7 +20062,8 @@ function _truRouteText(r,f){
   L.push('\u05d0\u05d6\u05d5\u05e8: '+_truLocOf(r));
   if(t)L.push('\u05de\u05e9\u05d9\u05de\u05d4: '+r.t+'. '+t.t);
   L.push('\u05d3\u05d5\u05d5\u05d7: '+fd(r.d)+(r.u?' \u05e2\u05dc \u05d9\u05d3\u05d9 '+r.u:''));
-  var p=_truRoutePhoto(r);if(p)L.push('\u05ea\u05de\u05d5\u05e0\u05d4: '+p);
+  // Never the bare storage address (404 outside the app); no signed link yet = point to the app link.
+  var p=_truRoutePhoto(r);if(p)L.push('\u05ea\u05de\u05d5\u05e0\u05d4: '+(_truPhotoLinks[p]||'\u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d1\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05de\u05d8\u05d4'));
   var who=_truRouteWho(f);
   L.push('\u05dc\u05d8\u05d9\u05e4\u05d5\u05dc: '+(who||'')+(f.due?(who?', ':'')+'\u05e2\u05d3 '+fd(f.due):''));
   if(f.notes)L.push('\u05d4\u05e0\u05d7\u05d9\u05d5\u05ea: '+f.notes);
@@ -23288,7 +23292,10 @@ function _uploadErr(status,bodyText){
   toast('\u05d4\u05e2\u05dc\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+_uploadErrMsg(status));
 }
 var _signCache={};
-function _sign(u,cb){
+// sec: how long the link lives (default an hour). A longer link for a message that
+// leaves the app (07/10/2026, the bucket is private: a /public/ URL answers 404).
+function _sign(u,cb,sec){
+  sec=sec||3600;
   if(!u){cb('');return;}
   if(/^data:/i.test(u)){cb(u);return;}
   // Pass-through for absolute http(s) URLs that aren't Supabase Storage —
@@ -23297,13 +23304,13 @@ function _sign(u,cb){
   if(/^https?:\/\//i.test(u) && !/\/storage\/v1\/object\//.test(u)){cb(u);return;}
   var m=String(u).match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^\/]+)\/([^?]+)/);
   if(!m){cb('');return;}
-  var bucket=m[1],path=m[2],key=bucket+'/'+path,c=_signCache[key];
+  var bucket=m[1],path=m[2],key=bucket+'/'+path+(sec===3600?'':'|'+sec),c=_signCache[key];
   if(c&&c.exp>Date.now()){cb(c.url);return;}
   _sbAuth().then(function(){
     if(!_sbToken)throw new Error('no session');
-    return fetch(SBU+'/storage/v1/object/sign/'+bucket+'/'+path,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});
+    return fetch(SBU+'/storage/v1/object/sign/'+bucket+'/'+path,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:sec})});
   }).then(function(r){return r&&r.ok?r.json():null;}).then(function(d){
-    if(d&&d.signedURL){var s=SBU+'/storage/v1'+d.signedURL;_signCache[key]={url:s,exp:Date.now()+55*60*1000};cb(s);}
+    if(d&&d.signedURL){var s=SBU+'/storage/v1'+d.signedURL;_signCache[key]={url:s,exp:Date.now()+(sec-300)*1000};cb(s);}
     else cb('');
   }).catch(function(){cb('');});
 }
