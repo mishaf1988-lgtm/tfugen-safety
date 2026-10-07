@@ -20,8 +20,11 @@ function measure(sel) {
   root.querySelectorAll('input:not([type=hidden]),select,textarea,button,label,.b,h2,h3,.modal-title,.card-title').forEach((el) => {
     const r = el.getBoundingClientRect();
     if (!r.width || !el.offsetParent) return;
-    // Inside a scrolling table box the box is what has to fit.
-    const box = el.closest('.tbl-wrap');
+    // Inside a scrolling table box the box is what has to fit. On a phone the table is cards
+    // and the box does not scroll (overflow visible): then every button must be on screen
+    // (07/10/2026: 3 buttons of a talk sat off the left edge and this test passed).
+    const wrap = el.closest('.tbl-wrap');
+    const box = wrap && /auto|scroll/.test(getComputedStyle(wrap).overflowX) ? wrap : null;
     const lim = box ? box.getBoundingClientRect() : { left: 0, right: W };
     if (!box && (r.left < -1 || r.right > W + 1)) out.off.push((el.id || el.tagName + ':' + el.textContent.trim().slice(0, 18)) + ' ' + Math.round(r.left) + '..' + Math.round(r.right));
     if (box && (lim.left < -1 || lim.right > W + 1)) out.off.push('tbl-wrap ' + Math.round(lim.left) + '..' + Math.round(lim.right));
