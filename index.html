@@ -7442,6 +7442,16 @@ function _mrNext(){
   if(!last&&!SB_ON)return [];
   return [{name:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',owner:last?'\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+fd(last.ts):'\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05d0\u05e3 \u05e4\u05e2\u05dd',mod:'mr',modLabel:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',e:last?_plusMonths(last.ts,_MR_FREQ_M):null,id:last?last.id:null}];
 }
+// 07/10/2026 (Michael, "בצע"): the yearly safety management programme (תקנות התכנית לניהול
+// הבטיחות 3(ב), "מדי שנה", law.md in the assistant). It lives in docs like any document, with
+// its expiry 12 months from approval, so once it is there docs already brings its date. Until
+// then a fixed "never done" row, like the management review, so the duty is not invisible.
+var _SMP_RE=/\u05ea[\u05d5]?\u05db\u05e0\u05d9\u05ea.*\u05e0\u05d9\u05d4\u05d5\u05dc.*\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/;
+function _smpNext(){
+  if(!SB_ON)return [];
+  if((DB.docs||[]).some(function(r){return _SMP_RE.test(String(r.n||''));}))return [];
+  return [{name:'\u05ea\u05db\u05e0\u05d9\u05ea \u05dc\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05ea\u05e7\u05e0\u05d4 3(\u05d1), \u05de\u05d3\u05d9 \u05e9\u05e0\u05d4)',owner:'\u05dc\u05d0 \u05d4\u05d5\u05d6\u05e0\u05d4 \u05d1\u05de\u05e1\u05de\u05db\u05d9\u05dd',mod:'smp',modLabel:'\u05de\u05e1\u05de\u05da',e:null,id:null}];
+}
 function _legNext(){
   return (DB.leg||[]).map(function(r){
     return {name:r.s||r.law_num||'',owner:r.c_date?'\u05d4\u05d5\u05e2\u05e8\u05da: '+fd(r.c_date)+(r.c?' ('+r.c+')':''):'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da',mod:'leg',modLabel:'\u05d4\u05e2\u05e8\u05db\u05ea \u05e6\u05d9\u05d5\u05ea',e:r.c_date?_plusMonths(r.c_date,_LEG_FREQ_M):null,id:r.id};
@@ -7566,6 +7576,7 @@ function _expNoDate(){
   _drlNext().forEach(function(x){if(!x.e)out.push(x);});
   _audNext().forEach(function(x){if(!x.e)out.push(x);});
   _mrNext().concat(_legNext(),_envNext()).forEach(function(x){if(!x.e)out.push(x);});
+  _smpNext().forEach(function(x){out.push(x);});
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
@@ -7678,6 +7689,7 @@ function rExp(){
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'-';
     if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
     if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
+    if(i.mod==='smp')act='<button class="btn btn-d btn-sm" onclick="goPage(\'docs\')" title="\u05dc\u05de\u05e1\u05de\u05db\u05d9\u05dd">+ \u05de\u05e1\u05de\u05da</button>';
     if(i.mod==='mr')act='<button class="btn btn-d btn-sm" onclick="goPage(\'mr\')" title="\u05dc\u05d3\u05e3 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05d4\u05e0\u05d4\u05dc\u05d4">+ \u05e1\u05e7\u05d9\u05e8\u05d4</button>';
     if(i.mod==='leg')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'leg\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'+(i.e?' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="_legReconfirm(this.dataset.li)" title="\u05e0\u05d1\u05d3\u05e7 \u05d4\u05d9\u05d5\u05dd, \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4">\u2705 \u05d1\u05ea\u05d5\u05e7\u05e3</button>':'')+' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="editLeg(this.dataset.li)" title="\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4">\u270f\ufe0f \u05e7\u05d1\u05d9\u05e2\u05d4</button>';
     if(i.mod==='env')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-ety="'+esc(i.name)+'" onclick="_envNew(this.dataset.ety)" title="\u05e8\u05e9\u05d5\u05dd \u05de\u05d3\u05d9\u05d3\u05d4 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05de\u05d3\u05d9\u05d3\u05d4</button>';

@@ -135,6 +135,24 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     await page.evaluate(() => { goPage('exp'); expFilter('all'); rExp(); });
     await page.locator('#tb-exp').locator('xpath=ancestor::div[contains(@class,"card")][1]').screenshot({ path: process.env.SHOT });
   }
+  console.log('\nSafety management programme, yearly (07/10/2026)');
+  const smp = () => page.evaluate(() => ({ none: _expNoDate().filter((x) => x.mod === 'smp'), dated: _expCollect().filter((x) => x.mod === 'smp') }));
+  await page.evaluate(() => { SB_ON = false; DB.docs = []; });
+  let s = await smp();
+  check('before sync: no row', !s.none.length && !s.dated.length, s);
+  await page.evaluate(() => { SB_ON = true; DB.docs = [{ id: 'd1', n: 'נוהל עבודה בגובה', e: '2027-01-01' }]; });
+  s = await smp();
+  check('no such document: one fixed row in "no date", never in the dated list', s.none.length === 1 && !s.dated.length && /3\(ב\)/.test(s.none[0].name), s);
+  await page.evaluate(() => { DB.docs.push({ id: 'd2', n: 'תוכנית לניהול הבטיחות 2026', e: '2027-10-01' }); });
+  s = await smp();
+  check('document added (spelled תוכנית): the fixed row is gone', !s.none.length, s);
+  const docRow = await page.evaluate(() => _expCollect().some((x) => x.mod === 'docs' && x.id === 'd2' && x.e === '2027-10-01'));
+  check('...and its expiry comes from docs, like any document', docRow);
+  await page.evaluate(() => { DB.docs = [{ id: 'd3', n: 'תכנית לניהול הבטיחות', e: null }]; });
+  check('document with no expiry (spelled תכנית): no fixed row, docs shows it with no date', (await smp()).none.length === 0 && await page.evaluate(() => _expNoDate().some((x) => x.mod === 'docs' && x.id === 'd3')));
+  const btn = await page.evaluate(() => { DB.docs = []; goPage('exp'); expFilter('all'); rExp();
+    return [...document.querySelectorAll('#tb-exp tr')].some((tr) => /3\(ב\)/.test(tr.textContent) && [...tr.querySelectorAll('button')].some((b) => /goPage\('docs'\)/.test(b.getAttribute('onclick') || ''))); });
+  check('the row has a button to the documents page', btn);
   check('no page errors', !errs.length, errs);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

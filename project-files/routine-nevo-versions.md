@@ -4,9 +4,9 @@
 
 מבנה הערך: `{"at": ISO, "ok": true|false, "error": "...", "v": {"leg-nevo-01": "YYYY-MM-DD"}, "changed": [{"id", "s", "old", "new"}], "failed": ["leg-nevo-..."]}`.
 
-**הוקם 07/10/2026 מהענן:** `trig_0125XHPwWvh1Z1yLyk9SypW1`, ריצה ראשונה 03/11/2026. **חסר: connectors (Supabase, Claude_Code_Remote), מיכאל מוסיף ביד** ב-https://claude.ai/code/routines/trig_0125XHPwWvh1Z1yLyk9SypW1 . בלי זה הריצה נעצרת בצעד הראשון: Routine שנוצר מהענן לא מקבל connectors (`create_trigger`: "the connectors parameter is not available for this organization"), וגם לא את כלי השיחות; בהפעלת בדיקה ב-07/10 `list_triggers` לא נמצא. לבדוק אחרי ההוספה עם `get_trigger` (`mcp_connections`).
+**הוקם 07/10/2026 מהענן, בלי תלות במיכאל:** `trig_01DAFczYPND3M4VP9u2G9Hnn`, מופעל לתוך השיחה העובדת `session_01CrdV8icakCa1oWpMScphBB` ("עובד Routines", לא לארכב). Routine רגיל שנוצר מהענן לא מקבל connectors ולא את כלי השיחות (נבדק בהפעלת ניסיון, והראשון `trig_0125XHPwWvh1Z1yLyk9SypW1` נמחק); Routine שמופעל לתוך שיחה קיימת משתמש בכלים שלה, ולשיחה הזו יש Supabase, `list_triggers` ו-`create_session` (נבדק: `count(*)` על `leg` = 39). הפרומפט בטריגר מתחיל ב"ריצה חדשה... git fetch + reset" כי השיחה נשמרת בין ריצות. ההגדרות למטה הן לתיעוד; אין מה להוסיף ביד.
 
-**ההגדרות:** Connectors: Supabase, Claude_Code_Remote. לוח: ב-3 לכל חודש, 07:22 שעון ישראל (`CRON_TZ=Asia/Jerusalem 22 7 3 * *`), שיחה חדשה בכל הפעלה, Sonnet 5.5.
+**ההגדרות:** לוח: ב-3 לכל חודש, 07:22 שעון ישראל (`CRON_TZ=Asia/Jerusalem 22 7 3 * *`), Sonnet 5.5.
 
 ---
 משימה חודשית: מעקב אחרי נוסח החוקים בנבו. כל הודעה בעברית. תאריכים DD/MM/YYYY.
