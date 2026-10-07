@@ -348,6 +348,10 @@ export function odScanFiles(raw, nowMs) {
 // or YYYY-MM-DD in it, else the file's last change. Red with no line in 8 days, a failure
 // word in the last line, or no file. Pure.
 export const UPLOAD_STALE_DAYS = 8;
+// 07/10/2026 (Michael chose it after the task stopped at 06/10 10:20 unnoticed for a day): a
+// zip or .skill still in the folder's top (the task moves what it handled to "הועלו") while the
+// last log line is over 24 hours old = the task on the computer is not running.
+export const UPLOAD_STUCK_MS = 24 * 3600e3;
 export function logText(bytes) {
   const b = bytes || new Uint8Array(0);
   if (b[0] === 0xff && b[1] === 0xfe) return new TextDecoder('utf-16le').decode(b.subarray(2));
@@ -368,6 +372,17 @@ export function uploadLine(log, nowMs) {
   const today = new Date(nowMs).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const age = at ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(at + 'T12:00:00Z')) / DAY) : null;
   const failed = /\u05e0\u05db\u05e9\u05dc|\u05e9\u05d2\u05d9\u05d0|fail|error/i.test(last);
+  const pending = (log.pending || []).filter(Boolean);
+  if (at && pending.length) {
+    // The line's own time (HH:MM after its date), Israel time taken as UTC+3: an hour off at
+    // most in winter, nothing against a 24-hour limit.
+    const hm = /\b(\d{1,2}):(\d{2})\b/.exec(last.substring(m ? m.index + m[0].length : 0));
+    const lastMs = Date.parse(at + 'T' + (hm ? hm[1].padStart(2, '0') + ':' + hm[2] : '12:00') + ':00Z') - 3 * 3600e3;
+    if (nowMs - lastMs > UPLOAD_STUCK_MS) {
+      const names = pending.join(', ');
+      return { red: true, stuck: true, text: t + '\u05de\u05e9\u05d9\u05de\u05ea \u05d4\u05d4\u05e2\u05dc\u05d0\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ' + fd(at) + (hm ? ' ' + hm[1] + ':' + hm[2] : '') + ', ' + pending.length + ' \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: ' + (names.length > 120 ? names.substring(0, 117) + '...' : names) };
+    }
+  }
   const stale = age == null || age > UPLOAD_STALE_DAYS;
   return { red: failed || stale, text: t + (at ? '\u05e9\u05d5\u05e8\u05d4 \u05d0\u05d7\u05e8\u05d5\u05e0\u05d4 \u05de-' + fd(at) + ': ' : '') + last.substring(0, 160) + (stale && age != null ? ' (\u05d0\u05d9\u05df \u05e9\u05d5\u05e8\u05d4 \u05d7\u05d3\u05e9\u05d4 ' + age + ' \u05d9\u05de\u05d9\u05dd)' : '') };
 }
@@ -382,7 +397,15 @@ export async function uploadLog(env) {
     const mod = (await r.json()).lastModifiedDateTime || null;
     const c = await fetch(base + ':/content', { headers: { Authorization: 'Bearer ' + token } });
     if (!c.ok) return { error: 'onedrive ' + c.status };
-    return { mod, text: logText(new Uint8Array(await c.arrayBuffer())) };
+    const text = logText(new Uint8Array(await c.arrayBuffer()));
+    // What waits in the folder's top (read only). A failed listing just leaves the check out.
+    let pending = [];
+    try {
+      const dir = UPLOAD_LOG.split('/').slice(0, -1).map(encodeURIComponent).join('/');
+      const k = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + dir + ':/children?$select=name,file&$top=200', { headers: { Authorization: 'Bearer ' + token } });
+      if (k.ok) pending = ((await k.json()).value || []).filter((x) => x && x.file && /\.(zip|skill)$/i.test(x.name || '')).map((x) => x.name);
+    } catch (e) { pending = []; }
+    return { mod, text, pending };
   } catch (e) {
     return { error: String((e && e.message) || e).substring(0, 80) };
   }
