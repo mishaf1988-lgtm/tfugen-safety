@@ -62,6 +62,6 @@ check('every mail send in functions/ is an approved call site', sends == APPROVE
 check('every Graph DELETE in functions/ is an approved call site', deletes == APPROVED_DELETE, {'found': deletes, 'approved': APPROVED_DELETE})
 check('the hook file exists and is wired', os.path.exists(os.path.join(ROOT, '.claude', 'hooks', 'guard-365.py'))
       and 'guard-365.py' in open(os.path.join(ROOT, '.claude', 'settings.json'), encoding='utf-8').read())
-check('the assistant carries the same rules', os.path.exists(os.path.join(ROOT, 'project-files', 'claude-ai-skill', 'michael-assistant', 'references', 'm365.md')))
+check('CLAUDE.md points to the rules for all the interfaces (michael-skills since 07/10/2026)', 'michael-skills' in open(os.path.join(ROOT, 'CLAUDE.md'), encoding='utf-8').read() and 'references/m365.md' in open(os.path.join(ROOT, 'CLAUDE.md'), encoding='utf-8').read())
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)

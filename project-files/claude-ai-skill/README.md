@@ -1,11 +1,14 @@
-# skill לחשבון claude.ai של מיכאל
+# skills לחשבון claude.ai של מיכאל: עברו ל-michael-skills
 
-**`michael-assistant/`: העוזר האישי של מיכאל (04/10/2026).** נטען בצ'אט, ב-Cowork וב-Claude Code. `SKILL.md` קצר (נטען בכל שיחה), והידע לפי נושא ב-`references/`: `lessons.md` (הכללים מטעויות), `role.md`, `mail.md`, `iso.md`, `ncr.md`, `excel-decks.md`, `law.md`, `learning.md` (לולאת הלמידה וסריקת השדרוג).
-מחליף את `michael-work-lessons/` ואת `ncr-capa-writing/`, שנשארים פה לעיון עד שמיכאל מוחק אותם מהחשבון. עדכון חדש נכנס רק ל-`michael-assistant/`.
+**מ-07/10/2026 (שלב ב', מיכאל בשאלון: "המקור עובר ל-michael-skills") המקור היחיד הוא ה-repo הפרטי `mishaf1988-lgtm/michael-skills`** (https://github.com/mishaf1988-lgtm/michael-skills). אין פה עותק, בכוונה: שני עותקים התפצלו כבר כמה פעמים (עוזר לקח 34).
 
-**`m365-guard/`: שומר Microsoft 365 (06/10/2026).** אותם כללים כמו `michael-assistant/references/m365.md`, ב-skill קצר שעומד לבד, כדי שייטען בכל פעולה על 365 גם כשהעוזר לא נטען. שינוי בכלל: בשני המקומות (`account-skill-test.py` בודק שהכללים המרכזיים בשניהם).
+| מה | איפה ב-michael-skills |
+|---|---|
+| העוזר `michael-assistant` (כללים, `references/`) | `plugins/michael/skills/michael-assistant/` |
+| כללי 365 לכל הממשקים | `plugins/michael/skills/michael-assistant/references/m365.md` ו-`plugins/michael/skills/m365-guard/SKILL.md` |
+| הצעות לעוזר, והמיזוג היומי (א'-ה' 17:55) | `proposals/` (הכללים ב-`proposals/README.md`) |
+| `michael-work-lessons`, `ncr-capa-writing` (העוזר החליף אותם) | `archive/`, מחוץ ל-plugin |
 
-**`proposals/`: הצעות לעוזר (07/10/2026).** כל צ'אט כותב לשם תוספות בלבד, עם `אושר ע"י מיכאל`; משימת מיזוג בענן (א'-ה' 17:55) ממזגת, מעלה גרסה ומעבירה ל-`proposals/merged/`. ראו `proposals/README.md`.
-
-להעלאה: `cd project-files/claude-ai-skill && zip -r michael-assistant.zip michael-assistant`, ואז ב-claude.ai: Settings > Capabilities > Skills > Upload skill.
-כשנוסף לקח כללי ל-`tfugen-lessons`, להוסיף אותו גם ל-`michael-assistant/references/lessons.md` (בלי נתיבים של ה-repo), שורה בהיסטוריה ב-`SKILL.md`, ולשלוח zip למיכאל.
+- **הגעה לחשבון:** סנכרון plugin, לבד, בכל push ל-main שם. אין zip ואין העלאה ידנית.
+- **בדיקות:** `checks` שם (מספר גרסה גבוה מ-main, מונה הכללים, כללי 365 זהים בשני ה-skills). פה נשאר רק ה-hook `guard-365.py`, שאוכף את כללי 365 בקוד בכל שיחת Claude Code על ה-repo הזה.
+- **שיחת Code פה שצריכה את העוזר או את m365.md:** `add_repo` (owner `mishaf1988-lgtm`, repo `michael-skills`), או `git clone https://github.com/mishaf1988-lgtm/michael-skills`. שינוי בעוזר = PR שם, ובתיאור ה-PR פה `skill: ... michael-skills#N`.

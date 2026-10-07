@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""michael-assistant: a PR that changes the assistant must give it a version
+"""Since 07/10/2026 (stage B) michael-assistant and m365-guard live in
+mishaf1988-lgtm/michael-skills, which runs the same gate on its own PRs. What is
+left here: the repo skills below (opt-in).
+
+History: a PR that changed the assistant had to give it a version
 higher than main's (04/10/2026, Michael: "approve all"). Twice in one day two
 sessions wrote a different "(4)" and then a different "(5)"; only a merge
 conflict found the second pair. Since 04/10/2026 a merge to main is uploaded to
@@ -18,8 +22,6 @@ Test: tests/harness/skill-version-gate-test.py
 """
 import os, re, subprocess, sys
 
-DIR = 'project-files/claude-ai-skill/michael-assistant/'
-SKILL = DIR + 'SKILL.md'
 # "גרסה: DD/MM/YYYY (N)"
 VER = re.compile('גרסה: (\\d{2})/(\\d{2})/(\\d{4}) \\((\\d+)\\)')
 
@@ -29,7 +31,7 @@ def ver(text):
     return (int(m.group(3)), int(m.group(2)), int(m.group(1)), int(m.group(4))) if m else None
 
 
-def problem(changed, base_text, head_text, d=DIR, required=True):
+def problem(changed, base_text, head_text, d, required=False):
     if not any(f.startswith(d) for f in changed):
         return None
     b, h = ver(base_text), ver(head_text)
@@ -41,8 +43,8 @@ def problem(changed, base_text, head_text, d=DIR, required=True):
 
 
 def skill_dirs(changed):
-    """michael-assistant (version line required) + each changed repo skill (opt-in)."""
-    out = [(DIR, True), ('project-files/claude-ai-skill/m365-guard/', True)]
+    """Each changed repo skill (opt-in)."""
+    out = []
     for f in changed:
         m = re.match(r'(\.claude/skills/[^/]+/)', f)
         if m and (m.group(1), False) not in out:

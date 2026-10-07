@@ -18,7 +18,8 @@ retro lines that found something.
 Every PR (02/10/2026, Michael: "the skill has to keep learning from every job
 we do"): a line "skill: <what was learned and where>" or "skill: אין". Any
 answer other than none must come with a changed file under .claude/skills/ or
-project-files/claude-ai-skill/, so "learned" means written down, not said.
+project-files/claude-ai-skill/, so "learned" means written down, not said. Since 07/10/2026
+the account skills live in michael-skills: "michael-skills#N" in the line counts.
 
 Input: env PR_TITLE, PR_BODY; changed file names on stdin, one per line.
 Exit 0 = ok, 1 = missing lesson. Called from .github/workflows/tests.yml.
@@ -32,6 +33,7 @@ RETRO = re.compile(r"^\s*(retro|רטרו)\s*:\s*(\S.*)$", re.I | re.M)
 RETRO_NONE = re.compile(r"^(אין|none|-)\W*$", re.I)
 SKILL = re.compile(r"^\s*(skill|סקייל)\s*:\s*(\S.*)$", re.I | re.M)
 SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
+EXT = re.compile(r"michael-skills(#|/pull/)\d+")
 WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.M)
 
 
@@ -44,9 +46,9 @@ def check(title, body, files):
     if not sk:
         return False, ("no skill line. Add 'skill: <what was learned, which skill was updated>' "
                        "or 'skill: אין'. See tfugen-lessons, section Retro.")
-    if not RETRO_NONE.match(sk.group(2).strip()) and not any(f.startswith(SKILL_DIRS) for f in files):
+    if not RETRO_NONE.match(sk.group(2).strip()) and not any(f.startswith(SKILL_DIRS) for f in files) and not EXT.search(sk.group(2)):
         return False, ("the skill line says something was learned, but no skill file changed. "
-                       "Update a SKILL.md under .claude/skills/ (or project-files/claude-ai-skill/) "
+                       "Update a SKILL.md under .claude/skills/ (or name the michael-skills PR: michael-skills#N) "
                        "in this PR, or write 'skill: אין'.")
     if not FIX.search(title or ""):
         return True, "not a fix PR"

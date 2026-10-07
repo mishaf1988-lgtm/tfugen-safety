@@ -71,8 +71,8 @@ jobs:
       - env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: git -c core.quotepath=off diff -U0 "$BASE" HEAD -- STATUS.md project-files/STATUS-archive.md | python3 .github/scripts/rule7-gate.py
-      # michael-assistant: a change must raise the version above main's (04/10/2026; a merge to main
-      # is uploaded to the account, two parallel "(5)" were caught only by a merge conflict).
+      # Repo skills with a version line must raise it above main's (04/10/2026). The account skills
+      # (michael-assistant, m365-guard) moved to michael-skills on 07/10/2026, which runs the same gate.
       - env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: python3 .github/scripts/skill-version-gate.py

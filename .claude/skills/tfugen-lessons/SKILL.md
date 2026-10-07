@@ -80,12 +80,6 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 
 ## בדיקות שבודקות את הדבר הנכון
 
-**63. hook על Bash בלבד, ו-PowerShell עקף אותו (07/10/2026, PR זה).**
-מה קרה: guard-365 בדק רק `name == "Bash"`; במחשב (Windows) יש גם כלי PowerShell, ו-`Move-Item` / `Remove-Item` בתיקיית OneDrive עברו בלי בדיקה.
-הכלל: hook שבודק פקודת מעטפת בודק את כל כלי המעטפת (Bash, PowerShell), גם בקוד וגם ב-matcher של `settings.json`.
-נאכף: `guard-365-test.py` (מקרי PowerShell, וה-matcher ב-settings.json תופס PowerShell).
-חזר: 0
-
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
@@ -124,7 +118,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: קישור `/public/` לתמונה בוואטסאפ, וה-bucket פרטי מ-21/04: "Bucket not found".
 הכלל: הנחה על דבר חי (bucket, RLS, הרשאה, צורת תשובה של API) נבדקת מול האמיתי לפני קוד; מוק נבנה מתשובה אמיתית. קישור שיוצא נבדק בלי התחברות.
 נאכף: `trustee-route-test.js` (אין `/object/public/`), `od-pick-test.mjs` (חיפוש בלי path, כמו האמיתי).
-חזר: 1 (07/10: מוק חיפוש Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני; החיפוש החזיר ריק, Chrome מצא).
+חזר: 2 (07/10: מוק חיפוש Graph עם `parentReference.path`, שאין ב-OneDrive הארגוני; Chrome מצא. 07/10: "אין repo ל-skills" בלי `list_repos`; מיכאל: "זה כבר קיים בפרטי").
 
 **60. אי-התאמה שראיתי נשארה בפתק (06/10/2026, PR זה).**
 מה קרה: בסקיצות כתבתי "הכרטיס 13, העמודות 12" ולא תיקנתי; מיכאל מצא את זה שוב בישיבה.
