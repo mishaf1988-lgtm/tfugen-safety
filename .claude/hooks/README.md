@@ -20,6 +20,7 @@
 | `hebrew-midturn.py` | PostToolUse על כל כלי | **מזכיר** (פעם אחת להודעה) כשהודעת הביניים האחרונה באנגלית, באותו מדד של `hebrew-reply.py`. ה-Stop hook תופס רק בסוף התור (לקח 13, 05/10/2026). `hebrew-midturn-test.py` |
 | `push-recheck.py` | PostToolUse על Bash (`git push`) | **מזהיר** אם `lessons-format-test.py` אדום אחרי ה-push: `push-gate.py` רץ לפני הפקודה ולא רואה commit שנעשה באותה פקודה (05/10/2026). `push-recheck-test.py` |
 | `ci-wait.sh` | (כלי, לא hook) | מחכה לבדיקת `tests` על ה-head של branch (ב-`michael-skills`: `checks`, לפי הארגומנט השני, 07/10/2026). רק הריצה האחרונה של ה-sha קובעת, ו-cancelled לא נספרת (05/10/2026). `tests` של ריצה שעבודה שלה בוטלה נשאר "failure" ולא "cancelled": מזוהה לפי `check_suite` ומדולג, וכל עוד יש עבודה רצה ממשיכים לחכות (#1200). `ci-wait-test.py` (צריך `jq`) |
+| `checkout-guard.py` | PreToolUse על Bash | **חוסם** `git checkout`/`git restore` של קובץ (או `.`) שיש בו שינויים שלא נשמרו מול HEAD, ומפנה ל-`cp` לגיבוי ולחזרה. החלפת branch, `-b`/`-B` ו-`restore --staged` עוברים. לקח 26 חזר פעמיים ב-08/10/2026. `checkout-guard-test.py` |
 | `live-check.py` | PreToolUse על `AskUserQuestion` | **חוסם פעם אחת** שאלון שאומר שמשהו "הקיים/הקיימת" או "כבר קיים/עובד/רץ/מחובר", עם הוראה לבדוק מול המערכת החיה (מסד, הרשאות הטוקן, Graph, `get_trigger`). אותה שאלה בפעם השנייה עוברת. לקח 61 חזר 4 פעמים (08/10/2026: "סריקת המייל הקיימת", מושבתת מ-27/09). `live-check-test.py` |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 

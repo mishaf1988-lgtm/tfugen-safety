@@ -65,8 +65,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **26. ביטול שבירה מכוונת ב-`git checkout` (01/10/2026, BACKLOG 15).**
 מה קרה: `git checkout` על קובץ ששבר בכוונה מחק גם שינויים שלא נכנסו ל-commit.
 הכלל: לפני שבירה `cp` לגיבוי, וביטול ב-`cp` חזרה, לא ב-`git checkout`.
-נאכף: טקסט (אין דרך בקוד: hook לא מבדיל שבירה מתיקון; hook שחוסם `git checkout` על קובץ עם שינויים הוצע למיכאל, לקח 42).
-חזר: 1 (08/10/2026, `weekly-digest.js`: נמחקה שורת הפערים, הוחלה מחדש לפני commit).
+נאכף: hook `checkout-guard.py` (08/10/2026): checkout/restore של קובץ עם שינויים שלא נשמרו נחסם.
+חזר: 2 (08/10/2026 פעמיים, `weekly-digest.js`: שורת הפערים, ואז תיקון מסמך בלי ספק; שתיהן נתפסו ב-`git diff` לפני commit).
 
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
