@@ -111,6 +111,8 @@ const ROWS = [
   check('a request with no answer for ' + QUOTE_WAIT_DAYS + '+ days says so', hs.includes('נשלחה בקשה ' + fdd(plus(-QUOTE_WAIT_DAYS - 1))) && hs.includes('אין תשובה ' + (QUOTE_WAIT_DAYS + 1) + ' ימים'));
   const bad = {}; bad[k1] = { stage: 'whatever' }; bad[k2] = 'x';
   check('a stage that is not sent/quote/order (or not an object) is ignored: the link stays', attachQuotes(QL(), CT, bad, TODAY).filter((x) => x.quote && !x.quote.st).length === 2 && attachQuotes(QL(), CT, null, TODAY).length === 3);
+  const lic = attachQuotes(expiringOf([['מסמך', ['n'], ['o'], [{ id: 'xl1008-d54', n: 'רישיון ייצור מזון', o: 'מיכאל', nt: 'גורם מאשר: משרד הבריאות.', e: plus(-9) }], 'docs'], ['בדיקת ציוד', ['n', 'code'], ['vendor', 'loc'], [{ id: 'q9', n: 'מלגזה', vendor: null, e: plus(-1) }], 'equip_inspections']], TODAY), CT, {}, TODAY);
+  check('a document with no supplier (a license from an authority, live 08/10/2026) gets no link; equipment with no vendor keeps an open one', !lic[0].quote && lic[1].quote && lic[1].quote.href.startsWith('mailto:?subject='), lic.map((x) => !!x.quote));
   check('a list with no quote rows: the table has no extra column (as before)', !hx.includes('>הצעת מחיר</th>'));
 
   console.log('\n2c. recurring duties (02/10/2026, BACKLOG 7): 12 months after the last one, as _drlNext/_audNext/_mrNext/_legNext');

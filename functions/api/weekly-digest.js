@@ -274,7 +274,10 @@ export function attachQuotes(list, contacts, track, today) {
   (list || []).forEach((x) => {
     const key = x.t ? quoteKey(x.t, x.row && x.row.id, x.e) : '';
     if (!key) return;
-    const email = contactOf(vendorOf(x.t, x.row), contacts);
+    const vendor = vendorOf(x.t, x.row);
+    // A document with no supplier (a license from an authority) has no one to ask for a quote (08/10/2026).
+    if (x.t === 'docs' && !vendor) return;
+    const email = contactOf(vendor, contacts);
     const st = track && typeof track === 'object' && track[key] && QSTAGES.indexOf(track[key].stage) >= 0 ? track[key] : null;
     x.quote = { key, email, href: quoteMailto(x, key, email), st, today };
   });
