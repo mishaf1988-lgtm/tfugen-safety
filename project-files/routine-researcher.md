@@ -2,7 +2,7 @@
 
 מיכאל, 08/10/2026: "סוכן שירוץ כמו הסקילים ב-GitHub, שכל הזמן ילמד וכל הזמן יפתח את העוזר שלי"; "יישב איפשהו בענן... בצורה אוטומטית מלאה". בשאלון: "בצע: כל יום א'-ה'", "בצע: כן, קריאה בלבד" (מייל ותיקייה).
 
-**הוקם 08/10/2026:** `trig_016m1m98ssR5HHFGJvir5T3F`, א'-ה' 06:47 שעון ישראל, מופעל לתוך השיחה `session_01TNieNZ9SgMrHMMEK8ChXuo` ("חוקר העוזר", **לא לארכב**). המקור שלה הוא michael-skills, ונבדק שיש לה WebFetch, WebSearch, Microsoft 365 (קריאה), Artifact ו-push ל-main. הדרך הזו כי Routine רגיל מהענן לא מקבל connectors (`tfugen-db` סעיף 7).
+**הוקם 08/10/2026:** `trig_01SfS9dcNiZJZhFEGxUZoH7f`, א'-ה' 06:47 שעון ישראל, חמישה מסלולים לפי יום (חקיקה, סביבה, Claude, עבודה יומית, איכות העוזר), נוצר מתוך השיחה, ויורה לתוכה: `session_01CDERxs3YfVyJVkziMEhTvD` ("חוקר העוזר", **לא לארכב**). המקור שלה הוא michael-skills, ונבדק שיש לה WebFetch, WebSearch, Microsoft 365 (קריאה), Artifact ו-push ל-main. הדרך הזו כי Routine רגיל מהענן לא מקבל connectors (`tfugen-db` סעיף 7).
 
 **איך:** פריט אחד בכל ריצה מ-`plugins/michael/skills/michael-assistant/references/research-queue.md` ב-michael-skills. מה שאומת במקור נכתב לקובץ הנושא, ולא נמצא = "שאלות למיכאל". דחיפה ישירה ל-main (שינוי טקסט, 08/10/2026), שמגיעה לחשבון בסנכרון ה-plugin. פעם בחודש: סריקת skills וארכיון. עלות: ריצה אחת = פער אחד, בערך דולר-שניים.
 
