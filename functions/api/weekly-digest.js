@@ -131,7 +131,7 @@ const H = {
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
-  nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-',
+  nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
   never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
   neverWhy: '. \u05d0\u05d9\u05df \u05dc\u05d6\u05d4 \u05de\u05d5\u05e2\u05d3, \u05d5\u05dc\u05db\u05df \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea \u05dc\u05de\u05d8\u05d4.',
@@ -262,6 +262,7 @@ export function digestHtml(d, today, meta) {
   h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
   if (m.upload) h += '<p style="margin:4px 0' + (m.upload.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.upload.text) + '</p>';
   if (m.nevo) h += '<p style="margin:4px 0' + (m.nevo.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.nevo.text) + '</p>';
+  if (m.asst) h += '<p style="margin:4px 0' + (m.asst.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.asst.text) + '</p>';
   const on = m.odNew || [];
   h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
@@ -444,9 +445,45 @@ export function nevoLine(raw, nowMs) {
   return { text: H.nevo + H.nevoNone + fd(String(r.at).substring(0, 10)), red: false };
 }
 
+// 08/10/2026 (Michael, "בצע: מפתח קריאה ל-GitHub"): the researcher Routine closes one gap a
+// weekday in michael-skills (private), research-queue.md: "## נסגר" lines start "- DD/MM/YYYY,",
+// "## שאלות למיכאל" lines start "- ". The digest reads the file with a read-only token
+// (env.GH_SKILLS_TOKEN); no token = no line. Nothing closed in 7 days = red (the Routine stopped).
+export const ASST_QUEUE = 'https://api.github.com/repos/mishaf1988-lgtm/michael-skills/contents/plugins/michael/skills/michael-assistant/references/research-queue.md';
+function mdSection(md, title) {
+  const out = []; let on = false;
+  for (const ln of String(md || '').split(/\r?\n/)) {
+    if (/^##\s/.test(ln)) { on = ln.replace(/^##\s+/, '').trim().indexOf(title) === 0; continue; }
+    if (on && /^-\s+\S/.test(ln)) out.push(ln.replace(/^-\s+/, '').trim());
+  }
+  return out;
+}
+export function assistantLine(q, nowMs) {
+  if (!q) return null;
+  if (q.error) return { text: H.asst + H.asstFail + '(' + String(q.error).substring(0, 80) + ')', red: true };
+  const from = nowMs - 7 * DAY;
+  const closed = mdSection(q.text, '\u05e0\u05e1\u05d2\u05e8').filter((x) => {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(x);
+    return m && Date.UTC(+m[3], +m[2] - 1, +m[1]) + DAY > from;
+  });
+  const qs = mdSection(q.text, '\u05e9\u05d0\u05dc\u05d5\u05ea');
+  const cut = (t) => (t.length > 90 ? t.substring(0, 87) + '...' : t);
+  const parts = [closed.length ? H.asstClosed + closed.length + H.asstGaps : H.asstNone];
+  parts.push(qs.length ? qs.length + H.asstQs + cut(qs[0]) : H.asstNoQs);
+  return { text: H.asst + parts.join(', '), red: !closed.length };
+}
+export async function assistantQueue(env) {
+  if (!env.GH_SKILLS_TOKEN) return null;
+  try {
+    const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': 'tapugan-safety-digest' } });
+    if (!r.ok) return { error: 'HTTP ' + r.status };
+    return { text: await r.text() };
+  } catch (e) { return { error: String((e && e.message) || e) }; }
+}
+
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
-  const [hazards, reports, tasks, st, empty, exp, tk, ul] = await Promise.all([
+  const [hazards, reports, tasks, st, empty, exp, tk, ul, aq] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
@@ -455,6 +492,7 @@ async function build(env) {
     expiries(env, today),
     talkData(env).catch(() => null),
     odConfigured(env) ? uploadLog(env) : Promise.resolve({ error: 'not configured' }),
+    assistantQueue(env),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -466,7 +504,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), asst: assistantLine(aq, Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

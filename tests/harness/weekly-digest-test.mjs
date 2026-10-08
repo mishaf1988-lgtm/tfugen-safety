@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -318,6 +318,25 @@ const ROWS = [
     const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], nevo: ch });
     check('in the mail, red', /color:#b91c1c;font-weight:bold">מעקב נבו/.test(h));
     check('no nevo meta: no line', !/מעקב נבו/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
+    console.log('\nThe assistant this week (michael-skills research-queue.md, 08/10/2026)');
+    // The real file of 08/10/2026: two closed lines dated 08/10, no questions.
+    const rq = '# תור\n## פתוח\n- פריט פתוח 1\n## פעם בחודש\n- סריקה\n## שאלות למיכאל\n(הסבר)\n\n## נסגר\n(תאריך, פריט)\n- 08/10/2026, חודשי: סריקת skills.\n- 08/10/2026, ה\' 1 (בדיקה מול בקשות אמיתיות): נבדקו 3 בקשות.\n';
+    const n11 = Date.parse('2026-10-11T05:00:00Z');
+    const a1 = assistantLine({ text: rq }, n11);
+    check('the real file on Sunday 11/10: 2 closed, no questions, grey', a1.text === 'העוזר השבוע: החוקר סגר 2 פערים, אין שאלות פתוחות' && !a1.red, a1);
+    check('open items and the monthly list are not counted as closed', !/[3-9] פערים/.test(a1.text));
+    const a2 = assistantLine({ text: rq.replace('(הסבר)\n', '(הסבר)\n- האם תקנות הגהות חלות על המחסן בהוד השרון? נבדק בנבו ובתיקייה, לא נמצא\n- שאלה שנייה\n') }, n11);
+    check('questions: the count and the first one', /2 שאלות מחכות לך: האם תקנות הגהות/.test(a2.text), a2.text);
+    const a3 = assistantLine({ text: rq }, Date.parse('2026-10-18T05:00:00Z'));
+    check('nothing closed in 7 days (18/10): red', a3.red && /לא סגר אף פער/.test(a3.text), a3);
+    check('the edge: closed on 11/10, read on 18/10 08:00 (7 days): still counted', !assistantLine({ text: rq.replace(/08\/10\/2026/g, '11/10/2026') }, Date.parse('2026-10-18T05:00:00Z')).red);
+    const longQ = assistantLine({ text: rq.replace('(הסבר)\n', '(הסבר)\n- ' + 'א'.repeat(300) + '\n') }, n11);
+    check('a long question is cut', longQ.text.length < 160 && /\.\.\.$/.test(longQ.text), longQ.text.length);
+    check('read failed: red with the reason', assistantLine({ error: 'HTTP 401' }, n11).red && assistantLine({ error: 'HTTP 401' }, n11).text === 'העוזר השבוע: התור לא נקרא (HTTP 401)');
+    check('no token: no line', assistantLine(null, n11) === null && (await assistantQueue({})) === null);
+    const h2 = digestHtml(digestOf([], '2026-10-11'), '2026-10-11', { meeting: '2026-10-13', deckAt: '', watchOpen: [], asst: a3 });
+    check('in the mail, red', /color:#b91c1c;font-weight:bold">העוזר השבוע/.test(h2));
+    check('no assistant meta: no line', !/העוזר השבוע/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
