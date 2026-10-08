@@ -18,7 +18,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | תהליך שלקח יותר מניסיון אחד (migration, פריסה, בדיקה) | ה-skill של התחום (`tfugen-db`, `tfugen-dev`), או skill חדש |
 | עובדה על הקוד: טבלה, עזר, מספר שורה, מחרוזת | `tfugen-ref` |
 | רקע והיסטוריה שלא צריך בכל משימה | `tfugen-history` |
-| כלל שחל על כל עבודה, לא רק על ה-repo | העוזר ב-`mishaf1988-lgtm/michael-skills` (מ-07/10/2026 המקור היחיד): `plugins/michael/skills/michael-assistant/references/lessons.md` (ידע מקצועי: קובץ הנושא ב-`references/`; שורה בהיסטוריה ב-`SKILL.md`), עם מספר גרסה חדש. PR שם; המיזוג שם מגיע לחשבון לבד (סנכרון plugin). אין zip |
+| כלל שחל על כל עבודה, לא רק על ה-repo | העוזר ב-`mishaf1988-lgtm/michael-skills` (מ-07/10/2026 המקור היחיד): `plugins/michael/skills/michael-assistant/references/lessons.md` (ידע מקצועי: קובץ הנושא ב-`references/`; שורה בהיסטוריה ב-`SKILL.md`), עם מספר גרסה חדש. שינוי טקסט נדחף שם ישר ל-main אחרי שתי הבדיקות מקומית, `.github/` ב-PR (08/10/2026); כל עדכון ל-main מגיע לחשבון לבד (סנכרון plugin). אין zip |
 
 **שאלה שנייה, חובה, בכל משימה (מיכאל, 04-05/10/2026, פעמיים: "אל תשכח ללמד את העוזר שלי כשאתה לומד דברים חדשים ולפתח אותו"):** מה למדתי על **העבודה** של מיכאל, לא על הקוד?
 | מה | קובץ בעוזר (`plugins/michael/skills/michael-assistant/references/` ב-michael-skills) |
@@ -28,9 +28,9 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | החלטה או העדפה של מיכאל ("התכונות זהות") | הקובץ של הנושא, עם הציטוט והתאריך |
 | מקור או כלי שעובד (פורטל, אתר, API) | `learning.md`, "יומן סריקות שדרוג" |
 | טעות שלי שחלה גם מחוץ ל-repo | `lessons.md` (כלל חדש, או "(לקח שחזר)") |
-PR ב-michael-skills (`add_repo` או `git clone`): להעלות את שורת `גרסה:` ב-`SKILL.md` של העוזר ולהוסיף שורה בהיסטוריה (`checks` שם אוכף את הגרסה). אם אין גישה לדחוף לשם: קובץ הצעה ב-`proposals/` שם, בלי שורת אישור, ולשאול את מיכאל. רק ידע שנבדק עכשיו, עם מקור ותאריך (כלל 0 בעוזר). אין מה ללמד = לכתוב את זה ברטרו, לא לדלג בשקט.
+עדכון ב-michael-skills (`add_repo` או `git clone`; טקסט: push ישר ל-main אחרי `account-skill-test.py` ו-`BASE=origin/main skill-version-gate.py`): להעלות את שורת `גרסה:` ב-`SKILL.md` של העוזר ולהוסיף שורה בהיסטוריה (`checks` שם אוכף את הגרסה). אם אין גישה לדחוף לשם: קובץ הצעה ב-`proposals/` שם, בלי שורת אישור, ולשאול את מיכאל. רק ידע שנבדק עכשיו, עם מקור ותאריך (כלל 0 בעוזר). אין מה ללמד = לכתוב את זה ברטרו, לא לדלג בשקט.
 
-ובתיאור ה-PR שורה: `skill: <מה נלמד ואיפה נכתב>` או `skill: אין`. כשהעוזר עודכן, לציין אותו בשורה הזו עם `michael-skills#N` (מספר ה-PR שם; `lessons-gate.py` מקבל אותו כקובץ skill שהשתנה).
+ובתיאור ה-PR שורה: `skill: <מה נלמד ואיפה נכתב>` או `skill: אין`. כשהעוזר עודכן, לציין אותו בשורה הזו עם `michael-skills@<sha>` (הדחיפה הישירה) או `michael-skills#N` (PR; `lessons-gate.py` מקבל אותו כקובץ skill שהשתנה).
 `lessons-gate.py` נכשל בלי השורה, וגם כשהשורה אומרת שנלמד משהו ואף קובץ skill לא השתנה.
 
 ## לחפש ליקויים בלי שמבקשים (מיכאל, 02/10/2026)

@@ -20,6 +20,7 @@ we do"): a line "skill: <what was learned and where>" or "skill: אין". Any
 answer other than none must come with a changed file under .claude/skills/ or
 project-files/claude-ai-skill/, so "learned" means written down, not said. Since 07/10/2026
 the account skills live in michael-skills: "michael-skills#N" in the line counts.
+Since 08/10/2026 a text change there is pushed straight to main: "michael-skills@<sha>" counts too.
 
 Input: env PR_TITLE, PR_BODY; changed file names on stdin, one per line.
 Exit 0 = ok, 1 = missing lesson. Called from .github/workflows/tests.yml.
@@ -33,7 +34,7 @@ RETRO = re.compile(r"^\s*(retro|רטרו)\s*:\s*(\S.*)$", re.I | re.M)
 RETRO_NONE = re.compile(r"^(אין|none|-)\W*$", re.I)
 SKILL = re.compile(r"^\s*(skill|סקייל)\s*:\s*(\S.*)$", re.I | re.M)
 SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
-EXT = re.compile(r"michael-skills(#|/pull/)\d+")
+EXT = re.compile(r"michael-skills(#\d+|/pull/\d+|@[0-9a-f]{7,40}\b)")
 WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.M)
 
 
