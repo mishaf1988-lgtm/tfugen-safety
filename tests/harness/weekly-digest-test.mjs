@@ -114,19 +114,24 @@ const ROWS = [
   const qhrefs = [...new Set(QM2.map((x) => x.quote.href))];
   check('a long supplier list is split: every link under ' + QUOTE_HREF_MAX + ' characters, every item in exactly one mail, long names cut', qhrefs.length > 1 && qhrefs.every((h) => h.length <= QUOTE_HREF_MAX) && QM2.reduce((a, x) => a + 1 / x.quote.n, 0) > qhrefs.length - 0.01 && decodeURIComponent(qhrefs[0]).includes('...'), qhrefs.map((h) => h.length));
   const qhq = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: Q, expFail: [] });
-  check('the mail column: a link on 4 rows, "מייל אחד ל-2 פריטים של הספק" qby the shared one, nothing on training or the license', (qhq.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 4 && qhq.includes('>הצעת מחיר</th>') && (qhq.match(/מייל אחד ל-2 פריטים של הספק/g) || []).length === 2, qhq.substring(qhq.indexOf(T.exp), qhq.indexOf(T.exp) + 900));
-  check('no address known: the link opens with an empty "to", and says so', qfl.quote.href.startsWith('mailto:?subject=') && qhq.includes('(אין מייל ספק)'));
+  const sec = (h) => h.indexOf('בקשות הצעת מחיר לפי נותן שירות') >= 0 ? h.substring(h.indexOf('בקשות הצעת מחיר לפי נותן שירות')) : '';
+  const qs = sec(qhq);
+  check('a table per service provider (Michael, 08/10/2026), after the expiries: 3 providers, Ben-Kalifa first (overdue), both compressors in its row, one link each', qs.startsWith('בקשות הצעת מחיר לפי נותן שירות (3)') && qhq.indexOf('בקשות הצעת מחיר לפי נותן שירות') > qhq.indexOf(T.exp) && (qs.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 3 && qs.indexOf('דוד בן-כליפא') < qs.indexOf('אלפיין') && /מדחס 3[^<]*<span[^>]*>[^<]*<\/span><br>מדחס 4/.test(qs) && qs.includes('bkeng.ltd@gmail.com'), qs.substring(0, 1500));
+  check('the expiry table itself has no quote column any more, and the license and training are not in the provider table', !qhq.substring(0, qhq.indexOf('בקשות הצעת מחיר לפי נותן שירות')).includes('>הצעת מחיר</th>') && !qs.includes('רישיון ייצור מזון') && !qs.includes('גובה'));
+  check('no address known: the provider row says so, and its link opens with an empty "to"', qfl.quote.href.startsWith('mailto:?subject=') && qs.includes('ספק לא ידוע') && qs.includes('אין מייל ספק'));
   const qk1 = qm3.quote.key, qk2 = qf9.quote.key;
   const QTR = {}; QTR[qk1] = { stage: 'order', sent: plus(-20), quote: plus(-12), order: plus(-6), planned: plus(9) }; QTR[qk2] = { stage: 'sent', sent: plus(-QUOTE_WAIT_DAYS - 1) };
   const QS2 = attachQuotes(QL(), CT, QTR, TODAY);
   const qhs = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: QS2, expFail: [] });
   const qfdd = (d) => d.split('-').reverse().join('/');
-  check('tracked: the stage replaces the link, with its date and the planned date', qhs.includes('נשלחה הזמנה ' + qfdd(plus(-6)) + ', מתוכנן ' + qfdd(plus(9))), qhs.substring(qhs.indexOf(T.exp), qhs.indexOf(T.exp) + 1500));
+  check('tracked: the item shows its stage, with its date and the planned date, in the provider table', sec(qhs).includes('נשלחה הזמנה ' + qfdd(plus(-6)) + ', מתוכנן ' + qfdd(plus(9))), qhs.substring(qhs.indexOf(T.exp), qhs.indexOf(T.exp) + 1500));
   check('a tracked item leaves its supplier mail: the other compressor alone (n = 1)', QS2.find((x) => x.name === 'מדחס 4').quote.n === 1);
   check('a request with no answer for ' + QUOTE_WAIT_DAYS + '+ days says so', qhs.includes('נשלחה בקשה ' + qfdd(plus(-QUOTE_WAIT_DAYS - 1))) && qhs.includes('אין תשובה ' + (QUOTE_WAIT_DAYS + 1) + ' ימים'));
   const qbad = {}; qbad[qk1] = { stage: 'whatever' }; qbad[qk2] = 'x';
   check('a stage that is not sent/quote/order (or not an object) is ignored: the link stays', attachQuotes(QL(), CT, qbad, TODAY).filter((x) => x.quote && !x.quote.st).length === 4 && attachQuotes(QL(), CT, null, TODAY).length === 6);
-  check('a list with no quote rows: the table has no extra column (as before)', !hx.includes('>הצעת מחיר</th>'));
+  check('a list with no quote rows: no provider table', !hx.includes('בקשות הצעת מחיר לפי נותן שירות'));
+  const QA = {}; QA[qk1] = { stage: 'quote', quote: plus(-1) }; QA[QS2.find((x) => x.name === 'מדחס 4').quote.key] = { stage: 'sent', sent: plus(-2) };
+  check('a provider with everything already in hand: no link, "בטיפול"', sec(digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: attachQuotes(QL(), CT, QA, TODAY), expFail: [] })).includes('>בטיפול</td>'));
 
   console.log('\n2c. recurring duties (02/10/2026, BACKLOG 7): 12 months after the last one, as _drlNext/_audNext/_mrNext/_legNext');
   check('plusMonths: 12 months on, 29/02 to 28/02, empty stays empty', plusMonths('2025-10-20', 12) === '2026-10-20' && plusMonths('2024-02-29', 12) === '2025-02-28' && plusMonths(null, 12) === '');
