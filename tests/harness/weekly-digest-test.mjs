@@ -4,7 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
-import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS } from './_build/weekly-digest.mjs';
+import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
 import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
@@ -83,36 +83,49 @@ const ROWS = [
   const h0 = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: [], expFail: [] });
   check('nothing expiring: the section says אין', new RegExp(T.exp.replace(/[()]/g, '\\$&') + ' \\(0\\)</h3><p style="color:#555">אין').test(h0), h0.substring(0, 400));
 
-  console.log('\n2b2. quote request (08/10/2026, Michael: "בצע: כמו בתוכנית"): a mailto link, the stage from server_state.quote_track');
+  console.log('\n2b2. quote request (08/10/2026): one mail per supplier, no tracking code, the stage from server_state.quote_track');
   const QL = () => expiringOf([
-    ['בדיקת ציוד', ['n', 'code'], ['vendor', 'loc'], [{ id: 'abc123', n: 'מדחס 3', vendor: 'דוד בן-כליפא (בודק 207)', serial_number: 'SN-9', report_number: '400/1', loc: 'חדר מדחסים', e: plus(-5) }], 'equip_inspections'],
-    ['מסמך', ['n'], ['o'], [{ id: 'xl1008-d10', n: 'טופס 9א', o: 'מיכאל', nt: 'תדירות: חצי-שנתי. ספק: אלפיין סיסטמס מיגון אש. יובא', e: plus(3) }], 'docs'],
+    ['בדיקת ציוד', ['n', 'code'], ['vendor', 'loc'], [
+      { id: 'abc123', n: 'מדחס 3', vendor: 'דוד בן-כליפא (בודק 207)', serial_number: 'SN-9', report_number: '400/1', loc: 'חדר מדחסים', e: plus(-5) },
+      { id: 'abc124', n: 'מדחס 4', vendor: 'דוד בן-כליפא', serial_number: 'SN-10', loc: 'חדר מדחסים', e: plus(3) },
+      { id: 'q9', n: 'מלגזה', vendor: null, e: plus(-1) }], 'equip_inspections'],
+    ['מסמך', ['n'], ['o'], [
+      { id: 'xl1008-d10', n: 'טופס 9א', o: 'מיכאל', nt: 'תדירות: חצי-שנתי. ספק: אלפיין סיסטמס מיגון אש. יובא', e: plus(3) },
+      { id: 'xl1008-d54', n: 'רישיון ייצור מזון', o: 'מיכאל', nt: 'גורם מאשר: משרד הבריאות.', e: plus(-9) }], 'docs'],
     ['הדרכה', ['n'], ['w'], [{ id: 't1', n: 'גובה', w: 'דוד', e: plus(2) }], 'tr'],
   ], TODAY);
   const CT = [['בן כליפא', 'bkeng.ltd@gmail.com'], ['אלפיין', 'tali@alpinesystem.com'], ['כליפא', 'short@x.com'], ['ריק', 'not-an-email']];
   const Q = attachQuotes(QL(), CT, {}, TODAY);
-  const qe = Q.find((x) => x.name === 'מדחס 3'), qd = Q.find((x) => x.name === 'טופס 9א'), qt = Q.find((x) => x.name === 'גובה');
-  check('the key: table code, id, expiry; equipment and documents get one, training does not', qe.quote.key === 'Q-eq-abc123-' + plus(-5).substring(2).replace(/-/g, '') && qd.quote.key.startsWith('Q-dc-xl1008-d10-') && !qt.quote, Q.map((x) => x.quote && x.quote.key));
-  check('an id with other characters gets no key (the tag regex of mail-inbox is [A-Za-z0-9_-])', quoteKey('docs', 'a b', TODAY) === '' && quoteKey('tr', 't1', TODAY) === '' && quoteKey('docs', 'x1', '') === '');
+  const qby = (n) => Q.find((x) => x.name === n);
+  const qm3 = qby('מדחס 3'), qm4 = qby('מדחס 4'), qf9 = qby('טופס 9א'), qfl = qby('מלגזה');
+  check('the key (for the Routine, not in the mail): table code, id, expiry; training and a document with no supplier get none', qm3.quote.key === 'Q-eq-abc123-' + plus(-5).substring(2).replace(/-/g, '') && qf9.quote.key.startsWith('Q-dc-xl1008-d10-') && !qby('גובה').quote && !qby('רישיון ייצור מזון').quote);
+  check('an id with other characters gets no key', quoteKey('docs', 'a b', TODAY) === '' && quoteKey('tr', 't1', TODAY) === '' && quoteKey('docs', 'x1', '') === '');
   check('supplier: the vendor column for equipment, "ספק: X." in the note for a document', vendorOf('equip_inspections', { vendor: 'גיל לקס' }) === 'גיל לקס' && vendorOf('docs', { nt: 'תדירות: שנתי. ספק: יהודה נייקרוג. יובא' }) === 'יהודה נייקרוג' && vendorOf('docs', { nt: 'בלי' }) === '');
-  check('the address: the longest name inside the vendor, dashes and brackets ignored; a bad address never', qe.quote.email === 'bkeng.ltd@gmail.com' && qd.quote.email === 'tali@alpinesystem.com' && contactOf('ריק בע"מ', CT) === '' && contactOf('', CT) === '' && contactOf('גיל לקס', [['', 'any@x.com'], ['גל', 'g@x.com']]) === '', [qe.quote.email, qd.quote.email]);
-  const dec = decodeURIComponent(qe.quote.href.replace(/^mailto:[^?]*\?/, '').replace(/&body=/, '\n'));
-  check('the mail: to the supplier, the key in the subject and the body, serial, last report, location, expiry DD/MM/YYYY', qe.quote.href.startsWith('mailto:bkeng.ltd@gmail.com?subject=') && dec.includes('subject=בקשת הצעת מחיר: מדחס 3 [TS-' + qe.quote.key + ']') && dec.includes('מספר סידורי: SN-9') && dec.includes('דוח קודם: 400/1') && dec.includes('מיקום: חדר מדחסים') && dec.includes('תוקף נוכחי: ' + plus(-5).split('-').reverse().join('/')) && (dec.match(/\[TS-Q-eq-/g) || []).length === 2, dec);
-  check('the mail text is keyboard characters only (sent to a person)', !/[—–־«»“”…•→←]/.test(dec), dec.match(/[—–־«»“”…•→←]/));
-  const hq = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: Q, expFail: [] });
-  check('the mail column: "בקש הצעת מחיר" as a link on both, nothing on the training row', (hq.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 2 && hq.includes('<th style="border:1px solid #ccc;padding:6px;text-align:right;background:#1f3864;color:#fff">הצעת מחיר</th>') || ((hq.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 2 && hq.includes('>הצעת מחיר</th>')), hq.substring(hq.indexOf(T.exp), hq.indexOf(T.exp) + 900));
-  const noMail = attachQuotes(QL(), [], {}, TODAY);
-  check('no address known: the link opens with an empty "to", and says so', noMail[0].quote.href.startsWith('mailto:?subject=') && digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: noMail, expFail: [] }).includes('(אין מייל ספק)'));
-  const k1 = qe.quote.key, k2 = qd.quote.key;
-  const QTR = {}; QTR[k1] = { stage: 'order', sent: plus(-20), quote: plus(-12), order: plus(-6), planned: plus(9) }; QTR[k2] = { stage: 'sent', sent: plus(-QUOTE_WAIT_DAYS - 1) };
-  const hs = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: attachQuotes(QL(), CT, QTR, TODAY), expFail: [] });
-  const fdd = (d) => d.split('-').reverse().join('/');
-  check('tracked: the stage replaces the link, with its date and the planned date', hs.includes('נשלחה הזמנה ' + fdd(plus(-6)) + ', מתוכנן ' + fdd(plus(9))) && (hs.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 0, hs.substring(hs.indexOf(T.exp), hs.indexOf(T.exp) + 1500));
-  check('a request with no answer for ' + QUOTE_WAIT_DAYS + '+ days says so', hs.includes('נשלחה בקשה ' + fdd(plus(-QUOTE_WAIT_DAYS - 1))) && hs.includes('אין תשובה ' + (QUOTE_WAIT_DAYS + 1) + ' ימים'));
-  const bad = {}; bad[k1] = { stage: 'whatever' }; bad[k2] = 'x';
-  check('a stage that is not sent/quote/order (or not an object) is ignored: the link stays', attachQuotes(QL(), CT, bad, TODAY).filter((x) => x.quote && !x.quote.st).length === 2 && attachQuotes(QL(), CT, null, TODAY).length === 3);
-  const lic = attachQuotes(expiringOf([['מסמך', ['n'], ['o'], [{ id: 'xl1008-d54', n: 'רישיון ייצור מזון', o: 'מיכאל', nt: 'גורם מאשר: משרד הבריאות.', e: plus(-9) }], 'docs'], ['בדיקת ציוד', ['n', 'code'], ['vendor', 'loc'], [{ id: 'q9', n: 'מלגזה', vendor: null, e: plus(-1) }], 'equip_inspections']], TODAY), CT, {}, TODAY);
-  check('a document with no supplier (a license from an authority, live 08/10/2026) gets no link; equipment with no vendor keeps an open one', !lic[0].quote && lic[1].quote && lic[1].quote.href.startsWith('mailto:?subject='), lic.map((x) => !!x.quote));
+  check('the address: the longest name inside the vendor, dashes and brackets ignored; a qbad or empty name never', qm3.quote.email === 'bkeng.ltd@gmail.com' && qf9.quote.email === 'tali@alpinesystem.com' && contactOf('ריק בע"מ', CT) === '' && contactOf('', CT) === '' && contactOf('גיל לקס', [['', 'any@x.com'], ['גל', 'g@x.com']]) === '');
+  check('one mail per supplier (Michael, 08/10/2026): both compressors of Ben-Kalifa share one link, n = 2; other suppliers alone', qm3.quote.href === qm4.quote.href && qm3.quote.n === 2 && qf9.quote.n === 1 && qf9.quote.href !== qm3.quote.href, [qm3.quote.n, qf9.quote.n]);
+  const qdec = decodeURIComponent(qm3.quote.href.replace(/^mailto:[^?]*\?/, '').replace(/&body=/, '\n'));
+  check('the mail: to the supplier, a plain subject, both items numbered with serial, last report, location and expiry DD/MM/YYYY', qm3.quote.href.startsWith('mailto:bkeng.ltd@gmail.com?subject=') && qdec.startsWith('subject=בקשת הצעת מחיר - תעשיות תפוגן\n') && qdec.includes('לפריטים הבאים:') && qdec.includes('1. מדחס 3 (מספר סידורי SN-9, דוח קודם 400/1, מיקום חדר מדחסים, תוקף נוכחי ' + plus(-5).split('-').reverse().join('/') + ')') && qdec.includes('2. מדחס 4 (מספר סידורי SN-10'), qdec);
+  const qall = Q.filter((x) => x.quote).map((x) => decodeURIComponent(x.quote.href)).join('\n');
+  check('no tracking code anywhere in a mail to a supplier (Michael, 08/10/2026)', !/TS-|Q-eq|Q-dc|\[|\]/.test(qall), qall.match(/TS-|Q-eq|Q-dc/));
+  check('a single item: its name in the subject, no numbering', decodeURIComponent(qf9.quote.href).includes('subject=בקשת הצעת מחיר - תעשיות תפוגן: טופס 9א') && !decodeURIComponent(qf9.quote.href).includes('1. '));
+  check('the mail text is keyboard characters only (sent to a person)', !/[—–־«»“”…•→←]/.test(qall), qall.match(/[—–־«»“”…•→←]/));
+  const longList = Array.from({ length: 30 }, (_, i) => ({ id: 'L' + i, n: 'אביזר הרמה מורכב על מלגזה מספר ' + i + ' עם שם ארוך מאוד שממשיך וממשיך הלאה עד הסוף', vendor: "ג'ורג' פריד מהנדסים", serial_number: 'SER-' + i, e: plus(-2) }));
+  const QM2 = attachQuotes(expiringOf([["בדיקת ציוד", ["n"], ["vendor"], longList, "equip_inspections"]], TODAY), CT, {}, TODAY);
+  const qhrefs = [...new Set(QM2.map((x) => x.quote.href))];
+  check('a long supplier list is split: every link under ' + QUOTE_HREF_MAX + ' characters, every item in exactly one mail, long names cut', qhrefs.length > 1 && qhrefs.every((h) => h.length <= QUOTE_HREF_MAX) && QM2.reduce((a, x) => a + 1 / x.quote.n, 0) > qhrefs.length - 0.01 && decodeURIComponent(qhrefs[0]).includes('...'), qhrefs.map((h) => h.length));
+  const qhq = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: Q, expFail: [] });
+  check('the mail column: a link on 4 rows, "מייל אחד ל-2 פריטים של הספק" qby the shared one, nothing on training or the license', (qhq.match(/>בקש הצעת מחיר<\/a>/g) || []).length === 4 && qhq.includes('>הצעת מחיר</th>') && (qhq.match(/מייל אחד ל-2 פריטים של הספק/g) || []).length === 2, qhq.substring(qhq.indexOf(T.exp), qhq.indexOf(T.exp) + 900));
+  check('no address known: the link opens with an empty "to", and says so', qfl.quote.href.startsWith('mailto:?subject=') && qhq.includes('(אין מייל ספק)'));
+  const qk1 = qm3.quote.key, qk2 = qf9.quote.key;
+  const QTR = {}; QTR[qk1] = { stage: 'order', sent: plus(-20), quote: plus(-12), order: plus(-6), planned: plus(9) }; QTR[qk2] = { stage: 'sent', sent: plus(-QUOTE_WAIT_DAYS - 1) };
+  const QS2 = attachQuotes(QL(), CT, QTR, TODAY);
+  const qhs = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: QS2, expFail: [] });
+  const qfdd = (d) => d.split('-').reverse().join('/');
+  check('tracked: the stage replaces the link, with its date and the planned date', qhs.includes('נשלחה הזמנה ' + qfdd(plus(-6)) + ', מתוכנן ' + qfdd(plus(9))), qhs.substring(qhs.indexOf(T.exp), qhs.indexOf(T.exp) + 1500));
+  check('a tracked item leaves its supplier mail: the other compressor alone (n = 1)', QS2.find((x) => x.name === 'מדחס 4').quote.n === 1);
+  check('a request with no answer for ' + QUOTE_WAIT_DAYS + '+ days says so', qhs.includes('נשלחה בקשה ' + qfdd(plus(-QUOTE_WAIT_DAYS - 1))) && qhs.includes('אין תשובה ' + (QUOTE_WAIT_DAYS + 1) + ' ימים'));
+  const qbad = {}; qbad[qk1] = { stage: 'whatever' }; qbad[qk2] = 'x';
+  check('a stage that is not sent/quote/order (or not an object) is ignored: the link stays', attachQuotes(QL(), CT, qbad, TODAY).filter((x) => x.quote && !x.quote.st).length === 4 && attachQuotes(QL(), CT, null, TODAY).length === 6);
   check('a list with no quote rows: the table has no extra column (as before)', !hx.includes('>הצעת מחיר</th>'));
 
   console.log('\n2c. recurring duties (02/10/2026, BACKLOG 7): 12 months after the last one, as _drlNext/_audNext/_mrNext/_legNext');
