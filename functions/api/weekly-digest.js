@@ -130,6 +130,7 @@ const H = {
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
+  qGroups: '\u05d1\u05e7\u05e9\u05d5\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05e4\u05d9 \u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', qGTh: ['\u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', '\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd', '\u05d1\u05e7\u05e9\u05d4'], qMailN: '\u05de\u05d9\u05d9\u05dc ', qNoVendor: '\u05e1\u05e4\u05e7 \u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2', qDone: '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc',
   qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qMany: ['\u05de\u05d9\u05d9\u05dc \u05d0\u05d7\u05d3 \u05dc-', ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'], qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 - \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df',
   qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd:'], qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 ',
   qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
@@ -291,9 +292,9 @@ export function attachQuotes(list, contacts, track, today) {
     if (x.t === 'docs' && !vendor) return;
     const email = contactOf(vendor, contacts);
     const st = track && typeof track === 'object' && track[key] && QSTAGES.indexOf(track[key].stage) >= 0 ? track[key] : null;
-    x.quote = { key, email, st, today };
-    if (st) return;
     const g = email ? 'm:' + email.toLowerCase() : vnorm(vendor) ? 'v:' + vnorm(vendor) : 'k:' + key;
+    x.quote = { key, email, st, today, g, vendor };
+    if (st) return;
     if (!groups[g]) { groups[g] = []; order.push(g); }
     groups[g].push(x);
   });
@@ -309,30 +310,49 @@ export function attachQuotes(list, contacts, track, today) {
   });
   return list;
 }
-function quoteCell(q) {
-  if (!q) return '';
-  const s = q.st;
-  if (s) {
-    const at = (k) => (ymd(s[k]) ? fd(s[k]) : '');
-    let t = s.stage === 'order' ? H.qOrder + at('order') : s.stage === 'quote' ? H.qQuote + at('quote') : H.qSent + at('sent');
-    if (ymd(s.planned)) t += ', ' + H.qPlanned + fd(s.planned);
-    const wait = s.stage === 'sent' && ymd(s.sent) && q.today ? dayDiff(ymd(s.sent), q.today) : 0;
-    let h = esc(t.trim());
-    if (wait >= QUOTE_WAIT_DAYS) h += '<br><span style="color:#b45309">' + esc(H.qWait + wait + H.days) + '</span>';
-    return h;
-  }
-  return '<a href="' + esc(q.href) + '" style="color:#1d4ed8;font-weight:bold">' + esc(H.qAsk) + '</a>' + (q.n > 1 ? '<br><span style="color:#555">' + esc(H.qMany[0] + q.n + H.qMany[1]) + '</span>' : '') + (q.email ? '' : '<span style="color:#555">' + esc(H.qNoMail) + '</span>');
+function stageText(q) {
+  const s = q && q.st;
+  if (!s) return '';
+  const at = (k) => (ymd(s[k]) ? fd(s[k]) : '');
+  let t = s.stage === 'order' ? H.qOrder + at('order') : s.stage === 'quote' ? H.qQuote + at('quote') : H.qSent + at('sent');
+  if (ymd(s.planned)) t += ', ' + H.qPlanned + fd(s.planned);
+  const wait = s.stage === 'sent' && ymd(s.sent) && q.today ? dayDiff(ymd(s.sent), q.today) : 0;
+  let h = esc(t.trim());
+  if (wait >= QUOTE_WAIT_DAYS) h += ' <span style="color:#b45309">(' + esc(H.qWait + wait + H.days) + ')</span>';
+  return h;
+}
+// Pure. The rows with a quote, one group per service provider (the same grouping as the mails),
+// the provider with the most overdue item first (Michael, 08/10/2026: "a table for each provider").
+export function quoteGroups(list) {
+  const by = {}, out = [];
+  (list || []).forEach((x) => {
+    if (!x.quote) return;
+    const g = x.quote.g;
+    if (!by[g]) { by[g] = { vendor: x.quote.vendor || '', email: x.quote.email || '', items: [], hrefs: [] }; out.push(by[g]); }
+    by[g].items.push(x);
+    if (x.quote.href && by[g].hrefs.indexOf(x.quote.href) < 0) by[g].hrefs.push(x.quote.href);
+  });
+  out.forEach((G) => { G.min = Math.min.apply(null, G.items.map((x) => x.days)); });
+  return out; // expiringOf sorts by days, so the first group seen holds the most overdue item
+}
+function quoteBlock(groups) {
+  const td = (v) => '<td style="' + cell + ';vertical-align:top">' + v + '</td>';
+  return '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.qGTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
+    + groups.map((G) => '<tr style="background:' + (G.min < 0 ? '#fde8e8' : '#fff') + '">'
+      + td('<b>' + esc(G.vendor || H.qNoVendor) + '</b><br><span style="color:#555">' + esc(G.email || H.qNoMail.trim().replace(/[()]/g, '')) + '</span>')
+      + td(G.items.map((x) => esc(x.name) + ' - ' + esc(fd(x.e)) + ' <span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">(' + esc(expWhen(x)) + ')</span>' + (x.quote.st ? '<br><span style="color:#166534">' + stageText(x.quote) + '</span>' : '')).join('<br>'))
+      + td(G.hrefs.length ? G.hrefs.map((h, i) => '<a href="' + esc(h) + '" style="color:#1d4ed8;font-weight:bold">' + esc(H.qAsk + (G.hrefs.length > 1 ? ' (' + H.qMailN + (i + 1) + ')' : '')) + '</a>').join('<br>') : esc(H.qDone))
+      + '</tr>').join('') + '</table>';
 }
 function expWhen(x) { return x.days < 0 ? H.expired + (-x.days) + H.days : x.days === 0 ? H.today : H.inDays + x.days + H.days; }
 function expBlock(list, failed) {
   let h = '';
   if (!list.length) h += '<p style="color:#555">' + H.none + '</p>';
   else {
-    const qc = list.slice(0, EXP_SHOW).some((x) => x.quote);
-    h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.concat(qc ? [H.qTh] : []).map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
+    h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
       + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name, x.owner].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
         + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span></td>'
-        + (qc ? '<td style="' + cell + '">' + quoteCell(x.quote) + '</td>' : '') + '</tr>').join('') + '</table>';
+        + '</tr>').join('') + '</table>';
     if (list.length > EXP_SHOW) h += '<p style="color:#555">' + esc(H.more + (list.length - EXP_SHOW)) + '</p>';
   }
   if (failed && failed.length) h += '<p style="color:#b45309">' + esc(H.expFail + failed.join(', ')) + '</p>';
@@ -351,6 +371,8 @@ export function digestHtml(d, today, meta) {
   const nv = m.never || [];
   if (nv.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.never + nv.join(', ') + H.neverWhy) + '</p>';
   if (m.expiring) h += h2(H.exp, m.expiring.length) + expBlock(m.expiring, m.expFail);
+  const qg = quoteGroups(m.expiring);
+  if (qg.length) h += h2(H.qGroups, qg.length) + quoteBlock(qg);
   h += h2(H.overdue, d.overdueCount);
   if (!d.overdue.length) h += '<p style="color:#555">' + H.none + '</p>';
   d.overdue.forEach((g) => { h += '<p style="margin:8px 0 4px;font-weight:bold">' + esc(g.resp || '-') + ' (' + g.items.length + ')</p>' + table(g.items); });
