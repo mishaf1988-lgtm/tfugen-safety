@@ -230,7 +230,7 @@ export function expiringOf(lists, today) {
 // equipment inspection or a document that expired or expires within EXP_DAYS, a mailto link
 // opens a ready request for a price quote in Michael's own mail. The server sends nothing
 // (DECISIONS 23/09: routing out = links from the device). The subject carries [TS-<key>];
-// the server cannot read mail (Mail.Read needs admin consent, DECISIONS 27/09), so a daily
+// the server cannot read mail (Mail.Read needs admin consent, DECISIONS 27/09), so a weekly
 // Routine (project-files/routine-quotes.md) searches the mailbox for the key, read only, and
 // writes the stage to server_state.quote_track: {key: {stage, sent, quote, order, planned}}.
 // Supplier addresses: server_state.vendor_contacts, [[name, email]], matched by name.
