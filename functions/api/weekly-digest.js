@@ -130,9 +130,9 @@ const H = {
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
-  qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8: ',
-  qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:'], qItem: '\u05e4\u05e8\u05d9\u05d8: ', qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9: ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd: ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd: ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9: ',
-  qEnd: ['\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', '\u05dc\u05e6\u05d5\u05e8\u05da \u05de\u05e2\u05e7\u05d1, \u05e0\u05d0 \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d1\u05e0\u05d5\u05e9\u05d0 \u05d4\u05de\u05d9\u05d9\u05dc \u05d0\u05ea \u05d4\u05e7\u05d5\u05d3 '], qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
+  qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qMany: ['\u05de\u05d9\u05d9\u05dc \u05d0\u05d7\u05d3 \u05dc-', ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'], qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 - \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df',
+  qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd:'], qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 ',
+  qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
   qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
   nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', xg: '\u05e4\u05e2\u05e8\u05d9\u05dd \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc-Excel: ', xgNone: '\u05d0\u05d9\u05df, \u05e0\u05d1\u05d3\u05e7 ', xgNever: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df', xgStale: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ', xgFail: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-', xgMore: ' \u05d5\u05e2\u05d5\u05d3 ', xgLabel: { date: '\u05ea\u05d0\u05e8\u05d9\u05da \u05e9\u05d5\u05e0\u05d4', missing: '\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-missing': '\u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-state': '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e9\u05d5\u05e0\u05d4', 'task-due': '\u05d9\u05e2\u05d3 \u05e9\u05d5\u05e0\u05d4' }, asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
@@ -229,14 +229,16 @@ export function expiringOf(lists, today) {
 // Quote request (08/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05db\u05de\u05d5 \u05d1\u05ea\u05d5\u05db\u05e0\u05d9\u05ea", "\u05d1\u05e6\u05e2: \u05e7\u05d9\u05e9\u05d5\u05e8 + \u05de\u05e2\u05e7\u05d1 \u05d3\u05e8\u05db\u05d9"): next to an
 // equipment inspection or a document that expired or expires within EXP_DAYS, a mailto link
 // opens a ready request for a price quote in Michael's own mail. The server sends nothing
-// (DECISIONS 23/09: routing out = links from the device). The subject carries [TS-<key>];
-// the server cannot read mail (Mail.Read needs admin consent, DECISIONS 27/09), so a weekly
-// Routine (project-files/routine-quotes.md) searches the mailbox for the key, read only, and
-// writes the stage to server_state.quote_track: {key: {stage, sent, quote, order, planned}}.
+// (DECISIONS 23/09: routing out = links from the device). One mail per supplier for all its
+// items in the list, and no tracking code in it (Michael, 08/10/2026: a code is out of place in
+// a mail to someone outside). The server cannot read mail (Mail.Read needs admin consent,
+// DECISIONS 27/09), so a weekly Routine (project-files/routine-quotes.md) finds the sent
+// requests by their subject, matches each listed item to its row, and writes the stage to
+// server_state.quote_track: {key: {stage, sent, quote, order, planned}}.
 // Supplier addresses: server_state.vendor_contacts, [[name, email]], matched by name.
 // The key holds the expiry, so the next cycle of the same item starts a new request.
 export const QUOTE_SRC = { equip_inspections: ['eq', ['vendor', 'serial_number', 'report_number', 'loc']], docs: ['dc', ['nt']] };
-export const QUOTE_KEY = 'quote_track', VENDOR_KEY = 'vendor_contacts', QUOTE_WAIT_DAYS = 7;
+export const QUOTE_KEY = 'quote_track', VENDOR_KEY = 'vendor_contacts', QUOTE_WAIT_DAYS = 7, QUOTE_HREF_MAX = 2000, QUOTE_NAME_MAX = 70;
 const QSTAGES = ['sent', 'quote', 'order'];
 export function quoteKey(t, id, e) {
   const k = QUOTE_SRC[t] && /^[A-Za-z0-9_-]{1,24}$/.test(String(id || '')) && ymd(e) ? 'Q-' + QUOTE_SRC[t][0] + '-' + id + '-' + ymd(e).substring(2).replace(/-/g, '') : '';
@@ -259,18 +261,28 @@ export function contactOf(vendor, contacts) {
   });
   return best ? best[1] : '';
 }
-// Pure. The mailto link: keyboard characters only, the key in the subject and once more in the body.
-export function quoteMailto(x, key, email) {
-  const r = x.row || {}, lines = H.qBody.concat([H.qItem + x.name]);
-  if (r.serial_number) lines.push(H.qSerial + r.serial_number);
-  if (r.report_number) lines.push(H.qReport + r.report_number);
-  if (r.loc) lines.push(H.qLoc + r.loc);
-  lines.push(H.qExp + fd(x.e), '', H.qEnd[0], H.qEnd[1] + '[TS-' + key + ']', '');
-  const body = lines.concat(H.qSign).join('\r\n');
-  return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(H.qSubj + x.name + ' [TS-' + key + ']') + '&body=' + encodeURIComponent(body);
+// Pure. The mailto link for one supplier's items: keyboard characters only, no code. Each item on one
+// line (name, serial, last report, location, expiry). QUOTE_HREF_MAX keeps it short enough for a phone
+// mail app and Outlook on Windows; attachQuotes splits a long group into more mails.
+export function quoteMailto(items, email) {
+  const lines = [H.qBody[0], items.length > 1 ? H.qBody[2] : H.qBody[1]];
+  items.forEach((x, i) => {
+    const r = x.row || {}, nm = String(x.name || '').length > QUOTE_NAME_MAX ? String(x.name).substring(0, QUOTE_NAME_MAX - 3).trim() + '...' : String(x.name || '');
+    const parts = [];
+    if (r.serial_number) parts.push(H.qSerial + r.serial_number);
+    if (r.report_number) parts.push(H.qReport + r.report_number);
+    if (r.loc) parts.push(H.qLoc + r.loc);
+    parts.push(H.qExp + fd(x.e));
+    lines.push((items.length > 1 ? (i + 1) + '. ' : '') + nm + ' (' + parts.join(', ') + ')');
+  });
+  lines.push('', H.qEnd, '');
+  const subj = H.qSubj + (items.length === 1 ? ': ' + String(items[0].name || '').substring(0, QUOTE_NAME_MAX) : '');
+  return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(lines.concat(H.qSign).join('\r\n'));
 }
-// Pure. Adds x.quote to the rows of QUOTE_SRC tables: {key, href, email, st} (st = the tracked stage, if any).
+// Pure. Adds x.quote to the rows of QUOTE_SRC tables: {key, email, st, href, n}. st = the tracked stage;
+// rows not tracked yet share one mail per supplier (by address, else by name), n = items in it.
 export function attachQuotes(list, contacts, track, today) {
+  const groups = {}, order = [];
   (list || []).forEach((x) => {
     const key = x.t ? quoteKey(x.t, x.row && x.row.id, x.e) : '';
     if (!key) return;
@@ -279,7 +291,21 @@ export function attachQuotes(list, contacts, track, today) {
     if (x.t === 'docs' && !vendor) return;
     const email = contactOf(vendor, contacts);
     const st = track && typeof track === 'object' && track[key] && QSTAGES.indexOf(track[key].stage) >= 0 ? track[key] : null;
-    x.quote = { key, email, href: quoteMailto(x, key, email), st, today };
+    x.quote = { key, email, st, today };
+    if (st) return;
+    const g = email ? 'm:' + email.toLowerCase() : vnorm(vendor) ? 'v:' + vnorm(vendor) : 'k:' + key;
+    if (!groups[g]) { groups[g] = []; order.push(g); }
+    groups[g].push(x);
+  });
+  order.forEach((g) => {
+    const items = groups[g], email = items[0].quote.email;
+    let chunk = [];
+    const close = () => { const href = quoteMailto(chunk, email); chunk.forEach((x) => { x.quote.href = href; x.quote.n = chunk.length; }); chunk = []; };
+    items.forEach((x) => {
+      if (chunk.length && quoteMailto(chunk.concat([x]), email).length > QUOTE_HREF_MAX) close();
+      chunk.push(x);
+    });
+    if (chunk.length) close();
   });
   return list;
 }
@@ -295,7 +321,7 @@ function quoteCell(q) {
     if (wait >= QUOTE_WAIT_DAYS) h += '<br><span style="color:#b45309">' + esc(H.qWait + wait + H.days) + '</span>';
     return h;
   }
-  return '<a href="' + esc(q.href) + '" style="color:#1d4ed8;font-weight:bold">' + esc(H.qAsk) + '</a>' + (q.email ? '' : '<span style="color:#555">' + esc(H.qNoMail) + '</span>');
+  return '<a href="' + esc(q.href) + '" style="color:#1d4ed8;font-weight:bold">' + esc(H.qAsk) + '</a>' + (q.n > 1 ? '<br><span style="color:#555">' + esc(H.qMany[0] + q.n + H.qMany[1]) + '</span>' : '') + (q.email ? '' : '<span style="color:#555">' + esc(H.qNoMail) + '</span>');
 }
 function expWhen(x) { return x.days < 0 ? H.expired + (-x.days) + H.days : x.days === 0 ? H.today : H.inDays + x.days + H.days; }
 function expBlock(list, failed) {
