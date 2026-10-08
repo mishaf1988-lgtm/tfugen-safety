@@ -130,6 +130,10 @@ const H = {
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
+  qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8: ',
+  qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:'], qItem: '\u05e4\u05e8\u05d9\u05d8: ', qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9: ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd: ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd: ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9: ',
+  qEnd: ['\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', '\u05dc\u05e6\u05d5\u05e8\u05da \u05de\u05e2\u05e7\u05d1, \u05e0\u05d0 \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d1\u05e0\u05d5\u05e9\u05d0 \u05d4\u05de\u05d9\u05d9\u05dc \u05d0\u05ea \u05d4\u05e7\u05d5\u05d3 '], qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
+  qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
   nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', xg: '\u05e4\u05e2\u05e8\u05d9\u05dd \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc-Excel: ', xgNone: '\u05d0\u05d9\u05df, \u05e0\u05d1\u05d3\u05e7 ', xgNever: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df', xgStale: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ', xgFail: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-', xgMore: ' \u05d5\u05e2\u05d5\u05d3 ', xgLabel: { date: '\u05ea\u05d0\u05e8\u05d9\u05da \u05e9\u05d5\u05e0\u05d4', missing: '\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-missing': '\u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-state': '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e9\u05d5\u05e0\u05d4', 'task-due': '\u05d9\u05e2\u05d3 \u05e9\u05d5\u05e0\u05d4' }, asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
@@ -213,21 +217,93 @@ function table(items, opt) {
 export function expiringOf(lists, today) {
   const pick = (r, cols) => cols.map((k) => r[k]).find((v) => v != null && String(v).trim() !== '') || '';
   const out = [];
-  (lists || []).forEach(([label, nc, oc, rows]) => (rows || []).forEach((r) => {
+  (lists || []).forEach(([label, nc, oc, rows, t]) => (rows || []).forEach((r) => {
     const e = ymd(r && r.e); if (!e) return;
     const days = dayDiff(today, e); if (days > EXP_DAYS) return;
-    out.push({ label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days });
+    const x = { label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days };
+    if (t) { x.t = t; x.row = r; }
+    out.push(x);
   }));
   return out.sort((a, b) => a.days - b.days);
+}
+// Quote request (08/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05db\u05de\u05d5 \u05d1\u05ea\u05d5\u05db\u05e0\u05d9\u05ea", "\u05d1\u05e6\u05e2: \u05e7\u05d9\u05e9\u05d5\u05e8 + \u05de\u05e2\u05e7\u05d1 \u05d3\u05e8\u05db\u05d9"): next to an
+// equipment inspection or a document that expired or expires within EXP_DAYS, a mailto link
+// opens a ready request for a price quote in Michael's own mail. The server sends nothing
+// (DECISIONS 23/09: routing out = links from the device). The subject carries [TS-<key>];
+// the server cannot read mail (Mail.Read needs admin consent, DECISIONS 27/09), so a daily
+// Routine (project-files/routine-quotes.md) searches the mailbox for the key, read only, and
+// writes the stage to server_state.quote_track: {key: {stage, sent, quote, order, planned}}.
+// Supplier addresses: server_state.vendor_contacts, [[name, email]], matched by name.
+// The key holds the expiry, so the next cycle of the same item starts a new request.
+export const QUOTE_SRC = { equip_inspections: ['eq', ['vendor', 'serial_number', 'report_number', 'loc']], docs: ['dc', ['nt']] };
+export const QUOTE_KEY = 'quote_track', VENDOR_KEY = 'vendor_contacts', QUOTE_WAIT_DAYS = 7;
+const QSTAGES = ['sent', 'quote', 'order'];
+export function quoteKey(t, id, e) {
+  const k = QUOTE_SRC[t] && /^[A-Za-z0-9_-]{1,24}$/.test(String(id || '')) && ymd(e) ? 'Q-' + QUOTE_SRC[t][0] + '-' + id + '-' + ymd(e).substring(2).replace(/-/g, '') : '';
+  return k;
+}
+const vnorm = (v) => String(v || '').replace(/[\s"'`.,()\u05f3\u05f4\u2010-\u2015-]/g, '').toLowerCase();
+// Pure. The supplier of a row: equipment has a vendor column, a document says "\u05e1\u05e4\u05e7: X." in its note.
+export function vendorOf(t, r) {
+  if (t === 'equip_inspections') return String((r && r.vendor) || '').trim();
+  const m = /\u05e1\u05e4\u05e7:\s*([^.\n]+)/.exec(String((r && r.nt) || ''));
+  return m ? m[1].trim() : '';
+}
+// Pure. contacts = [[name, email]]; the longest name found inside the vendor wins.
+export function contactOf(vendor, contacts) {
+  const v = vnorm(vendor); let best = null;
+  if (!v) return '';
+  (contacts || []).forEach((c) => {
+    const n = vnorm(c && c[0]);
+    if (n.length >= 3 && v.includes(n) && /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test(String(c[1] || '')) && (!best || n.length > best[0].length)) best = [n, String(c[1])];
+  });
+  return best ? best[1] : '';
+}
+// Pure. The mailto link: keyboard characters only, the key in the subject and once more in the body.
+export function quoteMailto(x, key, email) {
+  const r = x.row || {}, lines = H.qBody.concat([H.qItem + x.name]);
+  if (r.serial_number) lines.push(H.qSerial + r.serial_number);
+  if (r.report_number) lines.push(H.qReport + r.report_number);
+  if (r.loc) lines.push(H.qLoc + r.loc);
+  lines.push(H.qExp + fd(x.e), '', H.qEnd[0], H.qEnd[1] + '[TS-' + key + ']', '');
+  const body = lines.concat(H.qSign).join('\r\n');
+  return 'mailto:' + (email || '') + '?subject=' + encodeURIComponent(H.qSubj + x.name + ' [TS-' + key + ']') + '&body=' + encodeURIComponent(body);
+}
+// Pure. Adds x.quote to the rows of QUOTE_SRC tables: {key, href, email, st} (st = the tracked stage, if any).
+export function attachQuotes(list, contacts, track, today) {
+  (list || []).forEach((x) => {
+    const key = x.t ? quoteKey(x.t, x.row && x.row.id, x.e) : '';
+    if (!key) return;
+    const email = contactOf(vendorOf(x.t, x.row), contacts);
+    const st = track && typeof track === 'object' && track[key] && QSTAGES.indexOf(track[key].stage) >= 0 ? track[key] : null;
+    x.quote = { key, email, href: quoteMailto(x, key, email), st, today };
+  });
+  return list;
+}
+function quoteCell(q) {
+  if (!q) return '';
+  const s = q.st;
+  if (s) {
+    const at = (k) => (ymd(s[k]) ? fd(s[k]) : '');
+    let t = s.stage === 'order' ? H.qOrder + at('order') : s.stage === 'quote' ? H.qQuote + at('quote') : H.qSent + at('sent');
+    if (ymd(s.planned)) t += ', ' + H.qPlanned + fd(s.planned);
+    const wait = s.stage === 'sent' && ymd(s.sent) && q.today ? dayDiff(ymd(s.sent), q.today) : 0;
+    let h = esc(t.trim());
+    if (wait >= QUOTE_WAIT_DAYS) h += '<br><span style="color:#b45309">' + esc(H.qWait + wait + H.days) + '</span>';
+    return h;
+  }
+  return '<a href="' + esc(q.href) + '" style="color:#1d4ed8;font-weight:bold">' + esc(H.qAsk) + '</a>' + (q.email ? '' : '<span style="color:#555">' + esc(H.qNoMail) + '</span>');
 }
 function expWhen(x) { return x.days < 0 ? H.expired + (-x.days) + H.days : x.days === 0 ? H.today : H.inDays + x.days + H.days; }
 function expBlock(list, failed) {
   let h = '';
   if (!list.length) h += '<p style="color:#555">' + H.none + '</p>';
   else {
-    h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
+    const qc = list.slice(0, EXP_SHOW).some((x) => x.quote);
+    h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.concat(qc ? [H.qTh] : []).map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
       + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name, x.owner].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
-        + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span></td></tr>').join('') + '</table>';
+        + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span></td>'
+        + (qc ? '<td style="' + cell + '">' + quoteCell(x.quote) + '</td>' : '') + '</tr>').join('') + '</table>';
     if (list.length > EXP_SHOW) h += '<p style="color:#555">' + esc(H.more + (list.length - EXP_SHOW)) + '</p>';
   }
   if (failed && failed.length) h += '<p style="color:#b45309">' + esc(H.expFail + failed.join(', ')) + '</p>';
@@ -301,11 +377,11 @@ export async function expiries(env, today) {
   const failed = [];
   const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
     try {
-      const sel = ['id', 'e'].concat(nc, oc).join(',');
+      const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : []))).join(',');
       const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
       if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
       const j = await r.json();
-      return [label, nc, oc, Array.isArray(j) ? j : []];
+      return [label, nc, oc, Array.isArray(j) ? j : [], QUOTE_SRC[t] ? t : undefined];
     } catch (e) { failed.push(label); return [label, nc, oc, []]; }
   }));
   const sets = {};
@@ -316,7 +392,10 @@ export async function expiries(env, today) {
       sets[t] = await r.json();
     } catch (e) { failed.push(label); }
   }));
-  return { expiring: expiringOf(lists.concat(recurringOf(sets)), today), expFail: failed, never: neverOf(sets) };
+  const qs = await stateGet(env, [QUOTE_KEY, VENDOR_KEY]).catch(() => ({}));
+  const pj = (k, d) => { try { return JSON.parse((qs[k] && qs[k].value) || 'null') || d; } catch (e) { return d; } };
+  const expiring = attachQuotes(expiringOf(lists.concat(recurringOf(sets)), today), pj(VENDOR_KEY, []), pj(QUOTE_KEY, {}), today);
+  return { expiring, expFail: failed, never: neverOf(sets) };
 }
 
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
