@@ -33,6 +33,7 @@ const DAY = 86400000;
   check('a later date in the Excel: a date gap with both values (spaces in the name ignored)', g.some((x) => x.k === 'date' && /מתזים/.test(x.n) && x.app === '2027-07-30' && x.xl === '2028-07-30'), g);
   check('an item the app does not have: missing', g.some((x) => x.k === 'missing' && x.n === 'בדיקה חדשה' && x.xl === '2027-01-01'), g);
   check('headers, task rows and items kept elsewhere: skipped', g.length === 2, g);
+  check('an en dash and a hyphen are the same name', findGaps([['כיבוי אש', 'טופס 9 - בדיקה', '01.01.2027']], [], { items: [{ n: 'טופס 9 \u2013 בדיקה', e: '2027-01-01' }], tasks: [] }).length === 0);
 
   console.log('\n3. the tasks sheet');
   const TASKS = [

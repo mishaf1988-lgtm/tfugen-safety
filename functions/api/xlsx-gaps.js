@@ -26,7 +26,7 @@ export const GAPS_MAX = 60;
 // Board items kept in the app under other names (49 inspections imported 04/10, the plan in
 // docs) or grouped there; not compared.
 export const ELSEWHERE = [
-  '\u05d2\u05dc\u05d0\u05d9 \u05d0\u05de\u05d5\u05e0\u05d9\u05d4 \u2013 \u05db\u05d9\u05d5\u05dc',
+  '\u05d2\u05dc\u05d0\u05d9 \u05d0\u05de\u05d5\u05e0\u05d9\u05d4 - \u05db\u05d9\u05d5\u05dc',
   '\u05de\u05dc\u05d2\u05d6\u05d5\u05ea',
   '\u05e6\u05d9\u05d5\u05d3 \u05d5\u05d0\u05d1\u05d9\u05d6\u05e8\u05d9 \u05d4\u05e8\u05de\u05d4',
   '\u05d0\u05d1\u05d9\u05d6\u05e8\u05d9 \u05d4\u05e8\u05de\u05d4 (\u05de\u05d7\u05e1\u05df)',
@@ -52,7 +52,8 @@ export function xlDate(t) {
 }
 const closedXl = (s) => /^\s*(\u05d4\u05d5\u05e9\u05dc\u05dd|\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9)/.test(String(s || ''));
 const closedApp = (s) => s === '\u05d4\u05d5\u05e9\u05dc\u05dd' || s === '\u05d1\u05d5\u05d8\u05dc';
-const nm = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+// Dashes of every width count as one (the Excel types en dashes; the app may not).
+const nm = (s) => String(s || '').replace(/[\u2010-\u2015]/g, '-').replace(/\s+/g, ' ').trim();
 
 // dates: rows of "לוח זמנים"; tasks: rows of "משימות וליקויים" (text, as Graph returns them).
 // app: {items: [{n, e}], tasks: [{ext_id, id, title, due, status}]}. Pure.
