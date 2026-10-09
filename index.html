@@ -2489,7 +2489,7 @@ id="m-ncr" style="display:none">
   <div class="modal-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; &#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; - &#1514;&#1508;&#1493;&#1490;&#1503;</div>
   <div class="fgrid">
     <div class="field"><label>&#1502;&#1505;&#1508;&#1512; &#1492;&#1512;&#1513;&#1488;&#1492;</label><input id="ptw-num" placeholder="&#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;"></div>
-    <div class="field"><label>&#1513;&#1501; &#1511;&#1489;&#1500;&#1503; *</label><input id="ptw-con"></div>
+    <div class="field"><label>&#1513;&#1501; &#1511;&#1489;&#1500;&#1503; *</label><input id="ptw-con" list="ptw-con-list" autocomplete="off" onfocus="_ptwConFill()" oninput="_ptwConCheck()"><datalist id="ptw-con-list"></datalist><div id="ptw-con-warn" style="font-size:12px;margin-top:4px"></div></div>
     <div class="field"><label>&#1513;&#1501; &#1488;&#1495;&#1512;&#1488;&#1497; &#1489;&#1513;&#1496;&#1495;</label><input id="ptw-sup"></div>
     <div class="field"><label>&#1504;&#1497;&#1497;&#1491;</label><input id="ptw-ph" type="tel"></div>
     <div class="field fw"><label>&#1513;&#1502;&#1493;&#1514; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label><input id="ptw-wkr"></div>
@@ -5576,6 +5576,23 @@ function svEmp(){
   ['e-n','e-r','e-d','e-s','e-left','e-ph','e-em','e-eid'].forEach(function(i){var el=g(i);if(el)el.value='';});
   toast('\u05e2\u05d5\u05d1\u05d3 \u05e0\u05e9\u05de\u05e8 \u2713');rEmp();
 }
+// BACKLOG 12.3 (09/10/2026, ISO 45001 8.1.4.2): the permit's contractor was free text, never
+// checked against the register. Now a pick-list from DB.ctr and a warning, not a block: not in
+// the register, agreement expired (du(e)<0), or training not "hukhshar". The ISO sheet's 8.1.4 line
+// stays amber until permits are issued against the register.
+function _ptwCtrOf(name){var k=String(name||'').trim().toLowerCase();if(!k)return null;return (DB.ctr||[]).filter(function(c){return String(c.n||'').trim().toLowerCase()===k;})[0]||null;}
+function _ptwConIssue(name){
+  if(!String(name||'').trim())return '';
+  var c=_ptwCtrOf(name);
+  if(!c)return '\u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05d0 \u05d1\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd';
+  var w=[];
+  if(c.e&&du(c.e)<0)w.push('\u05d4\u05d4\u05e1\u05db\u05dd \u05e4\u05d2 \u05d1-'+fd(c.e));
+  if(!c.e)w.push('\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05d5\u05e7\u05e3 \u05dc\u05d4\u05e1\u05db\u05dd');
+  if(c.tr!=='\u05d4\u05d5\u05db\u05e9\u05e8')w.push('\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+(c.tr||'\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df'));
+  return w.join(', ');
+}
+function _ptwConFill(){var dl=g('ptw-con-list');if(!dl)return;dl.innerHTML=(DB.ctr||[]).filter(function(c){return c&&c.n;}).map(function(c){return '<option value="'+esc(c.n)+'">';}).join('');}
+function _ptwConCheck(){var el=g('ptw-con-warn');if(!el)return '';var t=_ptwConIssue(gv('ptw-con'));el.innerHTML=t?'<span style="color:var(--bad)">\u26a0\ufe0f '+esc(t)+'</span>':'';return t;}
 function svPtw(){
   var con=gv('ptw-con');if(!con){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e7\u05d1\u05dc\u05df');return;}
   function getChk(id){var el=g(id);return el&&el.checked;}
@@ -5607,7 +5624,9 @@ function svPtw(){
     s:gv('ptw-st')};
   _svPut('ptw',r);
   addLog('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d4: '+num);sdb();closeModal('m-ptw');
-  toast('\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rPtw();
+  var ci=_ptwConIssue(con);
+  var cw=g('ptw-con-warn');if(cw)cw.innerHTML='';
+  toast(ci?'\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4, \u05e9\u05d9\u05dd \u05dc\u05d1: '+ci:'\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rPtw();
 }
 function svPpe(){
   var ty=gv('ppe-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
@@ -7989,12 +8008,12 @@ function _isoClauses(){
 
   // 8.1.3 / 8.1.4 (BACKLOG 12.2, 09/10/2026): change management is procedure 35 in the folder
   // (Michael, 09/10/2026: "most screens exist in the safety folder"), so grey with its name. Contractors: the register and its agreement expiry; the permit's contractor is still
-  // free text (12.3), so a permit cannot be checked against it, and the line says so.
+  // checked against it when the permit is written (12.3, a warning under the field).
   add(s45,'8.1.3','\u05e0\u05d9\u05d4\u05d5\u05dc \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd','-','na',ext('\u05e0\u05d5\u05d4\u05dc 35 - \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd (12/03/2025), \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 15_\u05ea\u05d9\u05e7 \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05e0\u05d4\u05dc\u05d9\u05dd'));
   var ctx=_isoExpiry('ctr');
   add(s45,'8.1.4','\u05e8\u05db\u05e9 \u05d5\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',ctx.total+' \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd, '+ctx.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3, '+ctx.gone+' \u05e4\u05d2\u05d5',
-    ctx.total?'warn':'na',
-    ctx.total?[(ctx.gone?ctx.gone+' \u05d4\u05e1\u05db\u05de\u05d9 \u05e7\u05d1\u05dc\u05df \u05e4\u05d2\u05d5':''),'\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05df \u05d1\u05d4\u05d9\u05ea\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05de\u05d5\u05dc \u05d4\u05de\u05e8\u05e9\u05dd'].filter(Boolean).join(', '):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05d5\u05d4\u05e1\u05de\u05db\u05d5\u05ea\u05d9\u05d4\u05dd'));
+    ctx.total?(ctx.gone?'warn':'ok'):'na',
+    ctx.total?(ctx.gone?ctx.gone+' \u05d4\u05e1\u05db\u05de\u05d9 \u05e7\u05d1\u05dc\u05df \u05e4\u05d2\u05d5':''):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05d5\u05d4\u05e1\u05de\u05db\u05d5\u05ea\u05d9\u05d4\u05dd'));
 
   // 8.2 — emergency preparedness: drills.
   var drlN=_isoCount('drl'),drlR=_isoRecent('drl','d');
