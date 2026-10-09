@@ -9,6 +9,7 @@
 **הפרומפט (כפי שנשמר בטריגר):**
 
 ---
+0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md (ב-repo tfugen-safety; אם אין: git clone https://github.com/mishaf1988-lgtm/tfugen-safety), סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-researcher).
 ריצה חדשה של חוקר העוזר: לבצע מההתחלה, לא להסתמך על ריצות קודמות בשיחה הזו. כל הודעה בעברית. תאריכים DD/MM/YYYY. בלי מקף ארוך.
 0. cd ל-repo michael-skills, git fetch origin main && git checkout -B main origin/main. קרא plugins/michael/skills/michael-assistant/SKILL.md (הכללים, "איך עדכון מגיע לחשבון") ו-references/research-queue.md.
 1. אם זו הריצה הראשונה בחודש (אין שורה ב"נסגר" מהחודש הנוכחי עם "חודשי"): בצע את "פעם בחודש" במקום פריט, וסיים בשלב 5.

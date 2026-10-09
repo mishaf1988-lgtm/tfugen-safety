@@ -7,6 +7,7 @@
 **ההגדרות:** לוח: יום שני 07:43 שעון ישראל (`CRON_TZ=Asia/Jerusalem 43 7 * * 1`), Sonnet 5.5.
 
 ---
+0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md (ב-repo tfugen-safety; אם אין: git clone https://github.com/mishaf1988-lgtm/tfugen-safety), סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-radar-learn).
 משימה שבועית: הרדאר מלמד את העוזר. כל הודעה בעברית. תאריכים DD/MM/YYYY.
 0. אם ה-repo tfugen-safety לא נמצא בשיחה: git clone https://github.com/mishaf1988-lgtm/tfugen-safety (ציבורי). קרא את CLAUDE.md, ואת השורה על nevo ב-.claude/skills/tfugen-ref/SKILL.md (איך מוצאים חוק בנבו).
 1. list_triggers (מ-ToolSearch, "list_triggers"), מצא trig_01SzAJJc2RDFcLoAeBEcWonK. אם last_run חסר, לא SUCCEEDED, או ש-fired_at ישן מ-3 ימים: שורה אחת וסיים.
