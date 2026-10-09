@@ -8,11 +8,11 @@
 "עדכן את ההוראות של הטריגר שלך לטקסט שב-project-files/retro-prompt.md, מתחת לקו".
 
 ---
-0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md (ב-repo tfugen-safety; אם אין: git clone https://github.com/mishaf1988-lgtm/tfugen-safety), סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: retro). ובנוסף, לפני שלב 2: עבור על שורות project-files/agent-log.md מאז הריצה הקודמת (סעיף "מי מעכל את הלוג" שם): "למדתי" שחוזר אצל שני סוכנים או פעמיים אצל אותו סוכן עולה לסעיף "ידע משותף" או ללקח, באותו PR של הרטרו (או ב-PR קטן משלו אם אין ממצא אחר).
+0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md (ב-repo tfugen-safety; אם אין: git clone https://github.com/mishaf1988-lgtm/tfugen-safety), סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: retro). ובנוסף, לפני שלב 2: קרא `bash project-files/routine-db.sh '{"op":"state_get","keys":["agent_log"]}'` והוסף לסוף project-files/agent-log.md כל דיווח שאין בו עדיין (לפי סוכן ותאריך), בפורמט של agent-common; ואז עבור על שורות agent-log.md מאז הריצה הקודמת (סעיף "מי מעכל את הלוג" שם): "למדתי" שחוזר אצל שני סוכנים או פעמיים אצל אותו סוכן עולה לסעיף "ידע משותף" או ללקח, באותו PR של הרטרו (או ב-PR קטן משלו אם אין ממצא אחר).
 
 רטרו יומי ברקע עבור repo mishaf1988-lgtm/tfugen-safety. זה הצ'אט הצדדי היחיד של הרטרו; כל ההרצות נכנסות לכאן. אין משתמש שקורא. מיכאל ביקש ב-01/10/2026: "רץ מאחורה, אפילו לא צריך להציג לי, בשביל הלימודים שלך", "שלא יהיו לי הרבה צ'אטים", וב-02/10/2026 אישר להוסיף מאתגר ופעולות מתקנות ("מישהו שינסה לאתגר אותו לתוצאות טובות ואולי דברים שהוא לא חשב"). לכן: לא לשאול שאלות, לא לפנות למיכאל, לא ליצור סשנים או טריגרים, לא לקרוא שיחות אחרות, ותשובה סופית של שורה אחת לכל היותר.
 
-1. `cd` ל-repo (או `git clone https://github.com/mishaf1988-lgtm/tfugen-safety` אם אינו). `git fetch origin main && git checkout -q -B retro-work origin/main`. לקרוא את CLAUDE.md ואת `.claude/skills/tfugen-lessons/SKILL.md`.
+1. `cd` ל-repo (או `git clone https://github.com/mishaf1988-lgtm/tfugen-safety` אם אינו). אם `git status --porcelain` לא ריק (שארית מריצה קודמת): `git stash` ולרשום בסגירה. `git fetch origin main && git checkout -q -B retro-work origin/main`. לקרוא את CLAUDE.md ואת `.claude/skills/tfugen-lessons/SKILL.md`.
 2. `git log --since="1 day ago" origin/main --oneline` (ביום ראשון: "3 days ago"). אם אין commits חוץ מ-"Monthly metrics": שורה אחת "אין חדש" וסיום.
 3. סוכן בודק (Agent, general-purpose) עם רשימת ה-commits, ה-diff שלהם (רק ה-hunks, לא index.html כולו), ו-`tfugen-lessons`, בלי הסבר מה ניסו לעשות. המשימה שלו: ליקויים אמיתיים בלבד (באג, בדיקה שבודקת דבר לא נכון, הפרת חוק מ-CLAUDE.md, לקח שחזר), כל אחד עם קובץ:שורה והוכחה. לא סגנון.
 4. לבדוק כל ממצא בעצמך: מאושר או נדחה עם הוכחה. עד שני סבבים מול הבודק.
@@ -27,6 +27,6 @@
    - פעולה מתקנת, לפי הסדר: (א) אפשר לאכוף בקוד (hook ב-`.claude/hooks/` או בדיקה ב-`tests/harness/`) = לכתוב, להוכיח בשבירה מכוונת (`cp` לגיבוי לפני, ביטול ב-`cp`), ולעדכן `נאכף:`. לקח עם `חזר:` 1 ומעלה ועדיין `נאכף: טקסט` = חובה לנסות hook או בדיקה. (ב) באג קטן וברור = לתקן עם בדיקה. (ג) צריך החלטה של מיכאל או מעל 50 שורות = לא לבצע; שורה ב-`STATUS.md`, סעיף «🔔 פתוח עכשיו», עם ההצעה, כדי ששיחה רגילה תציג אותה.
    - שורה ב-`project-files/RETRO-LOG.md`: תאריך DD/MM/YYYY, commits שנבדקו, ממצאים, לקח, פעולה מתקנת, ומה המאתגר מצא (כמה טענות, כמה התקבלו, הרעיון לשיפור התהליך).
    branch `routine/retro-YYYY-MM-DD`, commit, `git push -u origin <branch>`. אם יש כלי GitHub (mcp__github__*): PR שכותרתו מתחילה ב-"Fix:", עם שורת `רטרו:`, מיזוג רק כש-`tests` ירוקה (בלי expectedHeadSha; `bash .claude/hooks/ci-wait.sh <branch>` ברקע). אם אין: להשאיר את ה-branch; שיחה רגילה תמזג.
-7. אין ממצא מאושר (גם אחרי המאתגר): שורה אחת ב-RETRO-LOG עם הרעיון של המאתגר לשיפור התהליך, ו-"אין ממצא".
+7. אין ממצא מאושר (גם אחרי המאתגר): שורה אחת ב-RETRO-LOG עם הרעיון של המאתגר לשיפור התהליך, ו-"אין ממצא". גם השורה הזו, ושורות agent-log מצעד 0, נכנסות ל-main: branch `routine/retro-YYYY-MM-DD`, commit, push, PR (כותרת בלי Fix, שורות `רטרו:` ו-`skill:`), מיזוג כש-`tests` ירוקה, כמו בצעד 6. בלי זה הן נשארות בדיסק של השיחה ואובדות (09/10/2026: מ-02/10 עד 09/10 לא נוספה ל-RETRO-LOG אף שורה).
 עברית בקבצים, בלי מקף ארוך.
 ---

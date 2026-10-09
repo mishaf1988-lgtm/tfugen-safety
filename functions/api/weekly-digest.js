@@ -136,6 +136,7 @@ const H = {
   qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
   qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
+  ag: '\u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05d4\u05d0\u05d5\u05d8\u05d5\u05e0\u05d5\u05de\u05d9\u05d9\u05dd: ', agOk: ' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2', agFail: '\u05e0\u05db\u05e9\u05dc\u05d5: ', agLate: '\u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d1\u05d6\u05de\u05df: ', agNever: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5: ',
   nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', xg: '\u05e4\u05e2\u05e8\u05d9\u05dd \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc-Excel: ', xgNone: '\u05d0\u05d9\u05df, \u05e0\u05d1\u05d3\u05e7 ', xgNever: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df', xgStale: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ', xgFail: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-', xgMore: ' \u05d5\u05e2\u05d5\u05d3 ', xgLabel: { date: '\u05ea\u05d0\u05e8\u05d9\u05da \u05e9\u05d5\u05e0\u05d4', missing: '\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-missing': '\u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-state': '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e9\u05d5\u05e0\u05d4', 'task-due': '\u05d9\u05e2\u05d3 \u05e9\u05d5\u05e0\u05d4' }, asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
   never: '\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2 \u05d0\u05e3 \u05e4\u05e2\u05dd: ',
@@ -388,6 +389,7 @@ export function digestHtml(d, today, meta) {
   const w = m.watchOpen || [];
   h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
   if (m.upload) h += '<p style="margin:4px 0' + (m.upload.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.upload.text) + '</p>';
+  if (m.agents) h += '<p style="margin:4px 0' + (m.agents.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.agents.text) + '</p>';
   if (m.nevo) h += '<p style="margin:4px 0' + (m.nevo.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.nevo.text) + '</p>';
   if (m.asst) h += '<p style="margin:4px 0' + (m.asst.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.asst.text) + '</p>';
   if (m.xg) h += '<p style="margin:4px 0' + (m.xg.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.xg.text) + '</p>';
@@ -576,6 +578,32 @@ export function nevoLine(raw, nowMs) {
   return { text: H.nevo + H.nevoNone + fd(String(r.at).substring(0, 10)), red: false };
 }
 
+// 09/10/2026 (review of the agents): every Routine ends with agent_report to /api/routine-db,
+// which appends {agent, at, ok, line, learned} to server_state.agent_log. A failed run, or an
+// agent silent longer than its period after it already reported once, is red: before this a
+// run's last message stayed in a persistent session that nobody opens. Never reported = listed,
+// not red (the monthly ones first run on 01/11). Pure.
+export const AGENT_PERIODS = { 'routine-researcher': 4, retro: 4, 'routine-quotes': 8, 'routine-radar-learn': 8, 'routine-compliance': 35, 'routine-od-scan': 35, 'routine-nevo-versions': 35, 'routine-factory-trends': 35 };
+export function agentsLine(raw, nowMs) {
+  let log = []; try { log = JSON.parse(raw || '[]'); } catch (e) { log = []; }
+  if (!Array.isArray(log)) log = [];
+  const last = {}, fails = [];
+  for (const e of log) {
+    if (!e || !e.agent || !e.at) continue;
+    const t = Date.parse(e.at);
+    if (!last[e.agent] || t > last[e.agent]) last[e.agent] = t;
+    if (e.ok !== true && nowMs - t <= 8 * DAY) fails.push(e.agent + (e.line ? ' (' + String(e.line).substring(0, 80) + ')' : ''));
+  }
+  const week = Object.keys(last).filter((a) => nowMs - last[a] <= 7 * DAY).length;
+  const late = Object.keys(AGENT_PERIODS).filter((a) => last[a] && nowMs - last[a] > AGENT_PERIODS[a] * DAY);
+  const never = Object.keys(AGENT_PERIODS).filter((a) => !last[a]);
+  const parts = [week + H.agOk];
+  if (fails.length) parts.push(H.agFail + fails.slice(0, 5).join('; '));
+  if (late.length) parts.push(H.agLate + late.join(', '));
+  if (never.length) parts.push(H.agNever + never.join(', '));
+  return { text: H.ag + parts.join('. '), red: !!(fails.length || late.length) };
+}
+
 // 08/10/2026 (Michael, "בצע: מפתח קריאה ל-GitHub"): the researcher Routine closes one gap a
 // weekday in michael-skills (private), research-queue.md: "## נסגר" lines start "- DD/MM/YYYY,",
 // "## שאלות למיכאל" lines start "- ". The digest reads the file with a read-only token
@@ -634,7 +662,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -651,7 +679,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

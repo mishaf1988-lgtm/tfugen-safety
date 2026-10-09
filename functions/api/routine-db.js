@@ -19,13 +19,26 @@
 //              name (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"). COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back.
+//   agent_report  append one run report {agent, ok, line, learned} to server_state
+//              agent_log (last AGENT_LOG_MAX kept). Every Routine ends with it, so a
+//              failed or silent run reaches the weekly mail and the daily retro
+//              (09/10/2026, review of the agents: a run's last message in a
+//              persistent session reaches nobody).
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log'];
+export const AGENT_LOG_MAX = 200;
+// One run report, cleaned: a short agent name and three short texts.
+export function agentEntry(b, nowIso) {
+  const name = String(b.agent || '');
+  if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
+  const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
+  return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+}
 export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp'];
 // Tables a Routine reads only some columns of; select= is required and must stay inside.
 export const COLUMNS = {
@@ -112,6 +125,23 @@ export async function onRequest(context) {
       const rows = await stateRead([body.key]);
       const got = Array.isArray(rows) && rows[0] ? rows[0].value : null;
       return jsonResp({ ok: got === value, value: got }, 200, {});
+    }
+    if (body.op === 'agent_report') {
+      const e = agentEntry(body, new Date().toISOString());
+      if (!e) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      const rows = await stateRead(['agent_log']);
+      let log = [];
+      try { log = JSON.parse(rows && rows[0] && rows[0].value || '[]'); } catch (x) { log = []; }
+      if (!Array.isArray(log)) log = [];
+      log.push(e);
+      log = log.slice(-AGENT_LOG_MAX);
+      const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+        method: 'POST',
+        headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log), updated_at: e.at }]),
+      });
+      if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
     }
     return jsonResp({ ok: false, error: 'unknown op' }, 400, {});
   } catch (e) {
