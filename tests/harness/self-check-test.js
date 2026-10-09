@@ -75,8 +75,10 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
   say('NCR due: 30d default, 1d on critical', r.u30 === r.exp30 && r.u1 === r.exp1, r);
   say('NCR root cause / action are 3-row textareas, full width', r.rcRows >= 3 && r.cRows >= 3 && r.rcW > r.mdW * 0.8, r);
   await page.evaluate(() => closeModal('m-ncr'));
-  r = await page.evaluate(() => { goPage('ncr'); rNcr(); const tb = g('tb-ncr'); const row = tb.querySelector('tr'); return { txt: row.textContent, badge: !!row.querySelector('.badge,.eb,[class*="badge"]'), del: Array.from(row.querySelectorAll('button')).map(b => b.textContent.trim()).filter(t => /✕|🗑/.test(t)) }; });
+  r = await page.evaluate(() => { goPage('ncr'); rNcr(); const tb = g('tb-ncr'); const row = tb.querySelector('tr'); return { txt: row.cells[2].textContent, badge: !!row.cells[2].querySelector('.badge,.eb,[class*="badge"]'), del: Array.from(row.querySelectorAll('button')).map(b => b.textContent.trim()).filter(t => /✕|🗑/.test(t)) }; });
   await page.waitForTimeout(300); await shot('NCR-table');
+  // only the discovery-date cell: the due column (eb(n.u)) rightly says "פג" once the fixed
+  // audit date's 7-day target has passed (09/10/2026, red on main with no code change)
   say('NCR table: discovery date not an expiry badge ("0 י"/"פג"), delete button carries ✕ or 🗑', !/\d+ י\b|פג/.test(r.txt) && r.del.length > 0, r);
 
   // ---- ג. AI prompt rules (server not reachable here) ----
