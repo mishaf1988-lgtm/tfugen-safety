@@ -80,5 +80,19 @@ doc4 = mm.render(mm.render(doc3, row12, [], '2026-12', now), row01, [], '2027-01
 check('render: year boundary sorts 01/2027 before 12/2026', doc4.index('| 01/2027') < doc4.index('| 12/2026') < doc4.index('| 10/2026'))
 check('render: detail block replaced, not appended', doc4.count(mm.DETAIL_START) == 1)
 
+# Agents' shared learning (09/10/2026)
+LOG = ('09/10/2026 | routine-quotes (הקמה) | הוקם | למדתי: לחפש מזהה ישן\n'
+       '12/10/2026 | routine-researcher | גרסה 50 | למדתי: אין\n'
+       '13/10/2026 | routine-researcher | גרסה 51 | למדתי: נבו מחזיר 403 בלילה\n'
+       '01/11/2026 | routine-compliance | דוח | למדתי: אין\n')
+COM = '# x\n## ידע משותף (נבדק)\n- כלי א (09/10/2026).\n- כלי ב (20/10/2026, #1).\n- ישן (30/09/2026).\n'
+ad = mm.agents_digest(LOG, COM, '2026-10', {'routine-quotes', 'routine-researcher', 'retro'})
+check('agents: runs and learned per agent, the "(הקמה)" suffix dropped', '- routine-researcher: 2 ריצות, 1 עם "למדתי"' in ad and '- routine-quotes: 1 ריצות, 1 עם "למדתי"' in ad, ad)
+check('agents: another month is not counted', not any('routine-compliance' in l and 'ריצות' in l for l in ad), ad)
+check('agents: an agent with no line is named', 'סוכנים בלי אף שורה: retro.' in ad, ad)
+check('agents: shared knowledge lines dated in the month', 'שורות שנוספו לידע המשותף: 2.' in ad, ad)
+check('agents: an empty log says so', 'אין שורות.' in mm.agents_digest('', '', '2026-10', set()))
+real_agents = mm.routine_agents()
+check('agents: the real routine files name their agents (step 0)', {'routine-quotes', 'routine-compliance', 'retro', 'routine-researcher'} <= real_agents, real_agents)
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)
