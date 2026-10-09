@@ -153,6 +153,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const btn = await page.evaluate(() => { DB.docs = []; goPage('exp'); expFilter('all'); rExp();
     return [...document.querySelectorAll('#tb-exp tr')].some((tr) => /3\(ב\)/.test(tr.textContent) && [...tr.querySelectorAll('button')].some((b) => /goPage\('docs'\)/.test(b.getAttribute('onclick') || ''))); });
   check('the row has a button to the documents page', btn);
+  console.log('\nOut of tracking ("לא רלוונטי", BACKLOG 12.11, 10/10/2026)');
+  const off = await page.evaluate(() => {
+    DB.docs = [{ id: 'o1', n: 'רישיון', s: 'לא רלוונטי', e: null }, { id: 'o2', n: 'היתר', s: 'בתוקף', e: null }, { id: 'o3', n: 'ישן', s: 'לא רלוונטי', e: '2023-06-30' }];
+    DB.equip_inspections = [{ id: 'q1', n: 'אוטוקלב', s: 'לא רלוונטי', e: null }, { id: 'q2', n: 'דפיברילטור', s: 'טעון אימות', e: null }, { id: 'q3', n: 'עמדה', s: 'לא רלוונטי', e: '2026-06-30' }];
+    const none = _expNoDate().map((x) => x.id), dated = _expCollect().map((x) => x.id);
+    DB.docs = []; DB.equip_inspections = [];
+    return { none, dated };
+  });
+  check('not relevant, no date: not in "no date"; another status still is', !off.none.includes('o1') && !off.none.includes('q1') && off.none.includes('o2') && off.none.includes('q2'), off);
+  check('not relevant with an old date: not counted as expired', !off.dated.includes('o3') && !off.dated.includes('q3'), off);
   check('no page errors', !errs.length, errs);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
