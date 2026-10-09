@@ -13,6 +13,7 @@ Per month:
   - fix PRs (same title rule as lessons-gate.py)
   - PRs whose retro line found something (not "אין" / "none")
   - new lessons (header date in that month), lessons that recurred (חזר: > 0, snapshot)
+  - in the detail block: learning lines of the agents (agent-log.md), silent agents, shared knowledge added
 
 Usage: monthly-metrics.py [YYYY-MM]   (default: the previous month, UTC)
 Env: GITHUB_TOKEN (optional, raises the rate limit), GITHUB_REPOSITORY.
@@ -113,6 +114,45 @@ def lessons_digest(text, ym):
     rec = ['- %d. %s: חזר %d' % (n, t, k) for n, t, k, _ in sorted(items, key=lambda x: -x[2]) if k > 0]
     return (['', '### לקחים חדשים ב-%s/%s' % (m, y), ''] + (new or ['אין.']) +
             ['', '### לקחים שחזרו (מצב ביום המדידה; חזר = הכלל לא עובד, צריך hook או בדיקה)', ''] + (rec or ['אין.']))
+
+
+AGENT_LOG = os.path.join(ROOT, 'project-files', 'agent-log.md')
+AGENT_COMMON = os.path.join(ROOT, 'project-files', 'agent-common.md')
+LOG_LINE = re.compile(r'^(\d\d)/(\d\d)/(\d{4}) \| ([^|]+?) \| [^|]* \| למדתי: (.*)$', re.M)
+
+
+def routine_agents(root=ROOT):
+    """The agent names step 0 gives each Routine ("שם הסוכן: X" in routine-*.md and retro-prompt.md)."""
+    names = set()
+    for p in sorted(os.listdir(os.path.join(root, 'project-files'))):
+        if p.startswith('routine-') and p.endswith('.md') or p == 'retro-prompt.md':
+            m = re.search(r'שם הסוכן: ([^)\s]+)', open(os.path.join(root, 'project-files', p), encoding='utf-8').read())
+            if m:
+                names.add(m.group(1))
+    return names
+
+
+def agents_digest(log_text, common_text, ym, agents):
+    """Michael, 09/10/2026: does the shared learning of the agents work? Per month: learning
+    lines per agent, how many learned something, agents that wrote nothing, and shared
+    knowledge lines dated in the month (they are what the daily retro promoted)."""
+    y, m = ym.split('-')
+    per = {}
+    for dd, mm_, yy, name, learned in LOG_LINE.findall(log_text or ''):
+        if mm_ == m and yy == y:
+            name = name.split(' (')[0].strip()
+            c = per.setdefault(name, [0, 0])
+            c[0] += 1
+            if learned.strip() not in ('אין', 'אין.', ''):
+                c[1] += 1
+    sec = (common_text or '').split('## ידע משותף', 1)
+    shared = len(re.findall(r'^- .*\b\d\d/%s/%s\b' % (m, y), sec[1] if len(sec) > 1 else '', re.M))
+    out = ['', '### למידה של הסוכנים ב-%s/%s (`agent-log.md`)' % (m, y), '']
+    out += ['- %s: %d ריצות, %d עם "למדתי"' % (n, c[0], c[1]) for n, c in sorted(per.items())] or ['אין שורות.']
+    silent = sorted(set(agents) - set(per))
+    out += ['', 'סוכנים בלי אף שורה: ' + (', '.join(silent) if silent else 'אין') + '.',
+            'שורות שנוספו לידע המשותף: %d.' % shared]
+    return out
 
 
 def summarize(prs, lessons_text, ym):
@@ -229,7 +269,9 @@ def main():
     row, detail = summarize(prs, lessons, ym)
     existing = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
     with open(OUT, 'w', encoding='utf-8') as f:
-        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym)))
+        log = open(AGENT_LOG, encoding='utf-8').read() if os.path.exists(AGENT_LOG) else ''
+        common = open(AGENT_COMMON, encoding='utf-8').read() if os.path.exists(AGENT_COMMON) else ''
+        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym) + agents_digest(log, common, ym, routine_agents())))
     print(row)
 
 
