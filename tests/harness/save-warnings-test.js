@@ -1,6 +1,6 @@
 // BACKLOG 12.4 / 12.5 (09/10/2026): two save-time warnings, never a block.
 // 12.4: a document saved "בתוקף" with no expiry. 12.5: an equipment item whose serial number
-// is already on another item. Also: editing an item keeps the columns the form does not hold.
+// is already on another item. 12.8: a high or critical task with no target date. Also: editing an item keeps the columns the form does not hold.
 const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
@@ -39,6 +39,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const a = DB.equip_inspections.find((x) => x.id === 'a');
     out.kept = a.serial_number === 'SN-77' && a.deficiencies === 'שלט חסר' && a.report_number === 'R1';
     out.sentOnlyForm = !('deficiencies' in window.__upd[0][1]);
+    // 12.8: an urgent task with no target date
+    DB.tasks = []; window.rTasks = function () {}; window.rDash = function () {};
+    const tsk = (pri, due, st) => { openTskModal(); g('tsk-title').value = 'גידור מכונה'; g('tsk-priority').value = pri; g('tsk-due').value = due || ''; if (st) g('tsk-status').value = st; svTsk(); return last(); };
+    out.tHigh = tsk('גבוה', '');
+    out.tCrit = tsk('קריטי', '');
+    out.tHighDue = tsk('גבוה', '2026-11-01');
+    out.tNormal = tsk('רגיל', '');
+    out.tDone = tsk('גבוה', '', _TSK_DONE);
+    out.tSaved = DB.tasks.length;
     return out;
   });
   check('"בתוקף" with no expiry: saved, and the toast says so', /מסמך "בתוקף" בלי תאריך תפוגה/.test(r.docNoDate), r.docNoDate);
@@ -49,6 +58,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('a unique serial number: the plain toast', !/שים לב/.test(r.eqUnique), r.eqUnique);
   check('editing keeps serial, defect and report in the local row', r.kept, r);
   check('...while the update still sends only the form fields', r.sentOnlyForm);
+  check('high priority, no target: saved, and the toast says so', /משימה בעדיפות גבוה בלי יעד/.test(r.tHigh), r.tHigh);
+  check('critical priority, no target: the same warning', /משימה בעדיפות קריטי בלי יעד/.test(r.tCrit), r.tCrit);
+  check('high priority with a target: the plain toast', !/שים לב/.test(r.tHighDue), r.tHighDue);
+  check('normal priority, no target: no warning', !/שים לב/.test(r.tNormal), r.tNormal);
+  check('high priority saved as done: no warning', !/שים לב/.test(r.tDone), r.tDone);
+  check('all five tasks were saved (a warning, not a block)', r.tSaved === 5, r.tSaved);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
