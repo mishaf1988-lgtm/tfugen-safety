@@ -77,6 +77,20 @@ def no_code_handoff(cwd):
         return False
 
 
+def squashed_into_main(cwd):
+    """A squash merge leaves the branch commits "ahead" by hash, though main has
+    their content (09/10/2026, a false block after #1257). True when every file
+    the branch changed since the merge base is identical in origin/main."""
+    rc, base = git(cwd, "merge-base", "origin/main", "HEAD")
+    if rc or not base:
+        return False
+    rc, files = git(cwd, "diff", "--name-only", base, "HEAD")
+    if rc or not files:
+        return False
+    p = subprocess.run(["git", "diff", "--quiet", "origin/main", "HEAD", "--"] + files.splitlines(), cwd=cwd, timeout=20)
+    return p.returncode == 0
+
+
 def verdict(cwd, text, tools, waiting, recent=None):
     if text.rstrip()[-400:].count("?"):
         return None
@@ -86,7 +100,7 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if rc == 0 and dirty:
         return "המפקח: יש שינויים שלא נכנסו ל-commit:\n" + dirty[:400] + "\nלסיים: בדיקות, commit, PR, מיזוג. או להסביר למיכאל למה עוצרים."
     rc, ahead = git(cwd, "rev-list", "--count", "origin/main..HEAD")
-    if rc == 0 and ahead not in ("", "0"):
+    if rc == 0 and ahead not in ("", "0") and not squashed_into_main(cwd):
         return ("המפקח: %s commits על ה-branch עוד לא ב-main (Cloudflare מפרסם רק את main). "
                 "לפתוח PR אם אין, להריץ ברקע ci-wait.sh ולמזג כשירוק (לקח 25)." % ahead)
     merged = any(t.endswith("merge_pull_request") for t in tools)
