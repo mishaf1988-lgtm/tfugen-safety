@@ -343,6 +343,25 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('change management (no register yet): grey', r.moc === 'na', r.moc);
   }
 
+  console.log('\nBACKLOG 12.10: policy (5.2) and roles (5.3), grey with the folder documents until in the register');
+  {
+    const r = await page.evaluate(() => {
+      const keep = DB.docs;
+      DB.docs = [];
+      const e = ['5.2', '5.3'].map((cl) => { const c = __by(cl); return c ? c.st + '|' + c.gap + '|' + c.proc : null; });
+      DB.docs = [{ id: 'p', n: 'מדיניות בטיחות - עדכנית', c: 'מדיניות', e: null }, { id: 'r', n: 'הגדרת תפקיד - מנהל משמרת', c: 'נהלים', e: null }];
+      const f = ['5.2', '5.3'].map((cl) => __by(cl).st + '|' + __by(cl).ev);
+      DB.docs = [{ id: 'x', n: 'נוהל עבודה בגובה', c: 'נהלים', e: null }];
+      const o = ['5.2', '5.3'].map((cl) => __by(cl).st);
+      DB.docs = keep;
+      return { e, f, o };
+    });
+    check('nothing in the register: both grey, naming the folder documents', /^na\|לא באפליקציה: "מדיניות בטיחות - עדכנית" \(22\/04\/2025\)/.test(r.e[0] || '') && /^na\|לא באפליקציה: הגדרות תפקיד \(ממונה בטיחות/.test(r.e[1] || ''), r.e);
+    check('the procedures from the clause table', /\|נוהל 1 \(מדריך המערכת המשולבת\)$/.test(r.e[0] || '') && /\|מסמכי הגדרות תפקיד$/.test(r.e[1] || ''), r.e);
+    check('a policy document and a role definition in the register: both green, counted', r.f.join() === 'ok|1 מסמכים במרשם,ok|1 מסמכים במרשם', r.f);
+    check('an unrelated document does not turn them green', r.o.join() === 'na,na', r.o);
+  }
+
   console.log('\nThe factory procedure behind each clause (clause table, 22/04/2025)');
   {
     const r = await page.evaluate(() => {
