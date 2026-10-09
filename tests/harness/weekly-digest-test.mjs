@@ -5,7 +5,7 @@
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, eqiFailLine } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -369,6 +369,16 @@ const ROWS = [
     const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], nevo: ch });
     check('in the mail, red', /color:#b91c1c;font-weight:bold">מעקב נבו/.test(h));
     check('no nevo meta: no line', !/מעקב נבו/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
+    console.log('\nFailed equipment (BACKLOG 12.1, 09/10/2026)');
+    {
+      const rows = [{ id: 'a', n: 'עגורן', s: 'לתקן', d: '2026-08-03', deficiencies: 'יש להחליף שרשרת' }, { id: 'b', n: 'במה', s: 'כשיר לעבודה' }, { id: 'c', code: 'XL-7', s: 'לא כשיר' }];
+      const l = eqiFailLine(rows);
+      check('two failed of three: red, named, with the defect and the date', l.red && l.n === 2 && /עגורן \(יש להחליף שרשרת\), 03\/08\/2026/.test(l.text) && /XL-7/.test(l.text) && !/במה/.test(l.text), l);
+      check('none failed: no line', eqiFailLine([{ n: 'x', s: 'תקין' }]) === null && eqiFailLine(null) === null);
+      check('many: cut at 6 with the rest counted', /ועוד 2$/.test(eqiFailLine(Array.from({ length: 8 }, (_, i) => ({ n: 'n' + i, s: 'פסול' }))).text));
+      const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], eqiFail: l });
+      check('in the mail, red, before the expiry table', /color:#b91c1c;font-weight:bold">ציוד לא כשיר/.test(h));
+    }
     console.log('\nAgents (server_state.agent_log, 09/10/2026)');
     {
       const now = Date.parse('2026-11-08T05:00:00Z');
