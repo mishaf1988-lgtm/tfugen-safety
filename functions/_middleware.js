@@ -36,7 +36,10 @@ const DEFAULT_ALLOWED = 'IL';
 // its own authentication and does not become weaker for being reachable.
 // /api/trustee-log (2026-09-27) is the same kind of caller: the trustee_reports
 // statement trigger, rebuilding the OneDrive log, with the same secret.
-const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inbox', '/api/hazard-file', '/api/od-read', '/api/meeting-data', '/api/hazard-deck', '/api/weekly-digest', '/api/backup-od', '/api/od-scan', '/api/xlsx-gaps'];
+const MACHINE_PATHS = ['/api/trustee-notify', '/api/trustee-log', '/api/mail-inbox', '/api/hazard-file', '/api/od-read', '/api/meeting-data', '/api/hazard-deck', '/api/weekly-digest', '/api/backup-od', '/api/od-scan', '/api/xlsx-gaps', '/api/routine-db'];
+// /api/routine-db (09/10/2026, Michael: "בצע: בלי טבלת רפואה"): the Routines run in the
+// cloud, outside Israel. Its own ROUTINE_KEY is the gate; it reads a fixed list of
+// tables (medical ones: expiry only) and writes four server_state keys, nothing else.
 // The daily Vitre import (30/09/2026) is pg_cron calling POST /api/vitre?op=sync
 // with the same secret header. Only that one call is let through: the rest of
 // /api/vitre (employee phones, SMS) is a browser endpoint and stays behind the
