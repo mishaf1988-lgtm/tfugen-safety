@@ -2,6 +2,8 @@
 
 מיכאל אישר ב-04/10/2026 ("מאשר הכל"). רשימת הקבצים החדשים נבנית בלי Claude: `/api/od-scan` כל לילה (cron `od-scan`, `migrations/2026-10-04_od_scan_cron.sql`) שומר אותה ב-`server_state.od_scan`, והמייל של יום ראשון מציג את הקבצים של השבוע. ה-Routine נחוץ רק לקריאת המסמך עצמו ולעדכון העוזר.
 
+**מ-09/10/2026:** הטריגר יורה לתוך `session_01JT8Fct6Z6Qv2GbaBBqxtQT` ("Routines חודשיים בלי לחיצה", לא לארכב) עם פרומפט קצר שקורא את הפרומפט שבין הקווים בקובץ הזה (נבדק ב-`list_triggers` 09/10/2026). מה שכתוב למטה על 04/10 ו-07/10 הוא היסטוריה: אין מה להדביק ביד.
+
 **הוקם 04/10/2026** מהשיחה במחשב דרך ה-API: `trig_01PgHBDZYCBf8M9GsytoVMjd`, Sonnet 5.5, ריצה ראשונה 02/11/2026. נבדק ב-`get_trigger` מהענן: הלוח, הפרומפט, התראה לטלפון ו-connector של Supabase במקום. ה-repo לא מופיע בתשובה של `get_trigger`; אם הריצה של 02/11 לא מוצאת את CLAUDE.md, להוסיף את ה-repo ב-claude.ai > Routines.
 
 **07/10/2026: פרומפט חדש, להדביק ביד.** העוזר עבר ל-repo הפרטי `michael-skills`, ולמשימה מתוזמנת אין אליו גישה (ריצת ניסיון). שיחה שנפתחת עם `create_session` ו-`source_url` כן דוחפת לשם (נבדק). ה-Routine נוצר דרך ה-API, ולכן שיחה לא יכולה לעדכן אותו (`update_trigger`: "Agents can only update routines they created"). מיכאל מדביק את הטקסט שבין הקווים ב-https://claude.ai/code/routines/trig_01PgHBDZYCBf8M9GsytoVMjd ומוסיף connector Claude_Code_Remote אם אינו שם (בתשובת `get_trigger` מ-07/10 הוא שם). ההגדרות:
