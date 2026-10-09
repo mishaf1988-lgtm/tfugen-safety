@@ -33,6 +33,8 @@ const DAY = 86400000;
   check('a later date in the Excel: a date gap with both values (spaces in the name ignored)', g.some((x) => x.k === 'date' && /מתזים/.test(x.n) && x.app === '2027-07-30' && x.xl === '2028-07-30'), g);
   check('an item the app does not have: missing', g.some((x) => x.k === 'missing' && x.n === 'בדיקה חדשה' && x.xl === '2027-01-01'), g);
   check('headers, task rows and items kept elsewhere: skipped', g.length === 2, g);
+  g = findGaps([['תסקירי ציוד', 'אוטוקלב ישן', '13.08.2025'], ['רישוי והיתרים', 'רישיון שאינו שלי', '30.06.2023'], ['תסקירי ציוד', 'אוטוקלב חדש', '01.01.2027']], [], { items: [{ n: 'אוטוקלב ישן', e: null, s: 'לא רלוונטי' }, { n: 'רישיון שאינו שלי', e: null, s: ' לא רלוונטי - לא בניהול שלי' }, { n: 'אוטוקלב חדש', e: null, s: 'כשיר לעבודה' }], tasks: [] });
+  check('BACKLOG 12.11: a row the app took out of tracking ("לא רלוונטי"): no date gap; another status still is', g.length === 1 && g[0].n === 'אוטוקלב חדש' && g[0].k === 'date', g);
   check('an en dash and a hyphen are the same name', findGaps([['כיבוי אש', 'טופס 9 - בדיקה', '01.01.2027']], [], { items: [{ n: 'טופס 9 \u2013 בדיקה', e: '2027-01-01' }], tasks: [] }).length === 0);
 
   console.log('\n3. the tasks sheet');

@@ -56,7 +56,10 @@ const closedApp = (s) => s === '\u05d4\u05d5\u05e9\u05dc\u05dd' || s === '\u05d1
 const nm = (s) => String(s || '').replace(/[\u2010-\u2015]/g, '-').replace(/\s+/g, ' ').trim();
 
 // dates: rows of "לוח זמנים"; tasks: rows of "משימות וליקויים" (text, as Graph returns them).
-// app: {items: [{n, e}], tasks: [{ext_id, id, title, due, status}]}. Pure.
+// A row the app marks "lo relevanti" was taken out of tracking on purpose (Michael, 08/10/2026),
+// so its empty date is not a gap while the Excel still shows the old one (BACKLOG 12.11).
+export const OFF = /^\s*\u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9/;
+// app: {items: [{n, e, s}], tasks: [{ext_id, id, title, due, status}]}. Pure.
 export function findGaps(dates, tasks, app) {
   const gaps = [];
   const skip = new Set(ELSEWHERE.map(nm));
@@ -67,6 +70,7 @@ export function findGaps(dates, tasks, app) {
     if (!dom || !item || dom === '\u05ea\u05d7\u05d5\u05dd' || /^\u05de\u05e9\u05d9\u05de\u05d4/.test(dom) || skip.has(item)) return;
     const a = byName.get(item), xl = xlDate(r[2]);
     if (!a) gaps.push({ k: 'missing', n: item, xl });
+    else if (OFF.test(String(a.s || ''))) return;
     else if ((a.e || null) !== xl) gaps.push({ k: 'date', n: item, app: a.e || null, xl });
   });
   const byExt = new Map();
@@ -104,7 +108,7 @@ export async function onRequest(context) {
     };
     const [dates, tasks, docs, eq, tk] = await Promise.all([
       sheet(SHEET_DATES), sheet(SHEET_TASKS),
-      readAll(env, 'docs?select=n,e'), readAll(env, 'equip_inspections?select=n,e'),
+      readAll(env, 'docs?select=n,e,s'), readAll(env, 'equip_inspections?select=n,e,s'),
       readAll(env, 'tasks?select=id,ext_id,title,due,status'),
     ]);
     if (!dates.length || !tasks.length) throw new Error('empty sheet');
