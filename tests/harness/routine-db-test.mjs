@@ -87,6 +87,18 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
 
+  console.log('\n4c. live: the deployed commit and the hash of the served index.html');
+  {
+    const html = '<html>tapugan</html>';
+    const want = (await import('crypto')).createHash('sha256').update(html).digest('hex');
+    const ENVL = { ...ENV, CF_PAGES_COMMIT_SHA: 'abc123', CF_PAGES_BRANCH: 'main', ASSETS: { fetch: async (req) => new Response(new URL(req.url).pathname === '/index.html' ? html : 'x', { status: 200 }) } };
+    let l = await call({ op: 'live' }, 'k-123', 'POST', ENVL);
+    check('live: ok, the commit, and the sha256 of the served index.html', l.json.ok && l.json.commit === 'abc123' && l.json.index_sha256 === want && l.json.bytes === html.length, l.json);
+    check('live without the key: 403', (await call({ op: 'live' }, 'nope', 'POST', ENVL)).status === 403);
+    l = await call({ op: 'live' }, 'k-123', 'POST', ENV);
+    check('live with no ASSETS binding: ok false, says why', !l.json.ok && /ASSETS/.test(l.json.error), l.json);
+  }
+
   console.log('\n5. the country gate lets it through (the cloud is not in Israel)');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
   check('/api/routine-db is a machine path', /const MACHINE_PATHS = \[[^\]]*'\/api\/routine-db'/.test(mw));
