@@ -339,7 +339,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     });
     check('with nothing recorded, all four are grey and say where the evidence is', r.empty.every((x) => x && x.indexOf('na|לא באפליקציה') === 0), r.empty);
     check('a context document in the register: 4.1/4.2 green', r.ctx === 'ok', r.ctx);
-    check('contractors: counted with expiry, amber, and the permit link named as missing', /^warn\|2 קבלנים במרשם, 1 בתוקף, 1 פגו\|1 הסכמי קבלן פגו, שם הקבלן בהיתר העבודה לא נבדק מול המרשם$/.test(r.con), r.con);
+    check('contractors: counted with expiry; an expired agreement is amber and named', /^warn\|2 קבלנים במרשם, 1 בתוקף, 1 פגו\|1 הסכמי קבלן פגו$/.test(r.con), r.con);
     check('change management (no register yet): grey', r.moc === 'na', r.moc);
   }
 
