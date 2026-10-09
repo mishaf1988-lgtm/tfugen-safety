@@ -5,7 +5,7 @@
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, eqiFailLine } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -77,6 +77,14 @@ const ROWS = [
   const hx = digestHtml(g, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: X, expFail: [] });
   check('the mail: a section with the count, above the overdue hazards', hx.includes(T.exp + ' (4)') && hx.indexOf(T.exp) < hx.indexOf(T.overdue), hx.substring(0, 300));
   check('the row reads as Michael reads it: DD/MM/YYYY, "פג לפני 3 ימים" in red, "בעוד 10 ימים"', hx.includes('01/10/2026') && /color:#b91c1c;font-weight:bold">פג לפני 3 ימים/.test(hx) && hx.includes('בעוד 10 ימים') && hx.includes('>היום<'), hx);
+  // BACKLOG 12.9 (09/10/2026): expired over 30 days and no open task = "בלי משימה"
+  const NT = () => expiringOf([['בדיקת ציוד', ['n'], ['vendor'], [{ id: 'e67', n: 'מלגזה', e: plus(-95) }, { id: 'e37', n: 'במה', e: plus(-95) }, { id: 'e1', n: 'סולם', e: plus(-31) }, { id: 'e2', n: 'מנוף', e: plus(-NO_TASK_DAYS) }], undefined, 'equip_inspections']], TODAY);
+  const nt = markNoTask(NT(), [{ source_table: 'equip_inspections', source_id: 'e37', status: 'פתוח' }, { source_table: 'equip_inspections', source_id: 'e1', status: 'הושלם' }, { source_table: 'docs', source_id: 'e67', status: 'פתוח' }]);
+  const ntOf = (l) => l.filter((x) => x.noTask).map((x) => x.id).sort().join();
+  check('no task: 95 days with no task, 31 days with only a done task; an open task, another table task id, and exactly 30 days do not count', ntOf(nt) === 'e1,e67', nt);
+  check('tasks not read (null): no mark at all, never a false "no task"', ntOf(markNoTask(NT(), null)) === '', markNoTask(NT(), null));
+  const hnt = digestHtml(g, TODAY, { meeting: '2026-10-06', deckAt: '', watchOpen: [], emptyRegs: [], expiring: nt, expFail: [] });
+  check('the mail: "בלי משימה" in red under the expiry date, once per such row', (hnt.match(/color:#b91c1c;font-weight:bold">בלי משימה</g) || []).length === 2, hnt.length);
   const many = Array.from({ length: EXP_SHOW + 5 }, (_, i) => ({ id: 'm' + i, n: 'מסמך ' + i, o: '', e: plus(-1) }));
   const hm = digestHtml(g, TODAY, { meeting: '2026-10-06', expiring: expiringOf([['מסמך', ['n'], ['o'], many]], TODAY), expFail: ['קבלן'] });
   check('more than ' + EXP_SHOW + ' rows: the first ' + EXP_SHOW + ' and "ועוד 5"; a table not read is named', (hm.match(/מסמך \d+/g) || []).length === EXP_SHOW && hm.includes('ועוד 5') && hm.includes(T.expFail + 'קבלן'), hm.length);
@@ -172,6 +180,7 @@ const ROWS = [
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope || 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
       if (u.startsWith(SB + '/rest/v1/tour_hazards')) return json(HZ);
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json(TR);
+      if (u.startsWith(SB + '/rest/v1/tasks') && u.includes('source_id=not.is.null')) { if (o.linksFail) return json({ error: 'x' }, 500); return json(o.links || []); }
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
       if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: 'x' })));
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
@@ -266,6 +275,12 @@ const ROWS = [
   c = await call({ exp: { docs: [{ id: 'd1', n: 'סוד Azure של OneDrive', o: 'מיכאל', e: plus(10, now) }], tr: [{ id: 't1', n: 'עבודה בגובה', w: 'דוד', e: plus(-2, now) }] } }, { op: 'send', force: true }, 'nsec');
   const mx = c.w.mails[0] && c.w.mails[0].message.body.content;
   check('the endpoint reads all seven tables up to today + 30, and the mail carries the rows', (c.w.expUrls || []).length === 7 && c.w.expUrls.every((u) => u.includes('&e=lte.' + plus(30, now))) && /סוד Azure של OneDrive/.test(mx) && /עבודה בגובה/.test(mx) && c.j.counts.expiring === 2 && c.j.counts.expired === 1, [c.j.counts, (c.w.expUrls || []).length]);
+  const eqOld = { equip_inspections: [{ id: 'e67', n: 'מלגזה ישנה', e: plus(-95, now) }, { id: 'e37', n: 'במה ישנה', e: plus(-95, now) }] };
+  c = await call({ exp: eqOld, links: [{ source_table: 'equip_inspections', source_id: 'e37', status: 'בטיפול' }] }, { op: 'send', force: true }, 'nsec');
+  const mnt = c.w.mails[0] && c.w.mails[0].message.body.content;
+  check('the endpoint: the item with no open task is marked "בלי משימה", the one with a task is not', (mnt.match(/בלי משימה/g) || []).length === 1 && mnt.indexOf('מלגזה ישנה') < mnt.indexOf('בלי משימה') && mnt.indexOf('בלי משימה') < mnt.indexOf('במה ישנה'), mnt && mnt.length);
+  c = await call({ exp: eqOld, linksFail: true }, { op: 'send', force: true }, 'nsec');
+  check('the endpoint: tasks not read = no "בלי משימה" at all, and the mail still goes', c.j.sent && !/בלי משימה/.test(c.w.mails[0].message.body.content), c.j);
   c = await call({ rec: { drl: [{ id: 'd1', ty: 'פינוי חירום', d: plus(-370, now) }] } }, { op: 'send', force: true }, 'nsec');
   const mr = c.w.mails[0] && c.w.mails[0].message.body.content;
   check('the endpoint reads the five duty tables, and a drill past its 12 months is in the block, counted as expired', (c.w.recUrls || []).length === 5 && /תרגיל חירום<\/td><td[^>]*>פינוי חירום/.test(mr) && c.j.counts.expiring === 1 && c.j.counts.expired === 1, [c.j.counts, c.w.recUrls]);
