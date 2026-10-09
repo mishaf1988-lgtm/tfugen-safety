@@ -325,6 +325,36 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('nine tasks, 90 task points', r.max === 90, r.max);
   }
 
+  console.log('\nBACKLOG 12.2: the clauses an auditor asks about are on the sheet, grey when not measured');
+  {
+    const r = await page.evaluate(() => {
+      const keep = { docs: DB.docs, ctr: DB.ctr, mgmt_reviews: DB.mgmt_reviews };
+      DB.docs = []; DB.ctr = []; DB.mgmt_reviews = [];
+      const empty = ['4.1/4.2', '8.1.3', '8.1.4', '10.3'].map((cl) => { const c = __by(cl); return c ? c.st + '|' + c.gap : null; });
+      DB.docs = [{ id: 'k', n: 'ניתוח בעלי עניין 2026', c: 'הקשר ובעלי עניין', e: null }];
+      DB.ctr = [{ id: 'c1', n: 'קבלן א', e: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) }, { id: 'c2', n: 'קבלן ב', e: '2025-01-01' }];
+      const ctx = __by('4.1/4.2'), con = __by('8.1.4');
+      Object.assign(DB, keep);
+      return { empty, ctx: ctx.st, con: con.st + '|' + con.ev + '|' + con.gap, moc: __by('8.1.3').st };
+    });
+    check('with nothing recorded, all four are grey and say where the evidence is', r.empty.every((x) => x && x.indexOf('na|לא באפליקציה') === 0), r.empty);
+    check('a context document in the register: 4.1/4.2 green', r.ctx === 'ok', r.ctx);
+    check('contractors: counted with expiry, amber, and the permit link named as missing', /^warn\|2 קבלנים במרשם, 1 בתוקף, 1 פגו\|1 הסכמי קבלן פגו, שם הקבלן בהיתר העבודה לא נבדק מול המרשם$/.test(r.con), r.con);
+    check('change management (no register yet): grey', r.moc === 'na', r.moc);
+  }
+
+  console.log('\nThe factory procedure behind each clause (clause table, 22/04/2025)');
+  {
+    const r = await page.evaluate(() => {
+      const C = _isoClauses();
+      const p = (cl, std) => (C.filter((c) => c.cl === cl && (!std || c.std === std))[0] || {}).proc;
+      return { missing: C.filter((c) => !c.proc).map((c) => c.cl + ' ' + c.std), moc: p('8.1.3'), h45: p('6.1.2', '45001 + 14001'), h14: p('6.1.2', '14001'), em: p('8.2') };
+    });
+    check('every clause on the sheet names its procedure', r.missing.length === 0, r.missing);
+    check('8.1.3 = procedure 35, 8.2 = procedure 26', r.moc === 'נוהל 35' && r.em === 'נוהל 26', r);
+    check('the two 6.1.2 clauses get their own procedure (33 hazards, 28 aspects)', /נוהל 33/.test(r.h45) && r.h14 === 'נוהל 28', r);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

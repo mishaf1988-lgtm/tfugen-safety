@@ -7889,15 +7889,26 @@ function _objHtml(){
     return '<tr><td>'+esc(o.l)+'</td><td>'+o.t+'%</td><td>'+(o.p===null?'-':o.p+'% ('+o.n+'/'+o.d+')')+'</td><td><span class="b '+_OBJ_ST[o.st][0]+'">'+_OBJ_ST[o.st][1]+'</span></td></tr>';
   }).join('')+'</table></div>';
 }
+// Michael, 09/10/2026: "there are many documents for managing the ISO system". The factory's own
+// clause-to-procedure table (folder 15, "clause table", revised
+// 22/04/2025) names the procedure behind each clause; the sheet prints it next to the clause.
+// [clause, standard exactly as add() gets it ('' = any), procedure]. Update when that table is revised.
+var _ISO_PROC=[['4.1/4.2','','\u05e0\u05d5\u05d4\u05dc 1 (\u05de\u05d3\u05e8\u05d9\u05da \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d4\u05de\u05e9\u05d5\u05dc\u05d1\u05ea), \u05d8\u05d5\u05e4\u05e1 01.01'],['5.4','','\u05e0\u05d5\u05d4\u05dc 25'],['6.1.2','45001 + 14001','\u05e0\u05d5\u05d4\u05dc 33, \u05d8\u05d5\u05e4\u05e1 33.02'],['6.1.2','14001','\u05e0\u05d5\u05d4\u05dc 28'],['6.1.3','','\u05e0\u05d5\u05d4\u05dc 29, \u05e8\u05e9\u05d9\u05de\u05d4 29.01'],['6.2','','\u05d8\u05d5\u05e4\u05e1 \u05de\u05d8\u05e8\u05d5\u05ea \u05d5\u05d9\u05e2\u05d3\u05d9\u05dd'],['7.2','','\u05e0\u05d5\u05d4\u05dc 8'],['7.4','','\u05e0\u05d5\u05d4\u05dc 25, \u05ea\u05db\u05e0\u05d9\u05ea 25.01'],['7.5','','\u05e0\u05d5\u05d4\u05dc 2'],['8.1','','\u05e0\u05d5\u05d4\u05dc 31'],['8.1.3','','\u05e0\u05d5\u05d4\u05dc 35'],['8.1.4','','\u05e0\u05d5\u05d4\u05dc \u05e2\u05d1\u05d5\u05d3\u05d4 \u05de\u05d5\u05dc \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd (15/04/2025)'],['8.2','','\u05e0\u05d5\u05d4\u05dc 26'],['9.1','','\u05e0\u05d5\u05d4\u05dc 31, \u05d8\u05d5\u05e4\u05e1 31.02'],['9.1.2','','\u05e0\u05d5\u05d4\u05dc 29'],['9.2','','\u05e0\u05d5\u05d4\u05dc 3'],['9.3','','\u05e0\u05d5\u05d4\u05dc 7'],['10.2','','\u05e0\u05d5\u05d4\u05dc 6, \u05e0\u05d5\u05d4\u05dc 32, \u05e0\u05d5\u05d4\u05dc 30'],['10.3','','\u05e0\u05d5\u05d4\u05dc 6']];
+function _isoProc(cl,std){var r=_ISO_PROC.filter(function(x){return x[0]===cl&&(!x[1]||x[1]===std);})[0];return r?r[2]:'';}
 function _isoClauses(){
   var C=[];
-  function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||''});}
+  function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||'',proc:_isoProc(cl,std)});}
   var both='45001 + 14001',s45='45001',s14='14001';
   // Grey = a register this app does not keep (Michael, 30/09/2026: drills and
   // internal audits live in folders). Not a pass and not a fail: the evidence
   // is elsewhere, and the sheet says where to look.
   function ext(what){return '\u05dc\u05d0 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: '+what+'. \u05dc\u05d4\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05e8\u05d0\u05d9\u05d4 \u05de\u05d4\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4';}
   var ev=_opsEvidence();
+
+  // 4.1/4.2 (BACKLOG 12.2, 09/10/2026): context and interested parties, the opening question of a
+  // recertification audit. Evidence = a document in the register whose category or name says so.
+  var ctxDocs=(DB.docs||[]).filter(function(d){return /\u05d4\u05e7\u05e9\u05e8|\u05d1\u05e2\u05dc\u05d9 \u05e2\u05e0\u05d9\u05d9\u05df/.test(String(d.c||'')+' '+String(d.n||''));});
+  add(both,'4.1/4.2','\u05d4\u05e7\u05e9\u05e8 \u05d4\u05d0\u05e8\u05d2\u05d5\u05df \u05d5\u05d1\u05e2\u05dc\u05d9 \u05e2\u05e0\u05d9\u05d9\u05df',ctxDocs.length+' \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd',ctxDocs.length?'ok':'na',ctxDocs.length?'':ext('\u05d8\u05d5\u05e4\u05e1 01.01 "\u05d6\u05d9\u05d4\u05d5\u05d9 \u05de\u05d7\u05d6\u05d9\u05e7\u05d9 \u05e2\u05e0\u05d9\u05d9\u05df \u05d5\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea\u05d9\u05d4\u05dd" (\u05e1\u05e7\u05d9\u05e8\u05d4 23/06/2025) \u05d5\u05e0\u05d5\u05d4\u05dc 25 - \u05ea\u05e7\u05e9\u05d5\u05e8\u05ea'));
 
   // 5.4 — worker participation. The trustee programme is the evidence.
   var truN=_isoCount('trustees'),truR=_isoCount('trustee_reports');
@@ -7976,6 +7987,15 @@ function _isoClauses(){
     (wstN||hzmN)?(wstR?'ok':'warn'):'na',
     (wstN||hzmN)?(wstR?'':'\u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05e4\u05d9\u05e0\u05d5\u05d9 \u05e4\u05e1\u05d5\u05dc\u05ea \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4'):ext('\u05d9\u05d5\u05de\u05df \u05e4\u05e1\u05d5\u05dc\u05ea \u05d5\u05de\u05e8\u05e9\u05dd \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05de\u05e1\u05d5\u05db\u05e0\u05d9\u05dd'));
 
+  // 8.1.3 / 8.1.4 (BACKLOG 12.2, 09/10/2026): change management is procedure 35 in the folder
+  // (Michael, 09/10/2026: "most screens exist in the safety folder"), so grey with its name. Contractors: the register and its agreement expiry; the permit's contractor is still
+  // free text (12.3), so a permit cannot be checked against it, and the line says so.
+  add(s45,'8.1.3','\u05e0\u05d9\u05d4\u05d5\u05dc \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd','-','na',ext('\u05e0\u05d5\u05d4\u05dc 35 - \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd (12/03/2025), \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 15_\u05ea\u05d9\u05e7 \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05e0\u05d4\u05dc\u05d9\u05dd'));
+  var ctx=_isoExpiry('ctr');
+  add(s45,'8.1.4','\u05e8\u05db\u05e9 \u05d5\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd',ctx.total+' \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05d1\u05de\u05e8\u05e9\u05dd, '+ctx.ok+' \u05d1\u05ea\u05d5\u05e7\u05e3, '+ctx.gone+' \u05e4\u05d2\u05d5',
+    ctx.total?'warn':'na',
+    ctx.total?[(ctx.gone?ctx.gone+' \u05d4\u05e1\u05db\u05de\u05d9 \u05e7\u05d1\u05dc\u05df \u05e4\u05d2\u05d5':''),'\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05df \u05d1\u05d4\u05d9\u05ea\u05e8 \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4 \u05dc\u05d0 \u05e0\u05d1\u05d3\u05e7 \u05de\u05d5\u05dc \u05d4\u05de\u05e8\u05e9\u05dd'].filter(Boolean).join(', '):ext('\u05de\u05e8\u05e9\u05dd \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05d5\u05d4\u05e1\u05de\u05db\u05d5\u05ea\u05d9\u05d4\u05dd'));
+
   // 8.2 — emergency preparedness: drills.
   var drlN=_isoCount('drl'),drlR=_isoRecent('drl','d');
   add(both,'8.2','\u05de\u05d5\u05db\u05e0\u05d5\u05ea \u05d5\u05ea\u05d2\u05d5\u05d1\u05d4 \u05dc\u05de\u05e6\u05d1\u05d9 \u05d7\u05d9\u05e8\u05d5\u05dd',drlN+' \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd, '+drlR+' \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4',drlN?(drlR?'ok':'warn'):'na',
@@ -8037,6 +8057,9 @@ function _isoClauses(){
       nmN?nmN+' \u05db\u05de\u05e2\u05d8-\u05d5\u05e0\u05e4\u05d2\u05e2':''].filter(Boolean).join(', '),
     has102?(g102.length?'warn':'ok'):'bad',
     has102?g102.join(', '):'\u05d0\u05d9\u05df \u05e8\u05d9\u05e9\u05d5\u05de\u05d9 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4, \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d0\u05d5 \u05ea\u05d0\u05d5\u05e0\u05d5\u05ea');
+  // 10.3 (BACKLOG 12.2, 09/10/2026): continual improvement shows in a management review this year
+  // with objectives (9.3 and 6.2); without both it is grey, the evidence is in the folder.
+  add(both,'10.3','\u05e9\u05d9\u05e4\u05d5\u05e8 \u05de\u05ea\u05de\u05d9\u05d3',mrR+' \u05e1\u05e7\u05d9\u05e8\u05d5\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4 \u05d1\u05e9\u05e0\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4, '+obj.length+' \u05d9\u05e2\u05d3\u05d9\u05dd',(mrR&&obj.length)?'ok':'na',(mrR&&obj.length)?'':ext('\u05e1\u05d9\u05db\u05d5\u05dd \u05e1\u05e7\u05e8 \u05d4\u05d4\u05e0\u05d4\u05dc\u05d4 \u05d5\u05de\u05e2\u05e7\u05d1 \u05d4\u05d9\u05e2\u05d3\u05d9\u05dd'));
   return C;
 }
 // ---- 6.13 ----
@@ -8206,7 +8229,7 @@ window.isoAuditReport=function(){
     return '<tr class="'+c.st+'">'+
       '<td class="num">'+(i+1)+'</td>'+
       '<td class="cl"><b>'+esc(c.cl)+'</b><div class="std">'+esc(c.std)+'</div></td>'+
-      '<td><b>'+esc(c.title)+'</b></td>'+
+      '<td><b>'+esc(c.title)+'</b>'+(c.proc?'<div class="std">'+esc(c.proc)+'</div>':'')+'</td>'+
       '<td>'+esc(c.ev)+'</td>'+
       '<td class="st">'+icon[c.st]+'</td>'+
       '<td class="gap">'+(c.gap?esc(c.gap):'-')+'</td>'+
