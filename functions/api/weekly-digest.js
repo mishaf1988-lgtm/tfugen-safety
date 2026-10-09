@@ -129,7 +129,7 @@ const H = {
   sync: '\u05e9\u05d2\u05d9\u05d0\u05d5\u05ea \u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea: ', topics: '\u05e0\u05d5\u05e9\u05d0\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea:',
   foot: '\u05de\u05d9\u05d9\u05dc \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9, \u05e4\u05e2\u05dd \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d1\u05d9\u05d5\u05dd \u05e8\u05d0\u05e9\u05d5\u05df \u05d1\u05d1\u05d5\u05e7\u05e8. ',
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
-  exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
+  exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', noTask: '\u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   qGroups: '\u05d1\u05e7\u05e9\u05d5\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05e4\u05d9 \u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', qGTh: ['\u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', '\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd', '\u05d1\u05e7\u05e9\u05d4'], qMailN: '\u05de\u05d9\u05d9\u05dc ', qNoVendor: '\u05e1\u05e4\u05e7 \u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2', qDone: '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc',
   qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qMany: ['\u05de\u05d9\u05d9\u05dc \u05d0\u05d7\u05d3 \u05dc-', ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'], qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 - \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df',
   qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd:'], qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 ',
@@ -220,11 +220,12 @@ function table(items, opt) {
 export function expiringOf(lists, today) {
   const pick = (r, cols) => cols.map((k) => r[k]).find((v) => v != null && String(v).trim() !== '') || '';
   const out = [];
-  (lists || []).forEach(([label, nc, oc, rows, t]) => (rows || []).forEach((r) => {
+  (lists || []).forEach(([label, nc, oc, rows, t, src]) => (rows || []).forEach((r) => {
     const e = ymd(r && r.e); if (!e) return;
     const days = dayDiff(today, e); if (days > EXP_DAYS) return;
     const x = { label, name: String(pick(r, nc)), owner: String(pick(r, oc)), e, days };
     if (t) { x.t = t; x.row = r; }
+    if (src && r.id != null) { x.src = src; x.id = String(r.id); }
     out.push(x);
   }));
   return out.sort((a, b) => a.days - b.days);
@@ -353,7 +354,8 @@ function expBlock(list, failed) {
   else {
     h += '<table style="border-collapse:collapse;width:100%;margin-bottom:8px"><tr>' + H.expTh.map((t) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(t) + '</th>').join('') + '</tr>'
       + list.slice(0, EXP_SHOW).map((x) => '<tr style="background:' + (x.days < 0 ? '#fde8e8' : '#fff') + '">' + [x.label, x.name, x.owner].map((v) => '<td style="' + cell + '">' + esc(v) + '</td>').join('')
-        + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span></td>'
+        + '<td style="' + cell + ';white-space:nowrap">' + esc(fd(x.e)) + '<br><span style="color:' + (x.days < 0 ? '#b91c1c;font-weight:bold' : '#555') + '">' + esc(expWhen(x)) + '</span>'
+        + (x.noTask ? '<br><span style="color:#b91c1c;font-weight:bold">' + esc(H.noTask) + '</span>' : '') + '</td>'
         + '</tr>').join('') + '</table>';
     if (list.length > EXP_SHOW) h += '<p style="color:#555">' + esc(H.more + (list.length - EXP_SHOW)) + '</p>';
   }
@@ -436,7 +438,7 @@ export async function expiries(env, today) {
       const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
       if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
       const j = await r.json();
-      return [label, nc, oc, Array.isArray(j) ? j : [], QUOTE_SRC[t] ? t : undefined];
+      return [label, nc, oc, Array.isArray(j) ? j : [], QUOTE_SRC[t] ? t : undefined, t];
     } catch (e) { failed.push(label); return [label, nc, oc, []]; }
   }));
   const sets = {};
@@ -452,10 +454,27 @@ export async function expiries(env, today) {
     const r = await fetch(base + 'equip_inspections?select=id,n,code,s,d,deficiencies&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
     if (r.ok) eqf = eqiFailLine(await r.json());
   } catch (e) { eqf = null; }
+  let links = null;
+  try {
+    const r = await fetch(base + 'tasks?select=source_table,source_id,status&source_id=not.is.null&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (r.ok) links = await r.json();
+  } catch (e) { links = null; }
   const qs = await stateGet(env, [QUOTE_KEY, VENDOR_KEY]).catch(() => ({}));
   const pj = (k, d) => { try { return JSON.parse((qs[k] && qs[k].value) || 'null') || d; } catch (e) { return d; } };
-  const expiring = attachQuotes(expiringOf(lists.concat(recurringOf(sets)), today), pj(VENDOR_KEY, []), pj(QUOTE_KEY, {}), today);
+  const expiring = markNoTask(attachQuotes(expiringOf(lists.concat(recurringOf(sets)), today), pj(VENDOR_KEY, []), pj(QUOTE_KEY, {}), today), links);
   return { expiring, expFail: failed, never: neverOf(sets), eqiFail: eqf };
+}
+
+// BACKLOG 12.9 (09/10/2026): an item that expired over NO_TASK_DAYS ago and has no open task
+// (tasks.source_table + source_id) is one nobody is handling (measured: 2 inspections, ~95 days).
+// x.noTask marks it in the expiry table. tasks not read (null) = no mark, never a false "no task". Pure.
+export const NO_TASK_DAYS = 30;
+const TSK_CLOSED = ['\u05d4\u05d5\u05e9\u05dc\u05dd', '\u05d1\u05d5\u05d8\u05dc'];
+export function markNoTask(list, tasks) {
+  if (!Array.isArray(tasks)) return list;
+  const open = new Set(tasks.filter((k) => k && TSK_CLOSED.indexOf(k.status) < 0).map((k) => k.source_table + ':' + k.source_id));
+  (list || []).forEach((x) => { if (x.src && x.days < -NO_TASK_DAYS && !open.has(x.src + ':' + x.id)) x.noTask = true; });
+  return list;
 }
 
 // BACKLOG 12.1 (09/10/2026): a failed inspection, as _eqiFail in index.html. Its expiry can be a
