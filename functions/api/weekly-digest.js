@@ -136,6 +136,7 @@ const H = {
   qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
   qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
+  eqf: '\u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8, \u05dc\u05d0 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05e2\u05d3 \u05ea\u05d9\u05e7\u05d5\u05df: ', eqfMore: ' \u05d5\u05e2\u05d5\u05d3 ',
   ag: '\u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd \u05d4\u05d0\u05d5\u05d8\u05d5\u05e0\u05d5\u05de\u05d9\u05d9\u05dd: ', agOk: ' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2', agFail: '\u05e0\u05db\u05e9\u05dc\u05d5: ', agLate: '\u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5 \u05d1\u05d6\u05de\u05df: ', agNever: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d5: ',
   nevo: '\u05de\u05e2\u05e7\u05d1 \u05e0\u05d1\u05d5 (\u05de\u05e8\u05e9\u05dd \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd): ', nevoChanged: '\u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5 \u05d1\u05e0\u05d1\u05d5, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05de\u05d4 \u05d4\u05e9\u05ea\u05e0\u05d4: ', nevoNone: '\u05d0\u05d9\u05df \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05e0\u05d5\u05e1\u05d7, \u05e0\u05d1\u05d3\u05e7 ', nevoNever: '\u05dc\u05d0 \u05e8\u05e5 \u05e2\u05d3\u05d9\u05d9\u05df', nevoStale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', nevoFail: '\u05e0\u05db\u05e9\u05dc \u05d1-', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2: ', asstClosed: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05e1\u05d2\u05e8 ', asstGaps: ' \u05e4\u05e2\u05e8\u05d9\u05dd', asstNone: '\u05d4\u05d7\u05d5\u05e7\u05e8 \u05dc\u05d0 \u05e1\u05d2\u05e8 \u05d0\u05e3 \u05e4\u05e2\u05e8 \u05d1-7 \u05d4\u05d9\u05de\u05d9\u05dd \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d9\u05dd', asstQs: ' \u05e9\u05d0\u05dc\u05d5\u05ea \u05de\u05d7\u05db\u05d5\u05ea \u05dc\u05da: ', asstNoQs: '\u05d0\u05d9\u05df \u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05ea\u05d5\u05d7\u05d5\u05ea', xg: '\u05e4\u05e2\u05e8\u05d9\u05dd \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc-Excel: ', xgNone: '\u05d0\u05d9\u05df, \u05e0\u05d1\u05d3\u05e7 ', xgNever: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df', xgStale: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05dc\u05d0 \u05e8\u05e6\u05d4 \u05de\u05d0\u05d6 ', xgFail: '\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 \u05d1-', xgMore: ' \u05d5\u05e2\u05d5\u05d3 ', xgLabel: { date: '\u05ea\u05d0\u05e8\u05d9\u05da \u05e9\u05d5\u05e0\u05d4', missing: '\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-missing': '\u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d0\u05d9\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4', 'task-state': '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05e9\u05d5\u05e0\u05d4', 'task-due': '\u05d9\u05e2\u05d3 \u05e9\u05d5\u05e0\u05d4' }, asstFail: '\u05d4\u05ea\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0 ',
   emptyRegs: '\u05de\u05e8\u05e9\u05de\u05d9 \u05d7\u05d5\u05d1\u05d4 \u05e8\u05d9\u05e7\u05d9\u05dd: ',
@@ -371,6 +372,7 @@ export function digestHtml(d, today, meta) {
   if (er.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.emptyRegs + er.join(', ') + H.emptyWhy) + '</p>';
   const nv = m.never || [];
   if (nv.length) h += '<p style="color:#b91c1c;font-weight:bold">' + esc(H.never + nv.join(', ') + H.neverWhy) + '</p>';
+  if (m.eqiFail) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.eqiFail.text) + '</p>';
   if (m.expiring) h += h2(H.exp, m.expiring.length) + expBlock(m.expiring, m.expFail);
   const qg = quoteGroups(m.expiring);
   if (qg.length) h += h2(H.qGroups, qg.length) + quoteBlock(qg);
@@ -445,10 +447,25 @@ export async function expiries(env, today) {
       sets[t] = await r.json();
     } catch (e) { failed.push(label); }
   }));
+  let eqf = null;
+  try {
+    const r = await fetch(base + 'equip_inspections?select=id,n,code,s,d,deficiencies&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    if (r.ok) eqf = eqiFailLine(await r.json());
+  } catch (e) { eqf = null; }
   const qs = await stateGet(env, [QUOTE_KEY, VENDOR_KEY]).catch(() => ({}));
   const pj = (k, d) => { try { return JSON.parse((qs[k] && qs[k].value) || 'null') || d; } catch (e) { return d; } };
   const expiring = attachQuotes(expiringOf(lists.concat(recurringOf(sets)), today), pj(VENDOR_KEY, []), pj(QUOTE_KEY, {}), today);
-  return { expiring, expFail: failed, never: neverOf(sets) };
+  return { expiring, expFail: failed, never: neverOf(sets), eqiFail: eqf };
+}
+
+// BACKLOG 12.1 (09/10/2026): a failed inspection, as _eqiFail in index.html. Its expiry can be a
+// year away, so the expiry table never showed it: equipment marked "fix" stayed silent. Pure.
+export const EQI_FAIL = /^(\u05dc\u05d0 \u05ea\u05e7\u05d9\u05df|\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8|\u05dc\u05ea\u05e7\u05df|\u05d0\u05e1\u05d5\u05e8|\u05e4\u05e1\u05d5\u05dc)/;
+export function eqiFailLine(rows) {
+  const f = (rows || []).filter((r) => r && EQI_FAIL.test(String(r.s || '')));
+  if (!f.length) return null;
+  const one = (r) => String(r.n || r.code || r.id) + (r.deficiencies ? ' (' + String(r.deficiencies).substring(0, 60) + ')' : '') + (r.d ? ', ' + fd(ymd(r.d)) : '');
+  return { text: H.eqf + f.slice(0, 6).map(one).join('; ') + (f.length > 6 ? H.eqfMore + (f.length - 6) : ''), red: true, n: f.length };
 }
 
 // The daily OneDrive backup (backup-od.js, 01/10/2026): a line among the sync
@@ -679,7 +696,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

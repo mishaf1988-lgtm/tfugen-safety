@@ -7537,7 +7537,14 @@ function _expCollect(){
   (DB.tr||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.w||'',mod:'tr',modLabel:'\u05d4\u05d3\u05e8\u05db\u05d4',e:r.e,id:r.id});});
   (DB.ppe||[]).forEach(function(r){if(r.e)items.push({name:r.ty||'',owner:r.w||'',mod:'ppe',modLabel:'\u05e6\u05de\u05d2',e:r.e,id:r.id});});
   (DB.ctr||[]).forEach(function(r){if(r.e)items.push({name:r.n||'',owner:r.c||'',mod:'ctr',modLabel:'\u05e7\u05d1\u05dc\u05df',e:r.e,id:r.id});});
-  (DB.equip_inspections||[]).forEach(function(r){if(r.e)items.push({name:r.n||r.code||'',owner:r.vendor||r.loc||'',mod:'eqi',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',e:r.e,id:r.id});});
+  // BACKLOG 12.1 (09/10/2026): a failed inspection ("lataken", "lo kashir") is out of use now, whatever
+  // its expiry says. It was green here until 2027: _eqiFail was read only in the events list.
+  // It counts as expired, dated by the inspection that failed it (yesterday if none).
+  (DB.equip_inspections||[]).forEach(function(r){
+    var f=_eqiFail(r.s);if(!r.e&&!f)return;
+    var ed=f?(r.d&&du(r.d)<0?r.d:new Date(Date.now()-864e5).toISOString().substring(0,10)):r.e;
+    items.push({name:(f?'\u26d4 ':'')+(r.n||r.code||''),owner:f?('\u05dc\u05d0 \u05db\u05e9\u05d9\u05e8: '+String(r.deficiencies||r.s||'')).substring(0,80):(r.vendor||r.loc||''),mod:'eqi',modLabel:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',e:ed,id:r.id,fail:f});
+  });
   // 3.5 — audiometric surveillance was the one statutory register with no
   // expiry field at all: not scanned here, not in the calendar, not in the ICS
   // and not in the 30-day warning. rHearing printed the test date with fd() and
@@ -7562,6 +7569,7 @@ function _expNoDate(){
   function take(tbl,mod,label,nameOf,ownerOf){
     (DB[tbl]||[]).forEach(function(r){
       if(r.e)return;
+      if(tbl==='equip_inspections'&&_eqiFail(r.s))return; // already in _expCollect, as expired
       out.push({name:nameOf(r)||'',owner:ownerOf(r)||'',mod:mod,modLabel:label,e:null,id:r.id});
     });
   }

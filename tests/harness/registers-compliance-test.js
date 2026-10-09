@@ -249,6 +249,29 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('the dashboard counts it apart and not as compliant (1 of 3 = 33%)', /⏳ טרם הוערך: <strong>1</.test(r.dash) && />33</.test(r.dash), r.dash.slice(0, 900));
   }
 
+  console.log('\nBACKLOG 12.1: a failed equipment inspection is expired now, whatever its expiry says');
+  {
+    const r = await page.evaluate(() => {
+      ['docs', 'tr', 'ppe', 'ctr', 'med', 'hearing_tests'].forEach((t) => { DB[t] = []; });
+      DB.equip_inspections = [
+        { id: 'f1', n: 'עגורן', s: 'לתקן', d: __in(-67), e: __in(360), deficiencies: 'יש להחליף שרשרת' },
+        { id: 'f2', n: 'מלגזה', s: 'לא כשיר לעבודה', e: null },
+        { id: 'ok', n: 'במה', s: 'כשיר לעבודה', e: __in(200) },
+        { id: 'nd', n: 'מנוף', s: 'כשיר', e: null },
+      ];
+      const coll = _expCollect(), none = _expNoDate();
+      const by = (id) => coll.find((x) => x.id === id);
+      expFilter('exp');
+      return { f1: by('f1'), f2: by('f2'), ok: by('ok'), noneIds: none.map((x) => x.id), du1: by('f1') && du(by('f1').e), du2: by('f2') && du(by('f2').e), duOk: by('ok') && du(by('ok').e), expRows: g('tb-exp').innerHTML, kExp: g('exp-k-exp').textContent };
+    });
+    check('"לתקן" with an expiry a year away: expired, dated by the inspection that failed it', r.f1 && r.f1.fail && r.du1 === -67, r.f1);
+    check('...named with the defect, not the vendor', !!r.f1 && /לא כשיר: יש להחליף שרשרת/.test(r.f1.owner) && /⛔/.test(r.f1.name), r.f1);
+    check('"לא כשיר" with no expiry at all: expired (yesterday), not in the no-date list', r.f2 && r.du2 === -1 && r.noneIds.indexOf('f2') < 0, [r.f2, r.noneIds]);
+    check('a passing inspection keeps its own expiry', r.ok && !r.ok.fail && r.duOk > 100, r.ok);
+    check('a passing one with no date is still in the no-date list', r.noneIds.indexOf('nd') >= 0, r.noneIds);
+    check('the "expired" tab shows both failed items, counted in the header', /עגורן/.test(r.expRows) && /מלגזה/.test(r.expRows) && r.kExp === '2', r.kExp);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
