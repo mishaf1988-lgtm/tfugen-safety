@@ -7,6 +7,7 @@
 **ההגדרות:** לוח: ב-4 לכל חודש, 07:34 שעון ישראל (`CRON_TZ=Asia/Jerusalem 34 7 4 * *`).
 
 ---
+0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-factory-trends).
 משימה חודשית: מגמות מנתוני המפעל. כל הודעה בעברית. תאריכים DD/MM/YYYY.
 המסד (09/10/2026, בלי לחיצת אישור): בתיקיית tfugen-safety, `bash project-files/routine-db.sh '<JSON>'`. פעולות: {"op":"select","table":"<טבלה>","query":"<PostgREST, למשל select=id,e&e=lte.2026-12-31>"}, {"op":"state_get","keys":[...]}, {"op":"state_set","key":"...","value":...}. `med` ו-`hearing_tests`: רק select=e; `trustee_reports`: רק loc,location_id,s,ok,ts,closed_d,num. שאילתת SQL בצעדים למטה מתארת מה לחשב: למשוך את השורות ב-select ולחשב ב-python. יציאה 3 ("ROUTINE_KEY missing") או ok:false: אותו דבר בכלי execute_sql של Supabase (project_id znhjtpcltrxxyfjczgvw; ToolSearch "execute_sql"), ובהודעה האחרונה שורה "המסד דרך execute_sql: <סיבה>".
 0. אם ה-repo tfugen-safety לא נמצא בשיחה: git clone https://github.com/mishaf1988-lgtm/tfugen-safety (ציבורי). קרא את CLAUDE.md ואת .claude/skills/tfugen-db/SKILL.md. מצא את הסוגים: grep -n "_THZ_KINDS=" -A16 index.html (שם הסוג ומילות המפתח שלו).

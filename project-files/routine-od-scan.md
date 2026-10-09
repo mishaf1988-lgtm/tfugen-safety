@@ -15,6 +15,7 @@
 - **Prompt:** הטקסט שבין הקווים
 
 ---
+0. ידע משותף (09/10/2026): קרא את project-files/agent-common.md, סעיפי "פתיחה" ו"ידע משותף". בסוף הריצה: סעיף "סגירה" (שורת למידה אחת; שם הסוכן: routine-od-scan).
 משימה חודשית. כל הודעה בעברית. תאריכים DD/MM/YYYY.
 המסד (09/10/2026, בלי לחיצת אישור): בתיקיית tfugen-safety, `bash project-files/routine-db.sh '<JSON>'`. פעולות: {"op":"select","table":"<טבלה>","query":"<PostgREST, למשל select=id,e&e=lte.2026-12-31>"}, {"op":"state_get","keys":[...]}, {"op":"state_set","key":"...","value":...}. `med` ו-`hearing_tests`: רק select=e; `trustee_reports`: רק loc,location_id,s,ok,ts,closed_d,num. שאילתת SQL בצעדים למטה מתארת מה לחשב: למשוך את השורות ב-select ולחשב ב-python. יציאה 3 ("ROUTINE_KEY missing") או ok:false: אותו דבר בכלי execute_sql של Supabase (project_id znhjtpcltrxxyfjczgvw; ToolSearch "execute_sql"), ובהודעה האחרונה שורה "המסד דרך execute_sql: <סיבה>".
 רקע (07/10/2026): העוזר של מיכאל, כולל factory.md, נמצא ב-repo הפרטי mishaf1988-lgtm/michael-skills. לשיחה הזו אין אליו גישה (ריצת ניסיון 07/10). שיחה שנפתחת עם create_session ו-source_url של ה-repo כן יכולה לדחוף אליו (נבדק 07/10). לכן: השיחה הזו קוראת ובוחרת, ושיחה-בת כותבת.

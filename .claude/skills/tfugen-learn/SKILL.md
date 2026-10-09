@@ -18,6 +18,7 @@ description: How the skills of the tfugen-safety repo keep learning from every t
 | תהליך שלקח יותר מניסיון אחד (migration, פריסה, בדיקה) | ה-skill של התחום (`tfugen-db`, `tfugen-dev`), או skill חדש |
 | עובדה על הקוד: טבלה, עזר, מספר שורה, מחרוזת | `tfugen-ref` |
 | רקע והיסטוריה שלא צריך בכל משימה | `tfugen-history` |
+| ידע שכל הסוכנים צריכים: כלי, מגבלה, דרך עבודה שעובדת (09/10/2026) | `project-files/agent-common.md`, "ידע משותף", עם תאריך ומקור |
 | כלל שחל על כל עבודה, לא רק על ה-repo | העוזר ב-`mishaf1988-lgtm/michael-skills` (מ-07/10/2026 המקור היחיד): `plugins/michael/skills/michael-assistant/references/lessons.md` (ידע מקצועי: קובץ הנושא ב-`references/`; שורה בהיסטוריה ב-`SKILL.md`), עם מספר גרסה חדש. שינוי טקסט נדחף שם ישר ל-main אחרי שתי הבדיקות מקומית, `.github/` ב-PR (08/10/2026); כל עדכון ל-main מגיע לחשבון לבד (סנכרון plugin). אין zip |
 
 **שאלה שנייה, חובה, בכל משימה (מיכאל, 04-05/10/2026, פעמיים: "אל תשכח ללמד את העוזר שלי כשאתה לומד דברים חדשים ולפתח אותו"):** מה למדתי על **העבודה** של מיכאל, לא על הקוד?
