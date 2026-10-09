@@ -4,3 +4,4 @@
 פורמט: `DD/MM/YYYY | <שם הסוכן> | <תוצאה> | למדתי: <...>`
 
 09/10/2026 | routine-quotes (הקמה) | טריגר v2 הוקם, ריצת בדיקה עברה | למדתי: בהחלפת טריגר, תיעוד בשלושה מקומות נשאר ישן (STATUS, routine-compliance, handoff); עכשיו נתפס ב-stale-trigger-test ובצעד 4 של דוח הציות
+09/10/2026 | routine-night | 3 PRs מוזגו (#1293, #1294, #1295), live OK, בלי ביטולים; 12.7 דולג (migration) | למדתי: live-check.sh לא הוכיח פריסה של שינוי בפונקציית שרת בלבד; תוקן (commit + index, live-check-sh-test.py)
