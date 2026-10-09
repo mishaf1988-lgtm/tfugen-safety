@@ -12245,7 +12245,10 @@ function svTsk(){
   if(!DB.tasks)DB.tasks=[];
   if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
-  sdb();closeModal('m-tsk');toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTasks();rDash();
+  // BACKLOG 12.8 (09/10/2026): an urgent task with no target cannot be late, so nobody is chased
+  // for it (measured: 3 open). A warning, not a block, like the document one (12.4).
+  var _noDue=!r.due&&(r.priority==='\u05e7\u05e8\u05d9\u05d8\u05d9'||r.priority==='\u05d2\u05d1\u05d5\u05d4')&&r.status!==_TSK_DONE&&r.status!==_TSK_CANC;
+  sdb();closeModal('m-tsk');toast(_noDue?'\u05e0\u05e9\u05de\u05e8, \u05e9\u05d9\u05dd \u05dc\u05d1: \u05de\u05e9\u05d9\u05de\u05d4 \u05d1\u05e2\u05d3\u05d9\u05e4\u05d5\u05ea '+r.priority+' \u05d1\u05dc\u05d9 \u05d9\u05e2\u05d3. \u05db\u05d3\u05d0\u05d9 \u05dc\u05e7\u05d1\u05d5\u05e2 \u05ea\u05d0\u05e8\u05d9\u05da':'\u05e0\u05e9\u05de\u05e8 \u2713');rTasks();rDash();
   if(CUR==='trustees'&&typeof rTrustees==='function')rTrustees();   // task spawned from a trustee finding: show the link on the row
   if(!_wasDone&&r.status===_TSK_DONE&&typeof _truAskCloseFor==='function')_truAskCloseFor([r.id]);
 }
