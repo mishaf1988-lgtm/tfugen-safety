@@ -5170,7 +5170,10 @@ function svDoc(){
   _svPut('docs',r);addLog('\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8: '+n);sdb();closeModal('m-doc');
   ['d-n','d-o','d-nt','d-i'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('doc-attach-area');
-  toast('\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8 &#10003;');rDocs();
+  // BACKLOG 12.4 (09/10/2026): "valid" with no expiry cannot be checked by anyone (measured: 2
+  // licences and a report). A warning, not a block: some documents have no expiry by nature.
+  var dw=(r.s==='\u05d1\u05ea\u05d5\u05e7\u05e3'&&!r.e)?'\u05e0\u05e9\u05de\u05e8, \u05e9\u05d9\u05dd \u05dc\u05d1: \u05de\u05e1\u05de\u05da "\u05d1\u05ea\u05d5\u05e7\u05e3" \u05d1\u05dc\u05d9 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4. \u05d0\u05dd \u05d9\u05e9 \u05dc\u05d5 \u05ea\u05d5\u05e7\u05e3, \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05d0\u05d5\u05ea\u05d5':'';
+  toast(dw||'\u05de\u05e1\u05de\u05da \u05e0\u05e9\u05de\u05e8 &#10003;');rDocs();
 }
 function svAud(){
   var n=gv('a-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e0\u05d5\u05e9\u05d0');return;}
@@ -8907,11 +8910,22 @@ function svEqi(){
     attachments:_eqiFiles.slice(),
     ts:new Date().toISOString()
   };
-  if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?rec:r;});sbUpd('equip_inspections',rec);}
+  // The form does not hold every column (serial_number, deficiencies, report_number...). The
+  // server row keeps them (an update sends only these fields); keep them in the local row too.
+  if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?Object.assign({},r,rec):r;});sbUpd('equip_inspections',rec);}
   else{DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);}
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3: '+n.substring(0,30));
   _eqiClearPhoto();sdb();closeModal('m-eqi');rEqi();rDash();
-  toast('\u05e0\u05e9\u05de\u05e8 \u2713');
+  // BACKLOG 12.5 (09/10/2026): one serial number on two items (measured: one pair) is almost
+  // always a copy mistake. A warning naming the other item, not a block.
+  var dup=_eqiSerialDup(rec.id);
+  toast(dup?'\u05e0\u05e9\u05de\u05e8, \u05e9\u05d9\u05dd \u05dc\u05d1: \u05d4\u05de\u05e1\u05e4\u05e8 \u05d4\u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 \u05db\u05d1\u05e8 \u05e8\u05e9\u05d5\u05dd \u05d1\u05e4\u05e8\u05d9\u05d8 \u05d0\u05d7\u05e8: '+dup:'\u05e0\u05e9\u05de\u05e8 \u2713');
+}
+function _eqiSerialDup(id){
+  var me=(DB.equip_inspections||[]).filter(function(r){return r.id===id;})[0];
+  var k=me&&String(me.serial_number||'').trim().toLowerCase();if(!k)return '';
+  var o=(DB.equip_inspections||[]).filter(function(r){return r.id!==id&&String(r.serial_number||'').trim().toLowerCase()===k;})[0];
+  return o?(o.n||o.code||o.id):'';
 }
 function openEqiXl(){openModal('m-eqi-xl');window._eqiXlData=[];var s=g('eqi-xl-st');if(s)s.textContent='';var b=g('eqi-xl-ok');if(b)b.style.display='none';var i=g('eqi-xl-inp');if(i)i.value='';}
 function closeEqiXl(){closeModal('m-eqi-xl');}
