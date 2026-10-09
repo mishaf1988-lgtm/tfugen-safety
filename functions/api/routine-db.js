@@ -19,6 +19,10 @@
 //              name (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"). COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
 //   state_set  write one key of STATE_WRITE, then read it back.
+//   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
+//              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
+//              answers 403 to a plain fetch of the site; a night run compares this hash with the
+//              file it tested to prove the live site runs exactly that code (09/10/2026).
 //   agent_report  append one run report {agent, ok, line, learned} to server_state
 //              agent_log (last AGENT_LOG_MAX kept). Every Routine ends with it, so a
 //              failed or silent run reaches the weekly mail and the daily retro
@@ -85,10 +89,27 @@ export function cleanQuery(q, table) {
   return p.toString();
 }
 
+export async function liveInfo(request, env) {
+  const out = { ok: false, commit: env.CF_PAGES_COMMIT_SHA || null, branch: env.CF_PAGES_BRANCH || null };
+  try {
+    if (!env.ASSETS) { out.error = 'no ASSETS binding'; return out; }
+    const r = await env.ASSETS.fetch(new Request(new URL('/index.html', request.url).toString()));
+    if (!r.ok) { out.error = 'index ' + r.status; return out; }
+    const buf = await r.arrayBuffer();
+    out.bytes = buf.byteLength;
+    out.index_sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    out.ok = true;
+  } catch (e) { out.error = String(e && e.message || e).slice(0, 200); }
+  return out;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
   if (!(await keyOk(request.headers.get('x-routine-key') || '', env.ROUTINE_KEY))) return jsonResp({ error: 'forbidden' }, 403, {});
+  let peek = null;
+  try { peek = await request.clone().json(); } catch (e) { peek = null; }
+  if (peek && peek.op === 'live') return jsonResp(await liveInfo(request, env), 200, {});
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
   let body = {};
   try { body = await request.json(); } catch (e) { return jsonResp({ ok: false, error: 'bad json' }, 400, {}); }
