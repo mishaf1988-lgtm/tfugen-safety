@@ -11,18 +11,19 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const URL0 = 'https://tapugan-safety.pages.dev/api/talk';
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec' };
 const PUB = { id: 'tt1', d: '2026-10-04', title: 'עבודה בגובה', body: 'רתמה', s: 'פורסמה', trainer: 'מיכאל פרייליך', trainer_qual: 'ממונה בטיחות' };
-const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור' }, { id: 'e2', n: 'דנה לוי', dep: 'אחזקה' }];
+const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור' }, { id: 'e2', n: 'דנה לוי', dep: 'אחזקה' }, { id: 'e3', n: 'יוסי מזרחי', dep: 'ייצור', eid: '300000007' }];
 const png = new Uint8Array(1024); png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0);
 const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
 
 function world(o) {
   o = o || {};
-  const w = { inserts: [], uploads: [], patches: [], reads: (o.reads || []).slice() };
+  const w = { inserts: [], uploads: [], patches: [], empPatches: [], reads: (o.reads || []).slice() };
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { w.patches.push({ u, b: JSON.parse(body) }); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
     if (u.startsWith(SB + '/rest/v1/toolbox_talks')) return json([{ ...PUB, ...(o.talk || {}) }]);
+    if (u.startsWith(SB + '/rest/v1/emp') && m === 'PATCH') { w.empPatches.push({ u: decodeURIComponent(u), b: JSON.parse(body) }); return new Response(null, { status: 204 }); }
     if (u.startsWith(SB + '/rest/v1/emp')) return json(EMPS);
     if (u.startsWith(SB + '/rest/v1/toolbox_reads')) {
       if (m === 'POST') { const r = JSON.parse(body); w.inserts.push(r); w.reads.push(r); return new Response(null, { status: 201 }); }
@@ -83,6 +84,20 @@ console.log('\n3. each signature records how');
   check('shared link: mode "link"', w.inserts[1] && w.inserts[1].mode === 'link', w.inserts[1]);
   const r3 = await post({ k: lt, g: '1', l: 'he', emp: 'e2', oid: '7654321', ok: '1', sig: SIG });
   check('a shared-link token sent with g=1 is refused', r3.status === 403 && w.inserts.length === 2, r3.status);
+}
+
+console.log('\n3b. the ID number in the group (regulation 6 as amended, 09/10/2026)');
+{
+  const w = world();
+  const gt = await makeGroupToken(ENV, 'tt1');
+  const gp = await (await get('k=' + encodeURIComponent(gt) + '&g=1')).text();
+  check('group page: no ID from a card, only the yes/no mark', !gp.includes('300000007') && /<option value="e1" data-n="1">/.test(gp) && /<option value="e3">/.test(gp));
+  const r1 = await post({ k: gt, g: '1', l: 'he', emp: 'e3', oid: '', ok: '1', sig: SIG });
+  check('group: a card with an ID signs without typing, id_no from the card, the card untouched', r1.status === 200 && w.inserts[0] && w.inserts[0].id_no === '300000007' && w.empPatches.length === 0, w.inserts[0]);
+  const r2 = await post({ k: gt, g: '1', l: 'ar', emp: 'e2', oid: '', ok: '1', sig: SIG });
+  check('group: a card with no ID and nothing typed: refused in the page language', r2.status === 400 && w.inserts.length === 1 && (await r2.text()).includes(LANGS.ar.oIdNeed));
+  const r3 = await post({ k: gt, g: '1', l: 'he', emp: 'e2', oid: '0123-4567', ok: '1', sig: SIG });
+  check('group: the typed number in id_no and onto the empty card', r3.status === 200 && w.inserts[1] && w.inserts[1].id_no === '01234567' && w.empPatches.length === 1 && w.empPatches[0].b.eid === '01234567' && /id=eq\.e2&or=\(eid\.is\.null,eid\.eq\.\)/.test(w.empPatches[0].u), w.empPatches);
 }
 
 console.log('\n4. the trainer\'s declaration');
