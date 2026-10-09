@@ -204,7 +204,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('review: replacing the file of a signed talk asks first; "cancel" saves nothing', out.fileAsked && out.fileSaved === 0, [out.fileAsked, out.fileSaved]);
   const FOREIGN = /[\u0600-\u06ff\u0400-\u04ff\u1200-\u137f]/;
   check('documentation in Hebrew only: who-signed with ar/ru/am readers', !FOREIGN.test(out.whoAll) && /רוסית/.test(out.whoAll) && /אמהרית/.test(out.whoAll), out.whoAll);
-  check('outside the list: counted apart, marked, not as "left the list"', /חתמו: 3/.test(out.whoAll) && /מחוץ לרשימה: 1/.test(out.whoAll) && /איוון פטרוב/.test(out.whoAll) && /חתם מחוץ לרשימה/.test(out.whoAll) && /123456782/.test(out.whoAll) && !/לא ברשימת העובדים/.test(out.whoAll), out.whoAll);
+  check('outside the list: counted apart, marked, not as "left the list"', /חתמו: 3/.test(out.whoAll) && /מחוץ לרשימה: 1/.test(out.whoAll) && /איוון פטרוב/.test(out.whoAll) && /חתם מחוץ לרשימה/.test(out.whoAll) && /\*\*\*6782/.test(out.whoAll) && !/123456782/.test(out.whoAll) && !/לא ברשימת העובדים/.test(out.whoAll), out.whoAll);
   check('who-signed and its print: an ID column and the declaration everyone signed', /ת\.ז \/ דרכון/.test(out.whoAll) && /קיבלתי הדרכה על הוראות הבטיחות/.test(out.printAll), out.whoAll.slice(0, 300));
   check('the declaration in the app is the one on the worker\'s page (talk.js)', (() => { const m = TALKSRC.match(/he: \{[\s\S]*?\bok: '([^']+)'/); const he = m && JSON.parse('"' + m[1] + '"'); return !!he && out.whoAll.includes(he); })());
   check('documentation in Hebrew only: the printed list', !FOREIGN.test(out.printAll) && /אחמד/.test(out.printAll), (out.printAll.match(FOREIGN) || [])[0]);

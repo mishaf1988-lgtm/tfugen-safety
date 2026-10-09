@@ -197,6 +197,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   })]);
   await pop.setViewportSize({ width: 375, height: 812 }); await pop.waitForTimeout(300);
   const pr = await pop.evaluate(() => { const h = document.querySelector('h2').getBoundingClientRect(), b = document.getElementById('rpt-back'); const r = b ? b.getBoundingClientRect() : null; return { sw: document.documentElement.scrollWidth, over: !!r && r.bottom > h.top && r.top < h.bottom }; });
+  // Regulation 6 as amended (09/10/2026): the ID number, 4 last digits on the screen, the full number on paper.
+  const idScr = await page.evaluate(() => Array.from(document.querySelectorAll('#tbt-who-body .tbt-idno')).map((td) => td.textContent));
+  const idPr = await pop.evaluate(() => Array.from(document.querySelectorAll('.tbt-idno')).map((td) => td.textContent));
+  check('who signed: an ID column, masked on the screen (last 4 digits)', idScr.join('|') === '***5678|***7766' && !/012345678/.test(await page.evaluate(() => document.getElementById('tbt-who-body').textContent)), idScr);
+  check('the printed register: the full ID number', idPr.join('|') === '012345678|99887766', idPr);
   await pop.close();
   check('print on a phone: no sideways scroll, the back button clear of the title', pr.sw <= 375 && !pr.over, pr);
   // Michael 03/10/2026 (questionnaire): who left (emp.left_d) and the version each worker signed (text_hash)
