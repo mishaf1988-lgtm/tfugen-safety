@@ -79,6 +79,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `closeModal(id)` | 5057 | hide modal |
 | `rDash()` | 6401 | dashboard render |
 | `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext`/`_thzRecheck` |
+| `_expOff(r)` | grep | `s` starting "לא רלוונטי" = taken out of tracking on purpose: skipped by `_expCollect` and `_expNoDate`, and by `xlsx-gaps.js` (`OFF`, reads `n,e,s`). A new expiry scanner checks it too (BACKLOG 12.11, 10/10/2026) |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
