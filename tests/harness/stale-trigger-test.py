@@ -30,9 +30,11 @@ def stale(files):
     deleted = {i for ms in found.values() for i, d in ms if d}
     return sorted({(i, n) for n, ms in found.items() for i, d in ms if not d and i in deleted})
 
-paths = [os.path.join(ROOT, 'STATUS.md')] + sorted(glob.glob(os.path.join(ROOT, 'project-files', 'routine-*.md')))
+# The root handoff too (09/10/2026): every new session reads it first (session-start.py).
+paths = ([os.path.join(ROOT, 'STATUS.md')] + sorted(glob.glob(os.path.join(ROOT, 'project-files', 'routine-*.md')))
+         + sorted(glob.glob(os.path.join(ROOT, 'handoff-*.md'))))
 real = stale({os.path.relpath(p, ROOT): open(p, encoding='utf-8').read() for p in paths})
-check('no deleted Routine id is named as live in STATUS.md or routine-*.md', real == [], real)
+check('no deleted Routine id is named as live in STATUS.md, routine-*.md or the handoff', real == [], real)
 
 A, B = 'trig_01SGfUDNANbo4ecjCdCGTZV2', 'trig_01SogHpEgS3nkMoworDxmfTh'
 check('the #1274 case is caught (old id live in STATUS, deleted in the routine file)',
