@@ -67,6 +67,8 @@ jobs:
       - run: python3 tests/harness/status-dup-test.py
       # Same reason: a replaced Routine id left live in STATUS or routine-*.md (lesson 67).
       - run: python3 tests/harness/stale-trigger-test.py
+      # Same reason: a Routine prompt file without step 0 (agent-common.md), 09/10/2026.
+      - run: python3 tests/harness/routine-common-test.py
       # A handoff PR is .md only too (CLAUDE.md: only the latest handoff in the root).
       - run: python3 tests/harness/handoff-root-test.py
       # CLAUDE.md rule 7 on the lines this PR adds (a STATUS PR is .md only and skips the harness).
