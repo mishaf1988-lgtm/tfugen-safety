@@ -81,6 +81,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   await until(() => sent.length >= 2);
   check('a label followed by a real finding still goes out', sent.length === 2, [sent.length, t2]);
+  // wait for that answer to land: in CI it arrived during step 4 and filled the fields (09/10/2026)
+  await page.waitForFunction(() => gv('ncr-rc') !== '', null, { timeout: 5000 }).catch(() => {});
 
   console.log('\n4. the model answers with empty fields');
   empty = true;
