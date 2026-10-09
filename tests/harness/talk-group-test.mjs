@@ -91,9 +91,9 @@ console.log('\n3b. the ID number in the group (regulation 6 as amended, 09/10/20
   const w = world();
   const gt = await makeGroupToken(ENV, 'tt1');
   const gp = await (await get('k=' + encodeURIComponent(gt) + '&g=1')).text();
-  check('group page: no ID from a card, only the yes/no mark', !gp.includes('300000007') && /<option value="e1" data-n="1">/.test(gp) && /<option value="e3">/.test(gp));
-  const r1 = await post({ k: gt, g: '1', l: 'he', emp: 'e3', oid: '', ok: '1', sig: SIG });
-  check('group: a card with an ID signs without typing, id_no from the card, the card untouched', r1.status === 200 && w.inserts[0] && w.inserts[0].id_no === '300000007' && w.empPatches.length === 0, w.inserts[0]);
+  check('group page: no ID from a card', !gp.includes('300000007'));
+  const r1 = await post({ k: gt, g: '1', l: 'he', emp: 'e3', oid: '300000007', ok: '1', sig: SIG });
+  check('group: a card with an ID, the same number typed: saved, the card untouched', r1.status === 200 && w.inserts[0] && w.inserts[0].id_no === '300000007' && w.empPatches.length === 0, w.inserts[0]);
   const r2 = await post({ k: gt, g: '1', l: 'ar', emp: 'e2', oid: '', ok: '1', sig: SIG });
   check('group: a card with no ID and nothing typed: refused in the page language', r2.status === 400 && w.inserts.length === 1 && (await r2.text()).includes(LANGS.ar.oIdNeed));
   const r3 = await post({ k: gt, g: '1', l: 'he', emp: 'e2', oid: '0123-4567', ok: '1', sig: SIG });

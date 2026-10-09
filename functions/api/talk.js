@@ -216,14 +216,12 @@ c.addEventListener('pointerdown',function(e){down=true;var p=pt(e);x.beginPath()
 c.addEventListener('pointermove',function(e){if(!down)return;var p=pt(e);x.lineTo(p.x,p.y);x.stroke();drawn=true;e.preventDefault();});
 c.addEventListener('pointerup',function(){down=false;});
 document.getElementById('clr').addEventListener('click',function(){fit();});
-var em=document.getElementById('emp');
-function ask(){var o=em.options[em.selectedIndex];return em.value==='__other'||!!(o&&o.getAttribute('data-n'));}
-function obox(){document.getElementById('obox').style.display=em.value==='__other'?'block':'none';document.getElementById('ibox').style.display=ask()?'block':'none';}
-em.addEventListener('change',obox);obox();
+function obox(){document.getElementById('obox').style.display=document.getElementById('emp').value==='__other'?'block':'none';}
+document.getElementById('emp').addEventListener('change',obox);obox();
 document.getElementById('f').addEventListener('submit',function(e){
   if(!document.getElementById('emp').value){e.preventDefault();alert(T.noName);return;}
   if(document.getElementById('emp').value==='__other'&&document.getElementById('oname').value.trim().length<2){e.preventDefault();alert(T.oNeed);return;}
-  if(ask()&&!/^[A-Za-z0-9]{5,12}$/.test(document.getElementById('oid').value.replace(/[\s.-]/g,''))){e.preventDefault();alert(T.oIdNeed);return;}
+  if(!/^[A-Za-z0-9]{5,12}$/.test(document.getElementById('oid').value.replace(/[\s.-]/g,''))){e.preventDefault();alert(T.oIdNeed);return;}
   if(!drawn){e.preventDefault();alert(T.noSig);return;}
   document.getElementById('sig').value=c.toDataURL('image/png');
   var b=document.getElementById('go');b.disabled=true;b.textContent=T.saving;
@@ -294,7 +292,7 @@ async function showTalk(env, tok, want, g, tr) {
   const byDep = {};
   for (const e of emps) { const d = e.dep || '\u05d0\u05d7\u05e8'; (byDep[d] = byDep[d] || []).push(e); }
   const opts = Object.keys(byDep).sort((a, b) => a.localeCompare(b, 'he')).map((d) =>
-    '<optgroup label="' + esc(d) + '">' + byDep[d].map((e) => (signed.has(String(e.id)) ? '<option value="" disabled>\u2713 ' + esc(e.n) + ' (' + esc(L.signedL) + ')</option>' : '<option value="' + esc(e.id) + '"' + (idOf(e.eid) ? '' : ' data-n="1"') + '>' + esc(e.n) + '</option>')).join('') + '</optgroup>').join('');
+    '<optgroup label="' + esc(d) + '">' + byDep[d].map((e) => (signed.has(String(e.id)) ? '<option value="" disabled>\u2713 ' + esc(e.n) + ' (' + esc(L.signedL) + ')</option>' : '<option value="' + esc(e.id) + '">' + esc(e.n) + '</option>')).join('') + '</optgroup>').join('');
   const avail = langsOf(talk);
   const bar = avail.length < 2 ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + avail.map((l) =>
     l === lang ? '<span style="padding:6px 12px;border-radius:16px;background:#1e3a8a;color:#fff;font-size:14px;font-weight:700">' + esc(LANGS[l].name) + '</span>'
@@ -314,8 +312,7 @@ async function showTalk(env, tok, want, g, tr) {
     + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>'
     // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
     + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off" placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px"><input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px"></div>'
-    // The ID box: outside the list, and for a worker whose card has no ID (data-n). The card's number never reaches the page.
-    + '<div id="ibox"><label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right"></div>'
+    + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
     + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
@@ -368,7 +365,7 @@ async function signTalk(env, request) {
   const empId = String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
-  let oid = idOf(form.get('oid'));
+  const oid = idOf(form.get('oid'));
   let emp;
   if (empId === OTHER) {
     const raw = oneLine(form.get('oname')), comp = oneLine(form.get('ocomp'));
@@ -382,14 +379,14 @@ async function signTalk(env, request) {
     const emps = await getEmps(env);
     emp = emps.find((e) => String(e.id) === empId);
     if (!emp) return bad('errNameT', 'errName');
-    // Regulation 6 as amended (in force 16/10/2026): an ID or passport number for every participant.
-    // Michael, 09/10/2026: "from the card, and if there is none the worker types it". The card's
-    // number is read here and goes into id_no; what the page sent is ignored.
+    if (!oid) return bad('errNameT', 'oIdNeed');
+    // An ID on the employee card must match: no signing in another worker's name.
     const onCard = idOf(emp.eid);
-    if (onCard) oid = onCard;
-    else {
-      if (!oid) return bad('errNameT', 'oIdNeed');
-      // A number already on another worker's card: no signing in their name.
+    if (onCard && onCard !== oid) return bad('errNameT', 'idMismatch', 403);
+    // Regulation 6 as amended (in force 16/10/2026): an ID for every participant, already typed by
+    // everyone (03/10/2026). Michael, 09/10/2026: a card with no ID gets the typed number, unless
+    // that number is on another worker's card (no signing in their name).
+    if (!onCard) {
       if (emps.some((e) => e !== emp && idOf(e.eid) === oid)) return bad('errNameT', 'idMismatch', 403);
       emp = { ...emp, fill: true };
     }
