@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -71,6 +71,21 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   await call({ op: 'delete', table: 'docs' });
   check('no delete op: nothing sent', !calls.length);
   check('no DELETE or PATCH anywhere in the source', !/method:\s*'(DELETE|PATCH)'/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
+
+  console.log('\n4b. agent_report: append-only run log');
+  state = {};
+  r = await call({ op: 'agent_report', agent: 'routine-quotes', ok: true, line: 'אין שינוי', learned: 'אין' });
+  check('first report: written, one entry with a server time', r.json.ok && JSON.parse(state.agent_log).length === 1 && /^\d{4}-\d\d-\d\dT/.test(JSON.parse(state.agent_log)[0].at), r.json);
+  await call({ op: 'agent_report', agent: 'retro', ok: false, line: 'push נדחה', learned: 'x'.repeat(500) });
+  let lg = JSON.parse(state.agent_log);
+  check('second report: appended, not replacing; ok false kept; text cut to 300', lg.length === 2 && lg[0].agent === 'routine-quotes' && lg[1].ok === false && lg[1].learned.length === 300, lg);
+  check('ok that is not exactly true counts as a failure', (await call({ op: 'agent_report', agent: 'retro', ok: 'yes' })).json.entry.ok === false);
+  check('a bad agent name: refused, log untouched', (await call({ op: 'agent_report', agent: 'Bad Name; drop' })).status === 400 && JSON.parse(state.agent_log).length === 3);
+  state.agent_log = JSON.stringify(Array.from({ length: AGENT_LOG_MAX }, (_, i) => ({ agent: 'a', at: String(i) })));
+  await call({ op: 'agent_report', agent: 'retro', ok: true });
+  lg = JSON.parse(state.agent_log);
+  check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
+  check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
 
   console.log('\n5. the country gate lets it through (the cloud is not in Israel)');
   const mw = fs.readFileSync(new URL('../../functions/_middleware.js', import.meta.url), 'utf8');
