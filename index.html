@@ -7889,9 +7889,15 @@ function _objHtml(){
     return '<tr><td>'+esc(o.l)+'</td><td>'+o.t+'%</td><td>'+(o.p===null?'-':o.p+'% ('+o.n+'/'+o.d+')')+'</td><td><span class="b '+_OBJ_ST[o.st][0]+'">'+_OBJ_ST[o.st][1]+'</span></td></tr>';
   }).join('')+'</table></div>';
 }
+// Michael, 09/10/2026: "there are many documents for managing the ISO system". The factory's own
+// clause-to-procedure table (folder 15, "clause table", revised
+// 22/04/2025) names the procedure behind each clause; the sheet prints it next to the clause.
+// [clause, standard exactly as add() gets it ('' = any), procedure]. Update when that table is revised.
+var _ISO_PROC=[['4.1/4.2','','\u05e0\u05d5\u05d4\u05dc 1 (\u05de\u05d3\u05e8\u05d9\u05da \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d4\u05de\u05e9\u05d5\u05dc\u05d1\u05ea), \u05d8\u05d5\u05e4\u05e1 01.01'],['5.4','','\u05e0\u05d5\u05d4\u05dc 25'],['6.1.2','45001 + 14001','\u05e0\u05d5\u05d4\u05dc 33, \u05d8\u05d5\u05e4\u05e1 33.02'],['6.1.2','14001','\u05e0\u05d5\u05d4\u05dc 28'],['6.1.3','','\u05e0\u05d5\u05d4\u05dc 29, \u05e8\u05e9\u05d9\u05de\u05d4 29.01'],['6.2','','\u05d8\u05d5\u05e4\u05e1 \u05de\u05d8\u05e8\u05d5\u05ea \u05d5\u05d9\u05e2\u05d3\u05d9\u05dd'],['7.2','','\u05e0\u05d5\u05d4\u05dc 8'],['7.4','','\u05e0\u05d5\u05d4\u05dc 25, \u05ea\u05db\u05e0\u05d9\u05ea 25.01'],['7.5','','\u05e0\u05d5\u05d4\u05dc 2'],['8.1','','\u05e0\u05d5\u05d4\u05dc 31'],['8.1.3','','\u05e0\u05d5\u05d4\u05dc 35'],['8.1.4','','\u05e0\u05d5\u05d4\u05dc \u05e2\u05d1\u05d5\u05d3\u05d4 \u05de\u05d5\u05dc \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd (15/04/2025)'],['8.2','','\u05e0\u05d5\u05d4\u05dc 26'],['9.1','','\u05e0\u05d5\u05d4\u05dc 31, \u05d8\u05d5\u05e4\u05e1 31.02'],['9.1.2','','\u05e0\u05d5\u05d4\u05dc 29'],['9.2','','\u05e0\u05d5\u05d4\u05dc 3'],['9.3','','\u05e0\u05d5\u05d4\u05dc 7'],['10.2','','\u05e0\u05d5\u05d4\u05dc 6, \u05e0\u05d5\u05d4\u05dc 32, \u05e0\u05d5\u05d4\u05dc 30'],['10.3','','\u05e0\u05d5\u05d4\u05dc 6']];
+function _isoProc(cl,std){var r=_ISO_PROC.filter(function(x){return x[0]===cl&&(!x[1]||x[1]===std);})[0];return r?r[2]:'';}
 function _isoClauses(){
   var C=[];
-  function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||''});}
+  function add(std,cl,title,evidence,status,gap){C.push({std:std,cl:cl,title:title,ev:evidence,st:status,gap:gap||'',proc:_isoProc(cl,std)});}
   var both='45001 + 14001',s45='45001',s14='14001';
   // Grey = a register this app does not keep (Michael, 30/09/2026: drills and
   // internal audits live in folders). Not a pass and not a fail: the evidence
@@ -8223,7 +8229,7 @@ window.isoAuditReport=function(){
     return '<tr class="'+c.st+'">'+
       '<td class="num">'+(i+1)+'</td>'+
       '<td class="cl"><b>'+esc(c.cl)+'</b><div class="std">'+esc(c.std)+'</div></td>'+
-      '<td><b>'+esc(c.title)+'</b></td>'+
+      '<td><b>'+esc(c.title)+'</b>'+(c.proc?'<div class="std">'+esc(c.proc)+'</div>':'')+'</td>'+
       '<td>'+esc(c.ev)+'</td>'+
       '<td class="st">'+icon[c.st]+'</td>'+
       '<td class="gap">'+(c.gap?esc(c.gap):'-')+'</td>'+

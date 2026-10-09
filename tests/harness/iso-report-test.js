@@ -343,6 +343,18 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('change management (no register yet): grey', r.moc === 'na', r.moc);
   }
 
+  console.log('\nThe factory procedure behind each clause (clause table, 22/04/2025)');
+  {
+    const r = await page.evaluate(() => {
+      const C = _isoClauses();
+      const p = (cl, std) => (C.filter((c) => c.cl === cl && (!std || c.std === std))[0] || {}).proc;
+      return { missing: C.filter((c) => !c.proc).map((c) => c.cl + ' ' + c.std), moc: p('8.1.3'), h45: p('6.1.2', '45001 + 14001'), h14: p('6.1.2', '14001'), em: p('8.2') };
+    });
+    check('every clause on the sheet names its procedure', r.missing.length === 0, r.missing);
+    check('8.1.3 = procedure 35, 8.2 = procedure 26', r.moc === 'נוהל 35' && r.em === 'נוהל 26', r);
+    check('the two 6.1.2 clauses get their own procedure (33 hazards, 28 aspects)', /נוהל 33/.test(r.h45) && r.h14 === 'נוהל 28', r);
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
