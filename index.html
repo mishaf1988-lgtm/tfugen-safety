@@ -1005,7 +1005,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="qa-btn qa-hot" onclick="_emergencyReport()"><span class="qa-ic">&#127111;</span><span>דיווח חירום</span></button>
     <button class="qa-btn" onclick="goPage('tasks');if(typeof tskFilter==='function')tskFilter('today')"><span class="qa-ic">&#9203;</span><span>משימות להיום</span></button>
     <button class="qa-btn" onclick="goPage('round')"><span class="qa-ic">&#9728;&#65039;</span><span>סבב בוקר</span></button>
-    <button class="qa-btn" data-qa-mgr="1" onclick="openNewNcrModal()"><span class="qa-ic">&#9888;&#65039;</span><span>NCR חדש</span></button>
+    <button class="qa-btn" data-qa-mgr="1" data-mod="ncr" onclick="openNewNcrModal()"><span class="qa-ic">&#9888;&#65039;</span><span>NCR חדש</span></button>
     <button class="qa-btn" onclick="openModal('m-nm')"><span class="qa-ic">&#9889;</span><span>כמעט ונפגע</span></button>
     <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO - &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
     <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-tru-log"></div></div>
@@ -2114,6 +2114,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" id="sheet-btn-agents" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','agents')" data-kw="סוכנים"><span class="sic">&#129302;</span>כלי AI</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openGlobalSearch()" data-kw="חיפוש search"><span class="sic">&#128269;</span>חיפוש בכל הרשומות</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()" data-kw="whatsapp מייל"><span class="sic">&#128276;</span>הגדרות התראות</button>
+    <button class="sheet-btn" id="sheet-btn-modhidden" style="display:none" onclick="_modVisOpen()" data-kw="מוסתר הסתרה להחזיר"><span class="sic">&#128065;&#65039;</span>מודולים מוסתרים<span class="mh-n"></span></button>
     <button class="sheet-btn" onclick="_modVisOpen()" data-kw="מודולים ניגודיות"><span class="sic">&#9881;&#65039;</span>הגדרות תצוגה</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()" data-kw="סיסמה"><span class="sic">&#128273;</span>שנה סיסמה</button>
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_mfaSetupOpen()" data-kw="2fa &#1511;&#1493;&#1491; &#1488;&#1489;&#1496;&#1495;&#1492;"><span class="sic">&#128272;</span>&#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button>
@@ -4627,6 +4628,16 @@ window._appPrefsSet=function(p){
   try{localStorage.setItem(_APP_PREFS_KEY,JSON.stringify(p));}catch(e){}
   _appPrefsApply();
 };
+// Modules hidden for everyone until shown again (Michael, 10/10/2026, questionnaire:
+// empty modules out of sight; data stays, "hidden modules" brings each back).
+window._MOD_DEFAULT_HIDDEN={round:1,ptw:1,ppe:1,ctr:1,wst:1,prj:1,rsk:1,ncr:1};
+window._modHiddenSet=function(){
+  var p=_appPrefs(),h={},sh=p.modulesShown||{},uh=p.modulesHidden||{},k;
+  for(k in _MOD_DEFAULT_HIDDEN)if(!sh[k])h[k]=true;
+  for(k in uh)if(uh[k])h[k]=true;
+  return h;
+};
+window._modIsHidden=function(k){return !!_modHiddenSet()[k];};
 // Build [{key,btn,label}] from .sheet-btn elements that are not currently
 // role-gated hidden. Skips buttons we already user-hid (display:none + flag).
 // A1: one entry per module KEY. A module can sit in the "frequent" row and in
@@ -4652,7 +4663,16 @@ window._appPrefsApply=function(){
   else if(p.hc===false)document.body.classList.remove('hc');
   // Module visibility — use data attribute + CSS rule so search filter
   // (which writes display:'') does not accidentally re-show hidden modules.
-  var hidden=p.modulesHidden||{};
+  var hidden=_modHiddenSet();
+  // Shortcuts to a hidden module elsewhere: home quick actions and the reports sheet.
+  document.querySelectorAll('.qa-btn, #m-reports-sheet .sheet-btn').forEach(function(b){
+    var oc=b.getAttribute('onclick')||'',m=oc.match(/(?:goPage\(|_goFromSheet\(['"]m-reports-sheet['"]\s*,\s*)['"]([a-z]+)['"]/),k=b.dataset.mod||(m&&m[1]);
+    if(!k)return;
+    if(hidden[k]){b.dataset.modUserHidden='1';b.style.display='none';}
+    else if(b.dataset.modUserHidden==='1'){b.dataset.modUserHidden='';var bc=document.body.classList;b.style.display=(b.hasAttribute('data-qa-mgr')&&!bc.contains('role-manager')&&!bc.contains('role-admin'))?'none':'';}
+  });
+  var hb=document.getElementById('sheet-btn-modhidden');
+  if(hb){var hn=Object.keys(hidden).length;var hl=hb.querySelector('.mh-n');if(hl)hl.textContent=hn?' ('+hn+')':'';}
   _modList().forEach(function(it){
     it.btns.forEach(function(b){
       if(hidden[it.key]){
@@ -4669,7 +4689,7 @@ window._modVisOpen=function(){
   closeModal('m-modules-sheet');
   var box=document.getElementById('mvis-list');if(!box)return;
   var p=_appPrefs();
-  var hidden=p.modulesHidden||{};
+  var hidden=_modHiddenSet();
   box.innerHTML=_modList().map(function(it){
     var on=!hidden[it.key];
     return '<label class="chk-item" style="cursor:pointer"><input type="checkbox" data-modkey="'+esc(it.key)+'"'+(on?' checked':'')+' style="margin:0"><span style="flex:1;font-size:12px">'+esc(it.label)+'</span></label>';
@@ -4697,6 +4717,12 @@ window._modVisSaveFromUI=function(){
     if(!c.checked)hidden[c.dataset.modkey]=true;
   });
   p.modulesHidden=hidden;
+  // A default-hidden module that was ticked is shown on purpose.
+  var shown={};
+  document.querySelectorAll('#mvis-list input[type=checkbox]').forEach(function(c){
+    if(c.checked&&_MOD_DEFAULT_HIDDEN[c.dataset.modkey])shown[c.dataset.modkey]=true;
+  });
+  p.modulesShown=shown;
   // Default page
   var dp=document.getElementById('mvis-default-page');if(dp)p.defaultPage=dp.value||'dash';
   // High contrast
@@ -6457,7 +6483,10 @@ window._renderDashKpis=function(c){
     {v:c.docsValid, cls:'kpi-g',label:'\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3',go:"goPage('docs')"},
     {v:c.emps,      cls:'kpi-b',label:'\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd',go:"goPage('emp')"}
   ];
-  var tiles=cands.filter(function(k){return (+k.v||0)>0;}).slice(0,6);
+  var tiles=cands.filter(function(k){
+    var m=/goPage\('([a-z]+)'\)/.exec(k.go);
+    return (+k.v||0)>0&&!(m&&typeof _modIsHidden==='function'&&_modIsHidden(m[1]));
+  }).slice(0,6);
   if(!tiles.length){host.style.display='none';host.innerHTML='';return;}
   host.style.display='';
   host.innerHTML=tiles.map(function(k){
@@ -18605,6 +18634,8 @@ function _applyRoleGates(){
   if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
   var auditBtn=g('sheet-btn-audit');
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
+  var mhBtn=g('sheet-btn-modhidden');
+  if(mhBtn) mhBtn.style.display = isAdmin ? '' : 'none';
   var mrBtn=g('sheet-btn-mr');
   if(mrBtn) mrBtn.style.display = isAdmin ? '' : 'none';
   // Face ID pilot parked (Michael, 25/09: «נוותר בינתיים, אולי נחזור»): the
@@ -18653,7 +18684,7 @@ function _applyRoleGates(){
   }
   // P1#1: the two AI cards now live on the agents page (admin-only), not on
   // the home screen. Home quick actions: manager-only tiles hide for reporters.
-  document.querySelectorAll('#dash-qa [data-qa-mgr]').forEach(function(b){b.style.display=isManagerOrUp?'':'none';});
+  document.querySelectorAll('#dash-qa [data-qa-mgr]').forEach(function(b){b.style.display=(isManagerOrUp&&b.dataset.modUserHidden!=='1')?'':'none';});
   // If a non-admin is somehow sitting on an admin-only page (stale session,
   // direct navigation, etc.) \u2014 kick them to dashboard.
   if(!isAdmin && _ADMIN_ONLY_PAGES[CUR]){

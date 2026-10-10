@@ -22,7 +22,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const lg = document.getElementById('login'); if (lg) lg.style.display = 'none';
     const app = document.getElementById('app'); if (app) app.style.display = 'block';
     ['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','ctr','equip_inspections','near_miss','rounds','tasks','locations','projects','inspection_types','env_aspects','leg','hzm','wst','env','ins','drl','med','hearing_tests','toolbox'].forEach(k => { if (!DB[k]) DB[k] = []; });
-    try { localStorage.removeItem('tfgn_app_prefs'); } catch (e) {}
+    // The 8 modules hidden by default (Michael 10/10/2026) are shown here, so this file keeps testing
+    // the sheet itself; the default hiding is hide-modules-test.js.
+    try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({modulesShown:{round:true,ptw:true,ppe:true,ctr:true,wst:true,prj:true,rsk:true,ncr:true}})); } catch (e) {}
+    if (typeof _appPrefsApply === 'function') _appPrefsApply();
   });
   const setRole = (u) => page.evaluate((u) => { window._currentUser = u; _applyRoleGates(); }, u);
   const state = () => page.evaluate(() => {
