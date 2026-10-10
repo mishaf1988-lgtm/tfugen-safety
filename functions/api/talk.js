@@ -290,7 +290,7 @@ const errPage = (msg, status) => page('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u0
 const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L.errT, '<p>' + esc(L[k]) + '</p>', 'err', status, '', langOf(lang)); };
 
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,video_url,quiz,kind,link_v', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,video_url,quiz,kind,link_v,dept', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -409,8 +409,11 @@ async function showTalk(env, tok, want, g, tr) {
   const quiz = quizOf(talk, lang);
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const signed = g ? await signedIds(env, talk.id) : new Set();
+  // A talk for one department lists its workers (10/10/2026); "not on the list" stays for anyone else,
+  // and the signature still checks against the whole list, so a worker who moved can sign.
+  const listed = talk.dept ? emps.filter((e) => (e.dep || '') === talk.dept) : emps;
   const byDep = {};
-  for (const e of emps) { const d = e.dep || '\u05d0\u05d7\u05e8'; (byDep[d] = byDep[d] || []).push(e); }
+  for (const e of (listed.length ? listed : emps)) { const d = e.dep || '\u05d0\u05d7\u05e8'; (byDep[d] = byDep[d] || []).push(e); }
   const opts = Object.keys(byDep).sort((a, b) => a.localeCompare(b, 'he')).map((d) =>
     '<optgroup label="' + esc(d) + '">' + byDep[d].map((e) => (signed.has(String(e.id)) ? '<option value="" disabled>\u2713 ' + esc(e.n) + ' (' + esc(L.signedL) + ')</option>' : '<option value="' + esc(e.id) + '">' + esc(e.n) + '</option>')).join('') + '</optgroup>').join('');
   const avail = langsOf(talk);
