@@ -3,7 +3,8 @@
 // (Graph conversion of an HTML page; the HTML itself when that fails) and mailed with the file to
 // Michael and hr-tap@. The signature is saved first: a OneDrive or mail failure never loses it,
 // and the reason lands on the row (doc_err). A weekly talk sends nothing.
-import { onRequest, makeTalkToken, inductionHtml, IND_HR, IND_ROOT } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, inductionHtml, quizAnswers, IND_HR, IND_ROOT } from './_build/talk.mjs';
+import { LOGO_JPG } from './_build/_logo.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -30,7 +31,7 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return w.noToken ? json([]) : json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
   if (u.startsWith(GR + '/drive/root:/') && m === 'PUT') {
     const path = decodeURIComponent(u.slice((GR + '/drive/root:/').length).replace(/:\/content$/, ''));
-    w.puts.push({ path, type: init.headers['Content-Type'], n: init.body.length, head: String.fromCharCode.apply(null, Array.from(init.body.slice(0, 4))) });
+    w.puts.push({ path, type: init.headers['Content-Type'], n: init.body.length, txt: /html/.test(init.headers['Content-Type']) ? new TextDecoder().decode(init.body) : '', head: String.fromCharCode.apply(null, Array.from(init.body.slice(0, 4))) });
     if (w.putFail && !/Apps\//.test(path)) return json({ error: { message: 'disk full' } }, 507);
     return json({ webUrl: 'https://od.example/' + encodeURIComponent(path), size: init.body.length });
   }
@@ -57,6 +58,17 @@ console.log('\n1. the form page');
   check('the text read, name, ID, company, date, score, trainer and signature', h.includes('1. חירום') && h.includes('דני &lt;b&gt;') && h.includes('123') && h.includes('כוח אדם') && h.includes('11/10/2026 07:05') && h.includes('1/1') && h.includes('ממונה בטיחות') && h.includes('data:image/png;base64,QUJD'));
   const ru = inductionHtml(T.ind, { id: 'r1', emp_name: 'x', id_no: '1' }, 'QQ', 'ru', { day: '2026-10-11', hm: '07:05' });
   check('a worker who read Russian: the Russian text, and the form says so', ru.includes('Текст') && ru.includes('Русский'));
+  // 10/10/2026, Michael: "בטופס שנשלח חסר לוגו של תפוגן כולל השאלות שנענו"
+  check('the Tapugan logo at the top (a real JPEG, carried in the code)', h.includes('data:image/jpeg;base64,' + LOGO_JPG) && Buffer.from(LOGO_JPG, 'base64').subarray(0, 3).toString('hex') === 'ffd8ff' && LOGO_JPG.length > 5000);
+  const Q = { ...T.ind, quiz: [{ q: 'מה עושים בצבע אדום?', a: ['ממשיכים', 'למרחב המוגן', 'הביתה', 'לחניה'], c: 1, t: { ru: { q: 'Что делать?', a: ['Работать', 'В убежище', 'Домой', 'На парковку'] } } }, { q: 'מתי מורידים חלוק?', a: ['אף פעם', 'לפני השירותים'], c: 1 }, { q: 'מכונה בלי הדרכה?', a: ['לא מפעילים', 'מפעילים'], c: 0 }] };
+  const ans = quizAnswers(Q, 'he', '0:1,1:0,0:3');
+  check('the answers: the first choice per question, right or wrong, an unanswered one marked', ans.length === 3 && ans[0].a === 'למרחב המוגן' && ans[0].ok && ans[1].a === 'אף פעם' && !ans[1].ok && ans[1].right === 'לפני השירותים' && ans[2].a === null && !ans[2].ok, ans);
+  const hq = inductionHtml(Q, { id: 'r1', emp_name: 'x', id_no: '1', quiz_ok: 1, quiz_n: 3 }, 'QQ', 'he', { day: '2026-10-11', hm: '07:05' }, ans);
+  check('the form lists every question, the answer chosen, right or wrong, and the right answer when wrong', hq.includes('השאלות והתשובה שהעובד בחר') && hq.includes('1. מה עושים בצבע אדום?') && hq.includes('למרחב המוגן') && hq.includes('✓ נכון') && hq.includes('2. מתי מורידים חלוק?') && hq.includes('✗ שגוי') && hq.includes('התשובה הנכונה: לפני השירותים') && hq.includes('לא נענתה'), hq.slice(hq.indexOf('בדיקת הבנה: השאלות'), hq.indexOf('בדיקת הבנה: השאלות') + 600));
+  const one = { ...Q, quiz: [Q.quiz[0]] };
+  const hr = inductionHtml(one, { id: 'r1', emp_name: 'x', id_no: '1' }, 'QQ', 'ru', { day: '2026-10-11', hm: '07:05' }, quizAnswers(one, 'ru', '0:1'));
+  check('answered in Russian: the Russian question and answer, and the Hebrew under them for HR', hr.includes('Что делать?') && hr.includes('В убежище') && hr.includes('מה עושים בצבע אדום?') && hr.includes('למרחב המוגן'), quizAnswers(one, 'ru', '0:1'));
+  check('no questions: no answers block', !inductionHtml(T.wk, { id: 'r', emp_name: 'x', id_no: '1' }, 'QQ', 'he', { day: '2026-10-11', hm: '07:05' }, []).includes('השאלות והתשובה'));
 }
 
 console.log('\n2. a new worker signs');
@@ -68,6 +80,8 @@ console.log('\n2. a new worker signs');
   const y = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
   check('filed as a PDF under 12_קליטת עובדים חדשים/<year>', filed && filed.path.startsWith(IND_ROOT + '/' + y + '/') && /\.pdf$/.test(filed.path) && filed.head === '%PDF', w.puts);
   check('the file name: DD-MM-YYYY - name - ID', filed && /\/\d{2}-\d{2}-\d{4} - איוון פטרוב - 334455667\.pdf$/.test(filed.path), filed && filed.path);
+  const src = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
+  check('the filed form carries the logo and the answer the worker gave (qa 0:1 = "ב", right)', src && src.txt.includes('data:image/jpeg;base64,') && src.txt.includes('1. שאלה') && src.txt.includes('>ב<') && src.txt.includes('✓ נכון'), src && src.txt.slice(-900));
   check('the source page went to the app folder, not the safety folder', w.puts.some((p) => p.path.startsWith('Apps/Tapugan Safety/') && /\.html$/.test(p.path)) && w.conv === 1);
   const mail = w.mails[0] && w.mails[0].message;
   const to = mail ? mail.toRecipients.map((x) => x.emailAddress.address) : [];

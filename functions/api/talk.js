@@ -28,6 +28,7 @@ import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireR
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
+import { LOGO_JPG } from '../_logo.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -372,6 +373,22 @@ export function quizOf(talk, lang) {
 }
 // The first answer to each question, "0:2,1:0". Changing it after seeing the right answer does
 // not count: the score is evidence of understanding (procedure 8, 5.5.5).
+// Every question with the answer the worker chose first (10/10/2026, Michael: "\u05d7\u05e1\u05e8... \u05db\u05d5\u05dc\u05dc \u05d4\u05e9\u05d0\u05dc\u05d5\u05ea
+// \u05e9\u05e0\u05e2\u05e0\u05d5"): for the signed induction form. In the language the worker answered in; when every
+// question was translated (same count) the Hebrew comes along, the answers sit in the same places.
+export function quizAnswers(talk, lang, raw) {
+  const quiz = quizOf(talk, lang);
+  if (!quiz.length) return [];
+  const he = lang && lang !== 'he' ? quizOf(talk, 'he') : [];
+  const first = {};
+  for (const p of String(raw || '').split(',')) { const m = /^(\d):(\d)$/.exec(p.trim()); if (m && !(m[1] in first) && +m[1] < quiz.length) first[m[1]] = +m[2]; }
+  return quiz.map((x, i) => {
+    const pick = i in first && ansOk(x.a[first[i]]) ? first[i] : null;
+    const h = he.length === quiz.length ? he[i] : null;
+    return { q: x.q, a: pick === null ? null : x.a[pick], right: x.a[x.c], ok: pick === x.c,
+      he: h ? { q: h.q, a: pick === null ? null : h.a[pick], right: h.a[h.c] } : null };
+  });
+}
 export function quizScore(quiz, raw) {
   if (!quiz.length) return null;
   const first = {};
@@ -418,11 +435,12 @@ export const IND_SRC = 'Apps/Tapugan Safety/\u05e7\u05dc\u05d9\u05d8\u05ea \u05e
 const GRAPH_ROOT = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const fileSafe = (v) => String(v || '').replace(/[\\/:*?"<>|#%]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 60);
 function b64(u8) { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); }
-export function inductionHtml(talk, row, sigB64, lang, when) {
+export function inductionHtml(talk, row, sigB64, lang, when, answers) {
   const x = textOf(talk, lang), L = LANGS[x.lang] || LANGS.he;
   const tr = (k, v) => '<tr><td style="border:1px solid #999;padding:6px 10px;font-weight:bold">' + k + '</td><td style="border:1px solid #999;padding:6px 10px">' + v + '</td></tr>';
   return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' + esc(x.title) + '</title></head>'
     + '<body style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;margin:24px;color:#111">'
+    + '<img alt="\u05ea\u05e4\u05d5\u05d2\u05df" style="height:56px;float:left;margin:0 0 8px 12px" src="data:image/jpeg;base64,' + LOGO_JPG + '">'
     + '<div style="font-size:11px;color:#555">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea, \u05d8\u05d5\u05e4\u05e1 08.02.01</div>'
     + '<h1 style="font-size:18px;margin:4px 0 8px">' + esc(x.title) + '</h1>'
     + (x.lang !== 'he' ? '<div style="margin-bottom:6px">\u05e9\u05e4\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e7\u05e8\u05d0: ' + esc(L.name) + '</div>' : '')
@@ -436,9 +454,16 @@ export function inductionHtml(talk, row, sigB64, lang, when) {
     + (row.quiz_n ? tr('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n + ' \u05e0\u05db\u05d5\u05e0\u05d5\u05ea') : '')
     + (talk.trainer ? tr('\u05de\u05d3\u05e8\u05d9\u05da', esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '')) : '')
     + tr('\u05d7\u05ea\u05d9\u05de\u05d4', '<img alt="\u05d7\u05ea\u05d9\u05de\u05d4" style="height:90px;max-width:260px" src="data:image/png;base64,' + sigB64 + '">')
-    + '</table><div style="font-size:11px;color:#555">\u05e0\u05d7\u05ea\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d3\u05e8\u05da \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05de\u05d6\u05d4\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4: ' + esc(row.id || '') + '</div></body></html>';
+    + '</table>'
+    + (Array.isArray(answers) && answers.length ? '<div style="font-weight:bold;margin:12px 0 4px">\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4: \u05d4\u05e9\u05d0\u05dc\u05d5\u05ea \u05d5\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d7\u05e8</div>'
+      + '<table style="border-collapse:collapse;margin:0 0 12px;width:100%">' + answers.map((x, n) => '<tr>'
+        + '<td style="border:1px solid #999;padding:6px 10px;vertical-align:top;width:45%"><b>' + (n + 1) + '. ' + esc(x.q) + '</b>' + (x.he && x.he.q !== x.q ? '<div style="color:#555">' + esc(x.he.q) + '</div>' : '') + '</td>'
+        + '<td style="border:1px solid #999;padding:6px 10px;vertical-align:top">' + (x.a === null ? '\u05dc\u05d0 \u05e0\u05e2\u05e0\u05ea\u05d4' : esc(x.a) + (x.he && x.he.a !== x.a ? '<div style="color:#555">' + esc(x.he.a) + '</div>' : '')) + '</td>'
+        + '<td style="border:1px solid #999;padding:6px 10px;vertical-align:top;white-space:nowrap;font-weight:bold;color:' + (x.ok ? '#15803d">\u2713 \u05e0\u05db\u05d5\u05df' : '#b91c1c">\u2717 \u05e9\u05d2\u05d5\u05d9') + '</td></tr>'
+        + (x.ok ? '' : '<tr><td colspan="3" style="border:1px solid #999;padding:4px 10px;color:#555">\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4: ' + esc(x.he ? x.he.right : x.right) + '</td></tr>')).join('') + '</table>' : '')
+    + '<div style="font-size:11px;color:#555">\u05e0\u05d7\u05ea\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d3\u05e8\u05da \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05de\u05d6\u05d4\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4: ' + esc(row.id || '') + '</div></body></html>';
 }
-export async function fileInduction(env, talk, row, sig, lang, nowMs) {
+export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
   const out = { pdf: false, url: null, mailed: false, err: null, name: null };
   try {
     const od = await accessToken(env);
@@ -446,7 +471,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs) {
     const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
     const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + ' - ' + fileSafe(row.id_no);
-    const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }));
+    const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }, answers));
     let bytes = hb, name = base + '.html', type = 'text/html';
     try {
       await putFile(od.token, IND_SRC, base + '.html', hb, 'text/html; charset=utf-8');
@@ -757,7 +782,7 @@ async function signTalk(env, request, ctx) {
   if (!ins.ok) return bad('errSaveT', 'errSave', 502);
   // Induction: file the signed form and mail it, after the worker already sees "saved".
   if (talk.kind === KIND_IND) {
-    const job = fileInduction(env, talk, row, sig, lang);
+    const job = fileInduction(env, talk, row, sig, lang, undefined, quizAnswers(talk, textOf(talk, lang).lang, form.get('qa')));
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
