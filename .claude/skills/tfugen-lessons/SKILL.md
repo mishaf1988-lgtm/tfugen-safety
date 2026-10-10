@@ -173,8 +173,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **13. הודעות המתנה באנגלית (01/10/2026).**
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
-נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 43 (10/10: ה-hooks לא נטענו מ-`/home/user`, ופעמיים אחרי פלט כלי). בלי repo כתיקיית עבודה אין hooks.
+נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`; תזכורת בתחילת כל תור `hebrew-prompt.py`, והודעת `ci-watch.py` בעברית (`hebrew-prompt-test.py`).
+חזר: 45 (10/10: פעמיים הודעת "מחכה ל-CI" באנגלית, מיד אחרי ההודעה באנגלית של `ci-watch.py`. לפני כן: ה-hooks לא נטענו מ-`/home/user`). בלי repo כתיקיית עבודה אין hooks.
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.

@@ -87,10 +87,12 @@ if already_watching(ref):
             "לא להפעיל שוב ולא להרוג אותו; הסיום שלו יעיר את השיחה." % ref}}, ensure_ascii=False))
     sys.exit(0)
 
+# In Hebrew (10/10/2026): twice in one day the short "waiting for CI" line to Michael came out
+# in English right after this message, which was English. The reply follows the last text it read.
 cmd = "sleep 20; bash .claude/hooks/ci-wait.sh %s %s" % (ref, REPO)
 print(json.dumps({"hookSpecificOutput": {
     "hookEventName": "PostToolUse",
     "additionalContext":
-        "ci-watch (lesson 25): run now with Bash run_in_background=true: `%s` . "
-        "Exit 0 = green: merge (no expectedHeadSha); 1 = red: fix; 2 = look yourself. "
-        "Do not wait for a GitHub event instead." % cmd}}))
+        "ci-watch (לקח 25): להריץ עכשיו ב-Bash עם run_in_background=true: `%s` . "
+        "יציאה 0 = ירוק: למזג (בלי expectedHeadSha); 1 = אדום: לתקן; 2 = לבדוק בעצמך. "
+        "לא לחכות לאירוע מ-GitHub במקום. הודעת ההמתנה למיכאל: בעברית (לקח 13)." % cmd}}, ensure_ascii=False))
