@@ -80,6 +80,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `rDash()` | 6401 | dashboard render |
 | `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext`/`_thzRecheck` |
 | `_expOff(r)` | grep | `s` starting "לא רלוונטי" = taken out of tracking on purpose: skipped by `_expCollect` and `_expNoDate`, and by `xlsx-gaps.js` (`OFF`, reads `n,e,s`). A new expiry scanner checks it too (BACKLOG 12.11, 10/10/2026) |
+| `<script id="app-main">` / `/app.js` (`functions/_appjs.js`, `app.js.js`) | 3246 | the main script is served as `/app.js?v=<deploy>` (10/10/2026, DECISIONS): keep the `id` on the tag and never write `</script>` inside it. Tests still load index.html inline; `app-split-test.mjs` covers the split. A new helper module in `functions/` imported by an api file needs the copy+sed in `run.sh` |
 | `PUBLIC_PATHS` (`functions/_middleware.js`) | - | the only non-`/api/` URLs the site serves (10/10/2026, security scan): every other path is 404. A new static file the app needs (icon, page) goes into the list, or it 404s on the live site; `geo-gate-test.mjs` section 9 |
 | `SPEAK` / `speakScript(lang)` (`functions/api/talk.js`) | - | "read aloud" on the weekly-talk page: `speechSynthesis`, shown only when the phone has a voice in the page language (`he`/`iw`, `ar`, `ru`, `am`); `talk-speak-test.mjs` |
 | `VIEW_CONFIG` | 14558 | view field map |

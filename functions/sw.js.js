@@ -25,7 +25,10 @@ export async function onRequest({ env }) {
 // Build: ${BUILD} (auto-injected from CF_PAGES_COMMIT_SHA)
 
 const CACHE = 'tfgn-${BUILD}';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
+const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg', '/app.js?v=${BUILD}'];
+// /app.js (10/10/2026) is the page's main script, cut out of index.html by the server: it
+// is shell, and its ?v= is this deploy. /?inline=1 is the fallback page when it fails to
+// load: always from the network, never the cached shell (or the fallback would loop).
 // supabase-js is the whole login. Without it _sbBoot leaves _sbClient null,
 // the boot path falls through to showLogin(), and typing the password answers
 // "Supabase \u05d0\u05d9\u05e0\u05d5 \u05d6\u05de\u05d9\u05df" \u2014 a message that erases itself after 2.5s. So a cold
@@ -61,10 +64,11 @@ self.addEventListener('activate', (e) => {
 });
 
 function isShell(req) {
-  if (req.mode === 'navigate') return true;
   try {
     const u = new URL(req.url);
-    return u.origin === self.location.origin && SHELL.indexOf(u.pathname) >= 0;
+    if (/[?&]inline=1/.test(u.search)) return false;
+    if (req.mode === 'navigate') return true;
+    return u.origin === self.location.origin && (SHELL.indexOf(u.pathname) >= 0 || u.pathname === '/app.js');
   } catch (err) {
     return false;
   }

@@ -33,8 +33,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **39. הרגתי תהליך רקע כדי "להפעיל מחדש" (02/10/2026, PR זה).**
 מה קרה: kill בלי לקרוא מה רץ. 05/10: `pkill -f run.sh` תפס גם את ה-shell שלי (exit 144).
 הכלל: לפני kill לקרוא מה רץ; `ci-wait.sh` עוקב אחרי ה-head לבד; kill לפי PID מ-`ps`, לא `pkill -f`.
-נאכף: `ci-watch.py` אומר "כבר רץ" (`ci-watch-test.py`); pkill: טקסט (אין דרך בקוד: מה נהרג).
-חזר: 1 (05/10, pkill תפס את עצמו)
+נאכף: `ci-watch.py` אומר "כבר רץ" (`ci-watch-test.py`); pkill: טקסט (hook מוצע לשיחה במחשב, BACKLOG 13.19, לקח 42).
+חזר: 2 (05/10; 10/10 `pkill -f "http.server"` בניסוי מהירות, exit 144)
 
 **46. push אחרי בדיקות ממוקדות בלבד (03/10/2026, #1128).**
 מה קרה: הרצתי רק את בדיקות התכונה; `print-standalone-test` נפל ב-CI (חלון הדפסה בלי `_tryPrint`).

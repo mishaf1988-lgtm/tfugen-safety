@@ -1,3 +1,4 @@
+import { rewriteApp, buildOf } from './_appjs.js';
 // Cloudflare Pages middleware — who is allowed to reach the front door.
 //
 // Michael, 2026-09-21: «צריך שהמערכת תהיה נגישה רק מישראל בלבד ולא מכל העולם».
@@ -54,7 +55,7 @@ function machineCall(request, path) {
 // root, so every file in it was a URL: /STATUS.md, /DECISIONS.md, /backups/*.json,
 // /migrations/*.sql, /VITRE_~1.DOC. The app needs only these; the rest is 404. /api/* are the
 // Functions (they have their own gates). Pages serves x.html also as /x, so both are listed.
-export const PUBLIC_PATHS = ['/', '/index.html', '/index', '/sw.js', '/manifest.webmanifest', '/robots.txt',
+export const PUBLIC_PATHS = ['/', '/index.html', '/index', '/sw.js', '/app.js', '/manifest.webmanifest', '/robots.txt',
   '/logo.jpg', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png',
   '/privacy.html', '/privacy', '/user-data-deletion.html', '/user-data-deletion'];
 export function publicPath(path) {
@@ -122,7 +123,13 @@ export async function onRequest(context) {
 
   if (!publicPath(path)) return notFound();
 
-  const res = await next();
+  let res = await next();
+  // The page: the 1.57MB inline script goes out as /app.js (functions/_appjs.js).
+  // ?inline=1 is the fallback when /app.js fails to load, and is never rewritten.
+  if ((path === '/' || path === '/index.html' || path === '/index') && res.status === 200
+      && /text\/html/.test(res.headers.get('Content-Type') || '') && !/[?&]inline=1/.test(new URL(request.url).search)) {
+    try { res = rewriteApp(res, buildOf(env)); } catch (e) { /* the inline page is the safe default */ }
+  }
   try {
     const out = new Response(res.body, res);
     Object.keys(MUST_HAVE).forEach(function (k) {

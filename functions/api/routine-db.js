@@ -31,6 +31,7 @@
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
+import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
@@ -98,6 +99,15 @@ export async function liveInfo(request, env) {
     const buf = await r.arrayBuffer();
     out.bytes = buf.byteLength;
     out.index_sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map((b) => b.toString(16).padStart(2, '0')).join('');
+    // /app.js (10/10/2026): the main script is cut out of this index and the page is
+    // rewritten to load it. The cloud cannot open the site (country gate), so the night run
+    // proves both here, in the real runtime: the cut's length, and that the swap happened.
+    const html = new TextDecoder().decode(buf), js = extractApp(html);
+    out.app_js_bytes = js === null ? null : js.length;
+    try {
+      const sw = rewriteApp(new Response(html, { headers: { 'Content-Type': 'text/html' } }), buildOf(env));
+      out.app_swap = (await sw.text()).indexOf('src="' + appSrc(buildOf(env)) + '"') >= 0;
+    } catch (e) { out.app_swap = false; }
     out.ok = true;
   } catch (e) { out.error = String(e && e.message || e).slice(0, 200); }
   return out;
