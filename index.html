@@ -12768,7 +12768,7 @@ function svUser(){
 // \u05d4\u05e1\u05d9\u05e1\u05de\u05d5\u05ea", "\u05de\u05de\u05e9\u05e7\u05d9 \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e6\u05e8\u05d9\u05db\u05d9\u05dd \u05dc\u05e9\u05d1\u05ea \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05d3 \u05e2\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd", "\u05d0\u05e0\u05d9 \u05de\u05e2\u05d3\u05d9\u05e3 \u05e1\u05d9\u05e1\u05de\u05d4, \u05dc\u05d0 \u05e7\u05d5\u05d3 \u05d1\u05de\u05e1\u05e4\u05e8\u05d9\u05dd").
 // Two on the server through /api/codes (admin): letters and digits, 8 or more, capitals not counted.
 // The delete password per device (_delPw). A password shows only after a tap; a change asks first.
-var _codesList=[],_codesAt=0;
+var _codesList=[],_codesAt=0,_codesRecent=[];
 function _codesCall(body){
   return fetch('/api/codes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,st:r.status,j:j};},function(){return {ok:false,st:r.status,j:null};});});
@@ -12783,7 +12783,7 @@ function _codesLoad(force){
   g('codes-body').textContent='\u05d8\u05d5\u05e2\u05df...';
   _codesCall({op:'list'}).then(function(x){
     if(!x.ok||!x.j||!x.j.codes){g('codes-body').textContent='\u26a0\ufe0f \u05dc\u05d0 \u05e0\u05d8\u05e2\u05df ('+x.st+')';return;}
-    _codesList=x.j.codes;_codesAt=Date.now();_codesRender();
+    _codesList=x.j.codes;_codesRecent=Array.isArray(x.j.recent)?x.j.recent:[];_codesAt=Date.now();_codesRender();
   },function(){g('codes-body').textContent='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
 }
 // Old entry points (the dialog of 10/10/2026, the delete dialog's hint): the users page.
@@ -12816,6 +12816,8 @@ function _codesRender(){
   h+='<div style="border-top:1px solid var(--border);padding:8px 0"><div style="font-weight:700">\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4</div>'
     +'<div style="font-size:12px;color:var(--t2);margin:2px 0 6px">\u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05db\u05dc \u05de\u05db\u05e9\u05d9\u05e8 \u05dc\u05d7\u05d5\u05d3, \u05d1\u05d3\u05e4\u05d3\u05e4\u05df: \u05de\u05d5\u05e0\u05e2\u05ea \u05de\u05d7\u05d9\u05e7\u05d4 \u05d1\u05d8\u05e2\u05d5\u05ea, \u05d4\u05d9\u05d0 \u05dc\u05d0 \u05d4\u05d2\u05e0\u05d4. '+(_delPwIsDefault()?'\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc.':'\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4.')+'</div>'
     +'<button type="button" class="btn btn-s btn-sm" onclick="_delPwChange();_codesRender()">\u270f\ufe0f \u05d4\u05d7\u05dc\u05e3 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4</button></div>'
+    +(_codesRecent.length?'<div style="border-top:1px solid var(--border);padding:8px 0"><div style="font-weight:700;font-size:13px">\u05d4\u05d7\u05dc\u05e4\u05d5\u05ea \u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea</div>'
+      +_codesRecent.map(function(r){var d=new Date(r.ts),ok=!isNaN(d),day=ok?d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}):'',hm=ok?d.toLocaleTimeString('en-GB',{timeZone:'Asia/Jerusalem',hour:'2-digit',minute:'2-digit',hour12:false}):'';return '<div style="font-size:12px;color:var(--t2)">'+fd(day)+' '+esc(hm)+' | '+esc(r.label||'')+' | '+esc(r.who||'')+'</div>';}).join('')+'</div>':'')
     +'<div style="border-top:1px solid var(--border);padding:8px 0 0;font-size:12px;color:var(--t2)">\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u270f\ufe0f \u05d1\u05e9\u05d5\u05e8\u05d4 \u05e9\u05dc \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05d8\u05d1\u05dc\u05d4 \u05dc\u05de\u05d8\u05d4.</div>';
   g('codes-body').innerHTML=h;
 }

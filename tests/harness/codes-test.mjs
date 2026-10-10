@@ -16,6 +16,7 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/app_users')) return j([u.includes('id=eq.michael') ? { role: 'מנהל', active: true } : { role: 'מדווח', active: true }]);
   if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') { const b = JSON.parse(init.body); w.writes.push({ u, b, prefer: init.headers.Prefer }); if (w.failWrite) return new Response('x', { status: 500 }); w.state[b.key] = b; return new Response(null, { status: 201 }); }
   if (u.startsWith(SB + '/rest/v1/server_state')) { const one = /key=eq\.([a-z_]+)/.exec(u); return j(Object.values(w.state).filter((x) => !one || x.key === one[1])); }
+  if (u.startsWith(SB + '/rest/v1/audit_log') && m === 'GET') { w.auditQ = u; return j(w.logs.slice().reverse().slice(0, 3).map((x, i) => ({ ts: '2026-10-10T1' + i + ':00:00Z', user_email: x.user_email, record_id: x.record_id }))); }
   if (u.startsWith(SB + '/rest/v1/audit_log')) { w.logs.push(JSON.parse(init.body)); return new Response(null, { status: 201 }); }
   return j({ error: 'unexpected ' + u }, 599);
 };
@@ -42,6 +43,7 @@ console.log('\n3. changing a code');
   check('...logged: who, which code, and NOT the code', w.logs.length === 1 && w.logs[0].user_email === 'admin@tfugen.local' && w.logs[0].record_id === 'trustee_code' && !JSON.stringify(w.logs[0]).toLowerCase().includes('tapugan2026'), w.logs[0]);
   r = await call({ op: 'list' }, 'admin');
   check('the list now shows it as set in the app', r.j.codes.find((c) => c.key === 'trustee_code').source === 'app');
+  check('...and the last changes: who (without the domain), which, never the password; only codes, newest first, three', r.j.recent.length === 1 && r.j.recent[0].who === 'admin' && r.j.recent[0].key === 'trustee_code' && /נאמני/.test(r.j.recent[0].label) && !JSON.stringify(r.j.recent).includes('tapugan2026') && /source=eq\.codes/.test(w.auditQ) && /order=ts\.desc/.test(w.auditQ) && /limit=3/.test(w.auditQ), [r.j.recent, w.auditQ]);
   r = await call({ op: 'set', key: 'induction_code' }, 'admin');
   check('no value: a random password, 10 letters and digits, no 0/o/1/l/i', r.st === 200 && /^[a-z2-9]{10}$/.test(r.j.value) && pwOk(r.j.value) && !/[01oli]/.test(r.j.value) && w.state.induction_code.value === r.j.value, r.j);
   check('randomCode: letters and digits, the length asked, always both kinds', Array.from({ length: 50 }, () => randomCode(10)).every((v) => v.length === 10 && pwOk(v)) && new Set(Array.from({ length: 20 }, () => randomCode(10))).size === 20);
