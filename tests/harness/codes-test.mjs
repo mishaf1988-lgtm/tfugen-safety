@@ -2,7 +2,7 @@
 // הסיסמות", the app's own codes): /api/codes lists and changes the HR code and the trustee code in
 // server_state, admin only, and logs who and when to audit_log without the code. The trustee
 // screen reads its code from server_state first, Cloudflare's TRUSTEE_CODE while that is empty.
-import { onRequest, randomCode, CODE_RE, pwOk } from './_build/codes.mjs';
+import { onRequest, randomCode, CODE_RE, pwOk, changeMailHtml } from './_build/codes.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -16,6 +16,8 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/app_users')) return j([u.includes('id=eq.michael') ? { role: 'מנהל', active: true } : { role: 'מדווח', active: true }]);
   if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') { const b = JSON.parse(init.body); w.writes.push({ u, b, prefer: init.headers.Prefer }); if (w.failWrite) return new Response('x', { status: 500 }); w.state[b.key] = b; return new Response(null, { status: 201 }); }
   if (u.startsWith(SB + '/rest/v1/server_state')) { const one = /key=eq\.([a-z_]+)/.exec(u); return j(Object.values(w.state).filter((x) => !one || x.key === one[1])); }
+  if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return j(w.noOd ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
+  if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') { w.mails = (w.mails || []).concat([JSON.parse(init.body)]); return new Response(null, { status: w.mailFail ? 500 : 202 }); }
   if (u.startsWith(SB + '/rest/v1/audit_log') && m === 'GET') { w.auditQ = u; return j(w.logs.slice().reverse().slice(0, 3).map((x, i) => ({ ts: '2026-10-10T1' + i + ':00:00Z', user_email: x.user_email, record_id: x.record_id }))); }
   if (u.startsWith(SB + '/rest/v1/audit_log')) { w.logs.push(JSON.parse(init.body)); return new Response(null, { status: 201 }); }
   return j({ error: 'unexpected ' + u }, 599);
@@ -41,9 +43,19 @@ console.log('\n3. changing a code');
   let r = await call({ op: 'set', key: 'trustee_code', value: ' Tapugan2026 ' }, 'admin');
   check('my password: saved in lower case (upsert on key), returned', r.st === 200 && r.j.value === 'tapugan2026' && w.writes[0].b.key === 'trustee_code' && w.writes[0].b.value === 'tapugan2026' && /merge-duplicates/.test(w.writes[0].prefer) && /on_conflict=key/.test(w.writes[0].u), [r, w.writes[0]]);
   check('...logged: who, which code, and NOT the code', w.logs.length === 1 && w.logs[0].user_email === 'admin@tfugen.local' && w.logs[0].record_id === 'trustee_code' && !JSON.stringify(w.logs[0]).toLowerCase().includes('tapugan2026'), w.logs[0]);
+  const ml = (w.mails || [])[0] && w.mails[0].message;
+  check('...and a mail to Michael: which password, who, when; never the password', ml && ml.toRecipients.length === 1 && ml.toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && /סיסמה הוחלפה: קוד נאמני/.test(ml.subject) && /admin/.test(ml.body.content) && !JSON.stringify(w.mails).toLowerCase().includes('tapugan2026'), ml && [ml.subject, ml.body.content.slice(0, 300)]);
+  w.noOd = true; const nm = (w.mails || []).length;
+  const r2 = await call({ op: 'set', key: 'trustee_code', value: 'abcd1234' }, 'admin');
+  check('no mail account connected: the change still goes through, no mail', r2.st === 200 && w.mails.length === nm);
+  w.noOd = false; w.mailFail = true;
+  check('the mail fails: the change still goes through', (await call({ op: 'set', key: 'trustee_code', value: 'tapugan2026' }, 'admin')).st === 200);
+  w.mailFail = false;
+  const mh = changeMailHtml('קוד נאמני הבטיחות', 'admin', '2026-10-10T17:05:00Z');
+  check('the mail in Israel time and in plain words', mh.includes('10/10/2026') && mh.includes('20:05') && /לא אתה\?/.test(mh));
   r = await call({ op: 'list' }, 'admin');
   check('the list now shows it as set in the app', r.j.codes.find((c) => c.key === 'trustee_code').source === 'app');
-  check('...and the last changes: who (without the domain), which, never the password; only codes, newest first, three', r.j.recent.length === 1 && r.j.recent[0].who === 'admin' && r.j.recent[0].key === 'trustee_code' && /נאמני/.test(r.j.recent[0].label) && !JSON.stringify(r.j.recent).includes('tapugan2026') && /source=eq\.codes/.test(w.auditQ) && /order=ts\.desc/.test(w.auditQ) && /limit=3/.test(w.auditQ), [r.j.recent, w.auditQ]);
+  check('...and the last changes: who (without the domain), which, never the password; only codes, newest first, three', r.j.recent.length === 3 && r.j.recent[0].who === 'admin' && r.j.recent[0].key === 'trustee_code' && /נאמני/.test(r.j.recent[0].label) && !JSON.stringify(r.j.recent).includes('tapugan2026') && /source=eq\.codes/.test(w.auditQ) && /order=ts\.desc/.test(w.auditQ) && /limit=3/.test(w.auditQ), [r.j.recent, w.auditQ]);
   r = await call({ op: 'set', key: 'induction_code' }, 'admin');
   check('no value: a random password, 10 letters and digits, no 0/o/1/l/i', r.st === 200 && /^[a-z2-9]{10}$/.test(r.j.value) && pwOk(r.j.value) && !/[01oli]/.test(r.j.value) && w.state.induction_code.value === r.j.value, r.j);
   check('randomCode: letters and digits, the length asked, always both kinds', Array.from({ length: 50 }, () => randomCode(10)).every((v) => v.length === 10 && pwOk(v)) && new Set(Array.from({ length: 20 }, () => randomCode(10))).size === 20);
