@@ -2905,6 +2905,7 @@ id="m-ncr" style="display:none">
       <div style="font-size:11px;color:var(--t3);margin-top:4px">העובד עונה בדף בעברית, ואחרי כל תשובה רואה אם צדק ומה התשובה הנכונה. הציון (תשובה ראשונה) נשמר ב"מי חתם".</div>
     </div>
     <div class="field fw"><label>&#1514;&#1512;&#1490;&#1493;&#1501; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label>
+      <button type="button" class="btn btn-s" id="tbt-say-btn" style="width:100%;margin-bottom:6px" onclick="tbtSay()">&#128266; &#1513;&#1502;&#1506; &#1488;&#1497;&#1498; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1497;&#1513;&#1502;&#1506;&#1493; &#1488;&#1514; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492;</button>
       <button type="button" class="btn btn-s" id="tbt-tr-btn" style="width:100%" onclick="tbtTranslate()">&#127760; &#1514;&#1512;&#1490;&#1501; &#1500;&#1506;&#1512;&#1489;&#1497;&#1514;, &#1512;&#1493;&#1505;&#1497;&#1514; &#1493;&#1488;&#1502;&#1492;&#1512;&#1497;&#1514;</button>
       <div style="font-size:11px;color:var(--t3);margin-top:4px">&#1514;&#1512;&#1490;&#1493;&#1501; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;. &#1492;&#1506;&#1493;&#1489;&#1491; &#1489;&#1493;&#1495;&#1512; &#1513;&#1508;&#1492; &#1489;&#1491;&#1507;. &#1489;&#1500;&#1497; &#1514;&#1512;&#1490;&#1493;&#1501; &#1492;&#1493;&#1488; &#1512;&#1493;&#1488;&#1492; &#1506;&#1489;&#1512;&#1497;&#1514;.</div>
       <details id="tbt-tr-box" style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">&#1492;&#1514;&#1512;&#1490;&#1493;&#1502;&#1497;&#1501; (&#1513;&#1493;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492; = &#1492;&#1504;&#1493;&#1513;&#1488;)</summary>
@@ -11658,6 +11659,29 @@ function tbtQuizAI(){
     toast('\u05e0\u05db\u05ea\u05d1\u05d5 '+ok.length+' \u05e9\u05d0\u05dc\u05d5\u05ea. \u05db\u05d3\u05d0\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05ea\u05e7\u05df \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4');
     return 'ok';
   })['catch'](function(){done();if(my===_tbtQuizRun)toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05e9\u05d0\u05dc\u05d5\u05ea. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1 \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d3');return 'fail';});
+}
+// Listen before publishing (10/10/2026, Michael: "\u05d4\u05d3\u05d9\u05d1\u05d5\u05d1 \u05dc\u05d0 \u05d8\u05d5\u05d1, \u05db\u05de\u05d5 \u05e8\u05d5\u05d1\u05d5\u05d8"): the same voice the
+// worker hears, from the text in the form, through /api/talk op 'say'. The player is the one the
+// worker's page uses, loaded once from /api/talk?op=player.
+var _tbtSayCur=null;
+function _tbtSayLbl(on){var b=g('tbt-say-btn');if(b)b.textContent=on?'\u23f9 \u05e2\u05e6\u05d5\u05e8':'\ud83d\udd0a \u05e9\u05de\u05e2 \u05d0\u05d9\u05da \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d9\u05e9\u05de\u05e2\u05d5 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4';}
+function tbtSay(){
+  if(_tbtSayCur){_tbtSayCur.stop();_tbtSayCur=null;_tbtSayLbl(false);return;}
+  var title=(g('tbt-title').value||'').trim(),body=(g('tbt-body').value||'').trim();
+  if(!body){toast('\u05d0\u05d9\u05df \u05ea\u05d5\u05db\u05df \u05dc\u05d4\u05e7\u05e8\u05d0\u05d4');return;}
+  _tbtSayCur={stop:function(){}};_tbtSayLbl(true);
+  // Created inside the tap: a phone lets audio start only from a user gesture.
+  var AC=window.AudioContext||window.webkitAudioContext,ac=null;try{ac=AC?new AC():null;if(ac)ac.resume();}catch(e){ac=null;}
+  var go=function(){
+    if(!_tbtSayCur)return;
+    _tbtSayCur=window.tapSay({ac:ac,url:'/api/talk',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'say',lang:'he',title:title,body:body})},
+      onEnd:function(){_tbtSayCur=null;_tbtSayLbl(false);},
+      onFail:function(e){_tbtSayCur=null;_tbtSayLbl(false);toast('\u26a0\ufe0f \u05d4\u05d4\u05e7\u05e8\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+String(e||'').substring(0,60));}});
+  };
+  if(window.tapSay)return go();
+  var s=document.createElement('script');s.src='/api/talk?op=player';s.onload=go;
+  s.onerror=function(){_tbtSayCur=null;_tbtSayLbl(false);toast('\u26a0\ufe0f \u05d4\u05d4\u05e7\u05e8\u05d0\u05d4 \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4');};
+  document.head.appendChild(s);
 }
 function tbtTranslate(){
   var title=gv('tbt-title'),body=gv('tbt-body');

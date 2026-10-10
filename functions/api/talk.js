@@ -116,26 +116,138 @@ export const QZL = {
 };
 export const QZ = QZL.he;
 
-// Read aloud (10/10/2026, Michael: "מאשר המלצות"): the phone's own voices (speechSynthesis),
-// nothing installed and nothing sent anywhere. The button shows only when the phone has a voice
-// in the page's language; many have Hebrew, Arabic and Russian, few have Amharic.
+// Read aloud (10/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8 \u05d4\u05de\u05dc\u05e6\u05d5\u05ea"). First version: the phone's own voices
+// (speechSynthesis). Michael the same day: "\u05d4\u05d3\u05d9\u05d1\u05d5\u05d1 \u05dc\u05d0 \u05d8\u05d5\u05d1, \u05db\u05de\u05d5 \u05e8\u05d5\u05d1\u05d5\u05d8, \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05d9\u05d5\u05ea\u05e8 \u05de\u05e7\u05e6\u05d5\u05e2\u05d9 \u05db\u05de\u05d5
+// \u05de\u05d3\u05e8\u05d9\u05da \u05de\u05d3\u05d1\u05e8, \u05d1\u05e0\u05d5\u05e1\u05e3 \u05d4\u05d5\u05d0 \u05de\u05e7\u05e8\u05d9\u05d0 \u05de\u05e1\u05e4\u05e8 \u05d8\u05d5\u05e4\u05e1". So the voice now comes from Gemini TTS (the key the
+// server already holds; Hebrew, Arabic, Russian and Amharic, free tier, paid about $0.04 for three
+// minutes): /api/talk?op=say streams it, the page plays it as it arrives, and the phone's voice is
+// only the fallback when the server voice fails. What is read is speechText: no form numbers, no
+// "2.1." in front of a line.
 export const SPEAK = {
   he: { listen: '\u05d4\u05e7\u05e8\u05d0 \u05d1\u05e7\u05d5\u05dc', stop: '\u05e2\u05e6\u05d5\u05e8', tag: ['he', 'iw'] },
   ar: { listen: '\u0627\u0633\u062a\u0645\u0639', stop: '\u0625\u064a\u0642\u0627\u0641', tag: ['ar'] },
   ru: { listen: '\u041f\u0440\u043e\u0441\u043b\u0443\u0448\u0430\u0442\u044c', stop: '\u0421\u0442\u043e\u043f', tag: ['ru'] },
   am: { listen: '\u12a0\u12f3\u121d\u1325', stop: '\u12a0\u1241\u121d', tag: ['am'] },
 };
-export const speakScript = (lang) => `(function(){
-  var b=document.getElementById('say'),t=document.getElementById('tb'),h=document.getElementById('th'),S=window.speechSynthesis;
-  if(!b||!t||!S||typeof SpeechSynthesisUtterance==='undefined')return;
-  var W=${JSON.stringify(SPEAK[lang] || SPEAK.he)},v=null,on=false;
-  function pick(){var vs=S.getVoices()||[];v=null;for(var i=0;i<vs.length&&!v;i++){var l=String(vs[i].lang||'').toLowerCase();for(var k=0;k<W.tag.length;k++)if(l.indexOf(W.tag[k])===0){v=vs[i];break;}}b.style.display=v?'':'none';}
-  pick();if(S.addEventListener)S.addEventListener('voiceschanged',pick);
-  function idle(){on=false;b.textContent='\\ud83d\\udd0a '+W.listen;}
+export const TTS_MODEL = 'gemini-3.8-flash-tts';
+// Charon: Gemini's "informative" voice, a calm male voice that reads like an instructor.
+// TTS_VOICE / TTS_MODEL in the environment override both without a deploy.
+export const TTS_VOICE = 'Charon';
+export const TTS_LANG = { he: 'he-IL', ar: 'ar', ru: 'ru-RU', am: 'am-ET' };
+export const TTS_MAX = 6000;
+// The words to speak. A form number ("(\u05d8\u05d5\u05e4\u05e1 08.02.01)", "08.01") means nothing said aloud, and a
+// line number ("2.1.") is read as "two point one"; both go. Each line ends in a stop, so the voice
+// pauses between rules instead of running them together; " - " becomes a comma.
+export function speechText(title, body) {
+  const strip = (v) => String(v || '')
+    .replace(/\([^()]*\d{1,2}\.\d{2}(?:\.\d{1,2})*[^()]*\)/g, ' ')
+    .replace(/(?:\u05dc\u05e4\u05d9\s+)?(?:\u05d8\u05d5\u05e4\u05e1|\u05e0\u05d5\u05d4\u05dc|form|\u0444\u043e\u0440\u043c\u0430|\u0646\u0645\u0648\u0630\u062c)\s*\d{1,2}(?:\.\d{1,2})+/gi, ' ')
+    .replace(/(^|[\s(])\d{1,2}\.\d{2}\.\d{1,2}(?=[\s).,]|$)/g, '$1');
+  return (strip(title) + '\n' + strip(body)).split('\n')
+    .map((l) => l.replace(/^\s*(?:\d+(?:\.\d+)*[.)]?|[-*])\s+/, '').replace(/\s+-\s+/g, ', ').replace(/\s+/g, ' ').trim())
+    .filter((l) => /[^\s.,:;()-]/.test(l))
+    .map((l) => (/[.!?:;,\u060c\u061f\u1362]$/.test(l) ? l : l + '.'))
+    .join('\n').substring(0, TTS_MAX);
+}
+export function spokenOf(talk, lang) { const x = textOf(talk, lang); return speechText(x.title, x.body); }
+const GEM = 'https://generativelanguage.googleapis.com/v1beta';
+// The stream from Gemini, untouched: decoding base64 audio here would cost more CPU than the free
+// plan's 10ms. The page decodes. The current API (interactions) first; generateContent with
+// responseModalities AUDIO if that is refused, so a change on Google's side degrades, not breaks.
+export async function ttsUpstream(env, text, lang) {
+  if (!env.GEMINI_API_KEY) return { status: 503, err: 'no key' };
+  const model = env.TTS_MODEL || TTS_MODEL, voice = env.TTS_VOICE || TTS_VOICE;
+  const H = { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY };
+  let r = await fetch(GEM + '/interactions', { method: 'POST', headers: H, body: JSON.stringify({
+    model, stream: true, input: [{ type: 'user_input', content: [{ type: 'text', text }] }],
+    response_format: { type: 'audio', mime_type: 'audio/l16', sample_rate: 24000 },
+    generation_config: { speech_config: [{ voice, language: TTS_LANG[lang] || 'he-IL' }] } }) });
+  if (r.ok && r.body) return { r };
+  const e1 = r.status + ' ' + String(await r.text().catch(() => '')).substring(0, 160);
+  r = await fetch(GEM + '/models/' + encodeURIComponent(model) + ':streamGenerateContent?alt=sse', { method: 'POST', headers: H, body: JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text }] }],
+    generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } }) });
+  if (r.ok && r.body) return { r };
+  return { status: 502, err: 'interactions ' + e1 + ' | generate ' + r.status + ' ' + String(await r.text().catch(() => '')).substring(0, 160) };
+}
+const SAY_H = { 'Content-Type': 'text/event-stream; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' };
+// The same text in the same voice is the same audio: kept in the edge cache for a week, so a
+// department of 40 costs one generation. Best effort: no cache, no harm.
+async function sayStream(env, text, lang, ctx, extra) {
+  const H = Object.assign({}, SAY_H, extra || {});
+  let cache = null, key = null;
+  try {
+    cache = (typeof caches !== 'undefined' && caches.default) || null;
+    if (cache) {
+      const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode([env.TTS_MODEL || TTS_MODEL, env.TTS_VOICE || TTS_VOICE, lang, text].join('|'))));
+      key = new Request('https://tts-cache.tapugan-safety.pages.dev/' + Array.from(d.slice(0, 16)).map((b) => b.toString(16).padStart(2, '0')).join(''));
+      const hit = await cache.match(key);
+      if (hit && hit.body) return new Response(hit.body, { headers: Object.assign({}, H, { 'X-TTS': 'cache' }) });
+    }
+  } catch (e) { cache = null; }
+  const up = await ttsUpstream(env, text, lang);
+  if (!up.r) return new Response(JSON.stringify({ error: up.err }), { status: up.status, headers: Object.assign({}, H, { 'Content-Type': 'application/json' }) });
+  let body = up.r.body;
+  if (cache && key && ctx && typeof ctx.waitUntil === 'function') {
+    const [a, b] = body.tee();
+    body = a;
+    ctx.waitUntil(cache.put(key, new Response(b, { headers: { 'Content-Type': SAY_H['Content-Type'], 'Cache-Control': 'public, max-age=604800' } })).catch(() => {}));
+  }
+  return new Response(body, { headers: Object.assign({}, H, { 'Cache-Control': 'no-store', 'X-TTS': 'gemini' }) });
+}
+async function sayTalk(env, tok, want, g, ctx) {
+  const t = await readTok(env, tok, g);
+  if (t.error) return new Response('{"error":"link"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
+  const talk = await getTalk(env, t.id);
+  if (!talk || talk.s !== S_PUB || !permOk(t, talk)) return new Response('{"error":"talk"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+  const lang = textOf(talk, langOf(want)).lang;
+  return sayStream(env, spokenOf(talk, lang), lang, ctx);
+}
+// The player, one copy: inlined in the worker's page and served at ?op=player to the app's
+// "listen" button. Reads Server-Sent Events (or one JSON), finds every base64 audio part
+// wherever the API puts it, and queues 16-bit PCM on an AudioContext as it arrives.
+export const PLAYER = `(function(){if(window.tapSay)return;
+function b64(s){var b=atob(s),n=b.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=b.charCodeAt(i);return u;}
+function audios(o,out){if(!o||typeof o!=='object')return;if(Array.isArray(o)){for(var i=0;i<o.length;i++)audios(o[i],out);return;}
+var m=String(o.mime_type||o.mimeType||'');if(typeof o.data==='string'&&o.data.length>8&&(/audio/i.test(m)||o.type==='audio')){out.push({d:o.data,m:m,r:+(o.sample_rate||o.sampleRate||0)});return;}
+for(var k in o)if(k!=='data')audios(o[k],out);}
+window.tapSay=function(o){var AC=window.AudioContext||window.webkitAudioContext;
+if(!AC){if(o.onFail)o.onFail('noaudio');return{stop:function(){}};}
+var ac=o.ac||new AC(),ctl=window.AbortController?new AbortController():null,at=0,got=0,live=0,done=false,stopped=false,carry=null;
+try{ac.resume();}catch(e){}
+function fin(){if(stopped)return;stopped=true;try{if(ctl)ctl.abort();}catch(e){}try{ac.close();}catch(e){}}
+function ended(){if(done&&!live&&!stopped){fin();if(o.onEnd)o.onEnd();}}
+function play(a){var u=b64(a.d),off=0;if(stopped)return;
+if(u.length>44&&u[0]===82&&u[1]===73&&u[2]===70&&u[3]===70)off=44;
+if(carry){var t=new Uint8Array(carry.length+u.length-off);t.set(carry);t.set(u.subarray(off),carry.length);u=t;off=0;carry=null;}
+var n=(u.length-off)>>1;if((u.length-off)&1)carry=u.slice(u.length-1);if(!n)return;
+var rate=a.r||+((/rate=(\\d+)/.exec(a.m)||[])[1])||24000,buf=ac.createBuffer(1,n,rate),ch=buf.getChannelData(0),dv=new DataView(u.buffer,u.byteOffset+off,n*2);
+for(var i=0;i<n;i++)ch[i]=dv.getInt16(i*2,true)/32768;
+var s=ac.createBufferSource();s.buffer=buf;s.connect(ac.destination);var st=Math.max(ac.currentTime+0.08,at);s.start(st);at=st+buf.duration;got++;live++;
+s.onended=function(){live--;ended();};}
+function feed(x){var j;try{j=JSON.parse(x);}catch(e){return;}var out=[];audios(j,out);for(var i=0;i<out.length;i++)play(out[i]);}
+function lines(b,last){var p=b.split('\\n'),rest=last?'':p.pop();for(var i=0;i<p.length;i++){var l=p[i].replace(/\\r$/,'');if(l.indexOf('data:')===0)feed(l.slice(5).trim());}return rest;}
+var init=o.init||{};if(ctl)init.signal=ctl.signal;
+fetch(o.url,init).then(function(r){if(!r.ok)throw new Error('http '+r.status);var ct=r.headers.get('content-type')||'',sse=/event-stream/.test(ct);
+if(!sse||!r.body||!r.body.getReader)return r.text().then(function(t){if(sse)lines(t,true);else feed(t);});
+var rd=r.body.getReader(),dec=new TextDecoder(),b='';
+function pump(){return rd.read().then(function(x){if(x.done){lines(b,true);return;}b=lines(b+dec.decode(x.value,{stream:true}),false);return pump();});}
+return pump();}).then(function(){done=true;if(!got){fin();if(o.onFail)o.onFail('empty');}else ended();},
+function(e){if(stopped)return;done=true;if(!got){fin();if(o.onFail)o.onFail(String(e&&e.message||e));}else ended();});
+return{stop:fin};};})();`;
+export const speakScript = (lang, text) => `(function(){
+  var b=document.getElementById('say'),f=document.getElementById('f'),S=window.speechSynthesis,AC=window.AudioContext||window.webkitAudioContext;
+  if(!b||!f)return;
+  var W=${JSON.stringify(SPEAK[lang] || SPEAK.he)},TX=${JSON.stringify(String(text || '')).replace(/</g, '\\u003c')},v=null,on=false,cur=null;
+  var url='/api/talk?op=say&k='+encodeURIComponent(f.k.value)+'&l='+encodeURIComponent(f.l.value)+(f.g?'&g=1':'');
+  function pick(){v=null;var vs=(S&&S.getVoices&&S.getVoices())||[];for(var i=0;i<vs.length&&!v;i++){var l=String(vs[i].lang||'').toLowerCase();for(var k=0;k<W.tag.length;k++)if(l.indexOf(W.tag[k])===0){v=vs[i];break;}}b.style.display=(AC&&window.tapSay)||v?'':'none';}
+  pick();if(S&&S.addEventListener)S.addEventListener('voiceschanged',pick);
+  function idle(){on=false;cur=null;b.textContent='\\ud83d\\udd0a '+W.listen;}
+  function phone(){if(!on)return;if(!S||!v||typeof SpeechSynthesisUtterance==='undefined'){idle();return;}var u=new SpeechSynthesisUtterance(TX);u.voice=v;u.lang=v.lang;u.rate=0.95;u.onend=idle;u.onerror=idle;S.cancel();S.speak(u);}
   b.addEventListener('click',function(){
-    if(on){S.cancel();idle();return;}
-    var u=new SpeechSynthesisUtterance(((h&&h.textContent)||'')+'. '+t.textContent);u.voice=v;u.lang=v.lang;u.rate=0.95;
-    u.onend=idle;u.onerror=idle;S.cancel();S.speak(u);on=true;b.textContent='\\u23f9 '+W.stop;
+    if(on){if(cur)cur.stop();if(S)S.cancel();idle();return;}
+    on=true;b.textContent='\\u23f9 '+W.stop;
+    if(AC&&window.tapSay)cur=window.tapSay({url:url,onEnd:idle,onFail:function(){cur=null;phone();}});else phone();
   });
 })();`;
 export const langOf = (l) => (Object.prototype.hasOwnProperty.call(LANGS, l) ? l : 'he');
@@ -220,6 +332,8 @@ function headers(nonce) {
       + (nonce ? "script-src 'nonce-" + nonce + "'; " : '')
       // The talk video (10/10/2026): a file from our Storage, or YouTube without cookies.
       + "media-src " + SB + "; frame-src https://www.youtube-nocookie.com; "
+      // The read-aloud voice (10/10/2026): fetched from this same endpoint, played with Web Audio.
+      + "connect-src 'self'; "
       + "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   };
 }
@@ -528,7 +642,7 @@ async function showTalk(env, tok, want, g, tr) {
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
     + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
     + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
-    + (x.body ? '<script nonce="' + nonce + '">' + speakScript(lang) + '</script>' : '');
+    + (x.body ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
   return page(talk.kind === KIND_IND ? L.indT : L.title, inner, '', 200, nonce, lang);
 }
 
@@ -655,7 +769,7 @@ async function signTalk(env, request, ctx) {
     + '<p><a href="' + esc(talkUrl(tok, lang, g)) + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#1e3a8a;color:#fff;font-weight:700;text-decoration:none">' + esc(L.next) + '</a></p>', 'ok', 200, '', lang);
 }
 
-async function makeLink(env, request) {
+async function makeLink(env, request, ctx) {
   const allowed = defaultAllowedOrigins(env);
   const cors = corsHeaders(request.headers.get('origin') || '', allowed, 'POST,OPTIONS');
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
@@ -663,6 +777,12 @@ async function makeLink(env, request) {
   if (!who.ok) return jsonResp({ error: who.error }, who.status || 401, cors);
   let b = {};
   try { b = await request.json(); } catch (e) { b = {}; }
+  // The manager hears the talk before publishing it (10/10/2026): the text from the form, unsaved.
+  if (b && b.op === 'say') {
+    const lang = langOf(b.lang), text = speechText(b.title, b.body);
+    if (!text) return jsonResp({ error: 'empty' }, 400, cors);
+    return sayStream(env, text, lang, ctx, cors);
+  }
   if (!b || (b.op !== 'link' && b.op !== 'group' && b.op !== 'revoke')) return jsonResp({ error: 'unknown op' }, 400, cors);
   const talk = await getTalk(env, String(b.id || ''));
   if (!talk) return jsonResp({ error: 'not found' }, 404, cors);
@@ -707,9 +827,14 @@ export async function onRequest(context) {
       return new Response(null, { headers: corsHeaders(request.headers.get('origin') || '', allowed, 'POST,OPTIONS') });
     }
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
-    if (request.method === 'GET') { const q = new URL(request.url).searchParams; return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1'); }
+    if (request.method === 'GET') {
+      const q = new URL(request.url).searchParams;
+      if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context);
+      if (q.get('op') === 'player') return new Response(PLAYER, { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' } });
+      return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1');
+    }
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
-    if (/application\/json/i.test(request.headers.get('content-type') || '')) return await makeLink(env, request);
+    if (/application\/json/i.test(request.headers.get('content-type') || '')) return await makeLink(env, request, context);
     return await signTalk(env, request, context);
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 500);
