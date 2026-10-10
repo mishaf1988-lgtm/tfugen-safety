@@ -22,6 +22,16 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller } from '../_shared.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
+const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+async function appCode(env) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return '';
+  try {
+    const r = await fetch(SB + '/rest/v1/server_state?key=eq.trustee_code&select=value', { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY } });
+    if (!r.ok) return '';
+    const rows = await r.json();
+    return String((Array.isArray(rows) && rows[0] && rows[0].value) || '').trim();
+  } catch (e) { return ''; }
+}
 
 // Same time whatever the mismatch, so the length of the real code is not
 // something a stopwatch can learn.
@@ -42,7 +52,9 @@ export async function onRequest({ request, env }) {
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
   if (!isAllowedCaller(request, allowed)) return jsonResp({ error: 'origin not allowed' }, 403, cors);
 
-  const expected = String(env.TRUSTEE_CODE || '').trim();
+  // Since 10/10/2026 the code can be changed from the app (codes.js): server_state
+  // 'trustee_code' first, TRUSTEE_CODE in Cloudflare while that row is empty.
+  const expected = (await appCode(env)) || String(env.TRUSTEE_CODE || '').trim();
   if (!expected) {
     // Closed. Says so in words the trustee in front of it can act on.
     return jsonResp({
