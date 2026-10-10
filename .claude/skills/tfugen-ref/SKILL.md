@@ -200,6 +200,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 ## Gotchas
 
+- Operational tests (10/10/2026): `ops-sweep-test.js` (every page: open, 👁, ✏️, 🗑 and what is left) and `ops-create-test.js` (every "new" form: fill by type, save, in data + `sbIns` + on the page; then edit in place, `sbUpd`, no duplicate). Most pages edit through 👁 then `#view-edit` (`_genEdit`), not a ✏️ on the row. A bug Michael finds by hand = a new case in one of them.
+
 - Playwright `addInitScript` then `setContent` on a fresh page: the stub does NOT run (the first about:blank was created before it). `await page.goto('about:blank')` between them (10/10/2026, `talk-speak-test.mjs`). `window.speechSynthesis` is a getter: stub it with `Object.defineProperty`.
 
 - Account skills: since 07/10/2026 in `mishaf1988-lgtm/michael-skills` (`plugins/michael/skills/*/`; here only a pointer README). Its `checks` workflow runs `account-skill-test.py`, which checks that every `references/*.md` named in a SKILL.md exists, and that "(N כללים" next to a references file equals the numbered rules there, numbered 1..N once each. Adding a rule to `lessons.md` = bump N in SKILL.md in the same commit (04/10/2026, it said 31 with 32).
