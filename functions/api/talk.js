@@ -349,19 +349,64 @@ async function codeGate(env, talk, cookieHeader) {
   const r = await readLinkToken(env, CODE_PREFIX, c);
   return { ok: !r.error && r.id === talk.id + '-' + (await codeTag(code)) };
 }
+// The guessing lock (10/10/2026, the security review: a wrong guess only waited, and a script in
+// parallel could try every six-digit code in hours). Every attempt counts before the code is checked,
+// in one atomic upsert (guess_hit, migration 2026-10-10_guess_lock.sql); over GUESS_LIMIT in an hour
+// from the same address = refused without a check; the right code clears the count. The first lock
+// of an address lands in server_state 'guess_locks', which the weekly mail reports. If the count
+// cannot be read the check goes on (the lock must not shut HR out when the database blinks).
+// The same block sits in talk.js and trustee-gate.js; a shared module would need a build entry in
+// every test that loads either file.
+export const GUESS_LIMIT = 10;
+const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
+export async function guessKey(scope, request) {
+  const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'none';
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('guess|' + ip)));
+  return 'guess:' + scope + ':' + Array.from(d.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function guessHit(env, key) {
+  try {
+    const r = await fetch(GUESS_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }) });
+    if (!r.ok) return 0;
+    const n = await r.json();
+    return typeof n === 'number' ? n : 0;
+  } catch (e) { return 0; }
+}
+async function guessClear(env, key) {
+  try { await fetch(GUESS_SB + '/rest/v1/rpc/guess_clear', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }) }); } catch (e) { /* the code was right */ }
+}
+async function guessLocked(env, scope) {
+  try {
+    const r = await fetch(GUESS_SB + '/rest/v1/server_state?key=eq.guess_locks&select=value', { headers: guessH(env) });
+    const rows = r.ok ? await r.json() : [];
+    let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
+    list = (Array.isArray(list) ? list : []).concat([{ at: new Date().toISOString(), s: scope }]).slice(-50);
+    await fetch(GUESS_SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: Object.assign(guessH(env), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key: 'guess_locks', value: JSON.stringify(list), updated_at: new Date().toISOString() }) });
+  } catch (e) { /* the lock holds anyway */ }
+}
+// n attempts so far in the window, including this one; true = refuse without checking.
+export async function guessGate(env, scope, request) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return { key: null, locked: false };
+  const key = await guessKey(scope, request);
+  const n = await guessHit(env, key);
+  if (n === GUESS_LIMIT + 1) await guessLocked(env, scope);
+  return { key, locked: n > GUESS_LIMIT };
+}
+export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
 const sameCode = (a, b) => { const x = String(a || ''), y = String(b || ''); let d = x.length === y.length ? 0 : 1; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0); return d === 0; };
-function codePage(tok, lang, wrong, closed) {
+function codePage(tok, lang, wrong, closed, locked) {
   const inner = '<p>\u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05e2\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05de\u05e7\u05dc\u05d9\u05d3\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea, \u05d5\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d6\u05d5\u05db\u05e8.</p>'
     + '<p dir="auto" style="font-size:14px;color:#6b7280;margin-top:-4px">\u0627\u0644\u0631\u0645\u0632 \u0644\u062f\u0649 \u0642\u0633\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629 | \u041a\u043e\u0434 \u0443 \u043e\u0442\u0434\u0435\u043b\u0430 \u043a\u0430\u0434\u0440\u043e\u0432 | \u12ae\u12f1 \u1260\u1230\u12cd \u1200\u1265\u1275 \u12ad\u134d\u120d \u1290\u12cd</p>'
-    + (closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e7\u05d5\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
+    + (locked ? '<p style="color:#b91c1c;font-weight:700">\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.</p>' : closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e7\u05d5\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
       : (wrong ? '<p style="color:#b91c1c;font-weight:700">\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.</p>' : '')
       + '<form method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="l" value="' + esc(langOf(lang)) + '">'
       + '<label for="icode" style="display:block;font-weight:700;margin-bottom:4px">\u05e7\u05d5\u05d3</label>'
       + '<input id="icode" name="icode" inputmode="numeric" autocomplete="off" maxlength="12" required dir="ltr" style="width:100%;box-sizing:border-box;font-size:22px;letter-spacing:4px;text-align:center;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px">'
       + '<button type="submit" id="icode-go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#1e3a8a;color:#fff;font-size:18px;font-weight:700">\u05db\u05e0\u05d9\u05e1\u05d4</button></form>');
-  return page('\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9', inner, closed || wrong ? 'err' : '', closed ? 503 : (wrong ? 403 : 200), '', 'he');
+  return page('\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9', inner, closed || wrong || locked ? 'err' : '', locked ? 429 : (closed ? 503 : (wrong ? 403 : 200)), '', 'he');
 }
-async function codeSubmit(env, form) {
+async function codeSubmit(env, form, request) {
   const tok = String(form.get('k') || ''), lang = langOf(String(form.get('l') || ''));
   const t = await readTok(env, tok, false);
   if (t.error === 'expired') return errL('expired', lang, 410);
@@ -370,7 +415,10 @@ async function codeSubmit(env, form) {
   if (!talk || talk.s !== S_PUB || !permOk(t, talk) || talk.kind !== KIND_IND) return errL('badLink', lang, 403);
   const code = await indCode(env);
   if (!code) return codePage(tok, lang, false, true);
+  const gg = await guessGate(env, 'ind', request);
+  if (gg.locked) return codePage(tok, lang, false, false, true);
   if (!sameCode(String(form.get('icode') || '').trim(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, lang, true, false); }
+  await guessOk(env, gg);
   const c = await makeCodeCookie(env, talk.id, code);
   if (!c) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
   return new Response(null, { status: 303, headers: { Location: talkUrl(tok, lang), 'Cache-Control': 'no-store',
@@ -765,7 +813,7 @@ async function isDuplicate(r) {
 async function signTalk(env, request, ctx) {
   let form;
   try { form = await request.formData(); } catch (e) { return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.'); }
-  if (form.has('icode')) return codeSubmit(env, form);
+  if (form.has('icode')) return codeSubmit(env, form, request);
   const tok = String(form.get('k') || '');
   const g = String(form.get('g') || '') === '1';
   const t = await readTok(env, tok, g);
