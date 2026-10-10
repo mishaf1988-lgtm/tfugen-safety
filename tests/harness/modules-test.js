@@ -60,7 +60,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('frequent row: reports + 8 modules', s.freq.length === 9 && s.freq[0].key === null && s.freq.slice(1).map(f => f.key).join() === 'ncr,eqi,exp,tasks,nm,inc,round,docs', s.freq);
   const dup = s.modList.filter(m => m.n > 1).map(m => m.key + ':' + m.n).sort().join();
   check('_modList: unique keys; ncr/eqi/docs carry 2 buttons each', new Set(s.modList.map(m => m.key)).size === s.modList.length && dup === 'docs:2,eqi:2,ncr:2', dup);
-  check('admin sees the gated entries (users / audit / agents / mr)', ['users', 'audit', 'agents', 'mr'].every(k => s.visibleKeys.includes(k)), s.hiddenIds);
+  check('admin sees the gated entries (audit / agents / mr) and the one "users and passwords" entry', ['audit', 'agents', 'mr'].every(k => s.visibleKeys.includes(k)) && !s.hiddenIds.includes('sheet-btn-users'), s.hiddenIds);
+  check('one entry for passwords: no separate "change password" or two-step button in the sheet', !document_has_pw_extra(s), s.visibleTexts.filter(t => /סיסמה|דו-שלבי/.test(t)));
   check('settings button lives in the AI/settings group', s.visibleTexts.some(t => /הגדרות תצוגה/.test(t)) && !document_has_standalone(s), s.visibleTexts.filter(t => /הגדרות/.test(t)));
   await page.waitForTimeout(500);
   await page.screenshot({ path: OUT + '/modules-sheet-375.png' });
@@ -86,7 +87,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   await page.evaluate(() => _menuOpen());
   await type('x'); await type('');
   s = await state();
-  check('manager: users/audit/agents stay hidden after a search is cleared', ['sheet-btn-users', 'sheet-btn-audit', 'sheet-btn-agents'].every(id => s.hiddenIds.includes(id)), s.hiddenIds);
+  check('manager: audit/agents stay hidden after a search is cleared; "users and passwords" stays (it opens their own passwords)', ['sheet-btn-audit', 'sheet-btn-agents'].every(id => s.hiddenIds.includes(id)) && !s.hiddenIds.includes('sheet-btn-users'), s.hiddenIds);
   check('manager: regular modules visible', ['docs', 'eqi', 'rsk', 'emp', 'wst', 'cal'].every(k => s.visibleKeys.includes(k)), s.visibleKeys);
   await setRole(null);  // reporter
   s = await state();
@@ -98,7 +99,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     && !['ncr', 'nm', 'inc', 'round'].some(k => s.visibleKeys.includes(k)), s.visibleKeys);
   await setRole({ username: 'admin' });
   s = await state();
-  check('back to admin: everything restored', ['docs', 'eqi', 'users', 'audit'].every(k => s.visibleKeys.includes(k)), s.hiddenIds);
+  check('back to admin: everything restored', ['docs', 'eqi', 'audit'].every(k => s.visibleKeys.includes(k)) && !s.hiddenIds.includes('sheet-btn-users'), s.hiddenIds);
 
   console.log('\n4. visibility prefs hide every copy');
   await page.evaluate(() => _appPrefsSet({ modulesHidden: { eqi: true } }));
@@ -123,4 +124,6 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   process.exit(fail ? 1 : 0);
 
   function document_has_standalone(st) { return false; }
+  // 10/10/2026: "change password" and two-step moved into the one "users and passwords" entry.
+  function document_has_pw_extra(st) { return st.visibleTexts.some((t) => /שנה סיסמה|אימות דו-שלבי/.test(t)); }
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });

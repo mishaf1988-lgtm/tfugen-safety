@@ -282,7 +282,8 @@ const USERS = { dani: DANI, vered: VERED };
   const words = dec(SRC.slice(a, b)) + dec(m1 ? m1[0] : '') + dec(m2 ? m2[0] : '');
   const bad = words.match(/[—–־«»“”„‘’←→↔·…]/g);
   check('keyboard characters only in every new message (' + (a > 0 && m1 && m2 ? 'found' : 'MISSING') + ')', a > 0 && b > a && m1 && m2 && !bad, bad);
-  check('the settings entry is in the menu', /_mfaSetupOpen\(\)" data-kw=/.test(SRC));
+  // 10/10/2026: one menu entry for users and passwords; two-step sits in the users page card and in the hub.
+  check('the settings entry is reachable: the users card and the hub', /id="codes-card"[\s\S]{0,1500}onclick="_mfaSetupOpen\(\)"/.test(SRC) && /id="m-pwhub"[\s\S]{0,1500}_mfaSetupOpen\(\)/.test(SRC) && /id="sheet-btn-users" onclick="_pwHubOpen\(\)"/.test(SRC));
 
   check('no page errors', errs.length === 0, errs.slice(0, 3));
   await browser.close();

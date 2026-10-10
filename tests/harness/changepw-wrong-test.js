@@ -132,7 +132,10 @@ const TURNSTILE = `
 
     // 1. Opened the way Michael opens it: the menu, then the entry.
     await p.evaluate(() => _menuOpen());
-    await p.click('#m-modules-sheet button[onclick*="_changePwOpen"]');
+    // Since 10/10/2026 one entry, "users and passwords": the users page (admin) or the small hub.
+    await p.click('#m-modules-sheet #sheet-btn-users');
+    await p.waitForTimeout(200);
+    await p.locator('button[onclick*="_changePwOpen"]:visible').first().click();
     await p.waitForTimeout(200);
     await p.fill('#cpw-current', 'wrong-pw');
     await p.fill('#cpw-new', 'new-password-1');
