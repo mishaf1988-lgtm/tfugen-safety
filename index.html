@@ -618,6 +618,11 @@ body.hc .close-btn:hover,body.hc .close-btn:active{transform:none}
 .field{display:flex;flex-direction:column;gap:6px}
 label{font-size:13px;font-weight:700;color:var(--t2);letter-spacing:.1px}
 input,select,textarea{background:#f8f9fa;border:1.5px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--tx);font-family:'Heebo',Arial,sans-serif;font-size:16px;width:100%;-webkit-appearance:none;outline:none;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+/* Weekly-talk questions (10/10/2026): the rule above strips every input's own look, so the
+   radio that marks the right answer showed as an empty box, checked or not. Give it back, and
+   paint the marked answer green so the manager sees which one the workers must pick. */
+#tbt-quiz input[type=radio]{-webkit-appearance:radio;appearance:auto;width:22px;height:22px;min-height:0;padding:0;margin:0;flex:none;accent-color:#15803d;background:none;border:0}
+#tbt-quiz label:has(input[type=radio]:checked) .tq-a{border-color:#15803d;background:#f0fdf4}
 input:hover:not(:focus):not(:disabled),select:hover:not(:focus):not(:disabled),textarea:hover:not(:focus):not(:disabled){border-color:#bfc4cc;background:#fff}
 input:focus,select:focus,textarea:focus{border-color:var(--red);background:#fff;box-shadow:0 0 0 3px rgba(204,31,31,.12)}
 input:disabled,select:disabled,textarea:disabled{background:#eef0f3;color:var(--t3);cursor:not-allowed}
