@@ -30,9 +30,9 @@ const OUT = path.join(ROOT, 'project-files', 'guide-training');
 // only under .mjs, so copy the four into a temp dir, the same mapping as
 // tests/harness/run.sh.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'talk-shots-'));
-for (const m of ['_shared', '_closelink', '_ai', '_onedrive']) fs.copyFileSync(path.join(ROOT, 'functions', m + '.js'), path.join(tmp, m + '.mjs'));
+for (const m of ['_shared', '_closelink', '_ai', '_onedrive', '_logo']) fs.copyFileSync(path.join(ROOT, 'functions', m + '.js'), path.join(tmp, m + '.mjs'));
 fs.writeFileSync(path.join(tmp, 'talk.mjs'), fs.readFileSync(path.join(ROOT, 'functions/api/talk.js'), 'utf8')
-  .replace(/'\.\.\/(_shared|_closelink|_ai|_onedrive)\.js'/g, "'./$1.mjs'"));
+  .replace(/'\.\.\/(_shared|_closelink|_ai|_onedrive|_logo)\.js'/g, "'./$1.mjs'"));
 const T = await import(pathToFileURL(path.join(tmp, 'talk.mjs')).href);
 
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'guide-shots', GEMINI_API_KEY: 'g' };
@@ -203,7 +203,7 @@ async function formShot(browser) {
     x.stroke(); return c.toDataURL('image/png').split(',')[1];
   });
   const row = { id: 'mgxk2a7f', emp_name: 'יוסף אלמו', id_no: '123456782', dept: 'כוח אדם - חברת השמה', quiz_ok: 1, quiz_n: 2 };
-  await p.setContent(T.inductionHtml(IND, row, sig, 'he', { day: '2026-10-11', hm: '07:42' }));
+  await p.setContent(T.inductionHtml(IND, row, sig, 'he', { day: '2026-10-11', hm: '07:42' }, T.quizAnswers(IND, 'he', '0:1,1:0')));
   await p.waitForTimeout(200);
   const file = path.join(OUT, 'form-08.png');
   await p.screenshot({ path: file, fullPage: true });

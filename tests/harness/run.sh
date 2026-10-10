@@ -42,12 +42,12 @@ sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-send.js > _build
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/wa-status.js > _build/wa-status.mjs
 sed "s#'../_shared.js'#'./_shared.mjs'#" ../../functions/api/claude.js > _build/claude.mjs
 # trustee-log (27/09): its own helper modules, imported as ../_xlsx.js and ../_onedrive.js
-for m in _xlsx _onedrive _closelink _xlsxpatch _ai _meeting _pptx _deckpatch _watchdog _appjs; do cp ../../functions/$m.js _build/$m.mjs; done
+for m in _xlsx _onedrive _closelink _xlsxpatch _ai _meeting _pptx _deckpatch _watchdog _appjs _logo; do cp ../../functions/$m.js _build/$m.mjs; done
 sed -i "s#'./api/hazard-file.js'#'./hazard-file.mjs'#" _build/_meeting.mjs
 sed -i "s#'./_xlsxpatch.js'#'./_xlsxpatch.mjs'#" _build/_pptx.mjs _build/_deckpatch.mjs
 sed -i "s#'./_onedrive.js'#'./_onedrive.mjs'#" _build/_watchdog.mjs
 for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file od-read od-pick od-scan hazard-report meeting-data hazard-deck weekly-digest backup-od talk xlsx-gaps routine-db; do
-  sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'./od-read.js'#'./od-read.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" -e "s#'../_appjs.js'#'./_appjs.mjs'#" -e "s#'./talk.js'#'./talk.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
+  sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'./od-read.js'#'./od-read.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" -e "s#'../_appjs.js'#'./_appjs.mjs'#" -e "s#'../_logo.js'#'./_logo.mjs'#" -e "s#'./talk.js'#'./talk.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 filter="${1:-}"; fail=0
 # SHARD=i/n (the GitHub workflow, 01/10/2026): only every n-th file, from i.
