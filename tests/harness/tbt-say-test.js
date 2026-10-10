@@ -53,6 +53,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.__x.onEnd(); o.ended = btn.textContent;
     tbtSay(); await new Promise((res) => setTimeout(res, 20));
     window.__x.onFail('http 502'); o.fail = { label: btn.textContent, toast: toasts.slice(-1)[0] };
+    // the other languages: that language's translation box, first line = the title
+    const ar = document.getElementById('tbt-say-ar');
+    o.arBtn = ar && ar.textContent;
+    document.getElementById('tbt-ar').value = '';
+    let n = calls.length; tbtSay('ar', ar); o.arEmpty = { toast: toasts.slice(-1)[0], calls: calls.length - n };
+    document.getElementById('tbt-ar').value = 'السلالم\nثلاث نقاط تثبيت';
+    n = calls.length; tbtSay('ar', ar); await new Promise((res) => setTimeout(res, 20));
+    o.arCall = calls.length > n ? JSON.parse(calls[calls.length - 1].init.body) : null;
+    o.arLabel = { ar: ar.textContent, he: btn.textContent };
+    window.__x.onEnd(); o.arEnded = ar.textContent;
+    document.getElementById('tbt-am').value = 'መሰላል';
+    tbtSay('am', document.getElementById('tbt-say-am')); await new Promise((res) => setTimeout(res, 20));
+    o.amCall = JSON.parse(calls[calls.length - 1].init.body); window.__x.onEnd();
     return o;
   });
   check('the button is in the form', r.btn && /שמע איך העובדים ישמעו/.test(r.btn), r.btn);
@@ -65,6 +78,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the player loads once', r.second.loads === 1 && r.second.calls === 2, r.second);
   check('the end of the audio brings the button back', /שמע/.test(r.ended), r.ended);
   check('a failure: the button back and a message', /שמע/.test(r.fail.label) && /ההקראה נכשלה/.test(r.fail.toast), r.fail);
+  check('a button per other language', /العربية/.test(r.arBtn || ''), r.arBtn);
+  check('no translation yet: says so, nothing sent', /אין תרגום/.test(r.arEmpty.toast) && r.arEmpty.calls === 0, r.arEmpty);
+  check('Arabic: lang ar, the first line as title and the rest as body', r.arCall && r.arCall.lang === 'ar' && r.arCall.title === 'السلالم' && r.arCall.body === 'ثلاث نقاط تثبيت', r.arCall);
+  check('...the Arabic button says stop, the Hebrew one is untouched', /עצור/.test(r.arLabel.ar) && /שמע איך/.test(r.arLabel.he), r.arLabel);
+  check('...and comes back when the audio ends', /العربية/.test(r.arEnded), r.arEnded);
+  check('Amharic, one line only: the title, an empty body', r.amCall.lang === 'am' && r.amCall.title === 'መሰላል' && r.amCall.body === '', r.amCall);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
