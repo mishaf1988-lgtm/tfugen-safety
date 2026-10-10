@@ -155,5 +155,21 @@ console.log('\n8. the router sends everything here, and nothing is swallowed');
   check('...and so is the service worker', sw.served === 1, sw);
 }
 
+console.log('\n9. repo files are not URLs (security scan 10/10/2026)');
+{
+  for (const p of ['/STATUS.md', '/DECISIONS.md', '/backups/equip_inspections_2026-05-02_pre-reset.json', '/migrations/x.sql', '/VITRE_~1.DOC', '/project-files/BACKLOG.md', '/CLAUDE.md', '/.mcp.json', '/tests/harness/run.sh', '/functions/_middleware.js']) {
+    const r = await call({ country: 'IL', path: p });
+    check(p + ': 404, never served', r.status === 404 && r.served === 0, { status: r.status, served: r.served });
+  }
+  for (const p of ['/', '/index.html', '/?emp=1', '/sw.js', '/manifest.webmanifest', '/logo.jpg', '/icon-192.png', '/icon-maskable-512.png', '/privacy', '/privacy.html', '/user-data-deletion', '/robots.txt', '/api/talk', '/api/trustee-gate']) {
+    const r = await call({ country: 'IL', path: p });
+    check(p + ': served', r.status === 200 && r.served === 1, { status: r.status, served: r.served });
+  }
+  const m = await call({ country: 'US', path: '/api/trustee-notify', method: 'POST' });
+  check('a machine path from abroad still passes', m.served === 1, m.status);
+  const r = await call({ country: 'IL', path: '/STATUS.md' });
+  check('the 404 carries the security headers', r.headers.get('X-Robots-Tag') === 'noindex, nofollow' && r.headers.get('X-Content-Type-Options') === 'nosniff');
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

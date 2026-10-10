@@ -50,6 +50,20 @@ function machineCall(request, path) {
   try { return new URL(request.url).searchParams.get('op') === 'sync'; } catch (e) { return false; }
 }
 
+// Security scan 10/10/2026 (Michael: "בצע: לחסום"): the Pages output directory is the repo
+// root, so every file in it was a URL: /STATUS.md, /DECISIONS.md, /backups/*.json,
+// /migrations/*.sql, /VITRE_~1.DOC. The app needs only these; the rest is 404. /api/* are the
+// Functions (they have their own gates). Pages serves x.html also as /x, so both are listed.
+export const PUBLIC_PATHS = ['/', '/index.html', '/index', '/sw.js', '/manifest.webmanifest', '/robots.txt',
+  '/logo.jpg', '/icon.svg', '/icon-180.png', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png',
+  '/privacy.html', '/privacy', '/user-data-deletion.html', '/user-data-deletion'];
+export function publicPath(path) {
+  return path.indexOf('/api/') === 0 || PUBLIC_PATHS.indexOf(path) >= 0;
+}
+function notFound() {
+  return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...MUST_HAVE } });
+}
+
 // Headers Pages applies to static assets from /_headers. A response that comes
 // back through next() should still carry them, but this does not depend on
 // that: the security review of May put them there and a geo rule is no reason
@@ -105,6 +119,8 @@ export async function onRequest(context) {
   // nobody is thinking about Tor. It is checked before the list, not after.
   if (country === 'T1') return blocked(country);
   if (country && allowed.indexOf(country) < 0) return blocked(country);
+
+  if (!publicPath(path)) return notFound();
 
   const res = await next();
   try {
