@@ -68,14 +68,25 @@ globalThis.fetch = async (u) => {
   if (u.includes('/rest/v1/toolbox_talks')) return j([talk]);
   if (u.includes('/rest/v1/toolbox_reads')) return j(signed.map((id) => ({ emp_id: id })));
   if (u.includes('/rest/v1/emp')) return j(EMPS);
+  if (u.includes('/rest/v1/server_state')) return j([{ value: '000000' }]);
   return j({}, 599);
 };
-const serve = async (url) => (await T.onRequest({ request: new Request(url), env: ENV })).text();
+// The induction page sits behind the HR code (10/10/2026): the shots carry the device's cookie,
+// except the shot of the code screen itself.
+let cookie = '';
+const serve = async (url) => (await T.onRequest({ request: new Request(url, { headers: cookie ? { cookie } : {} }), env: ENV })).text();
+cookie = 'tsind=' + (await T.makeCodeCookie(ENV, 'ind-0802', '000000'));
 const plain = async (t) => { talk = t; signed = []; return serve(T.talkUrl(await T.makeTalkToken(ENV, t.id))); };
 const perm = async (t) => { talk = t; signed = []; return serve(T.talkUrl(await T.makePermToken(ENV, t.id, t.link_v))); };
 
 // label -> the page, what to do on it, and what to ring.
 const SHOTS = {
+  'w0-code': {
+    html: async () => { const c = cookie; cookie = ''; try { return await perm(IND); } finally { cookie = c; } },
+    prepare: async (p) => { await p.fill('#icode', '••••••'); },
+    ring: { sel: '#icode', n: null },
+    crop: true,
+  },
   'w1-open': {
     html: () => perm(IND),
     ring: { sel: 'body a[href*="l=ar"]', parent: true, n: 1 },

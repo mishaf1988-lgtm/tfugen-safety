@@ -12,6 +12,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - שם הכלי משתנה בין סשנים: לפעמים `mcp__Supabase__execute_sql`, לפעמים קידומת UUID (`mcp__ea272696-...__execute_sql`, 02/10/2026). `ToolSearch` עם `execute_sql` מוצא את שניהם.
 - **לפני SQL על טבלה שלא בדקת השבוע:** `information_schema.columns` קודם. ב-02/10/2026 `emp.role` לא קיים (העמודה `r`), ו-`emp.s` הוא תאריך.
 - **project_id:** `znhjtpcltrxxyfjczgvw`.
+- **טקסט ארוך בעדכון (10/10/2026):** גרש (`'`) בתוך טקסט ב-dollar quote (`$h$...$h$`) גורם ל-`execute_sql` להיתקע ולהיכשל אחרי 60 שניות, והעדכון לא נשמר. במקום הגרש: `...$h$||chr(39)||$h$...`. גם `;` בתוך טקסט: להימנע. 9,000-11,500 תווים בבקשה אחת עברו. אחרי עדכון ארוך: `md5(עמודה)` מול md5 של הקובץ המקומי, ורק אז לדווח שנשמר.
 - **לא עובד בענן, וזה צפוי:** השרת `supabase` מ-`.mcp.json` ("requires authentication"), ו-`curl` ל-`*.supabase.co` (חסום ברשת). זה **לא** חסם, ואין לדווח עליו למיכאל (לקח 30).
 
 - SQL של policies, DROP או ALTER: רק דרך `apply_migration`/`execute_sql`, וקובץ ההגירה דרך Write. heredoc ב-Bash עם SQL כזה נחסם ונועל גם פקודות קריאה אחריו (לקח 40).

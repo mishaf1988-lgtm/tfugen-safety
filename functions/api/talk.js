@@ -135,7 +135,7 @@ export const TTS_MODEL = 'gemini-3.8-flash-tts';
 // TTS_VOICE / TTS_MODEL in the environment override both without a deploy.
 export const TTS_VOICE = 'Charon';
 export const TTS_LANG = { he: 'he-IL', ar: 'ar', ru: 'ru-RU', am: 'am-ET' };
-export const TTS_MAX = 6000;
+export const TTS_MAX = 12000;  // the full induction form 08.02.01: 7,900 characters in Hebrew, 11,500 in Russian (10/10/2026)
 // The words to speak. A form number ("(\u05d8\u05d5\u05e4\u05e1 08.02.01)", "08.01") means nothing said aloud, and a
 // line number ("2.1.") is read as "two point one"; both go. Each line ends in a stop, so the voice
 // pauses between rules instead of running them together; " - " becomes a comma.
@@ -196,11 +196,12 @@ async function sayStream(env, text, lang, ctx, extra) {
   }
   return new Response(body, { headers: Object.assign({}, H, { 'Cache-Control': 'no-store', 'X-TTS': 'gemini' }) });
 }
-async function sayTalk(env, tok, want, g, ctx) {
+async function sayTalk(env, tok, want, g, ctx, cookie) {
   const t = await readTok(env, tok, g);
   if (t.error) return new Response('{"error":"link"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB || !permOk(t, talk)) return new Response('{"error":"talk"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
+  if (!(await codeGate(env, talk, cookie)).ok) return new Response('{"error":"code"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const lang = textOf(talk, langOf(want)).lang;
   return sayStream(env, spokenOf(talk, lang), lang, ctx);
 }
@@ -308,6 +309,68 @@ export async function readPermToken(env, tok, nowMs) {
   if (r.error) return r;
   const m = /^(.+)-v(\d{1,5})$/.exec(r.id);
   return m ? { id: m[1], perm: true, v: +m[2] } : { error: 'bad' };
+}
+// The HR code in front of the induction page (10/10/2026, Michael: "\u05d4\u05d8\u05d5\u05e4\u05e1 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d9\u05d5\u05ea \u05de\u05d5\u05d2\u05df \u05d1\u05e1\u05d9\u05e1\u05de\u05d4
+// \u05d1\u05d6\u05de\u05df \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05dc hr", and in the questionnaire: "\u05d6\u05d4 \u05e6\u05e8\u05d9\u05da \u05dc\u05e2\u05d1\u05d5\u05d3 \u05e7\u05d1\u05d5\u05e2", no code handed out each
+// time). One code, in server_state 'induction_code' (service key only, RLS without policies), typed
+// once on a device: the device keeps a signed cookie for a year. Changing the code signs every device
+// out, because the cookie carries a hash of it. No code set = closed, not open. A wrong guess waits,
+// as the trustee code does (trustee-gate.js): a Worker keeps no count without a store.
+export const IND_CODE_KEY = 'induction_code';
+export const IND_CODE_COOKIE = 'tsind';
+export const IND_CODE_DAYS = 365;
+const CODE_PREFIX = 'talk-indcode:v1:';
+const WRONG_CODE_DELAY_MS = 800;
+async function indCode(env) {
+  try {
+    const r = await fetch(SB + '/rest/v1/server_state?key=eq.' + IND_CODE_KEY + '&select=value', { headers: sbH(env) });
+    if (!r.ok) return '';
+    const rows = await r.json();
+    return String((Array.isArray(rows) && rows[0] && rows[0].value) || '').trim();
+  } catch (e) { return ''; }
+}
+async function codeTag(code) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ind-code|' + code)));
+  return Array.from(d.slice(0, 6)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export async function makeCodeCookie(env, talkId, code) { return makeLinkToken(env, CODE_PREFIX, talkId + '-' + (await codeTag(code)), IND_CODE_DAYS); }
+const cookieOf = (h) => { const m = /(?:^|;\s*)tsind=([^;]+)/.exec(String(h || '')); return m ? m[1] : ''; };
+// { ok } for every talk that is not the induction; for the induction, ok only with this code's cookie.
+async function codeGate(env, talk, cookieHeader) {
+  if (!talk || talk.kind !== KIND_IND) return { ok: true };
+  const code = await indCode(env);
+  if (!code) return { ok: false, closed: true };
+  const c = cookieOf(cookieHeader);
+  if (!c) return { ok: false };
+  const r = await readLinkToken(env, CODE_PREFIX, c);
+  return { ok: !r.error && r.id === talk.id + '-' + (await codeTag(code)) };
+}
+const sameCode = (a, b) => { const x = String(a || ''), y = String(b || ''); let d = x.length === y.length ? 0 : 1; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0); return d === 0; };
+function codePage(tok, lang, wrong, closed) {
+  const inner = '<p>\u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05e2\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05de\u05e7\u05dc\u05d9\u05d3\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea, \u05d5\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d6\u05d5\u05db\u05e8.</p>'
+    + '<p dir="auto" style="font-size:14px;color:#6b7280;margin-top:-4px">\u0627\u0644\u0631\u0645\u0632 \u0644\u062f\u0649 \u0642\u0633\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629 | \u041a\u043e\u0434 \u0443 \u043e\u0442\u0434\u0435\u043b\u0430 \u043a\u0430\u0434\u0440\u043e\u0432 | \u12ae\u12f1 \u1260\u1230\u12cd \u1200\u1265\u1275 \u12ad\u134d\u120d \u1290\u12cd</p>'
+    + (closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e7\u05d5\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
+      : (wrong ? '<p style="color:#b91c1c;font-weight:700">\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.</p>' : '')
+      + '<form method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="l" value="' + esc(langOf(lang)) + '">'
+      + '<label for="icode" style="display:block;font-weight:700;margin-bottom:4px">\u05e7\u05d5\u05d3</label>'
+      + '<input id="icode" name="icode" inputmode="numeric" autocomplete="off" maxlength="12" required dir="ltr" style="width:100%;box-sizing:border-box;font-size:22px;letter-spacing:4px;text-align:center;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px">'
+      + '<button type="submit" id="icode-go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#1e3a8a;color:#fff;font-size:18px;font-weight:700">\u05db\u05e0\u05d9\u05e1\u05d4</button></form>');
+  return page('\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9', inner, closed || wrong ? 'err' : '', closed ? 503 : (wrong ? 403 : 200), '', 'he');
+}
+async function codeSubmit(env, form) {
+  const tok = String(form.get('k') || ''), lang = langOf(String(form.get('l') || ''));
+  const t = await readTok(env, tok, false);
+  if (t.error === 'expired') return errL('expired', lang, 410);
+  if (t.error) return errL('badLink', lang, 403);
+  const talk = await getTalk(env, t.id);
+  if (!talk || talk.s !== S_PUB || !permOk(t, talk) || talk.kind !== KIND_IND) return errL('badLink', lang, 403);
+  const code = await indCode(env);
+  if (!code) return codePage(tok, lang, false, true);
+  if (!sameCode(String(form.get('icode') || '').trim(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, lang, true, false); }
+  const c = await makeCodeCookie(env, talk.id, code);
+  if (!c) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
+  return new Response(null, { status: 303, headers: { Location: talkUrl(tok, lang), 'Cache-Control': 'no-store',
+    'Set-Cookie': IND_CODE_COOKIE + '=' + c + '; Path=/api/talk; Max-Age=' + IND_CODE_DAYS * 86400 + '; HttpOnly; Secure; SameSite=Lax' } });
 }
 // A permanent token opens only an induction talk, and only while its version is the current one.
 export const permOk = (t, talk) => !t.perm || (!!talk && talk.kind === KIND_IND && (talk.link_v || 0) === t.v);
@@ -612,13 +675,15 @@ async function signTrainer(env, form, tok, talk) {
   return page('\u05ea\u05d5\u05d3\u05d4', '<p>\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05e9\u05de\u05e8\u05d4. \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4.</p>', 'ok', 200, '', 'he');
 }
 
-async function showTalk(env, tok, want, g, tr) {
+async function showTalk(env, tok, want, g, tr, cookie) {
   const t = await readTok(env, tok, g);
   if (t.error === 'expired') return errL('expired', want, 410);
   if (t.error) return errL('badLink', want, 403);
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB) return errL('unpub', want, 404);
   if (!permOk(t, talk)) return errL('badLink', want, 403);
+  const gate = await codeGate(env, talk, cookie);
+  if (!gate.ok) return codePage(tok, want, false, !!gate.closed);
   if (g && tr) return trainerPage(tok, talk);
   const x = textOf(talk, langOf(want));
   const lang = x.lang, L = LANGS[lang];
@@ -696,6 +761,7 @@ async function isDuplicate(r) {
 async function signTalk(env, request, ctx) {
   let form;
   try { form = await request.formData(); } catch (e) { return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.'); }
+  if (form.has('icode')) return codeSubmit(env, form);
   const tok = String(form.get('k') || '');
   const g = String(form.get('g') || '') === '1';
   const t = await readTok(env, tok, g);
@@ -710,6 +776,8 @@ async function signTalk(env, request, ctx) {
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB) return errL('unpub', lang, 404);
   if (!permOk(t, talk)) return errL('badLink', lang, 403);
+  const gate = await codeGate(env, talk, request.headers.get('cookie'));
+  if (!gate.ok) return codePage(tok, lang, false, !!gate.closed);
   const empId = String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
@@ -854,9 +922,9 @@ export async function onRequest(context) {
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
     if (request.method === 'GET') {
       const q = new URL(request.url).searchParams;
-      if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context);
+      if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context, request.headers.get('cookie'));
       if (q.get('op') === 'player') return new Response(PLAYER, { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' } });
-      return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1');
+      return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1', request.headers.get('cookie'));
     }
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await makeLink(env, request, context);

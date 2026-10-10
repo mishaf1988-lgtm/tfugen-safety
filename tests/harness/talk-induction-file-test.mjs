@@ -3,7 +3,7 @@
 // (Graph conversion of an HTML page; the HTML itself when that fails) and mailed with the file to
 // Michael and hr-tap@. The signature is saved first: a OneDrive or mail failure never loses it,
 // and the reason lands on the row (doc_err). A weekly talk sends nothing.
-import { onRequest, makeTalkToken, inductionHtml, quizAnswers, IND_HR, IND_ROOT } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, inductionHtml, quizAnswers, makeCodeCookie, IND_HR, IND_ROOT } from './_build/talk.mjs';
 import { LOGO_JPG } from './_build/_logo.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -28,6 +28,7 @@ globalThis.fetch = async (url, init) => {
     return json([]);
   }
   if (u.startsWith(SB + '/storage/v1/object/')) return json({ Key: 'x' });
+  if (u.startsWith(SB + '/rest/v1/server_state')) return json([{ value: '246810' }]);
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return w.noToken ? json([]) : json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
   if (u.startsWith(GR + '/drive/root:/') && m === 'PUT') {
     const path = decodeURIComponent(u.slice((GR + '/drive/root:/').length).replace(/:\/content$/, ''));
@@ -45,7 +46,7 @@ const sign = async (id, extra) => {
   const k = await makeTalkToken(ENV, id);
   const fd = new FormData();
   for (const [a, b] of Object.entries({ k, l: 'he', emp: '__other', oname: 'Ivan Petrov', ocomp: 'כוח אדם', oid: '334455667', ok: '1', sig: SIG, qa: '0:1', ...extra })) fd.append(a, b);
-  const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile' } }), env: ENV });
+  const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', cookie: 'tsind=' + (await makeCodeCookie(ENV, id, '246810')) } }), env: ENV });
   return { st: r.status, h: await r.text() };
 };
 // The name a worker types is turned to Hebrew by the AI; here a fixed answer.
