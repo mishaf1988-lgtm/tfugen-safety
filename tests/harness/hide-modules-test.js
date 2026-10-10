@@ -35,6 +35,10 @@ const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr'];
     const host = document.getElementById('dash-kpis');
     _renderDashKpis({ ncrOpen: 3, critRisks: 2, ptwOpen: 1, incYear: 5 });
     out.kpi = host ? host.textContent : '';
+    // the "today" list: no morning-round line while rounds are hidden (10/10/2026)
+    DB.rounds = []; DB.tasks = []; _renderToday();
+    out.todayRound = (document.getElementById('today-items') || {}).textContent || '';
+    out.todayCount = (document.getElementById('today-count') || {}).textContent || '';
     // bring rsk back from the settings screen
     _modVisOpen();
     const cb = document.querySelector('#mvis-list input[data-modkey="rsk"]');
@@ -45,6 +49,8 @@ const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr'];
     out.ncrStill = sheetKey('ncr').every((b) => !vis(b));
     _renderDashKpis({ ncrOpen: 3, critRisks: 2 });
     out.kpi2 = host ? host.textContent : '';
+    const p = _appPrefs(); p.modulesShown = Object.assign({}, p.modulesShown || {}, { round: true }); p.modulesHidden = Object.assign({}, p.modulesHidden || {}, { round: false }); _appPrefsSet(p); _renderToday();
+    out.todayRound2 = (document.getElementById('today-items') || {}).textContent || '';
     return out;
   }, HIDE);
   check('all 8 modules found on the sheet', r.sheetHas.length === 8, r.sheetHas);
@@ -58,6 +64,8 @@ const HIDE = ['round', 'ptw', 'ppe', 'ctr', 'wst', 'prj', 'rsk', 'ncr'];
   check('settings list a hidden module unticked', r.rskUnticked === true);
   check('ticking it brings it back, the rest stay hidden', r.rskBack && r.ncrStill, r);
   check('...and its tile comes back', /RPN/.test(r.kpi2) && !/NCR/.test(r.kpi2), r.kpi2);
+  check('today list: no morning-round line while rounds are hidden', !/סבב בוקר/.test(r.todayRound), [r.todayRound, r.todayCount]);
+  check('...and it comes back when rounds are shown', /סבב בוקר/.test(r.todayRound2), r.todayRound2);
   check('no page errors', !errs.length, errs);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
