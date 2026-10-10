@@ -322,7 +322,7 @@ const ROWS = [
     check('link made late in the evening: the day is Israel\'s', /פג ב-19\/10\/2026/.test(talkLine(lk('2026-10-04T22:30:00Z', '2026-10-12'), reads, 10, '2026-10-13').text));
     check('no link yet and nobody signed: says so', /עוד לא נוצר קישור לעובדים$/.test(talkLine(lk(null), [], 10, '2026-10-05').text) && !/קישור/.test(talkLine(lk(null), [], 10, '2026-10-04').text));
     const fs0 = await import('fs');
-    check('the employee count leaves out who left (emp.left_d up to today)', /readAll\(env, 'emp\?select=id&or=\(left_d\.is\.null,left_d\.gt\.' \+ new Date\(\)\.toLocaleDateString\('en-CA', \{ timeZone: 'Asia\/Jerusalem' \}\)/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
+    check('the employee count leaves out who left (emp.left_d up to today)', /readAll\(env, 'emp\?select=id,dep&or=\(left_d\.is\.null,left_d\.gt\.' \+ new Date\(\)\.toLocaleDateString\('en-CA', \{ timeZone: 'Asia\/Jerusalem' \}\)/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
     check('TALK_LINK_DAYS here = TALK_TTL_DAYS in talk.js', /TALK_TTL_DAYS = 14;/.test(fs0.readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8')) && /TALK_LINK_DAYS = 14,/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
     const g = digestOf([], '2026-10-05');
     const h = digestHtml(g, '2026-10-05', { meeting: '2026-10-06', deckAt: '', watchOpen: [], talk: l });

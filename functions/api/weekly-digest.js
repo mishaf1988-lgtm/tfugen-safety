@@ -43,6 +43,7 @@ import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
 import { UPLOAD_LOG } from './od-read.js';
+import { TBT_DEPTS, deptMatch, KIND_IND } from './talk.js';
 
 export const STATE_KEY = 'weekly_digest';
 export const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -158,8 +159,30 @@ export const TALK_LINK_DAYS = 14, TALK_LINK_WARN = 7;
 const ilDay = (iso) => { const t = Date.parse(iso || ''); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); };
 // The talk's date, or the day it was saved when the date was left empty.
 const talkKey = (t) => String((t && (t.d || String(t.ts || '').substring(0, 10))) || '');
+// The whole-plant line counts every worker, so it reads only talks for the whole plant: a talk for
+// one department or the new-worker induction has its own line (deptTalkLines) or none.
 export function latestTalk(talks) {
-  return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
+  return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB && !t.dept && t.kind !== KIND_IND).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
+}
+// One line per training department (10/10/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05de\u05e6\u05d1 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05e4\u05d9
+// \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9"): this week's published talk and how many of the department's workers signed,
+// red under 80% from the day after; a draft still waiting to be published; or no talk at all.
+// null while no talk has a department yet, so the mail stays as it was until the feature is used.
+export function deptTalkLines(talks, reads, emps, today) {
+  const all = (Array.isArray(talks) ? talks : []).filter((t) => t && t.dept && t.kind !== KIND_IND);
+  if (!all.length) return null;
+  const age = (t) => { const k = talkKey(t); return k ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(k.substring(0, 10) + 'T12:00:00Z')) / DAY) : 99; };
+  const recent = (t) => { const a = age(t); return a >= 0 && a <= TALK_STALE_DAYS; };
+  const rs = Array.isArray(reads) ? reads : [], es = Array.isArray(emps) ? emps : [];
+  return TBT_DEPTS.map(([dept]) => {
+    const mine = all.filter((t) => t.dept === dept && recent(t)).sort((a, b) => talkKey(b).localeCompare(talkKey(a)));
+    const pub = mine.find((t) => t.s === TALK_PUB);
+    if (!pub) return { red: true, text: dept + ': ' + (mine.length ? '\u05d9\u05e9 \u05d8\u05d9\u05d5\u05d8\u05d4 \u05e9\u05de\u05d7\u05db\u05d4 \u05dc\u05e4\u05e8\u05e1\u05d5\u05dd' : '\u05dc\u05d0 \u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2') };
+    const ids = new Set(es.filter((e) => e && e.id != null && deptMatch(dept, e.dep)).map((e) => String(e.id)));
+    const n = new Set(rs.filter((r) => r && r.talk_id === pub.id && ids.has(String(r.emp_id))).map((r) => String(r.emp_id))).size;
+    const short = ids.size ? n < Math.ceil(ids.size * TALK_MIN_SHARE) : n === 0;
+    return { red: age(pub) >= 1 && short, text: dept + ': ' + n + (ids.size ? ' \u05de\u05ea\u05d5\u05da ' + ids.size : '') + ' \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc "' + (pub.title || '') + '"' };
+  });
 }
 // emps: the current employee rows, without those who left (emp.left_d, read by talkData),
 // so signatures of people who left are not counted against today's list; or just a number.
@@ -187,12 +210,22 @@ export function talkLine(talks, reads, emps, today) {
   return { red, text };
 }
 // Only the latest talk's signatures are read (the table grows by ~50 rows a week).
+// The department lines need the talks of the last two weeks, drafts too, and their signatures.
 export async function talkData(env) {
-  const talks = await readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at&s=eq.' + encodeURIComponent(TALK_PUB));
+  const since = new Date(Date.now() - 16 * DAY).toISOString();
+  const [talks, dts] = await Promise.all([
+    readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at,dept,kind&s=eq.' + encodeURIComponent(TALK_PUB)),
+    readAll(env, 'toolbox_talks?select=id,d,title,s,ts,dept,kind&dept=not.is.null&ts=gte.' + encodeURIComponent(since)),
+  ]);
   const t = latestTalk(talks);
-  if (!t) return { talks, reads: [], emps: [] };
-  const [reads, emps] = await Promise.all([readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=eq.' + encodeURIComponent(t.id)), readAll(env, 'emp?select=id&or=(left_d.is.null,left_d.gt.' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + ')')]);
-  return { talks, reads, emps };
+  const want = new Set((dts || []).filter((x) => x && x.s === TALK_PUB).map((x) => x.id));
+  if (t) want.add(t.id);
+  if (!want.size) return { talks, reads: [], emps: [], dtalks: dts };
+  const [reads, emps] = await Promise.all([
+    readAll(env, 'toolbox_reads?select=talk_id,emp_id&talk_id=in.(' + Array.from(want).map(encodeURIComponent).join(',') + ')'),
+    readAll(env, 'emp?select=id,dep&or=(left_d.is.null,left_d.gt.' + new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) + ')'),
+  ]);
+  return { talks, reads, emps, dtalks: dts };
 }
 
 function when(x) {
@@ -385,6 +418,7 @@ export function digestHtml(d, today, meta) {
   h += h2(H.noDue, d.noDue.length) + table(d.noDue);
   h += h2(H.trustee, d.trustee.length) + table(d.trustee.map((x) => Object.assign({}, x, { dueRep: x.due })), { age: true });
   if (m.talk) h += '<p style="margin:8px 0' + (m.talk.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.talk.text) + '</p>';
+  if (m.deptTalks && m.deptTalks.length) h += '<p style="margin:10px 0 2px;font-weight:bold">\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4</p>' + m.deptTalks.map((x) => '<p style="margin:2px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   h += h2(H.committee);
   h += '<p style="margin:4px 0">' + esc(H.meeting) + esc(fd(m.meeting)) + '</p>';
   const deckAt = m.deckAt ? Date.parse(m.deckAt) : 0;
@@ -715,7 +749,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
