@@ -27,6 +27,7 @@
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName } from '../_ai.js';
+import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -285,6 +286,78 @@ if(!(i in first)){first[i]=v;document.getElementById('qa').value=Object.keys(fir
 var r=f.querySelector('.qr');if(v===K[i]){r.style.color='#15803d';r.textContent='\\u2713 '+T.ok;}else{r.style.color='#cc1f1f';r.textContent='\\u2717 '+T.no+' '+A[i];}});});
 })();`.replace(/</g, '\\u003c');
 
+// The signed induction form (10/10/2026, Michael: "\u05dc\u05d0\u05d7\u05e8 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d5\u05ea\u05dd \u05d5\u05d4\u05d8\u05d5\u05e4\u05e1 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05d2\u05d9\u05e2 \u05dc-2
+// \u05de\u05d9\u05d9\u05dc\u05d9\u05dd, \u05d0\u05dc\u05d9\u05d9 \u05d5\u05dc\u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9, \u05dc\u05ea\u05d9\u05d5\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4". Questionnaire: to him and hr-tap@, filed under
+// 11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/12_\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd/<year>). An HTML page with the text the worker read, the details
+// and the signature; Graph turns it into a PDF (the HTML is filed when that fails); one mail with
+// the form attached. The source HTML stays in the app folder: nothing is ever deleted in OneDrive.
+export const IND_HR = 'hr-tap@tapugan.co.il';
+export const IND_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea/12_\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd';
+export const IND_SRC = 'Apps/Tapugan Safety/\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05de\u05e7\u05d5\u05e8';
+const GRAPH_ROOT = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+const fileSafe = (v) => String(v || '').replace(/[\\/:*?"<>|#%]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 60);
+function b64(u8) { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); }
+export function inductionHtml(talk, row, sigB64, lang, when) {
+  const x = textOf(talk, lang), L = LANGS[x.lang] || LANGS.he;
+  const tr = (k, v) => '<tr><td style="border:1px solid #999;padding:6px 10px;font-weight:bold">' + k + '</td><td style="border:1px solid #999;padding:6px 10px">' + v + '</td></tr>';
+  return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' + esc(x.title) + '</title></head>'
+    + '<body style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;margin:24px;color:#111">'
+    + '<div style="font-size:11px;color:#555">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea, \u05d8\u05d5\u05e4\u05e1 08.02.01</div>'
+    + '<h1 style="font-size:18px;margin:4px 0 8px">' + esc(x.title) + '</h1>'
+    + (x.lang !== 'he' ? '<div style="margin-bottom:6px">\u05e9\u05e4\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e7\u05e8\u05d0: ' + esc(L.name) + '</div>' : '')
+    + '<div dir="' + L.dir + '" style="white-space:pre-wrap;border:1px solid #ccc;padding:10px">' + esc(x.body) + '</div>'
+    + '<p dir="' + L.dir + '" style="font-weight:bold">' + esc(L.ok) + '</p>'
+    + '<table style="border-collapse:collapse;margin:12px 0">'
+    + tr('\u05ea\u05d0\u05e8\u05d9\u05da \u05d5\u05e9\u05e2\u05d4', esc(fdate(when.day)) + ' ' + esc(when.hm))
+    + tr('\u05e9\u05dd', esc(row.emp_name || ''))
+    + tr('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || ''))
+    + tr('\u05d7\u05d1\u05e8\u05d4 / \u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-'))
+    + (row.quiz_n ? tr('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n + ' \u05e0\u05db\u05d5\u05e0\u05d5\u05ea') : '')
+    + (talk.trainer ? tr('\u05de\u05d3\u05e8\u05d9\u05da', esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '')) : '')
+    + tr('\u05d7\u05ea\u05d9\u05de\u05d4', '<img alt="\u05d7\u05ea\u05d9\u05de\u05d4" style="height:90px;max-width:260px" src="data:image/png;base64,' + sigB64 + '">')
+    + '</table><div style="font-size:11px;color:#555">\u05e0\u05d7\u05ea\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d3\u05e8\u05da \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05de\u05d6\u05d4\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4: ' + esc(row.id || '') + '</div></body></html>';
+}
+export async function fileInduction(env, talk, row, sig, lang, nowMs) {
+  const out = { pdf: false, url: null, mailed: false, err: null, name: null };
+  try {
+    const od = await accessToken(env);
+    const now = new Date(nowMs || Date.now());
+    const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
+    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + ' - ' + fileSafe(row.id_no);
+    const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }));
+    let bytes = hb, name = base + '.html', type = 'text/html';
+    try {
+      await putFile(od.token, IND_SRC, base + '.html', hb, 'text/html; charset=utf-8');
+      const seg = (IND_SRC + '/' + base + '.html').split('/').map(encodeURIComponent).join('/');
+      const r = await fetch(GRAPH_ROOT + seg + ':/content?format=pdf', { headers: { Authorization: 'Bearer ' + od.token } });
+      if (r.ok) {
+        const pdf = new Uint8Array(await r.arrayBuffer());
+        if (pdf.length > 800 && pdf[0] === 0x25 && pdf[1] === 0x50 && pdf[2] === 0x44 && pdf[3] === 0x46) { bytes = pdf; name = base + '.pdf'; type = 'application/pdf'; out.pdf = true; }
+      }
+    } catch (e) { /* the HTML is filed and sent instead */ }
+    out.name = name;
+    const filed = await putFile(od.token, IND_ROOT + '/' + day.slice(0, 4), name, bytes, type);
+    out.url = filed.webUrl || null;
+    const to = [od.email, IND_HR].filter((v, i, a) => v && a.indexOf(v) === i);
+    const cell = (k, v) => '<tr><td style="padding:4px 10px;font-weight:bold">' + k + '</td><td style="padding:4px 10px">' + v + '</td></tr>';
+    const mail = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+      + '<p>\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea (\u05d8\u05d5\u05e4\u05e1 08.02.01). \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3.</p>'
+      + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + cell('\u05d7\u05d1\u05e8\u05d4 / \u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
+      + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
+      + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
+      + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
+    await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05d5\u05dd: ' + (row.emp_name || '') + ', ' + fdate(day), mail,
+      [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }]);
+    out.mailed = true;
+  } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
+  // Shown next to the signature in "who signed": filed, mailed, or why not.
+  try {
+    await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(row.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ doc_url: out.url, mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: out.err }) });
+  } catch (e) { /* the signature is saved */ }
+  return out;
+}
+
 const errPage = (msg, status) => page('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05e4\u05ea\u05d5\u05d7', '<p>' + esc(msg) + '</p>', 'err', status || 400);
 // The same pages in the language the worker chose: an expired link is the error every worker meets.
 const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L.errT, '<p>' + esc(L[k]) + '</p>', 'err', status, '', langOf(lang)); };
@@ -474,7 +547,7 @@ async function isDuplicate(r) {
   return /"409"|Duplicate|already exists/i.test(t);
 }
 
-async function signTalk(env, request) {
+async function signTalk(env, request, ctx) {
   let form;
   try { form = await request.formData(); } catch (e) { return errPage('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.'); }
   const tok = String(form.get('k') || '');
@@ -561,6 +634,11 @@ async function signTalk(env, request) {
   const ins = await fetch(SB + '/rest/v1/toolbox_reads', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(row) });
   if (ins.status === 409) return done(emp.n);
   if (!ins.ok) return bad('errSaveT', 'errSave', 502);
+  // Induction: file the signed form and mail it, after the worker already sees "saved".
+  if (talk.kind === KIND_IND) {
+    const job = fileInduction(env, talk, row, sig, lang);
+    if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
+  }
   // The typed number onto the card, only while the card is still empty (never over a number
   // the manager wrote). A failed write costs the card, not the signature.
   if (emp.fill) {
@@ -614,7 +692,8 @@ async function makeLink(env, request) {
   return jsonResp({ url: talkUrl(tok), days: TALK_TTL_DAYS, link_at: saved ? at : null }, 200, cors);
 }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(context) {
+  const { request, env } = context;
   try {
     if (request.method === 'OPTIONS') {
       const allowed = defaultAllowedOrigins(env);
@@ -624,7 +703,7 @@ export async function onRequest({ request, env }) {
     if (request.method === 'GET') { const q = new URL(request.url).searchParams; return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1'); }
     if (request.method !== 'POST') return errPage('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05dc\u05d0 \u05e0\u05ea\u05de\u05db\u05ea.', 405);
     if (/application\/json/i.test(request.headers.get('content-type') || '')) return await makeLink(env, request);
-    return await signTalk(env, request);
+    return await signTalk(env, request, context);
   } catch (e) {
     return errPage('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.', 500);
   }
