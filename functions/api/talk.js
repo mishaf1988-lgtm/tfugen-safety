@@ -102,8 +102,16 @@ export const LANGS = {
 // 05/10/2026 in DECISIONS: a video in the page, then a question that is not required).
 const VID = { he: ['\u05e1\u05e8\u05d8\u05d5\u05df \u05d4\u05d4\u05d3\u05e8\u05db\u05d4', '\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05e8\u05d8\u05d5\u05df'], ar: ['\u0641\u064a\u062f\u064a\u0648 \u0627\u0644\u062a\u062f\u0631\u064a\u0628', '\u0627\u0641\u062a\u062d \u0627\u0644\u0641\u064a\u062f\u064a\u0648'], ru: ['\u0412\u0438\u0434\u0435\u043e \u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u0430\u0436\u0430', '\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0432\u0438\u0434\u0435\u043e'], am: ['\u12e8\u1235\u120d\u1320\u1293 \u126a\u12f2\u12ee', '\u126a\u12f2\u12ee\u12cd\u1295 \u12ad\u1348\u1275'] };
 for (const k of Object.keys(VID)) { LANGS[k].video = VID[k][0]; LANGS[k].vOpen = VID[k][1]; }
-// The questions are written in Hebrew by the manager, so they show on the Hebrew page only.
-export const QZ = { t: '\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', ok: '\u05e0\u05db\u05d5\u05df', no: '\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4:' };
+// The manager writes the questions in Hebrew; the translate button in the form adds them in
+// Arabic, Russian and Amharic (Michael, 10/10/2026: "\u05d1\u05e6\u05e2: \u05dc\u05ea\u05e8\u05d2\u05dd \u05e2\u05dd \u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e7\u05d9\u05d9\u05dd"). A question
+// with no translation for the page's language is left out of that page.
+export const QZL = {
+  he: { t: '\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)', ok: '\u05e0\u05db\u05d5\u05df', no: '\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4:' },
+  ar: { t: '\u0627\u062e\u062a\u0628\u0627\u0631 \u0641\u0647\u0645 (\u063a\u064a\u0631 \u0625\u0644\u0632\u0627\u0645\u064a)', ok: '\u0635\u062d\u064a\u062d', no: '\u0627\u0644\u0625\u062c\u0627\u0628\u0629 \u0627\u0644\u0635\u062d\u064a\u062d\u0629:' },
+  ru: { t: '\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043f\u043e\u043d\u0438\u043c\u0430\u043d\u0438\u044f (\u043d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e)', ok: '\u0412\u0435\u0440\u043d\u043e', no: '\u041f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442:' },
+  am: { t: '\u12e8\u1218\u1228\u12f3\u1275 \u1325\u12eb\u1244 (\u12a0\u1235\u1308\u12f3\u1305 \u12a0\u12ed\u12f0\u1208\u121d)', ok: '\u1275\u12ad\u12ad\u120d', no: '\u1275\u12ad\u12ad\u1208\u129b\u12cd \u1218\u120d\u1235:' },
+};
+export const QZ = QZL.he;
 
 // Read aloud (10/10/2026, Michael: "מאשר המלצות"): the phone's own voices (speechSynthesis),
 // nothing installed and nothing sent anywhere. The button shows only when the phone has a voice
@@ -205,10 +213,17 @@ export function ytId(v) {
 }
 const ansOk = (a) => typeof a === 'string' && a.trim() !== '';
 // Up to 5 questions; each needs a text, two answers and a right answer that is not empty.
-export function quizOf(talk) {
+export function quizOf(talk, lang) {
   const q = Array.isArray(talk && talk.quiz) ? talk.quiz : [];
-  return q.filter((x) => x && ansOk(x.q) && Array.isArray(x.a) && x.a.filter(ansOk).length >= 2
+  const base = q.filter((x) => x && ansOk(x.q) && Array.isArray(x.a) && x.a.filter(ansOk).length >= 2
     && Number.isInteger(x.c) && x.c >= 0 && x.c < x.a.length && ansOk(x.a[x.c])).slice(0, 5);
+  if (!lang || lang === 'he') return base;
+  // A translation counts only with the same answers in the same places, so the right answer stays right.
+  return base.map((x) => {
+    const t = x.t && x.t[lang];
+    if (!t || !ansOk(t.q) || !Array.isArray(t.a) || t.a.length !== x.a.length || x.a.some((a, j) => ansOk(a) !== ansOk(t.a[j]))) return null;
+    return { q: t.q, a: t.a, c: x.c };
+  }).filter(Boolean);
 }
 // The first answer to each question, "0:2,1:0". Changing it after seeing the right answer does
 // not count: the score is evidence of understanding (procedure 8, 5.5.5).
@@ -231,15 +246,16 @@ async function videoHtml(env, talk, L) {
   if (/^https:\/\//.test(v)) return head + '<p><a href="' + esc(v) + '" target="_blank" rel="noopener" style="color:#1e3a8a;font-weight:700">\u25b6 ' + esc(L.vOpen) + '</a></p>';
   return '';
 }
-function quizHtml(quiz) {
+function quizHtml(quiz, lang) {
   if (!quiz.length) return '';
-  return '<div id="qz" dir="rtl" style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:8px"><div style="font-weight:700;margin-bottom:8px">\u2753 ' + esc(QZ.t) + '</div>'
+  const T = QZL[lang] || QZ;
+  return '<div id="qz" dir="' + ((LANGS[lang] || LANGS.he).dir) + '" style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:8px"><div style="font-weight:700;margin-bottom:8px">\u2753 ' + esc(T.t) + '</div>'
     + quiz.map((x, i) => '<fieldset data-q="' + i + '" style="border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin:0 0 10px"><legend style="font-weight:700;padding:0 4px">' + (i + 1) + '. ' + esc(x.q) + '</legend>'
       + x.a.map((a, j) => (ansOk(a) ? '<label style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="radio" name="q' + i + '" value="' + j + '" style="width:22px;height:22px;flex:none">' + esc(a) + '</label>' : '')).join('')
       + '<div class="qr" style="font-size:14px;font-weight:700"></div></fieldset>').join('') + '</div>';
 }
-const quizScript = (quiz) => `(function(){
-var K=${JSON.stringify(quiz.map((x) => x.c))},A=${JSON.stringify(quiz.map((x) => x.a[x.c]))},T=${JSON.stringify(QZ)},first={};
+const quizScript = (quiz, lang) => `(function(){
+var K=${JSON.stringify(quiz.map((x) => x.c))},A=${JSON.stringify(quiz.map((x) => x.a[x.c]))},T=${JSON.stringify(QZL[lang] || QZ)},first={};
 Array.prototype.forEach.call(document.querySelectorAll('fieldset[data-q]'),function(f){var i=+f.getAttribute('data-q');
 f.addEventListener('change',function(e){var v=+e.target.value;
 if(!(i in first)){first[i]=v;document.getElementById('qa').value=Object.keys(first).map(function(k){return k+':'+first[k];}).join(',');}
@@ -366,7 +382,7 @@ async function showTalk(env, tok, want, g, tr) {
   const emps = await getEmps(env);
   const files = await signedFiles(env, talk.file_url);
   const vid = await videoHtml(env, talk, L);
-  const quiz = lang === 'he' ? quizOf(talk) : [];
+  const quiz = quizOf(talk, lang);
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const signed = g ? await signedIds(env, talk.id) : new Set();
   const byDep = {};
@@ -388,7 +404,7 @@ async function showTalk(env, tok, want, g, tr) {
       + '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
     + vid
     + files.map((u, i) => '<p><a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1e3a8a;font-weight:700">' + esc(L.file) + (files.length > 1 ? ' ' + (i + 1) : '') + '</a></p>').join('')
-    + quizHtml(quiz)
+    + quizHtml(quiz, lang)
     + '<form id="f" method="POST" action="/api/talk" style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:8px">'
     + '<input type="hidden" name="k" value="' + esc(tok) + '">' + (g ? '<input type="hidden" name="g" value="1">' : '') + '<input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig"><input type="hidden" name="qa" id="qa">'
     + '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
@@ -404,7 +420,7 @@ async function showTalk(env, tok, want, g, tr) {
     + '</form>'
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
     + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
-    + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz) + '</script>' : '')
+    + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
     + (x.body ? '<script nonce="' + nonce + '">' + speakScript(lang) + '</script>' : '');
   return page(L.title, inner, '', 200, nonce, lang);
 }
@@ -512,7 +528,7 @@ async function signTalk(env, request) {
     sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name,
     device: deviceOf(request.headers.get('user-agent')), read_at: new Date().toISOString(), mode: g ? 'group' : 'link',
   };
-  const qs = quizScore(lang === 'he' ? quizOf(talk) : [], form.get('qa'));
+  const qs = quizScore(quizOf(talk, textOf(talk, lang).lang), form.get('qa'));
   if (qs) { row.quiz_ok = qs.ok; row.quiz_n = qs.n; }
   const ins = await fetch(SB + '/rest/v1/toolbox_reads', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(row) });
   if (ins.status === 409) return done(emp.n);
