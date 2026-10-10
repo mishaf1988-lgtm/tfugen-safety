@@ -26,14 +26,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.opts = Array.from(document.getElementById('tbt-dept').options).map((x) => x.value);
     document.getElementById('tbt-title').value = 'מסועים'; document.getElementById('tbt-body').value = 'x';
     document.getElementById('tbt-trainer').value = 'מיכאל'; document.getElementById('tbt-trainer-q').value = 'ממונה';
-    document.getElementById('tbt-s').value = 'פורסמה'; document.getElementById('tbt-dept').value = 'יצור';
+    document.getElementById('tbt-s').value = 'פורסמה'; document.getElementById('tbt-dept').value = 'טוגנים';
     svTbt(); const t = ins.slice(-1)[0]; o.dept = t.dept;
     openModal('m-tbt'); o.newEmpty = document.getElementById('tbt-dept').value; closeModal('m-tbt');
     _genEdit('toolbox_talks', t.id); o.edit = document.getElementById('tbt-dept').value; closeModal('m-tbt');
     DB.toolbox_reads = [{ id: 'r1', talk_id: t.id, emp_id: 'e1', emp_name: 'אחמד', dept: 'יצור', read_at: '2026-10-11T07:00:00Z' }, { id: 'r2', talk_id: t.id, emp_id: 'e3', emp_name: 'יוסי', dept: 'אריזה', read_at: '2026-10-11T07:05:00Z' }];
     rTbt();
     const row = Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes('מסועים'));
-    o.tag = row.textContent.includes('יצור'); o.count = row.querySelector('[onclick^="tbtWho"]').textContent.trim();
+    o.tag = row.textContent.includes('טוגנים'); o.count = row.querySelector('[onclick^="tbtWho"]').textContent.trim();
     tbtWho(t.id); const wb = document.getElementById('tbt-who-body').textContent;
     o.who = { dana: wb.includes('דנה'), yossiMissing: /לא חתמו[\s\S]*יוסי/.test(wb.split('בדיקת אפקטיביות')[0].split('לא חתמו').slice(-1)[0] || ''), missN: (wb.match(/לא חתמו: (\d+)/) || [])[1] };
     // a whole-plant talk still counts everyone
@@ -42,10 +42,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.all = row2.querySelector('[onclick^="tbtWho"]').textContent.trim(); o.allDept = ins.slice(-1)[0].dept;
     return o;
   });
-  check('the select: whole plant, then the departments of current workers (not of one who left)', JSON.stringify(r.opts) === JSON.stringify(['', 'אריזה', 'יצור']), r.opts);
-  check('saved with its department', r.dept === 'יצור', r.dept);
-  check('a new form starts at "whole plant"; edit brings the department back', r.newEmpty === '' && r.edit === 'יצור', r);
-  check('the list shows the department and counts its workers only (1 / 2)', r.tag && r.count === '1 / 2', r.count);
+  check('the select: whole plant, then the seven training departments of the forms', JSON.stringify(r.opts) === JSON.stringify(['', 'טוגנים', 'מעוצבים', 'אריזה', 'חומר גלם', 'תוצ"ג ומחסנים', 'מעבדה', 'אחזקה וחשמל']), r.opts);
+  check('saved with its training department', r.dept === 'טוגנים', r.dept);
+  check('a new form starts at "whole plant"; edit brings the department back', r.newEmpty === '' && r.edit === 'טוגנים', r);
+  check('the list shows the department and counts its workers (card "יצור" = טוגנים) only (1 / 2)', r.tag && r.count === '1 / 2', r.count);
   check('"did not sign": only the department (Dana), not Yossi from packing', r.who.dana && r.who.missN === '1' && !r.who.yossiMissing, r.who);
   check('a whole-plant talk saves no department and counts all current workers', r.allDept === null && /\/ 3$/.test(r.all), r.all);
   check('no page errors', errors.length === 0, errors);

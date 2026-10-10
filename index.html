@@ -11324,7 +11324,18 @@ function _tbtReads(id){return (DB.toolbox_reads||[]).filter(function(x){return x
 function _tbtKey(r){return (r&&(r.d||String(r.ts||'').substring(0,10)))||'';}
 // Signatures of people still on the employee list: the count next to "of N employees".
 // dept (10/10/2026, Michael: "כרגע זה רק למחלקות"): a weekly talk for one department counts and lists only its workers.
-function _tbtEmpSet(dept){var m={};(DB.emp||[]).forEach(function(e){if(e&&e.id!=null&&!_empLeft(e)&&(!dept||(e.dep||'')===dept))m[String(e.id)]=1;});return m;}
+// The training departments (10/10/2026, Michael: "\u05d9\u05e9 \u05db\u05d1\u05e8 \u05d8\u05e4\u05e1\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 \u05dc\u05db\u05dc \u05de\u05d7\u05dc\u05e7\u05d4", "10 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d6\u05d4 \u05d4\u05e8\u05d1\u05d4,
+// \u05d6\u05d4 \u05dc\u05d0 \u05db\u05db\u05d4"): the seven weekly forms, each with the department names on the employee cards that
+// belong to it. Management, support and "general" have no weekly form. talk.js has the same list
+// (TBT_DEPTS), and tbt-depts-test.js keeps the two equal.
+var _TBT_DEPTS=[["\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", ["\u05d9\u05e6\u05d5\u05e8"]], ["\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd", ["\u05d8\u05d1\u05e2 (\u05de\u05e2\u05e6\u05d1\u05d9\u05dd)"]], ["\u05d0\u05e8\u05d9\u05d6\u05d4", ["\u05d0\u05e8\u05d9\u05d6\u05d4"]], ["\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd", ["\u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd"]], ["\u05ea\u05d5\u05e6\"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd", ["\u05ea\u05d5\u05e6\u05d2"]], ["\u05de\u05e2\u05d1\u05d3\u05d4", ["\u05de\u05e2\u05d1\u05d3\u05d4"]], ["\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc", ["\u05d0\u05d7\u05d6\u05e7\u05d4, \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc"]]];
+function _tbtDeptMatch(dept,empDep){
+  if(!dept)return true;
+  var d=String(empDep||'');
+  for(var i=0;i<_TBT_DEPTS.length;i++)if(_TBT_DEPTS[i][0]===dept)return d===dept||_TBT_DEPTS[i][1].indexOf(d)>=0;
+  return d===dept;
+}
+function _tbtEmpSet(dept){var m={};(DB.emp||[]).forEach(function(e){if(e&&e.id!=null&&!_empLeft(e)&&_tbtDeptMatch(dept,e.dep))m[String(e.id)]=1;});return m;}
 // When the newest workers' link runs out (talk.js writes link_at, valid 14 days): YYYY-MM-DD in Israel, or ''.
 var _TBT_LINK_DAYS=14;
 function _tbtLinkEnd(r){var t=Date.parse((r&&r.link_at)||'');return isNaN(t)?'':new Date(t+_TBT_LINK_DAYS*864e5).toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});}
@@ -11549,9 +11560,7 @@ function _tbtVideoPick(){
 // The departments of the workers on the list, for the talk's department select (empty = the whole plant).
 function _tbtDeptFill(){
   var el=g('tbt-dept');if(!el)return;
-  var seen={},deps=[];(DB.emp||[]).forEach(function(e){var d=e&&!_empLeft(e)&&(e.dep||'').trim();if(d&&!seen[d]){seen[d]=1;deps.push(d);}});
-  deps.sort(function(a,b){return a.localeCompare(b,'he');});
-  el.innerHTML='<option value="">\u05db\u05dc \u05d4\u05de\u05e4\u05e2\u05dc</option>'+deps.map(function(d){return '<option value="'+esc(d)+'">'+esc(d)+'</option>';}).join('');
+  el.innerHTML='<option value="">\u05db\u05dc \u05d4\u05de\u05e4\u05e2\u05dc</option>'+_TBT_DEPTS.map(function(d){return '<option value="'+esc(d[0])+'">'+esc(d[0])+'</option>';}).join('');
 }
 function _tbtQuizRows(){return Array.prototype.slice.call(document.querySelectorAll('#tbt-quiz .tq'));}
 function _tbtQuizAdd(x){
@@ -11711,7 +11720,7 @@ function tbtTranslate(){
   });
 }
 // Stage 4 (03/10/2026): who signed and who did not, by department, with the signatures; printable.
-function _tbtEmpN(dept){return (DB.emp||[]).filter(function(e){return !_empLeft(e)&&(!dept||(e.dep||'')===dept);}).length;}
+function _tbtEmpN(dept){return (DB.emp||[]).filter(function(e){return !_empLeft(e)&&_tbtDeptMatch(dept,e.dep);}).length;}
 var _tbtWhoId=null;
 // The declaration next to each signature on the worker's page (talk.js LANGS.he.ok). toolbox-talks-lang-test.js keeps the two the same.
 var _TBT_DECL='\u05db\u05dc \u05d7\u05d5\u05ea\u05dd \u05d0\u05d9\u05e9\u05e8: "\u05d0\u05e0\u05d9 \u05de\u05d0\u05e9\u05e8/\u05ea \u05e9\u05e7\u05d9\u05d1\u05dc\u05ea\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e0\u05d5\u05e9\u05d0 \u05d6\u05d4, \u05d4\u05d1\u05e0\u05ea\u05d9 \u05d0\u05d5\u05ea\u05df \u05d5\u05d0\u05e4\u05e2\u05dc \u05dc\u05e4\u05d9\u05d4\u05df."';
@@ -11728,7 +11737,7 @@ function tbtWho(id){
   var byId={};(DB.emp||[]).forEach(function(e){if(e&&e.id!=null)byId[String(e.id)]=e;});
   var leftOf=function(x){var e=byId[String(x.emp_id)];return e&&_empLeft(e)?'\u05e2\u05d6\u05d1 \u05d1-'+fd(e.left_d):'';};
   var gone=reads.filter(function(x){return !isOut(x)&&!cur[String(x.emp_id)];}).length;
-  var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!_empLeft(e)&&(!t.dept||(e.dep||'')===t.dept)&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
+  var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!_empLeft(e)&&_tbtDeptMatch(t.dept,e.dep)&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
   // Induction is for new workers only: the whole list "did not sign" would be noise.
   if(t.kind==='induction')miss={};
   var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);

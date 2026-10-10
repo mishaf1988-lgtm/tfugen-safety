@@ -1,7 +1,8 @@
 // New-worker induction (10/10/2026, Michael: "רק עובדים חדש"): a talk with kind=induction gets a
 // permanent link (no 14-day expiry) for a QR at the entrance; "revoke" raises link_v so the old
 // link and QR stop; a permanent token never opens a weekly talk; the page says "induction".
-import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND, TBT_DEPTS, deptMatch } from './_build/talk.mjs';
+import { readFileSync } from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -79,6 +80,16 @@ console.log('\n3. a talk for one department');
   check('"not on the list" is still there', p.h.includes('value="__other"'));
   w.inserts = [];
   check('a worker from another department can still sign by the list (moved, covers a shift)', (await sign(k)) === 200 && w.inserts.length === 1 && w.inserts[0].emp_id === 'e1');
+}
+
+console.log('\n4. the training departments');
+{
+  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const m = /var _TBT_DEPTS=(\[.*?\]\]);/.exec(html);
+  const app = m ? JSON.parse(m[1]) : null;
+  check('index.html and talk.js have the same seven departments and card names', app && JSON.stringify(app) === JSON.stringify(TBT_DEPTS) && TBT_DEPTS.length === 7, app);
+  check('a card named "יצור" belongs to טוגנים, and to no other department', deptMatch('טוגנים', 'יצור') && !deptMatch('אריזה', 'יצור'));
+  check('management is in no training department; no department = everyone', !TBT_DEPTS.some((d) => deptMatch(d[0], 'הנהלה')) && deptMatch(null, 'הנהלה'));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
