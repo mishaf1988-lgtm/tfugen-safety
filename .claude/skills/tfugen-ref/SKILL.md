@@ -80,6 +80,8 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `rDash()` | 6401 | dashboard render |
 | `_expCollect()` | 7421 | collect expiries from 7 tables (`docs`,`ppe`,`med`,`tr`,`ctr`,`equip_inspections`,`hearing_tests`) plus `_drlNext`/`_audNext`/`_mrNext`/`_legNext`/`_thzRecheck` |
 | `_expOff(r)` | grep | `s` starting "לא רלוונטי" = taken out of tracking on purpose: skipped by `_expCollect` and `_expNoDate`, and by `xlsx-gaps.js` (`OFF`, reads `n,e,s`). A new expiry scanner checks it too (BACKLOG 12.11, 10/10/2026) |
+| `PUBLIC_PATHS` (`functions/_middleware.js`) | - | the only non-`/api/` URLs the site serves (10/10/2026, security scan): every other path is 404. A new static file the app needs (icon, page) goes into the list, or it 404s on the live site; `geo-gate-test.mjs` section 9 |
+| `SPEAK` / `speakScript(lang)` (`functions/api/talk.js`) | - | "read aloud" on the weekly-talk page: `speechSynthesis`, shown only when the phone has a voice in the page language (`he`/`iw`, `ar`, `ru`, `am`); `talk-speak-test.mjs` |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
@@ -196,6 +198,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 3. Storage → bucket → Policies → New policy → name `allow_anon_insert`, operation INSERT, role anon, USING `true`, WITH CHECK `true`
 
 ## Gotchas
+
+- Playwright `addInitScript` then `setContent` on a fresh page: the stub does NOT run (the first about:blank was created before it). `await page.goto('about:blank')` between them (10/10/2026, `talk-speak-test.mjs`). `window.speechSynthesis` is a getter: stub it with `Object.defineProperty`.
 
 - Account skills: since 07/10/2026 in `mishaf1988-lgtm/michael-skills` (`plugins/michael/skills/*/`; here only a pointer README). Its `checks` workflow runs `account-skill-test.py`, which checks that every `references/*.md` named in a SKILL.md exists, and that "(N כללים" next to a references file equals the numbered rules there, numbered 1..N once each. Adding a rule to `lessons.md` = bump N in SKILL.md in the same commit (04/10/2026, it said 31 with 32).
   - Did a version reach the account? Ask in a NEW chat on the claude.ai website for the skill's version line. Not a Code session on Michael's computer: the desktop app loads skills from a local copy refreshed only on restart. Settings path: Customize > Plugins > Add > Manage marketplaces, compare "Synced commit" with michael-skills `main` (07/10/2026).

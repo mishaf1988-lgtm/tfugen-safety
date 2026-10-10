@@ -98,6 +98,28 @@ export const LANGS = {
     errT: '\u1218\u12ad\u1348\u1275 \u12a0\u120d\u1270\u127b\u1208\u121d', expired: '\u12e8\u120a\u1295\u12a9 \u130a\u12dc \u12a0\u120d\u134f\u120d\u1362 \u12a8\u12f0\u1205\u1295\u1290\u1275 \u1283\u120b\u134a\u12cd \u12a0\u12f2\u1235 \u120a\u1295\u12ad \u12ed\u1320\u12ed\u1241\u1362', badLink: '\u120a\u1295\u12a9 \u1275\u12ad\u12ad\u120d \u12a0\u12ed\u12f0\u1208\u121d\u1362 \u12a8\u12f0\u1205\u1295\u1290\u1275 \u1283\u120b\u134a\u12cd \u12a0\u12f2\u1235 \u120a\u1295\u12ad \u12ed\u1320\u12ed\u1241\u1362', unpub: '\u12ed\u1205 \u1235\u120d\u1320\u1293 \u12a0\u120d\u1273\u1270\u1218\u121d \u12c8\u12ed\u121d \u1270\u12c8\u130d\u12f7\u120d\u1362',
     other: '\u1235\u121c \u1260\u12dd\u122d\u12dd\u1229 \u12cd\u1235\u1325 \u12e8\u1208\u121d', oname: '\u1219\u1209 \u1235\u121d', ocomp: '\u12a9\u1263\u1295\u12eb \u12c8\u12ed\u121d \u12ad\u134d\u120d (\u12a0\u121b\u122b\u132d)', oNeed: '\u1219\u1209 \u1235\u121d\u12ce\u1295 \u12ed\u133b\u1349', errHe: '\u1235\u1219\u1295 \u1218\u1218\u12dd\u1308\u1265 \u12a0\u120d\u1270\u127b\u1208\u121d\u1362 \u1260\u12d5\u1265\u122b\u12ed\u1235\u1325 \u134a\u12f0\u120b\u1275 \u12ed\u133b\u1349\u1275 \u12c8\u12ed\u121d \u12a8\u120c\u120b \u1230\u122b\u1270\u129b \u12a5\u122d\u12f3\u1273 \u12ed\u1320\u12ed\u1241\u1362', full: '\u12a8\u12dd\u122d\u12dd\u1229 \u12cd\u132d \u12e8\u121a\u1348\u122d\u1219 \u1230\u12ce\u127d \u12a8\u134d\u1270\u129b\u12cd \u1241\u1325\u122d \u12f0\u122d\u1237\u120d\u1362 \u12e8\u12f0\u1205\u1295\u1290\u1275 \u1283\u120b\u134a\u12cd\u1295 \u12eb\u1290\u130b\u130d\u1229\u1362', oid: '\u12e8\u1218\u1273\u12c8\u1242\u12eb \u12c8\u12ed\u121d \u12e8\u1353\u1235\u1356\u122d\u1275 \u1241\u1325\u122d', oIdNeed: '\u12e8\u1218\u1273\u12c8\u1242\u12eb \u12c8\u12ed\u121d \u12e8\u1353\u1235\u1356\u122d\u1275 \u1241\u1325\u122d \u12ed\u133b\u1349', idMismatch: '\u12e8\u1218\u1273\u12c8\u1242\u12eb \u1241\u1325\u1229 \u12a8\u1270\u1218\u12d8\u1308\u1260\u12cd \u130b\u122d \u12a0\u12ed\u12db\u1218\u12f5\u121d\u1362 \u1241\u1325\u1229\u1295 \u12eb\u1228\u130b\u130d\u1321 \u12c8\u12ed\u121d \u12e8\u12f0\u1205\u1295\u1290\u1275 \u1283\u120b\u134a\u12cd\u1295 \u12eb\u1290\u130b\u130d\u1229\u1362', group: '\u134a\u1275 \u1208\u134a\u1275 \u1235\u120d\u1320\u1293', trainerL: '\u12a0\u1230\u120d\u1323\u129d', signedL: '\u1348\u122d\u121f\u120d' },
 };
+// Read aloud (10/10/2026, Michael: "מאשר המלצות"): the phone's own voices (speechSynthesis),
+// nothing installed and nothing sent anywhere. The button shows only when the phone has a voice
+// in the page's language; many have Hebrew, Arabic and Russian, few have Amharic.
+export const SPEAK = {
+  he: { listen: '\u05d4\u05e7\u05e8\u05d0 \u05d1\u05e7\u05d5\u05dc', stop: '\u05e2\u05e6\u05d5\u05e8', tag: ['he', 'iw'] },
+  ar: { listen: '\u0627\u0633\u062a\u0645\u0639', stop: '\u0625\u064a\u0642\u0627\u0641', tag: ['ar'] },
+  ru: { listen: '\u041f\u0440\u043e\u0441\u043b\u0443\u0448\u0430\u0442\u044c', stop: '\u0421\u0442\u043e\u043f', tag: ['ru'] },
+  am: { listen: '\u12a0\u12f3\u121d\u1325', stop: '\u12a0\u1241\u121d', tag: ['am'] },
+};
+export const speakScript = (lang) => `(function(){
+  var b=document.getElementById('say'),t=document.getElementById('tb'),h=document.getElementById('th'),S=window.speechSynthesis;
+  if(!b||!t||!S||typeof SpeechSynthesisUtterance==='undefined')return;
+  var W=${JSON.stringify(SPEAK[lang] || SPEAK.he)},v=null,on=false;
+  function pick(){var vs=S.getVoices()||[];v=null;for(var i=0;i<vs.length&&!v;i++){var l=String(vs[i].lang||'').toLowerCase();for(var k=0;k<W.tag.length;k++)if(l.indexOf(W.tag[k])===0){v=vs[i];break;}}b.style.display=v?'':'none';}
+  pick();if(S.addEventListener)S.addEventListener('voiceschanged',pick);
+  function idle(){on=false;b.textContent='\\ud83d\\udd0a '+W.listen;}
+  b.addEventListener('click',function(){
+    if(on){S.cancel();idle();return;}
+    var u=new SpeechSynthesisUtterance(((h&&h.textContent)||'')+'. '+t.textContent);u.voice=v;u.lang=v.lang;u.rate=0.95;
+    u.onend=idle;u.onerror=idle;S.cancel();S.speak(u);on=true;b.textContent='\\u23f9 '+W.stop;
+  });
+})();`;
 export const langOf = (l) => (Object.prototype.hasOwnProperty.call(LANGS, l) ? l : 'he');
 // The text a worker reads in lang: the translation (first line = title) when
 // there is one, else the Hebrew. lang comes back as what was actually shown.
@@ -300,11 +322,12 @@ async function showTalk(env, tok, want, g, tr) {
   const nonce = newId() + newId();
   const inner = bar
     + '<div style="font-size:13px;color:#6b7280">' + esc(fdate(talk.d)) + '</div>'
-    + '<h2 style="margin:4px 0 12px;font-size:20px">' + esc(x.title) + '</h2>'
+    + '<h2 id="th" style="margin:4px 0 12px;font-size:20px">' + esc(x.title) + '</h2>'
     + (g ? '<div style="font-size:14px;font-weight:700;color:#1e3a8a;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:8px">\ud83d\udc65 ' + esc(L.group) + '</div>' : '')
     + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + esc(L.trainerL) + ': ' + esc(talk.trainer) + '</div>' : '')
     + (L.auto ? '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px">' + esc(L.auto) + '</div>' : '')
-    + (x.body ? '<div style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
+    + (x.body ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
+      + '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
     + files.map((u, i) => '<p><a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1e3a8a;font-weight:700">' + esc(L.file) + (files.length > 1 ? ' ' + (i + 1) : '') + '</a></p>').join('')
     + '<form id="f" method="POST" action="/api/talk" style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:8px">'
     + '<input type="hidden" name="k" value="' + esc(tok) + '">' + (g ? '<input type="hidden" name="g" value="1">' : '') + '<input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig">'
@@ -320,7 +343,8 @@ async function showTalk(env, tok, want, g, tr) {
     + '<button type="submit" id="go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#15803d;color:#fff;font-size:18px;font-weight:700">' + esc(L.send) + '</button>'
     + '</form>'
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
-    + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>';
+    + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
+    + (x.body ? '<script nonce="' + nonce + '">' + speakScript(lang) + '</script>' : '');
   return page(L.title, inner, '', 200, nonce, lang);
 }
 
