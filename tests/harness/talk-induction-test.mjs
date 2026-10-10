@@ -1,7 +1,7 @@
 // New-worker induction (10/10/2026, Michael: "רק עובדים חדש"): a talk with kind=induction gets a
 // permanent link (no 14-day expiry) for a QR at the entrance; "revoke" raises link_v so the old
 // link and QR stop; a permanent token never opens a weekly talk; the page says "induction".
-import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND, TBT_DEPTS, deptMatch } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND, TBT_DEPTS, deptMatch, makeCodeCookie, IND_CODE_DAYS } from './_build/talk.mjs';
 import { readFileSync } from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -13,7 +13,7 @@ const T = {
   wk: { id: 'wk1', d: '2026-10-11', title: 'סולמות', body: 'x', s: 'פורסמה', kind: null, link_v: 0 },
   dp: { id: 'dp1', d: '2026-10-11', title: 'מסועים', body: 'x', s: 'פורסמה', kind: null, link_v: 0, dept: 'אריזה' },
 };
-const w = { patches: [], inserts: [] };
+const w = { patches: [], inserts: [], code: '246810', cookie: '' };
 globalThis.fetch = async (url, init) => {
   const u = String(url), m = (init && init.method) || 'GET';
   const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
@@ -22,15 +22,17 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/emp')) return m === 'PATCH' ? new Response(null, { status: 204 }) : json([{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור', eid: '7777777' }, { id: 'e2', n: 'יוסי לוי', dep: 'אריזה' }]);
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) { if (m === 'POST') { w.inserts.push(JSON.parse(init.body)); return new Response(null, { status: 201 }); } return json([]); }
   if (u.startsWith(SB + '/storage/v1/object/')) return json({ Key: 'x' });
+  if (u.startsWith(SB + '/rest/v1/server_state')) { w.codeReads = (w.codeReads || 0) + 1; return json(w.code === null ? [] : [{ value: w.code }]); }
   if (u === SB + '/auth/v1/user') { const tok = init.headers.Authorization.replace('Bearer ', ''); return tok === 'good' ? json({ id: 'u1', email: 'michael@tfugen.local' }) : tok === 'rep' ? json({ id: 'u2', email: 'rep@tfugen.local' }) : new Response('no', { status: 401 }); }
   if (u.startsWith(SB + '/rest/v1/app_users')) return json([u.includes('id=eq.michael') ? { role: 'מנהל', active: true } : { role: 'מדווח', active: true }]);
   return json({ error: 'unexpected ' + u }, 599);
 };
 const link = async (body, auth) => { const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json', Origin: 'https://tapugan-safety.pages.dev', ...(auth ? { Authorization: 'Bearer ' + auth } : {}) } }), env: ENV }); let j = null; try { j = await r.json(); } catch (e) { j = null; } return { st: r.status, j }; };
-const open = async (u) => { const r = await onRequest({ request: new Request(u), env: ENV }); return { st: r.status, h: await r.text() }; };
+const open = async (u, cookie) => { const c = cookie === undefined ? w.cookie : cookie; const r = await onRequest({ request: new Request(u, { headers: c ? { cookie: c } : {} }), env: ENV }); return { st: r.status, h: await r.text() }; };
 const tokOf = (u) => decodeURIComponent(new URL(u).searchParams.get('k'));
 const png = new Uint8Array(1024); png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0);
-const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oid: '7777777', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile' } }), env: ENV }); return r.status; };
+const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oid: '7777777', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', ...(w.cookie ? { cookie: w.cookie } : {}) } }), env: ENV }); return r.status; };
+w.cookie = 'tsind=' + (await makeCodeCookie(ENV, 'ind1', '246810'));
 
 console.log('\n1. the permanent token');
 {
@@ -90,6 +92,45 @@ console.log('\n4. the training departments');
   check('index.html and talk.js have the same seven departments and card names', app && JSON.stringify(app) === JSON.stringify(TBT_DEPTS) && TBT_DEPTS.length === 7, app);
   check('a card named "יצור" belongs to טוגנים, and to no other department', deptMatch('טוגנים', 'יצור') && !deptMatch('אריזה', 'יצור'));
   check('management is in no training department; no department = everyone', !TBT_DEPTS.some((d) => deptMatch(d[0], 'הנהלה')) && deptMatch(null, 'הנהלה'));
+}
+
+console.log('\n5. the HR code (10/10/2026, Michael: "מוגן בסיסמה... צריך לעבוד קבוע")');
+{
+  const k = tokOf((await link({ op: 'link', id: 'ind1' }, 'good')).j.url), url = URL0 + '?k=' + encodeURIComponent(k);  // the current version, after section 2 revoked
+  let r = await open(url, '');
+  check('no cookie: the code page, not the talk', r.st === 200 && r.h.includes('קוד משאבי אנוש') && r.h.includes('name="icode"') && !r.h.includes('הוראות כניסה למשמרת'), r.h.slice(0, 200));
+  const code = async (val, cookie) => { const fd = new FormData(); fd.append('k', k); fd.append('l', 'ar'); fd.append('icode', val); return onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: cookie ? { cookie } : {} }), env: ENV }); };
+  const t0 = Date.now(); r = await code('111111');
+  const h = await r.text();
+  check('a wrong code: 403, says so, after a wait, no cookie', r.status === 403 && h.includes('קוד שגוי') && Date.now() - t0 >= 700 && !r.headers.get('set-cookie'), [r.status, Date.now() - t0]);
+  r = await code(' 246810 ');
+  const sc = r.headers.get('set-cookie') || '';
+  check('the right code: back to the page in its language, with a cookie for a year', r.status === 303 && r.headers.get('location').includes('k=' + encodeURIComponent(k)) && r.headers.get('location').includes('l=ar') && /^tsind=[^;]+; Path=\/api\/talk; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax$/.test(sc) && IND_CODE_DAYS === 365, [r.status, sc]);
+  const ck = sc.split(';')[0];
+  r = await open(url, ck);
+  check('with the cookie the talk opens', r.st === 200 && r.h.includes('הוראות כניסה למשמרת') && !r.h.includes('name="icode"'));
+  r = await open(url, 'other=1; ' + ck + '; x=2');
+  check('...also among other cookies', r.st === 200 && r.h.includes('הוראות כניסה למשמרת'));
+  const save = w.cookie; w.cookie = '';
+  let n = w.inserts.length;
+  check('signing the induction without the cookie: refused, nothing saved', (await sign(k)) === 200 && w.inserts.length === n);
+  w.cookie = ck; n = w.inserts.length;
+  check('...with it: saved', (await sign(k)) === 200 && w.inserts.length === n + 1);
+  w.code = '135790';
+  r = await open(url, ck);
+  check('the code changed: every device has to type the new one', r.h.includes('name="icode"'));
+  w.code = null;
+  r = await open(url, ck);
+  check('no code set: closed, says so, and no field to guess in', r.st === 503 && r.h.includes('הקוד עוד לא הוגדר') && !r.h.includes('name="icode"'));
+  w.code = '246810';
+  r = await open(URL0 + '?k=' + encodeURIComponent(await makeTalkToken(ENV, 'wk1')), '');
+  check('a weekly talk: no code', r.st === 200 && r.h.includes('סולמות') && !r.h.includes('name="icode"'));
+  r = await open(URL0 + '?op=say&k=' + encodeURIComponent(k), '');
+  check('the voice of the induction without the cookie: 403', r.st === 403);
+  r = await code('246810'.replace('2', '9'));
+  const forged = 'tsind=' + (await makeCodeCookie({ ...ENV, TRUSTEE_NOTIFY_SECRET: 'other' }, 'ind1', '246810'));
+  check('a cookie signed with another key does not open', (await open(url, forged)).h.includes('name="icode"'));
+  w.cookie = save;
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

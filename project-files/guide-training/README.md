@@ -44,6 +44,7 @@ PREVIEW=/some/dir NODE_PATH=$(npm root -g) node project-files/guide-training/bui
 - הטופס החתום נשלח ל-`IND_HR` (hr-tap@tapugan.co.il) ולמיכאל, ומתויק ב-`IND_ROOT/<שנה>`.
 - נושא המייל: "טופס קליטת עובד חדש חתום: (שם), (תאריך)" (`fileInduction`).
 - ברשימת השמות רק עובדי המחלקה, ו"אני לא ברשימה" בראש הרשימה (`showTalk`).
+- דף הקליטה מאחורי קוד משאבי אנוש, שהמכשיר זוכר שנה (`IND_CODE_DAYS`, `codeGate`). הצילום `w0-code.png`.
 
 ## לפני שליחה
 
