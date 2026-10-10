@@ -182,6 +182,13 @@ export function readTalkToken(env, tok, nowMs) { return readLinkToken(env, PREFI
 const PERM_PREFIX = 'talk-perm:v1:';
 export const PERM_TTL_DAYS = 3650;
 export const KIND_IND = 'induction';
+// The training departments and the employee-card names that belong to each (index.html _TBT_DEPTS).
+export const TBT_DEPTS = [["\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", ["\u05d9\u05e6\u05d5\u05e8"]], ["\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd", ["\u05d8\u05d1\u05e2 (\u05de\u05e2\u05e6\u05d1\u05d9\u05dd)"]], ["\u05d0\u05e8\u05d9\u05d6\u05d4", ["\u05d0\u05e8\u05d9\u05d6\u05d4"]], ["\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd", ["\u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd"]], ["\u05ea\u05d5\u05e6\"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd", ["\u05ea\u05d5\u05e6\u05d2"]], ["\u05de\u05e2\u05d1\u05d3\u05d4", ["\u05de\u05e2\u05d1\u05d3\u05d4"]], ["\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc", ["\u05d0\u05d7\u05d6\u05e7\u05d4, \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc"]]];
+export function deptMatch(dept, empDep) {
+  if (!dept) return true;
+  const d = String(empDep || ''), row = TBT_DEPTS.find((x) => x[0] === dept);
+  return d === dept || (!!row && row[1].indexOf(d) >= 0);
+}
 export function makePermToken(env, id, v, nowMs) { return makeLinkToken(env, PERM_PREFIX, id + '-v' + (v || 0), PERM_TTL_DAYS, nowMs); }
 export async function readPermToken(env, tok, nowMs) {
   const r = await readLinkToken(env, PERM_PREFIX, tok, nowMs);
@@ -484,7 +491,7 @@ async function showTalk(env, tok, want, g, tr) {
   const signed = g ? await signedIds(env, talk.id) : new Set();
   // A talk for one department lists its workers (10/10/2026); "not on the list" stays for anyone else,
   // and the signature still checks against the whole list, so a worker who moved can sign.
-  const listed = talk.dept ? emps.filter((e) => (e.dep || '') === talk.dept) : emps;
+  const listed = talk.dept ? emps.filter((e) => deptMatch(talk.dept, e.dep)) : emps;
   const byDep = {};
   for (const e of (listed.length ? listed : emps)) { const d = e.dep || '\u05d0\u05d7\u05e8'; (byDep[d] = byDep[d] || []).push(e); }
   const opts = Object.keys(byDep).sort((a, b) => a.localeCompare(b, 'he')).map((d) =>
