@@ -2887,6 +2887,15 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>&#1511;&#1493;&#1489;&#1509; (&#1500;&#1488; &#1495;&#1493;&#1489;&#1492;)</label>
       <div id="tbt-attach-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick('tbt-attach-area','toolbox_talks')">&#128247; &#128196; &#1510;&#1500;&#1501; / &#1511;&#1493;&#1489;&#1509;</button></div>
     </div>
+    <div class="field fw"><label>🎬 סרטון (לא חובה)</label>
+      <input id="tbt-video" type="url" inputmode="url" dir="ltr" maxlength="500" placeholder="קישור YouTube, או העלאה מהטלפון">
+      <button type="button" class="btn btn-s" id="tbt-video-btn" style="width:100%;margin-top:6px" onclick="_tbtVideoPick()">⬆ העלאת סרטון (עד 50MB)</button>
+    </div>
+    <div class="field fw"><label>❓ שאלות הבנה (לא חובה, עד 5)</label>
+      <div id="tbt-quiz"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-s" onclick="_tbtQuizAdd()">+ שאלה</button><button type="button" class="btn btn-s" id="tbt-quiz-ai" onclick="tbtQuizAI()">🤖 הצע שאלות מהתוכן</button></div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px">העובד עונה בדף בעברית, ואחרי כל תשובה רואה אם צדק ומה התשובה הנכונה. הציון (תשובה ראשונה) נשמר ב"מי חתם".</div>
+    </div>
     <div class="field fw"><label>&#1514;&#1512;&#1490;&#1493;&#1501; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label>
       <button type="button" class="btn btn-s" id="tbt-tr-btn" style="width:100%" onclick="tbtTranslate()">&#127760; &#1514;&#1512;&#1490;&#1501; &#1500;&#1506;&#1512;&#1489;&#1497;&#1514;, &#1512;&#1493;&#1505;&#1497;&#1514; &#1493;&#1488;&#1502;&#1492;&#1512;&#1497;&#1514;</button>
       <div style="font-size:11px;color:var(--t3);margin-top:4px">&#1514;&#1512;&#1490;&#1493;&#1501; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;. &#1492;&#1506;&#1493;&#1489;&#1491; &#1489;&#1493;&#1495;&#1512; &#1513;&#1508;&#1492; &#1489;&#1491;&#1507;. &#1489;&#1500;&#1497; &#1514;&#1512;&#1490;&#1493;&#1501; &#1492;&#1493;&#1488; &#1512;&#1493;&#1488;&#1492; &#1506;&#1489;&#1512;&#1497;&#1514;.</div>
@@ -4998,7 +5007,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am","tbt-trainer":"trainer","tbt-trainer-q":"trainer_qual"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"},"attach":"hzm-attach-area"},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am","tbt-trainer":"trainer","tbt-trainer-q":"trainer_qual","tbt-video":"video_url"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d"}},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"},"attach":"hzm-attach-area"},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -5047,6 +5056,7 @@ function _genEdit(tbl,id){
       }
       el.value=v;
     });
+    if(tbl==='toolbox_talks'&&typeof _tbtQuizLoad==='function')_tbtQuizLoad(rec.quiz);
     // svTr / svToolbox write `file_url: _attachUrls[area] || null` on EVERY save.
     // Nothing restored _attachUrls when the form was opened for editing, so a
     // trip through ✎ to change an expiry date silently deleted the attached
@@ -11338,12 +11348,15 @@ function _tbtTrainerFill(){
 // send (05/10/2026): "save and send" = save as published, then the link dialog (tbtLink),
 // with the same checks; the share itself starts from a tap in that dialog (Safari).
 function svTbt(send){
-  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
+  if(_attachBusy()||_tbtVidBusy){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var title=gv('tbt-title');
   if(!title){toast('\u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0');return;}
   var body=gv('tbt-body')||null,file=_attachUrls['tbt-attach-area']||null;
-  if(!body&&!file){toast('\u05d7\u05d5\u05d1\u05d4: \u05ea\u05d5\u05db\u05df \u05d0\u05d5 \u05e7\u05d5\u05d1\u05e5, \u05db\u05d3\u05d9 \u05e9\u05d9\u05d4\u05d9\u05d4 \u05de\u05d4 \u05dc\u05e7\u05e8\u05d5\u05d0');return;}
+  if(!body&&!file&&!(gv('tbt-video')||'').trim()){toast('\u05d7\u05d5\u05d1\u05d4: \u05ea\u05d5\u05db\u05df \u05d0\u05d5 \u05e7\u05d5\u05d1\u05e5, \u05db\u05d3\u05d9 \u05e9\u05d9\u05d4\u05d9\u05d4 \u05de\u05d4 \u05dc\u05e7\u05e8\u05d5\u05d0');return;}
   var trainer=gv('tbt-trainer')||null,trainerQ=gv('tbt-trainer-q')||null;
+  var video=(gv('tbt-video')||'').trim()||null;
+  if(video&&!/^https:\/\/\S+$/.test(video)){toast('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e1\u05e8\u05d8\u05d5\u05df \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05ea\u05d7\u05d9\u05dc \u05d1-https://');return;}
+  var quiz=_tbtQuizRead();if(quiz===false)return;
   var pub=!!send||(gv('tbt-s')||_TBT_DRAFT)===_TBT_PUB;
   if(pub&&(!trainer||!trainerQ)){toast(_TBT_TRAINER_MSG);return;}
   var tr={body_ar:gv('tbt-ar')||null,body_ru:gv('tbt-ru')||null,body_am:gv('tbt-am')||null};
@@ -11353,13 +11366,13 @@ function svTbt(send){
   if((tr.body_ar||tr.body_ru||tr.body_am)&&srcTr!==null&&srcTr!==srcNow&&!confirm('\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea \u05d4\u05e9\u05ea\u05e0\u05d4 \u05d0\u05d7\u05e8\u05d9 \u05d4\u05ea\u05e8\u05d2\u05d5\u05dd. \u05dc\u05e9\u05de\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05dc\u05ea\u05e8\u05d2\u05dd \u05de\u05d7\u05d3\u05e9?\n(\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d7\u05d6\u05d5\u05e8 \u05d5\u05dc\u05ea\u05e8\u05d2\u05dd)'))return;
   // Workers already signed this text (ISO 45001 7.4 evidence): changing it makes their signatures look like signatures on the new text.
   var nSig=editId?_tbtReads(editId):0;
-  if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am||(old.file_url||null)!==file)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
-  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
+  if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am||(old.file_url||null)!==file||(old.video_url||null)!==video)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
+  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,video_url:video,quiz:quiz,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
   if(!_svEditId('toolbox_talks'))r.created_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
   _svPut('toolbox_talks',r);
   addLog('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+title.substring(0,30));sdb();
   closeModal('m-tbt');
-  ['tbt-title','tbt-body','tbt-d','tbt-ar','tbt-ru','tbt-am','tbt-trainer','tbt-trainer-q'].forEach(function(id){var el=g(id);if(el)el.value='';});_tbtTrSrc=null;
+  ['tbt-title','tbt-body','tbt-d','tbt-ar','tbt-ru','tbt-am','tbt-trainer','tbt-trainer-q','tbt-video'].forEach(function(id){var el=g(id);if(el)el.value='';});_tbtTrSrc=null;_tbtQuizLoad(null);
   if(typeof _attachClear==='function')_attachClear('tbt-attach-area');
   toast('\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u2713');rTbt();
   if(send)return _obIdle().then(function(){return tbtLink(r.id);});
@@ -11377,6 +11390,7 @@ function tbtDup(id){
   Object.keys(f).forEach(function(dom){var el=g(dom);if(!el)return;var v=r[f[dom]];el.value=(v===null||v===undefined)?'':v;});
   g('tbt-d').value=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});
   g('tbt-s').value=_TBT_DRAFT;
+  _tbtQuizLoad(r.quiz);
   _tbtTrainerFill();
   _tbtTrSrc=(r.title||'')+'\n'+(r.body||'');
   if(r.file_url){_attachUrls['tbt-attach-area']=r.file_url;_attachRender('tbt-attach-area',r.file_url,String(r.file_url).split('/').pop().split('?')[0]);}
@@ -11452,6 +11466,10 @@ var _tbtTrSrc=null,_tbtTrRun=0;
 function _tbtTrReset(){
   _tbtTrSrc=null;_tbtTrRun++;
   var b=g('tbt-tr-btn');if(b&&b.dataset.label){b.disabled=false;b.textContent=b.dataset.label;}
+  // Every opening fills these from the record or starts them empty: a video or questions left
+  // from the talk opened before must not ride into a new one.
+  _tbtQuizRun++;_tbtQuizLoad(null);var tv=g('tbt-video');if(tv)tv.value='';
+  var qb=g('tbt-quiz-ai');if(qb&&qb.dataset.label){qb.disabled=false;qb.textContent=qb.dataset.label;}
 }
 var _TBT_LANG={he:'\u05e2\u05d1\u05e8\u05d9\u05ea',ar:'\u05e2\u05e8\u05d1\u05d9\u05ea',ru:'\u05e8\u05d5\u05e1\u05d9\u05ea',am:'\u05d0\u05de\u05d4\u05e8\u05d9\u05ea'};
 var _TBT_DEV={phone:'\u05d8\u05dc\u05e4\u05d5\u05df',tablet:'\u05d8\u05d0\u05d1\u05dc\u05d8',other:'\u05de\u05d7\u05e9\u05d1'};
@@ -11461,6 +11479,100 @@ function _tbtLangTag(r){
 }
 // Workers see what people type on a keyboard (CLAUDE.md): the AI's dashes, quotes and dots are not.
 function _tbtKbd(t){return String(t||'').replace(/[\u2013\u2014\u05be]/g,'-').replace(/[\u00ab\u00bb\u201c\u201d\u201e]/g,'"').replace(/[\u2018\u2019]/g,"'").replace(/\u2026/g,'...').replace(/\u00b7/g,',').trim();}
+// Video and comprehension questions (10/10/2026, Michael: "\u05d9\u05e9 \u05d2\u05dd \u05e1\u05e8\u05d8\u05d5\u05e0\u05d9\u05dd"; the order approved
+// 05/10/2026 in DECISIONS: a video in the page, then a question that is not required).
+// The worker page (functions/api/talk.js) plays a Storage file through a one-hour signed link,
+// or YouTube without cookies; the questions show on the Hebrew page and the first answer counts.
+var _TBT_VID_MAX=50*1024*1024,_tbtVidBusy=false,_tbtQuizRun=0;
+function _tbtVideoPick(){
+  if(_viewOnly()){_viewBlock();return;}
+  var inp=g('_tbt-vid-inp');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.id='_tbt-vid-inp';inp.accept='video/*';inp.style.display='none';document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    if(!/^video\//i.test(f.type||'')){toast('\u05d1\u05d7\u05e8 \u05e7\u05d5\u05d1\u05e5 \u05d5\u05d9\u05d3\u05d0\u05d5');return;}
+    if(f.size>_TBT_VID_MAX){toast('\u05d4\u05e1\u05e8\u05d8\u05d5\u05df \u05d2\u05d3\u05d5\u05dc \u05de-50MB. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e7\u05e6\u05e8 \u05d0\u05d5\u05ea\u05d5, \u05d0\u05d5 \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea \u05dc-YouTube \u05d5\u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05db\u05d0\u05df \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8');return;}
+    var b=g('tbt-video-btn');if(b){if(!b.dataset.label)b.dataset.label=b.textContent;b.disabled=true;b.textContent='\u23f3 \u05de\u05e2\u05dc\u05d4 \u05e1\u05e8\u05d8\u05d5\u05df...';}
+    _tbtVidBusy=true;
+    _fileUpload(f,'talkvid',function(url,st){
+      _tbtVidBusy=false;
+      if(b){b.disabled=false;b.textContent=b.dataset.label;}
+      if(!url){toast('\u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e1\u05e8\u05d8\u05d5\u05df \u05e0\u05db\u05e9\u05dc\u05d4'+(st?' ('+st+')':'')+'. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1');return;}
+      var el=g('tbt-video');if(el)el.value=url;
+      toast('\u05d4\u05e1\u05e8\u05d8\u05d5\u05df \u05d4\u05d5\u05e2\u05dc\u05d4 \u2713');
+    });
+  };
+  inp.click();
+}
+function _tbtQuizRows(){return Array.prototype.slice.call(document.querySelectorAll('#tbt-quiz .tq'));}
+function _tbtQuizAdd(x){
+  var box=g('tbt-quiz');if(!box)return;
+  if(_tbtQuizRows().length>=5){toast('\u05e2\u05d3 5 \u05e9\u05d0\u05dc\u05d5\u05ea');return;}
+  x=x||{q:'',a:['','','',''],c:-1};
+  var nm='tq-c-'+Date.now().toString(36)+Math.random().toString(36).substring(2,6);
+  var d=document.createElement('div');d.className='tq';
+  d.style.cssText='border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px';
+  var h='<div style="display:flex;gap:6px;align-items:center"><input class="tq-q" maxlength="200" placeholder="\u05d4\u05e9\u05d0\u05dc\u05d4" style="flex:1"><button type="button" class="btn btn-s btn-sm" style="min-width:44px;min-height:44px" onclick="this.closest(\'.tq\').remove()" title="\u05de\u05d7\u05e7 \u05e9\u05d0\u05dc\u05d4">\u2715</button></div>';
+  for(var j=0;j<4;j++)h+='<label style="display:flex;gap:6px;align-items:center;margin-top:4px"><input type="radio" name="'+nm+'" value="'+j+'" title="\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4" style="flex:none;width:22px;height:22px;min-height:0"><input class="tq-a" maxlength="120" placeholder="\u05ea\u05e9\u05d5\u05d1\u05d4 '+(j+1)+(j===0?' (\u05e1\u05de\u05df \u05d1\u05e2\u05d9\u05d2\u05d5\u05dc \u05d0\u05ea \u05d4\u05e0\u05db\u05d5\u05e0\u05d4)':'')+'" style="flex:1"></label>';
+  d.innerHTML=h;box.appendChild(d);
+  d.querySelector('.tq-q').value=x.q||'';
+  var as=d.querySelectorAll('.tq-a');for(var k=0;k<4;k++)as[k].value=(x.a&&x.a[k])||'';
+  if(x.c>=0&&x.c<4)d.querySelectorAll('input[type=radio]')[x.c].checked=true;
+}
+function _tbtQuizLoad(q){
+  var box=g('tbt-quiz');if(!box)return;box.innerHTML='';
+  (Array.isArray(q)?q:[]).slice(0,5).forEach(function(x){if(x&&typeof x==='object')_tbtQuizAdd(x);});
+}
+// null = no questions. false = a question that is not complete: the save stops and says which.
+function _tbtQuizRead(){
+  var out=[],bad=0;
+  _tbtQuizRows().forEach(function(d,i){
+    var q=(d.querySelector('.tq-q').value||'').trim();
+    var a=Array.prototype.map.call(d.querySelectorAll('.tq-a'),function(e){return (e.value||'').trim();});
+    var r=d.querySelector('input[type=radio]:checked'),c=r?+r.value:-1;
+    if(!q&&!a.join(''))return;
+    if(!q||a.filter(Boolean).length<2||c<0||!a[c]){if(!bad)bad=i+1;return;}
+    out.push({q:q,a:a,c:c});
+  });
+  if(bad){toast('\u05e9\u05d0\u05dc\u05d4 '+bad+': \u05e6\u05e8\u05d9\u05da \u05e9\u05d0\u05dc\u05d4, \u05dc\u05e4\u05d7\u05d5\u05ea \u05e9\u05ea\u05d9 \u05ea\u05e9\u05d5\u05d1\u05d5\u05ea, \u05d5\u05e1\u05d9\u05de\u05d5\u05df \u05d1\u05e2\u05d9\u05d2\u05d5\u05dc \u05e9\u05dc \u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4');return false;}
+  return out.length?out:null;
+}
+function _tbtQuizTag(x){
+  if(!x||!x.quiz_n)return '';
+  var full=x.quiz_ok===x.quiz_n;
+  return '<div style="font-size:10px;font-weight:700;color:'+(full?'#15803d':'#b45309')+'">\u2753 '+(x.quiz_ok||0)+'/'+x.quiz_n+' \u05e0\u05db\u05d5\u05e0\u05d5\u05ea</div>';
+}
+// Three questions from the talk text, through the same AI route as the translation.
+// The manager reads and fixes them before saving: nothing is saved by the AI.
+function tbtQuizAI(){
+  var title=gv('tbt-title'),body=gv('tbt-body');
+  if(!body){toast('\u05e7\u05d5\u05d3\u05dd \u05ea\u05d5\u05db\u05df \u05d4\u05d4\u05d3\u05e8\u05db\u05d4, \u05d4\u05e9\u05d0\u05dc\u05d5\u05ea \u05e0\u05db\u05ea\u05d1\u05d5\u05ea \u05de\u05de\u05e0\u05d5');return Promise.resolve('empty');}
+  if(_tbtQuizRows().length&&!confirm('\u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e9\u05d0\u05dc\u05d5\u05ea \u05e9\u05db\u05d1\u05e8 \u05db\u05ea\u05d5\u05d1\u05d5\u05ea \u05d1\u05e9\u05d0\u05dc\u05d5\u05ea \u05d7\u05d3\u05e9\u05d5\u05ea?'))return Promise.resolve('kept');
+  var b=g('tbt-quiz-ai'),my=++_tbtQuizRun;
+  if(b){if(!b.dataset.label)b.dataset.label=b.textContent;b.disabled=true;b.textContent='\u23f3 \u05db\u05d5\u05ea\u05d1 \u05e9\u05d0\u05dc\u05d5\u05ea...';}
+  var done=function(){if(b&&my===_tbtQuizRun){b.disabled=false;b.textContent=b.dataset.label;}};
+  var prompt='Write 3 multiple-choice questions in Hebrew that check whether a factory worker understood this safety briefing. Ask only about what the text says. Each question has exactly 4 short answers and exactly one correct answer. Use short, simple words. Put the correct answer in a different position in each question. Return only a JSON array, with no notes and no code fences: [{"q":"question","a":["answer","answer","answer","answer"],"c":0}] where c is the index of the correct answer.\n\n'+(title||'')+'\n'+body;
+  return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({model:'gemini',max_tokens:3000,messages:[{role:'user',content:prompt}]})})
+  .then(function(r){if(!r.ok)throw new Error('http');return r.json();})
+  .then(function(dj){
+    var c=dj&&dj.content&&dj.content[0]?dj.content[0].text:'';
+    var m=/\[[\s\S]*\]/.exec(String(c||''));if(!m)throw new Error('nojson');
+    var arr=JSON.parse(m[0]);
+    var ok=(Array.isArray(arr)?arr:[]).map(function(x){
+      if(!x||typeof x.q!=='string'||!Array.isArray(x.a))return null;
+      var a=x.a.slice(0,4).map(function(v){return _tbtKbd(String(v||''));});while(a.length<4)a.push('');
+      var ci=+x.c;if(!(ci>=0&&ci<4)||!a[ci])return null;
+      return {q:_tbtKbd(x.q),a:a,c:ci};
+    }).filter(function(x){return x&&x.q;}).slice(0,5);
+    if(!ok.length)throw new Error('empty');
+    if(my!==_tbtQuizRun)return 'stale';
+    var m2=g('m-tbt');if(!m2||m2.style.display==='none')return 'stale';
+    _tbtQuizLoad(ok);done();
+    toast('\u05e0\u05db\u05ea\u05d1\u05d5 '+ok.length+' \u05e9\u05d0\u05dc\u05d5\u05ea. \u05db\u05d3\u05d0\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05ea\u05e7\u05df \u05dc\u05e4\u05e0\u05d9 \u05d4\u05e9\u05de\u05d9\u05e8\u05d4');
+    return 'ok';
+  })['catch'](function(){done();if(my===_tbtQuizRun)toast('\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05e9\u05d0\u05dc\u05d5\u05ea. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1 \u05d0\u05d5 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d3');return 'fail';});
+}
 function tbtTranslate(){
   var title=gv('tbt-title'),body=gv('tbt-body');
   if(!title||!body){toast('\u05e7\u05d5\u05d3\u05dd \u05e0\u05d5\u05e9\u05d0 \u05d5\u05ea\u05d5\u05db\u05df \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea');return Promise.resolve('empty');}
@@ -11525,7 +11637,7 @@ function tbtWho(id){
   var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'+(t.trainer?'<div style="font-size:12px;margin-bottom:8px">\u05de\u05d3\u05e8\u05d9\u05da: '+esc(t.trainer)+(t.trainer_qual?', '+esc(t.trainer_qual):'')+(t.trainer_sig_url?'<div>\u05d4\u05e6\u05d4\u05e8\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05d7\u05ea\u05de\u05d4 \u05d1-'+tm(t.trainer_signed_at)+' <img data-sign="'+esc(t.trainer_sig_url)+'" alt="" style="height:36px;max-width:110px;vertical-align:middle;background:#fff;border:1px solid #e5e7eb;border-radius:4px"></div>':'<div style="color:#b45309">\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</div>')+'</div>':'')+'<div style="font-size:12px;margin-bottom:8px">'+esc(_TBT_DECL)+'</div>'
     +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone-outN)+'</span>'+(outN?' <span class="b bX">\u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4: '+outN+'</span>':'')+' <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span> <span id="tbt-who-old"></span></div>';
   h+=reads.length?'<div class="tbl-wrap"><table><thead><tr><th scope="col">\u05e9\u05dd</th><th scope="col">\u05ea.\u05d6 / \u05d3\u05e8\u05db\u05d5\u05df</th><th scope="col">\u05de\u05d7\u05dc\u05e7\u05d4</th><th scope="col">\u05de\u05ea\u05d9</th><th scope="col">\u05e9\u05e4\u05d4</th><th scope="col">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr></thead><tbody>'
-    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':(leftOf(x)||'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'))+'</div>')+'<div class="tbt-old" data-rid="'+esc(x.id||'')+'" style="font-size:10px;font-weight:700;color:#b45309"></div></td><td class="tbt-idno" data-rid="'+esc(x.id||'')+'" style="direction:ltr;text-align:right">'+esc(_tbtIdMask(x.id_no))+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+(_TBT_MODE[x.mode]?(x.device?', ':'')+_TBT_MODE[x.mode]:'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
+    +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+_tbtQuizTag(x)+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':(leftOf(x)||'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'))+'</div>')+'<div class="tbt-old" data-rid="'+esc(x.id||'')+'" style="font-size:10px;font-weight:700;color:#b45309"></div></td><td class="tbt-idno" data-rid="'+esc(x.id||'')+'" style="direction:ltr;text-align:right">'+esc(_tbtIdMask(x.id_no))+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+(_TBT_MODE[x.mode]?(x.device?', ':'')+_TBT_MODE[x.mode]:'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
     +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
   if(missN)h+='<div style="font-weight:700;margin:12px 0 4px">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</div>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('');
   if(missN&&t.s===_TBT_PUB&&!_viewOnly())h+='<div class="no-print" style="margin-top:6px"><button type="button" class="btn btn-p btn-sm" id="tbt-rem-btn" data-id="'+esc(t.id)+'" onclick="tbtRemind(this.dataset.id)">\ud83d\udce4 \u05ea\u05d6\u05db\u05d5\u05e8\u05ea \u05dc-'+missN+' \u05e9\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</button>'
