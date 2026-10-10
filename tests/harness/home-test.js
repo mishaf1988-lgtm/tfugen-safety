@@ -63,6 +63,9 @@ async function renderHome(page, seed) {
   const errs = [];
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errs.push('console.error: ' + m.text()); });
+  // The 8 modules hidden by default (Michael 10/10/2026) are shown here, so the KPI order is the
+  // full one; the default hiding is hide-modules-test.js.
+  await page.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({modulesShown:{round:true,ptw:true,ppe:true,ctr:true,wst:true,prj:true,rsk:true,ncr:true}})); } catch (e) {} });
   await page.goto(HTML, { waitUntil: 'load' });
   await page.waitForTimeout(1200);
 
