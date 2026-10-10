@@ -37,7 +37,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _genEdit('toolbox_talks', id); o.edit = document.getElementById('tbt-kind').checked; closeModal('m-tbt');
     _genEdit('toolbox_talks', wid); o.editWk = document.getElementById('tbt-kind').checked; closeModal('m-tbt');
     tbtDup(id); o.dup = document.getElementById('tbt-kind').checked; closeModal('m-tbt');
-    DB.toolbox_reads = [{ id: 'r1', talk_id: id, emp_id: 'x:123:dani', emp_name: 'דני', read_at: '2026-10-11T07:00:00Z' }];
+    DB.toolbox_reads = [{ id: 'r1', talk_id: id, emp_id: 'x:123:dani', emp_name: 'דני', read_at: '2026-10-11T07:00:00Z', doc_url: 'https://od.example/f.pdf', mailed_at: '2026-10-11T07:01:00Z' }, { id: 'r2', talk_id: id, emp_id: 'x:456:rami', emp_name: 'רמי', read_at: '2026-10-11T07:02:00Z', doc_err: 'outlook 429: quota' }, { id: 'r3', talk_id: id, emp_id: 'x:789:gil', emp_name: 'גיל', read_at: '2026-10-11T07:03:00Z' }];
     rTbt();
     const row = Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes('הוראות כניסה'));
     o.tag = row.textContent.includes('קליטת עובד חדש'); o.count = row.querySelector('[onclick^="tbtWho"]').textContent.trim();
@@ -57,7 +57,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.fetch = () => Promise.resolve(new Response(JSON.stringify({ url: 'https://tapugan-safety.pages.dev/api/talk?k=wk', days: 14, link_at: new Date().toISOString() }), { status: 200 }));
     await tbtLink(wid); o.rvWk = document.getElementById('tbt-link-revoke').style.display === 'none'; closeModal('m-tbt-link');
     // who signed: no "did not sign" for induction, still there for weekly
-    tbtWho(id); const wb = document.getElementById('tbt-who-body').textContent; o.whoInd = { miss: wb.includes('לא חתמו'), signer: wb.includes('דני') }; closeModal('m-tbt-who');
+    tbtWho(id); const wb = document.getElementById('tbt-who-body').textContent; o.whoInd = { miss: wb.includes('לא חתמו'), signer: wb.includes('דני') };
+    o.doc = { mailed: wb.includes('נשלח למייל'), link: !!document.querySelector('#tbt-who-body a[href="https://od.example/f.pdf"]'), err: wb.includes('הטופס לא נשלח: outlook 429'), pending: wb.includes('הטופס בשליחה') }; closeModal('m-tbt-who');
     tbtWho(wid); o.whoWk = document.getElementById('tbt-who-body').textContent.includes('לא חתמו');
     return o;
   });
@@ -67,12 +68,13 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('edit brings the mark back (and not on a weekly talk)', r.edit === true && r.editWk === false);
   check('duplicate keeps it', r.dup === true);
   check('the list marks the induction talk', r.tag);
-  check('its count is signatures only, not "of all workers"; weekly keeps "x / all"', r.count === '1' && /\//.test(r.wcount), [r.count, r.wcount]);
+  check('its count is signatures only, not "of all workers"; weekly keeps "x / all"', r.count === '3' && /\//.test(r.wcount), [r.count, r.wcount]);
   check('the link dialog says permanent and offers cancel', r.link === 'shown' && /קבוע/.test(r.days) && r.url.endsWith('perm0') && r.rvShown, r.days);
   check('cancel asks first; no answer = nothing sent', r.kept === 'kept' && r.keptCalls === 0);
   check('cancel: the new link replaces the old in the dialog, and link_v is kept', r.rev === 'shown' && r.revUrl.endsWith('k=new') && r.linkV === 1 && /בוטל/.test(r.revToast || ''), r);
   check('a weekly talk\'s link dialog has no cancel button', r.rvWk);
   check('who signed: no "did not sign" list on induction, the signer is there; weekly keeps it', !r.whoInd.miss && r.whoInd.signer && r.whoWk, r);
+  check('who signed on induction: mailed and filed (with the link), the failure reason, or still sending', r.doc.mailed && r.doc.link && r.doc.err && r.doc.pending, r.doc);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
