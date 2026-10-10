@@ -2906,6 +2906,7 @@ id="m-ncr" style="display:none">
     </div>
     <div class="field fw"><label>&#1514;&#1512;&#1490;&#1493;&#1501; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</label>
       <button type="button" class="btn btn-s" id="tbt-say-btn" style="width:100%;margin-bottom:6px" onclick="tbtSay()">&#128266; &#1513;&#1502;&#1506; &#1488;&#1497;&#1498; &#1492;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1497;&#1513;&#1502;&#1506;&#1493; &#1488;&#1514; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492;</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;font-size:12px;color:var(--t2)">&#1490;&#1501; &#1489;&#1513;&#1508;&#1493;&#1514; (&#1488;&#1495;&#1512;&#1497; &#1514;&#1512;&#1490;&#1493;&#1501;):<button type="button" class="btn btn-s btn-sm" id="tbt-say-ar" onclick="tbtSay('ar',this)">&#128266; &#1575;&#1604;&#1593;&#1585;&#1576;&#1610;&#1577;</button><button type="button" class="btn btn-s btn-sm" id="tbt-say-ru" onclick="tbtSay('ru',this)">&#128266; &#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</button><button type="button" class="btn btn-s btn-sm" id="tbt-say-am" onclick="tbtSay('am',this)">&#128266; &#4768;&#4635;&#4653;&#4763;</button></div>
       <button type="button" class="btn btn-s" id="tbt-tr-btn" style="width:100%" onclick="tbtTranslate()">&#127760; &#1514;&#1512;&#1490;&#1501; &#1500;&#1506;&#1512;&#1489;&#1497;&#1514;, &#1512;&#1493;&#1505;&#1497;&#1514; &#1493;&#1488;&#1502;&#1492;&#1512;&#1497;&#1514;</button>
       <div style="font-size:11px;color:var(--t3);margin-top:4px">&#1514;&#1512;&#1490;&#1493;&#1501; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;. &#1492;&#1506;&#1493;&#1489;&#1491; &#1489;&#1493;&#1495;&#1512; &#1513;&#1508;&#1492; &#1489;&#1491;&#1507;. &#1489;&#1500;&#1497; &#1514;&#1512;&#1490;&#1493;&#1501; &#1492;&#1493;&#1488; &#1512;&#1493;&#1488;&#1492; &#1506;&#1489;&#1512;&#1497;&#1514;.</div>
       <details id="tbt-tr-box" style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">&#1492;&#1514;&#1512;&#1490;&#1493;&#1502;&#1497;&#1501; (&#1513;&#1493;&#1512;&#1492; &#1512;&#1488;&#1513;&#1493;&#1504;&#1492; = &#1492;&#1504;&#1493;&#1513;&#1488;)</summary>
@@ -11662,19 +11663,24 @@ function tbtQuizAI(){
 }
 // Listen before publishing (10/10/2026, Michael: "\u05d4\u05d3\u05d9\u05d1\u05d5\u05d1 \u05dc\u05d0 \u05d8\u05d5\u05d1, \u05db\u05de\u05d5 \u05e8\u05d5\u05d1\u05d5\u05d8"): the same voice the
 // worker hears, from the text in the form, through /api/talk op 'say'. The player is the one the
-// worker's page uses, loaded once from /api/talk?op=player.
-var _tbtSayCur=null;
-function _tbtSayLbl(on){var b=g('tbt-say-btn');if(b)b.textContent=on?'\u23f9 \u05e2\u05e6\u05d5\u05e8':'\ud83d\udd0a \u05e9\u05de\u05e2 \u05d0\u05d9\u05da \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d9\u05e9\u05de\u05e2\u05d5 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4';}
-function tbtSay(){
+// worker's page uses, loaded once from /api/talk?op=player. Michael: "\u05d4\u05e9\u05de\u05e2\u05d4 \u05d2\u05dd \u05d1\u05e9\u05e4\u05d5\u05ea?": the
+// same button per language reads that language's translation box (first line = the title),
+// in a voice of that language.
+var _tbtSayCur=null,_tbtSayEl=null,_tbtSayTxt='';
+function _tbtSayLbl(on){var b=_tbtSayEl||g('tbt-say-btn');if(!b)return;if(on){_tbtSayTxt=b.textContent;b.textContent='\u23f9 \u05e2\u05e6\u05d5\u05e8';}else{if(_tbtSayTxt)b.textContent=_tbtSayTxt;_tbtSayTxt='';_tbtSayEl=null;}}
+function tbtSay(lang,el){
   if(_tbtSayCur){_tbtSayCur.stop();_tbtSayCur=null;_tbtSayLbl(false);return;}
-  var title=(g('tbt-title').value||'').trim(),body=(g('tbt-body').value||'').trim();
-  if(!body){toast('\u05d0\u05d9\u05df \u05ea\u05d5\u05db\u05df \u05dc\u05d4\u05e7\u05e8\u05d0\u05d4');return;}
+  lang=lang==='ar'||lang==='ru'||lang==='am'?lang:'he';
+  var title,body;
+  if(lang==='he'){title=(g('tbt-title').value||'').trim();body=(g('tbt-body').value||'').trim();if(!body){toast('\u05d0\u05d9\u05df \u05ea\u05d5\u05db\u05df \u05dc\u05d4\u05e7\u05e8\u05d0\u05d4');return;}}
+  else{var t=(g('tbt-'+lang).value||'').trim();if(!t){toast('\u05d0\u05d9\u05df \u05ea\u05e8\u05d2\u05d5\u05dd \u05dc\u05e9\u05e4\u05d4 \u05d4\u05d6\u05d5. \u05e7\u05d5\u05d3\u05dd \ud83c\udf10 \u05ea\u05e8\u05d2\u05dd');return;}var nl=t.indexOf('\n');title=nl<0?t:t.substring(0,nl).trim();body=nl<0?'':t.substring(nl+1).trim();}
+  _tbtSayEl=el||g('tbt-say-btn');
   _tbtSayCur={stop:function(){}};_tbtSayLbl(true);
   // Created inside the tap: a phone lets audio start only from a user gesture.
   var AC=window.AudioContext||window.webkitAudioContext,ac=null;try{ac=AC?new AC():null;if(ac)ac.resume();}catch(e){ac=null;}
   var go=function(){
     if(!_tbtSayCur)return;
-    _tbtSayCur=window.tapSay({ac:ac,url:'/api/talk',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'say',lang:'he',title:title,body:body})},
+    _tbtSayCur=window.tapSay({ac:ac,url:'/api/talk',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'say',lang:lang,title:title,body:body})},
       onEnd:function(){_tbtSayCur=null;_tbtSayLbl(false);},
       onFail:function(e){_tbtSayCur=null;_tbtSayLbl(false);toast('\u26a0\ufe0f \u05d4\u05d4\u05e7\u05e8\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+String(e||'').substring(0,60));}});
   };
