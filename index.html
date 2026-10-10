@@ -1254,13 +1254,14 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <!-- USERS PAGE (admin only) -->
 <div id="pg-users" class="page">
   <div class="row">
-    <div class="page-title">&#128100; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; <span>&#1504;&#1497;&#1492;&#1493;&#1500;</span></div>
+    <div class="page-title">&#128272; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1493;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; <span>&#1504;&#1497;&#1492;&#1493;&#1500;</span></div>
     <button class="btn btn-p" onclick="openNewUserModal()">+ &#1502;&#1513;&#1514;&#1502;&#1513; &#1495;&#1491;&#1513;</button>
   </div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
   <!-- PASSWORDS (admin, 10/10/2026, Michael: "&#1502;&#1502;&#1513;&#1511;&#1497; &#1492;&#1513;&#1497;&#1504;&#1493;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492; &#1510;&#1512;&#1497;&#1499;&#1497;&#1501; &#1500;&#1513;&#1489;&#1514; &#1489;&#1502;&#1511;&#1493;&#1501; &#1488;&#1495;&#1491; &#1506;&#1501; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;") -->
   <div class="card" id="codes-card" style="padding:12px 14px;margin-bottom:12px">
     <div style="font-weight:700;font-size:15px">&#128272; &#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514;</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px"><button type="button" class="btn btn-s btn-sm" onclick="_changePwOpen()">&#128273; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1500;&#1497;</button><button type="button" class="btn btn-s btn-sm" onclick="_mfaSetupOpen()">&#128272; &#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button></div>
     <div style="font-size:12px;color:var(--t2);margin:2px 0 8px">&#1499;&#1500; &#1492;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1489;&#1502;&#1511;&#1493;&#1501; &#1488;&#1495;&#1491;. &#1504;&#1513;&#1502;&#1512;&#1493;&#1514; &#1489;&#1513;&#1512;&#1514;, &#1493;&#1499;&#1500; &#1492;&#1495;&#1500;&#1508;&#1492; &#1504;&#1512;&#1513;&#1502;&#1514; &#1489;&#1497;&#1493;&#1502;&#1503; (&#1502;&#1497; &#1493;&#1502;&#1514;&#1497;, &#1489;&#1500;&#1497; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492;). &#1488;&#1495;&#1512;&#1497; &#1492;&#1495;&#1500;&#1508;&#1492;, &#1502;&#1497; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513; &#1489;&#1505;&#1497;&#1505;&#1502;&#1492; &#1497;&#1510;&#1496;&#1512;&#1498; &#1500;&#1492;&#1511;&#1500;&#1497;&#1491; &#1488;&#1514; &#1492;&#1495;&#1491;&#1513;&#1492;.</div>
     <div id="codes-body">&#1496;&#1493;&#1506;&#1503;...</div>
   </div>
@@ -1276,6 +1277,18 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
 </div>
 
+<!-- PASSWORD HUB (10/10/2026): the one entry "users and passwords" for a non-admin -->
+<div class="overlay" id="ov-pwhub" onclick="closeModal('m-pwhub')"></div>
+<div class="modal" id="m-pwhub" style="display:none;max-width:400px">
+  <button class="close-btn" onclick="closeModal('m-pwhub')">&#10005;</button>
+  <div class="modal-title">&#128272; &#1492;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1513;&#1500;&#1497;</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button type="button" class="btn btn-s" style="min-height:44px" onclick="closeModal('m-pwhub');_changePwOpen()">&#128273; &#1513;&#1504;&#1492; &#1488;&#1514; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1500;&#1497;</button>
+    <button type="button" class="btn btn-s" style="min-height:44px" onclick="closeModal('m-pwhub');_mfaSetupOpen()">&#128272; &#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button>
+  </div>
+  <div style="font-size:12px;color:var(--t3);margin-top:8px">&#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1493;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;: &#1488;&#1491;&#1502;&#1497;&#1503; &#1489;&#1500;&#1489;&#1491;.</div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-pwhub')">&#1505;&#1490;&#1493;&#1512;</button></div>
+</div>
 <!-- NEW USER MODAL (admin only) -->
 <div class="overlay" id="ov-newuser" onclick="closeModal('m-newuser')"></div>
 <div class="modal" id="m-newuser" style="display:none;max-width:440px">
@@ -2149,7 +2162,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','loc')" data-kw="אזורים"><span class="sic">&#128205;</span>מיקומים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','prj')"><span class="sic">&#127959;&#65039;</span>פרויקטים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','lg')" data-kw="log"><span class="sic">&#128203;</span>יומן פעולות</button>
-    <button class="sheet-btn" id="sheet-btn-users" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','users')" data-kw="הרשאות"><span class="sic">&#128100;</span>משתמשים</button>
+    <button class="sheet-btn" id="sheet-btn-users" onclick="_pwHubOpen()" data-kw="&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1492;&#1512;&#1513;&#1488;&#1493;&#1514; &#1505;&#1497;&#1505;&#1502;&#1492; &#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; 2fa &#1511;&#1493;&#1491; &#1488;&#1497;&#1502;&#1493;&#1514;"><span class="sic">&#128272;</span>&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; &#1493;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514;</button>
     <button class="sheet-btn" id="sheet-btn-audit" data-role-gated="1" style="display:none" onclick="_goFromSheet('m-modules-sheet','audit')" data-kw="audit log"><span class="sic">&#128279;</span>יומן ביקורת</button>
 
     <div class="sheet-group-title">&#129302; AI / הגדרות</div>
@@ -2158,9 +2171,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');openNotifSettings()" data-kw="whatsapp מייל"><span class="sic">&#128276;</span>הגדרות התראות</button>
     <button class="sheet-btn" id="sheet-btn-modhidden" style="display:none" onclick="_modVisOpen()" data-kw="מוסתר הסתרה להחזיר"><span class="sic">&#128065;&#65039;</span>מודולים מוסתרים<span class="mh-n"></span></button>
     <button class="sheet-btn" onclick="_modVisOpen()" data-kw="מודולים ניגודיות"><span class="sic">&#9881;&#65039;</span>הגדרות תצוגה</button>
-    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_changePwOpen()" data-kw="סיסמה"><span class="sic">&#128273;</span>שנה סיסמה</button>
-    <button class="sheet-btn" onclick="closeModal('m-modules-sheet');_mfaSetupOpen()" data-kw="2fa &#1511;&#1493;&#1491; &#1488;&#1489;&#1496;&#1495;&#1492;"><span class="sic">&#128272;</span>&#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</button>
-    <button class="sheet-btn" id="sheet-btn-passkey" data-role-gated="1" style="display:none" onclick="closeModal(m-modules-sheet);_pkRegister()" data-kw="face id passkey &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506;"><span class="sic">&#128273;</span>Face ID / &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506; (&#1508;&#1497;&#1497;&#1500;&#1493;&#1496;)</button>
+    <button class="sheet-btn" id="sheet-btn-passkey" data-role-gated="1" style="display:none" onclick="closeModal('m-modules-sheet');_pkRegister()" data-kw="face id passkey &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506;"><span class="sic">&#128273;</span>Face ID / &#1496;&#1489;&#1497;&#1506;&#1514; &#1488;&#1510;&#1489;&#1506; (&#1508;&#1497;&#1497;&#1500;&#1493;&#1496;)</button>
   </div>
   <div id="m-modules-empty" style="display:none;text-align:center;color:var(--t3);font-size:13px;padding:18px 0">אין מודול שמתאים לחיפוש</div>
 </div>
@@ -12776,6 +12787,15 @@ function _codesLoad(force){
   },function(){g('codes-body').textContent='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
 }
 // Old entry points (the dialog of 10/10/2026, the delete dialog's hint): the users page.
+// One module for users and passwords (10/10/2026, Michael: "\u05d4\u05db\u05d5\u05d5\u05e0\u05d4 \u05d4\u05db\u05dc \u05e6\u05e8\u05d9\u05da \u05dc\u05e9\u05d1\u05ea \u05ea\u05d7\u05ea \u05de\u05d5\u05d3\u05dc \u05d0\u05d7\u05d3").
+// The sheet had three entries (users, change password, two-step); now one. Admin: the users page,
+// where the card holds his password, two-step, the app's passwords and the users. Anyone else:
+// their own password and two-step, the only parts that are theirs.
+function _pwHubOpen(){
+  closeModal('m-modules-sheet');
+  if(typeof _role==='function'&&_role()==='admin'){goPage('users');return;}
+  openModal('m-pwhub');
+}
 function openCodes(){
   if(typeof _role==='function'&&_role()!=='admin'){toast('\u05e8\u05e7 \u05d0\u05d3\u05de\u05d9\u05df');return;}
   goPage('users');_codesLoad(true);
@@ -19000,7 +19020,9 @@ function _applyRoleGates(){
   }catch(e){}
   // Admin-only modules sheet buttons
   var usersBtn=g('sheet-btn-users');
-  if(usersBtn) usersBtn.style.display = isAdmin ? '' : 'none';
+  // One entry for users and passwords, for everyone (10/10/2026): an admin lands on the users page,
+  // anyone else on their own password and two-step sign-in (_pwHubOpen).
+  if(usersBtn) usersBtn.style.display = '';
   var auditBtn=g('sheet-btn-audit');
   if(auditBtn) auditBtn.style.display = isAdmin ? '' : 'none';
   var mhBtn=g('sheet-btn-modhidden');
