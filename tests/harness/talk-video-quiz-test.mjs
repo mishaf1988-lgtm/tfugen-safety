@@ -2,7 +2,7 @@
 // through a one-hour signed link, YouTube through the no-cookie embed, both allowed by the CSP;
 // the questions show on the Hebrew page only, the first answer to each counts, and the score
 // lands on the signature row (quiz_ok / quiz_n). A bad question is left out, not shown broken.
-import { onRequest, makeTalkToken, ytId, quizOf, quizScore } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, ytId, quizOf, quizScore, QZL } from './_build/talk.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -18,6 +18,9 @@ const QUIZ = [
 const TALKS = {
   v1: { id: 'v1', d: '2026-10-11', title: 'סולמות', body: 'שלוש נקודות אחיזה', s: 'פורסמה', trainer: 'מיכאל', video_url: SB + '/storage/v1/object/public/incidents-photos/talkvid-1.mp4', quiz: QUIZ, body_ar: 'سلالم\nثلاث نقاط' },
   v2: { id: 'v2', d: '2026-10-11', title: 'עייפות', body: 'x', s: 'פורסמה', video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10', quiz: null },
+  v4: { id: 'v4', d: '2026-10-11', title: 'סולמות', body: 'x', body_ar: 'سلالم\nx', body_ru: 'Лестницы\nx', s: 'פורסמה',
+    quiz: [{ q: 'כמה נקודות?', a: ['אחת', 'שתיים', 'שלוש', ''], c: 2, t: { ar: { q: 'كم نقطة؟', a: ['واحدة', 'اثنتان', 'ثلاث', ''] }, ru: { q: 'Сколько?', a: ['Одна', 'Две', '', ''] } } },
+      { q: 'מה בודקים?', a: ['סולם', 'מוזיקה'], c: 0, t: { ar: { q: 'ماذا نفحص؟', a: ['السلم', 'الموسيقى'] } } }] },
   v3: { id: 'v3', d: '2026-10-11', title: 'קישור אחר', body: 'x', s: 'פורסמה', video_url: 'https://example.com/v.mp4' },
 };
 const EMPS = [{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור', eid: '7777777' }];
@@ -47,6 +50,12 @@ check('the first answer counts, a later one does not', JSON.stringify(quizScore(
 check('nothing answered = no score', quizScore(Q, '') === null && quizScore(Q, 'junk') === null && quizScore([], '0:1') === null);
 check('an answer to a question that is not there is ignored', JSON.stringify(quizScore(Q, '7:1,0:2')) === '{"ok":1,"n":2}');
 
+const Q4 = TALKS.v4;
+check('Arabic: both translated questions, the right answer in the same place', JSON.stringify(quizOf(Q4, 'ar').map((x) => [x.q, x.c])) === JSON.stringify([['كم نقطة؟', 2], ['ماذا نفحص؟', 0]]));
+check('Russian: a translation with an answer moved or missing is left out, and a question with none too', quizOf(Q4, 'ru').length === 0, quizOf(Q4, 'ru'));
+check('Hebrew is untouched by the translations', quizOf(Q4, 'he')[0].q === 'כמה נקודות?' && quizOf(Q4)[0].q === 'כמה נקודות?');
+check('the page words for the questions exist in all four languages', ['he', 'ar', 'ru', 'am'].every((l) => QZL[l] && QZL[l].t && QZL[l].ok && QZL[l].no));
+
 console.log('\n2. the page');
 {
   const { r, h } = await get('v1');
@@ -74,6 +83,13 @@ console.log('\n2. the page');
   check('another https link: a button that opens it, not an embed', h.includes('href="https://example.com/v.mp4"') && !h.includes('<iframe') && !h.includes('<video'));
 }
 
+{
+  const { h } = await get('v4', 'ar');
+  check('Arabic page: the translated questions, right to left, with the Arabic heading', h.includes('كم نقطة؟') && h.includes('id="qz" dir="rtl"') && h.includes(QZL.ar.t) && !h.includes('כמה נקודות?'));
+  const ru = (await get('v4', 'ru')).h;
+  check('Russian page: no questions when none is translated well', !ru.includes('fieldset data-q'));
+}
+
 console.log('\n3. the signature row');
 {
   const { k } = await get('v1');
@@ -94,6 +110,13 @@ console.log('\n3. the signature row');
   const fd = { qa: '0:2', l: 'ar' };
   await post(k, fd);
   check('an Arabic signature has no score (the questions are Hebrew)', !('quiz_ok' in (w.inserts[0] || {})), w.inserts[0]);
+}
+
+{
+  const k4 = (await get('v4')).k;
+  w.inserts = [];
+  await post(k4, { qa: '0:2,1:1', l: 'ar' });
+  check('an Arabic signature on translated questions is scored (1 of 2)', (w.inserts[0] || {}).quiz_ok === 1 && w.inserts[0].quiz_n === 2, w.inserts[0]);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

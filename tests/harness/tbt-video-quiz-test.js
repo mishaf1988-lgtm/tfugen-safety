@@ -70,6 +70,24 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.confirm = () => true;
     window.fetch = () => Promise.resolve(new Response('x', { status: 500 })); o.aiFail = await tbtQuizAI(); o.aiFailBtn = document.getElementById('tbt-quiz-ai').disabled;
     closeModal('m-tbt');
+    // 6b. the translate button translates the questions too; a question edited afterwards loses them
+    openModal('m-tbt'); fill(); _tbtQuizLoad([{ q: 'כמה נקודות?', a: ['אחת', 'שתיים', 'שלוש', ''], c: 2 }, { q: 'מה בודקים?', a: ['סולם', 'מוזיקה', '', ''], c: 0 }]);
+    const reqs = [];
+    window.fetch = (u, init) => { const b = JSON.parse(init.body); const p = b.messages[0].content; reqs.push(p);
+      const lang = /to (Arabic|Russian|Amharic)/.exec(p)[1];
+      if (/quiz questions/.test(p)) {
+        const src = JSON.parse(p.slice(p.indexOf('[')));
+        const out = lang === 'Russian' ? src.slice(0, 1) : src.map((x) => ({ q: lang + ': ' + x.q, a: x.a.map((a) => a ? lang + '-' + a : '') }));
+        return Promise.resolve(new Response(JSON.stringify({ content: [{ text: JSON.stringify(out) }] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ content: [{ text: lang + ' title\n' + lang + ' body' }] }), { status: 200 })); };
+    o.tr = await tbtTranslate();
+    o.trReqs = reqs.filter((p) => /quiz questions/.test(p)).length;
+    o.trTag = document.querySelector('#tbt-quiz .tq .tq-tr') && document.querySelector('#tbt-quiz .tq .tq-tr').textContent;
+    o.trToast = toasts.slice(-1)[0];
+    document.querySelectorAll('#tbt-quiz .tq')[1].querySelectorAll('.tq-a')[1].value = 'מוזיקה חזקה';
+    n = ins.length; svTbt(); const trSaved = ins.slice(-1)[0][1].quiz;
+    o.trSaved = { q0: trSaved[0].t, q1: trSaved[1].t || null };
     // 7. a talk with only a video can be saved; an upload in progress blocks the save
     openModal('m-tbt'); set('tbt-title', 'סרטון בלבד'); set('tbt-trainer', 'מיכאל'); set('tbt-trainer-q', 'ממונה'); set('tbt-video', 'https://youtu.be/dQw4w9WgXcQ');
     _tbtVidBusy = true; n = ins.length; svTbt(); o.busy = { ins: ins.length - n, t: toasts.slice(-1)[0] }; _tbtVidBusy = false;
@@ -97,6 +115,11 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the AI text is cleaned to keyboard characters, the right answer marked', r.aiQ === 'מה עושים לפני עלייה-לסולם?' && r.aiRight, r.aiQ);
   check('written questions are replaced only after asking', r.aiKept === 'kept' && r.aiKeptRows === 2);
   check('an AI failure says so and frees the button', r.aiFail === 'fail' && r.aiFailBtn === false);
+  check('the translate button also translates the questions, one call per language', r.trReqs === 3, r.trReqs);
+  check('a translated question shows which languages it has', /ערבית/.test(r.trTag || '') && /אמהרית/.test(r.trTag || '') && !/רוסית/.test(r.trTag || ''), r.trTag);
+  check('a language whose answer came back wrong is reported, not saved', /שאלות ברוסית/.test(r.trToast || ''), r.trToast);
+  check('saved: the translations ride on the question, in the same places', r.trSaved.q0 && r.trSaved.q0.ar.q === 'Arabic: כמה נקודות?' && r.trSaved.q0.ar.a[3] === '' && r.trSaved.q0.am && !r.trSaved.q0.ru, r.trSaved);
+  check('a question edited after the translation saves without it', r.trSaved.q1 === null, r.trSaved.q1);
   check('a video upload in progress blocks the save', r.busy.ins === 0, r.busy);
   check('a talk with only a video (no text, no file) can be saved', r.vidOnly === 1, r.vidOnly);
   check('who signed: each worker\'s score, nothing for one who did not answer', r.who.half && r.who.full && r.who.none === 2, r.who);
