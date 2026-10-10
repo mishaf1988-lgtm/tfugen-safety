@@ -6162,8 +6162,11 @@ function _renderToday(){
   var today=new Date().toISOString().split('T')[0];
   var items=[];
   // 1. Morning round (highest priority — daily task)
+  // Not when the rounds module is hidden (10/10/2026, Michael hid it: no rounds now): the line
+  // asked every day for a round nobody does, and counted in "17 actions".
   var todayRound=(DB.rounds||[]).find(function(r){return r.d===today;});
-  if(!todayRound){
+  var roundHidden=typeof _modIsHidden==='function'&&_modIsHidden('round');
+  if(!todayRound&&!roundHidden){
     items.push({priority:0,icon:'☀',title:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 - \u05d8\u05e8\u05dd \u05d1\u05d5\u05e6\u05e2',sub:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d9\u05d5\u05de\u05d9\u05ea',badge:'\u05e2\u05e9\u05d4',badgeCls:'amber',fn:'round',a1:'',a2:''});
   }
   // 1a. Hazards reported, routed, and still not fixed. Priority 1 \u2014 the same
