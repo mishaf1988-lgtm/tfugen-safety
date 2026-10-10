@@ -10,6 +10,7 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec', G
 const T = {
   ind: { id: 'ind1', d: '2026-10-11', title: 'הוראות כניסה למשמרת', body: 'כללי', s: 'פורסמה', kind: 'induction', link_v: 0 },
   wk: { id: 'wk1', d: '2026-10-11', title: 'סולמות', body: 'x', s: 'פורסמה', kind: null, link_v: 0 },
+  dp: { id: 'dp1', d: '2026-10-11', title: 'מסועים', body: 'x', s: 'פורסמה', kind: null, link_v: 0, dept: 'אריזה' },
 };
 const w = { patches: [], inserts: [] };
 globalThis.fetch = async (url, init) => {
@@ -17,7 +18,7 @@ globalThis.fetch = async (url, init) => {
   const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { 'Content-Type': 'application/json' } });
   if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); const b = JSON.parse(init.body); w.patches.push({ id, b }); if (w.patchFail) return new Response('x', { status: 500 }); Object.assign(T[Object.keys(T).find((k) => T[k].id === id)], b); return new Response(null, { status: 204 }); }
   if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || ''); w.sel = u; return json(Object.values(T).filter((t) => t.id === id).map((t) => ({ ...t }))); }
-  if (u.startsWith(SB + '/rest/v1/emp')) return m === 'PATCH' ? new Response(null, { status: 204 }) : json([{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור', eid: '7777777' }]);
+  if (u.startsWith(SB + '/rest/v1/emp')) return m === 'PATCH' ? new Response(null, { status: 204 }) : json([{ id: 'e1', n: 'אחמד כהן', dep: 'ייצור', eid: '7777777' }, { id: 'e2', n: 'יוסי לוי', dep: 'אריזה' }]);
   if (u.startsWith(SB + '/rest/v1/toolbox_reads')) { if (m === 'POST') { w.inserts.push(JSON.parse(init.body)); return new Response(null, { status: 201 }); } return json([]); }
   if (u.startsWith(SB + '/storage/v1/object/')) return json({ Key: 'x' });
   if (u === SB + '/auth/v1/user') { const tok = init.headers.Authorization.replace('Bearer ', ''); return tok === 'good' ? json({ id: 'u1', email: 'michael@tfugen.local' }) : tok === 'rep' ? json({ id: 'u2', email: 'rep@tfugen.local' }) : new Response('no', { status: 401 }); }
@@ -67,6 +68,17 @@ console.log('\n2. the link from the manager');
   check('a weekly talk still gets its 14-day link', wl.st === 200 && wl.j.days === 14 && !wl.j.perm);
   const forged = await makePermToken(ENV, 'wk1', 0);
   check('a permanent token made for a weekly talk does not open it', (await open(URL0 + '?k=' + encodeURIComponent(forged))).st === 403);
+}
+
+console.log('\n3. a talk for one department');
+{
+  const k = await makeTalkToken(ENV, 'dp1');
+  const p = await open(URL0 + '?k=' + encodeURIComponent(k));
+  check('the talk read asks for dept', /link_v,dept/.test(w.sel || ''));
+  check('the list on the page: only that department\'s workers', p.h.includes('יוסי לוי') && !p.h.includes('אחמד כהן'));
+  check('"not on the list" is still there', p.h.includes('value="__other"'));
+  w.inserts = [];
+  check('a worker from another department can still sign by the list (moved, covers a shift)', (await sign(k)) === 200 && w.inserts.length === 1 && w.inserts[0].emp_id === 'e1');
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
