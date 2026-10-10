@@ -2876,6 +2876,7 @@ id="m-ncr" style="display:none">
   <div id="tbt-link-days" style="font-size:12px;color:var(--t2);margin-bottom:10px"></div>
   <div id="tbt-link-qr" style="text-align:center;margin-bottom:10px;min-height:40px"></div>
   <input id="tbt-link-url" readonly onclick="this.select()" style="width:100%;font:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;direction:ltr;text-align:left">
+  <button type="button" class="btn btn-s" id="tbt-link-revoke" style="display:none;width:100%;margin-top:8px;min-height:44px" onclick="tbtRevoke()">⛔ בטל את הקישור והפק קישור חדש</button>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-link')">סגור</button><button class="btn btn-s" style="min-height:44px" onclick="_tbtLinkCopy()">&#128203; העתק</button><button class="btn btn-p" style="min-height:44px;background:#25D366;border-color:#25D366" onclick="_tbtLinkShare()">&#128241; שתף</button></div>
 </div>
 <div class="overlay" id="ov-tbt" onclick="closeModal('m-tbt')"></div>
@@ -2886,6 +2887,7 @@ id="m-ncr" style="display:none">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="tbt-d"></div>
     <div class="field"><label>&#1505;&#1496;&#1496;&#1493;&#1505;</label><select id="tbt-s"><option>&#1496;&#1497;&#1493;&#1496;&#1492;</option><option>&#1508;&#1493;&#1512;&#1505;&#1502;&#1492;</option></select></div>
     <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488; *</label><input id="tbt-title"></div>
+    <div class="field fw"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="tbt-kind" style="width:22px;height:22px;flex:none;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0"> 🆕 הדרכת קליטה לעובד חדש (טופס 08.02): קישור ו-QR קבועים שלא פגים</label></div>
     <div class="field"><label>&#1502;&#1491;&#1512;&#1497;&#1498; (&#1513;&#1501;) *</label><input id="tbt-trainer" maxlength="60"></div>
     <div class="field"><label>&#1499;&#1513;&#1497;&#1512;&#1493;&#1514; &#1492;&#1502;&#1491;&#1512;&#1497;&#1498; *</label><input id="tbt-trainer-q" maxlength="80" placeholder="&#1502;&#1502;&#1493;&#1504;&#1492; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;"></div>
     <div class="field fw"><label>&#1514;&#1493;&#1499;&#1503; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492; (&#1502;&#1492; &#1513;&#1492;&#1506;&#1493;&#1489;&#1491; &#1497;&#1511;&#1512;&#1488;)</label><textarea id="tbt-body" rows="10"></textarea></div>
@@ -5061,7 +5063,7 @@ function _genEdit(tbl,id){
       }
       el.value=v;
     });
-    if(tbl==='toolbox_talks'&&typeof _tbtQuizLoad==='function')_tbtQuizLoad(rec.quiz);
+    if(tbl==='toolbox_talks'&&typeof _tbtQuizLoad==='function'){_tbtQuizLoad(rec.quiz);var _tk=g('tbt-kind');if(_tk)_tk.checked=rec.kind==='induction';}
     // svTr / svToolbox write `file_url: _attachUrls[area] || null` on EVERY save.
     // Nothing restored _attachUrls when the form was opened for editing, so a
     // trip through ✎ to change an expiry date silently deleted the attached
@@ -11338,7 +11340,7 @@ function rTbt(){
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var dupBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtDup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05e2\u05dd \u05d0\u05d5\u05ea\u05d5 \u05ea\u05d5\u05db\u05df">\ud83d\udccb \u05e9\u05db\u05e4\u05dc</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+_tbtLangTag(r)+(r.kind==='induction'?'<div style="font-size:10px;font-weight:700;color:#1e3a8a">\ud83c\udd95 '+_TBT_IND_L+'</div>':'')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN()&&r.kind!=='induction'?_tbtSignedNow(r.id)+' / '+_tbtEmpN():n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 // 05/10/2026: the amended training regulations (in force 16/10/2026) want the trainer's
@@ -11372,7 +11374,7 @@ function svTbt(send){
   // Workers already signed this text (ISO 45001 7.4 evidence): changing it makes their signatures look like signatures on the new text.
   var nSig=editId?_tbtReads(editId):0;
   if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am||(old.file_url||null)!==file||(old.video_url||null)!==video)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
-  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,video_url:video,quiz:quiz,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
+  var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,video_url:video,quiz:quiz,kind:(g('tbt-kind')&&g('tbt-kind').checked)?'induction':null,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
   if(!_svEditId('toolbox_talks'))r.created_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
   _svPut('toolbox_talks',r);
   addLog('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+title.substring(0,30));sdb();
@@ -11396,6 +11398,7 @@ function tbtDup(id){
   g('tbt-d').value=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});
   g('tbt-s').value=_TBT_DRAFT;
   _tbtQuizLoad(r.quiz);
+  g('tbt-kind').checked=r.kind==='induction';
   _tbtTrainerFill();
   _tbtTrSrc=(r.title||'')+'\n'+(r.body||'');
   if(r.file_url){_attachUrls['tbt-attach-area']=r.file_url;_attachRender('tbt-attach-area',r.file_url,String(r.file_url).split('/').pop().split('?')[0]);}
@@ -11422,6 +11425,35 @@ function _tbtLinkErr(st,er){
   var m={401:'\u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9',403:'\u05e8\u05e7 \u05de\u05e0\u05d4\u05dc \u05d0\u05d5 \u05d0\u05d3\u05de\u05d9\u05df \u05d9\u05db\u05d5\u05dc \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8',404:'\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2\u05d4 \u05dc\u05e9\u05e8\u05ea. \u05dc\u05d7\u05db\u05d5\u05ea \u05dc\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1',409:'\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05dc\u05d0 \u05de\u05e4\u05d5\u05e8\u05e1\u05de\u05ea \u05d1\u05e9\u05e8\u05ea. \u05dc\u05e8\u05e2\u05e0\u05df \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1',503:'\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8 \u05dc\u05d9\u05e6\u05d9\u05e8\u05ea \u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd (TRUSTEE_NOTIFY_SECRET)'};
   return m[st]||((er?er+' ':'')+'('+(st||'?')+')');
 }
+// New-worker induction (10/10/2026, Michael: "\u05e8\u05e7 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9, \u05d0\u05d7\u05e8\u05d9\u05dd \u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9"): a talk marked
+// kind=induction gets a permanent link from /api/talk (no 14-day expiry) for a QR at the entrance.
+// "Cancel link" raises link_v on the server: the printed QR stops and a new one is shown.
+var _TBT_IND_L='\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9, \u05e7\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05d5\u05e2';
+function _tbtLinkShow(r,url,perm){
+  _tbtLinkTxt=(perm?'\u05d4\u05d3\u05e8\u05db\u05ea \u05e7\u05dc\u05d9\u05d8\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ':'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: ')+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0, \u05dc\u05e6\u05e4\u05d5\u05ea \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd:\n'+url;
+  g('tbt-link-title').textContent=r.title||'';
+  g('tbt-link-days').textContent='\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e7\u05d1\u05d5\u05e2, \u05dc\u05d0 \u05e4\u05d2. \u05dc\u05d4\u05d3\u05e4\u05d9\u05e1 \u05d0\u05ea \u05d4-QR \u05d5\u05dc\u05ea\u05dc\u05d5\u05ea \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d0\u05d5 \u05d0\u05e6\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05d0\u05dd \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d3\u05dc\u05e3: "\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8".';
+  g('tbt-link-url').value=url;
+  var rv=g('tbt-link-revoke');if(rv){rv.style.display='';rv.dataset.id=r.id;}
+  var box=g('tbt-link-qr');box.innerHTML='';
+  _eqiQrLib(function(){if(g('tbt-link-url').value===url)box.innerHTML=_eqiQrSvg(url,220);});
+  openModal('m-tbt-link');
+  return 'shown';
+}
+function tbtRevoke(){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  var b=g('tbt-link-revoke'),id=b&&b.dataset.id,r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
+  if(!r)return Promise.resolve('missing');
+  if(!confirm('\u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05d5\u05e2? \u05d4-QR \u05e9\u05db\u05d1\u05e8 \u05ea\u05dc\u05d5\u05d9 \u05d9\u05e4\u05e1\u05d9\u05e7 \u05dc\u05e2\u05d1\u05d5\u05d3, \u05d5\u05d9\u05d5\u05e4\u05e7 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4.'))return Promise.resolve('kept');
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'revoke',id:id})})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
+  .then(function(x){
+    if(!x.ok||!x.j||!x.j.url){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05d1\u05d5\u05d8\u05dc: '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
+    if(typeof x.j.link_v==='number')r.link_v=x.j.link_v;
+    toast('\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d9\u05e9\u05df \u05d1\u05d5\u05d8\u05dc \u2713 \u05d6\u05d4 \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05d7\u05d3\u05e9');
+    return _tbtLinkShow(r,x.j.url,true);
+  })['catch'](function(e){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05d1\u05d5\u05d8\u05dc: '+((e&&e.message)||e));return 'failed';});
+}
 function tbtLink(id){
   if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
   var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
@@ -11431,10 +11463,12 @@ function tbtLink(id){
   .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
   .then(function(x){
     if(!x.ok||!x.j||!x.j.url){toast('\u26a0\ufe0f \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8: '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
+    if(x.j.perm)return _tbtLinkShow(r,x.j.url,true);
     var days=x.j.days||14;
     // The server wrote link_at; keep it here too so the table shows the new date now.
     if(x.j.link_at){r.link_at=x.j.link_at;sdb();rTbt();}
     _tbtLinkTxt='\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0 \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd (\u05d1\u05ea\u05d5\u05e7\u05e3 '+days+' \u05d9\u05de\u05d9\u05dd):\n'+x.j.url;
+    var rv=g('tbt-link-revoke');if(rv)rv.style.display='none';
     g('tbt-link-title').textContent=r.title||'';
     g('tbt-link-days').textContent='\u05d1\u05ea\u05d5\u05e7\u05e3 '+(x.j.link_at?'\u05e2\u05d3 '+fd(_tbtLinkEnd(r)):days+' \u05d9\u05de\u05d9\u05dd')+'. \u05dc\u05e1\u05e8\u05d5\u05e7 \u05de\u05d4\u05d8\u05d0\u05d1\u05dc\u05d8, \u05dc\u05e6\u05dc\u05dd \u05dc\u05de\u05d5\u05d3\u05e2\u05d4, \u05d0\u05d5 \u05dc\u05e9\u05ea\u05e3 \u05d1\u05d5\u05d5\u05d0\u05d8\u05e1\u05d0\u05e4.';
     g('tbt-link-url').value=x.j.url;
@@ -11473,7 +11507,7 @@ function _tbtTrReset(){
   var b=g('tbt-tr-btn');if(b&&b.dataset.label){b.disabled=false;b.textContent=b.dataset.label;}
   // Every opening fills these from the record or starts them empty: a video or questions left
   // from the talk opened before must not ride into a new one.
-  _tbtQuizRun++;_tbtQuizLoad(null);var tv=g('tbt-video');if(tv)tv.value='';
+  _tbtQuizRun++;_tbtQuizLoad(null);var tv=g('tbt-video');if(tv)tv.value='';var tk=g('tbt-kind');if(tk)tk.checked=false;
   var qb=g('tbt-quiz-ai');if(qb&&qb.dataset.label){qb.disabled=false;qb.textContent=qb.dataset.label;}
 }
 var _TBT_LANG={he:'\u05e2\u05d1\u05e8\u05d9\u05ea',ar:'\u05e2\u05e8\u05d1\u05d9\u05ea',ru:'\u05e8\u05d5\u05e1\u05d9\u05ea',am:'\u05d0\u05de\u05d4\u05e8\u05d9\u05ea'};
@@ -11677,10 +11711,12 @@ function tbtWho(id){
   var leftOf=function(x){var e=byId[String(x.emp_id)];return e&&_empLeft(e)?'\u05e2\u05d6\u05d1 \u05d1-'+fd(e.left_d):'';};
   var gone=reads.filter(function(x){return !isOut(x)&&!cur[String(x.emp_id)];}).length;
   var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!_empLeft(e)&&!signed[String(e.id)]){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
+  // Induction is for new workers only: the whole list "did not sign" would be noise.
+  if(t.kind==='induction')miss={};
   var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);
   var tm=function(v){var d=new Date(v);return isNaN(d)?'':fd(d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'});};
   var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'+(t.trainer?'<div style="font-size:12px;margin-bottom:8px">\u05de\u05d3\u05e8\u05d9\u05da: '+esc(t.trainer)+(t.trainer_qual?', '+esc(t.trainer_qual):'')+(t.trainer_sig_url?'<div>\u05d4\u05e6\u05d4\u05e8\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05d7\u05ea\u05de\u05d4 \u05d1-'+tm(t.trainer_signed_at)+' <img data-sign="'+esc(t.trainer_sig_url)+'" alt="" style="height:36px;max-width:110px;vertical-align:middle;background:#fff;border:1px solid #e5e7eb;border-radius:4px"></div>':'<div style="color:#b45309">\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</div>')+'</div>':'')+'<div style="font-size:12px;margin-bottom:8px">'+esc(_TBT_DECL)+'</div>'
-    +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone-outN)+'</span>'+(outN?' <span class="b bX">\u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4: '+outN+'</span>':'')+' <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span> <span id="tbt-who-old"></span></div>';
+    +'<div style="margin-bottom:8px"><span class="b bG">\u05d7\u05ea\u05de\u05d5: '+(reads.length-gone-outN)+'</span>'+(outN?' <span class="b bX">\u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4: '+outN+'</span>':'')+(t.kind==='induction'?'':' <span class="b '+(missN?'bR':'bG')+'">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5: '+missN+'</span>')+' <span id="tbt-who-old"></span></div>';
   h+=reads.length?'<div class="tbl-wrap"><table><thead><tr><th scope="col">\u05e9\u05dd</th><th scope="col">\u05ea.\u05d6 / \u05d3\u05e8\u05db\u05d5\u05df</th><th scope="col">\u05de\u05d7\u05dc\u05e7\u05d4</th><th scope="col">\u05de\u05ea\u05d9</th><th scope="col">\u05e9\u05e4\u05d4</th><th scope="col">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr></thead><tbody>'
     +reads.map(function(x){return '<tr><td>'+esc(x.emp_name||'-')+_tbtQuizTag(x)+(cur[String(x.emp_id)]?'':'<div style="font-size:10px;color:var(--t3)">'+(isOut(x)?'\u05d7\u05ea\u05dd \u05de\u05d7\u05d5\u05e5 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4':(leftOf(x)||'\u05dc\u05d0 \u05d1\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd'))+'</div>')+'<div class="tbt-old" data-rid="'+esc(x.id||'')+'" style="font-size:10px;font-weight:700;color:#b45309"></div></td><td class="tbt-idno" data-rid="'+esc(x.id||'')+'" style="direction:ltr;text-align:right">'+esc(_tbtIdMask(x.id_no))+'</td><td>'+esc(x.dept||'-')+'</td><td style="white-space:nowrap">'+tm(x.read_at)+'<div style="font-size:10px;color:var(--t3)">'+esc(_TBT_DEV[x.device]||x.device||'')+(_TBT_MODE[x.mode]?(x.device?', ':'')+_TBT_MODE[x.mode]:'')+'</div></td><td>'+esc(_TBT_LANG[x.lang]||x.lang||'-')+'</td><td>'+(x.sig_url?'<img data-sign="'+esc(x.sig_url)+'" alt="" style="height:36px;max-width:110px;background:#fff;border:1px solid #e5e7eb;border-radius:4px">':'-')+'</td></tr>';}).join('')
     +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
