@@ -180,7 +180,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: נכתבו באנגלית.
 הכלל: עברית תמיד.
 נאכף: `hebrew-reply.py` (Stop) בודק כל קטע טקסט לחוד, `hebrew-reply-test.py`.
-חזר: 40 (02-09/10, הערות ביניים אחרי כלי; 09/10 שלוש, אחרי תוצאת בדיקה. `hebrew-midturn.py` תופס רק אחרי שיצאה).
+חזר: 41 (10/10: שיחה מ-`/home/user`, ה-hooks לא נטענו). בלי repo כתיקיית עבודה אין hooks.
 
 **14. שיחה ארוכה מדי (01/10/2026).**
 מה קרה: הודעות איטיות ויקרות; "שיחה חדשה" הוטל על מיכאל.
