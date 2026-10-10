@@ -13,7 +13,7 @@
 // account to the factory's server by sending a manager a link.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, CF_PROD } from '../_shared.js';
-import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow, hasMail } from '../_onedrive.js';
+import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow, hasMail, stateGet, stateSet } from '../_onedrive.js';
 
 const REDIRECT = CF_PROD + '/api/ms-auth';
 const STATE_TTL_MS = 15 * 60 * 1000;
@@ -38,6 +38,7 @@ function sameStr(a, b) {
   let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return d === 0;
 }
+export const NONCE_KEY = 'ms_auth_nonce';
 export async function makeState(env, who, now) {
   const n = b64url(crypto.getRandomValues(new Uint8Array(12)));
   const p = b64urlText(JSON.stringify({ t: now || Date.now(), n, u: String(who || '') }));
@@ -50,7 +51,7 @@ export async function checkState(env, state, now) {
   if (!sameStr(want, parts[1])) return false;
   let p; try { p = JSON.parse(unb64urlText(parts[0])); } catch (e) { return false; }
   const age = (now || Date.now()) - Number(p.t);
-  return age >= 0 && age <= STATE_TTL_MS;
+  return age >= 0 && age <= STATE_TTL_MS ? p : false;
 }
 
 function back(status, why) {
@@ -71,7 +72,15 @@ export async function onRequest(context) {
     const err = url.searchParams.get('error');
     if (err) return back('err', url.searchParams.get('error_description') || err);
     const code = url.searchParams.get('code'), state = url.searchParams.get('state');
-    if (!code || !(await checkState(env, state))) return back('err', 'invalid or expired sign-in, start again');
+    const sp = code ? await checkState(env, state) : false;
+    if (!sp) return back('err', 'invalid or expired sign-in, start again');
+    // Security scan 10/10/2026: the state is single-use. Only the nonce of the last "start" an
+    // admin asked for is accepted, and it is cleared on first use, so a sign-in link that leaked
+    // (or a second tab) cannot replace the connected account.
+    const ns = await stateGet(env, [NONCE_KEY]).catch(() => ({}));
+    const want = ns[NONCE_KEY] && ns[NONCE_KEY].value;
+    if (!want || !sameStr(want, String(sp.n || ''))) return back('err', 'this sign-in link was already used or replaced, start again');
+    await stateSet(env, { [NONCE_KEY]: null }).catch(() => {});
     try {
       const t = await exchangeCode(env, code, REDIRECT);
       if (!t.refresh_token) return back('err', 'no refresh token (offline_access missing)');
@@ -86,10 +95,12 @@ export async function onRequest(context) {
   }
 
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, cors);
-  const who = await requireRole(request, env, ['admin', 'manager']);
-  if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
   let body = {}; try { body = await request.json(); } catch (e) {}
   const op = String(body.op || '');
+  // Security scan 10/10/2026 (Michael: "בצע: אדמין בלבד"): replacing the mailbox the alerts go
+  // out from, and the drive every file is written to, is for the admin. Managers still read status.
+  const who = await requireRole(request, env, op === 'start' ? ['admin'] : ['admin', 'manager']);
+  if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
 
   if (op === 'status') {
     if (!odConfigured(env)) return jsonResp({ configured: false, connected: false }, 200, cors);
@@ -103,6 +114,7 @@ export async function onRequest(context) {
   if (op === 'start') {
     if (!odConfigured(env)) return jsonResp({ error: 'server not configured: set ONEDRIVE_CLIENT_ID and ONEDRIVE_CLIENT_SECRET in Cloudflare' }, 503, cors);
     const state = await makeState(env, who.user && who.user.email);
+    await stateSet(env, { [NONCE_KEY]: JSON.parse(unb64urlText(state.split('.')[0])).n });
     const q = new URLSearchParams({
       client_id: env.ONEDRIVE_CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT,
       response_mode: 'query', scope: SCOPES, state, prompt: 'select_account',

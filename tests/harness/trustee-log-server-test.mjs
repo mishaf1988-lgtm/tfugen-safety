@@ -54,6 +54,7 @@ function world(o) {
     if (u.startsWith(SB + '/auth/v1/user')) {
       const tok = String(init.headers.Authorization || '').replace('Bearer ', '');
       if (tok === 'mgr') return json({ id: 'x', email: 'eli@tfugen.local' });
+      if (tok === 'adm') return json({ id: 'a', email: 'admin@tfugen.local' });
       if (tok === 'rep') return json({ id: 'y', email: 'moshe@tfugen.local' });
       return json({}, 401);
     }
@@ -190,10 +191,13 @@ console.log('\n5. the one-time sign-in');
   check('...not when tampered', !(await checkState(ENV, st.slice(0, -2) + 'xx', now)));
   check('...not when signed with another secret', !(await checkState({ ONEDRIVE_CLIENT_SECRET: 'other' }, st, now)));
   let w = world();
-  let res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer mgr', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
+  const startAs = (tok) => msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
+  let res = await startAs('mgr');
+  check('security scan 10/10/2026: a manager can no longer start it (admin only)', res.status === 403, res.status);
+  res = await startAs('adm');
   let j = await res.json();
   const au = j.url ? new URL(j.url) : null;
-  check('a manager gets a Microsoft sign-in link', au && au.hostname === 'login.microsoftonline.com', j);
+  check('the admin gets a Microsoft sign-in link', au && au.hostname === 'login.microsoftonline.com', j);
   check('...asking for offline access and Files.ReadWrite, back to /api/ms-auth',
     au && /offline_access/.test(au.searchParams.get('scope')) && /Files\.ReadWrite/.test(au.searchParams.get('scope')) && au.searchParams.get('redirect_uri') === 'https://tapugan-safety.pages.dev/api/ms-auth', j.url);
   res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer rep', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
@@ -201,9 +205,16 @@ console.log('\n5. the one-time sign-in');
   w = world({ tokens: [] });
   res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth?code=abc&state=forged.sig'), env: ENV });
   check('a callback with a forged state stores nothing', res.status === 302 && /ms=err/.test(res.headers.get('Location')) && w.saved.length === 0, res.headers.get('Location'));
-  const good = await makeState(ENV, 'eli@tfugen.local');
+  const signed = await makeState(ENV, 'admin@tfugen.local');
+  res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth?code=abc&state=' + encodeURIComponent(signed)), env: ENV });
+  check('a state we signed but did not hand out on "start" stores nothing (single use)', /ms=err/.test(res.headers.get('Location')) && w.saved.length === 0, res.headers.get('Location'));
+  j = await (await startAs('adm')).json();
+  const good = new URL(j.url).searchParams.get('state');
   res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth?code=abc&state=' + encodeURIComponent(good)), env: ENV });
   check('a real callback stores the refresh token and returns to the app', res.status === 302 && /\?ms=ok$/.test(res.headers.get('Location')) && w.saved[0] && w.saved[0].refresh_token === 'rt2' && w.saved[0].user_email === 'sviva@tapugan.co.il', [res.headers.get('Location'), w.saved]);
+  const saved1 = w.saved.length;
+  res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth?code=abc2&state=' + encodeURIComponent(good)), env: ENV });
+  check('...and the same link a second time stores nothing', /ms=err/.test(res.headers.get('Location')) && w.saved.length === saved1, res.headers.get('Location'));
   check('...exchanging the code with the same redirect address', w.tokenReq.grant_type === 'authorization_code' && w.tokenReq.code === 'abc' && w.tokenReq.redirect_uri === 'https://tapugan-safety.pages.dev/api/ms-auth', w.tokenReq);
 }
 
@@ -218,7 +229,7 @@ console.log('\n6. alert mail through Outlook (Mail.Send)');
   await runLog(ENV, true);
   check('the OneDrive refresh of an account without Mail.Send does not ask for it', w.tokenReq && !/Mail\.Send/.test(w.tokenReq.scope), w.tokenReq && w.tokenReq.scope);
   world();
-  const res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer mgr', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
+  const res = await msAuth({ request: new Request('https://tapugan-safety.pages.dev/api/ms-auth', { method: 'POST', headers: { Authorization: 'Bearer adm', 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'start' }) }), env: ENV });
   const j = await res.json();
   check('a new sign-in asks for Mail.Send', /Mail\.Send/.test(new URL(j.url).searchParams.get('scope')), j.url);
   const nreq = (b) => new Request('https://tapugan-safety.pages.dev/api/trustee-notify', { method: 'POST', headers: { Authorization: 'Bearer mgr', 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
