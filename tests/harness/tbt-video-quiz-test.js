@@ -52,6 +52,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _genEdit('toolbox_talks', id);
     const rows = document.querySelectorAll('#tbt-quiz .tq');
     o.edit = { v: gv('tbt-video'), n: rows.length, q: rows[0] && rows[0].querySelector('.tq-q').value, right: rows[0] && rows[0].querySelectorAll('input[type=radio]')[1].checked };
+    const rad = rows[0] && rows[0].querySelectorAll('input[type=radio]')[1];
+    o.radioLook = rad ? { app: getComputedStyle(rad).appearance, w: rad.getBoundingClientRect().width, green: getComputedStyle(rows[0].querySelectorAll('.tq-a')[1]).borderColor } : null;
     closeModal('m-tbt'); openModal('m-tbt'); o.afterEdit = { n: document.querySelectorAll('#tbt-quiz .tq').length, v: gv('tbt-video') }; closeModal('m-tbt');
     // 5. duplicate copies them
     tbtDup(id); o.dup = { v: gv('tbt-video'), n: document.querySelectorAll('#tbt-quiz .tq').length, edit: _svEditId('toolbox_talks') }; closeModal('m-tbt');
@@ -88,6 +90,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('after the save the form is clean', r.cleared.v === '' && r.cleared.q === 0, r.cleared);
   check('no more than 5 questions', r.max === 5 && /5/.test(r.maxToast || ''), r.max);
   check('edit brings back the video and the question with its right answer', r.edit.v === 'https://youtu.be/dQw4w9WgXcQ' && r.edit.n === 1 && r.edit.q === 'כמה נקודות אחיזה?' && r.edit.right, r.edit);
+  check('the right-answer radio looks like a radio (the global input rule hid it) and its answer is green', r.radioLook && r.radioLook.app !== 'none' && r.radioLook.w <= 30 && r.radioLook.green === 'rgb(21, 128, 61)', r.radioLook);
   check('a new form after an edit is empty again', r.afterEdit.n === 0 && r.afterEdit.v === '', r.afterEdit);
   check('duplicate copies the video and the questions into a new record', r.dup.v === 'https://youtu.be/dQw4w9WgXcQ' && r.dup.n === 1 && !r.dup.edit, r.dup);
   check('the AI: questions from the talk text, a broken one dropped', r.ai === 'ok' && r.aiRows === 2 && r.aiPrompt, r);
