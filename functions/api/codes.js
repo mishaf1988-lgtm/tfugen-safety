@@ -15,6 +15,7 @@
 //   POST {op:'list'}                       -> {codes:[{key,set,value,source,updated_at}]}
 //   POST {op:'set', key, value?}           -> {key,value,updated_at}; no value = 6 random digits
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
+import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 export const CODE_KEYS = {
@@ -48,7 +49,29 @@ async function readRows(env) {
   return by;
 }
 
-export async function onRequest({ request, env }) {
+// A mail to Michael on every change (10/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8" to "an email on each password
+// change: you changed it, ignore it; you did not, you know at once"). Who, which and when, never the
+// password. To the account the server mails from (his own). A failed mail does not undo the change.
+export function changeMailHtml(label, who, atIso) {
+  const d = new Date(atIso);
+  const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }), hm = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
+  const esc = (v) => String(v || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+    + '<p><b>' + esc(label) + '</b> \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05d1-' + esc(day) + ' \u05d1\u05e9\u05e2\u05d4 ' + esc(hm) + ', \u05e2\u05dc \u05d9\u05d3\u05d9 ' + esc(who || '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2') + '.</p>'
+    + '<p>\u05d4\u05d7\u05dc\u05e4\u05ea \u05d1\u05e2\u05e6\u05de\u05da? \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05ea\u05e2\u05dc\u05dd \u05de\u05d4\u05de\u05d9\u05d9\u05dc.</p>'
+    + '<p>\u05dc\u05d0 \u05d0\u05ea\u05d4? \u05d4\u05d9\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05d5\u05d4\u05d7\u05dc\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d5\u05d1. \u05db\u05d3\u05d0\u05d9 \u05d2\u05dd \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05da.</p>'
+    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df. \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e2\u05e6\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7\u05ea.</p></div>';
+}
+async function mailChange(env, label, who, atIso) {
+  try {
+    const od = await accessToken(env);
+    if (!od.email) return;
+    await sendMailTo(od.token, [od.email], [], '\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4: ' + label, changeMailHtml(label, who, atIso), []);
+  } catch (e) { /* the password is changed */ }
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const cors = corsHeaders(request.headers.get('origin') || '', allowed, 'POST,OPTIONS');
   if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -87,6 +110,8 @@ export async function onRequest({ request, env }) {
       try {
         await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: key, op: 'UPDATE', title: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05e7\u05d5\u05d3: ' + CODE_KEYS[key].label, source: 'codes' }) });
       } catch (e) { /* the code is changed */ }
+      const job = mailChange(env, CODE_KEYS[key].label, String((who.user && who.user.email) || '').split('@')[0], at);
+      if (typeof context.waitUntil === 'function') context.waitUntil(job); else await job;
       return jsonResp({ key, value, updated_at: at }, 200, cors);
     }
     return jsonResp({ error: 'unknown op' }, 400, cors);

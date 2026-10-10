@@ -3,7 +3,7 @@
 // an hour and the eleventh is refused even with the right code, a right code clears the count, the
 // first lock is kept for the weekly mail, and a database that cannot count does not shut HR out.
 import { onRequest, makePermToken, GUESS_LIMIT, guessKey } from './_build/talk.mjs';
-import { guessLocksLine } from './_build/weekly-digest.mjs';
+import { guessLocksLine, passwordAgeLines } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -66,6 +66,20 @@ console.log('\n3. the weekly mail');
   check('no locks: no line', guessLocksLine('', now) === null && guessLocksLine('[]', now) === null);
   const L = guessLocksLine(JSON.stringify([{ at: '2026-10-10T10:00:00Z', s: 'ind' }, { at: '2026-10-09T10:00:00Z', s: 'tru' }, { at: '2026-09-20T10:00:00Z', s: 'ind' }]), now);
   check('this week only, by code, red, and what to do', L && L.red && /: 2 \(/.test(L.text) && /משאבי אנוש: 1/.test(L.text) && /נאמנים: 1/.test(L.text) && L.text.includes('🔐 קודים'), L);
+}
+
+console.log('\n4. a password not changed for a year (weekly mail)');
+{
+  const now = Date.parse('2026-10-11T08:00:00Z');
+  const fresh = { induction_code: { value: 'x', at: '2026-10-10T10:00:00Z' }, trustee_code: { value: 'y', at: '2026-10-10T10:00:00Z' } };
+  check('both changed this year: no line', passwordAgeLines(fresh, {}, now) === null);
+  const L = passwordAgeLines({ induction_code: { value: 'x', at: '2025-09-01T10:00:00Z' }, trustee_code: { value: 'y', at: '2025-10-01T10:00:00Z' } }, {}, now);
+  check('both over a year: two red lines, with the date', L && L.length === 2 && L.every((x) => x.red) && /01\/09\/2025/.test(L[0].text) && /01\/10\/2025/.test(L[1].text), L);
+  const C = passwordAgeLines({ induction_code: { value: 'x', at: '2026-10-10T10:00:00Z' } }, { TRUSTEE_CODE: '482913' }, now);
+  check('the trustee password still in Cloudflare: one plain line', C && C.length === 1 && !C[0].red && /Cloudflare/.test(C[0].text), C);
+  const N = passwordAgeLines({}, {}, now);
+  check('no HR password at all: red, the form is closed', N && N.length === 1 && N[0].red && /סגור/.test(N[0].text), N);
+  check('never the value itself', !JSON.stringify(passwordAgeLines({ induction_code: { value: 'secret123', at: '2020-01-01T00:00:00Z' } }, {}, now)).includes('secret123'));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

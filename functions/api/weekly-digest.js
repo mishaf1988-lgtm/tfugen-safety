@@ -432,6 +432,7 @@ export function digestHtml(d, today, meta) {
   if (m.asst) h += '<p style="margin:4px 0' + (m.asst.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.asst.text) + '</p>';
   if (m.xg) h += '<p style="margin:4px 0' + (m.xg.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.xg.text) + '</p>';
   if (m.locks) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.locks.text) + '</p>';
+  if (m.pwAge) h += m.pwAge.map((x) => '<p style="margin:4px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   const on = m.odNew || [];
   h += h2(H.odNew, on.length) + (on.length ? '<ul style="margin:0;padding-right:20px">' + on.slice(0, 15).map((f) => '<li>' + esc(f.p) + ' (' + esc(fd(new Date(f.c).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }))) + ')</li>').join('') + (on.length > 15 ? '<li>' + esc(H.more + (on.length - 15)) + '</li>' : '') + '</ul>' : '<p style="color:#555">' + H.none + '</p>');
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
@@ -718,6 +719,19 @@ export async function assistantQueue(env) {
 export const XG_STALE_DAYS = 3;
 // Locks on guessing a code this week (10/10/2026, talk.js / trustee-gate.js guessGate): ten
 // attempts from one address in an hour. Nothing this week = no line.
+// A password not changed for a year, or one never set in the app (10/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8").
+// Reads only when each was last changed, never the value. Nothing to say = no line.
+export const PW_MAX_DAYS = 365;
+export function passwordAgeLines(st, env, nowMs) {
+  const out = [], old = (at) => at && nowMs - Date.parse(at) > PW_MAX_DAYS * DAY;
+  const ind = st && st.induction_code, tru = st && st.trustee_code;
+  if (!ind || !String(ind.value || '').trim()) out.push({ red: true, text: '\ud83d\udd11 \u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8\u05ea, \u05d5\u05dc\u05db\u05df \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e1\u05d2\u05d5\u05e8. \u05dc\u05d4\u05d2\u05d3\u05d9\u05e8 \u05d1"\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea".' });
+  else if (old(ind.at)) out.push({ red: true, text: '\ud83d\udd11 \u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05de\u05d0\u05d6 ' + fd(String(ind.at).substring(0, 10)) + '. \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d1"\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea".' });
+  if (!tru || !String(tru.value || '').trim()) {
+    if (String((env && env.TRUSTEE_CODE) || '').trim()) out.push({ red: false, text: '\ud83d\udd11 \u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05de\u05d5\u05d2\u05d3\u05e8\u05ea \u05d1-Cloudflare, \u05d5\u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4. \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d1"\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea".' });
+  } else if (old(tru.at)) out.push({ red: true, text: '\ud83d\udd11 \u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05de\u05d0\u05d6 ' + fd(String(tru.at).substring(0, 10)) + '. \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d1"\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea".' });
+  return out.length ? out : null;
+}
 export function guessLocksLine(raw, nowMs) {
   let list = []; try { list = JSON.parse(raw || '[]'); } catch (e) { list = []; }
   const wk = (Array.isArray(list) ? list : []).filter((x) => x && x.at && nowMs - Date.parse(x.at) <= 7 * DAY);
@@ -742,7 +756,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'guess_locks']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -759,7 +773,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
