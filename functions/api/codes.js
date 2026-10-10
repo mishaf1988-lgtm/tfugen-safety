@@ -67,7 +67,13 @@ export async function onRequest({ request, env }) {
         const envSet = !!(envName && String(env[envName] || '').trim());
         return { key, label: CODE_KEYS[key].label, set: !!v || envSet, value: v || null, source: v ? 'app' : (envSet ? 'cloudflare' : 'none'), updated_at: v && row ? row.updated_at : null };
       });
-      return jsonResp({ codes }, 200, cors);
+      // The last three changes, for the card (10/10/2026, Michael: "מאשר"): who, which, when.
+      let recent = [];
+      try {
+        const r = await fetch(SB + '/rest/v1/audit_log?source=eq.codes&select=ts,user_email,record_id&order=ts.desc&limit=3', { headers: h(env) });
+        if (r.ok) recent = (await r.json()).map((x) => ({ ts: x.ts, who: String(x.user_email || '').split('@')[0], key: x.record_id, label: (CODE_KEYS[x.record_id] || {}).label || x.record_id }));
+      } catch (e) { recent = []; }
+      return jsonResp({ codes, recent }, 200, cors);
     }
     if (b.op === 'set') {
       const key = String(b.key || '');
