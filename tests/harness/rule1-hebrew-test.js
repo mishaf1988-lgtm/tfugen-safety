@@ -80,6 +80,17 @@ check('no HTML entity is a lone UTF-16 surrogate half (' + halves.length + ')', 
 const astral = [];
 src.split('\n').forEach((l, i) => { const m = l.match(/\\u1f[0-9a-f]{3}/gi); if (m) astral.push('line ' + (i + 1) + ': ' + m.join(' ')); });
 check('no emoji written as a 5-digit escape (' + astral.length + ')', astral.length === 0, astral.slice(0, 8));
+// The same slip in a server page (10/10/2026: the talk video heading showed "\u1f3a" + "c"
+// on the worker's phone, found in a screenshot before the merge): every file under functions/.
+const astralFn = [];
+(function walk(d) {
+  for (const f of fs.readdirSync(d, { withFileTypes: true })) {
+    const p = path.join(d, f.name);
+    if (f.isDirectory()) walk(p);
+    else if (/\.js$/.test(f.name)) fs.readFileSync(p, 'utf8').split('\n').forEach((l, i) => { const m = l.match(/\\u1f[0-9a-f]{3}/gi); if (m) astralFn.push(path.relative(path.resolve(__dirname, '../..'), p) + ':' + (i + 1) + ' ' + m.join(' ')); });
+  }
+})(path.resolve(__dirname, '../../functions'));
+check('no emoji written as a 5-digit escape in functions/ (' + astralFn.length + ')', astralFn.length === 0, astralFn.slice(0, 8));
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

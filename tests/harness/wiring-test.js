@@ -156,6 +156,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
             if (t === 'date') el.value = '2026-06-15';
             else if (t === 'number') el.value = String(i + 1);
             else if (t === 'time') el.value = '08:30';
+            else if (t === 'url') el.value = 'https://example.com/' + i;
             else el.value = 'בדיקה ' + i;
           });
           window[sv]();
