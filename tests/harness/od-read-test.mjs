@@ -72,6 +72,12 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() });
   res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
   check('an expired token: refused', res.status === 403);
+  rawWorld({ od_raw_token: TOK, od_raw_exp: '2099-01-01T00:00:00Z' });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
+  check('security scan 10/10/2026: a token that claims more than an hour: refused', res.status === 403);
+  rawWorld({ od_raw_token: TOK, od_raw_exp: 'not a date' });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
+  check('an expiry that is not a date: refused', res.status === 403);
   rawWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() });
   res = await onRequest({ request: req({ 'x-raw-token': 'b'.repeat(40) }, { path: '13_סיורי מפגעים/2026/מצגת שבועית.חודשית.pptx', raw: true }), env: ENV });
   check('a wrong token: refused', res.status === 403);
