@@ -2,7 +2,7 @@
 // הסיסמות", the app's own codes): /api/codes lists and changes the HR code and the trustee code in
 // server_state, admin only, and logs who and when to audit_log without the code. The trustee
 // screen reads its code from server_state first, Cloudflare's TRUSTEE_CODE while that is empty.
-import { onRequest, randomCode, CODE_RE } from './_build/codes.mjs';
+import { onRequest, randomCode, CODE_RE, pwOk } from './_build/codes.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -37,22 +37,22 @@ console.log('\n2. the list');
 
 console.log('\n3. changing a code');
 {
-  let r = await call({ op: 'set', key: 'trustee_code', value: ' 135790 ' }, 'admin');
-  check('my code: saved (upsert on key), returned', r.st === 200 && r.j.value === '135790' && w.writes[0].b.key === 'trustee_code' && w.writes[0].b.value === '135790' && /merge-duplicates/.test(w.writes[0].prefer) && /on_conflict=key/.test(w.writes[0].u), [r, w.writes[0]]);
-  check('...logged: who, which code, and NOT the code', w.logs.length === 1 && w.logs[0].user_email === 'admin@tfugen.local' && w.logs[0].record_id === 'trustee_code' && !JSON.stringify(w.logs[0]).includes('135790'), w.logs[0]);
+  let r = await call({ op: 'set', key: 'trustee_code', value: ' Tapugan2026 ' }, 'admin');
+  check('my password: saved in lower case (upsert on key), returned', r.st === 200 && r.j.value === 'tapugan2026' && w.writes[0].b.key === 'trustee_code' && w.writes[0].b.value === 'tapugan2026' && /merge-duplicates/.test(w.writes[0].prefer) && /on_conflict=key/.test(w.writes[0].u), [r, w.writes[0]]);
+  check('...logged: who, which code, and NOT the code', w.logs.length === 1 && w.logs[0].user_email === 'admin@tfugen.local' && w.logs[0].record_id === 'trustee_code' && !JSON.stringify(w.logs[0]).toLowerCase().includes('tapugan2026'), w.logs[0]);
   r = await call({ op: 'list' }, 'admin');
   check('the list now shows it as set in the app', r.j.codes.find((c) => c.key === 'trustee_code').source === 'app');
   r = await call({ op: 'set', key: 'induction_code' }, 'admin');
-  check('no value: 6 random digits', r.st === 200 && /^\d{6}$/.test(r.j.value) && w.state.induction_code.value === r.j.value, r.j);
-  check('randomCode: digits only, the length asked', /^\d{6}$/.test(randomCode(6)) && /^\d{8}$/.test(randomCode(8)) && new Set(Array.from({ length: 20 }, () => randomCode(6))).size > 15);
-  for (const bad of ['12', '12ab56', '1234567890123', 'abc']) check('refused: "' + bad + '"', (await call({ op: 'set', key: 'induction_code', value: bad }, 'admin')).st === 400);
-  check('an unknown key: 400, nothing written', (await call({ op: 'set', key: 'delete', value: '1234' }, 'admin')).st === 400 && !w.writes.some((x) => x.b.key === 'delete'));
-  check('a manager cannot change one', (await call({ op: 'set', key: 'induction_code', value: '1111' }, 'mgr')).st === 403);
+  check('no value: a random password, 10 letters and digits, no 0/o/1/l/i', r.st === 200 && /^[a-z2-9]{10}$/.test(r.j.value) && pwOk(r.j.value) && !/[01oli]/.test(r.j.value) && w.state.induction_code.value === r.j.value, r.j);
+  check('randomCode: letters and digits, the length asked, always both kinds', Array.from({ length: 50 }, () => randomCode(10)).every((v) => v.length === 10 && pwOk(v)) && new Set(Array.from({ length: 20 }, () => randomCode(10))).size === 20);
+  for (const bad of ['12', 'abc12', '12345678', 'abcdefgh', 'abcd-1234', 'a'.repeat(32) + '1']) check('refused: "' + bad + '"', (await call({ op: 'set', key: 'induction_code', value: bad }, 'admin')).st === 400);
+  check('an unknown key: 400, nothing written', (await call({ op: 'set', key: 'delete', value: 'abcd1234' }, 'admin')).st === 400 && !w.writes.some((x) => x.b.key === 'delete'));
+  check('a manager cannot change one', (await call({ op: 'set', key: 'induction_code', value: 'abcd1234' }, 'mgr')).st === 403);
   w.failWrite = true; const n = w.logs.length;
-  r = await call({ op: 'set', key: 'induction_code', value: '2222' }, 'admin');
+  r = await call({ op: 'set', key: 'induction_code', value: 'efgh5678' }, 'admin');
   check('a failed write: 502 and nothing logged', r.st === 502 && w.logs.length === n);
   w.failWrite = false;
-  check('CODE_RE: 4 to 12 digits', CODE_RE.test('1234') && CODE_RE.test('123456789012') && !CODE_RE.test('123'));
+  check('pwOk: 8 to 32, letters and digits, at least one of each', pwOk('abcd1234') && pwOk('a1'.repeat(16)) && !pwOk('abc1234') && !pwOk('abcdefgh') && !pwOk('12345678'));
 }
 
 console.log('\n4. the trustee screen reads the code from the app first');
@@ -61,8 +61,8 @@ console.log('\n4. the trustee screen reads the code from the app first');
   fs.writeFileSync(new URL('./_build/trustee-gate-c.mjs', import.meta.url), src);
   const { onRequest: gate } = await import('./_build/trustee-gate-c.mjs');
   const g = async (code, env) => (await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev' } }), env })).status;
-  w.state.trustee_code = { key: 'trustee_code', value: '135790' };
-  check('the app code opens', (await g('135790', ENV)) === 200);
+  w.state.trustee_code = { key: 'trustee_code', value: 'tapugan2026' };
+  check('the app password opens, capitals not counted', (await g('Tapugan2026', ENV)) === 200);
   check('the old Cloudflare code no longer does', (await g('482913', ENV)) === 403);
   delete w.state.trustee_code;
   check('no app code: Cloudflare\'s still works', (await g('482913', ENV)) === 200);
@@ -71,9 +71,9 @@ console.log('\n4. the trustee screen reads the code from the app first');
 console.log('\n5. the screen in the app');
 {
   const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
-  check('a "codes" button on the users page, and the dialog', html.includes('id="codes-btn" onclick="openCodes()"') && html.includes('id="m-codes"') && /function openCodes\(\)/.test(html) && /function _codeSet\(key,own\)/.test(html));
-  check('a code is hidden until "show"', html.includes("'••••••'") || html.includes("'\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022'"));
-  check('a change asks first', /function _codeSet[\s\S]{0,700}confirm\(/.test(html));
+  check('the passwords card sits on the users page, no separate dialog', html.includes('id="codes-card"') && !html.includes('id="m-codes"') && /function _codesLoad\(force\)/.test(html) && /function _codeSet\(key,own\)/.test(html));
+  check('a code is hidden until "show"', html.includes("'\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022'"));
+  check('a change asks first', /function _codeSet[\s\S]{0,1500}confirm\(/.test(html));
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');

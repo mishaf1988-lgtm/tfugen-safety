@@ -330,7 +330,7 @@ async function indCode(env) {
     const r = await fetch(SB + '/rest/v1/server_state?key=eq.' + IND_CODE_KEY + '&select=value', { headers: sbH(env) });
     if (!r.ok) return '';
     const rows = await r.json();
-    return String((Array.isArray(rows) && rows[0] && rows[0].value) || '').trim();
+    return String((Array.isArray(rows) && rows[0] && rows[0].value) || '').trim().toLowerCase();
   } catch (e) { return ''; }
 }
 async function codeTag(code) {
@@ -396,15 +396,15 @@ export async function guessGate(env, scope, request) {
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
 const sameCode = (a, b) => { const x = String(a || ''), y = String(b || ''); let d = x.length === y.length ? 0 : 1; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0); return d === 0; };
 function codePage(tok, lang, wrong, closed, locked) {
-  const inner = '<p>\u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05e2\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05de\u05e7\u05dc\u05d9\u05d3\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea, \u05d5\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d6\u05d5\u05db\u05e8.</p>'
-    + '<p dir="auto" style="font-size:14px;color:#6b7280;margin-top:-4px">\u0627\u0644\u0631\u0645\u0632 \u0644\u062f\u0649 \u0642\u0633\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629 | \u041a\u043e\u0434 \u0443 \u043e\u0442\u0434\u0435\u043b\u0430 \u043a\u0430\u0434\u0440\u043e\u0432 | \u12ae\u12f1 \u1260\u1230\u12cd \u1200\u1265\u1275 \u12ad\u134d\u120d \u1290\u12cd</p>'
-    + (locked ? '<p style="color:#b91c1c;font-weight:700">\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.</p>' : closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e7\u05d5\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
-      : (wrong ? '<p style="color:#b91c1c;font-weight:700">\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.</p>' : '')
+  const inner = '<p>\u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 \u05d4\u05e7\u05dc\u05d9\u05d8\u05d4 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05e2\u05dd \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9. \u05de\u05e7\u05dc\u05d9\u05d3\u05d9\u05dd \u05d0\u05d5\u05ea\u05d4 \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea, \u05d5\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d6\u05d5\u05db\u05e8.</p>'
+    + '<p dir="auto" style="font-size:14px;color:#6b7280;margin-top:-4px">\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u062f\u0649 \u0642\u0633\u0645 \u0627\u0644\u0645\u0648\u0627\u0631\u062f \u0627\u0644\u0628\u0634\u0631\u064a\u0629 | \u041f\u0430\u0440\u043e\u043b\u044c \u0443 \u043e\u0442\u0434\u0435\u043b\u0430 \u043a\u0430\u0434\u0440\u043e\u0432 | \u12e8\u12ed\u1208\u134d \u1243\u1209 \u1260\u1230\u12cd \u1200\u1265\u1275 \u12ad\u134d\u120d \u1290\u12cd</p>'
+    + (locked ? '<p style="color:#b91c1c;font-weight:700">\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05de\u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.</p>' : closed ? '<p style="color:#b91c1c;font-weight:700">\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d4. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>'
+      : (wrong ? '<p style="color:#b91c1c;font-weight:700">\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4. \u05e0\u05e1\u05d5 \u05e9\u05d5\u05d1.</p>' : '')
       + '<form method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="l" value="' + esc(langOf(lang)) + '">'
-      + '<label for="icode" style="display:block;font-weight:700;margin-bottom:4px">\u05e7\u05d5\u05d3</label>'
-      + '<input id="icode" name="icode" inputmode="numeric" autocomplete="off" maxlength="12" required dir="ltr" style="width:100%;box-sizing:border-box;font-size:22px;letter-spacing:4px;text-align:center;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px">'
+      + '<label for="icode" style="display:block;font-weight:700;margin-bottom:4px">\u05e1\u05d9\u05e1\u05de\u05d4</label>'
+      + '<input id="icode" name="icode" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32" required dir="ltr" style="width:100%;box-sizing:border-box;font-size:20px;letter-spacing:2px;text-align:center;padding:12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px">'
       + '<button type="submit" id="icode-go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#1e3a8a;color:#fff;font-size:18px;font-weight:700">\u05db\u05e0\u05d9\u05e1\u05d4</button></form>');
-  return page('\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9', inner, closed || wrong || locked ? 'err' : '', locked ? 429 : (closed ? 503 : (wrong ? 403 : 200)), '', 'he');
+  return page('\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9', inner, closed || wrong || locked ? 'err' : '', locked ? 429 : (closed ? 503 : (wrong ? 403 : 200)), '', 'he');
 }
 async function codeSubmit(env, form, request) {
   const tok = String(form.get('k') || ''), lang = langOf(String(form.get('l') || ''));
@@ -417,7 +417,7 @@ async function codeSubmit(env, form, request) {
   if (!code) return codePage(tok, lang, false, true);
   const gg = await guessGate(env, 'ind', request);
   if (gg.locked) return codePage(tok, lang, false, false, true);
-  if (!sameCode(String(form.get('icode') || '').trim(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, lang, true, false); }
+  if (!sameCode(String(form.get('icode') || '').trim().toLowerCase(), code)) { await new Promise((r) => setTimeout(r, WRONG_CODE_DELAY_MS)); return codePage(tok, lang, true, false); }
   await guessOk(env, gg);
   const c = await makeCodeCookie(env, talk.id, code);
   if (!c) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);

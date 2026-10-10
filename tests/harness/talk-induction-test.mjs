@@ -98,11 +98,11 @@ console.log('\n5. the HR code (10/10/2026, Michael: "מוגן בסיסמה... צ
 {
   const k = tokOf((await link({ op: 'link', id: 'ind1' }, 'good')).j.url), url = URL0 + '?k=' + encodeURIComponent(k);  // the current version, after section 2 revoked
   let r = await open(url, '');
-  check('no cookie: the code page, not the talk', r.st === 200 && r.h.includes('קוד משאבי אנוש') && r.h.includes('name="icode"') && !r.h.includes('הוראות כניסה למשמרת'), r.h.slice(0, 200));
+  check('no cookie: the code page, not the talk', r.st === 200 && r.h.includes('סיסמת משאבי אנוש') && r.h.includes('name="icode"') && r.h.includes('type="password"') && !r.h.includes('הוראות כניסה למשמרת'), r.h.slice(0, 200));
   const code = async (val, cookie) => { const fd = new FormData(); fd.append('k', k); fd.append('l', 'ar'); fd.append('icode', val); return onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: cookie ? { cookie } : {} }), env: ENV }); };
   const t0 = Date.now(); r = await code('111111');
   const h = await r.text();
-  check('a wrong code: 403, says so, after a wait, no cookie', r.status === 403 && h.includes('קוד שגוי') && Date.now() - t0 >= 700 && !r.headers.get('set-cookie'), [r.status, Date.now() - t0]);
+  check('a wrong code: 403, says so, after a wait, no cookie', r.status === 403 && h.includes('סיסמה שגויה') && Date.now() - t0 >= 700 && !r.headers.get('set-cookie'), [r.status, Date.now() - t0]);
   r = await code(' 246810 ');
   const sc = r.headers.get('set-cookie') || '';
   check('the right code: back to the page in its language, with a cookie for a year', r.status === 303 && r.headers.get('location').includes('k=' + encodeURIComponent(k)) && r.headers.get('location').includes('l=ar') && /^tsind=[^;]+; Path=\/api\/talk; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax$/.test(sc) && IND_CODE_DAYS === 365, [r.status, sc]);
@@ -128,7 +128,7 @@ console.log('\n5. the HR code (10/10/2026, Michael: "מוגן בסיסמה... צ
   check('the code changed: every device has to type the new one', r.h.includes('name="icode"'));
   w.code = null;
   r = await open(url, ck);
-  check('no code set: closed, says so, and no field to guess in', r.st === 503 && r.h.includes('הקוד עוד לא הוגדר') && !r.h.includes('name="icode"'));
+  check('no code set: closed, says so, and no field to guess in', r.st === 503 && r.h.includes('הסיסמה עוד לא הוגדרה') && !r.h.includes('name="icode"'));
   w.code = '246810';
   r = await open(URL0 + '?k=' + encodeURIComponent(await makeTalkToken(ENV, 'wk1')), '');
   check('a weekly talk: no code', r.st === 200 && r.h.includes('סולמות') && !r.h.includes('name="icode"'));
