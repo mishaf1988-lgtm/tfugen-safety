@@ -56,7 +56,7 @@ globalThis.fetch = async (url, init) => (String(url).startsWith('https://generat
 console.log('\n1. the form page');
 {
   const h = inductionHtml(T.ind, { id: 'r1', emp_name: 'דני <b>', id_no: '123', dept: 'כוח אדם', quiz_ok: 1, quiz_n: 1 }, 'QUJD', 'he', { day: '2026-10-11', hm: '07:05' });
-  check('the text read, name, ID, company, date, score, trainer and signature', h.includes('1. חירום') && h.includes('דני &lt;b&gt;') && h.includes('123') && h.includes('כוח אדם') && h.includes('11/10/2026 07:05') && h.includes('1/1') && h.includes('ממונה בטיחות') && h.includes('data:image/png;base64,QUJD'));
+  check('the text read, name, ID, company, date, score, trainer and signature', h.includes('1. חירום') && h.includes('דני &lt;b&gt;') && h.includes('123') && h.includes('כוח אדם') && h.includes('11/10/2026 07:05') && h.includes('1/1') && h.includes('הטופס הוכן על ידי</td>') && h.includes('ממונה בטיחות') && !h.includes('>מדריך<') && h.includes('data:image/png;base64,QUJD'));
   const ru = inductionHtml(T.ind, { id: 'r1', emp_name: 'x', id_no: '1' }, 'QQ', 'ru', { day: '2026-10-11', hm: '07:05' });
   check('a worker who read Russian: the Russian text, and the form says so', ru.includes('Текст') && ru.includes('Русский'));
   // 10/10/2026, Michael: "בטופס שנשלח חסר לוגו של תפוגן כולל השאלות שנענו"

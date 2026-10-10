@@ -116,6 +116,10 @@ export const QZL = {
   am: { t: '\u12e8\u1218\u1228\u12f3\u1275 \u1325\u12eb\u1244 (\u12a0\u1235\u1308\u12f3\u1305 \u12a0\u12ed\u12f0\u1208\u121d)', ok: '\u1275\u12ad\u12ad\u120d', no: '\u1275\u12ad\u12ad\u1208\u129b\u12cd \u1218\u120d\u1235:' },
 };
 export const QZ = QZL.he;
+// The induction is a form the worker reads, not a talk someone gives (10/10/2026, Michael: "\u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05ea
+// \u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da, \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05d9\u05d9\u05df \u05de\u05d9 \u05d9\u05e6\u05e8 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05de\u05e7\u05d5\u05dd"). The name and qualification stay, because the
+// training record needs them (regulations from 16/10/2026), under "the form was prepared by".
+export const BY_L = { he: '\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9', ar: '\u0623\u0639\u062f\u0651 \u0627\u0644\u0646\u0645\u0648\u0630\u062c', ru: '\u0424\u043e\u0440\u043c\u0443 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u0438\u043b', am: '\u1245\u1339\u1295 \u12eb\u12d8\u130b\u1300\u12cd' };
 
 // Read aloud (10/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8 \u05d4\u05de\u05dc\u05e6\u05d5\u05ea"). First version: the phone's own voices
 // (speechSynthesis). Michael the same day: "\u05d4\u05d3\u05d9\u05d1\u05d5\u05d1 \u05dc\u05d0 \u05d8\u05d5\u05d1, \u05db\u05de\u05d5 \u05e8\u05d5\u05d1\u05d5\u05d8, \u05d7\u05d9\u05d9\u05d1 \u05dc\u05d4\u05d9\u05d5\u05ea \u05d9\u05d5\u05ea\u05e8 \u05de\u05e7\u05e6\u05d5\u05e2\u05d9 \u05db\u05de\u05d5
@@ -515,7 +519,7 @@ export function inductionHtml(talk, row, sigB64, lang, when, answers) {
     + tr('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || ''))
     + tr('\u05d7\u05d1\u05e8\u05d4 / \u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-'))
     + (row.quiz_n ? tr('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n + ' \u05e0\u05db\u05d5\u05e0\u05d5\u05ea') : '')
-    + (talk.trainer ? tr('\u05de\u05d3\u05e8\u05d9\u05da', esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '')) : '')
+    + (talk.trainer ? tr('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9', esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '')) : '')
     + tr('\u05d7\u05ea\u05d9\u05de\u05d4', '<img alt="\u05d7\u05ea\u05d9\u05de\u05d4" style="height:90px;max-width:260px" src="data:image/png;base64,' + sigB64 + '">')
     + '</table>'
     + (Array.isArray(answers) && answers.length ? '<div style="font-weight:bold;margin:12px 0 4px">\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4: \u05d4\u05e9\u05d0\u05dc\u05d5\u05ea \u05d5\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05d1\u05d7\u05e8</div>'
@@ -709,7 +713,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + '<div style="font-size:13px;color:#6b7280">' + esc(fdate(talk.d)) + '</div>'
     + '<h2 id="th" style="margin:4px 0 12px;font-size:20px">' + esc(x.title) + '</h2>'
     + (g ? '<div style="font-size:14px;font-weight:700;color:#1e3a8a;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:8px">\ud83d\udc65 ' + esc(L.group) + '</div>' : '')
-    + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + esc(L.trainerL) + ': ' + esc(talk.trainer) + '</div>' : '')
+    + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + (talk.kind === KIND_IND ? esc(BY_L[lang] || BY_L.he) + ': ' + esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '') : esc(L.trainerL) + ': ' + esc(talk.trainer)) + '</div>' : '')
     + (L.auto ? '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px">' + esc(L.auto) + '</div>' : '')
     + (x.body ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
       + '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')

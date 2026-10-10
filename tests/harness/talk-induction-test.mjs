@@ -109,6 +109,13 @@ console.log('\n5. the HR code (10/10/2026, Michael: "מוגן בסיסמה... צ
   const ck = sc.split(';')[0];
   r = await open(url, ck);
   check('with the cookie the talk opens', r.st === 200 && r.h.includes('הוראות כניסה למשמרת') && !r.h.includes('name="icode"'));
+  T.ind.trainer = 'מיכאל פרייליך'; T.ind.trainer_qual = 'ממונה בטיחות';
+  const rb = await open(url, ck);
+  check('the induction says who prepared the form, not "trainer"', rb.h.includes('הטופס הוכן על ידי: מיכאל פרייליך, ממונה בטיחות') && !rb.h.includes('מדריך: '), rb.h.slice(rb.h.indexOf('<h2'), rb.h.indexOf('<h2') + 400));
+  T.ind.body_ar = 'تعليمات\nنص';
+  const ra = await open(url + '&l=ar', ck);
+  check('...in the worker\'s language', ra.h.includes('أعدّ النموذج: מיכאל פרייליך'), ra.h.slice(ra.h.indexOf('<h2'), ra.h.indexOf('<h2') + 300));
+  delete T.ind.trainer; delete T.ind.trainer_qual; delete T.ind.body_ar;
   r = await open(url, 'other=1; ' + ck + '; x=2');
   check('...also among other cookies', r.st === 200 && r.h.includes('הוראות כניסה למשמרת'));
   const save = w.cookie; w.cookie = '';
