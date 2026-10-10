@@ -83,7 +83,7 @@ const perm = async (t) => { talk = t; signed = []; return serve(T.talkUrl(await 
 const SHOTS = {
   'w0-code': {
     html: async () => { const c = cookie; cookie = ''; try { return await perm(IND); } finally { cookie = c; } },
-    prepare: async (p) => { await p.fill('#icode', '••••••'); },
+    prepare: async (p) => { await p.fill('#icode', 'password'); },
     ring: { sel: '#icode', n: null },
     crop: true,
   },

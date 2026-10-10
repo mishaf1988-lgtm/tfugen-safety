@@ -1255,10 +1255,15 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 <div id="pg-users" class="page">
   <div class="row">
     <div class="page-title">&#128100; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501; <span>&#1504;&#1497;&#1492;&#1493;&#1500;</span></div>
-    <button class="btn btn-s" id="codes-btn" onclick="openCodes()">&#128272; &#1511;&#1493;&#1491;&#1497;&#1501;</button>
     <button class="btn btn-p" onclick="openNewUserModal()">+ &#1502;&#1513;&#1514;&#1502;&#1513; &#1495;&#1491;&#1513;</button>
   </div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px">10 &#1502;&#1511;&#1493;&#1502;&#1493;&#1514; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1502;&#1512;&#1488;&#1513;. &#1506;&#1512;&#1493;&#1498; &#1513;&#1493;&#1512;&#1492; &#1499;&#1491;&#1497; &#1500;&#1513;&#1497;&#1497;&#1498; &#1488;&#1514; &#1492;&#1502;&#1511;&#1493;&#1501; &#1500;&#1488;&#1491;&#1501; &#1488;&#1502;&#1497;&#1514;&#1497;.</div>
+  <!-- PASSWORDS (admin, 10/10/2026, Michael: "&#1502;&#1502;&#1513;&#1511;&#1497; &#1492;&#1513;&#1497;&#1504;&#1493;&#1497; &#1505;&#1497;&#1505;&#1502;&#1492; &#1510;&#1512;&#1497;&#1499;&#1497;&#1501; &#1500;&#1513;&#1489;&#1514; &#1489;&#1502;&#1511;&#1493;&#1501; &#1488;&#1495;&#1491; &#1506;&#1501; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;") -->
+  <div class="card" id="codes-card" style="padding:12px 14px;margin-bottom:12px">
+    <div style="font-weight:700;font-size:15px">&#128272; &#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514;</div>
+    <div style="font-size:12px;color:var(--t2);margin:2px 0 8px">&#1499;&#1500; &#1492;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492; &#1489;&#1502;&#1511;&#1493;&#1501; &#1488;&#1495;&#1491;. &#1504;&#1513;&#1502;&#1512;&#1493;&#1514; &#1489;&#1513;&#1512;&#1514;, &#1493;&#1499;&#1500; &#1492;&#1495;&#1500;&#1508;&#1492; &#1504;&#1512;&#1513;&#1502;&#1514; &#1489;&#1497;&#1493;&#1502;&#1503; (&#1502;&#1497; &#1493;&#1502;&#1514;&#1497;, &#1489;&#1500;&#1497; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492;). &#1488;&#1495;&#1512;&#1497; &#1492;&#1495;&#1500;&#1508;&#1492;, &#1502;&#1497; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513; &#1489;&#1505;&#1497;&#1505;&#1502;&#1492; &#1497;&#1510;&#1496;&#1512;&#1498; &#1500;&#1492;&#1511;&#1500;&#1497;&#1491; &#1488;&#1514; &#1492;&#1495;&#1491;&#1513;&#1492;.</div>
+    <div id="codes-body">&#1496;&#1493;&#1506;&#1503;...</div>
+  </div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr>
     <th scope="col">&#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</th>
     <th scope="col">&#1513;&#1501; &#1502;&#1500;&#1488;</th>
@@ -1271,15 +1276,6 @@ body.emp-mode #emp-mode-badge{display:inline-block}
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1504;&#1497;&#1492;&#1493;&#1500; &#1502;&#1513;&#1514;&#1502;&#1513;&#1497;&#1501;</div>
 </div>
 
-<!-- CODES (admin only, 10/10/2026): the app's codes in one place, functions/api/codes.js -->
-<div class="overlay" id="ov-codes" onclick="closeModal('m-codes')"></div>
-<div class="modal" id="m-codes" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-codes')">&#10005;</button>
-  <div class="modal-title">&#128272; &#1511;&#1493;&#1491;&#1497;&#1501; &#1513;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;</div>
-  <div style="font-size:12px;color:var(--t2);margin-bottom:10px">&#1492;&#1511;&#1493;&#1491;&#1497;&#1501; &#1513;&#1502;&#1493;&#1512;&#1497;&#1501; &#1489;&#1513;&#1512;&#1514;, &#1500;&#1488; &#1489;&#1491;&#1508;&#1491;&#1508;&#1503;. &#1499;&#1500; &#1492;&#1495;&#1500;&#1508;&#1492; &#1504;&#1512;&#1513;&#1502;&#1514; &#1489;&#1497;&#1493;&#1502;&#1503; (&#1502;&#1497; &#1493;&#1502;&#1514;&#1497;, &#1489;&#1500;&#1497; &#1492;&#1511;&#1493;&#1491;). &#1488;&#1495;&#1512;&#1497; &#1492;&#1495;&#1500;&#1508;&#1492;, &#1502;&#1497; &#1513;&#1502;&#1513;&#1514;&#1502;&#1513; &#1489;&#1511;&#1493;&#1491; &#1497;&#1510;&#1496;&#1512;&#1498; &#1500;&#1492;&#1511;&#1500;&#1497;&#1491; &#1488;&#1514; &#1492;&#1495;&#1491;&#1513;.</div>
-  <div id="codes-body">&#1496;&#1493;&#1506;&#1503;...</div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-codes')">&#1505;&#1490;&#1493;&#1512;</button></div>
-</div>
 <!-- NEW USER MODAL (admin only) -->
 <div class="overlay" id="ov-newuser" onclick="closeModal('m-newuser')"></div>
 <div class="modal" id="m-newuser" style="display:none;max-width:440px">
@@ -4416,11 +4412,18 @@ function _delPwHint(){
   var h=g('del-pw-hint');if(!h)return;
   if(_delPwIsDefault()){
     h.style.display='';
-    h.innerHTML='\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d9\u05d0 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc. <button type="button" class="btn btn-s btn-sm" onclick="_delPwChange()">\ud83d\udd11 \u05e9\u05e0\u05d4 \u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05d7\u05d9\u05e7\u05d4</button>';
+    h.innerHTML='\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d9\u05d0 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc. <button type="button" class="btn btn-s btn-sm" onclick="_delPwFromHint()">\ud83d\udd11 \u05e9\u05e0\u05d4 \u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05d7\u05d9\u05e7\u05d4</button>';
   }else h.style.display='none';
 }
 // The hint used to say "setDeletePassword('...')": a console command, of no
 // use on a phone (02/10/2026). Two prompts, the same per-device setter.
+// From the delete dialog's hint: the admin goes to the one place for passwords, the users page
+// (10/10/2026, Michael: "\u05de\u05de\u05e9\u05e7\u05d9 \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e6\u05e8\u05d9\u05db\u05d9\u05dd \u05dc\u05e9\u05d1\u05ea \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05d3 \u05e2\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd"); anyone else changes
+// this device's password here, the only place they have.
+window._delPwFromHint=function(){
+  if(typeof _role==='function'&&_role()==='admin'){cancelDel();openCodes();return;}
+  _delPwChange();
+};
 window._delPwChange=function(){
   var a=prompt('\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05d7\u05d9\u05e7\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05dc\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea 4 \u05ea\u05d5\u05d5\u05d9\u05dd):');if(a===null)return;
   var b=prompt('\u05e9\u05d5\u05d1, \u05dc\u05d0\u05d9\u05de\u05d5\u05ea:');if(b===null)return;
@@ -12678,6 +12681,7 @@ function _collectVirtualTasks(){
 // ---- APP USERS (admin-only) ----
 function rUsers(){
   var tb=g('tb-users'); if(!tb)return;
+  _codesLoad();
   var users=(DB.app_users||[]).slice().sort(function(a,b){return String(a.username||'').localeCompare(String(b.username||''),undefined,{numeric:true,sensitivity:'base'});});
   if(!users.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u05d0\u05d9\u05df \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd. \u05d4\u05e8\u05e5 \u05d0\u05ea \u05d4-migration \u05e9\u05dc app_users.</td></tr>';return;}
   tb.innerHTML = users.map(function(u){
@@ -12749,55 +12753,69 @@ function svUser(){
   rUsers();
 }
 
-// The app's codes (10/10/2026, Michael: "\u05e4\u05dc\u05d8\u05e4\u05d5\u05e8\u05de\u05d4 \u05de\u05dc\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e1\u05d9\u05e1\u05de\u05d5\u05ea", in the
-// questionnaire: the app's own codes). Two on the server through /api/codes (admin), the delete
-// password per device (_delPw). A code is shown only after a tap, and the change asks first.
-var _codesList=[];
+// The app's passwords on the users page (10/10/2026, Michael: "\u05e4\u05dc\u05d8\u05e4\u05d5\u05e8\u05de\u05d4 \u05de\u05dc\u05d0\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05dc\u05e0\u05d9\u05d4\u05d5\u05dc
+// \u05d4\u05e1\u05d9\u05e1\u05de\u05d5\u05ea", "\u05de\u05de\u05e9\u05e7\u05d9 \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e6\u05e8\u05d9\u05db\u05d9\u05dd \u05dc\u05e9\u05d1\u05ea \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05d3 \u05e2\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd", "\u05d0\u05e0\u05d9 \u05de\u05e2\u05d3\u05d9\u05e3 \u05e1\u05d9\u05e1\u05de\u05d4, \u05dc\u05d0 \u05e7\u05d5\u05d3 \u05d1\u05de\u05e1\u05e4\u05e8\u05d9\u05dd").
+// Two on the server through /api/codes (admin): letters and digits, 8 or more, capitals not counted.
+// The delete password per device (_delPw). A password shows only after a tap; a change asks first.
+var _codesList=[],_codesAt=0;
 function _codesCall(body){
   return fetch('/api/codes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,st:r.status,j:j};},function(){return {ok:false,st:r.status,j:null};});});
 }
-function openCodes(){
-  if(typeof _role==='function'&&_role()!=='admin'){toast('\u05e8\u05e7 \u05d0\u05d3\u05de\u05d9\u05df');return;}
-  openModal('m-codes');
+// Called from rUsers: the card loads with the page, at most once a minute.
+function _codesLoad(force){
+  var card=g('codes-card');if(!card)return;
+  var admin=typeof _role==='function'&&_role()==='admin';
+  card.style.display=admin?'':'none';
+  if(!admin)return;
+  if(!force&&_codesList.length&&Date.now()-_codesAt<60000){_codesRender();return;}
   g('codes-body').textContent='\u05d8\u05d5\u05e2\u05df...';
   _codesCall({op:'list'}).then(function(x){
     if(!x.ok||!x.j||!x.j.codes){g('codes-body').textContent='\u26a0\ufe0f \u05dc\u05d0 \u05e0\u05d8\u05e2\u05df ('+x.st+')';return;}
-    _codesList=x.j.codes;_codesRender();
+    _codesList=x.j.codes;_codesAt=Date.now();_codesRender();
   },function(){g('codes-body').textContent='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
 }
+// Old entry points (the dialog of 10/10/2026, the delete dialog's hint): the users page.
+function openCodes(){
+  if(typeof _role==='function'&&_role()!=='admin'){toast('\u05e8\u05e7 \u05d0\u05d3\u05de\u05d9\u05df');return;}
+  goPage('users');_codesLoad(true);
+  setTimeout(function(){var c=g('codes-card');if(c&&c.scrollIntoView)c.scrollIntoView({block:'start'});},150);
+}
 function _codesRender(){
-  var src={app:'\u05de\u05d5\u05d2\u05d3\u05e8 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',cloudflare:'\u05de\u05d5\u05d2\u05d3\u05e8 \u05d1-Cloudflare (\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3 \u05de\u05db\u05d0\u05df)',none:'\u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8: \u05d4\u05de\u05e1\u05da \u05e1\u05d2\u05d5\u05e8'};
+  var src={app:'\u05de\u05d5\u05d2\u05d3\u05e8\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',cloudflare:'\u05de\u05d5\u05d2\u05d3\u05e8\u05ea \u05d1-Cloudflare (\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u05de\u05db\u05d0\u05df)',none:'\u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8\u05ea: \u05d4\u05de\u05e1\u05da \u05e1\u05d2\u05d5\u05e8'};
   var h=_codesList.map(function(c){
-    return '<div class="card" style="padding:10px 12px;margin-bottom:8px">'
+    return '<div style="border-top:1px solid var(--border);padding:8px 0">'
       +'<div style="font-weight:700">'+esc(c.label)+'</div>'
-      +'<div style="font-size:12px;color:var(--t2);margin:2px 0 6px">'+esc(src[c.source]||'')+(c.updated_at?' | \u05d4\u05d5\u05d7\u05dc\u05e3 '+fd(String(c.updated_at).substring(0,10)):'')+'</div>'
+      +'<div style="font-size:12px;color:var(--t2);margin:2px 0 6px">'+esc(src[c.source]||'')+(c.updated_at?' | \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 '+fd(String(c.updated_at).substring(0,10)):'')+'</div>'
       +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +(c.value?'<span id="code-v-'+esc(c.key)+'" style="font:700 18px monospace;letter-spacing:3px;direction:ltr">\u2022\u2022\u2022\u2022\u2022\u2022</span><button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeShow(this.dataset.k)">\ud83d\udc41 \u05d4\u05e6\u05d2</button>':'')
-      +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,0)">\ud83c\udfb2 \u05e7\u05d5\u05d3 \u05d7\u05d3\u05e9 \u05d0\u05e7\u05e8\u05d0\u05d9</button>'
-      +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,1)">\u270f\ufe0f \u05e7\u05d5\u05d3 \u05e9\u05dc\u05d9</button>'
+      +(c.value?'<span id="code-v-'+esc(c.key)+'" style="font:700 16px monospace;letter-spacing:1px;direction:ltr">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span><button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeShow(this.dataset.k)">\ud83d\udc41 \u05d4\u05e6\u05d2</button>':'')
+      +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,0)">\ud83c\udfb2 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d0\u05e7\u05e8\u05d0\u05d9\u05ea</button>'
+      +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,1)">\u270f\ufe0f \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05d9</button>'
       +'</div></div>';
   }).join('');
-  h+='<div class="card" style="padding:10px 12px"><div style="font-weight:700">\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4</div>'
+  h+='<div style="border-top:1px solid var(--border);padding:8px 0"><div style="font-weight:700">\u05e1\u05d9\u05e1\u05de\u05ea \u05d4\u05de\u05d7\u05d9\u05e7\u05d4</div>'
     +'<div style="font-size:12px;color:var(--t2);margin:2px 0 6px">\u05e0\u05e9\u05de\u05e8\u05ea \u05d1\u05db\u05dc \u05de\u05db\u05e9\u05d9\u05e8 \u05dc\u05d7\u05d5\u05d3, \u05d1\u05d3\u05e4\u05d3\u05e4\u05df: \u05de\u05d5\u05e0\u05e2\u05ea \u05de\u05d7\u05d9\u05e7\u05d4 \u05d1\u05d8\u05e2\u05d5\u05ea, \u05d4\u05d9\u05d0 \u05dc\u05d0 \u05d4\u05d2\u05e0\u05d4. '+(_delPwIsDefault()?'\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05d1\u05e8\u05d9\u05e8\u05ea \u05d4\u05de\u05d7\u05d3\u05dc.':'\u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4.')+'</div>'
-    +'<button type="button" class="btn btn-s btn-sm" onclick="_delPwChange();_codesRender()">\u270f\ufe0f \u05d4\u05d7\u05dc\u05e3 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4</button></div>';
+    +'<button type="button" class="btn btn-s btn-sm" onclick="_delPwChange();_codesRender()">\u270f\ufe0f \u05d4\u05d7\u05dc\u05e3 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4</button></div>'
+    +'<div style="border-top:1px solid var(--border);padding:8px 0 0;font-size:12px;color:var(--t2)">\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc \u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u270f\ufe0f \u05d1\u05e9\u05d5\u05e8\u05d4 \u05e9\u05dc \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05d8\u05d1\u05dc\u05d4 \u05dc\u05de\u05d8\u05d4.</div>';
   g('codes-body').innerHTML=h;
 }
 function _codeShow(key){
   var c=_codesList.filter(function(x){return x.key===key;})[0],el=g('code-v-'+key);
   if(!c||!el)return;
-  el.textContent=el.textContent===c.value?'\u2022\u2022\u2022\u2022\u2022\u2022':c.value;
+  el.textContent=el.textContent===c.value?'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022':c.value;
 }
+// The same rule as the server (codes.js PW_RE): 8 to 32 letters and digits, with at least one of each.
+function _codeOk(v){return /^[A-Za-z0-9]{8,32}$/.test(v)&&/[A-Za-z]/.test(v)&&/[0-9]/.test(v);}
 function _codeSet(key,own){
   var c=_codesList.filter(function(x){return x.key===key;})[0];if(!c)return;
   var v='';
-  if(own){v=prompt('\u05e7\u05d5\u05d3 \u05d7\u05d3\u05e9 \u05dc'+c.label+' (4 \u05e2\u05d3 12 \u05e1\u05e4\u05e8\u05d5\u05ea):');if(v===null)return;v=String(v).trim();if(!/^\d{4,12}$/.test(v)){toast('\u05d4\u05e7\u05d5\u05d3: 4 \u05e2\u05d3 12 \u05e1\u05e4\u05e8\u05d5\u05ea');return;}}
-  if(!confirm('\u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea '+c.label+'? \u05de\u05d9 \u05e9\u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05e7\u05d5\u05d3 \u05d4\u05d9\u05e9\u05df \u05d9\u05e6\u05d8\u05e8\u05da \u05dc\u05d4\u05e7\u05dc\u05d9\u05d3 \u05d0\u05ea \u05d4\u05d7\u05d3\u05e9.'))return;
+  if(own){v=prompt('\u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05dc'+c.label+'\n8 \u05ea\u05d5\u05d5\u05d9\u05dd \u05dc\u05e4\u05d7\u05d5\u05ea, \u05d0\u05d5\u05ea\u05d9\u05d5\u05ea \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d5\u05de\u05e1\u05e4\u05e8\u05d9\u05dd (\u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05de\u05db\u05dc \u05e1\u05d5\u05d2):');if(v===null)return;v=String(v).trim();if(!_codeOk(v)){toast('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4: 8 \u05ea\u05d5\u05d5\u05d9\u05dd \u05dc\u05e4\u05d7\u05d5\u05ea, \u05d0\u05d5\u05ea\u05d9\u05d5\u05ea \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d5\u05de\u05e1\u05e4\u05e8\u05d9\u05dd');return;}}
+  if(!confirm('\u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea '+c.label+'? \u05de\u05d9 \u05e9\u05de\u05e9\u05ea\u05de\u05e9 \u05d1\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d9\u05e9\u05e0\u05d4 \u05d9\u05e6\u05d8\u05e8\u05da \u05dc\u05d4\u05e7\u05dc\u05d9\u05d3 \u05d0\u05ea \u05d4\u05d7\u05d3\u05e9\u05d4.'))return;
   _codesCall(own?{op:'set',key:key,value:v}:{op:'set',key:key}).then(function(x){
-    if(!x.ok||!x.j||!x.j.value){toast('\u26a0\ufe0f \u05d4\u05e7\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e3: '+((x.j&&(x.j.message||x.j.error))||x.st));return;}
+    if(!x.ok||!x.j||!x.j.value){toast('\u26a0\ufe0f \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05dc\u05d0 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4: '+((x.j&&(x.j.message||x.j.error))||x.st));return;}
     c.value=x.j.value;c.source='app';c.updated_at=x.j.updated_at;c.set=true;_codesRender();
     var el=g('code-v-'+key);if(el)el.textContent=c.value;
-    toast('\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d5\u05d7\u05dc\u05e3 \u2713');
+    toast('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 \u2713');
   },function(){toast('\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea');});
 }
 function openNewUserModal(){

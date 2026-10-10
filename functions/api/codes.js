@@ -21,13 +21,22 @@ export const CODE_KEYS = {
   induction_code: { label: '\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', env: null },
   trustee_code: { label: '\u05e7\u05d5\u05d3 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', env: 'TRUSTEE_CODE' },
 };
-export const CODE_RE = /^\d{4,12}$/;
+// Letters and digits, 8 to 32, at least one of each (10/10/2026, Michael: "\u05d0\u05e0\u05d9 \u05de\u05e2\u05d3\u05d9\u05e3 \u05e1\u05d9\u05e1\u05de\u05d4, \u05dc\u05d0 \u05e7\u05d5\u05d3
+// \u05d1\u05de\u05e1\u05e4\u05e8\u05d9\u05dd"). Kept in lower case: capitals are not counted, so a phone's auto-capital does not lock
+// anyone out. A numeric code set before this still works until it is changed.
+export const CODE_RE = /^[a-z0-9]{8,32}$/;
+export const pwOk = (v) => CODE_RE.test(v) && /[a-z]/.test(v) && /[0-9]/.test(v);
+// No 0/o, 1/l/i: a password read out over the phone.
+const PW_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
 const h = (env, extra) => Object.assign({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY }, extra || {});
 
 export function randomCode(n) {
-  const b = new Uint32Array(n || 6);
-  crypto.getRandomValues(b);
-  return Array.from(b, (x) => String(x % 10)).join('');
+  for (;;) {
+    const b = new Uint32Array(n || 10);
+    crypto.getRandomValues(b);
+    const v = Array.from(b, (x) => PW_CHARS[x % PW_CHARS.length]).join('');
+    if (pwOk(v)) return v;
+  }
 }
 
 async function readRows(env) {
@@ -63,8 +72,8 @@ export async function onRequest({ request, env }) {
     if (b.op === 'set') {
       const key = String(b.key || '');
       if (!CODE_KEYS[key]) return jsonResp({ error: 'unknown code' }, 400, cors);
-      const value = b.value === undefined || b.value === null || b.value === '' ? randomCode(6) : String(b.value).trim();
-      if (!CODE_RE.test(value)) return jsonResp({ error: 'digits', message: '\u05d4\u05e7\u05d5\u05d3: 4 \u05e2\u05d3 12 \u05e1\u05e4\u05e8\u05d5\u05ea' }, 400, cors);
+      const value = b.value === undefined || b.value === null || b.value === '' ? randomCode(10) : String(b.value).trim().toLowerCase();
+      if (!pwOk(value)) return jsonResp({ error: 'format', message: '\u05d4\u05e1\u05d9\u05e1\u05de\u05d4: 8 \u05e2\u05d3 32 \u05ea\u05d5\u05d5\u05d9\u05dd, \u05d0\u05d5\u05ea\u05d9\u05d5\u05ea \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d5\u05de\u05e1\u05e4\u05e8\u05d9\u05dd, \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05de\u05db\u05dc \u05e1\u05d5\u05d2' }, 400, cors);
       const at = new Date().toISOString();
       const w = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key, value, updated_at: at }) });
       if (!w.ok) return jsonResp({ error: 'save failed' }, 502, cors);

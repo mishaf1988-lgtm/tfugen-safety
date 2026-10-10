@@ -99,7 +99,7 @@ export async function onRequest({ request, env }) {
 
   // Since 10/10/2026 the code can be changed from the app (codes.js): server_state
   // 'trustee_code' first, TRUSTEE_CODE in Cloudflare while that row is empty.
-  const expected = (await appCode(env)) || String(env.TRUSTEE_CODE || '').trim();
+  const expected = ((await appCode(env)) || String(env.TRUSTEE_CODE || '').trim()).toLowerCase();
   if (!expected) {
     // Closed. Says so in words the trustee in front of it can act on.
     return jsonResp({
@@ -109,7 +109,7 @@ export async function onRequest({ request, env }) {
   }
 
   let code = '';
-  try { const b = await request.json(); code = String((b && b.code) || '').trim(); } catch (e) { code = ''; }
+  try { const b = await request.json(); code = String((b && b.code) || '').trim().toLowerCase(); } catch (e) { code = ''; }
 
   const gg = await guessGate(env, 'tru', request);
   if (gg.locked) return jsonResp({ error: 'locked', message: '\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.' }, 429, cors);
