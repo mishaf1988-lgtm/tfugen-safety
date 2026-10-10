@@ -102,6 +102,8 @@ export const LANGS = {
 // 05/10/2026 in DECISIONS: a video in the page, then a question that is not required).
 const VID = { he: ['\u05e1\u05e8\u05d8\u05d5\u05df \u05d4\u05d4\u05d3\u05e8\u05db\u05d4', '\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05e1\u05e8\u05d8\u05d5\u05df'], ar: ['\u0641\u064a\u062f\u064a\u0648 \u0627\u0644\u062a\u062f\u0631\u064a\u0628', '\u0627\u0641\u062a\u062d \u0627\u0644\u0641\u064a\u062f\u064a\u0648'], ru: ['\u0412\u0438\u0434\u0435\u043e \u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u0430\u0436\u0430', '\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0432\u0438\u0434\u0435\u043e'], am: ['\u12e8\u1235\u120d\u1320\u1293 \u126a\u12f2\u12ee', '\u126a\u12f2\u12ee\u12cd\u1295 \u12ad\u1348\u1275'] };
 for (const k of Object.keys(VID)) { LANGS[k].video = VID[k][0]; LANGS[k].vOpen = VID[k][1]; }
+const IND_T = { he: '\u05d4\u05d3\u05e8\u05db\u05ea \u05e7\u05dc\u05d9\u05d8\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9', ar: '\u062a\u062f\u0631\u064a\u0628 \u0627\u0633\u062a\u064a\u0639\u0627\u0628 \u0644\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u062c\u062f\u064a\u062f', ru: '\u0412\u0432\u043e\u0434\u043d\u044b\u0439 \u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u0430\u0436 \u0434\u043b\u044f \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0442\u043d\u0438\u043a\u0430', am: '\u1208\u12a0\u12f2\u1235 \u1230\u122b\u1270\u129b \u12e8\u1218\u130d\u1262\u12eb \u1235\u120d\u1320\u1293' };
+for (const k of Object.keys(IND_T)) LANGS[k].indT = IND_T[k];
 // The manager writes the questions in Hebrew; the translate button in the form adds them in
 // Arabic, Russian and Amharic (Michael, 10/10/2026: "\u05d1\u05e6\u05e2: \u05dc\u05ea\u05e8\u05d2\u05dd \u05e2\u05dd \u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e7\u05d9\u05d9\u05dd"). A question
 // with no translation for the page's language is left out of that page.
@@ -173,9 +175,30 @@ export function deviceOf(ua) {
 export function talkUrl(tok, lang, g, tr) { return APP_URL + '/api/talk?k=' + encodeURIComponent(tok) + (lang && lang !== 'he' ? '&l=' + lang : '') + (g ? '&g=1' : '') + (tr ? '&t=1' : ''); }
 export function makeTalkToken(env, id, nowMs) { return makeLinkToken(env, PREFIX, id, TALK_TTL_DAYS, nowMs); }
 export function readTalkToken(env, tok, nowMs) { return readLinkToken(env, PREFIX, tok, nowMs); }
+// New-worker induction (form 08.02, Michael 10/10/2026: "\u05e8\u05e7 \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05d3\u05e9, \u05d0\u05d7\u05e8\u05d9\u05dd \u05dc\u05d0 \u05e8\u05dc\u05d5\u05d5\u05e0\u05d8\u05d9"): one
+// link and one QR at the entrance that do not run out. The token carries the talk's link_v; the
+// manager's "cancel link" raises it, so a leaked link stops working and a new one is printed.
+const PERM_PREFIX = 'talk-perm:v1:';
+export const PERM_TTL_DAYS = 3650;
+export const KIND_IND = 'induction';
+export function makePermToken(env, id, v, nowMs) { return makeLinkToken(env, PERM_PREFIX, id + '-v' + (v || 0), PERM_TTL_DAYS, nowMs); }
+export async function readPermToken(env, tok, nowMs) {
+  const r = await readLinkToken(env, PERM_PREFIX, tok, nowMs);
+  if (r.error) return r;
+  const m = /^(.+)-v(\d{1,5})$/.exec(r.id);
+  return m ? { id: m[1], perm: true, v: +m[2] } : { error: 'bad' };
+}
+// A permanent token opens only an induction talk, and only while its version is the current one.
+export const permOk = (t, talk) => !t.perm || (!!talk && talk.kind === KIND_IND && (talk.link_v || 0) === t.v);
 export function makeGroupToken(env, id, nowMs) { return makeLinkToken(env, GROUP_PREFIX, id, GROUP_TTL_DAYS, nowMs); }
 export function readGroupToken(env, tok, nowMs) { return readLinkToken(env, GROUP_PREFIX, tok, nowMs); }
-const readTok = (env, tok, g) => (g ? readGroupToken(env, tok) : readTalkToken(env, tok));
+async function readTok(env, tok, g) {
+  if (g) return readGroupToken(env, tok);
+  const t = await readTalkToken(env, tok);
+  if (t.error !== 'bad') return t;
+  const p = await readPermToken(env, tok);
+  return p.error ? t : p;
+}
 
 function headers(nonce) {
   return {
@@ -267,7 +290,7 @@ const errPage = (msg, status) => page('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u0
 const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L.errT, '<p>' + esc(L[k]) + '</p>', 'err', status, '', langOf(lang)); };
 
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,video_url,quiz', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,video_url,quiz,kind,link_v', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -376,6 +399,7 @@ async function showTalk(env, tok, want, g, tr) {
   if (t.error) return errL('badLink', want, 403);
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB) return errL('unpub', want, 404);
+  if (!permOk(t, talk)) return errL('badLink', want, 403);
   if (g && tr) return trainerPage(tok, talk);
   const x = textOf(talk, langOf(want));
   const lang = x.lang, L = LANGS[lang];
@@ -422,7 +446,7 @@ async function showTalk(env, tok, want, g, tr) {
     + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
     + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
     + (x.body ? '<script nonce="' + nonce + '">' + speakScript(lang) + '</script>' : '');
-  return page(L.title, inner, '', 200, nonce, lang);
+  return page(talk.kind === KIND_IND ? L.indT : L.title, inner, '', 200, nonce, lang);
 }
 
 // The PNG from canvas.toDataURL, checked: the right header, not empty, not huge.
@@ -463,6 +487,7 @@ async function signTalk(env, request) {
   if (String(form.get('ok') || '') !== '1') return bad('errOkT', 'errOk');
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB) return errL('unpub', lang, 404);
+  if (!permOk(t, talk)) return errL('badLink', lang, 403);
   const empId = String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
@@ -550,7 +575,7 @@ async function makeLink(env, request) {
   if (!who.ok) return jsonResp({ error: who.error }, who.status || 401, cors);
   let b = {};
   try { b = await request.json(); } catch (e) { b = {}; }
-  if (!b || (b.op !== 'link' && b.op !== 'group')) return jsonResp({ error: 'unknown op' }, 400, cors);
+  if (!b || (b.op !== 'link' && b.op !== 'group' && b.op !== 'revoke')) return jsonResp({ error: 'unknown op' }, 400, cors);
   const talk = await getTalk(env, String(b.id || ''));
   if (!talk) return jsonResp({ error: 'not found' }, 404, cors);
   if (talk.s !== S_PUB) return jsonResp({ error: 'not published' }, 409, cors);
@@ -560,6 +585,19 @@ async function makeLink(env, request) {
     if (!gt) return jsonResp({ error: 'not configured' }, 503, cors);
     return jsonResp({ url: talkUrl(gt, 'he', true), days: GROUP_TTL_DAYS }, 200, cors);
   }
+  // Induction: the permanent link; "revoke" raises link_v first, so the old link and QR stop.
+  if (talk.kind === KIND_IND) {
+    let v = talk.link_v || 0;
+    if (b.op === 'revoke') {
+      v += 1;
+      const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ link_v: v }) });
+      if (!p.ok) return jsonResp({ error: 'revoke failed' }, 502, cors);
+    }
+    const pt = await makePermToken(env, talk.id, v);
+    if (!pt) return jsonResp({ error: 'not configured' }, 503, cors);
+    return jsonResp({ url: talkUrl(pt), perm: true, link_v: v }, 200, cors);
+  }
+  if (b.op === 'revoke') return jsonResp({ error: 'not an induction talk' }, 409, cors);
   const tok = await makeTalkToken(env, talk.id);
   if (!tok) return jsonResp({ error: 'not configured' }, 503, cors);
   // When the newest link runs out (03/10/2026, Michael chose a column): the weekly
