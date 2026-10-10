@@ -125,6 +125,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const mixed = await page.evaluate(() => {
       __blank();
       DB.rounds = [];                                  // the morning round has no due date
+      // Rounds are hidden by default since 10/10/2026 (no morning-round line then): show them here.
+      try { const p = _appPrefs(); p.modulesShown = Object.assign({}, p.modulesShown || {}, { round: true }); localStorage.setItem(_APP_PREFS_KEY, JSON.stringify(p)); } catch (e) {}
       DB.tasks = [{ id: 'o', title: 'איחור', status: 'פתוח', due: __iso(-40) }];
       goPage('dash');
       return [...document.querySelectorAll('#today-items .today-item .ti-title')].map((e) => e.textContent);
