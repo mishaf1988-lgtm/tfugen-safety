@@ -95,7 +95,8 @@ const OTHER = 'דנה לוי';
         order: _truMyOpenOlder(me, now).map((x) => x.id),
         olderIds: (olderHtml.match(/data-tru-rep="([^"]+)"/g) || []).map((s) => s.slice(14, -1)),
         closeBtns: (olderHtml.match(/_truCloseReport\(&quot;|_truCloseReport\('([^']+)'/g) || []).length,
-        closesOld1: olderHtml.indexOf("_truCloseReport('old1')") >= 0,
+        closesOld1: /data-tru-rep="old1"[^]*?_truCloseReport\(this\.closest/.test(olderHtml.split('class="tru-rep"').filter(function (x) { return x.indexOf('data-tru-rep="old1"') >= 0; }).map(function (x) { return 'class="tru-rep"' + x; }).join('')), // 10/10/2026: the id comes from the row, not inside onclick
+
         namesIt: olderHtml.indexOf('מגן על מסוע 3 הוסר') >= 0,
         age: /\d+ יום/.test(olderHtml),
         mineIds: (mineHtml.match(/data-tru-rep="([^"]+)"/g) || []).map((s) => s.slice(14, -1)),

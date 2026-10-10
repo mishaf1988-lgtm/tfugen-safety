@@ -39,6 +39,7 @@ export function safeDir(p) {
   return (ROOT + parts.join('/')).replace(/\/$/, '');
 }
 
+export const RAW_MAX_MS = 3600e3;
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
@@ -53,7 +54,10 @@ export async function onRequest(context) {
   if ((body.raw === true || typeof body.list === 'string') && rawTok.length >= 32) {
     const st = await stateGet(env, ['od_raw_token', 'od_raw_exp']).catch(() => ({}));
     const t = st.od_raw_token && st.od_raw_token.value, x = st.od_raw_exp && st.od_raw_exp.value;
-    rawOk = !!t && t === rawTok && !!x && Date.parse(x) > Date.now();
+    // Security scan 10/10/2026: a token "for a few minutes" is refused if it claims more than an
+    // hour, so a Routine (routine-db can write od_raw_exp) or a mistake cannot open the folder for good.
+    const ms = x ? Date.parse(x) : NaN;
+    rawOk = !!t && t === rawTok && ms > Date.now() && ms <= Date.now() + RAW_MAX_MS;
   }
   if (!rawOk && (!want || (request.headers.get('x-notify-secret') || '') !== want)) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
