@@ -63,3 +63,9 @@ description: How to read and change the live Supabase database of tfugen-safety 
 הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
 נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
 חזר: 1 (07/10: אמרתי למיכאל להתחבר מחדש; `mcp__Supabase__execute_sql` עבד)
+
+**78. שעה מנוחשת בדוח ריצה ב-server_state (11/10/2026, PR זה).**
+מה קרה: בריצה הראשונה של routine-mail-filing כתבתי `"at":"15:05"` ב-`mail_filing`, כשהשעה הייתה 14:54. הריצה הבאה מחפשת כשלי זרימה מה-`at` הזה, ולכן 11 דקות היו נופלות. תיקנתי ביד.
+הכלל: זמן "עכשיו" לא נכתב מהראש. השרת חותם אותו (`STAMP_AT` ב-`routine-db.js`), ומחוץ לשרת: `date -u +%FT%TZ`.
+נאכף: `routine-db-test.mjs` (state_set של `mail_filing` ו-`validity_run` מקבל את שעת השרת).
+חזר: 0
