@@ -12783,9 +12783,16 @@ function _codesLoad(force){
   g('codes-body').textContent='\u05d8\u05d5\u05e2\u05df...';
   _codesCall({op:'list'}).then(function(x){
     if(!x.ok||!x.j||!x.j.codes){g('codes-body').textContent='\u26a0\ufe0f \u05dc\u05d0 \u05e0\u05d8\u05e2\u05df ('+x.st+')';return;}
-    _codesList=x.j.codes;_codesRecent=Array.isArray(x.j.recent)?x.j.recent:[];_codesAt=Date.now();_codesRender();
-  },function(){g('codes-body').textContent='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea';});
+    _codesRetried=false;_codesList=x.j.codes;_codesRecent=Array.isArray(x.j.recent)?x.j.recent:[];_codesAt=Date.now();_codesRender();
+  },function(){
+    // No answer at all (11/10/2026, Michael's screenshot at 08:04, the minute a deploy went live):
+    // one quiet retry after 3 seconds, then the message with a retry button.
+    if(!_codesRetried){_codesRetried=true;setTimeout(function(){_codesLoad(true);},3000);return;}
+    _codesRetried=false;
+    g('codes-body').innerHTML='\u26a0\ufe0f \u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea. <button class="btn" onclick="_codesLoad(true)">\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1</button>';
+  });
 }
+var _codesRetried=false;
 // Old entry points (the dialog of 10/10/2026, the delete dialog's hint): the users page.
 // One module for users and passwords (10/10/2026, Michael: "\u05d4\u05db\u05d5\u05d5\u05e0\u05d4 \u05d4\u05db\u05dc \u05e6\u05e8\u05d9\u05da \u05dc\u05e9\u05d1\u05ea \u05ea\u05d7\u05ea \u05de\u05d5\u05d3\u05dc \u05d0\u05d7\u05d3").
 // The sheet had three entries (users, change password, two-step); now one. Admin: the users page,
