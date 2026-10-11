@@ -40,6 +40,16 @@ export function safeDir(p) {
 }
 
 export const RAW_MAX_MS = 3600e3;
+// One file attached to a mail (11/10/2026, Michael: "do everything needed yourself" - a certificate
+// that exists only as an attachment in his inbox). Read-only (GET), only with the one-off token,
+// only a PDF or a photo, and never another kind of attachment (an item, a link).
+export const MAIL_ID = /^[A-Za-z0-9_=+\/-]{20,400}$/;
+export const MAIL_ATT_MAX = 15 * 1024 * 1024;
+export function mailAttOk(a) {
+  return !!(a && a['@odata.type'] === '#microsoft.graph.fileAttachment' && a.contentBytes
+    && (/^(application\/pdf|image\/(jpeg|jpg|png))$/i.test(a.contentType || '') || /\.(pdf|jpe?g|png)$/i.test(a.name || ''))
+    && +a.size > 0 && +a.size <= MAIL_ATT_MAX);
+}
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== 'POST') return jsonResp({ error: 'method not allowed' }, 405, {});
@@ -51,13 +61,31 @@ export async function onRequest(context) {
   // run SQL there, lasts minutes, and allows only this download.
   const rawTok = request.headers.get('x-raw-token') || '';
   let rawOk = false;
-  if ((body.raw === true || typeof body.list === 'string') && rawTok.length >= 32) {
+  if ((body.raw === true || typeof body.list === 'string' || (body.mailAtt && typeof body.mailAtt === 'object')) && rawTok.length >= 32) {
     const st = await stateGet(env, ['od_raw_token', 'od_raw_exp']).catch(() => ({}));
     const t = st.od_raw_token && st.od_raw_token.value, x = st.od_raw_exp && st.od_raw_exp.value;
     // Security scan 10/10/2026: a token "for a few minutes" is refused if it claims more than an
     // hour, so a Routine (routine-db can write od_raw_exp) or a mistake cannot open the folder for good.
     const ms = x ? Date.parse(x) : NaN;
     rawOk = !!t && t === rawTok && ms > Date.now() && ms <= Date.now() + RAW_MAX_MS;
+  }
+  if (body.mailAtt && typeof body.mailAtt === 'object') {
+    if (!rawOk) return jsonResp({ error: 'forbidden' }, 403, {});
+    const m = String(body.mailAtt.msg || ''), a = String(body.mailAtt.att || '');
+    if (!MAIL_ID.test(m) || !MAIL_ID.test(a)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+    if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
+    try {
+      const { token } = await accessToken(env);
+      const r = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(m) + '/attachments/' + encodeURIComponent(a), { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) return jsonResp({ ok: false, error: 'mail ' + r.status }, 200, {});
+      const att = await r.json();
+      if (!mailAttOk(att)) return jsonResp({ ok: false, error: 'not a pdf or a photo' }, 200, {});
+      const bin = atob(att.contentBytes), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return new Response(bytes, { status: 200, headers: { 'Content-Type': 'application/octet-stream', 'Cache-Control': 'no-store' } });
+    } catch (e) {
+      return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, {});
+    }
   }
   if (!rawOk && (!want || (request.headers.get('x-notify-secret') || '') !== want)) return jsonResp({ error: 'forbidden' }, 403, {});
   if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});

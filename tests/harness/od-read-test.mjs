@@ -1,6 +1,6 @@
 // od-read (28/09): read one sheet of a workbook in the safety folder, server
 // to server, read-only. Graph mocked; the workbook is built by writeZip.
-import { onRequest, safePath, safeDir } from './_build/od-read.mjs';
+import { onRequest, safePath, safeDir, mailAttOk } from './_build/od-read.mjs';
 import { writeZip } from './_build/_xlsxpatch.mjs';
 
 let pass = 0, fail = 0;
@@ -112,6 +112,31 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
   listWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() });
   res = await onRequest({ request: req({ 'x-raw-token': TOK }, { list: '' }), env: ENV });
   check('a listing with an expired token: 403', res.status === 403);
+
+  // A mail attachment (11/10/2026): read-only, one-off token, a PDF or a photo only.
+  const MID = 'AAMkADNmMjhj-x_y=' + 'q'.repeat(20), AID = 'AAMkADNmMjhjATT' + 'w'.repeat(20);
+  const pdf = btoa('%PDF-1.4 cert');
+  const mailWorld = (state, att) => { const got = []; globalThis.fetch = async (url, init) => { const u = String(url); got.push([u, (init && init.method) || 'GET']); if (u.startsWith(SB + '/rest/v1/server_state')) return new Response(JSON.stringify(Object.keys(state).map((k) => ({ key: k, value: state[k] }))), { status: 200 }); if (u.startsWith(SB)) return new Response(JSON.stringify([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Read' }]), { status: 200 }); return new Response(JSON.stringify(att), { status: 200 }); }; return got; };
+  const okState = { od_raw_token: TOK, od_raw_exp: new Date(Date.now() + 600e3).toISOString() };
+  let got = mailWorld(okState, { '@odata.type': '#microsoft.graph.fileAttachment', name: 'cert.pdf', contentType: 'application/pdf', size: 13, contentBytes: pdf });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { mailAtt: { msg: MID, att: AID } }), env: ENV });
+  const mb = new TextDecoder().decode(new Uint8Array(await res.arrayBuffer()));
+  check('mail attachment with the one-off token: the PDF bytes, by GET on that one attachment', res.status === 200 && mb === '%PDF-1.4 cert' && got.some(([u, m]) => m === 'GET' && u === 'https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(MID) + '/attachments/' + encodeURIComponent(AID)) && got.every(([, m]) => m === 'GET'), [res.status, mb, got]);
+  mailWorld(okState, {});
+  res = await onRequest({ request: req(S, { mailAtt: { msg: MID, att: AID } }), env: ENV });
+  check('mail attachment with the server secret alone: refused', res.status === 403);
+  res = await onRequest({ request: req({}, { mailAtt: { msg: MID, att: AID } }), env: ENV });
+  check('mail attachment with no token: refused', res.status === 403);
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { mailAtt: { msg: '../me', att: AID } }), env: ENV });
+  check('mail attachment with a bad id: 400', res.status === 400);
+  mailWorld({ od_raw_token: TOK, od_raw_exp: new Date(Date.now() - 1000).toISOString() }, {});
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { mailAtt: { msg: MID, att: AID } }), env: ENV });
+  check('mail attachment with an expired token: refused', res.status === 403);
+  mailWorld(okState, { '@odata.type': '#microsoft.graph.itemAttachment', name: 'fwd', size: 10 });
+  res = await onRequest({ request: req({ 'x-raw-token': TOK }, { mailAtt: { msg: MID, att: AID } }), env: ENV });
+  j = await res.json();
+  check('a forwarded mail or any non-file attachment: refused', j.ok === false, j);
+  check('only a PDF or a photo, up to 15MB', mailAttOk({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'a.jpg', contentType: 'image/jpeg', size: 5, contentBytes: 'x' }) && !mailAttOk({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'a.exe', contentType: 'application/octet-stream', size: 5, contentBytes: 'x' }) && !mailAttOk({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'a.pdf', contentType: 'application/pdf', size: 16 * 1024 * 1024, contentBytes: 'x' }));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
