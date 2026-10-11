@@ -78,7 +78,7 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   r = await call({ op: 'state_set', key: 'quote_track', value: { 'Q-eq-1-261101': { stage: 'sent', sent: '2026-10-11' } } });
   check('state_set: written and read back equal', r.json.ok && JSON.parse(state.quote_track)['Q-eq-1-261101'].stage === 'sent', r.json);
   check('state_set of another key (weekly_digest): refused, untouched', (await call({ op: 'state_set', key: 'weekly_digest', value: 'y' })).status === 400 && state.weekly_digest === 'x');
-  check('the write list is exactly the five keys (mail_filing 11/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing');
+  check('the write list is exactly the six keys (mail_filing, validity_run 11/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run');
   calls = [];
   await call({ op: 'delete', table: 'docs' });
   check('no delete op: nothing sent', !calls.length);
