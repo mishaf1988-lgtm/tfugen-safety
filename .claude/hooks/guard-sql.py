@@ -51,6 +51,17 @@ def semi_in_literal(q):
 m = pat.search(text)
 a = None if m else ask.search(sql)
 t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(sql) else None))
+# tfugen-db rule 8 (03/10/2026, lesson 45): a DO $$ block hangs the connector the
+# same way, in execute_sql and apply_migration alike. Run the statements one by one.
+d8 = None if (m or a or t) else re.search(r"\bDO\s+(LANGUAGE\s+\w+\s+)?\$", re.sub(r"'(?:[^']|'')*'", "''", sql), re.I)
+if d8:
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason":
+            "guard-sql (tfugen-db 8): a DO $$ block hangs execute_sql/apply_migration for 60s. "
+            "Send the statements as plain SQL, one by one, without DO."}}))
+    sys.exit(0)
 if t:
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
