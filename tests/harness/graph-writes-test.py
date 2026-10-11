@@ -34,7 +34,7 @@ APPROVED_SEND = {
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")
 }
 APPROVED_DELETE = {
-    'functions/api/backup-od.js': 1,   # prune old daily backups in _Backups (01/10/2026)
+    'functions/api/backup-od.js': 1,   # prune old daily backups in _Backups (01/10/2026); the same prune empties 'לא לתיוק' after 30 days (11/10/2026, Michael: "בצע: מחיקה אחרי 30 יום")
     'functions/api/hazard-file.js': 1,  # prune old copies in 'הוחלפו' after KEEP_DAYS (29/09/2026)
 }
 SEND = re.compile(r"\bsendMail(To)?\s*\(|/me/sendMail")

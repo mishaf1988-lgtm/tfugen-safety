@@ -36,6 +36,14 @@ export const BASE = 'Apps/Tapugan Safety/_Backups';
 export const DAILY = BASE + '/cron', MONTHLY = BASE + '/monthly', PHOTOS = BASE + '/photos';
 export const DAILY_KEEP = 15, MONTHLY_KEEP = 12, PHOTO_MAX = 15;
 export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
+// "לא לתיוק" (11/10/2026, Michael in the questionnaire: "בצע: מחיקה אחרי 30 יום"): copies of mail
+// attachments that were not filed (invoices, quotes, duplicates). The original stays in the mail.
+// A file created there more than SKIP_DAYS ago is deleted (to the OneDrive recycle bin), at most
+// SKIP_MAX a day. Only this folder, only files, never a sub-folder. skipOld.
+export const SKIP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7', SKIP_DAYS = 30, SKIP_MAX = 20;
+export function skipOld(items, nowMs) {
+  return (items || []).filter((x) => x && x.id && x.created && !isNaN(Date.parse(x.created)) && nowMs - Date.parse(x.created) > SKIP_DAYS * 864e5);
+}
 // One request for both tables (FK toolbox_reads.talk_id). Max rows applies to the talks only.
 export const TALKS_Q = 'toolbox_talks?select=*,toolbox_reads(*)&order=id.asc';
 const TALKS_RE = /^talks-(\d{2})-(\d{2})-(\d{4})\.json$/;
@@ -107,13 +115,13 @@ async function run(env) {
   }
   async function odList(path) {
     const out = [];
-    let url = GRAPH + '/root:/' + seg(path) + ':/children?$select=id,name,file&$top=200';
+    let url = GRAPH + '/root:/' + seg(path) + ':/children?$select=id,name,file,createdDateTime&$top=200';
     while (url) {
       const r = await f(url, { headers: gh });
       if (r.status === 404) return out;
       if (!r.ok) throw new Error('onedrive list ' + r.status);
       const j = await r.json();
-      (j.value || []).forEach((x) => { if (x && x.file && x.name) out.push({ id: x.id, name: x.name }); });
+      (j.value || []).forEach((x) => { if (x && x.file && x.name) out.push({ id: x.id, name: x.name, created: x.createdDateTime || null }); });
       url = j['@odata.nextLink'] || null;
     }
     return out;
@@ -186,6 +194,14 @@ async function run(env) {
     }
     rec.photos.left = todo.length - rec.photos.copied;
   } catch (e) { err('photos', e); }
+
+  // 5. "לא לתיוק": files older than SKIP_DAYS, through the same prune (one DELETE call site),
+  // after the photos and only with budget left: the backups come first, these can wait a day.
+  if (left() >= 3) try {
+    const od = await odList(SKIP);
+    const old = skipOld(od, Date.now()).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
+    rec.skip = { files: od.length, pruned: old.length ? await prune(od, 0, () => old) : 0 };
+  } catch (e) { err('skip', e); }
 
   if (!rec.newest) rec.errors.push('no complete backup in the bucket');
   else {
