@@ -28,6 +28,12 @@
 //              failed or silent run reaches the weekly mail and the daily retro
 //              (09/10/2026, review of the agents: a run's last message in a
 //              persistent session reaches nobody).
+//   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
+//              update one row of docs / equip_inspections after a document was read:
+//              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
+//              A later e needs the document it came from (doc). The old value, the new
+//              one, why and the document are appended to the row's note, so every change
+//              is visible in the app. EXPIRY_TABLES, expiryPatch.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
@@ -51,6 +57,53 @@ export const COLUMNS = {
   hearing_tests: ['id', 'e'],
   trustee_reports: ['id', 'loc', 'location_id', 's', 'ok', 'ts', 'closed_d', 'num'],
 };
+// expiry_set: the tables, the note column of each, and the one extra field it may set.
+export const EXPIRY_TABLES = {
+  docs: { note: 'nt', extra: 's' },
+  equip_inspections: { note: 'notes', extra: 'd' },
+};
+export const DOC_STATES = ['\u05d1\u05ea\u05d5\u05e7\u05e3', '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3', '\u05d8\u05e2\u05d5\u05df \u05d0\u05d9\u05de\u05d5\u05ea'];
+export const FILE_URL_PREFIX = 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/';
+const isDay = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) && !isNaN(Date.parse(x + 'T00:00:00Z')) && new Date(x + 'T00:00:00Z').toISOString().slice(0, 10) === x;
+const ddmm = (x) => x ? x.slice(8, 10) + '/' + x.slice(5, 7) + '/' + x.slice(0, 4) : '-';
+const short = (x, n) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, n);
+
+// The PATCH for one row, or { error }. row = the row as it is now; today = YYYY-MM-DD.
+export function expiryPatch(b, row, today) {
+  const t = EXPIRY_TABLES[b.table];
+  if (!t) return { error: 'table not allowed' };
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  const why = short(b.why, 300), doc = short(b.doc, 300);
+  if (why.length < 5) return { error: 'why required' };
+  const patch = {}, said = [];
+  if (b.e !== undefined) {
+    if (!isDay(b.e) || b.e < '2000-01-01' || b.e > String(Number(today.slice(0, 4)) + 6) + today.slice(4)) return { error: 'bad e' };
+    const old = row.e ? String(row.e).slice(0, 10) : '';
+    // later than now = the run read a document that says so; earlier is always allowed (careful)
+    if ((!old || b.e > old) && !doc) return { error: 'doc required for a later e' };
+    if (b.e !== old) { patch.e = b.e; said.push('\u05ea\u05d5\u05e7\u05e3 ' + ddmm(old) + ' -> ' + ddmm(b.e)); }
+  }
+  if (b.file_url !== undefined) {
+    const u = String(b.file_url || '');
+    if (u.indexOf(FILE_URL_PREFIX) !== 0 || u.length > 600 || /[\s"<>]/.test(u)) return { error: 'bad file_url' };
+    if (u !== row.file_url) { patch.file_url = u; said.push('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5'); }
+  }
+  if (b[t.extra] !== undefined) {
+    const v = b[t.extra];
+    if (t.extra === 's' && DOC_STATES.indexOf(v) < 0) return { error: 'bad s' };
+    if (t.extra === 'd' && (!isDay(v) || v > today)) return { error: 'bad d' };
+    if (v !== row[t.extra]) { patch[t.extra] = v; said.push(t.extra + ' ' + (t.extra === 'd' ? ddmm(v) : v)); }
+  }
+  for (const k of Object.keys(b)) {
+    if (['op', 'table', 'id', 'agent', 'why', 'doc', 'e', 'file_url', t.extra].indexOf(k) < 0) return { error: 'field not allowed: ' + k };
+  }
+  if (!said.length) return { patch: null };
+  const line = ddmm(today) + ' Claude (' + b.agent + '): ' + said.join(', ') + '. ' + why + (doc ? '. \u05de\u05e1\u05de\u05da: ' + doc : '');
+  const prev = String(row[t.note] || '').trim();
+  patch[t.note] = prev ? prev + ' | ' + line : line;
+  return { patch };
+}
+
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 
 async function digest(s) {
@@ -173,6 +226,28 @@ export async function onRequest(context) {
       });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
+    }
+    if (body.op === 'expiry_set') {
+      const t = EXPIRY_TABLES[body.table];
+      if (!t) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
+      const id = String(body.id === undefined || body.id === null ? '' : body.id);
+      if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      const cols = ['id', 'e', 'file_url', t.note, t.extra].join(',');
+      const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const rows = await g.json();
+      if (!Array.isArray(rows) || rows.length !== 1) return jsonResp({ ok: false, error: 'row not found' }, 200, {});
+      const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+      const p = expiryPatch(body, rows[0], today);
+      if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
+      if (!p.patch) return jsonResp({ ok: true, changed: false, row: rows[0] }, 200, {});
+      const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id), {
+        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(p.patch),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
     }
     return jsonResp({ ok: false, error: 'unknown op' }, 400, {});
   } catch (e) {

@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -17,8 +17,17 @@ globalThis.fetch = async (url, opt = {}) => {
     const keys = decodeURIComponent((/key=(?:in\.\(([^)]*)\)|eq\.(.*))/.exec(url) || []).slice(1).filter(Boolean)[0] || '').split(',');
     return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: 'now' }))), { status: 200 });
   }
+  // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
+  const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
+  if (m && rows[m[1]]) {
+    const id = decodeURIComponent((/id=eq\.([^&]*)/.exec(m[2]) || [])[1] || '');
+    const hit = rows[m[1]].filter((r) => String(r.id) === id);
+    if ((opt.method || 'GET') === 'PATCH') { hit.forEach((r) => Object.assign(r, JSON.parse(opt.body))); return new Response(JSON.stringify(hit), { status: 200 }); }
+    return new Response(JSON.stringify(hit.map((r) => ({ ...r }))), { status: 200 });
+  }
   return new Response(JSON.stringify([{ id: 1 }]), { status: 200 });
 };
+let rows = {};
 const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method, headers: { 'x-routine-key': key, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify(body) : undefined }), env });
   return { status: r.status, json: await r.json() };
@@ -70,7 +79,12 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   calls = [];
   await call({ op: 'delete', table: 'docs' });
   check('no delete op: nothing sent', !calls.length);
-  check('no DELETE or PATCH anywhere in the source', !/method:\s*'(DELETE|PATCH)'/.test(fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8')));
+  {
+    // 11/10/2026: one PATCH, inside expiry_set (docs / equip_inspections by id). Still no DELETE.
+    const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
+    const patches = src.match(/method:\s*'PATCH'/g) || [];
+    check('no DELETE anywhere; the only PATCH is in expiry_set', !/method:\s*'DELETE'/.test(src) && patches.length === 1 && /method:\s*'PATCH'/.test(src.slice(src.indexOf("body.op === 'expiry_set'"))) && src.indexOf("body.op === 'expiry_set'") > 0);
+  }
 
   console.log('\n4b. agent_report: append-only run log');
   state = {};
@@ -86,6 +100,42 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   lg = JSON.parse(state.agent_log);
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
+
+  console.log('\n4d. expiry_set: one row, after a document was read, with the reason in the note');
+  {
+    const U = FILE_URL_PREFIX + 'Documents/x.pdf';
+    rows = { docs: [{ id: 'd1', e: '2026-05-01', nt: 'old note', file_url: null, s: '\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3' }, { id: 'd2', e: null, nt: null, file_url: null, s: null }],
+      equip_inspections: [{ id: 'q1', e: '2026-12-01', notes: null, file_url: null, d: '2025-12-01' }] };
+    const base = { op: 'expiry_set', table: 'docs', id: 'd1', agent: 'routine-mail-filing', why: '\u05d3\u05d5\u05d7 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e9\u05e0\u05ea\u05d9' };
+    let x = await call({ ...base, e: '2027-05-01' });
+    check('later e without doc: refused, row untouched', x.status === 400 && /doc required/.test(x.json.error) && rows.docs[0].e === '2026-05-01', x.json);
+    calls = [];
+    x = await call({ ...base, e: '2027-05-01', doc: 'report.pdf', file_url: U, s: '\u05d1\u05ea\u05d5\u05e7\u05e3' });
+    check('later e with doc: written, one PATCH by id', x.json.ok && x.json.changed && rows.docs[0].e === '2027-05-01' && rows.docs[0].file_url === U && calls.filter((c) => c.method === 'PATCH').length === 1 && calls.some((c) => c.method === 'PATCH' && /docs\?id=eq\.d1$/.test(c.url)), x.json);
+    check('the note keeps the old one and adds old -> new, why and the document', /^old note \| \d\d\/\d\d\/\d{4} Claude \(routine-mail-filing\): /.test(rows.docs[0].nt) && rows.docs[0].nt.indexOf('01/05/2026 -> 01/05/2027') > 0 && rows.docs[0].nt.indexOf('report.pdf') > 0, rows.docs[0].nt);
+    x = await call({ ...base, e: '2027-01-01' });
+    check('earlier e: allowed without doc (careful)', x.json.ok && rows.docs[0].e === '2027-01-01', x.json);
+    calls = [];
+    x = await call({ ...base, e: '2027-01-01' });
+    check('same value: ok, nothing written', x.json.ok && x.json.changed === false && !calls.some((c) => c.method === 'PATCH'), x.json);
+    check('no e yet: a first e needs doc', (await call({ ...base, id: 'd2', e: '2027-01-01' })).status === 400);
+    check('why missing: refused', (await call({ ...base, why: '', e: '2026-01-01' })).status === 400);
+    check('file_url outside the OneDrive: refused', (await call({ ...base, file_url: 'https://evil.example/x.pdf' })).status === 400);
+    check('s not in the list: refused', (await call({ ...base, s: 'x' })).status === 400);
+    check('a field outside the list (n): refused', (await call({ ...base, n: 'renamed', e: '2026-01-01' })).status === 400 && rows.docs[0].e === '2027-01-01');
+    check('bad date / 30 years ahead: refused', (await call({ ...base, e: '2027-02-30', doc: 'r' })).status === 400 && (await call({ ...base, e: '2056-01-01', doc: 'r' })).status === 400);
+    check('another table (tasks): refused', (await call({ ...base, table: 'tasks', e: '2026-01-01' })).status === 400);
+    check('id with a filter in it: refused', (await call({ ...base, id: 'd1&e=gte.2000-01-01', e: '2026-01-01' })).status === 400);
+    x = await call({ ...base, id: 'nope', e: '2026-01-01' });
+    check('unknown id: ok false, row not found', !x.json.ok && /not found/.test(x.json.error), x.json);
+    x = await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'routine-validity', why: 'tasqir 2026', doc: 't.pdf', e: '2027-06-01', d: '2026-06-01' });
+    check('equip_inspections: e and d, note in notes', x.json.ok && rows.equip_inspections[0].e === '2027-06-01' && rows.equip_inspections[0].d === '2026-06-01' && /routine-validity/.test(rows.equip_inspections[0].notes), x.json);
+    check('equipment d in the future: refused', (await call({ op: 'expiry_set', table: 'equip_inspections', id: 'q1', agent: 'a-b', why: 'xxxxx', d: '2099-01-01' })).status === 400);
+    check('expiryPatch: docs cannot set d, equipment cannot set s', !!expiryPatch({ ...base, d: '2026-01-01' }, rows.docs[0], '2026-10-11').error && !!expiryPatch({ ...base, table: 'equip_inspections', s: 'x' }, rows.equip_inspections[0], '2026-10-11').error);
+    check('only docs and equip_inspections', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections');
+    check('without the key: 403, nothing written', (await call({ ...base, e: '2026-01-01' }, 'nope')).status === 403 && rows.docs[0].e === '2027-01-01');
+    rows = {};
+  }
 
   console.log('\n4c. live: the deployed commit and the hash of the served index.html');
   {
