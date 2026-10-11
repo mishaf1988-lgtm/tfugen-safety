@@ -154,6 +154,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 ## הפניות
 
 - **תור העבודה: `project-files/BACKLOG.md`**
+- **מה קיים מחוץ ל-repo: `project-files/ACCOUNT-INVENTORY.md`** (מיכאל, 11/10/2026: "אם אצטרך להעביר את כל הפעילות מהחשבון הזה, זה אמור להיות מתועד ב-GitHub"): Routines, זרימות Power Automate, תיקיות שהאוטומציה תלויה בהן, Cowork, connectors, שמות הסודות ב-Cloudflare, pg_cron, ובדיקה אחרי העברה. כל דבר חדש מחוץ ל-repo נרשם שם באותו PR (`account-inventory-test.py`). בלי ערכים סודיים.
 - תבניות קוד: `project-files/PATTERNS.md`
 - Checklist לפני PR: `project-files/CHECKLIST.md`
 - Skill מפורט: `.claude/skills/tfugen-dev/SKILL.md`
