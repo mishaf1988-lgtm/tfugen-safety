@@ -144,3 +144,19 @@ export async function requireRole(request, env, allowed) {
   }
   return { ok: true, user: who.user, role: role };
 }
+
+// The address a lock counts by (11/10/2026, retro). IPv4 as it is. IPv6: the /64, because one home line or
+// VPS holds 2^64 addresses and each would get its own ten tries. Kept whole: an IPv4 inside an IPv6
+// (::ffff:1.2.3.4, 64:ff9b::1.2.3.4, or the same in hex), where the first groups are the same for everyone.
+export function ipBucket(raw) {
+  const s = String(raw || 'none').split('%')[0];
+  if (s.indexOf(':') < 0 || s.indexOf('.') >= 0) return s;
+  const [a, b] = s.split('::');
+  const L = a ? a.split(':') : [], R = b === undefined ? [] : (b ? b.split(':') : []);
+  if (L.length + R.length > 8) return s;
+  const g = (b === undefined ? L : L.concat(Array(8 - L.length - R.length).fill('0'), R)).map((x) => (x || '0').toLowerCase().replace(/^0+(?=.)/, ''));
+  if (g.length !== 8) return s;
+  const mapped = g.slice(0, 5).every((x) => x === '0') && g[5] === 'ffff';
+  const nat64 = g[0] === '64' && g[1] === 'ff9b' && g.slice(2, 6).every((x) => x === '0');
+  return mapped || nat64 || g.slice(0, 7).every((x) => x === '0') ? g.join(':') : g.slice(0, 4).join(':');
+}

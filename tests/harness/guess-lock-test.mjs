@@ -4,6 +4,7 @@
 // first lock is kept for the weekly mail, and a database that cannot count does not shut HR out.
 import { onRequest, makePermToken, GUESS_LIMIT, guessKey } from './_build/talk.mjs';
 import { guessLocksLine, passwordAgeLines } from './_build/weekly-digest.mjs';
+import { ipBucket } from './_build/_shared.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -39,6 +40,12 @@ console.log('\n1. the HR code');
   check('...the first lock is kept for the weekly mail', w.locks && w.locks.length === 1 && w.locks[0].s === 'ind' && w.locks[0].at, w.locks);
   await code('246810');
   check('...and a later attempt does not add another lock entry', w.locks.length === 1);
+  check('IPv6: the same /64 is one bucket, written short or long, any case', ipBucket('2001:db8:1:2:aaaa:bbbb:cccc:dddd') === ipBucket('2001:0DB8:0001:0002::1') && ipBucket('2001:db8:1:2::') === ipBucket('2001:db8:1:2:0:0:0:9'));
+  check('IPv6: another /64 is another bucket', ipBucket('2001:db8:1:3::1') !== ipBucket('2001:db8:1:2::1'));
+  check('an IPv4 inside an IPv6 keeps its own bucket (not 0:0:0:0 for everyone)', new Set(['::ffff:1.2.3.4', '::ffff:5.6.7.8', '::ffff:0102:0304', '::ffff:0506:0708', '64:ff9b::1.2.3.4', '64:ff9b::5.6.7.8']).size === new Set(['::ffff:1.2.3.4', '::ffff:5.6.7.8', '::ffff:0102:0304', '::ffff:0506:0708', '64:ff9b::1.2.3.4', '64:ff9b::5.6.7.8'].map(ipBucket)).size, ['::ffff:1.2.3.4', '::ffff:0102:0304', '::1'].map(ipBucket));
+  check('edge inputs do not throw and stay distinct: ::1, ::, zone, junk, none', ipBucket('::1') !== ipBucket('::') && ipBucket('fe80::1%eth0') === ipBucket('fe80::2') && ipBucket('1:2:3:4:5:6:7:8:9') === '1:2:3:4:5:6:7:8:9' && ipBucket(undefined) === 'none' && ipBucket('1.2.3.4') === '1.2.3.4');
+  const gsrc = ['talk', 'trustee-gate'].map((f) => fs.readFileSync(new URL('../../functions/api/' + f + '.js', import.meta.url), 'utf8'));
+  check('both copies of guessKey count by ipBucket', gsrc.every((x) => x.includes('ipBucket(request.headers.get(')));
   r = await code('246810', '5.6.7.8');
   check('another address is not locked', r.st === 303);
   w.rpcDown = true;
