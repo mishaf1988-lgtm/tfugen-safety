@@ -178,8 +178,9 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('source missing: refused', !x.json.ok && /source 404/.test(x.json.error), x.json);
     check('from outside the inbox (a path): refused', (await call({ ...base, from: '../x.pdf' })).status === 400 && (await call({ ...base, from: 'sub/a.pdf' })).status === 400);
     check('to_dir with .. or into the inbox: refused', (await call({ ...base, to_dir: '../../x' })).status === 400 && (await call({ ...base, to_dir: OD_INBOX })).status === 400);
-    check('the not-filed folder inside the inbox: allowed; any other folder inside it, or deeper: refused', !odMoveCheck({ ...base, to_dir: OD_INBOX + '/' + OD_SKIP }).error && !!odMoveCheck({ ...base, to_dir: OD_INBOX + '/x' }).error && !!odMoveCheck({ ...base, to_dir: OD_INBOX + '/' + OD_SKIP + '/x' }).error);
+    check('the not-filed folder inside the inbox: allowed; any other folder inside it, or deeper: refused', !odMoveCheck({ ...base, to_dir: OD_INBOX + '/' + OD_SKIP, name: 'a.pdf' }).error && !!odMoveCheck({ ...base, to_dir: OD_INBOX + '/x' }).error && !!odMoveCheck({ ...base, to_dir: OD_INBOX + '/' + OD_SKIP + '/x' }).error);
     check('to the old-versions or to-delete folders, or ARCHIVE: refused', ['a/_גרסאות קודמות', 'a/למחיקה/b', 'ARCHIVE/2020'].every((d) => !!odMoveCheck({ ...base, to_dir: d }).error));
+    check('into not filed: any file type, same name only', !odMoveCheck({ ...base, from: 'ad.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'ad.mp4' }).error && !!odMoveCheck({ ...base, from: 'ad.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'other.mp4' }).error && !!odMoveCheck({ ...base, from: 'ad.mp4', name: 'ad.mp4' }).error);
     check('a name with a slash or a script type: refused', !!odMoveCheck({ ...base, name: 'a/b.pdf' }).error && !!odMoveCheck({ ...base, name: 'x.exe' }).error && !!odMoveCheck({ ...base, from: 'x.js' }).error);
     check('why missing: refused', !!odMoveCheck({ ...base, why: '' }).error);
     check('the paths stay inside the safety folder', odMoveCheck(base).toDir === OD_ROOT + DIR && odMoveCheck(base).from === OD_ROOT + OD_INBOX + '/a.pdf');

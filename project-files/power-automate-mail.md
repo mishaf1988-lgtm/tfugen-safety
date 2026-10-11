@@ -13,7 +13,7 @@
   - `sviva@`: המיילים של מיכאל עצמו.
 - **בענף True:** Apply to each על Attachments, ובתוכו Condition על סוג הקובץ: `toLower(item()?['name'])` "does not end with" `.jpg`, `.png`, `.gif`, `.ics`, `.zip` (And), ובענף True שלו Create file:
   - Folder Path: `/שולחן העבודה/ניהול בטיחות/_נכנס מהמייל`
-  - File Name: `concat(formatDateTime(convertFromUtc(triggerOutputs()?['body/receivedDateTime'],'Israel Standard Time'),'yyyy-MM-dd HHmm'),' - ',item()?['name'])`
+  - File Name: `concat(replace(replace(substring(string(triggerOutputs()?['body/receivedDateTime']),0,16),'T',' '),':',''),' - ',item()?['name'])` (שעת UTC). הנוסח הקודם עם `convertFromUtc` נכשל ב-InvalidTemplate בשתי הזרימות, ותוקן 11/10/2026 (לקח 77).
   - File Content: `item()?['contentBytes']`
 - **תיקייה נוספת:** `_נכנס מהמייל\לא לתיוק`. לשם השרת מעביר מה שלא מתויק (חשבוניות, הצעות מחיר, לא ברור), כך שב-`_נכנס מהמייל` נשאר רק מה שחדש.
 
