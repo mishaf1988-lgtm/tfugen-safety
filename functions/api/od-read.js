@@ -43,6 +43,8 @@ export const RAW_MAX_MS = 3600e3;
 // One file attached to a mail (11/10/2026, Michael: "do everything needed yourself" - a certificate
 // that exists only as an attachment in his inbox). Read-only (GET), only with the one-off token,
 // only a PDF or a photo, and never another kind of attachment (an item, a link).
+// Dormant like mail-inbox.js: the token has no Mail.Read until an admin grants it (DECISIONS
+// 2026-09-27), so Graph answers 403 and this returns {ok:false, error:'mail 403'}.
 export const MAIL_ID = /^[A-Za-z0-9_=+\/-]{20,400}$/;
 export const MAIL_ATT_MAX = 15 * 1024 * 1024;
 export function mailAttOk(a) {
