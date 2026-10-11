@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -79,6 +79,15 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   check('state_set: written and read back equal', r.json.ok && JSON.parse(state.quote_track)['Q-eq-1-261101'].stage === 'sent', r.json);
   check('state_set of another key (weekly_digest): refused, untouched', (await call({ op: 'state_set', key: 'weekly_digest', value: 'y' })).status === 400 && state.weekly_digest === 'x');
   check('the write list is exactly the six keys (mail_filing, validity_run 11/10/2026)', STATE_WRITE.join() === 'quote_track,nevo_versions,od_raw_token,od_raw_exp,mail_filing,validity_run');
+  const t0 = Date.now();
+  r = await call({ op: 'state_set', key: 'mail_filing', value: [{ at: '2020-01-01T00:00:00Z', got: 1 }, { at: '2026-10-11T15:05:00Z', got: 0 }] });
+  const mf = JSON.parse(state.mail_filing);
+  check('state_set mail_filing: the server stamps "at" of the last entry, not a guessed one', r.json.ok && Math.abs(Date.parse(mf[1].at) - t0) < 60000 && mf[0].at === '2020-01-01T00:00:00Z', mf);
+  r = await call({ op: 'state_set', key: 'validity_run', value: { at: 'x', checked: 3 } });
+  check('state_set validity_run: "at" stamped by the server', r.json.ok && Math.abs(Date.parse(JSON.parse(state.validity_run).at) - t0) < 60000, state.validity_run);
+  r = await call({ op: 'state_set', key: 'quote_track', value: { at: 'keep' } });
+  check('state_set of a key outside STAMP_AT: "at" kept as sent', JSON.parse(state.quote_track).at === 'keep' && STAMP_AT.join() === 'mail_filing,validity_run', state.quote_track);
+  check('stampAt: an empty list and a string stay as they are', stampAt([], 'T').length === 0 && stampAt('s', 'T') === 's');
   calls = [];
   await call({ op: 'delete', table: 'docs' });
   check('no delete op: nothing sent', !calls.length);

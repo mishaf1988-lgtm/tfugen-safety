@@ -18,7 +18,7 @@
 //              trustee_reports only where and when, never the free text or a
 //              name (Michael, 09/10/2026: "בצע: בלי טבלת רפואה"). COLUMNS.
 //   state_get  read server_state keys of STATE_READ.
-//   state_set  write one key of STATE_WRITE, then read it back.
+//   state_set  write one key of STATE_WRITE, then read it back (STAMP_AT keys: the server sets "at").
 //   live       the deployed commit (CF_PAGES_COMMIT_SHA) and the sha256 of the index.html this
 //              deployment serves (env.ASSETS). The cloud is outside Israel, so the country gate
 //              answers 403 to a plain fetch of the site; a night run compares this hash with the
@@ -65,6 +65,16 @@ export function agentEntry(b, nowIso) {
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
 export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run'];
+// Run reports whose "at" the server stamps (11/10/2026): a Routine wrote a guessed time 11 minutes off,
+// and the next run reads mail from that time. mail_filing: the last entry of the list; validity_run: the object.
+export const STAMP_AT = ['mail_filing', 'validity_run'];
+export function stampAt(v, nowIso) {
+  if (Array.isArray(v)) {
+    const last = v[v.length - 1];
+    if (last && typeof last === 'object' && !Array.isArray(last)) last.at = nowIso;
+  } else if (v && typeof v === 'object') v.at = nowIso;
+  return v;
+}
 // Tables a Routine reads only some columns of; select= is required and must stay inside.
 export const COLUMNS = {
   med: ['id', 'e'],
@@ -244,6 +254,7 @@ export async function onRequest(context) {
     }
     if (body.op === 'state_set') {
       if (STATE_WRITE.indexOf(body.key) < 0) return jsonResp({ ok: false, error: 'key not allowed' }, 400, {});
+      if (STAMP_AT.indexOf(body.key) >= 0 && body.value && typeof body.value === 'object') stampAt(body.value, new Date().toISOString());
       const value = body.value === null || body.value === undefined ? null : (typeof body.value === 'string' ? body.value : JSON.stringify(body.value));
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
         method: 'POST',
