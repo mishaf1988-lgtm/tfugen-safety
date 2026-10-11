@@ -72,7 +72,7 @@ console.log('\n3. the weekly mail');
   const now = Date.parse('2026-10-11T08:00:00Z');
   check('no locks: no line', guessLocksLine('', now) === null && guessLocksLine('[]', now) === null);
   const L = guessLocksLine(JSON.stringify([{ at: '2026-10-10T10:00:00Z', s: 'ind' }, { at: '2026-10-09T10:00:00Z', s: 'tru' }, { at: '2026-09-20T10:00:00Z', s: 'ind' }]), now);
-  check('this week only, by code, red, and what to do', L && L.red && /: 2 \(/.test(L.text) && /משאבי אנוש: 1/.test(L.text) && /נאמנים: 1/.test(L.text) && L.text.includes('🔐 קודים'), L);
+  check('this week only, by code, red, and what to do', L && L.red && /: 2 \(/.test(L.text) && /משאבי אנוש: 1/.test(L.text) && /נאמנים: 1/.test(L.text) && L.text.includes('משתמשים וסיסמאות'), L);
 }
 
 console.log('\n4. a password not changed for a year (weekly mail)');

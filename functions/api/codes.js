@@ -19,8 +19,8 @@ import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 export const CODE_KEYS = {
-  induction_code: { label: '\u05e7\u05d5\u05d3 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', env: null },
-  trustee_code: { label: '\u05e7\u05d5\u05d3 \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', env: 'TRUSTEE_CODE' },
+  induction_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', env: null },
+  trustee_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', env: 'TRUSTEE_CODE' },
 };
 // Letters and digits, 8 to 32, at least one of each (10/10/2026, Michael: "\u05d0\u05e0\u05d9 \u05de\u05e2\u05d3\u05d9\u05e3 \u05e1\u05d9\u05e1\u05de\u05d4, \u05dc\u05d0 \u05e7\u05d5\u05d3
 // \u05d1\u05de\u05e1\u05e4\u05e8\u05d9\u05dd"). Kept in lower case: capitals are not counted, so a phone's auto-capital does not lock
@@ -108,7 +108,7 @@ export async function onRequest(context) {
       if (!w.ok) return jsonResp({ error: 'save failed' }, 502, cors);
       // Who and when, never the code. A failed log does not undo the change.
       try {
-        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: key, op: 'UPDATE', title: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05e7\u05d5\u05d3: ' + CODE_KEYS[key].label, source: 'codes' }) });
+        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: key, op: 'UPDATE', title: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05e1\u05d9\u05e1\u05de\u05d4: ' + CODE_KEYS[key].label, source: 'codes' }) });
       } catch (e) { /* the code is changed */ }
       const job = mailChange(env, CODE_KEYS[key].label, String((who.user && who.user.email) || '').split('@')[0], at);
       if (typeof context.waitUntil === 'function') context.waitUntil(job); else await job;
