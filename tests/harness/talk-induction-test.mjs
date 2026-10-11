@@ -1,7 +1,7 @@
 // New-worker induction (10/10/2026, Michael: "רק עובדים חדש"): a talk with kind=induction gets a
 // permanent link (no 14-day expiry) for a QR at the entrance; "revoke" raises link_v so the old
 // link and QR stop; a permanent token never opens a weekly talk; the page says "induction".
-import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND, TBT_DEPTS, deptMatch, makeCodeCookie, IND_CODE_DAYS } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, makePermToken, readPermToken, permOk, PERM_TTL_DAYS, LANGS, KIND_IND, TBT_DEPTS, deptMatch, makeCodeCookie, IND_CODE_DAYS, indFields, IND_L } from './_build/talk.mjs';
 import { readFileSync } from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -9,7 +9,7 @@ const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const URL0 = 'https://tapugan-safety.pages.dev/api/talk';
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec', GEMINI_API_KEY: 'g' };
 const T = {
-  ind: { id: 'ind1', d: '2026-10-11', title: 'הוראות כניסה למשמרת', body: 'כללי', s: 'פורסמה', kind: 'induction', link_v: 0 },
+  ind: { id: 'ind1', d: '2026-10-11', title: 'הוראות כניסה למשמרת', body: 'כללי', s: 'פורסמה', kind: 'induction', link_v: 0, quiz: [{ q: 'שאלה', a: ['א', 'ב'], c: 1 }] },
   wk: { id: 'wk1', d: '2026-10-11', title: 'סולמות', body: 'x', s: 'פורסמה', kind: null, link_v: 0 },
   dp: { id: 'dp1', d: '2026-10-11', title: 'מסועים', body: 'x', s: 'פורסמה', kind: null, link_v: 0, dept: 'אריזה' },
 };
@@ -31,7 +31,7 @@ const link = async (body, auth) => { const r = await onRequest({ request: new Re
 const open = async (u, cookie) => { const c = cookie === undefined ? w.cookie : cookie; const r = await onRequest({ request: new Request(u, { headers: c ? { cookie: c } : {} }), env: ENV }); return { st: r.status, h: await r.text() }; };
 const tokOf = (u) => decodeURIComponent(new URL(u).searchParams.get('k'));
 const png = new Uint8Array(1024); png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0);
-const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oid: '7777777', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', ...(w.cookie ? { cookie: w.cookie } : {}) } }), env: ENV }); return r.status; };
+const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oid: '7777777', ino: '55', idep: 'אריזה', iph: '0501234567', ijob: 'אורז', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', ...(w.cookie ? { cookie: w.cookie } : {}) } }), env: ENV }); return r.status; };
 w.cookie = 'tsind=' + (await makeCodeCookie(ENV, 'ind1', '246810'));
 
 console.log('\n1. the permanent token');
@@ -54,6 +54,14 @@ console.log('\n2. the link from the manager');
   const p = await open(u0);
   check('it opens the page with the induction heading', p.st === 200 && p.h.includes('font-weight:700">' + LANGS.he.indT + '</div>'), p.h.slice(0, 900));
   check('the talk read asks for kind and link_v', /kind,link_v/.test(w.sel || ''));
+  // 11/10/2026, Michael: welcome + essential food plant, no voice, no quiz, the new details
+  check('the induction page: the welcome and "essential food plant"', p.h.includes(IND_L.he.welcome) && p.h.includes(IND_L.he.vital));
+  check('...no reading aloud and no quiz, even when the talk has questions', !p.h.includes('id="say"') && !p.h.includes('tapSay') && !p.h.includes('data-q="0"'), p.h.length);
+  check('...worker number, department (the seven + other), phone, job, agency box', ['name="ino"', 'name="idep"', 'name="iph"', 'name="ijob"', 'name="iag"', 'name="iagn"'].every((x) => p.h.includes(x)) && TBT_DEPTS.every((d) => p.h.includes('value="' + d[0].replace(/"/g, '&quot;') + '"')) && p.h.includes('value="אחר"'));
+  { const f = (o) => indFields({ get: (k) => (k in o ? o[k] : null) });
+    check('the details: all given = ok; agency without a worker number = ok; no number and no agency = refused', f({ ino: '12', idep: 'אריזה', iph: '050-1234567', ijob: 'אורז' }).ok && f({ iag: '1', iagn: 'מנפאואר', idep: 'אחר', iph: '0501234567', ijob: 'אורז' }).ok && f({ idep: 'אריזה', iph: '0501234567', ijob: 'אורז' }).err === 'needNo');
+    check('...a department not on the list, a short phone, no job, an agency box with no name: each refused', f({ ino: '1', idep: 'x', iph: '0501234567', ijob: 'אורז' }).err === 'needDep' && f({ ino: '1', idep: 'אריזה', iph: '050', ijob: 'אורז' }).err === 'needPhone' && f({ ino: '1', idep: 'אריזה', iph: '0501234567', ijob: '' }).err === 'needJob' && f({ iag: '1', idep: 'אריזה', iph: '0501234567', ijob: 'אורז' }).err === 'needAg'); }
+  check('...the four languages have every new label, keyboard characters only', ['he', 'ar', 'ru', 'am'].every((l) => Object.keys(IND_L.he).every((k) => IND_L[l][k])) && !/[\u2013\u2014\u05be\u00ab\u00bb\u201c\u201d\u2019\u2026]/.test(JSON.stringify(IND_L)));
   check('a worker signs through it', (await sign(tokOf(u0))) === 200 && w.inserts.length === 1);
   r = await link({ op: 'revoke', id: 'ind1' }, 'good');
   check('revoke: link_v goes up and a new link comes back', r.st === 200 && r.j.link_v === 1 && w.patches.slice(-1)[0].b.link_v === 1 && r.j.url !== u0, r);

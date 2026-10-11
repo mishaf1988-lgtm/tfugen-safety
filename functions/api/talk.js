@@ -119,6 +119,32 @@ export const QZ = QZL.he;
 // The induction is a form the worker reads, not a talk someone gives (10/10/2026, Michael: "\u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05ea
 // \u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da, \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05d9\u05d9\u05df \u05de\u05d9 \u05d9\u05e6\u05e8 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05de\u05e7\u05d5\u05dd"). The name and qualification stay, because the
 // training record needs them (regulations from 16/10/2026), under "the form was prepared by".
+// The new-worker form (11/10/2026, Michael: "\u05e9\u05e4\u05d4 \u05e9\u05dc \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05d9\u05d5\u05ea \u05d1\u05e2\u05d1\u05e8\u05d9\u05ea", "\u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05e9\u05d0\u05dc\u05d5\u05df \u05d4\u05d1\u05e0\u05d4",
+// "\u05dc\u05d0 \u05e6\u05e8\u05d9\u05db\u05d9\u05dd \u05d3\u05d9\u05d1\u05d5\u05d1 \u05db\u05e8\u05d2\u05e2", "\u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 \u05dc\u05d8\u05d5\u05e4\u05e1 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3, \u05de\u05d7\u05dc\u05e7\u05d4, \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc \u05e2\u05d5\u05d1\u05d3, \u05ea\u05e4\u05e7\u05d9\u05d3, \u05d1\u05de\u05d9\u05d3\u05d4 \u05e2\u05d5\u05d1\u05d3 \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd
+// \u05ea\u05d9\u05d1\u05d4 \u05dc\u05e8\u05e9\u05d5\u05dd \u05e9\u05dc \u05d4\u05d7\u05d1\u05e8\u05d4", "\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc\u05de\u05e4\u05e2\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df", "\u05d4\u05de\u05e4\u05e2\u05dc \u05d4\u05d5\u05d0 \u05de\u05e4\u05e2\u05dc \u05de\u05d6\u05d5\u05df \u05d7\u05d9\u05d5\u05e0\u05d9"). The worker
+// reads in his language; the signed form is always in Hebrew. Keyboard characters only (CLAUDE.md).
+export const IND_L = {
+  he: { welcome: '\u05d1\u05e8\u05d5\u05db\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd \u05dc\u05de\u05e4\u05e2\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df', vital: '\u05d4\u05de\u05e4\u05e2\u05dc \u05d4\u05d5\u05d0 \u05de\u05e4\u05e2\u05dc \u05de\u05d6\u05d5\u05df \u05d7\u05d9\u05d5\u05e0\u05d9', empNo: '\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', dep: '\u05de\u05d7\u05dc\u05e7\u05d4', depPick: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', depOther: '\u05d0\u05d7\u05e8', phone: '\u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df', job: '\u05ea\u05e4\u05e7\u05d9\u05d3', ag: '\u05d0\u05e0\u05d9 \u05e2\u05d5\u05d1\u05d3 \u05d3\u05e8\u05da \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', agName: '\u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd', errT: '\u05d7\u05e1\u05e8\u05d9\u05dd \u05e4\u05e8\u05d8\u05d9\u05dd', needNo: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', needDep: '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4', needPhone: '\u05db\u05ea\u05d5\u05d1 \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05ea\u05e7\u05d9\u05df', needJob: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05d4\u05ea\u05e4\u05e7\u05d9\u05d3', needAg: '\u05db\u05ea\u05d5\u05d1 \u05d0\u05ea \u05e9\u05dd \u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d4\u05d0\u05d3\u05dd' },
+  ar: { welcome: '\u0623\u0647\u0644\u0627 \u0648\u0633\u0647\u0644\u0627 \u0628\u0643\u0645 \u0641\u064a \u0645\u0635\u0646\u0639 \u0635\u0646\u0627\u0639\u0627\u062a \u062a\u0641\u0648\u063a\u0627\u0646', vital: '\u0627\u0644\u0645\u0635\u0646\u0639 \u0647\u0648 \u0645\u0635\u0646\u0639 \u0623\u063a\u0630\u064a\u0629 \u062d\u064a\u0648\u064a', empNo: '\u0631\u0642\u0645 \u0627\u0644\u0639\u0627\u0645\u0644', dep: '\u0627\u0644\u0642\u0633\u0645', depPick: '\u0627\u062e\u062a\u0631 \u0627\u0644\u0642\u0633\u0645', depOther: '\u0622\u062e\u0631', phone: '\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062a\u0641', job: '\u0627\u0644\u0648\u0638\u064a\u0641\u0629', ag: '\u0623\u0639\u0645\u0644 \u0639\u0646 \u0637\u0631\u064a\u0642 \u0634\u0631\u0643\u0629 \u0642\u0648\u0649 \u0639\u0627\u0645\u0644\u0629', agName: '\u0627\u0633\u0645 \u0634\u0631\u0643\u0629 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629', errT: '\u062a\u0641\u0627\u0635\u064a\u0644 \u0646\u0627\u0642\u0635\u0629', needNo: '\u0627\u0643\u062a\u0628 \u0631\u0642\u0645 \u0627\u0644\u0639\u0627\u0645\u0644', needDep: '\u0627\u062e\u062a\u0631 \u0627\u0644\u0642\u0633\u0645', needPhone: '\u0627\u0643\u062a\u0628 \u0631\u0642\u0645 \u0647\u0627\u062a\u0641 \u0635\u062d\u064a\u062d', needJob: '\u0627\u0643\u062a\u0628 \u0627\u0644\u0648\u0638\u064a\u0641\u0629', needAg: '\u0627\u0643\u062a\u0628 \u0627\u0633\u0645 \u0634\u0631\u0643\u0629 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629' },
+  ru: { welcome: '\u0414\u043e\u0431\u0440\u043e \u043f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c \u043d\u0430 \u0437\u0430\u0432\u043e\u0434 \u0422\u0430\u043f\u0443\u0433\u0430\u043d \u0418\u043d\u0434\u0430\u0441\u0442\u0440\u0438\u0437', vital: '\u0417\u0430\u0432\u043e\u0434 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u0436\u0438\u0437\u043d\u0435\u043d\u043d\u043e \u0432\u0430\u0436\u043d\u044b\u043c \u043f\u0440\u0435\u0434\u043f\u0440\u0438\u044f\u0442\u0438\u0435\u043c \u043f\u0438\u0449\u0435\u0432\u043e\u0439 \u043f\u0440\u043e\u043c\u044b\u0448\u043b\u0435\u043d\u043d\u043e\u0441\u0442\u0438', empNo: '\u0422\u0430\u0431\u0435\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440', dep: '\u041e\u0442\u0434\u0435\u043b', depPick: '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043e\u0442\u0434\u0435\u043b', depOther: '\u0414\u0440\u0443\u0433\u043e\u0435', phone: '\u041d\u043e\u043c\u0435\u0440 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430', job: '\u0414\u043e\u043b\u0436\u043d\u043e\u0441\u0442\u044c', ag: '\u042f \u0440\u0430\u0431\u043e\u0442\u0430\u044e \u0447\u0435\u0440\u0435\u0437 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0435 \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u043e', agName: '\u041d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0433\u043e \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u0430', errT: '\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445', needNo: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0442\u0430\u0431\u0435\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440', needDep: '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u043e\u0442\u0434\u0435\u043b', needPhone: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u044b\u0439 \u043d\u043e\u043c\u0435\u0440 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0430', needJob: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u0434\u043e\u043b\u0436\u043d\u043e\u0441\u0442\u044c', needAg: '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u043a\u0430\u0434\u0440\u043e\u0432\u043e\u0433\u043e \u0430\u0433\u0435\u043d\u0442\u0441\u0442\u0432\u0430' },
+  am: { welcome: '\u12c8\u12f0 \u1273\u1351\u130b\u1295 \u12a2\u1295\u12f1\u1235\u1275\u122a\u12ce\u127d \u134b\u1265\u122a\u12ab \u12a5\u1295\u12b3\u1295 \u1260\u12f0\u1205\u1293 \u1218\u1321', vital: '\u134b\u1265\u122a\u12ab\u12cd \u12a0\u1235\u1348\u120b\u130a \u12e8\u121d\u130d\u1265 \u134b\u1265\u122a\u12ab \u1290\u12cd', empNo: '\u12e8\u1220\u122b\u1270\u129b \u1241\u1325\u122d', dep: '\u12ad\u134d\u120d', depPick: '\u12ad\u134d\u120d \u12ed\u121d\u1228\u1321', depOther: '\u120c\u120b', phone: '\u1235\u120d\u12ad \u1241\u1325\u122d', job: '\u12e8\u1225\u122b \u12f5\u122d\u123b', ag: '\u12e8\u121d\u1220\u122b\u12cd \u1260\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb \u1260\u12a9\u120d \u1290\u12cd', agName: '\u12e8\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb\u12cd \u1235\u121d', errT: '\u12dd\u122d\u12dd\u122e\u127d \u12ed\u130e\u12f5\u120b\u1209', needNo: '\u12e8\u1220\u122b\u1270\u129b \u1241\u1325\u122d \u12ed\u133b\u1349', needDep: '\u12ad\u134d\u120d \u12ed\u121d\u1228\u1321', needPhone: '\u1275\u12ad\u12ad\u1208\u129b \u1235\u120d\u12ad \u1241\u1325\u122d \u12ed\u133b\u1349', needJob: '\u12e8\u1225\u122b \u12f5\u122d\u123b\u12cd\u1295 \u12ed\u133b\u1349', needAg: '\u12e8\u1230\u12cd \u1283\u12ed\u120d \u12a9\u1263\u1295\u12eb\u12cd\u1295 \u1235\u121d \u12ed\u133b\u1349' },
+};
+export const IND_OTHER_DEP = '\u05d0\u05d7\u05e8';
+// Pure. The details of the new-worker form, checked: {ok, v} or {ok:false, err}. The names (job,
+// agency) are put in Hebrew by the caller. A worker number is needed unless he comes from an agency.
+export function indFields(form) {
+  const one = (k, n) => String(form.get(k) || '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, n);
+  const ag = String(form.get('iag') || '') === '1';
+  const no = one('ino', 12).replace(/[^0-9]/g, ''), dep = one('idep', 40), phone = one('iph', 20).replace(/[^0-9+]/g, ''), job = one('ijob', 60), agency = ag ? one('iagn', 60) : '';
+  const deps = TBT_DEPTS.map((x) => x[0]).concat([IND_OTHER_DEP]);
+  if (!ag && !no) return { ok: false, err: 'needNo' };
+  if (deps.indexOf(dep) < 0) return { ok: false, err: 'needDep' };
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (digits.length < 9 || digits.length > 15) return { ok: false, err: 'needPhone' };
+  if (job.length < 2) return { ok: false, err: 'needJob' };
+  if (ag && agency.length < 2) return { ok: false, err: 'needAg' };
+  return { ok: true, v: { emp_no: no || null, dept: dep, phone, job, agency: ag ? agency : null } };
+}
 export const BY_L = { he: '\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9', ar: '\u0623\u0639\u062f\u0651 \u0627\u0644\u0646\u0645\u0648\u0630\u062c', ru: '\u0424\u043e\u0440\u043c\u0443 \u043f\u043e\u0434\u0433\u043e\u0442\u043e\u0432\u0438\u043b', am: '\u1245\u1339\u1295 \u12eb\u12d8\u130b\u1300\u12cd' };
 
 // Read aloud (10/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8 \u05d4\u05de\u05dc\u05e6\u05d5\u05ea"). First version: the phone's own voices
@@ -571,21 +597,26 @@ const GRAPH_ROOT = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const fileSafe = (v) => String(v || '').replace(/[\\/:*?"<>|#%]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 60);
 function b64(u8) { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); }
 export function inductionHtml(talk, row, sigB64, lang, when, answers) {
-  const x = textOf(talk, lang), L = LANGS[x.lang] || LANGS.he;
+  const x = textOf(talk, 'he'), read = textOf(talk, lang).lang, L = LANGS.he, RL = LANGS[read] || LANGS.he;
   const tr = (k, v) => '<tr><td style="border:1px solid #999;padding:6px 10px;font-weight:bold">' + k + '</td><td style="border:1px solid #999;padding:6px 10px">' + v + '</td></tr>';
   return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' + esc(x.title) + '</title></head>'
     + '<body style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;margin:24px;color:#111">'
     + '<img alt="\u05ea\u05e4\u05d5\u05d2\u05df" style="height:56px;float:left;margin:0 0 8px 12px" src="data:image/jpeg;base64,' + LOGO_JPG + '">'
     + '<div style="font-size:11px;color:#555">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea, \u05d8\u05d5\u05e4\u05e1 08.02.01</div>'
     + '<h1 style="font-size:18px;margin:4px 0 8px">' + esc(x.title) + '</h1>'
-    + (x.lang !== 'he' ? '<div style="margin-bottom:6px">\u05e9\u05e4\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e7\u05e8\u05d0: ' + esc(L.name) + '</div>' : '')
+    + '<div style="font-size:16px;font-weight:bold;margin:2px 0">' + esc(IND_L.he.welcome) + '</div><div style="margin-bottom:8px">' + esc(IND_L.he.vital) + '</div>'
+    + (read !== 'he' ? '<div style="margin-bottom:6px">\u05e9\u05e4\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d4\u05e2\u05d5\u05d1\u05d3 \u05e7\u05e8\u05d0: ' + esc(RL.name) + '</div>' : '')
     + '<div dir="' + L.dir + '" style="white-space:pre-wrap;border:1px solid #ccc;padding:10px">' + esc(x.body) + '</div>'
     + '<p dir="' + L.dir + '" style="font-weight:bold">' + esc(L.ok) + '</p>'
     + '<table style="border-collapse:collapse;margin:12px 0">'
     + tr('\u05ea\u05d0\u05e8\u05d9\u05da \u05d5\u05e9\u05e2\u05d4', esc(fdate(when.day)) + ' ' + esc(when.hm))
     + tr('\u05e9\u05dd', esc(row.emp_name || ''))
     + tr('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || ''))
-    + tr('\u05d7\u05d1\u05e8\u05d4 / \u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-'))
+    + (row.emp_no ? tr('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '')
+    + tr('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-'))
+    + (row.phone ? tr('\u05d8\u05dc\u05e4\u05d5\u05df', '<span dir="ltr">' + esc(row.phone) + '</span>') : '')
+    + (row.job ? tr('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '')
+    + (row.agency ? tr('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '')
     + (row.quiz_n ? tr('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n + ' \u05e0\u05db\u05d5\u05e0\u05d5\u05ea') : '')
     + (talk.trainer ? tr('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d5\u05db\u05df \u05e2\u05dc \u05d9\u05d3\u05d9', esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '')) : '')
     + tr('\u05d7\u05ea\u05d9\u05de\u05d4', '<img alt="\u05d7\u05ea\u05d9\u05de\u05d4" style="height:90px;max-width:260px" src="data:image/png;base64,' + sigB64 + '">')
@@ -624,7 +655,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
     const cell = (k, v) => '<tr><td style="padding:4px 10px;font-weight:bold">' + k + '</td><td style="padding:4px 10px">' + v + '</td></tr>';
     const mail = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
       + '<p>\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05dd \u05e2\u05dc \u05d4\u05d5\u05e8\u05d0\u05d5\u05ea \u05d4\u05db\u05e0\u05e1\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05dc\u05de\u05e9\u05de\u05e8\u05ea (\u05d8\u05d5\u05e4\u05e1 08.02.01). \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d4\u05d7\u05ea\u05d5\u05dd \u05de\u05e6\u05d5\u05e8\u05e3.</p>'
-      + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + cell('\u05d7\u05d1\u05e8\u05d4 / \u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
+      + '<table>' + cell('\u05e9\u05dd', esc(row.emp_name || '')) + cell('\u05de\u05e1\' \u05ea.\u05d6.', esc(row.id_no || '')) + (row.emp_no ? cell('\u05de\u05e1\u05e4\u05e8 \u05e2\u05d5\u05d1\u05d3', esc(row.emp_no)) : '') + cell('\u05de\u05d7\u05dc\u05e7\u05d4', esc(row.dept || '-')) + (row.phone ? cell('\u05d8\u05dc\u05e4\u05d5\u05df', esc(row.phone)) : '') + (row.job ? cell('\u05ea\u05e4\u05e7\u05d9\u05d3', esc(row.job)) : '') + (row.agency ? cell('\u05d7\u05d1\u05e8\u05ea \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd', esc(row.agency)) : '') + cell('\u05ea\u05d0\u05e8\u05d9\u05da', esc(fdate(day)) + ' ' + esc(hm))
       + (row.quiz_n ? cell('\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d1\u05e0\u05d4', row.quiz_ok + '/' + row.quiz_n) : '') + '</table>'
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
       + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
@@ -762,7 +793,8 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   const emps = await getEmps(env);
   const files = await signedFiles(env, talk.file_url);
   const vid = await videoHtml(env, talk, L);
-  const quiz = quizOf(talk, lang);
+  const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he;
+  const quiz = ind ? [] : quizOf(talk, lang);
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const signed = g ? await signedIds(env, talk.id) : new Set();
   // A talk for one department lists its workers (10/10/2026); "not on the list" stays for anyone else,
@@ -778,13 +810,14 @@ async function showTalk(env, tok, want, g, tr, cookie) {
       : '<a href="' + esc(talkUrl(tok, l, g)) + '" style="padding:6px 12px;border-radius:16px;border:1px solid #1e3a8a;color:#1e3a8a;font-size:14px;text-decoration:none">' + esc(LANGS[l].name) + '</a>').join('') + '</div>';
   const nonce = newId() + newId();
   const inner = bar
+    + (ind ? '<div style="background:#eff6ff;border-radius:8px;padding:10px 12px;margin-bottom:10px"><div style="font-size:18px;font-weight:700;color:#1e3a8a">' + esc(IL.welcome) + '</div><div style="font-size:14px;color:#374151;margin-top:2px">' + esc(IL.vital) + '</div></div>' : '')
     + '<div style="font-size:13px;color:#6b7280">' + esc(fdate(talk.d)) + '</div>'
     + '<h2 id="th" style="margin:4px 0 12px;font-size:20px">' + esc(x.title) + '</h2>'
     + (g ? '<div style="font-size:14px;font-weight:700;color:#1e3a8a;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:8px">\ud83d\udc65 ' + esc(L.group) + '</div>' : '')
     + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + (talk.kind === KIND_IND ? esc(BY_L[lang] || BY_L.he) + ': ' + esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '') : esc(L.trainerL) + ': ' + esc(talk.trainer)) + '</div>' : '')
     + (L.auto ? '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px">' + esc(L.auto) + '</div>' : '')
-    + (x.body ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
-      + '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
+    + (x.body && !ind ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
+      : '') + (x.body ? '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
     + vid
     + files.map((u, i) => '<p><a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1e3a8a;font-weight:700">' + esc(L.file) + (files.length > 1 ? ' ' + (i + 1) : '') + '</a></p>').join('')
     + quizHtml(quiz, lang)
@@ -793,8 +826,15 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
     + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>'
     // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
-    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off" placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px"><input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px"></div>'
+    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off" placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (ind ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
     + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
+    + (ind ? (() => { const st = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px', lb = (f, t) => '<label for="' + f + '" style="display:block;font-weight:700;margin-bottom:4px">' + esc(t) + '</label>';
+      return lb('ino', IL.empNo) + '<input name="ino" id="ino" maxlength="12" inputmode="numeric" autocomplete="off" dir="ltr" style="' + st + ';text-align:right">'
+        + lb('idep', IL.dep) + '<select name="idep" id="idep" required dir="rtl" style="' + st + '"><option value="">' + esc(IL.depPick) + '</option>' + TBT_DEPTS.map((d) => '<option value="' + esc(d[0]) + '">' + esc(d[0]) + '</option>').join('') + '<option value="' + esc(IND_OTHER_DEP) + '">' + esc(IL.depOther) + '</option></select>'
+        + lb('iph', IL.phone) + '<input name="iph" id="iph" type="tel" maxlength="20" required autocomplete="off" dir="ltr" style="' + st + ';text-align:right">'
+        + lb('ijob', IL.job) + '<input name="ijob" id="ijob" maxlength="60" required autocomplete="off" style="' + st + '">'
+        + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" name="iag" id="iag" value="1" style="width:22px;height:22px;flex:none">' + esc(IL.ag) + '</label>'
+        + '<input name="iagn" id="iagn" maxlength="60" autocomplete="off" placeholder="' + esc(IL.agName) + '" style="' + st + ';display:none">'; })() : '')
     + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
@@ -804,7 +844,8 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
     + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
     + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
-    + (x.body ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
+    + (ind ? '<script nonce="' + nonce + '">(function(){var c=document.getElementById("iag"),n=document.getElementById("iagn"),o=document.getElementById("ino");c.addEventListener("change",function(){n.style.display=c.checked?"":"none";n.required=c.checked;o.required=!c.checked;});o.required=true;})();</script>' : '')
+    + (x.body && !ind ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
   return page(talk.kind === KIND_IND ? L.indT : L.title, inner, '', 200, nonce, lang);
 }
 
@@ -880,6 +921,14 @@ async function signTalk(env, request, ctx) {
     }
   }
   if (!sig) return bad('errSigT', 'errSig');
+  let indV = null;
+  if (talk.kind === KIND_IND) {
+    const IL = IND_L[lang] || IND_L.he, f = indFields(form);
+    if (!f.ok) return page(IL.errT, '<p>' + esc(IL[f.err]) + '</p>' + back, 'err', 400, '', lang);
+    const job = await hebrewName(env, f.v.job), agency = f.v.agency ? await hebrewName(env, f.v.agency) : null;
+    if (!job || (f.v.agency && !agency)) return bad('errNameT', 'errHe', 422);
+    indV = { ...f.v, job, agency };
+  }
 
   const who = emp.out ? '&emp_id=like.' + encodeURIComponent(emp.key + '*') : '&emp_id=eq.' + encodeURIComponent(emp.id);
   const done = (name) => page(L.thanks + ', ' + name, '<p>' + esc(L.already) + '</p>' + back, 'ok', 200, '', lang);
@@ -915,14 +964,15 @@ async function signTalk(env, request, ctx) {
     sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name,
     device: deviceOf(request.headers.get('user-agent')), read_at: new Date().toISOString(), mode: g ? 'group' : 'link',
   };
-  const qs = quizScore(quizOf(talk, textOf(talk, lang).lang), form.get('qa'));
+  if (indV) Object.assign(row, indV);
+  const qs = indV ? null : quizScore(quizOf(talk, textOf(talk, lang).lang), form.get('qa'));
   if (qs) { row.quiz_ok = qs.ok; row.quiz_n = qs.n; }
   const ins = await fetch(SB + '/rest/v1/toolbox_reads', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(row) });
   if (ins.status === 409) return done(emp.n);
   if (!ins.ok) return bad('errSaveT', 'errSave', 502);
   // Induction: file the signed form and mail it, after the worker already sees "saved".
   if (talk.kind === KIND_IND) {
-    const job = fileInduction(env, talk, row, sig, lang, undefined, quizAnswers(talk, textOf(talk, lang).lang, form.get('qa')));
+    const job = fileInduction(env, talk, row, sig, lang, undefined, []);
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
