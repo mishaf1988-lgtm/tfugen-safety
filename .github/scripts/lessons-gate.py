@@ -36,6 +36,17 @@ SKILL = re.compile(r"^\s*(skill|סקייל)\s*:\s*(\S.*)$", re.I | re.M)
 SKILL_DIRS = (".claude/skills/", "project-files/claude-ai-skill/")
 EXT = re.compile(r"michael-skills(#\d+|/pull/\d+|@[0-9a-f]{7,40}\b)")
 WAIVER = re.compile(r"^\s*(no-lesson|בלי לקח)\s*:\s*(.{10,})$", re.I | re.M)
+DOMAIN_MARK = "## לקחים בתחום"
+
+
+def has_domain_lessons(f):
+    """A field skill holding lessons (Michael, 11/10/2026: lessons per field)."""
+    if not (f.startswith(".claude/skills/") and f.endswith("/SKILL.md")):
+        return False
+    try:
+        return DOMAIN_MARK in open(f, encoding="utf-8").read()
+    except OSError:
+        return False
 
 
 def check(title, body, files):
@@ -53,7 +64,7 @@ def check(title, body, files):
                        "in this PR, or write 'skill: אין'.")
     if not FIX.search(title or ""):
         return True, "not a fix PR"
-    if LESSONS in files:
+    if LESSONS in files or any(has_domain_lessons(f) for f in files):
         return True, "fix PR with a lesson"
     m = WAIVER.search(body or "")
     if m:

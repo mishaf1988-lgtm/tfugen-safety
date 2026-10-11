@@ -62,5 +62,11 @@ check('a file merely named skills elsewhere does not count', not raw('Tour scree
 check('empty skill line: blocked', not raw('Tour screen', 'רטרו: אין\nskill:   ', ['index.html']))
 check('skill inside a sentence does not count', not raw('Tour screen', 'רטרו: אין\nthe new skill: later', ['index.html']))
 
+# a lesson in a field skill counts (11/10/2026); run from the repo root
+_cwd = os.getcwd(); os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
+check('fix PR with a lesson in tfugen-dev: ok', raw('Fix: x', 'רטרו: אין\nskill: לקח 23', ['a.js', '.claude/skills/tfugen-dev/SKILL.md']))
+check('fix PR touching a skill with no lessons section: blocked', not raw('Fix: x', 'רטרו: אין\nskill: x', ['a.js', '.claude/skills/tfugen-lean/SKILL.md']))
+os.chdir(_cwd)
+
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

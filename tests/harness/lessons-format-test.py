@@ -6,9 +6,13 @@
 # across both files, and the archive holds only one-line lessons with חזר: 0.
 # Since 07/10/2026 (Michael, questionnaire: "3 old lessons to the archive") also a lesson
 # enforced in text only that never recurred, so the 16KB file has room.
-import os, re, sys
+# Since 11/10/2026 (Michael: "a few lesson files, each in its own field") a lesson of one
+# field lives in that field's skill, under DOMAIN_MARK, same format and shared numbering.
+import glob, os, re, sys
 P = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.claude', 'skills', 'tfugen-lessons', 'SKILL.md')
 A = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'project-files', 'lessons-archive.md')
+DOMAIN_MARK = '## לקחים בתחום'
+SKILLS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.claude', 'skills')
 MAX = 16 * 1024  # 14 until 05/10/2026 (Michael: "approve all"; the file sat 7 bytes under it)
 FIELDS = ('מה קרה:', 'הכלל:', 'נאכף:', 'חזר:')
 HEAD = re.compile(r'^\*\*(\d+)\. .+ \((\d\d/\d\d/\d{4}|[^)]*\d\d/\d\d/\d{4}[^)]*)(, [^)]*)?\)\.\*\*$')
@@ -32,8 +36,13 @@ def lessons(text):
             cur['lines'].append(l)
     return out
 
-def problems(text, archive=''):
+def domain_part(text):
+    i = text.find(DOMAIN_MARK)
+    return text[i:] if i >= 0 else ''
+
+def problems(text, archive='', domain=''):
     errs = []
+    if domain and not lessons(domain): errs.append('a domain lessons section with no lessons')
     if len(text.encode('utf-8')) > MAX: errs.append('file is %d bytes, over %d: prune (rule 3)' % (len(text.encode('utf-8')), MAX))
     ls = lessons(text); nums = []
     if not ls: errs.append('no lessons found')
@@ -43,7 +52,7 @@ def problems(text, archive=''):
         nums.append(int(s.group(1)))
         if x['lines']: errs.append('archive lesson %s has a body' % s.group(1))
         if s.group(4) != '0': errs.append('archive lesson %s recurred (חזר: %s): move it back to the lessons file with a full body' % (s.group(1), s.group(4)))
-    for x in ls:
+    for x in ls + lessons(domain):
         s = SHORT.match(x['head'])
         if s:
             nums.append(int(s.group(1)))
@@ -68,7 +77,11 @@ def problems(text, archive=''):
 
 real = open(P, encoding='utf-8').read()
 real_a = open(A, encoding='utf-8').read()
-check('the real files have no problems', problems(real, real_a) == [], problems(real, real_a))
+real_d = {f: domain_part(open(f, encoding='utf-8').read()) for f in sorted(glob.glob(os.path.join(SKILLS, '*', 'SKILL.md'))) if os.path.abspath(f) != os.path.abspath(P)}
+real_d = {f: t for f, t in real_d.items() if t}
+real_dt = '\n'.join(real_d.values())
+check('the real files have no problems', problems(real, real_a, real_dt) == [], problems(real, real_a, real_dt))
+check('domain lessons live in tfugen-dev and tfugen-db (11/10/2026)', sum(1 for f in real_d if 'tfugen-dev' in f or 'tfugen-db' in f) == 2, list(real_d))
 check('the real file has lessons', len(lessons(real)) >= 10, len(lessons(real)))
 check('the archive has lessons', len(lessons(real_a)) >= 1, len(lessons(real_a)))
 check('the archive alone has a gap (numbers are shared with the lessons file)', problems(real_a) != [])
@@ -99,6 +112,14 @@ check('an archive lesson that recurred fails', problems(ok, arch2.replace('חז�
 check('an archive lesson enforced by text that never recurred passes (07/10/2026)', problems(ok, arch2.replace('`x-test.js`', 'טקסט בלבד')) == [], problems(ok, arch2.replace('`x-test.js`', 'טקסט בלבד')))
 check('...and one enforced by text that recurred fails', problems(ok, arch2.replace('`x-test.js`', 'טקסט בלבד').replace('חזר: 0', 'חזר: 1')) != [])
 check('a full-body lesson in the archive fails', problems(short, ok.replace('**1.', '**2.')) != [])
+
+dom = DOMAIN_MARK + '\n\n' + ok.replace('**1.', '**2.')
+check('a domain lesson fills the gap (11/10/2026)', problems(ok, '', dom) == [], problems(ok, '', dom))
+check('a domain lesson missing a field fails', problems(ok, '', dom.replace('הכלל: b\n', '')) != [])
+check('the same number in the lessons file and a domain file fails', problems(ok, '', DOMAIN_MARK + '\n\n' + ok) != [])
+check('a lesson moved out without its domain copy leaves a gap', problems(ok + '\n' + ok.replace('**1.', '**3.')) != [])
+check('the domain text does not count toward the 16KB cap', problems(ok, '', dom + 'x' * MAX) == [])
+check('domain_part keeps only the section', domain_part('# a\n**1. x (01/10/2026).**\n' + DOMAIN_MARK + '\nz') == DOMAIN_MARK + '\nz')
 
 print('%d passed, %d failed' % (passed, failed))
 sys.exit(1 if failed else 0)

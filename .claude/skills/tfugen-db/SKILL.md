@@ -53,3 +53,13 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - בלי אישור מפורש באותה שיחה: `DROP`, `DELETE`, `TRUNCATE`, `ALTER ... DROP COLUMN`, שינוי או מחיקה של RLS policy.
 - גם עם אישור: מחיקת שורות מ-`ncr`, `ncr_ai`, `trustee_reports` (נאכף ב-`guard-sql.py`).
 - `public.ncr` = 0 שורות בכוונה; ההיסטוריה ב-`backup_ops_20260918.ncr`.
+
+## לקחים בתחום (הועברו מ-tfugen-lessons, 11/10/2026)
+
+אותו מבנה ואותו מספור כמו ב-`tfugen-lessons` (`lessons-format-test.py` בודק את כל הקבצים יחד). לקח שחל רק על התחום הזה נכתב כאן.
+
+**30. "Supabase דורש התחברות מחדש" בלי לבדוק (02/10/2026, PR זה).**
+מה קרה: "MCP מנותק" הועתק מה-handoff.
+הכלל: לפני "כלי לא זמין": `ToolSearch` ושאילתה אחת.
+נאכף: טקסט (אין דרך בקוד: טענה בצ'אט).
+חזר: 1 (07/10: אמרתי למיכאל להתחבר מחדש; `mcp__Supabase__execute_sql` עבד)
