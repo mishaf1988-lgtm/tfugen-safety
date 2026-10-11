@@ -9,6 +9,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
 pdfmetrics.registerFont(TTFont('DV','/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 W,H=595.32,841.92
+SIGNED='11.10.2026'   # date on page 1 = the day Michael signed (signing page, 11/10/2026)
 def heb(s): return s[::-1]   # visual order for plain Hebrew words (no digits inside)
 def overlay(draw):
     b=io.BytesIO(); c=canvas.Canvas(b,pagesize=(W,H)); draw(c); c.save(); b.seek(0); return PdfReader(b).pages[0]
@@ -26,7 +27,7 @@ def boxes(c,edges,s):  # one character per box, filling the rightmost boxes
     c.setFont('DV',10)
     for (x0,x1),ch in zip(cells,s): c.drawCentredString((x0+x1)/2,H-315,ch)
 def p1(c):
-    white(c,60,203,124,221)            # old form date -> empty, Michael dates it when signing
+    white(c,60,203,124,221); c.setFont('DV',11); c.drawString(64,H-217,SIGNED)   # the day Michael signed on the signing page
     b=BIZ
     boxes(c,[43.2,55.8,68.4,81.4,94.0,106.6,119.5,132.1,144.0,157.7,169.9],b['hp'])     # box edges measured on the form at 200dpi
     boxes(c,[410.8,428.0,445.3,461.5,479.5,496.8,514.1,531.0,548.3,565.2],b['file'])
@@ -37,7 +38,7 @@ def p1(c):
     c.setFont('DV',10); c.drawCentredString(388,H-428,heb(b['person']))   # para 1, owner's name; the ID stays for Michael
     white(c,338,478,404,496); c.setFont('DV',11); c.drawString(345,H-492,'02.03.2026')
     white(c,195,478,262,496); c.drawRightString(260,H-492,heb('מיכאל פרייליך'))
-    white(c,518,562,534,584)           # the old tick: Michael ticks the line that is true for him
+    white(c,518,562,534,584); c.setFont('DV',13); c.drawString(521,H-579,'√')   # route 1, Michael chose it in a questionnaire (11/10/2026)
 pg=old.pages[0]; pg.merge_page(overlay(p1)); out.add_page(pg)
 def p2(c):
     white(c,40,98,560,518)
