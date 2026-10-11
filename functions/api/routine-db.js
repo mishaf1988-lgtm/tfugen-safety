@@ -40,11 +40,17 @@
 //              exists inside the safety folder, under a new name. Graph with
 //              conflictBehavior=fail: an existing name is never replaced, no folder is
 //              created, nothing is deleted. Michael's computer is not needed. odMoveCheck.
+//   mail_request  (11/10/2026, Michael: "בצע: זרימה שנייה") ask the second Power Automate
+//              flow for the attachments of one old mail: write a small text file with the
+//              message id into OD_REQ. The flow (When a file is created there) opens the
+//              mail and saves its attachments into the inbox folder. Neither the cloud, the
+//              server (no Mail.Read) nor Cowork can get an attachment's bytes; the flow can.
+//              A new file each time (time + random), never replacing one. MAIL_REQ_ID.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
-import { accessToken } from '../_onedrive.js';
+import { accessToken, putFile } from '../_onedrive.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
@@ -118,6 +124,10 @@ export const OD_INBOX = '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d
 // Files that are not filed (invoices, quotes, unclear) go here, so the inbox holds only what is new
 // (11/10/2026, Michael: "בצע: כל מה שמגיע, חוץ מרעש"). The only folder inside the inbox a file may go to.
 export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
+// The folder the second flow watches for requests (inside the safety folder).
+export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\u05d9\u05dc';
+// A Graph / Outlook message id: base64url-ish, as outlook_email_search returns it.
+export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
 const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
@@ -279,6 +289,16 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
+    }
+    if (body.op === 'mail_request') {
+      if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
+      if (String(body.why || '').trim().length < 5) return jsonResp({ ok: false, error: 'why required' }, 400, {});
+      const id = String(body.message_id || '').trim();
+      if (!MAIL_REQ_ID.test(id)) return jsonResp({ ok: false, error: 'bad message_id' }, 400, {});
+      const at = await accessToken(env);
+      const name = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '') + '-' + Math.random().toString(36).slice(2, 8) + '.txt';
+      const f = await putFile(at.token, OD_ROOT + OD_REQ, name, id, 'text/plain');
+      return jsonResp({ ok: true, file: OD_REQ + '/' + name, size: f.size || null }, 200, {});
     }
     if (body.op === 'od_move') {
       const c = odMoveCheck(body);
