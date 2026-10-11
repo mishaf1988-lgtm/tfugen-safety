@@ -708,7 +708,12 @@ export function mailFilingLine(raw, nowMs) {
   let t = MF.head + got + MF.got + ', ' + sum('filed') + MF.filed + ', ' + sum('skip') + MF.skip + ', ' + sum('wait') + MF.wait + ', ' + sum('exp') + MF.exp;
   if (!got) t += MF.none;
   if (noise.length) t += MF.noise + noise.slice(0, 5).join(', ');
-  return { text: t, red: !got || sum('wait') > 0, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc (' + sum('filed') + ' \u05ea\u05d5\u05d9\u05e7\u05d5)' };
+  // 11/10/2026 (Michael: "מאשר את ההצעה"): the Routine reads Power Automate's "have failed" mails and
+  // records the flow names in flow_fail; any this week = red, in Hebrew, with the names.
+  const ff = [];
+  wk.forEach((r) => (Array.isArray(r.flow_fail) ? r.flow_fail : []).forEach((x) => { const a = String(x || '').trim().substring(0, 60); if (a && ff.indexOf(a) < 0) ff.push(a); }));
+  if (ff.length) t += '. \u05d6\u05e8\u05d9\u05de\u05d4 \u05d1-Power Automate \u05e0\u05db\u05e9\u05dc\u05d4 \u05d4\u05e9\u05d1\u05d5\u05e2: ' + ff.slice(0, 3).join(', ');
+  return { text: t, red: !got || sum('wait') > 0 || ff.length > 0, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc (' + sum('filed') + ' \u05ea\u05d5\u05d9\u05e7\u05d5)' };
 }
 
 // 11/10/2026 (Michael: "מאשר גם את שתי ההצעות"): the weekly validity Routine writes

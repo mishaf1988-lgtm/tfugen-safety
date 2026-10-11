@@ -411,6 +411,9 @@ const ROWS = [
       const nz = mailFilingLine(j([{ at: ago(1), got: 2, skip: 2, noise: ['Ads@X.com', 'ads@x.com', 'b@y.com'] }]), now);
       check('noise suggestions: lower case, once each', /אולי להחריג.*ads@x\.com, b@y\.com/.test(nz.text) && (nz.text.match(/ads@x\.com/g) || []).length === 1, nz);
       check('bad values: no crash, not counted', /0 קבצים נקלטו/.test(mailFilingLine(j([{ at: ago(1), got: -3, filed: 'x' }, { at: 'nope', got: 9 }, null]), now).text));
+      const ff = mailFilingLine(j([{ at: ago(1), got: 5, filed: 5, flow_fail: ['flow A', 'flow A', 'flow B'] }]), now);
+      check('a flow failed this week: red, named once each', ff.red && /זרימה ב-Power Automate נכשלה השבוע: flow A, flow B/.test(ff.text), ff);
+      check('a flow failure older than a week: not red', !mailFilingLine(j([{ at: ago(1), got: 5, filed: 5 }, { at: ago(9), got: 1, flow_fail: ['old'] }]), now).red);
       check('broken JSON: never ran', /עוד לא רץ/.test(mailFilingLine('{oops', now).text));
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], mf: zero });
       check('in the mail, red', /color:#b91c1c;font-weight:bold">\S+ תיוק מהמייל השבוע/.test(h), h.substring(0, 0));
