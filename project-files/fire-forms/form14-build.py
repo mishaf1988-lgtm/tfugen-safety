@@ -16,8 +16,8 @@ def overlay(draw):
 def white(c,x0,y0,x1,y1):  # top-origin coords
     c.setFillColorRGB(1,1,1); c.setStrokeColorRGB(1,1,1); c.rect(x0,H-y1,x1-x0,y1-y0,fill=1,stroke=0); c.setFillColorRGB(0,0,0)
 old=PdfReader('old14.pdf'); out=PdfWriter()
-BIZ = dict(  # copied from fire forms 8 (01/09/2026) and 10 (06/09/2026) in OneDrive, Michael chose file 260012-1 (11/10/2026)
-    hp='511969008', kind='מפעל מזון', name='תעשיות תפוגן בע"מ', file='260012-1',
+BIZ = dict(  # copied from fire forms 8 (01/09/2026) and 10 (06/09/2026) in OneDrive, Michael chose file 260012-3, as on the fire approval of 07/10/2026 (11/10/2026)
+    hp='511969008', kind='מפעל מזון', name='תעשיות תפוגן בע"מ', file='260012-3',
     city='שדרות', street='אזה"ת שער הנגב', zip='8701402', pob='571',
     person='מיכאל פרייליך', role=('מנהל איכות סביבה','ובטיחות'), phone='0547940073', mail='sviva@tapugan.co.il')
 def mid(c,x0,x1,y,s,size=9,rtl=True):  # centred in a cell, top-origin y of the text baseline
