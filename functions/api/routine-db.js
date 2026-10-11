@@ -34,10 +34,17 @@
 //              A later e needs the document it came from (doc). The old value, the new
 //              one, why and the document are appended to the row's note, so every change
 //              is visible in the app. EXPIRY_TABLES, expiryPatch.
+//   od_move  (11/10/2026, Michael in the questionnaire: "בצע: Power Automate + השרת")
+//              move one file that a Power Automate flow saved from the mail into the
+//              inbox folder (OD_INBOX) of the safety folder to a folder that already
+//              exists inside the safety folder, under a new name. Graph with
+//              conflictBehavior=fail: an existing name is never replaced, no folder is
+//              created, nothing is deleted. Michael's computer is not needed. odMoveCheck.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
+import { accessToken } from '../_onedrive.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
@@ -102,6 +109,25 @@ export function expiryPatch(b, row, today) {
   const prev = String(row[t.note] || '').trim();
   patch[t.note] = prev ? prev + ' | ' + line : line;
   return { patch };
+}
+
+// od_move: the safety folder, the folder the flow saves into, and what may go where.
+export const OD_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
+export const OD_INBOX = '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc';
+const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
+const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
+const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
+// { from, toDir, name } as Graph paths under the drive root, or { error }.
+export function odMoveCheck(b) {
+  if (!/^[a-z0-9-]{2,40}$/.test(String(b.agent || ''))) return { error: 'bad agent name' };
+  if (String(b.why || '').trim().length < 5) return { error: 'why required' };
+  const clean = (x) => String(x === undefined || x === null ? '' : x).split('/').filter(Boolean);
+  const bad = (parts) => parts.some((x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 180);
+  const from = clean(b.from), dir = clean(b.to_dir), name = String(b.name || '');
+  if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file inside the inbox folder' };
+  if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || dir[0] === OD_INBOX) return { error: 'bad to_dir' };
+  if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !OD_EXT.test(name)) return { error: 'bad name' };
+  return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name };
 }
 
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -248,6 +274,30 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
+    }
+    if (body.op === 'od_move') {
+      const c = odMoveCheck(body);
+      if (c.error) return jsonResp({ ok: false, error: c.error }, 400, {});
+      const at = await accessToken(env);
+      const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
+      const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
+      const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+      const src = await fetch(G + enc(c.from) + '?select=id,name,size,file', { headers: gh });
+      if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
+      const sj = await src.json();
+      if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
+      const dst = await fetch(G + enc(c.toDir) + '?select=id,folder', { headers: gh });
+      if (!dst.ok) return jsonResp({ ok: false, error: 'folder ' + dst.status }, 200, {});
+      const dj = await dst.json();
+      if (!dj.folder) return jsonResp({ ok: false, error: 'to_dir is not a folder' }, 200, {});
+      const taken = await fetch(G + enc(c.toDir + '/' + c.name) + '?select=id', { headers: gh });
+      if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken' : 'name check ' + taken.status }, 200, {});
+      const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
+        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: dj.id }, name: c.name }),
+      });
+      const mj = await mv.json().catch(() => ({}));
+      if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
+      return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null }, 200, {});
     }
     return jsonResp({ ok: false, error: 'unknown op' }, 400, {});
   } catch (e) {

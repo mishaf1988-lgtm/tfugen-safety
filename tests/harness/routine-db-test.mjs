@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -17,6 +17,8 @@ globalThis.fetch = async (url, opt = {}) => {
     const keys = decodeURIComponent((/key=(?:in\.\(([^)]*)\)|eq\.(.*))/.exec(url) || []).slice(1).filter(Boolean)[0] || '').split(',');
     return new Response(JSON.stringify(keys.filter((k) => k in state).map((k) => ({ key: k, value: state[k], updated_at: 'now' }))), { status: 200 });
   }
+  if (url.startsWith(SB + '/rest/v1/oauth_tokens')) return new Response(JSON.stringify([{ user_email: 'm', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite' }]), { status: 200 });
+  if (url.startsWith('https://graph.microsoft.com/')) return graph(url, opt);
   // expiry_set: a small docs / equip_inspections table (rows[table] = [...])
   const m = /\/rest\/v1\/(docs|equip_inspections)\?(.*)$/.exec(url);
   if (m && rows[m[1]]) {
@@ -28,6 +30,7 @@ globalThis.fetch = async (url, opt = {}) => {
   return new Response(JSON.stringify([{ id: 1 }]), { status: 200 });
 };
 let rows = {};
+let graph = async () => new Response('{}', { status: 500 });
 const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   const r = await onRequest({ request: new Request('https://x/api/routine-db', { method, headers: { 'x-routine-key': key, 'content-type': 'application/json' }, body: method === 'POST' ? JSON.stringify(body) : undefined }), env });
   return { status: r.status, json: await r.json() };
@@ -80,10 +83,14 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   await call({ op: 'delete', table: 'docs' });
   check('no delete op: nothing sent', !calls.length);
   {
-    // 11/10/2026: one PATCH, inside expiry_set (docs / equip_inspections by id). Still no DELETE.
+    // 11/10/2026: two PATCHes, one in expiry_set (docs / equip_inspections by id) and one in
+    // od_move (a OneDrive item, conflictBehavior=fail). Still no DELETE.
     const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
     const patches = src.match(/method:\s*'PATCH'/g) || [];
-    check('no DELETE anywhere; the only PATCH is in expiry_set', !/method:\s*'DELETE'/.test(src) && patches.length === 1 && /method:\s*'PATCH'/.test(src.slice(src.indexOf("body.op === 'expiry_set'"))) && src.indexOf("body.op === 'expiry_set'") > 0);
+    const ex = src.indexOf("body.op === 'expiry_set'"), od = src.indexOf("body.op === 'od_move'");
+    const at = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => m.index);
+    check('no DELETE anywhere; one PATCH in expiry_set and one in od_move', !/method:\s*'DELETE'/.test(src) && patches.length === 2 && ex > 0 && od > 0
+      && at.some((p) => p > ex && (od < ex || p < od)) && at.some((p) => p > od && (ex < od || p < ex)));
   }
 
   console.log('\n4b. agent_report: append-only run log');
@@ -135,6 +142,48 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('only docs and equip_inspections', Object.keys(EXPIRY_TABLES).join() === 'docs,equip_inspections');
     check('without the key: 403, nothing written', (await call({ ...base, e: '2026-01-01' }, 'nope')).status === 403 && rows.docs[0].e === '2027-01-01');
     rows = {};
+  }
+
+  console.log('\n4e. od_move: from the mail inbox folder to an existing folder, never replacing');
+  {
+    const IN = OD_ROOT + OD_INBOX + '/';
+    const DIR = '01_fire/2026/pumps';
+    // a tiny drive: paths -> items
+    let drive = {};
+    const reset = () => { drive = { [IN + 'a.pdf']: { id: 'f1', size: 10, file: {} }, [OD_ROOT + DIR]: { id: 'd1', folder: {} }, [OD_ROOT + DIR + '/old.pdf']: { id: 'f0', size: 9, file: {} } }; };
+    graph = async (url, opt = {}) => {
+      const m = /\/root:\/([^?]*)/.exec(url);
+      if (m) { const path = m[1].split('/').map(decodeURIComponent).join('/'); const it = drive[path]; return it ? new Response(JSON.stringify(it), { status: 200 }) : new Response('{}', { status: 404 }); }
+      const i = /\/items\/([^?]+)\?@microsoft\.graph\.conflictBehavior=fail$/.exec(url);
+      if (i && opt.method === 'PATCH') {
+        const b = JSON.parse(opt.body), key = Object.keys(drive).find((k) => drive[k].id === decodeURIComponent(i[1]));
+        const dir = Object.keys(drive).find((k) => drive[k].id === b.parentReference.id);
+        const it = drive[key]; delete drive[key]; drive[dir + '/' + b.name] = it;
+        return new Response(JSON.stringify({ ...it, webUrl: 'https://x/' + b.name }), { status: 200 });
+      }
+      return new Response('{}', { status: 400 });
+    };
+    const base = { op: 'od_move', agent: 'routine-mail-filing', from: 'a.pdf', to_dir: DIR, name: 'report 09.02.2026.pdf', why: 'monthly pump report' };
+    reset(); calls = [];
+    let x = await call(base);
+    check('moved: the file is in the folder under the new name, gone from the inbox', x.json.ok && drive[OD_ROOT + DIR + '/report 09.02.2026.pdf'] && !drive[IN + 'a.pdf'], x.json);
+    check('one PATCH with conflictBehavior=fail, no PUT, no DELETE', calls.filter((c) => c.method === 'PATCH').length === 1 && calls.some((c) => /conflictBehavior=fail$/.test(c.url)) && !calls.some((c) => c.method === 'PUT' || c.method === 'DELETE'));
+    reset(); calls = [];
+    x = await call({ ...base, name: 'old.pdf' });
+    check('name taken: refused before any move', !x.json.ok && x.json.error === 'name taken' && !calls.some((c) => c.method === 'PATCH') && drive[IN + 'a.pdf'], x.json);
+    reset();
+    x = await call({ ...base, to_dir: '01_fire/2027/pumps' });
+    check('folder that does not exist: refused, nothing created', !x.json.ok && /folder 404/.test(x.json.error) && Object.keys(drive).length === 3, x.json);
+    x = await call({ ...base, from: 'nope.pdf' });
+    check('source missing: refused', !x.json.ok && /source 404/.test(x.json.error), x.json);
+    check('from outside the inbox (a path): refused', (await call({ ...base, from: '../x.pdf' })).status === 400 && (await call({ ...base, from: 'sub/a.pdf' })).status === 400);
+    check('to_dir with .. or into the inbox: refused', (await call({ ...base, to_dir: '../../x' })).status === 400 && (await call({ ...base, to_dir: OD_INBOX })).status === 400);
+    check('to the old-versions or to-delete folders, or ARCHIVE: refused', ['a/_גרסאות קודמות', 'a/למחיקה/b', 'ARCHIVE/2020'].every((d) => !!odMoveCheck({ ...base, to_dir: d }).error));
+    check('a name with a slash or a script type: refused', !!odMoveCheck({ ...base, name: 'a/b.pdf' }).error && !!odMoveCheck({ ...base, name: 'x.exe' }).error && !!odMoveCheck({ ...base, from: 'x.js' }).error);
+    check('why missing: refused', !!odMoveCheck({ ...base, why: '' }).error);
+    check('the paths stay inside the safety folder', odMoveCheck(base).toDir === OD_ROOT + DIR && odMoveCheck(base).from === OD_ROOT + OD_INBOX + '/a.pdf');
+    check('without the key: 403, nothing moved', (await call(base, 'nope')).status === 403);
+    graph = async () => new Response('{}', { status: 500 });
   }
 
   console.log('\n4c. live: the deployed commit and the hash of the served index.html');
