@@ -114,6 +114,9 @@ export function expiryPatch(b, row, today) {
 // od_move: the safety folder, the folder the flow saves into, and what may go where.
 export const OD_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/';
 export const OD_INBOX = '_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc';
+// Files that are not filed (invoices, quotes, unclear) go here, so the inbox holds only what is new
+// (11/10/2026, Michael: "בצע: כל מה שמגיע, חוץ מרעש"). The only folder inside the inbox a file may go to.
+export const OD_SKIP = '\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7';
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
 const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
@@ -125,7 +128,8 @@ export function odMoveCheck(b) {
   const bad = (parts) => parts.some((x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 180);
   const from = clean(b.from), dir = clean(b.to_dir), name = String(b.name || '');
   if (from.length !== 1 || bad(from) || !OD_EXT.test(from[0])) return { error: 'from: one file inside the inbox folder' };
-  if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || dir[0] === OD_INBOX) return { error: 'bad to_dir' };
+  const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
+  if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !OD_EXT.test(name)) return { error: 'bad name' };
   return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name };
 }
