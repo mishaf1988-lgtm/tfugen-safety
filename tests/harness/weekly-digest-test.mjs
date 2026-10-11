@@ -5,7 +5,7 @@
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -394,13 +394,34 @@ const ROWS = [
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], eqiFail: l });
       check('in the mail, red, before the expiry table', /color:#b91c1c;font-weight:bold">ציוד לא כשיר/.test(h));
     }
+    console.log('\nMail filing (server_state.mail_filing, 11/10/2026)');
+    {
+      const now = Date.parse('2026-11-08T05:00:00Z');
+      const ago = (d) => new Date(now - d * DAY).toISOString();
+      const j = (x) => JSON.stringify(x);
+      check('never ran: grey', !mailFilingLine(null, now).red && /עוד לא רץ/.test(mailFilingLine(null, now).text));
+      const ok = mailFilingLine(j([{ at: ago(1), got: 5, filed: 3, skip: 2, wait: 0, exp: 2 }, { at: ago(2), got: 4, filed: 2, skip: 2, wait: 0, exp: 1 }, { at: ago(9), got: 50, filed: 50 }]), now);
+      check('this week summed, older runs left out, grey', !ok.red && /9 קבצים נקלטו, 5 תויקו, 4 ב"לא לתיוק", 0 מחכים לך, 3 תאריכי תוקף עודכנו/.test(ok.text), ok);
+      const wait = mailFilingLine(j([{ at: ago(1), got: 3, filed: 1, skip: 1, wait: 1 }]), now);
+      check('something waits for Michael: red', wait.red && /1 מחכים לך/.test(wait.text), wait);
+      const zero = mailFilingLine(j([{ at: ago(1), got: 0 }, { at: ago(2), got: 0 }]), now);
+      check('runs but nothing came in all week: red, points at the flow', zero.red && /Power Automate/.test(zero.text), zero);
+      const stale = mailFilingLine(j([{ at: ago(MF_STALE_DAYS + 1), got: 5 }]), now);
+      check('no run for ' + MF_STALE_DAYS + ' days: red', stale.red && /לא רץ מאז/.test(stale.text), stale);
+      const nz = mailFilingLine(j([{ at: ago(1), got: 2, skip: 2, noise: ['Ads@X.com', 'ads@x.com', 'b@y.com'] }]), now);
+      check('noise suggestions: lower case, once each', /אולי להחריג.*ads@x\.com, b@y\.com/.test(nz.text) && (nz.text.match(/ads@x\.com/g) || []).length === 1, nz);
+      check('bad values: no crash, not counted', /0 קבצים נקלטו/.test(mailFilingLine(j([{ at: ago(1), got: -3, filed: 'x' }, { at: 'nope', got: 9 }, null]), now).text));
+      check('broken JSON: never ran', /עוד לא רץ/.test(mailFilingLine('{oops', now).text));
+      const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], mf: zero });
+      check('in the mail, red', /color:#b91c1c;font-weight:bold">\S+ תיוק מהמייל השבוע/.test(h), h.substring(0, 0));
+    }
     console.log('\nAgents (server_state.agent_log, 09/10/2026)');
     {
       const now = Date.parse('2026-11-08T05:00:00Z');
       const ago = (d) => new Date(now - d * DAY).toISOString();
       const all = Object.keys(AGENT_PERIODS).map((a) => ({ agent: a, at: ago(1), ok: true, line: 'ok' }));
       const fine = agentsLine(JSON.stringify(all), now);
-      check('all reported, all ok: grey, the count', !fine.red && /8 דיווחו השבוע/.test(fine.text) && !/נכשלו|לא דיווחו/.test(fine.text), fine);
+      check('all reported, all ok: grey, the count', !fine.red && new RegExp(Object.keys(AGENT_PERIODS).length + ' דיווחו השבוע').test(fine.text) && !/נכשלו|לא דיווחו/.test(fine.text), fine);
       const failed = agentsLine(JSON.stringify(all.concat([{ agent: 'routine-quotes', at: ago(0.5), ok: false, line: 'HTTP 403' }])), now);
       check('a failed run this week: red, named, with its line', failed.red && /נכשלו: routine-quotes \(HTTP 403\)/.test(failed.text), failed);
       const lateLog = all.map((e) => (e.agent === 'routine-researcher' ? { ...e, at: ago(6) } : e));

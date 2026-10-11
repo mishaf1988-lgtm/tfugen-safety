@@ -48,7 +48,7 @@ import { accessToken } from '../_onedrive.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
   'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
-export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log'];
+export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing'];
 export const AGENT_LOG_MAX = 200;
 // One run report, cleaned: a short agent name and three short texts.
 export function agentEntry(b, nowIso) {
@@ -57,7 +57,8 @@ export function agentEntry(b, nowIso) {
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
   return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
 }
-export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp'];
+// mail_filing (11/10/2026): the mail-filing Routine's run counts, for the weekly mail (MF_MAX runs).
+export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing'];
 // Tables a Routine reads only some columns of; select= is required and must stay inside.
 export const COLUMNS = {
   med: ['id', 'e'],
