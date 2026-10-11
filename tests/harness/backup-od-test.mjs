@@ -5,7 +5,7 @@
 // copied a few per run within Cloudflare's 50-subrequest budget, never
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
-import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile } from './_build/backup-od.mjs';
+import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld } from './_build/backup-od.mjs';
 import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
@@ -35,7 +35,8 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map() }, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; });
     Object.keys(o.od || {}).forEach((k) => o.od[k].forEach((n) => w.od[k].set(n, 'id' + (++w.seq))));
     const buckets = { backups: o.backups || [], 'incidents-photos': o.photos || [] };
     globalThis.fetch = async (url, init) => {
@@ -51,7 +52,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       m = /\/storage\/v1\/object\/([^/]+)\/(.+)$/.exec(u);
       if (m) return buckets[m[1]].includes(decodeURIComponent(m[2])) ? new Response('data:' + m[2], { status: 200, headers: { 'Content-Type': m[1] === 'backups' ? 'application/json' : 'image/jpeg' } }) : json({}, 404);
       m = /\/root:\/(.+):\/children/.exec(u);
-      if (m) { const f = decodeURIComponent(m[1]); const map = w.od[f]; if (!map || !map.size) return json({}, 404); return json({ value: [...map].map(([n, id]) => ({ id, name: n, file: {} })) }); }
+      if (m) { const f = decodeURIComponent(m[1]); const map = w.od[f]; if (!map || !map.size) return json({}, 404); return json({ value: [...map].map(([n, id]) => ({ id, name: n, file: {}, createdDateTime: w.created[id] })) }); }
       m = /\/root:\/(.+)\/([^/]+):\/content$/.exec(u);
       if (m && mth === 'PUT') { if (o.putFail) return json({ error: { message: 'quota' } }, 507); const f = decodeURIComponent(m[1]), n = decodeURIComponent(m[2]); w.od[f].set(n, 'id' + (++w.seq)); w.puts.push(f + '|' + n); w.bodies[f + '|' + n] = init.body; return json({ id: 'x' }, 201); }
       m = /\/items\/([^/?]+)$/.exec(u);
@@ -69,6 +70,15 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     let rec = null; try { rec = JSON.parse(w.state[STATE_KEY]); } catch (e) {}
     return { status: r.status, j, w, rec };
   };
+
+  console.log('\n1b. "not filed": deleted after ' + SKIP_DAYS + ' days');
+  {
+    const now = Date.parse('2026-11-20T03:00:00Z');
+    const ago = (d) => new Date(now - d * 864e5).toISOString();
+    const items = [{ id: 'a', name: 'old.pdf', created: ago(31) }, { id: 'b', name: 'new.pdf', created: ago(29) }, { id: 'c', name: 'nodate.pdf', created: null }, { id: null, name: 'noid.pdf', created: ago(90) }];
+    check('older than 30 days only; no date or no id: kept', skipOld(items, now).map((x) => x.name).join() === 'old.pdf', skipOld(items, now));
+    check('the folder: not filed, inside the mail inbox of the safety folder', /\/_נכנס מהמייל\/לא לתיוק$/.test(SKIP) && SKIP.indexOf('שולחן העבודה/ניהול בטיחות/') === 0);
+  }
 
   console.log('\n2. who may run it');
   let c = await call({});
@@ -133,6 +143,17 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the file has the talk and the signature, ID included', body.tables && body.tables.toolbox_talks[0].title === 'עבודה בגובה' && body.tables.toolbox_reads[0].id_no === '0123', body);
   check('15 days kept, the oldest pruned, counts recorded', c.w.od[TALKS].size === TALKS_KEEP && !c.w.od[TALKS].has(OLDT[15]) && !c.w.od[TALKS].has(OLDT[14]) && c.rec.talks.pruned === 2 && c.rec.talks.talks === 1 && c.rec.talks.reads === 1, [c.w.od[TALKS].size, c.rec.talks]);
   check('still within the 50-subrequest budget, photos take what is left', c.rec.subrequests <= 44 && c.rec.photos.copied > 0, [c.rec.subrequests, c.rec.photos]);
+  {
+    const D = 864e5;
+    const sk = [{ name: 'a-old.pdf', created: new Date(Date.now() - 40 * D).toISOString() }, { name: 'b-new.pdf', created: new Date(Date.now() - 2 * D).toISOString() }];
+    const c2 = await call({ backups: [], photos: [], talks: [], skip: sk }, 'nsec');
+    check('not filed: the old one deleted, the new one kept, counted', c2.w.dels.includes('a-old.pdf') && !c2.w.dels.includes('b-new.pdf') && c2.w.od[SKIP].has('b-new.pdf') && c2.rec.skip.pruned === 1 && c2.rec.skip.files === 2, [c2.w.dels, c2.rec.skip]);
+    const many = Array.from({ length: SKIP_MAX + 5 }, (_, i) => ({ name: 'x' + i + '.pdf', created: new Date(Date.now() - 60 * D).toISOString() }));
+    const c3 = await call({ backups: [], photos: [], talks: [], skip: many }, 'nsec');
+    check('at most ' + SKIP_MAX + ' a day', c3.rec.skip.pruned === SKIP_MAX && c3.w.od[SKIP].size === 5, c3.rec.skip);
+    const c4 = await call({ backups: [], photos: [], talks: [] }, 'nsec');
+    check('no such folder: nothing deleted, no error', c4.rec.skip.pruned === 0 && !c4.rec.errors.some((e) => /^skip/.test(e)), c4.rec);
+  }
   c = await call({ backups: BK, photos: [], talksFail: true }, 'nsec');
   check('the talk read fails: named in the result (and so in the weekly mail), the rest still copied', !c.j.ok && c.rec.errors.some((e) => /^talks: read toolbox_talks 500/.test(e)) && c.w.od[DAILY].size === 15, c.rec.errors);
   check('the weekly mail names it', /talks: read toolbox_talks/.test(backupProblem(JSON.stringify(c.rec), Date.now()) || ''), backupProblem(JSON.stringify(c.rec), Date.now()));
