@@ -425,13 +425,9 @@ export function digestHtml(d, today, meta) {
   const old = !!deckAt && Date.parse(today + 'T12:00:00Z') - deckAt > 7 * DAY;
   h += '<p style="margin:4px 0' + (!deckAt || old ? ';color:#b91c1c;font-weight:bold' : '') + '">' + (deckAt ? esc(H.deckAt + ilTime(m.deckAt)) + (old ? esc(H.deckOld) : '') : esc(H.deckNever)) + '</p>';
   const w = m.watchOpen || [];
-  h += '<p style="margin:4px 0' + (w.length ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(H.sync) + (w.length ? esc(w.join('; ')) : H.none) + '</p>';
-  if (m.upload) h += '<p style="margin:4px 0' + (m.upload.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.upload.text) + '</p>';
-  if (m.agents) h += '<p style="margin:4px 0' + (m.agents.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.agents.text) + '</p>';
-  if (m.nevo) h += '<p style="margin:4px 0' + (m.nevo.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.nevo.text) + '</p>';
-  if (m.asst) h += '<p style="margin:4px 0' + (m.asst.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.asst.text) + '</p>';
-  if (m.mf) h += '<p style="margin:4px 0' + (m.mf.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.mf.text) + '</p>';
-  if (m.xg) h += '<p style="margin:4px 0' + (m.xg.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.xg.text) + '</p>';
+  // 11/10/2026 (Michael: "\u05d4\u05de\u05d9\u05d9\u05dc \u05db\u05d1\u05e8 \u05de\u05d0\u05d5\u05d3 \u05e2\u05de\u05d5\u05e1", "\u05d1\u05e6\u05e2: \u05e8\u05e7 \u05de\u05d4 \u05e9\u05d3\u05d5\u05e8\u05e9 \u05d0\u05d5\u05ea\u05da"): a status line is shown only when it is red;
+  // the fine ones collapse into one short grey line of names (statusBlock).
+  h += statusBlock(m);
   if (m.locks) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.locks.text) + '</p>';
   if (m.pwAge) h += m.pwAge.map((x) => '<p style="margin:4px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   const on = m.odNew || [];
@@ -439,6 +435,21 @@ export function digestHtml(d, today, meta) {
   h += '<p style="margin:8px 0 2px;font-weight:bold">' + esc(H.topics) + '</p>';
   h += d.topics.length ? '<ol style="margin:0;padding-right:20px">' + d.topics.map((x) => '<li>' + esc([x.n, x.dept, x.descr].filter(Boolean).join(' - ')) + (x.sev ? ' (' + esc(x.sev) + ')' : '') + (x.days > 0 ? ', <span style="color:#b91c1c">' + esc(when(x)) + '</span>' : '') + '</li>').join('') + '</ol>' : '<p style="color:#555">' + H.none + '</p>';
   h += '<p style="color:#555;font-size:12px;margin-top:16px">' + esc(H.foot) + '<a href="' + APP_URL + '">' + esc(H.app) + '</a></p></div>';
+  return h;
+}
+
+// The system status lines of the weekly mail: red ones in full, the rest as one grey line of
+// names (11/10/2026). STATUS_LABELS: the short name of each in the grey line. Pure.
+export const STATUS_LABELS = { sync: '\u05e1\u05e0\u05db\u05e8\u05d5\u05df', upload: '\u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8', agents: '\u05e1\u05d5\u05db\u05e0\u05d9\u05dd', vd: '', nevo: '\u05e0\u05d1\u05d5', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8', mf: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc', xg: 'Excel' };
+export function statusBlock(m) {
+  const w = m.watchOpen || [];
+  const rows = [['sync', w.length ? { red: true, text: H.sync + w.join('; ') } : { red: false }]]
+    .concat(['upload', 'agents', 'vd', 'nevo', 'asst', 'mf', 'xg'].map((k) => [k, m[k]]))
+    .filter((x) => x[1]);
+  let h = '';
+  rows.filter((x) => x[1].red).forEach((x) => { h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x[1].text) + '</p>'; });
+  const fine = rows.filter((x) => !x[1].red).map((x) => x[1].label || STATUS_LABELS[x[0]]).filter(Boolean);
+  if (fine.length) h += '<p style="margin:4px 0;color:#555;font-size:13px">' + esc('\u2705 \u05ea\u05e7\u05d9\u05df: ' + fine.join(', ')) + '</p>';
   return h;
 }
 
@@ -697,7 +708,23 @@ export function mailFilingLine(raw, nowMs) {
   let t = MF.head + got + MF.got + ', ' + sum('filed') + MF.filed + ', ' + sum('skip') + MF.skip + ', ' + sum('wait') + MF.wait + ', ' + sum('exp') + MF.exp;
   if (!got) t += MF.none;
   if (noise.length) t += MF.noise + noise.slice(0, 5).join(', ');
-  return { text: t, red: !got || sum('wait') > 0 };
+  return { text: t, red: !got || sum('wait') > 0, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc (' + sum('filed') + ' \u05ea\u05d5\u05d9\u05e7\u05d5)' };
+}
+
+// 11/10/2026 (Michael: "מאשר גם את שתי ההצעות"): the weekly validity Routine writes
+// state_set validity_run = {at, checked, fixed, wait, items:[]} at the end of each run. Red when
+// something waits for Michael (the items, cut), or no run in VD_STALE_DAYS. Pure.
+export const VD_STALE_DAYS = 9;
+export function validityLine(raw, nowMs) {
+  let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
+  const head = '\ud83d\udd0e \u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3 \u05de\u05d5\u05dc \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd: ';
+  if (!r || !r.at || isNaN(Date.parse(r.at))) return { text: head + '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', red: false, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' };
+  if (nowMs - Date.parse(r.at) > VD_STALE_DAYS * DAY) return { text: head + '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ' + ilTime(r.at), red: true };
+  const n = (k) => (Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0);
+  const items = (Array.isArray(r.items) ? r.items : []).map((x) => String(x || '').trim().substring(0, 70)).filter(Boolean);
+  const t = head + '\u05d1\u05d3\u05e7 ' + n('checked') + ', \u05ea\u05d9\u05e7\u05df \u05dc\u05d1\u05d3 ' + n('fixed') + ', \u05de\u05d7\u05db\u05d9\u05dd \u05dc\u05da ' + n('wait') + '';
+  if (!n('wait')) return { text: t, red: false, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' + (n('fixed') ? ' (' + '\u05ea\u05d9\u05e7\u05df ' + n('fixed') + ')' : '') };
+  return { text: t + (items.length ? ': ' + items.slice(0, 5).join('; ') + (items.length > 5 ? ' +' + (items.length - 5) : '') : ''), red: true };
 }
 
 // 08/10/2026 (Michael, "בצע: מפתח קריאה ל-GitHub"): the researcher Routine closes one gap a
@@ -780,7 +807,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -797,7 +824,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

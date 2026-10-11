@@ -5,7 +5,7 @@
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -414,6 +414,26 @@ const ROWS = [
       check('broken JSON: never ran', /עוד לא רץ/.test(mailFilingLine('{oops', now).text));
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], mf: zero });
       check('in the mail, red', /color:#b91c1c;font-weight:bold">\S+ תיוק מהמייל השבוע/.test(h), h.substring(0, 0));
+    }
+    console.log('\nValidity runs and the quiet status block (11/10/2026)');
+    {
+      const now = Date.parse('2026-11-08T05:00:00Z');
+      const ago = (d) => new Date(now - d * DAY).toISOString();
+      const j = (x) => JSON.stringify(x);
+      const fine = validityLine(j({ at: ago(1), checked: 37, fixed: 2, wait: 0 }), now);
+      check('validity, nothing waits: grey, label with what it fixed', !fine.red && /בדק 37, תיקן לבד 2, מחכים לך 0/.test(fine.text) && /בודק התוקף \(תיקן 2\)/.test(fine.label), fine);
+      const wait = validityLine(j({ at: ago(1), checked: 37, fixed: 0, wait: 2, items: ['Drager 8000', 'form 14'] }), now);
+      check('validity, items wait: red, named', wait.red && /מחכים לך 2: Drager 8000; form 14/.test(wait.text), wait);
+      check('validity, no run for ' + VD_STALE_DAYS + ' days: red', validityLine(j({ at: ago(VD_STALE_DAYS + 1) }), now).red);
+      check('validity, never ran or broken JSON: grey', !validityLine(null, now).red && !validityLine('{x', now).red);
+      const red = { red: true, text: 'RED-LINE' };
+      const quiet = statusBlock({ watchOpen: [], agents: { red: false, text: 'AGENTS-TEXT' }, nevo: { red: false, text: 'NEVO-TEXT' }, mf: { red: false, text: 'MF-TEXT', label: 'MF-LABEL' }, xg: red, vd: fine });
+      check('red lines in full, grey lines not', /RED-LINE/.test(quiet) && !/AGENTS-TEXT|NEVO-TEXT|MF-TEXT/.test(quiet), quiet);
+      check('grey ones in one short line, by label', (quiet.match(/<p/g) || []).length === 2 && /תקין: סנכרון, סוכנים, בודק התוקף \(תיקן 2\), נבו, MF-LABEL/.test(quiet), quiet);
+      check('sync errors: red with the list', /color:#b91c1c[^>]*>[^<]*sync-a; sync-b/.test(statusBlock({ watchOpen: ['sync-a', 'sync-b'] })));
+      check('all red: no grey line', !/תקין:/.test(statusBlock({ watchOpen: ['x'], agents: red })));
+      const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], agents: { red: false, text: 'AGENTS-TEXT' }, vd: wait });
+      check('in the mail: the red validity line, the fine agents only by name', /color:#b91c1c;font-weight:bold">[^<]*Drager 8000/.test(h) && !/AGENTS-TEXT/.test(h) && /תקין: סנכרון, סוכנים/.test(h));
     }
     console.log('\nAgents (server_state.agent_log, 09/10/2026)');
     {
