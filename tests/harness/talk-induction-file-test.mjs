@@ -82,7 +82,7 @@ console.log('\n2. a new worker signs');
   const filed = w.puts.find((p) => p.path.startsWith(IND_ROOT + '/'));
   const y = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }).slice(0, 4);
   check('filed as a PDF under 12_קליטת עובדים חדשים/<year>', filed && filed.path.startsWith(IND_ROOT + '/' + y + '/') && /\.pdf$/.test(filed.path) && filed.head === '%PDF', w.puts);
-  check('the file name: DD-MM-YYYY - name - ID', filed && /\/\d{2}-\d{2}-\d{4} - איוון פטרוב - 334455667\.pdf$/.test(filed.path), filed && filed.path);
+  check('the file name: DD-MM-YYYY - name - last 4 of the ID, never the full ID (11/10/2026)', filed && /\/\d{2}-\d{2}-\d{4} - איוון פטרוב - 5667\.pdf$/.test(filed.path) && filed.path.indexOf('334455667') < 0, filed && filed.path);
   const src = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
   // 11/10/2026, Michael: no quiz, and worker number, department, phone, job, agency on the form
   check('the filed form: the logo, the new details, no quiz', src && src.txt.includes('data:image/jpeg;base64,') && src.txt.includes('מספר עובד') && src.txt.includes('1234') && src.txt.includes('טוגנים') && src.txt.includes('0521234567') && src.txt.includes('מפעיל קו') && !src.txt.includes('1. שאלה') && !src.txt.includes('✓ נכון'), src && src.txt.slice(-900));

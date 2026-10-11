@@ -635,7 +635,10 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
     const now = new Date(nowMs || Date.now());
     const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     const hm = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem', hour12: false });
-    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + ' - ' + fileSafe(row.id_no);
+    // The file name: date, name and the last 4 digits of the ID only (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05e9\u05dd \u05d1\u05dc\u05d9 \u05ea.\u05d6. \u05de\u05dc\u05d0\u05d4").
+    // A file name shows in folder listings, search and sharing; the full ID stays inside the signed form.
+    const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
+    const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '');
     const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }, answers));
     let bytes = hb, name = base + '.html', type = 'text/html';
     try {
