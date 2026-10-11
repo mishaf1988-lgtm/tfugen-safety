@@ -44,5 +44,14 @@ check('delete from trustee_reports is denied', {'query': 'delete from public.tru
 check('a Bash command that mentions delete is left to the normal prompt', {'command': 'grep -n "DELETE FROM tasks" x'}, 'pass')
 check('a Bash command on a protected table is still denied', {'command': 'psql -c "' + T + ' ncr"'}, 'deny')
 
+# tfugen-db rule 7a: these hang the connector for 60s (10/10 and 11/10/2026)
+check('semicolon inside a literal is denied', {'query': "update docs set n='a; b' where id='1'"}, 'deny')
+check('gershayim is denied', {'query': "update docs set n='\u05ea\u05f4\u05d6' where id='1'"}, 'deny')
+check('two statements separated by ; still run', {'query': "select 1; select 2;"}, 'pass')
+check("an escaped quote before ; outside the literal runs", {'query': "update docs set n='it''s' where id='1';"}, 'pass')
+check("escaped quote then ; inside the literal is denied", {'query': "update docs set n='it''s; x' where id='1'"}, 'deny')
+check('a Bash command with ; in quotes is not this rule', {'command': "echo 'a; b'"}, 'pass')
+check('a destructive statement with ; still asks', {'query': "delete from tasks where n='a; b'"}, 'ask')
+
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)

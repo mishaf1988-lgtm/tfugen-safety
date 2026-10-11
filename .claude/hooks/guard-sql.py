@@ -26,9 +26,40 @@ ask = re.compile(
     r"\b(DELETE\s+FROM|TRUNCATE|DROP\s+(TABLE|SCHEMA|COLUMN|POLICY|FUNCTION|TRIGGER|VIEW|INDEX|TYPE)"
     r"|ALTER\s+POLICY|CREATE\s+(OR\s+REPLACE\s+)?POLICY|DISABLE\s+ROW\s+LEVEL\s+SECURITY"
     r"|NO\s+FORCE\s+ROW\s+LEVEL\s+SECURITY|ALTER\s+TABLE\s+\S+\s+DROP\b)", re.I)
+# tfugen-db rule 7a (10/10/2026, recurred 11/10/2026): a ';' inside a quoted
+# literal, or a U+05F4 gershayim anywhere, makes the connector hang for 60s and
+# the statement never reaches the database. Text alone did not stop it.
+def semi_in_literal(q):
+    i, n = 0, len(q)
+    while i < n:
+        if q[i] == "'":
+            j = i + 1
+            while j < n:
+                if q[j] == "'":
+                    if j + 1 < n and q[j + 1] == "'":
+                        j += 2; continue
+                    break
+                if q[j] == ';':
+                    return True
+                j += 1
+            i = j + 1
+        else:
+            i += 1
+    return False
+
+
 m = pat.search(text)
 a = None if m else ask.search(sql)
-if a:
+t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(sql) else None))
+if t:
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason":
+            "guard-sql (tfugen-db 7a): %s inside the SQL text hangs execute_sql for 60s and nothing is written. "
+            "Use a comma or period instead of ';', and a plain '\"' instead of the Hebrew gershayim." % (
+                "a ';' inside a quoted string" if t == ";" else "the Hebrew gershayim (U+05F4)")}}))
+elif a:
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "permissionDecision": "ask",
