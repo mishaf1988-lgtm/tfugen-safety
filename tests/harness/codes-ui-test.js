@@ -22,7 +22,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     let confirmAns = false, promptAns = null;
     window.confirm = () => confirmAns; window.prompt = () => promptAns;
     window.fetch = (u, init) => { if (String(u) !== '/api/codes') return Promise.resolve(new Response('[]', { status: 200 })); const b = JSON.parse(init.body); calls.push({ u, b, auth: init.headers.Authorization });
-      const body = b.op === 'list' ? { codes: [{ key: 'induction_code', label: 'קוד משאבי אנוש (טופס קליטה)', set: true, value: '996322', source: 'app', updated_at: '2026-10-10T16:35:21Z' }, { key: 'trustee_code', label: 'קוד נאמני הבטיחות', set: true, value: null, source: 'cloudflare', updated_at: null }], recent: [{ ts: '2026-10-10T17:05:00Z', who: 'admin', key: 'trustee_code', label: 'קוד נאמני הבטיחות' }] }
+      const body = b.op === 'list' ? { codes: [{ key: 'induction_code', label: 'קוד משאבי אנוש (טופס קליטה)', set: true, value: '996322', source: 'app', updated_at: '2026-10-10T16:35:21Z' }, { key: 'trustee_code', label: 'קוד נאמני הבטיחות', set: true, value: null, source: 'cloudflare', updated_at: null }], recent: [{ ts: '2026-10-10T17:05:00Z', who: 'admin', key: 'trustee_code', label: 'קוד נאמני הבטיחות' }], locked: window.__locked || 0 }
+        : b.op === 'unlock' ? { cleared: 1 }
         : { key: b.key, value: (b.value || 'k7m3x9p2qa').toLowerCase(), updated_at: '2026-10-10T18:00:00Z' };
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })); };
     goPage('users');
@@ -32,6 +33,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const body = document.getElementById('codes-body');
     o.list = { auth: calls[0] && calls[0].auth, text: body.textContent, hidden: !body.textContent.includes('996322'), cf: body.textContent.includes('Cloudflare'), del: body.textContent.includes('סיסמת המחיקה') };
     o.recent = body.textContent;
+    o.noLock = !body.textContent.includes('נעולות עכשיו');
+    window.__locked = 2; _codesLoad(true); await new Promise((res) => setTimeout(res, 50));
+    o.lock = body.textContent.includes('נעולות עכשיו: 2');
+    window.__locked = 0; confirmAns = true; let m = calls.length; _codesUnlock(); await new Promise((res) => setTimeout(res, 80));
+    o.unlock = { op: calls[m] && calls[m].b.op, toast: toasts.filter((t) => /נפתחה/.test(t)).length, gone: !body.textContent.includes('נעולות עכשיו') };
+    confirmAns = false;
     _codeShow('induction_code'); o.shown = document.getElementById('code-v-induction_code').textContent;
     _codeShow('induction_code'); o.hiddenAgain = document.getElementById('code-v-induction_code').textContent;
     let n = calls.length; confirmAns = false; _codeSet('trustee_code', 0); await new Promise((res) => setTimeout(res, 30));
@@ -52,6 +59,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the passwords card is part of the users page (no button, no dialog)', r.btn);
   check('the list: asked with the login, the HR code hidden, the trustee one "in Cloudflare", the delete password', r.list.auth === 'Bearer tok' && r.list.hidden && r.list.cf && r.list.del, r.list);
   check('the last changes at the bottom, in Israel time (17:05Z = 20:05)', /החלפות אחרונות/.test(r.recent) && /10\/10\/2026 20:05 \| קוד נאמני הבטיחות \| admin/.test(r.recent), r.recent);
+  check('the lock banner only when something is locked, and "open now" opens it', r.noLock && r.lock && r.unlock.op === 'unlock' && r.unlock.toast === 1 && r.unlock.gone, [r.noLock, r.lock, r.unlock]);
   check('"show" shows it, a second tap hides it', r.shown === '996322' && r.hiddenAgain !== '996322', [r.shown, r.hiddenAgain]);
   check('no confirm: nothing sent', r.noConfirm === 0);
   check('a password without a digit: refused before the server', r.badOwn.calls === 0 && /8 תווים לפחות/.test(r.badOwn.toast), r.badOwn);

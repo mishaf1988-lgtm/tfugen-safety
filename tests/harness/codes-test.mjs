@@ -2,7 +2,7 @@
 // הסיסמות", the app's own codes): /api/codes lists and changes the HR code and the trustee code in
 // server_state, admin only, and logs who and when to audit_log without the code. The trustee
 // screen reads its code from server_state first, Cloudflare's TRUSTEE_CODE while that is empty.
-import { onRequest, randomCode, CODE_RE, pwOk, changeMailHtml } from './_build/codes.mjs';
+import { onRequest, randomCode, CODE_RE, pwOk, changeMailHtml, lockedCount } from './_build/codes.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -14,6 +14,8 @@ globalThis.fetch = async (url, init) => {
   const j = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
   if (u === SB + '/auth/v1/user') { const t = init.headers.Authorization.replace('Bearer ', ''); return t === 'admin' ? j({ id: 'u0', email: 'admin@tfugen.local' }) : t === 'mgr' ? j({ id: 'u1', email: 'michael@tfugen.local' }) : new Response('no', { status: 401 }); }
   if (u.startsWith(SB + '/rest/v1/app_users')) return j([u.includes('id=eq.michael') ? { role: 'מנהל', active: true } : { role: 'מדווח', active: true }]);
+  if (u.startsWith(SB + '/rest/v1/server_state') && m === 'PATCH') { w.patch = { u: decodeURIComponent(u), b: JSON.parse(init.body) }; return j([{ key: 'guess:tru:aa' }, { key: 'guess:ind:bb' }]); }
+  if (u.startsWith(SB + '/rest/v1/server_state') && u.includes('key=like.guess')) { w.lockQ = decodeURIComponent(u); return j([{ key: 'guess:tru:aa', value: '11' }, { key: 'guess:ind:bb', value: '3' }]); }
   if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') { const b = JSON.parse(init.body); w.writes.push({ u, b, prefer: init.headers.Prefer }); if (w.failWrite) return new Response('x', { status: 500 }); w.state[b.key] = b; return new Response(null, { status: 201 }); }
   if (u.startsWith(SB + '/rest/v1/server_state')) { const one = /key=eq\.([a-z_]+)/.exec(u); return j(Object.values(w.state).filter((x) => !one || x.key === one[1])); }
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return j(w.noOd ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
@@ -27,6 +29,18 @@ const call = async (body, auth, env) => { const r = await onRequest({ request: n
 console.log('\n1. who may');
 check('no login: 401', (await call({ op: 'list' })).st === 401);
 check('a manager: 403 (admin only)', (await call({ op: 'list' }, 'mgr')).st === 403);
+
+console.log('\n1b. the guessing lock (11/10/2026)');
+{
+  check('locked = counters over 10, guess keys only', lockedCount([{ key: 'guess:tru:a', value: '11' }, { key: 'guess:ind:b', value: '10' }, { key: 'induction_code', value: '996322' }]) === 1);
+  const r = await call({ op: 'list' }, 'admin');
+  check('the list says how many addresses are locked, from the last hour', r.j.locked === 1 && /updated_at=gte\./.test(w.lockQ || ''), [r.j.locked, w.lockQ]);
+  check('a manager cannot open it', (await call({ op: 'unlock' }, 'mgr')).st === 403 && !w.patch);
+  const n = w.logs.length;
+  const u2 = await call({ op: 'unlock' }, 'admin');
+  check('admin: every guess counter back to 0, the log says who', u2.st === 200 && u2.j.cleared === 2 && /key=like\.guess:\*/.test(w.patch.u) && /value=neq\.0/.test(w.patch.u) && w.patch.b.value === '0' && w.logs.length === n + 1 && w.logs[n].record_id === 'guess_locks' && w.logs[n].user_email === 'admin@tfugen.local', [u2, w.patch, w.logs[n]]);
+  w.logs.splice(n, 1);
+}
 
 console.log('\n2. the list');
 {
@@ -71,7 +85,7 @@ console.log('\n3. changing a code');
 
 console.log('\n4. the trustee screen reads the code from the app first');
 {
-  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'");
+  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'");
   fs.writeFileSync(new URL('./_build/trustee-gate-c.mjs', import.meta.url), src);
   const { onRequest: gate } = await import('./_build/trustee-gate-c.mjs');
   const g = async (code, env) => (await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev' } }), env })).status;
