@@ -430,6 +430,7 @@ export function digestHtml(d, today, meta) {
   if (m.agents) h += '<p style="margin:4px 0' + (m.agents.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.agents.text) + '</p>';
   if (m.nevo) h += '<p style="margin:4px 0' + (m.nevo.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.nevo.text) + '</p>';
   if (m.asst) h += '<p style="margin:4px 0' + (m.asst.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.asst.text) + '</p>';
+  if (m.mf) h += '<p style="margin:4px 0' + (m.mf.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.mf.text) + '</p>';
   if (m.xg) h += '<p style="margin:4px 0' + (m.xg.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.xg.text) + '</p>';
   if (m.locks) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.locks.text) + '</p>';
   if (m.pwAge) h += m.pwAge.map((x) => '<p style="margin:4px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
@@ -655,7 +656,7 @@ export function nevoLine(raw, nowMs) {
 // agent silent longer than its period after it already reported once, is red: before this a
 // run's last message stayed in a persistent session that nobody opens. Never reported = listed,
 // not red (the monthly ones first run on 01/11). Pure.
-export const AGENT_PERIODS = { 'routine-researcher': 4, retro: 4, 'routine-quotes': 8, 'routine-radar-learn': 8, 'routine-compliance': 35, 'routine-od-scan': 35, 'routine-nevo-versions': 35, 'routine-factory-trends': 35 };
+export const AGENT_PERIODS = { 'routine-researcher': 4, retro: 4, 'routine-mail-filing': 4, 'routine-quotes': 8, 'routine-radar-learn': 8, 'routine-validity': 8, 'routine-compliance': 35, 'routine-od-scan': 35, 'routine-nevo-versions': 35, 'routine-factory-trends': 35 };
 export function agentsLine(raw, nowMs) {
   let log = []; try { log = JSON.parse(raw || '[]'); } catch (e) { log = []; }
   if (!Array.isArray(log)) log = [];
@@ -674,6 +675,29 @@ export function agentsLine(raw, nowMs) {
   if (late.length) parts.push(H.agLate + late.join(', '));
   if (never.length) parts.push(H.agNever + never.join(', '));
   return { text: H.ag + parts.join('. '), red: !!(fails.length || late.length) };
+}
+
+// 11/10/2026 (Michael: "מאשר לעשות את השדרוגים"): the mail-filing Routine ends every run with
+// state_set mail_filing = [{at, got, filed, skip, wait, exp, noise:[]}] (last MF_MAX runs). The
+// weekly line sums the last 7 days. No run in MF_STALE_DAYS = red (the Routine stopped); runs but
+// nothing came in all week = red too (about 30 files a week came in 2025-2026, so zero means the
+// Power Automate flow stopped). Never ran = grey. Pure.
+export const MF_STALE_DAYS = 4, MF_MAX = 60;
+const MF = { head: '\ud83d\udce8 \u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2: ', never: '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', stale: '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ', got: ' \u05e7\u05d1\u05e6\u05d9\u05dd \u05e0\u05e7\u05dc\u05d8\u05d5', filed: ' \u05ea\u05d5\u05d9\u05e7\u05d5', skip: ' \u05d1"\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7"', wait: ' \u05de\u05d7\u05db\u05d9\u05dd \u05dc\u05da', exp: ' \u05ea\u05d0\u05e8\u05d9\u05db\u05d9 \u05ea\u05d5\u05e7\u05e3 \u05e2\u05d5\u05d3\u05db\u05e0\u05d5', none: '. \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8 \u05d0\u05e3 \u05e7\u05d5\u05d1\u05e5: \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05d4\u05d6\u05e8\u05d9\u05de\u05d4 \u05d1-Power Automate', noise: '. \u05d0\u05d5\u05dc\u05d9 \u05dc\u05d4\u05d7\u05e8\u05d9\u05d2 (\u05db\u05dc \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05e9\u05dc\u05d4\u05dd \u05dc\u05d0 \u05ea\u05d5\u05d9\u05e7\u05d5): ' };
+export function mailFilingLine(raw, nowMs) {
+  let runs = []; try { runs = JSON.parse(raw || '[]'); } catch (e) { runs = []; }
+  runs = (Array.isArray(runs) ? runs : []).filter((r) => r && r.at && !isNaN(Date.parse(r.at)));
+  if (!runs.length) return { text: MF.head + MF.never, red: false };
+  const last = Math.max.apply(null, runs.map((r) => Date.parse(r.at)));
+  if (nowMs - last > MF_STALE_DAYS * DAY) return { text: MF.head + MF.stale + ilTime(new Date(last).toISOString()), red: true };
+  const wk = runs.filter((r) => nowMs - Date.parse(r.at) <= 7 * DAY);
+  const sum = (k) => wk.reduce((a, r) => a + (Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0), 0);
+  const got = sum('got'), noise = [];
+  wk.forEach((r) => (Array.isArray(r.noise) ? r.noise : []).forEach((x) => { const a = String(x || '').trim().toLowerCase().substring(0, 80); if (a && noise.indexOf(a) < 0) noise.push(a); }));
+  let t = MF.head + got + MF.got + ', ' + sum('filed') + MF.filed + ', ' + sum('skip') + MF.skip + ', ' + sum('wait') + MF.wait + ', ' + sum('exp') + MF.exp;
+  if (!got) t += MF.none;
+  if (noise.length) t += MF.noise + noise.slice(0, 5).join(', ');
+  return { text: t, red: !got || sum('wait') > 0 };
 }
 
 // 08/10/2026 (Michael, "בצע: מפתח קריאה ל-GitHub"): the researcher Routine closes one gap a
@@ -756,7 +780,7 @@ async function build(env) {
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -773,7 +797,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
