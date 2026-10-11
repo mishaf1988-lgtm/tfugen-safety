@@ -19,7 +19,7 @@
 // Unset TRUSTEE_CODE means closed, not open. Nobody is using the trustee
 // screen yet, and a lock that defaults to open is not a lock.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket } from '../_shared.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
 // The guessing lock (10/10/2026, the security review: a wrong guess only waited, and a script in
@@ -34,7 +34,7 @@ export const GUESS_LIMIT = 10;
 const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
 export async function guessKey(scope, request) {
-  const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'none';
+  const ip = ipBucket(request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip'));
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('guess|' + ip)));
   return 'guess:' + scope + ':' + Array.from(d.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }

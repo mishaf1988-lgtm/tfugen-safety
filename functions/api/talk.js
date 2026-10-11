@@ -24,7 +24,7 @@
 // tells the link holder about one worker, and asking costs a signature in that
 // worker's name when they had not signed (checker, 03/10/2026; accepted).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
@@ -361,7 +361,7 @@ export const GUESS_LIMIT = 10;
 const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
 export async function guessKey(scope, request) {
-  const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || 'none';
+  const ip = ipBucket(request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip'));
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('guess|' + ip)));
   return 'guess:' + scope + ':' + Array.from(d.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
