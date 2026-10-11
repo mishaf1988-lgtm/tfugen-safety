@@ -22,6 +22,8 @@ globalThis.fetch = async (url, init) => {
   if (u.includes('key=eq.induction_code')) return j([{ value: '246810' }]);
   if (u.includes('key=eq.trustee_code')) return j([]);
   if (u.startsWith(SB + '/rest/v1/toolbox_talks')) return j([IND]);
+  if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return j([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
+  if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') { w.mails = (w.mails || []).concat([JSON.parse(init.body)]); return new Response(null, { status: 202 }); }
   return j({ error: 'unexpected ' + u }, 599);
 };
 const k = await makePermToken(ENV, 'ind1', 0);
@@ -40,6 +42,8 @@ console.log('\n1. the HR code');
   check('...the first lock is kept for the weekly mail', w.locks && w.locks.length === 1 && w.locks[0].s === 'ind' && w.locks[0].at, w.locks);
   await code('246810');
   check('...and a later attempt does not add another lock entry', w.locks.length === 1);
+  const lm = (w.mails || []).map((x) => x.message);
+  check('the lock: one mail to Michael, which password and what to do, never the address', lm.length === 1 && lm[0].toRecipients[0].emailAddress.address === 'sviva@tapugan.co.il' && /נעילה על ניחוש סיסמה: סיסמת משאבי אנוש/.test(lm[0].subject) && /פתח עכשיו/.test(lm[0].body.content) && !JSON.stringify(lm).includes('1.2.3.4'), lm.map((x) => x.subject));
   check('IPv6: the same /64 is one bucket, written short or long, any case', ipBucket('2001:db8:1:2:aaaa:bbbb:cccc:dddd') === ipBucket('2001:0DB8:0001:0002::1') && ipBucket('2001:db8:1:2::') === ipBucket('2001:db8:1:2:0:0:0:9'));
   check('IPv6: another /64 is another bucket', ipBucket('2001:db8:1:3::1') !== ipBucket('2001:db8:1:2::1'));
   check('an IPv4 inside an IPv6 keeps its own bucket (not 0:0:0:0 for everyone)', new Set(['::ffff:1.2.3.4', '::ffff:5.6.7.8', '::ffff:0102:0304', '::ffff:0506:0708', '64:ff9b::1.2.3.4', '64:ff9b::5.6.7.8']).size === new Set(['::ffff:1.2.3.4', '::ffff:5.6.7.8', '::ffff:0102:0304', '::ffff:0506:0708', '64:ff9b::1.2.3.4', '64:ff9b::5.6.7.8'].map(ipBucket)).size, ['::ffff:1.2.3.4', '::ffff:0102:0304', '::1'].map(ipBucket));
@@ -56,7 +60,7 @@ console.log('\n1. the HR code');
 
 console.log('\n2. the trustee code');
 {
-  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'");
+  const src = fs.readFileSync(new URL('../../functions/api/trustee-gate.js', import.meta.url), 'utf8').replace("from '../_shared.js'", "from './_shared.mjs'").replace("from '../_onedrive.js'", "from './_onedrive.mjs'");
   fs.writeFileSync(new URL('./_build/trustee-gate-g.mjs', import.meta.url), src);
   const { onRequest: gate } = await import('./_build/trustee-gate-g.mjs');
   const g = async (c, ip) => { const r = await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code: c }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev', 'cf-connecting-ip': ip || '7.7.7.7' } }), env: ENV }); let b = null; try { b = await r.json(); } catch (e) { b = null; } return { st: r.status, b }; };

@@ -20,6 +20,7 @@
 // screen yet, and a lock that defaults to open is not a lock.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket } from '../_shared.js';
+import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
 // The guessing lock (10/10/2026, the security review: a wrong guess only waited, and a script in
@@ -58,12 +59,32 @@ async function guessLocked(env, scope) {
     await fetch(GUESS_SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: Object.assign(guessH(env), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key: 'guess_locks', value: JSON.stringify(list), updated_at: new Date().toISOString() }) });
   } catch (e) { /* the lock holds anyway */ }
 }
+// A mail to Michael the moment an address is locked (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05d9\u05dc \u05dc\u05da \u05d5\u05db\u05e4\u05ea\u05d5\u05e8
+// \u05e4\u05ea\u05d9\u05d7\u05d4"): the lock is per address, and HR and the trustees on the factory WiFi share one, so a lock
+// may shut out his own people. Which password, when; the unlock is in "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea". Never the address.
+const LOCK_LABEL = { ind: '\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', tru: '\u05e1\u05d9\u05e1\u05de\u05ea \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' };
+export function lockMailHtml(scope, atIso) {
+  const d = new Date(atIso);
+  const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }), hm = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
+  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+    + '<p><b>' + (LOCK_LABEL[scope] || scope) + '</b>: 10 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd \u05d1\u05e9\u05e2\u05d4 \u05de\u05d0\u05d5\u05ea\u05d4 \u05db\u05ea\u05d5\u05d1\u05ea, \u05d1-' + day + ' \u05d1\u05e9\u05e2\u05d4 ' + hm + '. \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e9\u05e2\u05d4.</p>'
+    + '<p>\u05d0\u05dd \u05d0\u05dc\u05d4 \u05d0\u05e0\u05e9\u05d9\u05dd \u05e9\u05dc\u05db\u05dd (\u05dc\u05de\u05e9\u05dc \u05de\u05d4-WiFi \u05e9\u05dc \u05d4\u05de\u05e4\u05e2\u05dc): \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d9\u05d3 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, "\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd \u05d5\u05e1\u05d9\u05e1\u05de\u05d0\u05d5\u05ea", \u05db\u05e4\u05ea\u05d5\u05e8 "\u05e4\u05ea\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5".</p>'
+    + '<p>\u05d0\u05dd \u05d6\u05d4 \u05dc\u05d0 \u05de\u05d5\u05db\u05e8 \u05dc\u05db\u05dd: \u05db\u05d3\u05d0\u05d9 \u05dc\u05d4\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d0\u05d5\u05ea\u05d5 \u05de\u05e7\u05d5\u05dd.</p>'
+    + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
+}
+async function lockMail(env, scope) {
+  try {
+    const od = await accessToken(env);
+    if (!od || !od.email) return;
+    await sendMailTo(od.token, [od.email], [], '\u05e0\u05e2\u05d9\u05dc\u05d4 \u05e2\u05dc \u05e0\u05d9\u05d7\u05d5\u05e9 \u05e1\u05d9\u05e1\u05de\u05d4: ' + (LOCK_LABEL[scope] || scope), lockMailHtml(scope, new Date().toISOString()), []);
+  } catch (e) { /* the lock holds anyway */ }
+}
 // n attempts so far in the window, including this one; true = refuse without checking.
 export async function guessGate(env, scope, request) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return { key: null, locked: false };
   const key = await guessKey(scope, request);
   const n = await guessHit(env, key);
-  if (n === GUESS_LIMIT + 1) await guessLocked(env, scope);
+  if (n === GUESS_LIMIT + 1) { await guessLocked(env, scope); await lockMail(env, scope); }
   return { key, locked: n > GUESS_LIMIT };
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }

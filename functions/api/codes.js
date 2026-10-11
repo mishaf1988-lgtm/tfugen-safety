@@ -70,6 +70,12 @@ async function mailChange(env, label, who, atIso) {
   } catch (e) { /* the password is changed */ }
 }
 
+// Open the guessing lock now (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05d9\u05dc \u05dc\u05da \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 \u05e4\u05ea\u05d9\u05d7\u05d4"). The same limit as
+// talk.js and trustee-gate.js: a counter over LOCK_AT in the last hour = a locked address.
+export const LOCK_AT = 10;
+export function lockedCount(rows) {
+  return (Array.isArray(rows) ? rows : []).filter((x) => x && /^guess:/.test(String(x.key || '')) && +x.value > LOCK_AT).length;
+}
 export async function onRequest(context) {
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
@@ -94,9 +100,15 @@ export async function onRequest(context) {
       let recent = [];
       try {
         const r = await fetch(SB + '/rest/v1/audit_log?source=eq.codes&select=ts,user_email,record_id&order=ts.desc&limit=3', { headers: h(env) });
-        if (r.ok) recent = (await r.json()).map((x) => ({ ts: x.ts, who: String(x.user_email || '').split('@')[0], key: x.record_id, label: (CODE_KEYS[x.record_id] || {}).label || x.record_id }));
+        if (r.ok) recent = (await r.json()).map((x) => ({ ts: x.ts, who: String(x.user_email || '').split('@')[0], key: x.record_id, label: x.record_id === 'guess_locks' ? '\u05e4\u05ea\u05d9\u05d7\u05ea \u05e0\u05e2\u05d9\u05dc\u05ea \u05e0\u05d9\u05d7\u05d5\u05e9' : ((CODE_KEYS[x.record_id] || {}).label || x.record_id) }));
       } catch (e) { recent = []; }
-      return jsonResp({ codes, recent }, 200, cors);
+      let locked = 0;
+      try {
+        const since = new Date(Date.now() - 3600e3).toISOString();
+        const r = await fetch(SB + '/rest/v1/server_state?key=like.guess%3A*&updated_at=gte.' + encodeURIComponent(since) + '&select=key,value', { headers: h(env) });
+        if (r.ok) locked = lockedCount(await r.json());
+      } catch (e) { locked = 0; }
+      return jsonResp({ codes, recent, locked }, 200, cors);
     }
     if (b.op === 'set') {
       const key = String(b.key || '');
@@ -113,6 +125,16 @@ export async function onRequest(context) {
       const job = mailChange(env, CODE_KEYS[key].label, String((who.user && who.user.email) || '').split('@')[0], at);
       if (typeof context.waitUntil === 'function') context.waitUntil(job); else await job;
       return jsonResp({ key, value, updated_at: at }, 200, cors);
+    }
+    if (b.op === 'unlock') {
+      // Every counter back to zero (the same reset as guess_clear); who and when go to the log.
+      const r = await fetch(SB + '/rest/v1/server_state?key=like.guess%3A*&value=neq.0', { method: 'PATCH', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: '0' }) });
+      if (!r.ok) return jsonResp({ error: 'save failed' }, 502, cors);
+      const rows = await r.json().catch(() => []);
+      try {
+        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: 'guess_locks', op: 'UPDATE', title: '\u05e4\u05ea\u05d9\u05d7\u05ea \u05e0\u05e2\u05d9\u05dc\u05ea \u05e0\u05d9\u05d7\u05d5\u05e9', source: 'codes' }) });
+      } catch (e) { /* opened */ }
+      return jsonResp({ cleared: Array.isArray(rows) ? rows.length : 0 }, 200, cors);
     }
     return jsonResp({ error: 'unknown op' }, 400, cors);
   } catch (e) {
