@@ -9,6 +9,7 @@ Claude Code בענן לא כותב ל-OneDrive: המסווג של Claude Code ח
 - **הקבצים:** כל קובץ שמיכאל מעלה, או ש-Claude בונה, נשמר כ-asset בארטיפקט הפרטי `https://claude.ai/artifact/8YG6U1r72asze2EFHxz4db` (כלי `Artifact`, `asset: true`). Cowork מוריד asset ב-`Artifact` read עם `path` = המזהה.
 - **המשימות:** מסמך באוסף `cowork_tasks` במסד של אותו ארטיפקט (כלי `ArtifactData`, `set`). שדות: `status` (`open` / `done` / `blocked`), `created`, `from`, `approved_by_michael` (ציטוט ה"בצע" ומתי), `title`, `steps` (רשימה, כל צעד עם נתיב מלא ושם קובץ), ובסיום `done_at` ו-`report`.
 - **הביצוע:** משימה מתוזמנת ב-Cowork (מיכאל מגדיר פעם אחת) קוראת את `cowork_tasks`, מבצעת כל משימה ב-`open` לפי הכללים למטה, ומעדכנת `status`.
+- **פתיחת Cowork לא מספיקה** (11/10/2026: מיכאל פתח, ושתי המשימות נשארו `open`, בלי גיבוי). עד שהמשימה המתוזמנת מוגדרת, להדביק ל-Cowork: "קרא את האוסף cowork_tasks בארטיפקט https://claude.ai/artifact/8YG6U1r72asze2EFHxz4db. בצע כל משימה ב-status=open לפי ה-steps שבה ולפי הכללים בקובץ הזה (גיבוי לפני כל קובץ, בלי מחיקה ובלי דריסה, שורה ב-Claude Log). בסוף עדכן status, done_at ו-report." זה גם הטקסט למשימה המתוזמנת.
 - **הבדיקה:** אחרי שהמשימה סומנה `done`, Claude מאמת בעצמו (`read_resource` של Microsoft 365 על התיקייה, גודל הקובץ) ורק אז מעדכן את המסד של האפליקציה (`file_url` וכו').
 
 ## כללים למשימה (כללי Microsoft 365 של מיכאל, 05/10/2026)
