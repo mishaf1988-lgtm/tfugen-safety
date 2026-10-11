@@ -45,7 +45,7 @@ const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
 const sign = async (id, extra) => {
   const k = await makeTalkToken(ENV, id);
   const fd = new FormData();
-  for (const [a, b] of Object.entries({ k, l: 'he', emp: '__other', oname: 'Ivan Petrov', ocomp: 'כוח אדם', oid: '334455667', ok: '1', sig: SIG, qa: '0:1', ...extra })) fd.append(a, b);
+  for (const [a, b] of Object.entries({ k, l: 'he', emp: '__other', oname: 'Ivan Petrov', ocomp: 'כוח אדם', oid: '334455667', ok: '1', sig: SIG, qa: '0:1', ino: '1234', idep: 'טוגנים', iph: '052-1234567', ijob: 'מפעיל קו', ...extra })) fd.append(a, b);
   const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', cookie: 'tsind=' + (await makeCodeCookie(ENV, id, '246810')) } }), env: ENV });
   return { st: r.status, h: await r.text() };
 };
@@ -58,7 +58,9 @@ console.log('\n1. the form page');
   const h = inductionHtml(T.ind, { id: 'r1', emp_name: 'דני <b>', id_no: '123', dept: 'כוח אדם', quiz_ok: 1, quiz_n: 1 }, 'QUJD', 'he', { day: '2026-10-11', hm: '07:05' });
   check('the text read, name, ID, company, date, score, trainer and signature', h.includes('1. חירום') && h.includes('דני &lt;b&gt;') && h.includes('123') && h.includes('כוח אדם') && h.includes('11/10/2026 07:05') && h.includes('1/1') && h.includes('הטופס הוכן על ידי</td>') && h.includes('ממונה בטיחות') && !h.includes('>מדריך<') && h.includes('data:image/png;base64,QUJD'));
   const ru = inductionHtml(T.ind, { id: 'r1', emp_name: 'x', id_no: '1' }, 'QQ', 'ru', { day: '2026-10-11', hm: '07:05' });
-  check('a worker who read Russian: the Russian text, and the form says so', ru.includes('Текст') && ru.includes('Русский'));
+  // 11/10/2026, Michael: "שפה של הטופס חייבת להיות בעברית לא משנה באיזה שפה"
+  check('a worker who read Russian: the signed form is in Hebrew, and says he read Russian', !ru.includes('Текст') && ru.includes('1. חירום') && ru.includes('Русский'), ru.slice(0, 900));
+  check('the form opens with the welcome and the essential food plant', h.includes('ברוכים הבאים למפעל תעשיות תפוגן') && h.includes('המפעל הוא מפעל מזון חיוני'));
   // 10/10/2026, Michael: "בטופס שנשלח חסר לוגו של תפוגן כולל השאלות שנענו"
   check('the Tapugan logo at the top (a real JPEG, carried in the code)', h.includes('data:image/jpeg;base64,' + LOGO_JPG) && Buffer.from(LOGO_JPG, 'base64').subarray(0, 3).toString('hex') === 'ffd8ff' && LOGO_JPG.length > 5000);
   const Q = { ...T.ind, quiz: [{ q: 'מה עושים בצבע אדום?', a: ['ממשיכים', 'למרחב המוגן', 'הביתה', 'לחניה'], c: 1, t: { ru: { q: 'Что делать?', a: ['Работать', 'В убежище', 'Домой', 'На парковку'] } } }, { q: 'מתי מורידים חלוק?', a: ['אף פעם', 'לפני השירותים'], c: 1 }, { q: 'מכונה בלי הדרכה?', a: ['לא מפעילים', 'מפעילים'], c: 0 }] };
@@ -82,7 +84,9 @@ console.log('\n2. a new worker signs');
   check('filed as a PDF under 12_קליטת עובדים חדשים/<year>', filed && filed.path.startsWith(IND_ROOT + '/' + y + '/') && /\.pdf$/.test(filed.path) && filed.head === '%PDF', w.puts);
   check('the file name: DD-MM-YYYY - name - ID', filed && /\/\d{2}-\d{2}-\d{4} - איוון פטרוב - 334455667\.pdf$/.test(filed.path), filed && filed.path);
   const src = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
-  check('the filed form carries the logo and the answer the worker gave (qa 0:1 = "ב", right)', src && src.txt.includes('data:image/jpeg;base64,') && src.txt.includes('1. שאלה') && src.txt.includes('>ב<') && src.txt.includes('✓ נכון'), src && src.txt.slice(-900));
+  // 11/10/2026, Michael: no quiz, and worker number, department, phone, job, agency on the form
+  check('the filed form: the logo, the new details, no quiz', src && src.txt.includes('data:image/jpeg;base64,') && src.txt.includes('מספר עובד') && src.txt.includes('1234') && src.txt.includes('טוגנים') && src.txt.includes('0521234567') && src.txt.includes('מפעיל קו') && !src.txt.includes('1. שאלה') && !src.txt.includes('✓ נכון'), src && src.txt.slice(-900));
+  check('the row keeps the new details', w.inserts[0] && w.inserts[0].emp_no === '1234' && w.inserts[0].dept === 'טוגנים' && w.inserts[0].phone === '0521234567' && w.inserts[0].job === 'מפעיל קו' && w.inserts[0].agency === null && w.inserts[0].quiz_n === undefined, w.inserts[0]);
   check('the source page went to the app folder, not the safety folder', w.puts.some((p) => p.path.startsWith('Apps/Tapugan Safety/') && /\.html$/.test(p.path)) && w.conv === 1);
   const mail = w.mails[0] && w.mails[0].message;
   const to = mail ? mail.toRecipients.map((x) => x.emailAddress.address) : [];
