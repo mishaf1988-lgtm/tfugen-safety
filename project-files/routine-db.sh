@@ -4,6 +4,7 @@
 # Usage: bash project-files/routine-db.sh '{"op":"state_get","keys":["quote_track"]}'
 #        bash project-files/routine-db.sh '{"op":"select","table":"docs","query":"select=id,n,e"}'
 #        bash project-files/routine-db.sh '{"op":"state_set","key":"quote_track","value":{...}}'
+#        bash project-files/routine-db.sh '{"op":"expiry_set","table":"docs","id":"...","agent":"routine-mail-filing","e":"2027-05-01","why":"...","doc":"..."}'
 #        bash project-files/routine-db.sh '{"op":"agent_report","agent":"routine-quotes","ok":true,"line":"...","learned":"..."}'
 # Exit 3 = no ROUTINE_KEY in this environment: fall back to execute_sql, as the prompt says.
 # Exit 4 = the call failed (HTTP not 200, e.g. 403 for a wrong key, or no "ok":true in the
