@@ -53,5 +53,10 @@ check("escaped quote then ; inside the literal is denied", {'query': "update doc
 check('a Bash command with ; in quotes is not this rule', {'command': "echo 'a; b'"}, 'pass')
 check('a destructive statement with ; still asks', {'query': "delete from tasks where n='a; b'"}, 'ask')
 
+# tfugen-db rule 8: DO blocks hang the connector (03/10/2026)
+check('a DO block is denied', {'query': "do $$ begin perform 1 end $$"}, 'deny')
+check('a DO block in a migration is denied', {'name': 'm', 'query': "DO $x$ BEGIN PERFORM 1 END $x$"}, 'deny')
+check('the word do inside a literal runs', {'query': "update docs set n='to do $5' where id='1'"}, 'pass')
+
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)
