@@ -11,7 +11,8 @@
   - רגישים (לא לתייק אוטומטית): `geny@`, `hr-tap@`, `prod@` (טופסי תאונה, רשימות עובדים עם תעודות זהות).
   - רעש: `gideon@` (תוכניות ייצור), k-t (הצעות IT), mishlav, ztni, vitre.
   - `sviva@`: המיילים של מיכאל עצמו.
-- **בענף True:** Apply to each על Attachments, ובתוכו Condition על סוג הקובץ: `toLower(item()?['name'])` "does not end with" `.jpg`, `.png`, `.gif`, `.ics`, `.zip` (And), ובענף True שלו Create file:
+- **החרגה לפי נושא (11/10/2026, מיכאל: "מאשר את שתי ההצעות"):** שורה שנייה (And) באותו Condition: `contains(toLower(coalesce(triggerOutputs()?['body/subject'],'')),'הזמנת קניה')` is equal to `false`. הזמנות קניה של חדווה מגיעות כל שבוע ואין בהן מה לתייק.
+- **בענף True:** Apply to each על Attachments, ובתוכו Condition על סוג הקובץ: `toLower(item()?['name'])` "does not end with" `.jpg`, `.png`, `.gif`, `.ics`, `.zip`, ומ-11/10/2026 גם `.mp4`, `.mov`, `.avi`, `.wmv` (And; פרסומת של 4MB הגיעה ב-11/10/2026), ובענף True שלו Create file:
   - Folder Path: `/שולחן העבודה/ניהול בטיחות/_נכנס מהמייל`
   - File Name: `concat(replace(replace(substring(string(triggerOutputs()?['body/receivedDateTime']),0,16),'T',' '),':',''),' - ',item()?['name'])` (שעת UTC). הנוסח הקודם עם `convertFromUtc` נכשל ב-InvalidTemplate בשתי הזרימות, ותוקן 11/10/2026 (לקח 77).
   - File Content: `item()?['contentBytes']`
