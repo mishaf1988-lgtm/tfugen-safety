@@ -15,6 +15,9 @@ check("names the skills to load", "tfugen-lean" in o and "tfugen-lessons" in o, 
 check("prints the handoff", "handoff-05-10-2026-10.00.md" in o and "בדיקה X" in o, o)
 check("open items: 2, the closed one left out", "2 פריטים פתוחים" in o and "משימה ב" in o and "סגורה" not in o, o)
 check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" in o and "09/2026" not in o, o)
+open(os.path.join(d, "project-files", "chrome-queue.md"), "w", encoding="utf-8").write("## פתוח\n- [ ] **C1. זרימה ב-Power Automate** (12/10/2026)\n  ```\n  - [ ] לא משימה\n  ```\n## בוצע\n- [x] **C0. ישן**\n")
+o = run(d).stdout
+check("open Chrome tasks: counted and listed, done ones and code-block lines left out", "משימות לכרום: 1 פתוחות" in o and "C1. זרימה" in o and "C0" not in o, o)
 e = tempfile.mkdtemp()
 p = run(e, "not json")
 check("empty dir + bad stdin: exit 0, still names the skills", p.returncode == 0 and "tfugen-lean" in p.stdout, (p.returncode, p.stdout, p.stderr))
