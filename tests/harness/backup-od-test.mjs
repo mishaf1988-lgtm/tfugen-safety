@@ -5,7 +5,7 @@
 // copied a few per run within Cloudflare's 50-subrequest budget, never
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
-import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld } from './_build/backup-od.mjs';
+import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld, skipSeen, SEEN_KEY } from './_build/backup-od.mjs';
 import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
@@ -35,9 +35,11 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
-    (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; if (x.moved) w.moved[id] = x.moved; });
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, seen: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; if (x.moved) w.moved[id] = x.moved; if (x.seen !== null) w.seen[id] = x.seen || x.created; });
     if (Object.keys(w.moved).length) w.state.skip_moved = JSON.stringify(w.moved);
+    // Seen since it was created, unless the case says otherwise (seen: null = never seen before).
+    if (Object.keys(w.seen).length) w.state[SEEN_KEY] = JSON.stringify(w.seen);
     Object.keys(o.od || {}).forEach((k) => o.od[k].forEach((n) => w.od[k].set(n, 'id' + (++w.seq))));
     const buckets = { backups: o.backups || [], 'incidents-photos': o.photos || [] };
     globalThis.fetch = async (url, init) => {
@@ -156,6 +158,15 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     const mvd = [{ name: 'm-moved.pdf', created: new Date(Date.now() - 40 * D).toISOString(), moved: new Date(Date.now() - 2 * D).toISOString() }, { name: 'm-old.pdf', created: new Date(Date.now() - 40 * D).toISOString(), moved: new Date(Date.now() - 35 * D).toISOString() }];
     const c5 = await call({ backups: [], photos: [], talks: [], skip: mvd }, 'nsec');
     check('created 40 days ago, moved 2 days ago: kept; moved 35 days ago: deleted', !c5.w.dels.includes('m-moved.pdf') && c5.w.dels.includes('m-old.pdf'), c5.w.dels);
+    // 12/10/2026 ("שדרג הכול"): dragged in by hand, so no skip_moved; counted from the first night seen.
+    const t2 = new Date(Date.now() - 2 * D).toISOString(), t40 = new Date(Date.now() - 40 * D).toISOString();
+    const drag = [{ name: 'd-new.pdf', created: t40, seen: null }, { name: 'd-2.pdf', created: t40, seen: t2 }, { name: 'd-35.pdf', created: t40, seen: new Date(Date.now() - 35 * D).toISOString() }];
+    const c7 = await call({ backups: [], photos: [], talks: [], skip: drag }, 'nsec');
+    const s7 = JSON.parse(c7.w.state[SEEN_KEY] || '{}');
+    check('dragged by hand, created 40 days ago: never seen = kept, seen 2 days ago = kept, seen 35 days ago = deleted', !c7.w.dels.includes('d-new.pdf') && !c7.w.dels.includes('d-2.pdf') && c7.w.dels.includes('d-35.pdf') && c7.rec.skip.pruned === 1, [c7.w.dels, c7.rec.skip]);
+    check('skip_seen saved: the new one recorded today, the old time kept, the deleted one gone', s7.id1 && Date.now() - Date.parse(s7.id1) < 60e3 && s7.id2 === t2 && !('id3' in s7), s7);
+    check('skipSeen: a bad stored time counts as today; ids no longer there dropped', JSON.stringify(skipSeen([{ id: 'a' }, { id: 'b' }], { a: 'x', b: t2, z: t2 }, 'NOW')) === JSON.stringify({ a: 'NOW', b: t2 }));
+    check('skipOld: without seen, as before (created and moved only)', skipOld([{ id: 'q', created: t40 }], Date.now()).length === 1 && skipOld([{ id: 'q', created: t40 }], Date.now(), {}, {}).length === 0);
     const c6 = await call({ backups: [], photos: [], talks: [], skip: sk, stateFail: true }, 'nsec');
     check('the move record not read: nothing deleted that day, the error named', !c6.w.dels.length && c6.rec.errors.some((e) => /^skip/.test(e)), [c6.w.dels, c6.rec.errors]);
     const c4 = await call({ backups: [], photos: [], talks: [] }, 'nsec');

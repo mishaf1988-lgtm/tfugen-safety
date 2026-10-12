@@ -68,7 +68,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **10. שלוש התנגשויות בין שני החשבונות (22/09/2026).**
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff: `grep` ב-DECISIONS קודם.
-נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; תוכנו: טקסט (אין דרך בקוד: שיפוט).
+נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; פריט אחד לשיחה: `claim.sh` (`routine-db-test.mjs`, 12/10); תוכנו: טקסט.
 חזר: 8 (handoff נגד החלטה; 11/10: הורדה ממייל, אין Mail.Read; 11/10: תיק כבאות 177677 ב-handoff, בטפסים 260012-1; 12/10: שתי שיחות על הצעות הרטרו, ואחת קראה לטריגר של השנייה "כבר היה"). לפני הקוד: `fetch` ו-`grep` על השורה שוב; "כבר קיים" במסד: `list_migrations` קודם.
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
