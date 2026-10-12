@@ -15,7 +15,7 @@
 // who reached this endpoint must not be able to submit arbitrary text for
 // approval in the factory's name.
 
-import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = '4400035656982783';
@@ -66,6 +66,12 @@ export async function onRequest({ request, env }) {
     });
   }
 
+  // BACKLOG 13.10 (12/10/2026): the Origin header can be set by any script, so the gate
+  // above alone let anyone read the template list. Both screens that read it (notification
+  // settings, system state) belong to a signed-in user and now send the token.
+  const who = await requireUser(request, env);
+  if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+
   const TOKEN = env.META_ACCESS_TOKEN;
   const WABA = env.META_WABA_ID || FALLBACK_WABA_ID;
   if (!TOKEN) {
@@ -79,8 +85,9 @@ export async function onRequest({ request, env }) {
   if (request.method === 'POST') {
     // Submitting in the factory's name is not something an anonymous kiosk
     // session may do. Same gate as the test path in trustee-notify.
-    const who = await requireUser(request, env);
-    if (!who.ok) return jsonResp({ error: who.error }, who.status, cors);
+    // Any signed-in user could submit (BACKLOG 13.10); only the people who run the system may.
+    const lead = await requireRole(request, env, ['admin', 'manager']);
+    if (!lead.ok) return jsonResp({ error: lead.error }, lead.status, cors);
 
     let res;
     try {

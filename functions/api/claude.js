@@ -251,7 +251,14 @@ export async function onRequest({ request, env }) {
     }
   }
 
-  // Anthropic flow (legacy / paid).
+  // Anthropic flow (legacy / paid). Only the fields the app sends go upstream
+  // (BACKLOG 13.11, 12/10/2026): the body used to pass as is, so a signed-in
+  // caller could add `tools`, `mcp_servers` or anything else the API accepts and
+  // spend ANTHROPIC_KEY on it. The one caller (photo reading) sends model,
+  // max_tokens and messages.
+  const ANTHROPIC_FIELDS = ['model', 'max_tokens', 'messages', 'system', 'stream', 'temperature'];
+  const upBody = {};
+  ANTHROPIC_FIELDS.forEach((k) => { if (parsed[k] !== undefined) upBody[k] = parsed[k]; });
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -259,7 +266,7 @@ export async function onRequest({ request, env }) {
       'anthropic-version': '2023-06-01',
       'x-api-key': env.ANTHROPIC_KEY || ''
     },
-    body: JSON.stringify(parsed)
+    body: JSON.stringify(upBody)
   });
 
   // Streaming path: pipe the SSE body straight through. Keeps the connection

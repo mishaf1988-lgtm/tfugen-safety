@@ -14589,7 +14589,7 @@ function _waTplLabel(st){
 function _waTemplateStatus(){
   var box=g('wa-tpl-status');if(!box)return;
   _waTplSet('<span style="color:var(--t3)">' + '\u05d1\u05d5\u05d3\u05e7 \u05de\u05e6\u05d1 \u05ea\u05d1\u05e0\u05d9\u05ea...' + '</span>');
-  fetch('/api/wa-templates',{headers:{'Accept':'application/json'}})
+  fetch('/api/wa-templates',{headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
     .then(function(r){return r.json();})
     .then(function(j){
       var list=(j&&j.data)||[];
@@ -14727,7 +14727,7 @@ function _sysChkDelivery(){
 // 3. Which WhatsApp template the alerts will actually go out on. Read from
 // Meta, not from anything we remember.
 function _sysChkTemplate(){
-  return fetch('/api/wa-templates',{headers:{'Accept':'application/json'}})
+  return fetch('/api/wa-templates',{headers:{'Accept':'application/json','Authorization':'Bearer '+(_sbToken||'')}})
     .then(function(r){return r.json();})
     .then(function(j){
       var list=(j&&j.data)||[],t=null;

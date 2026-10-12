@@ -30,8 +30,9 @@ function world(opts) {
     calls.push({ u, method: (init && init.method) || 'GET', body: init && init.body ? JSON.parse(init.body) : null });
     const json = (x, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/auth/v1/user')) {
-      return json(o.authOk === false ? { error: 'bad' } : { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false }, o.authOk === false ? 401 : 200);
+      return json(o.authOk === false ? { error: 'bad' } : { id: 'u1', email: o.email || 'admin@tfugen.local', is_anonymous: false }, o.authOk === false ? 401 : 200);
     }
+    if (u.startsWith(SB + '/rest/v1/app_users')) return json([{ role: o.role || '\u05de\u05d3\u05d5\u05d5\u05d7', active: true }]);
     if (u.includes('graph.facebook.com')) {
       if (o.metaExists) return json({ error: { message: 'Template name (tfugen_safety_report) already exists in he', code: 100 } }, 400);
       if (o.metaFail) return json({ error: { message: 'Invalid OAuth access token', code: 190 } }, 401);
@@ -113,6 +114,24 @@ const req = (method, headers) => new Request(ORIGIN + '/api/wa-templates', {
     check('another origin → 403, before anything else', r3.status === 403, r3.status);
   }
 
+  console.log('\n4b. BACKLOG 13.10 (12/10/2026): the Origin header alone is not a gate');
+  {
+    const w = world({});
+    const r = await onRequest({ request: req('GET'), env });
+    check('GET without a session → 401', r.status === 401, r.status);
+    check('...and Meta is never asked', !w.calls.some((c) => c.u.includes('graph.facebook.com')), w.calls.map((c) => c.u));
+    world({ email: 'v1@tfugen.local', role: 'צופה' });
+    const r2 = await onRequest({ request: req('GET', { Authorization: 'Bearer good' }), env });
+    check('a viewer may read the list (system state screen)', r2.status === 200, r2.status);
+    const w3 = world({ email: 'v1@tfugen.local', role: 'צופה' });
+    const r3 = await onRequest({ request: req('POST', { Authorization: 'Bearer good' }), env });
+    check('a viewer may not submit → 403', r3.status === 403, r3.status);
+    check('...and Meta is never called', !w3.calls.some((c) => c.u.includes('graph.facebook.com')), w3.calls.map((c) => c.u));
+    world({ email: 'm1@tfugen.local', role: 'מנהל' });
+    const r4 = await onRequest({ request: req('POST', { Authorization: 'Bearer good' }), env });
+    check('a manager may submit', r4.status === 200, r4.status);
+  }
+
   console.log('\n5. pressing it twice');
   {
     // The button sits in a settings modal. Somebody will press it again.
@@ -132,7 +151,7 @@ const req = (method, headers) => new Request(ORIGIN + '/api/wa-templates', {
   console.log('\n6. listing still works');
   {
     const w = world({});
-    const r = await onRequest({ request: req('GET'), env });
+    const r = await onRequest({ request: req('GET', { Authorization: 'Bearer good' }), env });
     check('GET still reaches the template list', r.status === 200 && w.calls.some((c) => /message_templates\?/.test(c.u)), w.calls.map((c) => c.u));
     const r2 = await onRequest({ request: new Request(ORIGIN + '/api/wa-templates', { method: 'DELETE', headers: { origin: ORIGIN } }), env });
     check('anything else → 405', r2.status === 405, r2.status);
