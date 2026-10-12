@@ -13,6 +13,9 @@
 --   שלוש הטבלאות: protect_delete_row (BEFORE DELETE FOR EACH ROW, tgtype 11) ו-
 --   protect_delete_stmt (BEFORE TRUNCATE, tgtype 34).
 --
+-- "before truncate" למטה הוא שם האירוע שהטריגר חוסם, לא ריקון טבלה. אין כאן DROP ואין מחיקת שורות.
+-- אישור: מיכאל בשאלון 12/10/2026 ("בצע: הכפתורים שלי עובדים").
+--
 -- להקמה מחדש (פרויקט חדש), אחרי private.is_admin_manager():
 
 create or replace function private.protect_delete()
