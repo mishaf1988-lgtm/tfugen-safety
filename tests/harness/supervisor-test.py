@@ -65,6 +65,18 @@ check("a handoff with a next item: still blocks", sup.verdict(work, P, MERGED, F
 open(H, "w", encoding="utf-8").write("### הבא בתור\nבלי תשובה: אין פריט קוד.\n")
 check("handoff says no code item: lets it through (#1099)", sup.verdict(work, P, MERGED, False) is None)
 os.remove(H)
+print("\nopen Chrome tasks (Michael, 12/10/2026)")
+os.makedirs(os.path.join(work, "project-files"), exist_ok=True)
+Q = os.path.join(work, "project-files", "chrome-queue.md")
+open(Q, "w", encoding="utf-8").write("## פתוח\n\n- [ ] **C1. זרימה** (12/10/2026)\n\n## בוצע\n\n- [x] **C0. ישן**\n")
+PC = P + "\n\nאין קוד"
+r = sup.verdict(work, P, MERGED | {"mcp__claude-code-remote__create_session"}, False)
+check("merged, an open Chrome task, no reminder: blocks and names the count", r and "1 משימות" in r and "chrome-queue" in r, r)
+check("with a 🌐 לכרום line: lets it through", sup.verdict(work, P + "\n🌐 לכרום (1): C1.", MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+check("no merge since the last reply: no reminder needed", sup.verdict(work, "סיימתי.", set(), False) is None)
+open(Q, "w", encoding="utf-8").write("## בוצע\n\n- [x] **C1. זרימה**\n")
+check("only done tasks: lets it through", sup.verdict(work, P, MERGED | {"mcp__claude-code-remote__create_session"}, False) is None)
+os.remove(Q)
 check("no merge: no proposals needed", sup.verdict(work, "סיימתי.", set(), False) is None)
 
 print("\nthe hook end to end")

@@ -154,6 +154,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 ## הפניות
 
 - **תור העבודה: `project-files/BACKLOG.md`**
+- **משימות ל-Claude בכרום: `project-files/chrome-queue.md`** (מיכאל, 12/10/2026: "לרשום במשימות ולתזכר אותי לבקש מהכרום"): כל פעולה שצריכה את הדפדפן של מיכאל (Power Automate, מסכי הגדרות, בדיקה באתר החי) נרשמת שם באותו PR, עם טקסט מוכן להדבקה. `session-start.py` מציג אותן, והמפקח חוסם סיכום אחרי מיזוג בלי שורה "🌐 לכרום" כשיש פתוחות.
 - **מה קיים מחוץ ל-repo: `project-files/ACCOUNT-INVENTORY.md`** (מיכאל, 11/10/2026: "אם אצטרך להעביר את כל הפעילות מהחשבון הזה, זה אמור להיות מתועד ב-GitHub"): Routines, זרימות Power Automate, תיקיות שהאוטומציה תלויה בהן, Cowork, connectors, שמות הסודות ב-Cloudflare, pg_cron, ובדיקה אחרי העברה. כל דבר חדש מחוץ ל-repo נרשם שם באותו PR (`account-inventory-test.py`). בלי ערכים סודיים.
 - תבניות קוד: `project-files/PATTERNS.md`
 - Checklist לפני PR: `project-files/CHECKLIST.md`

@@ -14,6 +14,8 @@ Before a turn ends it checks, locally and without network:
      (create_session) -> block (lesson? then handoff, or the next item),
      unless the handoff in the repo root says "אין קוד" (CLAUDE.md, #1099:
      no code item without Michael = the session stays open for his answer)
+  5. a PR was merged since the last reply, project-files/chrome-queue.md has
+     open tasks, and the reply has no "לכרום" line -> block (Michael, 12/10/2026)
 It lets the stop through when the reply ends on a question to Michael (an
 approval he must give), when ci-wait.sh is running in the background (its
 end wakes the session), and never blocks twice in a row (stop_hook_active).
@@ -25,6 +27,15 @@ sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code r
 sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
 PROPOSALS = "הצעות לשדרוג"
+CHROME = "לכרום"
+
+
+def chrome_open(cwd):
+    try:
+        t = open(os.path.join(cwd, "project-files", "chrome-queue.md"), encoding="utf-8").read()
+    except Exception:
+        return []
+    return [l for l in t.splitlines() if re.match(r"- \[ \] \*\*C\d+", l)]
 
 
 def git(cwd, *args):
@@ -111,6 +122,12 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if merged_since and PROPOSALS not in text:
         return ("המפקח: מוזג, ובסיכום אין סעיף \"💡 הצעות לשדרוג\" (tfugen-screen-review; מיכאל 02/10/2026). "
                 "להוסיף: skill לעדכן או ליצור, בדיקה או hook שיתפסו טעות שחזרה, ומה מהם נעשה לבד.")
+    # Michael, 12/10/2026: "remind me to ask Chrome". A task summary after a merge
+    # names the open tasks in project-files/chrome-queue.md.
+    chrome = chrome_open(cwd)
+    if merged_since and chrome and CHROME not in text:
+        return ("המפקח: יש %d משימות פתוחות לכרום (project-files/chrome-queue.md), ובסיכום אין שורה \"🌐 לכרום\" "
+                "(מיכאל 12/10/2026: \"לתזכר אותי לבקש מהכרום\"). להוסיף: מה מחכה, ושהטקסט להדבקה בקובץ." % len(chrome))
     if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd):
         return ("המפקח: מוזג, ולא נפתחה שיחה הבאה. לפני שעוצרים: היה לקח? (tfugen-lessons). "
                 "אחר כך הפריט הבא שאפשר לעשות בקוד מ-STATUS/BACKLOG (לקח 24), "

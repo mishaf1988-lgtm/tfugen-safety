@@ -2,7 +2,8 @@
 """SessionStart: what CLAUDE.md asks a new session to read, printed for it
 (lesson 13 and others were forgotten because the session started by reading
 600KB, or nothing). Prints: the skills to load, the root handoff, the open
-items in STATUS.md, and the last row of project-files/METRICS.md.
+items in STATUS.md, the open Chrome tasks, and the last row of
+project-files/METRICS.md.
 Output to stdout becomes context for the session. Never fails the start.
 
 Test:  python3 tests/harness/session-start-test.py
@@ -23,6 +24,12 @@ def read(p):
         return ""
 
 
+def chrome_open(cwd):
+    """Open tasks for Claude in Chrome (Michael, 12/10/2026: "remind me to ask Chrome")."""
+    t = read(os.path.join(cwd, "project-files", "chrome-queue.md"))
+    return [re.sub(r"\s+", " ", l.strip())[:160] for l in t.splitlines() if re.match(r"- \[ \] \*\*C\d+", l)]
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -32,6 +39,9 @@ def report(cwd):
         out += ["", "-- " + n + " --", t[:MAX_HANDOFF] + ("\n[...נחתך]" if len(t) > MAX_HANDOFF else "")]
     opens = [l.strip() for l in read(os.path.join(cwd, "STATUS.md")).splitlines() if re.match(r"\s*- \[ \]", l)]
     out += ["", "-- STATUS.md: %d פריטים פתוחים --" % len(opens)] + [o[:200] for o in opens[:MAX_OPEN]]
+    chrome = chrome_open(cwd)
+    if chrome:
+        out += ["", "-- 🌐 משימות לכרום: %d פתוחות (project-files/chrome-queue.md). להזכיר למיכאל --" % len(chrome)] + chrome
     rows = [l for l in read(os.path.join(cwd, "project-files", "METRICS.md")).splitlines() if l.startswith("|") and not re.match(r"\|\s*-", l)]
     if len(rows) > 1:
         out += ["", "-- METRICS (שורה אחרונה) --", rows[0], rows[-1]]
