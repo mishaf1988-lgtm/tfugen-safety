@@ -4,7 +4,9 @@
 -- חיבור ישיר או גוף פונקציה עוברת בלעדיו. כאן המסד עצמו דוחה.
 -- מה מותר: DELETE רק ממשתמש מחובר (role authenticated) ש-private.is_admin_manager() מאשר,
 -- כלומר כפתורי "מחק דיווח" ו-askDel באפליקציה. TRUNCATE חסום תמיד.
--- הוספה בלבד: פונקציה וטריגרים חדשים, בלי שינוי בנתונים או ב-RLS.
+-- הוספה בלבד: פונקציה וטריגרים חדשים, בלי שינוי בנתונים או ב-RLS. המילה TRUNCATE כאן רק חוסמת,
+-- שום טבלה לא מתרוקנת. אישור: מיכאל בשאלון 12/10/2026 (למעלה).
+-- rollback (רק באישור מיכאל): drop trigger protect_delete_row ו-protect_delete_stmt משלוש הטבלאות.
 create or replace function private.protect_delete() returns trigger
 language plpgsql security definer set search_path = ''
 as $f$
