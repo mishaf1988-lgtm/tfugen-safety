@@ -17,6 +17,8 @@ check("git checkout <changed file>: denied, names the file and the cp way", '"de
 check("git restore <changed file>: denied", '"deny"' in bash("git restore functions/a.js"))
 check("cd + checkout, and git -C: denied", '"deny"' in bash("cd " + r + " && git checkout functions/a.js", cwd="/") and '"deny"' in bash("git -C " + r + " checkout functions/a.js", cwd="/"))
 check("checkout . with a change: denied", '"deny"' in bash("git checkout ."))
+check("with a redirect (2>/dev/null, >x, &>/dev/null) after the file: still denied (12/10/2026)", all('"deny"' in bash("true; git checkout -q functions/a.js " + rd + "; git stash -q") for rd in ("2>/dev/null", ">out.txt", "&>/dev/null")))
+check("branch switch with a redirect: passes", bash("git checkout side 2>/dev/null") == "")
 check("a clean file: passes", bash("git checkout functions/b.js") == "")
 check("branch switch and -B: pass", bash("git checkout side") == "" and bash("git checkout -q -B routine/x side") == "")
 check("restore --staged (unstage only): passes", bash("git restore --staged functions/a.js") == "")
