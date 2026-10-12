@@ -141,7 +141,7 @@ Cloudflare Pages מפרסם **רק את `main`** ל-`tapugan-safety.pages.dev`. 
 
 ## Supabase MCP — גישה ישירה ל-DB (מחובר מ-2026-09-22)
 
-**מחובר ועובד** דרך **Connector ב-claude.ai** (`mcp__Supabase__*`, OAuth). ⚠️ הרשת של הענן חוסמת את `*.supabase.co` ישירות: הרשומה `supabase` ב-`.mcp.json` נכשלת בענן בכל סשן (זה צפוי, לא תקלה), ו-`curl` ל-REST נכשל. **לאימות משתמשים ב-`execute_sql` של ה-MCP.** פרטי האימות: skill `tfugen-history`.
+**מחובר ועובד** דרך **Connector ב-claude.ai** (`mcp__Supabase__*`, OAuth). ⚠️ הרשומה `supabase` ב-`.mcp.json` נכשלת בענן בכל סשן (זה צפוי, לא תקלה). `*.supabase.co` עצמו זמין מהענן: ב-12/10/2026 `curl` ל-REST החזיר 401 (צריך מפתח), לא חסימה. Routines ניגשים למסד דרך `routine-db.sh`. **לאימות משתמשים ב-`execute_sql` של ה-MCP.** פרטי האימות: skill `tfugen-history`.
 
 **ההרשאה היא קריאה + כתיבה.** לכן:
 
