@@ -53,6 +53,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - בלי אישור מפורש באותה שיחה: `DROP`, `DELETE`, `TRUNCATE`, `ALTER ... DROP COLUMN`, שינוי או מחיקה של RLS policy.
 - גם עם אישור: מחיקת שורות מ-`ncr`, `ncr_ai`, `trustee_reports` (נאכף ב-`guard-sql.py`).
 - `public.ncr` = 0 שורות בכוונה; ההיסטוריה ב-`backup_ops_20260918.ncr`.
+- **הגנת מחיקה במסד (קיימת, תועדה 12/10/2026):** `private.protect_delete` על `ncr`, `ncr_ai`, `trustee_reports`: TRUNCATE תמיד נחסם, DELETE רק לאדמין או מנהל מחובר באפליקציה. `execute_sql` שלך נחסם גם אם ה-hook לא. הנוסח: `migrations/2026-10-12_protect_delete_record.sql`. לפני הצעת הגנה או טריגר: `pg_trigger` על הטבלה (לקח 18).
 
 ## לקחים בתחום (הועברו מ-tfugen-lessons, 11/10/2026)
 
