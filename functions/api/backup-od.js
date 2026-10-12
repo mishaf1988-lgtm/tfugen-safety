@@ -28,7 +28,7 @@
 // the state write take up to RESERVE; the daily and monthly copies go first;
 // the photos take what is left, PHOTO_MAX per run at most, and the rest wait
 // for tomorrow (photos_left says how many).
-import { odConfigured, accessToken, stateSet } from '../_onedrive.js';
+import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
 import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole } from '../_shared.js';
 
 export const STATE_KEY = 'backup_od';
@@ -38,11 +38,22 @@ export const DAILY_KEEP = 15, MONTHLY_KEEP = 12, PHOTO_MAX = 15;
 export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
 // "לא לתיוק" (11/10/2026, Michael in the questionnaire: "בצע: מחיקה אחרי 30 יום"): copies of mail
 // attachments that were not filed (invoices, quotes, duplicates). The original stays in the mail.
-// A file created there more than SKIP_DAYS ago is deleted (to the OneDrive recycle bin), at most
-// SKIP_MAX a day. Only this folder, only files, never a sub-folder. skipOld.
+// A file the server first SAW there more than SKIP_DAYS ago is deleted (to the OneDrive recycle
+// bin), at most SKIP_MAX a day. Only this folder, only files, never a sub-folder. skipOld.
+// Not createdDateTime (retro 12/10/2026, Michael "בצע"): a move keeps it, so a file that waited
+// 31 days in the inbox and was then moved here went the next night. First-seen per item id is in
+// server_state.skip_seen (skipSeen); a failed read gives every file "today", which only delays.
 export const SKIP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7', SKIP_DAYS = 30, SKIP_MAX = 20;
-export function skipOld(items, nowMs) {
-  return (items || []).filter((x) => x && x.id && x.created && !isNaN(Date.parse(x.created)) && nowMs - Date.parse(x.created) > SKIP_DAYS * 864e5);
+export const SEEN_KEY = 'skip_seen';
+// First-seen time of each file in the folder now; a file seen before keeps its time. Pure.
+export function skipSeen(items, prev, nowIso) {
+  const p = prev && typeof prev === 'object' ? prev : {}, out = {};
+  (items || []).forEach((x) => { if (x && x.id) out[x.id] = typeof p[x.id] === 'string' && !isNaN(Date.parse(p[x.id])) ? p[x.id] : nowIso; });
+  return out;
+}
+export function skipOld(items, nowMs, seen) {
+  const s = seen || {};
+  return (items || []).filter((x) => x && x.id && s[x.id] && nowMs - Date.parse(s[x.id]) > SKIP_DAYS * 864e5);
 }
 // One request for both tables (FK toolbox_reads.talk_id). Max rows applies to the talks only.
 export const TALKS_Q = 'toolbox_talks?select=*,toolbox_reads(*)&order=id.asc';
@@ -197,10 +208,19 @@ async function run(env) {
 
   // 5. "לא לתיוק": files older than SKIP_DAYS, through the same prune (one DELETE call site),
   // after the photos and only with budget left: the backups come first, these can wait a day.
-  if (left() >= 3) try {
+  // Two more subrequests than before: the read and the write of skip_seen (counted by hand).
+  if (left() >= 5) try {
     const od = await odList(SKIP);
-    const old = skipOld(od, Date.now()).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
+    let prev = {};
+    used++;
+    try { const st = await stateGet(env, [SEEN_KEY]); prev = JSON.parse((st[SEEN_KEY] || {}).value || '{}'); } catch (e) { prev = {}; }
+    const seen = skipSeen(od, prev, new Date().toISOString());
+    const old = skipOld(od, Date.now(), seen).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
     rec.skip = { files: od.length, pruned: old.length ? await prune(od, 0, () => old) : 0 };
+    const gone = new Set(old);
+    od.forEach((x) => { if (gone.has(x.name)) delete seen[x.id]; });
+    used++;
+    await stateSet(env, { [SEEN_KEY]: JSON.stringify(seen) });
   } catch (e) { err('skip', e); }
 
   if (!rec.newest) rec.errors.push('no complete backup in the bucket');

@@ -5,7 +5,7 @@
 // copied a few per run within Cloudflare's 50-subrequest budget, never
 // pruned; a stale bucket or a refusing OneDrive is a failure in
 // server_state.backup_od, and the weekly mail names it.
-import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld } from './_build/backup-od.mjs';
+import { onRequest, missing, pruneList, monthlyPick, STATE_KEY, DAILY, MONTHLY, PHOTOS, DAILY_KEEP, MONTHLY_KEEP, TALKS, TALKS_KEEP, talksName, talksPrune, talksFile, SKIP, SKIP_DAYS, SKIP_MAX, skipOld, skipSeen, SEEN_KEY } from './_build/backup-od.mjs';
 import { backupProblem, schemaProblem } from './_build/weekly-digest.mjs';
 import fs from 'fs';
 
@@ -35,7 +35,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    const w = { state: Object.assign({}, o.state || {}), od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
     (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; });
     Object.keys(o.od || {}).forEach((k) => o.od[k].forEach((n) => w.od[k].set(n, 'id' + (++w.seq))));
     const buckets = { backups: o.backups || [], 'incidents-photos': o.photos || [] };
@@ -46,6 +46,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
       if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { w.talkReads.push(u); return o.talksFail ? json({ message: 'x' }, 500) : json(o.talks || []); }
+      if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') { const ks = decodeURIComponent((/key=in\.\(([^)]*)\)/.exec(u) || [])[1] || '').split(','); return json(ks.filter((k) => k in w.state).map((k) => ({ key: k, value: w.state[k], updated_at: null }))); }
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       let m = /\/storage\/v1\/object\/list\/([^/?]+)$/.exec(u);
       if (m) { const b = JSON.parse(init.body); return json(buckets[m[1]].slice().sort().slice(b.offset, b.offset + b.limit).map((n) => ({ name: n, id: 'x' + n }))); }
@@ -76,7 +77,15 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     const now = Date.parse('2026-11-20T03:00:00Z');
     const ago = (d) => new Date(now - d * 864e5).toISOString();
     const items = [{ id: 'a', name: 'old.pdf', created: ago(31) }, { id: 'b', name: 'new.pdf', created: ago(29) }, { id: 'c', name: 'nodate.pdf', created: null }, { id: null, name: 'noid.pdf', created: ago(90) }];
-    check('older than 30 days only; no date or no id: kept', skipOld(items, now).map((x) => x.name).join() === 'old.pdf', skipOld(items, now));
+    const seen = { a: ago(31), b: ago(29), x: ago(90) };
+    check('seen more than 30 days ago only; never seen or no id: kept', skipOld(items, now, seen).map((x) => x.name).join() === 'old.pdf', skipOld(items, now, seen));
+    // Retro 12/10/2026: a move keeps createdDateTime. A file created 90 days ago and moved in today is kept.
+    const moved = [{ id: 'm', name: 'moved.pdf', created: ago(90) }];
+    const s1 = skipSeen(moved, {}, ago(0));
+    check('moved in today with an old createdDateTime: first seen today, kept', s1.m === ago(0) && skipOld(moved, now, s1).length === 0, s1);
+    check('seen before: keeps its first time; gone from the folder: dropped', JSON.stringify(skipSeen([{ id: 'a' }, { id: 'n' }], { a: ago(40), z: ago(50) }, ago(0))) === JSON.stringify({ a: ago(40), n: ago(0) }));
+    check('a bad stored time counts as today (only delays)', skipSeen([{ id: 'a' }], { a: 'garbage' }, ago(0)).a === ago(0));
+    check('no seen map: nothing old', skipOld(items, now).length === 0);
     check('the folder: not filed, inside the mail inbox of the safety folder', /\/_נכנס מהמייל\/לא לתיוק$/.test(SKIP) && SKIP.indexOf('שולחן העבודה/ניהול בטיחות/') === 0);
   }
 
@@ -145,11 +154,20 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('still within the 50-subrequest budget, photos take what is left', c.rec.subrequests <= 44 && c.rec.photos.copied > 0, [c.rec.subrequests, c.rec.photos]);
   {
     const D = 864e5;
-    const sk = [{ name: 'a-old.pdf', created: new Date(Date.now() - 40 * D).toISOString() }, { name: 'b-new.pdf', created: new Date(Date.now() - 2 * D).toISOString() }];
-    const c2 = await call({ backups: [], photos: [], talks: [], skip: sk }, 'nsec');
-    check('not filed: the old one deleted, the new one kept, counted', c2.w.dels.includes('a-old.pdf') && !c2.w.dels.includes('b-new.pdf') && c2.w.od[SKIP].has('b-new.pdf') && c2.rec.skip.pruned === 1 && c2.rec.skip.files === 2, [c2.w.dels, c2.rec.skip]);
-    const many = Array.from({ length: SKIP_MAX + 5 }, (_, i) => ({ name: 'x' + i + '.pdf', created: new Date(Date.now() - 60 * D).toISOString() }));
-    const c3 = await call({ backups: [], photos: [], talks: [], skip: many }, 'nsec');
+    const iso = (d) => new Date(Date.now() - d * D).toISOString();
+    // world() gives the skip files ids id1, id2, ... in order.
+    const sk = [{ name: 'a-old.pdf', created: iso(40) }, { name: 'b-new.pdf', created: iso(40) }];
+    const t2 = iso(2);
+    const c2 = await call({ backups: [], photos: [], talks: [], skip: sk, state: { [SEEN_KEY]: JSON.stringify({ id1: iso(40), id2: t2 }) } }, 'nsec');
+    const seen2 = JSON.parse(c2.w.state[SEEN_KEY] || '{}');
+    check('not filed: seen 40 days ago deleted, seen 2 days ago kept (same createdDateTime), counted', c2.w.dels.includes('a-old.pdf') && !c2.w.dels.includes('b-new.pdf') && c2.w.od[SKIP].has('b-new.pdf') && c2.rec.skip.pruned === 1 && c2.rec.skip.files === 2, [c2.w.dels, c2.rec.skip]);
+    check('skip_seen saved: the kept one with its first time, the deleted one gone', seen2.id2 === t2 && !('id1' in seen2), seen2);
+    const c1 = await call({ backups: [], photos: [], talks: [], skip: sk }, 'nsec');
+    const seen1 = JSON.parse(c1.w.state[SEEN_KEY] || '{}');
+    check('first run: old files are only recorded, none deleted', c1.rec.skip.pruned === 0 && !c1.w.dels.length && Object.keys(seen1).length === 2, [c1.rec.skip, seen1]);
+    const many = Array.from({ length: SKIP_MAX + 5 }, (_, i) => ({ name: 'x' + i + '.pdf', created: iso(60) }));
+    const old60 = {}; many.forEach((x, i) => { old60['id' + (i + 1)] = iso(60); });
+    const c3 = await call({ backups: [], photos: [], talks: [], skip: many, state: { [SEEN_KEY]: JSON.stringify(old60) } }, 'nsec');
     check('at most ' + SKIP_MAX + ' a day', c3.rec.skip.pruned === SKIP_MAX && c3.w.od[SKIP].size === 5, c3.rec.skip);
     const c4 = await call({ backups: [], photos: [], talks: [] }, 'nsec');
     check('no such folder: nothing deleted, no error', c4.rec.skip.pruned === 0 && !c4.rec.errors.some((e) => /^skip/.test(e)), c4.rec);

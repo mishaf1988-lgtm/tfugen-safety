@@ -5,7 +5,7 @@
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
-import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
+import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, ST_FAIL, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -435,6 +435,12 @@ const ROWS = [
       check('grey ones in one short line, by label', (quiet.match(/<p/g) || []).length === 2 && /תקין: סנכרון, סוכנים, בודק התוקף \(תיקן 2\), נבו, MF-LABEL/.test(quiet), quiet);
       check('sync errors: red with the list', /color:#b91c1c[^>]*>[^<]*sync-a; sync-b/.test(statusBlock({ watchOpen: ['sync-a', 'sync-b'] })));
       check('all red: no grey line', !/תקין:/.test(statusBlock({ watchOpen: ['x'], agents: red })));
+      // Retro 12/10/2026: never ran is not "fine"; a failed server_state read is red and nothing is "fine".
+      const nv = statusBlock({ watchOpen: [], agents: { red: false, text: 'A' }, mf: mailFilingLine(null, now), vd: validityLine(null, now) });
+      check('never ran: not in the fine line, in its own grey line', /תקין: סנכרון, סוכנים</.test(nv) && /עוד לא רצו: בודק התוקף, תיוק מהמייל/.test(nv) && !/color:#b91c1c/.test(nv), nv);
+      check('never ran: marked unknown', mailFilingLine(null, now).unknown === true && validityLine(null, now).unknown === true && !validityLine(j({ at: ago(1), checked: 1, wait: 0 }), now).unknown);
+      const sf = statusBlock({ stFail: true, watchOpen: [], agents: { red: false, text: 'A' }, xg: red, mf: mailFilingLine(null, now) });
+      check('state read failed: red line first, other red lines kept, no fine or never-ran line', sf.indexOf(ST_FAIL) > 0 && sf.indexOf(ST_FAIL) < sf.indexOf('RED-LINE') && !/תקין:|עוד לא רצו/.test(sf), sf);
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], agents: { red: false, text: 'AGENTS-TEXT' }, vd: wait });
       check('in the mail: the red validity line, the fine agents only by name', /color:#b91c1c;font-weight:bold">[^<]*Drager 8000/.test(h) && !/AGENTS-TEXT/.test(h) && /תקין: סנכרון, סוכנים/.test(h));
     }

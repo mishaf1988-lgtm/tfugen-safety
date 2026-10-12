@@ -441,15 +441,24 @@ export function digestHtml(d, today, meta) {
 // The system status lines of the weekly mail: red ones in full, the rest as one grey line of
 // names (11/10/2026). STATUS_LABELS: the short name of each in the grey line. Pure.
 export const STATUS_LABELS = { sync: '\u05e1\u05e0\u05db\u05e8\u05d5\u05df', upload: '\u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e2\u05d5\u05d6\u05e8', agents: '\u05e1\u05d5\u05db\u05e0\u05d9\u05dd', vd: '', nevo: '\u05e0\u05d1\u05d5', asst: '\u05d4\u05e2\u05d5\u05d6\u05e8', mf: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc', xg: 'Excel' };
+// Retro 12/10/2026 (Michael "\u05d1\u05e6\u05e2"): a line with unknown:true (an agent that never ran) is not
+// "fine": it goes to its own grey line. m.stFail (the server_state read failed, so the status
+// lines came from an empty read): a red line first, the other red lines, and no grey line at all.
+export const ST_FAIL = '\u05e7\u05e8\u05d9\u05d0\u05ea \u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05db\u05e9\u05dc\u05d4 (server_state): \u05e9\u05d5\u05e8\u05d5\u05ea \u05d4\u05de\u05e6\u05d1 \u05d7\u05e1\u05e8\u05d5\u05ea \u05d1\u05de\u05d9\u05d9\u05dc \u05d4\u05d6\u05d4, \u05d5\u05d0\u05d9\u05df \u05dc\u05d3\u05e2\u05ea \u05de\u05d4 \u05ea\u05e7\u05d9\u05df';
 export function statusBlock(m) {
+  const red = (t) => '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(t) + '</p>';
   const w = m.watchOpen || [];
   const rows = [['sync', w.length ? { red: true, text: H.sync + w.join('; ') } : { red: false }]]
     .concat(['upload', 'agents', 'vd', 'nevo', 'asst', 'mf', 'xg'].map((k) => [k, m[k]]))
     .filter((x) => x[1]);
-  let h = '';
-  rows.filter((x) => x[1].red).forEach((x) => { h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x[1].text) + '</p>'; });
-  const fine = rows.filter((x) => !x[1].red).map((x) => x[1].label || STATUS_LABELS[x[0]]).filter(Boolean);
+  let h = m.stFail ? red(ST_FAIL) : '';
+  rows.filter((x) => x[1].red).forEach((x) => { h += red(x[1].text); });
+  if (m.stFail) return h;
+  const name = (x) => x[1].label || STATUS_LABELS[x[0]];
+  const fine = rows.filter((x) => !x[1].red && !x[1].unknown).map(name).filter(Boolean);
+  const unk = rows.filter((x) => !x[1].red && x[1].unknown).map(name).filter(Boolean);
   if (fine.length) h += '<p style="margin:4px 0;color:#555;font-size:13px">' + esc('\u2705 \u05ea\u05e7\u05d9\u05df: ' + fine.join(', ')) + '</p>';
+  if (unk.length) h += '<p style="margin:4px 0;color:#555;font-size:13px">' + esc('\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e6\u05d5: ' + unk.join(', ')) + '</p>';
   return h;
 }
 
@@ -698,7 +707,7 @@ const MF = { head: '\ud83d\udce8 \u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05
 export function mailFilingLine(raw, nowMs) {
   let runs = []; try { runs = JSON.parse(raw || '[]'); } catch (e) { runs = []; }
   runs = (Array.isArray(runs) ? runs : []).filter((r) => r && r.at && !isNaN(Date.parse(r.at)));
-  if (!runs.length) return { text: MF.head + MF.never, red: false };
+  if (!runs.length) return { text: MF.head + MF.never, red: false, unknown: true, label: '\u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05d9\u05d9\u05dc' };
   const last = Math.max.apply(null, runs.map((r) => Date.parse(r.at)));
   if (nowMs - last > MF_STALE_DAYS * DAY) return { text: MF.head + MF.stale + ilTime(new Date(last).toISOString()), red: true };
   const wk = runs.filter((r) => nowMs - Date.parse(r.at) <= 7 * DAY);
@@ -723,7 +732,7 @@ export const VD_STALE_DAYS = 9;
 export function validityLine(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
   const head = '\ud83d\udd0e \u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3 \u05de\u05d5\u05dc \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd: ';
-  if (!r || !r.at || isNaN(Date.parse(r.at))) return { text: head + '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', red: false, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' };
+  if (!r || !r.at || isNaN(Date.parse(r.at))) return { text: head + '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', red: false, unknown: true, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' };
   if (nowMs - Date.parse(r.at) > VD_STALE_DAYS * DAY) return { text: head + '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ' + ilTime(r.at), red: true };
   const n = (k) => (Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0);
   const items = (Array.isArray(r.items) ? r.items : []).map((x) => String(x || '').trim().substring(0, 70)).filter(Boolean);
@@ -829,7 +838,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stFail: !st || !Object.keys(st).length };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
