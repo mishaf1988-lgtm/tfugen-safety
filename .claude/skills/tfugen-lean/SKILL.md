@@ -55,6 +55,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
   לא תאם.
 - **קריאות בלתי תלויות באותה הודעה.** ארבעה `grep` במקביל זה מחזור אחד, לא ארבעה.
 - **עריכות ב-`python3` heredoc** כשיש יותר משתי החלפות: עריכה אחת במקום חמש
+  - heredoc שיש בו גם מילת מחיקה (`delete`, `rm`) וגם שם של תיקייה או מודול של OneDrive (`_onedrive`, "לא לתיוק") נחסם ב-`guard-365` גם כשהוא רק עורך קוד (12/10/2026, פעמיים). במקרה כזה: לכתוב את הסקריפט ב-Write לסקראץ' ולהריץ `python3 <קובץ>`.
   קריאות Edit, וכל אחת עם `assert s.count(a)==1` שתופס תבנית שהשתנתה.
 - **`git show --stat`** במקום `git diff` כשרק רוצים לדעת מה נגעת בו.
 
