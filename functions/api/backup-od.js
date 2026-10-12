@@ -28,7 +28,7 @@
 // the state write take up to RESERVE; the daily and monthly copies go first;
 // the photos take what is left, PHOTO_MAX per run at most, and the rest wait
 // for tomorrow (photos_left says how many).
-import { odConfigured, accessToken, stateSet } from '../_onedrive.js';
+import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
 import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole } from '../_shared.js';
 
 export const STATE_KEY = 'backup_od';
@@ -41,8 +41,15 @@ export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
 // A file created there more than SKIP_DAYS ago is deleted (to the OneDrive recycle bin), at most
 // SKIP_MAX a day. Only this folder, only files, never a sub-folder. skipOld.
 export const SKIP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7', SKIP_DAYS = 30, SKIP_MAX = 20;
-export function skipOld(items, nowMs) {
-  return (items || []).filter((x) => x && x.id && x.created && !isNaN(Date.parse(x.created)) && nowMs - Date.parse(x.created) > SKIP_DAYS * 864e5);
+// moved: server_state.skip_moved {itemId: ISO} written by routine-db od_move (12/10/2026). The age
+// counts from the later of the creation and the move: OneDrive keeps createdDateTime on a move.
+export function skipOld(items, nowMs, moved) {
+  const mv = moved && typeof moved === 'object' ? moved : {};
+  return (items || []).filter((x) => {
+    if (!x || !x.id || !x.created || isNaN(Date.parse(x.created))) return false;
+    const t = Math.max(Date.parse(x.created), Date.parse(mv[x.id]) || 0);
+    return nowMs - t > SKIP_DAYS * 864e5;
+  });
 }
 // One request for both tables (FK toolbox_reads.talk_id). Max rows applies to the talks only.
 export const TALKS_Q = 'toolbox_talks?select=*,toolbox_reads(*)&order=id.asc';
@@ -197,9 +204,13 @@ async function run(env) {
 
   // 5. "לא לתיוק": files older than SKIP_DAYS, through the same prune (one DELETE call site),
   // after the photos and only with budget left: the backups come first, these can wait a day.
-  if (left() >= 3) try {
+  if (left() >= 4) try {
     const od = await odList(SKIP);
-    const old = skipOld(od, Date.now()).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
+    // A failed read throws (strict): better a day late than deleting by the wrong date. One subrequest.
+    used++;
+    const st = await stateGet(env, ['skip_moved'], true);
+    let moved = {}; try { moved = JSON.parse((st.skip_moved && st.skip_moved.value) || '{}'); } catch (e) { moved = {}; }
+    const old = skipOld(od, Date.now(), moved).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
     rec.skip = { files: od.length, pruned: old.length ? await prune(od, 0, () => old) : 0 };
   } catch (e) { err('skip', e); }
 

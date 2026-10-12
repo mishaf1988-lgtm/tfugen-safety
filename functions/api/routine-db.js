@@ -156,7 +156,21 @@ export function odMoveCheck(b) {
   const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? name === from[0] : OD_EXT.test(name))) return { error: 'bad name' };
-  return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name };
+  return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo };
+}
+// 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
+// month in the inbox and was then moved to "לא לתיוק" was deleted the next night. Every move there is
+// recorded here {itemId: ISO time}; backup-od counts the 30 days from the later of the two. Entries
+// older than SKIP_MOVED_DAYS (the file is gone by then) and beyond SKIP_MOVED_MAX are dropped. Pure.
+export const SKIP_MOVED_KEY = 'skip_moved', SKIP_MOVED_DAYS = 90, SKIP_MOVED_MAX = 500;
+export function skipMovedAdd(raw, id, atIso, nowMs) {
+  let m = {}; try { m = JSON.parse(raw || '{}'); } catch (e) { m = {}; }
+  if (!m || typeof m !== 'object' || Array.isArray(m)) m = {};
+  m[id] = atIso;
+  const keep = Object.keys(m).filter((k) => !isNaN(Date.parse(m[k])) && nowMs - Date.parse(m[k]) <= SKIP_MOVED_DAYS * 864e5)
+    .sort((a, b) => Date.parse(m[b]) - Date.parse(m[a])).slice(0, SKIP_MOVED_MAX);
+  const out = {}; keep.forEach((k) => { out[k] = m[k]; });
+  return JSON.stringify(out);
 }
 
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -337,7 +351,19 @@ export async function onRequest(context) {
       });
       const mj = await mv.json().catch(() => ({}));
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
-      return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null }, 200, {});
+      // The move is done; a failed record only means this file is counted from its creation date.
+      let recorded = null;
+      if (c.skip) {
+        recorded = false;
+        try {
+          const now = new Date().toISOString();
+          const rows = await stateRead([SKIP_MOVED_KEY]);
+          const value = skipMovedAdd(rows && rows[0] && rows[0].value, sj.id, now, Date.parse(now));
+          const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: SKIP_MOVED_KEY, value, updated_at: now }]) });
+          recorded = w.ok;
+        } catch (e) { recorded = false; }
+      }
+      return jsonResp({ ok: true, path: c.toDir + '/' + c.name, size: mj.size || sj.size || null, webUrl: mj.webUrl || null, recorded }, 200, {});
     }
     return jsonResp({ ok: false, error: 'unknown op' }, 400, {});
   } catch (e) {

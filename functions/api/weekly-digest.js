@@ -447,9 +447,16 @@ export function statusBlock(m) {
     .concat(['upload', 'agents', 'vd', 'nevo', 'asst', 'mf', 'xg'].map((k) => [k, m[k]]))
     .filter((x) => x[1]);
   let h = '';
+  // 12/10/2026 (retro, Michael: "בצע"): a line with no data (never ran, empty log) is not "fine",
+  // and when server_state could not be read every line built from it is unknown, not fine.
+  if (m.stateFail) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc('\u26a0\ufe0f \u05de\u05e6\u05d1 \u05d4\u05de\u05e2\u05e8\u05db\u05ea (server_state) \u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05d5\u05dc\u05db\u05df \u05d0\u05d9 \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d3\u05e2\u05ea \u05d0\u05dd \u05d4\u05e1\u05d5\u05db\u05e0\u05d9\u05dd, \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d5\u05d4\u05ea\u05d9\u05d5\u05e7 \u05ea\u05e7\u05d9\u05e0\u05d9\u05dd') + '</p>';
   rows.filter((x) => x[1].red).forEach((x) => { h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x[1].text) + '</p>'; });
-  const fine = rows.filter((x) => !x[1].red).map((x) => x[1].label || STATUS_LABELS[x[0]]).filter(Boolean);
+  const name = (x) => x[1].label || STATUS_LABELS[x[0]];
+  const unk = (x) => !x[1].red && (x[1].unknown || (m.stateFail && x[0] !== 'upload' && x[0] !== 'asst'));
+  const fine = rows.filter((x) => !x[1].red && !unk(x)).map(name).filter(Boolean);
+  const none = rows.filter(unk).map(name).filter(Boolean);
   if (fine.length) h += '<p style="margin:4px 0;color:#555;font-size:13px">' + esc('\u2705 \u05ea\u05e7\u05d9\u05df: ' + fine.join(', ')) + '</p>';
+  if (none.length) h += '<p style="margin:4px 0;color:#555;font-size:13px">' + esc('\u2754 \u05d0\u05d9\u05df \u05de\u05d9\u05d3\u05e2: ' + none.join(', ')) + '</p>';
   return h;
 }
 
@@ -654,7 +661,7 @@ export function schemaProblem(raw) {
 export const NEVO_STALE_DAYS = 40;
 export function nevoLine(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
-  if (!r || !r.at) return { text: H.nevo + H.nevoNever, red: false };
+  if (!r || !r.at) return { text: H.nevo + H.nevoNever, red: false, unknown: true };
   if (nowMs - Date.parse(r.at) > NEVO_STALE_DAYS * DAY) return { text: H.nevo + H.nevoStale + ilTime(r.at), red: true };
   if (!r.ok) return { text: H.nevo + H.nevoFail + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')', red: true };
   const ch = (r.changed || []).filter((x) => x && (x.s || x.id));
@@ -685,7 +692,7 @@ export function agentsLine(raw, nowMs) {
   if (fails.length) parts.push(H.agFail + fails.slice(0, 5).join('; '));
   if (late.length) parts.push(H.agLate + late.join(', '));
   if (never.length) parts.push(H.agNever + never.join(', '));
-  return { text: H.ag + parts.join('. '), red: !!(fails.length || late.length) };
+  return { text: H.ag + parts.join('. '), red: !!(fails.length || late.length), unknown: !Object.keys(last).length };
 }
 
 // 11/10/2026 (Michael: "מאשר לעשות את השדרוגים"): the mail-filing Routine ends every run with
@@ -698,7 +705,7 @@ const MF = { head: '\ud83d\udce8 \u05ea\u05d9\u05d5\u05e7 \u05de\u05d4\u05de\u05
 export function mailFilingLine(raw, nowMs) {
   let runs = []; try { runs = JSON.parse(raw || '[]'); } catch (e) { runs = []; }
   runs = (Array.isArray(runs) ? runs : []).filter((r) => r && r.at && !isNaN(Date.parse(r.at)));
-  if (!runs.length) return { text: MF.head + MF.never, red: false };
+  if (!runs.length) return { text: MF.head + MF.never, red: false, unknown: true };
   const last = Math.max.apply(null, runs.map((r) => Date.parse(r.at)));
   if (nowMs - last > MF_STALE_DAYS * DAY) return { text: MF.head + MF.stale + ilTime(new Date(last).toISOString()), red: true };
   const wk = runs.filter((r) => nowMs - Date.parse(r.at) <= 7 * DAY);
@@ -723,7 +730,7 @@ export const VD_STALE_DAYS = 9;
 export function validityLine(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
   const head = '\ud83d\udd0e \u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3 \u05de\u05d5\u05dc \u05d4\u05de\u05e1\u05de\u05db\u05d9\u05dd: ';
-  if (!r || !r.at || isNaN(Date.parse(r.at))) return { text: head + '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', red: false, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' };
+  if (!r || !r.at || isNaN(Date.parse(r.at))) return { text: head + '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e8\u05e5', red: false, unknown: true, label: '\u05d1\u05d5\u05d3\u05e7 \u05d4\u05ea\u05d5\u05e7\u05e3' };
   if (nowMs - Date.parse(r.at) > VD_STALE_DAYS * DAY) return { text: head + '\u05dc\u05d0 \u05e8\u05e5 \u05de\u05d0\u05d6 ' + ilTime(r.at), red: true };
   const n = (k) => (Number.isFinite(+r[k]) && +r[k] > 0 ? Math.floor(+r[k]) : 0);
   const items = (Array.isArray(r.items) ? r.items : []).map((x) => String(x || '').trim().substring(0, 70)).filter(Boolean);
@@ -797,7 +804,7 @@ export function guessLocksLine(raw, nowMs) {
 }
 export function xlsxGapsLine(raw, nowMs) {
   let r = null; try { r = JSON.parse(raw || 'null'); } catch (e) { r = null; }
-  if (!r || !r.at) return { text: H.xg + H.xgNever, red: false };
+  if (!r || !r.at) return { text: H.xg + H.xgNever, red: false, unknown: true };
   if (nowMs - Date.parse(r.at) > XG_STALE_DAYS * DAY) return { text: H.xg + H.xgStale + ilTime(r.at), red: true };
   if (!r.ok) return { text: H.xg + H.xgFail + ilTime(r.at) + ' (' + String(r.error || '').substring(0, 120) + ')', red: true };
   const g = (r.gaps || []).filter((x) => x && x.n);
@@ -808,11 +815,12 @@ export function xlsxGapsLine(raw, nowMs) {
 
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  let stFail = false;
   const [hazards, reports, tasks, st, empty, exp, tk, ul, aq] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
-    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code']).catch(() => ({})),
+    stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code'], true).catch(() => { stFail = true; return {}; }),
     emptyRegs(env),
     expiries(env, today),
     talkData(env).catch(() => null),
@@ -829,7 +837,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()) };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

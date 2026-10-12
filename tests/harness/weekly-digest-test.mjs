@@ -435,6 +435,11 @@ const ROWS = [
       check('grey ones in one short line, by label', (quiet.match(/<p/g) || []).length === 2 && /תקין: סנכרון, סוכנים, בודק התוקף \(תיקן 2\), נבו, MF-LABEL/.test(quiet), quiet);
       check('sync errors: red with the list', /color:#b91c1c[^>]*>[^<]*sync-a; sync-b/.test(statusBlock({ watchOpen: ['sync-a', 'sync-b'] })));
       check('all red: no grey line', !/תקין:/.test(statusBlock({ watchOpen: ['x'], agents: red })));
+      // 12/10/2026 (retro, Michael: "בצע"): no data is not "fine", and a failed server_state read says so
+      const unk = statusBlock({ watchOpen: [], agents: agentsLine('', now), mf: mailFilingLine('', now), nevo: { red: false, text: 'N' } });
+      check('never ran / empty log: under "no data", not under fine', /אין מידע: סוכנים, תיוק מהמייל/.test(unk) && /תקין: סנכרון, נבו/.test(unk) && !/תקין:[^<]*סוכנים/.test(unk), unk);
+      const sf = statusBlock({ stateFail: true, watchOpen: [], agents: { red: false, text: 'A' }, upload: { red: false, text: 'U' }, nevo: { red: false, text: 'N' } });
+      check('server_state not read: a red line, and its lines are "no data"', /color:#b91c1c[^>]*>[^<]*server_state/.test(sf) && /אין מידע: סנכרון, סוכנים, נבו/.test(sf) && /תקין: העלאת העוזר/.test(sf), sf);
       const h = digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [], agents: { red: false, text: 'AGENTS-TEXT' }, vd: wait });
       check('in the mail: the red validity line, the fine agents only by name', /color:#b91c1c;font-weight:bold">[^<]*Drager 8000/.test(h) && !/AGENTS-TEXT/.test(h) && /תקין: סנכרון, סוכנים/.test(h));
     }

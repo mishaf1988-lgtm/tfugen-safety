@@ -62,10 +62,11 @@ function sb(env) {
 }
 
 // ---- small key/value store: public.server_state (service-role only) ----
-export async function stateGet(env, keys) {
+// strict (12/10/2026, the weekly digest): a failed read throws instead of looking like "no rows".
+export async function stateGet(env, keys, strict) {
   const s = sb(env);
   const r = await fetch(s.url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: s.h });
-  if (!r.ok) return {};
+  if (!r.ok) { if (strict) throw new Error('server_state HTTP ' + r.status); return {}; }
   const rows = await r.json();
   const out = {};
   (Array.isArray(rows) ? rows : []).forEach((x) => { out[x.key] = { value: x.value, at: x.updated_at }; });

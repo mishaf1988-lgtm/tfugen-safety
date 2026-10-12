@@ -35,8 +35,9 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
-    (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; });
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; if (x.moved) w.moved[id] = x.moved; });
+    if (Object.keys(w.moved).length) w.state.skip_moved = JSON.stringify(w.moved);
     Object.keys(o.od || {}).forEach((k) => o.od[k].forEach((n) => w.od[k].set(n, 'id' + (++w.seq))));
     const buckets = { backups: o.backups || [], 'incidents-photos': o.photos || [] };
     globalThis.fetch = async (url, init) => {
@@ -46,7 +47,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
       if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { w.talkReads.push(u); return o.talksFail ? json({ message: 'x' }, 500) : json(o.talks || []); }
-      if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); } if (o.stateFail) return json({ message: 'x' }, 500); return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: null }))); }
       let m = /\/storage\/v1\/object\/list\/([^/?]+)$/.exec(u);
       if (m) { const b = JSON.parse(init.body); return json(buckets[m[1]].slice().sort().slice(b.offset, b.offset + b.limit).map((n) => ({ name: n, id: 'x' + n }))); }
       m = /\/storage\/v1\/object\/([^/]+)\/(.+)$/.exec(u);
@@ -151,6 +152,12 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
     const many = Array.from({ length: SKIP_MAX + 5 }, (_, i) => ({ name: 'x' + i + '.pdf', created: new Date(Date.now() - 60 * D).toISOString() }));
     const c3 = await call({ backups: [], photos: [], talks: [], skip: many }, 'nsec');
     check('at most ' + SKIP_MAX + ' a day', c3.rec.skip.pruned === SKIP_MAX && c3.w.od[SKIP].size === 5, c3.rec.skip);
+    // 12/10/2026: counted from the move, not from the creation (OneDrive keeps createdDateTime on a move)
+    const mvd = [{ name: 'm-moved.pdf', created: new Date(Date.now() - 40 * D).toISOString(), moved: new Date(Date.now() - 2 * D).toISOString() }, { name: 'm-old.pdf', created: new Date(Date.now() - 40 * D).toISOString(), moved: new Date(Date.now() - 35 * D).toISOString() }];
+    const c5 = await call({ backups: [], photos: [], talks: [], skip: mvd }, 'nsec');
+    check('created 40 days ago, moved 2 days ago: kept; moved 35 days ago: deleted', !c5.w.dels.includes('m-moved.pdf') && c5.w.dels.includes('m-old.pdf'), c5.w.dels);
+    const c6 = await call({ backups: [], photos: [], talks: [], skip: sk, stateFail: true }, 'nsec');
+    check('the move record not read: nothing deleted that day, the error named', !c6.w.dels.length && c6.rec.errors.some((e) => /^skip/.test(e)), [c6.w.dels, c6.rec.errors]);
     const c4 = await call({ backups: [], photos: [], talks: [] }, 'nsec');
     check('no such folder: nothing deleted, no error', c4.rec.skip.pruned === 0 && !c4.rec.errors.some((e) => /^skip/.test(e)), c4.rec);
   }

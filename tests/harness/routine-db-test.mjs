@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -193,6 +193,20 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('a name with a slash or a script type: refused', !!odMoveCheck({ ...base, name: 'a/b.pdf' }).error && !!odMoveCheck({ ...base, name: 'x.exe' }).error && !!odMoveCheck({ ...base, from: 'x.js' }).error);
     check('why missing: refused', !!odMoveCheck({ ...base, why: '' }).error);
     check('the paths stay inside the safety folder', odMoveCheck(base).toDir === OD_ROOT + DIR && odMoveCheck(base).from === OD_ROOT + OD_INBOX + '/a.pdf');
+    // 12/10/2026: a move into "not filed" is recorded with its time; backup-od counts 30 days from it
+    drive[IN + 'v.mp4'] = { id: 'f9', size: 5, file: {} }; drive[OD_ROOT + OD_INBOX + '/' + OD_SKIP] = { id: 'dskip', folder: {} };
+    delete state.skip_moved;
+    x = await call({ ...base, from: 'v.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'v.mp4' });
+    let sm = {}; try { sm = JSON.parse(state.skip_moved || '{}'); } catch (e) {}
+    check('into not filed: the move is recorded in server_state.skip_moved by item id', x.json.ok && x.json.recorded === true && !isNaN(Date.parse(sm.f9)) && Date.now() - Date.parse(sm.f9) < 60e3, [x.json, state.skip_moved]);
+    const before = state.skip_moved; reset(); x = await call(base);
+    check('to any other folder: nothing recorded', x.json.ok && x.json.recorded === null && state.skip_moved === before, x.json);
+    const now = Date.parse('2026-10-12T10:00:00Z'), D = 864e5;
+    const old = JSON.stringify({ a: new Date(now - (SKIP_MOVED_DAYS + 1) * D).toISOString(), b: new Date(now - D).toISOString() });
+    const kept = JSON.parse(skipMovedAdd(old, 'c', new Date(now).toISOString(), now));
+    check('the record drops entries older than ' + SKIP_MOVED_DAYS + ' days, keeps the rest', !kept.a && kept.b && kept.c, kept);
+    const big = {}; for (let i = 0; i < SKIP_MOVED_MAX + 10; i++) big['i' + i] = new Date(now - (i % 50) * D).toISOString();
+    check('at most ' + SKIP_MOVED_MAX + ' entries, broken JSON starts over', Object.keys(JSON.parse(skipMovedAdd(JSON.stringify(big), 'n', new Date(now).toISOString(), now))).length === SKIP_MOVED_MAX && Object.keys(JSON.parse(skipMovedAdd('{x', 'n', new Date(now).toISOString(), now))).length === 1);
     check('without the key: 403, nothing moved', (await call(base, 'nope')).status === 403);
     graph = async () => new Response('{}', { status: 500 });
   }
