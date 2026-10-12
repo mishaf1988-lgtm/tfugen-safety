@@ -64,6 +64,22 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   r = await page.evaluate(() => ['ncr-rc', 'ncr-c'].map((id) => { const el = g(id); return { tag: el.tagName, rows: el.rows, fw: el.closest('.field').classList.contains('fw') }; }));
   check('both are 3-row textareas, full width', r.every((x) => x.tag === 'TEXTAREA' && x.rows === 3 && x.fw), r);
 
+  console.log('\n8. Cancel drops the draft, X keeps it (12/10/2026)');
+  r = await page.evaluate(() => {
+    const out = {};
+    const put = () => localStorage.setItem('tfgn_ncr_draft_v1', JSON.stringify({ snap: { 'ncr-d': 'x' }, ts: Date.now() }));
+    put();
+    document.querySelector('#m-ncr .modal-footer .btn-s').click();
+    out.cancel = localStorage.getItem('tfgn_ncr_draft_v1');
+    put();
+    document.querySelector('#m-ncr .close-btn').click();
+    out.x = localStorage.getItem('tfgn_ncr_draft_v1');
+    localStorage.removeItem('tfgn_ncr_draft_v1');
+    return out;
+  });
+  check('Cancel removes the saved draft', r.cancel === null, r);
+  check('X keeps it, for an accidental close', !!r.x, r);
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();

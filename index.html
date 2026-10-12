@@ -2367,7 +2367,7 @@ id="m-ncr" style="display:none">
     </div>
     <div class="field fw"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="ncr-sens" style="width:16px;height:16px;cursor:pointer">&#128274; &#1512;&#1490;&#1497;&#1513; (&#1504;&#1512;&#1488;&#1492; &#1500;&#1488;&#1491;&#1502;&#1497;&#1503; &#1489;&#1500;&#1489;&#1491;)</label></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-ncr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNcr()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><!-- 12/10/2026 (Chrome: a form closed with Cancel came back as a draft 2 hours later): Cancel drops the draft; X and a tap outside keep it, they are the accidental closes --><button class="btn btn-s" onclick="_ncrDraftClear();closeModal('m-ncr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNcr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 
@@ -5341,7 +5341,8 @@ function _ncrAutoDue(){
 }
 // NCR draft autosave: every 5s while m-ncr is open with no ncr-id, snapshot
 // the form fields to localStorage. On modal re-open, offer to restore if a
-// draft exists. Cleared on successful svNcr or explicit cancel.
+// draft exists. Cleared on successful svNcr or on the Cancel button (not on X or
+// a tap outside: those are the accidental closes the draft is for).
 var _NCR_DRAFT_KEY='tfgn_ncr_draft_v1';
 var _ncrDraftRestored=false;
 var _NCR_DRAFT_TIMER=null;
