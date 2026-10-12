@@ -4881,8 +4881,26 @@ window._lockExpired=function(ctx){
 // Drop the session and ask for the password. Runs both at startup and when the
 // app is resumed from the background — on iOS a home-screen app usually resumes
 // without reloading, so a startup-only check would almost never fire.
+// BACKLOG 13.14 (12/10/2026, Michael: "\u05dc\u05de\u05d7\u05d5\u05e7 \u05e8\u05e7 \u05d0\u05ea \u05d4\u05e8\u05d2\u05d9\u05e9"): a locked phone kept the
+// employee, medical and hearing rows in tfgn2, readable to whoever holds it.
+// The lock now drops those three, in memory and in the stored copy; the next
+// sbSync after login pulls them whole. The blob is edited in place, not
+// rewritten from DB: at startup the lock runs before ldb(), and a flush of an
+// empty DB would have wiped every table. Queued offline edits live in
+// tfgn_outbox and are not touched.
+var _LOCK_WIPE=['emp','med','hearing_tests'];
+function _lockWipeSensitive(){
+  _LOCK_WIPE.forEach(function(k){if(DB[k])DB[k]=[];});
+  try{
+    var x=localStorage.getItem('tfgn2');if(!x)return;
+    var d=JSON.parse(x),hit=false;
+    _LOCK_WIPE.forEach(function(k){if(k in d){delete d[k];hit=true;}});
+    if(hit)localStorage.setItem('tfgn2',JSON.stringify(d));
+  }catch(e){}
+}
 window._lockNow=function(){
   try{_rtStop();}catch(e){}
+  try{_lockWipeSensitive();}catch(e){}
   try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}

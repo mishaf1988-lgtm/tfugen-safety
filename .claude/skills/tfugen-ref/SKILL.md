@@ -84,6 +84,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `PUBLIC_PATHS` (`functions/_middleware.js`) | - | the only non-`/api/` URLs the site serves (10/10/2026, security scan): every other path is 404. A new static file the app needs (icon, page) goes into the list, or it 404s on the live site; `geo-gate-test.mjs` section 9 |
 | `SPEAK` / `speakScript(lang)` (`functions/api/talk.js`) | - | "read aloud" on the weekly-talk page: `speechSynthesis`, shown only when the phone has a voice in the page language (`he`/`iw`, `ar`, `ru`, `am`); `talk-speak-test.mjs` |
 | `_heFold(s)` / `_heMatch(q,texts)` | - | spelling-tolerant Hebrew search (12/10/2026): drops א/ו/י, niqqud, final forms and punctuation on both sides; a query of only א/ו/י falls back to plain substring. Used by the expiry page box `#exp-q` (`expSearch`). Reuse it for any new search box instead of `toLowerCase().indexOf` |
+| `_lockWipeSensitive()` / `_LOCK_WIPE` | - | called first thing in `_lockNow` (12/10/2026): empties `emp`, `med`, `hearing_tests` in DB and deletes them from the `tfgn2` blob in place. Never write `tfgn2` from DB inside the lock: at startup DB is still empty. A new sensitive table goes into `_LOCK_WIPE` |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
