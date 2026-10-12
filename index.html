@@ -1161,6 +1161,7 @@ body.emp-mode #emp-mode-badge{display:inline-block}
     <button class="btn btn-s" id="exp-tab-90" onclick="expFilter('90')">&le;90&#1497;</button>
     <button class="btn btn-s" id="exp-tab-none" onclick="expFilter('none')">- &#1500;&#1500;&#1488; &#1514;&#1488;&#1512;&#1497;&#1498;</button>
   </div>
+  <input type="search" id="exp-q" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1508;&#1512;&#1497;&#1496;, &#1488;&#1495;&#1512;&#1488;&#1497; &#1488;&#1493; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="expSearch()" style="width:100%;max-width:360px;margin:0 0 10px">
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1508;&#1512;&#1497;&#1496;</th><th scope="col">&#1488;&#1495;&#1512;&#1488;&#1497;/&#1506;&#1493;&#1489;&#1491;</th><th scope="col">&#1502;&#1493;&#1491;&#1493;&#1500;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">פעולות</th></tr></thead><tbody id="tb-exp"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1505;&#1493;&#1499;&#1503; &#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</div>
 </div>
@@ -7731,6 +7732,30 @@ function _expNoDate(){
   take('hearing_tests','hearing','\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',function(r){return r.emp_name;},function(r){return r.dept||r.role;});
   return out;
 }
+// Hebrew is written with or without matres lectionis: "\u05d0\u05d5\u05d8\u05d5\u05e7\u05dc\u05d1" and "\u05d0\u05d5\u05d8\u05d5\u05e7\u05dc\u05d0\u05d1" are the
+// same autoclave, and an exact substring search found only one of them.
+// _heFold drops \u05d0/\u05d5/\u05d9, niqqud, final forms and punctuation on both sides, so the
+// spelling Michael types and the spelling in the register meet in the middle.
+function _heFold(s){
+  return String(s||'').toLowerCase()
+    .replace(/[\u0591-\u05c7]/g,'')
+    .replace(/[\u05da\u05dd\u05df\u05e3\u05e5]/g,function(c){return {'\u05da':'\u05db','\u05dd':'\u05de','\u05df':'\u05e0','\u05e3':'\u05e4','\u05e5':'\u05e6'}[c];})
+    .replace(/[\u05d0\u05d5\u05d9]/g,'')
+    .replace(/[\s'"\u05f3\u05f4\-_.,\/()]+/g,' ').trim();
+}
+// True when q matches any of the texts. A query made only of \u05d0/\u05d5/\u05d9 folds to
+// nothing, so it falls back to a plain substring rather than matching everything.
+function _heMatch(q,texts){
+  var fq=_heFold(q);
+  var lq=String(q||'').toLowerCase().trim();
+  if(!lq)return true;
+  return texts.some(function(t){
+    if(String(t||'').toLowerCase().indexOf(lq)>=0)return true;
+    return !!fq&&_heFold(t).indexOf(fq)>=0;
+  });
+}
+window._expQ='';
+function expSearch(){var el=g('exp-q');window._expQ=el?el.value:'';rExp();}
 function expFilter(f){
   window._expFilter=f;
   ['all','exp','7','30','90','none'].forEach(function(k){
@@ -7820,6 +7845,8 @@ function rExp(){
   });
   if(f==='none')rows=noDate.slice();
   else if(f==='all')rows=rows.concat(noDate);
+  var q=window._expQ||'';
+  if(q.trim())rows=rows.filter(function(i){return _heMatch(q,[i.name,i.owner,i.modLabel]);});
   rows.sort(function(a,b){
     if(!a.e&&!b.e)return String(a.name||'').localeCompare(String(b.name||''),'he');
     if(!a.e)return 1;            // undated last, so the urgent stay on top
@@ -7827,6 +7854,7 @@ function rExp(){
     return du(a.e)-du(b.e);
   });
   var tb=g('tb-exp');if(!tb)return;
+  if(!rows.length&&q.trim()){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udd0d<br>\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05e4\u05e8\u05d9\u05d8 \u05e9\u05de\u05ea\u05d0\u05d9\u05dd \u05dc\u05d7\u05d9\u05e4\u05d5\u05e9</td></tr>';return;}
   if(!rows.length){tb.innerHTML=_expEmptyRow(f,items.length+noDate.length);return;}
   // Seeing an expiry used to be the end of the road: no view, no task, nothing.
   // _expCollect already carries mod + id, and openTskModal prefills from exactly
