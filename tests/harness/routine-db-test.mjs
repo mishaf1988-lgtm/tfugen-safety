@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -116,6 +116,25 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
   lg = JSON.parse(state.agent_log);
   check('the log keeps the last ' + AGENT_LOG_MAX, lg.length === AGENT_LOG_MAX && lg[0].at === '1' && lg[lg.length - 1].agent === 'retro');
   check('agent_log is readable through state_get, not writable through state_set', (await call({ op: 'state_get', keys: ['agent_log'] })).json.rows.length === 1 && (await call({ op: 'state_set', key: 'agent_log', value: '[]' })).status === 400);
+
+  console.log('\n4g. claim: one session takes an open item (12/10/2026, lesson 10)');
+  {
+    const A = 'cse_012U83ozxzQjH8BcQ2AvykSf', B = 'session_01OtherSessionAbcdef';
+    let c = await call({ op: 'claim', item: 'Status-Lo-Letiyuk', session: A, note: 'skip_seen' });
+    check('first claim: mine, stored under session_ (cse_ is the same session), item lower-cased', c.json.ok && c.json.mine && JSON.parse(state[CLAIM_KEY])['status-lo-letiyuk'].session === 'session_012U83ozxzQjH8BcQ2AvykSf', c.json);
+    c = await call({ op: 'claim', item: 'status-lo-letiyuk', session: B });
+    check('another session: not mine, told who holds it, nothing written', c.json.ok && c.json.mine === false && c.json.holder.session === 'session_012U83ozxzQjH8BcQ2AvykSf' && JSON.parse(state[CLAIM_KEY])['status-lo-letiyuk'].session.startsWith('session_012U'), c.json);
+    check('the same session again: still mine', (await call({ op: 'claim', item: 'status-lo-letiyuk', session: 'session_012U83ozxzQjH8BcQ2AvykSf' })).json.mine === true);
+    const cl = await call({ op: 'claims' });
+    check('claims: the fresh list', cl.json.ok && Object.keys(cl.json.claims).join() === 'status-lo-letiyuk', cl.json);
+    check('release by another session: refused (not mine)', (await call({ op: 'claim', item: 'status-lo-letiyuk', session: B, release: true })).json.mine === false && !!JSON.parse(state[CLAIM_KEY])['status-lo-letiyuk']);
+    c = await call({ op: 'claim', item: 'status-lo-letiyuk', session: A, release: true });
+    check('release by the holder: gone, then the other one can take it', c.json.released && !JSON.parse(state[CLAIM_KEY])['status-lo-letiyuk'] && (await call({ op: 'claim', item: 'status-lo-letiyuk', session: B })).json.mine === true);
+    const old = new Date(Date.now() - (CLAIM_HOURS + 1) * 3600e3).toISOString();
+    const r = claimApply({ x1: { session: 'session_zzzzzzzzzz', at: old } }, { item: 'x1', session: A }, new Date().toISOString());
+    check('a claim older than ' + CLAIM_HOURS + ' hours: expired, taken over', r.ans.mine === true && !!r.map.x1 && r.map.x1.session.startsWith('session_012U'), r);
+    check('bad item or session: 400, nothing written', (await call({ op: 'claim', item: 'a b; drop', session: A })).status === 400 && (await call({ op: 'claim', item: 'ok-item', session: 'x' })).status === 400 && claimSession('cse_abcdefgh') === 'session_abcdefgh');
+  }
 
   console.log('\n4d. expiry_set: one row, after a document was read, with the reason in the note');
   {

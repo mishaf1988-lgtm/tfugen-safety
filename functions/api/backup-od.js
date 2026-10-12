@@ -43,11 +43,21 @@ export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
 export const SKIP = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/_\u05e0\u05db\u05e0\u05e1 \u05de\u05d4\u05de\u05d9\u05d9\u05dc/\u05dc\u05d0 \u05dc\u05ea\u05d9\u05d5\u05e7', SKIP_DAYS = 30, SKIP_MAX = 20;
 // moved: server_state.skip_moved {itemId: ISO} written by routine-db od_move (12/10/2026). The age
 // counts from the later of the creation and the move: OneDrive keeps createdDateTime on a move.
-export function skipOld(items, nowMs, moved) {
+// seen: server_state.skip_seen {itemId: ISO}, the first night this run saw the file there
+// (12/10/2026, Michael "שדרג הכול"): a file Michael drags in by hand has no skip_moved entry, and
+// counts from that night. A file not in seen counts as seen today (only delays). skipSeen.
+export const SEEN_KEY = 'skip_seen';
+export function skipSeen(items, prev, nowIso) {
+  const p = prev && typeof prev === 'object' ? prev : {}, out = {};
+  (items || []).forEach((x) => { if (x && x.id) out[x.id] = typeof p[x.id] === 'string' && !isNaN(Date.parse(p[x.id])) ? p[x.id] : nowIso; });
+  return out;
+}
+export function skipOld(items, nowMs, moved, seen) {
   const mv = moved && typeof moved === 'object' ? moved : {};
+  const sn = seen && typeof seen === 'object' ? seen : null;
   return (items || []).filter((x) => {
     if (!x || !x.id || !x.created || isNaN(Date.parse(x.created))) return false;
-    const t = Math.max(Date.parse(x.created), Date.parse(mv[x.id]) || 0);
+    const t = Math.max(Date.parse(x.created), Date.parse(mv[x.id]) || 0, sn ? (Date.parse(sn[x.id]) || nowMs) : 0);
     return nowMs - t > SKIP_DAYS * 864e5;
   });
 }
@@ -204,14 +214,20 @@ async function run(env) {
 
   // 5. "לא לתיוק": files older than SKIP_DAYS, through the same prune (one DELETE call site),
   // after the photos and only with budget left: the backups come first, these can wait a day.
-  if (left() >= 4) try {
+  if (left() >= 5) try {
     const od = await odList(SKIP);
     // A failed read throws (strict): better a day late than deleting by the wrong date. One subrequest.
     used++;
-    const st = await stateGet(env, ['skip_moved'], true);
+    const st = await stateGet(env, ['skip_moved', SEEN_KEY], true);
     let moved = {}; try { moved = JSON.parse((st.skip_moved && st.skip_moved.value) || '{}'); } catch (e) { moved = {}; }
-    const old = skipOld(od, Date.now(), moved).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 2))).map((x) => x.name);
+    let prev = {}; try { prev = JSON.parse((st[SEEN_KEY] && st[SEEN_KEY].value) || '{}'); } catch (e) { prev = {}; }
+    const seen = skipSeen(od, prev, new Date().toISOString());
+    const old = skipOld(od, Date.now(), moved, seen).slice(0, Math.max(0, Math.min(SKIP_MAX, left() - 3))).map((x) => x.name);
     rec.skip = { files: od.length, pruned: old.length ? await prune(od, 0, () => old) : 0 };
+    const gone = new Set(old);
+    od.forEach((x) => { if (gone.has(x.name)) delete seen[x.id]; });
+    used++;
+    await stateSet(env, { [SEEN_KEY]: JSON.stringify(seen) });
   } catch (e) { err('skip', e); }
 
   if (!rec.newest) rec.errors.push('no complete backup in the bucket');

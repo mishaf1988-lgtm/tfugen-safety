@@ -28,6 +28,10 @@
 //              failed or silent run reaches the weekly mail and the daily retro
 //              (09/10/2026, review of the agents: a run's last message in a
 //              persistent session reaches nobody).
+//   claim      (12/10/2026, lesson 10, Michael "שדרג הכול") one session takes an open item before
+//              it codes it: {item, session, note}. Another session's claim younger than
+//              CLAIM_HOURS wins and is returned (mine:false, holder); release:true drops one's own.
+//              That day two sessions built the same retro items in parallel. claims: the fresh list.
 //   expiry_set  (11/10/2026, Michael in the questionnaire: "בצע: תיוק מייל + תוקף")
 //              update one row of docs / equip_inspections after a document was read:
 //              e, file_url (only under Michael's OneDrive), s (docs) or d (equipment).
@@ -62,6 +66,27 @@ export function agentEntry(b, nowIso) {
   if (!/^[a-z0-9-]{2,40}$/.test(name)) return null;
   const t = (x) => String(x === undefined || x === null ? '' : x).replace(/\s+/g, ' ').trim().slice(0, 300);
   return { agent: name, at: nowIso, ok: b.ok === true, line: t(b.line), learned: t(b.learned) };
+}
+// Work claims between parallel sessions (12/10/2026). Pure helpers, tested.
+export const CLAIM_KEY = 'work_claims', CLAIM_HOURS = 6, CLAIM_MAX = 100;
+export function claimSession(x) { const v = String(x || '').trim().replace(/^cse_/, 'session_'); return /^[A-Za-z0-9_-]{8,80}$/.test(v) ? v : null; }
+export function claimItem(x) { const v = String(x || '').trim().toLowerCase(); return /^[a-z0-9][a-z0-9._-]{1,59}$/.test(v) ? v : null; }
+export function claimsFresh(map, nowMs) {
+  const out = {};
+  Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= CLAIM_HOURS * 3600e3) out[k] = c; });
+  return out;
+}
+// The new map and the answer. A fresh claim of another session is not touched.
+export function claimApply(map, b, nowIso) {
+  const item = claimItem(b.item), session = claimSession(b.session);
+  if (!item || !session) return { error: 'bad item or session' };
+  const m = claimsFresh(map, Date.parse(nowIso)), cur = m[item];
+  if (cur && cur.session !== session) return { map: null, ans: { mine: false, item, holder: cur } };
+  if (b.release === true) { delete m[item]; return { map: m, ans: { mine: false, item, released: !!cur } }; }
+  m[item] = { session, at: nowIso, note: String(b.note || '').replace(/\s+/g, ' ').trim().slice(0, 120) };
+  const keys = Object.keys(m).sort((a, c) => Date.parse(m[c].at) - Date.parse(m[a].at));
+  keys.slice(CLAIM_MAX).forEach((k) => { delete m[k]; });
+  return { map: m, ans: { mine: true, item, claim: m[item] } };
 }
 // mail_filing / validity_run (11/10/2026): run counts of the mail-filing and validity Routines, for the weekly mail.
 export const STATE_WRITE = ['quote_track', 'nevo_versions', 'od_raw_token', 'od_raw_exp', 'mail_filing', 'validity_run'];
@@ -296,6 +321,24 @@ export async function onRequest(context) {
       });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
+    }
+    if (body.op === 'claim' || body.op === 'claims') {
+      const now = new Date().toISOString();
+      const rows = await stateRead([CLAIM_KEY]);
+      let map = {};
+      try { map = JSON.parse(rows && rows[0] && rows[0].value || '{}'); } catch (x) { map = {}; }
+      if (body.op === 'claims') return jsonResp({ ok: true, claims: claimsFresh(map, Date.parse(now)) }, 200, {});
+      const res = claimApply(map, body, now);
+      if (res.error) return jsonResp({ ok: false, error: res.error }, 400, {});
+      if (res.map) {
+        const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
+          method: 'POST',
+          headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ key: CLAIM_KEY, value: JSON.stringify(res.map), updated_at: now }]),
+        });
+        if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
+      }
+      return jsonResp({ ok: true, ...res.ans }, 200, {});
     }
     if (body.op === 'expiry_set') {
       const t = EXPIRY_TABLES[body.table];
