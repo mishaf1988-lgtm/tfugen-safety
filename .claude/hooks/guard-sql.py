@@ -15,8 +15,45 @@ d = json.load(sys.stdin)
 ti = d.get("tool_input", {}) or {}
 text = " ".join(str(ti.get(k, "")) for k in ("command", "query", "sql"))
 pat = re.compile(
-    r"\b(DELETE\s+FROM|TRUNCATE(\s+TABLE)?|DROP\s+TABLE(\s+IF\s+EXISTS)?)\s+"
-    r"(public\.)?(ncr|ncr_ai|trustee_reports)\b", re.I)
+    r"\b(DELETE\s+FROM|TRUNCATE(\s+TABLE)?|DROP\s+TABLE(\s+IF\s+EXISTS)?)\s+(ONLY\s+)?"
+    r"([\w.]+\s*,\s*)*(public\s*\.\s*)?(ncr|ncr_ai|trustee_reports)\b", re.I)
+
+
+def plain(q):
+    # Comments and double quotes do not change what a statement deletes: "ncr", ONLY ncr,
+    # /**/ ncr and a table list ('truncate tasks, ncr') were only asked, not denied (retro 12/10/2026).
+    # A comment marker inside a literal is not a comment ('a--b'; delete from ncr), so this walks
+    # the text and skips '...', "..." and $tag$...$tag$ instead of a regex over all of it.
+    out, i, n = [], 0, len(q)
+    while i < n:
+        c = q[i]
+        if c == "'" or c == '"':
+            j = i + 1
+            while j < n:
+                if q[j] == c:
+                    if j + 1 < n and q[j + 1] == c:
+                        j += 2; continue
+                    break
+                j += 1
+            out.append(q[i:j + 1] if c == "'" else q[i + 1:j]); i = j + 1
+        elif c == "$":
+            m = re.match(r"\$\w*\$", q[i:])
+            e = q.find(m.group(0), i + len(m.group(0))) if m else -1
+            if e < 0:
+                out.append(c); i += 1
+            else:
+                e += len(m.group(0)); out.append(q[i:e]); i = e
+        elif q.startswith("--", i):
+            j = q.find("\n", i); i = n if j < 0 else j
+            out.append(" ")
+        elif q.startswith("/*", i):
+            j = q.find("*/", i + 2); i = n if j < 0 else j + 2
+            out.append(" ")
+        else:
+            out.append(c); i += 1
+    return "".join(out)
+
+
 # execute_sql is on the allow list (Michael, 01/10/2026: "an approval I give
 # automatically"), so reads and ordinary writes run without a prompt. What
 # CLAUDE.md says needs his explicit approval every time still stops and asks.
@@ -48,9 +85,9 @@ def semi_in_literal(q):
     return False
 
 
-m = pat.search(text)
-a = None if m else ask.search(sql)
-t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(sql) else None))
+m = pat.search(plain(text))
+a = None if m else ask.search(plain(sql))
+t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(plain(sql)) else None))
 # tfugen-db rule 8 (03/10/2026, lesson 45): a DO $$ block hangs the connector the
 # same way, in execute_sql and apply_migration alike. Run the statements one by one.
 d8 = None if (m or a or t) else re.search(r"\bDO\s+(LANGUAGE\s+\w+\s+)?\$", re.sub(r"'(?:[^']|'')*'", "''", sql), re.I)
