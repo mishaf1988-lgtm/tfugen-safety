@@ -78,7 +78,7 @@ let ACCEPT = true, DIALOGS = [];
       return { shown: shown, pairs: pairs, text: text };
     });
     check('opening an imported NCR shows its root cause in the form', r.shown === 'אטם סדוק בצינור ההזנה', r.shown);
-    check('the view sheet carries the legacy columns too', r.pairs.indexOf('סיבת שורש (מייבוא)=root_cause') >= 0 && r.pairs.indexOf('פעולה מיידית (מייבוא)=immediate') >= 0, r.pairs);
+    check('the view sheet carries the legacy columns too', r.pairs.indexOf('סיבת שורש (מייבוא)=root_cause') >= 0 && r.pairs.indexOf('פעולה מיידית=immediate') >= 0, r.pairs); // a form field since 12/10/2026, no longer import-only
     check('...so the imported root cause is on the screen at all', /אטם סדוק/.test(r.text), r.text.slice(0, 260));
     check('...and so is the immediate action', /נספג ונאטם/.test(r.text), r.text.slice(0, 260));
 

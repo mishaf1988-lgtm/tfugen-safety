@@ -132,6 +132,36 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   }
   reply = null;
 
+  // 12/10/2026 (Michael: "בצע: להפריד"): the AI wrote "take forklift 3 out and clean the oil" as the
+  // corrective action. That is containment; the corrective action removes the root cause.
+  console.log('\n6. immediate action apart from the corrective action');
+  check('the form has an immediate-action field', await page.evaluate(() => !!g('ncr-immediate')));
+  check('the prompt asks for im, and says c treats the root cause and does not repeat im', /"im"/.test(prompt) && /מטפלת בסיבת השורש/.test(prompt) && /ולא חוזרת על הפעולה המיידית/.test(prompt), prompt.slice(0, 900));
+  sent.length = 0;
+  reply = '{"im":"להשבית את מלגזה 3 ולנקות","rc":"אין בדיקה יומית","c":"להוסיף בדיקת דליפות לטופס היומי"}';
+  const r6 = await page.evaluate(async () => {
+    const toasts = []; window.toast = (m) => toasts.push(m);
+    ['ncr-rc', 'ncr-c', 'ncr-immediate'].forEach((id) => { g(id).value = ''; });
+    g('ncr-d').value = 'נמצאה דליפת שמן מתחת למלגזה מספר 3 באזור המחסן';
+    _ncrAIRcAction();
+    for (let i = 0; i < 100 && !toasts.length; i++) await new Promise((res) => setTimeout(res, 50));
+    return { im: gv('ncr-immediate'), rc: gv('ncr-rc'), c: gv('ncr-c'), toasts };
+  });
+  check('the three fields are filled, each in its own place', r6.im === 'להשבית את מלגזה 3 ולנקות' && r6.rc === 'אין בדיקה יומית' && r6.c === 'להוסיף בדיקת דליפות לטופס היומי', r6);
+  const r7 = await page.evaluate(async () => {
+    const toasts = []; window.toast = (m) => toasts.push(m);
+    ['ncr-rc', 'ncr-c'].forEach((id) => { g(id).value = ''; });
+    g('ncr-immediate').value = 'גודר האזור';
+    _ncrAIRcAction();
+    for (let i = 0; i < 100 && !toasts.length; i++) await new Promise((res) => setTimeout(res, 50));
+    return { im: gv('ncr-immediate') };
+  });
+  const p7 = sent[1] && sent[1].messages[0].content || '';
+  check('an immediate action already typed is kept and sent as context', r7.im === 'גודר האזור' && /פעולה מיידית שכבר נעשתה: גודר האזור/.test(p7), [r7, p7.slice(-200)]);
+  reply = null;
+  const saved = await page.evaluate(() => { let row = null; window.sbIns = function (t, r) { if (t === 'ncr') row = r; }; window.sbUpd = window.sbIns; try { svNcr(); } catch (e) { return 'err ' + e.message; } return row && row.immediate; });
+  check('saving writes it to ncr.immediate', saved === 'גודר האזור', saved);
+
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();
