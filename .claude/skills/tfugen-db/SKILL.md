@@ -13,6 +13,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 - **לפני SQL על טבלה שלא בדקת השבוע:** `information_schema.columns` קודם. ב-02/10/2026 `emp.role` לא קיים (העמודה `r`), ו-`emp.s` הוא תאריך.
 - **project_id:** `znhjtpcltrxxyfjczgvw`.
 - **`DELETE` בתוך פונקציה ב-migration (10/10/2026):** `apply_migration` נתקע 60 שניות ולא יצר כלום, כנראה בגלל בקשת אישור לפעולה הרסנית שאיש לא עונה עליה. במקום מחיקה: `update ... set value='0'`, או לבקש ממיכאל. אחרי timeout: לבדוק ב-`pg_proc` אם הפונקציה נוצרה, לא להניח.
+- **מה ש-`guard-sql` שואל עליו (12/10/2026)** ולכן נתקע בשיחה שאיש לא עונה בה: מחיקה, `DROP`, שינוי RLS, `UPDATE` בלי `WHERE`, `GRANT` ל-`anon`/`public`, `DISABLE TRIGGER`, ו-`security definer` בלי `set search_path`. פונקציה חדשה: תמיד עם `set search_path = ''` (כלל 2 למטה), ואז היא עוברת בלי שאלה.
 - **טקסט ארוך בעדכון (10/10/2026):** גרש (`'`) בתוך טקסט ב-dollar quote (`$h$...$h$`) גורם ל-`execute_sql` להיתקע ולהיכשל אחרי 60 שניות, והעדכון לא נשמר. במקום הגרש: `...$h$||chr(39)||$h$...`. גם `;` בתוך טקסט: להימנע. 9,000-11,500 תווים בבקשה אחת עברו. אחרי עדכון ארוך: `md5(עמודה)` מול md5 של הקובץ המקומי, ורק אז לדווח שנשמר.
 - **לא עובד בענן, וזה צפוי:** השרת `supabase` מ-`.mcp.json` ("requires authentication"), ו-`curl` ל-`*.supabase.co` (חסום ברשת). זה **לא** חסם, ואין לדווח עליו למיכאל (לקח 30).
 

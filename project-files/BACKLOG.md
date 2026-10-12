@@ -295,7 +295,7 @@
 12. **התקרה של 50 דיווחים אנונימיים בשעה משותפת לכולם**: שלושה sessions חוסמים דיווחים אמיתיים לשעה (נמוך; Turnstile מקשה).
 13. **סקריפטים מ-CDN בלי SRI** (9, ביניהם `supabase-js`, `msal-browser`, `xlsx`); `web-vitals@4` לא מקובע לגרסה (נמוך).
 14. **`tfgn2` (עותק המסד, כולל `emp`, `med`, `hearing_tests`) נשאר ב-localStorage אחרי יציאה/נעילה** (נמוך-בינוני בטלפון משותף).
-15. **`guard-sql.py` לא שואל על `GRANT`, `UPDATE` בלי `WHERE`, `SECURITY DEFINER`, `DISABLE TRIGGER`**, ו-`execute_sql` מאושר מראש (נמוך; הגנה מהזרקת פרומפט מטקסט אנונימי).
+15. ✅ **(בוצע 12/10/2026: שואל על `UPDATE` בלי `WHERE`, `GRANT` ל-`anon`/`public`, `DISABLE TRIGGER`, ו-definer בלי `search_path`. `GRANT` ל-`authenticated` ו-definer רגיל לא שואלים: בכל migration, ושאלה בלי תשובה תוקעת את `apply_migration`. `guard-sql-test.py`)** **`guard-sql.py` לא שואל על `GRANT`, `UPDATE` בלי `WHERE`, `SECURITY DEFINER`, `DISABLE TRIGGER`**, ו-`execute_sql` מאושר מראש (נמוך; הגנה מהזרקת פרומפט מטקסט אנונימי).
 16. **`workers/backup-cron.js`**: `/health` בלי אימות מחזיר שם קובץ ושגיאות; `/run` מקבל מפתח ב-`?key=` (נמוך).
 17. **פרטים אישיים בקבצי ה-repo הציבורי**: מספר נייד אחד (DECISIONS, STATUS-archive), כ-10 כתובות מייל של עובדים, 7 שמות נאמנים ב-migration (נמוך).
 18. ✅ **`Medwp123`** (סיסמת האדמין הישנה) בהיסטוריה הציבורית ו-DECISIONS. **נבדק 12/10/2026 ב-MCP** (`crypt` מול `auth.users`, בלי לקרוא סיסמאות): הייתה עדיין הסיסמה של `admin@tfugen.local`, למרות שה-handoff של 02/10 כתב "לא בשימוש". מיכאל החליף אותה ב-12/10/2026 10:10, ובדיקה חוזרת: 0 משתמשים איתה. לקח 80.
