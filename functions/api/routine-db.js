@@ -165,9 +165,9 @@ export const OD_REQ = '_\u05d1\u05e7\u05e9\u05d5\u05ea \u05de\u05d4\u05de\u05d9\
 export const MAIL_REQ_ID = /^[A-Za-z0-9_=+\/-]{40,400}$/;
 const OD_NO_DIR = /(^|\/)(_\u05d2\u05e8\u05e1\u05d0\u05d5\u05ea \u05e7\u05d5\u05d3\u05de\u05d5\u05ea|\u05dc\u05de\u05d7\u05d9\u05e7\u05d4|ARCHIVE)(\/|$)/i;
 const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
-// Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox),
+// Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
+// 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
-const OD_ANY = /\.[A-Za-z0-9]{1,5}$/;
 const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
 // { from, toDir, name } as Graph paths under the drive root, or { error }.
 export function odMoveCheck(b) {
@@ -177,7 +177,7 @@ export function odMoveCheck(b) {
   const bad = (parts) => parts.some((x) => x === '.' || x === '..' || OD_BAD.test(x) || x.length > 180);
   const from = clean(b.from), dir = clean(b.to_dir), name = String(b.name || '');
   const skipTo = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
-  if (from.length !== 1 || bad(from) || !(skipTo ? OD_ANY : OD_EXT).test(from[0])) return { error: 'from: one file inside the inbox folder' };
+  if (from.length !== 1 || bad(from) || !(skipTo || OD_EXT.test(from[0]))) return { error: 'from: one file inside the inbox folder' };
   const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
   if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? name === from[0] : OD_EXT.test(name))) return { error: 'bad name' };
