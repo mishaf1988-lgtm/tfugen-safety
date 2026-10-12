@@ -83,6 +83,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `<script id="app-main">` / `/app.js` (`functions/_appjs.js`, `app.js.js`) | 3246 | the main script is served as `/app.js?v=<deploy>` (10/10/2026, DECISIONS): keep the `id` on the tag and never write `</script>` inside it. Tests still load index.html inline; `app-split-test.mjs` covers the split. A new helper module in `functions/` imported by an api file needs the copy+sed in `run.sh` |
 | `PUBLIC_PATHS` (`functions/_middleware.js`) | - | the only non-`/api/` URLs the site serves (10/10/2026, security scan): every other path is 404. A new static file the app needs (icon, page) goes into the list, or it 404s on the live site; `geo-gate-test.mjs` section 9 |
 | `SPEAK` / `speakScript(lang)` (`functions/api/talk.js`) | - | "read aloud" on the weekly-talk page: `speechSynthesis`, shown only when the phone has a voice in the page language (`he`/`iw`, `ar`, `ru`, `am`); `talk-speak-test.mjs` |
+| `_heFold(s)` / `_heMatch(q,texts)` | - | spelling-tolerant Hebrew search (12/10/2026): drops א/ו/י, niqqud, final forms and punctuation on both sides; a query of only א/ו/י falls back to plain substring. Used by the expiry page box `#exp-q` (`expSearch`). Reuse it for any new search box instead of `toLowerCase().indexOf` |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |

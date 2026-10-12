@@ -104,6 +104,32 @@ const SEED = {
     await page.evaluate(() => closeModal('m-tsk'));
   }
 
+  console.log('\n4b. search ignores spelling differences (12/10/2026)');
+  {
+    const r = await page.evaluate(() => {
+      DB.equip_inspections.push({ id: 'e6', code: 'EQ-6', n: 'אוטוקלאב מעבדה', e: iso30() });
+      function iso30() { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0, 10); }
+      expFilter('all');
+      const names = (q) => { const el = document.getElementById('exp-q'); el.value = q; el.dispatchEvent(new Event('input')); return Array.from(document.querySelectorAll('#tb-exp tr td:first-child strong')).map((x) => x.textContent); };
+      const out = {
+        noAlef: names('אוטוקלב'), withAlef: names('אוטוקלאב'), yod: names('מליגזה'), plain: names('נוהל'),
+        none: names('צנרת'), noneText: (document.querySelector('#tb-exp td') || {}).textContent || '',
+        onlyVav: names('ו'),
+      };
+      names('');
+      out.cleared = document.querySelectorAll('#tb-exp tr td:first-child strong').length;
+      DB.equip_inspections.pop(); expFilter('all');
+      return out;
+    });
+    check('"אוטוקלב" finds "אוטוקלאב"', r.noAlef.length === 1 && r.noAlef[0] === 'אוטוקלאב מעבדה', r.noAlef);
+    check('the exact spelling still finds it', r.withAlef.length === 1, r.withAlef);
+    check('an extra yod still finds the forklifts', r.yod.length === 5, r.yod);
+    check('a plain word finds only its row', r.plain.length === 1 && r.plain[0] === 'נוהל בתוקף', r.plain);
+    check('no match says so instead of "all clear"', r.none.length === 0 && /לא נמצא/.test(r.noneText), r.noneText);
+    check('a query of only ו is a plain substring, not everything', r.onlyVav.length < 8, r.onlyVav);
+    check('clearing the box brings back every row', r.cleared === 8, r.cleared);
+  }
+
   console.log('\n5. the empty state still spans the table');
   {
     const r = await page.evaluate(() => {
