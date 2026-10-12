@@ -60,6 +60,24 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 
   check('the model is told to return empty fields instead of guessing', /אין מספיק פרטים/.test(prompt) && /ואל תנחש/.test(prompt), prompt.slice(-400));
 
+  // 12/10/2026, Chrome on the live site: "oil leak under forklift 3 in the warehouse" with the other
+  // fields empty came back with rc and c empty, twice. Empty fields went out as '?', and rule 5 had
+  // no limit.
+  check('rule 5 only for a label or a word or two, and a clear description is enough', /רק אם בתיאור אין מספיק פרטים/.test(prompt) && /רק כותרת, מילה או שתיים/.test(prompt) && /מספיק, גם כשאזור, מיקום, עדיפות או אחראי לא צוינו/.test(prompt), prompt.slice(-600));
+  sent.length = 0;
+  await page.evaluate(() => {
+    g('ncr-rc').value = ''; g('ncr-c').value = '';
+    g('ncr-d').value = 'נמצאה דליפת שמן מתחת למלגזה מספר 3 באזור המחסן';
+    ['ncr-a', 'ncr-loc', 'ncr-rc-cat', 'ncr-p', 'ncr-o'].forEach((id) => { const e = g(id); if (e) e.value = ''; });
+    const l = g('ncr-location-id'); if (l) l.selectedIndex = 0;
+    _ncrAIRcAction();
+  });
+  await until(() => sent.length >= 1);
+  const p2 = sent[0] && sent[0].messages[0].content || '';
+  const ctx2 = p2.slice(p2.lastIndexOf('-NCR:'));
+  check('empty form fields are not sent (no "?" lines), the description is', /דליפת שמן מתחת למלגזה/.test(ctx2) && !/: \?/.test(ctx2) && !/אזור:|עדיפות:|אחראי:/.test(ctx2), ctx2);
+  await page.waitForFunction(() => gv('ncr-rc') !== '', null, { timeout: 5000 }).catch(() => {});
+
   // 05/10/2026, Chrome on the live NCR-0001: the description was only the label
   // "ממצא בביקורת פנים (בטיחות):" and the model invented a waste-management finding.
   console.log('\n3. a description that is only a label');
