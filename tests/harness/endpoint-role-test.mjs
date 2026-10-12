@@ -107,6 +107,18 @@ const TEST_NOTIFY = { test: true, whatsapp_to: '972501234567', email_to: 'x@y.co
   { const w = world({ email: 'x@tfugen.local', row: { role: 'stranger', active: true } }); const r = await call(waSend, WA); check('an unknown role is denied', denied(r) && !w.metaSent, r); }
   { const w = world({ email: 'admin@tfugen.local' }); const r = await call(waSend, WA); check('the built-in admin needs no app_users row', !denied(r) && w.metaSent, r); }
 
+  console.log('\n5. claude: only the fields the app sends reach Anthropic (BACKLOG 13.11, 12/10/2026)');
+  {
+    let sent = null;
+    world({ email: 'admin@tfugen.local' });
+    const inner = globalThis.fetch;
+    globalThis.fetch = async (url, init) => { if (String(url).includes('api.anthropic.com')) sent = JSON.parse(init.body); return inner(url, init); };
+    await call(claude, { model: 'claude-haiku-4-5', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }],
+      tools: [{ name: 'web_search', type: 'web_search_20250305' }], tool_choice: { type: 'any' }, mcp_servers: [{ url: 'https://evil.example' }] });
+    check('the request still goes out with model, max_tokens and messages', !!sent && sent.model === 'claude-haiku-4-5' && sent.max_tokens === 10 && Array.isArray(sent.messages), sent);
+    check('tools, tool_choice and mcp_servers are dropped', !!sent && !('tools' in sent) && !('tool_choice' in sent) && !('mcp_servers' in sent), sent && Object.keys(sent));
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });

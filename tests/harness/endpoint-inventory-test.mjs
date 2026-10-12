@@ -29,7 +29,7 @@ const PUBLIC = {
   'close-hazard': ['a signed link from the alert mail; the token is the gate', /tokenError|verifyLink|tokenRow/],
   'trustee-gate': ['the trustee kiosk code is checked here; it is the gate itself', /TRUSTEE_CODE/],
   'self-recovery': ['"forgot password": queues a request, generic 200, rate limited, admin approves', /RATE_LIMIT_SECONDS/],
-  'wa-templates': ['GET lists template names for the settings screen; POST needs a user', /requireUser/],
+  'wa-templates': ['GET needs a signed-in user (BACKLOG 13.10); POST needs admin or manager', /requireRole\(request, env, \['admin', 'manager'\]\)/],
 };
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
