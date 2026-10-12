@@ -85,6 +85,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `SPEAK` / `speakScript(lang)` (`functions/api/talk.js`) | - | "read aloud" on the weekly-talk page: `speechSynthesis`, shown only when the phone has a voice in the page language (`he`/`iw`, `ar`, `ru`, `am`); `talk-speak-test.mjs` |
 | `_heFold(s)` / `_heMatch(q,texts)` | - | spelling-tolerant Hebrew search (12/10/2026): drops א/ו/י, niqqud, final forms and punctuation on both sides; a query of only א/ו/י falls back to plain substring. Used by the expiry page box `#exp-q` (`expSearch`). Reuse it for any new search box instead of `toLowerCase().indexOf` |
 | `_lockWipeSensitive()` / `_LOCK_WIPE` | - | called first thing in `_lockNow` (12/10/2026): empties `emp`, `med`, `hearing_tests` in DB and deletes them from the `tfgn2` blob in place. Never write `tfgn2` from DB inside the lock: at startup DB is still empty. A new sensitive table goes into `_LOCK_WIPE` |
+| `_signIcon(emoji)` / `_SIGN_MAP` / `_SIGN_GLYPH` | - | redesign phase 2 (12/10/2026): an emoji to an inline ISO 7010-style sign (warn triangle, must circle, safe square, fire square); unknown emoji escaped as is. Used by the Today rows; reuse it when phase 3 replaces emoji elsewhere. Sign tokens: `--s-yellow/red/green/blue/ink`, fonts `--f-sign/--f-plex/--f-mono` |
 | `VIEW_CONFIG` | 14558 | view field map |
 | `showView(tbl,id)` | 14652 | generic detail view |
 | `_PHOTO_BUCKET` | 22556 | `'incidents-photos'` |
