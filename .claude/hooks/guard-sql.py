@@ -62,7 +62,33 @@ sql = " ".join(str(ti.get(k, "")) for k in ("query", "sql"))
 ask = re.compile(
     r"\b(DELETE\s+FROM|TRUNCATE|DROP\s+(TABLE|SCHEMA|COLUMN|POLICY|FUNCTION|TRIGGER|VIEW|INDEX|TYPE)"
     r"|ALTER\s+POLICY|CREATE\s+(OR\s+REPLACE\s+)?POLICY|DISABLE\s+ROW\s+LEVEL\s+SECURITY"
-    r"|NO\s+FORCE\s+ROW\s+LEVEL\s+SECURITY|ALTER\s+TABLE\s+\S+\s+DROP\b)", re.I)
+    r"|NO\s+FORCE\s+ROW\s+LEVEL\s+SECURITY|ALTER\s+TABLE\s+\S+\s+DROP\b"
+    # BACKLOG 13.15 (12/10/2026): open a table to the anonymous kiosk, or switch off a guard
+    # trigger such as private.protect_delete. GRANT to authenticated and SECURITY DEFINER are
+    # in every ordinary migration (tfugen-db), and an unanswered ask hangs apply_migration.
+    r"|GRANT\b[^;]*\bTO\s+[^;]*\b(ANON|PUBLIC)\b|DISABLE\s+TRIGGER)", re.I)
+
+
+# tfugen-db rule 2: a SECURITY DEFINER function always sets search_path. One without it
+# runs as the owner and resolves names through the caller's path: a mistake, or an injection.
+def definer_no_path(q):
+    q = re.sub(r"'(?:[^']|'')*'", "''", q)
+    for st in q.split(";"):
+        u = re.search(r"\bSECURITY\s+DEFINER\b", st, re.I)
+        if u and not re.search(r"\bSET\s+search_path\b", st, re.I):
+            return u
+    return None
+
+
+# An UPDATE without WHERE rewrites every row of the table (BACKLOG 13.15). Literals are
+# blanked first so a ';' or a 'where' inside a string does not split or satisfy it.
+def update_all(q):
+    q = re.sub(r"'(?:[^']|'')*'", "''", q)
+    for st in q.split(";"):
+        u = re.search(r"\bUPDATE\s+(ONLY\s+)?[\w.\"]+(\s+(AS\s+)?\w+)?\s+SET\b", st, re.I)
+        if u and not re.search(r"\bWHERE\b", st[u.end():], re.I):
+            return u
+    return None
 # tfugen-db rule 7a (10/10/2026, recurred 11/10/2026): a ';' inside a quoted
 # literal, or a U+05F4 gershayim anywhere, makes the connector hang for 60s and
 # the statement never reaches the database. Text alone did not stop it.
@@ -86,7 +112,7 @@ def semi_in_literal(q):
 
 
 m = pat.search(plain(text))
-a = None if m else ask.search(plain(sql))
+a = None if m else (ask.search(plain(sql)) or update_all(plain(sql)) or definer_no_path(plain(sql)))
 t = None if (m or a) else ("\u05f4" if "\u05f4" in sql else (";" if semi_in_literal(plain(sql)) else None))
 # tfugen-db rule 8 (03/10/2026, lesson 45): a DO $$ block hangs the connector the
 # same way, in execute_sql and apply_migration alike. Run the statements one by one.
