@@ -12,12 +12,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const browser = await pw.chromium.launch();
   const page = await (await browser.newContext({ viewport: { width: 375, height: 812 }, locale: 'he-IL' })).newPage();
   const sent = [];
-  let empty = false;
+  let empty = false, reply = null;
   await page.route('**/*', (r) => {
     const u = r.request().url();
     // _AI is '/api/claude', relative: under file:// fetch refuses it before the
     // route sees it, so the test points _AI at an http host.
-    if (u.indexOf('/api/claude') >= 0) { sent.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: empty ? '{"rc":"","c":""}' : '{"rc":"אין נוהל פינוי","c":"לקבוע פינוי יומי"}' }] }) }); }
+    if (u.indexOf('/api/claude') >= 0) { sent.push(JSON.parse(r.request().postData())); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: reply || (empty ? '{"rc":"","c":""}' : '{"rc":"אין נוהל פינוי","c":"לקבוע פינוי יומי"}') }] }) }); }
     if (u.startsWith('file://')) return r.continue();
     return r.abort();
   });
@@ -46,6 +46,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const body = sent[0];
   const prompt = body && body.messages && body.messages[0].content || '';
   check('one request went out', sent.length === 1, sent.length);
+  // 12/10/2026: Llama 3.3 returned empty fields for a clear Hebrew description twice; Gemini, Llama as fallback in claude.js
+  check('asks Gemini (claude.js falls back to Llama)', body && body.model === 'gemini', body && body.model);
   check('the root cause must explain how the system allowed it, not restate or blame', /נוהל חסר, הדרכה, פיקוח, ציוד, תכנון/.test(prompt) && /לא מאשימה עובד/.test(prompt), prompt.slice(0, 300));
   check('the action must name the items in the description, with who and until when', /בשמם/.test(prompt) && /מי, ועד מתי/.test(prompt), prompt.slice(0, 300));
   check('generic phrasings are named as forbidden', /לעדכן נהלים/.test(prompt) && /לחזק מודעות/.test(prompt));
@@ -113,6 +115,22 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     return { toasts, rc: gv('ncr-rc'), c: gv('ncr-c') };
   });
   check('empty answer: fields stay empty and the user is asked for more detail', r4.rc === '' && r4.c === '' && r4.toasts.some((m) => /השלם את התיאור/.test(m)), r4);
+
+  console.log('\n5. an answer with a sentence around the JSON, or the fields one level down');
+  empty = false;
+  for (const [label, txt] of [['a sentence before the JSON', 'הנה התשובה: {"rc":"אין בדיקה יומית למלגזה","c":"בדיקת דליפות יומית"}'], ['the fields one level down', '{"NCR":{"rc":"אין בדיקה יומית למלגזה","c":"בדיקת דליפות יומית"}}']]) {
+    reply = txt;
+    const r5 = await page.evaluate(async () => {
+      const toasts = []; window.toast = (m) => toasts.push(m);
+      g('ncr-rc').value = ''; g('ncr-c').value = '';
+      g('ncr-d').value = 'נמצאה דליפת שמן מתחת למלגזה מספר 3 באזור המחסן';
+      _ncrAIRcAction();
+      for (let i = 0; i < 100 && !toasts.length; i++) await new Promise((res) => setTimeout(res, 50));
+      return { rc: gv('ncr-rc'), c: gv('ncr-c'), toasts };
+    });
+    check(label + ': the fields are filled', r5.rc === 'אין בדיקה יומית למלגזה' && r5.c === 'בדיקת דליפות יומית', r5);
+  }
+  reply = null;
 
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

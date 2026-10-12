@@ -16405,8 +16405,11 @@ window._ncrAIRcAction=function(){
     '5. \u05e8\u05e7 \u05d0\u05dd \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d0\u05d9\u05df \u05de\u05e1\u05e4\u05d9\u05e7 \u05e4\u05e8\u05d8\u05d9\u05dd \u05db\u05d3\u05d9 \u05dc\u05d3\u05e2\u05ea \u05de\u05d4 \u05e0\u05de\u05e6\u05d0 (\u05e8\u05e7 \u05db\u05d5\u05ea\u05e8\u05ea, \u05de\u05d9\u05dc\u05d4 \u05d0\u05d5 \u05e9\u05ea\u05d9\u05d9\u05dd), \u05d4\u05d7\u05d6\u05e8 rc \u05d5-c \u05e8\u05d9\u05e7\u05d9\u05dd ("") \u05d5\u05d0\u05dc \u05ea\u05e0\u05d7\u05e9. \u05ea\u05d9\u05d0\u05d5\u05e8 \u05e9\u05d0\u05d5\u05de\u05e8 \u05de\u05d4 \u05e0\u05de\u05e6\u05d0 \u05d5\u05d0\u05d9\u05e4\u05d4 \u05d0\u05d5 \u05e2\u05dc \u05d0\u05d9\u05d6\u05d4 \u05e4\u05e8\u05d9\u05d8 (\u05dc\u05de\u05e9\u05dc \u05d3\u05dc\u05d9\u05e4\u05ea \u05e9\u05de\u05df \u05de\u05ea\u05d7\u05ea \u05dc\u05de\u05dc\u05d2\u05d6\u05d4) \u05de\u05e1\u05e4\u05d9\u05e7, \u05d2\u05dd \u05db\u05e9\u05d0\u05d6\u05d5\u05e8, \u05de\u05d9\u05e7\u05d5\u05dd, \u05e2\u05d3\u05d9\u05e4\u05d5\u05ea \u05d0\u05d5 \u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d0 \u05e6\u05d5\u05d9\u05e0\u05d5.\n'+
     '\u05d4\u05e7\u05e4\u05d3 \u05e2\u05dc JSON \u05ea\u05e7\u05d9\u05df \u05d1\u05dc\u05d1\u05d3, \u05dc\u05dc\u05d0 \u05d4\u05e7\u05d3\u05de\u05d4. \u05e8\u05e7 \u05ea\u05d5\u05d5\u05d9 \u05de\u05e7\u05dc\u05d3\u05ea, \u05d1\u05dc\u05d9 \u05de\u05e7\u05e3 \u05d0\u05e8\u05d5\u05da.\n\n'+
     '\u05d4-NCR:\n'+ctx;
+  // 12/10/2026 (Chrome, after #1387: the same clear description still came back empty): Llama 3.3
+  // reads the Hebrew prompt poorly (DECISIONS 27/09/2026, the assistant moved to Gemini for the same
+  // reason). Gemini first; claude.js falls back to Llama on any failure.
   fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},
-    body:JSON.stringify({model:'@cf/meta/llama-3.3-70b-instruct-fp8-fast',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
+    body:JSON.stringify({model:'gemini',max_tokens:500,messages:[{role:'user',content:aiPrompt}]})})
     .then(function(r){return r.text().then(function(txt){return{ok:r.ok,status:r.status,txt:txt};});})
     .then(function(res){
       if(btn){btn.disabled=false;btn.textContent='\ud83e\udd16 \u05d4\u05e6\u05e2 \u05e1\u05d9\u05d1\u05d4 \u05d5\u05e4\u05e2\u05d5\u05dc\u05d4';}
@@ -16415,12 +16418,15 @@ window._ncrAIRcAction=function(){
       var content=dj.content&&dj.content[0]?dj.content[0].text:'';
       if(!content){toast('AI \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e8 \u05ea\u05d5\u05db\u05df');return;}
       content=content.replace(/^```(?:json)?\s*/,'').replace(/\s*```\s*$/,'').trim();
+      // A sentence before or after the JSON, or the two fields one level down, is still an answer.
+      var _a=content.indexOf('{'),_b=content.lastIndexOf('}');if(_a>0&&_b>_a)content=content.slice(_a,_b+1);
       var parsed;try{parsed=JSON.parse(content);}catch(e){toast('AI \u05d4\u05d7\u05d6\u05d9\u05e8 \u05d8\u05e7\u05e1\u05d8 \u05dc\u05d0 JSON - \u05dc\u05d0 \u05e9\u05d5\u05e0\u05d4');console.warn('AI raw:',content);return;}
+      if(parsed&&!parsed.rc&&!parsed.c){for(var _k in parsed){var _v=parsed[_k];if(_v&&typeof _v==='object'&&(_v.rc||_v.c)){parsed=_v;break;}}}
       var rcEl=g('ncr-rc'),cEl=g('ncr-c');
       var changed=[];
       if(rcEl && parsed.rc && !rcEl.value.trim()){rcEl.value=parsed.rc;changed.push('\u05e1\u05d9\u05d1\u05ea \u05e9\u05d5\u05e8\u05e9');}
       if(cEl && parsed.c && !cEl.value.trim()){cEl.value=parsed.c;changed.push('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05ea\u05e7\u05e0\u05ea');}
-      if(!parsed.rc&&!parsed.c){toast(_AI_THIN_ANS);return;}
+      if(!parsed.rc&&!parsed.c){console.warn('NCR AI empty answer from '+(dj.model||'?')+(dj.fallback_from?' (fallback)':'')+':',content);toast(_AI_THIN_ANS);return;}
       if(changed.length)toast('AI \u05de\u05d9\u05dc\u05d0: '+changed.join(' + '));
       else toast('\u05e9\u05d3\u05d5\u05ea \u05de\u05dc\u05d0\u05d9\u05dd - \u05dc\u05d0 \u05e0\u05d3\u05e8\u05e1');
     })
