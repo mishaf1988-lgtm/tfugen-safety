@@ -108,6 +108,7 @@ fetch('/api/claude', {
 - `gh` מחובר מ-07/10/2026 (`mishaf1988-lgtm`, keyring), כולל ל-michael-skills הפרטי: `bash .claude/hooks/ci-wait.sh main mishaf1988-lgtm/michael-skills` עבד חי. `merge-gate.py` קורא רק `GITHUB_TOKEN`/`GH_TOKEN` מהסביבה, לא את ה-keyring. `git push` עובד דרך Git Credential Manager. נתיב Windows ב-`git show origin/main:<path>` צריך `MSYS_NO_PATHCONV=1`.
 
 ## Anti-patterns (אל תעשה)
+- **צבע hex בתוך הגדרת CSS** (12/10/2026, עיצוב מחדש שלב 1): `color:`, `background:`, `border:` וכו' רק דרך `var(--c-*)` מה-`:root`. בתוך מחרוזת JS עם גיבוי: `var(--c-red-650,#cc1f1f)`, כי חלון הדפסה לא רואה את `:root`. canvas, `fillStyle` ו-html2canvas `backgroundColor` לא מקבלים משתנה. נאכף: `color-tokens-test.py`.
 - **לשנות `workers/*.js` ולחשוב שזה עלה** (12/10/2026): `tapugan-backup-cron` לא נפרס מ-`main`; מיכאל מדביק ומפרסם בלוח הבקרה של Cloudflare. שינוי שם = צעד ידני שלו, ולכן שווה רק כשהערך מצדיק אותו. רק `functions/` ו-`index.html` עולים לבד.
 - ❌ הוספת build step / webpack / vite
 - ❌ framework חדש (React/Vue/etc)
