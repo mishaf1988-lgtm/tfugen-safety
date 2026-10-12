@@ -14,6 +14,7 @@ sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows read
 sys.stdout.reconfigure(encoding="utf-8")  # the reason is Hebrew; Windows prints cp1255
 
 BRANCH_FLAGS = {"-b", "-B", "--orphan", "--detach"}
+REDIR = re.compile(r"^(\d*|&)(>>?|<)")
 
 
 def targets(cmd, cwd):
@@ -37,6 +38,9 @@ def targets(cmd, cwd):
         if i >= len(t) or t[i] not in ("checkout", "restore"):
             continue
         sub, args = t[i], t[i + 1:]
+        # Redirections are not paths (12/10/2026: `git checkout -q f 2>/dev/null` read "2>/dev/null" as
+        # a branch name, so the dirty file passed and the fix was wiped).
+        args = [a for a in args if not REDIR.match(a)]
         if BRANCH_FLAGS & set(args):
             continue
         if sub == "restore" and "--staged" in args and "--worktree" not in args and "-W" not in args:
