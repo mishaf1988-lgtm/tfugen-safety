@@ -3,7 +3,7 @@
 // (Graph conversion of an HTML page; the HTML itself when that fails) and mailed with the file to
 // Michael and hr-tap@. The signature is saved first: a OneDrive or mail failure never loses it,
 // and the reason lands on the row (doc_err). A weekly talk sends nothing.
-import { onRequest, makeTalkToken, inductionHtml, quizAnswers, makeCodeCookie, IND_HR, IND_ROOT } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, inductionHtml, quizAnswers, makeCodeCookie, IND_HR, IND_ROOT, docsOf, MAX_DOCS } from './_build/talk.mjs';
 import { LOGO_JPG } from './_build/_logo.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
@@ -36,7 +36,7 @@ globalThis.fetch = async (url, init) => {
     if (w.putFail && !/Apps\//.test(path)) return json({ error: { message: 'disk full' } }, 507);
     return json({ webUrl: 'https://od.example/' + encodeURIComponent(path), size: init.body.length });
   }
-  if (u.startsWith(GR + '/drive/root:/') && /\?format=pdf$/.test(u)) { w.conv++; if (w.noPdf) return new Response('x', { status: 406 }); const b = new Uint8Array(2000); b.set([0x25, 0x50, 0x44, 0x46], 0); return new Response(b, { status: 200 }); }
+  if (u.startsWith(GR + '/drive/root:/') && /\?format=pdf$/.test(u)) { w.conv++; if (w.noPdf) return new Response('x', { status: 406 }); const b = new Uint8Array(w.bigPdf ? 3.5 * 1024 * 1024 : 2000); b.set([0x25, 0x50, 0x44, 0x46], 0); return new Response(b, { status: 200 }); }
   if (u === GR + '/sendMail') { const b = JSON.parse(init.body); w.mails.push(b); return w.mailFail ? json({ error: { message: 'quota' } }, 429) : new Response(null, { status: 202 }); }
   return json({ error: 'unexpected ' + u }, 599);
 };
@@ -45,7 +45,7 @@ const SIG = 'data:image/png;base64,' + Buffer.from(png).toString('base64');
 const sign = async (id, extra) => {
   const k = await makeTalkToken(ENV, id);
   const fd = new FormData();
-  for (const [a, b] of Object.entries({ k, l: 'he', emp: '__other', oname: 'Ivan Petrov', ocomp: 'כוח אדם', oid: '334455667', ok: '1', sig: SIG, qa: '0:1', ino: '1234', idep: 'טוגנים', iph: '052-1234567', ijob: 'מפעיל קו', ...extra })) fd.append(a, b);
+  for (const [a, b] of Object.entries({ k, l: 'he', emp: '__other', oname: 'Ivan Petrov', ocomp: 'כוח אדם', oid: '334455667', ok: '1', sig: SIG, qa: '0:1', ino: '1234', idep: 'טוגנים', iph: '052-1234567', ijob: 'מפעיל קו', ...extra })) (Array.isArray(b) ? b : [b]).forEach((v) => fd.append(a, v));
   const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', cookie: 'tsind=' + (await makeCodeCookie(ENV, id, '246810')) } }), env: ENV });
   return { st: r.status, h: await r.text() };
 };
@@ -94,6 +94,25 @@ console.log('\n2. a new worker signs');
   check('the mail carries the signed form and the link to the folder', mail && mail.attachments && mail.attachments[0].contentType === 'application/pdf' && /\.pdf$/.test(mail.attachments[0].name) && mail.body.content.includes('od.example') && mail.subject.includes('איוון פטרוב'), mail && mail.subject);
   const p = w.patches[0];
   check('the row keeps the folder link and when it was mailed', p && p.b.doc_url && p.b.mailed_at && p.b.doc_err === null && p.u.includes('id=eq.' + w.inserts[0].id), p);
+}
+
+console.log('\n2b. documents photographed at the induction (13/10/2026, Michael: embedded in the PDF)');
+{
+  const jpg = (n, fill) => { const b = new Uint8Array(n).fill(fill || 7); b.set([0xFF, 0xD8, 0xFF], 0); return 'data:image/jpeg;base64,' + Buffer.from(b).toString('base64'); };
+  check('docsOf: JPEG data only, small or broken ones dropped, at most ' + MAX_DOCS, docsOf([jpg(5000), 'data:image/png;base64,AAAA', 'x', jpg(100), jpg(5000)]).length === 2 && docsOf(Array(MAX_DOCS + 3).fill(jpg(5000))).length === MAX_DOCS);
+  check('docsOf: one too big (over 900KB) is dropped', docsOf([jpg(950 * 1024)]).length === 0);
+  const h = inductionHtml(T.ind, { id: 'r1', emp_name: 'דני', id_no: '1' }, 'QQ', 'he', { day: '2026-10-11', hm: '07:05' }, [], ['QUJD', 'REVG']);
+  check('the form: a page per document after the signature, numbered "1 of 2"', (h.match(/page-break-before:always/g) || []).length === 2 && h.includes('data:image/jpeg;base64,QUJD') && h.indexOf('QUJD') > h.indexOf('חתימה') && /1 מתוך 2/.test(h));
+  check('no documents: no extra page', !inductionHtml(T.ind, { id: 'r1', emp_name: 'x', id_no: '1' }, 'QQ', 'he', { day: '2026-10-11', hm: '07:05' }, []).includes('page-break-before'));
+  reset();
+  const r = await sign('ind1', { doc: [jpg(6000, 1), jpg(6000, 2)] });
+  const src = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
+  check('signed with two photos: both inside the filed form', r.st === 200 && src && (src.txt.match(/page-break-before:always/g) || []).length === 2, src && src.txt.length);
+  check('the photos are not in the database row', w.inserts[0] && !JSON.stringify(w.inserts[0]).includes('base64'));
+  reset({ bigPdf: true });
+  await sign('ind1', { doc: [jpg(6000)] });
+  const mail = w.mails[0] && w.mails[0].message;
+  check('a form too big for a mail: sent with the link, no attachment', mail && (!mail.attachments || !mail.attachments.length) && mail.body.content.includes('od.example'), mail && mail.attachments && mail.attachments.length);
 }
 
 console.log('\n3. when something fails');
