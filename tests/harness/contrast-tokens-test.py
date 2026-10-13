@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""BACKLOG 13.21 (13/10/2026): the colour tokens behind most text stay at WCAG AA (4.5).
+
+visual-audit.js section 6 found 148 text elements under AA on 65 pages, almost all from
+three tokens: --t3 (#6b7280 on the page grey, 4.35: every page footer and the dashboard
+date), --c-blue-400-3 (#3b82f6, white on it 3.68: primary buttons) and --c-teal-700-2
+(#0d9488, white on it 3.74: the AI and mail buttons). They became #5f6673, the sign blue
+#154889 and #0f766e. This fails if one of them, or the page grey, drifts back under 4.5.
+"""
+import os, re, sys
+
+HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'index.html')
+s = open(HTML, encoding='utf-8').read()
+ok = bad = 0
+
+
+def check(label, cond, detail=None):
+    global ok, bad
+    if cond:
+        ok += 1; print('  ✓ ' + label)
+    else:
+        bad += 1; print('  ✗ %s  -> %s' % (label, detail))
+
+
+def tok(name):
+    m = re.search(r'(?<![\w-])--' + re.escape(name) + r':(#[0-9a-fA-F]{6});', s)
+    return m and m.group(1)
+
+
+def lum(h):
+    f = lambda x: x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+
+
+def ratio(a, b):
+    la, lb = lum(a), lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+bg = tok('bg')
+pairs = [
+    ('--t3 on the page grey (footer, dashboard date)', tok('t3'), bg),
+    ('--t3 on white (cards)', tok('t3'), '#ffffff'),
+    ('white on --c-blue-400-3 (primary buttons)', '#ffffff', tok('c-blue-400-3')),
+    ('white on --c-teal-700-2 (AI / mail buttons)', '#ffffff', tok('c-teal-700-2')),
+]
+for label, fg, back in pairs:
+    if not fg or not back:
+        check(label + ': token found', False, (fg, back)); continue
+    r = ratio(fg, back)
+    check('%s: %.2f >= 4.5' % (label, r), r >= 4.5, (fg, back))
+
+# The page-title period labels sit on the sign yellow, where no grey reaches 4.5.
+for pid in ('cal-period', 'mr-period'):
+    m = re.search(r'<span id="' + pid + r'" style="[^"]*color:var\(--s-ink\)', s)
+    check('#%s is ink on the yellow title, not --t3 (2.45)' % pid, bool(m))
+
+print('\n%d passed, %d failed' % (ok, bad))
+sys.exit(1 if bad else 0)
