@@ -57,28 +57,9 @@
   לא לאשר את הבקשה ולא להסיר. אני מחליט אחרי שאראה את התשובה.
   ```
 
-- [ ] **C6. יצירת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: ניסיון חינם בחשבון העבודה (מומלץ)"; `work-vm-setup.md` שלב 2). המנוי קיים (C9 בוצע 13/10/2026). **להריץ בפרופיל הכרום "Azure פרטי"**, לא בפרופיל של העבודה.
-  ```
-  מיכאל אישר (13/10/2026, בשאלון של Claude Code: "בצע: Azure על ה-Gmail שלי", "בצע: מחשב לפי דרישה"). יש מנוי ניסיון ב-Azure שמיכאל פתח בחשבון הפרטי.
-  ב-https://portal.azure.com, מחובר **לחשבון Microsoft הפרטי של מיכאל (כתובת ה-Gmail), לא ל-sviva@tapugan.co.il**. אם הפורטל פתוח על החשבון של תפוגן: לעצור ולבקש ממני להחליף חשבון.
-  1. Virtual machines, Create, Azure virtual machine.
-  2. Subscription: מנוי הניסיון. Resource group חדש: tapugan-claude-rg.
-     Virtual machine name: tapugan-claude. Region: (Middle East) Israel Central.
-     Image: Windows Server 2022 Datacenter: Azure Edition [smalldisk] (לא Core, עם Desktop Experience; הרגיל נעול על 127GB).
-     Size: Standard_B2als_v2 (אם לא זמין באזור: Standard_B2s).
-     Username: michael-vm. **את הסיסמה לא להזין: לעצור ולבקש ממני להקליד אותה בעצמי.**
-     Public inbound ports: Allow selected ports, RDP (3389).
-  3. Disks: Standard SSD, 64GB.
-  4. Management: Auto-shutdown פעיל, 22:00, אזור זמן Israel.
-  5. Review + create: לצלם את מסך הסיכום כולל המחיר המשוער, ולעצור. אני מאשר את Create בעצמי.
-  6. אחרי שהמחשב נוצר: Networking, כלל ה-RDP, Source = My IP address, לשמור.
-  7. Cost Management, Budgets, Add: 15 דולר לחודש, התראה במייל לכתובת ה-Gmail של מיכאל ב-80% וב-100%.
-  8. לכבות את המחשב (Stop) בסוף, כדי שלא יחויב עד השימוש הראשון.
-  לא ליצור משאבים נוספים, לא לשנות שום הגדרה אחרת. בסוף לכתוב לי: מחיר משוער לחודש מהסיכום, הכתובת הציבורית של המחשב, ושהתקציב נוצר.
-  ```
-
 ## בוצע
 
+- [x] **C6. יצירת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: ניסיון חינם בחשבון העבודה (מומלץ)"; `work-vm-setup.md` שלב 2). המנוי קיים (C9 בוצע 13/10/2026). **להריץ בפרופיל הכרום "Azure פרטי"**, לא בפרופיל של העבודה. **בוצע 13/10/2026 על ידי Claude בכרום:** `tapugan-claude` ב-`tapugan-claude-rg`, Israel Central, Standard_B2als_v2, smalldisk, 64GB Standard SSD, משתמש michael-vm (סיסמה של מיכאל), $0.0521 לשעה לפי מסך הסיכום. כלל ה-RDP מוגבל לכתובת של מיכאל בזמן היצירה. תקציב `tapugan-claude-budget` 15 דולר (התראות ב-80% וב-100% ל-Gmail). **Auto-shutdown לא נשמר** (Save כבוי ב-Israel Central). המחשב נעצר: Stopped (deallocated).
 - [x] **C9. חשבון Azure פרטי על ה-Gmail (שלב 1, דרך כרום)** (13/10/2026, מיכאל: "רשום הוראות מלאות ש-Chrome יעשה את זה עבורי"; `work-vm-setup.md` שלב 1). לפני C6. **13/10/2026:** בפרופיל הרגיל הדף נפתח על חשבון תפוגן (כרום עצר, לא נחתם דבר), אבל הפעם נקרא. מיכאל בשאלון: "בצע: פרופיל כרום נפרד (מומלץ)": ההרשמה רצה בפרופיל "Azure פרטי" עם התוסף (`work-vm-setup.md` שלב 1). **בוצע 13/10/2026:** מיכאל נכנס לפורטל בפרופיל "Azure פרטי" עם mishaf1988@gmail.com, הפעיל אימות דו-שלבי, והמסך מציג "$200 in credits remaining" (צילום של מיכאל). לא נוצר שום משאב.
 - [x] **C7. ניסיון חינם ב-Azure על חשבון תפוגן** (13/10/2026). **הוחלף 13/10/2026:** מיכאל בשאלון: "בצע: Azure על ה-Gmail שלי". ההרשמה הפרטית ממולאת ביד (`work-vm-setup.md` שלב 1), כי התוסף לא קורא את signup.azure.com. בניסיון על חשבון תפוגן לא נוצר מנוי.
 - [x] **C8. מחיר Kamatera** (13/10/2026). **בוטל:** מיכאל בחר ב-Azure, מחשב לפי דרישה.
