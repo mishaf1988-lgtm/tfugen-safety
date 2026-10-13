@@ -22,7 +22,7 @@
 | שדה | ערך | למה |
 |---|---|---|
 | Region | Israel Central | שער המדינות של האתר מכניס רק מישראל |
-| Image | Windows Server 2022 Datacenter: Azure Edition (Desktop Experience) | הרישיון כלול במחיר. Windows 11 ב-Azure דורש רישיון נוסף |
+| Image | Windows Server 2022 Datacenter: Azure Edition **[smalldisk]** (Desktop Experience, x64 Gen 2) | הרישיון כלול במחיר. Windows 11 ב-Azure דורש רישיון נוסף. **smalldisk:** האימג' הרגיל מגיע עם דיסק 127GB שאי אפשר להקטין; smalldisk מתחיל ב-30GB ומגדילים ל-64GB (כרום, 13/10/2026; מיכאל בחר בשאלון של כרום) |
 | Size | Standard_B2als_v2 (2 מעבדים, 4GB) | אותה רמה כמו B2s, זול יותר (אתרי השוואה, לא אומת במחשבון) |
 | Disk | Standard SSD, 64GB | הדיסק משולם גם כשהמחשב כבוי, ולכן קטן |
 | שם המחשב | `tapugan-claude` | |

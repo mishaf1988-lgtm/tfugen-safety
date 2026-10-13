@@ -64,7 +64,7 @@
   1. Virtual machines, Create, Azure virtual machine.
   2. Subscription: מנוי הניסיון. Resource group חדש: tapugan-claude-rg.
      Virtual machine name: tapugan-claude. Region: (Middle East) Israel Central.
-     Image: Windows Server 2022 Datacenter: Azure Edition (לא Core, עם Desktop Experience).
+     Image: Windows Server 2022 Datacenter: Azure Edition [smalldisk] (לא Core, עם Desktop Experience; הרגיל נעול על 127GB).
      Size: Standard_B2als_v2 (אם לא זמין באזור: Standard_B2s).
      Username: michael-vm. **את הסיסמה לא להזין: לעצור ולבקש ממני להקליד אותה בעצמי.**
      Public inbound ports: Allow selected ports, RDP (3389).
