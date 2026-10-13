@@ -39,15 +39,15 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   /* Redesign "factory sign" (12/10/2026, DECISIONS): ISO 3864 safety colours, used only for their
-     meaning. Approximations of RAL 1003 / 3001 / 6032 / 5005 / 9004. Phase 2: the home screen only. */
+     meaning. Approximations of RAL 1003 / 3001 / 6032 / 5005 / 9004. Phase 2: the home screen. Phase 3 (13/10/2026): the whole app, the hues below too. */
   --s-yellow:#f9a800;--s-red:#a72920;--s-green:#237f52;--s-blue:#154889;--s-ink:#2b2b2c;--s-paper:#fff;--s-sub:#4a4d50;
   --f-sign:'Karantina',Impact,'Arial Narrow',sans-serif;--f-plex:'IBM Plex Sans Hebrew','Heebo',Arial,sans-serif;--f-mono:'IBM Plex Mono',ui-monospace,monospace;
   /* Phase 1 of the redesign (12/10/2026): every colour that was written inline, named by
      hue and lightness. Values are the old colours exactly; phase 3 changes them here. */
-  --c-amber-100:#fff2cc;--c-amber-100-2:#fef3c7;--c-amber-350:#fcd34d;--c-amber-450:#fbbf24;--c-amber-50:#fffbeb;--c-amber-50-2:#fff8ed;--c-amber-50-3:#fff8e6;--c-amber-50-4:#fef9e7;--c-amber-500:#f59e0b;--c-amber-550:#eab308;--c-amber-650:#a16207;--c-blue-100:#dde0e6;--c-blue-100-2:#e8eaee;--c-blue-100-3:#e2e8f0;--c-blue-150:#cbd5e1;--c-blue-150-2:#bae6fd;--c-blue-150-3:#bfdbfe;--c-blue-150-4:#c0d4e8;--c-blue-200:#93c5fd;--c-blue-200-2:#aaccee;--c-blue-300:#60a5fa;--c-blue-350:#4d9fff;--c-blue-350-2:#94a3b8;--c-blue-350-3:#6366f1;--c-blue-400:#5da8d9;--c-blue-400-2:#4a9adf;--c-blue-400-3:#3b82f6;--c-blue-400-4:#7a9ab8;--c-blue-450:#2563eb;--c-blue-50:#eff6ff;--c-blue-50-10:#f0f4f8;--c-blue-50-11:#f0f9ff;--c-blue-50-12:#dcecff;--c-blue-50-13:#e0f2fe;--c-blue-50-14:#eef2ff;--c-blue-50-15:#ddeeff;--c-blue-50-2:#f5f7fa;--c-blue-50-3:#f3f5f8;--c-blue-50-4:#dbeafe;--c-blue-50-5:#f1f5f9;--c-blue-50-6:#f8fafc;--c-blue-50-7:#fafbfc;--c-blue-50-8:#f8f9fa;--c-blue-50-9:#eef0f3;--c-blue-500:#1d4ed8;--c-blue-500-2:#4a7aaa;--c-blue-500-3:#5a7a9a;--c-blue-550:#64748b;--c-blue-600:#1e40af;--c-blue-600-2:#0078d4;--c-blue-600-3:#0284c7;--c-blue-600-4:#3730a3;--c-blue-600-5:#4a6a8a;--c-blue-600-6:#2a6aaa;--c-blue-650:#475569;--c-blue-650-2:#4a5568;--c-blue-650-3:#0891b2;--c-blue-650-4:#1e3a8a;--c-blue-650-5:#2a5a8a;--c-blue-650-6:#3a5a7a;--c-blue-750:#0d4a72;--c-blue-750-2:#374151;--c-blue-750-3:#1e3a5f;--c-blue-750-4:#334155;--c-blue-750-5:#1a3a5a;--c-blue-750-6:#0c4a6e;--c-blue-750-7:#075985;--c-blue-850:#1e293b;--c-blue-850-2:#1a2a3a;--c-blue-900:#0f172a;--c-blue-950:#0d1014;--c-gray-100:#eaeaea;--c-gray-100-2:#e8e9eb;--c-gray-100-3:#e5e7eb;--c-gray-100-4:#e0e0e0;--c-gray-150:#dddddd;--c-gray-150-2:#d5d8de;--c-gray-150-3:#d1d5db;--c-gray-150-4:#d4d4d8;--c-gray-200:#cbd0d8;--c-gray-200-2:#cccccc;--c-gray-250:#bfc4cc;--c-gray-250-2:#bbbbbb;--c-gray-300:#a4abb6;--c-gray-350:#9aa1ab;--c-gray-350-2:#aaaaaa;--c-gray-350-3:#9ca3af;--c-gray-400:#9098a8;--c-gray-400-2:#999999;--c-gray-450:#888888;--c-gray-50:#f5f5f5;--c-gray-50-2:#fafafa;--c-gray-50-3:#f0f1f3;--c-gray-50-4:#f0f0f0;--c-gray-50-5:#eeeeee;--c-gray-50-6:#f8f8f8;--c-gray-50-7:#f3f4f6;--c-gray-50-8:#f7f7f7;--c-gray-50-9:#f6f6f6;--c-gray-550:#6b7280;--c-gray-550-2:#777777;--c-gray-600:#5a6070;--c-gray-600-2:#666666;--c-gray-650:#555555;--c-gray-650-2:#4b5563;--c-gray-750:#444444;--c-gray-800:#333333;--c-gray-850:#222222;--c-gray-900:#1a1d23;--c-gray-900-2:#111416;--c-gray-900-3:#1a1a1a;--c-gray-950:#000000;--c-gray-950-2:#111111;--c-gray-950-3:#0a0c0e;--c-green-250:#86efac;--c-green-250-2:#aaccaa;--c-green-450:#5fbf80;--c-green-450-2:#7aaa7a;--c-green-50:#f0fdf4;--c-green-50-2:#dcfce7;--c-green-50-3:#f0f7f0;--c-green-500:#25d366;--c-green-550:#22c55e;--c-green-600:#00cc55;--c-green-650:#16a34a;--c-green-700:#15803d;--c-green-750:#166534;--c-green-750-2:#0e7a37;--c-green-800:#0a5f2a;--c-green-900:#0d1a0d;--c-green-900-2:#0d2a0d;--c-orange-100:#ffedd5;--c-orange-300:#fdba74;--c-orange-400:#f0a04b;--c-orange-50:#fff7ed;--c-orange-500:#ea580c;--c-orange-550:#d97706;--c-orange-550-2:#e07a00;--c-orange-600:#c2410c;--c-orange-650:#b45309;--c-orange-650-2:#9a3412;--c-orange-700:#92400e;--c-orange-700-2:#8a4a05;--c-orange-700-3:#7c2d12;--c-red-200:#fca5a5;--c-red-350:#e07070;--c-red-350-2:#ff4444;--c-red-50:#fef2f2;--c-red-50-2:#fff1f1;--c-red-50-3:#fce4e4;--c-red-50-4:#fde2e2;--c-red-50-5:#fee2e2;--c-red-50-6:#fff5f5;--c-red-50-7:#fff7f7;--c-red-500:#e11d48;--c-red-500-2:#dc2626;--c-red-550:#cc1f1f;--c-red-600:#b91c1c;--c-red-600-2:#b81818;--c-red-650:#991515;--c-red-650-2:#991b1b;--c-red-650-3:#9c1313;--c-red-650-4:#a01818;--c-red-700:#7f1d1d;--c-red-700-2:#7a2222;--c-red-750:#7a0000;--c-teal-100:#ccfbf1;--c-teal-50:#ecfdf5;--c-teal-50-2:#f0fdfa;--c-teal-600:#10b981;--c-teal-600-2:#14b8a6;--c-teal-700:#2d6a4f;--c-teal-700-2:#0d9488;--c-teal-750:#0f766e;--c-teal-800:#065f46;--c-teal-800-2:#115e59;--c-teal-850:#0d3d2d;--c-violet-100:#e9d5ff;--c-violet-150:#d8b4fe;--c-violet-400:#7c3aed;--c-violet-50:#f3eafa;--c-violet-50-2:#f3e8ff;--c-violet-50-3:#faf5ff;--c-violet-600:#6b21a8;--c-violet-600-2:#5b21b6;--c-white:#ffffff;--c-yellow-100:#fef9c3;--c-yellow-250:#fde68a;--c-yellow-50:#fefce8;
-  --red:#cc1f1f;--red2:#a01818;--bg:#f2f3f5;--card:#fff;--border:#dde0e6;
-  --tx:#1a1d23;--t2:#4a5260;--t3:#6b7280;--ok:#16a34a;--warn:#d97706;--bad:#cc1f1f;
-  --blue:#2176ae;--sh:0 1px 4px rgba(0,0,0,.08);
+  --c-amber-100:#fff2cc;--c-amber-100-2:#fef3c7;--c-amber-350:#fcd34d;--c-amber-450:#f9a800;--c-amber-50:#fffbeb;--c-amber-50-2:#fff8ed;--c-amber-50-3:#fff8e6;--c-amber-50-4:#fef9e7;--c-amber-500:#f9a800;--c-amber-550:#f9a800;--c-amber-650:#a16207;--c-blue-100:#dde0e6;--c-blue-100-2:#e8eaee;--c-blue-100-3:#e2e8f0;--c-blue-150:#cbd5e1;--c-blue-150-2:#bae6fd;--c-blue-150-3:#bfdbfe;--c-blue-150-4:#c0d4e8;--c-blue-200:#93c5fd;--c-blue-200-2:#aaccee;--c-blue-300:#60a5fa;--c-blue-350:#4d9fff;--c-blue-350-2:#94a3b8;--c-blue-350-3:#6366f1;--c-blue-400:#5da8d9;--c-blue-400-2:#4a9adf;--c-blue-400-3:#3b82f6;--c-blue-400-4:#7a9ab8;--c-blue-450:#154889;--c-blue-50:#eff6ff;--c-blue-50-10:#f0f4f8;--c-blue-50-11:#f0f9ff;--c-blue-50-12:#dcecff;--c-blue-50-13:#e0f2fe;--c-blue-50-14:#eef2ff;--c-blue-50-15:#ddeeff;--c-blue-50-2:#f5f7fa;--c-blue-50-3:#f3f5f8;--c-blue-50-4:#dbeafe;--c-blue-50-5:#f1f5f9;--c-blue-50-6:#f8fafc;--c-blue-50-7:#fafbfc;--c-blue-50-8:#f8f9fa;--c-blue-50-9:#eef0f3;--c-blue-500:#154889;--c-blue-500-2:#4a7aaa;--c-blue-500-3:#5a7a9a;--c-blue-550:#64748b;--c-blue-600:#154889;--c-blue-600-2:#0078d4;--c-blue-600-3:#0284c7;--c-blue-600-4:#154889;--c-blue-600-5:#4a6a8a;--c-blue-600-6:#2a6aaa;--c-blue-650:#475569;--c-blue-650-2:#4a5568;--c-blue-650-3:#0891b2;--c-blue-650-4:#103a6e;--c-blue-650-5:#2a5a8a;--c-blue-650-6:#3a5a7a;--c-blue-750:#0d4a72;--c-blue-750-2:#374151;--c-blue-750-3:#1e3a5f;--c-blue-750-4:#334155;--c-blue-750-5:#1a3a5a;--c-blue-750-6:#0c4a6e;--c-blue-750-7:#075985;--c-blue-850:#1e293b;--c-blue-850-2:#1a2a3a;--c-blue-900:#0f172a;--c-blue-950:#0d1014;--c-gray-100:#eaeaea;--c-gray-100-2:#e8e9eb;--c-gray-100-3:#e5e7eb;--c-gray-100-4:#e0e0e0;--c-gray-150:#dddddd;--c-gray-150-2:#d5d8de;--c-gray-150-3:#d1d5db;--c-gray-150-4:#d4d4d8;--c-gray-200:#cbd0d8;--c-gray-200-2:#cccccc;--c-gray-250:#bfc4cc;--c-gray-250-2:#bbbbbb;--c-gray-300:#a4abb6;--c-gray-350:#9aa1ab;--c-gray-350-2:#aaaaaa;--c-gray-350-3:#9ca3af;--c-gray-400:#9098a8;--c-gray-400-2:#999999;--c-gray-450:#888888;--c-gray-50:#f5f5f5;--c-gray-50-2:#fafafa;--c-gray-50-3:#f0f1f3;--c-gray-50-4:#f0f0f0;--c-gray-50-5:#eeeeee;--c-gray-50-6:#f8f8f8;--c-gray-50-7:#f3f4f6;--c-gray-50-8:#f7f7f7;--c-gray-50-9:#f6f6f6;--c-gray-550:#6b7280;--c-gray-550-2:#777777;--c-gray-600:#5a6070;--c-gray-600-2:#666666;--c-gray-650:#555555;--c-gray-650-2:#4b5563;--c-gray-750:#444444;--c-gray-800:#333333;--c-gray-850:#222222;--c-gray-900:#1a1d23;--c-gray-900-2:#111416;--c-gray-900-3:#1a1a1a;--c-gray-950:#000000;--c-gray-950-2:#111111;--c-gray-950-3:#0a0c0e;--c-green-250:#86efac;--c-green-250-2:#aaccaa;--c-green-450:#5fbf80;--c-green-450-2:#7aaa7a;--c-green-50:#f0fdf4;--c-green-50-2:#dcfce7;--c-green-50-3:#f0f7f0;--c-green-500:#25d366;--c-green-550:#22c55e;--c-green-600:#00cc55;--c-green-650:#237f52;--c-green-700:#237f52;--c-green-750:#1c6642;--c-green-750-2:#237f52;--c-green-800:#0a5f2a;--c-green-900:#0d1a0d;--c-green-900-2:#0d2a0d;--c-orange-100:#ffedd5;--c-orange-300:#fdba74;--c-orange-400:#f0a04b;--c-orange-50:#fff7ed;--c-orange-500:#ea580c;--c-orange-550:#d97706;--c-orange-550-2:#e07a00;--c-orange-600:#c2410c;--c-orange-650:#b45309;--c-orange-650-2:#9a3412;--c-orange-700:#92400e;--c-orange-700-2:#8a4a05;--c-orange-700-3:#7c2d12;--c-red-200:#fca5a5;--c-red-350:#e07070;--c-red-350-2:#ff4444;--c-red-50:#fef2f2;--c-red-50-2:#fff1f1;--c-red-50-3:#fce4e4;--c-red-50-4:#fde2e2;--c-red-50-5:#fee2e2;--c-red-50-6:#fff5f5;--c-red-50-7:#fff7f7;--c-red-500:#a72920;--c-red-500-2:#a72920;--c-red-550:#a72920;--c-red-600:#a72920;--c-red-600-2:#a72920;--c-red-650:#991515;--c-red-650-2:#991b1b;--c-red-650-3:#9c1313;--c-red-650-4:#a01818;--c-red-700:#7f1d1d;--c-red-700-2:#7a2222;--c-red-750:#7a0000;--c-teal-100:#ccfbf1;--c-teal-50:#ecfdf5;--c-teal-50-2:#f0fdfa;--c-teal-600:#10b981;--c-teal-600-2:#14b8a6;--c-teal-700:#2d6a4f;--c-teal-700-2:#0d9488;--c-teal-750:#0f766e;--c-teal-800:#065f46;--c-teal-800-2:#115e59;--c-teal-850:#0d3d2d;--c-violet-100:#d8e1ef;--c-violet-150:#bccbe2;--c-violet-400:#154889;--c-violet-50:#eef2f8;--c-violet-50-2:#eef2f8;--c-violet-50-3:#f5f7fb;--c-violet-600:#154889;--c-violet-600-2:#103a6e;--c-white:#ffffff;--c-yellow-100:#fef9c3;--c-yellow-250:#fde68a;--c-yellow-50:#fefce8;
+  --red:var(--s-red);--red2:#86211a;--bg:#f2f3f5;--card:#fff;--border:#dde0e6;
+  --tx:var(--s-ink);--t2:var(--s-sub);--t3:#6b7280;--ok:var(--s-green);--warn:#d97706;--bad:var(--s-red);
+  --blue:var(--s-blue);--sh:0 1px 4px rgba(0,0,0,.08);
   --ac:var(--red);--su:#f9fafb
 }
 /* a11y: enforce minimum touch target size for icon-only close buttons.
@@ -889,6 +889,75 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 }
 /* Clickable list rows in the dashboard widgets were 27-33px tall (visual-audit 02/10/2026); a finger needs 40. */
 #pg-dash div[onclick][style*="border-bottom"]{min-height:40px;align-items:center}
+/* ---- Phase 3 of the redesign: the factory-sign language everywhere (13/10/2026) ----
+   What phase 2 gave the home screen, for the shared parts: top bar, bottom nav, page title,
+   cards, buttons, tables, forms, modals, badges. Square corners, ink lines instead of shadows,
+   sign headings, blue for an action, red/yellow/green only for what they mean. Emoji on
+   buttons are untouched: they appear in the guides (waits for Michael). */
+body{font-family:var(--f-plex)}
+input,select,textarea,button{font-family:var(--f-plex)}
+.topbar{border-bottom:3px solid var(--s-ink);box-shadow:none}
+.topbar-title{border-right-color:var(--s-ink)}
+.topbar-title .t1{color:var(--s-ink)}
+.topbar-left img,body:not(.on-dash) .topbar-left img{border-radius:0}
+.bell{border-radius:0}
+.bell:hover,.bell:active{transform:none}
+.bnav{border-top:3px solid var(--s-ink);box-shadow:none}
+.bn{color:var(--s-sub)}
+.bn.on{color:var(--s-ink);background:var(--s-yellow);border-top-color:var(--s-ink)}
+.bn.on::after{display:none}
+.page-title{font-family:var(--f-sign);font-size:40px;font-weight:700;line-height:1;letter-spacing:0;color:var(--s-ink);border-bottom:3px solid var(--s-ink);padding-bottom:6px}
+.page-title span{color:var(--s-ink);text-decoration:none;background:var(--s-yellow);padding:0 8px}
+.card,.kpi{border:1px solid var(--s-ink);border-radius:0;box-shadow:none}
+.card:hover,.kpi:hover{transform:none;box-shadow:none}
+.card-title{font-family:var(--f-sign);font-size:24px;font-weight:700;line-height:1;text-transform:none;letter-spacing:0;color:var(--s-ink)}
+.card-title::before{display:none}
+.kpi::before{display:none}
+.kpi-val{font-family:var(--f-mono);letter-spacing:0}
+.kpi-label{text-transform:none;letter-spacing:0}
+.btn{border-radius:0;box-shadow:none}
+.btn-p{background:var(--s-blue);color:var(--s-paper);border:2px solid var(--s-ink);box-shadow:none}
+.btn-p:active{background:var(--s-ink)}
+.btn-s{background:var(--s-paper);color:var(--s-ink);border:2px solid var(--s-ink)}
+.btn-s:active{background:var(--s-yellow)}
+.btn-d{background:var(--s-paper);color:var(--s-red);border:2px solid var(--s-red)}
+.btn-d:active{background:var(--s-red);color:var(--s-paper)}
+@media(hover:hover){
+  .btn-p:hover:not(:disabled),.btn-s:hover:not(:disabled),.btn-d:hover:not(:disabled){transform:none;box-shadow:none}
+  .btn-s:hover:not(:disabled){background:var(--c-gray-50-3)}
+}
+.et-cta{background:var(--s-blue);border:2px solid var(--s-ink);border-radius:0;box-shadow:none}
+.et-cta:hover,.et-cta:active{transform:none;box-shadow:none}
+.b{border-radius:0;font-family:var(--f-plex)}
+.bR{background:var(--s-red);color:var(--s-paper);border:1px solid var(--s-red)}
+.bY{background:var(--s-yellow);color:var(--s-ink);border:1px solid var(--s-ink)}
+.bG{background:var(--s-paper);color:var(--s-green);border:1px solid var(--s-green)}
+.bB{background:var(--s-paper);color:var(--s-blue);border:1px solid var(--s-blue)}
+.bX{background:var(--s-paper);color:var(--s-sub);border:1px solid var(--s-sub)}
+th{background:var(--s-ink);color:var(--s-paper);text-transform:none;letter-spacing:0}
+th:first-child,th:last-child{border-radius:0}
+@media (hover:hover){tbody tr:hover td{background:var(--c-amber-50)!important}}
+.tbl-wrap tr{border:1px solid var(--s-ink);border-radius:0;box-shadow:none}
+.tbl-wrap tr:active{box-shadow:none;background:var(--c-amber-50)}
+.tbl-wrap td::before{color:var(--s-sub);text-transform:none;letter-spacing:0}
+label{color:var(--s-ink)}
+input,select,textarea{background:var(--s-paper);border:1.5px solid var(--s-sub);border-radius:0}
+input:hover:not(:focus):not(:disabled),select:hover:not(:focus):not(:disabled),textarea:hover:not(:focus):not(:disabled){border-color:var(--s-ink)}
+input:focus,select:focus,textarea:focus{border-color:var(--s-ink);box-shadow:0 0 0 3px var(--s-yellow)}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--s-ink)}
+input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
+.modal{border-radius:0;border-top:3px solid var(--s-ink);box-shadow:none}
+.modal.sheet-modal{border-radius:0!important}
+.modal-title{font-family:var(--f-sign);font-size:28px;font-weight:700;line-height:1.05;letter-spacing:0;color:var(--s-ink);padding-right:0}
+.modal-title::before{display:none}
+.modal.is-fullscreen .modal-title{font-size:30px}
+.close-btn,.modal.is-fullscreen .close-btn{border-radius:0;border:2px solid var(--s-ink);background:var(--s-paper);color:var(--s-ink);box-shadow:none}
+.modal-footer,.modal.is-fullscreen .modal-footer{border-top:2px solid var(--s-ink);box-shadow:none}
+.sheet-btn{border:1px solid var(--s-ink);border-radius:0}
+@media(hover:hover){.sheet-btn:hover{border-color:var(--s-ink);box-shadow:none;transform:none}}
+.sheet-btn:active{background:var(--s-yellow)}
+.sheet-group-title{font-family:var(--f-sign);font-size:20px;color:var(--s-ink);text-transform:none;letter-spacing:0;padding-right:0}
+.sheet-group-title::before{display:none}
 </style>
 </head>
 <body>
@@ -1822,8 +1891,8 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 
 <div id="pg-ncr" class="page">
   <div class="row"><div class="page-title">&#1488;&#1497;-<span>&#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</span></div>
-    <button class="btn btn-s" style="background:var(--c-blue-500,#1d4ed8);margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
-    <button class="btn btn-p" onclick="openNewNcrModal()">+ &#1495;&#1491;&#1513;</button><button class="btn btn-s" style="background:var(--c-violet-400,#7c3aed);margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
+    <button class="btn btn-p" style="margin-left:8px" onclick="openXlModal()">&#128196; &#1497;&#1497;&#1489;&#1493;&#1488; Excel</button>
+    <button class="btn btn-p" onclick="openNewNcrModal()">+ &#1495;&#1491;&#1513;</button><button class="btn btn-p" style="margin-left:8px" onclick="openNCRAgent()">&#129302; &#1505;&#1493;&#1499;&#1503; AI</button></div>
   <div style="display:flex;gap:8px;margin:8px 0 12px;direction:rtl;flex-wrap:wrap;align-items:center">
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:14px;padding:10px 16px;min-height:44px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>

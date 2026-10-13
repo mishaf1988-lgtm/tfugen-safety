@@ -108,7 +108,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('after the save the form is clean', r.cleared.v === '' && r.cleared.q === 0, r.cleared);
   check('no more than 5 questions', r.max === 5 && /5/.test(r.maxToast || ''), r.max);
   check('edit brings back the video and the question with its right answer', r.edit.v === 'https://youtu.be/dQw4w9WgXcQ' && r.edit.n === 1 && r.edit.q === 'כמה נקודות אחיזה?' && r.edit.right, r.edit);
-  check('the right-answer radio looks like a radio (the global input rule hid it) and its answer is green', r.radioLook && r.radioLook.app !== 'none' && r.radioLook.w <= 30 && r.radioLook.green === 'rgb(21, 128, 61)', r.radioLook);
+  check('the right-answer radio looks like a radio (the global input rule hid it) and its answer is green', r.radioLook && r.radioLook.app !== 'none' && r.radioLook.w <= 30 && r.radioLook.green === 'rgb(35, 127, 82)' /* sign green, redesign phase 3 */, r.radioLook);
   check('a new form after an edit is empty again', r.afterEdit.n === 0 && r.afterEdit.v === '', r.afterEdit);
   check('duplicate copies the video and the questions into a new record', r.dup.v === 'https://youtu.be/dQw4w9WgXcQ' && r.dup.n === 1 && !r.dup.edit, r.dup);
   check('the AI: questions from the talk text, a broken one dropped', r.ai === 'ok' && r.aiRows === 2 && r.aiPrompt, r);
