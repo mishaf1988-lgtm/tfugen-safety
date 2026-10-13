@@ -57,6 +57,25 @@
   לא לאשר את הבקשה ולא להסיר. אני מחליט אחרי שאראה את התשובה.
   ```
 
+- [ ] **C6. יצירת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: ניסיון חינם בחשבון העבודה (מומלץ)"; `work-vm-setup.md` שלב 2). **רק אחרי** שמיכאל פתח בעצמו את הניסיון החינם (שלב 1, הכרטיס שלו).
+  ```
+  מיכאל אישר (13/10/2026, בשאלון של Claude Code: "בצע: ניסיון חינם בחשבון העבודה"). יש מנוי ניסיון ב-Azure שמיכאל פתח.
+  ב-https://portal.azure.com, מחובר עם sviva@tapugan.co.il:
+  1. Virtual machines, Create, Azure virtual machine.
+  2. Subscription: מנוי הניסיון. Resource group חדש: tapugan-claude-rg.
+     Virtual machine name: tapugan-claude. Region: (Middle East) Israel Central.
+     Image: Windows Server 2022 Datacenter: Azure Edition (לא Core, עם Desktop Experience).
+     Size: Standard_B2s.
+     Username: michael-vm. **את הסיסמה לא להזין: לעצור ולבקש ממני להקליד אותה בעצמי.**
+     Public inbound ports: Allow selected ports, RDP (3389).
+  3. Disks: Standard SSD.
+  4. Management: Auto-shutdown כבוי.
+  5. Review + create: לצלם את מסך הסיכום כולל המחיר המשוער, ולעצור. אני מאשר את Create בעצמי.
+  6. אחרי שהמחשב נוצר: Networking, כלל ה-RDP, Source = My IP address, לשמור.
+  7. Cost Management, Budgets, Add: 50 דולר לחודש, התראה במייל ל-sviva@tapugan.co.il ב-80% וב-100%.
+  לא ליצור משאבים נוספים, לא לשנות שום הגדרה אחרת. בסוף לכתוב לי: מחיר משוער לחודש מהסיכום, הכתובת הציבורית של המחשב, ושהתקציב נוצר.
+  ```
+
 ## בוצע
 
 - [x] **C5. Azure: האם אפשר לפתוח מנוי עם החשבון של העבודה** (13/10/2026). **בוצע חלקית 13/10/2026 על ידי Claude בכרום:** Add פתח "Select an offer for your subscription" בלי הודעת חסימה: Free Trial, Pay-As-You-Go, Azure for students, תמיכה בתשלום, Visual Studio. המסך עוד לא מבקש כרטיס. **לא נבדק:** אחרי Sign up (התחברות חוזרת וכרטיס), שם תופיע חסימה של הארגון אם יש. נסגר בלי לבחור.
