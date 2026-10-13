@@ -122,7 +122,8 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 
 ### אפליקציות GitHub (חשבון mishaf1988-lgtm, Settings, Applications; נבדק 13/10/2026)
 - **בשימוש:** Claude (העבודה על הקוד מהשיחות), Claude Design Import, Cloudflare Workers and Pages (פריסה מ-main).
-- **הוסר 13/10/2026:** Cursor (לא בשימוש, כתיבה לכל המאגרים, ביקש 7 הרשאות נוספות). **בהסרה (C11):** Vercel (הפרויקט נמחק 21/09/2026), Netlify (מושהה).
+- **הוסר 13/10/2026:** Cursor (לא בשימוש, כתיבה לכל המאגרים, ביקש 7 הרשאות נוספות), Vercel (הפרויקט נמחק 21/09/2026), Netlify (מושהה). Cursor ו-Netlify Auth גם מ-OAuth (C12).
+- **Authorized GitHub Apps** (התחברות, לא התקנה): גם ChatGPT Codex Connector, Copilot Chat App, Copilot SWE Agent, Manus Connector. **OAuth Apps:** Cloudflare, Supabase, Resend, DigitalOcean, Ollama, GitHub CLI, Git Credential Manager, GitHub iOS. מיכאל השאיר אותם (13/10/2026); לא בשימוש של המערכת הזו.
 - אפליקציה חדשה עם גישה לקוד נרשמת כאן באותו PR.
 
 ---
