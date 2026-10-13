@@ -70,7 +70,9 @@ export function agentEntry(b, nowIso) {
 // Work claims between parallel sessions (12/10/2026). Pure helpers, tested.
 export const CLAIM_KEY = 'work_claims', CLAIM_HOURS = 6, CLAIM_MAX = 100;
 export function claimSession(x) { const v = String(x || '').trim().replace(/^cse_/, 'session_'); return /^[A-Za-z0-9_-]{8,80}$/.test(v) ? v : null; }
-export function claimItem(x) { const v = String(x || '').trim().toLowerCase(); return /^[a-z0-9][a-z0-9._-]{1,59}$/.test(v) ? v : null; }
+// One key per BACKLOG number (13/10/2026, lesson 10): "backlog-13.21b" and "13.21" never collided,
+// and the same part was built twice (#1479, #1480). A prefix and a part suffix are dropped.
+export function claimItem(x) { const v = String(x || '').trim().toLowerCase().replace(/^backlog[-_.]?/, '').replace(/^(\d+(?:\.\d+)+)(?:[a-z]|[-_][a-z0-9._-]*)$/, '$1'); return /^[a-z0-9][a-z0-9._-]{1,59}$/.test(v) ? v : null; }
 export function claimsFresh(map, nowMs) {
   const out = {};
   Object.keys(map && typeof map === 'object' ? map : {}).forEach((k) => { const c = map[k]; if (c && c.session && nowMs - Date.parse(c.at) <= CLAIM_HOURS * 3600e3) out[k] = c; });
