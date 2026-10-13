@@ -5,6 +5,9 @@
 // and no camera button on a weekly talk. The buttons are <label>s around the inputs (13/10/2026, Michael:
 // "it does not let me open the camera"): a script click on a hidden input does nothing in some
 // in-app browsers, a label opens the picker natively. A second label without capture: the gallery.
+// On a Chrome tablet the gallery opened and the camera did not (13/10/2026), so the camera button
+// opens a live camera inside the page (getUserMedia, a fake camera here), with a clear message when
+// the browser blocks it; without mediaDevices the label still opens the file input.
 import { createRequire } from 'module';
 import { onRequest, makeTalkToken, makeCodeCookie, MAX_DOCS } from './_build/talk.mjs';
 const require = createRequire(import.meta.url);
@@ -32,8 +35,10 @@ const render = async (id) => {
 };
 // A real JPEG made by the browser itself, 3000x2000 (a phone photo is bigger than the 1400px kept).
 const ind = await render('ind1'), wk = await render('wk1');
-const browser = await pw.chromium.launch();
-const page = await (await browser.newContext({ viewport: { width: 375, height: 800 } })).newPage();
+const browser = await pw.chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] });
+const ctx = await browser.newContext({ viewport: { width: 375, height: 800 } });
+await ctx.grantPermissions(['camera'], { origin: 'https://x.test' });
+const page = await ctx.newPage();
 const errs = []; page.on('pageerror', (e) => errs.push(String(e)));
 await page.route('https://x.test/p', (rt) => rt.fulfill({ status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': ind.csp }, body: ind.html }));
 await page.goto('https://x.test/p');
@@ -42,7 +47,6 @@ const photo = await page.evaluate(() => { const c = document.createElement('canv
 check('the camera button is a <label> holding the capture input (no script click)', await page.evaluate(() => { const l = document.getElementById('dadd'), f = document.getElementById('dfile'); return l.tagName === 'LABEL' && l.contains(f) && f.getAttribute('capture') === 'environment' && getComputedStyle(f).display !== 'none'; }) && !/\.click\(\)/.test(ind.html));
 check('a gallery label with an input without capture', await page.evaluate(() => { const l = document.getElementById('dgal'), f = document.getElementById('dfile2'); return !!l && l.tagName === 'LABEL' && l.contains(f) && !f.hasAttribute('capture'); }));
 const chooser = async (sel) => { const p = page.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false); await page.click(sel); return p; };
-check('tapping the camera button opens the picker', await chooser('#dadd'));
 check('tapping the gallery button opens the picker', await chooser('#dgal'));
 const add = async () => { await page.setInputFiles('#dfile', { name: 'p.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(photo, 'base64') }); await page.waitForTimeout(400); };
 await add(); await page.setInputFiles('#dfile2', { name: 'g.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(photo, 'base64') }); await page.waitForTimeout(400);
@@ -55,6 +59,22 @@ check('shrunk to 1400px on the long side', w === 1400, w);
 await page.click('#dbox button');
 check('remove takes one away', await page.locator('input[name="doc"]').count() === 1 && /1/.test(await page.textContent('#dcnt')));
 check('no page error (CSP allows the data: images)', errs.length === 0, errs);
+// The live camera: tap, the picture, shutter adds a photo, done closes it and stops the camera.
+await page.click('#dadd');
+await page.waitForSelector('#camov video', { timeout: 3000 }).catch(() => {});
+await page.waitForFunction(() => { const b = document.getElementById('camshot'), v = document.querySelector('#camov video'); return b && !b.disabled && v && v.videoWidth > 0; }, null, { timeout: 5000 }).catch(() => {});
+check('tapping the camera button opens a live camera in the page', await page.evaluate(() => { const v = document.querySelector('#camov video'); return !!v && v.videoWidth > 0 && !document.getElementById('camshot').disabled; }), await page.evaluate(() => ({ ov: !!document.getElementById('camov'), msg: (document.getElementById('cammsg') || {}).textContent, vw: (document.querySelector('video') || {}).videoWidth })));
+await page.click('#camshot', { timeout: 3000 }).catch(() => {}); await page.waitForTimeout(500);
+check('the shutter adds a photo (2 now) and the camera stays open for the next one', await page.locator('input[name="doc"]').count() === 2 && await page.locator('#camov').count() === 1 && /2/.test(await page.textContent('#dcnt')));
+await page.click('#camdone', { timeout: 3000 }).catch(() => {});
+check('done closes the camera and stops it', await page.locator('#camov').count() === 0 && await page.evaluate(() => !document.querySelector('video')));
+const pp = async (perm, init) => { const c = await browser.newContext({ viewport: { width: 375, height: 800 } }); if (perm) await c.grantPermissions(['camera'], { origin: 'https://x.test' }); if (init) await c.addInitScript(init); const p = await c.newPage(); await p.route('https://x.test/p', (rt) => rt.fulfill({ status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': ind.csp }, body: ind.html })); await p.goto('https://x.test/p'); return p; };
+const den = await pp(true, () => { navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
+await den.click('#dadd'); await den.waitForFunction(() => { const m = document.getElementById('cammsg'); return m && m.textContent.length > 5; }, null, { timeout: 5000 }).catch(() => {});
+check('camera blocked: a message saying how to allow it, no shutter', await den.evaluate(() => { const m = document.getElementById('cammsg'); return !!m && /חוסם את המצלמה/.test(m.textContent) && /הרשאות/.test(m.textContent) && document.getElementById('camshot').style.display === 'none'; }), await den.evaluate(() => (document.getElementById('cammsg') || {}).textContent));
+const old = await pp(false, () => { Object.defineProperty(navigator, 'mediaDevices', { value: undefined }); });
+const fc = old.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false); await old.click('#dadd');
+check('a browser without mediaDevices: the button opens the file input with capture', await fc);
 check('a weekly talk has no camera button', !/id="dadd"/.test(wk.html));
 check('the limit is in the page', ind.html.includes('>=' + MAX_DOCS + ')'));
 await browser.close();
