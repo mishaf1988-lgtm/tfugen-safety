@@ -39,17 +39,6 @@
   בסוף לכתוב לי: בשתי הזרימות נוספו השורות, צילום של ה-Condition.
   ```
 
-- [ ] **C11. GitHub: להסיר את Vercel ו-Netlify, ו-Cursor מ-OAuth** (13/10/2026, מיכאל בשאלון: "בצע: להסיר Vercel ו-Netlify ולבדוק OAuth (מומלץ)"). Vercel נמחק ב-21/09/2026 ו-Netlify מושהה, אבל שתי האפליקציות עוד מותקנות עם גישה לקוד.
-  ```
-  מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: להסיר Vercel ו-Netlify ולבדוק OAuth".
-  ב-GitHub, בחשבון mishaf1988-lgtm: Settings, Applications.
-  1. לשונית Installed GitHub Apps: Vercel, Configure, Uninstall. אחר כך Netlify, Configure, Uninstall.
-  2. לא לגעת ב-Claude, ב-Claude Design Import ובפלאגין Cloudflare Workers and Pages.
-  3. לשונית Authorized GitHub Apps: אם Cursor שם, Revoke. אם Vercel או Netlify שם, Revoke גם להם. לא לגעת באחרים.
-  4. לשונית Authorized OAuth Apps: לכתוב לי מה יש שם, בלי לשנות.
-  בסוף לכתוב לי: מה הוסר, ומה נשאר בכל שלוש הלשוניות.
-  ```
-
 - [ ] **C10. מחיקת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: למחוק את המחשב", אחרי "למה אני צריך את זה?"; `work-vm-plan.md` "ההחלטה השנייה"). בפרופיל הכרום "Azure פרטי".
   ```
   מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: למחוק את המחשב". חשבון mishaf1988@gmail.com בלבד. אם מופיע tapugan.co.il: לעצור.
@@ -62,8 +51,18 @@
   בסוף לכתוב לי: מה נמחק, ושב-Resource groups לא נשאר שום דבר.
   ```
 
+- [ ] **C12. GitHub OAuth: לבטל את Cursor ו-Netlify Auth** (13/10/2026, מיכאל בשאלון: "בצע: Cursor ו-Netlify Auth (מומלץ)").
+  ```
+  מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: Cursor ו-Netlify Auth".
+  ב-GitHub, בחשבון mishaf1988-lgtm: Settings, Applications, לשונית Authorized OAuth Apps.
+  Cursor: Revoke, ולאשר אחרי שבדקת שהשם בחלון הוא Cursor. אחר כך Netlify Auth: Revoke, אותה בדיקה.
+  לא לגעת באף אחד אחר (Cloudflare, Supabase, Resend, GitHub CLI, Git Credential Manager, GitHub iOS, DigitalOcean, Ollama).
+  בסוף לכתוב לי מה נשאר בלשונית.
+  ```
+
 ## בוצע
 
+- [x] **C11. GitHub: להסיר את Vercel ו-Netlify, ו-Cursor מ-OAuth** (13/10/2026, מיכאל בשאלון: "בצע: להסיר Vercel ו-Netlify ולבדוק OAuth (מומלץ)"). Vercel נמחק ב-21/09/2026 ו-Netlify מושהה, אבל שתי האפליקציות עוד מותקנות עם גישה לקוד. **בוצע 13/10/2026 על ידי Claude בכרום:** Vercel ו-Netlify הוסרו מ-Installed; Cursor ו-Vercel בוטלו ב-Authorized GitHub Apps. נשארו Installed: Claude, Claude Design Import, Cloudflare Workers and Pages. Authorized GitHub Apps: ChatGPT Codex Connector, Claude, Claude Design Import, Cloudflare Workers and Pages, Copilot Chat App, Copilot SWE Agent, Manus Connector. OAuth Apps: Cloudflare, Cursor, DigitalOcean, Git Credential Manager, GitHub CLI, GitHub iOS, Netlify Auth, Ollama, Resend, Supabase. המשך: C12.
 - [x] **C3. Cursor ב-GitHub: להסיר** (13/10/2026). **הבדיקה בוצעה 13/10/2026 על ידי Claude בכרום:** הותקן 11/04/2026, גישה ל-All repositories, כתיבה לקוד, workflows, PRs ו-issues; מבקש 7 הרשאות נוספות (Administration, Actions כתיבה, Email addresses ועוד) בנימוק merge queues. ב-GitHub אין שום PR או commit שלו. מיכאל בשאלון: **"בצע: להסיר את Cursor (מומלץ)"**. **הוסר 13/10/2026 על ידי Claude בכרום** ("A job has been queued to uninstall"), בלי לאשר את בקשת ההרשאות. נשארו: Claude, Claude Design Import, Cloudflare Workers and Pages, Netlify (מושהה), Vercel. המשך: C11.
 - [x] **C2. בדיקה חוזרת של "הצע סיבה ופעולה" ב-NCR** (12/10/2026, STATUS "ה-AI ב-NCR"; בדיקת כרום של 12/10/2026 נכשלה ותוקנה) **בוצע 13/10/2026 על ידי Claude בכרום: עבר.** שלושת השדות מזכירים את המלגזה והדליפה, בלי "לעדכן נהלים". "ביטול" בסוף, שום NCR לא נשמר.
 - [x] **C6. יצירת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: ניסיון חינם בחשבון העבודה (מומלץ)"; `work-vm-setup.md` שלב 2). המנוי קיים (C9 בוצע 13/10/2026). **להריץ בפרופיל הכרום "Azure פרטי"**, לא בפרופיל של העבודה. **בוצע 13/10/2026 על ידי Claude בכרום:** `tapugan-claude` ב-`tapugan-claude-rg`, Israel Central, Standard_B2als_v2, smalldisk, 64GB Standard SSD, משתמש michael-vm (סיסמה של מיכאל), $0.0521 לשעה לפי מסך הסיכום. כלל ה-RDP מוגבל לכתובת של מיכאל בזמן היצירה. תקציב `tapugan-claude-budget` 15 דולר (התראות ב-80% וב-100% ל-Gmail). **Auto-shutdown לא נשמר** (Save כבוי ב-Israel Central). המחשב נעצר: Stopped (deallocated).
