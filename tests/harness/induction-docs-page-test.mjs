@@ -2,7 +2,9 @@
 // photograph the documents for a new worker, it can be several"; questionnaire: embedded in the
 // PDF, free photos). Rendered from the real talk.js with its own CSP header, in Chromium at phone
 // width: the camera button, each photo shrunk to a JPEG in a hidden "doc" field, remove, the count,
-// and no camera button on a weekly talk.
+// and no camera button on a weekly talk. The buttons are <label>s around the inputs (13/10/2026, Michael:
+// "it does not let me open the camera"): a script click on a hidden input does nothing in some
+// in-app browsers, a label opens the picker natively. A second label without capture: the gallery.
 import { createRequire } from 'module';
 import { onRequest, makeTalkToken, makeCodeCookie, MAX_DOCS } from './_build/talk.mjs';
 const require = createRequire(import.meta.url);
@@ -37,10 +39,15 @@ await page.route('https://x.test/p', (rt) => rt.fulfill({ status: 200, headers: 
 await page.goto('https://x.test/p');
 check('the induction page has the camera button and the section title', await page.locator('#dadd').count() === 1 && /צילום מסמכים/.test(await page.textContent('body')));
 const photo = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 3000; c.height = 2000; const x = c.getContext('2d'); x.fillStyle = '#c00'; x.fillRect(0, 0, 3000, 2000); x.fillStyle = '#fff'; x.fillRect(100, 100, 800, 400); return c.toDataURL('image/jpeg', 0.95).split(',')[1]; });
+check('the camera button is a <label> holding the capture input (no script click)', await page.evaluate(() => { const l = document.getElementById('dadd'), f = document.getElementById('dfile'); return l.tagName === 'LABEL' && l.contains(f) && f.getAttribute('capture') === 'environment' && getComputedStyle(f).display !== 'none'; }) && !/\.click\(\)/.test(ind.html));
+check('a gallery label with an input without capture', await page.evaluate(() => { const l = document.getElementById('dgal'), f = document.getElementById('dfile2'); return !!l && l.tagName === 'LABEL' && l.contains(f) && !f.hasAttribute('capture'); }));
+const chooser = async (sel) => { const p = page.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false); await page.click(sel); return p; };
+check('tapping the camera button opens the picker', await chooser('#dadd'));
+check('tapping the gallery button opens the picker', await chooser('#dgal'));
 const add = async () => { await page.setInputFiles('#dfile', { name: 'p.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(photo, 'base64') }); await page.waitForTimeout(400); };
-await add(); await add();
+await add(); await page.setInputFiles('#dfile2', { name: 'g.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(photo, 'base64') }); await page.waitForTimeout(400);
 const st = await page.evaluate(() => { const h = [...document.querySelectorAll('input[name="doc"]')]; const im = new Image(); return { n: h.length, jpeg: h.every((x) => /^data:image\/jpeg;base64,/.test(x.value)), kb: h.map((x) => Math.round(x.value.length * 0.75 / 1024)), cnt: document.getElementById('dcnt').textContent, inForm: h.every((x) => x.form && x.form.id === 'f') }; });
-check('two photos: two hidden "doc" fields inside the form, JPEG', st.n === 2 && st.jpeg && st.inForm, st);
+check('a photo from the camera and one from the gallery: two hidden "doc" fields inside the form, JPEG', st.n === 2 && st.jpeg && st.inForm, st);
 check('each shrunk well under the 900KB limit', st.kb.every((k) => k > 2 && k < 900), st.kb);
 check('the count says 2', /2/.test(st.cnt), st.cnt);
 const w = await page.evaluate(() => { const im = document.querySelector('#dbox img'); return new Promise((res) => { const i = new Image(); i.onload = () => res(i.naturalWidth); i.src = im.src; }); });
