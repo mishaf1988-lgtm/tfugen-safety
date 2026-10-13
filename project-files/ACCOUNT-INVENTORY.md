@@ -120,6 +120,11 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 - **בלי כיבוי אוטומטי** (לא זמין באזור): Stop אחרי כל שימוש. התכנון וההחלטה: `work-vm-plan.md`, `work-vm-setup.md`, `work-vm-trial.md`.
 - **להעברה:** אין מה להעביר מה-repo. מחשב חדש לפי `work-vm-setup.md`. הסיסמה אצל מיכאל בלבד.
 
+### אפליקציות GitHub (חשבון mishaf1988-lgtm, Settings, Applications; נבדק 13/10/2026)
+- **בשימוש:** Claude (העבודה על הקוד מהשיחות), Claude Design Import, Cloudflare Workers and Pages (פריסה מ-main).
+- **הוסר 13/10/2026:** Cursor (לא בשימוש, כתיבה לכל המאגרים, ביקש 7 הרשאות נוספות). **בהסרה (C11):** Vercel (הפרויקט נמחק 21/09/2026), Netlify (מושהה).
+- אפליקציה חדשה עם גישה לקוד נרשמת כאן באותו PR.
+
 ---
 
 ## 5. בדיקה אחרי העברה
