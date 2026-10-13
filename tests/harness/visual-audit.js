@@ -16,6 +16,7 @@
 //   - every ⋯ row menu: opened, measured inside the viewport
 //   - every modal reachable from the page: opened, measured, closed
 //   - page errors thrown while rendering
+//   - text contrast under WCAG AA (13/10/2026, Michael: "בצע: לבנות"): a warning, with the colour pairs
 //
 // Screenshots of every page and every opened menu/modal go to the output
 // directory, and findings.json next to them. The console summary lists the
@@ -137,6 +138,14 @@ const MEASURE = `(function(pageId){
   var glyphs={};
   if(pg){var walker=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var n;while((n=walker.nextNode())){var s=n.nodeValue;for(var i=0;i<s.length;i++){var c=s.codePointAt(i);if(c>0xffff)i++;if((c>=0x1F5A0&&c<=0x1F5FF)||(c>=0x1F320&&c<=0x1F32C)||(c>=0x2190&&c<=0x21FF&&c!==0x21a9&&c!==0x2192&&c!==0x2190)||c===0x25AF||c===0x25AE){var k=c.toString(16);glyphs[k]=(glyphs[k]||0)+1;}}}}
   out.glyphs=glyphs;
+  // 6. text contrast (WCAG 2.1 AA: 4.5, or 3 for 24px+ / bold 18.66px+). Background = first opaque
+  // background-color up the tree; a background-image on the way makes it unknown, so it is skipped.
+  var lowC=[], lowCount=0, seenC={};
+  var rgba=function(s){var v=(s||'').replace('rgba(','').replace('rgb(','').replace(')','').split(',').map(function(x){return parseFloat(x);});if(v.length<3||isNaN(v[0]))return null;return [v[0],v[1],v[2],v.length>3?v[3]:1];};
+  var lum=function(c){var f=function(x){x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);};
+  var bgOf=function(el){for(var e=el;e&&e.nodeType===1;e=e.parentElement){var cs=getComputedStyle(e);if(cs.backgroundImage&&cs.backgroundImage!=='none')return null;var b=rgba(cs.backgroundColor);if(b&&b[3]>=0.99)return b;if(b&&b[3]>0)return null;}return [255,255,255,1];};
+  if(pg){var tw=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var tn;while((tn=tw.nextNode())){var el=tn.parentElement;if(!el||!/[0-9A-Za-z\\u0400-\\u06FF]/.test(tn.nodeValue||'')||!vis(el))continue;if(el.__auditC)continue;el.__auditC=1;var cs=getComputedStyle(el);if(parseFloat(cs.opacity)<0.99)continue;var fg=rgba(cs.color),bg=bgOf(el);if(!fg||!bg)continue;if(fg[3]<1)fg=[fg[0]*fg[3]+bg[0]*(1-fg[3]),fg[1]*fg[3]+bg[1]*(1-fg[3]),fg[2]*fg[3]+bg[2]*(1-fg[3]),1];var L1=lum(fg),L2=lum(bg),ratio=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);var px=parseFloat(cs.fontSize),bold=parseInt(cs.fontWeight,10)>=700;var need=(px>=24||(bold&&px>=18.66))?3:4.5;if(ratio>=need)continue;lowCount++;var key=cs.color+'|'+bg.join(',');if(seenC[key]||lowC.length>=8)continue;seenC[key]=1;lowC.push({el:desc(el),t:tn.nodeValue.trim().slice(0,30),ratio:Math.round(ratio*100)/100,need:need,fg:cs.color,bg:'rgb('+bg.slice(0,3).join(',')+')'});}}
+  out.lowContrast=lowC; out.lowContrastCount=lowCount;
   return out;
 })`;
 
@@ -219,6 +228,7 @@ async function shotFull(page, file) {
         if (m.cut.length) note('warn', tag + '/' + pid, 'text cut without ellipsis', m.cut);
         if (m.covered.length) note('defect', tag + '/' + pid, 'controls covered by a fixed element at their natural scroll position', m.covered);
         if (m.smallCount) note('warn', tag + '/' + pid, m.smallCount + ' touch targets under 40px', m.small);
+        if (m.lowContrastCount) note('warn', tag + '/' + pid, m.lowContrastCount + ' text elements under WCAG AA contrast', m.lowContrast);
         if (Object.keys(m.glyphs).length) note('info', tag + '/' + pid, 'text-presentation glyphs (may render as a box on iOS)', m.glyphs);
 
         // Row / header menus
