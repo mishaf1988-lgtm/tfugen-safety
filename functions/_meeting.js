@@ -4,8 +4,8 @@
 // Hazards (slide 1), 1:1 with the workbook sheet "\u05e1\u05d9\u05db\u05d5\u05dd \u05e9\u05d1\u05d5\u05e2\u05d9 \u05dc\u05de\u05e6\u05d2\u05ea" and
 // "\u05d3\u05d5\u05d7 \u05de\u05e8\u05db\u05d6" (DECISIONS 2026-09-27/28), over the merged register (manager +
 // trustees, the same rows the file has):
-//   * the week = the 7 days since the previous meeting, up to the meeting date itself
-//     (06/10/2026, Michael: a tour on the meeting day is "new this week"; 06.10 -> 30.09-06.10),
+//   * the week = the 7 days before the meeting, from the previous meeting's day
+//     (13/10/2026, Michael; 13.10 -> 06.10-12.10, so the 06.10 tour is new on 13.10),
 //     the month = the calendar month of the meeting;
 //   * per department: \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd (status \u05e1\u05d2\u05d5\u05e8), \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05db\u05e2\u05ea (anything else), \u05d7\u05d3\u05e9\u05d9\u05dd
 //     \u05d1\u05e9\u05d1\u05d5\u05e2 (tour date in the week), \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 (closing date in the week),
@@ -28,10 +28,12 @@ const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const SEV = { high: '\u05d2\u05d1\u05d5\u05d4\u05d4', medium: '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', low: '\u05e0\u05de\u05d5\u05db\u05d4' };
 export const MONTHS = ['\u05d9\u05e0\u05d5', '\u05e4\u05d1\u05e8', '\u05de\u05e8\u05e5', '\u05d0\u05e4\u05e8', '\u05de\u05d0\u05d9', '\u05d9\u05d5\u05e0', '\u05d9\u05d5\u05dc', '\u05d0\u05d5\u05d2', '\u05e1\u05e4\u05d8', '\u05d0\u05d5\u05e7', '\u05e0\u05d5\u05d1', '\u05d3\u05e6\u05de'];
 
-// Was Sunday..Saturday before the meeting (28/09); since 06/10/2026 the day after the
-// previous (weekly) meeting through the meeting day, so nothing found since is left out.
+// Was Sunday..Saturday before the meeting (28/09), then (06/10) the day after the previous
+// meeting through the meeting day. Since 13/10/2026 (Michael: "in the weekly meeting we always
+// talk about the week before it"): the previous meeting's day through the day before this one,
+// so the tour held on a meeting day is "new" at the next meeting, and every day is counted once.
 export function weekBefore(ref) {
-  return { start: addDays(ref, -6), end: ref };
+  return { start: addDays(ref, -7), end: addDays(ref, -1) };
 }
 function standout(list, k) {
   let best = null;
