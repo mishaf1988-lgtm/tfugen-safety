@@ -6845,7 +6845,7 @@ function _renderKpiCard(){
   function anyOf(s){return s.some(function(x){return x.v;});}
   if(anyOf(sNm))tiles.push(leadTile(sNm,'\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d7\u05d5\u05d3\u05e9','#1d4ed8','\u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05d4\u05d5\u05d0 \u05de\u05d3\u05d3 \u05de\u05d5\u05d1\u05d9\u05dc - \u05d9\u05e8\u05d9\u05d3\u05d4 \u05d1\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05d9\u05d0 \u05d4\u05d0\u05d6\u05d4\u05e8\u05d4, \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05d4'));
   if(anyOf(sTru))tiles.push(leadTile(sTru,'\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05d4\u05d7\u05d5\u05d3\u05e9','#7c3aed','\u05db\u05de\u05d4 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d2\u05d9\u05e2\u05d5 \u05de\u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'));
-  if(anyOf(sRnd))tiles.push(leadTile(sRnd,'\u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d7\u05d5\u05d3\u05e9','#0d9488','\u05e8\u05e6\u05d9\u05e4\u05d5\u05ea \u05d4\u05e1\u05d1\u05d1 \u05d4\u05d9\u05d5\u05de\u05d9'));
+  if(anyOf(sRnd))tiles.push(leadTile(sRnd,'\u05e1\u05d1\u05d1\u05d9 \u05d1\u05d5\u05e7\u05e8 \u05d4\u05d7\u05d5\u05d3\u05e9','#0f766e','\u05e8\u05e6\u05d9\u05e4\u05d5\u05ea \u05d4\u05e1\u05d1\u05d1 \u05d4\u05d9\u05d5\u05de\u05d9'));
   if(anyOf(sTlk))tiles.push(leadTile(sTlk,'\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9','#b45309','\u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05d1\u05e9\u05d8\u05d7'));
   var acc=g('dash-kpi-acc');
   if(!tiles.length){if(acc)acc.style.display='none';box.innerHTML='';return;}
@@ -9429,7 +9429,7 @@ function _eqiDate(v){if(!v)return null;try{if(v instanceof Date)return v.toISOSt
 function _eqiCol(header){var h=String(header||'').toLowerCase().trim();if(/code|\u05de\u05e1\u05e4\u05e8|\u05e7\u05d5\u05d3/.test(h))return 'code';if(/name|desc|\u05ea\u05d9\u05d0\u05d5\u05e8|\u05e9\u05dd/.test(h))return 'n';if(/vendor|supplier|\u05e1\u05e4\u05e7|\u05d9\u05e6\u05e8\u05df/.test(h))return 'vendor';if(/loc|area|\u05de\u05d9\u05e7\u05d5\u05dd|\u05d0\u05d6\u05d5\u05e8/.test(h))return 'loc';if(/last|prev|\u05d0\u05d7\u05e8\u05d5\u05df|\u05d1\u05d9\u05e6\u05d5\u05e2/.test(h))return 'd';if(/next|due|\u05d4\u05d1\u05d0|\u05ea\u05d5\u05e7\u05e3/.test(h))return 'e';if(/status|\u05e1\u05d8\u05d8\u05d5\u05e1/.test(h))return 's';if(/note|\u05d4\u05e2\u05e8\u05d4/.test(h))return 'notes';return null;}
 function eqiXlRead(file){
   if(!file)return;
-  var st=g('eqi-xl-st');if(st){st.textContent='\u05e7\u05d5\u05e8\u05d0...';st.style.color='#d97706';}
+  var st=g('eqi-xl-st');if(st){st.textContent='\u05e7\u05d5\u05e8\u05d0...';st.style.color='#b45309';}
   var doParse=function(){
     var rd=new FileReader();
     rd.onload=function(ev){
@@ -10692,7 +10692,7 @@ function _roundPaintItems(){
       '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:16px">'+esc(it.icon||'\u2022')+'</span><span style="font-size:13px;flex:1">'+esc(it.label||'')+'</span>'+rmBtn+'</div>'+
       '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">'+
         btn('ok','\u2705','#237f52')+
-        btn('warn','\u26a0\ufe0f','#d97706')+
+        btn('warn','\u26a0\ufe0f','#b45309')+
         btn('critical','\u274c','#dc2626')+
         btn('na','\u2796','#6b7280')+
         '<input type="text" data-roundnotes="'+idx+'" placeholder="\u05d4\u05e2\u05e8\u05d4 (\u05d0\u05d5\u05e4\u05e6\u05d9\u05d5\u05e0\u05dc\u05d9)" value="'+esc(it.notes||'')+'" style="flex:1;min-width:120px;font-size:11px;padding:4px 6px;border:1px solid var(--c-gray-150-3,#d1d5db);border-radius:6px">'+
@@ -16200,7 +16200,7 @@ function showView(tbl,id){
   if(tbl==='rounds' && Array.isArray(rec.items) && rec.items.length){
     html+='<div style="margin-top:14px;border-top:2px solid var(--c-blue-100,#dde0e6);padding-top:10px"><div style="color:var(--c-gray-450,#888);font-size:11px;font-weight:700;margin-bottom:8px">📋 \u05e4\u05e8\u05d9\u05d8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d4 ('+rec.items.length+')</div>';
     rec.items.forEach(function(it){
-      var statColor={ok:'#237f52',warn:'#d97706',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
+      var statColor={ok:'#237f52',warn:'#b45309',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
       var statEmoji={ok:'✅',warn:'⚠️',critical:'❌',na:'➖'}[it.status]||'⚪';
       var hasExtra=it.notes||it.category||(it.attachments&&it.attachments.length);
       html+='<div style="background:var(--c-blue-50-7,#fafbfc);border:1px solid var(--c-gray-100-3,#e5e7eb);border-right:4px solid '+statColor+';border-radius:8px;padding:8px;margin-bottom:6px">';
@@ -18811,7 +18811,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
   if(tbl==='rounds' && Array.isArray(rec.items) && rec.items.length){
     itemsBlock='<div class="round-items"><h2 style="font-size:16px;color:var(--c-red-550,#cc1f1f);border-bottom:2px solid var(--c-red-550,#cc1f1f);padding-bottom:6px;margin:18px 0 10px">\u05e4\u05e8\u05d9\u05d8\u05d9 \u05d1\u05d3\u05d9\u05e7\u05d4 ('+rec.items.length+')</h2>';
     rec.items.forEach(function(it){
-      var statColor={ok:'#237f52',warn:'#d97706',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
+      var statColor={ok:'#237f52',warn:'#b45309',critical:'#dc2626',na:'#6b7280'}[it.status]||'#cbd5e1';
       var statSymbol={ok:'\u2713',warn:'\u26a0',critical:'\u2717',na:'-'}[it.status]||'\u25cb';
       itemsBlock+='<div class="round-item" style="border:1px solid var(--c-gray-200-2,#ccc);border-right:5px solid '+statColor+';border-radius:6px;padding:10px;margin-bottom:8px;page-break-inside:avoid">';
       itemsBlock+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap"><span style="font-size:18px;font-weight:700;color:'+statColor+'">'+statSymbol+'</span><span style="font-size:16px">'+esc(it.icon||'')+'</span><strong style="flex:1;font-size:14px;min-width:140px">'+esc(it.label||'')+'</strong>'+(it.category?'<span style="font-size:11px;background:var(--c-blue-50-5,#f1f5f9);border:1px solid var(--c-blue-150,#cbd5e1);border-radius:8px;padding:2px 8px;color:var(--c-blue-650,#475569)">'+esc(it.category)+'</span>':'')+'</div>';
@@ -18894,7 +18894,7 @@ function closeHearXl(){closeModal('m-hear-xl');}
 function _hearPickFile(){g('hear-xl-inp').click();}
 function hearXlRead(file){
   if(!file)return;
-  var st=g('hear-xl-st');if(st){st.textContent='\u05e7\u05d5\u05e8\u05d0...';st.style.color='#d97706';}
+  var st=g('hear-xl-st');if(st){st.textContent='\u05e7\u05d5\u05e8\u05d0...';st.style.color='#b45309';}
   var doParse=function(){
     var rd=new FileReader();
     rd.onload=function(ev){
@@ -21990,7 +21990,7 @@ function _nmNcrOf(nm){
 // \u2713 \u05e0\u05e9\u05de\u05e8 answers \u00abdid the phone keep it\u00bb. This answers \u00abdid anything happen\u00bb.
 function _nmLoopHtml(r){
   var st=r.s||'\u05e4\u05ea\u05d5\u05d7';
-  var col=st==='\u05e1\u05d2\u05d5\u05e8'?'#237f52':(st==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#d97706':'#64748b');
+  var col=st==='\u05e1\u05d2\u05d5\u05e8'?'#237f52':(st==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#b45309':'#64748b');
   var ref=_nmNcrRef(r),n=_nmNcrOf(r),tail='';
   if(ref)tail=', '+ref+((n&&n.s)?(' '+n.s):'');
   return '<span style="font-size:11px;white-space:nowrap;font-weight:600;color:'+col+'">'+esc(st)+esc(tail)+'</span>';
@@ -22171,14 +22171,14 @@ function xlPickFile(){var i=document.getElementById('xl-inp');if(i)i.click();}
 function xlSt(msg,col){var s=document.getElementById('xl-st');if(s){s.textContent=msg;s.style.color=col||'#5a6070';}}
 function xlProg(p){var w=document.getElementById('xl-pw');if(w)w.style.display='block';var b=document.getElementById('xl-pb');if(b)b.style.width=p+'%';}
 function xlDrop(e){e.preventDefault();var dz=document.getElementById('xl-dz');if(dz)dz.style.background='#fff';var f=e.dataTransfer&&e.dataTransfer.files[0];if(f)xlRead(f);}
-function xlRead(file){if(!file)return;xlSt('\u05e7\u05d5\u05e8\u05d0...','#d97706');xlProg(10);window._xlData=[];var btn=document.getElementById('xl-ok');if(btn)btn.style.display='none';var go=function(){var rd=new FileReader();rd.onload=function(ev){try{xlProg(40);var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});window._xlData=xlParse(wb);xlProg(90);if(window._xlData.length>0){xlSt('\u05e0\u05de\u05e6\u05d0\u05d5 '+window._xlData.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea','#237f52');var b2=document.getElementById('xl-ok');if(b2)b2.style.display='block';}else{xlSt('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd','#cc1f1f');}xlProg(100);}catch(er){xlSt('\u05e9\u05d2\u05d9\u05d0\u05d4: '+er.message,'#cc1f1f');}};rd.readAsArrayBuffer(file);};if(typeof XLSX==='undefined'){var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.integrity='sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw';sc.crossOrigin='anonymous';sc.onload=go;document.head.appendChild(sc);}else go();}
+function xlRead(file){if(!file)return;xlSt('\u05e7\u05d5\u05e8\u05d0...','#b45309');xlProg(10);window._xlData=[];var btn=document.getElementById('xl-ok');if(btn)btn.style.display='none';var go=function(){var rd=new FileReader();rd.onload=function(ev){try{xlProg(40);var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',cellDates:true});window._xlData=xlParse(wb);xlProg(90);if(window._xlData.length>0){xlSt('\u05e0\u05de\u05e6\u05d0\u05d5 '+window._xlData.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea','#237f52');var b2=document.getElementById('xl-ok');if(b2)b2.style.display='block';}else{xlSt('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd','#cc1f1f');}xlProg(100);}catch(er){xlSt('\u05e9\u05d2\u05d9\u05d0\u05d4: '+er.message,'#cc1f1f');}};rd.readAsArrayBuffer(file);};if(typeof XLSX==='undefined'){var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.integrity='sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw';sc.crossOrigin='anonymous';sc.onload=go;document.head.appendChild(sc);}else go();}
 function xlSv(v){if(v===null||v===undefined)return '';var s=String(v).trim();return(s==='null'||s==='undefined'||(s.toLowerCase()==='nan'))?'':(s);}
 // Rule 2 (03/10/2026, BACKLOG 10.1): an empty or unreadable cell is null. It was '' or the raw
 // text, and ncr.sd / ncr.u are date columns: Postgres rejected the row and the import never saved.
 function xlDate(v){if(!v)return null;try{var y=function(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);};if(v instanceof Date)return isNaN(v.getTime())?null:y(v);var s=xlSv(v);if(!s)return null;var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){var p=s.split('/');return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');}var d=new Date(s);return isNaN(d.getTime())?null:y(d);}catch(e){return null;}}
 function xlGid(n){return 'xl'+String(n).padStart(4,'0')+Math.random().toString(36).substr(2,4);}
 function xlParse(wb){var res=[],idx=_ncrMaxNum()+1;/* was 1: with NCR-0001..0375 already in the table every generated number collided and xlOk dropped the whole sheet */var sm={'\u05d1\u05d5\u05e6\u05e2':'\u05e1\u05d2\u05d5\u05e8','\u05d1\u05ea\u05d4\u05dc\u05d9\u05da':'\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc','\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2':'\u05e4\u05ea\u05d5\u05d7','\u05d1\u05de\u05e2\u05e7\u05d1':'\u05e4\u05ea\u05d5\u05d7'};wb.SheetNames.forEach(function(sn){var isEnv=sn.indexOf('\u05e1\u05d1\u05d9\u05d1\u05d4')>=0;var isSaf=sn.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0;if(!isEnv&&!isSaf)return;var ws=wb.Sheets[sn];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});var hIdx=-1;for(var r=0;r<Math.min(8,rows.length);r++){if(rows[r].filter(function(c){return xlSv(c);}).length>=4){hIdx=r;break;}}if(hIdx<0)return;var ds=hIdx+1;if(ds<rows.length&&xlSv(rows[ds][0]).indexOf('\u05d0\u05e4\u05e9\u05e8\u05d9')>=0)ds++;for(var r2=ds;r2<rows.length;r2++){var row=rows[r2];if(row.filter(function(c){return xlSv(c);}).length<2)continue;var rec={id:xlGid(idx),num:'NCR-'+String(idx).padStart(4,'0'),d:'',a:'',p:'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',o:'',u:null,s:'\u05e1\u05d2\u05d5\u05e8',c:'',root_cause:'',immediate:'',notes:'',sd:null,category:isEnv?'env':'saf'};if(isEnv){rec.d=xlSv(row[1]);rec.sd=xlDate(row[2]);/* was root_cause/immediate \u2014 columns no form, no view and no AI path reads, so every imported root cause was invisible in the app. rc is the field the whole NCR module uses; the immediate action has no field of its own and goes to the notes, labelled. */rec.rc=xlSv(row[3]);var _imm=xlSv(row[4]);rec.c=xlSv(row[5]);rec.o=xlSv(row[6]);rec.u=xlDate(row[7]);rec.a='\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4';rec.s=sm[xlSv(row[8])]||'\u05e1\u05d2\u05d5\u05e8';rec.notes=xlSv(row[9]);if(_imm)rec.notes=(rec.notes?rec.notes+'\n':'')+'\u05e4\u05e2\u05d5\u05dc\u05d4 \u05de\u05d9\u05d9\u05d3\u05d9\u05ea: '+_imm;}else{var dept=xlSv(row[1]),haz=xlSv(row[2]);rec.d=dept?'['+dept+'] '+haz:haz;rec.c=xlSv(row[3]);rec.sd=xlDate(row[4]);rec.u=xlDate(row[5]);rec.o=xlSv(row[6]);rec.a='\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';rec.s=sm[xlSv(row[7])]||'\u05e1\u05d2\u05d5\u05e8';}if(!rec.d)continue;res.push(rec);idx++;}});return res;}
-function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var _xlKey=function(r){return (String(r.d||'').trim().toLowerCase()+'|'+String(r.src_date||'').trim());};var ex={};dbncr.forEach(function(r){var k=_xlKey(r);if(k!=='|')ex[k]=1;});var seen={};var add=window._xlData.filter(function(r){var k=_xlKey(r);if(k==='|')return true;if(ex[k]||seen[k])return false;seen[k]=1;return true;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#d97706');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;var _xlNcrFailed=0;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){_xlNcrFailed++;console.warn('ncr import: row failed',r,e);}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length+(_xlNcrFailed?' ('+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5)':''));}catch(e){}try{sdb();}catch(e){}closeXlModal();try{var msg=_xlNcrFailed>0?('\u05d9\u05d5\u05d1\u05d0: '+(add.length-_xlNcrFailed)+'\u202c \u05e0\u05e9\u05de\u05e8\u05d5, '+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5'):('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');toast(msg);}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
+function xlOk(){if(!window._xlData||!window._xlData.length)return;var btn=document.getElementById('xl-ok');if(btn){btn.disabled=true;btn.textContent='\u05de\u05d9\u05d9\u05d1\u05d0...';}var dbncr=(window.DB&&window.DB.ncr)?window.DB.ncr:[];var _xlKey=function(r){return (String(r.d||'').trim().toLowerCase()+'|'+String(r.src_date||'').trim());};var ex={};dbncr.forEach(function(r){var k=_xlKey(r);if(k!=='|')ex[k]=1;});var seen={};var add=window._xlData.filter(function(r){var k=_xlKey(r);if(k==='|')return true;if(ex[k]||seen[k])return false;seen[k]=1;return true;});if(!add.length){xlSt('\u05db\u05dc \u05d4\u05e8\u05e9\u05d5\u05de\u05d5\u05ea \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05de\u05d5\u05ea','#b45309');if(btn){btn.disabled=false;btn.style.display='none';}return;}if(!window.DB)window.DB={ncr:[]};window.DB.ncr=(window.DB.ncr||[]).concat(add);if(typeof NCRI!=='undefined')NCRI=window.DB.ncr.length+1;var _xlNcrFailed=0;add.forEach(function(r){try{sbIns('ncr',r);}catch(e){_xlNcrFailed++;console.warn('ncr import: row failed',r,e);}});try{addLog('\u05d9\u05d5\u05d1\u05d0 Excel: '+add.length+(_xlNcrFailed?' ('+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5)':''));}catch(e){}try{sdb();}catch(e){}closeXlModal();try{var msg=_xlNcrFailed>0?('\u05d9\u05d5\u05d1\u05d0: '+(add.length-_xlNcrFailed)+'\u202c \u05e0\u05e9\u05de\u05e8\u05d5, '+_xlNcrFailed+' \u05e0\u05db\u05e9\u05dc\u05d5'):('\u05d9\u05d5\u05d1\u05d0: '+add.length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea &#10003;');toast(msg);}catch(e){}try{rNcr();}catch(e){}try{rDash();}catch(e){}}
 
 
 function loadFromSupabase(){
@@ -23047,10 +23047,10 @@ var _AI='/api/claude';
 var _AI_MODEL='@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 // The text model cannot see. Anything with a photo in it must go here.
 var _AI_VISION='@cf/meta/llama-3.2-11b-vision-instruct';
-var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff3333'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
-var _SC={'closed':'#00cc55','open':'#ff4444','wip':'#f0a000'};
+var _P={'q':{bg:'#3d0000',b:'#ff2222',c:'#ff6060'},'h':{bg:'#3d1a00',b:'#ff6600',c:'#ff7700'},'m':{bg:'#2d2a00',b:'#f0c000',c:'#f0c000'},'l':{bg:'#001a0d',b:'#00aa44',c:'#00cc55'}};
+var _SC={'closed':'#00cc55','open':'#ff8080','wip':'#f0a000'};
 function _gpc(p){return _P[p==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'q':p==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'h':p==='\u05e0\u05de\u05d5\u05db\u05d4'?'l':'m']||_P.m;}
-function _gsc(s){return s==='\u05e1\u05d2\u05d5\u05e8'?'#00cc55':s==='\u05e4\u05ea\u05d5\u05d7'?'#ff4444':s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#f0a000':'#7a9ab8';}
+function _gsc(s){return s==='\u05e1\u05d2\u05d5\u05e8'?'#00cc55':s==='\u05e4\u05ea\u05d5\u05d7'?'#ff8080':s==='\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc'?'#f0a000':'#8aa8c4';}
 window.openNCRAgent=function(){document.getElementById('ncr-agent-modal').style.display='flex';var _c=document.getElementById('ncr-agent-count');if(_c&&!_c.dataset.vmark){_c.insertAdjacentHTML('afterend',' <span style="font-size:10px;color:var(--c-green-600,#00cc55);padding:0 6px">v4.3</span>');_c.dataset.vmark='1';}_ncrLoad();if(typeof _ncrPatternsLoad==='function')_ncrPatternsLoad();};
 function _ncrLoad(){
   var L=document.getElementById('ncr-agent-list');
@@ -23986,7 +23986,7 @@ function capShowReview(j){
   if(confEl){
     var cc = typeof j.confidence==='number' ? j.confidence : 0;
     var pct = Math.round(cc*100);
-    var col = pct>=75 ? '#237f52' : (pct>=50 ? '#f59e0b' : '#dc2626');
+    var col = pct>=75 ? '#237f52' : (pct>=50 ? '#b45309' : '#dc2626');
     confEl.innerHTML = '<span style="color:'+col+';font-weight:700">'+pct+'%</span><br>\u05d5\u05d3\u05d0\u05d5\u05ea';
   }
   var badge=g('cap-rev-badge');
@@ -24418,7 +24418,7 @@ window._odRenderStatus=function(){
         var now=new Date();
         var hrs=Math.floor((now.getTime()-last.getTime())/3600000);
         var label=hrs<1?'\u05dc\u05e4\u05e0\u05d9 \u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05e2\u05d4':(hrs<24?'\u05dc\u05e4\u05e0\u05d9 '+hrs+' \u05e9\u05e2\u05d5\u05ea':'\u05dc\u05e4\u05e0\u05d9 '+Math.floor(hrs/24)+' \u05d9\u05de\u05d9\u05dd');
-        var color=hrs<26?'#237f52':(hrs<48?'#d97706':'#b91c1c');
+        var color=hrs<26?'#237f52':(hrs<48?'#b45309':'#b91c1c');
         statusEl.innerHTML='✅ <strong>\u05d2\u05d9\u05d1\u05d5\u05d9 \u05d0\u05d7\u05e8\u05d5\u05df:</strong> <span style="color:'+color+'">'+label+'</span> ('+esc(last.toLocaleString('he-IL'))+')';
       }
     }
@@ -25394,7 +25394,7 @@ function _odClassifyOne(item){
   var dlUrl=item['@microsoft.graph.downloadUrl'];
   function render(suggestion){
     var label=suggestion.label||'?';
-    var color={tr:'#237f52',ppe:'#1d4ed8',med:'#7c3aed',docs:'#92400e',ctr:'#0d9488',ncr:'#cc1f1f','equip_inspections':'#475569',other:'#64748b'}[suggestion.target]||'#64748b';
+    var color={tr:'#237f52',ppe:'#1d4ed8',med:'#7c3aed',docs:'#92400e',ctr:'#0f766e',ncr:'#cc1f1f','equip_inspections':'#475569',other:'#64748b'}[suggestion.target]||'#64748b';
     var bits=[];
     if(suggestion.code)bits.push('\u05e7\u05d5\u05d3: '+suggestion.code);
     if(suggestion.e)bits.push('\u05ea\u05d5\u05e7\u05e3: '+suggestion.e);
