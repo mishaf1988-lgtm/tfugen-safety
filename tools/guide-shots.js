@@ -35,17 +35,50 @@ const SEED = {
     { id: 't2', n: 'רונית כהן', dep: 'מחסן', active: true },
     { id: 't3', n: 'אבי מזרחי', dep: 'אריזה', active: true },
   ],
-  trustee_tasks: [
-    { id: 'k1', n: 1, t: 'עמדות כיבוי אש', d: 'מטפים במקומם, לחץ תקין, גישה פנויה', active: true },
-    { id: 'k2', n: 2, t: 'יציאות חירום', d: 'דלתות נפתחות, שילוט דולק, מעבר פנוי', active: true },
-    { id: 'k3', n: 3, t: 'מגני מכונות', d: 'מגנים במקומם ומחוברים', active: true },
-    { id: 'k4', n: 4, t: 'ציוד מגן אישי', d: 'זמין, תקין, בגודל הנכון', active: true },
-    { id: 'k5', n: 5, t: 'ארונות חשמל', d: 'סגורים, משולטים, ללא חסימה', active: true },
-    { id: 'k6', n: 6, t: 'מעברים ומדרגות', d: 'פנויים, מוארים, ללא מכשולים', active: true },
-    { id: 'k7', n: 7, t: 'ערכות עזרה ראשונה', d: 'מלאות ובתוקף', active: true },
-    { id: 'k8', n: 8, t: 'שפכים וחומרים מסוכנים', d: 'מאוחסנים נכון, ללא דליפה', active: true },
-  ],
+  // No trustee_tasks: the shots show the built-in catalogue (TRUSTEE_TASKS in
+  // index.html), with task 8 as the closing task it really is. The seed that
+  // used to be here had a task 8 of its own and was never what the guide showed.
+  trustee_reports: [],
 };
+
+// This month's reports of ME, for the shots after sending (07, 08). Dated in
+// the current month because the screen shows only this month's.
+const MON = new Date().toISOString().substring(0, 7);
+const REPORTS = [
+  { id: 'r1', u: ME, m: MON, d: MON + '-05', ts: MON + '-05T08:10:00Z', t: 1, loc: 'מחסן חומרי גלם', ok: true, s: 'תקין' },
+  { id: 'r2', u: ME, m: MON, d: MON + '-05', ts: MON + '-05T08:20:00Z', t: 5, loc: 'אולם ייצור - מסוע 3', ok: true, s: 'תקין' },
+  { id: 'r3', u: ME, m: MON, d: MON + '-05', ts: MON + '-05T08:25:00Z', t: 5, loc: 'אולם ייצור - מסוע 3 - מטף ליד דלת 4', f: 'פלומבה קרועה', ok: false, s: 'פתוח' },
+  { id: 'r4', u: 'רונית כהן', m: MON, d: MON + '-06', ts: MON + '-06T09:00:00Z', t: 3, loc: 'מחסן', ok: true, s: 'תקין' },
+];
+
+// Through the login button and the code screen, the way a trustee comes in.
+// The server's answer is stubbed in the page (fetch from file:// never reaches
+// a route), so no real code is typed or stored.
+async function enter(page) {
+  await page.evaluate(() => { _empGateAsk = () => Promise.resolve({ ok: true, status: 200, data: {} }); });
+  await page.click('#login-emp-btn');
+  await page.waitForSelector('#m-emp-gate', { state: 'visible', timeout: 5000 });
+  await page.fill('#emp-gate-code', 'guide');
+  await page.click('#emp-gate-btn');
+  await page.waitForSelector('#emp-trustee', { state: 'visible', timeout: 5000 });
+  await page.waitForTimeout(600);
+}
+async function withReports(page) {
+  await page.evaluate((rs) => { DB.trustee_reports = rs; _truRender(); }, REPORTS);
+  await page.waitForTimeout(200);
+}
+// Scrolled so the element sits at `at` of the screen height, then left to settle.
+// The scroller is whichever ancestor actually scrolls (the modal, or the page).
+async function scrollTo(page, sel, at) {
+  await page.evaluate((a) => {
+    const el = document.querySelector(a.sel);
+    let sc = el.parentElement;
+    while (sc && !(sc.scrollHeight > sc.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
+    const dy = el.getBoundingClientRect().top - innerHeight * a.at;
+    if (sc) sc.scrollTop += dy; else window.scrollBy(0, dy);
+  }, { sel, at });
+  await page.waitForTimeout(300);
+}
 
 // label -> how to reach the screen, and what to ring.
 // ring: { sel, n }  -- n null draws the ring with no number in it.
@@ -69,17 +102,65 @@ const SHOTS = {
     },
     ring: { sel: '#emp-gate-code', n: null },
   },
+  '02-name': {
+    // A phone that has never chosen a name: the list, and "how does it work" open.
+    noName: true,
+    prepare: async (page) => { await enter(page); },
+    ring: { sel: '#tru-me', n: 2 },
+  },
+  '03-home': {
+    prepare: async (page) => { await enter(page); await page.evaluate(() => { const d = document.getElementById('tru-intro'); if (d) d.open = false; }); },
+    ring: null,
+  },
+  '04-task-report': {
+    prepare: async (page) => { await enter(page); await scrollTo(page, '[data-tru-task="1"]', 0.35); },
+    ring: { sel: '[data-tru-task="1"] button', n: 3 },
+  },
+  '05-form': {
+    prepare: async (page) => {
+      await enter(page);
+      await page.click('[data-tru-task="5"] button');
+      await page.waitForSelector('#m-tru', { state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(400);
+      await page.fill('#tru-loc', 'אולם ייצור - מסוע 3');
+      await page.evaluate(() => { const m = document.getElementById('m-tru'); m.scrollTop = 0; });
+    },
+    ring: { sel: '#tru-loc', n: 4 },
+  },
+  '06-defect': {
+    prepare: async (page) => {
+      await enter(page);
+      await page.click('[data-tru-task="5"] button');
+      await page.waitForSelector('#m-tru', { state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(400);
+      await page.fill('#tru-loc', 'אולם ייצור - מסוע 3');
+      await page.fill('[data-tru-loc][data-n="5"]', 'מטף ליד דלת 4');
+      await page.click('[data-tru-bad="5"]');
+      await page.waitForTimeout(300);
+      await page.fill('[data-tru-f][data-n="5"]', 'פלומבה קרועה');
+      await scrollTo(page, '#tru-ph-5-1', 0.62);
+    },
+    ring: { sel: '#tru-ph-5-1', n: 5 },
+  },
+  '07-saved': {
+    prepare: async (page) => { await enter(page); await withReports(page); await scrollTo(page, '#tru-mine', 0.3); },
+    ring: null,
+  },
+  '08-close': {
+    prepare: async (page) => { await enter(page); await withReports(page); await scrollTo(page, '#tru-mine', 0.3); },
+    ring: { sel: '[data-tru-rep="r3"] button', n: 6 },
+  },
 };
 
-async function seed(page) {
+async function seed(page, noName) {
   await page.evaluate((s) => {
     try {
       localStorage.setItem('tfgn2', JSON.stringify(s.db));
-      localStorage.setItem('tfgn_trustee_name', s.me);
+      if (s.me) localStorage.setItem('tfgn_trustee_name', s.me); else localStorage.removeItem('tfgn_trustee_name');
       localStorage.removeItem('tfgn_emp_mode');
       localStorage.removeItem('tfgn_emp_code');
     } catch (e) {}
-  }, { db: SEED, me: ME });
+  }, { db: SEED, me: noName ? '' : ME });
 }
 
 // Drawn in the page so it is part of the capture. Fixed to the viewport,
@@ -149,7 +230,7 @@ async function ring(page, sel, n) {
       return r.continue();
     });
     await page.goto(HTML, { waitUntil: 'load' });
-    await seed(page);
+    await seed(page, spec.noName);
     await page.reload({ waitUntil: 'load' });
     await page.waitForTimeout(1200);
 
@@ -158,6 +239,9 @@ async function ring(page, sel, n) {
     // wears a red ring that reads, in a printed guide, as an error nobody
     // made. Take the focus off whatever has it before the shutter.
     await page.evaluate(() => { try { document.activeElement && document.activeElement.blur(); } catch (e) {} });
+    // A phone has no mouse: the pointer left over a clicked button paints its
+    // hover colour, which no trustee will ever see.
+    await page.mouse.move(1, 1);
     await page.waitForTimeout(250);
 
     let placed = { ok: true };
