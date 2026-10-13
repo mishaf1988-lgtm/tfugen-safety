@@ -57,6 +57,18 @@
   לא לאשר את הבקשה ולא להסיר. אני מחליט אחרי שאראה את התשובה.
   ```
 
+- [ ] **C10. מחיקת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: למחוק את המחשב", אחרי "למה אני צריך את זה?"; `work-vm-plan.md` "ההחלטה השנייה"). בפרופיל הכרום "Azure פרטי".
+  ```
+  מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: למחוק את המחשב". חשבון mishaf1988@gmail.com בלבד. אם מופיע tapugan.co.il: לעצור.
+  1. portal.azure.com, Resource groups, tapugan-claude-rg. לכתוב לי את רשימת המשאבים שבה (צפוי: tapugan-claude, דיסק, tapugan-claude-ip, tapugan-claude-nsg, vnet-israelcentral-1, כרטיס רשת).
+  2. אם יש בה משהו מעבר לזה: לעצור ולשאול.
+  3. Delete resource group, להקליד את השם tapugan-claude-rg לאישור, Delete.
+  4. לחכות לסיום (כמה דקות), ולוודא ש-Resource groups כבר לא מציג את tapugan-claude-rg.
+  5. Cost Management, Budgets: למחוק את tapugan-claude-budget.
+  6. לא לבטל את המנוי ולא לשנות שום דבר אחר. בלי Upgrade הוא נסגר לבד בסוף 30 הימים, בלי חיוב.
+  בסוף לכתוב לי: מה נמחק, ושב-Resource groups לא נשאר שום דבר.
+  ```
+
 ## בוצע
 
 - [x] **C6. יצירת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: ניסיון חינם בחשבון העבודה (מומלץ)"; `work-vm-setup.md` שלב 2). המנוי קיים (C9 בוצע 13/10/2026). **להריץ בפרופיל הכרום "Azure פרטי"**, לא בפרופיל של העבודה. **בוצע 13/10/2026 על ידי Claude בכרום:** `tapugan-claude` ב-`tapugan-claude-rg`, Israel Central, Standard_B2als_v2, smalldisk, 64GB Standard SSD, משתמש michael-vm (סיסמה של מיכאל), $0.0521 לשעה לפי מסך הסיכום. כלל ה-RDP מוגבל לכתובת של מיכאל בזמן היצירה. תקציב `tapugan-claude-budget` 15 דולר (התראות ב-80% וב-100% ל-Gmail). **Auto-shutdown לא נשמר** (Save כבוי ב-Israel Central). המחשב נעצר: Stopped (deallocated).
