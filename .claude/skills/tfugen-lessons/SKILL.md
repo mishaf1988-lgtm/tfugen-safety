@@ -69,7 +69,7 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 מה קרה: PR אחרי 31 commits, עוגנים ישנים, "ממצא" סגור.
 הכלל: `fetch` + `reset` לפני עריכה; `grep` ב-STATUS לפני ממצא ובקוד לפני "פתוח"; משימה מ-handoff: `grep` ב-DECISIONS קודם.
 נאכף: `fresh-main.py`; handoff אחד: `handoff-root-test.py`; פריט אחד לשיחה: `claim.sh` (`routine-db-test.mjs`, 12/10); תוכנו: טקסט.
-חזר: 9 (אחרון 13/10/2026: 13.21 חלק ב נבנה בשתי שיחות, #1479/#1480; שיחת ה-handoff נפתחה מהארכיון בלי `claim.sh`). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message` ולא לבנות; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
+חזר: 9 (אחרון 13/10/2026: 13.21 חלק ב נבנה בשתי שיחות, #1479/#1480: תפיסות `backlog-13.21b` ו-`13.21b` לא התנגשו; מ-13/10 `claimItem` מנרמל). לפני קוד מ-handoff: `get_session` על כותבת ה-handoff, פעילה = `send_message` ולא לבנות; תפיסה במספר ה-BACKLOG; `list_migrations` לפני "קיים".
 
 **8. תיקייה חדשה ב-OneDrive בלי לבדוק מי מנקה שם (01/10/2026, #1002).**
 מה קרה: הניקוי בדפדפן דילג על רשימת שמות; `talks` (#1138) לא נכנסה אליה.
