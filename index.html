@@ -889,6 +889,16 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 }
 /* Clickable list rows in the dashboard widgets were 27-33px tall (visual-audit 02/10/2026); a finger needs 40. */
 #pg-dash div[onclick][style*="border-bottom"]{min-height:40px;align-items:center}
+/* ---- Redesign phase 4: the tab strip under the top bar (13/10/2026) ---- */
+.tabbar{position:fixed;top:60px;left:0;right:0;height:44px;z-index:50;display:flex;background:var(--s-paper);border-bottom:2px solid var(--s-ink)}
+.tab{flex:1 1 0;min-height:42px;border:0;border-left:1px solid var(--s-ink);background:var(--s-paper);color:var(--s-ink);font-family:var(--f-plex);font-size:15px;font-weight:700;cursor:pointer}
+.tab:last-child{border-left:0}
+.tab.on{background:var(--s-yellow);box-shadow:inset 0 -4px 0 var(--s-ink)}
+.tab:active{background:var(--s-yellow)}
+.main{padding-top:116px}
+body.emp-mode .tabbar,body.role-reporter .tabbar{display:none}
+body.role-reporter .main{padding-top:76px}
+@media print{.tabbar{display:none!important}}
 /* ---- Phase 3 of the redesign: the factory-sign language everywhere (13/10/2026) ----
    What phase 2 gave the home screen, for the shared parts: top bar, bottom nav, page title,
    cards, buttons, tables, forms, modals, badges. Square corners, ink lines instead of shadows,
@@ -1095,6 +1105,16 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     </div>
   </div>
 </div>
+<!-- Redesign phase 4 (13/10/2026): four tabs by kind of work. Fixed under the TOP bar, never
+     at the bottom (the bottom nav is retired for iOS, DECISIONS 18/09/2026). "Today" is the home
+     queue; the other three open the modules sheet showing only that tab's screens (_tabOpen).
+     The full sheet behind the menu button and every goPage link stay as they were. -->
+<nav class="tabbar" id="tabbar" aria-label="&#1504;&#1497;&#1493;&#1493;&#1496; &#1512;&#1488;&#1513;&#1497;">
+  <button class="tab on" id="tab-today" onclick="_tabOpen('today')">&#1492;&#1497;&#1493;&#1501;</button>
+  <button class="tab" id="tab-field" onclick="_tabOpen('field')">&#1513;&#1496;&#1495;</button>
+  <button class="tab" id="tab-reg" onclick="_tabOpen('reg')">&#1502;&#1512;&#1513;&#1502;&#1497;&#1501;</button>
+  <button class="tab" id="tab-mgmt" onclick="_tabOpen('mgmt')">&#1504;&#1497;&#1492;&#1493;&#1500;</button>
+</nav>
 
 <!-- MAIN CONTENT -->
 <div class="main" id="main">
@@ -4695,11 +4715,43 @@ function goPage(id){
   var navId = (_navGroup.hasOwnProperty(id) ? _navGroup[id] : id) || id;
   var bn=g('bn-'+navId);if(bn)bn.classList.add('on');
   CUR=id;
+  _tabMark(id);
   // Lets CSS hide home-only clutter (e.g. the floating AI button) — P1#1.
   document.body.classList.toggle('on-dash',id==='dash');
   rPage();
 }
 function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
+// ---- Redesign phase 4 (13/10/2026): four tabs by kind of work ----
+// today = the home queue; field = rounds and reports; reg = registers with an expiry or a list;
+// mgmt = NCR, audits, review, users, settings. Every module of the sheet has exactly one tab.
+var _TAB_OF={dash:'today','emp-home':'today',
+  nm:'field',inc:'field',round:'field',thz:'field',drl:'field',toolbox:'field',trustees:'field',ptw:'field','ptw-view':'field',
+  eqi:'reg',exp:'reg',docs:'reg',ppe:'reg',ctr:'reg',tr:'reg',hearing:'reg',emp:'reg',wst:'reg',hzm:'reg',env:'reg',easp:'reg',leg:'reg',rsk:'reg',ins:'reg',
+  ncr:'mgmt',tasks:'mgmt',aud:'mgmt',mr:'mgmt',cal:'mgmt',loc:'mgmt',prj:'mgmt',lg:'mgmt',users:'mgmt',audit:'mgmt',agents:'mgmt',itype:'mgmt',itp:'mgmt'};
+// Sheet buttons that open a dialog instead of a page.
+var _TAB_OF_CALL={"m-reports-sheet":'field',mgrFieldOpen:'field',_pwHubOpen:'mgmt',openGlobalSearch:'mgmt',openNotifSettings:'mgmt',_modVisOpen:'mgmt',_pkRegister:'mgmt'};
+var _TAB_NAME={field:'\u05e9\u05d8\u05d7',reg:'\u05de\u05e8\u05e9\u05de\u05d9\u05dd',mgmt:'\u05e0\u05d9\u05d4\u05d5\u05dc'};
+function _sheetBtnTab(b){
+  var oc=b.getAttribute('onclick')||'';
+  var m=oc.match(/_goFromSheet\('m-modules-sheet','([a-z-]+)'\)/);
+  if(m)return _TAB_OF[m[1]]||'';
+  for(var k in _TAB_OF_CALL){if(oc.indexOf(k)>=0)return _TAB_OF_CALL[k];}
+  return '';
+}
+function _tabMark(id){
+  var t=_TAB_OF[id];if(!t)return;
+  ['today','field','reg','mgmt'].forEach(function(x){var b=g('tab-'+x);if(b)b.classList.toggle('on',x===t);});
+}
+window._tabOpen=function(t){
+  if(t==='today'){goPage('dash');return;}
+  if(_role()==='reporter'){openModal('m-reports-sheet');return;}
+  if(typeof _modulesSheetReset==='function')_modulesSheetReset();
+  var sheet=g('m-modules-sheet');if(!sheet)return;
+  sheet.dataset.tab=t;
+  var ttl=sheet.querySelector('.modal-title');if(ttl)ttl.textContent=_TAB_NAME[t]||'';
+  _modulesSheetFilter('');
+  openModal('m-modules-sheet');
+};
 // The 🏠 button in the top bar and the logo both land here. "Home" is the
 // dashboard for a manager and the employee screen in employee mode; a reporter
 // is sent to dash by goPage's own gate. Any open modal is closed first — the
@@ -4789,6 +4841,26 @@ function _modulesSheetFilter(q){
   // Admin-only buttons (data-role-gated) stay hidden unless the role gate
   // allowed them (data-role-allowed) — clearing a search must not re-show them.
   function gateOk(b){return !b.dataset.roleGated||b.dataset.roleAllowed==='1';}
+  var tab=sheet.dataset.tab||'';
+  if(!q&&tab){
+    // Two passes: the topic groups first, then the "frequent" group (always the first title)
+    // keeps only what no topic group already shows, e.g. near miss, events, expiries.
+    var seen={},items=[],cur=null;
+    Array.prototype.forEach.call(sheet.querySelector('.sheet-grid').children,function(el){
+      if(el.classList.contains('sheet-group-title')){cur=el;return;}
+      if(el.classList.contains('sheet-btn'))items.push([el,cur]);
+    });
+    [false,true].forEach(function(freq){items.forEach(function(it){
+      var el=it[0];if((it[1]===groups[0])!==freq)return;
+      var key=(el.id||'')+'|'+(el.getAttribute('onclick')||'');
+      var show=!seen[key]&&_sheetBtnTab(el)===tab&&_modBtnAvailable(el)&&gateOk(el);
+      if(_modBtnAvailable(el))el.style.display=show?'':'none';
+      if(show){seen[key]=1;if(it[1])it[1]._tabHas=1;}
+    });});
+    groups.forEach(function(g){g.style.display=g._tabHas?'':'none';g._tabHas=0;});
+    if(empty)empty.style.display='none';
+    return;
+  }
   if(!q){
     btns.forEach(function(b){if(_modBtnAvailable(b))b.style.display=gateOk(b)?'':'none';});
     groups.forEach(function(g){g.style.display='';});
@@ -4821,6 +4893,9 @@ window._modulesSheetKey=function(ev){
 // Reset the search every time the sheet opens, so it never starts filtered.
 window._modulesSheetReset=function(){
   var i=g('m-modules-search');if(i)i.value='';
+  var sh=g('m-modules-sheet');
+  if(sh){sh.dataset.tab='';var tt=sh.querySelector('.modal-title');
+    if(tt){if(!tt.dataset.full)tt.dataset.full=tt.innerHTML;else tt.innerHTML=tt.dataset.full;}}
   _modulesSheetFilter('');
 };
 
