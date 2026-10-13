@@ -110,6 +110,7 @@ fetch('/api/claude', {
 ## Anti-patterns (אל תעשה)
 - **צבע hex בתוך הגדרת CSS** (12/10/2026, עיצוב מחדש שלב 1): `color:`, `background:`, `border:` וכו' רק דרך `var(--c-*)` מה-`:root`. בתוך מחרוזת JS עם גיבוי: `var(--c-red-650,#cc1f1f)`, כי חלון הדפסה לא רואה את `:root`. canvas, `fillStyle` ו-html2canvas `backgroundColor` לא מקבלים משתנה. נאכף: `color-tokens-test.py`.
 - **לשנות `workers/*.js` ולחשוב שזה עלה** (12/10/2026): `tapugan-backup-cron` לא נפרס מ-`main`; מיכאל מדביק ומפרסם בלוח הבקרה של Cloudflare. שינוי שם = צעד ידני שלו, ולכן שווה רק כשהערך מצדיק אותו. רק `functions/` ו-`index.html` עולים לבד.
+- **סקריפט מ-CDN בלי `integrity` או בלי גרסה מדויקת** (13/10/2026, BACKLOG 13.13): כל `src` ל-jsdelivr/cdnjs/unpkg מקבל גרסה מלאה (`@4.2.4`, לא `@4`), `integrity='sha384-...'` ו-`crossOrigin='anonymous'` צמודים ל-`src`. ה-hash: `curl -sSfL <url> | openssl dgst -sha384 -binary | openssl base64 -A`. בדיקה שמחליפה את הקובץ בתחליף (`r.fulfill` ל-supabase-js) חייבת להוריד את ה-`integrity` מהתגית, אחרת הדפדפן חוסם את התחליף. חריגים: Turnstile (Cloudflare מעדכן את הקובץ במקום) ו-worker של pdf.js. נאכף: `sri-test.py` (בודק גם מול הקובץ האמיתי כשיש רשת).
 - ❌ הוספת build step / webpack / vite
 - ❌ framework חדש (React/Vue/etc)
 - ❌ עברית raw ב-`index.html` JS strings

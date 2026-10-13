@@ -14,7 +14,8 @@
 const fs = require('fs');
 const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
-const SRC0 = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
+// The stub below is not the CDN file, so the tag's SRI hash would block it (BACKLOG 13.13).
+const SRC0 = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8').replace(/<script[^>]*supabase-js[^>]*>/, (t) => t.replace(/ integrity="[^"]*"/, ''));
 const ORIGIN = 'https://tapugan.test';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
