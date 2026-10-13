@@ -118,6 +118,7 @@ export function setList(xml, name, sections, more, report) {
   return xml.substring(0, s.start) + sp.pre + out.join('') + sp.post + xml.substring(s.end);
 }
 
+export const catName = (v) => unesc(v).replace(/_x000D_/gi, '\r').split(/\r\n|\r|\n/)[0].trim();
 const pts = (vals) => '<c:ptCount val="' + vals.length + '"/>' + vals.map((v, i) => '<c:pt idx="' + i + '"><c:v>' + esc(v) + '</c:v></c:pt>').join('');
 // Stacked bar by department: series values by the chart's own category order.
 // fix: by series name, a last change to its XML; '' removes the series (07/10/2026).
@@ -127,7 +128,10 @@ export function setBars(xml, bySeries, maxAxis, report, labels, fix) {
     const name = unesc((/<c:tx>\s*(?:<c:strRef>[\s\S]*?<c:v>|<c:v>)([\s\S]*?)<\/c:v>/.exec(ser) || [])[1] || '');
     const vals = bySeries[name]; if (!vals) { report.push('chart series not updated: ' + name); return ser; }
     const cats = []; const cr = /<c:pt idx="(\d+)">\s*<c:v>([\s\S]*?)<\/c:v>/g; const cs = (/<c:cat>([\s\S]*?)<\/c:cat>/.exec(ser) || [])[1] || ''; let m;
-    while ((m = cr.exec(cs))) cats[+m[1]] = unesc(m[2]).split('\n')[0];
+    // 13/10/2026: PowerPoint saved the two-line label as "dept\r\n...". Split on '\n' alone
+    // left "dept\r", no department matched, and every bar was written 0 (all "all closed").
+    while ((m = cr.exec(cs))) cats[+m[1]] = catName(m[2]);
+    if (Object.keys(vals).length) cats.forEach((c) => { if (vals[c] == null && c) report.push('chart category not matched: ' + name + '/' + c); });
     n++;
     // 06/10/2026 (Michael: "how many closed in each department"): the label's second line.
     if (labels) ser = ser.replace(/(<c:cat>\s*<c:strLit>)[\s\S]*?(<\/c:strLit>)/, (a, x, y) => x + pts(cats.map((c) => labels[c] || c)) + y);
@@ -156,6 +160,7 @@ const ddmm = (ymd) => ymd.substring(8, 10) + '/' + ymd.substring(5, 7);
 const dmy = (ymd) => ymd.substring(8, 10) + '/' + ymd.substring(5, 7) + '/' + ymd.substring(0, 4);
 const HEB_MONTHS = ['\u05d9\u05e0\u05d5\u05d0\u05e8', '\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8', '\u05de\u05e8\u05e5', '\u05d0\u05e4\u05e8\u05d9\u05dc', '\u05de\u05d0\u05d9', '\u05d9\u05d5\u05e0\u05d9', '\u05d9\u05d5\u05dc\u05d9', '\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8', '\u05e1\u05e4\u05d8\u05de\u05d1\u05e8', '\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8', '\u05e0\u05d5\u05d1\u05de\u05d1\u05e8', '\u05d3\u05e6\u05de\u05d1\u05e8'];
 // Michael, 28/09: 2024 stays 9 as in the deck (the 2024 file has 14 rows).
+const NO_DEPT_ = '\u05dc\u05dc\u05d0 \u05de\u05d7\u05dc\u05e7\u05d4';
 export const FIXED_YEARS = { 2024: 9 };
 
 // m = /api/meeting-data result for the meeting date; rows = register rows
@@ -177,7 +182,11 @@ export function deckContent(m, rows, meetingDate, opts) {
   // bars 16, a finding with no department). The rest is named on the card, not hidden.
   const inDepts = new Set(h.byDept.map((d) => d.dept));
   const open = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && inDepts.has(r[3]));
-  const openOther = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && !inDepts.has(r[3])).length;
+  const otherRows = rows.filter((r) => r[10] !== '\u05e1\u05d2\u05d5\u05e8' && !inDepts.has(r[3]));
+  const openOther = otherRows.length;
+  // 13/10/2026: the card said "no department" for a finding routed to maintenance. It names them now.
+  const otherDepts = [...new Set(otherRows.map((r) => r[3] || NO_DEPT_))];
+  const otherNames = otherDepts.every((d) => d === NO_DEPT_) ? ' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : ' (' + otherDepts.map((d) => (d === NO_DEPT_ ? '\u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : d)).join(', ') + ')';
   const sevOf = (s) => open.filter((r) => r[6] === s);
   const d10 = (v) => (v && typeof v === 'object' ? v.date : v) || '';
   const highs = sevOf('\u05d2\u05d1\u05d5\u05d4\u05d4').slice().sort((p, q) => String(d10(p[1]) || '9').localeCompare(String(d10(q[1]) || '9')));
@@ -242,7 +251,13 @@ export function deckContent(m, rows, meetingDate, opts) {
     const cl = Object.keys(cm).sort((p, q) => cm[q] - cm[p]).map((d) => d + ': ' + (cm[d] === 1 ? 'מפגע אחד נסגר' : cm[d] + ' מפגעים נסגרו'));
     const nCl = Object.values(cm).reduce((a2, x) => a2 + x, 0);
     const yR = rep.substring(0, 4);
+    // 13/10/2026: the title said "up-to-date data" over a month-end snapshot (17 open there,
+    // 18 on slide 1), so it says the date the numbers are from.
+    const lastDay = new Date(Date.UTC(+rep.substring(0, 4), +rep.substring(5, 7), 0)).toISOString().substring(0, 10);
+    const asOfDay = opts && opts.s3Now === rep ? new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : lastDay;
+    const stamp = '\u05e0\u05db\u05d5\u05df \u05dc-' + dmy(asOfDay);
     return {
+      Title: [Object.assign((t) => t.replace(/\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e2\u05d5\u05d3\u05db\u05e0\u05d9\u05dd|\u05e0\u05db\u05d5\u05df \u05dc-\d{2}\/\d{2}\/\d{4}/, stamp), { perRun: true })],
       Card0: [String(asOf.length)],
       Card1: [String(asOf.length - openM.length)],
       Card2: [String(openM.length), 'פתוחים - ' + [hiM ? hiM + ' בחומרה גבוהה' : '', medM ? medM + ' בינונית' : '', lowM ? lowM + ' נמוכה' : ''].filter(Boolean).join(', ')],
@@ -272,7 +287,7 @@ export function deckContent(m, rows, meetingDate, opts) {
     s1: {
       Header: [Object.assign((t) => t.replace(/20\d{2}/, y).replace(/\s*\u00b7\s*/, ', ').replace(/\d{2}[./]\d{2}[./]\d{4}/, dmy(meetingDate)), { perRun: true })],
       ClosedNote: [h.total.closedThisWeek === 1 ? '\u05de\u05e4\u05d2\u05e2 \u05d0\u05d7\u05d3 \u05e0\u05e1\u05d2\u05e8 \u05d4\u05e9\u05d1\u05d5\u05e2' : h.total.closedThisWeek ? h.total.closedThisWeek + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e1\u05d2\u05e8\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2' : '\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2', countDepts('closedThisWeek') || '-'],
-      OpenNote: Object.assign([openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + ' \u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4' : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', ...highLines(highs)], { exact: true, sz: highs.length > 1 ? [1400, 1100, 1100] : [1500, 1300], tight: highs.length > 1 }),
+      OpenNote: Object.assign([openOther ? open.length + ' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05d5\u05e2\u05d5\u05d3 ' + openOther + otherNames : open.length + ' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd, \u05d4\u05d8\u05d9\u05e4\u05d5\u05dc \u05e0\u05de\u05e9\u05da', ...highLines(highs)], { exact: true, sz: highs.length > 1 ? [1400, 1100, 1100] : [1500, 1300], tight: highs.length > 1 }),
       // 30/09/2026 (Michael: «8 new hazards» was no longer true, some were
       // closed): the first line says what became of them, the second where.
       NewNote: [!nw ? '\u05dc\u05d0 \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d4\u05e9\u05d1\u05d5\u05e2'
@@ -339,7 +354,7 @@ export async function patchDeck(bytes, c) {
     // Room above the line for the yearly box (06/10/2026: a month of 3 sat under it).
     .replace(/(<c:valAx>[\s\S]*?<c:scaling>(?:<c:logBase [^>]*\/>)?<c:orientation [^>]*\/>)(?:<c:max val="[^"]*"\/>)?/, '$1<c:max val="' + (Math.max(0, ...c.s2.line.vals) + 2) + '"/>').replace(/(<c:title>[\s\S]*?<a:t>)[^<]*(<\/a:t>)/, (a, p, q) => p + esc(c.s2.chartTitle) + q));
   if (c.s3) await edit(SLIDE(3), (x) => {
-    x = shapes(x, { Card0: c.s3.Card0, Card1: c.s3.Card1, Card2: c.s3.Card2 });
+    x = shapes(x, { Title: c.s3.Title, Card0: c.s3.Card0, Card1: c.s3.Card1, Card2: c.s3.Card2 });
     x = setList(x, 'HighSevPanel', c.s3.high, more, report);
     return setList(x, 'MedSevPanel', c.s3.med, more, report);
   });

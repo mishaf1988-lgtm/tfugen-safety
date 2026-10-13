@@ -18,7 +18,8 @@ import { deckContent, patchDeck } from '../_deckpatch.js';
 
 export const DECK = { name: '\u05de\u05e6\u05d2\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea.\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea.pptx', type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' };
 // Bump when deckContent/patchDeck change what they write.
-export const DECK_VERSION = 13;
+// 14 (13/10/2026): chart categories saved by PowerPoint with \r matched again; the bars were all 0.
+export const DECK_VERSION = 14;
 const DAY = 86400000;
 const addDays = (ymd, n) => new Date(Date.parse(ymd + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 const dow = (ymd) => new Date(Date.parse(ymd + 'T12:00:00Z')).getUTCDay();
@@ -75,7 +76,7 @@ export async function runDeck(env, force, s3Now, opt) {
     const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
-    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, nearMiss, repMonth }));
+    const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, s3Now, nearMiss, repMonth }));
     // Nothing to change in the file (OneDrive bumped the cTag after our last
     // upload, or a person saved it without touching the numbers): remember the
     // cTag, write nothing, or this would rewrite the deck every 15 minutes.
@@ -90,8 +91,12 @@ export async function runDeck(env, force, s3Now, opt) {
       kept = FOLDER + '/\u05d0\u05e8\u05db\u05d9\u05d5\u05df/\u05de\u05e6\u05d2\u05d5\u05ea';
       await graphPut(token, kept, stampName(DECK.name, (meta.lastModifiedDateTime || now)), orig, DECK.type);
     }
+    // 13/10/2026: a chart category the data does not have was written 0 in silence for days
+    // (the bars all "all closed"). The deck is still written, and the app shows the error.
+    const unmatched = report.filter((x) => /^chart category not matched: /.test(x)).map((x) => x.replace(/^chart category not matched: [^/]*\//, ''));
+    const chartErr = unmatched.length ? '\u05d1\u05ea\u05e8\u05e9\u05d9\u05dd \u05d1\u05de\u05e6\u05d2\u05ea \u05d9\u05e9 \u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05d0 \u05d6\u05d5\u05d4\u05ea\u05d4, \u05d5\u05d4\u05e2\u05de\u05d5\u05d3\u05d4 \u05e9\u05dc\u05d4 \u05e0\u05db\u05ea\u05d1\u05d4 0: ' + [...new Set(unmatched)].join(', ') : '';
     const put = await graphPut(token, FOLDER, DECK.name, bytes, DECK.type);
-    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: '', deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
+    await stateSet(env, { deck_sig: sig, deck_ctag: put.cTag || '', deck_week: date, deck_ver: String(DECK_VERSION), deck_at: now, ...(s3Month && !s3Now ? { deck_s3_month: s3Month } : {}), deck_err: chartErr, ...(chartErr ? { deck_err_at: now } : {}), deck_report: report.join('; '), deck_url: put.webUrl || meta.webUrl || '' });
     return { ok: true, pushed: true, date, kept, report, webUrl: put.webUrl || null };
   } catch (e) {
     const msg = e && e.code === 'not_connected' ? 'not connected'

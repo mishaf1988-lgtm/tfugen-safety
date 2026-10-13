@@ -40,6 +40,10 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
     res.pageShown = CUR === 'thz' && document.getElementById('pg-thz').classList.contains('on');
     const rows = () => Array.from(document.querySelectorAll('#tb-thz tr'));
     res.sum = document.getElementById('thz-sum').textContent;
+    // 13/10/2026: the trustees' findings are in the file and the deck too; the summary says so.
+    DB.trustee_reports = [{ id: 'r1', t: 1, ok: false, s: 'פתוח' }, { id: 'r2', t: 2, ok: false, s: 'נסגר' }, { id: 'r3', t: 8, ok: true, s: 'תקין', ref: 'r2' },
+      { id: 'r4', t: 1, ok: false, s: 'פתוח', mgr_note: 'לא רלוונטי: אין ליקוי' }, { id: 'r5', t: 1, ok: true, s: 'תקין' }];
+    rThz(); res.sumTru = document.getElementById('thz-sum').textContent; DB.trustee_reports = []; rThz();
     res.defaultRows = rows().map((tr) => tr.children[0].textContent);
     res.th1 = rows().find((tr) => tr.children[0].textContent === '1').innerHTML;
     res.th4 = rows().find((tr) => tr.children[0].textContent === '4').innerHTML;
@@ -81,6 +85,8 @@ const ymd = (daysAgo) => new Date(Date.now() - daysAgo * DAY).toISOString().subs
 
   console.log('\n1. the page and its counts');
   check('the page opens', out.pageShown);
+  check('summary with trustee findings: 2 findings (1 open), 5 not closed of 7, as in the file and the deck', /2 ממצאי נאמנים \(אחד פתוח\).*5 לא נסגרו מתוך 7/.test(out.sumTru.replace(/\s+/g, ' ')), out.sumTru);
+  check('summary without trustee findings: no extra line', !/ממצאי נאמנים/.test(out.sum), out.sum);
   check('summary: 4 not closed, 2 overdue, 1 high, 5 total', /4.*2.*1.*5/.test(out.sum.replace(/\s+/g, ' ')), out.sum);
   check('default filter = not closed (closed n=2 hidden), newest first', out.defaultRows.join() === '5,4,3,1', out.defaultRows);
   check('no tour date shows "חסר", not an invented date', out.th1.includes('חסר'), out.th1);

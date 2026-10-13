@@ -3,7 +3,7 @@
 // runs (a bold 3200 number run, "dept" + " - text" item runs, the closures
 // section inside HighSevPanel), and the real chart XML (stacked bar with a
 // hidden "Totals" series and a fixed axis max; a literal line chart).
-import { patchPara, setList, patchDeck, deckContent, FIXED_YEARS } from './_build/_deckpatch.mjs';
+import { patchPara, setList, patchDeck, deckContent, FIXED_YEARS, setBars, catName } from './_build/_deckpatch.mjs';
 import { meetingHazards, meetingAccidents } from './_build/_meeting.mjs';
 import { readZip, writeZip, entryText } from './_build/_xlsxpatch.mjs';
 import { onRequest, runDeck, defaultMeeting, meetingDate } from './_build/hazard-deck.mjs';
@@ -52,13 +52,13 @@ const chart1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartS
 const chart2 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="c" xmlns:a="a"><c:chart><c:plotArea><c:lineChart><c:grouping val="standard"/><c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>תאונות עבודה</c:v></c:tx>' + lbl
   + '<c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>2024</c:v></c:pt><c:pt idx="1"><c:v>2025</c:v></c:pt><c:pt idx="2"><c:v>ינו-26</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:formatCode>General</c:formatCode><c:ptCount val="3"/><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>13</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numLit></c:val><c:smooth val="0"/></c:ser><c:marker val="1"/></c:lineChart><c:valAx><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling></c:valAx></c:plotArea></c:chart></c:chartSpace>';
 const IMG = new Uint8Array(4000).map((_, i) => (i * 13) % 251);
-async function deck() {
+async function deck(c1) {
   return writeZip([
     { name: '[Content_Types].xml', text: '<Types/>' },
     { name: 'ppt/presentation.xml', text: '<p:presentation/>' },
     { name: 'ppt/slides/slide1.xml', text: slide1 }, { name: 'ppt/slides/slide2.xml', text: slide2 },
     { name: 'ppt/slides/slide3.xml', text: slide3 }, { name: 'ppt/slides/slide4.xml', text: slide4 },
-    { name: 'ppt/charts/chart1.xml', text: chart1 }, { name: 'ppt/charts/chart2.xml', text: chart2 },
+    { name: 'ppt/charts/chart1.xml', text: c1 || chart1 }, { name: 'ppt/charts/chart2.xml', text: chart2 },
     { name: 'ppt/media/image1.png', method: 0, crc: 0, csize: IMG.length, usize: IMG.length, raw: IMG, time: 0, date: 0x21 },
   ]);
 }
@@ -185,6 +185,10 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const withOther = [wk(70, 'מעבדות', 'פתוח'), wk(71, 'תוצג', 'פתוח'), [ 'נ-5', { date: '2026-09-25' }, '', 'ללא מחלקה', 'משרד שפכים', 'מלגזות', 'בינונית', '', '', null, 'פתוח', null, '' ]];
   const co = deckContent({ hazards: meetingHazards(withOther, ref2), accidents: meetingAccidents(INC, ref2) }, withOther, ref2, {}).s1;
   const barsOpen = Object.values(co.bars['פתוח']).reduce((a, x) => a + x, 0);
+  // 13/10/2026: a finding routed to maintenance said "no department" on the card; it is named.
+  const toMaint = withOther.map((r) => (r[0] === 'נ-5' ? Object.assign(r.slice(), { 3: 'אחזקה' }) : r));
+  const cm = deckContent({ hazards: meetingHazards(toMaint, ref2), accidents: meetingAccidents(INC, ref2) }, toMaint, ref2, {}).s1;
+  check('a finding in a department outside the five is named on the card, not "no department"', cm.OpenNote[0] === '2 פתוחים במחלקות, ועוד 1 (אחזקה)', cm.OpenNote);
   check('open card = the open in the bars (2), and the one with no department named', co.OpenNote[0] === '2 פתוחים במחלקות, ועוד 1 בלי מחלקה' && barsOpen === 2, [co.OpenNote, barsOpen]);
   const noOther = deckContent({ hazards: meetingHazards(withOther.slice(0, 2), ref2), accidents: meetingAccidents(INC, ref2) }, withOther.slice(0, 2), ref2, {}).s1;
   check('nothing outside the departments: the card as before', noOther.OpenNote[0] === '2 מפגעים פתוחים, הטיפול נמשך', noOther.OpenNote);
@@ -272,6 +276,9 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   const prevM = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 0)).toISOString().substring(0, 7);
   check('the first run of a month writes slide 3 for the month that ended, and remembers it', w.state.deck_s3_month === prevM && (await partText(w.puts[1].body, 'ppt/slides/slide3.xml')) !== slide3, w.state.deck_s3_month);
   const written = w.puts[1].body;
+  // 13/10/2026: slide 3 is a month-end snapshot; its title said "up-to-date data".
+  { const t3 = await partText(w.puts[1].body, 'ppt/slides/slide3.xml'); const ld = new Date(Date.UTC(+prevM.substring(0, 4), +prevM.substring(5, 7), 0)).toISOString().substring(0, 10);
+    check('slide 3 title: "as of" the last day of that month, not "up-to-date data"', t3.includes('נכון ל-' + ld.substring(8, 10) + '/' + ld.substring(5, 7) + '/' + ld.substring(0, 4)) && !t3.includes('נתונים מעודכנים'), (/name="Title"[\s\S]{0,600}/.exec(t3) || [''])[0].replace(/<[^>]+>/g, '|')); }
   w = world({ file: written, state: s1st, cTag: 'c-ours-2' });
   r = await runDeck(ENV, false);
   check('nothing changed since: one metadata read, nothing written', !r.pushed && r.reason === 'unchanged' && !w.puts.length, r);
@@ -287,10 +294,21 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   r = await runDeck(ENV, true, curM);
   const s3now = r.pushed && (await partText(w.puts[w.puts.length - 1].body, 'ppt/slides/slide3.xml'));
   const moName = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][+curM.substring(5) - 1];
+  { const td = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); check('slide 3 on request: the title says today', !!s3now && s3now.includes('נכון ל-' + td.substring(8, 10) + '/' + td.substring(5, 7) + '/' + td.substring(0, 4))); }
   check('slide 3 on request: this month so far, and the month-end write is still due (deck_s3_month kept)', !!s3now && s3now.includes('פעולות סגירה - ' + moName) && !(await partText(written, 'ppt/slides/slide3.xml')).includes('פעולות סגירה - ' + moName) && w.state.deck_s3_month === s1st.deck_s3_month, [r.pushed, w.state.deck_s3_month]);
   w = world({ file: src, state: Object.assign({}, s1st, { deck_ver: '9' }), cTag: 'someone-saved-old' });
   r = await runDeck(ENV, false);
   check('a new look (DECK_VERSION) on the same meeting date: the deck as it was goes to the archive first, slide 3 rewritten', r.pushed && w.puts.length === 2 && /ארכיון/.test(w.puts[0].path) && w.state.deck_ver !== '9', w.puts.map((p) => p.path));
+  // 13/10/2026: a department in the chart the data does not have: written, but shown as an error.
+  {
+    const odd = await deck(chart1.split('<c:v>מעבדות</c:v>').join('<c:v>מחלקה שנמחקה</c:v>'));
+    w = world({ file: odd });
+    r = await runDeck(ENV, true);
+    check('a chart department the data does not have: the deck is written and deck_err names it', r.pushed && /מחלקה שנמחקה/.test(w.state.deck_err || ''), [r.pushed, w.state.deck_err]);
+    w = world({ file: src });
+    r = await runDeck(ENV, true);
+    check('... and a normal run clears it', r.pushed && !w.state.deck_err, w.state.deck_err);
+  }
   w = world({ file: src, locked: true });
   r = await runDeck(ENV, false);
   check('open in PowerPoint (423): a clear message, retried by the next run', !r.ok && r.locked && /המצגת פתוחה/.test(r.error) && w.state.deck_err, r);
@@ -307,6 +325,29 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   res = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, {}), env: ENV });
   const j = await res.json();
   check('with the server secret: runs', j.ok && j.pushed, j);
+
+  // 13/10/2026: PowerPoint saved the department labels as "dept\r\n..." (read from the live deck
+  // with od-read). Split on '\n' alone left "dept\r", nothing matched, every bar was written 0
+  // and every "Totals" label said "all closed" while 18 were open.
+  {
+    const vals = { 'ייצור טוגנים': 3, 'מעצבים': 0, 'חומר גלם': 5, 'תוצג': 3, 'מעבדות': 6 };
+    const cr = (x) => x.replace(/<c:v>(ייצור טוגנים|מעצבים|חומר גלם|תוצג|מעבדות)<\/c:v>/g, (a, d) => '<c:v>' + d + '\r\nנסגרו 1\r\nחדשים 0</c:v>');
+    const crOnly = (x) => x.replace(/<c:v>(ייצור טוגנים|מעצבים|חומר גלם|תוצג|מעבדות)<\/c:v>/g, (a, d) => '<c:v>' + d + '\r</c:v>');
+    const ent = (x) => x.replace(/<c:v>(ייצור טוגנים|מעצבים|חומר גלם|תוצג|מעבדות)<\/c:v>/g, (a, d) => '<c:v>' + d + '_x000D_\nנסגרו 1</c:v>');
+    for (const [label, f] of [['"dept\\r\\n..."', cr], ['"dept\\r" (what was left in the live deck)', crOnly], ['"dept_x000D_\\n..."', ent]]) {
+      const rep = [];
+      const out = setBars(f(chart1), { 'פתוח': vals, 'Totals': vals }, 10, rep, Object.fromEntries(Object.keys(vals).map((d) => [d, d + '\nנסגרו 2\nחדשים 1'])));
+      const ser = (n) => (out.match(/<c:ser>[\s\S]*?<\/c:ser>/g) || []).find((x) => x.includes('<c:v>' + n + '</c:v>')) || '';
+      const nums = (x) => [...((/<c:numLit>([\s\S]*?)<\/c:numLit>/.exec(x) || [])[1] || '').matchAll(/<c:pt idx="\d+"><c:v>([^<]*)<\/c:v>/g)].map((m) => +m[1]);
+      check('chart labels saved by PowerPoint as ' + label + ': the open bars get their numbers', nums(ser('Totals')).join() === '3,0,5,3,6' && nums(ser('פתוח')).join() === '3,0,5,3,6', [nums(ser('Totals')), nums(ser('פתוח'))]);
+      check('... and the department label gets its second line back', /<c:v>חומר גלם\nנסגרו 2\nחדשים 1<\/c:v>/.test(ser('Totals')), (/<c:cat>[\s\S]*?<\/c:cat>/.exec(ser('Totals')) || [''])[0].slice(0, 300));
+      check('... and no "category not matched" in the report', !rep.some((x) => /not matched/.test(x)), rep);
+    }
+    const rep = [];
+    setBars(chart1.split('<c:v>מעבדות</c:v>').join('<c:v>מעבדה ישנה</c:v>'), { 'פתוח': vals }, 10, rep);
+    check('a category the data does not have is reported, not silently written 0', rep.some((x) => /not matched/.test(x) && /מעבדה ישנה/.test(x)), rep);
+    check('catName: trims, and reads every kind of line break', catName('תוצג\r') === 'תוצג' && catName('תוצג_x000D_\nנסגרו') === 'תוצג' && catName('תוצג\nא') === 'תוצג' && catName(' תוצג ') === 'תוצג');
+  }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
