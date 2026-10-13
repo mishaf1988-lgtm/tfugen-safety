@@ -23,7 +23,8 @@ const fs = require('fs');
 const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 const KEY_RE = /var TURNSTILE_SITEKEY='([^']*)';/;
-const SRC0 = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
+// The stub below is not the CDN file, so the tag's SRI hash would block it (BACKLOG 13.13).
+const SRC0 = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8').replace(/<script[^>]*supabase-js[^>]*>/, (t) => t.replace(/ integrity="[^"]*"/, ''));
 if (!KEY_RE.test(SRC0)) { console.log('HARNESS ERROR: TURNSTILE_SITEKEY line not found'); process.exit(1); }
 const SRC = SRC0.replace(KEY_RE, "var TURNSTILE_SITEKEY='0x-test-key';");
 const ORIGIN = 'https://tapugan.test';
