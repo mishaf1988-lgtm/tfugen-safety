@@ -6,6 +6,7 @@ three tokens: --t3 (#6b7280 on the page grey, 4.35: every page footer and the da
 date), --c-blue-400-3 (#3b82f6, white on it 3.68: primary buttons) and --c-teal-700-2
 (#0d9488, white on it 3.74: the AI and mail buttons). They became #5f6673, the sign blue
 #154889 and #0f766e. This fails if one of them, or the page grey, drifts back under 4.5.
+Part B: the JS colour values below.
 """
 import os, re, sys
 
@@ -44,6 +45,7 @@ pairs = [
     ('--t3 on white (cards)', tok('t3'), '#ffffff'),
     ('white on --c-blue-400-3 (primary buttons)', '#ffffff', tok('c-blue-400-3')),
     ('white on --c-teal-700-2 (AI / mail buttons)', '#ffffff', tok('c-teal-700-2')),
+    ('--warn on white ("סיור הבוקר טרם בוצע", warnings)', tok('warn'), '#ffffff'),
 ]
 for label, fg, back in pairs:
     if not fg or not back:
@@ -55,6 +57,16 @@ for label, fg, back in pairs:
 for pid in ('cal-period', 'mr-period'):
     m = re.search(r'<span id="' + pid + r'" style="[^"]*color:var\(--s-ink\)', s)
     check('#%s is ink on the yellow title, not --t3 (2.45)' % pid, bool(m))
+
+# Part B (13/10/2026): the mid-tone colours written as JS values (dashboard numbers and
+# legends, RPN, NCR priority, review badges) went to darker ones of the same meaning, which
+# took the warnings to 0. A quoted one coming back is text under 4.5 on white again.
+# '#16a34a' stays only as a cell background with ink text (env. aspects RPN, 5.3).
+for h in ('#eab308', '#ca8a04', '#e07a00', '#3b82f6', '#10b981', '#06b6d4', '#a855f7', '#94a3b8'):
+    n = s.count("'" + h + "'")
+    check("no '%s' JS colour value (text under 4.5 on white)" % h, n == 0, n)
+n = s.count("'#16a34a'")
+check("'#16a34a' only in the two RPN background functions", n == 2, n)
 
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)

@@ -185,10 +185,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     });
     check('this quarter has 2 new NCRs, last had 4', r.counts && r.counts.cur.ncrNew === 2 && r.counts.prev.ncrNew === 4, r.counts);
     check('the page shows the delta next to the number', /2/.test(r.dNew) && /4/.test(r.dNew), r.dNew);
-    check('fewer NCRs reads as an improvement — green and a down arrow', /#16a34a/.test(r.dNewHtml) && /▼/.test(r.dNewHtml), r.dNewHtml);
+    check('fewer NCRs reads as an improvement — green and a down arrow', /#237f52/.test(r.dNewHtml) && /▼/.test(r.dNewHtml), r.dNewHtml);
     // Near-misses are the opposite of findings: MORE reported is a healthier
     // culture, so the same +1 that is red on NCRs must be green here.
-    check('more near-misses reported reads as good, unlike more NCRs', /#16a34a/.test(r.dNm) && /▲/.test(r.dNm), r.dNm);
+    check('more near-misses reported reads as good, unlike more NCRs', /#237f52/.test(r.dNm) && /▲/.test(r.dNm), r.dNm);
 
     const prompt = await page.evaluate(() => {
       let sent = null;
