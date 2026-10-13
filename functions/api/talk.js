@@ -844,10 +844,13 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + quizHtml(quiz, lang)
     + '<form id="f" method="POST" action="/api/talk" style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:8px">'
     + '<input type="hidden" name="k" value="' + esc(tok) + '">' + (g ? '<input type="hidden" name="g" value="1">' : '') + '<input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig"><input type="hidden" name="qa" id="qa">'
-    + '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
-    + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>'
+    // 13/10/2026 (Michael: "I don't want the list of existing workers, only the new worker being taken in"):
+    // the induction asks for the new worker's name and ID only; "emp" is always "not on the list".
+    + (ind ? '<input type="hidden" name="emp" id="emp" value="' + OTHER + '"><label for="oname" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oname) + '</label>'
+      : '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
+    + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>')
     // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
-    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off" placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (ind ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
+    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off"' + (ind ? ' required' : '') + ' placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (ind ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
     + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
     + (ind ? (() => { const st = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px', lb = (f, t) => '<label for="' + f + '" style="display:block;font-weight:700;margin-bottom:4px">' + esc(t) + '</label>';
       return lb('ino', IL.empNo) + '<input name="ino" id="ino" maxlength="12" inputmode="numeric" autocomplete="off" dir="ltr" style="' + st + ';text-align:right">'
@@ -915,7 +918,8 @@ async function signTalk(env, request, ctx) {
   if (!permOk(t, talk)) return errL('badLink', lang, 403);
   const gate = await codeGate(env, talk, request.headers.get('cookie'));
   if (!gate.ok) return codePage(tok, lang, false, !!gate.closed);
-  const empId = String(form.get('emp') || '');
+  // The induction is for a new worker only (13/10/2026): never a worker from the list.
+  const empId = talk.kind === KIND_IND ? OTHER : String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
   const oid = idOf(form.get('oid'));

@@ -31,7 +31,7 @@ const link = async (body, auth) => { const r = await onRequest({ request: new Re
 const open = async (u, cookie) => { const c = cookie === undefined ? w.cookie : cookie; const r = await onRequest({ request: new Request(u, { headers: c ? { cookie: c } : {} }), env: ENV }); return { st: r.status, h: await r.text() }; };
 const tokOf = (u) => decodeURIComponent(new URL(u).searchParams.get('k'));
 const png = new Uint8Array(1024); png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], 0);
-const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oid: '7777777', ino: '55', idep: 'אריזה', iph: '0501234567', ijob: 'אורז', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', ...(w.cookie ? { cookie: w.cookie } : {}) } }), env: ENV }); return r.status; };
+const sign = async (k) => { const fd = new FormData(); for (const [a, b] of Object.entries({ k, l: 'he', emp: 'e1', oname: 'דני חדש', oid: '7777777', ino: '55', idep: 'אריזה', iph: '0501234567', ijob: 'אורז', ok: '1', sig: 'data:image/png;base64,' + Buffer.from(png).toString('base64') })) fd.append(a, b); const r = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd, headers: { 'user-agent': 'iPhone Mobile', ...(w.cookie ? { cookie: w.cookie } : {}) } }), env: ENV }); return r.status; };
 w.cookie = 'tsind=' + (await makeCodeCookie(ENV, 'ind1', '246810'));
 
 console.log('\n1. the permanent token');
@@ -63,6 +63,10 @@ console.log('\n2. the link from the manager');
     check('...a department not on the list, a short phone, no job, an agency box with no name: each refused', f({ ino: '1', idep: 'x', iph: '0501234567', ijob: 'אורז' }).err === 'needDep' && f({ ino: '1', idep: 'אריזה', iph: '050', ijob: 'אורז' }).err === 'needPhone' && f({ ino: '1', idep: 'אריזה', iph: '0501234567', ijob: '' }).err === 'needJob' && f({ iagn: 'x', idep: 'אריזה', iph: '0501234567', ijob: 'אורז' }).err === 'needAg'); }
   check('...the four languages have every new label, keyboard characters only', ['he', 'ar', 'ru', 'am'].every((l) => Object.keys(IND_L.he).every((k) => IND_L[l][k])) && !/[\u2013\u2014\u05be\u00ab\u00bb\u201c\u201d\u2019\u2026]/.test(JSON.stringify(IND_L)));
   check('a worker signs through it', (await sign(tokOf(u0))) === 200 && w.inserts.length === 1);
+  // 13/10/2026 (Michael: "I don't want the list of existing workers, only the new worker"): no list,
+  // the name typed, and an existing worker's id sent by hand is ignored.
+  check('the induction page: no list of workers, the new worker name required', !p.h.includes('<select name="emp"') && p.h.includes('name="emp" id="emp" value="__other"') && /name="oname" id="oname" maxlength="60" autocomplete="off" required/.test(p.h), p.h.slice(p.h.indexOf('name="emp"') - 80, p.h.indexOf('name="emp"') + 200));
+  check('...signed as the new worker typed, never as the worker whose id was sent', w.inserts[0] && w.inserts[0].emp_name === 'דני חדש' && /^x:/.test(w.inserts[0].emp_id), w.inserts[0] && [w.inserts[0].emp_id, w.inserts[0].emp_name]);
   r = await link({ op: 'revoke', id: 'ind1' }, 'good');
   check('revoke: link_v goes up and a new link comes back', r.st === 200 && r.j.link_v === 1 && w.patches.slice(-1)[0].b.link_v === 1 && r.j.url !== u0, r);
   const old = await open(u0);
