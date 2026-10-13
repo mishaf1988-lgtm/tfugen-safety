@@ -190,7 +190,10 @@ export function odMoveCheck(b) {
   // A file already in "not filed" may only get its reason added, in place (13/10/2026, Michael:
   // "גם הקבצים הקיימים עדכן"). Not recorded in skip_moved: the 30 days count from the first move.
   if (from.length === 2 && from[0] === OD_SKIP) {
-    if (!skipTo || bad(from) || name === from[1] || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !skipNameOk(from[1], name)) return { error: 'bad rename in not filed' };
+    // A reason already in the name may be replaced (13/10/2026: "סריקה בלי טקסט" read as "empty").
+    const had = /^(.*) \(([^()]{2,60})\)(\.[^.\/]*)?$/.exec(from[1]);
+    const orig = had ? had[1] + (had[3] || '') : from[1];
+    if (!skipTo || bad(from) || name === from[1] || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !skipNameOk(orig, name)) return { error: 'bad rename in not filed' };
     return { from: OD_ROOT + OD_INBOX + '/' + OD_SKIP + '/' + from[1], toDir: OD_ROOT + dir.join('/'), name, skip: false };
   }
   if (from.length !== 1 || bad(from) || !(skipTo || OD_EXT.test(from[0]))) return { error: 'from: one file inside the inbox folder' };
