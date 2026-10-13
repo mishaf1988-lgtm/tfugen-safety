@@ -108,6 +108,22 @@ def no_code_handoff(cwd):
         return False
 
 
+def chain_limit_handoff(cwd):
+    """The root handoff says this session is generation 7 or later and Michael opens the next one
+    by hand: create_session is refused there (lineage limit 8, CLAUDE.md), so asking for it loops
+    forever (13/10/2026, four blocks in a row in a generation-8 session, lesson 87)."""
+    try:
+        names = [n for n in os.listdir(cwd) if n.startswith("handoff-") and n.endswith(".md")]
+        for n in names:
+            t = open(os.path.join(cwd, n), encoding="utf-8").read()
+            m = re.search(r"דור (\d+)", t)
+            if m and int(m.group(1)) >= 7 and "ביד" in t:
+                return True
+    except Exception:
+        pass
+    return False
+
+
 def squashed_into_main(cwd):
     """A squash merge leaves the branch commits "ahead" by hash, though main has
     their content (09/10/2026, a false block after #1257). True when every file
@@ -152,7 +168,7 @@ def verdict(cwd, text, tools, waiting, recent=None):
     if merged_since and chrome and CHROME not in text:
         return ("המפקח: יש %d משימות פתוחות לכרום (project-files/chrome-queue.md), ובסיכום אין שורה \"🌐 לכרום\" "
                 "(מיכאל 12/10/2026: \"לתזכר אותי לבקש מהכרום\"). להוסיף: מה מחכה, ושהטקסט להדבקה בקובץ." % len(chrome))
-    if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd):
+    if merged and not any(t.endswith("create_session") for t in tools) and not no_code_handoff(cwd) and not chain_limit_handoff(cwd):
         return ("המפקח: מוזג, ולא נפתחה שיחה הבאה. לפני שעוצרים: היה לקח? (tfugen-lessons). "
                 "אחר כך הפריט הבא שאפשר לעשות בקוד מ-STATUS/BACKLOG (לקח 24), "
                 "או handoff + create_session + archive_session (CLAUDE.md, שיחה ארוכה).")
