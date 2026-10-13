@@ -168,6 +168,16 @@ const OD_EXT = /\.(pdf|docx?|xlsx|jpe?g|png)$/i;
 // Into "not filed" any file the flow saved may go (11/10/2026: a 4 MB .mp4 ad stayed in the inbox;
 // 12/10/2026: an attachment named "RAW", saved with no extension, was refused and stuck there),
 // under the same name; into a document folder only OD_EXT.
+// The same name may carry the reason in parentheses before the extension, "x (invoice).pdf"
+// (13/10/2026, Michael: "on the file name, in parentheses, why it was not filed").
+export function skipNameOk(from, name) {
+  if (name === from) return true;
+  const i = from.lastIndexOf('.');
+  const ext = i > 0 ? from.slice(i) : '', base = i > 0 ? from.slice(0, i) : from;
+  if (!name.startsWith(base + ' (') || !name.endsWith(')' + ext)) return false;
+  const why = name.slice(base.length + 2, name.length - ext.length - 1);
+  return why.trim().length >= 2 && why.length <= 60 && !/[()]/.test(why);
+}
 const OD_BAD = /[<>:"|?*\\\u0000-\u001f]/;
 // { from, toDir, name } as Graph paths under the drive root, or { error }.
 export function odMoveCheck(b) {
@@ -180,7 +190,7 @@ export function odMoveCheck(b) {
   if (from.length !== 1 || bad(from) || !(skipTo || OD_EXT.test(from[0]))) return { error: 'from: one file inside the inbox folder' };
   const skip = dir.length === 2 && dir[0] === OD_INBOX && dir[1] === OD_SKIP;
   if (!dir.length || bad(dir) || OD_NO_DIR.test(dir.join('/')) || (dir[0] === OD_INBOX && !skip)) return { error: 'bad to_dir' };
-  if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? name === from[0] : OD_EXT.test(name))) return { error: 'bad name' };
+  if (!name || name.indexOf('/') >= 0 || OD_BAD.test(name) || name.length > 180 || !(skipTo ? skipNameOk(from[0], name) : OD_EXT.test(name))) return { error: 'bad name' };
   return { from: OD_ROOT + OD_INBOX + '/' + from[0], toDir: OD_ROOT + dir.join('/'), name, skip: skipTo };
 }
 // 12/10/2026 (retro, Michael: "בצע"): OneDrive keeps createdDateTime on a move, so a file that waited a
