@@ -917,6 +917,27 @@ body.role-reporter .main{padding-top:76px}
   .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td:not([data-label]),.tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label=""]:not(.et){order:9}
   .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note):has(>td:not([data-label]),>td[data-label=""]:not(.et))::after{content:"";order:8;flex:1 0 100%;height:0;border-top:1px solid var(--border);margin-top:4px}
 }
+/* ---- Redesign phase 5b: field mode (13/10/2026) ----
+   The "field" tab: one column of big rows (72px, thumb-sized, for gloves), the manager's
+   round report first. The round report itself: camera first, square sign chips, big save. */
+#m-modules-sheet.tab-field #m-modules-search,#m-modules-sheet.tab-field .sheet-group-title{display:none!important}
+#m-modules-sheet.tab-field .sheet-grid{grid-template-columns:1fr;gap:8px}
+#m-modules-sheet.tab-field .sheet-btn{flex-direction:row;justify-content:flex-start;gap:14px;min-height:72px;padding:12px 16px;font-size:18px;font-weight:700;border:2px solid var(--s-ink);text-align:right}
+#m-modules-sheet.tab-field .sheet-btn .sic{font-size:30px}
+#m-modules-sheet.tab-field .sheet-btn[onclick*="mgrFieldOpen"]{order:-1;background:var(--s-blue);color:var(--s-paper)}
+#mf{background:var(--s-paper);font-family:var(--f-plex)}
+#mf h2{font-family:var(--f-sign);font-size:30px;font-weight:700;line-height:1;color:var(--s-ink)}
+#mf label{color:var(--s-ink);font-size:14px}
+#mf .mf-chip{min-height:56px;border:2px solid var(--s-ink);border-radius:0;background:var(--s-paper);color:var(--s-ink);font-size:16px}
+#mf .mf-chip.on{border-color:var(--s-ink);background:var(--s-yellow);color:var(--s-ink)}
+#mf input,#mf textarea,#mf select{border:2px solid var(--s-sub);border-radius:0;background:var(--s-paper)}
+#mf .mf-cam .btn{min-height:72px;font-size:18px;font-weight:700;background:var(--s-blue);color:var(--s-paper);border:2px solid var(--s-ink)}
+#mf .mf-save{min-height:64px;font-size:18px;border-radius:0}
+#mf .mf-sync{border-radius:0;border:2px solid currentColor}
+#mf .mf-sync.ok{background:var(--s-paper);color:var(--s-green)}
+#mf .mf-sync.wait{background:var(--s-yellow);color:var(--s-ink)}
+#mf .mf-sync.bad{background:var(--s-red);color:var(--s-paper)}
+#mf .mf-list{border:1px solid var(--s-ink);border-radius:0}
 /* ---- Phase 3 of the redesign: the factory-sign language everywhere (13/10/2026) ----
    What phase 2 gave the home screen, for the shared parts: top bar, bottom nav, page title,
    cards, buttons, tables, forms, modals, badges. Square corners, ink lines instead of shadows,
@@ -4766,6 +4787,8 @@ window._tabOpen=function(t){
   if(typeof _modulesSheetReset==='function')_modulesSheetReset();
   var sheet=g('m-modules-sheet');if(!sheet)return;
   sheet.dataset.tab=t;
+  // 13/10/2026 (phase 5b): the field tab is for the round, gloves and sun: one big row per action.
+  sheet.classList.toggle('tab-field',t==='field');
   var ttl=sheet.querySelector('.modal-title');if(ttl)ttl.textContent=_TAB_NAME[t]||'';
   _modulesSheetFilter('');
   openModal('m-modules-sheet');
@@ -4912,7 +4935,7 @@ window._modulesSheetKey=function(ev){
 window._modulesSheetReset=function(){
   var i=g('m-modules-search');if(i)i.value='';
   var sh=g('m-modules-sheet');
-  if(sh){sh.dataset.tab='';var tt=sh.querySelector('.modal-title');
+  if(sh){sh.dataset.tab='';sh.classList.remove('tab-field');var tt=sh.querySelector('.modal-title');
     if(tt){if(!tt.dataset.full)tt.dataset.full=tt.innerHTML;else tt.innerHTML=tt.dataset.full;}}
   _modulesSheetFilter('');
 };
@@ -11110,10 +11133,11 @@ function _mfRender(){
     +'<div class="mf-sub">'+sub+'</div>'+_mfSyncHtml()
     +'<label>\u05de\u05d7\u05dc\u05e7\u05d4 *</label>'+_mfChips(_THZ_DEPTS,_mf.dept,'_mfPickDept')
     +_mfOpenHtml()
+    // 13/10/2026 (redesign phase 5b, field mode): the camera first, right after the department.
+    +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area" class="mf-cam"></div>'
     +'<label for="mf-loc">\u05de\u05d9\u05e7\u05d5\u05dd</label><input id="mf-loc" list="mf-loc-list" autocomplete="off" oninput="_thzRepUpd(\'mf-rep\',_mf.dept,g(\'mf-loc\').value,g(\'mf-descr\').value)" value="'+esc(_mf['mf-loc']||'')+'">'+_mfLocList()
     +'<label for="mf-descr">\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2 *</label><textarea id="mf-descr" rows="3" oninput="_thzRepUpd(\'mf-rep\',_mf.dept,g(\'mf-loc\').value,g(\'mf-descr\').value)">'+esc(_mf['mf-descr']||'')+'</textarea>'
     +'<div id="mf-rep">'+(_mf.dept?_thzRepHint(_mf.dept,_mf['mf-loc'],_mf['mf-descr']):'')+'</div>'
-    +'<label>\u05ea\u05de\u05d5\u05e0\u05d4</label><div id="mf-attach-area"></div>'
     +'<label>\u05e8\u05de\u05ea \u05d7\u05d5\u05de\u05e8\u05d4</label>'+_mfChips(_THZ_SEV,_mf.sev,'_mfPickSev')
     +'<label for="mf-resp">\u05d0\u05d7\u05e8\u05d0\u05d9 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc</label><select id="mf-resp">'+_THZ_RESP.map(function(v){return '<option'+(v===(_mf.resp||_THZ_RESP[0])?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select>'
     +'<label for="mf-action">\u05e4\u05e2\u05d5\u05dc\u05d4 \u05e0\u05d3\u05e8\u05e9\u05ea</label><textarea id="mf-action" rows="2">'+esc(_mf['mf-action']||'')+'</textarea>'

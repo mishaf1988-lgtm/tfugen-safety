@@ -42,9 +42,16 @@ const PAGES = ['dash', 'tasks', 'cal', 'mr', 'exp', 'nm', 'inc', 'round', 'ncr',
     const shown = new Set();
     for (const t of ['field', 'reg', 'mgmt']) { _tabOpen(t); vis().forEach((b) => shown.add(b.id + '|' + b.getAttribute('onclick'))); closeModal('m-modules-sheet'); }
     const lost = [...avail].filter((k) => !shown.has(k) && !/_tabOpen|goPage\('dash'\)/.test(k));
+    // 13/10/2026 (phase 5b, field mode): the field tab = big one-column rows, the round report first.
+    _tabOpen('field');
+    const fv = vis().map((b) => ({ h: b.getBoundingClientRect().height, top: b.getBoundingClientRect().top, mf: /mgrFieldOpen/.test(b.getAttribute('onclick') || '') }));
+    const field = { cls: sheet.classList.contains('tab-field'), minH: Math.min(...fv.map((x) => x.h)), firstMf: fv.slice().sort((a, b) => a.top - b.top)[0].mf,
+      oneCol: new Set(vis().map((b) => Math.round(b.getBoundingClientRect().left))).size === 1, search: getComputedStyle(document.getElementById('m-modules-search')).display };
+    closeModal('m-modules-sheet');
     _menuOpen();
     const full = { n: vis().length, groups: [...sheet.querySelectorAll('.sheet-group-title')].filter((gt) => gt.style.display !== 'none').length,
       title: sheet.querySelector('.modal-title').textContent };
+    full.cls = sheet.classList.contains('tab-field');
     closeModal('m-modules-sheet');
     goPage('ppe');
     const onPpe = document.querySelector('.tab.on') && document.querySelector('.tab.on').id;
@@ -59,7 +66,7 @@ const PAGES = ['dash', 'tasks', 'cal', 'mr', 'exp', 'nm', 'inc', 'round', 'ncr',
     const repPad = getComputedStyle(document.querySelector('.main')).paddingTop;
     document.body.classList.remove('role-reporter'); document.body.classList.add('emp-mode');
     const empHidden = getComputedStyle(document.getElementById('tabbar')).display;
-    return { lost, untabbed, noTab, per, full, onPpe, onNcr, today, tbPos: tb.position, tbTop: tb.top, mainPad, repHidden, repPad, empHidden, total: btns.length };
+    return { field, lost, untabbed, noTab, per, full, onPpe, onNcr, today, tbPos: tb.position, tbTop: tb.top, mainPad, repHidden, repPad, empHidden, total: btns.length };
   }, PAGES);
   check('every button of the modules sheet has a tab', r.untabbed.length === 0, r.untabbed);
   check('every module the sheet offers is reachable from some tab', r.lost.length === 0, r.lost);
@@ -69,6 +76,8 @@ const PAGES = ['dash', 'tasks', 'cal', 'mr', 'exp', 'nm', 'inc', 'round', 'ncr',
     check(t + ': opens with its own screens only, no duplicates, titled', p.n > 2 && p.wrong === 0 && p.dup === 0 && p.title.length > 1 && p.emptyGroup > 0, p);
   }
   check('the menu button still opens the full sheet with its own title', r.full.n > r.per.reg.n && r.full.groups >= 6 && r.full.title !== r.per.mgmt.title, r.full);
+  check('field tab: one column of rows at least 72px, the round report first, no search', r.field.cls && r.field.minH >= 72 && r.field.firstMf && r.field.oneCol && r.field.search === 'none', r.field);
+  check('the menu button after the field tab: the normal sheet again', r.full.cls === false, r.full);
   check('a register page marks the registers tab', r.onPpe === 'tab-reg', r.onPpe);
   check('NCR marks the management tab', r.onNcr === 'tab-mgmt', r.onNcr);
   check('"today" goes to the home queue', r.today === 'dash', r.today);

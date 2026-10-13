@@ -45,6 +45,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     res.open = ov && ov.style.display === 'block' && !_mfWanted();
     res.chips = Array.from(ov.querySelectorAll('.mf-chips')[0].children).map((b) => b.textContent);
     res.noScroll = document.documentElement.scrollWidth <= 375 && ov.scrollWidth <= 375;
+    // 13/10/2026 (phase 5b): the camera right after the department, before place and description, and big.
+    { const cam = ov.querySelector('#mf-attach-area'), loc = ov.querySelector('#mf-loc'), btn = cam && cam.querySelector('.btn');
+      res.camFirst = !!cam && !!loc && !!(cam.compareDocumentPosition(loc) & Node.DOCUMENT_POSITION_FOLLOWING); res.camH = btn ? btn.getBoundingClientRect().height : 0; }
     mgrFieldSave(); res.noDept = toasts.slice(-1)[0]; res.ins0 = ins.length;
     _mfPickDept('תוצג');
     res.sub = ov.querySelector('.mf-sub').textContent;
@@ -280,6 +283,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('a closure report (not a finding) is not a search result', !t27.closure.some((x) => x.startsWith('trustee_reports:')), t27.closure);
   check('the result reads "נ-7: ..." with the trustee', /^נ-7: מאריכים/.test(t27.view || '') && /מוסא/.test(t27.view), t27.view);
   check('opening it goes to the trustee page, all filters, that row', JSON.stringify(t27.open) === JSON.stringify(['tr-1', 'all']), t27.open);
+  check('field mode: the camera comes before place and description, at least 72px', out.camFirst && out.camH >= 72, [out.camFirst, out.camH]);
   check('no page errors', errors.length === 0, errors);
 
   await browser.close();
