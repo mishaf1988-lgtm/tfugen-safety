@@ -3,7 +3,7 @@
 // list of tables, medical tables expiry only, trustee reports without text or names,
 // four server_state keys to write, nothing deleted.
 import fs from 'fs';
-import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimSession } from './_build/routine-db.mjs';
+import { onRequest, cleanQuery, keyOk, TABLES, COLUMNS, STATE_WRITE, STAMP_AT, stampAt, AGENT_LOG_MAX, expiryPatch, EXPIRY_TABLES, FILE_URL_PREFIX, odMoveCheck, skipNameOk, OD_ROOT, OD_INBOX, OD_SKIP, OD_REQ, MAIL_REQ_ID, skipMovedAdd, SKIP_MOVED_DAYS, SKIP_MOVED_MAX, CLAIM_KEY, CLAIM_HOURS, claimApply, claimSession } from './_build/routine-db.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
@@ -210,6 +210,11 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('to the old-versions or to-delete folders, or ARCHIVE: refused', ['a/_גרסאות קודמות', 'a/למחיקה/b', 'ARCHIVE/2020'].every((d) => !!odMoveCheck({ ...base, to_dir: d }).error));
     check('into not filed: any file type, same name only', !odMoveCheck({ ...base, from: 'ad.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'ad.mp4' }).error && !!odMoveCheck({ ...base, from: 'ad.mp4', to_dir: OD_INBOX + '/' + OD_SKIP, name: 'other.mp4' }).error && !!odMoveCheck({ ...base, from: 'ad.mp4', name: 'ad.mp4' }).error);
     check('into not filed: a file with no extension too (RAW, 12/10/2026); into a document folder: refused', !odMoveCheck({ ...base, from: '2026-10-12 1046 - RAW', to_dir: OD_INBOX + '/' + OD_SKIP, name: '2026-10-12 1046 - RAW' }).error && !!odMoveCheck({ ...base, from: '2026-10-12 1046 - RAW' }).error && !!odMoveCheck({ ...base, from: '../x', to_dir: OD_INBOX + '/' + OD_SKIP, name: '../x' }).error);
+    check('into not filed: the reason in parentheses before the extension (13/10/2026)', !odMoveCheck({ ...base, from: '2026-10-13 0751 - Doc.pdf', to_dir: OD_INBOX + '/' + OD_SKIP, name: '2026-10-13 0751 - Doc (\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea).pdf' }).error && skipNameOk('RAW', 'RAW (\u05e7\u05d5\u05d1\u05e5 \u05e8\u05d9\u05e7)') && skipNameOk('a.b.pdf', 'a.b (x y).pdf'));
+    check('into not filed: another name, a changed extension, an empty, nested or too long reason: refused', [['a.pdf', 'b (x y).pdf'], ['a.pdf', 'a (x y).exe'], ['a.pdf', 'a ().pdf'], ['a.pdf', 'a (x (y)).pdf'], ['a.pdf', 'a (' + 'x'.repeat(61) + ').pdf'], ['a.pdf', 'a (x y)/.pdf']].every(([f, n]) => !skipNameOk(f, n) || !!odMoveCheck({ ...base, from: f, to_dir: OD_INBOX + '/' + OD_SKIP, name: n }).error));
+    const RN = { ...base, from: OD_SKIP + '/RAW', to_dir: OD_INBOX + '/' + OD_SKIP };
+    check('a file already in not filed: only the reason added, in place, not recorded (13/10/2026)', !odMoveCheck({ ...RN, name: 'RAW (x y)' }).error && odMoveCheck({ ...RN, name: 'RAW (x y)' }).skip === false && odMoveCheck({ ...RN, name: 'RAW (x y)' }).from === OD_ROOT + OD_INBOX + '/' + OD_SKIP + '/RAW');
+    check('a file already in not filed: the same name, another name, another folder or a deeper path: refused', !!odMoveCheck({ ...RN, name: 'RAW' }).error && !!odMoveCheck({ ...RN, name: 'other (x y)' }).error && !!odMoveCheck({ ...RN, to_dir: DIR, name: 'RAW (x y)' }).error && !!odMoveCheck({ ...RN, from: OD_SKIP + '/a/RAW', name: 'RAW (x y)' }).error && !!odMoveCheck({ ...RN, from: 'x/RAW', name: 'RAW (x y)' }).error);
     check('a name with a slash or a script type: refused', !!odMoveCheck({ ...base, name: 'a/b.pdf' }).error && !!odMoveCheck({ ...base, name: 'x.exe' }).error && !!odMoveCheck({ ...base, from: 'x.js' }).error);
     check('why missing: refused', !!odMoveCheck({ ...base, why: '' }).error);
     check('the paths stay inside the safety folder', odMoveCheck(base).toDir === OD_ROOT + DIR && odMoveCheck(base).from === OD_ROOT + OD_INBOX + '/a.pdf');
