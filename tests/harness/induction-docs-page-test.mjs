@@ -69,9 +69,14 @@ check('the shutter adds a photo (2 now) and the camera stays open for the next o
 await page.click('#camdone', { timeout: 3000 }).catch(() => {});
 check('done closes the camera and stops it', await page.locator('#camov').count() === 0 && await page.evaluate(() => !document.querySelector('video')));
 const pp = async (perm, init) => { const c = await browser.newContext({ viewport: { width: 375, height: 800 } }); if (perm) await c.grantPermissions(['camera'], { origin: 'https://x.test' }); if (init) await c.addInitScript(init); const p = await c.newPage(); await p.route('https://x.test/p', (rt) => rt.fulfill({ status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': ind.csp }, body: ind.html })); await p.goto('https://x.test/p'); return p; };
-const den = await pp(true, () => { navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('denied', 'NotAllowedError')); });
-await den.click('#dadd'); await den.waitForFunction(() => { const m = document.getElementById('cammsg'); return m && m.textContent.length > 5; }, null, { timeout: 5000 }).catch(() => {});
-check('camera blocked: a message saying how to allow it, no shutter', await den.evaluate(() => { const m = document.getElementById('cammsg'); return !!m && /חוסם את המצלמה/.test(m.textContent) && /הרשאות/.test(m.textContent) && document.getElementById('camshot').style.display === 'none'; }), await den.evaluate(() => (document.getElementById('cammsg') || {}).textContent));
+const blocked = async (name, state) => { const p = await pp(true, `navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('x', '${name}')); navigator.permissions.query = () => Promise.resolve({ state: '${state}' });`); await p.click('#dadd'); await p.waitForFunction(() => { const m = document.getElementById('cammsg'); return m && m.textContent.length > 5; }, null, { timeout: 5000 }).catch(() => {}); return p.evaluate(() => ({ t: (document.getElementById('cammsg') || {}).textContent || '', hid: (document.getElementById('camshot') || {}).style.display === 'none' })); };
+let m = await blocked('NotAllowedError', 'denied');
+check('site blocked: says how to allow the site, no shutter', /האתר חסום/.test(m.t) && /הרשאות/.test(m.t) && m.hid, m);
+m = await blocked('NotAllowedError', 'granted');
+check('blocked while the site is allowed: the device camera switch', /הגדרות המכשיר/.test(m.t) && /גישה למצלמה/.test(m.t) && m.hid, m);
+m = await blocked('NotReadableError', 'granted');
+check('camera busy in another app: says so', /תפוסה/.test(m.t), m);
+check('every blocked message points to the gallery button', /הכפתור השני/.test(m.t), m);
 const old = await pp(false, () => { Object.defineProperty(navigator, 'mediaDevices', { value: undefined }); });
 const fc = old.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false); await old.click('#dadd');
 check('a browser without mediaDevices: the button opens the file input with capture', await fc);
