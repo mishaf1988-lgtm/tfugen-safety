@@ -10925,7 +10925,10 @@ function rThz(){
     +(function(){var n=open.filter(function(r){return _thzOverdue(r)&&_thzEsc(-du(r.due),r.sev);}).length;return n?' | <b style="color:var(--red)">'+n+'</b> \u05d1\u05d4\u05e1\u05dc\u05de\u05d4':'';})()
     +(function(){var n=open.filter(_thzNoDue).length;return n?' | <b style="color:var(--c-orange-650,#b45309)">'+n+'</b> \u05d1\u05dc\u05d9 \u05d9\u05e2\u05d3':'';})()
     +' | <b>'+open.filter(function(r){return r.sev==='\u05d2\u05d1\u05d5\u05d4\u05d4';}).length+'</b> \u05d1\u05d7\u05d5\u05de\u05e8\u05d4 \u05d2\u05d1\u05d5\u05d4\u05d4'
-    +' | '+all.length+' \u05e1\u05d4"\u05db';
+    +' | '+all.length+' \u05e1\u05d4"\u05db'
+    // 13/10/2026 (Michael: the numbers do not match the deck): this list is the manager's tours only,
+    // the file and the deck also hold the trustees' findings. Say so, with the same count.
+    +(function(){var t=(DB.trustee_reports||[]).filter(function(r){return _truIsHazard(r);});if(!t.length)return '';var to=t.filter(function(r){return r.s!=='\u05e0\u05e1\u05d2\u05e8';}).length;return '<br>\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d5\u05d1\u05de\u05e6\u05d2\u05ea \u05d9\u05e9 \u05d2\u05dd '+t.length+' \u05de\u05de\u05e6\u05d0\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd ('+(to===1?'\u05d0\u05d7\u05d3 \u05e4\u05ea\u05d5\u05d7':to+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd')+'): \u05e1\u05d4"\u05db <b>'+(open.length+to)+'</b> \u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05ea\u05d5\u05da '+(all.length+t.length)+'.';})();
   var rows=all.filter(function(r){
     if(_thzF.dept&&r.dept!==_thzF.dept)return false;
     if(_thzF.s==='notclosed')return r.s!==_THZ_CLOSED;
