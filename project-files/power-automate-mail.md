@@ -7,7 +7,8 @@
 ## הזרימה (גרסה 2)
 - **טריגר:** `When a new email arrives (V3)`, Folder: תיבת דואר נכנס, Include Attachments: Yes, Only with Attachments: Yes, **From: ריק** (כל שולח).
 - **החרגה (Condition ראשון, לפני Apply to each):** Expression, "is equal to", `true`:
-  `not(contains(createArray('sviva@tapugan.co.il','geny@tapugan.co.il','hr-tap@tapugan.co.il','prod@tapugan.co.il','gideon@tapugan.co.il','tami@k-t.co.il','odoo@k-t.co.il','meital@mishlav.co.il','varditma@ztni.org.il','info@vitre.io','harel@vitre.io'),toLower(triggerOutputs()?['body/from'])))`
+  `not(contains(createArray('sviva@tapugan.co.il','<geny>','hr-tap@tapugan.co.il','prod@tapugan.co.il','<gideon>','<tami, k-t>','odoo@k-t.co.il','<meital, mishlav>','<vardit, ztni>','info@vitre.io','<harel, vitre>'),toLower(triggerOutputs()?['body/from'])))`
+  - **הכתובות האישיות הוסרו מהקובץ הציבורי** (13/10/2026, BACKLOG 13.17): כל `<...>` הוא כתובת מלאה של עובד או איש קשר. הרשימה המלאה נמצאת ב-Condition של הזרימה עצמה ב-Power Automate. בבנייה מחדש: להעתיק את הביטוי מהזרימה הקיימת, או לבקש ממיכאל את הכתובות.
   - רגישים (לא לתייק אוטומטית): `geny@`, `hr-tap@`, `prod@` (טופסי תאונה, רשימות עובדים עם תעודות זהות).
   - רעש: `gideon@` (תוכניות ייצור), k-t (הצעות IT), mishlav, ztni, vitre.
   - `sviva@`: המיילים של מיכאל עצמו.
