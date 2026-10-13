@@ -34,7 +34,7 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 o
 | `ins` | Insurance | `n`,`d`,`e`,`co`,`s` |
 | `drl` | Drills | `d`,`type`,`s`,`notes` |
 | `ctr` | Contractors | `n`,`co`,`d`,`e`,`s`,`cert` |
-| `wst` | Waste | `d`,`type`,`qty`,`dest`,`s` |
+| `wst` | Waste | `d`,`ty`,`q`,`c` (קוד),`h` (מוביל),`site` (אתר קליטה),`cert` (מספר תעודה),`t` (טיפול),`file_url` (13/10/2026, נמדד במסד) |
 | `hzm` | Hazmat (32 from permit 70011, 04/10/2026) | `n`,`un`,`hs` risk select (empty on import),`q` stock qty (null on import: the permit gives a max, kept in `em`),`loc`,`location_id`,`ms` SDS revision date (show with `fd`, not `eb`),`em` control measures,`file_url` SDS (04/10/2026) |
 | `env` | Environmental | `d`,`type`,`val`,`lim`,`s` |
 | `leg` | Legal register | `n`,`ref`,`d`,`e`,`s`,`notes` |
