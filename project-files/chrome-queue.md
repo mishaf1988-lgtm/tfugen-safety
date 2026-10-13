@@ -25,20 +25,6 @@
 
 ## פתוח
 
-- [ ] **C1. שתי הזרימות ב-Power Automate: לא לשמור קובץ בלי סיומת או קטן מ-1KB** (12/10/2026, מיכאל "מאשר"; `power-automate-mail.md`)
-  ב-12/10/2026 נשמר בתיקיית הנכנס קובץ ריק בשם "RAW" ממייל פנימי. מאז #1406 הוא לא נתקע יותר, אבל עדיף שלא יגיע בכלל.
-  ```
-  מיכאל אישר ("מאשר", 12/10/2026, בשיחה עם Claude Code). ב-Power Automate יש שתי זרימות:
-  "קבצים מספקים לנכנס מהמייל" ו"קבצים ממייל לפי בקשה".
-  בכל אחת מהן, בתוך Apply to each על Attachments, יש Condition על סוג הקובץ (שורות "does not end with" .jpg, .png וכו').
-  להוסיף לאותו Condition שתי שורות And:
-  1. Expression: contains(item()?['name'],'.')  is equal to  true
-  2. Expression: item()?['size']  is greater than  1024
-  לשמור, לוודא שה-Flow checker נקי ושהזרימה On.
-  לא לשלוח מייל לבדיקה, לא למחוק כלום, לא לשנות שום דבר אחר.
-  בסוף לכתוב לי: בשתי הזרימות נוספו השורות, צילום של ה-Condition.
-  ```
-
 - [ ] **C10. מחיקת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: למחוק את המחשב", אחרי "למה אני צריך את זה?"; `work-vm-plan.md` "ההחלטה השנייה"). בפרופיל הכרום "Azure פרטי".
   ```
   מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: למחוק את המחשב". חשבון mishaf1988@gmail.com בלבד. אם מופיע tapugan.co.il: לעצור.
@@ -53,6 +39,7 @@
 
 ## בוצע
 
+- [x] **C1. שתי הזרימות ב-Power Automate: לא לשמור קובץ בלי סיומת או קטן מ-1KB** (12/10/2026, מיכאל "מאשר"; `power-automate-mail.md`) **בוצע 13/10/2026 על ידי Claude בכרום:** בשתי הזרימות נוספו `"equals": ["@contains(item()?['name'],'.')", true]` ו-`"greater": ["@item()?['size']", 1024]` (נבדק בתצוגת הקוד), Flow checker 0/0, שתיהן On. **לא נבדק עדיין במייל אמיתי:** לבדוק בהיסטוריית ההרצות אחרי המייל הבא עם קובץ.
 - [x] **C12. GitHub OAuth: לבטל את Cursor ו-Netlify Auth** (13/10/2026, מיכאל בשאלון: "בצע: Cursor ו-Netlify Auth (מומלץ)"). **בוצע 13/10/2026 על ידי Claude בכרום.** נשארו ב-OAuth Apps: Cloudflare, DigitalOcean, Git Credential Manager, GitHub CLI, GitHub iOS, Ollama, Resend, Supabase. Cursor ו-Netlify לא מופיעים באף לשונית.
 - [x] **C11. GitHub: להסיר את Vercel ו-Netlify, ו-Cursor מ-OAuth** (13/10/2026, מיכאל בשאלון: "בצע: להסיר Vercel ו-Netlify ולבדוק OAuth (מומלץ)"). Vercel נמחק ב-21/09/2026 ו-Netlify מושהה, אבל שתי האפליקציות עוד מותקנות עם גישה לקוד. **בוצע 13/10/2026 על ידי Claude בכרום:** Vercel ו-Netlify הוסרו מ-Installed; Cursor ו-Vercel בוטלו ב-Authorized GitHub Apps. נשארו Installed: Claude, Claude Design Import, Cloudflare Workers and Pages. Authorized GitHub Apps: ChatGPT Codex Connector, Claude, Claude Design Import, Cloudflare Workers and Pages, Copilot Chat App, Copilot SWE Agent, Manus Connector. OAuth Apps: Cloudflare, Cursor, DigitalOcean, Git Credential Manager, GitHub CLI, GitHub iOS, Netlify Auth, Ollama, Resend, Supabase. המשך: C12.
 - [x] **C3. Cursor ב-GitHub: להסיר** (13/10/2026). **הבדיקה בוצעה 13/10/2026 על ידי Claude בכרום:** הותקן 11/04/2026, גישה ל-All repositories, כתיבה לקוד, workflows, PRs ו-issues; מבקש 7 הרשאות נוספות (Administration, Actions כתיבה, Email addresses ועוד) בנימוק merge queues. ב-GitHub אין שום PR או commit שלו. מיכאל בשאלון: **"בצע: להסיר את Cursor (מומלץ)"**. **הוסר 13/10/2026 על ידי Claude בכרום** ("A job has been queued to uninstall"), בלי לאשר את בקשת ההרשאות. נשארו: Claude, Claude Design Import, Cloudflare Workers and Pages, Netlify (מושהה), Vercel. המשך: C11.
