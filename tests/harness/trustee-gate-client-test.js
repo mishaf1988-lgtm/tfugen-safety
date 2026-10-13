@@ -290,7 +290,8 @@ window.supabase = { createClient: function () { return { auth: {
     const styled = await p.evaluate(() => {
       const bg = getComputedStyle(document.getElementById('emp-gate-btn')).backgroundColor;
       const m = bg.match(/\d+/g) || [];
-      return { bg, red: Number(m[0]) > 150 && Number(m[1]) < 90 && Number(m[2]) < 90 };
+      // Redesign phase 3 (13/10/2026): the primary action is sign blue, no longer red.
+      return { bg, red: bg === 'rgb(21, 72, 137)' };
     });
     check('...and the entry button looks like the primary action, not a disabled one', styled.red, styled);
     check('...and going back returns to the login screen', true);
