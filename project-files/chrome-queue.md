@@ -82,14 +82,15 @@
   2. Subscription: מנוי הניסיון. Resource group חדש: tapugan-claude-rg.
      Virtual machine name: tapugan-claude. Region: (Middle East) Israel Central.
      Image: Windows Server 2022 Datacenter: Azure Edition (לא Core, עם Desktop Experience).
-     Size: Standard_B2s.
+     Size: Standard_B2als_v2 (אם לא זמין באזור: Standard_B2s).
      Username: michael-vm. **את הסיסמה לא להזין: לעצור ולבקש ממני להקליד אותה בעצמי.**
      Public inbound ports: Allow selected ports, RDP (3389).
-  3. Disks: Standard SSD.
-  4. Management: Auto-shutdown כבוי.
+  3. Disks: Standard SSD, 64GB.
+  4. Management: Auto-shutdown פעיל, 22:00, אזור זמן Israel.
   5. Review + create: לצלם את מסך הסיכום כולל המחיר המשוער, ולעצור. אני מאשר את Create בעצמי.
   6. אחרי שהמחשב נוצר: Networking, כלל ה-RDP, Source = My IP address, לשמור.
-  7. Cost Management, Budgets, Add: 50 דולר לחודש, התראה במייל ל-sviva@tapugan.co.il ב-80% וב-100%.
+  7. Cost Management, Budgets, Add: 15 דולר לחודש, התראה במייל ל-sviva@tapugan.co.il ב-80% וב-100%.
+  8. לכבות את המחשב (Stop) בסוף, כדי שלא יחויב עד השימוש הראשון.
   לא ליצור משאבים נוספים, לא לשנות שום הגדרה אחרת. בסוף לכתוב לי: מחיר משוער לחודש מהסיכום, הכתובת הציבורית של המחשב, ושהתקציב נוצר.
   ```
 
