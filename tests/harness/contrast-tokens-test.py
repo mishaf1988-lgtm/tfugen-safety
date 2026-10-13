@@ -76,5 +76,34 @@ check('visual-audit: contrast measured inside each modal', '(${CONTRAST})(m,vis,
 check('visual-audit: contrast reported for the kiosk, its tour form and the detail view',
       va.count("'/emp-home', m.lowContrastCount") == 1 and 'in the tour form' in va and "'/view-' + tbl, m.lowContrastCount" in va)
 
+# Part D (13/10/2026): JS colour values the audit never reaches with the demo data (Excel import
+# status, morning-round warn button and print, NCR status in the mail list, backup age, AI
+# confidence, lead tile, suggestion badge) went to the same dark shades: '#d97706' (3.19) and
+# '#f59e0b' to '#b45309', '#0d9488' (white on it 3.74) to '#0f766e'. '#f59e0b' stays only as the
+# border of the low-confidence badge.
+for h in ('#d97706', '#0d9488'):
+    n = s.count("'" + h + "'")
+    check("no '%s' JS colour value (under 4.5 on white)" % h, n == 0, n)
+n = s.count("'#f59e0b'")
+check("'#f59e0b' only as the low-confidence badge border", n == 1 and "borderColor='#f59e0b'" in s, n)
+
+# The NCR agent panel is dark: its bright colours pass there, but the 9px status and priority
+# badges sit on the row colour tinted by their own colour (+'22'), where three were under 4.5.
+def mix(c, back, a=0x22 / 255):
+    return '#' + ''.join('%02x' % round(int(c[i:i + 2], 16) * a + int(back[i:i + 2], 16) * (1 - a)) for i in (1, 3, 5))
+
+m = re.search(r"var _P=\{(.*?)\};", s)
+P = dict((k, (bg, c)) for k, bg, c in re.findall(r"'(\w)':\{bg:'(#\w{6})',b:'#\w{6}',c:'(#\w{6})'\}", m.group(1))) if m else {}
+check('NCR agent: four priority colours found', len(P) == 4, P)
+for k, (back, c) in P.items():
+    r = ratio(c, mix(c, back))
+    check('NCR agent priority %s badge %s: %.2f >= 4.5' % (k, c, r), r >= 4.5)
+g = re.search(r"function _gsc\(s\)\{(.*?)\}", s)
+SC = re.findall(r"'(#\w{6})'", g.group(1)) if g else []
+check('NCR agent: four status colours found', len(SC) == 4, SC)
+for c in SC:
+    worst = min(ratio(c, mix(c, back)) for back, _ in P.values()) if P else 0
+    check('NCR agent status badge %s on every row colour: %.2f >= 4.5' % (c, worst), worst >= 4.5)
+
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)
