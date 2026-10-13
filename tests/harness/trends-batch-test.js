@@ -86,7 +86,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       return { nm: nm ? nm.innerHTML : '', tru: tru ? tru.innerHTML : '' };
     });
     check('a fall in near-miss REPORTING is flagged red — it is not a success', /▼/.test(dirs.nm) && /#cc1f1f/.test(dirs.nm), dirs.nm.slice(0, 300));
-    check('...and a rise in trustee reporting is green', /▲/.test(dirs.tru) && /#16a34a/.test(dirs.tru), dirs.tru.slice(0, 300));
+    check('...and a rise in trustee reporting is green', /▲/.test(dirs.tru) && /#237f52/.test(dirs.tru), dirs.tru.slice(0, 300));
 
     const trustee = await page.evaluate(() => {
       // a trustee report may carry only `m` — _truRowMonth handles both
