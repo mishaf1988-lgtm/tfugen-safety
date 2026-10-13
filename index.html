@@ -1304,7 +1304,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   <div class="card" id="dash-auds-card" style="display:none"><div class="card-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1493;&#1514; &#1488;&#1495;&#1512;&#1493;&#1504;&#1493;&#1514;</div><div id="dash-auds"><p class="et">&#1488;&#1497;&#1503;</p></div></div>
   <div class="card" id="dash-wa-test" style="display:none"><div class="card-title">&#128241; &#1489;&#1491;&#1497;&#1511;&#1514; WhatsApp (admin)</div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-      <input type="tel" id="dash-wa-phone" placeholder="+972547940073" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
+      <input type="tel" id="dash-wa-phone" placeholder="+972501234567" pattern="^\+?972[0-9]{9}$" title="פורמט תקין: ‎+972XXXXXXXXX" style="flex:1;min-width:160px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;direction:ltr;text-align:left;font-family:inherit">
       <button class="btn btn-p" onclick="_waTestSend()" style="font-size:13px;white-space:nowrap">&#128241; &#1513;&#1500;&#1495;</button>
       <button class="btn btn-d" onclick="_waDiagnose()" style="font-size:13px;white-space:nowrap" title="&#1502;&#1488;&#1489;&#1495;&#1503; &#1488;&#1514; &#1492;&#1488;&#1497;&#1504;&#1496;&#1490;&#1512;&#1510;&#1497;&#1492; &#1489;&#1500;&#1497; &#1500;&#1513;&#1500;&#1493;&#1495; &#1492;&#1493;&#1491;&#1506;&#1492;">&#128270; &#1488;&#1489;&#1495;&#1493;&#1503;</button>
     </div>
@@ -22335,7 +22335,7 @@ window._waTestSend=function(){
   // an API call and return a confusing Meta error.
   if(!/^\+?972[0-9]{9}$/.test(to)){
     var r2=g('dash-wa-result');
-    if(r2)r2.textContent='\u2717 \u05e4\u05d5\u05e8\u05de\u05d8 \u05e9\u05d2\u05d5\u05d9. \u05d3\u05d5\u05d2\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05ea: \u200e+972547940073';
+    if(r2)r2.textContent='\u2717 \u05e4\u05d5\u05e8\u05de\u05d8 \u05e9\u05d2\u05d5\u05d9. \u05d3\u05d5\u05d2\u05de\u05d4 \u05ea\u05e7\u05e0\u05d9\u05ea: \u200e+972501234567';
     return;
   }
   try{localStorage.setItem('tfgn_wa_last',to);}catch(e){console.warn('[wa] last save failed:',e&&e.message);}
