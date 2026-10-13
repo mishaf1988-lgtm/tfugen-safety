@@ -39,17 +39,16 @@
 
 0. **Start** למחשב (בפורטל, בפרופיל "Azure פרטי", או באפליקציית Azure בטלפון), ולחכות ל-Running.
 
-1. בפורטל: המחשב `tapugan-claude`, ואז Connect, ואז RDP, ואז Download RDP file. לפתוח את הקובץ, ולהתחבר עם `michael-vm` והסיסמה.
-2. במחשב החדש:
-   - להתקין את Google Chrome.
-   - להתקין את Git for Windows (https://git-scm.com/downloads/win). זו המלצה של התיעוד, כדי ש-Claude Code יעבוד עם Bash.
-   - להתקין את Claude Code. ב-PowerShell: `irm https://claude.ai/install.ps1 | iex` (מהתיעוד הרשמי, code.claude.com/docs/en/quickstart). לפתוח חלון חדש ולבדוק `claude --version`.
-3. בכרום:
-   - להתקין את התוסף Claude in Chrome מחנות כרום, ולהתחבר לחשבון Claude.
-   - להתחבר לאתרים: Microsoft 365 (`sviva@tapugan.co.il`), Power Automate, GitHub, Supabase, Cloudflare, נבו. בכל אחד לסמן "הישאר מחובר".
-4. ב-PowerShell: `claude`, ואז `/login` (התחברות דרך הדפדפן, לא מפתח API: בלי זה החיבור לכרום לא עובד, לפי התיעוד). אחר כך `/chrome`, ולבחור **Enabled by default**.
-5. **הדיסק:** smalldisk מתחיל ב-C: של 30GB. אם בסייר הקבצים C: מראה כ-30GB: לחיצה ימנית על התחל, Disk Management, לחיצה ימנית על C:, Extend Volume, Next עד הסוף.
-6. בדיקה: לכתוב ל-Claude Code "תפתח את tapugan-safety.pages.dev ותגיד לי מה מופיע". צריך להופיע מסך הכניסה של האפליקציה, לא "המערכת זמינה מישראל בלבד".
+**מה עבד בפועל (13/10/2026, הכניסה הראשונה).** אם מקימים מחשב מחדש, זה הסדר:
+
+1. **Git מבחוץ:** כרום בפורטל, Operations, Run command, RunPowerShellScript, סקריפט שמוריד את Git for Windows מ-GitHub ומתקין `/VERYSILENT`. כך לא צריך להקליד אותו בתוך המחשב.
+2. **החיבור:** Connect, Native RDP, Download RDP file. בחלון האזהרה "חיבור מרוחק לא מוכר" **לסמן "לוח"** לפני "התחבר": החלון הזה מבטל את ההגדרה ששמורה בקובץ, ובלעדיו ההדבקה מהמחשב של מיכאל לא עובדת. באזהרת האישור של `tapugan-claude`: "אל תבקש ממני שוב", ואז "כן".
+3. **PowerShell:** Server Manager, Tools, Windows PowerShell. **לבטל QuickEdit** (לחיצה ימנית על הכותרת, Properties, Options): בלי זה לחיצה או סימון בחלון מעבירים אותו ל-"Select" ומקפיאים את מה שרץ. מקלדת באנגלית (Alt+Shift).
+4. **Claude Code:** להקליד `irm https://claude.ai/install.ps1 | iex`. התיקייה `.local\bin` לא נכנסת ל-PATH, ולכן מפעילים `.\.local\bin\claude`. התחברות: "Claude account with subscription", ב-Edge שנפתח, עם CAPTCHA בכניסה הראשונה. "Yes, I trust this folder" היא **האפשרות השנייה** (הראשונה היא No, exit).
+5. **ההודעה הראשונה ל-Claude Code** עושה את השאר: `add .local\bin to my user PATH, restart rdpclip, extend C: to full disk, install Google Chrome`. **Invoke-WebRequest איטי מאוד ב-PowerShell 5.1** (6 דקות בלי סוף): להוריד עם `curl.exe`.
+6. **Chrome:** "Stay signed out" (בלי סנכרון חשבון Google), "Set as default". דף התוסף נחתך בחלון צר: להגדיל ואז Add to Chrome. הפאנל מתחבר לבד לחשבון Claude.
+7. **בדיקה T2 עברה (13/10/2026):** `tapugan-safety.pages.dev` הציג את מסך הכניסה (Claude Code פתח אותו ב-Chrome נסתר). אחר כך `/chrome`, Enabled by default, ובדיקה שהדף נפתח דרך התוסף בחלון הגלוי.
+8. **נשאר:** התחברות לאתרים (365, Power Automate, GitHub, Supabase, Cloudflare, נבו) עם "הישאר מחובר", ו-**Stop** בסוף.
 
 ## שלב 4: המשימה המתוזמנת (Claude, אחרי שלב 3)
 
