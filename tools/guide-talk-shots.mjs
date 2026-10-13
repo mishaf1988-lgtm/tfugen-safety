@@ -53,7 +53,12 @@ const IND = {
 const WK = {
   id: 'wk-tuganim', d: '2026-10-11', s: PUB, kind: null, dept: 'טוגנים', title: 'הדרכה שבועית: טוגנים', trainer: 'מיכאל פרייליך', trainer_qual: 'ממונה בטיחות',
   body: 'אולם השטיפה - בונקר קבלת תפוחי אדמה\n1. מתחת לבונקרים חובשים כובע חבטה.\n2. רעש מזיק: אטמי אוזניים.',
-  quiz: [{ q: 'מה חובשים מתחת לבונקרים?', a: ['כובע חבטה', 'כובע מצחייה', 'אוזניות מוזיקה', 'שום דבר'], c: 0 }],
+  body_ar: 'تدريب أسبوعي: القلي\n1.', body_ru: 'Еженедельный инструктаж\n1.', body_am: 'ሳምንታዊ ስልጠና\n1.',
+  // The second question is made from the body's own line 2, so the quiz shot shows a right and a wrong answer.
+  quiz: [
+    { q: 'מה חובשים מתחת לבונקרים?', a: ['כובע חבטה', 'כובע מצחייה', 'אוזניות מוזיקה', 'שום דבר'], c: 0 },
+    { q: 'מה שמים באוזניים כשיש רעש מזיק?', a: ['כלום', 'אוזניות מוזיקה', 'אטמי אוזניים', 'צמר גפן'], c: 2 },
+  ],
 };
 // Invented: a guide is seen by the whole plant.
 const EMPS = [
@@ -90,6 +95,21 @@ const SHOTS = {
   'w1-open': {
     html: () => perm(IND),
     ring: { sel: 'body a[href*="l=ar"]', parent: true, n: 1 },
+  },
+  // The managers' guide shows the weekly talk (13/10/2026): since 11/10/2026 the
+  // induction page has no quiz and no read-aloud, so its pictures no longer fit a weekly talk.
+  'w1-open-wk': {
+    html: () => plain(WK),
+    ring: { sel: 'body a[href*="l=ar"]', parent: true, n: 1 },
+  },
+  'w2-quiz-wk': {
+    html: () => plain(WK),
+    prepare: async (p) => {
+      await p.evaluate(() => { document.getElementById('qz').scrollIntoView({ block: 'start' }); window.scrollBy(0, -40); });
+      await p.check('fieldset[data-q="0"] input[value="0"]');
+      await p.check('fieldset[data-q="1"] input[value="1"]');
+    },
+    ring: { sel: '#qz', n: 2 },
   },
   'w2-quiz': {
     html: () => perm(IND),
@@ -223,7 +243,11 @@ async function formShot(browser) {
 }
 
 const want = process.argv.slice(2);
-const names = want.length ? want : Object.keys(SHOTS).concat('form-08');
+// The HR guide's own pictures are kept as they are (Michael, 11/10/2026: "no need to make more of
+// the guide, they are already briefed"), and since that day's induction form (no list, no quiz) these
+// shots can no longer be taken. Asked by name they still run, and fail where the page moved.
+const HR_FROZEN = ['w0-code', 'w1-open', 'w2-quiz', 'w3b-other', 'w4-sign-ind', 'w5-done-ind', 'form-08'];
+const names = want.length ? want : Object.keys(SHOTS).filter((n) => !HR_FROZEN.includes(n));
 const unknown = names.filter((n) => !SHOTS[n] && n !== 'form-08');
 if (unknown.length) { console.error('unknown shot: ' + unknown.join(', ')); process.exit(1); }
 fs.mkdirSync(OUT, { recursive: true });

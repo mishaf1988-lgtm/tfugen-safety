@@ -70,6 +70,17 @@ const BLUE = 'rgb(21, 72, 137)', INK = 'rgb(43, 43, 44)', RED = 'rgb(167, 41, 32
   check('register row: the expiry badge sits next to the name', w.badge === '2', w.badge);
   check('register row: other fields are small inline "label:" facts', w.fact && w.fact[0] === '3' && w.fact[1] === '13px' && /:/.test(w.fact[2]), w.fact);
   check('register row: the buttons are last, under a rule', w.act === '9' && w.rule === 'solid', [w.act, w.rule]);
+  // Stage 6 (13/10/2026, found in the trustee guide shot): the mouse-hover rule of .btn-s has the
+  // same weight as the chosen verdict and came later, so a chosen "defect" under the mouse turned
+  // grey with white text. Phones do not hover; a desktop and a tablet with a mouse do.
+  await page.evaluate(() => {
+    const d = document.createElement('div'); d.className = 'tru-vd'; d.style.cssText = 'position:fixed;top:300px;left:20px;z-index:99999';
+    d.innerHTML = '<button type="button" class="btn btn-s on-ok" id="t-ok">ok</button><button type="button" class="btn btn-s on-bad" id="t-bad">bad</button>';
+    document.body.appendChild(d);
+  });
+  const hov = [];
+  for (const id of ['t-ok', 't-bad']) { await page.hover('#' + id); await page.waitForTimeout(300); hov.push(await page.evaluate((i) => getComputedStyle(document.getElementById(i)).backgroundColor, id)); }
+  check('a chosen ok / defect keeps its colour under the mouse', hov[0] !== hov[1] && hov[1] === RED && !/rgb\((2[3-5]\d), \1, \1\)/.test(hov[0]), hov);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
