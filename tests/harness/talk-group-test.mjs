@@ -21,7 +21,7 @@ function world(o) {
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
-    if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { w.patches.push({ u, b: JSON.parse(body) }); return new Response(null, { status: o.patchFail ? 500 : 204 }); }
+    if (u.startsWith(SB + '/rest/v1/toolbox_talks') && m === 'PATCH') { w.patches.push({ u, b: JSON.parse(body) }); return o.patchFail ? new Response(null, { status: 500 }) : json(o.patchRace ? [] : [{ id: 'tt1' }]); }
     if (u.startsWith(SB + '/rest/v1/toolbox_talks')) return json([{ ...PUB, ...(o.talk || {}) }]);
     if (u.startsWith(SB + '/rest/v1/emp') && m === 'PATCH') { w.empPatches.push({ u: decodeURIComponent(u), b: JSON.parse(body) }); return new Response(null, { status: 204 }); }
     if (u.startsWith(SB + '/rest/v1/emp')) return json(EMPS);
@@ -109,12 +109,27 @@ console.log('\n4. the trainer\'s declaration');
   const noOk = await post({ k: gt, g: '1', t: '1', sig: SIG });
   check('without the declaration ticked: refused, nothing saved', noOk.status === 400 && w.patches.length === 0 && w.uploads.length === 0);
   const ok = await post({ k: gt, g: '1', t: '1', ok: '1', sig: SIG });
-  check('signed: the PNG saved as sig-tt1-trainer.png', ok.status === 200 && w.uploads.length === 1 && /sig-tt1-trainer\.png$/.test(w.uploads[0].u), w.uploads);
+  check('signed: the PNG saved as sig-tt1-trainer-<id>.png, never over an existing file', ok.status === 200 && w.uploads.length === 1 && /sig-tt1-trainer-[a-z0-9]+\.png$/.test(w.uploads[0].u) && w.uploads[0].upsert === 'false', w.uploads);
   const p = w.patches[0] && w.patches[0].b;
-  check('signed: trainer_sig_url and trainer_signed_at on the talk', p && /sig-tt1-trainer\.png$/.test(p.trainer_sig_url) && !isNaN(Date.parse(p.trainer_signed_at)), p);
+  check('signed: trainer_sig_url and trainer_signed_at on the talk', p && w.uploads[0] && p.trainer_sig_url.endsWith(w.uploads[0].u.split('/').pop()) && !isNaN(Date.parse(p.trainer_signed_at)), p);
+  check('signed: the PATCH only lands on a talk not signed yet', /trainer_signed_at=is\.null/.test(w.patches[0].u), w.patches[0].u);
   check('no worker row is written for the trainer', w.inserts.length === 0);
   const viaLink = await post({ k: lt, t: '1', ok: '1', sig: SIG });
   check('t=1 on a shared link is not a trainer signature', w.patches.length === 1 && viaLink.status !== 200, viaLink.status);
+}
+
+console.log('\n4b. the first trainer signature stays (BACKLOG 13.9)');
+{
+  const at = '2026-10-13T09:05:00Z';
+  const w = world({ talk: { trainer_signed_at: at, trainer_sig_url: SB + '/storage/v1/object/public/incidents-photos/sig-tt1-trainer.png' } });
+  const gt = await makeGroupToken(ENV, 'tt1');
+  const tp = await (await get('k=' + encodeURIComponent(gt) + '&g=1&t=1')).text();
+  check('signed talk: the page says when, and to ask the safety officer, with no pad', tp.includes('13/10/2026') && tp.includes('12:05') && tp.includes('\u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea') && !tp.includes('id="pad"') && !tp.includes(TR_DECL), tp.slice(0, 300));
+  const again = await post({ k: gt, g: '1', t: '1', ok: '1', sig: SIG });
+  check('a second signature: 409, no upload, no PATCH', again.status === 409 && w.uploads.length === 0 && w.patches.length === 0, { s: again.status, u: w.uploads, p: w.patches });
+  const w2 = world({ patchRace: true });
+  const race = await post({ k: gt, g: '1', t: '1', ok: '1', sig: SIG });
+  check('two phones at once: the one that lost the PATCH gets 409, not thanks', race.status === 409 && w2.patches.length === 1, race.status);
 }
 
 console.log('\n5. every language has the new words');

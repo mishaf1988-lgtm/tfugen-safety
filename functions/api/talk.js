@@ -783,33 +783,45 @@ c.addEventListener('pointerup',function(){down=false;});
 document.getElementById('clr').addEventListener('click',function(){fit();});
 document.getElementById('f').addEventListener('submit',function(e){if(!drawn){e.preventDefault();alert('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4');return;}document.getElementById('sig').value=c.toDataURL('image/png');document.getElementById('go').disabled=true;});
 })();`;
+// The first trainer signature stays (13/10/2026, BACKLOG 13.9): the group link sits on the
+// manager's phone for a day, and anyone holding it could sign again in the trainer's place.
+// A wrong signature is fixed by the safety officer, not from the link.
+function trSignedMsg(at) {
+  const d = at && new Date(at), when = d && !isNaN(d) ? ' \u05d1-' + d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' }) + ' \u05d1\u05e9\u05e2\u05d4 ' + d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+  return '\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05db\u05d1\u05e8 \u05e0\u05e9\u05de\u05e8\u05d4' + when + '. \u05dc\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05d9\u05e9 \u05dc\u05e4\u05e0\u05d5\u05ea \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.';
+}
 // The trainer closes the group talk with a signed declaration, on the same phone.
 function trainerPage(tok, talk) {
   const nonce = newId() + newId();
   const inner = '<h2 style="margin:4px 0 8px;font-size:20px">' + esc(talk.title) + '</h2>'
     + '<div style="font-size:14px;margin-bottom:10px">\u05de\u05d3\u05e8\u05d9\u05da: ' + esc(talk.trainer || '-') + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '') + '</div>'
-    + (talk.trainer_signed_at ? '<p style="color:#15803d;font-weight:700">\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05db\u05d1\u05e8 \u05d7\u05ea\u05dd. \u05d7\u05ea\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d3\u05de\u05ea.</p>' : '')
-    + '<form id="f" method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="g" value="1"><input type="hidden" name="t" value="1"><input type="hidden" name="sig" id="sig">'
+    + (talk.trainer_signed_at ? '<p style="color:#15803d;font-weight:700">' + trSignedMsg(talk.trainer_signed_at) + '</p>' : '')
+    + (talk.trainer_signed_at ? '' : '<form id="f" method="POST" action="/api/talk"><input type="hidden" name="k" value="' + esc(tok) + '"><input type="hidden" name="g" value="1"><input type="hidden" name="t" value="1"><input type="hidden" name="sig" id="sig">'
     + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(TR_DECL) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
     + '<button type="button" id="clr" style="margin:6px 0 14px;padding:6px 14px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:14px">\u05e0\u05e7\u05d4</button>'
-    + '<button type="submit" id="go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#15803d;color:#fff;font-size:18px;font-weight:700">\u05d7\u05ea\u05d5\u05dd \u05d5\u05e1\u05d9\u05d9\u05dd</button></form>'
+    + '<button type="submit" id="go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#15803d;color:#fff;font-size:18px;font-weight:700">\u05d7\u05ea\u05d5\u05dd \u05d5\u05e1\u05d9\u05d9\u05dd</button></form>')
     + '<p><a href="' + esc(talkUrl(tok, 'he', true)) + '" style="color:#1e3a8a">\u05d7\u05d6\u05e8\u05d4 \u05dc\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd</a></p>'
-    + '<script nonce="' + nonce + '">' + trScript + '</script>';
+    + (talk.trainer_signed_at ? '' : '<script nonce="' + nonce + '">' + trScript + '</script>');
   return page('\u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4', inner, '', 200, nonce, 'he');
 }
 async function signTrainer(env, form, tok, talk) {
   const back = '<p><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">\u05d7\u05d6\u05e8\u05d4</a></p>';
+  const already = (at) => page('\u05db\u05d1\u05e8 \u05e0\u05d7\u05ea\u05dd', '<p>' + trSignedMsg(at) + '</p>' + back, 'err', 409, '', 'he');
+  if (talk.trainer_signed_at) return already(talk.trainer_signed_at);
   if (String(form.get('ok') || '') !== '1') return page('\u05d7\u05e1\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8', '<p>\u05e6\u05e8\u05d9\u05da \u05dc\u05e1\u05de\u05df \u05d0\u05ea \u05d4\u05d4\u05e6\u05d4\u05e8\u05d4.</p>' + back, 'err', 400, '', 'he');
   const sig = sigBytes(form.get('sig'));
   if (!sig) return page('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4', '<p>\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05d7\u05ea\u05d5\u05dd \u05d1\u05d0\u05e6\u05d1\u05e2 \u05d1\u05ea\u05d5\u05da \u05d4\u05de\u05e1\u05d2\u05e8\u05ea.</p>' + back, 'err', 400, '', 'he');
-  const name = 'sig-' + talk.id + '-trainer.png';
-  const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': 'true' }), body: sig });
+  // A name per attempt and no upsert: a second signer racing the first never writes over its PNG.
+  const name = 'sig-' + talk.id + '-trainer-' + newId() + '.png';
+  const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/png', 'x-upsert': 'false' }), body: sig });
   const fail = () => page('\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4', '<p>\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>' + back, 'err', 502, '', 'he');
   if (!up.ok) return fail();
-  const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ trainer_sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, trainer_signed_at: new Date().toISOString() }) });
+  const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + '&trainer_signed_at=is.null', { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ trainer_sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name, trainer_signed_at: new Date().toISOString() }) });
   if (!p.ok) return fail();
+  const rows = await p.json().catch(() => null);
+  if (Array.isArray(rows) && !rows.length) return already(null);
   return page('\u05ea\u05d5\u05d3\u05d4', '<p>\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05e9\u05de\u05e8\u05d4. \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4.</p>', 'ok', 200, '', 'he');
 }
 
