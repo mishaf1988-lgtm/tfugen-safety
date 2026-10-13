@@ -46,6 +46,7 @@ pairs = [
     ('white on --c-blue-400-3 (primary buttons)', '#ffffff', tok('c-blue-400-3')),
     ('white on --c-teal-700-2 (AI / mail buttons)', '#ffffff', tok('c-teal-700-2')),
     ('--warn on white ("סיור הבוקר טרם בוצע", warnings)', tok('warn'), '#ffffff'),
+    ('--c-gray-450 on white (field labels in every detail view)', tok('c-gray-450'), '#ffffff'),
 ]
 for label, fg, back in pairs:
     if not fg or not back:
@@ -67,6 +68,13 @@ for h in ('#eab308', '#ca8a04', '#e07a00', '#3b82f6', '#10b981', '#06b6d4', '#a8
     check("no '%s' JS colour value (text under 4.5 on white)" % h, n == 0, n)
 n = s.count("'#16a34a'")
 check("'#16a34a' only in the two RPN background functions", n == 2, n)
+
+# Part C (13/10/2026): visual-audit.js measures contrast in the modals, the detail views and the
+# trustee kiosk too, not only on the page (68 labels in showView were never measured).
+va = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'visual-audit.js'), encoding='utf-8').read()
+check('visual-audit: contrast measured inside each modal', '(${CONTRAST})(m,vis,desc)' in va and 'contrast in modal' in va)
+check('visual-audit: contrast reported for the kiosk, its tour form and the detail view',
+      va.count("'/emp-home', m.lowContrastCount") == 1 and 'in the tour form' in va and "'/view-' + tbl, m.lowContrastCount" in va)
 
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)

@@ -16,13 +16,14 @@
 //   - every ⋯ row menu: opened, measured inside the viewport
 //   - every modal reachable from the page: opened, measured, closed
 //   - page errors thrown while rendering
-//   - text contrast under WCAG AA (13/10/2026, Michael: "בצע: לבנות"): a warning, with the colour pairs
+//   - text contrast under WCAG AA (13/10/2026, Michael: "בצע: לבנות"): a warning, with the colour pairs;
+//     on every page, modal, detail view and the trustee kiosk with its tour form (13/10/2026)
 //
 // Screenshots of every page and every opened menu/modal go to the output
 // directory, and findings.json next to them. The console summary lists the
 // findings; the exit code is 1 when any finding is a defect.
 //
-//   node tests/harness/visual-audit.js [outDir] [--width=390] [--state=seeded|empty|both]
+//   node tests/harness/visual-audit.js [outDir] [--width=390] [--state=seeded|empty|both] [--pages=a,b] [--all-contrast]
 const path = require('path');
 const fs = require('fs');
 const pw = require('playwright');
@@ -32,6 +33,7 @@ const OUT = argv.find((a) => !a.startsWith('--')) || path.join(require('os').tmp
 const WIDTHS = (argv.find((a) => a.startsWith('--width=')) || '--width=390,320').slice(8).split(',').map(Number);
 const STATE = (argv.find((a) => a.startsWith('--state=')) || '--state=both').slice(8);
 const ONLY = (argv.find((a) => a.startsWith('--pages=')) || '').slice(8);
+const ALL_CONTRAST = argv.includes('--all-contrast');
 fs.mkdirSync(OUT, { recursive: true });
 
 const PAGES = ['dash', 'tasks', 'cal', 'mr', 'exp', 'nm', 'inc', 'round', 'ncr', 'eqi', 'toolbox', 'docs', 'aud', 'tr',
@@ -91,6 +93,20 @@ const SEED = `(function(){
   try{sdb();}catch(e){}
 })();`;
 
+// 6. text contrast (WCAG 2.1 AA: 4.5, or 3 for 24px+ / bold 18.66px+), shared by the page, the
+// modals and the trustee kiosk. Background = first opaque background-color up the tree; a
+// background-image on the way makes it unknown, so it is skipped. Up to CAP colour pairs are
+// listed (8; --all-contrast lists every element, keyed by its text too, for finding the sources).
+const CONTRAST = `function(root,vis,desc){
+  var CAP=${ALL_CONTRAST ? 400 : 8}, done=new Set();
+  var lowC=[], lowCount=0, seenC={};
+  var rgba=function(s){var v=(s||'').replace('rgba(','').replace('rgb(','').replace(')','').split(',').map(function(x){return parseFloat(x);});if(v.length<3||isNaN(v[0]))return null;return [v[0],v[1],v[2],v.length>3?v[3]:1];};
+  var lum=function(c){var f=function(x){x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);};
+  var bgOf=function(el){for(var e=el;e&&e.nodeType===1;e=e.parentElement){var cs=getComputedStyle(e);if(cs.backgroundImage&&cs.backgroundImage!=='none')return null;var b=rgba(cs.backgroundColor);if(b&&b[3]>=0.99)return b;if(b&&b[3]>0)return null;}return [255,255,255,1];};
+  if(root){var tw=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);var tn;while((tn=tw.nextNode())){var el=tn.parentElement;if(!el||!/[0-9A-Za-z\\u0400-\\u06FF]/.test(tn.nodeValue||'')||!vis(el))continue;if(done.has(el))continue;done.add(el);var cs=getComputedStyle(el);if(parseFloat(cs.opacity)<0.99)continue;var fg=rgba(cs.color),bg=bgOf(el);if(!fg||!bg)continue;if(fg[3]<1)fg=[fg[0]*fg[3]+bg[0]*(1-fg[3]),fg[1]*fg[3]+bg[1]*(1-fg[3]),fg[2]*fg[3]+bg[2]*(1-fg[3]),1];var L1=lum(fg),L2=lum(bg),ratio=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);var px=parseFloat(cs.fontSize),bold=parseInt(cs.fontWeight,10)>=700;var need=(px>=24||(bold&&px>=18.66))?3:4.5;if(ratio>=need)continue;lowCount++;var key=cs.color+'|'+bg.join(',')+(CAP>8?'|'+tn.nodeValue.trim().slice(0,12):'');if(seenC[key]||lowC.length>=CAP)continue;seenC[key]=1;lowC.push({el:desc(el),t:tn.nodeValue.trim().slice(0,30),ratio:Math.round(ratio*100)/100,need:need,fg:cs.color,bg:'rgb('+bg.slice(0,3).join(',')+')'});}}
+  return {list:lowC,count:lowCount};
+}`;
+
 // In-page measurement of the current page. Returns a plain object.
 const MEASURE = `(function(pageId){
   var vw=window.innerWidth, vh=window.innerHeight, out={};
@@ -138,14 +154,7 @@ const MEASURE = `(function(pageId){
   var glyphs={};
   if(pg){var walker=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var n;while((n=walker.nextNode())){var s=n.nodeValue;for(var i=0;i<s.length;i++){var c=s.codePointAt(i);if(c>0xffff)i++;if((c>=0x1F5A0&&c<=0x1F5FF)||(c>=0x1F320&&c<=0x1F32C)||(c>=0x2190&&c<=0x21FF&&c!==0x21a9&&c!==0x2192&&c!==0x2190)||c===0x25AF||c===0x25AE){var k=c.toString(16);glyphs[k]=(glyphs[k]||0)+1;}}}}
   out.glyphs=glyphs;
-  // 6. text contrast (WCAG 2.1 AA: 4.5, or 3 for 24px+ / bold 18.66px+). Background = first opaque
-  // background-color up the tree; a background-image on the way makes it unknown, so it is skipped.
-  var lowC=[], lowCount=0, seenC={};
-  var rgba=function(s){var v=(s||'').replace('rgba(','').replace('rgb(','').replace(')','').split(',').map(function(x){return parseFloat(x);});if(v.length<3||isNaN(v[0]))return null;return [v[0],v[1],v[2],v.length>3?v[3]:1];};
-  var lum=function(c){var f=function(x){x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return 0.2126*f(c[0])+0.7152*f(c[1])+0.0722*f(c[2]);};
-  var bgOf=function(el){for(var e=el;e&&e.nodeType===1;e=e.parentElement){var cs=getComputedStyle(e);if(cs.backgroundImage&&cs.backgroundImage!=='none')return null;var b=rgba(cs.backgroundColor);if(b&&b[3]>=0.99)return b;if(b&&b[3]>0)return null;}return [255,255,255,1];};
-  if(pg){var tw=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var tn;while((tn=tw.nextNode())){var el=tn.parentElement;if(!el||!/[0-9A-Za-z\\u0400-\\u06FF]/.test(tn.nodeValue||'')||!vis(el))continue;if(el.__auditC)continue;el.__auditC=1;var cs=getComputedStyle(el);if(parseFloat(cs.opacity)<0.99)continue;var fg=rgba(cs.color),bg=bgOf(el);if(!fg||!bg)continue;if(fg[3]<1)fg=[fg[0]*fg[3]+bg[0]*(1-fg[3]),fg[1]*fg[3]+bg[1]*(1-fg[3]),fg[2]*fg[3]+bg[2]*(1-fg[3]),1];var L1=lum(fg),L2=lum(bg),ratio=(Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);var px=parseFloat(cs.fontSize),bold=parseInt(cs.fontWeight,10)>=700;var need=(px>=24||(bold&&px>=18.66))?3:4.5;if(ratio>=need)continue;lowCount++;var key=cs.color+'|'+bg.join(',');if(seenC[key]||lowC.length>=8)continue;seenC[key]=1;lowC.push({el:desc(el),t:tn.nodeValue.trim().slice(0,30),ratio:Math.round(ratio*100)/100,need:need,fg:cs.color,bg:'rgb('+bg.slice(0,3).join(',')+')'});}}
-  out.lowContrast=lowC; out.lowContrastCount=lowCount;
+  var _c=(${CONTRAST})(pg,vis,desc); out.lowContrast=_c.list; out.lowContrastCount=_c.count;
   return out;
 })`;
 
@@ -169,9 +178,12 @@ const MEASURE_MODAL = `(function(id){
   Array.prototype.forEach.call(m.querySelectorAll('*'),function(el){if(wide.length>=6)return;var er=el.getBoundingClientRect();if(!er.width)return;if(getComputedStyle(el).position==='fixed')return;if(er.right>vw+1||er.left<-1){var p=el.parentElement;if(p&&/auto|scroll|hidden/.test(getComputedStyle(p).overflowX))return;var t=el.tagName.toLowerCase()+(el.id?'#'+el.id:'')+(el.className&&typeof el.className==='string'?'.'+el.className.trim().split(/\\s+/)[0]:'');wide.push({el:t,left:Math.round(er.left),right:Math.round(er.right)});}});
   var small=[];
   Array.prototype.forEach.call(m.querySelectorAll('button'),function(b){var br=b.getBoundingClientRect();if(!br.width||!br.height)return;if((br.width<40||br.height<40)&&small.length<6)small.push({t:(b.innerText||b.getAttribute('aria-label')||'').trim().slice(0,30),w:Math.round(br.width),h:Math.round(br.height)});});
+  var vis=function(el){var r=el.getBoundingClientRect();if(!r.width||!r.height)return false;var cs=getComputedStyle(el);return cs.visibility!=='hidden'&&cs.display!=='none'&&cs.opacity!=='0';};
+  var desc=function(el){var t=el.tagName.toLowerCase();if(el.id)t+='#'+el.id;else if(el.className&&typeof el.className==='string')t+='.'+el.className.trim().split(/\\s+/).slice(0,2).join('.');var tx=(el.innerText||el.textContent||'').trim().replace(/\\s+/g,' ').slice(0,40);return t+(tx?' «'+tx+'»':'');};
+  var _c=(${CONTRAST})(m,vis,desc);
   var footer=m.querySelector('.modal-footer, .modal-actions');
   var fr=footer?footer.getBoundingClientRect():null;
-  return {id:id,top:Math.round(r.top),bottom:Math.round(r.bottom),left:Math.round(r.left),right:Math.round(r.right),vw:vw,vh:vh,hScroll:m.scrollWidth>m.clientWidth+1,wide:wide,small:small,footerBottom:fr?Math.round(fr.bottom):null,title:((m.querySelector('.modal-title')||{}).innerText||'').trim().slice(0,40)};
+  return {id:id,top:Math.round(r.top),bottom:Math.round(r.bottom),left:Math.round(r.left),right:Math.round(r.right),vw:vw,vh:vh,hScroll:m.scrollWidth>m.clientWidth+1,wide:wide,small:small,footerBottom:fr?Math.round(fr.bottom):null,lowContrast:_c.list,lowContrastCount:_c.count,title:((m.querySelector('.modal-title')||{}).innerText||'').trim().slice(0,40)};
 })`;
 
 // .main is the scroll container (height:100vh, overflow:auto), so Playwright's
@@ -270,6 +282,7 @@ async function shotFull(page, file) {
             if (md.hScroll || md.wide.length) note('defect', tag + '/' + pid, 'modal content overflows horizontally: ' + mo.id, { hScroll: md.hScroll, wide: md.wide, title: md.title });
             if (md.small.length) note('warn', tag + '/' + pid, 'modal buttons under 40px: ' + mo.id, md.small);
             if (md.footerBottom !== null && md.footerBottom > md.vh + 1) note('defect', tag + '/' + pid, 'modal footer (save/cancel) below the screen: ' + mo.id, md);
+            if (md.lowContrastCount) note('warn', tag + '/' + pid, md.lowContrastCount + ' text elements under WCAG AA contrast in modal ' + mo.id, md.lowContrast);
           }
           await page.evaluate((id) => { try { closeModal(id); } catch (e) {} const ov = document.getElementById('ov-' + id.replace(/^m-/, '')); if (ov) ov.style.display = 'none'; }, mo.id);
           await page.waitForTimeout(100);
@@ -297,6 +310,7 @@ async function shotFull(page, file) {
           if (m.cut.length) note('warn', tag + '/emp-home', 'text cut without ellipsis', m.cut);
           if (m.covered.length) note('defect', tag + '/emp-home', 'controls covered', m.covered);
           if (m.smallCount) note('warn', tag + '/emp-home', m.smallCount + ' touch targets under 40px', m.small);
+          if (m.lowContrastCount) note('warn', tag + '/emp-home', m.lowContrastCount + ' text elements under WCAG AA contrast', m.lowContrast);
           if (errs.length) note('defect', tag + '/emp-home', 'page error', errs.slice(0, 2));
           // Pick a name, open the tour form for task 1 and for the hazard-only report.
           for (const n of [1, 4]) {
@@ -311,6 +325,7 @@ async function shotFull(page, file) {
               if (md.left < -1 || md.right > md.vw + 1) note('defect', tag + '/emp-home', 'tour form wider than the screen (task ' + n + ')', md);
               if (md.hScroll || md.wide.length) note('defect', tag + '/emp-home', 'tour form content overflows horizontally (task ' + n + ')', { hScroll: md.hScroll, wide: md.wide });
               if (md.small.length) note('warn', tag + '/emp-home', 'tour form buttons under 40px (task ' + n + ')', md.small);
+              if (md.lowContrastCount) note('warn', tag + '/emp-home', md.lowContrastCount + ' text elements under WCAG AA contrast in the tour form (task ' + n + ')', md.lowContrast);
             }
             await page.evaluate(() => { try { _truCloseReport(true); } catch (e) {} try { closeModal('m-tru'); } catch (e) {} });
             await page.waitForTimeout(150);
@@ -329,6 +344,7 @@ async function shotFull(page, file) {
           const m = await page.evaluate(MEASURE + '("view")');
           await shotFull(page, path.join(dir, 'view-' + tbl + '.png'));
           if (m.scrollWidth > m.vw + 1 || m.offenders.length) note('defect', tag + '/view-' + tbl, 'detail view overflows', m.offenders);
+          if (m.lowContrastCount) note('warn', tag + '/view-' + tbl, m.lowContrastCount + ' text elements under WCAG AA contrast', m.lowContrast);
           if (m.covered.length) note('defect', tag + '/view-' + tbl, 'controls covered', m.covered);
           if (errs.length) note('defect', tag + '/view-' + tbl, 'page error', errs.slice(0, 2));
         }
