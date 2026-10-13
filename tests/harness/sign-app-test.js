@@ -2,6 +2,7 @@
 // On a register page (PPE) and in a form: square corners, ink lines, no shadows,
 // blue primary action, red only for an expired badge, ink table header, and the
 // NCR import / AI buttons are readable blue actions (they were grey text on blue).
+// Phase 5 (13/10/2026): the same register row (name, badge, facts, buttons) on the phone.
 const path = require('path');
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
 const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
@@ -15,12 +16,16 @@ const BLUE = 'rgb(21, 72, 137)', INK = 'rgb(43, 43, 44)', RED = 'rgb(167, 41, 32
   await page.route('**/*', (r) => r.request().url().startsWith('file://') ? r.continue() : r.abort());
   await page.goto(HTML, { waitUntil: 'load' });
   await page.waitForTimeout(700);
-  const r = await page.evaluate(() => {
+  // goPage first: the data-label of each cell comes from a MutationObserver (TBL-1), one tick later.
+  await page.evaluate(() => {
     document.getElementById('login').style.display = 'none'; document.getElementById('app').style.display = 'block';
     window.sdb = function () {}; window._currentUser = { username: 'admin' }; _isAdmin = true;
     const d = new Date(); d.setDate(d.getDate() - 3);
-    DB.ppe = [{ id: 'p1', ty: 'x', w: 'y', d: null, e: d.toISOString().slice(0, 10) }];
+    DB.ppe = [{ id: 'p1', ty: 'x', w: 'y', m: 'z', d: null, e: d.toISOString().slice(0, 10) }];
     goPage('ppe');
+  });
+  await page.waitForTimeout(200);
+  const r = await page.evaluate(() => {
     const cs = (el) => el ? getComputedStyle(el) : null;
     const pg = document.getElementById('pg-ppe');
     const btnP = cs(pg.querySelector('.btn-p')), card = cs(pg.querySelector('.card')), title = cs(pg.querySelector('.page-title'));
@@ -29,7 +34,19 @@ const BLUE = 'rgb(21, 72, 137)', INK = 'rgb(43, 43, 44)', RED = 'rgb(167, 41, 32
     const inp = cs(document.querySelector('.modal input:not([type=checkbox]):not([type=radio]):not([type=hidden])'));
     const ncr = document.getElementById('pg-ncr');
     const imp = cs(ncr.querySelector('[onclick="openXlModal()"]')), ai = cs(ncr.querySelector('[onclick="openNCRAgent()"]'));
+    // Phase 5: the same row in every register (PPE here, any register without its own rules).
+    const tr = pg.querySelector('.tbl-wrap tbody tr');
+    const tds = tr ? [...tr.children] : [];
+    const first = tds[0], badge = tds.find((t) => t.querySelector('.b')), act = tds.find((t) => !t.dataset.label);
+    const fact = tds.find((t) => t !== first && t !== badge && t.dataset.label && t.textContent.trim());
+    const row = {
+      first: first && [cs(first).order, cs(first).fontWeight, getComputedStyle(first, '::before').display],
+      badge: badge && cs(badge).order, act: act && cs(act).order,
+      fact: fact && [cs(fact).order, cs(fact).fontSize, getComputedStyle(fact, '::before').content],
+      rule: tr && getComputedStyle(tr, '::after').borderTopStyle,
+    };
     return {
+      row,
       btnP: btnP && [btnP.backgroundColor, btnP.borderRadius, btnP.boxShadow],
       card: card && [card.borderTopColor, card.borderRadius, card.boxShadow],
       title: title && [title.borderBottomColor, title.borderBottomWidth],
@@ -48,6 +65,11 @@ const BLUE = 'rgb(21, 72, 137)', INK = 'rgb(43, 43, 44)', RED = 'rgb(167, 41, 32
   check('the top bar is ruled in ink without a shadow', r.topbar && r.topbar[0] === INK && r.topbar[1] === 'none', r.topbar);
   check('a form input is square on white', r.inp && r.inp[0] === '0px' && r.inp[1] === PAPER, r.inp);
   check('NCR import and AI buttons are blue with white text', r.imp && r.ai && r.imp[0] === BLUE && r.imp[1] === PAPER && r.ai[0] === BLUE && r.ai[1] === PAPER, [r.imp, r.ai]);
+  const w = r.row;
+  check('register row: the first field is the bold name without its label', w.first && w.first[0] === '1' && w.first[1] === '700' && w.first[2] === 'none', w.first);
+  check('register row: the expiry badge sits next to the name', w.badge === '2', w.badge);
+  check('register row: other fields are small inline "label:" facts', w.fact && w.fact[0] === '3' && w.fact[1] === '13px' && /:/.test(w.fact[2]), w.fact);
+  check('register row: the buttons are last, under a rule', w.act === '9' && w.rule === 'solid', [w.act, w.rule]);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
