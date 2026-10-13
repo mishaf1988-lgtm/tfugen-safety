@@ -86,7 +86,17 @@ def update_all(q):
     q = re.sub(r"'(?:[^']|'')*'", "''", q)
     for st in q.split(";"):
         u = re.search(r"\bUPDATE\s+(ONLY\s+)?[\w.\"]+(\s+(AS\s+)?\w+)?\s+SET\b", st, re.I)
-        if u and not re.search(r"\bWHERE\b", st[u.end():], re.I):
+        tail = st[u.end():] if u else ""
+        d = 0  # a ')' that closes a CTE ends this UPDATE: a WHERE after it is the outer SELECT's
+        for i, ch in enumerate(tail):
+            d += (ch == "(") - (ch == ")")
+            if d < 0:
+                tail = tail[:i]; break
+        while True:  # a WHERE inside a sub-select is not the statement's own (retro 13/10/2026)
+            tail2 = re.sub(r"\([^()]*\)", " ", tail)
+            if tail2 == tail: break
+            tail = tail2
+        if u and not re.search(r"\bWHERE\b", tail, re.I):
             return u
     return None
 # tfugen-db rule 7a (10/10/2026, recurred 11/10/2026): a ';' inside a quoted

@@ -2533,7 +2533,7 @@ id="m-ncr" style="display:none">
     </div>
     <div class="field fw"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="ncr-sens" style="width:16px;height:16px;cursor:pointer">&#128274; &#1512;&#1490;&#1497;&#1513; (&#1504;&#1512;&#1488;&#1492; &#1500;&#1488;&#1491;&#1502;&#1497;&#1503; &#1489;&#1500;&#1489;&#1491;)</label></div>
   </div>
-  <div class="modal-footer"><!-- 12/10/2026 (Chrome: a form closed with Cancel came back as a draft 2 hours later): Cancel drops the draft; X and a tap outside keep it, they are the accidental closes --><button class="btn btn-s" onclick="_ncrDraftClear();closeModal('m-ncr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNcr()">&#1513;&#1502;&#1493;&#1512;</button></div>
+  <div class="modal-footer"><!-- 12/10/2026 (Chrome: a form closed with Cancel came back as a draft 2 hours later): Cancel drops the draft; X and a tap outside keep it, they are the accidental closes --><button class="btn btn-s" onclick="if(!g('ncr-id').value)_ncrDraftClear();closeModal('m-ncr')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svNcr()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
 
 
@@ -5741,7 +5741,7 @@ function svNcr(){
   var _nmLinked=(typeof _nmChainApply==='function')?_nmChainApply(rec):null;
   var _audLinked=id?null:_audChainApply(rec);_audChainPending=null;
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' NCR: '+d.substring(0,30));
-  if(typeof _ncrDraftClear==='function')_ncrDraftClear();
+  if(!id&&typeof _ncrDraftClear==='function')_ncrDraftClear();
   sdb();closeModal('m-ncr');rNcr();rDash();
   if(_nmLinked&&typeof rNm==='function')try{rNm();}catch(e){}
   if(_audLinked)try{rAud();}catch(e){}
@@ -5886,7 +5886,7 @@ function svInc(){
   }
   ['i-id','i-d','i-l','i-r','i-dy','i-dt','i-dept','i-rep'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('inc-attach-area');
-  if(typeof _incDraftClear==='function')_incDraftClear();
+  if(!isEdit&&typeof _incDraftClear==='function')_incDraftClear();
   toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
 }
 function svTr(){

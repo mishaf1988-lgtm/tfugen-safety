@@ -68,6 +68,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   r = await page.evaluate(() => {
     const out = {};
     const put = () => localStorage.setItem('tfgn_ncr_draft_v1', JSON.stringify({ snap: { 'ncr-d': 'x' }, ts: Date.now() }));
+    g('ncr-id').value = '';
     put();
     document.querySelector('#m-ncr .modal-footer .btn-s').click();
     out.cancel = localStorage.getItem('tfgn_ncr_draft_v1');
@@ -79,6 +80,23 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('Cancel removes the saved draft', r.cancel === null, r);
   check('X keeps it, for an accidental close', !!r.x, r);
+
+  r = await page.evaluate(() => {
+    localStorage.setItem('tfgn_ncr_draft_v1', JSON.stringify({ snap: { 'ncr-d': 'x' }, ts: Date.now() }));
+    g('ncr-id').value = '123';
+    document.querySelector('#m-ncr .modal-footer .btn-s').click();
+    const kept = localStorage.getItem('tfgn_ncr_draft_v1');
+    g('ncr-id').value = '';
+    localStorage.removeItem('tfgn_ncr_draft_v1');
+    return kept;
+  });
+  check('Cancel on an existing NCR (ncr-id set) keeps the saved new-NCR draft (13/10/2026)', !!r, r);
+
+  r = await page.evaluate(() => {
+    const src = String(window.svNcr);
+    return /if\(!id&&typeof _ncrDraftClear/.test(src);
+  });
+  check('saving an existing NCR does not clear the new-NCR draft (svNcr guards on id)', r === true, r);
 
   check('no page errors', errs.length === 0, errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
