@@ -48,6 +48,22 @@ export const GROUP_TTL_DAYS = 1;
 export const TR_DECL = '\u05d0\u05e0\u05d9 \u05de\u05e6\u05d4\u05d9\u05e8/\u05d4 \u05e9\u05d4\u05e2\u05d1\u05e8\u05ea\u05d9 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05ea\u05de\u05d5 \u05e2\u05dc\u05d9\u05d4, \u05e4\u05e0\u05d9\u05dd \u05d0\u05dc \u05e4\u05e0\u05d9\u05dd, \u05d1\u05e9\u05e4\u05d4 \u05e9\u05d4\u05dd \u05de\u05d1\u05d9\u05e0\u05d9\u05dd.';
 const S_PUB = '\u05e4\u05d5\u05e8\u05e1\u05de\u05d4';
 const MAX_SIG = 300 * 1024;
+// Documents photographed at the induction (13/10/2026, Michael: "a place to photograph the documents
+// for a new worker, it can be several"; in the questionnaire: "embedded in the PDF", "free photos").
+// The phone shrinks each photo to a JPEG first (1400px, quality 0.7, a few hundred KB). They live
+// only inside the signed form in OneDrive and its mail, never in the database or Storage.
+export const MAX_DOCS = 8, MAX_DOC = 900 * 1024, MAX_DOCS_TOTAL = 4 * 1024 * 1024, MAIL_ATTACH_MAX = 3 * 1024 * 1024;
+export function docsOf(list) {
+  const out = []; let total = 0;
+  for (const v of (list || [])) {
+    const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(v || ''));
+    if (!m) continue;
+    const n = Math.floor(m[1].length * 3 / 4);
+    if (n < 2048 || n > MAX_DOC || total + n > MAX_DOCS_TOTAL || out.length >= MAX_DOCS) continue;
+    total += n; out.push(m[1]);
+  }
+  return out;
+}
 const MIN_SIG = 400;
 // A worker not on the list (03/10/2026, Michael: "not always everyone is on the
 // list"): an ID or passport number and a typed name, kept as emp_id
@@ -595,7 +611,7 @@ export const IND_SRC = 'Apps/Tapugan Safety/\u05e7\u05dc\u05d9\u05d8\u05ea \u05e
 const GRAPH_ROOT = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const fileSafe = (v) => String(v || '').replace(/[\\/:*?"<>|#%]/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 60);
 function b64(u8) { let out = ''; for (let i = 0; i < u8.length; i += 0x8000) out += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(out); }
-export function inductionHtml(talk, row, sigB64, lang, when, answers) {
+export function inductionHtml(talk, row, sigB64, lang, when, answers, docs) {
   const x = textOf(talk, 'he'), read = textOf(talk, lang).lang, L = LANGS.he, RL = LANGS[read] || LANGS.he;
   const tr = (k, v) => '<tr><td style="border:1px solid #999;padding:6px 10px;font-weight:bold">' + k + '</td><td style="border:1px solid #999;padding:6px 10px">' + v + '</td></tr>';
   return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' + esc(x.title) + '</title></head>'
@@ -626,9 +642,11 @@ export function inductionHtml(talk, row, sigB64, lang, when, answers) {
         + '<td style="border:1px solid #999;padding:6px 10px;vertical-align:top">' + (x.a === null ? '\u05dc\u05d0 \u05e0\u05e2\u05e0\u05ea\u05d4' : esc(x.a) + (x.he && x.he.a !== x.a ? '<div style="color:#555">' + esc(x.he.a) + '</div>' : '')) + '</td>'
         + '<td style="border:1px solid #999;padding:6px 10px;vertical-align:top;white-space:nowrap;font-weight:bold;color:' + (x.ok ? '#15803d">\u2713 \u05e0\u05db\u05d5\u05df' : '#b91c1c">\u2717 \u05e9\u05d2\u05d5\u05d9') + '</td></tr>'
         + (x.ok ? '' : '<tr><td colspan="3" style="border:1px solid #999;padding:4px 10px;color:#555">\u05d4\u05ea\u05e9\u05d5\u05d1\u05d4 \u05d4\u05e0\u05db\u05d5\u05e0\u05d4: ' + esc(x.he ? x.he.right : x.right) + '</td></tr>')).join('') + '</table>' : '')
+    + (Array.isArray(docs) && docs.length ? docs.map((d, n) => '<div style="page-break-before:always;break-before:page"><div style="font-weight:bold;margin:0 0 8px">\u05de\u05e1\u05de\u05da \u05e9\u05e6\u05d5\u05dc\u05dd \u05d1\u05e7\u05dc\u05d9\u05d8\u05d4 ' + (n + 1) + ' \u05de\u05ea\u05d5\u05da ' + docs.length + ' - ' + esc(row.emp_name || '') + '</div>'
+      + '<img alt="' + (n + 1) + '" style="max-width:100%;max-height:900px" src="data:image/jpeg;base64,' + d + '"></div>').join('') : '')
     + '<div style="font-size:11px;color:#555">\u05e0\u05d7\u05ea\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df \u05d3\u05e8\u05da \u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea. \u05de\u05d6\u05d4\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4: ' + esc(row.id || '') + '</div></body></html>';
 }
-export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
+export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, docs) {
   const out = { pdf: false, url: null, mailed: false, err: null, name: null };
   try {
     const od = await accessToken(env);
@@ -639,7 +657,7 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
     // A file name shows in folder listings, search and sharing; the full ID stays inside the signed form.
     const idTail = String(row.id_no || '').replace(/\D/g, '').slice(-4);
     const base = day.split('-').reverse().join('-') + ' - ' + fileSafe(row.emp_name) + (idTail ? ' - ' + idTail : '');
-    const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }, answers));
+    const hb = new TextEncoder().encode(inductionHtml(talk, row, b64(sig), lang, { day, hm }, answers, docs));
     let bytes = hb, name = base + '.html', type = 'text/html';
     try {
       await putFile(od.token, IND_SRC, base + '.html', hb, 'text/html; charset=utf-8');
@@ -662,7 +680,8 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers) {
       + (out.url ? '<p>\u05ea\u05d5\u05d9\u05e7 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4: <a href="' + esc(out.url) + '">' + esc(name) + '</a></p>' : '')
       + '<p style="color:#666;font-size:12px">\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d9\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05e9\u05dc \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df.</p></div>';
     await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9 \u05d7\u05ea\u05d5\u05dd: ' + (row.emp_name || '') + ', ' + fdate(day), mail,
-      [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }]);
+      // A form with many photos can pass what a mail carries: then the link above only.
+      bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : []);
     out.mailed = true;
   } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
   // Shown next to the signature in "who signed": filed, mailed, or why not.
@@ -836,6 +855,9 @@ async function showTalk(env, tok, want, g, tr, cookie) {
         + lb('iph', IL.phone) + '<input name="iph" id="iph" type="tel" maxlength="20" required autocomplete="off" dir="ltr" style="' + st + ';text-align:right">'
         + lb('ijob', IL.job) + '<input name="ijob" id="ijob" maxlength="60" required autocomplete="off" style="' + st + '">'
         + lb('iagn', IL.agName) + '<input name="iagn" id="iagn" maxlength="60" autocomplete="off" style="' + st + '">'; })() : '')
+    + (ind ? '<div style="font-weight:700;margin-bottom:4px">\u05e6\u05d9\u05dc\u05d5\u05dd \u05de\u05e1\u05de\u05db\u05d9\u05dd (\u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9, \u05d0\u05e4\u05e9\u05e8 \u05db\u05de\u05d4, \u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)</div><div id="dbox" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>'
+      + '<input type="file" id="dfile" accept="image/*" capture="environment" style="display:none"><button type="button" id="dadd" style="display:block;width:100%;padding:12px;margin-bottom:6px;border:2px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:17px;font-weight:700">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05de\u05e1\u05de\u05da</button>'
+      + '<div id="dcnt" style="font-size:13px;color:#374151;margin-bottom:12px"></div>' : '')
     + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
@@ -845,6 +867,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
     + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
     + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
+    + (ind ? '<script nonce="' + nonce + '">(function(){var b=document.getElementById("dadd"),f=document.getElementById("dfile"),box=document.getElementById("dbox"),c=document.getElementById("dcnt");if(!b||!f||!box)return;var cnt=function(){var n=box.children.length;c.textContent=n?\'\u05e6\u05d5\u05dc\u05de\u05d5 \'+n+\' \u05de\u05e1\u05de\u05db\u05d9\u05dd\':\'\';};b.addEventListener("click",function(){if(box.children.length>=' + MAX_DOCS + '){alert(\'\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + MAX_DOCS + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd\');return;}f.click();});f.addEventListener("change",function(){var fl=f.files&&f.files[0];f.value=\'\';if(!fl)return;var r=new FileReader();r.onload=function(){var img=new Image();img.onload=function(){var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);var d=cv.toDataURL("image/jpeg",0.7),w=document.createElement("div"),im=document.createElement("img"),h=document.createElement("input"),x=document.createElement("button");w.style.cssText=\'position:relative\';im.src=d;im.style.cssText=\'height:90px;border:1px solid #9ca3af;border-radius:6px\';h.type=\'hidden\';h.name=\'doc\';h.value=d;x.type=\'button\';x.textContent=\'\u05d4\u05e1\u05e8\';x.style.cssText=\'display:block;margin-top:2px;width:100%;padding:4px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff\';x.addEventListener("click",function(){w.remove();cnt();});w.appendChild(im);w.appendChild(h);w.appendChild(x);box.appendChild(w);cnt();};img.onerror=function(){alert(\'\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4\');};img.src=r.result;};r.readAsDataURL(fl);});})();</script>' : '')
     + (ind ? '<script nonce="' + nonce + '">(function(){var n=document.getElementById("iagn"),o=document.getElementById("ino"),f=function(){o.required=!n.value.trim();};n.addEventListener("input",f);f();})();</script>' : '')
     + (x.body && !ind ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
   return page(talk.kind === KIND_IND ? L.indT : L.title, inner, '', 200, nonce, lang);
@@ -973,7 +996,7 @@ async function signTalk(env, request, ctx) {
   if (!ins.ok) return bad('errSaveT', 'errSave', 502);
   // Induction: file the signed form and mail it, after the worker already sees "saved".
   if (talk.kind === KIND_IND) {
-    const job = fileInduction(env, talk, row, sig, lang, undefined, []);
+    const job = fileInduction(env, talk, row, sig, lang, undefined, [], docsOf(form.getAll('doc')));
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
