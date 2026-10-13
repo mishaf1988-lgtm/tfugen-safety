@@ -52,5 +52,5 @@
 "trustee_tasks":["active","how","icon","id","n","t","ts"],
 "trustee_winners":["id","m","note","pts","ts","u"],
 "trustees":["active","dep","id","n","notes","ph","ts"],
-"wst":["c","created_at","d","h","id","q","t","ty"]
+"wst":["c","cert","created_at","d","file_url","h","id","q","site","t","ty"]
 }
