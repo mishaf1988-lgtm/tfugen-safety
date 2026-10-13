@@ -26,7 +26,7 @@
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
-import { hebrewName } from '../_ai.js';
+import { hebrewName, heName } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 
@@ -453,6 +453,20 @@ export async function guessGate(env, scope, request) {
   const n = await guessHit(env, key);
   if (n === GUESS_LIMIT + 1) { await guessLocked(env, scope); await lockMail(env, scope); }
   return { key, locked: n > GUESS_LIMIT };
+}
+// The weekly-talk link reaches every worker for 14 days, and "not on the list" with a name not in
+// Hebrew letters is a Gemini call per box (name, company, job, agency) from anyone holding the link
+// (BACKLOG 13.9, 13/10/2026). Each such call counts first in the same counter, scope "tlk", per
+// address: over TLK_AI_LIMIT in an hour the name is not sent, and the page asks for it in Hebrew
+// letters (errHe), which needs no call. A name already in Hebrew is never counted. The factory WiFi
+// is one address, so the limit is far above a department signing at once; a database that cannot
+// count lets the call go (a worker must not be stopped when it blinks). codes.js skips "tlk".
+export const TLK_AI_LIMIT = 300;
+export async function nameHe(env, request, raw) {
+  const direct = heName(raw);
+  if (direct) return direct;
+  if (env.SUPABASE_SERVICE_ROLE_KEY && (await guessHit(env, await guessKey('tlk', request))) > TLK_AI_LIMIT) return null;
+  return hebrewName(env, raw);
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
 const sameCode = (a, b) => { const x = String(a || ''), y = String(b || ''); let d = x.length === y.length ? 0 : 1; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0); return d === 0; };
@@ -937,7 +951,7 @@ async function signTalk(env, request, ctx) {
     if (raw.length < 2) return bad('errNameT', 'oNeed');
     if (!oid) return bad('errNameT', 'oIdNeed');
     if (!sig) return bad('errSigT', 'errSig');
-    const n = await hebrewName(env, raw), dep = comp ? await hebrewName(env, comp) : null;
+    const n = await nameHe(env, request, raw), dep = comp ? await nameHe(env, request, comp) : null;
     if (!n || (comp && !dep)) return bad('errNameT', 'errHe', 422);
     emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep, out: true };
   } else {
@@ -961,7 +975,7 @@ async function signTalk(env, request, ctx) {
   if (talk.kind === KIND_IND) {
     const IL = IND_L[lang] || IND_L.he, f = indFields(form);
     if (!f.ok) return page(IL.errT, '<p>' + esc(IL[f.err]) + '</p>' + back, 'err', 400, '', lang);
-    const job = await hebrewName(env, f.v.job), agency = f.v.agency ? await hebrewName(env, f.v.agency) : null;
+    const job = await nameHe(env, request, f.v.job), agency = f.v.agency ? await nameHe(env, request, f.v.agency) : null;
     if (!job || (f.v.agency && !agency)) return bad('errNameT', 'errHe', 422);
     indV = { ...f.v, job, agency };
   }

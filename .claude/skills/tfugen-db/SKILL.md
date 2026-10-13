@@ -48,7 +48,7 @@ description: How to read and change the live Supabase database of tfugen-safety 
 3. **אינדקס על כל עמודה שמופיעה ב-policy או ב-FK.** נמדד במסד החי (`pg_indexes`): `location_id`, `project_id`, `issue_type_id`, `parent_id`, `equip_id` מאונדקסות.
 4. **טיפוסים:** `timestamptz` ולא `timestamp` (יש 2 `timestamp` ישנים; לא לשנות בלי צורך, לא ליצור חדשים), `text` ולא `varchar(n)`, `boolean` ולא מחרוזת. שדה התפוגה `e` נשאר `date` (חוק 3).
 5. **טרנזקציה קצרה**, בלי קריאה חיצונית בתוכה; `set local statement_timeout` ב-migration ארוכה.
-6. **מונה לכל הגבלה (ניחוש, קצב) = `rpc/guess_hit`, לא טבלה או פונקציה חדשה** (13/10/2026): upsert אטומי ב-`server_state`, חלון שעה, מחזיר את הספירה כולל הקריאה הנוכחית. המפתח חייב להתאים ל-`^guess:[a-z]{2,8}:[0-9a-f]{8,64}$` (hash, לא כתובת או מזהה גלוי). בשימוש: `ind`/`tru` (לפי כתובת, `talk.js`/`trustee-gate.js`), `ai` (לפי משתמש, `claude.js`). scope חדש שאינו נעילה על סיסמה: להחריג אותו ב-`lockedCount` ב-`codes.js`, אחרת הוא נספר כ"כתובת נעולה".
+6. **מונה לכל הגבלה (ניחוש, קצב) = `rpc/guess_hit`, לא טבלה או פונקציה חדשה** (13/10/2026): upsert אטומי ב-`server_state`, חלון שעה, מחזיר את הספירה כולל הקריאה הנוכחית. המפתח חייב להתאים ל-`^guess:[a-z]{2,8}:[0-9a-f]{8,64}$` (hash, לא כתובת או מזהה גלוי). בשימוש: `ind`/`tru` (לפי כתובת, `talk.js`/`trustee-gate.js`), `ai` (לפי משתמש, `claude.js`), `tlk` (קריאות Gemini לשם לא עברי בקישור ההדרכה, לפי כתובת, `nameHe` ב-`talk.js`, 300 בשעה). scope חדש שאינו נעילה על סיסמה: להחריג אותו ב-`lockedCount` ב-`codes.js`, אחרת הוא נספר כ"כתובת נעולה".
 לקרוא את הכלל המלא רק כשצריך: `raw.githubusercontent.com/supabase/agent-skills/main/skills/supabase-postgres-best-practices/references/<שם>.md` (למשל `security-rls-performance`, `schema-foreign-key-indexes`).
 
 ## אסור
