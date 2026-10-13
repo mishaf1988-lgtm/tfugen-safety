@@ -102,6 +102,32 @@ function textResponse(text, model, stream, cors, extra) {
 const MAX_TOKENS_CAP = 16000;
 const MAX_BODY_BYTES = 25000000;
 
+// Rate limit per signed-in user (BACKLOG 13.11, 13/10/2026). A stolen or
+// scripted session could loop on this endpoint, spend ANTHROPIC_KEY and the
+// Gemini credit, and burn the free Workers AI quota for everyone. The same
+// counter as the guessing lock (guess_hit, migration 2026-10-10_guess_lock.sql):
+// one atomic upsert per call, a one-hour window, the key a hash of the user id.
+// Scope "ai" so codes.js does not count it as a locked address; its "unlock"
+// button resets these counters too, which is harmless. The limit is far above
+// real use (a batch of photo readings is two calls per photo). If the count
+// cannot be read the call goes on: the AI must not stop when the database blinks.
+export const AI_RATE_LIMIT = 200;
+const RATE_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+export async function aiRateKey(userId) {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ai|' + String(userId || 'none'))));
+  return 'guess:ai:' + Array.from(d.slice(0, 8)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function aiRateHit(env, user) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || !user || !user.id) return 0;
+  try {
+    const k = env.SUPABASE_SERVICE_ROLE_KEY;
+    const r = await fetch(RATE_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: await aiRateKey(user.id) }) });
+    if (!r.ok) return 0;
+    const n = await r.json();
+    return typeof n === 'number' ? n : 0;
+  } catch (e) { return 0; }
+}
+
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
@@ -138,6 +164,10 @@ export async function onRequest({ request, env }) {
   }
   if (typeof parsed.max_tokens !== 'number' || parsed.max_tokens > MAX_TOKENS_CAP) {
     parsed.max_tokens = Math.min(parsed.max_tokens || MAX_TOKENS_CAP, MAX_TOKENS_CAP);
+  }
+  if ((await aiRateHit(env, who.user)) > AI_RATE_LIMIT) {
+    return new Response(JSON.stringify({ error: 'rate limited', detail: 'more than ' + AI_RATE_LIMIT + ' AI calls in an hour from this user', retry_after_seconds: 3600 }),
+      { status: 429, headers: { ...cors, 'Content-Type': 'application/json', 'Retry-After': '3600' } });
   }
 
   // Gemini first; on any failure, answer from Workers AI and say so.

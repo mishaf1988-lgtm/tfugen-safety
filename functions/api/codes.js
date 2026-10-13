@@ -74,7 +74,8 @@ async function mailChange(env, label, who, atIso) {
 // talk.js and trustee-gate.js: a counter over LOCK_AT in the last hour = a locked address.
 export const LOCK_AT = 10;
 export function lockedCount(rows) {
-  return (Array.isArray(rows) ? rows : []).filter((x) => x && /^guess:/.test(String(x.key || '')) && +x.value > LOCK_AT).length;
+  // guess:ai: is the AI rate counter (claude.js), not a lock on a password.
+  return (Array.isArray(rows) ? rows : []).filter((x) => x && /^guess:(?!ai:)/.test(String(x.key || '')) && +x.value > LOCK_AT).length;
 }
 export async function onRequest(context) {
   const { request, env } = context;
