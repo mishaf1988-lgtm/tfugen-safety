@@ -6,6 +6,8 @@
 
 ## שלב 1: ניסיון חינם (מיכאל, כ-10 דקות)
 
+אפשר דרך Claude בכרום: משימה C7 ב-`chrome-queue.md` (עוצרת לכרטיס, לקוד ה-SMS ולאישור התנאים).
+
 1. https://portal.azure.com, מחובר עם `sviva@tapugan.co.il`.
 2. Subscriptions, ואז Add, ואז **Try Azure for free**.
 3. למלא את הפרטים ואת הכרטיס. בדרך כלל יש חיוב בדיקה קטן שמתבטל.
