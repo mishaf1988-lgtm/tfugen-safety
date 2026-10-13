@@ -38,6 +38,26 @@ def chrome_open(cwd):
     return [l for l in t.splitlines() if re.match(r"- \[ \] \*\*C\d+", l)]
 
 
+def chrome_done(cwd):
+    """C-numbers already marked [x] in chrome-queue.md."""
+    try:
+        t = open(os.path.join(cwd, "project-files", "chrome-queue.md"), encoding="utf-8").read()
+    except Exception:
+        return set()
+    return set(re.findall(r"^- \[x\] \*\*(C\d+)\b", t, re.M))
+
+
+def chrome_stale(cwd, text):
+    """13/10/2026 (Michael: "I think Chrome is already closed"): a "לכרום" line that still
+    names tasks another session closed. Three summaries in a row listed C1-C3 from memory."""
+    done = chrome_done(cwd)
+    named = set()
+    for line in text.splitlines():
+        if CHROME in line:
+            named |= set(re.findall(r"\bC\d+\b", line))
+    return sorted(named & done, key=lambda c: int(c[1:]))
+
+
 def git(cwd, *args):
     p = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True, timeout=20)
     return p.returncode, p.stdout.strip()
@@ -124,6 +144,10 @@ def verdict(cwd, text, tools, waiting, recent=None):
                 "להוסיף: skill לעדכן או ליצור, בדיקה או hook שיתפסו טעות שחזרה, ומה מהם נעשה לבד.")
     # Michael, 12/10/2026: "remind me to ask Chrome". A task summary after a merge
     # names the open tasks in project-files/chrome-queue.md.
+    stale = chrome_stale(cwd, text)
+    if stale:
+        return ("המפקח: בשורת \"🌐 לכרום\" מופיעות משימות שכבר סגורות ב-project-files/chrome-queue.md: %s. "
+                "לקרוא את הקובץ מחדש (git fetch) ולכתוב רק את מה שפתוח (לקח 85)." % ", ".join(stale))
     chrome = chrome_open(cwd)
     if merged_since and chrome and CHROME not in text:
         return ("המפקח: יש %d משימות פתוחות לכרום (project-files/chrome-queue.md), ובסיכום אין שורה \"🌐 לכרום\" "
