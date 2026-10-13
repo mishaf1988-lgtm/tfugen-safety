@@ -155,6 +155,8 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     check('same value: ok, nothing written', x.json.ok && x.json.changed === false && !calls.some((c) => c.method === 'PATCH'), x.json);
     check('no e yet: a first e needs doc', (await call({ ...base, id: 'd2', e: '2027-01-01' })).status === 400);
     check('why missing: refused', (await call({ ...base, why: '', e: '2026-01-01' })).status === 400);
+    check('file_url with spaces (plain OneDrive path): written', (await call({ ...base, file_url: 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/Documents/a b/c d.pdf' })).json.ok === true);
+    check('file_url with a newline: refused', (await call({ ...base, file_url: 'https://tapugancoil-my.sharepoint.com/personal/sviva_tapugan_co_il/a\nb.pdf' })).status === 400);
     check('file_url outside the OneDrive: refused', (await call({ ...base, file_url: 'https://evil.example/x.pdf' })).status === 400);
     check('s not in the list: refused', (await call({ ...base, s: 'x' })).status === 400);
     check('a field outside the list (n): refused', (await call({ ...base, n: 'renamed', e: '2026-01-01' })).status === 400 && rows.docs[0].e === '2027-01-01');

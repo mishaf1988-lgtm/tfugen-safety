@@ -134,7 +134,8 @@ export function expiryPatch(b, row, today) {
   }
   if (b.file_url !== undefined) {
     const u = String(b.file_url || '');
-    if (u.indexOf(FILE_URL_PREFIX) !== 0 || u.length > 600 || /[\s"<>]/.test(u)) return { error: 'bad file_url' };
+    // spaces allowed: the stored links are the plain OneDrive path (13/10/2026, a Hebrew path encoded ran past 600)
+    if (u.indexOf(FILE_URL_PREFIX) !== 0 || u.length > 600 || /[\t\r\n\f\v"<>]/.test(u)) return { error: 'bad file_url' };
     if (u !== row.file_url) { patch.file_url = u; said.push('\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d1\u05e5'); }
   }
   if (b[t.extra] !== undefined) {
