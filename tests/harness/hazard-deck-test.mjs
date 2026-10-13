@@ -194,7 +194,13 @@ const partText = async (bytes, n) => entryText(readZip(bytes).find((e) => e.name
   check('nothing outside the departments: the card as before', noOther.OpenNote[0] === '2 מפגעים פתוחים, הטיפול נמשך', noOther.OpenNote);
   const today = [row(80, ref2, 'מעבדות', '', 'סימון מדרגה', 'בינונית', null, 'פתוח', null)];
   const td = deckContent({ hazards: meetingHazards(today, ref2), accidents: meetingAccidents(INC, ref2) }, today, ref2, {}).s1;
-  check('a hazard found on the meeting day itself is new this week (red with the open, and on the orange card)', td.bars['פתוח']['מעבדות'] === 1 && /^מפגע חדש אחד/.test(td.NewNote[0]) && td.labels['מעבדות'].endsWith('חדשים 1'), [td.bars, td.NewNote, td.labels]);
+  // 13/10/2026 (Michael: "the weekly meeting always deals with the previous week"): a hazard found
+  // on the meeting day is open at that meeting but not new; it is new at the next one, once.
+  check('a hazard found on the meeting day itself: open in the bars, not new at this meeting', td.bars['פתוח']['מעבדות'] === 1 && !/^מפגע חדש/.test(td.NewNote[0]) && td.labels['מעבדות'].endsWith('חדשים 0'), [td.bars['פתוח'], td.NewNote, td.labels['מעבדות']]);
+  { const nx = '2026-10-05', tn = deckContent({ hazards: meetingHazards(today, nx), accidents: meetingAccidents(INC, nx) }, today, nx, {}).s1;
+    check('... and new at the next weekly meeting (the week before it)', /^מפגע חדש אחד/.test(tn.NewNote[0]) && tn.labels['מעבדות'].endsWith('חדשים 1'), [tn.NewNote, tn.labels['מעבדות']]);
+    const nn = '2026-10-12', t2 = deckContent({ hazards: meetingHazards(today, nn), accidents: meetingAccidents(INC, nn) }, today, nn, {}).s1;
+    check('... and not again a week later', t2.labels['מעבדות'].endsWith('חדשים 0'), t2.labels['מעבדות']); }
   // 07/10/2026 (Michael: "2 in high severity, but it does not show what they are"): a line each.
   const on = c2x.s1.OpenNote;
   check('two high-severity hazards: a line each, "גבוהה: dept - hazard", 50 characters at most, oldest first', on.length === 3 && on[1] === 'גבוהה: מעצבים - מחסן החומרים עמוס' && on[2].startsWith('גבוהה: מעצבים - נקודות צביטה חשופות') && on[2].length <= 50 && on.exact && on.tight && on.sz.join() === '1400,1100,1100', on);

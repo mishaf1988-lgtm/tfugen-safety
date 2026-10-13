@@ -13,11 +13,10 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
 
 (async () => {
   console.log('\n1. the week');
-  // 06/10/2026 (Michael): the 7 days since the previous weekly meeting, up to the meeting day.
-  check('meeting on Tuesday 06.10: Wednesday 30.09 to the meeting day itself', JSON.stringify(weekBefore('2026-10-06')) === '{"start":"2026-09-30","end":"2026-10-06"}', weekBefore('2026-10-06'));
-  check('a meeting moved to Wednesday 07.10: 01.10 to 07.10', weekBefore('2026-10-07').start === '2026-10-01' && weekBefore('2026-10-07').end === '2026-10-07');
-  check('across a month: 02.10 -> 26.09 to 02.10', weekBefore('2026-10-02').start === '2026-09-26');
-
+  // 13/10/2026 (Michael): the week before the meeting, from the previous meeting's day to the day before.
+  check('meeting on Tuesday 13.10: the previous meeting day 06.10 to Monday 12.10', JSON.stringify(weekBefore('2026-10-13')) === '{"start":"2026-10-06","end":"2026-10-12"}', weekBefore('2026-10-13'));
+  check('a meeting moved to Wednesday 14.10: 07.10 to 13.10', weekBefore('2026-10-14').start === '2026-10-07' && weekBefore('2026-10-14').end === '2026-10-13');
+  check('across a month: 02.10 -> 25.09 to 01.10', weekBefore('2026-10-02').start === '2026-09-25' && weekBefore('2026-10-02').end === '2026-10-01');
   console.log('\n2. hazards');
   const rows = [
     row(1, '2026-09-14', 'ייצור טוגנים', 'גבוהה', '2026-09-20', 'סגור', '2026-09-16'),   // new, closed in the week
@@ -26,10 +25,10 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
     row(4, '2026-09-07', 'חומר גלם', 'נמוכה', '2026-09-10', 'סגור', '2026-09-18'),     // old, closed in the week
     row(5, null, 'מעצבים', 'בינונית', null, 'פתוח', null),                              // no date: outside weekly counts
     row(6, '2026-09-19', 'ייצור טוגנים', 'נמוכה', null, 'פתוח', null),                 // Saturday: in the week, no target
-    row(7, '2026-09-20', 'תוצג', 'בינונית', '2026-09-18', 'פתוח', null),               // after the meeting: not in the week, past due
+    row(7, '2026-09-20', 'תוצג', 'בינונית', '2026-09-18', 'פתוח', null),               // on the meeting day: next week's, past due
     ['נ-1', d('2026-09-13'), 8, 'חומר גלם', '', 'פנס', 'בינונית', '', '', d('2026-09-16'), 'סגור', d('2026-09-19'), ''], // trustee
   ];
-  const h = meetingHazards(rows, '2026-09-19'); // the week: 13.09-19.09
+  const h = meetingHazards(rows, '2026-09-20'); // meeting Sunday 20.09: the week before it, 13.09-19.09
   const by = (k) => h.byDept.find((x) => x.dept === k);
   check('ייצור טוגנים: closed 1, open 2, new 3, closed in week 1, total 3, of the new closed 1', JSON.stringify([by('ייצור טוגנים').closed, by('ייצור טוגנים').open, by('ייצור טוגנים').newThisWeek, by('ייצור טוגנים').closedThisWeek, by('ייצור טוגנים').total, by('ייצור טוגנים').newClosed]) === '[1,2,3,1,3,1]', by('ייצור טוגנים'));
   check('trustee rows count in their department (the register is merged)', by('חומר גלם').total === 3 && by('חומר גלם').newThisWeek === 1 && by('חומר גלם').closedThisWeek === 2, by('חומר גלם'));
@@ -48,7 +47,7 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('a department with nothing closed: no average (null, not 0)', by('מעצבים').avgDaysToClose === null && by('מעצבים').closedWithDue === 0, by('מעצבים'));
   // 01/10/2026 live: a trustee finding routed to "אחזקה" is not one of the five
   // departments, so it is not in the table; the total row must still be the sum
-  const outside = meetingHazards(rows.concat([['נ-5', d('2026-09-15'), '', 'אחזקה', '', 'מעקה', 'בינונית', '', '', d('2026-09-18'), 'פתוח', null, '']]), '2026-09-19');
+  const outside = meetingHazards(rows.concat([['נ-5', d('2026-09-15'), '', 'אחזקה', '', 'מעקה', 'בינונית', '', '', d('2026-09-18'), 'פתוח', null, '']]), '2026-09-20');
   check('total row = sum of the departments, a row outside them does not change it', outside.total.late === outside.byDept.reduce((a, x) => a + x.late, 0) && outside.total.late === 2 && outside.total.closedWithDue === 3, outside.total);
   check('"אחר" row for rows outside the five: named, counted, with its own metrics', outside.other && outside.other.dept === 'אחר (אחזקה)' && outside.other.total === 1 && outside.other.open === 1 && outside.other.late === 1 && outside.total.total === 8, outside.other);
   check('no rows outside the five: no "אחר" row', h.other === null, h.other);
@@ -103,7 +102,7 @@ const row = (n, date, dept, sev, due, s, closed) => [n, d(date), 1, dept, '', '�
   check('anonymous: refused', r.status === 401 || r.status === 403, r.status);
   r = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { ref: '2026-09-22' }), env: ENV });
   let j = await r.json();
-  check('with the server secret: the data for that meeting date', j.ok && j.ref === '2026-09-22' && j.hazards.week.start === '2026-09-16' && j.hazards.week.end === '2026-09-22' && j.hazards.total.newThisWeek === 1 && j.accidents.daysSinceLastAccident === 21 && j.trustees.active === 2 && j.trustees.reported === 0, j);
+  check('with the server secret: the data for that meeting date', j.ok && j.ref === '2026-09-22' && j.hazards.week.start === '2026-09-15' && j.hazards.week.end === '2026-09-21' && j.hazards.total.newThisWeek === 1 && j.accidents.daysSinceLastAccident === 21 && j.trustees.active === 2 && j.trustees.reported === 0, j);
   r = await onRequest({ request: req({ 'x-notify-secret': 'nsec' }, { ref: '22/09/2026' }), env: ENV });
   j = await r.json();
   check('a malformed date: today (Israel)', j.ok && /^\d{4}-\d{2}-\d{2}$/.test(j.ref) && j.ref !== '22/09/2026', j.ref);
