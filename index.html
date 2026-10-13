@@ -899,6 +899,24 @@ body.emp-mode #emp-mode-badge{display:inline-block}
 body.emp-mode .tabbar,body.role-reporter .tabbar{display:none}
 body.role-reporter .main{padding-top:76px}
 @media print{.tabbar{display:none!important}}
+/* ---- Redesign phase 5: the same row in every register (13/10/2026) ----
+   The equipment-card pattern (10/10/2026) for every list on a phone: the first field is the
+   name, badge cells (expiry, status) sit next to it, the other fields are small "label: value"
+   facts, and the buttons sit on their own line under a rule. Equipment and trustees keep
+   their own rules. Phones only: from 600px the grid of labelled fields stays. */
+@media(max-width:599px){
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note){align-items:baseline;gap:4px 12px;padding:12px 14px}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""]){order:3;flex:0 1 auto;font-size:13px;color:var(--s-sub);line-height:1.45}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""])::before{display:inline;margin:0;font-size:12px;font-weight:400;color:var(--s-sub)}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""])::after{content:none}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""])::before{content:attr(data-label) ": "}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""]):empty{display:none}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""]):has(.b){order:2;flex:0 0 auto}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""]):first-child{order:1;flex:1 1 calc(100% - 150px);font-size:15px;font-weight:700;color:var(--s-ink)}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label]:not([data-label=""]):first-child::before{display:none}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td:not([data-label]),.tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note)>td[data-label=""]:not(.et){order:9}
+  .tbl-wrap tbody:not(#tb-eqi):not(#tb-trustees)>tr:not(.cap-note):has(>td:not([data-label]),>td[data-label=""]:not(.et))::after{content:"";order:8;flex:1 0 100%;height:0;border-top:1px solid var(--border);margin-top:4px}
+}
 /* ---- Phase 3 of the redesign: the factory-sign language everywhere (13/10/2026) ----
    What phase 2 gave the home screen, for the shared parts: top bar, bottom nav, page title,
    cards, buttons, tables, forms, modals, badges. Square corners, ink lines instead of shadows,
