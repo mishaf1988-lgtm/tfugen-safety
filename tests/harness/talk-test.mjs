@@ -99,7 +99,7 @@ console.log('\n2. the page');
   const r = await get(tok); const h = await r.text();
   check('200 for a published talk', r.status === 200, r.status);
   check('title and body escaped', h.includes('עבודה &lt;b&gt;בגובה&lt;/b&gt;') && h.includes('רתמה\nעיגון') && !h.includes('<b>בגובה'));
-  check('names grouped by department, escaped; no-department under "אחר"', h.includes('<optgroup label="אחזקה"><option value="e2">דנה &lt;לוי&gt;</option>') && h.includes('<optgroup label="אחר"><option value="e3">'));
+  check('names grouped by department, escaped; no-department under "אחר"', h.includes('<optgroup label="אחזקה"><option value="e2" data-t="">דנה &lt;לוי&gt;</option>') && h.includes('<optgroup label="אחר"><option value="e3" data-t="">'));
   check('date DD/MM/YYYY', h.includes('04/10/2026'));
   check('the file gets a signed link (private bucket)', w.signs === 1 && h.includes(SB + '/storage/v1/object/sign/incidents-photos/tb-1.pdf?token=abc'));
   check('script only with the nonce in the CSP', /script-src 'nonce-([a-z0-9]+)'/.test(r.headers.get('content-security-policy')) && h.includes('<script nonce="' + r.headers.get('content-security-policy').match(/nonce-([a-z0-9]+)/)[1] + '">'));
