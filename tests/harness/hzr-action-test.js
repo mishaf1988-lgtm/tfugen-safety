@@ -43,6 +43,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.missText = box().textContent;
     o.det = Array.from(document.querySelectorAll('#hzr-act .hzr-det')).map((d) => d.textContent);
     o.imgs = Array.from(document.querySelectorAll('#hzr-act img.hzr-ph')).map((i) => i.getAttribute('src'));
+    // 14/10/2026: routing on the card too; a change keeps the suggestions on screen.
+    o.actSel = Array.from(document.querySelectorAll('#hzr-act select.hzr-resp')).map((x) => x.dataset.id);
+    const prevApi = window._truApi;
+    window._truApi = function (p, b) { if (b.op === 'setResp') { calls.push([p, JSON.parse(JSON.stringify(b))]); return Promise.resolve({ ok: true, saved: true, resp: b.resp }); } return prevApi(p, b); };
+    const sel = document.querySelector('#hzr-act select.hzr-resp'); sel.value = 'אחזקה';
+    o.respRes = await hzrSetResp(sel);
+    o.respCall = calls.filter((c) => c[1].op === 'setResp').slice(-1)[0];
+    o.areasAfter = document.querySelectorAll('#hzr-act textarea').length;
+    window._truApi = prevApi;
     document.getElementById('hzr-sg-0').value = 'לחדש את סימון המדרגה בפס מחזיר אור צהוב-שחור';
     o.ok = await hzrApprove(0);
     o.setCall = calls.find((c) => c[1].op === 'setAction');
@@ -79,6 +88,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   // 14/10/2026 (Michael: "the picture, which department, more details to verify the action")
   check('each card: department, location, responsible, target and status', r.det && r.det.length === 2 && /מחלקה: מעבדות/.test(r.det[0]) && /מיקום: מעבדה/.test(r.det[0]) && /אחראי: בטיחות/.test(r.det[0]) && /יעד: 20\/10\/2026/.test(r.det[0]) && /סטטוס: פתוח/.test(r.det[0]) && /מחלקה: מעבדות/.test(r.det[1]), r.det);
   check('the photo shows when there is one (signed link), "no photo" otherwise', r.imgs && r.imgs.length === 1 && /object\/sign\/incidents-photos\/a\.jpg/.test(r.imgs[0]) && /אין תמונה/.test(r.missText), r.imgs);
+  check('the suggestion cards carry the routing select too, one per card', r.actSel && r.actSel.length === 2 && r.actSel[0] === 'h:th-54', r.actSel);
+  check('routing from a card: saved (setResp), and the suggestions stay on screen after the reload', r.respRes === 'ok' && r.respCall && r.respCall[1].id === 'h:th-54' && r.respCall[1].resp === 'אחזקה' && r.areasAfter === 2, { res: r.respRes, call: r.respCall, areas: r.areasAfter });
   check('no page errors', errors.length === 0, errors);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();

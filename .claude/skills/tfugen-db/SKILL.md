@@ -51,6 +51,9 @@ description: How to read and change the live Supabase database of tfugen-safety 
 6. **מונה לכל הגבלה (ניחוש, קצב) = `rpc/guess_hit`, לא טבלה או פונקציה חדשה** (13/10/2026): upsert אטומי ב-`server_state`, חלון שעה, מחזיר את הספירה כולל הקריאה הנוכחית. המפתח חייב להתאים ל-`^guess:[a-z]{2,8}:[0-9a-f]{8,64}$` (hash, לא כתובת או מזהה גלוי). בשימוש: `ind`/`tru` (לפי כתובת, `talk.js`/`trustee-gate.js`), `ai` (לפי משתמש, `claude.js`), `tlk` (קריאות Gemini לשם לא עברי בקישור ההדרכה, לפי כתובת, `nameHe` ב-`talk.js`, 300 בשעה). scope חדש שאינו נעילה על סיסמה: להחריג אותו ב-`lockedCount` ב-`codes.js`, אחרת הוא נספר כ"כתובת נעולה".
 לקרוא את הכלל המלא רק כשצריך: `raw.githubusercontent.com/supabase/agent-skills/main/skills/supabase-postgres-best-practices/references/<שם>.md` (למשל `security-rls-performance`, `schema-foreign-key-indexes`).
 
+## ערך שהשרת מחשב ומיכאל רוצה לשנות (14/10/2026)
+בקשה מסוג "לשנות לפני שליחה" או "לתקן ידנית": קודם לבדוק אם הערך **נשמר** במסד או **מחושב** בכל פעם. דוגמה: האחראי של ליקוי נאמן חושב ב-`trusteeResp` ולא היה לו עמודה, כך שלא היה מה לשנות עד `trustee_reports.resp` (#1508). איך בודקים: `grep` על שם השדה בשאילתת ה-`select` של הפונקציה (למשל `trustee_reports?select=`) ובמקום שבונה את השורה (`buildRegister`). ערך מחושב בלי עמודה = שינוי סכמה: לשאול את מיכאל בשאלון לפני (טבלה רגישה או עם נתונים), גיבוי, עמודה nullable, ובקוד `stored || computed`, כדי שהתנהגות קיימת לא תשתנה. ואז להוסיף את העמודה **לכל** השאילתות שבונות מאותו מקור (ב-#1508 היו חמש), ולהריץ את ה-migration **לפני** המיזוג: `select` של עמודה שעוד לא קיימת מחזיר 400 ומפיל את כולן.
+
 ## אסור
 - בלי אישור מפורש באותה שיחה: `DROP`, `DELETE`, `TRUNCATE`, `ALTER ... DROP COLUMN`, שינוי או מחיקה של RLS policy.
 - גם עם אישור: מחיקת שורות מ-`ncr`, `ncr_ai`, `trustee_reports` (נאכף ב-`guard-sql.py`).
