@@ -3,9 +3,12 @@
 changed files run here first (lesson 41, 02/10/2026: the lessons file went out
 170 bytes over its cap and CI went red for a round).
 
-Today one check: tests/harness/lessons-format-test.py when
-.claude/skills/tfugen-lessons/SKILL.md differs from origin/main. Red = deny,
-with the test's last lines as the reason. Anything else passes.
+Checks (RULES): tests/harness/lessons-format-test.py when
+.claude/skills/tfugen-lessons/SKILL.md differs from origin/main; and, from
+14/10/2026 (Michael: "בצע את שתי ההצעות"), tests/harness/graph-writes-test.py
+when a file under functions/ changed (PR #1502 went red in CI on a new mail
+call site that this static test, under a second, would have caught). Red =
+deny, with the test's last lines as the reason. Anything else passes.
 
 Tests set PUSH_GATE_CHANGED (comma list of changed files) and PUSH_GATE_TEST
 (a script to run instead of the real one).
@@ -18,6 +21,11 @@ sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows read
 
 LESSONS = ".claude/skills/tfugen-lessons/SKILL.md"
 TEST = "tests/harness/lessons-format-test.py"
+# (does a changed file need it, the test, the lesson it came from)
+RULES = [
+    (lambda f: f == LESSONS, TEST, "\u05dc\u05e7\u05d7 41: \u05e7\u05d5\u05d1\u05e5 \u05d4\u05dc\u05e7\u05d7\u05d9\u05dd \u05d4\u05e9\u05ea\u05e0\u05d4"),
+    (lambda f: f.startswith("functions/"), "tests/harness/graph-writes-test.py", "14/10/2026: \u05e7\u05d5\u05d3 \u05e9\u05e8\u05ea \u05d4\u05e9\u05ea\u05e0\u05d4"),
+]
 
 
 def changed(cwd):
@@ -66,22 +74,26 @@ def main():
             cwd = top
     except Exception:
         pass
-    if LESSONS not in changed(cwd):
-        print("{}"); return
-    test = os.environ.get("PUSH_GATE_TEST") or os.path.join(cwd, TEST)
-    try:
-        p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=120,
-                           env=dict(os.environ, PYTHONIOENCODING="utf-8"))  # Windows pipe = cp1255: the test crashed on its check mark
-    except Exception as e:
-        print("{}"); return
-    if p.returncode == 0:
-        print("{}"); return
-    tail = "\n".join((p.stdout + p.stderr).strip().splitlines()[-4:])
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason":
-            "push-gate (לקח 41): קובץ הלקחים השתנה ו-lessons-format-test.py אדום. לתקן לפני push:\n" + tail}}, ensure_ascii=False))
+    files = changed(cwd)
+    for need, rel, why in RULES:
+        if not any(need(f) for f in files):
+            continue
+        test = os.environ.get("PUSH_GATE_TEST") or os.path.join(cwd, rel)
+        try:
+            p = subprocess.run([sys.executable, test], cwd=cwd, capture_output=True, text=True, encoding="utf-8", timeout=120,
+                               env=dict(os.environ, PYTHONIOENCODING="utf-8"))  # Windows pipe = cp1255: the test crashed on its check mark
+        except Exception:
+            continue
+        if p.returncode == 0:
+            continue
+        tail = "\n".join((p.stdout + p.stderr).strip().splitlines()[-4:])
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason":
+                "push-gate (" + why + "): " + os.path.basename(rel) + " \u05d0\u05d3\u05d5\u05dd. \u05dc\u05ea\u05e7\u05df \u05dc\u05e4\u05e0\u05d9 push:\n" + tail}}, ensure_ascii=False))
+        return
+    print("{}")
 
 
 if __name__ == "__main__":
