@@ -20,7 +20,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     _currentUser = { username: 'admin' };
     DB.emp = [{ id: 'e1', n: 'אחמד', dep: 'יצור' }, { id: 'e2', n: 'דנה', dep: 'יצור' }, { id: 'e3', n: 'יוסי', dep: 'אריזה' }, { id: 'e4', n: 'עזב', dep: 'מעבדה', left_d: '2026-01-01' }];
     DB.toolbox_talks = []; DB.toolbox_reads = [];
-    goPage('toolbox');
+    goPage('training');
     const o = {};
     openModal('m-tbt');
     o.opts = Array.from(document.getElementById('tbt-dept').options).map((x) => x.value);

@@ -30,7 +30,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       { id: 'r2', talk_id: 'p', emp_id: 'e2', emp_name: 'דנה', id_no: '2', read_at: '2026-10-04T08:00:00Z', device: 'phone', mode: 'link' },
       { id: 'r3', talk_id: 'p', emp_id: 'e3', emp_name: 'ישן', id_no: '3', read_at: '2026-10-01T08:00:00Z', device: 'phone' },
     ];
-    goPage('toolbox');
+    goPage('training');
     const rowOf = (t) => Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes(t));
     const o = { btnPub: !!rowOf('פורסמה').querySelector('[onclick^="tbtGroup"]'), btnDraft: !!rowOf('טיוטה').querySelector('[onclick^="tbtGroup"]') };
     // success: the tab opened first is sent to the group link

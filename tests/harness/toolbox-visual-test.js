@@ -69,7 +69,7 @@ const fine = (m) => m && !m.missing && m.sw <= 375 && !m.off.length && !m.cut.le
       { id: 'r2', talk_id: 't1', emp_id: 'x:99887766:ivan', emp_name: 'איוון סמירנוב-קוזלובסקי', id_no: 'AB1234567', dept: 'קבלן ACME הנדסה ובניה', lang: 'ru', device: 'tablet', read_at: now },
       { id: 'r3', talk_id: 't1', emp_id: 'e4', emp_name: 'משה לוי', id_no: '33', dept: 'מחסן', lang: 'he', device: 'other', read_at: now },
     ];
-    goPage('toolbox');
+    goPage('training');
   });
   await page.waitForTimeout(300);
 

@@ -32,7 +32,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     ];
     DB.toolbox_reads = [{ id: 'r1', talk_id: 'p', emp_id: 'e2', emp_name: 'דנה', read_at: '2026-10-04T07:00:00Z' }]
       .concat(['e1', 'e2', 'e3', 'e4'].map((e, i) => ({ id: 'a' + i, talk_id: 'all', emp_id: e, read_at: '2026-10-03T07:00:00Z' })));
-    goPage('toolbox');
+    goPage('training');
     const o = {};
     const btn = () => document.getElementById('tbt-rem-btn');
     tbtWho('d'); o.draftBtn = !!btn();

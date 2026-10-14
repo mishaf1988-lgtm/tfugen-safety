@@ -57,9 +57,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     ];
     _currentUser = { username: 'admin' };
     const res = {};
-    goPage('toolbox');
+    goPage('training');
     const rows = () => Array.from(document.querySelectorAll('#tb-tbt tr'));
-    res.card = !!document.getElementById('tbt-card') && document.getElementById('pg-toolbox').contains(document.getElementById('tbt-card'));
+    res.card = !!document.getElementById('tbt-card') && document.getElementById('pg-training').contains(document.getElementById('tbt-card'));
     res.order = rows().map((tr) => tr.children[1].textContent);
     const r1 = rows().find((tr) => tr.textContent.includes('עבודה בגובה'));
     const r2 = rows().find((tr) => tr.textContent.includes('חומרים מסוכנים'));
@@ -93,7 +93,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtPublish('tt-9'); res.emptyPub = DB.toolbox_talks.find((x) => x.id === 'tt-9').s;
 
     // stage 2: the link button only on a published talk; it calls /api/talk with the session
-    goPage('toolbox');
+    goPage('training');
     const rowOf = (t) => Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes(t));
     res.linkPub = !!rowOf('עבודה בגובה').querySelector('[onclick^="tbtLink"]');
     res.linkDraft = !!rowOf('מלגזות').querySelector('[onclick^="tbtLink"]');
