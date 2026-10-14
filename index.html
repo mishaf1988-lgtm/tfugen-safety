@@ -3119,6 +3119,7 @@ id="m-ncr" style="display:none">
     <div class="field fw"><label>סוג ההדרכה</label><select id="tbt-kind" onchange="_tbtKindUi()"><option value="">&#128214; שבועית</option><option value="induction">&#127381; קליטה לעובד חדש (טופס 08.02): QR קבוע</option><option value="annual">&#128197; שנתית: QR קבוע עד שתסגור, טופס 08.01 אחד לכולם</option><option value="quality">&#129514; מחלקת איכות: QR קבוע עד שתסגור, טופס 08.01 אחד לכולם</option></select></div>
     <div class="field" id="tbt-dur-f" style="display:none"><label>משך ההדרכה (לטופס 08.01)</label><input id="tbt-dur" maxlength="30" placeholder="שעה"></div>
     <div class="field fw" id="tbt-cc-f" style="display:none"><label>שלח את טופס 08.01 גם אל (מייל, לא חובה)</label><input id="tbt-cc" type="email" maxlength="200" dir="ltr" placeholder="quality@tapugan.co.il"></div>
+    <div class="field fw" id="tbt-typed-f" style="display:none;border:2px solid var(--pr,#1d4ed8);border-radius:10px;padding:10px"><div style="font-weight:700;margin-bottom:6px">לפני פרסום (חובה): סוגי ההדרכה, בדיקת אפקטיביות וחתימת המדריך</div><label style="font-weight:600">סוגי ההדרכה שהועברו</label><div id="tbt-subj" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 6px"><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="הדרכה כללית" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">הדרכה כללית</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="כיבוי אש" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">כיבוי אש</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="איכות סביבה" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">איכות סביבה</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="מלגזות" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">מלגזות</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="חומרים מסוכנים" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">חומרים מסוכנים</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="עבודה בגובה" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">עבודה בגובה</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="עזרה ראשונה" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">עזרה ראשונה</label><label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" class="tbt-subj" value="אמוניה" style="width:20px;height:20px;-webkit-appearance:checkbox;appearance:auto;padding:0;margin:0">אמוניה</label></div><input id="tbt-subj-o" maxlength="200" placeholder="אחר (מופרד בפסיק)" style="margin-bottom:10px"><label style="font-weight:600">בדיקת אפקטיביות (באותו יום של ההדרכה)</label><textarea id="tbt-eff-desc-f" rows="2" maxlength="300" style="margin:4px 0"></textarea><label style="font-weight:600">אפקטיבי?</label><select id="tbt-eff-ok-f" style="margin:4px 0 10px"><option value="">בחר</option><option value="1">כן</option><option value="0">לא</option></select><label style="font-weight:600">חתימת המדריך (על ההדרכה ועל בדיקת האפקטיביות)</label><div id="tbt-trsig-st" style="font-size:12px;color:var(--t2);margin:2px 0 4px"></div><canvas id="tbt-trsig" style="width:100%;height:140px;border:2px dashed var(--bd,#9ca3af);border-radius:8px;touch-action:none;background:var(--c-white,#fff)"></canvas><button type="button" class="btn btn-s btn-sm" style="margin-top:4px" onclick="_tbtSigClear()">נקה חתימה</button></div>
     <div class="field"><label>&#1502;&#1491;&#1512;&#1497;&#1498; (&#1513;&#1501;) *</label><input id="tbt-trainer" maxlength="60"></div>
     <div class="field"><label>&#1499;&#1513;&#1497;&#1512;&#1493;&#1514; &#1492;&#1502;&#1491;&#1512;&#1497;&#1498; *</label><input id="tbt-trainer-q" maxlength="80" placeholder="&#1502;&#1502;&#1493;&#1504;&#1492; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;"></div>
     <div class="field fw"><label>&#1514;&#1493;&#1499;&#1503; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492; (&#1502;&#1492; &#1513;&#1492;&#1506;&#1493;&#1489;&#1491; &#1497;&#1511;&#1512;&#1488;)</label><textarea id="tbt-body" rows="10"></textarea><div style="font-size:11px;color:var(--t3);margin-top:4px">הדרכה שבועית לכל המחלקות: קטע לכל מחלקה מתחיל בשורה <b dir="ltr">## שם המחלקה</b>. העובד בוחר מחלקה ורואה רק את הקטע שלה. טקסט לפני הקטע הראשון מוצג לכולם.</div></div>
@@ -5382,7 +5383,7 @@ function _genEdit(tbl,id){
       }
       el.value=v;
     });
-    if(tbl==='toolbox_talks'&&typeof _tbtQuizLoad==='function'){_tbtQuizLoad(rec.quiz);var _tk=g('tbt-kind');if(_tk)_tk.value=rec.kind||'';var _td=g('tbt-dur');if(_td)_td.value=rec.dur||'';var _tc=g('tbt-cc');if(_tc)_tc.value=rec.mail_cc||'';if(typeof _tbtKindUi==='function')_tbtKindUi();}
+    if(tbl==='toolbox_talks'&&typeof _tbtQuizLoad==='function'){_tbtQuizLoad(rec.quiz);var _tk=g('tbt-kind');if(_tk)_tk.value=rec.kind||'';var _td=g('tbt-dur');if(_td)_td.value=rec.dur||'';var _tc=g('tbt-cc');if(_tc)_tc.value=rec.mail_cc||'';if(typeof _tbtKindUi==='function'){_tbtKindUi();_tbtTypedFill(rec);}}
     // svTr / svToolbox write `file_url: _attachUrls[area] || null` on EVERY save.
     // Nothing restored _attachUrls when the form was opened for editing, so a
     // trip through ✎ to change an expiry date silently deleted the attached
@@ -11864,6 +11865,16 @@ function svTbt(send){
   if(nSig&&old&&(old.title!==title||(old.body||null)!==body||(old.body_ar||null)!==tr.body_ar||(old.body_ru||null)!==tr.body_ru||(old.body_am||null)!==tr.body_am||(old.file_url||null)!==file||(old.video_url||null)!==video)&&!confirm('\u05db\u05d1\u05e8 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d4\u05d6\u05d5 '+nSig+' \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd, \u05e2\u05dc \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05e7\u05d5\u05d3\u05dd. \u05e9\u05d9\u05e0\u05d5\u05d9 \u05d9\u05e6\u05d9\u05d2 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e9\u05dc\u05d4\u05dd \u05dc\u05d9\u05d3 \u05d8\u05e7\u05e1\u05d8 \u05e9\u05dc\u05d0 \u05e8\u05d0\u05d5. \u05e2\u05d3\u05d9\u05e3 \u05dc\u05d9\u05e6\u05d5\u05e8 \u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4.\n\u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return;
   var r={id:editId||gid(),d:gv('tbt-d')||null,title:title,body:body,body_ar:tr.body_ar,body_ru:tr.body_ru,body_am:tr.body_am,file_url:file,trainer:trainer,trainer_qual:trainerQ,video_url:video,quiz:quiz,kind:(g('tbt-kind')&&g('tbt-kind').value)||null,dur:gv('tbt-dur')||null,mail_cc:gv('tbt-cc')||null,dept:gv('tbt-dept')||null,s:pub?_TBT_PUB:_TBT_DRAFT,ts:new Date().toISOString()};
   if(!_svEditId('toolbox_talks'))r.created_by=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)||null;
+  if(_tbtTyped(r.kind)){
+    var effOk=gv('tbt-eff-ok-f');
+    r.subjects=_tbtSubjects();r.eff_req=true;r.eff_d=r.d;r.eff_desc=gv('tbt-eff-desc-f')||_TBT_EFF_DEF;r.eff_ok=effOk==='1'?true:effOk==='0'?false:null;
+    r.trainer_sig_url=old?old.trainer_sig_url||null:null;r.trainer_signed_at=old?old.trainer_signed_at||null:null;r.eff_by=r.trainer_signed_at||_tbtSigDrawn?trainer:null;
+    var miss=_tbtTypedMissing(r,_tbtSigDrawn);
+    if(pub&&miss.length){toast('\u05dc\u05e4\u05e0\u05d9 \u05e4\u05e8\u05e1\u05d5\u05dd \u05d7\u05e1\u05e8: '+miss.join(', '));return;}
+    if(_tbtSigDrawn){var rid=r.id;_tbtSigUpload(rid,function(url){var x=(DB.toolbox_talks||[]).filter(function(z){return z.id===rid;})[0];
+      if(!url){toast('\u26a0\ufe0f \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d4. \u05dc\u05d7\u05ea\u05d5\u05dd \u05e9\u05d5\u05d1');if(x&&x.s===_TBT_PUB&&!x.trainer_signed_at){x.s=_TBT_DRAFT;sbUpd('toolbox_talks',x);sdb();rTbt();}return;}
+      if(x){x.trainer_sig_url=url;x.trainer_signed_at=new Date().toISOString();x.eff_by=x.trainer;sbUpd('toolbox_talks',x);sdb();rTbt();}});}
+  }
   _svPut('toolbox_talks',r);
   addLog('\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: '+title.substring(0,30));sdb();
   closeModal('m-tbt');
@@ -11886,7 +11897,7 @@ function tbtDup(id){
   g('tbt-d').value=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});
   g('tbt-s').value=_TBT_DRAFT;
   _tbtQuizLoad(r.quiz);
-  g('tbt-kind').value=r.kind||'';var _dd=g('tbt-dur');if(_dd)_dd.value=r.dur||'';var _dc=g('tbt-cc');if(_dc)_dc.value=r.mail_cc||'';_tbtKindUi();
+  g('tbt-kind').value=r.kind||'';var _dd=g('tbt-dur');if(_dd)_dd.value=r.dur||'';var _dc=g('tbt-cc');if(_dc)_dc.value=r.mail_cc||'';_tbtKindUi();_tbtTypedFill({subjects:r.subjects});
   _tbtTrainerFill();
   _tbtTrSrc=(r.title||'')+'\n'+(r.body||'');
   if(r.file_url){_attachUrls['tbt-attach-area']=r.file_url;_attachRender('tbt-attach-area',r.file_url,String(r.file_url).split('/').pop().split('?')[0]);}
@@ -11921,7 +11932,33 @@ var _TBT_IND_L='\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3 \u05d7\u
 // annual and quality. Annual and quality: the worker types his details, the QR stays until "close".
 var _TBT_KINDS={'':'\u05e9\u05d1\u05d5\u05e2\u05d9\u05ea',induction:'\u05e7\u05dc\u05d9\u05d8\u05d4',annual:'\u05e9\u05e0\u05ea\u05d9\u05ea',quality:'\u05d0\u05d9\u05db\u05d5\u05ea'};
 function _tbtTyped(k){return k==='annual'||k==='quality';}
-function _tbtKindUi(){var k=gv('tbt-kind'),t=_tbtTyped(k),a=g('tbt-dur-f'),b=g('tbt-cc-f');if(a)a.style.display=t?'':'none';if(b)b.style.display=t?'':'none';}
+function _tbtKindUi(){var k=gv('tbt-kind'),t=_tbtTyped(k),a=g('tbt-dur-f'),b=g('tbt-cc-f'),c=g('tbt-typed-f');if(a)a.style.display=t?'':'none';if(b)b.style.display=t?'':'none';if(c)c.style.display=t?'':'none';if(t)_tbtSigInit();}
+// Before an annual / quality training is published (14/10/2026, Michael: "the trainer is named and signs the training
+// and the effectiveness check, the kinds of training are ticked, before the form opens"; effectiveness "on the same day,
+// questions were asked"; in the questionnaire: "a list to tick + other", "the trainer marks yes/no and signs").
+var _TBT_EFF_DEF='\u05e0\u05e9\u05d0\u05dc\u05d5 \u05e9\u05d0\u05dc\u05d5\u05ea \u05e2\u05dc \u05e0\u05d5\u05e9\u05d0\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4, \u05d5\u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e2\u05e0\u05d5 \u05e0\u05db\u05d5\u05df.';
+var _tbtSigDrawn=false;
+function _tbtSigInit(){var c=g('tbt-trsig');if(!c||c._init)return;c._init=1;var x=c.getContext('2d'),down=false;
+  var fit=function(){var r=c.getBoundingClientRect();if(!r.width)return;c.width=r.width;c.height=140;x.lineWidth=2.5;x.lineCap='round';x.strokeStyle='#111';};
+  var pt=function(e){var r=c.getBoundingClientRect();return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};};
+  c.addEventListener('pointerdown',function(e){if(!c.width||c.width===300)fit();down=true;var p=pt(e);x.beginPath();x.moveTo(p.x,p.y);e.preventDefault();});
+  c.addEventListener('pointermove',function(e){if(!down)return;var p=pt(e);x.lineTo(p.x,p.y);x.stroke();_tbtSigDrawn=true;e.preventDefault();});
+  ['pointerup','pointerleave','pointercancel'].forEach(function(n){c.addEventListener(n,function(){down=false;});});
+  setTimeout(fit,50);}
+function _tbtSigClear(){var c=g('tbt-trsig');if(c){var x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);}_tbtSigDrawn=false;}
+function _tbtTypedFill(r){r=r||{};var set=(r.subjects||'').split(/\n/).map(function(v){return v.trim();}).filter(Boolean),known=[];
+  Array.prototype.forEach.call(document.querySelectorAll('.tbt-subj'),function(cb){cb.checked=set.indexOf(cb.value)>=0;known.push(cb.value);});
+  var o=g('tbt-subj-o');if(o)o.value=set.filter(function(v){return known.indexOf(v)<0;}).join(', ');
+  var d=g('tbt-eff-desc-f');if(d)d.value=r.eff_desc||_TBT_EFF_DEF;var k=g('tbt-eff-ok-f');if(k)k.value=r.eff_ok===true?'1':r.eff_ok===false?'0':'';
+  var st=g('tbt-trsig-st');if(st)st.textContent=r.trainer_signed_at?'\u2705 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05db\u05d1\u05e8 \u05d7\u05ea\u05dd \u05d1-'+fd(String(r.trainer_signed_at).substring(0,10))+'. \u05d7\u05ea\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05ea\u05d7\u05dc\u05d9\u05e3 \u05d0\u05d5\u05ea\u05d4.':'\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd.';
+  _tbtSigClear();}
+function _tbtSubjects(){var a=Array.prototype.filter.call(document.querySelectorAll('.tbt-subj'),function(cb){return cb.checked;}).map(function(cb){return cb.value;});
+  String(gv('tbt-subj-o')||'').split(/[,\n]/).forEach(function(v){v=v.trim();if(v&&a.indexOf(v)<0)a.push(v);});return a.join('\n')||null;}
+// What an annual / quality training still lacks before it is published (empty = ready).
+function _tbtTypedMissing(r,signedNow){var m=[];if(!r.d)m.push('\u05ea\u05d0\u05e8\u05d9\u05da');if(!r.trainer||!r.trainer_qual)m.push('\u05de\u05d3\u05e8\u05d9\u05da \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea');if(!r.dur)m.push('\u05de\u05e9\u05da');
+  if(!r.subjects)m.push('\u05e1\u05d5\u05d2\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4');if(r.eff_ok!==true&&r.eff_ok!==false)m.push('\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9 \u05db\u05df/\u05dc\u05d0');if(!r.trainer_signed_at&&!signedNow)m.push('\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da');return m;}
+function _tbtSigUpload(id,cb){var c=g('tbt-trsig');if(!c||!_tbtSigDrawn)return cb(null);
+  c.toBlob(function(b){if(!b)return cb(null);var f;try{f=new File([b],'trainer.png',{type:'image/png'});}catch(e){f=b;f.name='trainer.png';}_fileUpload(f,'sig-'+id+'-trainer',function(url){cb(url||null);});},'image/png');}
 function _tbtLinkShow(r,url,perm){
   _tbtLinkTxt=(_tbtTyped(r.kind)?'\u05d4\u05d3\u05e8\u05db\u05d4 '+_TBT_KINDS[r.kind]+': ':perm?'\u05d4\u05d3\u05e8\u05db\u05ea \u05e7\u05dc\u05d9\u05d8\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ':'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea: ')+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0, \u05dc\u05e6\u05e4\u05d5\u05ea \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd:\n'+url;
   g('tbt-link-title').textContent=r.title||'';
@@ -12002,7 +12039,7 @@ function _tbtTrReset(){
   var b=g('tbt-tr-btn');if(b&&b.dataset.label){b.disabled=false;b.textContent=b.dataset.label;}
   // Every opening fills these from the record or starts them empty: a video or questions left
   // from the talk opened before must not ride into a new one.
-  _tbtQuizRun++;_tbtQuizLoad(null);var tv=g('tbt-video');if(tv)tv.value='';var tk=g('tbt-kind');if(tk)tk.value='';var td=g('tbt-dur');if(td)td.value='';var tc=g('tbt-cc');if(tc)tc.value='';_tbtKindUi();_tbtDeptFill();
+  _tbtQuizRun++;_tbtQuizLoad(null);var tv=g('tbt-video');if(tv)tv.value='';var tk=g('tbt-kind');if(tk)tk.value='';var td=g('tbt-dur');if(td)td.value='';var tc=g('tbt-cc');if(tc)tc.value='';_tbtKindUi();_tbtTypedFill(null);_tbtDeptFill();
   var qb=g('tbt-quiz-ai');if(qb&&qb.dataset.label){qb.disabled=false;qb.textContent=qb.dataset.label;}
 }
 var _TBT_LANG={he:'\u05e2\u05d1\u05e8\u05d9\u05ea',ar:'\u05e2\u05e8\u05d1\u05d9\u05ea',ru:'\u05e8\u05d5\u05e1\u05d9\u05ea',am:'\u05d0\u05de\u05d4\u05e8\u05d9\u05ea'};
@@ -12395,6 +12432,7 @@ function tbtPublish(id){
   var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];if(!r)return;
   if(r.s!==_TBT_PUB&&!r.body&&!r.file_url){toast('\u05d0\u05d9\u05df \u05ea\u05d5\u05db\u05df \u05dc\u05e4\u05e8\u05e1\u05dd');return;}
   if(r.s!==_TBT_PUB&&(!r.trainer||!r.trainer_qual)){toast(_TBT_TRAINER_MSG);return;}
+  if(r.s!==_TBT_PUB&&_tbtTyped(r.kind)){var mm=_tbtTypedMissing(r,false);if(mm.length){toast('\u05dc\u05e4\u05e0\u05d9 \u05e4\u05e8\u05e1\u05d5\u05dd \u05d7\u05e1\u05e8: '+mm.join(', ')+'. \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05e2\u05e8\u05d9\u05db\u05d4 \u05d5\u05dc\u05d4\u05e9\u05dc\u05d9\u05dd.');return;}}
   r.s=r.s===_TBT_PUB?_TBT_DRAFT:_TBT_PUB;r.ts=new Date().toISOString();
   sbUpd('toolbox_talks',r);sdb();rTbt();
   toast(r.s===_TBT_PUB?'\u05e4\u05d5\u05e8\u05e1\u05de\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u2713':'\u05d4\u05d5\u05d7\u05d6\u05e8\u05d4 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4');

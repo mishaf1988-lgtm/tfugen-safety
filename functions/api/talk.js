@@ -749,7 +749,9 @@ export function topicsOf(body) {
 }
 export function form0801Html(talk, reads, sigOf, trSig) {
   const e = esc, dt = fdate(talk.d), yn = (v) => (v === true ? '\u05db\u05df' : v === false ? '\u05dc\u05d0' : '');
-  const topics = topicsOf(talk.body); while (topics.length < 4) topics.push('');
+  // The kinds of training ticked before publishing (subjects, 14/10/2026), else the topics of the text.
+  const topics = topicsOf(talk.subjects || talk.body); while (topics.length < 4) topics.push('');
+  const img = (v) => (String(v).indexOf('data:') === 0 ? v : 'data:image/png;base64,' + v);
   const css = 'body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 5px;vertical-align:middle}'
     + 'th{background:#d9d9d9;font-weight:normal}.pg{page-break-after:always;padding:8px 4px}.pg:last-child{page-break-after:auto}.h1{font-size:17px;font-weight:bold;text-align:center}'
     + '.sig{height:26px;max-width:120px}.lbl{font-weight:bold}.t2{color:#c00000;font-weight:bold;text-decoration:underline;margin:10px 0 4px}';
@@ -759,14 +761,14 @@ export function form0801Html(talk, reads, sigOf, trSig) {
   const top = '<table style="margin-top:10px"><tr><td rowspan="' + topics.length + '" style="width:110px;text-align:center">\u05e0\u05d5\u05e9\u05d0\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</td>'
     + topics.map((t, i) => (i ? '<tr>' : '') + '<td style="width:24px;text-align:center">' + (i + 1) + '</td><td>' + e(t) + '</td></tr>').join('') + '</table>'
     + '<table style="margin-top:10px"><tr><td class="lbl" style="width:22%">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d4:</td><td>' + e(dt) + '</td><td class="lbl" style="width:22%">\u05de\u05e9\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d4:</td><td>' + e(talk.dur || '') + '</td></tr>'
-    + '<tr><td class="lbl">\u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + e(talk.trainer || '') + (talk.trainer_qual ? ', ' + e(talk.trainer_qual) : '') + '</td><td class="lbl">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + (trSig ? '<img class="sig" alt="" src="data:image/png;base64,' + trSig + '">' : '') + '</td></tr></table>';
+    + '<tr><td class="lbl">\u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + e(talk.trainer || '') + (talk.trainer_qual ? ', ' + e(talk.trainer_qual) : '') + '</td><td class="lbl">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + (trSig ? '<img class="sig" alt="" src="' + img(trSig) + '">' : '') + '</td></tr></table>';
   const eff = '<div class="t2">\u05d1\u05d3\u05d9\u05e7\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea</div><table><tr><td class="lbl">\u05e0\u05d3\u05e8\u05e9\u05ea: ' + yn(talk.eff_req) + '</td><td class="lbl">\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9: ' + yn(talk.eff_ok) + '</td></tr>'
     + '<tr><td><span class="lbl">\u05ea\u05d0\u05e8\u05d9\u05da:</span> ' + e(fdate(talk.eff_d)) + '</td><td><span class="lbl">\u05d4\u05de\u05e9\u05da \u05d8\u05d9\u05e4\u05d5\u05dc (\u05d0\u05dd \u05e0\u05d3\u05e8\u05e9):</span> ' + e(talk.eff_next || '') + '</td></tr>'
-    + '<tr><td><span class="lbl">\u05ea\u05d0\u05d5\u05e8 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4:</span> ' + e(talk.eff_desc || '') + '</td><td><span class="lbl">\u05d7\u05ea\u05d9\u05de\u05d4:</span> ' + e(talk.eff_by || '') + '</td></tr></table>';
+    + '<tr><td><span class="lbl">\u05ea\u05d0\u05d5\u05e8 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4:</span> ' + e(talk.eff_desc || '') + '</td><td><span class="lbl">\u05d7\u05ea\u05d9\u05de\u05d4:</span> ' + e(talk.eff_by || '') + (talk.eff_by && trSig ? ' <img class="sig" alt="" src="' + img(trSig) + '">' : '') + '</td></tr></table>';
   let out = '';
   for (let p = 0; p < pages; p++) {
     const part = reads.slice(p * F0801_ROWS, (p + 1) * F0801_ROWS);
-    const rows = part.map((x, i) => '<tr><td style="text-align:center">' + (p * F0801_ROWS + i + 1) + '</td><td>' + e(x.emp_name || '') + '</td><td>' + e(x.dept || '') + '</td><td dir="ltr" style="text-align:right">' + e(x.id_no || '') + '</td><td>' + (sigOf(x) ? '<img class="sig" alt="" src="data:image/png;base64,' + sigOf(x) + '">' : '') + '</td></tr>');
+    const rows = part.map((x, i) => '<tr><td style="text-align:center">' + (p * F0801_ROWS + i + 1) + '</td><td>' + e(x.emp_name || '') + '</td><td>' + e(x.dept || '') + '</td><td dir="ltr" style="text-align:right">' + e(x.id_no || '') + '</td><td>' + (sigOf(x) ? '<img class="sig" alt="" src="' + img(sigOf(x)) + '">' : '') + '</td></tr>');
     while (rows.length < F0801_ROWS && p === pages - 1) rows.push('<tr><td style="height:22px"></td><td></td><td></td><td></td><td></td></tr>');
     out += '<div class="pg">' + head(p + 1) + (p === 0 ? top : '')
       + '<div class="t2">\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd</div><table><tr><th style="width:36px">\u05de\u05e1"\u05d3</th><th>\u05e9\u05dd \u05e2\u05d5\u05d1\u05d3</th><th>\u05de\u05d7\u05dc\u05e7\u05d4</th><th>\u05de\u05e1\' \u05d6\u05d4\u05d5\u05ea</th><th style="width:130px">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr>' + rows.join('') + '</table>'
@@ -780,7 +782,9 @@ async function storageB64(env, url) {
   try {
     const r = await fetch(SB + '/storage/v1/object/' + m[1] + '/' + m[2], { headers: sbH(env) });
     if (!r.ok) return null;
-    return b64(new Uint8Array(await r.arrayBuffer()));
+    const u8 = new Uint8Array(await r.arrayBuffer());
+    // A signature drawn in the app is uploaded as JPEG (_fileUpload compresses images), the workers' as PNG.
+    return 'data:' + (u8[0] === 0xFF && u8[1] === 0xD8 ? 'image/jpeg' : 'image/png') + ';base64,' + b64(u8);
   } catch (e) { return null; }
 }
 export async function file0801(env, talk, reads, nowMs) {
@@ -821,7 +825,7 @@ export async function file0801(env, talk, reads, nowMs) {
 }
 
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc,subjects', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -1208,6 +1212,9 @@ async function makeLink(env, request, ctx) {
   const talk = await getTalk(env, String(b.id || ''));
   if (!talk) return jsonResp({ error: 'not found' }, 404, cors);
   if (talk.s !== S_PUB) return jsonResp({ error: 'not published' }, 409, cors);
+  // Annual / quality (14/10/2026, Michael: "the trainer signs the training and the effectiveness check, and the
+  // kinds of training are ticked, before the form opens"): no link until both are there.
+  if (TYPED_KINDS.indexOf(talk.kind) >= 0 && b.op !== 'revoke' && (!talk.trainer_signed_at || !String(talk.subjects || '').trim())) return jsonResp({ error: 'incomplete' }, 409, cors);
   // Group: for the phone in the manager's hand, one day; the shared link's expiry (link_at) is untouched.
   if (b.op === 'group') {
     const gt = await makeGroupToken(env, talk.id);
