@@ -150,9 +150,10 @@ const MEASURE = `(function(pageId){
   var scope=[pg,document.querySelector('.topbar')].filter(Boolean);
   scope.forEach(function(root){Array.prototype.forEach.call(root.querySelectorAll('[onclick]'),function(el){if(!vis(el))return;var oc=el.getAttribute('onclick')||'';if(/Menu\\(/.test(oc)&&!/closeMenu|goPage/.test(oc)){el.setAttribute('data-audit-idx',menuBtns.length);menuBtns.push({idx:menuBtns.length,el:desc(el),oc:oc.slice(0,80)});}var m=oc.match(/openModal\\(['"]([^'"]+)['"]/);if(m&&document.getElementById(m[1]))modals[m[1]]=desc(el);});});
   out.menuBtns=menuBtns; out.modals=Object.keys(modals).map(function(k){return {id:k,from:modals[k]};});
-  // 5. glyphs that are not emoji-presentation by default (U+1F5xx block etc.)
+  // 5. glyphs that are not emoji-presentation by default (U+1F5xx block etc.); one followed by
+  //    U+FE0F asks for the emoji form and is fine (13/10/2026, BACKLOG 13.22)
   var glyphs={};
-  if(pg){var walker=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var n;while((n=walker.nextNode())){var s=n.nodeValue;for(var i=0;i<s.length;i++){var c=s.codePointAt(i);if(c>0xffff)i++;if((c>=0x1F5A0&&c<=0x1F5FF)||(c>=0x1F320&&c<=0x1F32C)||(c>=0x2190&&c<=0x21FF&&c!==0x21a9&&c!==0x2192&&c!==0x2190)||c===0x25AF||c===0x25AE){var k=c.toString(16);glyphs[k]=(glyphs[k]||0)+1;}}}}
+  if(pg){var walker=document.createTreeWalker(pg,NodeFilter.SHOW_TEXT);var n;while((n=walker.nextNode())){var s=n.nodeValue;for(var i=0;i<s.length;i++){var c=s.codePointAt(i);if(c>0xffff)i++;if(s.charCodeAt(i+1)===0xFE0F)continue;if((c>=0x1F5A0&&c<=0x1F5FF)||(c>=0x1F320&&c<=0x1F32C)||(c>=0x2190&&c<=0x21FF&&c!==0x21a9&&c!==0x2192&&c!==0x2190)||c===0x25AF||c===0x25AE||c===0x1F441){var k=c.toString(16);glyphs[k]=(glyphs[k]||0)+1;}}}}
   out.glyphs=glyphs;
   var _c=(${CONTRAST})(pg,vis,desc); out.lowContrast=_c.list; out.lowContrastCount=_c.count;
   return out;
