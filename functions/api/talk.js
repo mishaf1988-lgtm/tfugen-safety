@@ -341,6 +341,17 @@ export function readTalkToken(env, tok, nowMs) { return readLinkToken(env, PREFI
 const PERM_PREFIX = 'talk-perm:v1:';
 export const PERM_TTL_DAYS = 3650;
 export const KIND_IND = 'induction';
+// The annual safety training and the quality department's training (14/10/2026, Michael: "a barcode the worker
+// scans at the annual training, fills in his details, and in the end one form 08.01 with everyone who signed";
+// in the questionnaire: "\u05d1\u05e6\u05e2: \u05d4\u05db\u05dc \u05d1\u05d4\u05e7\u05dc\u05d3\u05d4", "\u05d1\u05e6\u05e2: \u05dc\u05e4\u05d9 \u05d4\u05ea\u05d5\u05db\u05e0\u05d9\u05ea"). Typed: no list, the worker types name and ID
+// and picks a department. Permanent link like the induction, until the manager closes it (revoke).
+export const KIND_ANN = 'annual', KIND_QA = 'quality';
+export const TYPED_KINDS = [KIND_ANN, KIND_QA];
+export const PERM_KINDS = [KIND_IND, KIND_ANN, KIND_QA];
+// The whole factory signs one annual training, temps included: more room than a weekly talk's 100 typed names.
+export const MAX_OUT_TYPED = 600;
+export const ANN_OK = '\u05d0\u05e0\u05d9 \u05de\u05d0\u05e9\u05e8/\u05ea \u05e9\u05e2\u05d1\u05e8\u05ea\u05d9 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05d1\u05db\u05dc \u05d4\u05e0\u05d5\u05e9\u05d0\u05d9\u05dd \u05e9\u05dc\u05de\u05e2\u05dc\u05d4, \u05d4\u05d1\u05e0\u05ea\u05d9 \u05d0\u05d5\u05ea\u05dd \u05d5\u05d0\u05e4\u05e2\u05dc \u05dc\u05e4\u05d9\u05d4\u05dd.';
+export const DEP_OTHER_PH = '\u05e9\u05dd \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
 // The training departments and the employee-card names that belong to each (index.html _TBT_DEPTS).
 export const TBT_DEPTS = [["\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", ["\u05d9\u05e6\u05d5\u05e8"]], ["\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd", ["\u05d8\u05d1\u05e2 (\u05de\u05e2\u05e6\u05d1\u05d9\u05dd)"]], ["\u05d0\u05e8\u05d9\u05d6\u05d4", ["\u05d0\u05e8\u05d9\u05d6\u05d4"]], ["\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd", ["\u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd"]], ["\u05ea\u05d5\u05e6\"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd", ["\u05ea\u05d5\u05e6\u05d2"]], ["\u05de\u05e2\u05d1\u05d3\u05d4", ["\u05de\u05e2\u05d1\u05d3\u05d4"]], ["\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc", ["\u05d0\u05d7\u05d6\u05e7\u05d4, \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc"]]];
 export function deptMatch(dept, empDep) {
@@ -500,7 +511,7 @@ async function codeSubmit(env, form, request) {
     'Set-Cookie': IND_CODE_COOKIE + '=' + c + '; Path=/api/talk; Max-Age=' + IND_CODE_DAYS * 86400 + '; HttpOnly; Secure; SameSite=Lax' } });
 }
 // A permanent token opens only an induction talk, and only while its version is the current one.
-export const permOk = (t, talk) => !t.perm || (!!talk && talk.kind === KIND_IND && (talk.link_v || 0) === t.v);
+export const permOk = (t, talk) => !t.perm || (!!talk && PERM_KINDS.indexOf(talk.kind) >= 0 && (talk.link_v || 0) === t.v);
 export function makeGroupToken(env, id, nowMs) { return makeLinkToken(env, GROUP_PREFIX, id, GROUP_TTL_DAYS, nowMs); }
 export function readGroupToken(env, tok, nowMs) { return readLinkToken(env, GROUP_PREFIX, tok, nowMs); }
 async function readTok(env, tok, g) {
@@ -709,8 +720,94 @@ const errPage = (msg, status) => page('\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u0
 // The same pages in the language the worker chose: an expired link is the error every worker meets.
 const errL = (k, lang, status) => { const L = LANGS[langOf(lang)]; return page(L.errT, '<p>' + esc(L[k]) + '</p>', 'err', status, '', langOf(lang)); };
 
+// Form 08.01 "\u05ea\u05d9\u05e2\u05d5\u05d3 \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d4\u05d3\u05e8\u05db\u05d4" (14/10/2026, Michael: "I want the tables here filled with every worker who
+// went through, and the signature here", one form, not one per worker; in the questionnaire: "PDF to
+// the folder + print"). The layout of his Word form: logo and form number, the topics, date, duration,
+// trainer and signature, the participants (#, name, department, ID, signature), the effectiveness check.
+// 20 participants per page, as on the paper; the header repeats on each page.
+export const F0801_ROOT = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/11_\u05d4\u05d3\u05e8\u05db\u05d5\u05ea';
+export const F0801_SUB = { annual: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d4\u05d3\u05e8\u05db\u05ea \u05d0\u05d9\u05db\u05d5\u05ea', induction: '\u05e7\u05dc\u05d9\u05d8\u05ea \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd - \u05d8\u05d5\u05e4\u05e1 08.01' };
+export const F0801_WEEKLY = '\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea';
+export const F0801_SRC = 'Apps/Tapugan Safety/\u05d8\u05e4\u05e1\u05d9 \u05d4\u05d3\u05e8\u05db\u05d4 - \u05de\u05e7\u05d5\u05e8';
+export const F0801_ROWS = 20;
+export function topicsOf(body) {
+  return String(body || '').split(/\r?\n/).map((l) => l.replace(/^\s*(\d+[.)]|[-*])\s*/, '').trim()).filter((l) => l.length > 1);
+}
+export function form0801Html(talk, reads, sigOf, trSig) {
+  const e = esc, dt = fdate(talk.d), yn = (v) => (v === true ? '\u05db\u05df' : v === false ? '\u05dc\u05d0' : '');
+  const topics = topicsOf(talk.body); while (topics.length < 4) topics.push('');
+  const css = 'body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 5px;vertical-align:middle}'
+    + 'th{background:#d9d9d9;font-weight:normal}.pg{page-break-after:always;padding:8px 4px}.pg:last-child{page-break-after:auto}.h1{font-size:17px;font-weight:bold;text-align:center}'
+    + '.sig{height:26px;max-width:120px}.lbl{font-weight:bold}.t2{color:#c00000;font-weight:bold;text-decoration:underline;margin:10px 0 4px}';
+  const pages = Math.max(1, Math.ceil(reads.length / F0801_ROWS));
+  const head = (n) => '<table><tr><td rowspan="2" style="width:110px;text-align:center"><img alt="\u05ea\u05e4\u05d5\u05d2\u05df" style="height:44px" src="data:image/jpeg;base64,' + LOGO_JPG + '"></td>'
+    + '<td colspan="3" class="h1">\u05ea\u05d9\u05e2\u05d5\u05d3 \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d4\u05d3\u05e8\u05db\u05d4</td></tr><tr><td style="font-size:11px">\u05d8\u05d5\u05e4\u05e1 08.01</td><td style="font-size:11px">\u05e2\u05de\u05d5\u05d3 ' + n + ' \u05de\u05ea\u05d5\u05da ' + pages + '</td><td style="font-size:11px">' + e(talk.title || '') + '</td></tr></table>';
+  const top = '<table style="margin-top:10px"><tr><td rowspan="' + topics.length + '" style="width:110px;text-align:center">\u05e0\u05d5\u05e9\u05d0\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</td>'
+    + topics.map((t, i) => (i ? '<tr>' : '') + '<td style="width:24px;text-align:center">' + (i + 1) + '</td><td>' + e(t) + '</td></tr>').join('') + '</table>'
+    + '<table style="margin-top:10px"><tr><td class="lbl" style="width:22%">\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d4:</td><td>' + e(dt) + '</td><td class="lbl" style="width:22%">\u05de\u05e9\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d4:</td><td>' + e(talk.dur || '') + '</td></tr>'
+    + '<tr><td class="lbl">\u05e9\u05dd \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + e(talk.trainer || '') + (talk.trainer_qual ? ', ' + e(talk.trainer_qual) : '') + '</td><td class="lbl">\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da:</td><td>' + (trSig ? '<img class="sig" alt="" src="data:image/png;base64,' + trSig + '">' : '') + '</td></tr></table>';
+  const eff = '<div class="t2">\u05d1\u05d3\u05d9\u05e7\u05ea \u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9\u05d5\u05ea</div><table><tr><td class="lbl">\u05e0\u05d3\u05e8\u05e9\u05ea: ' + yn(talk.eff_req) + '</td><td class="lbl">\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9: ' + yn(talk.eff_ok) + '</td></tr>'
+    + '<tr><td><span class="lbl">\u05ea\u05d0\u05e8\u05d9\u05da:</span> ' + e(fdate(talk.eff_d)) + '</td><td><span class="lbl">\u05d4\u05de\u05e9\u05da \u05d8\u05d9\u05e4\u05d5\u05dc (\u05d0\u05dd \u05e0\u05d3\u05e8\u05e9):</span> ' + e(talk.eff_next || '') + '</td></tr>'
+    + '<tr><td><span class="lbl">\u05ea\u05d0\u05d5\u05e8 \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4:</span> ' + e(talk.eff_desc || '') + '</td><td><span class="lbl">\u05d7\u05ea\u05d9\u05de\u05d4:</span> ' + e(talk.eff_by || '') + '</td></tr></table>';
+  let out = '';
+  for (let p = 0; p < pages; p++) {
+    const part = reads.slice(p * F0801_ROWS, (p + 1) * F0801_ROWS);
+    const rows = part.map((x, i) => '<tr><td style="text-align:center">' + (p * F0801_ROWS + i + 1) + '</td><td>' + e(x.emp_name || '') + '</td><td>' + e(x.dept || '') + '</td><td dir="ltr" style="text-align:right">' + e(x.id_no || '') + '</td><td>' + (sigOf(x) ? '<img class="sig" alt="" src="data:image/png;base64,' + sigOf(x) + '">' : '') + '</td></tr>');
+    while (rows.length < F0801_ROWS && p === pages - 1) rows.push('<tr><td style="height:22px"></td><td></td><td></td><td></td><td></td></tr>');
+    out += '<div class="pg">' + head(p + 1) + (p === 0 ? top : '')
+      + '<div class="t2">\u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05de\u05e9\u05ea\u05ea\u05e4\u05d9\u05dd</div><table><tr><th style="width:36px">\u05de\u05e1"\u05d3</th><th>\u05e9\u05dd \u05e2\u05d5\u05d1\u05d3</th><th>\u05de\u05d7\u05dc\u05e7\u05d4</th><th>\u05de\u05e1\' \u05d6\u05d4\u05d5\u05ea</th><th style="width:130px">\u05d7\u05ea\u05d9\u05de\u05d4</th></tr>' + rows.join('') + '</table>'
+      + (p === pages - 1 ? eff : '') + '</div>';
+  }
+  return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>08.01</title><style>' + css + '</style></head><body>' + out + '</body></html>';
+}
+async function storageB64(env, url) {
+  const m = /\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/([^?]+)/.exec(String(url || ''));
+  if (!m) return null;
+  try {
+    const r = await fetch(SB + '/storage/v1/object/' + m[1] + '/' + m[2], { headers: sbH(env) });
+    if (!r.ok) return null;
+    return b64(new Uint8Array(await r.arrayBuffer()));
+  } catch (e) { return null; }
+}
+export async function file0801(env, talk, reads, nowMs) {
+  const out = { pdf: false, url: null, name: null, mailed: false, n: reads.length };
+  const od = await accessToken(env);
+  const now = new Date(nowMs || Date.now());
+  const day = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const sigs = {};
+  for (const x of reads) sigs[x.id] = await storageB64(env, x.sig_url);
+  const trSig = talk.trainer_sig_url ? await storageB64(env, talk.trainer_sig_url) : null;
+  const html = form0801Html(talk, reads, (x) => sigs[x.id], trSig);
+  const base = (talk.d || day).split('-').reverse().join('-') + ' - ' + fileSafe(talk.title || '08.01') + ' - 08.01';
+  const hb = new TextEncoder().encode(html);
+  let bytes = hb, name = base + '.html', type = 'text/html';
+  try {
+    await putFile(od.token, F0801_SRC, base + '.html', hb, 'text/html; charset=utf-8');
+    const seg = (F0801_SRC + '/' + base + '.html').split('/').map(encodeURIComponent).join('/');
+    const r = await fetch(GRAPH_ROOT + seg + ':/content?format=pdf', { headers: { Authorization: 'Bearer ' + od.token } });
+    if (r.ok) {
+      const pdf = new Uint8Array(await r.arrayBuffer());
+      if (pdf.length > 800 && pdf[0] === 0x25 && pdf[1] === 0x50 && pdf[2] === 0x44 && pdf[3] === 0x46) { bytes = pdf; name = base + '.pdf'; type = 'application/pdf'; out.pdf = true; }
+    }
+  } catch (e) { /* the HTML is filed instead */ }
+  out.name = name;
+  const folder = F0801_ROOT + '/' + (F0801_SUB[talk.kind] || F0801_WEEKLY) + '/' + String(talk.d || day).slice(0, 4);
+  const filed = await putFile(od.token, folder, name, bytes, type);
+  out.url = filed.webUrl || null;
+  // To the connected account, and to the address on the training (the quality department).
+  const cc = String(talk.mail_cc || '').split(/[,;\s]+/).filter((x) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)).slice(0, 5);
+  const to = [od.email].concat(cc).filter((v, i, a) => v && a.indexOf(v) === i);
+  if (to.length) {
+    const mail = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px"><p>\u05d8\u05d5\u05e4\u05e1 08.01 \u05de\u05d5\u05dc\u05d0: <b>' + esc(talk.title || '') + '</b> (' + esc(fdate(talk.d)) + ')</p><p>\u05d7\u05ea\u05de\u05d5: ' + reads.length + '</p>'
+      + (out.url ? '<p><a href="' + esc(out.url) + '">\u05e4\u05ea\u05d7 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a></p>' : '') + '</div>';
+    const att = bytes.length <= MAIL_ATTACH_MAX ? [{ '@odata.type': '#microsoft.graph.fileAttachment', name, contentType: type, contentBytes: b64(bytes) }] : [];
+    try { await sendMailTo(od.token, to, [], '\u05d8\u05d5\u05e4\u05e1 08.01: ' + String(talk.title || '').substring(0, 80), mail, att); out.mailed = true; } catch (e) { out.mailErr = String((e && e.message) || e).substring(0, 160); }
+  }
+  return out;
+}
+
 async function getTalk(env, id) {
-  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,video_url,quiz,kind,link_v,dept', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&select=id,d,title,body,body_ar,body_ru,body_am,file_url,s,trainer,trainer_qual,trainer_signed_at,trainer_sig_url,video_url,quiz,kind,link_v,dept,dur,mail_cc', { headers: sbH(env) });
   if (!r.ok) throw new Error('talk read ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) ? rows[0] || null : null;
@@ -840,7 +937,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   const emps = await getEmps(env);
   const files = await signedFiles(env, talk.file_url);
   const vid = await videoHtml(env, talk, L);
-  const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he;
+  const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he, typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
   const quiz = ind ? [] : quizOf(talk, lang);
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const signed = g ? await signedIds(env, talk.id) : new Set();
@@ -872,12 +969,15 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + '<input type="hidden" name="k" value="' + esc(tok) + '">' + (g ? '<input type="hidden" name="g" value="1">' : '') + '<input type="hidden" name="l" value="' + lang + '"><input type="hidden" name="sig" id="sig"><input type="hidden" name="qa" id="qa">'
     // 13/10/2026 (Michael: "I don't want the list of existing workers, only the new worker being taken in"):
     // the induction asks for the new worker's name and ID only; "emp" is always "not on the list".
-    + (ind ? '<input type="hidden" name="emp" id="emp" value="' + OTHER + '"><label for="oname" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oname) + '</label>'
+    + (ind || typed ? '<input type="hidden" name="emp" id="emp" value="' + OTHER + '"><label for="oname" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oname) + '</label>'
       : '<label style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.you) + '</label>'
     + '<select name="emp" id="emp" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px"><option value="">' + esc(L.pick) + '</option><option value="' + OTHER + '">' + esc(L.other) + '</option>' + opts + '</select>')
     // Not on the list: the name first, then the ID like everyone (review 03/10/2026: the ID came between the list and the name).
-    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off"' + (ind ? ' required' : '') + ' placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (ind ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
+    + '<div id="obox" style="display:none;margin:-4px 0 12px"><input name="oname" id="oname" maxlength="60" autocomplete="off"' + (ind || typed ? ' required' : '') + ' placeholder="' + esc(L.oname) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:8px">' + (ind || typed ? '' : '<input name="ocomp" maxlength="60" autocomplete="off" placeholder="' + esc(L.ocomp) + '" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px">') + '</div>'
     + '<label for="oid" style="display:block;font-weight:700;margin-bottom:4px">' + esc(L.oid) + '</label><input name="oid" id="oid" maxlength="20" autocomplete="off" dir="ltr" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px;text-align:right">'
+    + (typed ? (() => { const st = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px';
+      return '<label for="idep" style="display:block;font-weight:700;margin-bottom:4px">' + esc(IL.dep) + '</label><select name="idep" id="idep" required dir="rtl" style="' + st + '"><option value="">' + esc(IL.depPick) + '</option>' + TBT_DEPTS.map((d) => '<option value="' + esc(d[0]) + '">' + esc(d[0]) + '</option>').join('') + '<option value="' + esc(IND_OTHER_DEP) + '">' + esc(IL.depOther) + '</option></select>'
+        + '<input name="idepo" id="idepo" maxlength="40" autocomplete="off" placeholder="' + esc(DEP_OTHER_PH) + '" style="' + st + ';display:none">'; })() : '')
     + (ind ? (() => { const st = 'width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:12px', lb = (f, t) => '<label for="' + f + '" style="display:block;font-weight:700;margin-bottom:4px">' + esc(t) + '</label>';
       return lb('ino', IL.empNo) + '<input name="ino" id="ino" maxlength="12" inputmode="numeric" autocomplete="off" dir="ltr" style="' + st + ';text-align:right">'
         + lb('idep', IL.dep) + '<select name="idep" id="idep" required dir="rtl" style="' + st + '"><option value="">' + esc(IL.depPick) + '</option>' + TBT_DEPTS.map((d) => '<option value="' + esc(d[0]) + '">' + esc(d[0]) + '</option>').join('') + '<option value="' + esc(IND_OTHER_DEP) + '">' + esc(IL.depOther) + '</option></select>'
@@ -891,7 +991,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
       + '<label id="dadd" style="display:block;width:100%;box-sizing:border-box;text-align:center;padding:12px;margin-bottom:6px;border:2px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:17px;font-weight:700;cursor:pointer"><input type="file" id="dfile" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">\ud83d\udcf7 \u05e6\u05dc\u05dd \u05de\u05e1\u05de\u05da</label>'
       + '<label id="dgal" style="display:block;width:100%;box-sizing:border-box;text-align:center;padding:12px;margin-bottom:6px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:15px;font-weight:700;cursor:pointer"><input type="file" id="dfile2" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden">\u05d0\u05d5 \u05d1\u05d7\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df</label>'
       + '<div id="dcnt" style="font-size:13px;color:#374151;margin-bottom:12px"></div>' : '')
-    + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(L.ok) + '</label>'
+    + '<label style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" name="ok" value="1" required style="width:22px;height:22px;flex:none">' + esc(typed && lang === 'he' ? ANN_OK : L.ok) + '</label>'
     + '<div style="font-weight:700;margin-bottom:4px">' + esc(L.sig) + '</div>'
     + '<canvas id="pad" style="width:100%;height:180px;border:2px dashed #9ca3af;border-radius:8px;touch-action:none;background:#fff"></canvas>'
     + '<button type="button" id="clr" style="margin:6px 0 14px;padding:6px 14px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:14px">' + esc(L.clear) + '</button>'
@@ -905,9 +1005,10 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     // Blocked (13/10/2026, the tablet said "blocked" without asking): the site permission or the
     // device's own camera switch, told apart with permissions.query, and a camera busy in another app.
     + (ind ? '<script nonce="' + nonce + '">(function(){var b=document.getElementById("dadd"),f=document.getElementById("dfile"),f2=document.getElementById("dfile2"),g2=document.getElementById("dgal"),box=document.getElementById("dbox"),c=document.getElementById("dcnt");if(!b||!f||!f2||!g2||!box)return;var cnt=function(){var n=box.children.length;c.textContent=n?"\u05e6\u05d5\u05dc\u05de\u05d5 "+n+" \u05de\u05e1\u05de\u05db\u05d9\u05dd":"";};var full=function(){if(box.children.length>=' + MAX_DOCS + '){alert("\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + MAX_DOCS + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd");return true;}return false;};var add=function(src){var img=new Image();img.onload=function(){var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);var d=cv.toDataURL("image/jpeg",0.7),w=document.createElement("div"),im=document.createElement("img"),h=document.createElement("input"),x=document.createElement("button");w.style.cssText="position:relative";im.src=d;im.style.cssText="height:90px;border:1px solid #9ca3af;border-radius:6px";h.type="hidden";h.name="doc";h.value=d;x.type="button";x.textContent="\u05d4\u05e1\u05e8";x.style.cssText="display:block;margin-top:2px;width:100%;padding:4px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff";x.addEventListener("click",function(){w.remove();cnt();});w.appendChild(im);w.appendChild(h);w.appendChild(x);box.appendChild(w);cnt();};img.onerror=function(){alert("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4");};img.src=src;};var onf=function(){var fl=this.files&&this.files[0];this.value="";if(!fl)return;var r=new FileReader();r.onload=function(){add(r.result);};r.readAsDataURL(fl);};f.addEventListener("change",onf);f2.addEventListener("change",onf);g2.addEventListener("click",function(e){if(full())e.preventDefault();});var md=navigator.mediaDevices;var mk=function(t,bg,fg){var x=document.createElement("button");x.type="button";x.textContent=t;x.style.cssText="flex:1;padding:14px;font-size:18px;font-weight:700;border:2px solid #fff;border-radius:8px;background:"+bg+";color:"+fg;return x;};var openCam=function(){var ov=document.createElement("div"),v=document.createElement("video"),bar=document.createElement("div"),msg=document.createElement("div"),shot=mk("\u05e6\u05dc\u05dd","#1e3a8a","#fff"),done=mk("\u05e1\u05d9\u05d5\u05dd","#fff","#111"),stream=null;ov.id="camov";ov.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:#000;display:flex;flex-direction:column";v.setAttribute("playsinline","");v.muted=true;v.autoplay=true;v.style.cssText="flex:1;width:100%;min-height:0;object-fit:contain;background:#000";msg.id="cammsg";msg.style.cssText="color:#fff;padding:8px 12px;font-size:16px;text-align:center;min-height:22px";bar.style.cssText="display:flex;gap:10px;padding:12px";shot.id="camshot";done.id="camdone";shot.disabled=true;bar.appendChild(shot);bar.appendChild(done);ov.appendChild(v);ov.appendChild(msg);ov.appendChild(bar);document.body.appendChild(ov);var stop=function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});ov.remove();};done.addEventListener("click",stop);shot.addEventListener("click",function(){if(full()){stop();return;}var w=v.videoWidth,h=v.videoHeight;if(!w||!h)return;var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(v,0,0,w,h);add(cv.toDataURL("image/jpeg",0.9));msg.textContent="\u05e6\u05d5\u05dc\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05dc\u05dd \u05e2\u05d5\u05d3 \u05de\u05e1\u05de\u05da, \u05d0\u05d5 \u05e1\u05d9\u05d5\u05dd";});md.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){stream=s;v.srcObject=s;var p=v.play();if(p&&p.catch)p.catch(function(){});shot.disabled=false;msg.textContent="\u05dc\u05db\u05d5\u05d5\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e6\u05dc\u05dd";}).catch(function(err){shot.style.display="none";var n=err&&err.name,say=function(t){msg.textContent=t+" \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df (\u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05e0\u05d9).";};if(n==="NotReadableError"||n==="AbortError"){say("\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05ea\u05e4\u05d5\u05e1\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d7\u05e8\u05ea. \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1.");return;}if(n==="NotFoundError"||n==="OverconstrainedError"){say("\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05de\u05e6\u05dc\u05de\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8.");return;}if(n!=="NotAllowedError"){say("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e6\u05dc\u05de\u05d4.");return;}var site="\u05d4\u05d0\u05ea\u05e8 \u05d7\u05e1\u05d5\u05dd \u05d1\u05de\u05e6\u05dc\u05de\u05d4. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05e1\u05de\u05dc \u05e9\u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05db\u05ea\u05d5\u05d1\u05ea, \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea, \u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d0\u05e4\u05e9\u05e8, \u05d5\u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.",os="\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05db\u05d1\u05d5\u05d9\u05d4 \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05db\u05e9\u05d9\u05e8. \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea: \u05e4\u05e8\u05d8\u05d9\u05d5\u05ea, \u05d2\u05d9\u05e9\u05d4 \u05dc\u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d4\u05e4\u05e2\u05d9\u05dc. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d2\u05dd \u05de\u05ea\u05d2 \u05d0\u05d5 \u05de\u05e7\u05e9 \u05de\u05e6\u05dc\u05de\u05d4. \u05d0\u05d7\u05e8 \u05db\u05da \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.";if(!navigator.permissions||!navigator.permissions.query){say(site);return;}navigator.permissions.query({name:"camera"}).then(function(r){say(r.state==="denied"?site:os);},function(){say(site);});});};b.addEventListener("click",function(e){if(full()){e.preventDefault();return;}if(!md||!md.getUserMedia)return;e.preventDefault();openCam();});})();</script>' : '')
+    + (typed ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("idep"),o=document.getElementById("idepo");if(!s||!o)return;var f=function(){var on=s.value===' + JSON.stringify(IND_OTHER_DEP) + ';o.style.display=on?"block":"none";o.required=on;};s.addEventListener("change",f);f();})();</script>' : '')
     + (ind ? '<script nonce="' + nonce + '">(function(){var n=document.getElementById("iagn"),o=document.getElementById("ino"),f=function(){o.required=!n.value.trim();};n.addEventListener("input",f);f();})();</script>' : '')
     + (x.body && !ind ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
-  return page(talk.kind === KIND_IND ? L.indT : L.title, inner, '', 200, nonce, lang);
+  return page(talk.kind === KIND_IND ? L.indT : typed ? x.title : L.title, inner, '', 200, nonce, lang);
 }
 
 // The PNG from canvas.toDataURL, checked: the right header, not empty, not huge.
@@ -953,7 +1054,8 @@ async function signTalk(env, request, ctx) {
   const gate = await codeGate(env, talk, request.headers.get('cookie'));
   if (!gate.ok) return codePage(tok, lang, false, !!gate.closed);
   // The induction is for a new worker only (13/10/2026): never a worker from the list.
-  const empId = talk.kind === KIND_IND ? OTHER : String(form.get('emp') || '');
+  const typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
+  const empId = talk.kind === KIND_IND || typed ? OTHER : String(form.get('emp') || '');
   const sig = sigBytes(form.get('sig'));
   // Michael, 03/10/2026: "an ID is always needed", for a worker on the list too.
   const oid = idOf(form.get('oid'));
@@ -966,6 +1068,13 @@ async function signTalk(env, request, ctx) {
     const n = await nameHe(env, request, raw), dep = comp ? await nameHe(env, request, comp) : null;
     if (!n || (comp && !dep)) return bad('errNameT', 'errHe', 422);
     emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep, out: true };
+    // Annual / quality: the department picked from the list, or typed under "other" (14/10/2026).
+    if (typed) {
+      const pick = oneLine(form.get('idep')), deps = TBT_DEPTS.map((x) => x[0]);
+      const typedDep = pick === IND_OTHER_DEP ? oneLine(form.get('idepo')).substring(0, 40) : '';
+      if (deps.indexOf(pick) < 0 && !(pick === IND_OTHER_DEP && typedDep.length >= 2)) return page((IND_L[lang] || IND_L.he).errT, '<p>' + esc((IND_L[lang] || IND_L.he).needDep) + '</p>' + back, 'err', 400, '', lang);
+      emp.dep = pick === IND_OTHER_DEP ? ((await nameHe(env, request, typedDep)) || typedDep) : pick;
+    }
   } else {
     const emps = await getEmps(env);
     emp = emps.find((e) => String(e.id) === empId);
@@ -1000,7 +1109,7 @@ async function signTalk(env, request, ctx) {
     const outs = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&emp_id=like.' + encodeURIComponent('x:*') + '&select=id', { headers: sbH(env) });
     if (!outs.ok) return bad('errSaveT', 'errSave', 502);
     const n = await outs.json();
-    if (Array.isArray(n) && n.length >= MAX_OUT) return bad('errSaveT', 'full', 429);
+    if (Array.isArray(n) && n.length >= (typed ? MAX_OUT_TYPED : MAX_OUT)) return bad('errSaveT', 'full', 429);
   }
 
   // One file name per worker and talk, uploaded without upsert: of two sends at
@@ -1060,6 +1169,18 @@ async function makeLink(env, request, ctx) {
     if (!text) return jsonResp({ error: 'empty' }, 400, cors);
     return sayStream(env, text, lang, ctx, cors);
   }
+  // Form 08.01 with everyone who signed (14/10/2026): any kind, published or closed.
+  if (b && b.op === 'form0801') {
+    const r = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(b.id || '')) + '&select=*', { headers: sbH(env) });
+    const t = r.ok ? ((await r.json()) || [])[0] : null;
+    if (!t) return jsonResp({ error: 'not found' }, 404, cors);
+    const rr = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(t.id) + '&select=id,emp_name,dept,id_no,sig_url,read_at&order=read_at.asc', { headers: sbH(env) });
+    const reads = rr.ok ? await rr.json() : null;
+    if (!Array.isArray(reads)) return jsonResp({ error: 'reads' }, 502, cors);
+    if (!reads.length) return jsonResp({ error: 'no signatures yet' }, 409, cors);
+    try { return jsonResp(Object.assign({ ok: true }, await file0801(env, t, reads)), 200, cors); }
+    catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 502, cors); }
+  }
   if (!b || (b.op !== 'link' && b.op !== 'group' && b.op !== 'revoke')) return jsonResp({ error: 'unknown op' }, 400, cors);
   const talk = await getTalk(env, String(b.id || ''));
   if (!talk) return jsonResp({ error: 'not found' }, 404, cors);
@@ -1071,7 +1192,7 @@ async function makeLink(env, request, ctx) {
     return jsonResp({ url: talkUrl(gt, 'he', true), days: GROUP_TTL_DAYS }, 200, cors);
   }
   // Induction: the permanent link; "revoke" raises link_v first, so the old link and QR stop.
-  if (talk.kind === KIND_IND) {
+  if (PERM_KINDS.indexOf(talk.kind) >= 0) {
     let v = talk.link_v || 0;
     if (b.op === 'revoke') {
       v += 1;
@@ -1082,7 +1203,7 @@ async function makeLink(env, request, ctx) {
     if (!pt) return jsonResp({ error: 'not configured' }, 503, cors);
     return jsonResp({ url: talkUrl(pt), perm: true, link_v: v }, 200, cors);
   }
-  if (b.op === 'revoke') return jsonResp({ error: 'not an induction talk' }, 409, cors);
+  if (b.op === 'revoke') return jsonResp({ error: 'not a permanent-link talk' }, 409, cors);
   const tok = await makeTalkToken(env, talk.id);
   if (!tok) return jsonResp({ error: 'not configured' }, 503, cors);
   // When the newest link runs out (03/10/2026, Michael chose a column): the weekly
