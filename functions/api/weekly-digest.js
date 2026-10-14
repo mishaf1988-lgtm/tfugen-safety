@@ -43,7 +43,7 @@ import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
 import { UPLOAD_LOG } from './od-read.js';
-import { TBT_DEPTS, deptMatch, KIND_IND } from './talk.js';
+import { TBT_DEPTS, deptMatch, PERM_KINDS, TYPED_KINDS } from './talk.js';
 
 export const STATE_KEY = 'weekly_digest';
 export const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -162,14 +162,14 @@ const talkKey = (t) => String((t && (t.d || String(t.ts || '').substring(0, 10))
 // The whole-plant line counts every worker, so it reads only talks for the whole plant: a talk for
 // one department or the new-worker induction has its own line (deptTalkLines) or none.
 export function latestTalk(talks) {
-  return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB && !t.dept && t.kind !== KIND_IND).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
+  return (Array.isArray(talks) ? talks : []).filter((t) => t && t.s === TALK_PUB && !t.dept && PERM_KINDS.indexOf(t.kind) < 0).sort((a, b) => talkKey(b).localeCompare(talkKey(a)))[0] || null;
 }
 // One line per training department (10/10/2026, Michael in the questionnaire: "\u05d1\u05e6\u05e2: \u05de\u05e6\u05d1 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05e4\u05d9
 // \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9"): this week's published talk and how many of the department's workers signed,
 // red under 80% from the day after; a draft still waiting to be published; or no talk at all.
 // null while no talk has a department yet, so the mail stays as it was until the feature is used.
 export function deptTalkLines(talks, reads, emps, today) {
-  const all = (Array.isArray(talks) ? talks : []).filter((t) => t && t.dept && t.kind !== KIND_IND);
+  const all = (Array.isArray(talks) ? talks : []).filter((t) => t && t.dept && PERM_KINDS.indexOf(t.kind) < 0);
   if (!all.length) return null;
   const age = (t) => { const k = talkKey(t); return k ? Math.round((Date.parse(today + 'T12:00:00Z') - Date.parse(k.substring(0, 10) + 'T12:00:00Z')) / DAY) : 99; };
   const recent = (t) => { const a = age(t); return a >= 0 && a <= TALK_STALE_DAYS; };
@@ -209,12 +209,23 @@ export function talkLine(talks, reads, emps, today) {
   } else if (n === 0 && !t.link_at && age >= 1) text += '. \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05d5\u05e6\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd';
   return { red, text };
 }
+// Annual / quality training open more than a week (14/10/2026, Michael: "\u05de\u05d0\u05e9\u05e8" to the suggestion
+// after the training-screen banner): published, its day TALK_OPEN_DAYS+ ago, form 08.01 never filed
+// (form_at). The same rule as _tbtStale in index.html. null = nothing to say.
+export const TALK_OPEN_DAYS = 7;
+const TYPED_L = { annual: '\u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d0\u05d9\u05db\u05d5\u05ea' };
+export function openTypedLines(talks, today) {
+  const lim = new Date(Date.parse(today + 'T12:00:00Z') - TALK_OPEN_DAYS * DAY).toISOString().slice(0, 10);
+  const st = (Array.isArray(talks) ? talks : []).filter((t) => t && TYPED_KINDS.indexOf(t.kind) >= 0 && t.s === TALK_PUB && !t.form_at && t.d && String(t.d).slice(0, 10) <= lim)
+    .sort((a, b) => String(a.d).localeCompare(String(b.d)));
+  return st.length ? st.map((t) => ({ red: true, text: '\u05d4\u05d3\u05e8\u05db\u05d4 ' + TYPED_L[t.kind] + ' "' + (t.title || '') + '" (' + fd(String(t.d).slice(0, 10)) + '): \u05e4\u05ea\u05d5\u05d7\u05d4 \u05d9\u05d5\u05ea\u05e8 \u05de\u05e9\u05d1\u05d5\u05e2, \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05e7. \u05d1\u05de\u05e1\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea: \u05de\u05d9 \u05d7\u05ea\u05dd, \u05d8\u05d5\u05e4\u05e1 08.01' })) : null;
+}
 // Only the latest talk's signatures are read (the table grows by ~50 rows a week).
 // The department lines need the talks of the last two weeks, drafts too, and their signatures.
 export async function talkData(env) {
   const since = new Date(Date.now() - 16 * DAY).toISOString();
   const [talks, dts] = await Promise.all([
-    readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at,dept,kind&s=eq.' + encodeURIComponent(TALK_PUB)),
+    readAll(env, 'toolbox_talks?select=id,d,title,s,ts,link_at,dept,kind,form_at&s=eq.' + encodeURIComponent(TALK_PUB)),
     readAll(env, 'toolbox_talks?select=id,d,title,s,ts,dept,kind&dept=not.is.null&ts=gte.' + encodeURIComponent(since)),
   ]);
   const t = latestTalk(talks);
@@ -419,6 +430,7 @@ export function digestHtml(d, today, meta) {
   h += h2(H.trustee, d.trustee.length) + table(d.trustee.map((x) => Object.assign({}, x, { dueRep: x.due })), { age: true });
   if (m.talk) h += '<p style="margin:8px 0' + (m.talk.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.talk.text) + '</p>';
   if (m.deptTalks && m.deptTalks.length) h += '<p style="margin:10px 0 2px;font-weight:bold">\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4</p>' + m.deptTalks.map((x) => '<p style="margin:2px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
+  if (m.openTyped && m.openTyped.length) h += m.openTyped.map((x) => '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x.text) + '</p>').join('');
   h += h2(H.committee);
   h += '<p style="margin:4px 0">' + esc(H.meeting) + esc(fd(m.meeting)) + '</p>';
   const deckAt = m.deckAt ? Date.parse(m.deckAt) : 0;
@@ -837,7 +849,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
+  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }
