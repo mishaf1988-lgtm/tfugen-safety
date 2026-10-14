@@ -118,6 +118,17 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       rTbt(); const tr2 = Array.from(document.querySelectorAll('#tb-tbt tr')).find((x) => x.textContent.includes('שנתית ישנה'));
       o.roLink = !!tr2 && !!tr2.querySelector('[onclick^="tbtLink"]') && !/נסגרה לחתימות/.test(tr2.textContent);
       o.closedErr = _tbtLinkErr(409, 'closed'); }
+    // 14/10/2026: who did not sign, to the department managers: a preview first, then a test or the send
+    { const mc = []; let asked = 0; window.confirm = () => { asked++; return true; };
+      window.fetch = (u, init) => { const b = JSON.parse(init.body); mc.push(b); return Promise.resolve(new Response(JSON.stringify(b.preview ? { ok: true, preview: true, plan: [{ dept: 'ייצור טוגנים', to: ['prod@tapugan.co.il'], cc: ['sviva@tapugan.co.il'], names: ['אחמד', 'בוריס'] }, { dept: 'חומר גלם', to: [], cc: [], names: ['זיו'] }], noDept: ['הדר (הנהלה)'] } : { ok: true, sent: [{ dept: 'ייצור טוגנים', n: 2, test: !!b.test }], skipped: b.test ? [] : [{ dept: 'חומר גלם' }], failed: [] }), { status: 200 })); };
+      DB.toolbox_talks.push({ id: 'mm1', title: 'שנתית פתוחה', s: 'פורסמה', kind: 'annual', d: '2026-10-10' });
+      tbtWho('mm1'); o.mmBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtMissMail"]');
+      DB.toolbox_talks.push({ id: 'mm2', title: 'שנתית סגורה', s: 'פורסמה', kind: 'annual', d: '2026-10-10', closed_at: '2026-10-12T08:00:00Z' });
+      tbtWho('mm2'); o.mmBtnClosed = !!document.querySelector('#tbt-who-body [onclick^="tbtMissMail"]');
+      tbtWho('mm1');
+      o.mmPrev = await tbtMissMail('mm1'); o.mmPrevCall = mc[0]; o.mmBox = document.getElementById('tbt-miss-res').innerHTML;
+      o.mmTest = await tbtMissSend('mm1', true); o.mmTestCall = mc[1]; o.mmAskedTest = asked;
+      o.mmSend = await tbtMissSend('mm1', false); o.mmSendCall = mc[2]; o.mmAsked = asked; o.mmRes = document.getElementById('tbt-miss-res').innerHTML; }
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -148,6 +159,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('a closed training: "closed" with the date and a reopen button, no link button', r.clTag);
   check('reopen: op reopen, closed_at cleared, the link button back', r.ro === 'reopened' && r.roCall && r.roCall.op === 'reopen' && r.roRow === null && r.roLink, [r.ro, r.roCall, r.roRow, r.roLink]);
   check('a link on a closed training explains how to reopen', /פתח מחדש/.test(r.closedErr || ''), r.closedErr);
+  check('who did not sign: a button on an open annual training, none once closed', r.mmBtn && !r.mmBtnClosed, [r.mmBtn, r.mmBtnClosed]);
+  check('...a preview first (op missMail, preview): department, recipients, copy, names, a department with no manager marked, the ones with no department', r.mmPrev === 'preview' && r.mmPrevCall.op === 'missMail' && r.mmPrevCall.preview === true && /ייצור טוגנים/.test(r.mmBox) && /prod@tapugan/.test(r.mmBox) && /עותק: sviva/.test(r.mmBox) && /אחמד, בוריס/.test(r.mmBox) && /אין נמען/.test(r.mmBox) && /הדר \(הנהלה\)/.test(r.mmBox) && /עוד לא נשלח/.test(r.mmBox), r.mmBox);
+  check('...a test to Michael without asking; the real send asks first, then says what went and what was skipped', r.mmTest === 'test' && r.mmTestCall.test === true && r.mmAskedTest === 0 && r.mmSend === 'sent' && r.mmSendCall.test === false && !r.mmSendCall.preview && r.mmAsked === 1 && /נשלח: ייצור טוגנים \(2\)/.test(r.mmRes) && /לא נשלח: חומר גלם/.test(r.mmRes), [r.mmTest, r.mmSend, r.mmAsked, r.mmRes]);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

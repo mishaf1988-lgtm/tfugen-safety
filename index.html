@@ -12334,7 +12334,7 @@ function tbtWho(id){
   _tbtRemMiss=miss;
   // Form 08.01 with everyone who signed (14/10/2026): a PDF in the training folder and by mail.
   // Not for the induction (14/10/2026, Michael: "each new worker signs his own form, not a combined one").
-  if(t.kind!=='induction'&&!_viewOnly())h+='<div class="no-print" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'+'<button type="button" class="btn btn-s btn-sm" data-id="'+esc(t.id)+'" onclick="tbtForm0801Preview(this.dataset.id)">&#128064; \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4 \u05e9\u05dc 08.01</button>'+(reads.length?'<button type="button" class="btn btn-p btn-sm" id="tbt-0801-btn" data-id="'+esc(t.id)+'" onclick="tbtForm0801(this.dataset.id)">&#128196; \u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05dd \u05db\u05dc \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd</button>':'')+'</div><div id="tbt-0801-res" style="margin-top:6px;font-size:13px"></div>';
+  if(t.kind!=='induction'&&!_viewOnly())h+='<div class="no-print" style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'+'<button type="button" class="btn btn-s btn-sm" data-id="'+esc(t.id)+'" onclick="tbtForm0801Preview(this.dataset.id)">&#128064; \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4 \u05e9\u05dc 08.01</button>'+(reads.length?'<button type="button" class="btn btn-p btn-sm" id="tbt-0801-btn" data-id="'+esc(t.id)+'" onclick="tbtForm0801(this.dataset.id)">&#128196; \u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05dd \u05db\u05dc \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd</button>':'')+(_tbtTyped(t.kind)&&t.s===_TBT_PUB&&!_tbtClosed(t)?'<button type="button" class="btn btn-s btn-sm" data-id="'+esc(t.id)+'" onclick="tbtMissMail(this.dataset.id)">\ud83d\udce7 \u05de\u05d9 \u05dc\u05d0 \u05d7\u05ea\u05dd, \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd</button>':'')+'</div><div id="tbt-0801-res" style="margin-top:6px;font-size:13px"></div><div id="tbt-miss-res" class="no-print" style="margin-top:6px;font-size:13px"></div>';
   h+=_tbtEffHtml(t);
   var b=g('tbt-who-body');if(b){b.innerHTML=h;if(typeof _signifyDom==='function')_signifyDom(b);}
   openModal('m-tbt-who');
@@ -12460,6 +12460,37 @@ function tbtForm0801(id){
     if(out)out.innerHTML='\u2705 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'+(x.j.pdf?' (PDF)':'')+', '+x.j.n+' \u05d7\u05d5\u05ea\u05de\u05d9\u05dd'+(x.j.mailed?'. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc':'')+(x.j.url?' <a href="'+esc(x.j.url)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d5\u05d4\u05d3\u05e4\u05e1</a>':'');
     return 'ok';
   })['catch'](function(e){if(b)b.disabled=false;if(out)out.textContent='\u26a0\ufe0f '+((e&&e.message)||e);return 'failed';});
+}
+// Who did not sign, to the department managers (14/10/2026, Michael in the questionnaire: "\u05de\u05d9 \u05dc\u05d0 \u05d7\u05ea\u05dd
+// \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd"): talk.js op missMail. First a preview (department, recipients, names), then a test to
+// Michael or the real send, each on his click. The same recipients as the department report.
+function _tbtMissPost(body){return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify(body)})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});});}
+function tbtMissMail(id){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  var out=g('tbt-miss-res');if(out)out.textContent='\u05de\u05db\u05d9\u05df \u05e8\u05e9\u05d9\u05de\u05d4 \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4...';
+  return _tbtMissPost({op:'missMail',id:id,preview:true}).then(function(x){
+    if(!x.ok||!x.j||!x.j.ok){if(out)out.textContent='\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error);return 'failed';}
+    var pl=x.j.plan||[],nd=x.j.noDept||[];
+    if(!pl.length&&!nd.length){if(out)out.textContent='\u2705 \u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05ea\u05de\u05d5';return 'none';}
+    var h='<div style="border:1px solid var(--bd,#d1d5db);border-radius:8px;padding:8px"><b>\u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4, \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7:</b>';
+    pl.forEach(function(p){h+='<div style="margin-top:6px"><b>'+esc(p.dept)+'</b> ('+p.names.length+'): '+(p.to.length?'\u05d0\u05dc '+esc(p.to.join(', ')):'<span style="color:var(--red,#b91c1c);font-weight:700">\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd, \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7</span>')+(p.to.length&&p.cc.length?' | \u05e2\u05d5\u05ea\u05e7: '+esc(p.cc.join(', ')):'')+'<div style="font-size:12px;color:var(--t2)">'+esc(p.names.join(', '))+'</div></div>';});
+    if(nd.length)h+='<div style="margin-top:6px"><b>\u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4, \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7</b> ('+nd.length+'): <span style="font-size:12px;color:var(--t2)">'+esc(nd.join(', '))+'</span></div>';
+    if(pl.length)h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-s btn-sm" data-id="'+esc(id)+'" onclick="tbtMissSend(this.dataset.id,true)">\ud83e\uddea \u05e9\u05dc\u05d7 \u05dc\u05d9 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4</button><button type="button" class="btn btn-p btn-sm" data-id="'+esc(id)+'" onclick="tbtMissSend(this.dataset.id,false)">\ud83d\udce7 \u05e9\u05dc\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd</button></div>';
+    if(out)out.innerHTML=h+'</div>';return 'preview';
+  })['catch'](function(e){if(out)out.textContent='\u26a0\ufe0f '+((e&&e.message)||e);return 'failed';});
+}
+function tbtMissSend(id,test){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  if(!test&&!confirm('\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc\u05d9 \u05d4\u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d0\u05ea \u05e8\u05e9\u05d9\u05de\u05ea \u05de\u05d9 \u05e9\u05dc\u05d0 \u05d7\u05ea\u05dd?'))return Promise.resolve('kept');
+  var out=g('tbt-miss-res');if(out)out.textContent='\u05e9\u05d5\u05dc\u05d7...';
+  return _tbtMissPost({op:'missMail',id:id,test:!!test}).then(function(x){
+    if(!x.j||(!x.ok&&!x.j.sent)){if(out)out.textContent='\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error);return 'failed';}
+    var s=x.j.sent||[],k=x.j.skipped||[],f=x.j.failed||[];
+    try{if(!test&&s.length)addLog('\u05de\u05d9 \u05dc\u05d0 \u05d7\u05ea\u05dd \u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd: '+id+' ('+s.map(function(z){return z.dept;}).join(', ')+')');}catch(e){}
+    if(out)out.innerHTML=(s.length?'\u2705 '+(test?'\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4 \u05e0\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da: ':'\u05e0\u05e9\u05dc\u05d7: ')+esc(s.map(function(z){return z.dept+' ('+z.n+')';}).join(', ')):'')+(k.length?'<div>\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: '+esc(k.map(function(z){return z.dept;}).join(', '))+'</div>':'')+(f.length?'<div style="color:var(--red,#b91c1c)">\u26a0\ufe0f '+esc(f.map(function(z){return z.dept+': '+z.error;}).join('; '))+'</div>':'');
+    return f.length?'failed':(test?'test':'sent');
+  })['catch'](function(e){if(out)out.textContent='\u26a0\ufe0f '+((e&&e.message)||e);return 'failed';});
 }
 function tbtWhoPrint(){
   var b0=g('tbt-who-body');if(!b0)return;

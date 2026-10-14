@@ -52,6 +52,19 @@ export const SEV_COLOR = { '\u05d2\u05d1\u05d5\u05d4\u05d4': '#c00000', '\u05d1\
 const fd = (v) => { const d = v && typeof v === 'object' ? v.date : v; const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
 
 // Pure: the "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" sheet (readSheetRows from row 1) -> who gets what.
+// The register workbook: this year's; in the first minutes of a year, before the tick has
+// copied it into the new folder, last year's (upgrade review 24).
+async function readBook(token) {
+  const book0 = (y) => fetch(G + seg(folderFor(y) + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+  let r = await book0(ilYear());
+  if (r.status === 404) r = await book0(ilYear() - 1);
+  if (!r.ok) throw new Error('the workbook could not be read (onedrive ' + r.status + ')');
+  return new Uint8Array(await r.arrayBuffer());
+}
+const RCPT_SHEET = { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] };
+// The department managers of the department report, for another mail to the same people
+// (talk.js "who did not sign", 14/10/2026).
+export async function readRecipients(token) { return parseRecipients(await readSheetRows(await readBook(token), RCPT_SHEET)); }
 export function parseRecipients(rows) {
   const out = { depts: {}, resp: {}, cc: [] };
   let part = 0;
@@ -153,12 +166,8 @@ async function loadAll(env, token) {
   ]);
   // This year's workbook; in the first minutes of a year, before the tick has
   // copied it into the new folder, last year's (upgrade review 24).
-  const book0 = (y) => fetch(G + seg(folderFor(y) + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
-  let r = await book0(ilYear());
-  if (r.status === 404) r = await book0(ilYear() - 1);
-  if (!r.ok) throw new Error('the workbook could not be read (onedrive ' + r.status + ')');
-  const book = new Uint8Array(await r.arrayBuffer());
-  const rc = await readSheetRows(book, { sheet: '\u05e0\u05de\u05e2\u05e0\u05d9\u05dd', minRow: 1, maxRow: 80, lastCol: 3, dateCols: [] });
+  const book = await readBook(token);
+  const rc = await readSheetRows(book, RCPT_SHEET);
   const tx = await readSheetRows(book, { sheet: '\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4', minRow: 1, maxRow: 2, lastCol: 11, dateCols: [] });
   const t1 = tx.find((x) => x.r === 1), t2 = tx.find((x) => x.r === 2);
   const reg = buildRegister(hazards, reports, tasks);
