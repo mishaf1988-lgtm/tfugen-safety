@@ -28,7 +28,7 @@ APPROVED_SEND = {
     'functions/api/mail-inbox.js': 1,    # "closed" reply to a mail reporter (29/09/2026)
     'functions/api/trustee-notify.js': 1,  # trustee finding notification (22/09/2026)
     'functions/api/weekly-digest.js': 1,   # the weekly mail (28/09/2026)
-    'functions/api/hazard-report.js': 1,   # the department report (28/09/2026)
+    'functions/api/hazard-report.js': 2,   # the department report (28/09/2026); the status mail to the same people (questionnaire 14/10/2026)
     'functions/api/talk.js': 2,   # signed new-worker induction form to Michael and hr-tap@ (questionnaire 10/10/2026); a guessing lock, to Michael (11/10/2026)
     'functions/api/trustee-gate.js': 1,  # a guessing lock on the trustee password, to Michael (11/10/2026)
     'functions/api/codes.js': 1,  # a password changed: to Michael only, never the password (10/10/2026, "maasher")

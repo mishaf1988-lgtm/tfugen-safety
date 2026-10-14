@@ -81,6 +81,21 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('"קלוט עכשיו": runs the file sync, reloads the preview, the banner is gone', JSON.stringify(un.calls.slice(-2)) === JSON.stringify([['/api/hazard-file', ''], ['/api/hazard-report', 'preview']]) && !un.bannerAfter, un.calls);
   check('"... ואז שלח": goes straight to the confirmation, with the departments that were ticked', /מעצבים/.test(un.ask) && !/תוצג/.test(un.ask), un.ask);
   check('after taking it, the send is a normal one (no "anyway")', un.send && un.send.op === 'send' && un.send.anyway === false && un.send.depts.join() === 'מעצבים', un.send);
+  // 14/10/2026: the status mail card, his text kept across re-renders, sent as op statusSend.
+  const stt = await page.evaluate(async () => {
+    window._hzr = null; hzrOpen(); await new Promise((r) => setTimeout(r, 50));
+    const card = document.getElementById('hzr-status'), ta = document.getElementById('hzr-note');
+    if (!card || !ta) return { card: !!card };
+    ta.value = 'היום נסגרו המעקות'; ta.dispatchEvent(new Event('input'));
+    hzrStatus(); const ask = (document.getElementById('hzr-ask') || {}).textContent || '';
+    const kept = (document.getElementById('hzr-note') || {}).value;
+    hzrAskYes(); await new Promise((r) => setTimeout(r, 50));
+    return { card: true, ask, kept, send: window._calls.slice(-1)[0], sent: !!document.querySelector('#hzr .hz-card') && /נשלח/.test(document.getElementById('hzr').textContent) };
+  });
+  check('status card on the report screen, with a text box', stt.card, stt);
+  check('status: asks inside the page, names it and the departments, keeps the text', /מייל סטטוס/.test(stt.ask) && /מעצבים/.test(stt.ask) && stt.kept === 'היום נסגרו המעקות', stt);
+  check('status: sends op statusSend with the ticked departments and his text', stt.send && stt.send[1].op === 'statusSend' && stt.send[1].depts.indexOf('מעצבים') >= 0 && stt.send[1].note === 'היום נסגרו המעקות' && stt.send[1].test === false && stt.sent, stt.send);
+  check('the screen no longer says the mail is kept in Sent Items', await page.evaluate(() => !/ונשמר בפריטים שנשלחו/.test(document.getElementById('hzr').textContent) && /לא נשמר בפריטים שנשלחו/.test(document.getElementById('hzr').textContent)));
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

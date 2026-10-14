@@ -184,6 +184,26 @@ const ROWS = [
   c = await call2({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'setAction', id: 'h:h54', action: 'לחדש' });
   check('viewer cannot approve', c.status === 403 && !(c.w.patches || []).length, c.status);
 
+  // 14/10/2026 (Michael: "a picture of the status, and whether things were closed", to
+  // each department like the report): op statusSend, his text + closed since + still open.
+  const ago = (n) => new Date(Date.now() - n * 864e5).toISOString().substring(0, 10);
+  const HZS = HZ.concat([
+    { id: 'h40', n: 40, d: '2026-09-20', tour_no: 8, dept: 'חומר גלם', loc: 'מדרגות', descr: 'מעקה רופף', sev: 'נמוכה', resp: 'אחזקה', due: ago(5), s: 'סגור', closed_d: ago(2) },
+    { id: 'h41', n: 41, d: '2026-01-05', tour_no: 1, dept: 'חומר גלם', loc: 'מחסן', descr: 'מדף ישן שנסגר מזמן', sev: 'נמוכה', resp: 'אחזקה', due: '2026-01-20', s: 'סגור', closed_d: ago(60) },
+  ]);
+  c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם', 'תוצג'], note: 'היום <b>נבדק</b>\nשורה שנייה' });
+  const sm = c.w.mails[0], smm = sm && sm.message;
+  check('status: one mail per department ticked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
+  check('status: the same recipients as the department report', smm && smm.toRecipients.map((x) => x.emailAddress.address).join() === 'gelem@tapugan.co.il,Igal@tapugan.co.il,vitaly@tapugan.co.il,shlomi@tapugan.co.il,tech_manager@tapugan.co.il' && smm.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il', smm && [smm.toRecipients, smm.ccRecipients]);
+  check('status: subject, his text escaped with its line break', smm && /^סטטוס מפגעים - מחלקת חומר גלם - \d\d\/\d\d\/\d{4}$/.test(smm.subject) && smm.body.content.includes('היום &lt;b&gt;נבדק&lt;/b&gt;<br>שורה שנייה'), smm && smm.subject);
+  check('status: closed since a week back listed, one closed long ago not', smm && smm.body.content.includes('מעקה רופף') && !smm.body.content.includes('מדף ישן'), c.j);
+  check('status: still open listed, past target marked', smm && smm.body.content.includes('רצפות') && smm.body.content.includes('עבר היעד') && c.j.sent[0].count === 2 && c.j.sent[0].closed === 1, c.j.sent);
+  check('status: not kept in Sent Items, logged for the next "since"', sm && sm.saveToSentItems === false && /חומר גלם/.test(c.w.state.hazard_status_last || ''), c.w.state);
+  c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
+  check('status test: only to the connected account, real recipients on top, not logged', c.j.ok && c.w.mails.length === 1 && c.w.mails[0].message.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !c.w.mails[0].message.ccRecipients.length && /^בדיקה - /.test(c.w.mails[0].message.subject) && c.w.mails[0].message.body.content.includes('gelem@tapugan.co.il') && !c.w.state.hazard_status_last, c.j);
+  c = await call({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'statusSend', depts: ['חומר גלם'] });
+  check('status: viewer refused, nothing sent', c.status === 403 && !c.w.mails.length, c.status);
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });
