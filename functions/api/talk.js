@@ -1213,7 +1213,13 @@ async function makeLink(env, request, ctx) {
       return jsonResp({ ok: true, preview: true, n: reads.length, html: form0801Html(t, reads, (x) => sigs[x.id], trSig) }, 200, cors);
     }
     if (!reads.length) return jsonResp({ error: 'no signatures yet' }, 409, cors);
-    try { return jsonResp(Object.assign({ ok: true }, await file0801(env, t, reads)), 200, cors); }
+    // form_at (14/10/2026): when the form was filed, so the training screen stops warning "open more than a week".
+    try {
+      const out = await file0801(env, t, reads);
+      const at = new Date().toISOString();
+      const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(t.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ form_at: at }) }).catch(() => null);
+      return jsonResp(Object.assign({ ok: true, form_at: p && p.ok ? at : null }, out), 200, cors);
+    }
     catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 502, cors); }
   }
   if (!b || (b.op !== 'link' && b.op !== 'group' && b.op !== 'revoke')) return jsonResp({ error: 'unknown op' }, 400, cors);

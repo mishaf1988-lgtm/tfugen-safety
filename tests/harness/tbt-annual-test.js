@@ -89,6 +89,24 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
     o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
     o.unsaved = await _tbtPreviewFromForm();
+    // 14/10/2026: a print button in the preview window, hidden on paper
+    { const ev = []; const btn = { style: {} }; const d = { body: { appendChild(x) { ev.push(['b', x]); } }, head: { appendChild(x) { ev.push(['h', x]); } }, getElementById() { return null; }, createElement(t) { return t === 'button' ? btn : { tag: t }; } };
+      const wv = { document: d, focus() {}, print() { ev.push(['print']); } };
+      o.pv = _tbtPvPrint(wv); btn.onclick(); o.pvBtn = /הדפס/.test(btn.textContent || ''); o.pvHide = ev.some((e) => e[0] === 'h' && /@media print\{#tbt-pv-print\{display:none/.test(e[1].textContent || '')); o.pvPrinted = ev.some((e) => e[0] === 'print'); }
+    o.pvWired = /_tbtPvPrint\(w\)/.test(String(tbtForm0801Preview));
+    // 14/10/2026: an annual / quality training published 7+ days ago with no form 08.01 warns on the trainings page
+    DB.toolbox_talks = [
+      { id: 'st1', title: 'שנתית ישנה', s: 'פורסמה', kind: 'annual', d: '2026-10-01' },
+      { id: 'st2', title: 'שנתית הופק', s: 'פורסמה', kind: 'annual', d: '2026-10-01', form_at: '2026-10-05T10:00:00Z' },
+      { id: 'st3', title: 'איכות חדשה', s: 'פורסמה', kind: 'quality', d: '2026-10-10' },
+      { id: 'st4', title: 'שבועית ישנה', s: 'פורסמה', kind: '', d: '2026-09-01' },
+      { id: 'st5', title: 'טיוטה ישנה', s: 'טיוטה', kind: 'quality', d: '2026-09-01' },
+      { id: 'st6', title: 'איכות בדיוק שבוע', s: 'פורסמה', kind: 'quality', d: '2026-10-07' }];
+    o.stale = _tbtStale(DB.toolbox_talks, '2026-10-14').map((x) => x.id).join();
+    o.staleNone = _tbtStaleHtml([DB.toolbox_talks[1]], '2026-10-14');
+    goPage('training'); rTbt(); o.staleBox = document.getElementById('tbt-stale').innerHTML;
+    window.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true, n: 1, form_at: '2026-10-14T09:00:00Z' }), { status: 200 }));
+    await tbtForm0801('st1'); o.afterForm = DB.toolbox_talks[0].form_at;
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -111,6 +129,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('preview of 08.01 on a draft with no signatures; the "file it" button only once someone signed', r.prevBtn && !r.formBtnNoReads, r);
   check('preview: op form0801 with preview, the HTML in the window opened first', r.prev === 'shown' && r.prevCall && r.prevCall.op === 'form0801' && r.prevCall.preview === true && /PREVIEW/.test(r.prevHtml || ''), r);
   check('preview from an unsaved form asks to save first', r.unsaved === 'unsaved');
+  check('preview window: a print button that prints, hidden on paper, added after the form is written', r.pv === true && r.pvBtn && r.pvHide && r.pvPrinted && r.pvWired, r);
+  check('stale: annual / quality, published, 7+ days ago, no form 08.01 (not filed, newer, weekly, draft)', r.stale === 'st1,st6', r.stale);
+  check('stale: a banner on the trainings page with a who-signed button; nothing when all filed', /08\.01/.test(r.staleBox) && /tbtWho/.test(r.staleBox) && /שנתית ישנה/.test(r.staleBox) && r.staleNone === '', r.staleBox);
+  check('filing 08.01 stamps form_at on the row, so the banner goes', r.afterForm === '2026-10-14T09:00:00Z', r.afterForm);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
