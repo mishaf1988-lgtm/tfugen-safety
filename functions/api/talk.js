@@ -359,6 +359,20 @@ export function deptMatch(dept, empDep) {
   const d = String(empDep || ''), row = TBT_DEPTS.find((x) => x[0] === dept);
   return d === dept || (!!row && row[1].indexOf(d) >= 0);
 }
+// The shared weekly talk (14/10/2026, Michael: "one shared draft for all departments, whoever fills it
+// picks his department"; "each department goes over all its topics"). Its text has a section per
+// department, a line "## <department>" and then that department's topics; text before the first
+// section is shown to everyone. No sections = an ordinary talk.
+export function sectionsOf(body) {
+  const intro = [], list = []; let cur = null;
+  for (const l of String(body || '').split(/\r?\n/)) {
+    const m = /^##\s+(.+?)\s*$/.exec(l);
+    if (m) { cur = { dept: m[1], text: [] }; list.push(cur); } else (cur ? cur.text : intro).push(l);
+  }
+  return { intro: intro.join('\n').trim(), list: list.map((x) => ({ dept: x.dept, text: x.text.join('\n').trim() })) };
+}
+export const WDEP_L = '\u05d4\u05de\u05d7\u05dc\u05e7\u05d4 \u05e9\u05dc\u05da', WDEP_PICK = '\u05d1\u05d7\u05e8 \u05de\u05d7\u05dc\u05e7\u05d4';
+export const tDeptOf = (empDep) => { const r = TBT_DEPTS.find((x) => deptMatch(x[0], empDep)); return r ? r[0] : ''; };
 export function makePermToken(env, id, v, nowMs) { return makeLinkToken(env, PERM_PREFIX, id + '-v' + (v || 0), PERM_TTL_DAYS, nowMs); }
 export async function readPermToken(env, tok, nowMs) {
   const r = await readLinkToken(env, PERM_PREFIX, tok, nowMs);
@@ -939,6 +953,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   const vid = await videoHtml(env, talk, L);
   const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he, typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
   const quiz = ind ? [] : quizOf(talk, lang);
+  const secs = ind || typed ? { intro: '', list: [] } : sectionsOf(x.body), sectioned = secs.list.length > 0;
   // Group mode only: who already signed, so the phone moves on to the next worker.
   const signed = g ? await signedIds(env, talk.id) : new Set();
   // A talk for one department lists its workers (10/10/2026); "not on the list" stays for anyone else,
@@ -947,7 +962,7 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   const byDep = {};
   for (const e of (listed.length ? listed : emps)) { const d = e.dep || '\u05d0\u05d7\u05e8'; (byDep[d] = byDep[d] || []).push(e); }
   const opts = Object.keys(byDep).sort((a, b) => a.localeCompare(b, 'he')).map((d) =>
-    '<optgroup label="' + esc(d) + '">' + byDep[d].map((e) => (signed.has(String(e.id)) ? '<option value="" disabled>\u2713 ' + esc(e.n) + ' (' + esc(L.signedL) + ')</option>' : '<option value="' + esc(e.id) + '">' + esc(e.n) + '</option>')).join('') + '</optgroup>').join('');
+    '<optgroup label="' + esc(d) + '">' + byDep[d].map((e) => (signed.has(String(e.id)) ? '<option value="" disabled>\u2713 ' + esc(e.n) + ' (' + esc(L.signedL) + ')</option>' : '<option value="' + esc(e.id) + '" data-t="' + esc(tDeptOf(e.dep)) + '">' + esc(e.n) + '</option>')).join('') + '</optgroup>').join('');
   const avail = langsOf(talk);
   const bar = avail.length < 2 ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + avail.map((l) =>
     l === lang ? '<span style="padding:6px 12px;border-radius:16px;background:#1e3a8a;color:#fff;font-size:14px;font-weight:700">' + esc(LANGS[l].name) + '</span>'
@@ -960,8 +975,11 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (g ? '<div style="font-size:14px;font-weight:700;color:#1e3a8a;background:#eff6ff;border-radius:6px;padding:6px 10px;margin-bottom:8px">\ud83d\udc65 ' + esc(L.group) + '</div>' : '')
     + (talk.trainer ? '<div style="font-size:14px;color:#374151;margin-bottom:10px">' + (talk.kind === KIND_IND ? esc(BY_L[lang] || BY_L.he) + ': ' + esc(talk.trainer) + (talk.trainer_qual ? ', ' + esc(talk.trainer_qual) : '') : esc(L.trainerL) + ': ' + esc(talk.trainer)) + '</div>' : '')
     + (L.auto ? '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-bottom:10px">' + esc(L.auto) + '</div>' : '')
-    + (x.body && !ind ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
-      : '') + (x.body ? '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
+    + (x.body && !ind && !sectioned ? '<button type="button" id="say" style="display:none;margin:0 0 8px;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-size:16px;font-weight:700">\ud83d\udd0a ' + esc((SPEAK[lang] || SPEAK.he).listen) + '</button>'
+      : '') + (sectioned ? (secs.intro ? '<div style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(secs.intro) + '</div>' : '')
+        + '<label for="wdep" style="display:block;font-weight:700;margin-bottom:4px">' + esc(WDEP_L) + '</label><select name="wdep" id="wdep" form="f" required dir="rtl" style="width:100%;font-size:16px;padding:10px;border:2px solid #1e3a8a;border-radius:8px;margin-bottom:12px"><option value="">' + esc(WDEP_PICK) + '</option>' + secs.list.map((c) => '<option value="' + esc(c.dept) + '">' + esc(c.dept) + '</option>').join('') + '</select>'
+        + secs.list.map((c) => '<div class="wsec" data-dep="' + esc(c.dept) + '" style="display:none;white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(c.text) + '</div>').join('')
+      : x.body ? '<div id="tb" style="white-space:pre-wrap;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">' + esc(x.body) + '</div>' : '')
     + vid
     + files.map((u, i) => '<p><a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:#1e3a8a;font-weight:700">' + esc(L.file) + (files.length > 1 ? ' ' + (i + 1) : '') + '</a></p>').join('')
     + quizHtml(quiz, lang)
@@ -1007,7 +1025,8 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + (ind ? '<script nonce="' + nonce + '">(function(){var b=document.getElementById("dadd"),f=document.getElementById("dfile"),f2=document.getElementById("dfile2"),g2=document.getElementById("dgal"),box=document.getElementById("dbox"),c=document.getElementById("dcnt");if(!b||!f||!f2||!g2||!box)return;var cnt=function(){var n=box.children.length;c.textContent=n?"\u05e6\u05d5\u05dc\u05de\u05d5 "+n+" \u05de\u05e1\u05de\u05db\u05d9\u05dd":"";};var full=function(){if(box.children.length>=' + MAX_DOCS + '){alert("\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + MAX_DOCS + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd");return true;}return false;};var add=function(src){var img=new Image();img.onload=function(){var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);var d=cv.toDataURL("image/jpeg",0.7),w=document.createElement("div"),im=document.createElement("img"),h=document.createElement("input"),x=document.createElement("button");w.style.cssText="position:relative";im.src=d;im.style.cssText="height:90px;border:1px solid #9ca3af;border-radius:6px";h.type="hidden";h.name="doc";h.value=d;x.type="button";x.textContent="\u05d4\u05e1\u05e8";x.style.cssText="display:block;margin-top:2px;width:100%;padding:4px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff";x.addEventListener("click",function(){w.remove();cnt();});w.appendChild(im);w.appendChild(h);w.appendChild(x);box.appendChild(w);cnt();};img.onerror=function(){alert("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4");};img.src=src;};var onf=function(){var fl=this.files&&this.files[0];this.value="";if(!fl)return;var r=new FileReader();r.onload=function(){add(r.result);};r.readAsDataURL(fl);};f.addEventListener("change",onf);f2.addEventListener("change",onf);g2.addEventListener("click",function(e){if(full())e.preventDefault();});var md=navigator.mediaDevices;var mk=function(t,bg,fg){var x=document.createElement("button");x.type="button";x.textContent=t;x.style.cssText="flex:1;padding:14px;font-size:18px;font-weight:700;border:2px solid #fff;border-radius:8px;background:"+bg+";color:"+fg;return x;};var openCam=function(){var ov=document.createElement("div"),v=document.createElement("video"),bar=document.createElement("div"),msg=document.createElement("div"),shot=mk("\u05e6\u05dc\u05dd","#1e3a8a","#fff"),done=mk("\u05e1\u05d9\u05d5\u05dd","#fff","#111"),stream=null;ov.id="camov";ov.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:#000;display:flex;flex-direction:column";v.setAttribute("playsinline","");v.muted=true;v.autoplay=true;v.style.cssText="flex:1;width:100%;min-height:0;object-fit:contain;background:#000";msg.id="cammsg";msg.style.cssText="color:#fff;padding:8px 12px;font-size:16px;text-align:center;min-height:22px";bar.style.cssText="display:flex;gap:10px;padding:12px";shot.id="camshot";done.id="camdone";shot.disabled=true;bar.appendChild(shot);bar.appendChild(done);ov.appendChild(v);ov.appendChild(msg);ov.appendChild(bar);document.body.appendChild(ov);var stop=function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});ov.remove();};done.addEventListener("click",stop);shot.addEventListener("click",function(){if(full()){stop();return;}var w=v.videoWidth,h=v.videoHeight;if(!w||!h)return;var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(v,0,0,w,h);add(cv.toDataURL("image/jpeg",0.9));msg.textContent="\u05e6\u05d5\u05dc\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05dc\u05dd \u05e2\u05d5\u05d3 \u05de\u05e1\u05de\u05da, \u05d0\u05d5 \u05e1\u05d9\u05d5\u05dd";});md.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){stream=s;v.srcObject=s;var p=v.play();if(p&&p.catch)p.catch(function(){});shot.disabled=false;msg.textContent="\u05dc\u05db\u05d5\u05d5\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e6\u05dc\u05dd";}).catch(function(err){shot.style.display="none";var n=err&&err.name,say=function(t){msg.textContent=t+" \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df (\u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05e0\u05d9).";};if(n==="NotReadableError"||n==="AbortError"){say("\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05ea\u05e4\u05d5\u05e1\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d7\u05e8\u05ea. \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1.");return;}if(n==="NotFoundError"||n==="OverconstrainedError"){say("\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05de\u05e6\u05dc\u05de\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8.");return;}if(n!=="NotAllowedError"){say("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e6\u05dc\u05de\u05d4.");return;}var site="\u05d4\u05d0\u05ea\u05e8 \u05d7\u05e1\u05d5\u05dd \u05d1\u05de\u05e6\u05dc\u05de\u05d4. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05e1\u05de\u05dc \u05e9\u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05db\u05ea\u05d5\u05d1\u05ea, \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea, \u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d0\u05e4\u05e9\u05e8, \u05d5\u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.",os="\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05db\u05d1\u05d5\u05d9\u05d4 \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05db\u05e9\u05d9\u05e8. \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea: \u05e4\u05e8\u05d8\u05d9\u05d5\u05ea, \u05d2\u05d9\u05e9\u05d4 \u05dc\u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d4\u05e4\u05e2\u05d9\u05dc. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d2\u05dd \u05de\u05ea\u05d2 \u05d0\u05d5 \u05de\u05e7\u05e9 \u05de\u05e6\u05dc\u05de\u05d4. \u05d0\u05d7\u05e8 \u05db\u05da \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.";if(!navigator.permissions||!navigator.permissions.query){say(site);return;}navigator.permissions.query({name:"camera"}).then(function(r){say(r.state==="denied"?site:os);},function(){say(site);});});};b.addEventListener("click",function(e){if(full()){e.preventDefault();return;}if(!md||!md.getUserMedia)return;e.preventDefault();openCam();});})();</script>' : '')
     + (typed ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("idep"),o=document.getElementById("idepo");if(!s||!o)return;var f=function(){var on=s.value===' + JSON.stringify(IND_OTHER_DEP) + ';o.style.display=on?"block":"none";o.required=on;};s.addEventListener("change",f);f();})();</script>' : '')
     + (ind ? '<script nonce="' + nonce + '">(function(){var n=document.getElementById("iagn"),o=document.getElementById("ino"),f=function(){o.required=!n.value.trim();};n.addEventListener("input",f);f();})();</script>' : '')
-    + (x.body && !ind ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
+    + (sectioned ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("wdep"),e=document.getElementById("emp");if(!s)return;var f=function(){var v=s.value;Array.prototype.forEach.call(document.querySelectorAll(".wsec"),function(d){d.style.display=d.getAttribute("data-dep")===v?"block":"none";});if(e)Array.prototype.forEach.call(e.querySelectorAll("option[data-t]"),function(o){o.hidden=!!v&&o.getAttribute("data-t")!==v;});};s.addEventListener("change",f);f();})();</script>' : '')
+    + (x.body && !ind && !sectioned ? '<script nonce="' + nonce + '">' + PLAYER + '</script><script nonce="' + nonce + '">' + speakScript(lang, speechText(x.title, x.body)) + '</script>' : '');
   return page(talk.kind === KIND_IND ? L.indT : typed ? x.title : L.title, inner, '', 200, nonce, lang);
 }
 
@@ -1092,6 +1111,10 @@ async function signTalk(env, request, ctx) {
     }
   }
   if (!sig) return bad('errSigT', 'errSig');
+  // The shared weekly talk: the department picked must be one of its sections, and it goes on the row.
+  const wsecs = typed || talk.kind === KIND_IND ? [] : sectionsOf(textOf(talk, lang).body).list.map((c) => c.dept);
+  const wdep = wsecs.length ? oneLine(form.get('wdep')) : '';
+  if (wsecs.length && wsecs.indexOf(wdep) < 0) return page((IND_L[lang] || IND_L.he).errT, '<p>' + esc((IND_L[lang] || IND_L.he).needDep) + '</p>' + back, 'err', 400, '', lang);
   let indV = null;
   if (talk.kind === KIND_IND) {
     const IL = IND_L[lang] || IND_L.he, f = indFields(form);
@@ -1131,7 +1154,7 @@ async function signTalk(env, request, ctx) {
   }
   if (!up.ok) return bad('errSaveT', 'errSave', 502);
   const row = {
-    id, talk_id: talk.id, emp_id: String(emp.id), emp_name: emp.n, id_no: oid, dept: emp.dep || null, lang: textOf(talk, lang).lang, text_hash: await textHash(talk, lang),
+    id, talk_id: talk.id, emp_id: String(emp.id), emp_name: emp.n, id_no: oid, dept: wdep || emp.dep || null, lang: textOf(talk, lang).lang, text_hash: await textHash(talk, lang),
     sig_url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name,
     device: deviceOf(request.headers.get('user-agent')), read_at: new Date().toISOString(), mode: g ? 'group' : 'link',
   };
