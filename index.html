@@ -11525,6 +11525,8 @@ function _hzrActHtml(){
         +(x.resp?'<div><b>\u05d0\u05d7\u05e8\u05d0\u05d9:</b> '+esc(x.resp)+'</div>':'')
         +((x.due||x.status)?'<div>'+(x.due?'<b>\u05d9\u05e2\u05d3:</b> '+esc(x.due)+(x.overdue?' <b style="color:var(--c-red-600,#b91c1c)">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>':''):'')+(x.due&&x.status?' | ':'')+(x.status?'<b>\u05e1\u05d8\u05d8\u05d5\u05e1:</b> '+esc(x.status):'')+'</div>':'')
       +'</div>'
+      // 14/10/2026 (Michael: "approve the action and route it in the same place")
+      +_hzrRespSel(x,x.dept)
       +(x.photoLink?'<a href="'+esc(x.photoLink)+'" target="_blank" rel="noopener" style="display:block;margin-bottom:6px"><img class="hzr-ph" src="'+esc(x.photoLink)+'" alt="" loading="lazy" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--bd,#d9dee5)"></a>':'<div style="font-size:12px;color:var(--t3);margin-bottom:6px">\u05d0\u05d9\u05df \u05ea\u05de\u05d5\u05e0\u05d4</div>')
       +(s.state==='saved'?'<div style="background:var(--c-green-50-2,#dcfce7);color:var(--c-green-750,#166534);border:1px solid var(--c-green-250,#86efac);border-radius:8px;padding:8px;font-weight:700">\u2713 \u05d0\u05d5\u05e9\u05e8 \u05d5\u05e0\u05e9\u05de\u05e8: '+esc(s.text)+'</div>'
        :s.state==='skip'?'<div style="font-size:13px;color:var(--t2)">\u05d3\u05d9\u05dc\u05d2\u05ea. \u05e0\u05e9\u05d0\u05e8 \u05d1\u05dc\u05d9 \u05e4\u05e2\u05d5\u05dc\u05d4.</div>'
@@ -11620,7 +11622,7 @@ function hzrSetResp(el){
     try{addLog('\u05e0\u05d9\u05ea\u05d5\u05d1 \u05de\u05e4\u05d2\u05e2 \u05e9\u05d5\u05e0\u05d4: '+id+' -> '+resp);}catch(e){}
     toast('\u05d4\u05d0\u05d7\u05e8\u05d0\u05d9 \u05e2\u05d5\u05d3\u05db\u05df: '+resp);
     return _truApi('/api/hazard-report',{op:'preview'}).then(function(p){
-      if(p&&p.reports){var keep={note:note,openDept:dept,statusLast:p.statusLast};_hzr=p;_hzr.note=keep.note;_hzr.openDept=keep.openDept;}
+      if(p&&p.reports){var keep={note:note,openDept:dept,sugg:_hzr.sugg,suggDone:_hzr.suggDone};_hzr=p;_hzr.note=keep.note;_hzr.openDept=keep.openDept;_hzr.sugg=keep.sugg;_hzr.suggDone=keep.suggDone;}
       else _hzr.respBusy=false;
       _hzrRender();
       document.querySelectorAll('#hzr .hz-pick').forEach(function(c){if(!c.disabled)c.checked=picks.indexOf(c.dataset.d)>=0;});
