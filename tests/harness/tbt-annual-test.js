@@ -82,6 +82,13 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.toolbox_talks.push({ id: 'indx', title: 'קליטה', s: 'פורסמה', kind: 'induction', d: '2026-10-10' });
     DB.toolbox_reads.push({ id: 'r9', talk_id: 'indx', emp_id: 'x:1:a', emp_name: 'חדש', read_at: '2026-10-11T07:00:00Z' });
     tbtWho('indx'); o.indBtn = !!document.getElementById('tbt-0801-btn');
+    // 14/10/2026: preview of form 08.01, also on a draft with no signatures, in a window opened before the fetch
+    const wins = []; window.open = () => { const d = { html: '', open() {}, close() {}, write(h) { this.html += h; } }; const wv = { document: d, closed: false, close() { this.closed = true; } }; wins.push(wv); return wv; };
+    window.fetch = (u, init) => { const b = JSON.parse(init.body); calls.push(b); return Promise.resolve(new Response(JSON.stringify(b.preview ? { ok: true, preview: true, n: 0, html: '<html>תיעוד ביצוע הדרכה PREVIEW</html>' } : {}), { status: 200 })); };
+    DB.toolbox_talks.push({ id: 'drf', title: 'שנתית טיוטה', s: 'טיוטה', kind: 'annual', d: '2026-10-20' });
+    tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
+    o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
+    o.unsaved = await _tbtPreviewFromForm();
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -101,6 +108,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('form 08.01: the button calls op form0801 and shows the result with a link', r.btn && r.form === 'ok' && r.formCall && r.formCall.id && /od\.example\/f\.pdf/.test(r.res) && /2/.test(r.res), r.res);
   check('one "הדרכות" tile; "courses and certifications" is a tab, on both pages', r.oneTile && r.tabs, r);
   check('no combined 08.01 button on the induction', r.indBtn === false);
+  check('preview of 08.01 on a draft with no signatures; the "file it" button only once someone signed', r.prevBtn && !r.formBtnNoReads, r);
+  check('preview: op form0801 with preview, the HTML in the window opened first', r.prev === 'shown' && r.prevCall && r.prevCall.op === 'form0801' && r.prevCall.preview === true && /PREVIEW/.test(r.prevHtml || ''), r);
+  check('preview from an unsaved form asks to save first', r.unsaved === 'unsaved');
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
