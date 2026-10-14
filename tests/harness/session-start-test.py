@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """session-start.py: prints the skills, the handoff, the open STATUS items and
 the last METRICS row; never fails on a missing file or a tty stdin."""
-import os, subprocess, sys, tempfile
+import json, os, subprocess, sys, tempfile
 from _common import hook, check, done
 d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "project-files"))
 open(os.path.join(d, "handoff-05-10-2026-10.00.md"), "w", encoding="utf-8").write("# handoff\nהבא בתור: בדיקה X\n")
@@ -51,4 +51,26 @@ p = subprocess.run([sys.executable, hook("session-start.py")], input=b"{}", capt
                    env=dict(os.environ, CLAUDE_PROJECT_DIR=w, PYTHONIOENCODING="cp1255", PYTHONUTF8="0"))
 o = p.stdout.decode("utf-8", "replace")
 check("cp1255 stdout (Windows) + emoji: the report still arrives, in UTF-8", "== התחלת שיחה" in o and "\U0001f4d6 משימה ג" in o, (o, p.stderr))
+# 14/10/2026: in the cloud the repo's hooks are copied to ~/.claude/settings.json, guarded.
+r = tempfile.mkdtemp(); hm = tempfile.mkdtemp(); os.makedirs(os.path.join(r, ".claude"))
+probe = os.path.join(hm, "ran")
+json.dump({"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": 'echo "$CLAUDE_PROJECT_DIR" > ' + probe}]}]}},
+          open(os.path.join(r, ".claude", "settings.json"), "w"))
+os.makedirs(os.path.join(hm, ".claude")); json.dump({"permissions": {"allow": ["x"]}}, open(os.path.join(hm, ".claude", "settings.json"), "w"))
+cl = lambda remote: subprocess.run([sys.executable, hook("session-start.py")], input="{}", capture_output=True, text=True, timeout=30,
+                                   env=dict(os.environ, CLAUDE_PROJECT_DIR=r, HOME=hm, CLAUDE_CODE_REMOTE=remote))
+us = lambda: json.load(open(os.path.join(hm, ".claude", "settings.json")))
+cl("false")
+check("not in the cloud: user settings left alone", "hooks" not in us(), us())
+cl("true"); u = us()
+cmd = u.get("hooks", {}).get("PreToolUse", [{}])[0].get("hooks", [{}])[0].get("command", "")
+check("cloud: hooks copied, other keys kept", cmd and u.get("permissions") == {"allow": ["x"]}, u)
+sh = lambda pd: subprocess.run(["bash", "-c", cmd], env=dict(os.environ, CLAUDE_PROJECT_DIR=pd), capture_output=True, text=True)
+p = sh(r)
+check("in the repo the copy does nothing (no hook twice)", p.returncode == 0 and not os.path.exists(probe), (p.returncode, cmd))
+p = sh("/home/user")
+check("outside the repo the copy runs, with the repo as CLAUDE_PROJECT_DIR",
+      p.returncode == 0 and os.path.exists(probe) and open(probe).read().strip() == r, (p.returncode, p.stderr, cmd))
+t = os.path.getmtime(os.path.join(hm, ".claude", "settings.json")); cl("true")
+check("unchanged hooks: not rewritten", os.path.getmtime(os.path.join(hm, ".claude", "settings.json")) == t)
 done()

@@ -4,11 +4,16 @@
 600KB, or nothing). Prints: the skills to load, the root handoff, the open
 items in STATUS.md, the open items that may already be done, the open Chrome
 tasks, and the last row of project-files/METRICS.md.
+In a cloud session it also copies the repo's hooks to ~/.claude/settings.json
+(14/10/2026, Michael: "בצע: את שניהם"): when the working directory moved to
+/home/user mid-session, the project hooks stopped and nothing said so. Each
+copied command first checks $CLAUDE_PROJECT_DIR: in the repo the project hook
+runs and the copy does nothing, so no hook runs twice.
 Output to stdout becomes context for the session. Never fails the start.
 
 Test:  python3 tests/harness/session-start-test.py
 """
-import datetime, json, os, re, sys
+import datetime, json, os, re, shlex, sys
 sys.stdout.reconfigure(encoding="utf-8")  # Windows writes cp1255; Claude Code reads UTF-8 (05/10/2026)
 sys.stdin.reconfigure(encoding="utf-8")  # Claude Code sends UTF-8; Windows reads cp1255 (05/10/2026)
 
@@ -91,6 +96,34 @@ def report(cwd):
     return "\n".join(out)
 
 
+def install_user_hooks(cwd, home=None):
+    """Copy the repo's hooks to the user settings, guarded. True if written."""
+    if os.environ.get("CLAUDE_CODE_REMOTE") != "true" or os.name != "posix":
+        return False  # Michael's Windows computer has its own settings
+    root = os.path.abspath(cwd)
+    try:
+        hooks = json.load(open(os.path.join(root, ".claude", "settings.json"), encoding="utf-8"))["hooks"]
+    except Exception:
+        return False
+    q = shlex.quote(root)
+    for groups in hooks.values():
+        for g in groups:
+            for h in g.get("hooks", []):
+                cmd = h["command"].replace('"$CLAUDE_PROJECT_DIR"', q)
+                h["command"] = '[ "$CLAUDE_PROJECT_DIR" = %s ] || CLAUDE_PROJECT_DIR=%s %s' % (q, q, cmd)
+    f = os.path.join(home or os.path.expanduser("~"), ".claude", "settings.json")
+    try:
+        cur = json.load(open(f, encoding="utf-8"))
+    except Exception:
+        cur = {}
+    if cur.get("hooks") == hooks:
+        return False
+    cur["hooks"] = hooks
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    json.dump(cur, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    return True
+
+
 def main():
     d = {}
     if not sys.stdin.isatty():
@@ -101,6 +134,10 @@ def main():
     cwd = os.environ.get("CLAUDE_PROJECT_DIR") or d.get("cwd") or "."
     try:
         print(report(cwd))
+    except Exception:
+        pass
+    try:
+        install_user_hooks(cwd)
     except Exception:
         pass
 

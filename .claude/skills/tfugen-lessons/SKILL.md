@@ -60,8 +60,8 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-lean
 **57. hooks שקטים ב-Windows (05/10/2026, PR זה).**
 מה קרה: stdout ב-cp1255 ואימוג'י: session-start נפל בשקט. שיחה מחוץ לריפו: hooks לא נטענו.
 הכלל: hook קובע stdout ו-stdin ל-UTF-8, ובבדיקות `encoding="utf-8"`. בדיקה חיה רק מתיקיית הריפו, בלי `PYTHONUTF8=1`.
-נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: טקסט.
-חזר: 1 (05/10, במחשב: stdin ב-cp1255, pr-gate חסם כל PR).
+נאכף: `hook-utf8-test.py` (stdout וגם stdin); התיקייה: בענן `session-start.py` מעתיק את ה-hooks ל-`~/.claude` (`session-start-test.py`).
+חזר: 2 (14/10: התיקייה עברה ל-/home/user באמצע שיחה, ה-hooks כבו בשקט).
 
 ## לפני כתיבה למקום משותף
 
