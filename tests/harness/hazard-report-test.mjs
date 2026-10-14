@@ -116,7 +116,8 @@ const ROWS = [
   c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם', 'תוצג'] });
   const mail = c.w.mails[0] && c.w.mails[0].message;
   check('send: one mail per department asked, empty department skipped', c.j.ok && c.w.mails.length === 1 && c.j.sent[0].dept === 'חומר גלם' && c.j.skipped[0].dept === 'תוצג', c.j);
-  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing, kept in Sent Items', mail && mail.toRecipients.length === 5 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ') && c.w.mails[0].saveToSentItems === true, mail && mail.subject);
+  check('the mail: אל + עותק, subject, the sheet\'s own opening and closing', mail && mail.toRecipients.length === 5 && mail.ccRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,tzachi@tapugan.co.il' && mail.subject === 'דוח מפגעים פתוחים לטיפול - מחלקת חומר גלם' && mail.body.content.includes('פתיחה מהקובץ') && mail.body.content.includes('חתימה מהקובץ'), mail && mail.subject);
+  check('not kept in Sent Items (Michael, 14/10/2026: no outgoing copy)', c.w.mails[0] && c.w.mails[0].saveToSentItems === false, c.w.mails[0] && c.w.mails[0].saveToSentItems);
   check('the send is logged', /חומר גלם/.test(c.w.state.hazard_report_last || ''), c.w.state);
   // Upgrade review 13 (30/09/2026): a "mark as handled" link on every row of a
   // real send, signed for the row's own id (close-hazard.js).
