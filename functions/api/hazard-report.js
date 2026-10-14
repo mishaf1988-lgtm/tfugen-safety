@@ -12,7 +12,7 @@
 //     \u05d4\u05e0\u05d3\u05e1\u05d4 row (\u05e9\u05dc\u05d5\u05de\u05d9, their manager) when a row is for \u05d0\u05d7\u05d6\u05e7\u05d4 or \u05d7\u05e9\u05de\u05dc.
 //     \u05e2\u05d5\u05ea\u05e7: part 3, on every mail.
 //   * the opening and closing lines: L1 / L2 of "\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4".
-// Sent from sviva's Outlook (Graph, Mail.Send), kept in Sent Items.
+// Sent from sviva's Outlook (Graph, Mail.Send), not kept in Sent Items (14/10/2026).
 // Only on request (Michael: "\u05e8\u05e7 \u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4"): admin/manager session.
 // POST {op:'preview'} -> every department; {op:'send', depts:[...], test?}.
 // test: true sends each report to the connected account only.

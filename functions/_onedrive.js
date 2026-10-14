@@ -217,8 +217,10 @@ export async function itemUrl(token, path) {
   return j.webUrl || null;
 }
 
-// Several recipients and copies, kept in Sent Items (the department report,
-// 28/09: it replaces the workbook macro, which sent from Outlook).
+// Several recipients and copies (the department report, 28/09: it replaces the
+// workbook macro, which sent from Outlook). Not kept in Sent Items (14/10/2026,
+// Michael: no outgoing copy in Sent Items, only the incoming one): Graph never
+// saves it, so nothing has to be deleted afterwards. The log is in server_state.
 // attachments (optional): Graph fileAttachment objects, e.g. inline pictures
 // (isInline + contentId, shown where the html says cid:<contentId>).
 export async function sendMailTo(token, to, cc, subject, html, attachments) {
@@ -228,7 +230,7 @@ export async function sendMailTo(token, to, cc, subject, html, attachments) {
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: Object.assign({ subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) }, attachments && attachments.length ? { attachments } : {}),
-      saveToSentItems: true,
+      saveToSentItems: false,
     }),
   });
   if (r.status === 202 || r.ok) return true;
