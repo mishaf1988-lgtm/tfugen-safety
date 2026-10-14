@@ -14,7 +14,8 @@
 //   * the opening and closing lines: L1 / L2 of "\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4".
 // Sent from sviva's Outlook (Graph, Mail.Send), not kept in Sent Items (14/10/2026).
 // Only on request (Michael: "\u05e8\u05e7 \u05db\u05e4\u05ea\u05d5\u05e8 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4"): admin/manager session.
-// POST {op:'preview'} -> every department; {op:'send', depts:[...], test?}.
+// POST {op:'preview'} -> every department; {op:'send', depts:[...], test?};
+// {op:'statusSend', depts:[...], note, test?} -> the status mail (14/10/2026).
 // test: true sends each report to the connected account only.
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
@@ -111,6 +112,31 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
   return { dept, title, to, cc, rows: open, count: open.length, old: open.filter((r) => r.old).length, overdue: open.filter((r) => r.overdue).length, html };
 }
 
+// Pure: one department's status mail (14/10/2026, Michael: "a picture of the
+// status, and whether things were closed", to the same people as the
+// department report). His text for the day on top, then the department's
+// hazards closed since `since`, then the ones still open (past target marked).
+export function buildStatus(dept, rows, rcpt, note, since, today) {
+  const rep = buildReport(dept, rows, rcpt, {}, today);
+  const day = (v) => String((v && typeof v === 'object' ? v.date : v) || '').substring(0, 10);
+  const closed = rows.filter((r) => r[3] === dept && r[10] === S_DONE && day(r[11]) && (!since || day(r[11]) >= since));
+  const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
+  const th = (a) => '<tr>' + a.map((h) => '<th style="' + cell + ';background:#1f3864;color:#fff">' + esc(h) + '</th>').join('') + '</tr>';
+  const sinceTxt = since ? ' \u05de\u05d0\u05d6 ' + fd(since) : '';
+  const title = '\u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd - \u05de\u05d7\u05dc\u05e7\u05ea ' + dept + ' - ' + fd(today);
+  const html = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">'
+    + '<h2 style="margin:0 0 10px">' + esc(title) + '</h2>'
+    + (String(note || '').trim() ? '<p>' + esc(note).replace(/\n/g, '<br>') + '</p>' : '')
+    + '<p style="font-weight:bold">\u05e0\u05e1\u05d2\u05e8\u05d5' + esc(sinceTxt) + ': ' + closed.length + ' | \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd: ' + rep.count + (rep.overdue ? ' | <span style="color:#b91c1c">\u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05d4\u05d9\u05e2\u05d3: ' + rep.overdue + '</span>' : '') + '</p>'
+    + '<h3 style="margin:14px 0 6px;color:#15803d">&#9989; \u05e0\u05e1\u05d2\u05e8\u05d5' + esc(sinceTxt) + ' (' + closed.length + ')</h3>'
+    + (closed.length ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05e0\u05e1\u05d2\u05e8']) + closed.map((r) => '<tr>' + [r[0], r[4], r[5], fd(r[11])].map((x) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + '</td>').join('') + '</tr>').join('') + '</table>' : '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d4\u05d6\u05d5.</p>')
+    + '<h3 style="margin:14px 0 6px">\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd (' + rep.count + ')</h3>'
+    + (rep.count ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'])
+      + rep.rows.map((r) => '<tr style="background:' + (r.overdue ? '#fde8e8' : '#fff') + '">' + [r.n, r.loc, r.descr, r.resp, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 ? ';white-space:nowrap' : '') + '">' + esc(x).replace(/\n/g, '<br>') + (i === 4 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + '</tr>').join('') + '</table>' : '<p>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.</p>')
+    + SIGNATURE + '</div>';
+  return { dept, title, to: rep.to, cc: rep.cc, open: rep.count, overdue: rep.overdue, closed: closed.length, html };
+}
+
 async function loadAll(env, token) {
   const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
@@ -175,6 +201,32 @@ export async function onRequest(context) {
     }
     const data = await loadAll(env, token);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    // The status mail (14/10/2026): one per department ticked, to the same
+    // people as the department report. "since" = the last status sent, or a
+    // week back; a department with nothing open and nothing closed is skipped.
+    if (body.op === 'statusSend') {
+      if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
+      const st = await stateGet(env, ['hazard_status_last']).catch(() => ({}));
+      let lastAt = null; try { lastAt = JSON.parse(st.hazard_status_last.value).at || null; } catch (e) {}
+      const since = lastAt ? new Date(lastAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : new Date(Date.parse(today + 'T12:00:00Z') - 7 * 864e5).toISOString().substring(0, 10);
+      const note = String(body.note || '').replace(/[\u2013\u2014\u05be]/g, '-').substring(0, 4000);
+      const want = Array.isArray(body.depts) ? body.depts : [];
+      const test = body.test === true, me = row.user_email;
+      if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
+      const sent = [], skipped = [], failed = [];
+      for (const dept of REPORT_DEPTS) {
+        if (want.indexOf(dept) < 0) continue;
+        const s = buildStatus(dept, data.rows, data.rcpt, note, since, today);
+        if (!s.open && !s.closed) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8' }); continue; }
+        if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
+        const to = test ? [me] : s.to, cc = test ? [] : s.cc;
+        const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
+        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html); sent.push({ dept, to, cc, test, count: s.open, closed: s.closed, overdue: s.overdue }); }
+        catch (e) { failed.push({ dept, error: String((e && e.message) || e).substring(0, 160) }); }
+      }
+      if (!test && sent.length) await stateSet(env, { hazard_status_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
+      return jsonResp({ ok: !failed.length, since, sent, skipped, failed }, 200, cors);
+    }
     const reports = REPORT_DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
     if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); return Object.assign({}, r, { id: id || null, noAction: !!id && !String(data.raw.get(id) || '').trim() }); }) })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);

@@ -11456,7 +11456,7 @@ function _hzrRender(){
   var h='<div class="hz-in"><div class="mf-top" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 style="margin:0;font-size:19px">&#128231; \u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea</h2><button type="button" class="btn btn-s" onclick="hzrClose()">\u05e1\u05d2\u05d5\u05e8</button></div>';
   if(!_hzr||_hzr.loading){ov.innerHTML=h+'<p>\u05d8\u05d5\u05e2\u05df \u05d0\u05ea \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d5\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05de\u05d4\u05e7\u05d5\u05d1\u05e5...</p></div>';return;}
   if(_hzr.error){ov.innerHTML=h+'<p style="color:var(--er,var(--c-red-600,#b91c1c))">'+esc(_hzr.error)+'</p></div>';return;}
-  h+='<p style="font-size:13px;color:var(--t2)">\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d5\u05d4\u05e0\u05d5\u05e1\u05d7 \u05e0\u05dc\u05e7\u05d7\u05d9\u05dd \u05de\u05d4\u05d2\u05d9\u05dc\u05d9\u05d5\u05e0\u05d5\u05ea "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" \u05d5"\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4" \u05d1\u05e7\u05d5\u05d1\u05e5. \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d5\u05e6\u05d0 \u05de-Outlook \u05e9\u05dc sviva \u05d5\u05e0\u05e9\u05de\u05e8 \u05d1\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05e9\u05dc\u05d7\u05d5.</p>';
+  h+='<p style="font-size:13px;color:var(--t2)">\u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d5\u05d4\u05e0\u05d5\u05e1\u05d7 \u05e0\u05dc\u05e7\u05d7\u05d9\u05dd \u05de\u05d4\u05d2\u05d9\u05dc\u05d9\u05d5\u05e0\u05d5\u05ea "\u05e0\u05de\u05e2\u05e0\u05d9\u05dd" \u05d5"\u05d3\u05d5\u05d7 \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4" \u05d1\u05e7\u05d5\u05d1\u05e5. \u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d5\u05e6\u05d0 \u05de-Outlook \u05e9\u05dc sviva \u05d5\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8 \u05d1\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05e0\u05e9\u05dc\u05d7\u05d5.</p>';
   // A save in Excel not taken yet (upgrade review 16, 29/09): the report would
   // list what was just closed in the file. "Take it now, then send".
   if(_hzr.unsynced)h+='<div class="hz-card" id="hzr-unsynced" style="border:2px solid var(--c-orange-550,#d97706);background:var(--c-amber-50,#fffbeb)"><div style="font-weight:900;margin-bottom:4px">\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4</div><div style="font-size:13px">\u05d0\u05dd \u05ea\u05e9\u05dc\u05d7 \u05e2\u05db\u05e9\u05d9\u05d5, \u05d4\u05de\u05e0\u05d4\u05dc\u05d9\u05dd \u05e2\u05dc\u05d5\u05dc\u05d9\u05dd \u05dc\u05e7\u05d1\u05dc \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e9\u05db\u05d1\u05e8 \u05e1\u05d2\u05e8\u05ea \u05d0\u05d5 \u05e9\u05d9\u05e0\u05d9\u05ea \u05d1\u05e7\u05d5\u05d1\u05e5.</div>'
@@ -11465,7 +11465,7 @@ function _hzrRender(){
   if(_hzr.ask){
     var a=_hzr.ask;
     h+='<div class="hz-card" id="hzr-ask" style="border:2px solid var(--pr,var(--c-blue-500,#1d4ed8));background:var(--c-blue-50,#eff6ff)"><div style="font-weight:900;font-size:15px;margin-bottom:6px">'
-      +(a.test?'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4, \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da, \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05dc: ':'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05dc-'+a.ds.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea: ')+esc(a.ds.join(', '))+'?</div>'
+      +(a.status?'\u05de\u05d9\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1: ':'')+(a.test?'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4, \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da, \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05e9\u05dc: ':'\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d3\u05d5\u05d7 \u05dc-'+a.ds.length+' \u05de\u05d7\u05dc\u05e7\u05d5\u05ea: ')+esc(a.ds.join(', '))+'?</div>'
       +(a.test?'<div style="font-size:13px">\u05d4\u05de\u05d9\u05d9\u05dc \u05d9\u05d2\u05d9\u05e2 \u05e8\u05e7 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05de\u05d7\u05d5\u05d1\u05e8, \u05d1\u05dc\u05d9 \u05e2\u05d5\u05ea\u05e7. \u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05d4\u05d0\u05de\u05d9\u05ea\u05d9\u05d9\u05dd \u05d9\u05d5\u05e4\u05d9\u05e2\u05d5 \u05d1\u05e8\u05d0\u05e9\u05d5.</div>':'<div style="font-size:13px">\u05db\u05dc \u05de\u05d7\u05dc\u05e7\u05d4 \u05ea\u05e7\u05d1\u05dc \u05de\u05d9\u05d9\u05dc \u05e0\u05e4\u05e8\u05d3 \u05dc\u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05e9\u05dc\u05d4, \u05e2\u05dd \u05e2\u05d5\u05ea\u05e7 \u05e7\u05d1\u05d5\u05e2.</div>')
       +(_hzr.unsynced?'<div style="font-size:13px;color:var(--c-orange-700,#92400e);margin-top:6px">\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4: \u05d4\u05d3\u05d5\u05d7 \u05d9\u05d9\u05e6\u05d0 \u05dc\u05e4\u05d9 \u05de\u05d4 \u05e9\u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05db\u05e9\u05d9\u05d5.</div>':'')
       +'<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn btn-p" style="flex:1;min-height:44px" onclick="hzrAskYes()">\u05d0\u05d9\u05e9\u05d5\u05e8, \u05e9\u05dc\u05d7</button><button type="button" class="btn btn-s" style="flex:1;min-height:44px" onclick="hzrAskNo()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div></div>';
@@ -11486,6 +11486,13 @@ function _hzrRender(){
       +(r.count?'<details style="margin-top:6px"><summary style="font-size:13px">\u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd</summary>'+r.rows.map(function(x){return '<div class="hz-row'+(x.old?' hz-old':'')+'"><b>'+esc(x.n)+'</b> '+esc(x.descr)+' <span style="color:var(--t2)">('+esc(x.resp)+', '+esc(x.status)+(x.due?', \u05d9\u05e2\u05d3 '+esc(x.due):'')+(x.overdue?' <b style="color:var(--c-red-600,#b91c1c)">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>':'')+')</span></div>';}).join('')+'</details>':'')
       +'</div>';
   });
+  // Status mail (14/10/2026, Michael: "a picture of the status, and whether things were closed"):
+  // his text for the day, to the departments ticked above, same recipients as the report.
+  h+='<div class="hz-card" id="hzr-status" style="border:2px solid var(--c-green-600,#15803d)"><div style="font-weight:900;margin-bottom:4px">\ud83d\udcca \u05de\u05d9\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea</div>'
+    +'<div style="font-size:13px;color:var(--t2);margin-bottom:6px">\u05dc\u05db\u05dc \u05de\u05d7\u05dc\u05e7\u05d4 \u05de\u05e1\u05d5\u05de\u05e0\u05ea: \u05de\u05d4 \u05e0\u05e1\u05d2\u05e8 \u05de\u05d0\u05d6 \u05d4\u05e1\u05d8\u05d8\u05d5\u05e1 \u05d4\u05e7\u05d5\u05d3\u05dd \u05d5\u05de\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7, \u05dc\u05d0\u05d5\u05ea\u05dd \u05e0\u05de\u05e2\u05e0\u05d9\u05dd \u05e9\u05dc \u05d4\u05d3\u05d5\u05d7. \u05db\u05ea\u05d5\u05d1 \u05db\u05d0\u05df \u05d0\u05ea \u05d4\u05de\u05e6\u05d1 \u05e9\u05dc \u05d4\u05d9\u05d5\u05dd:</div>'
+    +'<textarea id="hzr-note" rows="4" maxlength="4000" style="width:100%;box-sizing:border-box" oninput="_hzr.note=this.value">'+esc(_hzr.note||'')+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button type="button" class="btn btn-s" style="flex:1;min-height:44px" onclick="hzrStatus(true)"'+(_hzr.canSend&&!_hzr.busy?'':' disabled')+'>\u05e9\u05dc\u05d7 \u05dc\u05d9 \u05e1\u05d8\u05d8\u05d5\u05e1 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4</button>'
+    +'<button type="button" class="btn btn-p" style="flex:1;min-height:44px;font-weight:900" onclick="hzrStatus()"'+(_hzr.canSend&&!_hzr.busy?'':' disabled')+'>\ud83d\udcca \u05e9\u05dc\u05d7 \u05e1\u05d8\u05d8\u05d5\u05e1 \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea</button></div></div>';
     h+='<button type="button" class="btn btn-s" style="width:100%;min-height:44px;margin-bottom:8px" onclick="hzrSend(true)"'+(_hzr.canSend&&!_hzr.busy?'':' disabled')+'>&#128231; \u05e9\u05dc\u05d7 \u05dc\u05d9 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 (\u05e8\u05e7 \u05d0\u05dc\u05d9\u05d9)</button>';
 h+='<button type="button" class="btn btn-p" style="width:100%;min-height:50px;font-size:16px;font-weight:900" onclick="hzrSend()"'+(_hzr.canSend&&!_hzr.busy?'':' disabled')+'>'+(_hzr.busy?'\u05e9\u05d5\u05dc\u05d7...':'&#128231; \u05e9\u05dc\u05d7 \u05dc\u05de\u05d7\u05dc\u05e7\u05d5\u05ea \u05d4\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea')+'</button></div>';
   ov.innerHTML=h;
@@ -11582,9 +11589,22 @@ function hzrPullNow(){
   })['catch'](function(){_hzr={error:fail};_hzrRender();});
 }
 function hzrAskNo(){if(_hzr)_hzr.ask=null;_hzrRender();}
+function hzrStatus(test){
+  if(_viewBlock())return;
+  var ds=_hzrPicks();
+  if(!ds.length){toast('\u05dc\u05d0 \u05e1\u05d5\u05de\u05e0\u05d4 \u05d0\u05e3 \u05de\u05d7\u05dc\u05e7\u05d4');return;}
+  _hzr.ask={test:!!test,ds:ds,status:true};_hzrRender();
+}
 function hzrAskYes(){
   var a=_hzr&&_hzr.ask;if(!a)return;
   _hzr.ask=null;_hzr.busy=true;_hzrRender();
+  if(a.status){
+    _truApi('/api/hazard-report',{op:'statusSend',depts:a.ds,test:a.test,note:_hzr.note||''}).then(function(j){
+      _hzr.busy=false;_hzr.result=j&&(j.sent||j.failed)?j:{failed:[{dept:'',error:(j&&j.error)||'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
+      try{addLog('\u05de\u05d9\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7'+(a.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
+    })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);
+    return;
+  }
   _truApi('/api/hazard-report',{op:'send',depts:a.ds,test:a.test,anyway:!!_hzr.unsynced}).then(function(j){
     _hzr.busy=false;if(j&&j.unsynced)_hzr.unsynced=true;_hzr.result=j||{failed:[{dept:'',error:'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
     if(j&&j.error&&!j.sent){_hzr.result={failed:[{dept:'',error:j.error}]};}
