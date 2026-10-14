@@ -168,6 +168,14 @@ const ROWS = [
   check('preview rows carry their id and "no action" when none was typed', r31 && r31.id === 'h:h31' && r31.noAction === true && r31.opened === '17/08/2026', r31);
   c = await call({ email: 'admin@tfugen.local', hz: HZ.map((x) => Object.assign({ action: 'לייצר' }, x)) }, { op: 'preview' });
   check('...and not when it has one', c.j.reports.find((x) => x.dept === 'חומר גלם').rows.every((x) => !x.noAction), c.j.reports.find((x) => x.dept === 'חומר גלם').rows);
+  // 14/10/2026 (Michael: "the picture, if there is one, to verify the action"): a signed
+  // link for a row with no action, none for a row that has one, and no thumbnail fetched.
+  c = await call({ email: 'admin@tfugen.local', hz: HZ.map((h, i) => Object.assign({}, h, { photo_url: PHU }, i === 1 ? { action: 'לייצר' } : {})) }, { op: 'preview' });
+  {
+    const rs = c.j.reports.find((x) => x.dept === 'חומר גלם').rows;
+    const a31 = rs.find((x) => x.n === 31), a33 = rs.find((x) => x.n === 33);
+    check('preview: a row with no action carries a signed photo link, one with an action does not, no thumbnail fetched', a31 && /\/object\/sign\/incidents-photos\//.test(a31.photoLink || '') && a33 && a33.photoLink === null && !c.w.thumbs, { a31: a31 && a31.photoLink, a33: a33 && a33.photoLink });
+  }
   const ENV2 = Object.assign({}, ENV, { GEMINI_API_KEY: 'g' });
   const call2 = async (o, body) => { const w = world(o); const r = await onRequest({ request: new Request('https://tapugan-safety.pages.dev/api/hazard-report', { method: 'POST', headers: { authorization: 'Bearer tok', 'content-type': 'application/json' }, body: JSON.stringify(body) }), env: ENV2 }); return { status: r.status, j: await r.json().catch(() => null), w }; };
   c = await call2({ email: 'admin@tfugen.local' }, { op: 'suggest', items: [{ id: 'h:h54', f: 'ליקוי סימון מדרגה', loc: 'מעבדה' }] });

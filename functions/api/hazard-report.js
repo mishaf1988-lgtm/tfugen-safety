@@ -250,7 +250,14 @@ export async function onRequest(context) {
       return jsonResp({ ok: !failed.length, at: test ? null : at, sent, skipped, failed }, 200, cors);
     }
     const reports = REPORT_DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
-    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, statusLast: await statusDepts(env), reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); return Object.assign({}, r, { id: id || null, noAction: !!id && !String(data.raw.get(id) || '').trim() }); }) })) }, 200, cors);
+    if (body.op !== 'send') {
+      // 14/10/2026 (Michael, on the suggested-action cards: "the picture, if there is one,
+      // and which department"): a signed link to the photo of each row with no action.
+      const noAct = (r) => { const id = r.src && data.idOf.get(r.src); return !!id && !String(data.raw.get(id) || '').trim(); };
+      const need = []; reports.forEach((x) => x.rows.forEach((r) => { const u = noAct(r) && data.urls.get(r.src); if (u) need.push(u); }));
+      const signed = need.length ? await signPhotos(env, need).catch(() => ({})) : {};
+      return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, statusLast: await statusDepts(env), reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); const u = r.src && data.urls.get(r.src); return Object.assign({}, r, { id: id || null, noAction: noAct(r), photoLink: (noAct(r) && u && signed[u]) || null }); }) })) }, 200, cors);
+    }
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
     if (data.unsynced && body.anyway !== true) return jsonResp({ ok: false, unsynced: true, error: '\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05e7\u05dc\u05d5\u05d8 \u05d0\u05d5\u05ea\u05d4 \u05e7\u05d5\u05d3\u05dd.' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];
