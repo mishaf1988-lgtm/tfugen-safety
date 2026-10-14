@@ -6,10 +6,13 @@ name: Monthly learning metrics
 # lessons) and commits it straight to main. Claude reads that file at the start
 # of a session (CLAUDE.md).
 #
-# The commit is .md only, so it starts no deploy of the app and no harness run.
-# If main is ever protected with "Require status checks", this direct push will
-# be refused and the run goes red: then give github-actions a bypass, or switch
-# this job to open a PR.
+# The commit is .md only, so it starts no deploy of the app.
+# Since 04/10/2026 main requires the "tests" check, and a direct push of a commit
+# that has none is refused (the bot is not an admin). The workflow had never run, so
+# the first run on 01/11/2026 would have gone red (STATUS, found 14/10/2026). Now the
+# commit goes to the branch metrics/auto first, tests.yml runs on it through
+# workflow_dispatch (a GITHUB_TOKEN may start that event, not a push or a PR), and
+# once "tests" is green on that exact commit it is pushed to main, no PR needed.
 on:
   schedule:
     - cron: '7 4 1 * *'   # the 1st of every month, 07:07 Israel time in summer
@@ -21,6 +24,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # gh workflow run tests.yml
 
 concurrency:
   group: metrics
@@ -29,7 +33,7 @@ concurrency:
 jobs:
   metrics:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,10 +45,25 @@ jobs:
           MONTH: ${{ inputs.month }}
         run: python3 .github/scripts/monthly-metrics.py $MONTH
       - name: Commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git -c core.quotepath=off diff --quiet -- project-files/METRICS.md && { echo "no change"; exit 0; }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add project-files/METRICS.md
           git commit -m "Monthly metrics (automatic)"
+          sha=$(git rev-parse HEAD)
+          git push -f origin HEAD:refs/heads/metrics/auto
+          gh workflow run tests.yml --ref metrics/auto
+          # wait for the tests run on this commit (about 4 minutes), at most 25
+          for i in $(seq 1 50); do
+            sleep 30
+            r=$(gh run list --workflow tests.yml --branch metrics/auto --json headSha,status,conclusion \
+                  --jq "[.[] | select(.headSha==\"$sha\")][0] | \"\(.status) \(.conclusion)\"")
+            echo "tests on $sha: $r"
+            case "$r" in "completed success") break ;; completed*) echo "tests failed on the metrics commit"; exit 1 ;; esac
+          done
+          [ "$r" = "completed success" ] || { echo "tests did not finish in time"; exit 1; }
           git push origin HEAD:main
+          git push origin --delete metrics/auto || true
