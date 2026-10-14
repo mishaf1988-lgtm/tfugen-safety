@@ -170,6 +170,16 @@ async function loadAll(env, token) {
   return { rows: reg.rows, urls, idOf, raw, rcpt: parseRecipients(rc), texts: { open: t1 && t1.v[11], sign: t2 && t2.v[11] }, unsynced };
 }
 
+// When each department last got a status mail (14/10/2026, Michael: "when I
+// last sent them the status", shown before sending). One map in server_state;
+// the first version kept only the last send, its departments are read from it.
+async function statusDepts(env) {
+  const st = await stateGet(env, ['hazard_status_depts', 'hazard_status_last']).catch(() => ({}));
+  let m = {}; try { m = JSON.parse(st.hazard_status_depts.value) || {}; } catch (e) { m = {}; }
+  try { const l = JSON.parse(st.hazard_status_last.value); (l.sent || []).forEach((d) => { if (!m[d] && l.at) m[d] = l.at; }); } catch (e) {}
+  return m;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const cors = corsHeaders(request.headers.get('Origin') || '', defaultAllowedOrigins(env), 'POST,OPTIONS');
@@ -205,13 +215,14 @@ export async function onRequest(context) {
     const data = await loadAll(env, token);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
     // The status mail (14/10/2026): one per department ticked, to the same
-    // people as the department report. "since" = the last status sent, or a
-    // week back; a department with nothing open and nothing closed is skipped.
+    // people as the department report. "since" = that department's last status,
+    // or a week back; a department with nothing open and nothing closed is skipped.
     if (body.op === 'statusSend') {
       if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
-      const st = await stateGet(env, ['hazard_status_last']).catch(() => ({}));
-      let lastAt = null; try { lastAt = JSON.parse(st.hazard_status_last.value).at || null; } catch (e) {}
-      const since = lastAt ? new Date(lastAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : new Date(Date.parse(today + 'T12:00:00Z') - 7 * 864e5).toISOString().substring(0, 10);
+      // "since" per department: its own last status, or a week back.
+      const lastBy = await statusDepts(env);
+      const weekBack = new Date(Date.parse(today + 'T12:00:00Z') - 7 * 864e5).toISOString().substring(0, 10);
+      const sinceOf = (d) => (lastBy[d] ? new Date(lastBy[d]).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }) : weekBack);
       const note = String(body.note || '').replace(/[\u2013\u2014\u05be]/g, '-').substring(0, 4000);
       const want = Array.isArray(body.depts) ? body.depts : [];
       const test = body.test === true, me = row.user_email;
@@ -222,19 +233,24 @@ export async function onRequest(context) {
         // "Mark as handled" per open row, as in the report (close-hazard.js). No secret = no links.
         const closeLinks = new Map();
         for (const x of buildReport(dept, data.rows, data.rcpt, {}, today).rows) { const rid = x.src && data.idOf.get(x.src); const tk = rid && await makeCloseToken(env, rid.substring(2)); if (tk) closeLinks.set(x.src, closeUrl(APP_URL, tk)); }
+        const since = sinceOf(dept);
         const s = buildStatus(dept, data.rows, data.rcpt, note, since, today, closeLinks);
         if (!s.open && !s.closed) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8' }); continue; }
         if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
         const to = test ? [me] : s.to, cc = test ? [] : s.cc;
         const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
-        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html); sent.push({ dept, to, cc, test, count: s.open, closed: s.closed, overdue: s.overdue }); }
+        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue }); }
         catch (e) { failed.push({ dept, error: String((e && e.message) || e).substring(0, 160) }); }
       }
-      if (!test && sent.length) await stateSet(env, { hazard_status_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
-      return jsonResp({ ok: !failed.length, since, sent, skipped, failed }, 200, cors);
+      const at = new Date().toISOString();
+      if (!test && sent.length) {
+        sent.forEach((x) => { lastBy[x.dept] = at; });
+        await stateSet(env, { hazard_status_last: JSON.stringify({ at, by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }), hazard_status_depts: JSON.stringify(lastBy) }).catch(() => {});
+      }
+      return jsonResp({ ok: !failed.length, at: test ? null : at, sent, skipped, failed }, 200, cors);
     }
     const reports = REPORT_DEPTS.map((d) => buildReport(d, data.rows, data.rcpt, data.texts, today));
-    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); return Object.assign({}, r, { id: id || null, noAction: !!id && !String(data.raw.get(id) || '').trim() }); }) })) }, 200, cors);
+    if (body.op !== 'send') return jsonResp({ ok: true, canSend: hasMail(row), unsynced: data.unsynced, statusLast: await statusDepts(env), reports: reports.map((x) => Object.assign({}, x, { html: undefined, rows: x.rows.map((r) => { const id = r.src && data.idOf.get(r.src); return Object.assign({}, r, { id: id || null, noAction: !!id && !String(data.raw.get(id) || '').trim() }); }) })) }, 200, cors);
     if (!hasMail(row)) return jsonResp({ ok: false, error: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05e9\u05dc\u05d9\u05d7\u05ea \u05de\u05d9\u05d9\u05dc (Mail.Send)' }, 200, cors);
     if (data.unsynced && body.anyway !== true) return jsonResp({ ok: false, unsynced: true, error: '\u05d9\u05e9 \u05d1\u05e7\u05d5\u05d1\u05e5 \u05e9\u05de\u05d9\u05e8\u05d4 \u05de-Excel \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e7\u05dc\u05d8\u05d4. \u05e7\u05dc\u05d5\u05d8 \u05d0\u05d5\u05ea\u05d4 \u05e7\u05d5\u05d3\u05dd.' }, 200, cors);
     const want = Array.isArray(body.depts) ? body.depts : [];

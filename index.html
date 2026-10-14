@@ -11483,6 +11483,7 @@ function _hzrRender(){
     h+='<div class="hz-card"><label><input type="checkbox" class="hz-pick" data-d="'+esc(r.dept)+'"'+(can?' checked':' disabled')+'> '+esc(r.dept)+' - '+r.count+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd'+(r.old?' ('+r.old+' \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd)':'')+(r.overdue?', '+r.overdue+' \u05e2\u05d1\u05e8\u05d5 \u05d0\u05ea \u05d4\u05d9\u05e2\u05d3':'')+'</label>'
       +'<div class="hz-rc">\u05d0\u05dc: '+(r.to.length?esc(r.to.join(', ')):'<b>\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd</b>')+'</div>'
       +'<div class="hz-rc">\u05e2\u05d5\u05ea\u05e7: '+esc(r.cc.join(', '))+'</div>'
+      +'<div class="hz-rc" data-st="'+esc(r.dept)+'">\ud83d\udcca \u05e1\u05d8\u05d8\u05d5\u05e1 \u05d0\u05d7\u05e8\u05d5\u05df: '+(_hzrLastSt(r.dept)||'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7')+'</div>'
       +(r.count?'<details style="margin-top:6px"><summary style="font-size:13px">\u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd</summary>'+r.rows.map(function(x){return '<div class="hz-row'+(x.old?' hz-old':'')+'"><b>'+esc(x.n)+'</b> '+esc(x.descr)+' <span style="color:var(--t2)">('+esc(x.resp)+', '+esc(x.status)+(x.due?', \u05d9\u05e2\u05d3 '+esc(x.due):'')+(x.overdue?' <b style="color:var(--c-red-600,#b91c1c)">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>':'')+')</span></div>';}).join('')+'</details>':'')
       +'</div>';
   });
@@ -11589,6 +11590,8 @@ function hzrPullNow(){
   })['catch'](function(){_hzr={error:fail};_hzrRender();});
 }
 function hzrAskNo(){if(_hzr)_hzr.ask=null;_hzrRender();}
+// When this department last got a status mail (14/10/2026, Michael: shown before sending), DD/MM/YYYY.
+function _hzrLastSt(d){var v=_hzr&&_hzr.statusLast&&_hzr.statusLast[d];if(!v)return '';try{return fd(new Date(v).toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}));}catch(e){return '';}}
 function hzrStatus(test){
   if(_viewBlock())return;
   var ds=_hzrPicks();
@@ -11600,6 +11603,7 @@ function hzrAskYes(){
   _hzr.ask=null;_hzr.busy=true;_hzrRender();
   if(a.status){
     _truApi('/api/hazard-report',{op:'statusSend',depts:a.ds,test:a.test,note:_hzr.note||''}).then(function(j){
+      if(j&&j.at&&j.sent){_hzr.statusLast=_hzr.statusLast||{};j.sent.forEach(function(x){_hzr.statusLast[x.dept]=j.at;});}
       _hzr.busy=false;_hzr.result=j&&(j.sent||j.failed)?j:{failed:[{dept:'',error:(j&&j.error)||'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
       try{addLog('\u05de\u05d9\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7'+(a.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
     })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);

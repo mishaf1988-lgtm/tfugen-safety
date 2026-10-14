@@ -90,7 +90,7 @@ const ROWS = [
       if (u.startsWith(SB + '/storage/v1/render/image/')) { w.thumbs = (w.thumbs || 0) + 1; return new Response(new Uint8Array([0xFF, 0xD8, 0xFF, 0xC0, 0, 17, 8, 0, 48, 0, 64, 3, 1, 34, 0, 2, 17, 1, 3, 17, 1, 0xFF, 0xD9]), { status: 200 }); }
       if (u.startsWith(SB + '/rest/v1/trustee_reports')) return json([]);
       if (u.startsWith(SB + '/rest/v1/tasks')) return json([]);
-      if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json(o.sheets ? [{ key: 'hazard_xlsm_sheets', value: o.sheets, updated_at: 'x' }] : []);
+      if (u.startsWith(SB + '/rest/v1/server_state') && mth === 'GET') return json((o.stateRows || []).concat(o.sheets ? [{ key: 'hazard_xlsm_sheets', value: o.sheets, updated_at: 'x' }] : []));
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
       if (u.startsWith('https://graph.microsoft.com/v1.0/me/sendMail')) { w.mails.push(JSON.parse(init.body)); return new Response(null, { status: o.mailFail ? 500 : 202 }); }
       if (u.startsWith('https://graph.microsoft.com/') && mth === 'GET') { w.read = decodeURIComponent(u); return new Response(book, { status: 200 }); }
@@ -206,6 +206,20 @@ const ROWS = [
   check('status: not kept in Sent Items, logged for the next "since"', sm && sm.saveToSentItems === false && /חומר גלם/.test(c.w.state.hazard_status_last || ''), c.w.state);
   c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
   check('status test: only to the connected account, real recipients on top, not logged', c.j.ok && c.w.mails.length === 1 && c.w.mails[0].message.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !c.w.mails[0].message.ccRecipients.length && /^בדיקה - /.test(c.w.mails[0].message.subject) && c.w.mails[0].message.body.content.includes('gelem@tapugan.co.il') && !c.w.state.hazard_status_last, c.j);
+  // 14/10/2026 (Michael: "when I last sent them the status", before sending): per department.
+  {
+    const old = { key: 'hazard_status_last', value: JSON.stringify({ at: '2026-10-01T08:00:00Z', sent: ['מעבדות'] }), updated_at: 'x' };
+    const map = { key: 'hazard_status_depts', value: JSON.stringify({ 'חומר גלם': new Date(Date.now() - 1 * 864e5).toISOString() }), updated_at: 'x' };
+    let p = await call({ email: 'admin@tfugen.local', stateRows: [old] }, { op: 'preview' });
+    check('preview: last status per department, the first version\'s single record read too', p.j.statusLast && p.j.statusLast['מעבדות'] === '2026-10-01T08:00:00Z' && !p.j.statusLast['חומר גלם'], p.j.statusLast);
+    p = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [old, map] }, { op: 'statusSend', depts: ['חומר גלם'], note: 'x' });
+    const body = p.w.mails[0] && p.w.mails[0].message.body.content;
+    check('status: "since" is the department\'s own last status (yesterday): the one closed two days ago is not in it', p.j.ok && body && !body.includes('מעקה רופף') && p.j.sent[0].since === new Date(Date.now() - 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }), p.j.sent);
+    const saved = JSON.parse(p.w.state.hazard_status_depts || '{}');
+    check('a real send: the department gets now, the others are kept', saved['חומר גלם'] === p.j.at && saved['מעבדות'] === '2026-10-01T08:00:00Z', saved);
+    p = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [map] }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
+    check('a test send does not move the date', !p.w.state.hazard_status_depts && p.j.at === null, p.w.state);
+  }
   c = await call({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'statusSend', depts: ['חומר גלם'] });
   check('status: viewer refused, nothing sent', c.status === 403 && !c.w.mails.length, c.status);
 

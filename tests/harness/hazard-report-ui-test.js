@@ -96,6 +96,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('status: asks inside the page, names it and the departments, keeps the text', /מייל סטטוס/.test(stt.ask) && /מעצבים/.test(stt.ask) && stt.kept === 'היום נסגרו המעקות', stt);
   check('status: sends op statusSend with the ticked departments and his text', stt.send && stt.send[1].op === 'statusSend' && stt.send[1].depts.indexOf('מעצבים') >= 0 && stt.send[1].note === 'היום נסגרו המעקות' && stt.send[1].test === false && stt.sent, stt.send);
   check('the screen no longer says the mail is kept in Sent Items', await page.evaluate(() => !/ונשמר בפריטים שנשלחו/.test(document.getElementById('hzr').textContent) && /לא נשמר בפריטים שנשלחו/.test(document.getElementById('hzr').textContent)));
+  const sl = await page.evaluate(async () => {
+    const orig = window._truApi;
+    window._truApi = function (p, b) { if (b.op === 'preview') return orig(p, b).then((j) => Object.assign({}, j, { statusLast: { 'מעצבים': '2026-10-01T08:00:00Z' } })); return orig(p, b); };
+    window._hzr = null; hzrOpen(); await new Promise((r) => setTimeout(r, 50));
+    const t = (d) => ((document.querySelector('#hzr [data-st="' + d + '"]') || {}).textContent || '');
+    const out = { m: t('מעצבים'), x: t('תוצג'), all: Array.from(document.querySelectorAll('#hzr [data-st]')).map((e) => e.dataset.st) };
+    window._truApi = orig; return out;
+  });
+  check('each department card says when it last got a status (DD/MM/YYYY), or that it never did', /סטטוס אחרון: 01\/10\/2026/.test(sl.m) && /עוד לא נשלח/.test(sl.x), sl);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
