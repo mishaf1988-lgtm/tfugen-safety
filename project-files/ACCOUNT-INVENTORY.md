@@ -119,6 +119,7 @@ Worker נפרד: `tapugan-backup-cron` (`workers/backup-cron.js`), גיבוי י
 - **משאבים** ב-`tapugan-claude-rg`, Israel Central: המחשב `tapugan-claude` (Standard_B2als_v2, Windows Server 2022 Azure Edition smalldisk, משתמש `michael-vm`), דיסק 64GB, IP ציבורי קבוע `tapugan-claude-ip`, `tapugan-claude-nsg` (RDP רק מהכתובת של מיכאל), VNet `vnet-israelcentral-1`. תקציב `tapugan-claude-budget`, 15 דולר.
 - **בלי כיבוי אוטומטי** (לא זמין באזור): Stop אחרי כל שימוש. התכנון וההחלטה: `work-vm-plan.md`, `work-vm-setup.md`, `work-vm-trial.md`.
 - **להעברה:** אין מה להעביר מה-repo. מחשב חדש לפי `work-vm-setup.md`. הסיסמה אצל מיכאל בלבד.
+- **סוף (14/10/2026, מיכאל):** לא בשימוש ולא נמחק ביד. בלי Upgrade המנוי נעצר לבד בסוף הניסיון (בערך 12/11/2026) ונמחק עם כל המשאבים עד 90 ימים אחר כך, בלי חיוב. **לא ללחוץ Upgrade.** מיילים מ-Azure על השבתה ומחיקה צפויים. כשהמנוי נמחק: להוריד את הסעיף הזה.
 
 ### אפליקציות GitHub (חשבון mishaf1988-lgtm, Settings, Applications; נבדק 13/10/2026)
 - **בשימוש:** Claude (העבודה על הקוד מהשיחות), Claude Design Import, Cloudflare Workers and Pages (פריסה מ-main).

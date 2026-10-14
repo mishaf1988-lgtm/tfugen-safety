@@ -25,20 +25,9 @@
 
 ## פתוח
 
-- [ ] **C10. מחיקת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: למחוק את המחשב", אחרי "למה אני צריך את זה?"; `work-vm-plan.md` "ההחלטה השנייה"). בפרופיל הכרום "Azure פרטי".
-  ```
-  מיכאל אישר בשאלון של Claude Code (13/10/2026): "בצע: למחוק את המחשב". חשבון mishaf1988@gmail.com בלבד. אם מופיע tapugan.co.il: לעצור.
-  1. portal.azure.com, Resource groups, tapugan-claude-rg. לכתוב לי את רשימת המשאבים שבה (צפוי: tapugan-claude, דיסק, tapugan-claude-ip, tapugan-claude-nsg, vnet-israelcentral-1, כרטיס רשת).
-  2. אם יש בה משהו מעבר לזה: לעצור ולשאול.
-  3. Delete resource group, להקליד את השם tapugan-claude-rg לאישור, Delete.
-  4. לחכות לסיום (כמה דקות), ולוודא ש-Resource groups כבר לא מציג את tapugan-claude-rg.
-  5. Cost Management, Budgets: למחוק את tapugan-claude-budget.
-  6. לא לבטל את המנוי ולא לשנות שום דבר אחר. בלי Upgrade הוא נסגר לבד בסוף 30 הימים, בלי חיוב.
-  בסוף לכתוב לי: מה נמחק, ושב-Resource groups לא נשאר שום דבר.
-  ```
-
 ## בוצע
 
+- [x] **C10. מחיקת מחשב העבודה ב-Azure** (13/10/2026, מיכאל בשאלון: "בצע: למחוק את המחשב", אחרי "למה אני צריך את זה?"; `work-vm-plan.md` "ההחלטה השנייה"). בפרופיל הכרום "Azure פרטי". **בוטל 14/10/2026, מיכאל: "המחשב יימחק לבד בעוד חודש".** נבדק בתיעוד של מיקרוסופט: מנוי ניסיון בלי Upgrade נשאר עם מגבלת הוצאה, כלומר אין חיוב בכלל. בסוף 30 הימים (בערך 12/11/2026) או כשה-200 דולר נגמרים, המנוי עובר ל-Disabled, ואחרי עד 90 ימים נמחק עם כל המשאבים. כלומר "לבד" נכון, אבל המחיקה הסופית יכולה לקחת עד 3 חודשים אחרי זה, לא בדיוק חודש. בינתיים המחשב עצור (deallocated), והדיסק מוריד רק מהקרדיט. התנאי היחיד: לא ללחוץ Upgrade ולא להוסיף תשלום רגיל. מיילים מ-Azure על השבתה ומחיקה צפויים, לא צריך לעשות איתם כלום.
 - [x] **C1. שתי הזרימות ב-Power Automate: לא לשמור קובץ בלי סיומת או קטן מ-1KB** (12/10/2026, מיכאל "מאשר"; `power-automate-mail.md`) **בוצע 13/10/2026 על ידי Claude בכרום:** בשתי הזרימות נוספו `"equals": ["@contains(item()?['name'],'.')", true]` ו-`"greater": ["@item()?['size']", 1024]` (נבדק בתצוגת הקוד), Flow checker 0/0, שתיהן On. **לא נבדק עדיין במייל אמיתי:** לבדוק בהיסטוריית ההרצות אחרי המייל הבא עם קובץ.
 - [x] **C12. GitHub OAuth: לבטל את Cursor ו-Netlify Auth** (13/10/2026, מיכאל בשאלון: "בצע: Cursor ו-Netlify Auth (מומלץ)"). **בוצע 13/10/2026 על ידי Claude בכרום.** נשארו ב-OAuth Apps: Cloudflare, DigitalOcean, Git Credential Manager, GitHub CLI, GitHub iOS, Ollama, Resend, Supabase. Cursor ו-Netlify לא מופיעים באף לשונית.
 - [x] **C11. GitHub: להסיר את Vercel ו-Netlify, ו-Cursor מ-OAuth** (13/10/2026, מיכאל בשאלון: "בצע: להסיר Vercel ו-Netlify ולבדוק OAuth (מומלץ)"). Vercel נמחק ב-21/09/2026 ו-Netlify מושהה, אבל שתי האפליקציות עוד מותקנות עם גישה לקוד. **בוצע 13/10/2026 על ידי Claude בכרום:** Vercel ו-Netlify הוסרו מ-Installed; Cursor ו-Vercel בוטלו ב-Authorized GitHub Apps. נשארו Installed: Claude, Claude Design Import, Cloudflare Workers and Pages. Authorized GitHub Apps: ChatGPT Codex Connector, Claude, Claude Design Import, Cloudflare Workers and Pages, Copilot Chat App, Copilot SWE Agent, Manus Connector. OAuth Apps: Cloudflare, Cursor, DigitalOcean, Git Credential Manager, GitHub CLI, GitHub iOS, Netlify Auth, Ollama, Resend, Supabase. המשך: C12.
