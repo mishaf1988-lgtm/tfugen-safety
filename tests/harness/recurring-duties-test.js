@@ -78,8 +78,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       badge: l1 && l1.textContent,
     };
   });
-  check('evaluated law: view, still holds, change', JSON.stringify(r.l1) === JSON.stringify(['👁', '✅ בתוקף', '✏️ קביעה']), r.l1);
-  check('law not yet evaluated: view and change only', JSON.stringify(r.l2) === JSON.stringify(['👁', '✏️ קביעה']), r.l2);
+  check('evaluated law: view, still holds, change', JSON.stringify(r.l1) === JSON.stringify(['👁️', '✅ בתוקף', '✏️ קביעה']), r.l1);
+  check('law not yet evaluated: view and change only', JSON.stringify(r.l2) === JSON.stringify(['👁️', '✏️ קביעה']), r.l2);
   check('management review: one button to the review page', JSON.stringify(r.mr) === JSON.stringify(['+ סקירה']), r.mr);
 
   r = await page.evaluate(() => {
