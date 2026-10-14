@@ -29,7 +29,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       { id: 'n', d: '2026-09-21', title: 'ישנה בלי מדריך', body: 'x', s: 'טיוטה', ts: '2026-09-21T07:00:00Z' },
     ];
     DB.toolbox_reads = [];
-    goPage('toolbox');
+    goPage('training');
     const rowOf = (t) => Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes(t));
     const o = { btnPub: !!rowOf('מלגזות').querySelector('[onclick^="tbtDup"]'), btnDraft: !!rowOf('ישנה').querySelector('[onclick^="tbtDup"]') };
     // duplicate: a new record, every field from the old talk, today, draft

@@ -32,7 +32,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       { id: 'b', d: '2026-09-27', title: 'אחרון', body: 'x', s: 'פורסמה', trainer: 'מיכאל פרייליך', trainer_qual: 'ממונה בטיחות מוסמך', ts: '2026-09-27T08:00:00Z' },
       { id: 'c', d: '2026-10-04', title: 'בלי מדריך', body: 'x', s: 'טיוטה' },
     ];
-    goPage('toolbox');
+    goPage('training');
     const o = {};
     openModal('m-tbt');
     o.prefill = [gv('tbt-trainer'), gv('tbt-trainer-q')];

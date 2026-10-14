@@ -21,7 +21,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.toast = (m) => toasts.push(String(m));
     _currentUser = { username: 'admin' }; window._sbToken = 'tok';
     DB.toolbox_talks = []; DB.toolbox_reads = [];
-    goPage('toolbox');
+    goPage('training');
     openModal('m-tbt');
     const o = {};
     const btn = document.getElementById('tbt-say-btn');

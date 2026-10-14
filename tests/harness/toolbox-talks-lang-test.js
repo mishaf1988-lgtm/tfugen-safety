@@ -50,7 +50,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     };
 
     // stage 4 first: the table and the who-signed window
-    goPage('toolbox');
+    goPage('training');
     const row = Array.from(document.querySelectorAll('#tb-tbt tr')).find((tr) => tr.textContent.includes('עבודה בגובה'));
     res.langTag = row.children[1].textContent;
     res.countBtn = row.children[3].querySelector('button') ? row.children[3].querySelector('button').textContent : null;
@@ -77,7 +77,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     closeModal('m-tbt-who');
     showView('toolbox_talks', 'tt-1'); res.viewAll = document.getElementById('pg-view').textContent;
     DB.toolbox_reads.splice(1); delete DB.toolbox_talks[0].body_ru; delete DB.toolbox_talks[0].body_am;
-    goPage('toolbox');
+    goPage('training');
 
     // stage 3: translate
     openModal('m-tbt');

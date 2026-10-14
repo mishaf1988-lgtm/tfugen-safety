@@ -64,7 +64,8 @@ console.log('\n5. the wiring');
   const src = fs.readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
   const direct = src.split('\n').filter((l) => /hebrewName\(env/.test(l));
   check('hebrewName is called only inside nameHe', direct.length === 1 && /return hebrewName\(env, raw\)/.test(direct[0]), direct);
-  check('name, company, job and agency all go through nameHe', (src.match(/await nameHe\(env, request, /g) || []).length === 4);
+  // 14/10/2026: + the department typed under "other" in the annual / quality training.
+  check('name, company, job, agency and a typed department all go through nameHe', (src.match(/await nameHe\(env, request, /g) || []).length === 5);
   const rows = [{ key: 'guess:tlk:0123456789abcdef', value: '400' }, { key: 'guess:ai:0123456789abcdef', value: '250' }, { key: 'guess:ind:0123456789abcdef', value: '11' }];
   check('the codes screen does not count tlk as a locked address', lockedCount(rows) === 1, lockedCount(rows));
 }

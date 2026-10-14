@@ -23,7 +23,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window.toast = (m) => toasts.push(String(m));
     _currentUser = { username: 'admin' }; window._sbToken = 'tok';
     DB.toolbox_talks = []; DB.toolbox_reads = [];
-    goPage('toolbox');
+    goPage('training');
     const o = {};
     const set = (id, v) => { document.getElementById(id).value = v; };
     const fill = () => { set('tbt-title', 'סולמות'); set('tbt-body', 'שלוש נקודות אחיזה. בדיקה לפני עלייה.'); set('tbt-trainer', 'מיכאל'); set('tbt-trainer-q', 'ממונה בטיחות'); };
