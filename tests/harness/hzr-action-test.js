@@ -21,7 +21,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window._role = () => 'admin'; window._isAdminUser = () => true;
     const calls = []; let saveOk = true;
     DB.tour_hazards = [{ id: 'th-54', n: 54, descr: 'ליקוי סימון מדרגה', action: null }];
-    const row = (id, n, descr, sev, noAction) => ({ id, n, opened: '06/10/2026', loc: 'מעבדה', descr, sev, resp: 'בטיחות', action: '', due: '20/10/2026', status: 'פתוח', noAction });
+    const row = (id, n, descr, sev, noAction) => ({ id, n, opened: '06/10/2026', loc: 'מעבדה', descr, sev, resp: 'בטיחות', action: '', due: '20/10/2026', status: 'פתוח', noAction, photoLink: id === 'h:th-54' ? 'https://x.supabase.co/storage/v1/object/sign/incidents-photos/a.jpg?token=t' : null });
     window._truApi = function (p, b) {
       calls.push([p, JSON.parse(JSON.stringify(b))]);
       if (b.op === 'preview') return Promise.resolve({ ok: true, canSend: true, reports: [
@@ -41,6 +41,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.areas = Array.from(document.querySelectorAll('#hzr-act textarea')).map((t) => t.value);
     o.noSave = calls.filter((c) => c[1].op === 'setAction').length;
     o.missText = box().textContent;
+    o.det = Array.from(document.querySelectorAll('#hzr-act .hzr-det')).map((d) => d.textContent);
+    o.imgs = Array.from(document.querySelectorAll('#hzr-act img.hzr-ph')).map((i) => i.getAttribute('src'));
     document.getElementById('hzr-sg-0').value = 'לחדש את סימון המדרגה בפס מחזיר אור צהוב-שחור';
     o.ok = await hzrApprove(0);
     o.setCall = calls.find((c) => c[1].op === 'setAction');
@@ -74,6 +76,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('fits a phone', r.wide <= 375, r.wide);
   check('hazard form: "הצע פעולה" fills the empty field (saved only with the form)', r.form === 'filled' && r.formVal === 'לחדש את סימון המדרגה בפס מחזיר אור' && r.formCall[1].op === 'suggest' && r.formCall[1].items[0].f === 'מכשיר חימום לא במקום', [r.form, r.formVal]);
   check('hazard form: no description, nothing asked', r.formShort === 'empty');
+  // 14/10/2026 (Michael: "the picture, which department, more details to verify the action")
+  check('each card: department, location, responsible, target and status', r.det && r.det.length === 2 && /מחלקה: מעבדות/.test(r.det[0]) && /מיקום: מעבדה/.test(r.det[0]) && /אחראי: בטיחות/.test(r.det[0]) && /יעד: 20\/10\/2026/.test(r.det[0]) && /סטטוס: פתוח/.test(r.det[0]) && /מחלקה: מעבדות/.test(r.det[1]), r.det);
+  check('the photo shows when there is one (signed link), "no photo" otherwise', r.imgs && r.imgs.length === 1 && /object\/sign\/incidents-photos\/a\.jpg/.test(r.imgs[0]) && /אין תמונה/.test(r.missText), r.imgs);
   check('no page errors', errors.length === 0, errors);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await browser.close();
