@@ -29,6 +29,8 @@ import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, heName } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
+import { readRecipients } from './hazard-report.js';
+import { REPORT_DEPTS } from './hazard-file.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const APP_URL = 'https://tapugan-safety.pages.dev';
@@ -332,6 +334,40 @@ export function deviceOf(ua) {
   return 'other';
 }
 
+// Who did not sign, to the department managers (14/10/2026, Michael in the questionnaire: "\u05de\u05d9 \u05dc\u05d0 \u05d7\u05ea\u05dd
+// \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd"). A worker's training department (TBT_DEPTS) -> the department of the department report,
+// whose managers (recipients sheet, part 1) get the mail; packing goes with production, as in
+// AREA_DEPT (Michael, 29/09/2026). A worker in no training department is listed to the manager only.
+export const TBT_REPORT = { '\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd': '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc': '\u05d0\u05d7\u05d6\u05e7\u05d4' };
+const idKey = (v) => String(v || '').replace(/[^0-9a-z]/gi, '').toLowerCase();
+// Pure. emps: rows of emp (id, n, dep, eid, left_d); reads: the talk's signatures (emp_id, id_no).
+// Annual / quality: signed = the typed ID is the one on the card; otherwise by emp_id.
+export function missingByDept(talk, emps, reads, today) {
+  const typed = TYPED_KINDS.indexOf(talk && talk.kind) >= 0;
+  const ids = new Set(), eids = new Set();
+  (reads || []).forEach((x) => { if (x && x.emp_id != null) ids.add(String(x.emp_id)); if (x && x.id_no) eids.add(idKey(x.id_no)); });
+  const groups = {}, noDept = [];
+  (emps || []).forEach((e) => {
+    if (!e || e.id == null) return;
+    if (/^\d{4}-\d{2}-\d{2}/.test(String(e.left_d || '')) && String(e.left_d).slice(0, 10) <= today) return;
+    if (talk && talk.dept && !deptMatch(talk.dept, e.dep)) return;
+    if (ids.has(String(e.id)) || (typed && e.eid && eids.has(idKey(e.eid)))) return;
+    const td = TBT_DEPTS.find((x) => x[0] === e.dep || x[1].indexOf(String(e.dep || '')) >= 0);
+    const rd = td && TBT_REPORT[td[0]];
+    const w = { n: e.n || '-', dep: e.dep || '' };
+    if (rd) (groups[rd] = groups[rd] || []).push(w); else noDept.push(w);
+  });
+  Object.values(groups).concat([noDept]).forEach((l) => l.sort((a, b) => a.n.localeCompare(b.n, 'he')));
+  return { groups, noDept };
+}
+export function missMailHtml(talk, dept, list, url) {
+  const kind = { annual: '\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05ea\u05d9\u05ea', quality: '\u05d4\u05d3\u05e8\u05db\u05ea \u05d0\u05d9\u05db\u05d5\u05ea' }[talk.kind] || '\u05d4\u05d3\u05e8\u05db\u05d4';
+  return '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6">'
+    + '<p>\u05e9\u05dc\u05d5\u05dd,</p><p>' + kind + ' <b>' + esc(talk.title || '') + '</b>' + (talk.d ? ' (' + esc(fdate(talk.d)) + ')' : '') + ': \u05e2\u05d5\u05d1\u05d3\u05d9 \u05de\u05d7\u05dc\u05e7\u05ea ' + esc(dept) + ' \u05e9\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 (' + list.length + '):</p>'
+    + '<ul style="margin:4px 0 10px">' + list.map((w) => '<li>' + esc(w.n) + (w.dep ? ' <span style="color:#666">(' + esc(w.dep) + ')</span>' : '') + '</li>').join('') + '</ul>'
+    + (url ? '<p>\u05d0\u05d9\u05da \u05d7\u05d5\u05ea\u05de\u05d9\u05dd: \u05e1\u05d5\u05e8\u05e7\u05d9\u05dd \u05d0\u05ea \u05d4-QR \u05e9\u05d1\u05db\u05e0\u05d9\u05e1\u05d4, \u05d0\u05d5 \u05e4\u05d5\u05ea\u05d7\u05d9\u05dd \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df, \u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05e9\u05dd, \u05ea"\u05d6 \u05d5\u05de\u05d7\u05dc\u05e7\u05d4 \u05d5\u05d7\u05d5\u05ea\u05de\u05d9\u05dd:<br><a href="' + esc(url) + '">' + esc(url) + '</a></p>' : '')
+    + '<p>\u05ea\u05d5\u05d3\u05d4,<br>\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da, \u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>';
+}
 export function talkUrl(tok, lang, g, tr) { return APP_URL + '/api/talk?k=' + encodeURIComponent(tok) + (lang && lang !== 'he' ? '&l=' + lang : '') + (g ? '&g=1' : '') + (tr ? '&t=1' : ''); }
 export function makeTalkToken(env, id, nowMs) { return makeLinkToken(env, PREFIX, id, TALK_TTL_DAYS, nowMs); }
 export function readTalkToken(env, tok, nowMs) { return readLinkToken(env, PREFIX, tok, nowMs); }
@@ -1200,6 +1236,43 @@ async function makeLink(env, request, ctx) {
     const lang = langOf(b.lang), text = speechText(b.title, b.body);
     if (!text) return jsonResp({ error: 'empty' }, 400, cors);
     return sayStream(env, text, lang, ctx, cors);
+  }
+  // Who did not sign, to the department managers (14/10/2026): preview (nothing sent), test (to the
+  // connected account only), or the real send; annual / quality, published and still open.
+  if (b && b.op === 'missMail') {
+    const t = await getTalk(env, String(b.id || ''));
+    if (!t) return jsonResp({ error: 'not found' }, 404, cors);
+    if (TYPED_KINDS.indexOf(t.kind) < 0) return jsonResp({ error: 'not an annual / quality training' }, 409, cors);
+    if (t.s !== S_PUB) return jsonResp({ error: 'not published' }, 409, cors);
+    if (isClosed(t)) return jsonResp({ error: 'closed' }, 409, cors);
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const [er, rr] = await Promise.all([
+      fetch(SB + '/rest/v1/emp?select=id,n,dep,eid,left_d', { headers: sbH(env) }),
+      fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(t.id) + '&select=emp_id,id_no', { headers: sbH(env) }),
+    ]);
+    const emps = er.ok ? await er.json() : null, reads = rr.ok ? await rr.json() : null;
+    if (!Array.isArray(emps) || !Array.isArray(reads)) return jsonResp({ error: 'read' }, 502, cors);
+    const m = missingByDept(t, emps, reads, today);
+    let od, rc;
+    try { od = await accessToken(env); rc = await readRecipients(od.token); }
+    catch (e) { return jsonResp({ error: 'recipients: ' + String((e && e.message) || e).substring(0, 120) }, 502, cors); }
+    const want = Array.isArray(b.depts) ? b.depts : null;
+    const depts = REPORT_DEPTS.filter((d) => m.groups[d] && m.groups[d].length && (!want || want.indexOf(d) >= 0));
+    const plan = depts.map((d) => ({ dept: d, to: rc.depts[d] || [], cc: rc.cc || [], names: m.groups[d].map((w) => w.n) }));
+    if (b.preview === true) return jsonResp({ ok: true, preview: true, plan, noDept: m.noDept.map((w) => w.n + (w.dep ? ' (' + w.dep + ')' : '')) }, 200, cors);
+    const test = b.test === true;
+    if (test && !od.email) return jsonResp({ error: 'no connected account' }, 409, cors);
+    const pt = await makePermToken(env, t.id, t.link_v || 0);
+    const url = pt ? talkUrl(pt) : null;
+    const sent = [], skipped = [], failed = [];
+    for (const p of plan) {
+      if (!test && !p.to.length) { skipped.push({ dept: p.dept, why: 'no recipient' }); continue; }
+      const html = (test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d4\u05d0\u05de\u05d9\u05ea\u05d9\u05ea \u05d9\u05d2\u05d9\u05e2 \u05d0\u05dc: ' + esc(p.to.join(', ') || '-') + '</div>' : '') + missMailHtml(t, p.dept, m.groups[p.dept], url);
+      const subj = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + '\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 \u05e2\u05dc ' + String(t.title || '').substring(0, 60) + ' - ' + p.dept;
+      try { await sendMailTo(od.token, test ? [od.email] : p.to, test ? [] : p.cc, subj, html, []); sent.push({ dept: p.dept, n: p.names.length, test }); }
+      catch (e) { failed.push({ dept: p.dept, error: String((e && e.message) || e).substring(0, 160) }); }
+    }
+    return jsonResp({ ok: !failed.length, sent, skipped, failed }, 200, cors);
   }
   // Form 08.01 with everyone who signed (14/10/2026): any kind, published or closed.
   if (b && b.op === 'form0801') {
