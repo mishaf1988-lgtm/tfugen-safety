@@ -116,8 +116,11 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
 // status, and whether things were closed", to the same people as the
 // department report). His text for the day on top, then the department's
 // hazards closed since `since`, then the ones still open (past target marked).
-export function buildStatus(dept, rows, rcpt, note, since, today) {
-  const rep = buildReport(dept, rows, rcpt, {}, today);
+// links (optional): Map register row -> the signed "mark as handled" URL, as in
+// buildReport (14/10/2026, Michael: the status mail needs the close button too).
+export function buildStatus(dept, rows, rcpt, note, since, today, links) {
+  const rep = buildReport(dept, rows, rcpt, {}, today, null, links);
+  const anyClose = rep.rows.some((r) => r.close);
   const day = (v) => String((v && typeof v === 'object' ? v.date : v) || '').substring(0, 10);
   const closed = rows.filter((r) => r[3] === dept && r[10] === S_DONE && day(r[11]) && (!since || day(r[11]) >= since));
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
@@ -131,8 +134,8 @@ export function buildStatus(dept, rows, rcpt, note, since, today) {
     + '<h3 style="margin:14px 0 6px;color:#15803d">&#9989; \u05e0\u05e1\u05d2\u05e8\u05d5' + esc(sinceTxt) + ' (' + closed.length + ')</h3>'
     + (closed.length ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05e0\u05e1\u05d2\u05e8']) + closed.map((r) => '<tr>' + [r[0], r[4], r[5], fd(r[11])].map((x) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + '</td>').join('') + '</tr>').join('') + '</table>' : '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d4\u05d6\u05d5.</p>')
     + '<h3 style="margin:14px 0 6px">\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd (' + rep.count + ')</h3>'
-    + (rep.count ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'])
-      + rep.rows.map((r) => '<tr style="background:' + (r.overdue ? '#fde8e8' : '#fff') + '">' + [r.n, r.loc, r.descr, r.resp, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 ? ';white-space:nowrap' : '') + '">' + esc(x).replace(/\n/g, '<br>') + (i === 4 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + '</tr>').join('') + '</table>' : '<p>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.</p>')
+    + (rep.count ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'].concat(anyClose ? [CLOSE_TH] : []))
+      + rep.rows.map((r) => '<tr style="background:' + (r.overdue ? '#fde8e8' : '#fff') + '">' + [r.n, r.loc, r.descr, r.resp, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 ? ';white-space:nowrap' : '') + '">' + esc(x).replace(/\n/g, '<br>') + (i === 4 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + (anyClose ? '<td style="' + cell + '">' + (r.close ? '<a href="' + esc(r.close) + '" style="color:#15803d;font-weight:bold;white-space:nowrap">' + CLOSE_LINK + '</a>' : '') + '</td>' : '') + '</tr>').join('') + '</table>' : '<p>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.</p>')
     + SIGNATURE + '</div>';
   return { dept, title, to: rep.to, cc: rep.cc, open: rep.count, overdue: rep.overdue, closed: closed.length, html };
 }
@@ -216,7 +219,10 @@ export async function onRequest(context) {
       const sent = [], skipped = [], failed = [];
       for (const dept of REPORT_DEPTS) {
         if (want.indexOf(dept) < 0) continue;
-        const s = buildStatus(dept, data.rows, data.rcpt, note, since, today);
+        // "Mark as handled" per open row, as in the report (close-hazard.js). No secret = no links.
+        const closeLinks = new Map();
+        for (const x of buildReport(dept, data.rows, data.rcpt, {}, today).rows) { const rid = x.src && data.idOf.get(x.src); const tk = rid && await makeCloseToken(env, rid.substring(2)); if (tk) closeLinks.set(x.src, closeUrl(APP_URL, tk)); }
+        const s = buildStatus(dept, data.rows, data.rcpt, note, since, today, closeLinks);
         if (!s.open && !s.closed) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8' }); continue; }
         if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
         const to = test ? [me] : s.to, cc = test ? [] : s.cc;
