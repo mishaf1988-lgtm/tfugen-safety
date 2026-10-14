@@ -1388,7 +1388,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="btn btn-s" id="eqi-tab-ok" onclick="eqiFilter('ok')">&#1514;&#1511;&#1497;&#1504;&#1497;&#1501;</button>
     <select id="eqi-sv-select" onchange="svEqiApply(this.value)" style="padding:8px;max-width:180px"></select>
     <button class="btn btn-s" onclick="svEqiSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
-    <button class="btn btn-s" onclick="svEqiDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;</button>
+    <button class="btn btn-s" onclick="svEqiDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button>
   </div>
   </details>
   <div id="eqi-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -1432,7 +1432,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <select id="nm-sv-filter" onchange="nmSvFilter(this.value)" style="padding:8px;max-width:200px"><option value="">- &#1499;&#1500; &#1492;&#1495;&#1493;&#1502;&#1512;&#1493;&#1514; -</option><option value="קל">קל</option><option value="בינוני">בינוני</option><option value="חמור">חמור</option><option value="קריטי">קריטי</option></select>
     <select id="nm-sv-select" onchange="svNmApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svNmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
-    <button class="btn btn-s" onclick="svNmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;</button>
+    <button class="btn btn-s" onclick="svNmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button>
     <button class="btn btn-s" onclick="nmClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div id="nm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -1577,7 +1577,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   </div>
   <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
     <button type="button" class="btn btn-s" style="width:100%;background:var(--c-amber-100-2,#fef3c7);color:var(--c-orange-700,#92400e);border:1px solid var(--c-amber-450,#fbbf24)" onclick="openResetPwDialog()">&#128273; &#1488;&#1497;&#1508;&#1493;&#1505; &#1505;&#1497;&#1505;&#1502;&#1492; &#1500;&#1502;&#1513;&#1514;&#1502;&#1513; &#1494;&#1492;</button>
-    <button type="button" class="btn btn-s" style="width:100%;background:var(--c-red-50,#fef2f2);color:var(--c-red-600,#b91c1c);border:1px solid var(--c-red-200,#fca5a5)" onclick="openDeleteUserDialog()">&#128465; &#1502;&#1495;&#1511; &#1502;&#1513;&#1514;&#1502;&#1513; &#1494;&#1492; &#1500;&#1490;&#1502;&#1512;&#1497;</button>
+    <button type="button" class="btn btn-s" style="width:100%;background:var(--c-red-50,#fef2f2);color:var(--c-red-600,#b91c1c);border:1px solid var(--c-red-200,#fca5a5)" onclick="openDeleteUserDialog()">&#128465;&#65039; &#1502;&#1495;&#1511; &#1502;&#1513;&#1514;&#1502;&#1513; &#1494;&#1492; &#1500;&#1490;&#1502;&#1512;&#1497;</button>
   </div>
   <div class="modal-footer">
     <button class="btn btn-s" onclick="closeModal('m-user')">&#1489;&#1497;&#1496;&#1493;&#1500;</button>
@@ -1609,7 +1609,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <input id="tsk-search-q" type="search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513;..." oninput="_debTskSearch(this.value)" style="padding:8px;max-width:160px;border:1px solid var(--c-gray-150,#ddd);border-radius:6px;font-family:inherit">
     <select id="tsk-sv-select" onchange="svTskApply(this.value)" style="padding:8px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svTskSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button>
-    <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;</button>
+    <button class="btn btn-s" onclick="svTskDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button>
     <button class="btn btn-s" onclick="tskClearAll()" title="&#1504;&#1511;&#1492; &#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:8px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div id="tsk-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -1715,7 +1715,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 <div id="pg-toolbox" class="page">
   <div class="row">
-    <div class="page-title">&#128483; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
+    <div class="page-title">&#128483;&#65039; &#1513;&#1497;&#1495;&#1493;&#1514; <span>&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; &#1497;&#1493;&#1502;&#1497;&#1493;&#1514; (Toolbox)</span></div>
     <button class="btn btn-p" onclick="openModal('m-toolbox')">+ &#1492;&#1493;&#1505;&#1507;</button>
   </div>
   <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1511;&#1493;&#1512;&#1488; &#1493;&#1495;&#1493;&#1514;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1488;&#1495;&#1512;&#1497; "&#1508;&#1512;&#1505;&#1501;": &#128279; &#1511;&#1497;&#1513;&#1493;&#1512;, &#1493;&#1500;&#1513;&#1500;&#1493;&#1495; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1488;&#1493; &#1500;&#1508;&#1514;&#1493;&#1495; &#1489;&#1496;&#1488;&#1489;&#1500;&#1496;. &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1489;&#1514;&#1493;&#1511;&#1507; 14 &#1497;&#1502;&#1497;&#1501;.</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
@@ -1967,13 +1967,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button id="ncr-tab-all" class="btn btn-p" onclick="ncrTab('all')" style="font-size:14px;padding:10px 16px;min-height:44px">&#1492;&#1499;&#1500;</button>
     <button id="ncr-tab-saf" class="btn btn-s" onclick="ncrTab('saf')" style="font-size:14px;padding:10px 16px;min-height:44px">&#128737; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button id="ncr-tab-env" class="btn btn-s" onclick="ncrTab('env')" style="font-size:14px;padding:10px 16px;min-height:44px">&#127807; &#1488;&#1497;&#1499;&#1493;&#1514; &#1505;&#1489;&#1497;&#1489;&#1492;</button>
-    <button id="ncr-tab-status" class="btn btn-s" onclick="_ncrToggleClosed()" title="&#1492;&#1510;&#1490;/&#1492;&#1505;&#1514;&#1512; NCR &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;" style="font-size:14px;padding:10px 16px;min-height:44px">&#128065; &#1499;&#1493;&#1500;&#1500; &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;</button>
+    <button id="ncr-tab-status" class="btn btn-s" onclick="_ncrToggleClosed()" title="&#1492;&#1510;&#1490;/&#1492;&#1505;&#1514;&#1512; NCR &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;" style="font-size:14px;padding:10px 16px;min-height:44px">&#128065;&#65039; &#1499;&#1493;&#1500;&#1500; &#1505;&#1490;&#1493;&#1512;&#1497;&#1501;</button>
     <select id="ncr-loc-filter" onchange="ncrLocFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-prj-filter" onchange="ncrPrjFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-itype-filter" onchange="ncrItypeFilter(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <select id="ncr-sv-select" onchange="svNcrApply(this.value)" style="font-size:14px;padding:10px;min-height:44px;max-width:200px"></select>
     <button class="btn btn-s" onclick="svNcrSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492; &#1504;&#1493;&#1499;&#1495;&#1497;&#1514;" style="padding:10px 12px;min-height:44px">&#128190;</button>
-    <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:var(--c-red-700,#7f1d1d)">&#128465;</button>
+    <button class="btn btn-s" onclick="svNcrDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492; &#1513;&#1504;&#1489;&#1495;&#1512;&#1492;" style="padding:10px 12px;min-height:44px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button>
     <button class="btn btn-s" onclick="ncrClearAll()" title="&#1504;&#1511;&#1492; &#1499;&#1500; &#1492;&#1508;&#1497;&#1500;&#1496;&#1512;&#1497;&#1501;" style="padding:10px 12px;min-height:44px">&#9587; &#1504;&#1511;&#1492;</button>
   </div>
   <div style="margin:0 0 8px;display:flex;gap:6px;flex-wrap:wrap;font-size:11px">
@@ -2045,7 +2045,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 
 <div id="pg-ptw" class="page">
   <div class="row"><div class="page-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; <span>&#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-ptw')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;</button></div>
+  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="ptw-loc-filter" onchange="ptwLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="ptw-sv-select" onchange="svPtwApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svPtwSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svPtwDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button></div>
   <div id="ptw-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1502;&#1505;&#1508;&#1512;</th><th scope="col">&#1511;&#1489;&#1500;&#1503;</th><th scope="col">&#1505;&#1493;&#1490; &#1506;&#1489;&#1493;&#1491;&#1492;</th><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1513;&#1506;&#1493;&#1514;</th><th scope="col">&#1502;&#1511;&#1493;&#1501;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col"></th></tr></thead><tbody id="tb-ptw"></tbody></table></div></div>
   <div class="page-footer">&#169; <strong>&#1502;&#1497;&#1499;&#1488;&#1500; &#1508;&#1512;&#1497;&#1497;&#1500;&#1497;&#1498;</strong> | &#1514;&#1508;&#1493;&#1490;&#1503; 2026</div>
@@ -2062,7 +2062,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="btn btn-s" id="view-back" onclick="goPage('dash')" style="font-size:13px">&#8594; &#1495;&#1494;&#1512;&#1492;</button>
     <div class="page-title" id="view-title">&#1510;&#1508;&#1497;&#1497;&#1492;</div>
     <button class="btn btn-s" id="view-edit" style="font-size:13px;display:none" onclick="_genEdit(this.dataset.vtbl,this.dataset.vid)" title="&#1506;&#1512;&#1493;&#1498; &#1512;&#1513;&#1493;&#1502;&#1492; &#1494;&#1493;">&#9998; &#1506;&#1512;&#1493;&#1498;</button>
-    <button class="btn btn-s" id="view-pdf" style="font-size:13px;display:none" onclick="printReport(this.dataset.vtbl,this.dataset.vid)">&#128424; PDF</button>
+    <button class="btn btn-s" id="view-pdf" style="font-size:13px;display:none" onclick="printReport(this.dataset.vtbl,this.dataset.vid)">&#128424;&#65039; PDF</button>
     <button class="btn btn-s" id="view-copy" style="font-size:13px;display:none" onclick="_viewCopy(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1506;&#1514;&#1511; &#1505;&#1497;&#1499;&#1493;&#1501; &#1500;&#1511;&#1500;&#1497;&#1508;&#1489;&#1493;&#1512;&#1491;">&#128203;</button>
     <button class="btn btn-s" id="view-link" style="font-size:13px;display:none" onclick="_copyDeepLink(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1506;&#1514;&#1511; &#1511;&#1497;&#1513;&#1493;&#1512; &#1497;&#1513;&#1497;&#1512;">&#128279;</button>
     <button class="btn btn-s" id="view-qr" style="font-size:13px;display:none;background:var(--c-teal-700-2,#0d9488)" onclick="_viewShowQr(this.dataset.vtbl,this.dataset.vid)" title="&#1492;&#1510;&#1490; QR (&#1500;&#1499;&#1500; &#1505;&#1493;&#1490;&#1497; &#1510;&#1497;&#1493;&#1491;)">&#128290;</button>
@@ -2083,7 +2083,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <div class="page-title">&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; <span>&#1513;&#1502;&#1497;&#1506;&#1492;</span></div>
     <button class="btn btn-p" onclick="openHearXl()">&#128228; &#1492;&#1506;&#1500;&#1492; Excel</button>
     <button class="btn btn-s" onclick="_hearFillExp()" title="&#1500;&#1512;&#1513;&#1493;&#1502;&#1493;&#1514; &#1513;&#1488;&#1497;&#1503; &#1500;&#1492;&#1503; &#1514;&#1508;&#1493;&#1490;&#1492;">&#128197; &#1502;&#1500;&#1488; &#1514;&#1508;&#1493;&#1490;&#1493;&#1514;</button>
-    <button class="btn btn-d" onclick="delAllHearing()">&#128465; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
+    <button class="btn btn-d" onclick="delAllHearing()">&#128465;&#65039; &#1502;&#1495;&#1511; &#1492;&#1499;&#1500;</button>
   </div>
   <div class="row">
     <input id="hearing-search" placeholder="&#1495;&#1497;&#1508;&#1493;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501; / &#1514;&quot;&#1494; / &#1502;&#1495;&#1500;&#1511;&#1492;..." oninput="_debRHearing()" style="flex:1;min-width:200px">
@@ -2140,7 +2140,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 
 <div id="pg-hzm" class="page">
   <div class="row"><div class="page-title">&#1495;&#1493;&#1502;&#1512;&#1497;&#1501; <span>&#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-hzm')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
-  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;</button></div>
+  <div class="row" style="margin:0 0 8px;flex-wrap:wrap;gap:6px"><select id="hzm-loc-filter" onchange="hzmLocFilter(this.value)" style="padding:8px;max-width:220px"></select><select id="hzm-sv-select" onchange="svHzmApply(this.value)" style="padding:8px;max-width:180px"></select><button class="btn btn-s" onclick="svHzmSave()" title="&#1513;&#1502;&#1493;&#1512; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px">&#128190;</button><button class="btn btn-s" onclick="svHzmDelete()" title="&#1502;&#1495;&#1511; &#1514;&#1510;&#1493;&#1490;&#1492;" style="padding:8px;background:var(--c-red-700,#7f1d1d)">&#128465;&#65039;</button></div>
   <div id="hzm-active-chips" style="margin:0 0 10px;display:flex;gap:6px;flex-wrap:wrap"></div>
   <div id="hzm-summary" style="margin:0 0 10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px"></div>
   <div class="card"><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1513;&#1501; &#1495;&#1493;&#1502;&#1512;</th><th scope="col">UN</th><th scope="col">&#1505;&#1497;&#1499;&#1493;&#1503;</th><th scope="col">&#1499;&#1502;&#1493;&#1514;(&#1500;)</th><th scope="col">&#1502;&#1497;&#1511;&#1493;&#1501;</th><th scope="col">MSDS</th><th scope="col"></th><th scope="col"></th></tr></thead><tbody id="tb-hzm"></tbody></table></div></div>
@@ -2293,7 +2293,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','nm')"><span class="sic">&#9940;</span>&#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','inc')"><span class="sic">&#9888;</span>&#1488;&#1497;&#1512;&#1493;&#1506;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','round')"><span class="sic">&#9728;</span>&#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','toolbox')"><span class="sic">&#128483;</span>&#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','toolbox')"><span class="sic">&#128483;&#65039;</span>&#1513;&#1497;&#1495;&#1493;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','ncr')"><span class="sic">&#128295;</span>&#1488;&#1497; &#1492;&#1514;&#1488;&#1502;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','exp')"><span class="sic">&#9200;</span>&#1514;&#1493;&#1511;&#1508;&#1497;&#1501;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-reports-sheet','eqi')"><span class="sic">&#128295;</span>&#1489;&#1491;&#1497;&#1511;&#1493;&#1514; &#1510;&#1497;&#1493;&#1491;</button>
@@ -2332,7 +2332,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="sheet-btn" onclick="closeModal('m-modules-sheet');mgrFieldOpen()" data-kw="ממשק ממונה הבטיחות דיווח סיור מפגע"><span class="sic">&#128203;</span>&#1502;&#1502;&#1513;&#1511; &#1502;&#1502;&#1493;&#1504;&#1492; &#1492;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','thz')" data-kw="סיור סיורי מפגעים ממונה מחלקה"><span class="sic">&#128270;</span>סיורי מפגעים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;</span>שיחות בטיחות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;&#65039;</span>שיחות בטיחות</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','trustees')" data-kw="נאמן נאמני trustees ניקוד פרס משימות חודשיות"><span class="sic">&#129466;</span>נאמני בטיחות</button>
 
     <div class="sheet-group-title">&#128203; איכות / NCR</div>
@@ -3139,7 +3139,7 @@ id="m-ncr" style="display:none">
 <div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
 <div class="modal" id="m-toolbox" style="display:none">
   <button class="close-btn" onclick="closeModal('m-toolbox')">&#10005;</button>
-  <div class="modal-title">&#128483; &#1513;&#1497;&#1495;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
+  <div class="modal-title">&#128483;&#65039; &#1513;&#1497;&#1495;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="tb-d"></div>
     <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488; *</label><input id="tb-topic" placeholder="PPE, &#1506;&#1489;&#1493;&#1491;&#1492; &#1489;&#1490;&#1493;&#1489;&#1492;, &#1495;&#1493;&#1502;&#1512;&#1497;&#1501; &#1502;&#1505;&#1493;&#1499;&#1504;&#1497;&#1501;..."></div>
@@ -8199,13 +8199,13 @@ function rExp(){
   var _expShown=_capRows(rows,'_expShowAll');
   tb.innerHTML=_expShown.map(function(i){
     var t=i.id?(_tbl[i.mod]||''):'';
-    var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'
+    var act=t?('<button class="btn btn-d btn-sm" data-vt="'+esc(t)+'" data-vi="'+esc(i.id)+'" onclick="showView(this.dataset.vt,this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41\ufe0f</button>'
       +' <button class="btn btn-d btn-sm" data-st="'+esc(t)+'" data-si="'+esc(i.id)+'" onclick="openTskModal(this.dataset.st,this.dataset.si)" title="\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d4">\u2795</button>'):'-';
     if(i.mod==='drl')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dty="'+esc(i.name)+'" onclick="_drlNew(this.dataset.dty)" title="\u05e8\u05e9\u05d5\u05dd \u05ea\u05e8\u05d2\u05d9\u05dc \u05e9\u05d1\u05d5\u05e6\u05e2">+ \u05ea\u05e8\u05d2\u05d9\u05dc</button>';
-    if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
+    if(i.mod==='thz')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'tour_hazards\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41\ufe0f</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,true)" title="\u05e0\u05d1\u05d3\u05e7 \u05d1\u05de\u05e7\u05d5\u05dd, \u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05d4\u05d7\u05d6\u05d9\u05e7">\u2705 \u05d4\u05d7\u05d6\u05d9\u05e7</button> <button class="btn btn-d btn-sm" data-ri="'+esc(i.id)+'" onclick="_thzRckDo(this.dataset.ri,false)" title="\u05d4\u05ea\u05d9\u05e7\u05d5\u05df \u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7, \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9">\u05dc\u05d0 \u05d4\u05d7\u05d6\u05d9\u05e7</button>';
     if(i.mod==='smp')act='<button class="btn btn-d btn-sm" onclick="goPage(\'docs\')" title="\u05dc\u05de\u05e1\u05de\u05db\u05d9\u05dd">+ \u05de\u05e1\u05de\u05da</button>';
     if(i.mod==='mr')act='<button class="btn btn-d btn-sm" onclick="goPage(\'mr\')" title="\u05dc\u05d3\u05e3 \u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05d4\u05e0\u05d4\u05dc\u05d4">+ \u05e1\u05e7\u05d9\u05e8\u05d4</button>';
-    if(i.mod==='leg')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'leg\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41</button>'+(i.e?' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="_legReconfirm(this.dataset.li)" title="\u05e0\u05d1\u05d3\u05e7 \u05d4\u05d9\u05d5\u05dd, \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4">\u2705 \u05d1\u05ea\u05d5\u05e7\u05e3</button>':'')+' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="editLeg(this.dataset.li)" title="\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4">\u270f\ufe0f \u05e7\u05d1\u05d9\u05e2\u05d4</button>';
+    if(i.mod==='leg')act='<button class="btn btn-d btn-sm" data-vi="'+esc(i.id)+'" onclick="showView(\'leg\',this.dataset.vi)" title="\u05e6\u05e4\u05d4">\ud83d\udc41\ufe0f</button>'+(i.e?' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="_legReconfirm(this.dataset.li)" title="\u05e0\u05d1\u05d3\u05e7 \u05d4\u05d9\u05d5\u05dd, \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4 \u05e2\u05d3\u05d9\u05d9\u05df \u05e0\u05db\u05d5\u05e0\u05d4">\u2705 \u05d1\u05ea\u05d5\u05e7\u05e3</button>':'')+' <button class="btn btn-d btn-sm" data-li="'+esc(i.id)+'" onclick="editLeg(this.dataset.li)" title="\u05dc\u05e9\u05e0\u05d5\u05ea \u05d0\u05ea \u05d4\u05e7\u05d1\u05d9\u05e2\u05d4">\u270f\ufe0f \u05e7\u05d1\u05d9\u05e2\u05d4</button>';
     if(i.mod==='env')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-ety="'+esc(i.name)+'" onclick="_envNew(this.dataset.ety)" title="\u05e8\u05e9\u05d5\u05dd \u05de\u05d3\u05d9\u05d3\u05d4 \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05de\u05d3\u05d9\u05d3\u05d4</button>';
     if(i.mod==='aud')act=(t?act+' ':'')+'<button class="btn btn-d btn-sm" data-dar="'+esc(i.name)+'" onclick="_audNew(this.dataset.dar)" title="\u05e8\u05e9\u05d5\u05dd \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd \u05e9\u05d1\u05d5\u05e6\u05e2\u05d4">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea</button>';
     return '<tr><td><strong>'+esc(i.name)+'</strong></td><td>'+(i.owner?esc(i.owner):'-')+'</td><td><span class="b bX">'+esc(i.modLabel)+'</span></td><td>'+(i.e?fd(i.e):'-')+'</td><td>'+eb(i.e)+'</td><td data-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">'+act+'</td></tr>';
@@ -9298,10 +9298,10 @@ function rEqi(){
     tb.innerHTML='<tr><td colspan="8" class="et" data-label="">'+_emptyEqi+'</td></tr>';return;
   }
   tb.innerHTML=rows.map(function(r){
-    var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var del='<button class="btn btn-d btn-sm" data-dtbl="equip_inspections" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     var edit='<button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="eqiEdit(this.dataset.eid)">&#9998;</button>';
-    var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    var view='<button class="btn btn-d btn-sm" data-vtbl="equip_inspections" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
+    var pdf='<button class="btn btn-d btn-sm" data-ptbl="equip_inspections" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>';
     var clone='<button class="btn btn-d btn-sm" data-cid="'+esc(r.id)+'" onclick="_eqiClone(this.dataset.cid)" title="\u05e9\u05db\u05e4\u05dc \u05dc\u05e6\u05d9\u05d5\u05d3 \u05d3\u05d5\u05de\u05d4 (\u05de\u05e0\u05e7\u05d4 \u05e7\u05d5\u05d3 / \u05de\u05e1\u05f3 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 / \u05de\u05e1\u05f3 \u05e8\u05d9\u05e9\u05d5\u05d9)">&#128203;</button>';
     var locTxt=(r.location_id&&typeof _locName==='function'?_locName(r.location_id):'')||r.loc||'';
     // Identifier badge fallback chain so every record surfaces *something*
@@ -10456,11 +10456,11 @@ function rNm(){
   tb.innerHTML=rows.map(function(r){
     var sc=r.sev?(sevCls[r.sev]||'bX'):'bY';          // ungraded = waiting on the manager, not «nothing»
     var ph=r.photo_url?'<a data-sign="'+escU(r.photo_url)+'" target="_blank"><img loading="lazy" data-sign="'+escU(r.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle"></a>':'-';
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="near_miss" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="near_miss" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>';
     var areaTxt=r.location_id&&typeof _locName==='function'?_locName(r.location_id):'';
     if(!areaTxt)areaTxt=r.area||'-';
-    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'-')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u05d8\u05e8\u05dd \u05e1\u05d5\u05d5\u05d2')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+fd(r.d)+(r.t?' '+esc(r.t):'')+'</td><td>'+esc(areaTxt)+'</td><td style="max-width:160px;word-break:break-word">'+esc(String(r.descr||'').substring(0,60))+'</td><td>'+(r.rep?esc(r.rep):'-')+'</td><td><span class="b '+sc+'">'+(r.sev?esc(r.sev):'\u05d8\u05e8\u05dd \u05e1\u05d5\u05d5\u05d2')+'</span></td><td>'+sb(r.s)+'</td><td>'+ph+'</td><td>'+viewBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="near_miss" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';
   }).join('');_signifyDom(tb);
 }
 // Near-miss draft autosave. Same pattern as NCR/Inc but the nm modal has
@@ -10552,10 +10552,10 @@ function rRound(){
     return '<span style="font-size:11px">\u2705 '+legacyOk+'/6 (\u05e4\u05d5\u05e8\u05de\u05d8 \u05d9\u05e9\u05df)</span>';
   }
   tb.innerHTML=rows.map(function(r){
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" aria-label="\u05e6\u05e4\u05d4">&#128065;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="rounds" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" aria-label="\u05e6\u05e4\u05d4">&#128065;&#65039;</button>';
     var editBtn='<button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_roundEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">&#9998;</button>';
-    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="rounds" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'-')+'</td><td colspan="4" style="text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">'+esc(_rThemeLabel(r.theme))+'</div>'+_rSummarize(r)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+editBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" aria-label="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="rounds" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>';
+    return '<tr><td>'+fd(r.d)+'</td><td>'+(r.inspector?esc(r.inspector):'-')+'</td><td colspan="4" style="text-align:center"><div style="font-size:11px;color:var(--t2);margin-bottom:2px">'+esc(_rThemeLabel(r.theme))+'</div>'+_rSummarize(r)+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+editBtn+' '+pdfBtn+' <button class="btn btn-d btn-sm" data-dtbl="rounds" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" aria-label="\u05de\u05d7\u05e7">&#128465;&#65039;</button></td></tr>';
   }).join('');
 }
 // === Round themes (\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 \u2014 \u05ea\u05de\u05d5\u05ea) ===
@@ -11004,8 +11004,8 @@ function rThz(){
     var due=r.due?fd(r.due):(_thzNoDue(r)?'<span class="b bY">\u05d7\u05e1\u05e8 \u05d9\u05e2\u05d3</span>':'\u05d7\u05e1\u05e8');
     if(_thzOverdue(r))due='<span style="color:var(--red);font-weight:700">'+fd(r.due)+'<br><small>\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8 '+(-du(r.due))+' \u05d9\u05de\u05d9\u05dd</small></span>'+(_thzEsc(-du(r.due),r.sev)?'<div><span class="b bR">\u05d4\u05e1\u05dc\u05de\u05d4</span></div>':'');
     var sevC=r.sev==='\u05d2\u05d1\u05d5\u05d4\u05d4'?'bR':(r.sev==='\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea'?'bY':'bG');
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tour_hazards" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tour_hazards" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tour_hazards" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="tour_hazards" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     return '<tr><td>'+esc(r.n||'')+'</td>'
       +'<td>'+(r.d?fd(r.d):'<span style="color:var(--t3)">\u05d7\u05e1\u05e8</span>')+'<div style="font-size:10px;color:var(--t3)">\u05e1\u05d9\u05d5\u05e8 '+esc(r.tour_no||'')+(isNew?' | \u05d7\u05d3\u05e9':'')+'</div></td>'
       +'<td>'+esc(r.dept||'')+'<div style="font-size:10px;color:var(--t3)">'+esc(r.loc||'')+'</div></td>'
@@ -11696,9 +11696,9 @@ function rToolbox(){
   var rows=DB.toolbox||[];
   if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udde3\ufe0f<br>\u05d0\u05d9\u05df \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-toolbox\')">+ \u05e9\u05d9\u05d7\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).map(function(r){
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="toolbox" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="toolbox" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
+    var pdfBtn='<button class="btn btn-d btn-sm" data-ptbl="toolbox" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>';
+    var delBtn='<button class="btn btn-d btn-sm" data-dtbl="toolbox" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     return '<tr><td>'+fd(r.d)+'</td><td style="max-width:180px;word-break:break-word">'+esc(r.topic||'-')+(r.dep?'<div style="font-size:10px;color:var(--t3)">'+esc(r.dep)+'</div>':'')+'</td><td>'+(r.presenter?esc(r.presenter):'-')+'</td><td>'+(r.attendees?esc(r.attendees):'-')+'</td><td>'+sb(r.s)+'</td><td>'+viewBtn+' '+pdfBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
@@ -11748,12 +11748,12 @@ function rTbt(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="et" data-label="">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea<br><button class="et-cta" onclick="openModal(\'m-tbt\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
     var n=_tbtReads(r.id),pub=r.s===_TBT_PUB;
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox_talks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="toolbox_talks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
     var linkBtn=pub?'<button class="btn btn-p btn-sm" data-id="'+esc(r.id)+'" onclick="tbtLink(this.dataset.id)" title="\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd">\ud83d\udd17 \u05e7\u05d9\u05e9\u05d5\u05e8</button> ':'';
     var grpBtn=pub?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtGroup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05e4\u05e0\u05d9\u05dd \u05d0\u05dc \u05e4\u05e0\u05d9\u05dd: \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05da \u05e2\u05d5\u05d1\u05e8 \u05de\u05d9\u05d3 \u05dc\u05d9\u05d3">\ud83d\udc65 \u05d1\u05e7\u05d1\u05d5\u05e6\u05d4</button> ':'';
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var dupBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtDup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05e2\u05dd \u05d0\u05d5\u05ea\u05d5 \u05ea\u05d5\u05db\u05df">\ud83d\udccb \u05e9\u05db\u05e4\u05dc</button>';
-    var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+(r.dept?'<div style="font-size:10px;font-weight:700;color:var(--t2)">\ud83c\udfed '+esc(r.dept)+'</div>':'')+_tbtLangTag(r)+(r.kind==='induction'?'<div style="font-size:10px;font-weight:700;color:var(--c-blue-650-4,#1e3a8a)">\ud83c\udd95 '+_TBT_IND_L+'</div>':'')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN(r.dept)&&r.kind!=='induction'?_tbtSignedNow(r.id)+' / '+_tbtEmpN(r.dept):n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
@@ -12632,7 +12632,7 @@ function rAudit(){
       if(Array.isArray(r.changed)&&r.changed.length)t+=' - \u05e9\u05d3\u05d5\u05ea: '+r.changed.join(', ');
       var viewBtn='';
       if(r.op!=='del'&&r.record_id&&r.table_name){
-        viewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.table_name)+'" data-vid="'+esc(r.record_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1512;&#1513;&#1493;&#1502;&#1492;">&#128065;</button>';
+        viewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.table_name)+'" data-vid="'+esc(r.record_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1512;&#1513;&#1493;&#1502;&#1492;">&#128065;&#65039;</button>';
       }
       return '<tr><td style="font-size:11px;white-space:nowrap">'+dtStr+'</td><td><strong>'+esc(u)+'</strong></td><td><span style="color:'+oc+';font-weight:700">'+op+'</span></td><td><code style="font-size:11px">'+esc(r.table_name)+'</code></td><td style="max-width:240px;word-break:break-word">'+esc(t)+'</td><td>'+viewBtn+'</td></tr>';
     }).join('');
@@ -12732,7 +12732,7 @@ function _tskMenu(taskId,anchor){
   sep();
   item('\u270f','\u05e2\u05e8\u05d9\u05db\u05d4 \u05de\u05dc\u05d0\u05d4',function(){editTsk(taskId);});
   item('\ud83d\udccb','\u05e9\u05db\u05e4\u05dc \u05de\u05e9\u05d9\u05de\u05d4',function(){_tskDuplicate(taskId);});
-  item('\ud83d\uddd1','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('tasks',taskId);},'#cc1f1f');
+  item('\ud83d\uddd1\ufe0f','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('tasks',taskId);},'#cc1f1f');
   document.body.appendChild(menu);
   // Keep the menu inside the viewport. Without this a long label makes the
   // menu wider than the phone, and since it is anchored by `right` the
@@ -12852,11 +12852,11 @@ window._popMenu=function(anchor,menuId,fill){
 window._legRowMenu=function(id,anchor){
   var rep=(typeof _role==='function'&&_role()==='reporter');
   _popMenu(anchor,'leg-row-menu',function(item,sep){
-    item('👁','\u05e6\u05e4\u05d9\u05d9\u05d4',function(){showView('leg',id);});
+    item('👁\ufe0f','\u05e6\u05e4\u05d9\u05d9\u05d4',function(){showView('leg',id);});
     if(rep)return;
     sep();
     item('✎','\u05e2\u05e8\u05d9\u05db\u05d4',function(){editLeg(id);});
-    item('🗑','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('leg',id);},true);
+    item('🗑\ufe0f','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('leg',id);},true);
   });
 };
 window._itypeRowMenu=function(id,level,anchor){
@@ -12866,7 +12866,7 @@ window._itypeRowMenu=function(id,level,anchor){
     if(level<3)item('＋','\u05d4\u05d5\u05e1\u05e3 \u05ea\u05ea-\u05e1\u05d5\u05d2',function(){_itypeOpenAdd(level+1,id);});
     item('✎','\u05e2\u05e8\u05d9\u05db\u05d4',function(){editItype(id);});
     sep();
-    item('🗑','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('issue_types',id);},true);
+    item('🗑\ufe0f','\u05de\u05d7\u05d9\u05e7\u05d4',function(){askDel('issue_types',id);},true);
   });
 };
 // A2: the equipment page's secondary actions, formerly nine header buttons.
@@ -12876,13 +12876,13 @@ window._eqiMoreMenu=function(anchor){
     item('📄','\u05d9\u05d9\u05d1\u05d5\u05d0 Excel',function(){openEqiXl();});
     item('💾','\u05d9\u05d9\u05d1\u05d5\u05d0 \u05de\u05d0\u05d2\u05e8 \u05de\u05dc\u05d0',function(){openEqiXl2();});
     sep();
-    item('🖨','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05d5\u05d7 \u05de\u05e1\u05db\u05dd',function(){_eqiPrintAll();});
+    item('🖨\ufe0f','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05d5\u05d7 \u05de\u05e1\u05db\u05dd',function(){_eqiPrintAll();});
     item('📊','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV',function(){_eqiExportCsv();});
     item('🔢','\u05d2\u05d9\u05dc\u05d9\u05d5\u05df QR \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4',function(){_eqiPrintQrSheet();});
     sep();
     item('📋','\u05e6\u05d5\u05e8 \u05de\u05e9\u05d9\u05de\u05d5\u05ea \u05dc\u05e6\u05d9\u05d5\u05d3 ≤30 \u05d9\u05d5\u05dd',function(){_eqiAutoTasksRun();});
     sep();
-    item('🗑','\u05de\u05d7\u05e7 \u05d4\u05db\u05dc',function(){delAllEqi();},true);
+    item('🗑\ufe0f','\u05de\u05d7\u05e7 \u05d4\u05db\u05dc',function(){delAllEqi();},true);
   });
 };
 function _tskDuplicate(id){
@@ -13187,7 +13187,7 @@ function _codesRender(){
       +'<div style="font-weight:700">'+esc(c.label)+'</div>'
       +'<div style="font-size:12px;color:var(--t2);margin:2px 0 6px">'+esc(src[c.source]||'')+(c.updated_at?' | \u05d4\u05d5\u05d7\u05dc\u05e4\u05d4 '+fd(String(c.updated_at).substring(0,10)):'')+'</div>'
       +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +(c.value?'<span id="code-v-'+esc(c.key)+'" style="font:700 16px monospace;letter-spacing:1px;direction:ltr">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span><button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeShow(this.dataset.k)">\ud83d\udc41 \u05d4\u05e6\u05d2</button>':'')
+      +(c.value?'<span id="code-v-'+esc(c.key)+'" style="font:700 16px monospace;letter-spacing:1px;direction:ltr">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span><button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeShow(this.dataset.k)">\ud83d\udc41\ufe0f \u05d4\u05e6\u05d2</button>':'')
       +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,0)">\ud83c\udfb2 \u05e1\u05d9\u05e1\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05d0\u05e7\u05e8\u05d0\u05d9\u05ea</button>'
       +'<button type="button" class="btn btn-s btn-sm" data-k="'+esc(c.key)+'" onclick="_codeSet(this.dataset.k,1)">\u270f\ufe0f \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05dc\u05d9</button>'
       +'</div></div>';
@@ -13799,15 +13799,15 @@ function rTasks(){
     if(r.project_id&&typeof _prjName==='function'){var pn=_prjName(r.project_id);if(pn)src+=' <span class="b" style="background:var(--c-blue-50-12,#dcecff);color:var(--c-blue-500,#1d4ed8);font-size:9px">\ud83c\udfd7\ufe0f '+esc(pn.substring(0,15))+'</span>';}
     var actions;
     if(r.isVirtual){
-      var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1502;&#1511;&#1493;&#1512;">&#128065;</button>';
+      var srcViewBtn='<button class="btn btn-d btn-sm" data-vtbl="'+esc(r.source_table)+'" data-vid="'+esc(r.source_id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1492; &#1489;&#1502;&#1511;&#1493;&#1512;">&#128065;&#65039;</button>';
       var promoteBtn='<button class="btn btn-d btn-sm" data-stbl="'+esc(r.source_table)+'" data-sid="'+esc(r.source_id)+'" onclick="openTskModal(this.dataset.stbl,this.dataset.sid)" title="&#1492;&#1508;&#1493;&#1498; &#1500;&#1502;&#1513;&#1497;&#1502;&#1492; &#1506;&#1510;&#1502;&#1488;&#1497;&#1514;">&#10133;</button>';
-      var srcDelBtn='<button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="'+esc(r.source_table)+'" data-did="'+esc(r.source_id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1514; &#1512;&#1513;&#1493;&#1502;&#1514; &#1492;&#1502;&#1511;&#1493;&#1512;">&#128465;</button>';
+      var srcDelBtn='<button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="'+esc(r.source_table)+'" data-did="'+esc(r.source_id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1514; &#1512;&#1513;&#1493;&#1502;&#1514; &#1492;&#1502;&#1511;&#1493;&#1512;">&#128465;&#65039;</button>';
       actions=srcViewBtn+' '+promoteBtn+' '+srcDelBtn;
     }else{
-      var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;</button>';
+      var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;&#65039;</button>';
       var editBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="editTsk(this.dataset.tid)" title="&#1506;&#1512;&#1497;&#1499;&#1492; / &#1506;&#1491;&#1499;&#1493;&#1503; &#1513;&#1501;">&#9998;</button>';
       var menuBtn='<button class="btn btn-d btn-sm" data-tid="'+esc(r.id)+'" onclick="_tskMenu(this.dataset.tid,this)" title="&#1505;&#1496;&#1496;&#1493;&#1505; &#1502;&#1492;&#1497;&#1512;">⋯</button>';
-      var delBtn='<button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;</button>';
+      var delBtn='<button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="tasks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="&#1502;&#1495;&#1497;&#1511;&#1492;">&#128465;&#65039;</button>';
       actions=viewBtn+' '+editBtn+' '+menuBtn+' '+delBtn;
     }
     var cb=r.isVirtual?'':'<input type="checkbox" name="tsk-row-cb" value="'+esc(r.id)+'" onclick="_tskBulkToggle(this.value,this.checked)" style="cursor:pointer">';
@@ -13849,12 +13849,12 @@ function rTasks(){
 function rDocs(){
   var tb=g('tb-docs');if(!tb)return;
   if(!DB.docs.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83d\udcc4<br>\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-doc\')">+ \u05de\u05e1\u05de\u05da \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.docs.map(function(d){return '<tr><td><strong>'+esc(d.n)+'</strong></td><td>'+esc(d.c)+'</td><td>v'+esc(d.v)+'</td><td>'+(d.o?esc(d.o):'-')+'</td><td>'+eb(d.e)+'</td><td>'+sb(d.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="docs" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="docs" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.docs.map(function(d){return '<tr><td><strong>'+esc(d.n)+'</strong></td><td>'+esc(d.c)+'</td><td>v'+esc(d.v)+'</td><td>'+(d.o?esc(d.o):'-')+'</td><td>'+eb(d.e)+'</td><td>'+sb(d.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="docs" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="docs" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rAud(){
   var tb=g('tb-aud');if(!tb)return;
   if(!DB.auds.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udd0d<br>\u05d0\u05d9\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-aud\')">+ \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
-  tb.innerHTML=DB.auds.map(function(a){var _ns=_audNcrs(a),_no=_ns.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;return '<tr><td><strong>'+esc(a.n)+'</strong>'+(_ns.length?'<div style="font-size:11px;color:'+(_no?'var(--bad)':'var(--ok)')+'">NCR: '+_no+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05ea\u05d5\u05da '+_ns.length+'</div>':'')+'</td><td>'+(a.a?esc(a.a):'-')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(a.sc)+'%</span>':'-')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+esc(a.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-etbl="auds" data-eid="'+esc(a.id)+'" onclick="_genEdit(this.dataset.etbl,this.dataset.eid)" title="\u05e2\u05e8\u05d9\u05db\u05d4">\u270e</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+esc(a.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.auds.map(function(a){var _ns=_audNcrs(a),_no=_ns.filter(function(n){return n.s!=='\u05e1\u05d2\u05d5\u05e8';}).length;return '<tr><td><strong>'+esc(a.n)+'</strong>'+(_ns.length?'<div style="font-size:11px;color:'+(_no?'var(--bad)':'var(--ok)')+'">NCR: '+_no+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05ea\u05d5\u05da '+_ns.length+'</div>':'')+'</td><td>'+(a.a?esc(a.a):'-')+'</td><td>'+fd(a.d)+'</td><td>'+(a.sc?'<span style="font-weight:700;color:'+(a.sc>=80?'var(--ok)':a.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(a.sc)+'%</span>':'-')+'</td><td>'+sb(a.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="auds" data-vid="'+esc(a.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button> <button class="btn btn-d btn-sm" data-etbl="auds" data-eid="'+esc(a.id)+'" onclick="_genEdit(this.dataset.etbl,this.dataset.eid)" title="\u05e2\u05e8\u05d9\u05db\u05d4">\u270e</button></td><td><button class="btn btn-d btn-sm" data-dtbl="auds" data-did="'+esc(a.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rNcr(){
 var tb=g('tb-ncr');if(!tb)return;
@@ -13970,7 +13970,7 @@ var _ncrClosedHidden=0;
 (function(){
   var b=g('ncr-tab-status');
   if(b){
-    b.innerHTML=_ncrHiding?'\ud83d\udc41 \u05db\u05d5\u05dc\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd':'\ud83d\udc41 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3';
+    b.innerHTML=_ncrHiding?'\ud83d\udc41\ufe0f \u05db\u05d5\u05dc\u05dc \u05e1\u05d2\u05d5\u05e8\u05d9\u05dd':'\ud83d\udc41\ufe0f \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d1\u05dc\u05d1\u05d3';
     b.className='btn '+(_ncrHiding?'btn-s':'btn-p');
   }
 })();
@@ -14027,7 +14027,7 @@ tb.innerHTML=rows.map(function(n){
   var ityp=(n.issue_type_id&&typeof _itypeName==='function')?_itypeName(n.issue_type_id):'';
   if(ityp)loc=loc?(loc+', 🎯'+ityp.substring(0,14)):('🎯'+ityp.substring(0,18));
   var delBtn='<button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="ncr" data-did="'+esc(n.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#10005;</button>';
-  var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
+  var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="ncr" data-vid="'+esc(n.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
   var editBtn='<button class="btn btn-d btn-sm" data-nid="'+esc(n.id)+'" onclick="editNcr(this.dataset.nid)" title="&#1506;&#1512;&#1497;&#1499;&#1492;">&#9998;</button>';
   // Verification is a two-tap trip through the view modal otherwise, and the
   // queue can be dozens long. Offer it on the row, for the rows that need it.
@@ -14158,7 +14158,7 @@ function rInc(){
   }catch(e){}
   if(!DB.inc.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">✓<span class="et-ic"></span>\u05d0\u05d9\u05df \u05d0\u05d9\u05e8\u05d5\u05e2\u05d9\u05dd \u05e8\u05e9\u05d5\u05de\u05d9\u05dd<br><span style="font-size:12px;color:var(--ok);font-weight:700">\u05db\u05dc \u05d4\u05db\u05d1\u05d5\u05d3 - \u05e8\u05e6\u05e3 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea\u05d9</span></td></tr>';return;}
   var sv_colors={'\u05e7\u05dc':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d7\u05de\u05d5\u05e8':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="\u05d7\u05de\u05d5\u05e8/\u05e7\u05e8\u05d9\u05d8\u05d9 \u05e4\u05ea\u05d5\u05d7 '+stAge+' \u05d9\u05de\u05d9\u05dd - \u05d7\u05e1\u05e8\u05d4 \u05d7\u05e7\u05d9\u05e8\u05d4" style="background:var(--c-red-50-4,#fde2e2);border:1px solid var(--c-red-600,#b91c1c);border-radius:10px;padding:1px 6px;color:var(--c-red-700,#7f1d1d);font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+esc(String(i.d||'').substring(0,30))+stBadge+'</td><td>'+esc(i.ty||'-')+'</td><td>'+(i.sv?'<span class="b '+(sv_colors[i.sv]||'bX')+'">'+esc(i.sv)+'</span>':'-')+'</td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':(i.dy===null||i.dy===undefined||i.dy==='')?'<span style="color:var(--c-gray-450,#888)" title="\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2">?</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(i.id)+'" onclick="editInc(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.inc.slice().sort(function(a,b){return new Date(b.dt)-new Date(a.dt);}).map(function(i){var stAge=_incStaleAge(i);var stBadge=stAge?' <span title="\u05d7\u05de\u05d5\u05e8/\u05e7\u05e8\u05d9\u05d8\u05d9 \u05e4\u05ea\u05d5\u05d7 '+stAge+' \u05d9\u05de\u05d9\u05dd - \u05d7\u05e1\u05e8\u05d4 \u05d7\u05e7\u05d9\u05e8\u05d4" style="background:var(--c-red-50-4,#fde2e2);border:1px solid var(--c-red-600,#b91c1c);border-radius:10px;padding:1px 6px;color:var(--c-red-700,#7f1d1d);font-size:10px;font-weight:700">🔍</span>':'';return '<tr><td>'+fd(i.dt)+'</td><td>'+esc(String(i.d||'').substring(0,30))+stBadge+'</td><td>'+esc(i.ty||'-')+'</td><td>'+(i.sv?'<span class="b '+(sv_colors[i.sv]||'bX')+'">'+esc(i.sv)+'</span>':'-')+'</td><td>'+(i.dy>0?'<span style="color:var(--bad);font-weight:700">'+i.dy+'</span>':(i.dy===null||i.dy===undefined||i.dy==='')?'<span style="color:var(--c-gray-450,#888)" title="\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2">?</span>':'0')+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="inc" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(i.id)+'" onclick="editInc(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button> <button class="btn btn-d btn-sm" data-ptbl="inc" data-pid="'+esc(i.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="inc" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 // ---- 6.9 ----
 // \u00ab\u05d0\u05d9\u05d6\u05d5 \u05de\u05d7\u05dc\u05e7\u05d4 \u05d1\u05e4\u05d9\u05d2\u05d5\u05e8 \u05d1\u05d4\u05d3\u05e8\u05db\u05d5\u05ea\u00bb is the first question an ISO 45001 auditor asks
@@ -14219,7 +14219,7 @@ function rTr(){
     }
   }catch(e){console.warn('tr-dept failed',e);}
   if(!DB.tr.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83c\udf93<br>\u05d0\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-tr\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
-  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+esc(t.w)+'</strong></td><td>'+esc(t.n)+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.tr.map(function(t){return '<tr><td><strong>'+esc(t.w)+'</strong></td><td>'+esc(t.n)+'</td><td>'+fd(t.d)+'</td><td>'+eb(t.e)+'</td><td>'+sb(t.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="tr" data-vid="'+esc(t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button> <button class="btn btn-d btn-sm" data-ptbl="tr" data-pid="'+esc(t.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="tr" data-did="'+esc(t.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rRsk(){
   var tb=g('tb-rsk');if(!tb)return;
@@ -14230,7 +14230,7 @@ function rRsk(){
     var revBadge=rev.state==='overdue'?'<span style="display:inline-block;background:var(--c-red-50-5,#fee2e2);color:var(--c-red-650-2,#991b1b);border:1px solid var(--c-red-550,#cc1f1f);font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8 '+(rev.days||'?')+' \u05d9\u05de\u05d9\u05dd">\u26a0 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05e4\u05d2\u05d4</span>':
       rev.state==='soon'?'<span style="display:inline-block;background:var(--c-amber-100-2,#fef3c7);color:var(--c-orange-700,#92400e);border:1px solid var(--c-orange-550,#d97706);font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1\u05e2\u05d5\u05d3 \u05d9\u05de\u05d9\u05dd \u05de\u05e2\u05d8\u05d9\u05dd">\u23f3 \u05e1\u05e7\u05d9\u05e8\u05d4 \u05d1-30 \u05d9\u05d5\u05dd</span>':
       rev.state==='never'?'<span style="display:inline-block;background:var(--c-red-50-5,#fee2e2);color:var(--c-red-650-2,#991b1b);border:1px solid var(--c-red-550,#cc1f1f);font-size:9px;padding:1px 5px;border-radius:6px;margin-right:4px" title="\u05d4\u05e1\u05d9\u05db\u05d5\u05df \u05de\u05e2\u05d5\u05dc\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e7\u05e8">\u26a0 \u05dc\u05dc\u05d0 \u05e1\u05e7\u05d9\u05e8\u05d4</span>':'';
-    return '<tr><td>'+String(r.d||'').substring(0,25)+revBadge+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';
+    return '<tr><td>'+String(r.d||'').substring(0,25)+revBadge+'</td><td>'+r.a+'</td><td>'+r.p+'</td><td>'+r.sv+'</td><td><strong style="color:'+(rpn>=15?'var(--bad)':rpn>=9?'var(--warn)':'var(--ok)')+'">'+rpn+'</strong></td><td><span class="b '+(rpn>=15?'bR':rpn>=9?'bY':'bG')+'">'+(rpn>=15?'\u05e7\u05e8\u05d9\u05d8\u05d9':rpn>=9?'\u05d2\u05d1\u05d5\u05d4':'\u05e0\u05de\u05d5\u05da')+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="rsk" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="rsk" data-did="'+esc(r.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';
   }).join('');
   _rskMatrix();
 }
@@ -14409,7 +14409,7 @@ function rEasp(){
     var potBadge=rpnP?'<span style="background:'+_easpRpnColor(rpnP)+';color:'+(rpnP>=12?'#fff':'#1a1d23')+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">'+(r.p_pot||'?')+'\u00d7'+(r.sv_pot||'?')+'='+rpnP+'</span>':'-';
     var sb=r.status?'<span class="b bX" style="font-size:10px">'+esc(r.status)+'</span>':'-';
     var clip=r.file_url?' <span title="\u05e7\u05d5\u05d1\u05e5 \u05de\u05e6\u05d5\u05e8\u05e3" style="font-size:11px">&#128206;</span>':'';
-    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong>'+clip+'<div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'-')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'-').substring(0,25))+'</td><td>'+_easpReviewBadge(r)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;</button></td></tr>';
+    return '<tr><td><strong>'+esc(String(r.aspect||'').substring(0,30))+'</strong>'+clip+'<div style="font-size:10px;color:var(--t3)">'+esc(String(r.activity||'').substring(0,30))+'</div></td><td style="font-size:11px">'+esc(r.lifecycle||'-')+'</td><td>'+curBadge+'</td><td>'+potBadge+'</td><td>'+sb+'</td><td style="font-size:11px">'+esc(String(r.owner||'-').substring(0,25))+'</td><td>'+_easpReviewBadge(r)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env_aspects" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="\u05e6\u05e4\u05d4">&#128065;&#65039;</button> <button class="btn btn-d btn-sm" data-eid="'+esc(r.id)+'" onclick="editEasp(this.dataset.eid)" title="\u05e2\u05e8\u05d5\u05da">&#9998;</button></td><td><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" data-dtbl="env_aspects" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)" title="\u05de\u05d7\u05e7">&#128465;&#65039;</button></td></tr>';
   }).join('');
 }
 function svEasp(){
@@ -14468,7 +14468,7 @@ function _locRenderNode(node,allRows){
   var counts='';
   if(nNcr)counts+=' <span class="b bR" style="font-size:9px" title="NCR \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">NCR '+nNcr+'</span>';
   if(nNm)counts+=' <span class="b bY" style="font-size:9px" title="\u05db\u05de\u05e2\u05d8 \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd">\u05db\u05de\u05e2\u05d8 '+nNm+'</span>';
-  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+  var html='<div style="margin-right:'+indent+'px;padding:8px 10px;background:'+bgColor+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;color:var(--t3);min-width:32px;font-weight:600">'+levelLabel+'</span><strong style="flex:1">'+esc(node.name)+counts+'</strong>'+addBtn+'<button class="btn btn-d btn-sm" onclick="editLoc(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'locations\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑\ufe0f</button></div>';
   children.forEach(function(c){html+=_locRenderNode(c,allRows);});
   return html;
 }
@@ -15385,7 +15385,7 @@ function rItp(){
     if(r.next_due){var dd=du(r.next_due);if(dd<0)dueCol='var(--bad)';else if(dd<=30)dueCol='var(--warn)';}
     var bg=r.active?'#dcfce7':'#fce4e4';
     var act=r.active?'\u05e4\u05e2\u05d9\u05dc':'\u05dc\u05d0 \u05e4\u05e2\u05d9\u05dc';
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" style="background:var(--c-green-650,#16a34a)" onclick="_itpDone(\''+safeId+'\')" title="\u05d1\u05d5\u05e6\u05e2 - \u05e7\u05d3\u05dd \u05dc\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0">✓</button><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong style="flex:1">'+esc(r.name)+'</strong><span style="font-size:11px;color:var(--t3)">\u05db\u05dc '+esc(String(r.recur_count||1))+' '+esc(unitLbl[r.recur_unit]||r.recur_unit)+'</span><span style="font-size:11px;color:'+dueCol+';font-weight:600">📅 '+esc(due)+'</span><span class="b bX" style="font-size:9px">'+esc(act)+'</span><button class="btn btn-d btn-sm" style="background:var(--c-green-650,#16a34a)" onclick="_itpDone(\''+safeId+'\')" title="\u05d1\u05d5\u05e6\u05e2 - \u05e7\u05d3\u05dd \u05dc\u05de\u05d5\u05e2\u05d3 \u05d4\u05d1\u05d0">✓</button><button class="btn btn-d btn-sm" onclick="editItp(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'inspection_types\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑\ufe0f</button></div>';
   }).join('');
 }
 // recur_count / recur_unit were decoration: written, read back into the form,
@@ -15632,7 +15632,7 @@ function rPrj(){
     var safeId=esc(p.id);
     var range='';
     if(p.start_date||p.end_date){range='<span style="font-size:10px;color:var(--t3)">'+(p.start_date?fd(p.start_date):'?')+' → '+(p.end_date?fd(p.end_date):'?')+'</span>';}
-    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1;cursor:pointer" data-pid="'+safeId+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑</button></div>';
+    return '<div style="padding:8px 10px;background:'+bg+';border-radius:6px;margin-bottom:4px;display:flex;align-items:center;gap:8px"><strong style="flex:1;cursor:pointer" data-pid="'+safeId+'" onclick="ncrPrjFilter(this.dataset.pid);goPage(\'ncr\')">'+esc(p.name)+'</strong><span class="b bX" style="font-size:10px">'+esc(p.status||'')+'</span> '+range+'<button class="btn btn-d btn-sm" onclick="editPrj(\''+safeId+'\')" title="\u05e2\u05e8\u05d5\u05da">✏️</button><button class="btn btn-d btn-sm" style="background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff)" onclick="askDel(\'projects\',\''+safeId+'\')" title="\u05de\u05d7\u05e7">🗑\ufe0f</button></div>';
   }).join('');
 }
 function _prjOpenAdd(){
@@ -15961,7 +15961,7 @@ function _empLeft(e){return !!(e&&/^\d{4}-\d{2}-\d{2}/.test(String(e.left_d||'')
 function rEmp(){
   var tb=g('tb-emp');if(!tb)return;
   if(!DB.emp.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83d\udc65<br>\u05d0\u05d9\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-emp\')">+ \u05e2\u05d5\u05d1\u05d3 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.emp.slice().sort(function(a,b){return (_empLeft(a)?1:0)-(_empLeft(b)?1:0);}).map(function(e){return '<tr'+(_empLeft(e)?' style="opacity:.6"':'')+'><td><strong>'+esc(e.n)+'</strong>'+(_empLeft(e)?' <span class="b bX">\u05e2\u05d6\u05d1 '+fd(e.left_d)+'</span>':'')+'</td><td>'+(e.r?esc(e.r):'-')+'</td><td>'+(e.dep?esc(e.dep):'-')+'</td><td>'+(e.ph?esc(e.ph):'-')+'</td><td>'+(e.em?esc(e.em):'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.emp.slice().sort(function(a,b){return (_empLeft(a)?1:0)-(_empLeft(b)?1:0);}).map(function(e){return '<tr'+(_empLeft(e)?' style="opacity:.6"':'')+'><td><strong>'+esc(e.n)+'</strong>'+(_empLeft(e)?' <span class="b bX">\u05e2\u05d6\u05d1 '+fd(e.left_d)+'</span>':'')+'</td><td>'+(e.r?esc(e.r):'-')+'</td><td>'+(e.dep?esc(e.dep):'-')+'</td><td>'+(e.ph?esc(e.ph):'-')+'</td><td>'+(e.em?esc(e.em):'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 
 // Every task spawned from one record, newest first. The link has always been
@@ -16092,7 +16092,7 @@ var VIEW_CONFIG={
   projects:{title:'\u05e4\u05e8\u05d5\u05d9\u05d9\u05e7\u05d8',back:'prj',fields:[['\u05e9\u05dd','name'],['\u05ea\u05d9\u05d0\u05d5\u05e8','description'],['\u05d4\u05ea\u05d7\u05dc\u05d4','start_date'],['\u05e1\u05d9\u05d5\u05dd','end_date'],['\u05e1\u05d8\u05d8\u05d5\u05e1','status']]}
 };
 // Catalog tables have no read-only view page \u2014 they are managed through
-// their edit modal. Virtual tasks (dashboard "today", tasks list \ud83d\udc41) still
+// their edit modal. Virtual tasks (dashboard "today", tasks list \ud83d\udc41\ufe0f) still
 // reach them via showView(source_table, id), so route those to the editor
 // instead of toasting "table not supported". The modals are global, so this
 // works from any page without navigating away.
@@ -17257,7 +17257,7 @@ function _mrPrevDecRender(){
         +'<span style="flex:1;min-width:0">'+esc(x.t.title||'')
         +'<div style="font-size:11px;color:var(--t3)">'+(x.t.assignee?esc(x.t.assignee):'\u05dc\u05dc\u05d0 \u05d0\u05d7\u05e8\u05d0\u05d9')+(x.t.due?', \u05d9\u05e2\u05d3 '+fd(x.t.due):'')+'</div></span>'
         +'<span style="font-size:12px;white-space:nowrap">'+_MR_DEC_LBL[x.st]+'</span>'
-        +'<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(x.t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>'
+        +'<button class="btn btn-d btn-sm" data-vtbl="tasks" data-vid="'+esc(x.t.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>'
         +'</div>';
     }).join('');
 }
@@ -17281,8 +17281,8 @@ function _mrReviewsRender(){
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--c-gray-50-4,#f0f0f0)">'
       +'<span style="flex:1;min-width:0"><strong>'+esc(kind)+'</strong>'+(r.period?(', '+esc(r.period)):'')
       +'<div style="font-size:11px;color:var(--t3)">'+esc(when)+(r.created_by?(', '+esc(r.created_by)):'')+'</div></span>'
-      +'<button class="btn btn-d btn-sm" data-vtbl="mgmt_reviews" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button> '
-      +'<button class="btn btn-d btn-sm" data-ptbl="mgmt_reviews" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>'
+      +'<button class="btn btn-d btn-sm" data-vtbl="mgmt_reviews" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button> '
+      +'<button class="btn btn-d btn-sm" data-ptbl="mgmt_reviews" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>'
       +'</div>';
   }).join('');
 }
@@ -18862,7 +18862,7 @@ function _printReportDo(tbl,id,cfg,rec,pUrl,fileSigned,signedUrls){
     '.noprint .sz{background:var(--c-white,#fff);color:var(--c-gray-800,#333);border:1px solid var(--c-gray-400-2,#999)}'+
     '@media print{.noprint{display:none}body{margin:10mm}.photo img{max-height:95vh}}'+
     '</style></head><body>'+
-    '<div class="noprint"><button onclick="_tryPrint(this)">\uD83D\uDDA8 \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
+    '<div class="noprint"><button onclick="_tryPrint(this)">\uD83D\uDDA8\ufe0f \u05d4\u05d3\u05e4\u05e1 / \u05e9\u05de\u05d5\u05e8 \u05db-PDF</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'95vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05dc\u05d0\u05d4</button>'+
     '<button class="sz" onclick="document.querySelector(\'.photo img\').style.maxHeight=\'50vh\'">\u05ea\u05de\u05d5\u05e0\u05d4 \u05d7\u05e6\u05d9 \u05e2\u05de\u05d5\u05d3</button>'+
     '</div>'+
@@ -18993,9 +18993,9 @@ function rHearing(){
   var cnt=g('hearing-count');if(cnt)cnt.textContent=list.length+' / '+(DB.hearing_tests||[]).length+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea';
   if(!list.length){tb.innerHTML='<tr><td colspan="11" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   tb.innerHTML=list.map(function(r){
-    var view='<button class="btn btn-d btn-sm" data-vtbl="hearing_tests" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button>';
-    var pdf='<button class="btn btn-d btn-sm" data-ptbl="hearing_tests" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;</button>';
-    var del='<button class="btn btn-d btn-sm" data-dtbl="hearing_tests" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>';
+    var view='<button class="btn btn-d btn-sm" data-vtbl="hearing_tests" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>';
+    var pdf='<button class="btn btn-d btn-sm" data-ptbl="hearing_tests" data-pid="'+esc(r.id)+'" onclick="printReport(this.dataset.ptbl,this.dataset.pid)" title="PDF">&#128424;&#65039;</button>';
+    var del='<button class="btn btn-d btn-sm" data-dtbl="hearing_tests" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
     var notes=(r.notes||'').replace(/</g,'&lt;');if(notes.length>32)notes=notes.substring(0,32)+'...';
     return '<tr><td><strong>'+(r.emp_name?esc(r.emp_name):'-')+'</strong></td><td>'+(r.emp_id?esc(r.emp_id):'-')+'</td><td>'+(r.age?esc(r.age):'-')+'</td><td>'+(r.role?esc(r.role):'-')+'</td><td>'+(r.dept?esc(r.dept):'-')+'</td><td>'+fd(r.test_date)+'</td><td>'+(r.e?eb(r.e):'<button class="btn btn-d btn-sm" data-hid="'+esc(r.id)+'" onclick="_hearSetExp(this.dataset.hid)" title="\u05e7\u05d1\u05e2 \u05ea\u05d0\u05e8\u05d9\u05da \u05ea\u05e4\u05d5\u05d2\u05d4" style="font-size:11px">+ \u05ea\u05e4\u05d5\u05d2\u05d4</button>')+'</td><td style="max-width:200px">'+notes+'</td><td>'+(r.inspector?esc(r.inspector):'-')+'</td><td>'+view+' '+pdf+'</td><td>'+del+'</td></tr>';
   }).join('');
@@ -19110,8 +19110,8 @@ function rPtw(){
   if(!rows.length){tb.innerHTML='<tr><td colspan="8" class="et" data-label="">\ud83d\udd12<br>\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-ptw\')">+ \u05d4\u05e8\u05e9\u05d0\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(p){
     var vid=esc(p.id);
-    var vbtn='<button class="btn btn-sm" style="background:var(--c-blue-350,#4d9fff);color:var(--c-white,#fff);border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;</button>';
-    var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;</button>';
+    var vbtn='<button class="btn btn-sm" style="background:var(--c-blue-350,#4d9fff);color:var(--c-white,#fff);border:none;padding:3px 8px;border-radius:4px;cursor:pointer" data-vid="'+vid+'" onclick="rPtwView(this.dataset.vid);goPage(\x27ptw-view\x27)">&#128065;&#65039;</button>';
+    var dbtn='<button class="btn btn-d btn-sm" data-did="'+vid+'" onclick="delById(\x27ptw\x27,this.dataset.did)">&#128465;&#65039;</button>';
     var areaTxt=(p.location_id&&typeof _locName==='function'?_locName(p.location_id):'')||p.area||'';
     return '<tr><td><span class="b bX">'+(p.num||'')+'</span></td><td><strong>'+(p.con||'')+'</strong></td><td style="font-size:11px">'+(p.types||'').substring(0,25)+'</td><td>'+fd(p.ds)+'</td><td style="font-size:11px">'+(p.ts||'')+'-'+(p.te||'')+'</td><td>'+esc(areaTxt)+'</td><td>'+sb(p.s)+'</td><td>'+vbtn+'</td><td>'+dbtn+'</td></tr>';
   }).join('');
@@ -19119,7 +19119,7 @@ function rPtw(){
 function rPpe(){
   var tb=g('tb-ppe');if(!tb)return;
   if(!DB.ppe.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\u26d1\ufe0f<br>\u05d0\u05d9\u05df \u05e6\u05d9\u05d5\u05d3<br><button class="et-cta" onclick="openModal(\'m-ppe\')">+ \u05e4\u05e8\u05d9\u05d8 PPE \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.ppe.map(function(p){var cm={'\u05ea\u05e7\u05d9\u05df':'bG','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05d7\u05dc\u05e4\u05d4':'bY','\u05e4\u05d2\u05d5\u05dd':'bR'};return '<tr><td>'+esc(p.ty)+'</td><td>'+(p.w?esc(p.w):'-')+'</td><td>'+(p.m?esc(p.m):'-')+'</td><td>'+fd(p.d)+'</td><td>'+eb(p.e)+'</td><td><span class="b '+(cm[p.c]||'bX')+'">'+esc(p.c)+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="ppe" data-vid="'+esc(p.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ppe" data-did="'+esc(p.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ppe.map(function(p){var cm={'\u05ea\u05e7\u05d9\u05df':'bG','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05d7\u05dc\u05e4\u05d4':'bY','\u05e4\u05d2\u05d5\u05dd':'bR'};return '<tr><td>'+esc(p.ty)+'</td><td>'+(p.w?esc(p.w):'-')+'</td><td>'+(p.m?esc(p.m):'-')+'</td><td>'+fd(p.d)+'</td><td>'+eb(p.e)+'</td><td><span class="b '+(cm[p.c]||'bX')+'">'+esc(p.c)+'</span></td><td><button class="btn btn-d btn-sm" data-vtbl="ppe" data-vid="'+esc(p.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ppe" data-did="'+esc(p.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 // Robust display helpers for the Safety Tours (ins) list. Legacy rows hold
 // dates as DD.MM.YYYY strings (not ISO) and non-percentage values in the
@@ -19163,18 +19163,18 @@ function _insScore(sc){
 function rIns(){
   var tb=g('tb-ins');if(!tb)return;
   if(!DB.ins.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83d\udeb6<br>\u05d0\u05d9\u05df \u05e1\u05d9\u05d5\u05e8\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-ins\')">+ \u05e1\u05d9\u05d5\u05e8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+_insDate(i.d)+'</td><td>'+esc(i.a?esc(i.a):'-')+'</td><td>'+esc(i.i?esc(i.i):'-')+'</td><td>'+_insScore(i.sc)+'</td><td>'+esc((i.fn?esc(i.fn):'').substring(0,30))+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ins.map(function(i){return '<tr><td>'+_insDate(i.d)+'</td><td>'+esc(i.a?esc(i.a):'-')+'</td><td>'+esc(i.i?esc(i.i):'-')+'</td><td>'+_insScore(i.sc)+'</td><td>'+esc((i.fn?esc(i.fn):'').substring(0,30))+'</td><td>'+sb(i.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ins" data-vid="'+esc(i.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ins" data-did="'+esc(i.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rDrl(){
   var tb=g('tb-drl');if(!tb)return;
   if(!DB.drl.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udea8<br>\u05d0\u05d9\u05df \u05ea\u05e8\u05d2\u05d9\u05dc\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-drl\')">+ \u05ea\u05e8\u05d2\u05d9\u05dc \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+esc(d.ty)+_drlFndBadge(d.id)+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(d.sc)+'%</span>':'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.drl.map(function(d){return '<tr><td>'+esc(d.ty)+_drlFndBadge(d.id)+'</td><td>'+fd(d.d)+'</td><td>'+(d.p||0)+'</td><td>'+(d.dur||0)+' \u05d3\u05e7</td><td>'+(d.sc?'<span style="font-weight:700;color:'+(d.sc>=80?'var(--ok)':d.sc>=60?'var(--warn)':'var(--bad)')+'">'+esc(d.sc)+'%</span>':'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="drl" data-vid="'+esc(d.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="drl" data-did="'+esc(d.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rCtr(){
   var tb=g('tb-ctr');if(!tb)return;
   if(!DB.ctr.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83e\udd1d<br>\u05d0\u05d9\u05df \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-ctr\')">+ \u05e7\u05d1\u05dc\u05df \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   var tc={'\u05d4\u05d5\u05db\u05e9\u05e8':'bG','\u05dc\u05d0 \u05d4\u05d5\u05db\u05e9\u05e8':'bR','\u05d3\u05d5\u05e8\u05e9 \u05d4\u05db\u05e9\u05e8\u05d4':'bY'};
-  tb.innerHTML=DB.ctr.map(function(c){return '<tr><td><strong>'+esc(c.n)+'</strong></td><td>'+(c.ty?esc(c.ty):'-')+'</td><td>'+(c.c?esc(c.c):'-')+'</td><td>'+eb(c.e)+'</td><td><span class="b '+(tc[c.tr]||'bX')+'">'+esc(c.tr)+'</span></td><td>'+sb(c.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ctr" data-vid="'+esc(c.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ctr" data-did="'+esc(c.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.ctr.map(function(c){return '<tr><td><strong>'+esc(c.n)+'</strong></td><td>'+(c.ty?esc(c.ty):'-')+'</td><td>'+(c.c?esc(c.c):'-')+'</td><td>'+eb(c.e)+'</td><td><span class="b '+(tc[c.tr]||'bX')+'">'+esc(c.tr)+'</span></td><td>'+sb(c.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="ctr" data-vid="'+esc(c.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="ctr" data-did="'+esc(c.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 // ISO 14001 8.1: a waste removal needs evidence, a delivery note number or the note itself.
 function _wstEvid(w){
@@ -19185,7 +19185,7 @@ function rWst(){
   var tb=g('tb-wst');if(!tb)return;
   if(!DB.wst.length){tb.innerHTML='<tr><td colspan="8" class="et">\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea</td></tr>';return;}
   var tot=DB.wst.reduce(function(s,w){return s+w.q;},0);
-  tb.innerHTML=DB.wst.map(function(w){return '<tr><td>'+fd(w.d)+'</td><td>'+esc(w.ty)+'</td><td>'+esc(w.q)+'</td><td>'+(w.c?esc(w.c):'-')+'</td><td>'+(w.h?esc(w.h):'-')+'</td><td>'+_wstEvid(w)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="wst" data-vid="'+esc(w.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="wst" data-did="'+esc(w.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.wst.map(function(w){return '<tr><td>'+fd(w.d)+'</td><td>'+esc(w.ty)+'</td><td>'+esc(w.q)+'</td><td>'+(w.c?esc(w.c):'-')+'</td><td>'+(w.h?esc(w.h):'-')+'</td><td>'+_wstEvid(w)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="wst" data-vid="'+esc(w.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="wst" data-did="'+esc(w.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 function rHzm(){
   var tb=g('tb-hzm');if(!tb)return;
@@ -19228,13 +19228,13 @@ function rHzm(){
   });
   if(!rows.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05d7\u05d5\u05de\u05e8\u05d9\u05dd</td></tr>';return;}
   var hc={'\u05e0\u05de\u05d5\u05da':'bG','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'bY','\u05d2\u05d1\u05d5\u05d4':'bR','\u05e7\u05e8\u05d9\u05d8\u05d9':'bR'};
-  tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'-')+'</td><td>'+(h.hs?'<span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span>':'-')+'</td><td>'+(h.q==null||h.q===''?'-':esc(h.q)+' \u05dc')+'</td><td>'+(locTxt?esc(locTxt):'-')+'</td><td>'+(h.ms?fd(h.ms):'')+(h.file_url?' <a data-sign="'+escU(h.file_url)+'" target="_blank" rel="noopener" style="color:var(--c-blue-450,#2563eb)">\ud83d\udcc4 SDS</a>':' <span style="color:var(--c-red-600,#b91c1c)">\u05d7\u05e1\u05e8</span>')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=rows.map(function(h){var locTxt=(h.location_id&&typeof _locName==='function'?_locName(h.location_id):'')||h.loc||'';return '<tr><td><strong>'+esc(h.n)+'</strong></td><td>'+(h.un?esc(h.un):'-')+'</td><td>'+(h.hs?'<span class="b '+(hc[h.hs]||'bX')+'">'+esc(h.hs)+'</span>':'-')+'</td><td>'+(h.q==null||h.q===''?'-':esc(h.q)+' \u05dc')+'</td><td>'+(locTxt?esc(locTxt):'-')+'</td><td>'+(h.ms?fd(h.ms):'')+(h.file_url?' <a data-sign="'+escU(h.file_url)+'" target="_blank" rel="noopener" style="color:var(--c-blue-450,#2563eb)">\ud83d\udcc4 SDS</a>':' <span style="color:var(--c-red-600,#b91c1c)">\u05d7\u05e1\u05e8</span>')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="hzm" data-vid="'+esc(h.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="hzm" data-did="'+esc(h.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
   if(typeof _signifyDom==='function')_signifyDom(tb);
 }
 function rEnv(){
   var tb=g('tb-env');if(!tb)return;
   if(!DB.env.length){tb.innerHTML='<tr><td colspan="7" class="et">\u05d0\u05d9\u05df \u05de\u05d3\u05d9\u05d3\u05d5\u05ea</td></tr>';return;}
-  tb.innerHTML=DB.env.map(function(e){return '<tr><td>'+fd(e.d)+'</td><td>'+esc(e.ty)+'</td><td>'+(e.me?esc(e.me):'-')+'</td><td><strong>'+(e.r?esc(e.r):'-')+'</strong> '+(e.u?esc(e.u):'')+'</td><td>'+(e.lim?esc(e.lim):'-')+'</td><td>'+sb(e.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="env" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button></td></tr>';}).join('');
+  tb.innerHTML=DB.env.map(function(e){return '<tr><td>'+fd(e.d)+'</td><td>'+esc(e.ty)+'</td><td>'+(e.me?esc(e.me):'-')+'</td><td><strong>'+(e.r?esc(e.r):'-')+'</strong> '+(e.u?esc(e.u):'')+'</td><td>'+(e.lim?esc(e.lim):'-')+'</td><td>'+sb(e.s)+'</td><td><button class="btn btn-d btn-sm" data-vtbl="env" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="env" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
 }
 // ISO 14001 \u00a76.1.3 \u2014 periodic legal-register review.
 // Hardcoded 12-month cycle (typical practice). last_review is the
@@ -19290,7 +19290,7 @@ function rLeg(){
       var q=encodeURIComponent('site:nevo.co.il "'+l.s+'"');
       srcBtn='<a href="https://www.google.com/search?q='+q+'" target="_blank" rel="noopener" class="btn btn-d btn-sm" title="&#1495;&#1508;&#1513; &#1489;&#1504;&#1489;&#1493;" style="text-decoration:none">\ud83d\udd0d</a>';
     }else{srcBtn='-';}
-    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+esc(l.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;</button>';
+    var viewBtn='<button class="btn btn-d btn-sm" data-vtbl="leg" data-vid="'+esc(l.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)" title="&#1510;&#1508;&#1497;&#1492;">&#128065;&#65039;</button>';
     // A3: edit + delete live behind one row menu (_legRowMenu) — two icons per row, not four.
     var moreBtn='<button class="btn btn-d btn-sm" data-lid="'+esc(l.id)+'" onclick="_legRowMenu(this.dataset.lid,this)" title="&#1506;&#1512;&#1497;&#1499;&#1492; / &#1502;&#1495;&#1497;&#1511;&#1492;">&#8943;</button>';
     var hasContent=l.summary||l.full_text;
@@ -20796,7 +20796,7 @@ function _truRowMenu(anchor,id){
       item('\u21a9','\u05d4\u05d7\u05d6\u05e8 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e4\u05ea\u05d5\u05d7',function(){_truMgrNotRelUndo(id);});
       sep();
     }
-    item('\ud83d\uddd1','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
+    item('\ud83d\uddd1\ufe0f','\u05de\u05d7\u05e7 \u05d3\u05d9\u05d5\u05d5\u05d7',function(){askDel('trustee_reports',id);},true);
   });
 }
 // quiet: the caller is closing several at once and will toast and re-render
@@ -21467,7 +21467,7 @@ function _truRosterRender(){
   box.innerHTML=rows.map(function(t){
     var off=t.active===false;
     return '<div class="tru-rep" data-tru-roster="'+esc(t.id)+'"><span style="flex:1;min-width:0"><strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.n)+'</strong>'+(t.dep?' <span style="color:var(--t2)">- '+esc(t.dep)+'</span>':'')+(t.notes?'<div style="font-size:11px;color:var(--t2)">'+esc(t.notes)+'</div>':'')+'</span>'
-      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">\u270e</button> <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+      +'<span style="white-space:nowrap"><button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterEdit(this.dataset.rid)" aria-label="\u05e2\u05e8\u05d5\u05da">\u270e</button> <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="_truRosterToggle(this.dataset.rid)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button> <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-rid="'+esc(t.id)+'" onclick="askDel(\'trustees\',this.dataset.rid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1\ufe0f</button></span></div>';
   }).join('');
   _truRosterGhosts();
 }
@@ -21595,7 +21595,7 @@ function _truTasksRender(){
     var edit=_truTasksSeeded()
       ? '<button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksEdit(this.dataset.tn)">\u05e2\u05e8\u05d5\u05da</button>'
         +(lock?'':' <button class="btn btn-s btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksToggle(this.dataset.tn)">'+(off?'\u05d4\u05e4\u05e2\u05dc':'\u05d4\u05e9\u05d1\u05ea')+'</button>'
-          +' <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksDel(this.dataset.tn)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button>')
+          +' <button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-tn="'+t.n+'" onclick="_truTasksDel(this.dataset.tn)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1\ufe0f</button>')
       : '';
     return '<div class="tru-rep" data-tru-task="'+t.n+'"><span style="flex:1;min-width:0">'
       +'<strong'+(off?' style="color:var(--t3);text-decoration:line-through"':'')+'>'+esc(t.icon||'')+' '+t.n+'. '+esc(t.t)+'</strong>'
@@ -21691,7 +21691,7 @@ function _truWinnerRender(){
     var ws=_truWinnersDesc();
     hist.innerHTML=ws.length?ws.map(function(w){
       return '<div class="tru-rep" data-tru-win="'+esc(w.m)+'"><span style="flex:1;min-width:0">\ud83c\udfc6 <strong>'+esc(w.u)+'</strong>, '+esc(_truMonthLabel(w.m))+(w.pts!=null?', '+w.pts+' \u05e0\u05e7\u05f3':'')+(w.note?'<div style="font-size:11px;color:var(--t2)">'+esc(w.note)+'</div>':'')+'</span>'
-        +'<span style="white-space:nowrap"><button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-wid="'+esc(w.id)+'" onclick="askDel(\'trustee_winners\',this.dataset.wid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1</button></span></div>';
+        +'<span style="white-space:nowrap"><button class="btn btn-d btn-sm" style="padding:8px 12px;min-height:44px;font-size:13px" data-wid="'+esc(w.id)+'" onclick="askDel(\'trustee_winners\',this.dataset.wid)" aria-label="\u05de\u05d7\u05e7">\ud83d\uddd1\ufe0f</button></span></div>';
     }).join(''):'<div style="font-size:13px;color:var(--t2);text-align:center;padding:10px">\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05db\u05e8\u05d6 \u05d0\u05e3 \u05d6\u05d5\u05db\u05d4.</div>';
   }
 }
@@ -21741,7 +21741,7 @@ function _truMgrMenu(anchor){
     item('\u2b07','\u05d9\u05d9\u05e6\u05d5\u05d0 CSV \u05dc\u05d5\u05d5\u05e2\u05d3\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d4\u05d7\u05d5\u05d3\u05e9 \u05d4\u05de\u05d5\u05e6\u05d2)',_truExportCsv);
     item('\ud83d\udcd7','\u05d9\u05d5\u05de\u05df \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05db\u05dc \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd, \u05e4\u05ea\u05d5\u05d7 / \u05e1\u05d2\u05d5\u05e8)',_truLogExportXlsx);
     item('\u26a0','\u05d9\u05d9\u05e6\u05d5\u05d0 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d0\u05e7\u05e1\u05dc (\u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd + \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2)',_hazExportXlsx);
-    item('\ud83d\udda8','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
+    item('\ud83d\udda8\ufe0f','\u05d4\u05d3\u05e4\u05e1 \u05d3\u05e3',function(){if(typeof _printPage==='function')_printPage();else window.print();});
     sep();
     item('\ud83e\uddba','\u05de\u05e1\u05da \u05d4\u05e0\u05d0\u05de\u05df (\u05dc\u05dc\u05d0 \u05e1\u05d9\u05e1\u05de\u05d4)',function(){empToggle(true);_truOpen();});
   });
@@ -25118,7 +25118,7 @@ function _mailPrefsRender(){
     var emailsList=(role.emails||[]).map(function(e,j){
       return '<div style="display:flex;gap:4px;margin:3px 0"><input type="email" class="inp" data-role-idx="'+idx+'" data-email-idx="'+j+'" value="'+esc(e)+'" style="flex:1;font-size:12px;padding:4px 6px;direction:ltr;text-align:left"><button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveEmail('+idx+','+j+')" style="background:var(--c-red-700,#7f1d1d);font-size:11px">×</button></div>';
     }).join('');
-    var removeBtn=role.custom?'<button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveRole('+idx+')" style="background:var(--c-red-700,#7f1d1d);font-size:10px;margin-right:6px">🗑 \u05d4\u05e1\u05d9\u05e8\u05d9 \u05ea\u05e4\u05e7\u05d9\u05d3</button>':'';
+    var removeBtn=role.custom?'<button type="button" class="btn btn-d btn-sm" onclick="_mailPrefsRemoveRole('+idx+')" style="background:var(--c-red-700,#7f1d1d);font-size:10px;margin-right:6px">🗑\ufe0f \u05d4\u05e1\u05d9\u05e8\u05d9 \u05ea\u05e4\u05e7\u05d9\u05d3</button>':'';
     return '<div style="background:var(--c-blue-50-6,#f8fafc);border:1px solid var(--c-gray-100-3,#e5e7eb);border-radius:8px;padding:10px;margin-bottom:8px">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:700;font-size:13px">'+esc(role.label)+'</div>'+removeBtn+'</div>'+
       emailsList+
@@ -25337,7 +25337,7 @@ window._odLoadInbox=function(){
           '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
             '<select id="rev-sel-'+safeId+'" style="flex:1;min-width:140px;padding:6px;border:1px solid var(--c-gray-200-2,#ccc);border-radius:6px;font-size:12px">'+optsHtml+'</select>'+
             '<button class="btn btn-p btn-sm" onclick="_odManualClassify(\''+safeId.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\',\''+safeName.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\')" style="background:var(--c-green-650,#16a34a);border-color:var(--c-green-650,#16a34a)">✓ \u05d9\u05d9\u05d1\u05d0</button>'+
-            '<button class="btn btn-d btn-sm" onclick="if(confirm(\'\u05dc\u05de\u05d7\u05d5\u05e7?\'))_odDeleteItem(\''+safeId.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\',this.parentElement.parentElement)" style="background:var(--c-red-700,#7f1d1d)">🗑 \u05de\u05d7\u05e7</button>'+
+            '<button class="btn btn-d btn-sm" onclick="if(confirm(\'\u05dc\u05de\u05d7\u05d5\u05e7?\'))_odDeleteItem(\''+safeId.replace(/\\/g,'\\\\').replace(/\x27/g,'\\\x27')+'\',this.parentElement.parentElement)" style="background:var(--c-red-700,#7f1d1d)">🗑\ufe0f \u05de\u05d7\u05e7</button>'+
           '</div>'+
         '</div>';
       }).join('');
@@ -25404,7 +25404,7 @@ function _odClassifyOne(item){
     actionsEl.style.display='';
     actionsEl.innerHTML='<button class="btn btn-p btn-sm" data-act="import" style="background:var(--c-green-650,#16a34a);border-color:var(--c-green-650,#16a34a)">✓ \u05d9\u05d9\u05d1\u05d0</button>'+
       '<button class="btn btn-d btn-sm" data-act="reclassify" style="background:var(--c-violet-400,#7c3aed)">⧮ \u05e1\u05d5\u05d5\u05d2 \u05de\u05d7\u05d3\u05e9</button>'+
-      '<button class="btn btn-d btn-sm" data-act="delete" style="background:var(--c-red-700,#7f1d1d)">🗑 \u05de\u05d7\u05e7 \u05de-OneDrive</button>';
+      '<button class="btn btn-d btn-sm" data-act="delete" style="background:var(--c-red-700,#7f1d1d)">🗑\ufe0f \u05de\u05d7\u05e7 \u05de-OneDrive</button>';
     actionsEl.querySelector('[data-act="import"]').onclick=function(){_odImportItem(item,suggestion,card);};
     actionsEl.querySelector('[data-act="reclassify"]').onclick=function(){classifyEl.innerHTML='⏳ \u05de\u05e1\u05d5\u05d5\u05d2 \u05de\u05d7\u05d3\u05e9...';_odClassifyOne(item);};
     actionsEl.querySelector('[data-act="delete"]').onclick=function(){if(confirm('\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5 \u05de-OneDrive?'))_odDeleteItem(item.id,card);};
@@ -26808,7 +26808,7 @@ function _expPdf(){window.print();}
       row.setAttribute('data-exp-for',id);
       row.style.cssText='gap:6px;justify-content:flex-end;margin:4px 0 6px';
       row.innerHTML='<button class="btn btn-s" data-tb="'+id+'" onclick="_expXlsx(this.dataset.tb)" title="&#1497;&#1497;&#1510;&#1493;&#1488; Excel">&#128196; Excel</button>'+
-                    '<button class="btn btn-s" onclick="_expPdf()" title="&#1492;&#1491;&#1508;&#1505;&#1492; / PDF">&#128424; PDF</button>';
+                    '<button class="btn btn-s" onclick="_expPdf()" title="&#1492;&#1491;&#1508;&#1505;&#1492; / PDF">&#128424;&#65039; PDF</button>';
       anchor.parentElement.insertBefore(row,anchor);
     });
   }

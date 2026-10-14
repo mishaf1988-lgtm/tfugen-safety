@@ -23,6 +23,7 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 - דוגמה: `'\u05e7\u05e8\u05d9\u05d8\u05d9'` במקום `'קריטי'`
 - המר עברית ב-JS/HTML inline strings. הערות רגילות יכולות להישאר.
 - סקריפט המרה: `node -e "console.log([...'טקסט'].map(c=>'\\\\u'+c.charCodeAt(0).toString(16).padStart(4,'0')).join(''))"`
+- **אימוג'י שברירת המחדל שלו טקסט** (🗑 🖨 👁 🌡 🗣) בכפתור: תמיד עם `\ufe0f` אחריו (`'\ud83d\uddd1\ufe0f'` או `&#128465;&#65039;`). בלעדיו כרום במחשב מצייר סמל טקסט בצבע הכפתור, והטלפון אימוג'י צבעוני. נאכף ב-`emoji-presentation-test.py` (14/10/2026, BACKLOG 13.22).
 
 ### 3. Empty Dates → null
 - אל תשלח מחרוזת ריקה `''` לעמודת date ב-Supabase
