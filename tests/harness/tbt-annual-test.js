@@ -107,6 +107,17 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     goPage('training'); rTbt(); o.staleBox = document.getElementById('tbt-stale').innerHTML;
     window.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true, n: 1, form_at: '2026-10-14T09:00:00Z' }), { status: 200 }));
     await tbtForm0801('st1'); o.afterForm = DB.toolbox_talks[0].form_at;
+    // 14/10/2026: "close signatures" on an annual training really closes it; the row shows closed + reopen
+    { const cl = []; window.confirm = () => true;
+      window.fetch = (u, init) => { const b = JSON.parse(init.body); cl.push(b); return Promise.resolve(new Response(JSON.stringify({ ok: true, closed_at: b.op === 'close' ? '2026-10-14T10:00:00Z' : null }), { status: 200 })); };
+      const rv = document.getElementById('tbt-link-revoke'); rv.dataset.id = 'st1';
+      o.cl = await tbtRevoke(); o.clCall = cl[0]; o.clRow = DB.toolbox_talks[0].closed_at;
+      rTbt(); const tr = Array.from(document.querySelectorAll('#tb-tbt tr')).find((x) => x.textContent.includes('שנתית ישנה'));
+      o.clTag = !!tr && /נסגרה לחתימות/.test(tr.textContent) && !!tr.querySelector('[onclick^="tbtClose"]') && !tr.querySelector('[onclick^="tbtLink"]');
+      o.ro = await tbtClose('st1', 'reopen'); o.roCall = cl[1]; o.roRow = DB.toolbox_talks[0].closed_at;
+      rTbt(); const tr2 = Array.from(document.querySelectorAll('#tb-tbt tr')).find((x) => x.textContent.includes('שנתית ישנה'));
+      o.roLink = !!tr2 && !!tr2.querySelector('[onclick^="tbtLink"]') && !/נסגרה לחתימות/.test(tr2.textContent);
+      o.closedErr = _tbtLinkErr(409, 'closed'); }
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -133,6 +144,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('stale: annual / quality, published, 7+ days ago, no form 08.01 (not filed, newer, weekly, draft)', r.stale === 'st1,st6', r.stale);
   check('stale: a banner on the trainings page with a who-signed button; nothing when all filed', /08\.01/.test(r.staleBox) && /tbtWho/.test(r.staleBox) && /שנתית ישנה/.test(r.staleBox) && r.staleNone === '', r.staleBox);
   check('filing 08.01 stamps form_at on the row, so the banner goes', r.afterForm === '2026-10-14T09:00:00Z', r.afterForm);
+  check('close signatures on an annual training: op close, closed_at on the row (not a new link)', r.cl === 'closed' && r.clCall && r.clCall.op === 'close' && r.clRow === '2026-10-14T10:00:00Z', [r.cl, r.clCall, r.clRow]);
+  check('a closed training: "closed" with the date and a reopen button, no link button', r.clTag);
+  check('reopen: op reopen, closed_at cleared, the link button back', r.ro === 'reopened' && r.roCall && r.roCall.op === 'reopen' && r.roRow === null && r.roLink, [r.ro, r.roCall, r.roRow, r.roLink]);
+  check('a link on a closed training explains how to reopen', /פתח מחדש/.test(r.closedErr || ''), r.closedErr);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

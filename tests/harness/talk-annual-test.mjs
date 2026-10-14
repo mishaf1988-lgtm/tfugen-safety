@@ -115,5 +115,29 @@ check('...mailed with the PDF to the connected account and the address on the tr
 const fa = w.patches.filter((x) => x.id === 'an1' && x.b.form_at);
 check('form0801: form_at stamped on the talk and returned; the preview stamped nothing', fa.length === 1 && r.j.form_at === fa[0].b.form_at && /^\d{4}-\d\d-\d\dT/.test(r.j.form_at), { fa, at: r.j.form_at });
 
+console.log('\n3. a real close (14/10/2026, Michael: "בצע: סגירה אמיתית")');
+{
+  const lk = await link({ op: 'link', id: 'an1' }, 'good');
+  const uo = lk.j && lk.j.url;
+  const np = w.patches.length;
+  let c = await link({ op: 'close', id: 'an1' }, 'good');
+  const cp = w.patches.slice(np);
+  check('close: closed_at written, nothing else (link_v untouched)', c.st === 200 && c.j.ok && /^\d{4}-/.test(c.j.closed_at) && cp.length === 1 && Object.keys(cp[0].b).join() === 'closed_at' && cp[0].b.closed_at === c.j.closed_at, { c, cp });
+  check('close: a viewer is refused', (await link({ op: 'close', id: 'an1' }, 'rep')).st === 403);
+  check('close on a weekly talk: refused', (await link({ op: 'close', id: 'wk1' }, 'good')).st === 409);
+  T.ann.closed_at = c.j.closed_at;
+  const pg = await open(uo);
+  check('closed: the worker who scans sees "closed", 410, no form', pg.st === 410 && pg.h.includes('נסגרה לחתימות') && !/name="sig"/.test(pg.h), pg.st);
+  const nIns = w.inserts.length;
+  const sg = await sign(tokOf(uo));
+  check('closed: a signature sent anyway is refused, nothing saved', sg.st === 410 && w.inserts.length === nIns, sg.st);
+  const l2 = await link({ op: 'link', id: 'an1' }, 'good');
+  check('closed: no new link either (409 closed)', l2.st === 409 && l2.j.error === 'closed', l2);
+  const ro = await link({ op: 'reopen', id: 'an1' }, 'good');
+  check('reopen: closed_at back to null', ro.st === 200 && ro.j.closed_at === null && w.patches.slice(-1)[0].b.closed_at === null, ro);
+  T.ann.closed_at = null;
+  check('reopened: the same link and QR work again', (await open(uo)).st === 200);
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

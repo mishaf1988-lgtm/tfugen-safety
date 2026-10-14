@@ -11836,7 +11836,7 @@ function rTbt(){
     var pubBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtPublish(this.dataset.id)">'+(pub?'\u05d4\u05d7\u05d6\u05e8 \u05dc\u05d8\u05d9\u05d5\u05d8\u05d4':'\u05e4\u05e8\u05e1\u05dd')+'</button>';
     var dupBtn='<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtDup(this.dataset.id)" title="\u05d4\u05d3\u05e8\u05db\u05d4 \u05d7\u05d3\u05e9\u05d4 \u05e2\u05dd \u05d0\u05d5\u05ea\u05d5 \u05ea\u05d5\u05db\u05df">\ud83d\udccb \u05e9\u05db\u05e4\u05dc</button>';
     var delBtn=n?'':'<button class="btn btn-d btn-sm" data-dtbl="toolbox_talks" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>';
-    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+(r.dept?'<div style="font-size:10px;font-weight:700;color:var(--t2)">\ud83c\udfed '+esc(r.dept)+'</div>':'')+_tbtLangTag(r)+(r.kind==='induction'?'<div style="font-size:10px;font-weight:700;color:var(--c-blue-650-4,#1e3a8a)">\ud83c\udd95 '+_TBT_IND_L+'</div>':'')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN(r.dept)&&r.kind!=='induction'?_tbtSignedNow(r.id)+' / '+_tbtEmpN(r.dept):n)+'</button>':n)+'</td><td>'+linkBtn+grpBtn+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
+    return '<tr><td>'+fd(r.d)+'</td><td style="max-width:200px;word-break:break-word">'+esc(r.title||'-')+(r.dept?'<div style="font-size:10px;font-weight:700;color:var(--t2)">\ud83c\udfed '+esc(r.dept)+'</div>':'')+_tbtLangTag(r)+(r.kind==='induction'?'<div style="font-size:10px;font-weight:700;color:var(--c-blue-650-4,#1e3a8a)">\ud83c\udd95 '+_TBT_IND_L+'</div>':'')+'</td><td><span class="b '+(pub?'bG':'bX')+'">'+esc(r.s||_TBT_DRAFT)+'</span>'+_tbtLinkTag(r)+'</td><td>'+(pub||n?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">'+(_tbtEmpN(r.dept)&&r.kind!=='induction'?_tbtSignedNow(r.id)+' / '+_tbtEmpN(r.dept):n)+'</button>':n)+'</td><td>'+(_tbtClosed(r)?'<div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:4px">\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8\u05d4 \u05dc\u05d7\u05ea\u05d9\u05de\u05d5\u05ea '+fd(String(r.closed_at).slice(0,10))+'</div><button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtClose(this.dataset.id,\'reopen\')">\ud83d\udd13 \u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9</button> ':linkBtn+grpBtn)+viewBtn+' '+dupBtn+' '+pubBtn+' '+delBtn+'</td></tr>';
   }).join('');
 }
 // 05/10/2026: the amended training regulations (in force 16/10/2026) want the trainer's
@@ -11928,6 +11928,7 @@ function _tbtLinkCopy(txt,fld){
 }
 // The server answers in English codes (talk.js makeLink); Michael reads Hebrew (review 03/10/2026).
 function _tbtLinkErr(st,er){
+  if(er==='closed')return '\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e1\u05d2\u05d5\u05e8\u05d4 \u05dc\u05d7\u05ea\u05d9\u05de\u05d5\u05ea. \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9: "\u05e4\u05ea\u05d7 \u05de\u05d7\u05d3\u05e9" \u05d1\u05d8\u05d1\u05dc\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea';
   var m={401:'\u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9',403:'\u05e8\u05e7 \u05de\u05e0\u05d4\u05dc \u05d0\u05d5 \u05d0\u05d3\u05de\u05d9\u05df \u05d9\u05db\u05d5\u05dc \u05dc\u05d9\u05e6\u05d5\u05e8 \u05e7\u05d9\u05e9\u05d5\u05e8',404:'\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d4\u05d2\u05d9\u05e2\u05d4 \u05dc\u05e9\u05e8\u05ea. \u05dc\u05d7\u05db\u05d5\u05ea \u05dc\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1',409:'\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05dc\u05d0 \u05de\u05e4\u05d5\u05e8\u05e1\u05de\u05ea \u05d1\u05e9\u05e8\u05ea. \u05dc\u05e8\u05e2\u05e0\u05df \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1',503:'\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8 \u05dc\u05d9\u05e6\u05d9\u05e8\u05ea \u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd (TRUSTEE_NOTIFY_SECRET)'};
   return m[st]||((er?er+' ':'')+'('+(st||'?')+')');
 }
@@ -11979,10 +11980,31 @@ function _tbtLinkShow(r,url,perm){
   openModal('m-tbt-link');
   return 'shown';
 }
+// Close / reopen the signatures of an annual or quality training (14/10/2026, Michael in the questionnaire:
+// "\u05e1\u05d2\u05d9\u05e8\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea"): talk.js op close / reopen sets closed_at; a worker who scans after it sees
+// "closed", and who signed stays. Before: "close" only made a new link.
+function _tbtClosed(r){return !!r&&_tbtTyped(r.kind)&&!!r.closed_at;}
+function tbtClose(id,op){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];if(!r)return Promise.resolve('missing');
+  if(!confirm(op==='close'?'\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea? \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4-QR \u05d9\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e2\u05d1\u05d5\u05d3, \u05d5\u05e2\u05d5\u05d1\u05d3 \u05e9\u05d9\u05e1\u05e8\u05d5\u05e7 \u05d9\u05e8\u05d0\u05d4 \u05e9\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4. \u05de\u05d9 \u05e9\u05db\u05d1\u05e8 \u05d7\u05ea\u05dd \u05e0\u05e9\u05d0\u05e8, \u05d5\u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9.':'\u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea? \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4-QR \u05d4\u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05d9\u05d7\u05d6\u05e8\u05d5 \u05dc\u05e2\u05d1\u05d5\u05d3.'))return Promise.resolve('kept');
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:op,id:id})})
+  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
+  .then(function(x){
+    if(!x.ok||!x.j||!x.j.ok){toast('\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
+    r.closed_at=x.j.closed_at||null;
+    try{addLog((op==='close'?'\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea: ':'\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea: ')+(r.title||id));}catch(e){}
+    try{closeModal('m-tbt-link');}catch(e){}
+    toast(op==='close'?'\ud83d\udd12 \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e0\u05e1\u05d2\u05e8\u05d5. \u05d8\u05d5\u05e4\u05e1 08.01: \u05d1\u05de\u05e1\u05da "\u05de\u05d9 \u05d7\u05ea\u05dd"':'\ud83d\udd13 \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9');
+    try{rTbt();}catch(e){}
+    return op==='close'?'closed':'reopened';
+  })['catch'](function(e){toast('\u26a0\ufe0f '+((e&&e.message)||e));return 'failed';});
+}
 function tbtRevoke(){
   if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
   var b=g('tbt-link-revoke'),id=b&&b.dataset.id,r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];
   if(!r)return Promise.resolve('missing');
+  if(_tbtTyped(r.kind))return tbtClose(id,'close');
   if(!confirm(_tbtTyped(r.kind)?'\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea? \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4-QR \u05d9\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e2\u05d1\u05d5\u05d3. \u05de\u05d9 \u05e9\u05db\u05d1\u05e8 \u05d7\u05ea\u05dd \u05e0\u05e9\u05d0\u05e8, \u05d5\u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e4\u05d9\u05e7 \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 08.01.':'\u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d4\u05e7\u05d1\u05d5\u05e2? \u05d4-QR \u05e9\u05db\u05d1\u05e8 \u05ea\u05dc\u05d5\u05d9 \u05d9\u05e4\u05e1\u05d9\u05e7 \u05dc\u05e2\u05d1\u05d5\u05d3, \u05d5\u05d9\u05d5\u05e4\u05e7 \u05e7\u05d9\u05e9\u05d5\u05e8 \u05d7\u05d3\u05e9 \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4.'))return Promise.resolve('kept');
   return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'revoke',id:id})})
   .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
