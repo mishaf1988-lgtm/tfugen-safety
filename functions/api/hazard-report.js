@@ -118,9 +118,12 @@ export function buildReport(dept, rows, rcpt, texts, today, photos, links) {
 // hazards closed since `since`, then the ones still open (past target marked).
 // links (optional): Map register row -> the signed "mark as handled" URL, as in
 // buildReport (14/10/2026, Michael: the status mail needs the close button too).
-export function buildStatus(dept, rows, rcpt, note, since, today, links) {
-  const rep = buildReport(dept, rows, rcpt, {}, today, null, links);
+// photos (optional): Map register row -> {cid} or {link}, as in buildReport
+// (14/10/2026, Michael: "does the update come with a picture too?").
+export function buildStatus(dept, rows, rcpt, note, since, today, links, photos) {
+  const rep = buildReport(dept, rows, rcpt, {}, today, photos || null, links);
   const anyClose = rep.rows.some((r) => r.close);
+  const anyPhoto = rep.rows.some((r) => r.photo);
   const day = (v) => String((v && typeof v === 'object' ? v.date : v) || '').substring(0, 10);
   const closed = rows.filter((r) => r[3] === dept && r[10] === S_DONE && day(r[11]) && (!since || day(r[11]) >= since));
   const cell = 'border:1px solid #ccc;padding:6px;vertical-align:top';
@@ -134,8 +137,8 @@ export function buildStatus(dept, rows, rcpt, note, since, today, links) {
     + '<h3 style="margin:14px 0 6px;color:#15803d">&#9989; \u05e0\u05e1\u05d2\u05e8\u05d5' + esc(sinceTxt) + ' (' + closed.length + ')</h3>'
     + (closed.length ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05e0\u05e1\u05d2\u05e8']) + closed.map((r) => '<tr>' + [r[0], r[4], r[5], fd(r[11])].map((x) => '<td style="' + cell + '">' + esc(x).replace(/\n/g, '<br>') + '</td>').join('') + '</tr>').join('') + '</table>' : '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8\u05d5 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05ea\u05e7\u05d5\u05e4\u05d4 \u05d4\u05d6\u05d5.</p>')
     + '<h3 style="margin:14px 0 6px">\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd (' + rep.count + ')</h3>'
-    + (rep.count ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'].concat(anyClose ? [CLOSE_TH] : []))
-      + rep.rows.map((r) => '<tr style="background:' + (r.overdue ? '#fde8e8' : '#fff') + '">' + [r.n, r.loc, r.descr, r.resp, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 ? ';white-space:nowrap' : '') + '">' + esc(x).replace(/\n/g, '<br>') + (i === 4 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + (anyClose ? '<td style="' + cell + '">' + (r.close ? '<a href="' + esc(r.close) + '" style="color:#15803d;font-weight:bold;white-space:nowrap">' + CLOSE_LINK + '</a>' : '') + '</td>' : '') + '</tr>').join('') + '</table>' : '<p>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.</p>')
+    + (rep.count ? '<table style="border-collapse:collapse;width:100%">' + th(['\u05de\u05e1"\u05d3', '\u05de\u05d9\u05e7\u05d5\u05dd', '\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05de\u05e4\u05d2\u05e2', '\u05de\u05d7\u05dc\u05e7\u05d4 \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea', '\u05d9\u05e2\u05d3 \u05dc\u05d8\u05d9\u05e4\u05d5\u05dc', '\u05e1\u05d8\u05d8\u05d5\u05e1'].concat(anyPhoto ? [PHOTO_TH] : [], anyClose ? [CLOSE_TH] : []))
+      + rep.rows.map((r) => '<tr style="background:' + (r.overdue ? '#fde8e8' : '#fff') + '">' + [r.n, r.loc, r.descr, r.resp, r.due, r.status].map((x, i) => '<td style="' + cell + (i === 4 ? ';white-space:nowrap' : '') + '">' + esc(x).replace(/\n/g, '<br>') + (i === 4 && r.overdue ? '<br><b style="color:#b91c1c">\u05e2\u05d1\u05e8 \u05d4\u05d9\u05e2\u05d3</b>' : '') + '</td>').join('') + (anyPhoto ? '<td style="' + cell + '">' + (r.photo && r.photo.cid ? '<img src="cid:' + r.photo.cid + '" width="140" alt="" style="display:block;border:0">' : r.photo && r.photo.link ? '<a href="' + esc(r.photo.link) + '">' + PHOTO_LINK + '</a>' : '') + '</td>' : '') + (anyClose ? '<td style="' + cell + '">' + (r.close ? '<a href="' + esc(r.close) + '" style="color:#15803d;font-weight:bold;white-space:nowrap">' + CLOSE_LINK + '</a>' : '') + '</td>' : '') + '</tr>').join('') + '</table>' : '<p>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd.</p>')
     + SIGNATURE + '</div>';
   return { dept, title, to: rep.to, cc: rep.cc, open: rep.count, overdue: rep.overdue, closed: closed.length, html };
 }
@@ -228,18 +231,31 @@ export async function onRequest(context) {
       const test = body.test === true, me = row.user_email;
       if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
       const sent = [], skipped = [], failed = [];
+      // The photos of the open rows, as in the report: inline pictures for the
+      // first MAIL_PICS of the whole send, links for the rest.
+      const openRows = {}; REPORT_DEPTS.forEach((d) => { if (want.indexOf(d) >= 0) openRows[d] = buildReport(d, data.rows, data.rcpt, {}, today).rows; });
+      const need = []; Object.keys(openRows).forEach((d) => openRows[d].forEach((x) => { const u = x.src && data.urls.get(x.src); if (u) need.push(u); }));
+      const links = need.length ? await signPhotos(env, need) : {};
+      const pics = {}; let k = 0;
+      for (const u of need) { if (u in pics) continue; if (k >= MAIL_PICS) { pics[u] = null; continue; } k++; pics[u] = await fetchThumb(env, u, MAIL_PIC_W); }
       for (const dept of REPORT_DEPTS) {
         if (want.indexOf(dept) < 0) continue;
+        const photos = new Map(), attachments = [];
+        openRows[dept].forEach((x, i) => {
+          const u = x.src && data.urls.get(x.src); if (!u) return;
+          if (pics[u]) { const cid = 'st' + dept.length + '-' + i + '@tapugan'; attachments.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: 'photo-' + (i + 1) + '.jpg', contentType: 'image/jpeg', contentBytes: b64(pics[u]), isInline: true, contentId: cid }); photos.set(x.src, { cid }); }
+          else if (links[u]) photos.set(x.src, { link: links[u] });
+        });
         // "Mark as handled" per open row, as in the report (close-hazard.js). No secret = no links.
         const closeLinks = new Map();
-        for (const x of buildReport(dept, data.rows, data.rcpt, {}, today).rows) { const rid = x.src && data.idOf.get(x.src); const tk = rid && await makeCloseToken(env, rid.substring(2)); if (tk) closeLinks.set(x.src, closeUrl(APP_URL, tk)); }
+        for (const x of openRows[dept]) { const rid = x.src && data.idOf.get(x.src); const tk = rid && await makeCloseToken(env, rid.substring(2)); if (tk) closeLinks.set(x.src, closeUrl(APP_URL, tk)); }
         const since = sinceOf(dept);
-        const s = buildStatus(dept, data.rows, data.rcpt, note, since, today, closeLinks);
+        const s = buildStatus(dept, data.rows, data.rcpt, note, since, today, closeLinks, photos);
         if (!s.open && !s.closed) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05d5\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8' }); continue; }
         if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
         const to = test ? [me] : s.to, cc = test ? [] : s.cc;
         const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
-        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue }); }
+        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html, attachments); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue, photos: attachments.length }); }
         catch (e) { failed.push({ dept, error: String((e && e.message) || e).substring(0, 160) }); }
       }
       const at = new Date().toISOString();
