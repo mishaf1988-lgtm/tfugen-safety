@@ -228,6 +228,15 @@ const ROWS = [
     p = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [map] }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
     check('a test send does not move the date', !p.w.state.hazard_status_depts && p.j.at === null, p.w.state);
   }
+  // 14/10/2026 (Michael: "does the update come with a picture too?"): the open rows' photos, as in the report.
+  c = await call({ email: 'admin@tfugen.local', hz: HZS.map((h) => (h.id === 'h31' ? Object.assign({}, h, { photo_url: PHU }) : h)) }, { op: 'statusSend', depts: ['חומר גלם'], note: 'x' });
+  {
+    const m = c.w.mails[0], att = (m && m.message.attachments) || [];
+    const cid = m && (/src="cid:([^"]+)"/.exec(m.message.body.content) || [])[1];
+    check('status: an open row with a photo: the picture inline by its cid, a "תמונה" column', c.j.ok && att.length === 1 && att[0].isInline === true && cid === att[0].contentId && m.message.body.content.includes('>תמונה<') && c.j.sent[0].photos === 1, { att: att.length, cid });
+  }
+  c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם'], note: 'x' });
+  check('status: no photos: no column, no attachments', c.j.ok && !(c.w.mails[0].message.attachments || []).length && !c.w.mails[0].message.body.content.includes('>תמונה<'), c.j.sent);
   c = await call({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'statusSend', depts: ['חומר גלם'] });
   check('status: viewer refused, nothing sent', c.status === 403 && !c.w.mails.length, c.status);
 
