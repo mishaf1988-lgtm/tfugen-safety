@@ -198,6 +198,11 @@ const ROWS = [
   check('status: subject, his text escaped with its line break', smm && /^סטטוס מפגעים - מחלקת חומר גלם - \d\d\/\d\d\/\d{4}$/.test(smm.subject) && smm.body.content.includes('היום &lt;b&gt;נבדק&lt;/b&gt;<br>שורה שנייה'), smm && smm.subject);
   check('status: closed since a week back listed, one closed long ago not', smm && smm.body.content.includes('מעקה רופף') && !smm.body.content.includes('מדף ישן'), c.j);
   check('status: still open listed, past target marked', smm && smm.body.content.includes('רצפות') && smm.body.content.includes('עבר היעד') && c.j.sent[0].count === 2 && c.j.sent[0].closed === 1, c.j.sent);
+  { // 14/10/2026 (Michael after the test mail: "missing a button to close the finding"): the report's link, per open row.
+    const hrefs = [...String(smm && smm.body.content).matchAll(/href="(https:\/\/tapugan-safety\.pages\.dev\/api\/close-hazard\?k=[^"]+)"/g)].map((x) => x[1]);
+    const ids = hrefs.map((h) => decodeURIComponent(h.split('k=')[1]).split('.')[0]);
+    check('status: one "סמן כטופל" link per open row, own id, with its header', hrefs.length === 2 && new Set(ids).size === 2 && ids.every((x) => x) && String(smm.body.content).includes('>סגירה<'), { hrefs: hrefs.length, ids });
+  }
   check('status: not kept in Sent Items, logged for the next "since"', sm && sm.saveToSentItems === false && /חומר גלם/.test(c.w.state.hazard_status_last || ''), c.w.state);
   c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם'], test: true, note: 'x' });
   check('status test: only to the connected account, real recipients on top, not logged', c.j.ok && c.w.mails.length === 1 && c.w.mails[0].message.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il' && !c.w.mails[0].message.ccRecipients.length && /^בדיקה - /.test(c.w.mails[0].message.subject) && c.w.mails[0].message.body.content.includes('gelem@tapugan.co.il') && !c.w.state.hazard_status_last, c.j);
