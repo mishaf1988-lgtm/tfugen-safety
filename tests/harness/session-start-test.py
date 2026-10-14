@@ -23,6 +23,27 @@ p = run(e, "not json")
 check("empty dir + bad stdin: exit 0, still names the skills", p.returncode == 0 and "tfugen-lean" in p.stdout, (p.returncode, p.stdout, p.stderr))
 big = tempfile.mkdtemp(); open(os.path.join(big, "handoff-x.md"), "w", encoding="utf-8").write("א" * 9000)
 check("a long handoff is cut", "נחתך" in run(big).stdout)
+# 14/10/2026 (lesson 15): open items whose test changed after the item's last date.
+m = tempfile.mkdtemp(); os.makedirs(os.path.join(m, "tests", "harness"))
+w_ = lambda rel, t: open(os.path.join(m, rel), "w", encoding="utf-8").write(t)
+w_("tests/harness/a-test.js", "// 02/09/2026: first\n// 03/09/2026: the middle dot too\nconst d = '2026-09-20';\n")
+w_("tests/harness/b-test.py", "# 01/09/2026\n# 01/01/2099 is a fixture\n")
+w_("STATUS.md", "## פתוח\n- [ ] **תווי מקלדת (02/09/2026).** `a-test.js`\n"
+   "- [ ] **נבדק (01/09/2026).** `a-test.js`. נבדק 05/09/2026: עדיין פתוח כי מחכה לטלפון\n"
+   "- [ ] **הבדיקה ישנה (02/09/2026).** `b-test.py`\n"
+   "- [ ] **אב (03/09/2026)**\n  - [ ] משנה בלי תאריך `a-test.js`\n"
+   "- [ ] **בלי שנה (01/09, ישן).** `a-test.js`\n"
+   "- [x] **סגור (01/08/2026).** `a-test.js`\n")
+o = run(m).stdout
+sec = o.split("אולי כבר בוצעו", 1)[1] if "אולי כבר בוצעו" in o else ""
+check("maybe-done: an item older than its test is listed, with both dates", "תווי מקלדת" in sec and "03/09/2026" in sec and "02/09/2026" in sec, o)
+check("maybe-done: a later 'נבדק DD/MM/YYYY' on the line silences it", "נבדק (01/09" not in sec, sec)
+check("maybe-done: a test whose only newer date is a fixture (ISO, future) does not count", "הבדיקה ישנה" not in sec, sec)
+check("maybe-done: an indented item carries its parent's date", "משנה בלי תאריך" not in sec, sec)
+check("maybe-done: a date without a year counts as the last such day", "בלי שנה" in sec, sec)
+check("maybe-done: a closed item is left out", "01/08/2026" not in sec, sec)
+check("maybe-done: counted, oldest first", "2 פריטים" in sec and sec.index("בלי שנה") < sec.index("תווי מקלדת"), sec)
+
 # 05/10/2026, Michael's computer: Windows stdout is cp1255, an emoji in STATUS raised
 # UnicodeEncodeError inside the try, and the session got nothing. Simulated with PYTHONIOENCODING.
 w = tempfile.mkdtemp(); open(os.path.join(w, "STATUS.md"), "w", encoding="utf-8").write("- [ ] \U0001f4d6 משימה ג\n")
