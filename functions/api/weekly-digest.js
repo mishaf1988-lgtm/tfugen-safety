@@ -818,7 +818,7 @@ async function build(env) {
   let stFail = false;
   const [hazards, reports, tasks, st, empty, exp, tk, ul, aq] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
     stateGet(env, ['deck_at', 'deck_meeting_date', WATCH_KEY, STATE_KEY, 'backup_od', 'db_columns_drift', 'od_scan', 'nevo_versions', 'xlsx_gaps', 'agent_log', 'mail_filing', 'validity_run', 'guess_locks', 'induction_code', 'trustee_code'], true).catch(() => { stFail = true; return {}; }),
     emptyRegs(env),

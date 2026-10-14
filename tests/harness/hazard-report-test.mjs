@@ -191,6 +191,15 @@ const ROWS = [
   check('a bad id is refused, nothing written', c.status === 400 && !(c.w.patches || []).length, c.status);
   c = await call2({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'setAction', id: 'h:h54', action: 'לחדש' });
   check('viewer cannot approve', c.status === 403 && !(c.w.patches || []).length, c.status);
+  // 14/10/2026 (Michael: "change the routing before sending, across the system", manager and trustees)
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setResp', id: 'h:h31', resp: 'אחזקה' });
+  check('setResp, a tour hazard: tour_hazards.resp set, resp2 cleared', c.j.saved && /tour_hazards\?id=eq\.h31$/.test((c.w.patches || [])[0].u) && c.w.patches[0].body.resp === 'אחזקה' && c.w.patches[0].body.resp2 === null, c.w.patches);
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setResp', id: 't:mudmp1', resp: 'חשמל' });
+  check('setResp, a trustee finding: trustee_reports.resp, nothing else', c.j.saved && /trustee_reports\?id=eq\.mudmp1$/.test((c.w.patches || [])[0].u) && JSON.stringify(c.w.patches[0].body) === JSON.stringify({ resp: 'חשמל' }), c.w.patches);
+  c = await call2({ email: 'admin@tfugen.local' }, { op: 'setResp', id: 'h:h31', resp: 'מישהו אחר' });
+  check('setResp: a value not in the form\'s list is refused, nothing written', c.status === 400 && !(c.w.patches || []).length, c.status);
+  c = await call2({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'setResp', id: 'h:h31', resp: 'אחזקה' });
+  check('setResp: viewer refused', c.status === 403 && !(c.w.patches || []).length, c.status);
 
   // 14/10/2026 (Michael: "a picture of the status, and whether things were closed", to
   // each department like the report): op statusSend, his text + closed since + still open.
