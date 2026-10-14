@@ -10,8 +10,9 @@ const URL0 = 'https://tapugan-safety.pages.dev/api/talk';
 const GR = 'https://graph.' + 'microsoft.com/v1.0/';  // the mock's Graph, for the filing and the mail
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'nsec', GEMINI_API_KEY: 'g' };
 const T = {
-  ann: { id: 'an1', d: '2026-10-20', title: 'הדרכת בטיחות שנתית 2026', body: '1. נהלי בטיחות\n2. ציוד מגן אישי\n3. חומרים מסוכנים\n- היערכות לחירום\n5. עזרה ראשונה', s: 'פורסמה', kind: 'annual', link_v: 0, trainer: 'מיכאל פרייליך', dur: 'שעתיים' },
+  ann: { id: 'an1', d: '2026-10-20', title: 'הדרכת בטיחות שנתית 2026', body: '1. נהלי בטיחות\n2. ציוד מגן אישי\n3. חומרים מסוכנים\n- היערכות לחירום\n5. עזרה ראשונה', s: 'פורסמה', kind: 'annual', link_v: 0, trainer: 'מיכאל פרייליך', dur: 'שעתיים', trainer_signed_at: '2026-10-20T06:00:00Z', subjects: 'כיבוי אש\nמלגזות' },
   qa: { id: 'qa1', d: '2026-10-21', title: 'הדרכת איכות', body: 'היגיינה', s: 'פורסמה', kind: 'quality', link_v: 2 },
+  q0: { id: 'q0', d: '2026-10-21', title: 'איכות בלי חתימת מדריך', body: 'היגיינה', s: 'פורסמה', kind: 'quality', link_v: 0, subjects: 'היגיינה' },
   wk: { id: 'wk1', d: '2026-10-11', title: 'סולמות', body: 'x', s: 'פורסמה', kind: null, link_v: 0 },
 };
 const w = { patches: [], inserts: [], outs: 0 };
@@ -45,7 +46,9 @@ const sign = async (k, extra) => { const fd = new FormData(); for (const [a, b] 
 console.log('\n1. kinds and the permanent link');
 check('annual and quality are typed, permanent-link kinds', TYPED_KINDS.join() === 'annual,quality' && PERM_KINDS.indexOf(KIND_ANN) >= 0 && PERM_KINDS.indexOf(KIND_QA) >= 0);
 check('permOk: an annual talk with the same version only; a weekly talk never by a permanent token', permOk({ perm: true, v: 0 }, T.ann) && !permOk({ perm: true, v: 1 }, T.ann) && permOk({ perm: true, v: 2 }, T.qa) && !permOk({ perm: true, v: 0 }, T.wk));
-let r = await link({ op: 'link', id: 'an1' }, 'good');
+let r = await link({ op: 'link', id: 'q0' }, 'good');
+check('no link before the trainer signed (and the kinds ticked): 409 incomplete', r.st === 409 && r.j.error === 'incomplete', r);
+r = await link({ op: 'link', id: 'an1' }, 'good');
 check('the manager gets a permanent link, no 14-day date written', r.st === 200 && r.j.perm === true && r.j.link_v === 0 && !w.patches.length, r);
 const u0 = r.j.url;
 r = await link({ op: 'revoke', id: 'an1' }, 'good');
@@ -79,7 +82,9 @@ w.outs = 0;
 
 console.log('\n4. form 08.01');
 const reads = Array.from({ length: 23 }, (_, i) => ({ id: 'r' + i, emp_name: 'עובד ' + (i + 1), dept: 'אריזה', id_no: String(1000000 + i), sig_url: SB + '/storage/v1/object/public/incidents-photos/s' + i + '.png' }));
-const h = form0801Html(Object.assign({}, T.ann, { eff_req: true, eff_ok: false, eff_desc: 'שאלות' }), reads, (x) => (x.id === 'r0' ? 'QUJD' : null), 'VFJT');
+const h = form0801Html(Object.assign({}, T.ann, { eff_req: true, eff_ok: false, eff_desc: 'שאלות', eff_by: 'מיכאל פרייליך' }), reads, (x) => (x.id === 'r0' ? 'QUJD' : null), 'data:image/jpeg;base64,VFJT');
+check('the trainer signature (a JPEG from the app) on the training and on the effectiveness check', (h.match(/data:image\/jpeg;base64,VFJT/g) || []).length === 2);
+check('the kinds ticked (subjects) are the topics on the form, before the text', h.includes('<td>כיבוי אש</td>') && h.includes('<td>מלגזות</td>') && !h.includes('<td>נהלי בטיחות</td>'));
 check('the topics, numbered, the list markers dropped', JSON.stringify(topicsOf(T.ann.body)) === JSON.stringify(['נהלי בטיחות', 'ציוד מגן אישי', 'חומרים מסוכנים', 'היערכות לחירום', 'עזרה ראשונה']));
 check('header: logo, "תיעוד ביצוע הדרכה", form 08.01, page 1 of 2 (20 per page)', h.includes('data:image/jpeg;base64,') && h.includes('תיעוד ביצוע הדרכה') && h.includes('טופס 08.01') && h.includes('עמוד 1 מתוך 2') && h.includes('עמוד 2 מתוך 2') && F0801_ROWS === 20);
 check('date, duration, trainer and his signature', h.includes('20/10/2026') && h.includes('שעתיים') && h.includes('מיכאל פרייליך') && h.includes('base64,VFJT'));

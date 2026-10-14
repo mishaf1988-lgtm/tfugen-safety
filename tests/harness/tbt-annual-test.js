@@ -44,7 +44,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     k.value = 'annual'; k.dispatchEvent(new Event('change'));
     o.durShown = document.getElementById('tbt-dur-f').style.display !== 'none' && document.getElementById('tbt-cc-f').style.display !== 'none';
     set('tbt-dur', 'שעתיים'); set('tbt-cc', 'quality@tapugan.co.il');
-    svTbt(); const sv = ins.slice(-1)[0][1]; o.saved = { kind: sv.kind, dur: sv.dur, cc: sv.mail_cc }; const id = sv.id;
+    // 14/10/2026: before publishing, the kinds of training, effectiveness yes/no and the trainer's signature
+    o.typedShown = document.getElementById('tbt-typed-f').style.display !== 'none';
+    o.effDefault = document.getElementById('tbt-eff-desc-f').value;
+    const n0 = ins.length; svTbt(); o.refused = { saved: ins.length !== n0, msg: toasts.slice(-1)[0] };
+    document.querySelector('.tbt-subj[value="כיבוי אש"]').checked = true; set('tbt-subj-o', 'הדרכת ריתוך');
+    set('tbt-eff-ok-f', '1');
+    const ups = []; window._fileUpload = (f, prefix, cb) => { ups.push(prefix); cb('https://x.supabase.co/storage/v1/object/public/incidents-photos/' + prefix + '.jpg'); };
+    const cv = document.getElementById('tbt-trsig'); const rc = cv.getBoundingClientRect();
+    const ev = (t, x, y) => cv.dispatchEvent(new PointerEvent(t, { clientX: rc.left + x, clientY: rc.top + y, bubbles: true }));
+    ev('pointerdown', 10, 10); ev('pointermove', 60, 40); ev('pointermove', 120, 30); ev('pointerup', 120, 30);
+    svTbt(); await new Promise((r) => setTimeout(r, 300));
+    const sv = ins.filter((x) => x[0] === 'toolbox_talks').slice(-1)[0][1]; o.saved = { kind: sv.kind, dur: sv.dur, cc: sv.mail_cc, subjects: sv.subjects, effOk: sv.eff_ok, effD: sv.eff_d, d: sv.d }; const id = sv.id;
+    o.sig = { ups, row: JSON.parse(JSON.stringify(DB.toolbox_talks.find((x) => x.id === id))) };
     openModal('m-tbt'); o.fresh = { kind: document.getElementById('tbt-kind').value, dur: document.getElementById('tbt-dur').value, hidden: document.getElementById('tbt-dur-f').style.display === 'none' }; closeModal('m-tbt');
     _genEdit('toolbox_talks', id); o.edit = { kind: document.getElementById('tbt-kind').value, dur: document.getElementById('tbt-dur').value, cc: document.getElementById('tbt-cc').value }; closeModal('m-tbt');
     // link: until closed, and "close signatures"
@@ -76,6 +88,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the trainings card lives on its own page, no longer on "שיחות בטיחות"', r.page && r.notOnToolbox, r);
   check('the kind select: weekly, induction, annual, quality', r.opts.join() === ',induction,annual,quality', r.opts);
   check('duration and copy address only for annual / quality', r.durHidden && r.durShown);
+  check('annual: the "before publishing" box shows, with the effectiveness text prefilled', r.typedShown && /נשאלו שאלות/.test(r.effDefault), r.effDefault);
+  check('publish refused while kinds, effectiveness and the trainer signature are missing, and says what', !r.refused.saved && /לפני פרסום חסר/.test(r.refused.msg) && /סוגי ההדרכה/.test(r.refused.msg) && /חתימת המדריך/.test(r.refused.msg), r.refused);
+  check('then saved: the kinds ticked plus "other", effective yes, effectiveness on the training day', r.saved.subjects === 'כיבוי אש\nהדרכת ריתוך' && r.saved.effOk === true && r.saved.effD === r.saved.d, r.saved);
+  check('the trainer signature is uploaded and stamped on the talk, and signs the effectiveness check', r.sig.ups.length === 1 && /^sig-.+-trainer$/.test(r.sig.ups[0]) && /trainer\.jpg$/.test(r.sig.row.trainer_sig_url || '') && !!r.sig.row.trainer_signed_at && r.sig.row.eff_by === 'מיכאל', r.sig);
   check('saved: kind annual, duration, copy address', r.saved.kind === 'annual' && r.saved.dur === 'שעתיים' && r.saved.cc === 'quality@tapugan.co.il', r.saved);
   check('a new form starts weekly, the fields empty and hidden', r.fresh.kind === '' && r.fresh.dur === '' && r.fresh.hidden, r.fresh);
   check('edit brings kind, duration and address back', r.edit.kind === 'annual' && r.edit.dur === 'שעתיים' && r.edit.cc === 'quality@tapugan.co.il', r.edit);
