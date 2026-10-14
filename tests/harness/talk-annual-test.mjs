@@ -111,5 +111,9 @@ check('form0801: a PDF filed under 11_הדרכות/הדרכה שנתית/2026, n
 const ml = (w.mails || [])[0];
 check('...mailed with the PDF to the connected account and the address on the training (a bad one dropped)', r.j.mailed && ml && ml.message.toRecipients.map((x) => x.emailAddress.address).join() === 'sviva@tapugan.co.il,quality@tapugan.co.il' && ml.message.attachments.length === 1 && ml.message.attachments[0].contentType === 'application/pdf' && ml.saveToSentItems === false, ml && ml.message.toRecipients);
 
+// 14/10/2026: form_at stamped on the talk once filed (the training screen stops warning), never by a preview
+const fa = w.patches.filter((x) => x.id === 'an1' && x.b.form_at);
+check('form0801: form_at stamped on the talk and returned; the preview stamped nothing', fa.length === 1 && r.j.form_at === fa[0].b.form_at && /^\d{4}-\d\d-\d\dT/.test(r.j.form_at), { fa, at: r.j.form_at });
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

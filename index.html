@@ -1735,6 +1735,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <div class="page-title">&#127891; <span>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</span></div>
   </div>
   <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap"><button type="button" class="btn btn-p btn-sm" onclick="goPage('training')">&#128221; הדרכות וחתימות</button><button type="button" class="btn btn-s btn-sm" onclick="goPage('tr')">&#128220; קורסים והסמכות</button></div>
+  <div id="tbt-stale"></div>
   <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1511;&#1493;&#1512;&#1488; &#1493;&#1495;&#1493;&#1514;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1488;&#1495;&#1512;&#1497; "&#1508;&#1512;&#1505;&#1501;": &#128279; &#1511;&#1497;&#1513;&#1493;&#1512;, &#1493;&#1500;&#1513;&#1500;&#1493;&#1495; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1488;&#1493; &#1500;&#1508;&#1514;&#1493;&#1495; &#1489;&#1496;&#1488;&#1489;&#1500;&#1496;. &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1489;&#1514;&#1493;&#1511;&#1507; 14 &#1497;&#1502;&#1497;&#1501;.</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
 </div>
 
@@ -11817,8 +11818,14 @@ var _TBT_LINK_DAYS=14;
 function _tbtLinkEnd(r){var t=Date.parse((r&&r.link_at)||'');return isNaN(t)?'':new Date(t+_TBT_LINK_DAYS*864e5).toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});}
 function _tbtLinkTag(r){var e=_tbtLinkEnd(r);if(!e||r.s!==_TBT_PUB)return '';var gone=du(e)<0;return '<div style="font-size:10px;margin-top:2px;color:'+(gone?'var(--red,#b91c1c)':'var(--t3)')+'">'+(gone?'\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e4\u05d2 \u05d1-':'\u05e7\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3 ')+fd(e)+'</div>';}
 function _tbtSignedNow(id){var t=(DB.toolbox_talks||[]).filter(function(x){return x&&x.id===id;})[0],m=_tbtEmpSet(t&&t.dept),k={};(DB.toolbox_reads||[]).forEach(function(x){if(x&&x.talk_id===id&&m[String(x.emp_id)])k[String(x.emp_id)]=1;});return Object.keys(k).length;}
+// Open more than a week (14/10/2026, Michael: "בצע"): an annual or quality training, published, its day 7+ days
+// ago, and form 08.01 never filed (form_at). The form is the evidence; a training left open has none.
+var _TBT_STALE_DAYS=7;
+function _tbtStale(rows,today){var lim=new Date(new Date((today||new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+'T12:00:00Z').getTime()-_TBT_STALE_DAYS*864e5).toISOString().slice(0,10);return (rows||[]).filter(function(r){return r&&_tbtTyped(r.kind)&&r.s===_TBT_PUB&&!r.form_at&&r.d&&String(r.d).slice(0,10)<=lim;});}
+function _tbtStaleHtml(rows,today){var st=_tbtStale(rows,today);if(!st.length)return '';return '<div role="alert" style="margin:0 0 10px;padding:10px 12px;border:2px solid var(--c-amber-500,#f9a800);border-radius:10px;background:var(--c-amber-50,#fffbeb);color:var(--c-orange-700,#92400e)"><b>\u26a0\ufe0f \u05e4\u05ea\u05d5\u05d7\u05d4 \u05d9\u05d5\u05ea\u05e8 \u05de\u05e9\u05d1\u05d5\u05e2, \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05e7:</b>'+st.map(function(r){return '<div style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>'+esc(_TBT_KINDS[r.kind]||'')+': '+esc(r.title||'-')+' ('+fd(r.d)+', '+_tbtReads(r.id)+' \u05d7\u05ea\u05de\u05d5)</span><button type="button" class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="tbtWho(this.dataset.id)">\u05de\u05d9 \u05d7\u05ea\u05dd \u05d5\u05d8\u05d5\u05e4\u05e1 08.01</button></div>';}).join('')+'</div>';}
 function rTbt(){
   var tb=g('tb-tbt');if(!tb)return;
+  var stEl=g('tbt-stale');if(stEl)stEl.innerHTML=_tbtStaleHtml(DB.toolbox_talks);
   var rows=(DB.toolbox_talks||[]).slice().sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
   if(!rows.length){tb.innerHTML='<tr><td colspan="5" class="et" data-label="">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05d1\u05d5\u05e2\u05d9\u05ea<br><button class="et-cta" onclick="openModal(\'m-tbt\')">+ \u05d4\u05d3\u05e8\u05db\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
   tb.innerHTML=rows.map(function(r){
@@ -12408,13 +12415,15 @@ function _tbtIdMask(v){var s=String(v||'');return !s?'-':s.length<=4?s:'***'+s.s
 // Preview of form 08.01 (14/10/2026, Michael: "see it before publishing"): the server builds it, nothing is filed;
 // the window opens before the fetch, Safari blocks one opened after it.
 function _tbtPreviewFromForm(){var id=_svEditId('toolbox_talks');if(!id){toast('\u05e7\u05d5\u05d3\u05dd \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05db\u05d8\u05d9\u05d5\u05d8\u05d4');return Promise.resolve('unsaved');}return tbtForm0801Preview(id);}
+// Print straight from the preview (14/10/2026, Michael: "בצע"): a button the paper does not show.
+function _tbtPvPrint(w){try{var d=w.document;if(!d||!d.body||d.getElementById('tbt-pv-print'))return false;var st=d.createElement('style');st.textContent='@media print{#tbt-pv-print{display:none!important}}';(d.head||d.body).appendChild(st);var b=d.createElement('button');b.id='tbt-pv-print';b.type='button';b.textContent='\ud83d\udda8\ufe0f \u05d4\u05d3\u05e4\u05e1';b.style.cssText='position:fixed;top:8px;left:8px;z-index:9;background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff);padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:Arial,sans-serif;font-size:14px;cursor:pointer';b.onclick=function(){try{w.focus();w.print();}catch(e){}};d.body.appendChild(b);return true;}catch(e){return false;}}
 function tbtForm0801Preview(id){
   var w=window.open('','_blank');if(!w){toast('\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05d7\u05e1\u05dd \u05d7\u05dc\u05d5\u05df. \u05dc\u05d0\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd');return Promise.resolve('blocked');}
   try{w.document.write('<p dir="rtl" style="font-family:Arial">\u05de\u05db\u05d9\u05df \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4...</p>');}catch(e){}
   return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'form0801',id:id,preview:true})})
   .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
   .then(function(x){if(!x.ok||!x.j||!x.j.html){try{w.close();}catch(e){}toast('\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
-    w.document.open();w.document.write(x.j.html);w.document.close();return 'shown';})
+    w.document.open();w.document.write(x.j.html);w.document.close();_tbtPvPrint(w);return 'shown';})
   ['catch'](function(e){try{w.close();}catch(x){}toast('\u26a0\ufe0f '+((e&&e.message)||e));return 'failed';});
 }
 function tbtForm0801(id){
@@ -12425,6 +12434,7 @@ function tbtForm0801(id){
   .then(function(x){if(b)b.disabled=false;
     if(!x.ok||!x.j||!x.j.ok){var m=x.st===409?'\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd':_tbtLinkErr(x.st,x.j&&x.j.error);if(out)out.textContent='\u26a0\ufe0f '+m;return 'failed';}
     try{addLog('\u05d8\u05d5\u05e4\u05e1 08.01 \u05d4\u05d5\u05e4\u05e7: '+id+' ('+x.j.n+')');}catch(e){}
+    if(x.j.form_at){var t0=(DB.toolbox_talks||[]).filter(function(q){return q.id===id;})[0];if(t0){t0.form_at=x.j.form_at;try{rTbt();}catch(e){}}}
     if(out)out.innerHTML='\u2705 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'+(x.j.pdf?' (PDF)':'')+', '+x.j.n+' \u05d7\u05d5\u05ea\u05de\u05d9\u05dd'+(x.j.mailed?'. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc':'')+(x.j.url?' <a href="'+esc(x.j.url)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d5\u05d4\u05d3\u05e4\u05e1</a>':'');
     return 'ok';
   })['catch'](function(e){if(b)b.disabled=false;if(out)out.textContent='\u26a0\ufe0f '+((e&&e.message)||e);return 'failed';});
