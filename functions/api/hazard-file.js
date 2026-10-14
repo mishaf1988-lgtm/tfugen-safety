@@ -211,7 +211,7 @@ export function buildRegister(hazards, reports, tasks) {
     const { dept, loc } = trusteeDept(r.loc);
     const closed = r.s === '\u05e0\u05e1\u05d2\u05e8';
     const c = closer[r.id];
-    rows.push(['\u05e0-' + (r.num || k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', trusteeResp(dept, r.f, r.t), (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
+    rows.push(['\u05e0-' + (r.num || k + 1), dt(r.d), tourFor(dept, d10(r.d)), dept, loc, r.f || '', '\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea', (r.resp || trusteeResp(dept, r.f, r.t)), (r.action ? r.action + ' (' : '') + '\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.action ? ')' : ''),
       routed[r.id] ? dt(routed[r.id].due) : routedNote(r.mgr_note) ? { date: routedNote(r.mgr_note) } : d10(r.d) ? { date: addDays(d10(r.d), TRUSTEE_DUE_DAYS) } : null, closed ? '\u05e1\u05d2\u05d5\u05e8' : '\u05e4\u05ea\u05d5\u05d7',
       closed ? (c ? dt(c.d || c.ts) : dt(r.closed_d)) : null, '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df: ' + (r.u || '') + (r.mgr_note ? '. ' + r.mgr_note : '')]);
     ids.push('t:' + r.id);
@@ -635,7 +635,7 @@ export async function runFile(env, which, force, opt) {
   if (B.left() < 3 + FILE_MIN) return { ok: false, file: which, pushed: false, retry: true, reason: 'budget', budget: { used: B.used } };
   const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc', B),
-    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc', B),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts,photo_url&order=ts.asc', B),
     readAll(env, TASKS_Q, B),
   ]);
   // 28/09 the assistant saved an action on every trustee finding by itself; since

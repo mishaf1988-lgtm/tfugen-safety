@@ -105,6 +105,35 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     window._truApi = orig; return out;
   });
   check('each department card says when it last got a status (DD/MM/YYYY), or that it never did', /סטטוס אחרון: 01\/10\/2026/.test(sl.m) && /עוד לא נשלח/.test(sl.x), sl);
+  // 14/10/2026 (Michael: "change the routing before sending, across the system"): a select per row.
+  const rr = await page.evaluate(async () => {
+    const orig = window._truApi, calls = [];
+    DB.tour_hazards = [{ id: 'th-1', n: 1, resp: 'מנהל המחלקה' }];
+    let respNow = 'מנהל המחלקה';
+    window._truApi = function (p, b) {
+      calls.push(b.op);
+      if (b.op === 'setResp') { respNow = b.resp; return Promise.resolve({ ok: true, saved: true, resp: b.resp }); }
+      if (b.op === 'preview') return Promise.resolve({ ok: true, canSend: true, reports: [
+        { dept: 'מעצבים', title: 't', to: ['Roman@tapugan.co.il'], cc: [], count: 1, old: 0, overdue: 0, rows: [{ id: 'h:th-1', n: 1, descr: 'מפגע א', resp: respNow, status: 'פתוח', due: '' }] },
+        { dept: 'מעבדות', title: 't', to: ['lab@t'], cc: [], count: 1, old: 0, overdue: 0, rows: [{ id: 't:tr1', n: 'נ-1', descr: 'נאמן', resp: 'מנהל המחלקה + חשמל', status: 'פתוח', due: '' }] }] });
+      return orig(p, b);
+    };
+    window._hzr = null; hzrOpen(); await new Promise((r) => setTimeout(r, 50));
+    const sels = Array.from(document.querySelectorAll('#hzr select.hzr-resp'));
+    const out = { n: sels.length, opts: sels[0] && Array.from(sels[0].options).map((o) => o.value), cur: sels[0] && sels[0].value, odd: sels[1] && sels[1].value };
+    document.querySelector('#hzr .hz-pick[data-d="מעצבים"]').checked = false;
+    sels[0].value = 'אחזקה'; const res = await hzrSetResp(sels[0]);
+    out.res = res; out.calls = calls.slice();
+    out.after = (document.querySelector('#hzr select.hzr-resp') || {}).value;
+    out.open = !!document.querySelector('#hzr details[open]');
+    out.local = DB.tour_hazards[0].resp;
+    out.pickKept = document.querySelector('#hzr .hz-pick[data-d="מעצבים"]').checked === false;
+    window._truApi = orig; return out;
+  });
+  check('a routing select on each row, the form\'s five choices, current value selected', rr.n === 2 && rr.opts.join() === 'מנהל המחלקה,אחזקה,חשמל,הנדסה,בטיחות' && rr.cur === 'מנהל המחלקה', rr);
+  check('a computed value not in the list (מנהל המחלקה + חשמל) shows as the current one', rr.odd === 'מנהל המחלקה + חשמל', rr.odd);
+  check('changing it: saved (setResp), the preview reloads, the row shows the new value, its list stays open', rr.res === 'ok' && rr.calls.join() === 'preview,setResp,preview' && rr.after === 'אחזקה' && rr.open, rr);
+  check('...the local copy updated, and the ticks the manager set are kept', rr.local === 'אחזקה' && rr.pickKept, rr);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

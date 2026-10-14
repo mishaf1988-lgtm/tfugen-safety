@@ -30,6 +30,8 @@ const CLOSE_TH = '\u05e1\u05d2\u05d9\u05e8\u05d4', CLOSE_LINK = '\u2705 \u05e1\u
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
 const OLD = ' - \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd!';
+// The choices of the hazard form (index.html _THZ_RESP), the only values setResp writes.
+export const RESP_CHOICES = ['\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4', '\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'];
 const RESP_KEYS = ['\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4'];
 const DEFAULT_OPEN = '\u05e9\u05dc\u05d5\u05dd, \u05dc\u05d4\u05dc\u05df \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d4\u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05e9\u05e0\u05de\u05e6\u05d0\u05d5 \u05d1\u05e1\u05d9\u05d5\u05e8 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d3\u05d5\u05e8\u05e9\u05d9\u05dd \u05d8\u05d9\u05e4\u05d5\u05dc.';
 // Michael's own Outlook signature (29/09/2026, from his screenshot), under every
@@ -146,7 +148,7 @@ export function buildStatus(dept, rows, rcpt, note, since, today, links, photos)
 async function loadAll(env, token) {
   const [hazards, reports, tasks] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes,photo_url&order=n.asc'),
-    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,ts,photo_url&order=ts.asc'),
+    readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts,photo_url&order=ts.asc'),
     readAll(env, TASKS_Q),
   ]);
   // This year's workbook; in the first minutes of a year, before the tick has
@@ -214,6 +216,20 @@ export async function onRequest(context) {
       const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]) + '&or=(action.is.null,action.eq.)', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ action: text }) });
       const got = up.ok ? await up.json().catch(() => []) : [];
       return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, action: text }, 200, cors);
+    }
+    // 14/10/2026 (Michael: "change the routing before sending, and it should update across
+    // the system", for the manager's hazards and the trustees' alike): the responsible
+    // department of one row. A tour hazard: tour_hazards.resp (resp2 cleared). A trustee
+    // finding: trustee_reports.resp (migration 2026-10-14; empty = computed as before).
+    if (body.op === 'setResp') {
+      const m = /^(h|t):([\w-]{1,80})$/.exec(String(body.id || ''));
+      const resp = String(body.resp || '');
+      if (!m || RESP_CHOICES.indexOf(resp) < 0) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
+      const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
+      const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]), { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(m[1] === 'h' ? { resp, resp2: null } : { resp }) });
+      const got = up.ok ? await up.json().catch(() => []) : [];
+      return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, resp }, 200, cors);
     }
     const data = await loadAll(env, token);
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });

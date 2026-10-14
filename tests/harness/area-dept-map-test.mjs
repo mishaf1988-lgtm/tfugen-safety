@@ -54,6 +54,12 @@ check('in a production department: מנהל המחלקה, as before', byF('מש�
 check('maintenance: אחזקה (the 30/09 finding)', byF('שטח תנועה של מלגזות')[7] === 'אחזקה' && byF('בור פתוח')[7] === 'אחזקה', [byF('שטח תנועה של מלגזות')[7], byF('בור פתוח')[7]]);
 check('maintenance, an electrical finding: חשמל', ['כבל חשמל חשוף', 'תאורה לא עובדת בשער', 'פנס שבור', 'מפסק פתוח', 'אין הארקה'].every((f) => trusteeResp('אחזקה', f) === 'חשמל'));
 check('...not a dip in the floor or a notice board', trusteeResp('אחזקה', 'שקע ברצפה ליד השער') === 'אחזקה' && trusteeResp('אחזקה', 'לוח מודעות נפל') === 'אחזקה');
+// 14/10/2026 (Michael: "change the routing before sending"): a resp the manager set wins over the computed one.
+{
+  const r2 = buildRegister([], reports.map((r) => (r.f === 'משטח שבור' ? Object.assign({}, r, { resp: 'אחזקה' }) : r)), []).rows;
+  const row = r2.find((x) => x[5] === 'משטח שבור');
+  check('a stored resp (trustee_reports.resp) replaces the computed one; empty = computed as before', row[7] === 'אחזקה' && byF('משטח שבור')[7] === 'מנהל המחלקה', row[7]);
+}
 const mrep = buildReport('אחזקה', buildRegister([], [tr('x', 'חצר · שער', 'כבל חשמל חשוף')], []).rows, { depts: {}, resp: { 'אחזקה': ['vitaly@x'], 'חשמל': ['slava@x'], 'הנדסה': ['shlomi@x'] }, cc: [] }, {}, '2026-09-30');
 check('the maintenance report still goes to all three when the finding is electrical', mrep.to.join() === 'vitaly@x,slava@x,shlomi@x' && mrep.rows[0].resp === 'חשמל', [mrep.to, mrep.rows[0] && mrep.rows[0].resp]);
 
