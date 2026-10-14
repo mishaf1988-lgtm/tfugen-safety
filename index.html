@@ -1734,6 +1734,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   <div class="row">
     <div class="page-title">&#127891; <span>&#1492;&#1491;&#1512;&#1499;&#1493;&#1514;</span></div>
   </div>
+  <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap"><button type="button" class="btn btn-p btn-sm" onclick="goPage('training')">&#128221; הדרכות וחתימות</button><button type="button" class="btn btn-s btn-sm" onclick="goPage('tr')">&#128220; קורסים והסמכות</button></div>
   <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1513;&#1489;&#1493;&#1506;&#1497;&#1514;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1511;&#1493;&#1512;&#1488; &#1493;&#1495;&#1493;&#1514;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1488;&#1495;&#1512;&#1497; "&#1508;&#1512;&#1505;&#1501;": &#128279; &#1511;&#1497;&#1513;&#1493;&#1512;, &#1493;&#1500;&#1513;&#1500;&#1493;&#1495; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1488;&#1493; &#1500;&#1508;&#1514;&#1493;&#1495; &#1489;&#1496;&#1488;&#1489;&#1500;&#1496;. &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1489;&#1514;&#1493;&#1511;&#1507; 14 &#1497;&#1502;&#1497;&#1501;.</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
 </div>
 
@@ -2015,7 +2016,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <div id="pg-tr" class="page">
-  <div class="row"><div class="page-title">&#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;</span></div><button class="btn btn-p" onclick="openModal('m-tr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
+  <!-- 14/10/2026 (Michael: "one tile, two tabs"): the course and certification register is the second tab of "הדרכות". -->
+  <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap"><button type="button" class="btn btn-s btn-sm" onclick="goPage('training')">&#128221; הדרכות וחתימות</button><button type="button" class="btn btn-p btn-sm" onclick="goPage('tr')">&#128220; קורסים והסמכות</button></div>
+  <div class="row"><div class="page-title">&#127891; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514; <span>&#1511;&#1493;&#1512;&#1505;&#1497;&#1501; &#1493;&#1492;&#1505;&#1502;&#1499;&#1493;&#1514;</span></div><button class="btn btn-p" onclick="openModal('m-tr')">+ &#1492;&#1493;&#1505;&#1507;</button></div>
   <div class="card" id="tr-dept-card" style="display:none"><div class="card-title">&#127891; &#1499;&#1513;&#1497;&#1512;&#1493;&#1514; &#1500;&#1508;&#1497; &#1502;&#1495;&#1500;&#1511;&#1492; <span style="font-weight:400;font-size:11px;color:var(--t2)">ISO 45001 &#167;7.2 - &#1492;&#1490;&#1512;&#1493;&#1506; &#1489;&#1512;&#1488;&#1513;</span></div>
     <div id="tr-dept"></div>
   </div>
@@ -2340,7 +2343,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','thz')" data-kw="סיור סיורי מפגעים ממונה מחלקה"><span class="sic">&#128270;</span>סיורי מפגעים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','drl')" data-kw="חירום פינוי"><span class="sic">&#128680;</span>תרגילים</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','toolbox')" data-kw="toolbox"><span class="sic">&#128483;&#65039;</span>שיחות בטיחות</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','training')" data-kw="training הדרכות הדרכה שנתית קליטה איכות"><span class="sic">&#127891;</span>הדרכות</button>
+    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','training')" data-kw="training הדרכות הדרכה שנתית קליטה איכות קורס הסמכה tr"><span class="sic">&#127891;</span>הדרכות</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','trustees')" data-kw="נאמן נאמני trustees ניקוד פרס משימות חודשיות"><span class="sic">&#129466;</span>נאמני בטיחות</button>
 
     <div class="sheet-group-title">&#128203; איכות / NCR</div>
@@ -2353,7 +2356,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 
     <div class="sheet-group-title">&#128101; HR</div>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','emp')" data-kw="אנשים"><span class="sic">&#128100;</span>עובדים</button>
-    <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','tr')" data-kw="קורס הסמכה"><span class="sic">&#127891;</span>הדרכות</button>
     <button class="sheet-btn" onclick="_goFromSheet('m-modules-sheet','hearing')" data-kw="אודיומטריה"><span class="sic">&#128066;</span>שמיעה</button>
 
     <div class="sheet-group-title">&#127807; סביבה</div>
@@ -4789,8 +4791,8 @@ function _goFromSheet(sheetId,page){closeModal(sheetId);goPage(page);}
 // today = the home queue; field = rounds and reports; reg = registers with an expiry or a list;
 // mgmt = NCR, audits, review, users, settings. Every module of the sheet has exactly one tab.
 var _TAB_OF={dash:'today','emp-home':'today',
-  nm:'field',inc:'field',round:'field',thz:'field',drl:'field',toolbox:'field',training:'field',trustees:'field',ptw:'field','ptw-view':'field',
-  eqi:'reg',exp:'reg',docs:'reg',ppe:'reg',ctr:'reg',tr:'reg',hearing:'reg',emp:'reg',wst:'reg',hzm:'reg',env:'reg',easp:'reg',leg:'reg',rsk:'reg',ins:'reg',
+  nm:'field',inc:'field',round:'field',thz:'field',drl:'field',toolbox:'field',training:'field',tr:'field',trustees:'field',ptw:'field','ptw-view':'field',
+  eqi:'reg',exp:'reg',docs:'reg',ppe:'reg',ctr:'reg',hearing:'reg',emp:'reg',wst:'reg',hzm:'reg',env:'reg',easp:'reg',leg:'reg',rsk:'reg',ins:'reg',
   ncr:'mgmt',tasks:'mgmt',aud:'mgmt',mr:'mgmt',cal:'mgmt',loc:'mgmt',prj:'mgmt',lg:'mgmt',users:'mgmt',audit:'mgmt',agents:'mgmt',itype:'mgmt',itp:'mgmt'};
 // Sheet buttons that open a dialog instead of a page.
 var _TAB_OF_CALL={"m-reports-sheet":'field',mgrFieldOpen:'field',_pwHubOpen:'mgmt',openGlobalSearch:'mgmt',openNotifSettings:'mgmt',_modVisOpen:'mgmt',_pkRegister:'mgmt'};
@@ -12265,7 +12267,8 @@ function tbtWho(id){
     +'<div id="tbt-rem-box" style="display:none;margin-top:6px"><textarea id="tbt-rem-txt" rows="7" readonly style="width:100%;font-size:12px"></textarea><div style="display:flex;gap:8px;margin-top:4px"><button type="button" class="btn btn-s" style="min-height:44px" onclick="_tbtLinkCopy(g(\'tbt-rem-txt\').value,\'tbt-rem-txt\')">&#128203; \u05d4\u05e2\u05ea\u05e7</button><button type="button" class="btn btn-p" style="min-height:44px;background:var(--c-green-500,#25D366);border-color:var(--c-green-500,#25D366)" onclick="_tbtLinkShare(g(\'tbt-rem-txt\').value,\'tbt-rem-txt\')">&#128241; \u05e9\u05ea\u05e3</button></div></div></div>';
   _tbtRemMiss=miss;
   // Form 08.01 with everyone who signed (14/10/2026): a PDF in the training folder and by mail.
-  if(reads.length&&!_viewOnly())h+='<div class="no-print" style="margin-top:10px"><button type="button" class="btn btn-p btn-sm" id="tbt-0801-btn" data-id="'+esc(t.id)+'" onclick="tbtForm0801(this.dataset.id)">&#128196; \u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05dd \u05db\u05dc \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd</button><div id="tbt-0801-res" style="margin-top:6px;font-size:13px"></div></div>';
+  // Not for the induction (14/10/2026, Michael: "each new worker signs his own form, not a combined one").
+  if(reads.length&&t.kind!=='induction'&&!_viewOnly())h+='<div class="no-print" style="margin-top:10px"><button type="button" class="btn btn-p btn-sm" id="tbt-0801-btn" data-id="'+esc(t.id)+'" onclick="tbtForm0801(this.dataset.id)">&#128196; \u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05dd \u05db\u05dc \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd</button><div id="tbt-0801-res" style="margin-top:6px;font-size:13px"></div></div>';
   h+=_tbtEffHtml(t);
   var b=g('tbt-who-body');if(b){b.innerHTML=h;if(typeof _signifyDom==='function')_signifyDom(b);}
   openModal('m-tbt-who');
