@@ -95,6 +95,12 @@ check('folders: annual and quality each their own', F0801_SUB.annual === 'הדר
 r = await link({ op: 'form0801', id: 'an1' }, 'rep');
 check('form0801: a viewer is refused', r.st === 403, r.st);
 w.reads = [];
+// 14/10/2026: a preview before anyone signed: the HTML, nothing filed or mailed
+const putsBefore = (w.puts || []).length, mailsBefore = (w.mails || []).length;
+r = await link({ op: 'form0801', id: 'an1', preview: true }, 'good');
+check('preview with no signatures yet: the form HTML (topics, trainer), nothing filed or mailed', r.st === 200 && r.j.preview === true && r.j.n === 0 && /תיעוד ביצוע הדרכה/.test(r.j.html) && r.j.html.includes('כיבוי אש') && (w.puts || []).length === putsBefore && (w.mails || []).length === mailsBefore, r.j && Object.keys(r.j));
+r = await link({ op: 'form0801', id: 'an1', preview: true }, 'rep');
+check('preview: a viewer is refused', r.st === 403, r.st);
 r = await link({ op: 'form0801', id: 'an1' }, 'good');
 check('form0801 with no signatures yet: a clear 409, nothing filed', r.st === 409, r);
 

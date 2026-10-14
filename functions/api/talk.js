@@ -1204,6 +1204,14 @@ async function makeLink(env, request, ctx) {
     const rr = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(t.id) + '&select=id,emp_name,dept,id_no,sig_url,read_at&order=read_at.asc', { headers: sbH(env) });
     const reads = rr.ok ? await rr.json() : null;
     if (!Array.isArray(reads)) return jsonResp({ error: 'reads' }, 502, cors);
+    // Preview (14/10/2026, Michael: "see the form before publishing"): the same HTML, nothing filed or mailed,
+    // also before anyone signed; the signatures there are, and the trainer's.
+    if (b.preview === true) {
+      const sigs = {};
+      for (const x of reads) sigs[x.id] = await storageB64(env, x.sig_url);
+      const trSig = t.trainer_sig_url ? await storageB64(env, t.trainer_sig_url) : null;
+      return jsonResp({ ok: true, preview: true, n: reads.length, html: form0801Html(t, reads, (x) => sigs[x.id], trSig) }, 200, cors);
+    }
     if (!reads.length) return jsonResp({ error: 'no signatures yet' }, 409, cors);
     try { return jsonResp(Object.assign({ ok: true }, await file0801(env, t, reads)), 200, cors); }
     catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 160) }, 502, cors); }
