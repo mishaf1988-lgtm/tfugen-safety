@@ -29,6 +29,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.toolbox_talks = []; DB.toolbox_reads = [];
     const o = {};
     o.tile = !!document.querySelector('#m-modules-sheet [onclick="_goFromSheet(\'m-modules-sheet\',\'training\')"]');
+    // 14/10/2026 (Michael: "one tile, two tabs"): no separate tile for the course register; tabs on both pages.
+    o.oneTile = !document.querySelector('#m-modules-sheet [onclick="_goFromSheet(\'m-modules-sheet\',\'tr\')"]');
+    o.tabs = ['pg-training', 'pg-tr'].every((id) => !!document.querySelector('#' + id + ' [onclick="goPage(\'tr\')"]') && !!document.querySelector('#' + id + ' [onclick="goPage(\'training\')"]'));
     goPage('training');
     o.page = document.getElementById('pg-training').classList.contains('on') && document.getElementById('pg-training').contains(document.getElementById('tbt-card'));
     o.notOnToolbox = !document.getElementById('pg-toolbox').contains(document.getElementById('tbt-card'));
@@ -63,6 +66,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.form = await tbtForm0801(id);
     o.formCall = calls.filter((c) => c.op === 'form0801')[0];
     o.res = document.getElementById('tbt-0801-res').innerHTML;
+    // the induction: each new worker signs his own form, no combined 08.01 (14/10/2026)
+    DB.toolbox_talks.push({ id: 'indx', title: 'קליטה', s: 'פורסמה', kind: 'induction', d: '2026-10-10' });
+    DB.toolbox_reads.push({ id: 'r9', talk_id: 'indx', emp_id: 'x:1:a', emp_name: 'חדש', read_at: '2026-10-11T07:00:00Z' });
+    tbtWho('indx'); o.indBtn = !!document.getElementById('tbt-0801-btn');
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -76,6 +83,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('...the button says "close signatures", and asks before closing', /סגור חתימות/.test(r.rv) && /לסגור את החתימות/.test(r.asked), [r.rv, r.asked]);
   check('who signed: nobody "outside the list", the annual declaration; a worker counts as signed by the typed ID', !r.who.out && r.who.decl && r.who.miss && r.who.danaMissing && !r.who.ahmadMissing, r.who);
   check('form 08.01: the button calls op form0801 and shows the result with a link', r.btn && r.form === 'ok' && r.formCall && r.formCall.id && /od\.example\/f\.pdf/.test(r.res) && /2/.test(r.res), r.res);
+  check('one "הדרכות" tile; "courses and certifications" is a tab, on both pages', r.oneTile && r.tabs, r);
+  check('no combined 08.01 button on the induction', r.indBtn === false);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
