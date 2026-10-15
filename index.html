@@ -15378,6 +15378,21 @@ function _sysChkLocations(){
   return _sysRow(SYS_OK,'\u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd',n+' \u05de\u05d9\u05e7\u05d5\u05de\u05d9\u05dd \u05de\u05d5\u05d2\u05d3\u05e8\u05d9\u05dd','');
 }
 
+// 8. How long the sign-ins on this device took, step by step (15/10/2026).
+function _sysChkLogin(){
+  var a=_lgList(),T='\u05d6\u05de\u05e0\u05d9 \u05db\u05e0\u05d9\u05e1\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4';
+  if(!a.length)return _sysRow(SYS_OK,T,'\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05de\u05d3\u05d3\u05d4 \u05db\u05e0\u05d9\u05e1\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8 \u05d4\u05d6\u05d4.','');
+  var sec=function(ms){return (Math.round((ms||0)/100)/10)+' \u05e9\'';};
+  var line=function(e){var s=e.s||{},p=[];['cf','pw','mfa','user'].forEach(function(k){if(s[k]!=null)p.push(_LG_NAMES[k]+' '+sec(s[k])+(k==='mfa'?' (\u05db\u05d5\u05dc\u05dc \u05d4\u05e7\u05dc\u05d3\u05ea \u05d4\u05e7\u05d5\u05d3)':''));});
+    return fd(String(e.at||'').substring(0,10))+' '+String(e.at?new Date(e.at).toTimeString():'').substring(0,5)+': '+(p.length?p.join(', '):'-')+'. \u05e1\u05d4"\u05db '+sec(e.total)+(e.res==='ok'?'':' (\u05dc\u05d0 \u05d4\u05d5\u05e9\u05dc\u05de\u05d4)');};
+  var last=a[a.length-1],slow=a.slice().sort(function(x,y){return (y.total||0)-(x.total||0);})[0];
+  var d='\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: '+line(last)+(slow!==last?' | \u05d4\u05d0\u05d9\u05d8\u05d9\u05ea \u05de-'+a.length+' \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d5\u05ea: '+line(slow):'');
+  // Steps that are only the server: the password and the approval. Over 5 seconds is not the person.
+  var srv=Math.max((last.s||{}).pw||0,(last.s||{}).user||0);
+  if(last.res==='err'||srv>5000)return _sysRow(SYS_WARN,T,d,'\u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8: \u05dc\u05e6\u05dc\u05dd \u05d0\u05ea \u05d4\u05e9\u05d5\u05e8\u05d4 \u05d4\u05d6\u05d5 \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea.');
+  return _sysRow(SYS_OK,T,d,'');
+}
+
 // Things the browser genuinely cannot check. Listed as unchecked rather than
 // dressed up as green, because a false all-clear is worse than a gap.
 var SYS_MANUAL=[
@@ -15392,9 +15407,9 @@ function _sysStateOpen(){
 function _sysStateRun(){
   var box=g('sys-list');if(!box)return;
   box.innerHTML='<div style="padding:16px;text-align:center;color:var(--t3)">'+esc('\u05d1\u05d5\u05d3\u05e7...')+'</div>';
-  var quick=[_sysChkRecipient(),_sysChkDelivery(),_sysChkOutbox(),_sysChkTrustees(),_sysChkLocations()];
+  var quick=[_sysChkRecipient(),_sysChkDelivery(),_sysChkOutbox(),_sysChkTrustees(),_sysChkLocations(),_sysChkLogin()];
   Promise.all([_sysChkTemplate(),_sysChkBackup()]).then(function(slow){
-    var rows=[quick[0],quick[1],slow[0],slow[1],quick[2],quick[3],quick[4]];
+    var rows=[quick[0],quick[1],slow[0],slow[1],quick[2],quick[3],quick[4],quick[5]];
     var bad=rows.filter(function(r){return r.s===SYS_BAD;}).length;
     var warn=rows.filter(function(r){return r.s===SYS_WARN;}).length;
     var head;
@@ -19564,7 +19579,26 @@ function rLg(){
 function clearLog(){if(!confirm('\u05dc\u05e0\u05e7\u05d5\u05ea?'))return;DB.hist=[];sdb();rLg();}
 // sticky: a message that explains why login CANNOT work must not erase itself
 // after 2.5 seconds, leaving an empty login screen and no explanation.
+// ---- How long each sign-in step took, and no step that waits in silence (15/10/2026) ----
+// Michael: "I type the password and it is stuck". Nobody could say which step was slow:
+// the Cloudflare check, the password, the second factor or the user approval. Every
+// sign-in now keeps its step times on this device (the last 10, in localStorage), and
+// the system screen shows them. Every step that waits on a server has a limit; past it
+// the person gets a line that says which step did not finish, not a button stuck on "connecting".
+var _LG_KEY='tfgn_login_times',_LG_WAIT_MS=20000,_lg=null;
+var _LG_NAMES={cf:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d0\u05d1\u05d8\u05d7\u05d4 \u05e9\u05dc Cloudflare',pw:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e1\u05d9\u05e1\u05de\u05d4',mfa:'\u05d4\u05d0\u05d9\u05de\u05d5\u05ea \u05d4\u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9',user:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d4'};
+function _lgStart(){var n=Date.now();_lg={at:new Date().toISOString(),t0:n,last:n,s:{}};}
+function _lgMark(st){if(!_lg)return;var n=Date.now();_lg.s[st]=n-_lg.last;_lg.last=n;}
+function _lgEnd(res){if(!_lg)return;var e={at:_lg.at,s:_lg.s,total:Date.now()-_lg.t0,res:res};_lg=null;
+  try{var a=JSON.parse(localStorage.getItem(_LG_KEY)||'[]');if(!Array.isArray(a))a=[];a.push(e);localStorage.setItem(_LG_KEY,JSON.stringify(a.slice(-10)));}catch(x){}}
+function _lgList(){try{var a=JSON.parse(localStorage.getItem(_LG_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+// p, or a rejection "timeout:<step>" after ms. ms 0 = no limit (the Cloudflare check has its own).
+function _lgWait(p,ms,st){if(!ms)return Promise.resolve(p);return new Promise(function(res,rej){var t=setTimeout(function(){rej(new Error('timeout:'+st));},ms);
+  Promise.resolve(p).then(function(v){clearTimeout(t);res(v);},function(e){clearTimeout(t);rej(e);});});}
+function _lgMsg(m){var st=String(m||'').replace(/^timeout:/,'');return (_LG_NAMES[st]||'\u05d4\u05e9\u05dc\u05d1')+' \u05dc\u05d0 \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4 \u05ea\u05d5\u05da '+Math.round(_LG_WAIT_MS/1000)+' \u05e9\u05e0\u05d9\u05d5\u05ea. \u05d1\u05d3\u05d5\u05e7 \u05d0\u05ea \u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05d0\u05d9\u05e0\u05d8\u05e8\u05e0\u05d8 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';}
+function _lgIsTimeout(e){return /^timeout:/.test(String((e&&e.message)||''));}
 function _loginErr(msg,sticky){
+  _lgEnd('err');
   var err=g('pw-err');if(err)err.textContent=msg;
   var pw=g('pw');if(pw){pw.value='';if(!sticky)pw.focus();}
   if(sticky)return;
@@ -19656,6 +19690,7 @@ window._changePwSubmit=function(){
   }).catch(function(e){
     if(btn){btn.disabled=false;btn.textContent='💾 \u05e2\u05d3\u05db\u05df \u05e1\u05d9\u05e1\u05de\u05d4';}
     var msg=((e&&e.message)||'').toString();
+    if(/^timeout:/.test(msg)){fail(_lgMsg(msg));return;}
     if(msg==='mfa-cancel'){fail('\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d1\u05d5\u05d8\u05dc: \u05e0\u05d3\u05e8\u05e9 \u05e7\u05d5\u05d3 \u05d0\u05d9\u05de\u05d5\u05ea. \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9.');try{_sbClient.auth.signOut();}catch(x){}_sbToken=null;_sbAuthPromise=null;setTimeout(function(){location.reload();},1500);return;}
     if(msg==='bad-current')fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05e0\u05d5\u05db\u05d7\u05d9\u05ea \u05e9\u05d2\u05d5\u05d9\u05d4');
     else if(/different|same/i.test(msg))fail('\u05d4\u05e1\u05d9\u05e1\u05de\u05d4 \u05d4\u05d7\u05d3\u05e9\u05d4 \u05d7\u05d9\u05d9\u05d1\u05ea \u05dc\u05d4\u05d9\u05d5\u05ea \u05e9\u05d5\u05e0\u05d4');
@@ -19857,18 +19892,18 @@ function _mfaAsk(){
       var code=String(inp.value||'').replace(/\D/g,'');
       if(code.length!==6){if(err)err.textContent='\u05d4\u05d6\u05df 6 \u05e1\u05e4\u05e8\u05d5\u05ea';return;}
       ok.disabled=true;
-      _sbClient.auth.mfa.listFactors().then(function(r){
+      _lgWait(_sbClient.auth.mfa.listFactors().then(function(r){
         var f=r&&r.data&&r.data.totp&&r.data.totp[0];
         if(!f)throw new Error('no-factor');
         return _sbClient.auth.mfa.challengeAndVerify({factorId:f.id,code:code});
-      }).then(function(v){
+      }),_LG_WAIT_MS,'mfa').then(function(v){
         if(v&&v.error)throw v.error;
         return _mfaNewSession();
       }).then(function(sess){
         done();resolve(sess);
       }).catch(function(e){
         ok.disabled=false;
-        if(err)err.textContent=(e&&e.message==='no-factor')?'\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05d6\u05d4':'\u05d4\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9 \u05d0\u05d5 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';
+        if(err)err.textContent=_lgIsTimeout(e)?'\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05e0\u05d4 \u05ea\u05d5\u05da '+Math.round(_LG_WAIT_MS/1000)+' \u05e9\u05e0\u05d9\u05d5\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.':(e&&e.message==='no-factor')?'\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0 \u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9 \u05dc\u05d7\u05e9\u05d1\u05d5\u05df \u05d4\u05d6\u05d4':'\u05d4\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9 \u05d0\u05d5 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d5. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.';
         inp.value='';try{inp.focus();}catch(x){}
       });
     }
@@ -19877,12 +19912,12 @@ function _mfaAsk(){
     no.onclick=function(){done();reject(new Error('mfa-cancel'));};
   });
 }
-function _mfaStep(){return _mfaNeeded().then(function(n){return n?_mfaAsk():null;});}
+function _mfaStep(){return _lgWait(_mfaNeeded(),_LG_WAIT_MS,'mfa').then(function(n){return n?_mfaAsk():null;});}
 // For the chain after signInWithPassword: the aal2 session replaces the
 // password-only one, or the result is marked as given up.
 function _mfaAfterPw(r){
   if(!r||r.error||!r.data||!r.data.session)return r;
-  return _mfaStep().then(function(s){if(s)r.data.session=s;return r;},function(){r.mfaCancelled=true;return r;});
+  return _mfaStep().then(function(s){if(s)r.data.session=s;return r;},function(e){if(_lgIsTimeout(e))throw e;r.mfaCancelled=true;return r;});
 }
 // A saved session that is password-only for someone who has a factor is
 // worth nothing to the database. Drop it, and the login screen asks properly.
@@ -20008,9 +20043,11 @@ function _loginResolveUser(lb,email,uname){
   }
 
   // For non-admin users - check the app_users row for approval (active=true + full_name)
-  fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
+  if(lb)lb.textContent='\u05d1\u05d5\u05d3\u05e7 \u05d4\u05e8\u05e9\u05d0\u05d4...';
+  _lgWait(fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
     headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
-  }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
+  }).then(function(rr){return rr.ok?rr.json():[];}),_LG_WAIT_MS,'user').then(function(rows){
+    _lgMark('user');
     var u=rows[0];
     var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
     if(!approved){
@@ -20027,6 +20064,7 @@ function _loginResolveUser(lb,email,uname){
     try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
     _sbToken=null;_sbAuthPromise=null;
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+    if(_lgIsTimeout(err)){_loginErr(_lgMsg(err.message),true);return;}
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e8\u05e9\u05d0\u05d4: '+(err&&err.message||err));
   });
 }
@@ -20115,7 +20153,12 @@ function doLogin(){
       :'\u05e1\u05e4\u05e8\u05d9\u05d9\u05ea \u05d4\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4 (Supabase). \u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3; \u05d0\u05dd \u05d6\u05d4 \u05d7\u05d5\u05d6\u05e8 - \u05d7\u05e1\u05dd \u05e8\u05e9\u05ea \u05d0\u05d5 \u05d7\u05d5\u05e1\u05dd \u05e4\u05e8\u05e1\u05d5\u05de\u05d5\u05ea.',true);
     return;
   }
-  _captcha().then(function(tok){return _sbClient.auth.signInWithPassword(_pwCreds(email,val,tok));}).then(_mfaAfterPw).then(function(r){
+  _lgStart();
+  if(lb)lb.textContent='\u05d1\u05d3\u05d9\u05e7\u05ea \u05d0\u05d1\u05d8\u05d7\u05d4...';
+  _captcha().then(function(tok){_lgMark('cf');if(lb)lb.textContent='\u05d1\u05d5\u05d3\u05e7 \u05e1\u05d9\u05e1\u05de\u05d4...';
+    return _lgWait(_sbClient.auth.signInWithPassword(_pwCreds(email,val,tok)),_LG_WAIT_MS,'pw');
+  }).then(function(r){_lgMark('pw');if(lb&&r&&r.data&&r.data.session)lb.textContent='\u05d0\u05d9\u05de\u05d5\u05ea \u05d3\u05d5-\u05e9\u05dc\u05d1\u05d9...';return _mfaAfterPw(r);}).then(function(r){
+    if(r&&r.data&&r.data.session&&!r.mfaCancelled)_lgMark('mfa');
     if(r&&r.mfaCancelled){
       try{_sbClient.auth.signOut();}catch(e){}
       _sbToken=null;_sbAuthPromise=null;
@@ -20147,11 +20190,18 @@ function doLogin(){
       var fpc2=g('fpc-confirm');if(fpc2)fpc2.value='';
       var fpcErr=g('fpc-err');if(fpcErr)fpcErr.textContent='';
       try{document.getElementById('ov-force-pw').style.display='block';document.getElementById('m-force-pw-change').style.display='block';}catch(e){}
+      _lgEnd('pwchange');
       return;
     }
 
     _loginResolveUser(lb,email,uname);
-  }).catch(function(){
+  }).catch(function(e){
+    if(_lgIsTimeout(e)){
+      try{_sbClient.auth.signOut();}catch(x){}
+      _sbToken=null;_sbAuthPromise=null;
+      if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
+      _loginErr(_lgMsg(e.message),true);return;
+    }
     if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
     _loginErr('\u05e9\u05d2\u05d9\u05d0\u05d4 \u05d1\u05d4\u05ea\u05d7\u05d1\u05e8\u05d5\u05ea');
   });
@@ -20217,6 +20267,7 @@ window._pwChangeSubmit=function(){
 };
 
 function _finishLogin(lb){
+  _lgEnd('ok');
   if(lb){lb.disabled=false;lb.textContent=lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
   _isAdmin=true;
   // This phone belongs to someone who signs in. Kept so that when the session
