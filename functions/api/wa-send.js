@@ -85,7 +85,8 @@ export async function onRequest({ request, env }) {
           'Authorization': `Bearer ${TOKEN}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20000) // 15/10/2026: a hung Meta call answers 502, not never
       }
     );
   } catch (e) {
@@ -96,8 +97,6 @@ export async function onRequest({ request, env }) {
   let parsed;
   try { parsed = JSON.parse(text); } catch (e) { parsed = { raw: text }; }
 
-  return new Response(JSON.stringify(parsed), {
-    status: metaResp.status,
-    headers: { ...cors, 'Content-Type': 'application/json' }
-  });
+  // jsonResp: charset=utf-8, or Safari reads a Hebrew error from Meta as Latin-1 (_shared.js).
+  return jsonResp(parsed, metaResp.status, cors);
 }

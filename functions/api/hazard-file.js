@@ -868,7 +868,8 @@ export async function onRequest(context) {
       // Also remembered apart, so a run that read the list a moment before
       // does not bring the item back.
       if (k && ds.indexOf(k) < 0) ds = ds.concat([k]).slice(-100);
-      await stateSet(env, { [sk]: JSON.stringify({ at: (d && d.at) || new Date().toISOString(), items }), [dk]: JSON.stringify(ds) });
+      try { await stateSet(env, { [sk]: JSON.stringify({ at: (d && d.at) || new Date().toISOString(), items }), [dk]: JSON.stringify(ds) }); }
+      catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 503, cors); }
       return jsonResp({ ok: true, left: items.length }, 200, cors);
     }
     force = body.force === true;
