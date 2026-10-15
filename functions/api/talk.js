@@ -602,7 +602,7 @@ export function page(title, inner, tone, status, nonce, lang) {
   const color = tone === 'ok' ? '#15803d' : tone === 'err' ? '#cc1f1f' : '#1e3a8a';
   const html = '<!doctype html><html lang="' + langOf(lang) + '" dir="' + L.dir + '"><head><meta charset="UTF-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">'
-    + '<title>' + esc(L.title) + '</title></head>'
+    + '<title>' + esc(title || L.title) + '</title></head>'  // the page's own title, not "weekly training" on every page (15/10/2026)
     + '<body style="font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0;padding:12px">'
     + '<div style="background:#fff;border-radius:12px;max-width:560px;margin:0 auto;box-shadow:0 4px 20px rgba(0,0,0,.08);overflow:hidden">'
     + '<div style="background:' + color + ';color:#fff;padding:14px 18px;font-size:18px;font-weight:700">' + esc(title) + '</div>'
@@ -1135,7 +1135,10 @@ async function signTalk(env, request, ctx) {
     if (raw.length < 2) return bad('errNameT', 'oNeed');
     if (!oid) return bad('errNameT', 'oIdNeed');
     if (!sig) return bad('errSigT', 'errSig');
-    const n = await nameHe(env, request, raw), dep = comp ? await nameHe(env, request, comp) : null;
+    // Annual / quality: the ID is the identity, so a name the AI could not put in Hebrew letters (busy, rate
+    // limit) is kept as typed instead of refusing the signature (15/10/2026, load test: fifty at once, names in
+    // Arabic and Russian, the name AI refusing = signatures lost).
+    const n = (await nameHe(env, request, raw)) || (typed ? raw.substring(0, 60) : null), dep = comp ? await nameHe(env, request, comp) : null;
     if (!n || (comp && !dep)) return bad('errNameT', 'errHe', 422);
     emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep, out: true };
     // Annual / quality: the department picked from the list, or typed under "other" (14/10/2026).
