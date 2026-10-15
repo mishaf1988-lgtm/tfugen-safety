@@ -731,7 +731,7 @@ export function nevoLine(raw, nowMs) {
 // agent silent longer than its period after it already reported once, is red: before this a
 // run's last message stayed in a persistent session that nobody opens. Never reported = listed,
 // not red (the monthly ones first run on 01/11). Pure.
-export const AGENT_PERIODS = { 'routine-researcher': 4, retro: 4, 'routine-mail-filing': 4, 'routine-quotes': 8, 'routine-radar-learn': 8, 'routine-inventor': 8, 'routine-validity': 8, 'routine-compliance': 35, 'routine-od-scan': 35, 'routine-nevo-versions': 35, 'routine-factory-trends': 35, 'routine-inspector': 35 };
+export const AGENT_PERIODS = { 'routine-researcher': 4, retro: 4, 'routine-mail-filing': 4, 'routine-quotes': 8, 'routine-radar-learn': 8, 'routine-inventor': 8, 'routine-validity': 8, 'routine-compliance': 35, 'routine-od-scan': 35, 'routine-nevo-versions': 35, 'routine-factory-trends': 35, 'routine-inspector': 35, 'routine-talk-field': 8 };
 export function agentsLine(raw, nowMs) {
   let log = []; try { log = JSON.parse(raw || '[]'); } catch (e) { log = []; }
   if (!Array.isArray(log)) log = [];
