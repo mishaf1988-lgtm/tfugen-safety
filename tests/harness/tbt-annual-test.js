@@ -89,6 +89,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
     o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
     o.unsaved = await _tbtPreviewFromForm();
+    // 15/10/2026: one list of topics per kind, from the folders: safety for annual, quality (GMP, allergens...) for quality
+    { openModal('m-tbt'); const k = document.getElementById('tbt-kind'); const vals = () => [...document.querySelectorAll('#tbt-subj .tbt-subj')].map((c) => c.value);
+      k.value = 'annual'; _tbtKindUi(); o.subjAnn = vals();
+      k.value = 'quality'; _tbtKindUi(); o.subjQa = vals();
+      _tbtTypedFill({ subjects: 'אלרגנים\nנושא חופשי' }); o.subjQaOn = [...document.querySelectorAll('#tbt-subj .tbt-subj')].filter((c) => c.checked).map((c) => c.value).join(); o.subjQaOther = document.getElementById('tbt-subj-o').value;
+      o.subjQaSaved = _tbtSubjects(); closeModal('m-tbt'); }
     // 15/10/2026: annual / quality is face to face: no text, video, questions or read-aloud in the form; no text needed to publish
     { openModal('m-tbt'); const k = document.getElementById('tbt-kind'); const fld = (id) => document.getElementById(id).closest('.field').style.display;
       k.value = 'annual'; _tbtKindUi(); o.ffHidden = ['tbt-body', 'tbt-video', 'tbt-quiz', 'tbt-say-btn'].map(fld);
@@ -170,6 +176,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('...a test to Michael without asking; the real send asks first, then says what went and what was skipped', r.mmTest === 'test' && r.mmTestCall.test === true && r.mmAskedTest === 0 && r.mmSend === 'sent' && r.mmSendCall.test === false && !r.mmSendCall.preview && r.mmAsked === 1 && /נשלח: ייצור טוגנים \(2\)/.test(r.mmRes) && /לא נשלח: חומר גלם/.test(r.mmRes), [r.mmTest, r.mmSend, r.mmAsked, r.mmRes]);
   check('annual: the text, video, questions and read-aloud fields are hidden; weekly shows them', r.ffHidden.every((x) => x === 'none') && r.ffShown.every((x) => x === ''), [r.ffHidden, r.ffShown]);
   check('a quality training with no text is not refused as "nothing to publish"', !/אין תוכן לפרסם/.test(r.noBodyToast), r.noBodyToast);
+  check('annual: the safety topics found in the folders (16, machine guarding, emergency, PPE...)', r.subjAnn.length === 16 && ['מיגון מכונות', 'חירום ופינוי', 'ציוד מגן אישי', 'כיבוי אש'].every((v) => r.subjAnn.includes(v)) && !r.subjAnn.includes('אלרגנים'), r.subjAnn);
+  check('quality: its own list (GMP, allergens, CCP, HACCP...), no safety topics', r.subjQa.length === 8 && ['GMP והיגיינה אישית', 'אלרגנים', 'CCP', 'HACCP'].every((v) => r.subjQa.includes(v)) && !r.subjQa.includes('כיבוי אש'), r.subjQa);
+  check('editing a quality training: its topic ticked, a free one under "other", saved back as both', r.subjQaOn === 'אלרגנים' && r.subjQaOther === 'נושא חופשי' && r.subjQaSaved === 'אלרגנים\nנושא חופשי', [r.subjQaOn, r.subjQaOther, r.subjQaSaved]);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
