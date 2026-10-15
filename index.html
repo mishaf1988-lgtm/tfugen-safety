@@ -1184,7 +1184,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="emp-btn g wide" id="emp-trustee-btn" onclick="_truOpen()"><span class="emi">&#129466;</span><span>נאמן בטיחות<br><small style="font-weight:400;font-size:12px;color:var(--t2)"><span id="tru-n-btn">8</span> המשימות החודשיות, דיווח, ניקוד</small></span></button>
   </div>
   <div id="emp-sync" style="margin-top:14px;background:var(--c-orange-50,#fff7ed);border:1px solid var(--c-amber-500,#f59e0b);border-radius:12px;padding:12px;display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:var(--c-orange-700,#92400e)"><strong>&#9203; <span id="emp-sync-count">0</span> &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span style="color:var(--c-amber-650,#a16207);font-size:11px">- &#1497;&#1505;&#1493;&#1504;&#1499;&#1512;&#1503; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1497;&#1492;&#1497;&#1492; &#1495;&#1497;&#1489;&#1493;&#1512;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:var(--c-amber-500,#f59e0b);border:none;border-radius:8px;color:var(--c-white,#fff);font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:13px;color:var(--c-orange-700,#92400e)"><span id="emp-sync-count" style="display:none">0</span><strong id="emp-sync-txt">&#9203; &#1504;&#1514;&#1493;&#1504;&#1497;&#1501; &#1502;&#1502;&#1514;&#1497;&#1504;&#1497;&#1501; &#1500;&#1505;&#1504;&#1499;&#1512;&#1493;&#1503;</strong> <span id="emp-sync-sub" style="color:var(--c-amber-650,#a16207);font-size:11px">- &#1497;&#1497;&#1513;&#1500;&#1495; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514; &#1499;&#1513;&#1497;&#1492;&#1497;&#1492; &#1495;&#1497;&#1489;&#1493;&#1512;</span></div><button onclick="if(typeof _obDrain==='function')_obDrain(true);" style="padding:8px 14px;background:var(--c-amber-500,#f59e0b);border:none;border-radius:8px;color:var(--c-white,#fff);font-weight:700;cursor:pointer;font-family:inherit;font-size:12px">&#8635; &#1505;&#1504;&#1499;&#1512;&#1503; &#1506;&#1499;&#1513;&#1497;&#1493;</button></div>
   </div>
   <div id="emp-recent" style="margin-top:14px;background:var(--c-blue-50-6,#f8fafc);border:1px solid var(--c-blue-100-3,#e2e8f0);border-radius:12px;padding:14px;display:none">
     <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--c-blue-750-4,#334155)">&#128221; &#1492;&#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501; &#1492;&#1488;&#1495;&#1512;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1497; <span style="font-size:11px;font-weight:400;color:var(--c-blue-550,#64748b)">(&#1493;&#1502;&#1492; &#1511;&#1512;&#1492; &#1488;&#1497;&#1514;&#1501;)</span></div>
@@ -2940,9 +2940,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TRUSTEE REPORT MODAL — one tour: several tasks, several findings (point 2) -->
-<div class="overlay" id="ov-tru" onclick="closeModal('m-tru')"></div>
+<div class="overlay" id="ov-tru" onclick="_truClose()"></div>
 <div class="modal" id="m-tru" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru')">&#10005;</button>
+  <button class="close-btn" onclick="_truClose()">&#10005;</button>
   <div class="modal-title">&#129466; דיווח סיור נאמן בטיחות</div>
   <input type="hidden" id="tru-ref">
   <div id="tru-ref-note" style="display:none;background:var(--c-blue-50,#eff6ff);border:1px solid var(--c-blue-200,#93c5fd);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--c-blue-600,#1e40af);margin-bottom:10px;line-height:1.5"></div>
@@ -2955,7 +2955,7 @@ id="m-ncr" style="display:none">
   <div id="tru-tasks"></div>
   <div class="tru-danger">&#128680; <strong>סכנה מיידית?</strong> מתקשרים לממונה הבטיחות מיד - לא ממתינים לדיווח. מגן מכונה שהוסר או נוטרל ו"כמעט ונפגע" נכנסים לכאן.</div>
   <div id="tru-form-status" style="font-size:12px;line-height:1.5;margin-top:10px;min-height:18px"></div>
-  <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tru')">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
+  <div class="modal-footer"><button class="btn btn-s" onclick="_truClose()">ביטול</button><button class="btn btn-p" onclick="svTru()">שלח דיווח</button></div>
 </div>
 
 <!-- TRUSTEES ROSTER (manager): who may report — maintained here, no code change -->
@@ -3813,15 +3813,6 @@ var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
 function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
-// A fetch with a time limit (15/10/2026, review of the trustee and sync paths). A request that
-// never settles on a dropped mobile connection kept _obBusy true (no send until a reload), held a
-// sync slot for ever, or left a trustee's photo on "uploading". An abort is a network error ('net').
-function _fetchT(url,opts,ms){
-  if(typeof AbortController==='undefined')return fetch(url,opts);
-  var ac=new AbortController(),o={};Object.keys(opts||{}).forEach(function(k){o[k]=opts[k];});o.signal=ac.signal;
-  var t=setTimeout(function(){try{ac.abort();}catch(e){}},ms||30000);
-  return fetch(url,o).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
-}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',toolbox_talks:'ts',toolbox_reads:'ts',train_plan:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
@@ -3856,7 +3847,7 @@ function _sbFetchAll(url,cap){
     if(cap&&to>cap-1)to=cap-1;
     var want=to-from+1;
     if(want<1)return Promise.resolve({ok:true,rows:rows});
-    return _fetchT(url,{headers:_sbRangeH(from,to),priority:'low'},30000).then(function(r){
+    return fetch(url,{headers:_sbRangeH(from,to),priority:'low'}).then(function(r){
       if(!r.ok)return {ok:false,status:r.status};
       return r.json().then(function(j){
         if(!Array.isArray(j))return {ok:false,status:r.status};
@@ -4044,7 +4035,7 @@ function _obSend(op){
     }
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
-    return _fetchT(url,opts,30000).then(function(r){
+    return fetch(url,opts).then(function(r){
       // ---- 5.2 ----
       // sbH() asks for return=representation, so PostgREST answers a PATCH or
       // DELETE that matched NOTHING with 200 and []. Nobody read the body, so
@@ -4102,16 +4093,6 @@ function _obSend(op){
             }
           }catch(e){}
         }
-        // An insert whose answer was lost already arrived (15/10/2026): its retry is an upsert, which
-        // needs the UPDATE right a trustee's session does not have, so it was refused every 30
-        // seconds for ever, and the red pill offered to clear the queue. If the row is there, done.
-        if(op.op==='ins'&&op.row&&op.row.id&&(r.status===401||r.status===403||r.status===409)){
-          return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id',{headers:sbH()},15000)
-            .then(function(g2){return g2.ok?g2.json():[];}).then(function(rows){
-              if(Array.isArray(rows)&&rows.length)return r;
-              var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
-            },function(x){if(x&&x.status)throw x;var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});
-        }
         var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
       });}
     });
@@ -4137,7 +4118,6 @@ function _obDrainOps(){
   var p=Promise.resolve();
   q.forEach(function(op){
     p=p.then(function(){
-      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
@@ -5239,9 +5219,6 @@ window._lockNow=function(){
   try{_lockWipeSensitive();}catch(e){}
   try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
-  // The queue waits for the next sign-in (15/10/2026): with SB_ON on, the 30-second send signed in
-  // anonymously and the manager's writes went out as anonymous, refused or matching 0 rows.
-  SB_ON=false;
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
   try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
@@ -20572,7 +20549,10 @@ function _truSyncNumbers(){
   set('tru-mgr-scorenote',TRUSTEE_PTS_TASK+' \u05dc\u05db\u05dc \u05de\u05e9\u05d9\u05de\u05d4 (\u05de\u05e7\u05e1\u05f3 '+_truMaxTaskPts()+'), '+TRUSTEE_PTS_CLOSED+' \u05dc\u05db\u05dc \u05de\u05e4\u05d2\u05e2 \u05e9\u05e0\u05e1\u05d2\u05e8 (\u05de\u05e7\u05e1\u05f3 '+TRUSTEE_MAX_CLOSED_PTS+'), \u05d6\u05db\u05d0\u05d5\u05ea \u05dc\u05e4\u05e8\u05e1 \u05de-'+minT+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea');
 }
 function _truMonthKey(d){return String(d||'').substring(0,7);}
-function _truThisMonth(){return new Date().toISOString().substring(0,7);}
+// Israel calendar, not UTC (15/10/2026): a report at 01:00 on the 1st used to
+// land in the previous month, and the date field showed yesterday until 03:00.
+function _truToday(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});}
+function _truThisMonth(){return _truToday().substring(0,7);}
 function _truRowMonth(r){return r.m||_truMonthKey(r.d);}
 // «לא ליקוי» (30/09/2026, Michael: a trustee reports something that is not a
 // deficiency, for the points): the manager marks it and the app treats it as
@@ -20633,7 +20613,19 @@ var TRU_ME_KEY='tfgn_trustee_name';
 // report it is only nudged. One flag if the committee wants it mandatory too.
 var TRUSTEE_PHOTO_REQUIRED_OK=false;
 function _truMe(){try{return localStorage.getItem(TRU_ME_KEY)||'';}catch(e){return '';}}
-function _truSetMe(v){v=String(v||'').trim();try{if(v)localStorage.setItem(TRU_ME_KEY,v);else localStorage.removeItem(TRU_ME_KEY);}catch(e){}_truNamePairSync('tru-me','tru-me-other',v);_truIntroSync();_truRender();}
+// A phone that more than one trustee sends from (15/10/2026). Sending used to
+// make the last sender the phone's owner, so the next trustee found the form
+// already filled with someone else's name and the points went to them. Now
+// the first sender owns the phone; a different sender marks it shared, and a
+// shared phone opens the form on "choose" until someone picks a name above.
+var TRU_SHARED_KEY='tfgn_tru_shared';
+function _truShared(){try{return localStorage.getItem(TRU_SHARED_KEY)==='1';}catch(e){return false;}}
+function _truSenderSeen(u){
+  var me=_truMe();
+  if(!me){_truSetMe(u);return;}
+  if(me!==u){try{localStorage.setItem(TRU_SHARED_KEY,'1');}catch(e){}}
+}
+function _truSetMe(v){v=String(v||'').trim();try{if(v){localStorage.setItem(TRU_ME_KEY,v);localStorage.removeItem(TRU_SHARED_KEY);}else localStorage.removeItem(TRU_ME_KEY);}catch(e){}_truNamePairSync('tru-me','tru-me-other',v);_truIntroSync();_truRender();}
 // Michael (2026-09-18): the employee home IS the trustee screen — no tile grid,
 // no extra tap. The tiles stay in the markup; flip this to bring them back.
 var EMP_HOME_TRUSTEES_ONLY=true;
@@ -20685,8 +20677,10 @@ function _truFillLists(){
 // session is anonymous and most tables are not readable), but
 // trustee_reports is readable by everyone, so the screen pulls it itself
 // with the same merge rules as sbSync (null = unreachable \u2192 keep cache).
+var _truPullAt=0,_TRU_PULL_MIN_MS=60000;
 function _truPull(manual){
   if(typeof sbGet!=='function')return Promise.resolve(false);
+  _truPullAt=Date.now();
   // trustee_tasks belongs here too: the kiosk never runs sbSync, so without
   // it the catalogue came only from realtime. One UPDATE on one task left
   // DB.trustee_tasks holding exactly that row, and _truTasks() stops falling
@@ -20722,7 +20716,7 @@ function _truStatusBadge(r){
   if(_truNotRel(r))return '<span class="b" style="background:var(--c-gray-100-3,#e5e7eb);color:var(--c-gray-650-2,#4b5563)" title="\u05dc\u05d0 \u05e0\u05d7\u05e9\u05d1 \u05dc\u05e0\u05d9\u05e7\u05d5\u05d3">\u05dc\u05d0 \u05dc\u05d9\u05e7\u05d5\u05d9</span>';
   return r.s===TRUSTEE_S_CLOSED?'<span class="b bG">\u05e0\u05e1\u05d2\u05e8</span>':'<span class="b bR">\u05e4\u05ea\u05d5\u05d7</span>';
 }
-function _truDaysLeft(){var d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate();}
+function _truDaysLeft(){var p=_truToday().split('-'),y=parseInt(p[0],10),m=parseInt(p[1],10),d=parseInt(p[2],10);return new Date(y,m,0).getDate()-d;}
 function _truIntroSync(){var it=g('tru-intro');if(it)it.open=!_truMe();}
 // One line in "my reports". Shared by the current month and by the block of
 // still-open findings from earlier months, because closing a finding is the
@@ -20886,6 +20880,7 @@ function _truFormSync(){
 // NCR / near-miss draft pattern: a 5s autosave, restored on the next open.
 var _TRU_DRAFT_KEY='tfgn_tru_draft_v1';
 var _TRU_DRAFT_TIMER=null;
+var _TRU_DRAFT_MAX_MIN=7*24*60;
 var _TRU_DRAFT_FIELDS=['tru-u','tru-u-other','tru-d','tru-loc'];
 function _truDraftSnapshot(){
   _truFormSync();
@@ -20908,17 +20903,54 @@ function _truDraftHasContent(sn){
     });
   })||Object.keys(sn.photos||{}).length>0;
 }
+// Writes the open tour down now. Only a tour with something in it: an empty
+// form never overwrites a draft the trustee declined to restore, so that one
+// stays until the new tour has content of its own.
+function _truDraftSave(){
+  var modal=g('m-tru');
+  if(!modal||modal.style.display==='none'||_truForm.lock)return false;
+  var sn=_truDraftSnapshot();
+  if(!_truDraftHasContent(sn))return false;
+  try{localStorage.setItem(_TRU_DRAFT_KEY,JSON.stringify({snap:sn,ts:Date.now()}));}catch(e){}
+  return true;
+}
 function _truDraftStart(){
   _truDraftStop();
   _TRU_DRAFT_TIMER=setInterval(function(){
     var modal=g('m-tru');
     if(!modal||modal.style.display==='none'){_truDraftStop();return;}
     if(_truForm.lock){_truDraftStop();return;}   // a closure report, not a tour
-    var sn=_truDraftSnapshot();
-    if(_truDraftHasContent(sn)){
-      try{localStorage.setItem(_TRU_DRAFT_KEY,JSON.stringify({snap:sn,ts:Date.now()}));}catch(e){}
-    }
+    _truDraftSave();
   },5000);
+}
+// The 5s timer alone lost up to 5 seconds of typing whenever iOS froze or
+// killed the page: an incoming call, the camera, the app switcher.
+document.addEventListener('visibilitychange',function(){if(document.hidden)try{_truDraftSave();}catch(e){}});
+window.addEventListener('pagehide',function(){try{_truDraftSave();}catch(e){}});
+// Android back on the form (15/10/2026): with no history entry of its own the
+// standalone PWA simply exited, tour and all. Opening the form pushes one;
+// back closes the form (draft saved) and the trustee stays on the screen.
+var _truHist=false,_truHistSkip=0;
+function _truHistPush(){
+  if(_truHist)return;
+  try{history.pushState({truModal:1},'');_truHist=true;}catch(e){}
+}
+// Called first by the global popstate handler; true = handled here.
+function _truPopHook(e){
+  if(_truHistSkip&&Date.now()-_truHistSkip<1500){_truHistSkip=0;return true;}
+  _truHistSkip=0;
+  if(!_truHist)return false;
+  _truHist=false;
+  var mo=g('m-tru');
+  if(mo&&mo.style.display!=='none'){try{_truDraftSave();}catch(x){}_truDraftStop();closeModal('m-tru');return true;}
+  return false;
+}
+// Every way the form closes: X, Cancel, the overlay, and a sent report.
+function _truClose(sent){
+  if(!sent){try{_truDraftSave();}catch(e){}}
+  _truDraftStop();
+  closeModal('m-tru');
+  if(_truHist){_truHist=false;_truHistSkip=Date.now();try{history.back();}catch(e){_truHistSkip=0;}}
 }
 function _truDraftStop(){if(_TRU_DRAFT_TIMER){clearInterval(_TRU_DRAFT_TIMER);_TRU_DRAFT_TIMER=null;}}
 function _truDraftClear(){_truDraftStop();try{localStorage.removeItem(_TRU_DRAFT_KEY);}catch(e){}}
@@ -20928,18 +20960,31 @@ function _truDraftCheck(){
   var d;try{d=JSON.parse(raw);}catch(e){_truDraftClear();return false;}
   if(!d||!d.snap||!d.ts||!_truDraftHasContent(d.snap)){_truDraftClear();return false;}
   var ageMin=Math.round((Date.now()-d.ts)/60000);
-  if(ageMin>1440){_truDraftClear();return false;}
-  var ageLabel=ageMin<1?'\u05e4\u05d7\u05d5\u05ea \u05de\u05d3\u05e7\u05d4':(ageMin<60?ageMin+' \u05d3\u05e7\u05d5\u05ea':Math.round(ageMin/60)+' \u05e9\u05e2\u05d5\u05ea');
-  var nTasks=Object.keys(d.snap.form.tasks||{}).length;
+  // 7 days, and asked (15/10/2026): after one day a tour with its photos used
+  // to vanish without a word, the weekend included.
+  if(ageMin>_TRU_DRAFT_MAX_MIN){_truDraftClear();return false;}
+  var ageD=Math.round(ageMin/1440);
+  var ageLabel=ageMin<1?'\u05e4\u05d7\u05d5\u05ea \u05de\u05d3\u05e7\u05d4':(ageMin<60?ageMin+' \u05d3\u05e7\u05d5\u05ea':(ageMin<1440?Math.round(ageMin/60)+' \u05e9\u05e2\u05d5\u05ea':(ageD<=1?'\u05d9\u05d5\u05dd':ageD+' \u05d9\u05de\u05d9\u05dd')));
+  var f=d.snap.fields||{};
+  var who=f['tru-u']===TRU_OTHER?String(f['tru-u-other']||''):String(f['tru-u']||'');
+  // Only the tasks that are ticked: a task switched off again keeps its items
+  // in the snapshot, and counting them promised a tour that is not there.
+  var nTasks=Object.keys(d.snap.form.sel||{}).length;
   var nPhotos=Object.keys(d.snap.photos||{}).length;
   var ok=confirm('\u05e0\u05de\u05e6\u05d0 \u05e1\u05d9\u05d5\u05e8 \u05e9\u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05de\u05dc\u05e4\u05e0\u05d9 '+ageLabel+':\n\n'
+    +(who?'\u05e0\u05d0\u05de\u05df: '+who+'\n':'')+(f['tru-d']?'\u05ea\u05d0\u05e8\u05d9\u05da: '+fd(f['tru-d'])+'\n':'')
     +nTasks+' \u05de\u05e9\u05d9\u05de\u05d5\u05ea'+(nPhotos?(', '+nPhotos+' \u05ea\u05de\u05d5\u05e0\u05d5\u05ea'):'')+'\n\n\u05dc\u05e9\u05d7\u05d6\u05e8 \u05d0\u05d5\u05ea\u05d5?');
-  if(!ok){_truDraftClear();return false;}
+  // Declined: kept, not deleted. A mis-tap on Cancel used to throw the tour
+  // away; it is replaced only once the new form has content (_truDraftSave).
+  if(!ok)return false;
   _truForm.sel=d.snap.form.sel||{};
   _truForm.tasks=d.snap.form.tasks||{};
   _truForm.k=d.snap.form.k||0;
   Object.keys(d.snap.photos||{}).forEach(function(k){_attachUrls[k]=d.snap.photos[k];});
-  _TRU_DRAFT_FIELDS.forEach(function(f){var el=g(f);if(el&&d.snap.fields[f]!==undefined)el.value=d.snap.fields[f];});
+  _TRU_DRAFT_FIELDS.forEach(function(x){var el=g(x);if(el&&f[x]!==undefined)el.value=f[x];});
+  // A name typed under "other" came back hidden: the select said other and the
+  // box with the name stayed display:none.
+  if(who)_truNamePairSync('tru-u','tru-u-other',who);
   toast('\u05d4\u05e1\u05d9\u05d5\u05e8 \u05e9\u05d5\u05d7\u05d6\u05e8 \u05de'+ageLabel);
   return true;
 }
@@ -20947,9 +20992,26 @@ function _truDraftCheck(){
 // svTru rejects on the first problem with a toast, so a worker learned what
 // was wrong one item at a time, after tapping. The same checks, in the same
 // order, now run as the form is filled.
+// The tour date: today back to 7 days, Israel time (15/10/2026). Any date was
+// accepted, so a slip of the picker filed a tour in another month's score.
+var _TRU_DATE_BACK=7;
+function _truDateErr(d){
+  d=String(d||'');if(!d)return null;              // empty = today (svTru)
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return '\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df';
+  var t=_truToday(),p=t.split('-');
+  var min=new Date(Date.UTC(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10))-_TRU_DATE_BACK*86400000).toISOString().substring(0,10);
+  if(d>t)return '\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e1\u05d9\u05d5\u05e8 \u05d1\u05e2\u05ea\u05d9\u05d3';
+  if(d<min)return '\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05e1\u05d9\u05d5\u05e8 - \u05e2\u05d3 '+_TRU_DATE_BACK+' \u05d9\u05de\u05d9\u05dd \u05d0\u05d7\u05d5\u05e8\u05d4';
+  return null;
+}
+// Task 8 without a finding to close is a check that closed findings stayed
+// fixed: it is \u05ea\u05e7\u05d9\u05df or nothing. A \u05dc\u05d9\u05e7\u05d5\u05d9 there never got a number, could never
+// be closed, and alerted all the same (15/10/2026).
+var _TRU_T8_BAD='\u05d1\u05de\u05e9\u05d9\u05de\u05d4 8 \u05de\u05e1\u05de\u05e0\u05d9\u05dd \u05e8\u05e7 \u05ea\u05e7\u05d9\u05df. \u05dc\u05d9\u05e7\u05d5\u05d9 \u05de\u05d3\u05d5\u05d5\u05d7\u05d9\u05dd \u05d1\u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05dc\u05d5';
 function _truFormBlocker(){
   if(_attachBusy())return {wait:1,msg:'\u05de\u05e2\u05dc\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4...'};
   if(!_truNameVal('tru-u','tru-u-other'))return {msg:'\u05d7\u05e1\u05e8 \u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df'};
+  var de=_truDateErr(gv('tru-d'));if(de)return {msg:de};
   if(!gv('tru-loc'))return {msg:'\u05d7\u05e1\u05e8 \u05de\u05d9\u05e7\u05d5\u05dd'};
   var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
   if(!ns.length)return {msg:'\u05e1\u05de\u05df \u05de\u05e9\u05d9\u05de\u05d4 \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea'};
@@ -20962,6 +21024,7 @@ function _truFormBlocker(){
     for(var j=0;j<st.items.length;j++){
       var it=st.items[j],ph=_attachUrls[_truPhId(n,it.k)],lbl=' - \u05de\u05e9\u05d9\u05de\u05d4 '+n+(st.items.length>1?', \u05e4\u05e8\u05d9\u05d8 '+(j+1):'');
       if(it.ok!==true&&it.ok!==false)return {msg:'\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
+      if(n===TRUSTEE_TASK_CLOSE&&it.ok===false)return {msg:_TRU_T8_BAD+lbl};
       if(it.ok===true){if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4'+lbl};continue;}
       if(!String(it.f||'').trim())return {msg:'\u05ea\u05d0\u05e8 \u05d0\u05ea \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
       if(!ph)return {msg:'\u05d7\u05e1\u05e8\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05dc\u05d9\u05e7\u05d5\u05d9'+lbl};
@@ -21014,9 +21077,9 @@ function _truFormRender(){
     h+=st.items.map(function(it,i){
       var phId=_truPhId(n,it.k);areas.push(phId);
       var head=(st.items.length>1?'\u05e4\u05e8\u05d9\u05d8 '+(i+1):'\u05e2\u05de\u05d3\u05d4 / \u05e0\u05e7\u05d5\u05d3\u05d4 \u05e9\u05e0\u05d1\u05d3\u05e7\u05d4');
-      return '<div class="tru-find" data-tru-item="'+it.k+'"><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700"><span>'+head+'</span>'+(st.items.length>1?'<button type="button" class="btn btn-d btn-sm" style="padding:4px 8px;min-height:30px;font-size:11px" onclick="_truFormRmItem('+n+','+it.k+')">\u05d4\u05e1\u05e8</button>':'')+'</div>'
+      return '<div class="tru-find" data-tru-item="'+it.k+'"><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700"><span>'+head+'</span>'+(st.items.length>1?'<button type="button" class="btn btn-d btn-sm" style="padding:8px 14px;min-height:44px;min-width:44px;font-size:13px" onclick="_truFormRmItem('+n+','+it.k+')">\u05d4\u05e1\u05e8</button>':'')+'</div>'
         +'<input data-tru-loc data-n="'+n+'" data-k="'+it.k+'" value="'+esc(it.loc)+'" placeholder="\u05d0\u05d9\u05d6\u05d5 \u05e2\u05de\u05d3\u05d4 / \u05d0\u05d9\u05e4\u05d4 \u05d1\u05d3\u05d9\u05d5\u05e7 (\u05dc\u05d0 \u05d7\u05d5\u05d1\u05d4)" style="width:100%;margin:4px 0">'
-        +'<div class="tru-vd"><button type="button" class="btn btn-s'+(it.ok===true?' on-ok':'')+'" data-tru-ok="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',true)">\u2705 \u05ea\u05e7\u05d9\u05df</button><button type="button" class="btn btn-s'+(it.ok===false?' on-bad':'')+'" data-tru-bad="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',false)">\u26a0\ufe0f \u05dc\u05d9\u05e7\u05d5\u05d9</button></div>'
+        +'<div class="tru-vd"><button type="button" class="btn btn-s'+(it.ok===true?' on-ok':'')+'" data-tru-ok="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',true)">\u2705 \u05ea\u05e7\u05d9\u05df</button>'+(n===TRUSTEE_TASK_CLOSE?'':'<button type="button" class="btn btn-s'+(it.ok===false?' on-bad':'')+'" data-tru-bad="'+n+'" data-k="'+it.k+'" onclick="_truFormSetOk('+n+','+it.k+',false)">\u26a0\ufe0f \u05dc\u05d9\u05e7\u05d5\u05d9</button>')+'</div>'
         +(it.ok===false?'<textarea data-tru-f data-n="'+n+'" data-k="'+it.k+'" rows="2" placeholder="\u05de\u05d4 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9? *" style="width:100%;margin:4px 0">'+esc(it.f)+'</textarea>':'')
         +(it.ok===null?'':'<div style="font-size:12px;color:var(--t2);margin-bottom:4px">\ud83d\udcf7 \u05ea\u05de\u05d5\u05e0\u05d4 '+((it.ok===false||TRUSTEE_PHOTO_REQUIRED_OK)?'*':'(\u05de\u05d5\u05de\u05dc\u05e5)')+'</div><div id="'+phId+'"></div>')
         +(it.ok===false?(function(){
@@ -21029,19 +21092,39 @@ function _truFormRender(){
     h+='<button type="button" class="btn btn-s btn-sm" style="width:100%;margin-top:8px" data-tru-add="'+n+'" onclick="_truFormAddItem('+n+')">+ \u05e2\u05d5\u05d3 \u05e2\u05de\u05d3\u05d4 / \u05de\u05e4\u05d2\u05e2 \u05d1\u05d0\u05d5\u05ea\u05d4 \u05de\u05e9\u05d9\u05de\u05d4</button>';
     return h+'</div>';
   }).join('');
-  areas.forEach(function(id){if(g(id))_attachLoad(id,_attachUrls[id]||null);});
+  areas.forEach(function(id){
+    if(!g(id))return;
+    var u=_attachUrls[id]||null;
+    if(_phIs(u))_truRenderPending(id,u);else _attachLoad(id,u);
+  });
   _truFormStatusBind();_truFormStatus();
+}
+// A photo waiting on the phone (no signal) has no URL yet. _attachLoad drew it
+// as a broken "file" link on every re-render; draw it from the queued blob.
+function _truRenderPending(id,u){
+  var pid=String(u).substring(_PH_PREFIX.length);
+  _attachRenderPending(id,null,pid);
+  if(typeof _phAll!=='function')return;
+  _phAll(function(list){
+    if(_attachUrls[id]!==u)return;
+    var rec=(list||[]).filter(function(x){return x&&x.pid===pid;})[0];
+    if(rec&&rec.blob)_attachRenderPending(id,rec.blob,pid);
+  });
 }
 function _truFormToggle(n){if(_truForm.lock)return;_truFormSync();if(_truForm.sel[n]){delete _truForm.sel[n];}else{_truForm.sel[n]=1;_truFormTask(n);}_truFormRender();}
 function _truFormSetOk(n,k,ok){_truFormSync();var it=_truFormItem(n,k);if(it){it.ok=ok;if(ok!==false){it.fx=false;delete _attachUrls[_truPhAfterId(n,k)];}}_truFormRender();}
 function _truFormAddItem(n){_truFormSync();_truFormTask(n).items.push(_truFormNewItem());_truFormRender();}
-function _truFormRmItem(n,k){_truFormSync();var t=_truFormTask(n);if(t.items.length<=1)return;t.items=t.items.filter(function(it){return it.k!==k;});delete _attachUrls[_truPhId(n,k)];delete _attachUrls[_truPhAfterId(n,k)];_truFormRender();}
+function _truFormRmItem(n,k){_truFormSync();var t=_truFormTask(n);if(t.items.length<=1)return;
+  // A thumb's slip took the text and the photo with it, no question asked.
+  var it=_truFormItem(n,k);
+  if(it&&(String(it.f||'').trim()||String(it.loc||'').trim()||_attachUrls[_truPhId(n,k)]||_attachUrls[_truPhAfterId(n,k)])&&!confirm('\u05dc\u05d4\u05e1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05e4\u05e8\u05d9\u05d8? \u05de\u05d4 \u05e9\u05e0\u05db\u05ea\u05d1 \u05d1\u05d5 \u05d5\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e9\u05dc\u05d5 \u05d9\u05d9\u05de\u05d7\u05e7\u05d5.'))return;t.items=t.items.filter(function(it){return it.k!==k;});delete _attachUrls[_truPhId(n,k)];delete _attachUrls[_truPhAfterId(n,k)];_truFormRender();}
 // Open the tour form. n = preselected task (optional); ref = the finding a
 // task-8 "after" report closes (then task 8 is fixed and the photo mandatory).
 function _truReport(n,ref){
   _truFormReset();_truFillLists();
-  _truNamePairSync('tru-u','tru-u-other',_truMe()||'');
-  var d=g('tru-d');if(d)d.value=new Date().toISOString().split('T')[0];
+  _truNamePairSync('tru-u','tru-u-other',_truShared()?'':(_truMe()||''));
+  var su=g('tru-u'),so=g('tru-u-other');if(su)su.disabled=false;if(so)so.disabled=false;
+  var d=g('tru-d');if(d)d.value=_truToday();
   var loc=g('tru-loc');if(loc)loc.value='';
   var rf=g('tru-ref');if(rf)rf.value=ref||'';
   var note=g('tru-ref-note');
@@ -21049,6 +21132,10 @@ function _truReport(n,ref){
     var orig=(DB.trustee_reports||[]).find(function(r){return r.id===ref;});
     _truForm.lock=true;_truForm.ref=ref;_truForm.sel={8:1};_truFormTask(8);
     if(loc&&orig)loc.value=orig.loc||'';
+    // The DB trigger closes the finding only when the closing row carries the
+    // same trustee (trustee_task9.sql): any other name sent a report that
+    // closed nothing. The name is the finding's, and fixed.
+    if(orig&&orig.u){_truNamePairSync('tru-u','tru-u-other',orig.u);if(su)su.disabled=true;if(so)so.disabled=true;}
     if(note){note.style.display='';note.textContent='\u05e1\u05d5\u05d2\u05e8 \u05d0\u05ea \u05d4\u05de\u05de\u05e6\u05d0: '+(orig?String(orig.f||'').substring(0,80):ref)+'. \u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05ea "\u05d0\u05d7\u05e8\u05d9" - \u05d4\u05de\u05de\u05e6\u05d0 \u05d9\u05e1\u05d5\u05de\u05df "\u05e0\u05e1\u05d2\u05e8".';}
   }else{
     if(note)note.style.display='none';
@@ -21058,6 +21145,7 @@ function _truReport(n,ref){
   if(!ref)_truDraftCheck();
   _truFormRender();
   openModal('m-tru');
+  _truHistPush();
   if(!ref)_truDraftStart();
 }
 function _truCloseReport(id){_truReport(TRUSTEE_TASK_CLOSE,id);}
@@ -21065,7 +21153,8 @@ function svTru(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   _truFormSync();
   var u=_truNameVal('tru-u','tru-u-other');if(!u){toast('\u05e9\u05dd \u05d4\u05e0\u05d0\u05de\u05df \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var d=gv('tru-d')||new Date().toISOString().split('T')[0];
+  var d=gv('tru-d')||_truToday();
+  var de=_truDateErr(d);if(de){toast(de);return;}
   var loc=gv('tru-loc');if(!loc){toast('\u05de\u05d9\u05e7\u05d5\u05dd \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4 - \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05dc\u05d9 \u05de\u05d9\u05e7\u05d5\u05dd \u05dc\u05d0 \u05e0\u05e1\u05e4\u05e8');return;}
   var ns=Object.keys(_truForm.sel).map(Number).sort(function(a,b){return a-b;});
   if(!ns.length){toast('\u05e1\u05de\u05df \u05dc\u05e4\u05d7\u05d5\u05ea \u05de\u05e9\u05d9\u05de\u05d4 \u05d0\u05d7\u05ea \u05e9\u05d1\u05d9\u05e6\u05e2\u05ea \u05d1\u05e1\u05d9\u05d5\u05e8');return;}
@@ -21085,6 +21174,7 @@ function svTru(){
       var it=st.items[j],ph=_attachUrls[_truPhId(n,it.k)]||null,lbl=(st.items.length>1?'\u05e4\u05e8\u05d9\u05d8 '+(j+1)+' \u05d1':'')+'\u05de\u05e9\u05d9\u05de\u05d4 '+n+(tt?' ('+tt.t+')':'');
       var detail=String(it.loc||'').trim();
       if(it.ok!==true&&it.ok!==false){toast('\u05e1\u05de\u05df \u05ea\u05e7\u05d9\u05df \u05d0\u05d5 \u05dc\u05d9\u05e7\u05d5\u05d9 - '+lbl);return;}
+      if(n===TRUSTEE_TASK_CLOSE&&it.ok===false){toast(_TRU_T8_BAD+' - '+lbl);return;}
       if(it.ok===true){
         if(TRUSTEE_PHOTO_REQUIRED_OK&&!ph){toast('\u05e6\u05e8\u05e3 \u05ea\u05de\u05d5\u05e0\u05d4 - '+lbl);return;}
         rows.push(row(n,true,null,ph,detail));continue;
@@ -21108,19 +21198,84 @@ function svTru(){
   rows.forEach(function(r){DB.trustee_reports.push(r);sbIns('trustee_reports',r);});
   // The server trigger closes the referenced finding; mirror it locally so
   // the screen updates now instead of after the next pull.
-  if(ref)(DB.trustee_reports||[]).forEach(function(x){if(x.id===ref&&_truIsHazard(x)&&x.s!==TRUSTEE_S_CLOSED)x.s=TRUSTEE_S_CLOSED;});
+  // Only when the trigger will: same trustee as the finding.
+  if(ref)(DB.trustee_reports||[]).forEach(function(x){if(x.id===ref&&x.u===u&&_truIsHazard(x)&&x.s!==TRUSTEE_S_CLOSED)x.s=TRUSTEE_S_CLOSED;});
   try{addLog('\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea: '+u+' - '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd');}catch(e){}
   sdb();
-  if(empIsOn())_truSetMe(u);else _truRender();   // remember the name on the trustee's own device only
-  _truDraftClear();
-  closeModal('m-tru');_truFormReset();
+  // Remember the name on the trustee's own device only, and never let the last
+  // sender on a shared phone become its owner (_truSenderSeen).
+  if(empIsOn())_truSenderSeen(u);
+  _truRender();
+  // A closure report is not a tour: the tour draft waiting under it stays.
+  if(!ref)_truDraftClear();
+  _truClose(true);_truFormReset();
   var bad=rows.filter(function(r){return r.ok===false;}).length;
-  var msg=ref?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u2713 - \u05ea\u05d5\u05d3\u05d4':((rows.length===1?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u2713':'\u05e0\u05e9\u05de\u05e8\u05d5 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u2713')+(bad?' - '+bad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05d4\u05d5\u05e2\u05d1\u05e8\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05dc\u05e0\u05d9\u05ea\u05d5\u05d1':''));
+  // Saved on the phone is all that is known here (15/10/2026): this used to say
+  // "passed to the safety officer" before any request had left the device.
+  var msg=ref?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e1\u05d5\u05de\u05df \u05e0\u05e1\u05d2\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df, \u05e9\u05d5\u05dc\u05d7...':((rows.length===1?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05de\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df':'\u05e0\u05e9\u05de\u05e8\u05d5 '+rows.length+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df')+(bad?' ('+bad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd)':'')+', \u05e9\u05d5\u05dc\u05d7...');
   if(empIsOn())empToast(msg);else toast(msg);
+  _truAfterSend(rows,bad,ref);
   if(typeof rTrustees==='function'&&CUR==='trustees')try{rTrustees();}catch(e){}
 }
+// What became of the send, once the outbox drain that sbIns started settles.
+function _truAfterSend(rows,bad,ref){
+  var ids={};rows.forEach(function(r){ids[r.id]=1;});
+  var show=function(m){if(empIsOn())empToast(m);else toast(m);};
+  var p=(typeof _obIdle==='function')?_obIdle():Promise.resolve();
+  return Promise.resolve(p).then(function(){
+    var q=[];try{q=_obGet().concat(_obMem||[]);}catch(e){}
+    var left=q.filter(function(op){return op&&op.tbl==='trustee_reports'&&op.row&&ids[op.row.id];}).length;
+    var ph=rows.filter(function(r){return _phIs(r.photo_url);}).length;
+    if(!left&&!ph)show(ref?'\u05d4\u05de\u05de\u05e6\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d5\u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2713 - \u05ea\u05d5\u05d3\u05d4':'\u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u2713'+(bad?' - '+bad+' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9\u05dd \u05dc\u05e0\u05d9\u05ea\u05d5\u05d7':''));
+    else show((left?'\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05de\u05d5\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df':'\u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05dc\u05d7, \u05d4\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05e9\u05de\u05d5\u05e8\u05d5\u05ea \u05d1\u05d8\u05dc\u05e4\u05d5\u05df')+' - '+_truSyncWhy());
+    try{_truSyncLine();}catch(e){}
+    return {left:left,photos:ph};
+  });
+}
+// ---- #emp-sync on the trustee screen (15/10/2026) ----
+// The count the core writes there counted every queued op (the audit row of
+// each report too) as "reports", and the line always promised automatic sync,
+// also when the server was refusing. Here: the reports (trustee + near miss)
+// and the photos separately, and why they are still waiting.
+function _truSyncWhy(){
+  var q=[];try{q=_obGet();}catch(e){}
+  if(q.some(function(op){return op&&op.conflict;}))return '\u05d4\u05e9\u05e8\u05ea \u05d3\u05d7\u05d4 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d2\u05dc\u05dc \u05e9\u05d9\u05e0\u05d5\u05d9 \u05de\u05e7\u05d1\u05d9\u05dc. \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
+  var e=null;try{e=_obLastErr();}catch(x){}
+  var st=e&&e.status;
+  if(!e||!st)return '\u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05d9\u05d4\u05d9\u05d4 \u05d7\u05d9\u05d1\u05d5\u05e8';
+  if(st===429)return '\u05d4\u05d2\u05e2\u05ea\u05dd \u05dc\u05de\u05db\u05e1\u05ea \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d9\u05d5\u05de\u05d9\u05ea, \u05d4\u05e9\u05d0\u05e8 \u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05de\u05d0\u05d5\u05d7\u05e8 \u05d9\u05d5\u05ea\u05e8';
+  if(st===401||st===403)return '\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05d0\u05d9\u05e9\u05e8 \u05d0\u05ea \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4. \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e9\u05de\u05d5\u05e8 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df, \u05e4\u05e0\u05d5 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
+  if(st>=500)return '\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05d6\u05de\u05d9\u05df \u05db\u05e8\u05d2\u05e2, \u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d1\u05d4\u05de\u05e9\u05da';
+  return '\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (\u05e7\u05d5\u05d3 '+st+'), \u05e0\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea';
+}
+function _truSyncLine(){
+  var tx=g('emp-sync-txt'),sub=g('emp-sync-sub');if(!tx)return;
+  var q=[];try{q=_obGet().concat(_obMem||[]);}catch(e){}
+  var nRep=q.filter(function(op){return op&&op.op==='ins'&&(op.tbl==='trustee_reports'||op.tbl==='near_miss');}).length;
+  var nPh=(typeof _phN==='number')?_phN:0,parts=[];
+  if(nRep)parts.push(nRep===1?'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d0\u05d7\u05d3 \u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4':nRep+' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4');
+  if(nPh)parts.push(nPh===1?'\u05ea\u05de\u05d5\u05e0\u05d4 \u05d0\u05d7\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d4':nPh+' \u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05de\u05de\u05ea\u05d9\u05e0\u05d5\u05ea');
+  if(!parts.length)parts.push('\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05e1\u05e0\u05db\u05e8\u05d5\u05df');
+  tx.textContent='\u23f3 '+parts.join(', ');
+  if(sub)sub.textContent='- '+_truSyncWhy();
+}
+// The core rewrites #emp-sync-count on every outbox change; follow it.
+(function(){
+  function hook(){
+    var c=g('emp-sync-count');if(!c||typeof MutationObserver==='undefined')return;
+    new MutationObserver(function(){try{_truSyncLine();}catch(e){}}).observe(c,{childList:true,characterData:true,subtree:true});
+    try{_truSyncLine();}catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
+})();
 // The trustee screen refreshes from the server whenever the app regains focus.
-window.addEventListener('focus',function(){if(typeof _truIsOpen==='function'&&_truIsOpen())try{_truPull(false);}catch(e){}});
+// At most once a minute (15/10/2026): every glance back from WhatsApp or the
+// camera used to fire four GETs on the factory's wifi.
+window.addEventListener('focus',function(){
+  if(typeof _truIsOpen!=='function'||!_truIsOpen())return;
+  if(Date.now()-_truPullAt<_TRU_PULL_MIN_MS)return;
+  try{_truPull(false);}catch(e){}
+});
 // ---- SAFETY TRUSTEES (T3): manager screen \u2014 leaderboard, findings, routing, CSV ----
 var _truMgrM=null;      // month shown ('YYYY-MM'); null = this month
 var _truMgrF='open';    // open | closed | ok | all
@@ -21886,7 +22041,7 @@ window._truLogExportXlsx=function(){
 // fallback for while the server is not connected.
 var _truSrv=null,_truSrvAt=0,_truSrvBusy=false;
 function _truApi(path,body){
-  return _fetchT(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})},30000)
+  return fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})})
     .then(function(r){return r.json().catch(function(){return {error:'HTTP '+r.status};}).then(function(j){if(!r.ok&&!j.error)j.error='HTTP '+r.status;return j;});});
 }
 function _truSrvRefresh(force){
@@ -22374,7 +22529,7 @@ function _empGateAdmitOffline(){
   try{if(typeof empToast==='function')empToast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea - \u05e0\u05db\u05e0\u05e1\u05ea \u05e2\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e9\u05d0\u05d5\u05e9\u05e8 \u05e7\u05d5\u05d3\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df');}catch(e){}
 }
 function _empGateAsk(code){
-  return _fetchT('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})},20000)
+  return fetch('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
     .then(function(r){return r.json().catch(function(){return {};}).then(function(j){return {status:r.status,ok:r.ok,data:j};});});
 }
 function _empGateShow(){
@@ -24672,13 +24827,7 @@ function capDispatch(j){
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
 var _PHOTO_BUCKET='incidents-photos';
 function _imgCompress(file,maxPx,q,cb){
-  // A photo the phone cannot decode (HEIC from an Android gallery, a 40MB original out of memory)
-  // called nothing back: the slot stayed on «מעלה...» and the whole tour was blocked (15/10/2026).
-  // Now every way out answers once, with the original file when it cannot be shrunk.
-  var cb0=cb,once=false;cb=function(b,d){if(once)return;once=true;clearTimeout(tt);cb0(b,d);};
-  var fail=function(){cb(file,'');},tt=setTimeout(fail,20000);
   var r=new FileReader();
-  r.onerror=fail;
   r.onload=function(e){
     var img=new Image();
     img.onload=function(){
@@ -24687,9 +24836,8 @@ function _imgCompress(file,maxPx,q,cb){
       var c=document.createElement('canvas');c.width=w;c.height=h;
       // JPEG has no transparency: a transparent PNG (a signature, a logo) came out on black (15/10/2026). White first.
       var cx=c.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
-      try{c.toBlob(function(blob){if(!blob){fail();return;}cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);}catch(x){fail();}
+      c.toBlob(function(blob){cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);
     };
-    img.onerror=fail;
     img.src=e.target.result;
   };
   r.readAsDataURL(file);
@@ -24759,21 +24907,11 @@ function _attachRenderPending(areaId,blob,pid){
 
 // ---- offline photo queue: send ----
 // Runs at the head of every outbox drain.
-// Photos still in the phone's queue after the last send (pid -> 1). A NEW row that carries one of
-// them waits for it (15/10/2026): sent first, it could never be fixed, because the trustee's
-// anonymous session may insert but not update, and the photo was lost. A pid not in the queue any
-// more (cleared, over the cap) does not hold the row back: the report goes without the photo.
-var _phLeft={};
-function _obWaitsPhoto(op){
-  if(!op||op.op!=='ins'||!op.row)return false;
-  return Object.keys(op.row).some(function(k){var v=op.row[k];return typeof v==='string'&&v.indexOf(_PH_PREFIX)===0&&_phLeft[v.slice(_PH_PREFIX.length)];});
-}
 function _phDrain(){
   if(_phBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   return new Promise(function(res){
     _phAll(function(list){
       _phN=list.length;
-      _phLeft={};list.forEach(function(rec){if(rec&&rec.pid)_phLeft[rec.pid]=1;});
       if(!list.length){res();return;}
       _phBusy=true;
       var p=Promise.resolve();
@@ -24783,7 +24921,7 @@ function _phDrain(){
             try{
               _fileUpload(rec.blob,rec.prefix,function(url){
                 // No url means the connection is still down: leave it queued.
-                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);delete _phLeft[rec.pid];}
+                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);}
                 done();
               });
             }catch(e){done();}
@@ -24823,9 +24961,6 @@ function _phResolve(pid,url){
   });
   // And a form may still be open with this area attached.
   try{Object.keys(_attachUrls).forEach(function(a){if(_attachUrls[a]===token)_attachUrls[a]=url;});}catch(e){}
-  // ...and the trustee's saved draft (15/10/2026): restored after the app was killed, it still held
-  // the placeholder of a photo already uploaded and deleted from the queue, so nothing fixed it.
-  try{var _dr=localStorage.getItem(_TRU_DRAFT_KEY);if(_dr&&_dr.indexOf(token)>=0)localStorage.setItem(_TRU_DRAFT_KEY,_dr.split(JSON.stringify(token).slice(1,-1)).join(JSON.stringify(url).slice(1,-1)));}catch(e){}
   try{sdb();}catch(e){}
 }
 var _attachUrls={};  // keyed by areaId
@@ -27022,7 +27157,7 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     _sbAuth().then(function(){
       if(!_sbToken)throw new Error('no session');
-      return _fetchT(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body},45000);
+      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body});
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
@@ -27032,7 +27167,7 @@ function _fileUpload(file,prefix,cb){
       })
       .catch(function(e){cb(null,'net',e&&e.message);});
   }
-  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,blob===file?(file.type||'application/octet-stream'):'image/jpeg');});
+  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,'image/jpeg');});
   else doUpload(file,file.type||'application/octet-stream');
 }
 
@@ -27294,6 +27429,7 @@ function _photoPickBtn(fn){return '<button type="button" class="btn btn-s" style
     if(typeof _backBtnSync==='function')_backBtnSync();
   };
   window.addEventListener('popstate',function(e){
+    if(typeof _truPopHook==='function'&&_truPopHook(e))return;
     var p=(e.state&&e.state.page)||(location.hash&&location.hash.slice(1));
     if(p)_g(p);
     if(typeof _navDepth!=='undefined'&&_navDepth>0)_navDepth--;
