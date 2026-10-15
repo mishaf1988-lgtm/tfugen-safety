@@ -128,7 +128,8 @@ console.log('\n1. the function renders a worker keyed to the deploy');
 
 const { src: SW } = await render('abcdef1234567890');
 const CACHE = 'tfgn-abcdef1';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
+// 15/10/2026: '/index.html' is no longer fetched at install (the same page twice); app.js of this deploy is.
+const SHELL = ['/', '/app.js?v=abcdef1', '/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
 
 console.log('\n2. install and activate');
 {
@@ -185,10 +186,35 @@ console.log('\n3. the shell is answered from the cache, without waiting for the 
   const e = w.fire('fetch', nav('/'));
   const got = await Promise.race([e.responded, new Promise((r) => setTimeout(() => r('TIMED-OUT'), 50))]);
   check('a navigation is served from the cache while the network is still hanging', got !== 'TIMED-OUT' && /^cached-index/.test(got.tag), got && got.tag);
-  check('the refresh is kicked off in the background and held by waitUntil', w.calls.length === 1 && e.waits.length === 1, { calls: w.calls, waits: e.waits.length });
+  // 15/10/2026: no background refresh of the page. It wrote the NEXT deploy's HTML into THIS deploy's
+  // cache, next to this deploy's app.js: the next open ran new HTML with the old script.
+  check('no background refresh of the page (a new deploy comes with its own worker)', w.calls.length === 0, { calls: w.calls });
   release(resp('fresh-index'));
   await settle(e);
-  check('when the background fetch lands it replaces the cached copy', /^fresh-index/.test(seeded.__store.get(CACHE).get(ORIGIN + '/').tag), seeded.__store.get(CACHE).get(ORIGIN + '/').tag);
+  check('...so the cached page stays the one of this deploy', /^cached-index/.test(seeded.__store.get(CACHE).get(ORIGIN + '/').tag), seeded.__store.get(CACHE).get(ORIGIN + '/').tag);
+}
+{
+  // The new page asks for /app.js?v=new while the cache holds /app.js?v=old: never the old script.
+  const seeded = makeCaches({ [CACHE]: { '/app.js?v=old1234': resp('old-app') } });
+  const w = boot(SW, { caches: seeded, net: (rq) => resp('net-app' + new URL(rq.url).search) });
+  const e = w.fire('fetch', { url: ORIGIN + '/app.js?v=new5678', method: 'GET', mode: 'no-cors' });
+  const got = await e.responded;
+  check('app.js of another deploy is never answered from the cache (no ignoreSearch)', /^net-app\?v=new5678/.test(got.tag) && w.calls.length === 1, got.tag);
+  await settle(e);
+}
+{
+  // An install that cannot get the page fails, so the previous worker and its cache stay.
+  const w = boot(SW, { net: (rq) => new URL(rq.url).pathname === '/' ? Promise.reject(new Error('offline')) : resp('net' + new URL(rq.url).pathname) });
+  const e = w.fire('install');
+  const ok = await Promise.all(e.waits).then(() => 'installed', () => 'failed');
+  check('install fails when the page itself cannot be fetched (the old worker is kept, not its cache deleted)', ok === 'failed', ok);
+}
+{
+  const seeded = makeCaches({ [CACHE]: { '/': resp('new') } });
+  const w = boot(SW, { caches: seeded, clients: ['tab-a'] });
+  const e = w.fire('activate');
+  await settle(e);
+  check('the first install of all does not show "new version" (nothing was replaced)', w.self_.__clients.every((c) => c.msgs.length === 0), w.self_.__clients.map((c) => c.msgs));
 }
 {
   const seeded = makeCaches({ [CACHE]: { '/': resp('cached-index') } });

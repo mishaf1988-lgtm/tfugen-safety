@@ -25,7 +25,13 @@ export async function onRequest({ env }) {
 // Build: ${BUILD} (auto-injected from CF_PAGES_COMMIT_SHA)
 
 const CACHE = 'tfgn-${BUILD}';
-const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/logo.jpg', '/app.js?v=${BUILD}'];
+// '/' and this deploy's app.js are ESSENTIAL: an install that cannot get both fails, and the previous
+// worker (with its matching pair) stays (15/10/2026: a swallowed failure still activated and deleted the
+// old cache, so the next open with no signal had no app). '/index.html' is not fetched separately any
+// more: it was the same 170 KB a second time on every install.
+const ESSENTIAL = ['/', '/app.js?v=${BUILD}'];
+const EXTRA = ['/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
+const SHELL = ESSENTIAL.concat(EXTRA, ['/index.html']);
 // /app.js (10/10/2026) is the page's main script, cut out of index.html by the server: it
 // is shell, and its ?v= is this deploy. /?inline=1 is the fallback page when it fails to
 // load: always from the network, never the cached shell (or the fallback would loop).
@@ -44,7 +50,8 @@ self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE).then((c) => Promise.all([
-      c.addAll(SHELL).catch(() => {}),
+      c.addAll(ESSENTIAL),
+      Promise.all(EXTRA.map((u) => c.add(u).catch(() => {}))),
       // One at a time: one vendor URL that 404s must not take the shell with it.
       Promise.all(VENDOR.map((u) => c.add(new Request(u, { mode: 'cors' })).catch(() => {}))),
     ]))
@@ -52,13 +59,14 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
+  let replaced = false;
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => { replaced = keys.some((k) => k !== CACHE && /^tfgn-/.test(k)); return Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))); })
       .then(() => self.clients.claim())
-      // Tell every open tab to reload so they pick up the fresh index.html
-      // immediately instead of running the previous (cached) JS until next nav.
-      .then(() => self.clients.matchAll({ type: 'window' }))
+      // Tell every open tab a new version is ready (the pill). Only when this worker replaced an older
+      // one: on the very first visit there is nothing new to tell (15/10/2026).
+      .then(() => (replaced ? self.clients.matchAll({ type: 'window' }) : []))
       .then((clients) => clients.forEach((c) => c.postMessage({ type: 'sw-updated', cache: CACHE })))
   );
 });
@@ -105,14 +113,21 @@ self.addEventListener('fetch', (e) => {
   // background instead — a deploy still reaches the user, because /sw.js is
   // no-cache, the new worker re-fills SHELL on install, and the page shows
   // the "new version" pill the moment that worker activates.
+  // app.js is matched EXACTLY (15/10/2026): with ignoreSearch the new page's /app.js?v=new was answered
+  // with the cached /app.js?v=old, the new HTML ran with the old script. Its ?v= never changes content,
+  // so a hit needs no refresh, and a miss goes to the network.
+  if (isShell(req) && new URL(req.url).pathname === '/app.js') {
+    e.respondWith(caches.match(req, { cacheName: CACHE }).then((hit) => hit || fetch(req).then(store)));
+    return;
+  }
+  // The page itself: from this worker's cache, which holds the page of THIS deploy, filled at install.
+  // It is not refreshed in the background any more: that wrote the next deploy's HTML into this
+  // deploy's cache, next to this deploy's app.js. A new deploy arrives with its own worker (the pill).
   if (isShell(req)) {
     e.respondWith(
       caches.match(req, { cacheName: CACHE, ignoreSearch: true }).then((hit) => {
-        if (hit) {
-          e.waitUntil(fetch(req).then(store).catch(() => {}));
-          return hit;
-        }
-        return fetch(req).then(store).catch(() => caches.match('/'));
+        if (hit) return hit;
+        return fetch(req).then(store).catch(() => caches.match('/', { cacheName: CACHE }));
       })
     );
     return;

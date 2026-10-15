@@ -69,13 +69,19 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   console.log('\n3. the audit log records WHAT was deleted');
   {
     await boot();
+    // 15/10/2026: ncr is audited by the database itself (private.audit_tables()), which throws a client
+    // audit row for it away, so the app no longer sends one. The title rule is checked on a table the
+    // app still audits.
+    const r0 = await page.evaluate(() => { sbDel('ncr', 'n1'); return window.__audit.filter((a) => a.op === 'del'); });
+    check('ncr: no client audit row (the database trigger records it)', r0.length === 0, r0);
     const r = await page.evaluate(() => {
-      sbDel('ncr', 'n1');
+      DB.ppe = [{ id: 'pp1', n: 'NCR-0247 דלת חירום', w: 'x' }];
+      sbDel('ppe', 'pp1');
       return window.__audit.filter((a) => a.op === 'del');
     });
     check('one del entry was written', r.length === 1, r);
     check('it carries the record title, not null', r[0] && r[0].title && /NCR-0247|דלת/.test(r[0].title), r[0]);
-    check('and still the table and id', r[0] && r[0].table_name === 'ncr' && r[0].record_id === 'n1', r[0]);
+    check('and still the table and id', r[0] && r[0].table_name === 'ppe' && r[0].record_id === 'pp1', r[0]);
   }
 
   console.log('\n4. the password is no longer a constant in the page');
