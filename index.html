@@ -27680,7 +27680,9 @@ function _attachBtn(areaId){return '<button type="button" class="btn btn-s" styl
 
 // Legacy aliases for nm/eqi (keep backward compat)
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
-function _nmPickPhoto(){_attachPick('nm-photo-area','nm');}
+// From the trustee kiosk the photo must be named tru-ph-*: the anonymous storage policy allows only that
+// (migrations/2026-09-20_storage_trustee_scope.sql), so a kiosk near-miss photo was always refused (15/10/2026).
+function _nmPickPhoto(){_attachPick('nm-photo-area',(typeof empIsOn==='function'&&empIsOn()&&!_isAdmin)?'tru-ph-nm':'nm');}
 function _nmClearPhoto(){_nmPhotoUrl=null;_attachClear('nm-photo-area');}
 // Multi-file attachments for the equip-inspections form.
 // _eqiFiles is the current state: array of {url, name, mime}.

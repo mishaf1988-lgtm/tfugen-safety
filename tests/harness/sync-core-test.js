@@ -157,6 +157,9 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const kiosk = await page.evaluate(() => { let n = 0; const real = window.sbSync; window.sbSync = () => { n++; }; SB_ON = true; document.body.classList.add('emp-mode'); _sbPullOnFocus(true); document.body.classList.remove('emp-mode'); _sbPullOnFocus(true); window.sbSync = real; return n; });
   check('the kiosk does not run the full 43-table sync on focus (it pulls its own tables)', kiosk === 1, kiosk);
 
+  const nmp = await page.evaluate(() => { let got = []; const real = window._attachPick; window._attachPick = (a, pre) => got.push(pre); _isAdmin = false; document.body.classList.add('emp-mode'); _nmPickPhoto(); document.body.classList.remove('emp-mode'); _isAdmin = true; _nmPickPhoto(); window._attachPick = real; return got; });
+  check('a near-miss photo from the kiosk is named tru-ph-* (the only name the anonymous storage policy allows)', nmp[0] === 'tru-ph-nm' && nmp[1] === 'nm', nmp);
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
