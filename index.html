@@ -1239,6 +1239,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
     <button class="qa-btn" data-qa-mgr="1" onclick="_auditPack()" title="&#1502;&#1505;&#1502;&#1498; &#1502;&#1488;&#1493;&#1495;&#1491; &#1500;&#1488;&#1493;&#1491;&#1497;&#1496; ISO - &#1510;&#1497;&#1493;&#1491; + NCR + &#1495;&#1514;&#1497;&#1502;&#1493;&#1514;"><span class="qa-ic">&#128230;</span><span>תיק ביקורת</span></button>
     <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-tru-log"></div></div>
     <div data-qa-mgr="1" style="grid-column:1/-1"><div id="dash-vitre-sync"></div></div>
+    <div style="grid-column:1/-1"><div id="dash-weather"></div></div>
   </div>
   <div id="dash-today" onclick="rDash();toast('\u05e8\u05d5\u05e2\u05e0\u05df ✓')" title="\u05dc\u05d7\u05e5 \u05dc\u05e8\u05e2\u05e0\u05d5\u05df" style="min-height:40px;display:flex;align-items:center;padding:6px 12px;margin:0 0 8px;font-size:12px;color:var(--t3);text-align:left;direction:rtl;cursor:pointer"></div>
   <div id="safety-streak" style="display:none;margin:0 0 10px"></div>
@@ -7287,6 +7288,8 @@ function rDash(){
   if(typeof _notifDailyScan==='function')setTimeout(_notifDailyScan,1500);
   // Vitre refreshers -> toolbox: the server imports them every morning (30/09/2026); this shows how it went.
   if(typeof _vitreSyncHomeRender==='function')try{_vitreSyncHomeRender();}catch(e){}
+  // Tomorrow's weather at the factory (15/10/2026): one line when working hours look dangerous.
+  if(typeof _wxHomeRender==='function')try{_wxHomeRender();}catch(e){}
   // Phase 2 Agent 2 — refresh password reset request inbox on every
   // dashboard render. Cheap (1 SELECT, hidden if no rows / non-admin).
   if(typeof _pwReqLoad==='function')_pwReqLoad();
@@ -23716,6 +23719,50 @@ window._vitreSyncHomeRender=function(noFetch){
   _vitreSyncBusy=true;_vitreSyncAt=Date.now();
   _vitreGet('op=sync_status').then(function(j){if(j&&typeof j==='object'&&'last' in j)_vitreSyncSt=j;})
     ['catch'](function(){}).then(function(){_vitreSyncBusy=false;try{_vitreSyncHomeRender(true);}catch(e){}});
+};
+
+// ---- Tomorrow's weather at the factory (15/10/2026, Michael: "weather against work permits") ----
+// pg_cron calls /api/weather?op=check every afternoon (migration 2026-10-15_weather_cron.sql);
+// the server keeps the IMS forecast for Sderot in server_state.weather_tomorrow, and this
+// shows one line when working hours (06:00-18:00) bring heat stress, strong gusts or rain.
+// Nothing when there is no alert, the run failed, the day passed, or the data is older than 30 hours.
+var _wxSt=null,_wxAt=0,_wxBusy=false;
+function _wxIlDate(ms){
+  try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));}
+  catch(e){return new Date(ms).toISOString().slice(0,10);}
+}
+// ['11:00','12:00','13:00','15:00'] -> "between 11:00 and 13:00, at 15:00"
+function _wxHours(h){
+  var runs=[],cur=null,p=function(n){return ('0'+n).slice(-2)+':00';};
+  (h||[]).forEach(function(x){var n=parseInt(x,10);if(isNaN(n))return;if(cur&&n===cur[1]+1)cur[1]=n;else{cur=[n,n];runs.push(cur);}});
+  return runs.map(function(r){return r[0]===r[1]?'\u05d1-'+p(r[0]):'\u05d1\u05d9\u05df '+p(r[0])+' \u05dc-'+p(r[1]);}).join(', ');
+}
+function _wxLine(last,now){
+  if(!last||last.ok!==true||!last.at||!last.day||!last.alerts||!last.alerts.length)return '';
+  var t=now||Date.now(),age=t-new Date(last.at).getTime();
+  if(!(age>=0&&age<=30*3600*1000))return '';
+  var today=_wxIlDate(t),q=today.split('-'),tmrw=new Date(Date.UTC(+q[0],+q[1]-1,+q[2]+1)).toISOString().slice(0,10);
+  var lbl=last.day===tmrw?'\u05de\u05d7\u05e8 \u05d1\u05de\u05e4\u05e2\u05dc':last.day===today?'\u05d4\u05d9\u05d5\u05dd \u05d1\u05de\u05e4\u05e2\u05dc':'';
+  if(!lbl)return '';
+  var parts=[];
+  last.alerts.forEach(function(a){
+    var hrs=_wxHours(a.hours);if(!hrs)return;
+    if(a.kind==='heat')parts.push('\u05e2\u05d5\u05de\u05e1 \u05d7\u05d5\u05dd \u05d3\u05e8\u05d2\u05d4 '+a.value+' '+hrs+'. \u05dc\u05e9\u05e7\u05d5\u05dc: \u05d4\u05e7\u05d3\u05de\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d7\u05d5\u05e5, \u05e9\u05ea\u05d9\u05d9\u05d4 \u05d5\u05d4\u05e4\u05e1\u05e7\u05d5\u05ea \u05d1\u05e6\u05dc.');
+    else if(a.kind==='gust')parts.push('\u05de\u05e9\u05d1\u05d9 \u05e8\u05d5\u05d7 \u05e2\u05d3 '+a.value+' \u05e7\u05de"\u05e9 '+hrs+'. \u05dc\u05e9\u05e7\u05d5\u05dc: \u05dc\u05d3\u05d7\u05d5\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4, \u05d4\u05e8\u05de\u05d5\u05ea \u05d5\u05e2\u05d2\u05d5\u05e8\u05e0\u05d9\u05dd.');
+    else if(a.kind==='rain')parts.push('\u05e1\u05d9\u05db\u05d5\u05d9 \u05dc\u05d2\u05e9\u05dd '+a.value+'% '+hrs+'. \u05dc\u05e9\u05e7\u05d5\u05dc: \u05e8\u05e6\u05e4\u05d5\u05ea \u05d7\u05dc\u05e7\u05d5\u05ea \u05d5\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d7\u05d5\u05e5.');
+  });
+  return parts.length?lbl+': '+parts.join(' '):'';
+}
+window._wxHomeRender=function(noFetch){
+  var box=g('dash-weather');if(!box)return;
+  var line=_wxLine(_wxSt&&_wxSt.last);
+  box.innerHTML=line?'<div style="font-size:13px;padding:8px 10px;border:1px solid var(--c-amber-500,#f59e0b);background:var(--c-amber-100-2,#fef3c7);color:var(--c-orange-700,#92400e);border-radius:8px;text-align:right">'+esc(line)+'</div>':'';
+  if(noFetch||_wxBusy||Date.now()-_wxAt<30*60000)return;
+  if(typeof _sbToken==='undefined'||!_sbToken)return;
+  _wxBusy=true;_wxAt=Date.now();
+  fetch('/api/weather?op=status',{method:'GET',headers:_vitreHdr()}).then(function(r){return r.ok?r.json():null;})
+    .then(function(j){if(j&&typeof j==='object'&&'last' in j)_wxSt=j;})
+    ['catch'](function(){}).then(function(){_wxBusy=false;try{_wxHomeRender(true);}catch(e){}});
 };
 
 // ---- Notification test (23/09 evening): does an API submission fire Vitre's SMS/email? ----
