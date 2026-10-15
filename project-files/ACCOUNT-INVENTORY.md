@@ -27,6 +27,7 @@
 | `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01XPwRokY9GmbtX533Res2TU` | הרדאר מלמד את העוזר | ב' 08:37 | `routine-radar-learn.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
+| `trig_01L7t6v87o3Bv4SAsxferZZJ` | חוקר ההמצאות | ו' 08:47 | `routine-inventor.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | כל שעה, דקה 19 | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
 

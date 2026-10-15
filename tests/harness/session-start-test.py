@@ -18,6 +18,9 @@ check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" 
 open(os.path.join(d, "project-files", "chrome-queue.md"), "w", encoding="utf-8").write("## פתוח\n- [ ] **C1. זרימה ב-Power Automate** (12/10/2026)\n  ```\n  - [ ] לא משימה\n  ```\n## בוצע\n- [x] **C0. ישן**\n")
 o = run(d).stdout
 check("open Chrome tasks: counted and listed, done ones and code-block lines left out", "משימות לכרום: 1 פתוחות" in o and "C1. זרימה" in o and "C0" not in o, o)
+open(os.path.join(d, "project-files", "ideas-lab.md"), "w", encoding="utf-8").write("# x\n## ממתין להחלטה\n### 1. המפקח המדומה\nטקסט\n### 2. לוח מודעות\n## הוחלט\n### 3. ישן שנדחה\n")
+o = run(d).stdout
+check("ideas waiting for Michael: counted and named, decided ones left out", "רעיונות שמחכים להחלטה של מיכאל: 2" in o and "המפקח המדומה" in o and "ישן שנדחה" not in o, o)
 e = tempfile.mkdtemp()
 p = run(e, "not json")
 check("empty dir + bad stdin: exit 0, still names the skills", p.returncode == 0 and "tfugen-lean" in p.stdout, (p.returncode, p.stdout, p.stderr))
