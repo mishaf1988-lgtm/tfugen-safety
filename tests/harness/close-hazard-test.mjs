@@ -17,21 +17,39 @@ const PNG = new Uint8Array(100); PNG.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x
 
 function world(o) {
   o = o || {};
-  const w = { inserts: [], patches: [], hpatches: [], uploads: [], mails: [], reports: JSON.parse(JSON.stringify(o.reports || [F1])), hazards: JSON.parse(JSON.stringify(o.hazards || [H1])) };
+  const w = { inserts: [], patches: [], hpatches: [], uploads: [], mails: [], ignored: 0, insertReqs: [], readsSeen: 0, waiting: [], patchFails: o.patchFails || 0, reports: JSON.parse(JSON.stringify(o.reports || [F1])), hazards: JSON.parse(JSON.stringify(o.hazards || [H1])) };
   globalThis.fetch = async (url, init) => {
     const u = String(url), m = (init && init.method) || 'GET', body = init && init.body;
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
+    const prefer = String((init && init.headers && init.headers.Prefer) || '');
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) {
-      if (m === 'POST') { w.inserts.push(JSON.parse(body)); return new Response(null, { status: o.insertFail ? 500 : 201 }); }
-      if (m === 'PATCH') { w.patches.push({ u, body: JSON.parse(body) }); const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); const r = w.reports.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(body)); return new Response(null, { status: 204 }); }
+      // PostgREST: a POST whose id exists is 409, or a no-op 201 with
+      // resolution=ignore-duplicates (the closure row's fixed id, 15/10/2026).
+      if (m === 'POST') {
+        const row = JSON.parse(body); w.inserts.push(row); w.insertReqs.push({ u, prefer });
+        if (o.insertFail) return new Response(null, { status: 500 });
+        if (w.reports.some((x) => x.id === row.id)) { if (/resolution=ignore-duplicates/.test(prefer)) { w.ignored++; return new Response(null, { status: 201 }); } return json({ code: '23505' }, 409); }
+        w.reports.push({ ...row, s: 'תקין' }); return new Response(null, { status: 201 });
+      }
+      if (m === 'PATCH') { w.patches.push({ u, body: JSON.parse(body) }); if (w.patchFails > 0) { w.patchFails--; return new Response('x', { status: 503 }); } const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); const r = w.reports.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(body)); return new Response(null, { status: 204 }); }
       if (o.readFail) return new Response('x', { status: 503 });
       const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
-      return json(w.reports.filter((r) => r.id === id));
+      const out = JSON.parse(JSON.stringify(w.reports.filter((r) => r.id === id)));
+      // the race: hold every read until o.raceReads of them arrived, so all see "open" before any write
+      if (o.raceReads) { w.readsSeen++; await new Promise((res) => { w.waiting.push(res); if (w.readsSeen >= o.raceReads) w.waiting.splice(0).forEach((f) => f()); }); }
+      return json(out);
     }
     if (u.startsWith(SB + '/rest/v1/tour_hazards')) {
       const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
-      if (m === 'PATCH') { const b = JSON.parse(body); w.hpatches.push({ u, body: b }); if (o.hPatchFail) return new Response('x', { status: 500 }); const r = w.hazards.find((x) => x.id === id && x.s !== 'סגור'); if (r) Object.assign(r, b); return new Response(null, { status: 204 }); }
-      return json(w.hazards.filter((r) => r.id === id));
+      if (m === 'PATCH') {
+        const b = JSON.parse(body); w.hpatches.push({ u, body: b, prefer }); if (o.hPatchFail) return new Response('x', { status: 500 });
+        const r = w.hazards.find((x) => x.id === id && x.s !== 'סגור'); if (r) Object.assign(r, b);
+        return /return=representation/.test(prefer) ? json(r ? [r] : []) : new Response(null, { status: 204 });
+      }
+      const out = JSON.parse(JSON.stringify(w.hazards.filter((r) => r.id === id)));
+      // closed in the app right after this read, before the PATCH
+      if (o.hClosedAfterRead) w.hazards.forEach((r) => { if (r.id === id) Object.assign(r, { s: 'סגור', closed_by: 'מנהל', after_photo_url: null }); });
+      return json(out);
     }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json([{ prefs: { trustee_hazard: { email: true, email_to: 'sviva@tapugan.co.il' } } }]);
     if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
@@ -201,6 +219,37 @@ function post(fields, env) {
     w = world({ hPatchFail: true });
     r = await post({ k: htok, who: 'ויטלי' }); h = await r.text();
     check('the PATCH fails: the form again with the error, no mail', /name="who"/.test(h) && w.mails.length === 0);
+  }
+
+  console.log('\n5. one closure per finding (15/10/2026): double tap, retry, closed in between');
+  const closures = (w) => w.reports.filter((r) => r.t === 8 && r.ref === F1.id);
+  {
+    // both POSTs read the finding as open before either one writes
+    const w = world({ raceReads: 2 });
+    const [r1, r2] = await Promise.all([post({ k: tok, who: 'דנה' }), post({ k: tok, who: 'דנה' })]);
+    const [h1, h2] = [await r1.text(), await r2.text()];
+    check('the race happened: both reads saw "open", two inserts were sent', w.readsSeen === 2 && w.inserts.length === 2, { reads: w.readsSeen, inserts: w.inserts.length });
+    check('double tap: exactly one closure row (the second insert is ignored)', closures(w).length === 1 && w.ignored === 1, closures(w));
+    check('the closure row id is fixed: cl- + the finding id + the day', w.inserts[0].id === w.inserts[1].id && /^cl-mudmp1oysfpo-\d{8}$/.test(w.inserts[0].id), w.inserts.map((x) => x.id));
+    check('the id is valid for a link and never a tour hazard id', /^[A-Za-z0-9_-]{1,64}$/.test(w.inserts[0].id) && !/^th-/.test(w.inserts[0].id));
+    check('insert uses on_conflict=id with resolution=ignore-duplicates', w.insertReqs.every((q) => /\?on_conflict=id$/.test(q.u) && /resolution=ignore-duplicates/.test(q.prefer)), w.insertReqs);
+    check('both pages say closed, the finding is closed', r1.status === 200 && r2.status === 200 && h1.includes('הליקוי נסגר') && h2.includes('הליקוי נסגר') && w.reports[0].s === 'נסגר');
+  }
+  {
+    const w = world({ patchFails: 1 });
+    let r = await post({ k: tok, who: 'דנה', note: 'נוקה' }); let h = await r.text();
+    check('PATCH fails: "partly saved" (502), finding still open', r.status === 502 && h.includes('נשמר חלקית') && w.reports[0].s === 'פתוח', h.slice(0, 300));
+    r = await post({ k: tok, who: 'דנה', note: 'נוקה' }); h = await r.text();
+    check('retry: success page, finding closed', r.status === 200 && h.includes('הליקוי נסגר') && w.reports[0].s === 'נסגר', h.slice(0, 300));
+    check('retry: still one closure row (second insert ignored)', closures(w).length === 1 && w.ignored === 1 && w.inserts.length === 2, closures(w));
+  }
+  {
+    const w = world({ hClosedAfterRead: true });
+    const htok = await makeCloseToken(ENV, H1.id);
+    const r = await post({ k: htok, who: 'ויטלי', note: 'הוחלף', photo: new File([JPG], 'a.jpg', { type: 'image/jpeg' }) }); const h = await r.text();
+    check('hazard PATCH asks for return=representation', w.hpatches.length === 1 && /return=representation/.test(w.hpatches[0].prefer), w.hpatches);
+    check('closed in between: the page says already closed, not closed now', h.includes('\u05d4\u05de\u05e4\u05d2\u05e2 \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8') && !h.includes('\u2705 \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8'), h.slice(0, 400));
+    check('closed in between: the earlier closure is kept, no mail for this one', w.hazards[0].closed_by === 'מנהל' && w.mails.length === 0);
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
