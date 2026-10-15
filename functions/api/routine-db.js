@@ -50,6 +50,13 @@
 //              mail and saves its attachments into the inbox folder. Neither the cloud, the
 //              server (no Mail.Read) nor Cowork can get an attachment's bytes; the flow can.
 //              A new file each time (time + random), never replacing one. MAIL_REQ_ID.
+//   talk_field  (15/10/2026, Michael: "בצע: הדרכה שבועית מהשטח") {id, dept, text}: into this week's
+//              shared weekly draft (private.talk_week: id w<YYYYMMDD>, s draft, kind null,
+//              created_by 'routine', a "## <department>" section per department) put a short part
+//              "what happened here this week" at the end of that department's section. A fixed
+//              first line (TALK_FIELD_HEAD); a second call replaces only that part. Only a draft of
+//              the last 7 days that nobody signed; body only (the translations are made in the app,
+//              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp } from '../_shared.js';
@@ -57,7 +64,7 @@ import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
-  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr'];
+  'tour_hazards', 'trustee_reports', 'inc', 'near_miss', 'ncr', 'toolbox_talks'];
 export const STATE_READ = ['quote_track', 'nevo_versions', 'od_scan', 'vendor_contacts', 'agent_log', 'mail_filing', 'validity_run'];
 export const AGENT_LOG_MAX = 200;
 // One run report, cleaned: a short agent name and three short texts.
@@ -107,7 +114,47 @@ export const COLUMNS = {
   med: ['id', 'e'],
   hearing_tests: ['id', 'e'],
   trustee_reports: ['id', 'loc', 'location_id', 's', 'ok', 'ts', 'closed_d', 'num'],
+  // talk_field reads this week's draft: no trainer signature, no links, no translations.
+  toolbox_talks: ['id', 'd', 's', 'kind', 'dept', 'created_by', 'title', 'body'],
 };
+
+// talk_field (15/10/2026). Pure: the new body, or { error }. row = the talk as it is now; today = YYYY-MM-DD (Israel).
+export const TALK_DRAFT = '\u05d8\u05d9\u05d5\u05d8\u05d4';
+export const TALK_FIELD_HEAD = '\u05de\u05d4 \u05e7\u05e8\u05d4 \u05d0\u05e6\u05dc\u05e0\u05d5 \u05d4\u05e9\u05d1\u05d5\u05e2:';
+export const TALK_FIELD_MAX = 1200;
+// Not on a keyboard (CLAUDE.md, text for people; the same list as build-pdf.js KEYBOARD_ONLY).
+export const NOT_KEYBOARD = /[\u2014\u2013\u2012\u05be\u2010\u2212\u00ab\u00bb\u201c\u201d\u2018\u2019\u05f3\u05f4\u2026\u00b7\u2190-\u21ff]/;
+// Seven digits or more, spaces or dashes between them allowed: an ID number or a phone, never in a talk.
+export const ID_LIKE = /\d(?:[\s-]?\d){6,}/;
+const TALK_HEADING = /^##\s+(.+?)\s*$/;
+export function talkFieldApply(row, b, today) {
+  if (!row) return { error: 'talk not found' };
+  const m = /^w(\d{4})(\d{2})(\d{2})$/.exec(String(row.id || ''));
+  if (!m || row.created_by !== 'routine' || (row.kind !== null && row.kind !== undefined && row.kind !== 'weekly') || row.dept) return { error: 'not the weekly draft' };
+  if (row.s !== TALK_DRAFT) return { error: 'not a draft' };
+  const day = m[1] + '-' + m[2] + '-' + m[3], age = (Date.parse(today + 'T00:00:00Z') - Date.parse(day + 'T00:00:00Z')) / 864e5;
+  if (String(row.d || '').slice(0, 10) !== day || !(age >= 0 && age <= 6)) return { error: 'not this week' };
+  const dept = String(b.dept || '').trim();
+  let text = String(b.text === undefined || b.text === null ? '' : b.text).replace(/\r/g, '').split('\n').map((l) => l.trim()).filter(Boolean).join('\n');
+  if (text.length < 20) return { error: 'text too short' };
+  if (text.length > TALK_FIELD_MAX) return { error: 'text over ' + TALK_FIELD_MAX };
+  if (NOT_KEYBOARD.test(text)) return { error: 'not keyboard characters' };
+  if (ID_LIKE.test(text)) return { error: 'ID-like digits' };
+  if (/^#/m.test(text) || text.indexOf(TALK_FIELD_HEAD) >= 0) return { error: 'no headings in text' };
+  const lines = String(row.body || '').replace(/\r/g, '').split('\n');
+  const at = lines.findIndex((l) => { const h = TALK_HEADING.exec(l); return h && h[1] === dept; });
+  if (!dept || at < 0) return { error: 'no such department section' };
+  let end = lines.length;
+  for (let i = at + 1; i < lines.length; i++) if (TALK_HEADING.test(lines[i])) { end = i; break; }
+  let sec = lines.slice(at + 1, end);
+  const h = sec.findIndex((l) => l.trim() === TALK_FIELD_HEAD);
+  if (h >= 0) { let e = h + 1; while (e < sec.length && sec[e].trim() !== '') e++; sec.splice(h, e - h); }
+  while (sec.length && sec[sec.length - 1].trim() === '') sec.pop();
+  sec = sec.concat(['', TALK_FIELD_HEAD], text.split('\n'));
+  const after = lines.slice(end);
+  const body = lines.slice(0, at + 1).concat(sec, after.length ? [''] : [], after).join('\n');
+  return { body, replaced: h >= 0 };
+}
 // expiry_set: the tables, the note column of each, and the one extra field it may set.
 export const EXPIRY_TABLES = {
   docs: { note: 'nt', extra: 's' },
@@ -372,7 +419,7 @@ export async function onRequest(context) {
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
       if (!Array.isArray(rows) || rows.length !== 1) return jsonResp({ ok: false, error: 'row not found' }, 200, {});
-      const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
       const p = expiryPatch(body, rows[0], today);
       if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
       if (!p.patch) return jsonResp({ ok: true, changed: false, row: rows[0] }, 200, {});
@@ -383,6 +430,31 @@ export async function onRequest(context) {
       const after = await w.json();
       if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
       return jsonResp({ ok: true, changed: true, before: rows[0], after: after[0] }, 200, {});
+    }
+    if (body.op === 'talk_field') {
+      const id = String(body.id === undefined || body.id === null ? '' : body.id);
+      if (!/^w\d{8}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
+      for (const k of Object.keys(body)) if (['op', 'id', 'dept', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
+      const g = await fetch(url + '/rest/v1/toolbox_talks?select=id,d,s,kind,dept,created_by,body&id=eq.' + encodeURIComponent(id), { headers: h });
+      if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
+      const rows = await g.json();
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+      const p = talkFieldApply(Array.isArray(rows) && rows.length === 1 ? rows[0] : null, body, today);
+      if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
+      // Signed = the text is evidence (ISO 45001 7.4); it is not changed under the signatures.
+      const sr = await fetch(url + '/rest/v1/toolbox_reads?select=id&limit=1&talk_id=eq.' + encodeURIComponent(id), { headers: h });
+      if (!sr.ok) return jsonResp({ ok: false, error: 'reads ' + sr.status }, 200, {});
+      const signed = await sr.json();
+      if (!Array.isArray(signed) || signed.length) return jsonResp({ ok: false, error: 'already signed' }, 400, {});
+      if (p.body === rows[0].body) return jsonResp({ ok: true, changed: false }, 200, {});
+      // s=eq.draft in the write too: published between the read and the write = nothing written.
+      const w = await fetch(url + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&s=eq.' + encodeURIComponent(TALK_DRAFT), {
+        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify({ body: p.body }),
+      });
+      if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
+      const after = await w.json();
+      if (!Array.isArray(after) || after.length !== 1) return jsonResp({ ok: false, error: 'write touched ' + (Array.isArray(after) ? after.length : '?') + ' rows' }, 200, {});
+      return jsonResp({ ok: true, changed: true, replaced: p.replaced, chars: p.body.length }, 200, {});
     }
     if (body.op === 'mail_request') {
       if (!/^[a-z0-9-]{2,40}$/.test(String(body.agent || ''))) return jsonResp({ ok: false, error: 'bad agent name' }, 400, {});
