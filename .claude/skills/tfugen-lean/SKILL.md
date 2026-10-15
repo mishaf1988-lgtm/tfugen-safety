@@ -103,3 +103,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 הכלל: לא לחתוך פלט של harness. ריצה ירוקה היא שורה אחת ממילא, ובריצה אדומה צריך לקרוא את כל הלוג. ריצה ברקע: `> קובץ 2>&1`, ואז `grep -E "✗|NO SUMMARY"` על הקובץ כולו.
 נאכף: `lean-harness.py` מ-15/10/2026 כותב מחדש גם `PARALLEL=N bash tests/harness/run.sh ... | tail/head -N`, ומוריד את ה-pipe (`lean-harness-test.py`).
 חזר: 0
+
+**100. דחיפה אחרי הרצה חלקית של הבדיקות, וסינון שהסתיר `HARNESS ERROR` (15/10/2026, #1545).**
+מה קרה: לפני ה-push הרצתי רק `run.sh trustee`, `run.sh batch` וכו'. ב-CI נכשלו `keyboard-only` (« » בהערה שנכתבה דרך python) ו-`outbox-race`, שמחלץ פונקציות מהקובץ ולא הכיר פונקציה חדשה. אחר כך סיננתי את הריצה המלאה עם `grep -E "✗|crashed|FAIL|GREEN"`, וזה לא תפס `HARNESS ERROR ReferenceError`: ראיתי רק "FAILURES ABOVE".
+הכלל: לפני כל push, `PARALLEL=4 bash tests/harness/run.sh` מלא. ולקרוא אותו בסינון הפוך: `grep -vE "passed, 0 failed|^\s+✓|report only"`, שמראה כל שורה שאינה הצלחה.
+נאכף: טקסט (אין דרך בקוד: hook לא יודע אילו בדיקות רצו מאז העריכה האחרונה). ה-CI ו-`merge-gate.py` חוסמים מיזוג אדום.
+חזר: 0
