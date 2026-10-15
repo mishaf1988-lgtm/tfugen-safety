@@ -80,4 +80,11 @@ json.dump(cur_, open(sf, "w")); cl("true"); u2 = us()
 check("a foreign Stop hook survives the copy", any(h.get("command") == "~/.claude/stop-hook-git-check.sh" for g in u2["hooks"].get("Stop", []) for h in g.get("hooks", [])), u2["hooks"].get("Stop"))
 check("the repo's PreToolUse group is there once, not doubled", len(u2["hooks"]["PreToolUse"]) == 1, u2["hooks"]["PreToolUse"])
 check("no temp file left in ~/.claude", not [n for n in os.listdir(os.path.join(hm, ".claude")) if ".tmp" in n], os.listdir(os.path.join(hm, ".claude")))
+# the challenger's edge cases (15/10/2026): odd shapes do not stop the copy, a broken file is not overwritten, the mode stays
+cur_ = us(); cur_["hooks"]["Stop"] = "not a list"; cur_["env"] = {"K": "secret"}
+json.dump(cur_, open(sf, "w")); os.chmod(sf, 0o600); cl("true"); u3 = us()
+check("a Stop value that is not a list: the repo's hooks still installed", "PreToolUse" in u3["hooks"] and u3["env"] == {"K": "secret"}, u3.get("hooks", {}).keys())
+check("the file mode 0600 is kept", (os.stat(sf).st_mode & 0o777) == 0o600, oct(os.stat(sf).st_mode & 0o777))
+open(sf, "w").write("{ broken json"); cl("true")
+check("a broken settings file is left as it is", open(sf).read() == "{ broken json", open(sf).read())
 done()
