@@ -11889,7 +11889,7 @@ function rTp(){
       +'<td data-label="\u05d1\u05d5\u05e6\u05e2" style="font-size:12px">'+(dn.length?dn.map(function(x){return fd(x.d)+(x.by?' - '+esc(x.by):'')+(x.src==='talk'?' (\u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4)':'');}).join('<br>'):'-')+'</td>'
       +'<td data-label="">'+(ed?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="_tpOpen(this.dataset.id)" aria-label="\u05e2\u05e8\u05d9\u05db\u05d4">\u270f\ufe0f</button> ':'')
       +'<button class="btn btn-d btn-sm" data-vtbl="train_plan" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>'
-      +(ed?' <button class="btn btn-d btn-sm" data-dtbl="train_plan" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>':'')+'</td></tr>';
+      +(ed?' <button class="btn btn-d btn-sm" data-dtbl="train_plan" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button>':'')+'</td></tr>';
   });
     h+='</tbody></table></div>';return h;};
   var late=rows.filter(function(r){return _tpState(r)==='late';});
