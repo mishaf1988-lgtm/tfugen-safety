@@ -445,7 +445,9 @@ export const annOk = (subjects) => { const t = topicsOf(subjects); return t.leng
 // anything else before sending (leading/trailing spaces allowed, the server trims); the server checks again.
 // The curly quotes and accent of an iPhone keyboard pass too (15/10/2026, B6): the browser checks the raw
 // value, and the server turns them into ' and " (plainQuotes).
-export const HE_ONLY_PATTERN = ' *[\u05d0-\u05ea][\u05d0-\u05ea\u05f3\u05f4\'"\u2018\u2019\u201b\u00b4\u201c\u201d\u201e. \\-]{1,60}';
+// (By code point: a curly quote written in a string here would read as text people see, server-keyboard-test.js.)
+const CURLY = String.fromCharCode(0x2018, 0x2019, 0x201b, 0xb4, 0x201c, 0x201d, 0x201e);
+export const HE_ONLY_PATTERN = ' *[\u05d0-\u05ea][\u05d0-\u05ea\u05f3\u05f4\'"' + CURLY + '. \\-]{1,60}';
 const HE_ONLY_ATTR = (L) => ' dir="rtl" lang="he" pattern="' + esc(HE_ONLY_PATTERN) + '" title="' + esc(L.heOnly) + '"';
 export const DEP_OTHER_PH = '\u05e9\u05dd \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
 // The training departments and the employee-card names that belong to each (index.html _TBT_DEPTS).
