@@ -17,6 +17,7 @@ const TODAY = '2026-10-04'; // a Sunday
 const fdNow = () => new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
 const DAYMS = 86400000;
 const fdAgo = (n) => new Date(Date.now() - n * DAYMS).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
+const NOW = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
 const plus = (n, from) => new Date(Date.parse((from || TODAY) + 'T12:00:00Z') + n * DAY).toISOString().substring(0, 10);
 // Register rows, columns A..M as buildRegister writes them.
 const ROWS = [
@@ -162,7 +163,9 @@ const ROWS = [
   console.log('\n3. the endpoint');
   const HZ = [
     { id: 'h31', n: 31, d: plus(-40, undefined), tour_no: 6, dept: 'חומר גלם', loc: 'מתקן', descr: 'מתקן', sev: 'בינונית', resp: 'אחזקה', due: plus(-20), s: 'בטיפול' },
-    { id: 'h38', n: 38, d: plus(-7), tour_no: 10, dept: 'תוצג', loc: 'דלת', descr: 'דלת חירום', sev: 'גבוהה', resp: 'הנדסה', due: plus(10), s: 'פתוח' },
+    // Not yet due on the day the test runs: the endpoint compares with the real today, not TODAY
+    // (15/10/2026: due plus(10) from TODAY = 14/10 turned overdue the next day and the counts broke).
+    { id: 'h38', n: 38, d: plus(-7, NOW), tour_no: 10, dept: 'תוצג', loc: 'דלת', descr: 'דלת חירום', sev: 'גבוהה', resp: 'הנדסה', due: plus(10, NOW), s: 'פתוח' },
   ];
   const TR = [{ id: 't1', num: 1, u: 'מוסא', t: 3, d: plus(-12), loc: 'חומר גלם · רחבה', ok: false, f: 'פנס שבור', s: 'פתוח', ts: plus(-12) + 'T08:00:00Z' }];
   function world(o) {

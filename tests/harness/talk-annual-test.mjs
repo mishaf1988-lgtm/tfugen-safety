@@ -2,7 +2,7 @@
 // training, the worker fills his details, and one form 08.01 with everyone"; in the questionnaire:
 // "everything typed", "PDF to the folder + print"). kind annual / quality: a permanent link until
 // closed (revoke), the worker types name and ID and picks a department, one form 08.01 for all.
-import { onRequest, makePermToken, permOk, KIND_ANN, KIND_QA, PERM_KINDS, TYPED_KINDS, ANN_OK, MAX_OUT_TYPED, form0801Html, topicsOf, F0801_ROWS, F0801_SUB } from './_build/talk.mjs';
+import { onRequest, makePermToken, permOk, KIND_ANN, KIND_QA, PERM_KINDS, TYPED_KINDS, ANN_OK, annOk, MAX_OUT_TYPED, form0801Html, topicsOf, F0801_ROWS, F0801_SUB } from './_build/talk.mjs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 400) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -62,7 +62,9 @@ const p = await open(r.j.url);
 check('opens, titled by the training', p.st === 200 && p.h.includes('הדרכת בטיחות שנתית 2026'), p.st);
 check('no list of workers: a hidden "other", name and ID required', p.h.includes('name="emp" id="emp" value="__other"') && !p.h.includes('אחמד כהן') && /name="oname" id="oname"[^>]*required/.test(p.h) && p.h.includes('name="oid"'));
 check('a department list (the seven + other) and a box for another department; no company box', p.h.includes('name="idep"') && p.h.includes('<option value="אריזה">') && p.h.includes('name="idepo"') && !p.h.includes('name="ocomp"'));
-check('the confirmation: every topic above, understood', p.h.includes(ANN_OK));
+// 15/10/2026 (Michael: the training is face to face, the worker signs he was trained on the topics the trainer ticked)
+check('the confirmation names the ticked topics; the general sentence only with none ticked', p.h.includes(annOk(T.ann.subjects)) && /אני מאשר\/ת שעברתי הדרכה בנושאים: כיבוי אש/.test(annOk(T.ann.subjects)) && annOk('') === ANN_OK, annOk(T.ann.subjects));
+check('face to face: the topics block, no text to read and no read-aloud', p.h.includes('id="tp"') && p.h.includes('ההדרכה ניתנה מול מדריך') && !p.h.includes('id="say"') && !p.h.includes('id="tb"'));
 check('the topics are on the page', p.h.includes('ציוד מגן אישי'));
 
 console.log('\n3. signing');

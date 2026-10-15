@@ -11,6 +11,7 @@ description: How the user guides of the tfugen-safety app are built and kept tru
 |---|---|---|---|
 | נאמני בטיחות | `project-files/guide-trustees/` | `tools/guide-shots.js` (האפליקציה, `index.html`) | `build-pdf.js` שם |
 | משאבי אנוש + מנהלים | `project-files/guide-training/` | `tools/guide-talk-shots.mjs` (דף העובד, `functions/api/talk.js`) | `build-pdf.js` שם |
+| פיילוט הדרכה שנתית (למיכאל) | `project-files/guide-annual/` | `tools/guide-annual-shots.mjs` (האפליקציה ודף העובד) | `build-pdf.js` שם |
 
 ```bash
 NODE_PATH=$(npm root -g) node tools/guide-talk-shots.mjs            # או guide-shots.js
@@ -50,3 +51,10 @@ PREVIEW=<scratchpad>/prev NODE_PATH=$(npm root -g) node project-files/guide-trai
 הכלל: בדיקה של צבע או מיקום אחרי פעולה (hover, לחיצה) מחכה יותר מזמן ה-`transition` (300ms), ונבדקת פעם אחת בלי התיקון: בדיקה שלא נכשלת בלי התיקון לא בודקת אותו.
 נאכף: `sign-app-test.js` ("a chosen ok / defect keeps its colour under the mouse"), עם המתנה של 300ms, נכשל בלי התיקון ועובר איתו.
 חזר: 0
+
+**91. שינוי ב-import של `talk.js` שבר בשקט את סקריפט הצילומים של המדריכים (15/10/2026, PR זה).**
+מה קרה: ב-14/10 `talk.js` התחיל לייבא את `./hazard-report.js`. הבדיקות עברו (הוספתי כלל ל-`run.sh`), אבל `tools/guide-talk-shots.mjs` העתיק רק את השכנים `../_x.js` ונפל ב-`ERR_MODULE_NOT_FOUND`. אף בדיקה לא מריצה אותו, ולכן זה התגלה רק כשבניתי מדריך חדש. בנוסף, המדריך הראשון נכתב כאילו העובד קורא את ההדרכה בטלפון, ומיכאל תיקן: ההדרכה השנתית ניתנת מול מדריך, והעובד רק חותם על השתתפות בנושאים.
+הכלל: (1) סקריפט שמריץ את `talk.js` ב-Node טוען אותו דרך `tools/_talk-module.mjs`, שמעתיק את כל `functions/_*.js` ומתקן כל import יחסי, כך ש-import חדש לא שובר אותו. (2) לפני שכותבים מדריך לתהליך, לשאול איך הוא קורה בשטח (מי מדריך, איפה, מה העובד עושה בטלפון), לא להסיק מהקוד.
+נאכף: (1) שני סקריפטי הצילום משתמשים ב-`loadTalk`; הוכח שהישן נפל לפני התיקון. (2) בטקסט בלבד.
+חזר: 0
+
