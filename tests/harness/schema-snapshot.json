@@ -615,6 +615,17 @@
       "text_hash",
       "ts"
     ],
+    "train_plan": [
+      "aud",
+      "done",
+      "id",
+      "n",
+      "q",
+      "t",
+      "ts",
+      "who",
+      "yr"
+    ],
     "toolbox_talks": [
       "body",
       "body_am",

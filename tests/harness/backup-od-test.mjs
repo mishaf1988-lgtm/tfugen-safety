@@ -35,7 +35,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   check('the folders: under Apps/Tapugan Safety/_Backups', DAILY === 'Apps/Tapugan Safety/_Backups/cron' && MONTHLY === 'Apps/Tapugan Safety/_Backups/monthly' && PHOTOS === 'Apps/Tapugan Safety/_Backups/photos');
 
   function world(o) {
-    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, seen: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [] };
+    const w = { state: {}, od: { [DAILY]: new Map(), [MONTHLY]: new Map(), [PHOTOS]: new Map(), [TALKS]: new Map(), [SKIP]: new Map() }, created: {}, moved: {}, seen: {}, puts: [], dels: [], seq: 0, bodies: {}, talkReads: [], planReads: [] };
     (o.skip || []).forEach((x) => { const id = 'id' + (++w.seq); w.od[SKIP].set(x.name, id); w.created[id] = x.created; if (x.moved) w.moved[id] = x.moved; if (x.seen !== null) w.seen[id] = x.seen || x.created; });
     if (Object.keys(w.moved).length) w.state.skip_moved = JSON.stringify(w.moved);
     // Seen since it was created, unless the case says otherwise (seen: null = never seen before).
@@ -48,6 +48,7 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
       if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
       if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
       if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return json(o.noToken ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'offline_access User.Read Files.ReadWrite Mail.Send' }]);
+      if (u.startsWith(SB + '/rest/v1/train_plan')) { w.planReads.push(u); return o.planFail ? json({ message: 'x' }, 500) : json(o.plan || []); }
       if (u.startsWith(SB + '/rest/v1/toolbox_talks')) { w.talkReads.push(u); return o.talksFail ? json({ message: 'x' }, 500) : json(o.talks || []); }
       if (u.startsWith(SB + '/rest/v1/server_state')) { if (mth === 'POST') { JSON.parse(init.body).forEach((r) => { w.state[r.key] = r.value; }); return new Response(null, { status: 201 }); } if (o.stateFail) return json({ message: 'x' }, 500); return json(Object.keys(w.state).map((k) => ({ key: k, value: w.state[k], updated_at: null }))); }
       let m = /\/storage\/v1\/object\/list\/([^/?]+)$/.exec(u);
@@ -140,12 +141,20 @@ const daily = (n, from) => Array.from({ length: n }, (_, i) => nameAt(at3((from 
   const TALK_ROWS = [{ id: 't1', title: 'עבודה בגובה', toolbox_reads: [{ id: 'r1', talk_id: 't1', emp_name: 'דנה', id_no: '0123' }] }];
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const OLDT = Array.from({ length: 16 }, (_, i) => talksName(new Date(Date.now() - (i + 1) * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })));
-  c = await call({ backups: BK, photos: PH, talks: TALK_ROWS, od: { [TALKS]: OLDT } }, 'nsec');
+  c = await call({ backups: BK, photos: PH, talks: TALK_ROWS, plan: [{ id: 'tp2026-28', yr: 2026, n: 28, t: 'x', done: [] }], od: { [TALKS]: OLDT } }, 'nsec');
   const tf = TALKS + '|' + talksName(today), body = JSON.parse(c.w.bodies[tf] || '{}');
   check('one read for both tables, today\'s file written', c.j.ok && c.w.talkReads.length === 1 && /select=\*,toolbox_reads\(\*\)/.test(c.w.talkReads[0]) && !!c.w.bodies[tf], [c.j.errors, c.w.talkReads]);
+  check('the annual training plan rides in the same file (15/10/2026)', c.w.planReads.length === 1 && Array.isArray(body.tables && body.tables.train_plan) && body.tables.train_plan[0].n === 28, [c.w.planReads, body.tables && body.tables.train_plan]);
+  {
+    const cf = await call({ backups: BK, photos: PH, talks: TALK_ROWS, plan: [], planFail: true }, 'nsec');
+    const b2 = JSON.parse(cf.w.bodies[TALKS + '|' + talksName(today)] || '{}');
+    check('the plan read fails: the talks file is still written, and the failure is reported', !!(b2.tables && b2.tables.toolbox_talks.length === 1) && !b2.tables.train_plan && JSON.stringify(cf.j.errors || []).includes('train_plan'), [cf.j.errors]);
+  }
   check('the file has the talk and the signature, ID included', body.tables && body.tables.toolbox_talks[0].title === 'עבודה בגובה' && body.tables.toolbox_reads[0].id_no === '0123', body);
   check('15 days kept, the oldest pruned, counts recorded', c.w.od[TALKS].size === TALKS_KEEP && !c.w.od[TALKS].has(OLDT[15]) && !c.w.od[TALKS].has(OLDT[14]) && c.rec.talks.pruned === 2 && c.rec.talks.talks === 1 && c.rec.talks.reads === 1, [c.w.od[TALKS].size, c.rec.talks]);
-  check('still within the 50-subrequest budget, photos take what is left', c.rec.subrequests <= 44 && c.rec.photos.copied > 0, [c.rec.subrequests, c.rec.photos]);
+  // A first-run day (20 backups, 16 old talk files): since the plan read (15/10/2026) no photo slot is
+  // left; what is not copied waits for tomorrow and is counted. A normal day copies photos (below).
+  check('still within the 50-subrequest budget, photos take what is left and the rest are counted', c.rec.subrequests <= 44 && c.rec.photos.copied + c.rec.photos.left === c.rec.photos.total, [c.rec.subrequests, c.rec.photos]);
   {
     const D = 864e5;
     const sk = [{ name: 'a-old.pdf', created: new Date(Date.now() - 40 * D).toISOString() }, { name: 'b-new.pdf', created: new Date(Date.now() - 2 * D).toISOString() }];

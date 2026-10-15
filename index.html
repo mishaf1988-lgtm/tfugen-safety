@@ -1736,6 +1736,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   </div>
   <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap"><button type="button" class="btn btn-p btn-sm" onclick="goPage('training')">&#128221; הדרכות וחתימות</button><button type="button" class="btn btn-s btn-sm" onclick="goPage('tr')">&#128220; קורסים והסמכות</button></div>
   <div id="tbt-stale"></div>
+  <div class="card" id="tp-card"></div>
   <div class="card" id="tbt-card"><div class="row" style="margin-bottom:6px"><div class="card-title" style="margin:0">&#128214; &#1492;&#1491;&#1512;&#1499;&#1493;&#1514; &#1500;&#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1488;&#1497;&#1513;&#1497;&#1514;</div><button class="btn btn-p btn-sm" onclick="openModal('m-tbt')">+ &#1492;&#1491;&#1512;&#1499;&#1492; &#1495;&#1491;&#1513;&#1492;</button></div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">&#1499;&#1500; &#1506;&#1493;&#1489;&#1491; &#1511;&#1493;&#1512;&#1488; &#1493;&#1495;&#1493;&#1514;&#1501; &#1489;&#1506;&#1510;&#1502;&#1493;. &#1488;&#1495;&#1512;&#1497; "&#1508;&#1512;&#1505;&#1501;": &#128279; &#1511;&#1497;&#1513;&#1493;&#1512;, &#1493;&#1500;&#1513;&#1500;&#1493;&#1495; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1489;&#1493;&#1493;&#1488;&#1496;&#1505;&#1488;&#1508; &#1488;&#1493; &#1500;&#1508;&#1514;&#1493;&#1495; &#1489;&#1496;&#1488;&#1489;&#1500;&#1496;. &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1513;&#1500; &#1492;&#1491;&#1512;&#1499;&#1514; &#1511;&#1512;&#1497;&#1488;&#1492; &#1493;&#1495;&#1514;&#1497;&#1502;&#1492; &#1489;&#1514;&#1493;&#1511;&#1507; 14 &#1497;&#1502;&#1497;&#1501;.</div><div class="tbl-wrap"><table><thead><tr><th scope="col">&#1514;&#1488;&#1512;&#1497;&#1498;</th><th scope="col">&#1504;&#1493;&#1513;&#1488;</th><th scope="col">&#1505;&#1496;&#1496;&#1493;&#1505;</th><th scope="col">&#1495;&#1514;&#1502;&#1493;</th><th scope="col"></th></tr></thead><tbody id="tb-tbt"></tbody></table></div></div>
 </div>
 
@@ -3296,6 +3297,11 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- NOTIFICATION SETTINGS MODAL -->
+<div class="overlay" id="ov-tp" onclick="closeModal('m-tp')"></div>
+<div class="modal" id="m-tp" style="display:none;max-width:560px">
+  <button class="close-btn" onclick="closeModal('m-tp')">&#10005;</button>
+  <div id="tp-body"></div>
+</div>
 <div class="overlay" id="ov-sys" onclick="closeModal('m-sys')"></div>
 <div class="modal" id="m-sys" style="display:none;max-width:560px">
   <button class="close-btn" onclick="closeModal('m-sys')">&#10005;</button>
@@ -3668,7 +3674,7 @@ var _isAdmin=false;
 // date in May while the app shipped many times a week, and a restored backup
 // named a version that had not been current for months.
 var APP_VER='2026.09.20';
-var DB={record_history:[],mgmt_reviews:[],docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],toolbox_talks:[],toolbox_reads:[],tour_hazards:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
+var DB={record_history:[],mgmt_reviews:[],docs:[],auds:[],ncr:[],inc:[],tr:[],rsk:[],emp:[],hist:[],ptw:[],ppe:[],med:[],ins:[],drl:[],ctr:[],wst:[],hzm:[],env:[],leg:[],equip_inspections:[],near_miss:[],rounds:[],tasks:[],app_users:[],toolbox:[],toolbox_talks:[],toolbox_reads:[],train_plan:[],tour_hazards:[],audit_log:[],env_aspects:[],page_files:[],locations:[],saved_views:[],notification_prefs:[],custom_props:[],projects:[],notifications_log:[],inspection_types:[],issue_types:[],trustee_tasks:[]};
 var CUR='dash';
 var NCRI=1;
 function g(id){return document.getElementById(id);}
@@ -3730,7 +3736,7 @@ function sdb(){
 // reload sees the latest snapshot (avoids racing the 250ms timer).
 window.addEventListener('beforeunload', function(){ if(_sdbTimer)_sdbFlush(); });
 window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); });
-function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.toolbox_talks)DB.toolbox_talks=[];if(!DB.toolbox_reads)DB.toolbox_reads=[];if(!DB.tour_hazards)DB.tour_hazards=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
+function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.toolbox_talks)DB.toolbox_talks=[];if(!DB.toolbox_reads)DB.toolbox_reads=[];if(!DB.tour_hazards)DB.tour_hazards=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-22.v1';
 var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -3808,7 +3814,7 @@ function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
-var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',toolbox_talks:'ts',toolbox_reads:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
+var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',toolbox_talks:'ts',toolbox_reads:'ts',train_plan:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
 // really is empty on the server. Resolves to null on any failure (auth,
 // offline, non-2xx, bad JSON) so the caller can tell "empty" from
@@ -4246,7 +4252,7 @@ function _sbMergePull(t,rows,obBefore){
   DB[t]=merged;
 }
 function sbSync(silent){
-  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+  var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var done=0;
   function finish(){
     done++;
@@ -4318,7 +4324,7 @@ function _rtStart(){
   _sbAuth().then(function(){
     try{
       var c=_sbClient;
-      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+      var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
       var ch=c.channel('tfgn-all-changes');
       // For noisy log tables, server-side filter to only the current user's
       // own rows. Reduces realtime traffic dramatically when many users are
@@ -4562,7 +4568,7 @@ function forceSync(){
 // rows never reached the server \u2014 but named for what it does, and warning in
 // the direction that can actually lose someone else's work.
 function _forceUpload(){
-  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
+  var syncTbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var totalRowsToPush=0;
   syncTbls.forEach(function(t){var r=DB[t];if(r&&r.length)totalRowsToPush+=r.length;});
   if(totalRowsToPush===0){toast('\u05d0\u05d9\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05e7\u05d5\u05de\u05d9\u05d9\u05dd \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4');return;}
@@ -4612,7 +4618,7 @@ var _delPending={tbl:null,id:null};
 // Tables CLAUDE.md says must not casually lose rows: ncr is 375 production
 // records, ncr_ai and trustee_reports are history keyed by version / month.
 var _DEL_PROTECTED={ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',ncr_ai:'\u05e0\u05d9\u05ea\u05d5\u05d7 AI',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',trustee_winners:'\u05d6\u05d5\u05db\u05d4 \u05d4\u05d7\u05d5\u05d3\u05e9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',audit_log:'\u05d9\u05d5\u05de\u05df \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea',record_history:'\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d9\u05ea \u05d7\u05d9\u05d3\u05d5\u05e9\u05d9\u05dd',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4'};
-var _DEL_TBL_LABEL={tour_hazards:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea',auds:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',ctr:'\u05e7\u05d1\u05dc\u05df/\u05e1\u05e4\u05e7',drl:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',env:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',env_aspects:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',hzm:'\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df',ins:'\u05e1\u05d9\u05d5\u05e8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',leg:'\u05d7\u05d5\u05e7/\u05ea\u05e7\u05e0\u05d4',rounds:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',toolbox:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',toolbox_talks:'\u05d4\u05d3\u05e8\u05db\u05d4',wst:'\u05e8\u05e9\u05d5\u05de\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea',issue_types:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4'};
+var _DEL_TBL_LABEL={train_plan:'\u05e1\u05e2\u05d9\u05e3 \u05d1\u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d4\u05e9\u05e0\u05ea\u05d9\u05ea',tour_hazards:'\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8',ncr:'\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4',tasks:'\u05de\u05e9\u05d9\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',docs:'\u05de\u05e1\u05de\u05da',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',emp:'\u05e2\u05d5\u05d1\u05d3',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',ppe:'\u05e6\u05de\u05d2',ptw:'\u05d4\u05d9\u05ea\u05e8 \u05e2\u05d1\u05d5\u05d3\u05d4',trustee_reports:'\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05d0\u05de\u05df',trustees:'\u05e0\u05d0\u05de\u05df',trustee_tasks:'\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d5\u05d3\u05e9\u05d9\u05ea',auds:'\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e4\u05e0\u05d9\u05dd',ctr:'\u05e7\u05d1\u05dc\u05df/\u05e1\u05e4\u05e7',drl:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd',env:'\u05e0\u05d9\u05d8\u05d5\u05e8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',env_aspects:'\u05d4\u05d9\u05d1\u05d8 \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9',hearing_tests:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e9\u05de\u05d9\u05e2\u05d4',hzm:'\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df',ins:'\u05e1\u05d9\u05d5\u05e8 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',leg:'\u05d7\u05d5\u05e7/\u05ea\u05e7\u05e0\u05d4',rounds:'\u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8',toolbox:'\u05e9\u05d9\u05d7\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',toolbox_talks:'\u05d4\u05d3\u05e8\u05db\u05d4',wst:'\u05e8\u05e9\u05d5\u05de\u05ea \u05e4\u05e1\u05d5\u05dc\u05ea',issue_types:'\u05e1\u05d5\u05d2 \u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d4'};
 // What the user is about to destroy, in words. A red trash on the tasks page
 // deletes the NCR behind the row, not the row \u2014 that is deliberate, but it
 // must not be a surprise.
@@ -4705,7 +4711,7 @@ function confirmDel(){
 function delById(tbl,id){
   var fn={docs:rDocs,auds:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
     ptw:rPtw,ppe:rPpe,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,
-    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,toolbox_talks:rToolbox,toolbox_reads:rToolbox,tour_hazards:rThz,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();},trustee_tasks:function(){if(typeof _truTasksRender==='function')_truTasksRender();if(typeof _truRender==='function')_truRender();if(typeof rTrustees==='function')rTrustees();}};
+    hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,toolbox_talks:rToolbox,toolbox_reads:rToolbox,train_plan:rToolbox,tour_hazards:rThz,env_aspects:rEasp,locations:rLoc,projects:rPrj,inspection_types:rItp,issue_types:rItype,trustee_reports:rTrustees,trustees:function(){if(typeof _truRosterRender==='function')_truRosterRender();if(typeof _truFillLists==='function')_truFillLists();if(typeof rTrustees==='function')rTrustees();},trustee_winners:function(){if(typeof rTrustees==='function')rTrustees();if(typeof _truRender==='function')_truRender();if(typeof _truWinnerRender==='function')_truWinnerRender();},trustee_tasks:function(){if(typeof _truTasksRender==='function')_truTasksRender();if(typeof _truRender==='function')_truRender();if(typeof rTrustees==='function')rTrustees();}};
 
   // 10/10/2026 (Michael, screenshot from the tasks page): a red trash on a virtual row
   // deletes the record behind it (an NCR), and only that table's page was re-rendered.
@@ -5238,7 +5244,7 @@ window._lockNow=function(){
 
 function rPage(){
   var m={'view':function(){},dash:rDash,exp:rExp,eqi:rEqi,nm:rNm,round:rRound,tasks:rTasks,users:rUsers,docs:rDocs,aud:rAud,ncr:rNcr,inc:rInc,tr:rTr,rsk:rRsk,emp:rEmp,
-    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,training:function(){if(typeof rTbt==='function')rTbt();},thz:rThz,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents,trustees:rTrustees};
+    ptw:rPtw,'ptw-view':function(){},ppe:rPpe,hearing:rHearing,ins:rIns,drl:rDrl,ctr:rCtr,wst:rWst,hzm:rHzm,env:rEnv,leg:rLeg,toolbox:rToolbox,training:function(){if(typeof rTbt==='function')rTbt();if(typeof rTp==='function')rTp();},thz:rThz,audit:rAudit,mr:rMr,cal:rCal,easp:rEasp,lg:rLg,loc:rLoc,prj:rPrj,itp:rItp,itype:rItype,agents:rAgents,trustees:rTrustees};
   if(m[CUR])m[CUR]();
 }
 // Agent Dashboard — central hub for AI capabilities. Admin-only.
@@ -11787,8 +11793,194 @@ function _mtgRender(){
 }
 
 // ---- TOOLBOX TALKS ----
+// ---- Annual training plan, form 08.01 (procedure 8, 5.4), 15/10/2026 --------------------
+// Michael in the questionnaire: all 30 items of the form, done marked automatically and by hand,
+// a target quarter per item, a screen plus the form 08.01 to print or save as PDF.
+// One train_plan row per item per year. Done by hand: train_plan.done. Done automatically: an
+// annual or quality talk in the app that was CLOSED (closed_at), and whose subjects include the
+// item's subject (_TP_AUTO); the date is the closing date, the instructor the talk's trainer.
+var _TP_SEED=[
+ [1,'GMP \u05d5\u05d4\u05d2\u05d9\u05d9\u05e0\u05d4 \u05d0\u05d9\u05e9\u05d9\u05ea','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05db\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [2,'CCP1','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [3,'CCP2','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05de\u05d7\' \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5 \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [4,'CCP3','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05d4\u05d0\u05e8\u05d9\u05d6\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05d0\u05e8\u05d9\u05d6\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [5,'OPRP1 \u05e0\u05d9\u05e7\u05d5\u05d9 \u05d5\u05d7\u05d9\u05d8\u05d5\u05d9 \u05de\u05e1\u05d5\u05e2\u05d9\u05dd','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [6,'OPRP3 \u05e0\u05d9\u05e7\u05d9\u05d5\u05df \u05d3\u05d5\u05dc\u05d1\u05d9\u05dd','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05d9\u05d9\u05e6\u05d5\u05e8, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05de\u05d7\' \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05dc\u05d5\u05d2\u05d9\u05e1\u05d8\u05d9\u05e7\u05d4'],
+ [7,'OPRP4 \u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05d6\u05db\u05d5\u05db\u05d9\u05ea \u05d5\u05e4\u05dc\u05e1\u05d8\u05d9\u05e7 \u05d1\u05d0\u05e8\u05d9\u05d6\u05ea \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05d0\u05e8\u05d9\u05d6\u05ea \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05de\u05d7\' \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd'],
+ [8,'OPRP5 \u05e7\u05d1\u05dc\u05ea \u05ea\u05d5\u05d5\u05d9\u05ea \u05d7\u05d3\u05e9\u05d4','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05e2\u05d5\u05d1\u05d3\u05ea \u05e4\u05d9\u05ea\u05d5\u05d7, \u05d4\u05d9\u05d9\u05d2\'\u05e0\u05d9\u05e1\u05d8'],
+ [9,'\u05db\u05d9\u05d5\u05dc\u05d9\u05dd','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05d0\u05d7\u05e8\u05d0\u05d9 \u05d4\u05db\u05d9\u05d5\u05dc\u05d9\u05dd'],
+ [10,'\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d9\u05d8\u05d7\u05d5\u05df','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05db\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [11,'\u05d0\u05dc\u05e8\u05d2\u05e0\u05d9\u05dd','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05db\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [12,'HACCP','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e6\u05d5\u05d5\u05ea HACCP'],
+ [13,'\u05d4\u05d7\u05d6\u05e8\u05d4 \u05d9\u05d6\u05d5\u05de\u05d4','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e6\u05d5\u05d5\u05ea \u05d1\u05ea\u05e4\u05d5\u05d2\u05df \u05dc\u05d4\u05d7\u05d6\u05e8\u05d4 \u05d9\u05d6\u05d5\u05de\u05d4'],
+ [14,'\u05d4\u05d3\u05e8\u05db\u05d4 \u05e2\u05dc \u05e1\u05d9\u05db\u05d5\u05e0\u05d9 \u05d4\u05de\u05d5\u05e6\u05e8 \u05d1\u05d4\u05ea\u05d9\u05d9\u05d7\u05e1 \u05dc\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d0\u05d7\u05d6\u05e7\u05d4','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4, \u05ea\u05d5\u05de\u05da \u05d4\u05d0\u05d7\u05d6\u05e7\u05d4, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05d7\u05e9\u05de\u05dc \u05d5\u05d1\u05e7\u05e8\u05d4'],
+ [15,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc \u05e7\u05d5 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd, \u05d8\u05db\u05e0\u05d5\u05dc\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d9, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc','\u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd'],
+ [16,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc \u05e7\u05d5 \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd, \u05d8\u05db\u05e0\u05d5\u05dc\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d9, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc','\u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5 \u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd'],
+ [17,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc \u05e7\u05d5 \u05d0\u05e8\u05d9\u05d6\u05d4, \u05d8\u05db\u05e0\u05d5\u05dc\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d9, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc','\u05de\u05e4\u05e2\u05d9\u05dc\u05d9 \u05e7\u05d5 \u05d0\u05e8\u05d9\u05d6\u05d4'],
+ [18,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd'],
+ [19,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e2\u05d5\u05d1\u05d3\u05ea \u05de\u05d9\u05e7\u05e8\u05d5\u05d1\u05d9\u05d5\u05dc\u05d5\u05d2\u05d9\u05d4'],
+ [20,'\u05e8\u05e2\u05e0\u05d5\u05df \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc \u05de\u05d7\' \u05d7\u05d5"\u05d2, \u05d8\u05db\u05e0\u05d5\u05dc\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d9, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc','\u05e2\u05d5\u05d1\u05d3\u05d9 \u05de\u05d7\u05dc\u05e7\u05ea \u05d7\u05d5"\u05d2'],
+ [21,'\u05d4\u05d3\u05e8\u05db\u05d4 \u05d9\u05d9\u05e2\u05d5\u05d3\u05d9\u05ea \u05dc\u05de\u05d2\u05d3\u05dc\u05d9\u05dd \u05d1\u05e0\u05d5\u05e9\u05d0 \u05d0\u05dc\u05e8\u05d2\u05e0\u05d9\u05dd \u05d5\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05de\u05d6\u05d5\u05df','\u05de\u05e0\u05d4\u05dc \u05de\u05d7\' \u05d7\u05d5"\u05d2, \u05d8\u05db\u05e0\u05d5\u05dc\u05d5\u05d2 \u05e8\u05d0\u05e9\u05d9','\u05de\u05d2\u05d3\u05dc\u05d9\u05dd'],
+ [22,'\u05e1\u05d3\u05e8 \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e9\u05dc \u05e9\u05d1\u05e8 \u05d6\u05db\u05d5\u05db\u05d9\u05ea','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05e4\u05e7\u05d7\u05d9\u05dd, \u05de\u05e4\u05e2\u05d9\u05dc\u05d9\u05dd, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc, \u05de\u05e0\u05d4\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d5\u05ea'],
+ [23,'\u05e1\u05d3\u05e8 \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05db\u05e9\u05d9\u05e9 \u05ea\u05e7\u05dc\u05d4 \u05d1\u05e8\u05db\u05d1 \u05e7\u05d9\u05e8\u05d5\u05e8','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05de\u05e0\u05d4\u05dc \u05d4\u05dc\u05d5\u05d2\u05d9\u05e1\u05d8\u05d9\u05e7\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc'],
+ [24,'\u05d8\u05d9\u05e4\u05d5\u05dc \u05d1\u05d3\u05d5\u05d0\u05e8 \u05d7\u05e9\u05d5\u05d3','\u05d0\u05d7\u05e8\u05d0\u05d9 GMP, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05de\u05d6\u05db\u05d9\u05e8\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u05dc\u05e7\u05d5\u05d7\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d5\u05ea, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05db\u05d5\u05d7 \u05d0\u05d3\u05dd'],
+ [25,'\u05e0\u05d4\u05dc\u05d9 \u05d4\u05e1\u05e4\u05e7\u05d4 \u05dc\u05de\u05e9\u05e8\u05d3 \u05d4\u05d1\u05d9\u05d8\u05d7\u05d5\u05df','\u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea','\u05de\u05e0\u05d4\u05dc \u05d4\u05dc\u05d5\u05d2\u05d9\u05e1\u05d8\u05d9\u05e7\u05d4'],
+ [26,'\u05d4\u05d2\u05e0\u05ea \u05d4\u05de\u05d6\u05d5\u05df \u05d5\u05d4\u05d5\u05e0\u05d0\u05ea \u05d4\u05de\u05d6\u05d5\u05df','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05d0\u05d5 \u05d7\u05d1\u05e8\u05d4 \u05d7\u05d9\u05e6\u05d5\u05e0\u05d9\u05ea','\u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea, \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea, \u05d0\u05d7\u05e8\u05d0\u05d9 \u05ea\u05e4"\u05d9, \u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d9\u05d8\u05d7\u05d5\u05df'],
+ [27,'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e0\u05d9\u05e7\u05d9\u05d5\u05df \u05de\u05e9\u05d0\u05d9\u05ea - \u05d5\u05d9\u05d6\u05d5\u05d0\u05dc\u05d9\u05ea \u05d1\u05d4\u05e2\u05de\u05e1\u05d4','\u05de\u05e0\u05d4\u05dc \u05de\u05d7\' \u05dc\u05d5\u05d2\u05d9\u05e1\u05d8\u05d9\u05e7\u05d4, \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e4\u05e2\u05dc \u05d0\u05d5 \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea','\u05de\u05dc\u05d2\u05d6\u05e0\u05d9\u05dd'],
+ [28,'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4, \u05d7\u05d9\u05e8\u05d5\u05dd, \u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df, \u05de\u05d9\u05d2\u05d5\u05df \u05de\u05db\u05d5\u05e0\u05d5\u05ea, \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05d5\u05d4\u05e1\u05de\u05db\u05d5\u05ea, \u05e1\u05e7\u05e8\u05d9 \u05e1\u05d9\u05db\u05d5\u05e0\u05d9\u05dd, \u05e0\u05d4\u05dc\u05d9\u05dd, \u05e1\u05d9\u05d5\u05e8 \u05d1\u05de\u05d7\u05dc\u05e7\u05d4, \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dd \u05de\u05db\u05d5\u05e0\u05d5\u05ea)','\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea','\u05db\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc, \u05dc\u05e4\u05d9 \u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05dc \u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'],
+ [29,'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4 (\u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd, \u05e1\u05e7\u05e8\u05d9\u05dd, \u05de\u05e4\u05d2\u05e2\u05d9\u05dd, \u05d3\u05d9\u05d5\u05d5\u05d7 \u05d7\u05e8\u05d9\u05d2\u05d5\u05ea, \u05d7\u05d9\u05e1\u05db\u05d5\u05df \u05d1\u05de\u05e9\u05d0\u05d1\u05d9\u05dd, \u05de\u05d9\u05d7\u05d6\u05d5\u05e8)','\u05de\u05de\u05d5\u05e0\u05d4 \u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4','\u05db\u05dc \u05e2\u05d5\u05d1\u05d3\u05d9 \u05d4\u05de\u05e4\u05e2\u05dc, \u05dc\u05e4\u05d9 \u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05dc \u05d0\u05d9\u05db\u05d5\u05ea \u05d4\u05e1\u05d1\u05d9\u05d1\u05d4'],
+ [30,'\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e0\u05d5\u05e1\u05e4\u05d5\u05ea \u05dc\u05e4\u05d9 \u05e6\u05e8\u05db\u05d9\u05dd \u05e9\u05d9\u05d6\u05d5\u05d4\u05d5','','']
+];
+// Item -> [talk kind, subject on the talk]; null subject = the whole talk covers it.
+var _TP_AUTO={1:['quality','GMP \u05d5\u05d4\u05d9\u05d2\u05d9\u05d9\u05e0\u05d4 \u05d0\u05d9\u05e9\u05d9\u05ea'],10:['quality','\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d9\u05d8\u05d7\u05d5\u05df'],11:['quality','\u05d0\u05dc\u05e8\u05d2\u05e0\u05d9\u05dd'],12:['quality','HACCP'],13:['quality','\u05d4\u05d7\u05d6\u05e8\u05d4 \u05d9\u05d6\u05d5\u05de\u05d4'],22:['quality','\u05e9\u05d1\u05e8 \u05d6\u05db\u05d5\u05db\u05d9\u05ea \u05d5\u05e4\u05dc\u05e1\u05d8\u05d9\u05e7'],26:['quality','\u05d4\u05d2\u05e0\u05ea \u05de\u05d6\u05d5\u05df'],28:['annual',null],29:['annual','\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4']};
+var _TP_ST={done:['\u05d1\u05d5\u05e6\u05e2','bG'],late:['\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8','bR'],plan:['\u05de\u05ea\u05d5\u05db\u05e0\u05df','bY'],none:['\u05dc\u05d0 \u05e9\u05d5\u05d1\u05e5','bX']};
+var _tpYr=new Date().getFullYear(),_tpEditId=null,_tpAllOpen=false;
+function _tpToday(){return new Date().toISOString().substring(0,10);}
+function _tpRows(yr){return (DB.train_plan||[]).filter(function(r){return r&&+r.yr===yr;}).sort(function(a,b){return (a.n||0)-(b.n||0);});}
+function _tpQ(d){var m=+String(d||'').substring(5,7);return m?Math.floor((m-1)/3)+1:0;}
+function _tpQs(r){var o=[];String((r&&r.q)||'').split(',').forEach(function(x){x=+x;if(x>=1&&x<=4&&o.indexOf(x)<0)o.push(x);});return o.sort();}
+// Every time the item was given in its year: by hand, and closed talks in the app that cover it.
+function _tpDone(r){
+  var out=[];
+  (Array.isArray(r.done)?r.done:[]).forEach(function(x,i){if(x&&x.d&&+String(x.d).substring(0,4)===+r.yr)out.push({d:x.d,by:x.by||'',file_url:x.file_url||'',note:x.note||'',src:'hand',i:i});});
+  var a=_TP_AUTO[r.n];
+  if(a)(DB.toolbox_talks||[]).forEach(function(t){
+    if(!t||t.kind!==a[0]||!t.closed_at)return;
+    var d=String(t.closed_at).substring(0,10);if(+d.substring(0,4)!==+r.yr)return;
+    if(a[1]&&String(t.subjects||'').split(/\n/).map(function(v){return v.trim();}).indexOf(a[1])<0)return;
+    out.push({d:d,by:t.trainer||'',src:'talk',talk:t.id,title:t.title||''});
+  });
+  return out.sort(function(x,y){return String(x.d).localeCompare(String(y.d));});
+}
+// done: every target quarter has a session in it. late: a target quarter is over without one.
+// plan: target quarters still ahead. none: no target quarter (done when it was given anyway).
+function _tpState(r,today){
+  today=today||_tpToday();
+  var qs=_tpQs(r),dq={};_tpDone(r).forEach(function(x){dq[_tpQ(x.d)]=1;});
+  if(!qs.length)return Object.keys(dq).length?'done':'none';
+  var y=+today.substring(0,4),cq=_tpQ(today),late=false,open=false;
+  qs.forEach(function(q){if(dq[q])return;if(+r.yr<y||(+r.yr===y&&q<cq))late=true;else open=true;});
+  return late?'late':open?'plan':'done';
+}
+function _tpSum(rows,today){var o={n:rows.length,planned:0,done:0,late:0};rows.forEach(function(r){var st=_tpState(r,today);if(_tpQs(r).length)o.planned++;if(st==='done'&&_tpQs(r).length)o.done++;if(st==='late')o.late++;});o.pct=o.planned?Math.round(o.done*100/o.planned):0;return o;}
+function _tpCanEdit(){return typeof _role!=='function'||_role()==='admin'||_role()==='manager';}
+function rTp(){
+  var box=g('tp-card');if(!box)return;
+  var yr=_tpYr,rows=_tpRows(yr),ed=_tpCanEdit();
+  var h='<div class="row" style="margin-bottom:6px;flex-wrap:wrap;gap:6px"><div class="card-title" style="margin:0">\ud83d\udcc5 \u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05e0\u05ea\u05d9\u05ea (\u05d8\u05d5\u05e4\u05e1 08.01)</div>'
+    +'<div style="display:flex;gap:4px;align-items:center"><button class="btn btn-s btn-sm" onclick="_tpYear(-1)" aria-label="\u05e9\u05e0\u05d4 \u05e7\u05d5\u05d3\u05de\u05ea">&#8250;</button><b>'+yr+'</b><button class="btn btn-s btn-sm" onclick="_tpYear(1)" aria-label="\u05e9\u05e0\u05d4 \u05d4\u05d1\u05d0\u05d4">&#8249;</button></div></div>';
+  if(!rows.length){
+    var prev=_tpRows(yr-1).length;
+    h+='<div style="padding:10px 0;color:var(--t2)">\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05ea\u05db\u05e0\u05d9\u05ea \u05dc\u05e9\u05e0\u05ea '+yr+'.</div>';
+    if(ed)h+='<button class="btn btn-p btn-sm" onclick="_tpCreate()">'+(prev?'+ \u05e6\u05d5\u05e8 \u05d0\u05ea '+yr+' \u05de\u05d4\u05ea\u05db\u05e0\u05d9\u05ea \u05e9\u05dc '+(yr-1):'+ \u05e6\u05d5\u05e8 \u05d0\u05ea '+yr+' \u05de\u05d8\u05d5\u05e4\u05e1 08.01 (30 \u05e1\u05e2\u05d9\u05e4\u05d9\u05dd)')+'</button>';
+    box.innerHTML=h;return;
+  }
+  var sm=_tpSum(rows);
+  h+='<div style="margin:0 0 8px;font-size:13px"><b>'+sm.pct+'%</b> \u05d1\u05d5\u05e6\u05e2: '+sm.done+' \u05de\u05ea\u05d5\u05da '+sm.planned+' \u05e1\u05e2\u05d9\u05e4\u05d9\u05dd \u05e9\u05e9\u05d5\u05d1\u05e6\u05d5 \u05dc\u05e8\u05d1\u05e2\u05d5\u05df'+(sm.late?', <b style="color:var(--bad)">'+sm.late+' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8</b>':'')+(sm.planned<sm.n?'. '+(sm.n-sm.planned)+' \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e9\u05d5\u05d1\u05e6\u05d5':'')+'.</div>'
+    +'<div style="margin:0 0 8px"><button class="btn btn-s btn-sm" onclick="_tpPrint()">\ud83d\udda8\ufe0f \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d4\u05d3\u05e4\u05e1\u05d4 / PDF</button></div>';
+  // Late items first, on their own; the whole form folded, so the phone does not scroll past 30 cards.
+  var tbl=function(list){var h='<div class="tbl-wrap"><table><thead><tr><th>\u05de\u05e1\'</th><th>\u05e0\u05d5\u05e9\u05d0</th><th>\u05e8\u05d1\u05e2\u05d5\u05df</th><th>\u05de\u05e6\u05d1</th><th>\u05d1\u05d5\u05e6\u05e2</th><th></th></tr></thead><tbody>';
+  list.forEach(function(r){
+    var st=_TP_ST[_tpState(r)],dn=_tpDone(r),qs=_tpQs(r);
+    h+='<tr><td data-label="\u05de\u05e1\'">'+esc(String(r.n))+'</td>'
+      +'<td data-label="\u05e0\u05d5\u05e9\u05d0"><b>'+esc(r.t||'')+'</b>'+(r.aud?'<div style="font-size:11px;color:var(--t3)">'+esc(r.aud)+'</div>':'')+'</td>'
+      +'<td data-label="\u05e8\u05d1\u05e2\u05d5\u05df">'+(qs.length?qs.map(function(q){return 'Q'+q;}).join(' '):'-')+'</td>'
+      +'<td data-label="\u05de\u05e6\u05d1"><span class="badge '+st[1]+'">'+st[0]+'</span></td>'
+      +'<td data-label="\u05d1\u05d5\u05e6\u05e2" style="font-size:12px">'+(dn.length?dn.map(function(x){return fd(x.d)+(x.by?' - '+esc(x.by):'')+(x.src==='talk'?' (\u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4)':'');}).join('<br>'):'-')+'</td>'
+      +'<td data-label="">'+(ed?'<button class="btn btn-s btn-sm" data-id="'+esc(r.id)+'" onclick="_tpOpen(this.dataset.id)" aria-label="\u05e2\u05e8\u05d9\u05db\u05d4">\u270f\ufe0f</button> ':'')
+      +'<button class="btn btn-d btn-sm" data-vtbl="train_plan" data-vid="'+esc(r.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button>'
+      +(ed?' <button class="btn btn-d btn-sm" data-dtbl="train_plan" data-did="'+esc(r.id)+'" onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;</button>':'')+'</td></tr>';
+  });
+    h+='</tbody></table></div>';return h;};
+  var late=rows.filter(function(r){return _tpState(r)==='late';});
+  if(late.length)h+='<div style="font-weight:700;color:var(--bad);margin:4px 0">\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8 ('+late.length+')</div>'+tbl(late);
+  h+='<details id="tp-all"'+(_tpAllOpen?' open':'')+' ontoggle="_tpAllOpen=this.open"><summary style="cursor:pointer;font-weight:700;padding:6px 0">\u05db\u05dc \u05d4\u05e1\u05e2\u05d9\u05e4\u05d9\u05dd ('+rows.length+')</summary>'+tbl(rows)+'</details>';
+  if(ed)h+='<button class="btn btn-s btn-sm" style="margin-top:6px" onclick="_tpOpen(null)">+ \u05e1\u05e2\u05d9\u05e3 \u05e0\u05d5\u05e1\u05e3</button>';
+  box.innerHTML=h;
+}
+window._tpYear=function(d){_tpYr+=d;rTp();};
+// A new year starts from the year before (its items and quarters, nothing done), or from the form.
+window._tpCreate=function(){
+  if(!_tpCanEdit())return;
+  var yr=_tpYr;if(_tpRows(yr).length)return;
+  var prev=_tpRows(yr-1),src=prev.length?prev.map(function(r){return [r.n,r.t,r.who,r.aud,r.q];}):_TP_SEED;
+  if(!DB.train_plan)DB.train_plan=[];
+  src.forEach(function(x){var r={id:'tp'+yr+'-'+x[0],yr:yr,n:x[0],t:x[1],who:x[2]||null,aud:x[3]||null,q:x[4]||null,done:[],ts:new Date().toISOString()};DB.train_plan.push(r);sbIns('train_plan',r);});
+  sdb();rTp();toast('\u05d4\u05ea\u05db\u05e0\u05d9\u05ea \u05dc\u05e9\u05e0\u05ea '+yr+' \u05e0\u05d5\u05e6\u05e8\u05d4: '+src.length+' \u05e1\u05e2\u05d9\u05e4\u05d9\u05dd. \u05dc\u05e9\u05d1\u05e5 \u05e8\u05d1\u05e2\u05d5\u05df \u05dc\u05db\u05dc \u05e1\u05e2\u05d9\u05e3 \u05d1-\u270f\ufe0f');
+};
+function _tpGet(id){return (DB.train_plan||[]).filter(function(r){return r&&r.id===id;})[0]||null;}
+window._tpOpen=function(id){
+  if(!_tpCanEdit())return;
+  _tpEditId=id;var r=id?_tpGet(id):null;
+  if(id&&!r){toast('\u05d4\u05e1\u05e2\u05d9\u05e3 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
+  var box=g('tp-body');if(!box)return;
+  var n=r?r.n:(_tpRows(_tpYr).reduce(function(m,x){return Math.max(m,x.n||0);},0)+1),qs=r?_tpQs(r):[];
+  var h='<div class="modal-title">\ud83d\udcc5 \u05e1\u05e2\u05d9\u05e3 '+n+' \u05d1\u05ea\u05db\u05e0\u05d9\u05ea '+(r?r.yr:_tpYr)+'</div>'
+    +'<div class="field fw"><label>\u05e0\u05d5\u05e9\u05d0 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 *</label><input id="tp-t" value="'+esc(r?r.t:'')+'"></div>'
+    +'<div class="field fw"><label>\u05de\u05d3\u05e8\u05d9\u05da</label><input id="tp-who" value="'+esc(r&&r.who||'')+'"></div>'
+    +'<div class="field fw"><label>\u05e7\u05d4\u05dc \u05d4\u05d9\u05e2\u05d3</label><input id="tp-aud" value="'+esc(r&&r.aud||'')+'"></div>'
+    +'<div class="field fw"><label>\u05e8\u05d1\u05e2\u05d5\u05df \u05d9\u05e2\u05d3</label><div style="display:flex;gap:12px;flex-wrap:wrap">'+[1,2,3,4].map(function(q){return '<label style="display:flex;gap:4px;align-items:center;font-weight:400"><input type="checkbox" id="tp-q'+q+'"'+(qs.indexOf(q)>=0?' checked':'')+'> \u05e8\u05d1\u05e2\u05d5\u05df '+q+'</label>';}).join('')+'</div></div>';
+  if(r){
+    var dn=_tpDone(r);
+    h+='<div class="field fw"><label>\u05d1\u05d5\u05e6\u05e2</label>'+(dn.length?dn.map(function(x){return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;font-size:13px"><span style="flex:1">'+fd(x.d)+(x.by?' - '+esc(x.by):'')+(x.note?' ('+esc(x.note)+')':'')+(x.file_url?' <a href="'+esc(x.file_url)+'" target="_blank" rel="noopener">\ud83d\udcce</a>':'')+(x.src==='talk'?' <span style="color:var(--t3)">\u05de\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 "'+esc(x.title)+'" \u05e9\u05e0\u05e1\u05d2\u05e8\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</span>':'')+'</span>'
+      +(x.src==='hand'?'<button class="btn btn-d btn-sm" data-i="'+x.i+'" onclick="_tpDoneDel(+this.dataset.i)" aria-label="\u05d4\u05e1\u05e8">\u2715</button>':'')+'</div>';}).join(''):'<div style="font-size:12px;color:var(--t3)">\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2'+(_TP_AUTO[r.n]?'. \u05d9\u05e1\u05d5\u05de\u05df \u05dc\u05d1\u05d3 \u05db\u05e9\u05d4\u05d3\u05e8\u05db\u05d4 '+(_TP_AUTO[r.n][0]==='annual'?'\u05e9\u05e0\u05ea\u05d9\u05ea':'\u05d0\u05d9\u05db\u05d5\u05ea')+(_TP_AUTO[r.n][1]?' \u05e2\u05dd \u05d4\u05e0\u05d5\u05e9\u05d0 "'+esc(_TP_AUTO[r.n][1])+'"':'')+' \u05ea\u05d9\u05e1\u05d2\u05e8 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4':'')+'.</div>')+'</div>'
+      +'<div class="card" style="padding:8px;margin:6px 0"><div style="font-weight:700;margin-bottom:4px">+ \u05e1\u05d9\u05de\u05d5\u05df \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d9\u05d3\u05e0\u05d9 (\u05d4\u05d3\u05e8\u05db\u05d4 \u05e9\u05e0\u05e2\u05e9\u05ea\u05d4 \u05de\u05d7\u05d5\u05e5 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4)</div>'
+      +'<div class="field"><label>\u05ea\u05d0\u05e8\u05d9\u05da</label><input type="date" id="tp-dd"></div>'
+      +'<div class="field"><label>\u05de\u05d3\u05e8\u05d9\u05da</label><input id="tp-dby" value="'+esc(r.who||'')+'"></div>'
+      +'<div class="field fw"><label>\u05d4\u05e2\u05e8\u05d4</label><input id="tp-dnote"></div>'
+      +'<div class="field fw"><label>\ud83d\udcce \u05e7\u05d5\u05d1\u05e5 (\u05d8\u05d5\u05e4\u05e1 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea)</label><div id="tp-file-area"><button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\'tp-file-area\',\'tp\')">\ud83d\udcce \u05e6\u05e8\u05e3 \u05e7\u05d5\u05d1\u05e5</button></div></div>'
+      +'<button class="btn btn-p btn-sm" onclick="_tpDoneAdd()">\u05d4\u05d5\u05e1\u05e3 \u05d1\u05d9\u05e6\u05d5\u05e2</button></div>';
+  }
+  h+='<div class="modal-footer"><button class="btn btn-s" onclick="closeModal(\'m-tp\')">\u05e1\u05d2\u05d5\u05e8</button><button class="btn btn-p" onclick="_tpSave()">\ud83d\udcbe \u05e9\u05de\u05d5\u05e8</button></div>';
+  box.innerHTML=h;
+  try{if(typeof _attachUrls!=='undefined')delete _attachUrls['tp-file-area'];}catch(e){}
+  openModal('m-tp');
+};
+window._tpSave=function(){
+  var t=(gv('tp-t')||'').trim();if(!t){toast('\u05d7\u05d5\u05d1\u05d4: \u05e0\u05d5\u05e9\u05d0 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4');return;}
+  var q=[1,2,3,4].filter(function(x){var c=g('tp-q'+x);return c&&c.checked;}).join(',')||null;
+  var r=_tpEditId?_tpGet(_tpEditId):null,isNew=!r;
+  if(isNew){var n=_tpRows(_tpYr).reduce(function(m,x){return Math.max(m,x.n||0);},0)+1;r={id:'tp'+_tpYr+'-'+n+'-'+gid(),yr:_tpYr,n:n,done:[]};}
+  r.t=t;r.who=(gv('tp-who')||'').trim()||null;r.aud=(gv('tp-aud')||'').trim()||null;r.q=q;r.ts=new Date().toISOString();
+  if(isNew){if(!DB.train_plan)DB.train_plan=[];DB.train_plan.push(r);sbIns('train_plan',r);}else sbUpd('train_plan',r);
+  sdb();closeModal('m-tp');rTp();toast('\u05e0\u05e9\u05de\u05e8 \u2713',{ok:true});
+};
+window._tpDoneAdd=function(){
+  var r=_tpEditId?_tpGet(_tpEditId):null;if(!r)return;
+  var d=gv('tp-dd')||null;if(!d){toast('\u05d7\u05d5\u05d1\u05d4: \u05ea\u05d0\u05e8\u05d9\u05da');return;}
+  if(+d.substring(0,4)!==+r.yr){toast('\u05d4\u05ea\u05d0\u05e8\u05d9\u05da \u05dc\u05d0 \u05d1\u05e9\u05e0\u05ea '+r.yr);return;}
+  var f=(typeof _attachUrls!=='undefined'&&_attachUrls['tp-file-area'])||null;
+  r.done=(Array.isArray(r.done)?r.done:[]).concat([{d:d,by:(gv('tp-dby')||'').trim()||null,note:(gv('tp-dnote')||'').trim()||null,file_url:f}]);
+  r.ts=new Date().toISOString();sbUpd('train_plan',r);sdb();rTp();_tpOpen(r.id);toast('\u05d4\u05d1\u05d9\u05e6\u05d5\u05e2 \u05e0\u05e8\u05e9\u05dd \u2713',{ok:true});
+};
+window._tpDoneDel=function(i){
+  var r=_tpEditId?_tpGet(_tpEditId):null;if(!r||!Array.isArray(r.done)||!r.done[i])return;
+  if(!confirm('\u05dc\u05d4\u05e1\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d1\u05d9\u05e6\u05d5\u05e2 \u05de-'+fd(r.done[i].d)+'?'))return;
+  r.done=r.done.filter(function(_x,j){return j!==i;});r.ts=new Date().toISOString();sbUpd('train_plan',r);sdb();rTp();_tpOpen(r.id);
+};
+// The form as it is on paper: item, topic and instructor, audience, one column per quarter with
+// the date and instructor of each session in it. A target quarter with nothing in it says "\u05de\u05ea\u05d5\u05db\u05e0\u05df".
+function _tpFormHtml(yr){
+  var rows=_tpRows(yr),sm=_tpSum(rows);
+  var cell=function(r,q){var dn=_tpDone(r).filter(function(x){return _tpQ(x.d)===q;});
+    if(dn.length)return dn.map(function(x){return '\u05ea\u05d0\u05e8\u05d9\u05da: '+fd(x.d)+'<br>\u05de\u05d3\u05e8\u05d9\u05da: '+esc(x.by||'');}).join('<hr>');
+    return _tpQs(r).indexOf(q)>=0?'<span style="color:#888">\u05de\u05ea\u05d5\u05db\u05e0\u05df</span>':'';};
+  var h='<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>08.01 \u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05e0\u05ea\u05d9\u05ea '+yr+'</title><style>body{font-family:Arial,sans-serif;font-size:11px;margin:12mm}h1{font-size:16px;margin:0 0 2px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #000;padding:4px;vertical-align:top;text-align:right}th{background:#eee}th.q{width:11%}hr{border:0;border-top:1px dashed #999;margin:3px 0}.f{margin-top:14px;display:flex;justify-content:space-between}@page{size:A4 landscape;margin:10mm}</style></head><body>'
+    +'<h1>\u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05e0\u05ea\u05d9\u05ea \u05dc\u05e9\u05e0\u05ea '+yr+'</h1><div>\u05ea\u05d9\u05e2\u05d5\u05d3 08.01. \u05d4\u05d5\u05e4\u05e7 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d1-'+fd(_tpToday())+'. \u05d1\u05d5\u05e6\u05e2\u05d5 '+sm.done+' \u05de\u05ea\u05d5\u05da '+sm.planned+' \u05e1\u05e2\u05d9\u05e4\u05d9\u05dd \u05e9\u05e9\u05d5\u05d1\u05e6\u05d5 ('+sm.pct+'%).</div><br>'
+    +'<table><thead><tr><th>\u05de\u05e1\'</th><th>\u05e0\u05d5\u05e9\u05d0 \u05d4\u05d3\u05e8\u05db\u05d4 / \u05de\u05d3\u05e8\u05d9\u05da</th><th>\u05e7\u05d4\u05dc \u05d4\u05d9\u05e2\u05d3</th><th class="q">\u05e8\u05d1\u05e2\u05d5\u05df 1</th><th class="q">\u05e8\u05d1\u05e2\u05d5\u05df 2</th><th class="q">\u05e8\u05d1\u05e2\u05d5\u05df 3</th><th class="q">\u05e8\u05d1\u05e2\u05d5\u05df 4</th></tr></thead><tbody>';
+  rows.forEach(function(r){h+='<tr><td>'+esc(String(r.n))+'</td><td><b>'+esc(r.t||'')+'</b>'+(r.who?'<br>('+esc(r.who)+')':'')+'</td><td>'+esc(r.aud||'')+'</td>'+[1,2,3,4].map(function(q){return '<td>'+cell(r,q)+'</td>';}).join('')+'</tr>';});
+  h+='</tbody></table><div class="f"><div>\u05e0\u05d1\u05d3\u05e7 \u05e2"\u05d9: \u05d0\u05d7\u05e8\u05d0\u05d9\u05ea \u05e8\u05e9\u05d5\u05de\u05d5\u05ea (\u05e9\u05dd \u05d5\u05d7\u05ea\u05d9\u05de\u05d4) ____________</div><div>\u05d0\u05d5\u05e9\u05e8 \u05e2"\u05d9: \u05de\u05e0\u05d4\u05dc\u05ea \u05d0\u05d9\u05db\u05d5\u05ea (\u05e9\u05dd \u05d5\u05d7\u05ea\u05d9\u05de\u05d4) ____________</div></div></body></html>';
+  return h;
+}
+window._tpPrint=function(){
+  var w=null;try{w=window.open('','_blank');}catch(e){}
+  if(!w){toast('\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05d7\u05e1\u05dd \u05d0\u05ea \u05d4\u05d7\u05dc\u05d5\u05df. \u05dc\u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1');return;}
+  w.document.open();w.document.write(_tpFormHtml(_tpYr));w.document.close();
+  if(typeof _tbtPvPrint==='function')_tbtPvPrint(w);
+};
 function rToolbox(){
   if(typeof rTbt==='function')rTbt();
+  if(typeof rTp==='function')rTp();
   var tb=g('tb-toolbox');if(!tb)return;
   var rows=DB.toolbox||[];
   if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="et" data-label="">\ud83d\udde3\ufe0f<br>\u05d0\u05d9\u05df \u05e9\u05d9\u05d7\u05d5\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea<br><button class="et-cta" onclick="openModal(\'m-toolbox\')">+ \u05e9\u05d9\u05d7\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4</button></td></tr>';return;}
@@ -16274,6 +16466,7 @@ function _tasksFor(tbl,id){
     .sort(function(a,b){return String(b.ts||'').localeCompare(String(a.ts||''));});
 }
 var VIEW_CONFIG={
+  train_plan:{title:'\u05e1\u05e2\u05d9\u05e3 \u05d1\u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d4\u05e9\u05e0\u05ea\u05d9\u05ea (08.01)',back:'training',fields:[['\u05e9\u05e0\u05d4','yr'],['\u05de\u05e1\u05f3','n'],['\u05e0\u05d5\u05e9\u05d0','t'],['\u05de\u05d3\u05e8\u05d9\u05da','who'],['\u05e7\u05d4\u05dc \u05d4\u05d9\u05e2\u05d3','aud'],['\u05e8\u05d1\u05e2\u05d5\u05e0\u05d9 \u05d9\u05e2\u05d3','q']]},
   // There is no m-med form and no pg-med page: med rows arrive only from
   // Smart Capture and from OneDrive. Until now there was no VIEW_CONFIG
   // either, so the calendar entry and the 30-day alert both led to
@@ -18553,7 +18746,7 @@ window._exportXlsx=function(){
       var wb=XLSX.utils.book_new();
       // Order: most-business-relevant first so Excel opens on a useful sheet.
       var tableOrder=[
-        'ncr','inc','near_miss','tasks','tour_hazards','rsk','rounds','toolbox','toolbox_talks','toolbox_reads','trustee_reports','trustees','trustee_winners','trustee_tasks',
+        'ncr','inc','near_miss','tasks','tour_hazards','rsk','rounds','toolbox','toolbox_talks','toolbox_reads','train_plan','trustee_reports','trustees','trustee_winners','trustee_tasks',
         'equip_inspections','ppe','tr','docs','ctr','med',
         'env_aspects','leg','hzm','wst','env','ins','drl','ptw','hearing_tests',
         'emp','app_users','locations','projects','inspection_types','issue_types',

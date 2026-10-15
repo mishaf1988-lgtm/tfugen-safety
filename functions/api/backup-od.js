@@ -18,7 +18,8 @@
 //   _Backups/photos   every photo of incidents-photos not yet there, never pruned:
 //                     a photo deleted in the app stays here, that is the point
 //   _Backups/talks    the weekly talk and who signed it (toolbox_talks + toolbox_reads,
-//                     one read), one file a day, newest TALKS_KEEP kept (03/10/2026,
+//                     and since 15/10/2026 the annual training plan, train_plan;
+//                     two reads), one file a day, newest TALKS_KEEP kept (03/10/2026,
 //                     Michael: OneDrive rather than Workers Paid; the nightly worker
 //                     has no room left, backup-cron-budget-test). The signatures are
 //                     images in incidents-photos, copied with the photos.
@@ -63,6 +64,7 @@ export function skipOld(items, nowMs, moved, seen) {
 }
 // One request for both tables (FK toolbox_reads.talk_id). Max rows applies to the talks only.
 export const TALKS_Q = 'toolbox_talks?select=*,toolbox_reads(*)&order=id.asc';
+export const PLAN_Q = 'train_plan?select=*&order=id.asc';
 const TALKS_RE = /^talks-(\d{2})-(\d{2})-(\d{4})\.json$/;
 // The worker runs once a day; a newest file older than this means it stopped.
 export const FRESH_MS = 36 * 3600 * 1000;
@@ -187,6 +189,10 @@ async function run(env) {
     const r = await f(sbUrl + '/rest/v1/' + TALKS_Q, { headers: sbh });
     if (!r.ok) throw new Error('read toolbox_talks ' + r.status);
     const file = talksFile(await r.json(), rec.at);
+    // The annual training plan (form 08.01, 15/10/2026) rides in the same file: 30 rows a year,
+    // no room for it in the nightly worker (backup-cron-budget-test). A failed read does not stop the talks.
+    const tp = await f(sbUrl + '/rest/v1/' + PLAN_Q, { headers: sbh });
+    if (tp.ok) file.tables.train_plan = await tp.json(); else err('talks', 'read train_plan ' + tp.status);
     const n = talksName(today);
     const p = await f(GRAPH + '/root:/' + seg(TALKS) + '/' + encodeURIComponent(n) + ':/content', { method: 'PUT', headers: { ...gh, 'Content-Type': 'application/json' }, body: JSON.stringify(file) });
     if (!p.ok) throw new Error('onedrive put ' + n + ' ' + p.status);
