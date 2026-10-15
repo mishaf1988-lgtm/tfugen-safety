@@ -7,8 +7,10 @@ CREATE TABLE IF NOT EXISTS backup_20261015.trustee_reports AS SELECT * FROM publ
 CREATE TABLE IF NOT EXISTS backup_20261015.near_miss AS SELECT * FROM public.near_miss;
 REVOKE ALL ON ALL TABLES IN SCHEMA backup_20261015 FROM anon, authenticated;
 
--- 1. NOT RUN YET (15/10/2026): apply_migration stops on the confirmation the DELETE line asks for, which
---    nobody answers in a cloud session. Michael runs this block in the SQL editor, or approves the prompt.
+-- 1. RUN 15/10/2026 (Michael: "תריץ"), not as written here: apply_migration and execute_sql both hung 60s on
+--    this body (no prompt reached Michael). What ran instead: a helper private.tmp_cap_60_200() that read
+--    pg_get_functiondef, replaced only the four numbers and EXECUTEd it, then was made a no-op with no grants.
+--    Verified in pg_proc: 60/200 in the check and both DETAIL texts, the cleanup line and the message intact.
 --    The anonymous write cap: one real tour of a diligent trustee is 17-19 rows, and three trustees in
 --    the same hour at the end of the month passed 50 for all. Live peak in 30 days: 3 an hour.
 CREATE OR REPLACE FUNCTION private.anon_write_cap()
