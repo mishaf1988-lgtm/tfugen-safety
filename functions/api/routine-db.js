@@ -419,7 +419,7 @@ export async function onRequest(context) {
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
       if (!Array.isArray(rows) || rows.length !== 1) return jsonResp({ ok: false, error: 'row not found' }, 200, {});
-      const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
       const p = expiryPatch(body, rows[0], today);
       if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
       if (!p.patch) return jsonResp({ ok: true, changed: false, row: rows[0] }, 200, {});
@@ -438,7 +438,7 @@ export async function onRequest(context) {
       const g = await fetch(url + '/rest/v1/toolbox_talks?select=id,d,s,kind,dept,created_by,body&id=eq.' + encodeURIComponent(id), { headers: h });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
-      const today = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
       const p = talkFieldApply(Array.isArray(rows) && rows.length === 1 ? rows[0] : null, body, today);
       if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
       // Signed = the text is evidence (ISO 45001 7.4); it is not changed under the signatures.
