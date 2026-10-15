@@ -220,6 +220,50 @@ export function openTypedLines(talks, today) {
     .sort((a, b) => String(a.d).localeCompare(String(b.d)));
   return st.length ? st.map((t) => ({ red: true, text: '\u05d4\u05d3\u05e8\u05db\u05d4 ' + TYPED_L[t.kind] + ' "' + (t.title || '') + '" (' + fd(String(t.d).slice(0, 10)) + '): \u05e4\u05ea\u05d5\u05d7\u05d4 \u05d9\u05d5\u05ea\u05e8 \u05de\u05e9\u05d1\u05d5\u05e2, \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05e7. \u05d1\u05de\u05e1\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea: \u05de\u05d9 \u05d7\u05ea\u05dd, \u05d8\u05d5\u05e4\u05e1 08.01' })) : null;
 }
+// Annual training plan, form 08.01 (15/10/2026, Michael in the questionnaire: "a quarter that passed
+// without the training is red and in the weekly mail"). The same rule as _tpState / _tpDone in
+// index.html: done by hand (train_plan.done) or by a CLOSED annual / quality talk whose subjects cover
+// the item (PLAN_AUTO = _TP_AUTO). Late = a target quarter is over with no session in it.
+// null = nothing late (or no plan this year): the mail carries only what needs Michael.
+export const PLAN_AUTO = { 1: ['quality', 'GMP \u05d5\u05d4\u05d9\u05d2\u05d9\u05d9\u05e0\u05d4 \u05d0\u05d9\u05e9\u05d9\u05ea'], 10: ['quality', '\u05d4\u05d3\u05e8\u05db\u05ea \u05d1\u05d9\u05d8\u05d7\u05d5\u05df'], 11: ['quality', '\u05d0\u05dc\u05e8\u05d2\u05e0\u05d9\u05dd'], 12: ['quality', 'HACCP'], 13: ['quality', '\u05d4\u05d7\u05d6\u05e8\u05d4 \u05d9\u05d6\u05d5\u05de\u05d4'], 22: ['quality', '\u05e9\u05d1\u05e8 \u05d6\u05db\u05d5\u05db\u05d9\u05ea \u05d5\u05e4\u05dc\u05e1\u05d8\u05d9\u05e7'], 26: ['quality', '\u05d4\u05d2\u05e0\u05ea \u05de\u05d6\u05d5\u05df'], 28: ['annual', null], 29: ['annual', '\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4'] };
+export function planQ(d) { const m = +String(d || '').slice(5, 7); return m ? Math.floor((m - 1) / 3) + 1 : 0; }
+export function planDone(r, talks) {
+  const out = [];
+  (Array.isArray(r.done) ? r.done : []).forEach((x) => { if (x && x.d && +String(x.d).slice(0, 4) === +r.yr) out.push(String(x.d).slice(0, 10)); });
+  const a = PLAN_AUTO[r.n];
+  if (a) (Array.isArray(talks) ? talks : []).forEach((t) => {
+    if (!t || t.kind !== a[0] || !t.closed_at) return;
+    const d = String(t.closed_at).slice(0, 10); if (+d.slice(0, 4) !== +r.yr) return;
+    if (a[1] && String(t.subjects || '').split(/\n/).map((v) => v.trim()).indexOf(a[1]) < 0) return;
+    out.push(d);
+  });
+  return out;
+}
+export function planLate(plan, talks, today) {
+  const y = +today.slice(0, 4), cq = planQ(today), late = [];
+  let planned = 0, done = 0;
+  (Array.isArray(plan) ? plan : []).filter((r) => r && +r.yr === y).sort((a, b) => a.n - b.n).forEach((r) => {
+    const qs = String(r.q || '').split(',').map(Number).filter((q) => q >= 1 && q <= 4);
+    if (!qs.length) return;
+    planned++;
+    const dq = new Set(planDone(r, talks).map(planQ));
+    if (qs.some((q) => !dq.has(q) && q < cq)) late.push(r); else if (qs.every((q) => dq.has(q))) done++;
+  });
+  return { late, planned, done };
+}
+export function planLateLine(plan, talks, today) {
+  const p = planLate(plan, talks, today);
+  if (!p.late.length) return null;
+  const names = p.late.map((r) => r.n + ' ' + String(r.t || '').slice(0, 30)).join(', ');
+  return { red: true, text: '\u05ea\u05db\u05e0\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05d4\u05e9\u05e0\u05ea\u05d9\u05ea (08.01): ' + p.late.length + ' \u05e1\u05e2\u05d9\u05e4\u05d9\u05dd \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8, \u05e8\u05d1\u05e2\u05d5\u05df \u05d4\u05d9\u05e2\u05d3 \u05e2\u05d1\u05e8 \u05d5\u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d5: ' + names + '. \u05d1\u05d5\u05e6\u05e2\u05d5 ' + p.done + ' \u05de\u05ea\u05d5\u05da ' + p.planned + ' \u05e9\u05ea\u05d5\u05db\u05e0\u05e0\u05d5. \u05d1\u05de\u05e1\u05da \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea: \u05dc\u05e1\u05de\u05df \u05d1\u05d9\u05e6\u05d5\u05e2 \u05d0\u05d5 \u05dc\u05e9\u05e0\u05d5\u05ea \u05e8\u05d1\u05e2\u05d5\u05df.' };
+}
+export async function planData(env, today) {
+  const [plan, talks] = await Promise.all([
+    readAll(env, 'train_plan?select=yr,n,t,q,done&yr=eq.' + today.slice(0, 4)),
+    readAll(env, 'toolbox_talks?select=kind,subjects,closed_at&closed_at=not.is.null&kind=in.(annual,quality)'),
+  ]);
+  return planLateLine(plan, talks, today);
+}
 // Only the latest talk's signatures are read (the table grows by ~50 rows a week).
 // The department lines need the talks of the last two weeks, drafts too, and their signatures.
 export async function talkData(env) {
@@ -431,6 +475,7 @@ export function digestHtml(d, today, meta) {
   if (m.talk) h += '<p style="margin:8px 0' + (m.talk.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(m.talk.text) + '</p>';
   if (m.deptTalks && m.deptTalks.length) h += '<p style="margin:10px 0 2px;font-weight:bold">\u05d4\u05d3\u05e8\u05db\u05d5\u05ea \u05e9\u05d1\u05d5\u05e2\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4</p>' + m.deptTalks.map((x) => '<p style="margin:2px 0' + (x.red ? ';color:#b91c1c;font-weight:bold' : '') + '">' + esc(x.text) + '</p>').join('');
   if (m.openTyped && m.openTyped.length) h += m.openTyped.map((x) => '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(x.text) + '</p>').join('');
+  if (m.plan) h += '<p style="margin:4px 0;color:#b91c1c;font-weight:bold">' + esc(m.plan.text) + '</p>';
   h += h2(H.committee);
   h += '<p style="margin:4px 0">' + esc(H.meeting) + esc(fd(m.meeting)) + '</p>';
   const deckAt = m.deckAt ? Date.parse(m.deckAt) : 0;
@@ -828,7 +873,7 @@ export function xlsxGapsLine(raw, nowMs) {
 async function build(env) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   let stFail = false;
-  const [hazards, reports, tasks, st, empty, exp, tk, ul, aq] = await Promise.all([
+  const [hazards, reports, tasks, st, empty, exp, tk, ul, aq, pl] = await Promise.all([
     readAll(env, 'tour_hazards?select=id,n,d,tour_no,dept,loc,descr,sev,resp,resp2,action,due,s,closed_d,notes&order=n.asc'),
     readAll(env, 'trustee_reports?select=id,num,u,t,d,loc,ok,f,s,ref,mgr_note,action,closed_d,resp,ts&order=ts.asc'),
     readAll(env, TASKS_Q),
@@ -838,6 +883,7 @@ async function build(env) {
     talkData(env).catch(() => null),
     odConfigured(env) ? uploadLog(env) : Promise.resolve({ error: 'not configured' }),
     assistantQueue(env),
+    planData(env, today).catch(() => null),
   ]);
   const v = (k) => (st[k] && st[k].value) || '';
   let watch = null; try { watch = JSON.parse(v(WATCH_KEY) || 'null'); } catch (e) { watch = null; }
@@ -849,7 +895,7 @@ async function build(env) {
   const os = odScanProblem(v('od_scan'), Date.now());
   if (os) watchOpen.push(os);
   const d = digestOf(buildRegister(hazards, reports, tasks).rows, today);
-  const meta = { meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
+  const meta = { plan: pl, meeting: meetingDate(today, v('deck_meeting_date')), deckAt: v('deck_at'), watchOpen, emptyRegs: empty, expiring: exp.expiring, expFail: exp.expFail, never: exp.never, eqiFail: exp.eqiFail, talk: tk ? talkLine(tk.talks, tk.reads, tk.emps, today) : null, deptTalks: tk ? deptTalkLines(tk.dtalks, tk.reads, tk.emps, today) : null, openTyped: tk ? openTypedLines(tk.talks, today) : null, odNew: odScanFiles(v('od_scan'), Date.now()), upload: uploadLine(ul, Date.now()), nevo: nevoLine(v('nevo_versions'), Date.now()), agents: agentsLine(v('agent_log'), Date.now()), mf: mailFilingLine(v('mail_filing'), Date.now()), vd: validityLine(v('validity_run'), Date.now()), asst: assistantLine(aq, Date.now()), xg: xlsxGapsLine(v('xlsx_gaps'), Date.now()), locks: guessLocksLine(v('guess_locks'), Date.now()), pwAge: passwordAgeLines(st, env, Date.now()), stateFail: stFail };
   let last = null; try { last = JSON.parse(v(STATE_KEY) || 'null'); } catch (e) { last = null; }
   return { today, d, meta, last, html: digestHtml(d, today, meta), subject: digestSubject(d, today) };
 }

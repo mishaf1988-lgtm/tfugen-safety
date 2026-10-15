@@ -48,6 +48,7 @@
 "toolbox_reads":["dept","device","doc_err","doc_url","emp_id","emp_name","id","id_no","lang","mailed_at","mode","quiz_n","quiz_ok","read_at","sig_url","talk_id","text_hash","ts"],
 "toolbox_talks":["body","body_am","body_ar","body_ru","closed_at","created_by","d","dept","dur","eff_by","eff_d","eff_desc","eff_next","eff_ok","eff_req","file_url","form_at","id","kind","link_at","link_v","mail_cc","quiz","s","title","topic_id","trainer","trainer_qual","trainer_sig_url","trainer_signed_at","ts","video_url"],
 "tr":["c","created_at","d","e","ext_id","file_url","id","n","s","sc","sig","tr_name","w"],
+"train_plan":["aud","done","id","n","q","t","ts","who","yr"],
 "trustee_reports":["action","closed_d","d","f","id","loc","location_id","m","mgr_note","notified_at","num","ok","photo_url","ref","resp","s","t","tour","ts","u","verified_at","verified_by"],
 "trustee_tasks":["active","how","icon","id","n","t","ts"],
 "trustee_winners":["id","m","note","pts","ts","u"],

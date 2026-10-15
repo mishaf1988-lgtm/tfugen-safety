@@ -21,6 +21,7 @@ Stored as `DB.{name}[]` in localStorage key `tfgn2`. `var DB=` is at line 3318 o
 
 | Table | Purpose | Key fields (beyond `id`) |
 |---|---|---|
+| `train_plan` | Annual training plan, form 08.01 (15/10/2026, 0 rows at creation). One row per item per year; screen = card `#tp-card` on the training page (`rTp`) | `yr`,`n` (unique together),`t`,`who`,`aud`,`q` ("1,3" = target quarters),`done` (jsonb `[{d,by,note,file_url}]` by hand). Done automatically = a CLOSED annual/quality talk whose `subjects` hold the item's subject: `_TP_AUTO` in index.html and `PLAN_AUTO` in `weekly-digest.js` must stay the same. Backed up in `backup-od.js` with the talks file |
 | `docs` | Documents (0 rows, measured 02/10/2026) | `n`,`c`,`v`,`o`,`u`,`e`,`s`,`i`,`nt`,`file_url` (measured 02/10/2026) |
 | `auds` | Internal audits | `n` subject,`a` auditor,`r` area,`d`,`f` findings,`sc` score,`s`,`f2`,`sm` summary (measured 02/10/2026) |
 | `ncr` | Non-conformance (public 0 rows by design, 375 in `backup_ops_20260918`; measured 02/10/2026) | `num`,`d` description (not a date; the date is `sd`),`a`,`p`,`o`,`u`,`s`,`c`,`rc`,`rc_cat`,`sd`,`cd`,`notes`,`location_id`,`sens`,`verified_by` |

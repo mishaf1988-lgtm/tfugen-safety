@@ -4,6 +4,7 @@
 // reads as Michael reads dates, that pg_cron's call sends it once to the
 // connected account and a second call the same day is skipped, and that a
 // missing permission or a refusing Outlook is reported, not swallowed.
+import { planLateLine, planLate } from './_build/weekly-digest.mjs';
 import { attachQuotes, quoteKey, contactOf, vendorOf, QUOTE_WAIT_DAYS, QUOTE_HREF_MAX } from './_build/weekly-digest.mjs';
 import { onRequest, digestOf, digestHtml, digestSubject, expiringOf, recurringOf, neverOf, plusMonths, STATE_KEY, T, EXP_SHOW, talkLine, latestTalk, uploadLine, logText, UPLOAD_STALE_DAYS, nevoLine, NEVO_STALE_DAYS, assistantLine, assistantQueue, agentsLine, AGENT_PERIODS, mailFilingLine, MF_STALE_DAYS, validityLine, VD_STALE_DAYS, statusBlock, eqiFailLine, markNoTask, NO_TASK_DAYS } from './_build/weekly-digest.mjs';
 
@@ -490,5 +491,31 @@ const ROWS = [
     check('no assistant meta: no line', !/העוזר השבוע/.test(digestHtml(digestOf([], '2026-10-04'), '2026-10-04', { meeting: '2026-10-06', deckAt: '', watchOpen: [] })));
   }
 
+  {
+    // The annual training plan (15/10/2026): the same rows as train-plan-test.js, the same answer as _tpState.
+    const fs0 = await import('fs');
+    const plan = [
+      { yr: 2026, n: 28, t: 'הדרכות בטיחות', q: '1,3', done: [] },
+      { yr: 2026, n: 1, t: 'GMP והגיינה אישית', q: '2', done: [] },
+      { yr: 2026, n: 10, t: 'הדרכת ביטחון', q: '2', done: [] },
+      { yr: 2026, n: 12, t: 'HACCP', q: '1', done: [] },
+      { yr: 2026, n: 5, t: 'OPRP1', q: '4', done: [] },
+      { yr: 2026, n: 9, t: 'כיולים', q: '2', done: [{ d: '2026-04-20', by: 'x' }] },
+      { yr: 2026, n: 11, t: 'אלרגנים', q: null, done: [] },
+      { yr: 2025, n: 3, t: 'CCP2', q: '1', done: [] },
+    ];
+    const talks = [
+      { kind: 'annual', closed_at: '2026-02-10T09:00:00Z', subjects: 'חשמל' },
+      { kind: 'quality', closed_at: '2026-05-01T09:00:00Z', subjects: 'GMP והיגיינה אישית\nאלרגנים' },
+    ];
+    const p = planLate(plan, talks, '2026-10-15');
+    check('plan: 28 (Q3 missed), 12 (Q1, its talk never closed) and 10 (the closed quality talk is not on its subject) late; 1 by a closed talk and 9 by hand done; last year and no-quarter items left out', p.late.map((r) => r.n).join() === '10,12,28' && p.done === 2 && p.planned === 6, [p.late.map((r) => r.n), p.done, p.planned]);
+    const l = planLateLine(plan, talks, '2026-10-15');
+    check('plan: one red line naming the late items and the count done', l && l.red && /08\.01/.test(l.text) && /3 סעיפים באיחור/.test(l.text) && /10 הדרכת ביטחון, 12 HACCP, 28 הדרכות בטיחות/.test(l.text) && /בוצעו 2 מתוך 6/.test(l.text), l);
+    check('plan: nothing late = no line', planLateLine(plan, talks, '2026-02-15') === null && planLateLine([], [], '2026-10-15') === null);
+    const html = digestHtml(digestOf([], '2026-10-15'), '2026-10-15', { meeting: '2026-10-20', deckAt: '', watchOpen: [], plan: l });
+    check('plan: the line is in the mail', html.includes('12 HACCP'));
+    check('plan: read from the server, this year only, closed talks only', /train_plan\?select=yr,n,t,q,done&yr=eq\./.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')) && /closed_at=not\.is\.null&kind=in\.\(annual,quality\)/.test(fs0.readFileSync(new URL('../../functions/api/weekly-digest.js', import.meta.url), 'utf8')));
+  }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
 })();

@@ -97,3 +97,9 @@ description: Use for every task in the tfugen-safety repo, alongside tfugen-dev.
 הכלל: לפני שבירה `cp` לגיבוי, וביטול ב-`cp` חזרה. לעולם לא `checkout`/`restore` על קובץ ששונה.
 נאכף: `checkout-guard.py` (hook, 08/10/2026), מ-12/10/2026 גם עם הפניית פלט אחרי הקובץ (`checkout-guard-test.py`).
 חזר: 3 (פעמיים ב-08/10; 12/10/2026, #1406: `git checkout -q <קובץ> 2>/dev/null` עבר את ה-hook, כי `2>/dev/null` נקרא כשם branch. נתפס ב-`git diff --stat` לפני ה-PR).
+
+**99. `run.sh | tail -12` הסתיר שני כישלונות, וה-PR הגיע ל-CI אדום בשלוש קבוצות (15/10/2026, #1537).**
+מה קרה: הרצתי את כל ה-harness ברקע עם `PARALLEL=4 ... 2>&1 | tail -12`. ה-hook `lean-harness.py` לא זיהה את הפקודה (בגלל `PARALLEL=` וה-pipe), ו-12 השורות האחרונות הראו "FAILURES ABOVE" וכישלון אחד בלבד. תיקנתי אותו ודחפתי, וכישלון האימוג'י (וחלק מהשאר) נחתך מהפלט.
+הכלל: לא לחתוך פלט של harness. ריצה ירוקה היא שורה אחת ממילא, ובריצה אדומה צריך לקרוא את כל הלוג. ריצה ברקע: `> קובץ 2>&1`, ואז `grep -E "✗|NO SUMMARY"` על הקובץ כולו.
+נאכף: `lean-harness.py` מ-15/10/2026 כותב מחדש גם `PARALLEL=N bash tests/harness/run.sh ... | tail/head -N`, ומוריד את ה-pipe (`lean-harness-test.py`).
+חזר: 0
