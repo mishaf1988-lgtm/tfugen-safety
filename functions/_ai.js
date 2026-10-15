@@ -42,17 +42,25 @@ export async function suggestAction(env, finding) {
 // typed; any other is written in Hebrew letters by the assistant. The answer is
 // accepted only if it is Hebrew letters, spaces and . ' " - (60 at most), so a
 // "name" that tries to steer the assistant gives nothing usable. null = failed.
-export function heName(t) {
-  const s = String(t || '').replace(/\s+/g, ' ').trim().replace(/\u05f3/g, "'").replace(/\u05f4/g, '"');
-  return /^[\u05d0-\u05ea][\u05d0-\u05ea'". -]{0,59}$/.test(s) ? s : null;
+// Curly quotes and the acute accent of a phone keyboard (U+2018 U+2019 U+201B U+00B4, U+201C U+201D U+201E)
+// are the plain ' and " that a name needs (15/10/2026, review of the signing pages: iOS types them).
+export const plainQuotes = (s) => String(s || '').replace(/[\u2018\u2019\u201b\u00b4\u05f3]/g, "'").replace(/[\u201c\u201d\u201e\u05f4]/g, '"');
+// max: 60 for what a person types; the assistant's spelling of a long Arabic name may run to 80 (15/10/2026).
+export function heName(t, max) {
+  const s = plainQuotes(String(t || '').replace(/\s+/g, ' ').trim());
+  const n = Math.max(0, (max || 60) - 1);
+  return new RegExp('^[\\u05d0-\\u05ea][\\u05d0-\\u05ea\'". -]{0,' + n + '}$').test(s) ? s : null;
 }
-export async function hebrewName(env, raw) {
-  const direct = heName(raw);
-  if (direct) return direct;
+// Free text that is not a name (job, agency, company, with a digit or a slash): Hebrew letters with digits
+// and common punctuation are kept as typed (15/10/2026). Moved here from talk.js beside hebrewText.
+export function heText(t) {
+  const s = plainQuotes(String(t || '').replace(/\s+/g, ' ').trim());
+  return /^(?=.*[\u05d0-\u05ea])[\u05d0-\u05ea0-9'". ,/()&+-]{1,60}$/.test(s) ? s : null;
+}
+async function geminiLine(env, text) {
   const key = env && env.GEMINI_API_KEY;
   if (!key) return null;
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
-  const text = 'Write this name of a person or of a company in Hebrew letters, the way an Israeli would spell it. Output only the name in Hebrew letters, with no notes. The name:\n' + String(raw || '').substring(0, 60);
   try {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
       method: 'POST',
@@ -63,7 +71,20 @@ export async function hebrewName(env, raw) {
     if (!r.ok) return null;
     const j = await r.json();
     const parts = (j && j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
-    const out = parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').split('\n').map((x) => x.trim()).filter(Boolean)[0];
-    return heName(out);
+    return parts.filter((p) => p && typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').split('\n').map((x) => x.trim()).filter(Boolean)[0] || null;
   } catch (e) { return null; }
+}
+export async function hebrewName(env, raw) {
+  const direct = heName(raw);
+  if (direct) return direct;
+  const out = await geminiLine(env, 'Write this name of a person or of a company in Hebrew letters, the way an Israeli would spell it. Output only the name in Hebrew letters, with no notes. The name:\n' + String(raw || '').substring(0, 60));
+  return heName(out, 80);
+}
+// A job, an agency or a company in Hebrew letters (15/10/2026): the answer is checked as text (digits kept),
+// not as a name, so a job with a line number is not refused for its digit.
+export async function hebrewText(env, raw) {
+  const direct = heText(raw);
+  if (direct) return direct;
+  const out = await geminiLine(env, 'Write this job title, department or company name in Hebrew letters, the way an Israeli would write it. Keep any digits. Output only the Hebrew text, with no notes. The text:\n' + String(raw || '').substring(0, 60));
+  return heText(out);
 }

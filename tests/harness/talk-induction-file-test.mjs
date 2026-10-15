@@ -92,7 +92,7 @@ console.log('\n2. a new worker signs');
   const to = mail ? mail.toRecipients.map((x) => x.emailAddress.address) : [];
   check('one mail, to Michael and HR', w.mails.length === 1 && to.length === 2 && to.includes('sviva@tapugan.co.il') && to.includes(IND_HR), to);
   check('the mail carries the signed form and the link to the folder', mail && mail.attachments && mail.attachments[0].contentType === 'application/pdf' && /\.pdf$/.test(mail.attachments[0].name) && mail.body.content.includes('od.example') && mail.subject.includes('איוון פטרוב'), mail && mail.subject);
-  const p = w.patches[0];
+  const p = w.patches[w.patches.length - 1];
   check('the row keeps the folder link and when it was mailed', p && p.b.doc_url && p.b.mailed_at && p.b.doc_err === null && p.u.includes('id=eq.' + w.inserts[0].id), p);
 }
 
@@ -123,13 +123,35 @@ console.log('\n3. when something fails');
   check('no PDF from Graph: the HTML page is filed and sent instead', filed && /\.html$/.test(filed.path) && w.mails[0].message.attachments[0].contentType === 'text/html');
   reset({ mailFail: true });
   const r = await sign('ind1');
-  check('the mail fails: the signature still saved, the reason on the row', r.st === 200 && w.inserts.length === 1 && w.patches[0].b.mailed_at === null && /outlook 429/.test(w.patches[0].b.doc_err || ''), w.patches[0]);
+  check('the mail fails: the signature still saved, the reason on the row', r.st === 200 && w.inserts.length === 1 && w.patches[w.patches.length - 1].b.mailed_at === null && /outlook 429/.test(w.patches[w.patches.length - 1].b.doc_err || ''), w.patches[w.patches.length - 1]);
   reset({ noToken: true });
   const r2 = await sign('ind1');
-  check('OneDrive not connected: signed, nothing filed, "not connected" on the row', r2.st === 200 && !w.puts.length && !w.mails.length && /not connected/.test(w.patches[0].b.doc_err || ''), w.patches[0]);
+  check('OneDrive not connected: signed, nothing filed, "not connected" on the row', r2.st === 200 && !w.puts.length && !w.mails.length && /not connected/.test(w.patches[w.patches.length - 1].b.doc_err || ''), w.patches[w.patches.length - 1]);
   reset({ putFail: true });
   await sign('ind1');
-  check('the safety folder refuses: no mail with a missing file, the reason on the row', !w.mails.length && /onedrive 507/.test(w.patches[0].b.doc_err || ''), w.patches[0]);
+  check('the safety folder refuses: no mail with a missing file, the reason on the row', !w.mails.length && /onedrive 507/.test(w.patches[w.patches.length - 1].b.doc_err || ''), w.patches[w.patches.length - 1]);
+}
+
+console.log('\n3b. the status written in steps (15/10/2026, A3), photos the server could not take (A2)');
+{
+  reset();
+  const seq = []; const f0 = globalThis.fetch;
+  globalThis.fetch = async (url, init) => { const u = String(url), m = (init && init.method) || 'GET';
+    if (/toolbox_reads/.test(u) && m === 'PATCH') seq.push('patch'); else if (/format=pdf/.test(u)) seq.push('pdf'); else if (/sendMail/.test(u)) seq.push('mail'); else if (m === 'PUT') seq.push(/Apps\//.test(decodeURIComponent(u)) ? 'put-src' : 'put-filed');
+    return f0(url, init); };
+  await sign('ind1');
+  globalThis.fetch = f0;
+  const ps = w.patches.map((p) => p.b);
+  check('the row is written after each step: the source filed, the PDF filed, the mail', seq.join() === 'put-src,patch,pdf,put-filed,patch,mail,patch' && /Apps/.test(decodeURIComponent(ps[0].doc_url)) && !('mailed_at' in ps[0]) && /\.pdf$/.test(decodeURIComponent(ps[1].doc_url)) && !('mailed_at' in ps[1]) && ps[2].mailed_at && ps[2].doc_err === null, { seq, ps });
+  check('a run cut after the HTML: the row already links the signed form (not "being sent" forever)', seq.indexOf('patch') < seq.indexOf('pdf') && !!ps[0].doc_url);
+  const srcT = (await import('fs')).readFileSync(new URL('../../functions/api/talk.js', import.meta.url), 'utf8');
+  check('the PDF conversion has its own, longer limit (25s here, 60s for 08.01), not the 20s of every call', /graphPdf\(od\.token, seg, PDF_MS_IND\)/.test(srcT) && /graphPdf\(od\.token, seg, PDF_MS_0801\)/.test(srcT) && /PDF_MS_IND = 25000, PDF_MS_0801 = 60000/.test(srcT));
+  const jpg = (n, fill) => { const b = new Uint8Array(n).fill(fill || 7); b.set([0xFF, 0xD8, 0xFF], 0); return 'data:image/jpeg;base64,' + Buffer.from(b).toString('base64'); };
+  reset();
+  await sign('ind1', { doc: [jpg(950 * 1024, 3), jpg(6000, 4)] });
+  const lp = w.patches[w.patches.length - 1];
+  const srcF = w.puts.find((p) => p.path.startsWith('Apps/Tapugan Safety/'));
+  check('a photo over the server limit: the other one filed, the form mailed, and "1 not in the form" on the row', srcF && (srcF.txt.match(/page-break-before:always/g) || []).length === 1 && w.mails.length === 1 && lp.b.mailed_at && /^1 מסמכים לא נכנסו לטופס/.test(lp.b.doc_err || ''), lp && lp.b);
 }
 
 console.log('\n4. a weekly talk');

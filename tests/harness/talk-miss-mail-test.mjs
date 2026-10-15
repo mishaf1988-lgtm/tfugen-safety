@@ -3,7 +3,7 @@
 // department of the department report (packing with production), to that department's managers in the
 // recipients sheet of the hazard workbook; a preview sends nothing, a test goes to the connected account
 // only, and a closed, weekly or unpublished training is refused.
-import { onRequest, missingByDept, missMailHtml, TBT_REPORT, TBT_DEPTS } from './_build/talk.mjs';
+import { onRequest, missingByDept, missMailHtml, TBT_REPORT, TBT_DEPTS, NO_ID_L, idKey } from './_build/talk.mjs';
 import { REPORT_DEPTS } from './_build/hazard-file.mjs';
 import { writeZip } from './_build/_xlsxpatch.mjs';
 let pass = 0, fail = 0;
@@ -95,6 +95,26 @@ w.mails = [];
 for (const [id, er] of [['cl1', 'closed'], ['dr1', 'not published'], ['wk1', 'not an annual / quality training']]) {
   r = await post({ op: 'missMail', id }, 'good');
   check('refused: ' + er, r.st === 409 && r.j.error === er && !w.mails.length, r);
+}
+
+console.log('\n3. a card with no ID (A6, 15/10/2026), leading zeros (A7)');
+{
+  const E = [{ id: 'n1', n: 'נועה ברק', dep: 'מעבדה', eid: '' }, { id: 'n2', n: 'רון שחר', dep: 'מעבדה', eid: null }, { id: 'n3', n: 'טל', dep: 'הנהלה' }, { id: 'z1', n: 'עמית', dep: 'מעבדה', eid: '012345678' }];
+  const Rd = [{ emp_id: 'x:1:a', id_no: '999999', emp_name: 'נועה  ברק' }, { emp_id: 'x:2:b', id_no: '12345678', emp_name: 'משהו אחר' }];
+  const m = missingByDept(T.ann, E, Rd, '2026-10-22');
+  check('idKey: leading zeros and dashes do not count, letters stay', idKey('012-345678') === '12345678' && idKey('0012') === idKey('12') && idKey('AB0123') === 'ab0123', [idKey('012-345678'), idKey('AB0123')]);
+  check('no ID on the card, the exact name typed: counted as signed', !JSON.stringify(m).includes('נועה ברק'), m);
+  check('no ID and no such name: under "cannot check", not as "did not sign"', (m.noId['מעבדות'] || []).map((x) => x.n).join() === 'רון שחר' && !(m.groups['מעבדות'] || []).some((x) => x.n === 'רון שחר') && m.noIdNoDept.map((x) => x.n).join() === 'טל' && !m.noDept.some((x) => x.n === 'טל'), m);
+  check('the card ID with a leading zero, typed without it: signed (A7)', !JSON.stringify(m.groups).includes('עמית'), m.groups);
+  const h = missMailHtml(T.ann, 'מעבדות', [], 'https://x/k', m.noId['מעבדות']);
+  check('the mail: a separate line "' + NO_ID_L + '" with the name, not in the did-not-sign list', h.includes(NO_ID_L + ' (1):') && h.includes('רון שחר') && h.includes('(0):') && !/[—–־«»]/.test(h), h);
+  EMPS.push(...E); READS.push(...Rd);
+  r = await post({ op: 'missMail', id: 'an1', preview: true }, 'good');
+  const lab = ((r.j && r.j.plan) || []).find((p) => p.dept === 'מעבדות');
+  check('preview: the department lists its cards with no ID apart; one with no department too', lab && lab.noId.join() === 'רון שחר' && !lab.names.includes('רון שחר') && !lab.names.includes('עמית') && (r.j.noIdNoDept || []).join() === 'טל (הנהלה)' && !(r.j.noDept || []).includes('טל (הנהלה)'), r.j);
+  w.mails = [];
+  r = await post({ op: 'missMail', id: 'an1', depts: ['מעבדות'], test: true }, 'good');
+  check('the mail sent has the "cannot check" line', r.st === 200 && w.mails.length === 1 && w.mails[0].message.body.content.includes(NO_ID_L) && w.mails[0].message.body.content.includes('רון שחר'), w.mails.length);
 }
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
