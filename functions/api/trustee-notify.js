@@ -31,7 +31,7 @@
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
-import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet } from '../_onedrive.js';
+import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 
 const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -46,6 +46,36 @@ const MAX_AGE_MS = 48 * 3600 * 1000;
 // every channel failed is tried again, up to MAX_TRIES in all; then a
 // 'notify_failed' line in notifications_log puts it on the app's home screen.
 const FAIL_KEY = 'notify_fail', MAX_TRIES = 3, RETRY_MS = 14 * 60 * 1000, MAX_RETRY_RUN = 5, SETTLE_MS = 3 * 60 * 1000;
+// Deadlines and a subrequest budget (15/10/2026, review: "no data that disappears").
+// Every outbound call has a deadline, so one hanging call cannot hold a run
+// until the platform cuts it. A call from _onedrive.js cannot take our signal,
+// so it is raced against the same deadline instead.
+const DB_MS = 10000, NET_MS = 20000;
+function tfetch(url, init, ms) { return fetch(url, Object.assign({}, init || {}, { signal: AbortSignal.timeout(ms) })); }
+function within(p, ms, what) {
+  let t;
+  return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error((what || 'call') + ' timeout')), ms); })]).finally(() => clearTimeout(t));
+}
+// One request may make 50 subrequests on the free plan and the 51st throws
+// (the same limit as hazard-file.js subBudget). The sweep counts what it spends
+// and stops before a hazard it might not finish; the rest go on the next tick.
+const SUB_LIMIT = 50;
+function subBudget(limit) {
+  return { limit: limit || SUB_LIMIT, used: 0, spend(n) { this.used += n; return this; }, left() { return this.limit - this.used; } };
+}
+const spend = (B, n) => { if (B) B.spend(n); };
+// The lease (runLeased): lock 2, unlock 1, mark checks 2, and once more
+// (lock 2, unlock 1, checks 2) when a mark arrives at the end.
+const LEASE_COST = 10, LEASE_MS = 60000;
+// The worst one hazard costs: claim 1, day count 2, task name 1, WhatsApp 2,
+// photo link 1, Outlook 6 (token read, refresh 4, send), Resend 1, log 1,
+// failure log 1, fail map 1, row read 1. The cap notice instead of the row
+// costs less (state 2, notice 10, log 1).
+const HAZARD_MAX = 18;
+// A row claimed this long ago with no log line and no failure noted: the run
+// that claimed it was cut before it sent (pg_net hangs up at 8s; waitUntil ends
+// at 30s). The sweep sends it again.
+const STALE_CLAIM_MS = 5 * 60 * 1000, STALE_LIMIT = 200;
 const anySent = (res) => !!res && (res.whatsapp === 'sent' || res.email === 'sent');
 // Daily ceiling (30/09/2026, upgrade review 18, Michael chose 15): after 15
 // hazards claimed since midnight Israel time, the 16th sends ONE notice
@@ -67,9 +97,9 @@ const TEMPLATE_FALLBACK = 'tfugen_incident_alert';
 // has run the manager can rename a task from the app — and the message that
 // went out still carried this wording. taskName() reads the table first.
 const TASKS = {
-  1: 'סיור מפגעים באזור', 2: 'מקלחות חירום ושטיפות עיניים', 3: 'דרכי מילוט ויציאות חירום',
-  4: 'תקינות סולמות וגישה לגובה', 5: 'עמדות כיבוי אש', 6: 'מגיני מכונות ולחצני עצירה',
-  7: 'עזרה ראשונה וציוד מגן', 8: 'מעקב סגירה'
+  1: '\u05e1\u05d9\u05d5\u05e8 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05d1\u05d0\u05d6\u05d5\u05e8', 2: '\u05de\u05e7\u05dc\u05d7\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd \u05d5\u05e9\u05d8\u05d9\u05e4\u05d5\u05ea \u05e2\u05d9\u05e0\u05d9\u05d9\u05dd', 3: '\u05d3\u05e8\u05db\u05d9 \u05de\u05d9\u05dc\u05d5\u05d8 \u05d5\u05d9\u05e6\u05d9\u05d0\u05d5\u05ea \u05d7\u05d9\u05e8\u05d5\u05dd',
+  4: '\u05ea\u05e7\u05d9\u05e0\u05d5\u05ea \u05e1\u05d5\u05dc\u05de\u05d5\u05ea \u05d5\u05d2\u05d9\u05e9\u05d4 \u05dc\u05d2\u05d5\u05d1\u05d4', 5: '\u05e2\u05de\u05d3\u05d5\u05ea \u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05e9', 6: '\u05de\u05d2\u05d9\u05e0\u05d9 \u05de\u05db\u05d5\u05e0\u05d5\u05ea \u05d5\u05dc\u05d7\u05e6\u05e0\u05d9 \u05e2\u05e6\u05d9\u05e8\u05d4',
+  7: '\u05e2\u05d6\u05e8\u05d4 \u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d5\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df', 8: '\u05de\u05e2\u05e7\u05d1 \u05e1\u05d2\u05d9\u05e8\u05d4'
 };
 
 // The two tables, and everything that differs between them. Anything the rest
@@ -84,41 +114,45 @@ const SOURCES = {
     // A finding already closed when the alert goes out was fixed on the spot
     // (BACKLOG 4.13: the form saves it closed). Said up front, so the manager
     // does not go looking for an open hazard.
-    norm: (r) => (r.s === 'נסגר' ? Object.assign({}, r, { f: '✅ תוקן במקום: ' + (r.f || '') }) : r),
+    norm: (r) => (r.s === '\u05e0\u05e1\u05d2\u05e8' ? Object.assign({}, r, { f: '✅ \u05ea\u05d5\u05e7\u05df \u05d1\u05de\u05e7\u05d5\u05dd: ' + (r.f || '') }) : r),
     event: 'trustee_hazard',
     emoji: '🦺',
-    title: 'ליקוי חדש מנאמן בטיחות',
-    subject: 'ליקוי מנאמן בטיחות',
-    whoLabel: 'נאמן',
-    lineLabel: 'משימה',
+    title: '\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d7\u05d3\u05e9 \u05de\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
+    subject: '\u05dc\u05d9\u05e7\u05d5\u05d9 \u05de\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
+    whoLabel: '\u05e0\u05d0\u05de\u05df',
+    lineLabel: '\u05de\u05e9\u05d9\u05de\u05d4',
     // The task number reads naturally in front of its name, and only there.
     lineText: (row, line) => (row.t ? esc(row.t) + '. ' : '') + esc(line),
-    kindLabel: (row, line) => 'ליקוי בסיור נאמן: ' + line,
-    footer: 'נשלח אוטומטית כשנאמן שומר ליקוי. באפליקציה: מודולים > נאמני בטיחות',
+    kindLabel: (row, line) => '\u05dc\u05d9\u05e7\u05d5\u05d9 \u05d1\u05e1\u05d9\u05d5\u05e8 \u05e0\u05d0\u05de\u05df: ' + line,
+    footer: '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05e0\u05d0\u05de\u05df \u05e9\u05d5\u05de\u05e8 \u05dc\u05d9\u05e7\u05d5\u05d9. \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u05de\u05d5\u05d3\u05d5\u05dc\u05d9\u05dd > \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
   },
   near_miss: {
     select: 'id,rep,descr,area,sev,typ,d,s,photo_url,ts,notified_at',
     // Every near-miss is worth knowing about the moment it is filed. There is
     // no "clean" near-miss to filter out.
     skipReason: () => null,
-    norm: (r) => ({ ...r, u: r.rep || 'לא צוין', loc: r.area || '', f: r.descr || '', t: '' }),
+    norm: (r) => ({ ...r, u: r.rep || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df', loc: r.area || '', f: r.descr || '', t: '' }),
     event: 'near_miss',
     emoji: '⛔',
-    title: 'דיווח חדש: כמעט ונפגע',
-    subject: 'כמעט ונפגע',
-    whoLabel: 'מדווח',
-    lineLabel: 'חומרה / סוג',
+    title: '\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d7\u05d3\u05e9: \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',
+    subject: '\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',
+    whoLabel: '\u05de\u05d3\u05d5\u05d5\u05d7',
+    lineLabel: '\u05d7\u05d5\u05de\u05e8\u05d4 / \u05e1\u05d5\u05d2',
     lineText: (row, line) => esc(line),
-    kindLabel: (row, line) => 'כמעט ונפגע' + (row.sev ? ', חומרה ' + row.sev : ''),
-    footer: 'נשלח אוטומטית כשנשמר דיווח כמעט ונפגע. באפליקציה: מודולים > כמעט ונפגע',
+    kindLabel: (row, line) => '\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2' + (row.sev ? ', \u05d7\u05d5\u05de\u05e8\u05d4 ' + row.sev : ''),
+    footer: '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05e0\u05e9\u05de\u05e8 \u05d3\u05d9\u05d5\u05d5\u05d7 \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2. \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u05de\u05d5\u05d3\u05d5\u05dc\u05d9\u05dd > \u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',
   },
 };
 
 // Meta rejects parameters with newlines / tabs / long runs of spaces.
 function clean(s, max) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().substring(0, max || 200); }
+// DD/MM/YYYY (Michael, 29/09/2026: dates he reads are in the Hebrew order).
+// d is a date column, YYYY-MM-DD; anything else is shown as it came.
+function dmy(d) { const m = String(d == null ? '' : d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(d == null ? '' : d); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(context) {
+  const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
   const cors = corsHeaders(origin, allowed, 'POST,OPTIONS');
@@ -139,10 +173,7 @@ export async function onRequest({ request, env }) {
   catch (e) { return jsonResp({ error: 'invalid json' }, 400, cors); }
   body = body && typeof body === 'object' ? body : {};
 
-  const sb = (path, init) => fetch(SUPABASE_URL + '/rest/v1/' + path, {
-    ...(init || {}),
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'application/json', ...((init && init.headers) || {}) }
-  });
+  const sb = mkSb(serviceKey);
 
   // ---- (2) test message from the settings screen: needs a logged-in session ----
   if (body.test === true) {
@@ -158,7 +189,7 @@ export async function onRequest({ request, env }) {
       email: body.email !== false, email_to: clean(body.email_to, 120)
     };
     if (!prefs.whatsapp_to && !prefs.email_to) return jsonResp({ error: 'no recipient: fill a WhatsApp number or an email' }, 400, cors);
-    const sample = { id: 'test', u: 'בדיקה', t: 5, d: new Date().toISOString().substring(0, 10), loc: 'מחסן, מטף מזרחי', f: 'הודעת בדיקה - מטף ללא פלומבה', photo_url: null };
+    const sample = { id: 'test', u: '\u05d1\u05d3\u05d9\u05e7\u05d4', t: 5, d: ilDay(Date.now()), loc: '\u05de\u05d7\u05e1\u05df, \u05de\u05d8\u05e3 \u05de\u05d6\u05e8\u05d7\u05d9', f: '\u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4 - \u05de\u05d8\u05e3 \u05dc\u05dc\u05d0 \u05e4\u05dc\u05d5\u05de\u05d1\u05d4', photo_url: null };
     const res = await deliver(env, prefs, sample, await taskName(sb, sample.t), SOURCES.trustee_reports);
     return jsonResp({ ok: true, test: true, ...res }, 200, cors);
   }
@@ -171,7 +202,7 @@ export async function onRequest({ request, env }) {
     return jsonResp({ error: 'forbidden' }, 403, cors);
   }
   if (body.op === 'retry') {
-    return jsonResp(await retrySweep(env, sb), 200, cors);
+    return jsonResp(await retrySweep(env, serviceKey), 200, cors);
   }
   const id = clean(body.id, 64);
   if (!id || /[^A-Za-z0-9_-]/.test(id)) return jsonResp({ error: 'id required' }, 400, cors);
@@ -204,17 +235,39 @@ export async function onRequest({ request, env }) {
   });
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || !claimed.length) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
-  const capped = await capGate(env, sb, prefs, src, row);
-  if (capped) return jsonResp({ ok: true, skipped: capped }, 200, cors);
-
-  const task = await lineFor(sb, src, row);
-  const res = await deliver(env, prefs, row, task, src);
-  await logDelivery(sb, src, row, task, res);
-  if (!anySent(res)) {
-    try { const m = await failGet(env); await noteFail(sb, m, srcKey, src, row, task, res); await stateSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* the retry sweep also finds it by its log */ }
+  // From here the row is ours, and nothing else will send it until the sweep
+  // finds it. pg_net hangs up at 8s (migrations/2026-09-25_notify_secret_header.sql),
+  // so the trigger gets its answer now and the sending goes on in waitUntil
+  // (15/10/2026). A run cut even so leaves a claimed row with no log line,
+  // and the sweep's stale-claim pass sends it again.
+  const work = async () => {
+    const capped = await capGate(env, sb, prefs, src, row);
+    if (capped) return { skipped: capped };
+    const task = await lineFor(sb, src, row);
+    const res = await deliver(env, prefs, row, task, src);
+    await logDelivery(sb, src, row, task, res);
+    if (!anySent(res)) {
+      try { const m = await failGet(env); await noteFail(sb, m, srcKey, src, row, task, res); await sSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* the retry sweep also finds it by its log */ }
+    }
+    return res;
+  };
+  if (typeof context.waitUntil === 'function') {
+    context.waitUntil(work().catch(() => {}));
+    return jsonResp({ ok: true, accepted: true, id }, 202, cors);
   }
-  return jsonResp({ ok: true, ...res }, 200, cors);
+  return jsonResp({ ok: true, ...(await work()) }, 200, cors);
 }
+
+// Supabase REST with the service key and a deadline; with a budget, each call is counted.
+function mkSb(serviceKey, B) {
+  return (path, init) => { spend(B, 1); return tfetch(SUPABASE_URL + '/rest/v1/' + path, {
+    ...(init || {}),
+    headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'application/json', ...((init && init.headers) || {}) }
+  }, DB_MS); };
+}
+// server_state through _onedrive.js, with a deadline and counted.
+function sGet(env, keys, B, strict) { spend(B, 1); return within(stateGet(env, keys, strict), DB_MS, 'state read'); }
+function sSet(env, obj, B) { spend(B, 1); return within(stateSet(env, obj), DB_MS, 'state write'); }
 
 function titleOf(row, task) { return clean((row.u || '') + ' - ' + task + (row.f ? ': ' + row.f : ''), 120); }
 async function logRows(sb, rows) {
@@ -230,8 +283,9 @@ async function logDelivery(sb, src, row, task, res) {
   if (res.email) logs.push({ channel: res.email === 'sent' ? 'email' : 'email_error', detail: res.email });
   await logRows(sb, logs.map((l) => ({ event_type: src.event, channel: l.channel, payload: { id: row.id, title, detail: l.detail } })));
 }
-async function failGet(env) {
-  const st = await stateGet(env, [FAIL_KEY]).catch(() => ({}));
+// strict: a failed read throws, so an unread map is never written back as empty.
+async function failGet(env, B, strict) {
+  const st = await sGet(env, [FAIL_KEY], B, strict).catch((e) => { if (strict) throw e; return {}; });
   try { const m = JSON.parse((st[FAIL_KEY] && st[FAIL_KEY].value) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; }
 }
 // One more failed attempt on the map; the third gives up and says so in the log.
@@ -245,46 +299,112 @@ async function noteFail(sb, m, srcKey, src, row, task, res) {
   }
   m[k] = e;
 }
-async function retrySweep(env, sb) {
+// The retry sweep, one run at a time (15/10/2026): it is fired from every save
+// (hazard-file.js) and from the cron, and two runs at once sent the same alert
+// twice and wrote over each other's fail map. A run that finds the lease held
+// leaves a mark and the holder goes once more (runLeased, _onedrive.js).
+async function retrySweep(env, serviceKey) {
+  const B = subBudget(SUB_LIMIT);
+  B.spend(LEASE_COST);
+  const r = await runLeased(env, 'notify_retry', LEASE_MS, () => sweepOnce(env, serviceKey, B));
+  if (r && r.busy) return { ok: true, busy: true, skipped: 'another sweep is running' };
+  return r;
+}
+// A log line that means the row was dealt with: sent on a channel, held back
+// by the daily cap (or replaced by its notice), or given up on. Error lines
+// alone do not count: a row whose every channel failed and whose fail-map
+// entry was not written must still be tried again.
+const DONE_CHANNELS = { whatsapp: 1, email: 1, capped: 1, notify_failed: 1 };
+async function sweepOnce(env, serviceKey, B) {
+  const out = { ok: true, tried: 0, sent: 0, failed: 0, gave_up: 0, resent: 0 };
+  // Reads up front (prefs 1, fail map 1, lists 4, log 1), then at least one hazard and the tail.
+  if (B.left() < 7 + HAZARD_MAX + 1) { out.deferred = true; return out; }
+  const sb = mkSb(serviceKey, B);
   const prefs = await loadPrefs(sb);
   if (!(prefs.whatsapp && prefs.whatsapp_to) && !(prefs.email && prefs.email_to)) return { ok: true, skipped: 'no recipient configured' };
-  const m = await failGet(env), now = Date.now(), out = { ok: true, tried: 0, sent: 0, failed: 0, gave_up: 0 };
+  // Strict: a map that could not be read must not be written back as empty.
+  let m;
+  try { m = await failGet(env, B, true); } catch (e) { return { ok: false, error: 'fail map read failed' }; }
+  const now = Date.now();
   const since = new Date(now - MAX_AGE_MS).toISOString(), until = new Date(now - SETTLE_MS).toISOString();
-  const one = async (srcKey, raw, claim) => {
-    const src = SOURCES[srcKey];
-    if (claim) {
+  // After each hazard (not only at the end): what was sent is never sent again
+  // because a later step of this run failed. Read again and merged, so an entry
+  // the trigger path wrote meanwhile is kept.
+  const persist = async (k) => {
+    try {
+      const cur = await failGet(env, B, true);
+      if (m[k]) cur[k] = m[k]; else delete cur[k];
+      await sSet(env, { [FAIL_KEY]: JSON.stringify(cur) }, B);
+    } catch (e) { /* the end of the run writes the whole map again */ }
+  };
+  const one = async (srcKey, raw, mode) => {
+    const src = SOURCES[srcKey], k = srcKey + ':' + raw.id;
+    if (mode === 'claim') {
       const c = await sb(srcKey + '?id=eq.' + encodeURIComponent(raw.id) + '&notified_at=is.null', { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ notified_at: new Date().toISOString() }) });
       const got = c.ok ? await c.json() : [];
       if (!Array.isArray(got) || !got.length) return;
-      if (await capGate(env, sb, prefs, src, src.norm(raw))) return;
     }
+    // A claimed row that never went out never passed the daily cap either.
+    if (mode !== 'retry' && await capGate(env, sb, prefs, src, src.norm(raw), B)) return;
     const row = src.norm(raw), task = await lineFor(sb, src, row);
-    const res = await deliver(env, prefs, row, task, src);
+    const res = await deliver(env, prefs, row, task, src, B);
     out.tried++;
+    if (mode === 'stale') out.resent++;
     await logDelivery(sb, src, row, task, res);
-    if (anySent(res)) { out.sent++; delete m[srcKey + ':' + raw.id]; return; }
+    if (anySent(res)) { out.sent++; if (m[k]) { delete m[k]; await persist(k); } return; }
     out.failed++; await noteFail(sb, m, srcKey, src, row, task, res);
-    if (m[srcKey + ':' + raw.id].gave_up) out.gave_up++;
+    if (m[k].gave_up) out.gave_up++;
+    await persist(k);
+  };
+  // Room for one more hazard at its worst and the final write of the map.
+  const room = () => out.tried < MAX_RETRY_RUN && B.left() >= HAZARD_MAX + 1;
+  const run = async (srcKey, raw, mode) => {
+    if (!room()) { out.deferred = true; return false; }
+    try { await one(srcKey, raw, mode); } catch (e) { out.errors = (out.errors || 0) + 1; }
+    return true;
   };
   const read = async (q) => { try { const r = await sb(q); const j = r.ok ? await r.json() : []; return Array.isArray(j) ? j : []; } catch (e) { return []; } };
   // 1. never delivered: the trigger's call did not arrive, or failed before the claim.
-  const win = '&notified_at=is.null&ts=gte.' + encodeURIComponent(since) + '&ts=lte.' + encodeURIComponent(until) + '&order=ts.asc&limit=' + MAX_RETRY_RUN;
-  const lost = (await read('trustee_reports?ok=eq.false' + win + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
-    .concat((await read('near_miss?select=' + SOURCES.near_miss.select + win)).map((r) => ['near_miss', r]));
-  for (const [k, r] of lost) { if (out.tried >= MAX_RETRY_RUN) break; await one(k, r, true); }
+  const win = '&ts=gte.' + encodeURIComponent(since) + '&ts=lte.' + encodeURIComponent(until) + '&order=ts.asc';
+  const lost = (await read('trustee_reports?ok=eq.false&notified_at=is.null' + win + '&limit=' + MAX_RETRY_RUN + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
+    .concat((await read('near_miss?select=' + SOURCES.near_miss.select + '&notified_at=is.null' + win + '&limit=' + MAX_RETRY_RUN)).map((r) => ['near_miss', r]));
+  // 3. claimed and never sent: the run that claimed it was cut before it
+  // logged anything (15/10/2026). Claimed over 5 minutes ago, no fail-map entry,
+  // and no log line that says it was dealt with.
+  const stale = '&notified_at=not.is.null&notified_at=lt.' + encodeURIComponent(new Date(now - STALE_CLAIM_MS).toISOString())
+    + '&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=' + STALE_LIMIT;
+  let claimed = (await read('trustee_reports?ok=eq.false' + stale + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
+    .concat((await read('near_miss?select=' + SOURCES.near_miss.select + stale)).map((r) => ['near_miss', r]))
+    .filter(([k, r]) => r && r.id && r.notified_at && !/[^A-Za-z0-9_-]/.test(r.id) && !m[k + ':' + r.id]);
+  if (claimed.length) {
+    // Strict: a log that cannot be read must not look like "nothing was sent".
+    let logs = null;
+    try {
+      const ids = Array.from(new Set(claimed.map(([, r]) => r.id)));
+      const r = await sb('notifications_log?select=event_type,channel,payload&payload->>id=in.(' + ids.map(encodeURIComponent).join(',') + ')&ts=gte.' + encodeURIComponent(since) + '&limit=2000');
+      const j = r.ok ? await r.json() : null;
+      logs = Array.isArray(j) ? j : null;
+    } catch (e) { logs = null; }
+    const done = new Set((logs || []).filter((l) => l && l.payload && (DONE_CHANNELS[l.channel] || l.event_type === 'notify_cap')).map((l) => String(l.payload.id)));
+    claimed = logs ? claimed.filter(([, r]) => !done.has(String(r.id))) : [];
+    if (!logs) out.log_read_failed = true;
+  }
+  for (const [k, r] of lost) { if (!await run(k, r, 'claim')) break; }
+  for (const [k, r] of claimed) { if (!await run(k, r, 'stale')) break; }
   // 2. delivered and failed on every channel: again, 15 minutes apart.
   for (const k of Object.keys(m)) {
-    if (out.tried >= MAX_RETRY_RUN) break;
     const e = m[k]; if (!e || e.gave_up || now - Date.parse(e.last || 0) < RETRY_MS) continue;
     const [srcKey, id] = [k.split(':')[0], k.split(':').slice(1).join(':')];
     if (!Object.prototype.hasOwnProperty.call(SOURCES, srcKey) || /[^A-Za-z0-9_-]/.test(id)) { delete m[k]; continue; }
+    if (!room()) { out.deferred = true; break; }
     const rows = await read(srcKey + '?id=eq.' + encodeURIComponent(id) + '&select=' + SOURCES[srcKey].select);
     if (!rows[0]) { delete m[k]; continue; }
-    await one(srcKey, rows[0], false);
+    await run(srcKey, rows[0], 'retry');
   }
   // Given-up entries are kept a week (so a failure is not retried forever), then dropped.
   Object.keys(m).forEach((k) => { if (m[k] && m[k].gave_up && now - Date.parse(m[k].last || 0) > 7 * 86400000) delete m[k]; });
-  try { await stateSet(env, { [FAIL_KEY]: JSON.stringify(m) }); } catch (e) { /* next tick */ }
+  try { await sSet(env, { [FAIL_KEY]: JSON.stringify(m) }, B); } catch (e) { /* next tick */ }
+  out.subrequests = B.used;
   return out;
 }
 
@@ -297,13 +417,13 @@ function ilDayStart(now) {
 }
 // The one notice that replaces the 16th alert of the day.
 const CAP_SRC = {
-  event: 'notify_cap', emoji: '🔕', title: 'הרבה דיווחים היום', subject: 'הגבלת התראות יומית',
-  whoLabel: 'מאת', lineLabel: 'מה קרה', lineText: (row, line) => esc(line), kindLabel: () => 'הגבלת התראות יומית',
-  footer: 'נשלח אוטומטית פעם אחת ביום, כשעוברים ' + DAILY_CAP + ' התראות. באפליקציה: מודולים > נאמני בטיחות',
+  event: 'notify_cap', emoji: '🔕', title: '\u05d4\u05e8\u05d1\u05d4 \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d9\u05d5\u05dd', subject: '\u05d4\u05d2\u05d1\u05dc\u05ea \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d9\u05d5\u05de\u05d9\u05ea',
+  whoLabel: '\u05de\u05d0\u05ea', lineLabel: '\u05de\u05d4 \u05e7\u05e8\u05d4', lineText: (row, line) => esc(line), kindLabel: () => '\u05d4\u05d2\u05d1\u05dc\u05ea \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05d9\u05d5\u05de\u05d9\u05ea',
+  footer: '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea \u05d1\u05d9\u05d5\u05dd, \u05db\u05e9\u05e2\u05d5\u05d1\u05e8\u05d9\u05dd ' + DAILY_CAP + ' \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea. \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u05de\u05d5\u05d3\u05d5\u05dc\u05d9\u05dd > \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
 };
 // null = send as usual. Otherwise the row is not sent and the reason is returned;
 // the first row over the ceiling sends CAP_SRC's notice in its place.
-async function capGate(env, sb, prefs, src, row) {
+async function capGate(env, sb, prefs, src, row, B) {
   const now = Date.now(), since = encodeURIComponent(ilDayStart(now));
   let n = 0;
   try {
@@ -315,17 +435,17 @@ async function capGate(env, sb, prefs, src, row) {
   } catch (e) { return null; }   // a failed count never costs a real alert
   if (n <= DAILY_CAP) return null;
   const day = ilDay(now);
-  const st = await stateGet(env, [CAP_KEY]).catch(() => ({}));
+  const st = await sGet(env, [CAP_KEY], B).catch(() => ({}));
   if (st[CAP_KEY] && st[CAP_KEY].value === day) {
     await logRows(sb, [{ event_type: src.event, channel: 'capped', payload: { id: row.id, n } }]);
     return 'daily cap';
   }
-  try { await stateSet(env, { [CAP_KEY]: day }); } catch (e) { /* worst case the notice goes twice */ }
+  try { await sSet(env, { [CAP_KEY]: day }, B); } catch (e) { /* worst case the notice goes twice */ }
   const [y, m, d] = day.split('-');
-  const note = { id: row.id, u: 'מערכת הבטיחות', loc: 'כל המפעל', d: d + '/' + m + '/' + y, photo_url: null,
-    f: 'היום כבר נשלחו ' + DAILY_CAP + ' התראות על מפגעים. עד מחר לא יישלחו עוד התראות. הדיווחים נשמרים כרגיל ונמצאים באפליקציה ובקובץ.' };
-  const line = 'יותר מ-' + DAILY_CAP + ' דיווחים היום';
-  const res = await deliver(env, prefs, note, line, CAP_SRC);
+  const note = { id: row.id, u: '\u05de\u05e2\u05e8\u05db\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', loc: '\u05db\u05dc \u05d4\u05de\u05e4\u05e2\u05dc', d: d + '/' + m + '/' + y, photo_url: null,
+    f: '\u05d4\u05d9\u05d5\u05dd \u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7\u05d5 ' + DAILY_CAP + ' \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea \u05e2\u05dc \u05de\u05e4\u05d2\u05e2\u05d9\u05dd. \u05e2\u05d3 \u05de\u05d7\u05e8 \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05e2\u05d5\u05d3 \u05d4\u05ea\u05e8\u05d0\u05d5\u05ea. \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05e0\u05e9\u05de\u05e8\u05d9\u05dd \u05db\u05e8\u05d2\u05d9\u05dc \u05d5\u05e0\u05de\u05e6\u05d0\u05d9\u05dd \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05e7\u05d5\u05d1\u05e5.' };
+  const line = '\u05d9\u05d5\u05ea\u05e8 \u05de-' + DAILY_CAP + ' \u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05d9\u05d5\u05dd';
+  const res = await deliver(env, prefs, note, line, CAP_SRC, B);
   await logDelivery(sb, CAP_SRC, note, line, res);
   return 'daily cap (notice sent)';
 }
@@ -350,7 +470,7 @@ async function loadPrefs(sb) {
 // any read that fails — a notification must never be lost over its subject line.
 async function taskName(sb, n) {
   const num = parseInt(n, 10);
-  const fallback = TASKS[num] || ('משימה ' + n);
+  const fallback = TASKS[num] || ('\u05de\u05e9\u05d9\u05de\u05d4 ' + n);
   if (!(num > 0)) return fallback;
   try {
     const r = await sb('trustee_tasks?n=eq.' + num + '&select=t');
@@ -366,41 +486,42 @@ async function taskName(sb, n) {
 async function lineFor(sb, src, row) {
   if (src.event === 'near_miss') {
     const bits = [];
-    if (row.sev) bits.push('חומרה ' + clean(row.sev, 20));
+    if (row.sev) bits.push('\u05d7\u05d5\u05de\u05e8\u05d4 ' + clean(row.sev, 20));
     if (row.typ) bits.push(clean(row.typ, 40));
-    return bits.length ? bits.join(', ') : 'כמעט ונפגע';
+    return bits.length ? bits.join(', ') : '\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2';
   }
   return taskName(sb, row.t);
 }
 
-async function deliver(env, prefs, row, task, src) {
+async function deliver(env, prefs, row, task, src, B) {
   const res = {};
-  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task, src);
-  if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task, src);
+  if (prefs.whatsapp && prefs.whatsapp_to) res.whatsapp = await sendWhatsApp(env, prefs.whatsapp_to, row, task, src, B);
+  if (prefs.email && prefs.email_to) res.email = await sendEmail(env, prefs.email_to, row, task, src, B);
   return res;
 }
 
-async function metaSend(env, to, template, params) {
-  const resp = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
+async function metaSend(env, to, template, params, B) {
+  spend(B, 1);
+  const resp = await tfetch(`https://graph.facebook.com/${META_API_VERSION}/${env.META_PHONE_NUMBER_ID}/messages`, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + env.META_ACCESS_TOKEN, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messaging_product: 'whatsapp', to, type: 'template',
       template: { name: template, language: { code: 'he' }, components: [{ type: 'body', parameters: params.map((p) => ({ type: 'text', text: p })) }] }
     })
-  });
+  }, NET_MS);
   const text = await resp.text();
   let parsed; try { parsed = JSON.parse(text); } catch (e) { parsed = { raw: text }; }
   return { ok: resp.ok, status: resp.status, parsed };
 }
 
-async function sendWhatsApp(env, to, row, task, src) {
+async function sendWhatsApp(env, to, row, task, src, B) {
   if (!env.META_PHONE_NUMBER_ID || !env.META_ACCESS_TOKEN) return 'error: WhatsApp not configured (META env vars)';
-  const who = clean(row.u, 40), loc = clean(row.loc || 'לא צוין', 60), finding = clean(row.f || 'ללא תיאור', 150);
+  const who = clean(row.u, 40), loc = clean(row.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df', 60), finding = clean(row.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8', 150);
   try {
     const kind = clean(src.kindLabel(row, task), 90);
     // The template we want: {{1}} reporter, {{2}} kind, {{3}} location, {{4}} finding.
-    let r = await metaSend(env, to, TEMPLATE_DEDICATED, [who, kind, loc, finding]);
+    let r = await metaSend(env, to, TEMPLATE_DEDICATED, [who, kind, loc, finding], B);
     const err = r.parsed && r.parsed.error;
     const missing = !r.ok && err && (err.code === 132001 || /template/i.test(String(err.message || '')));
     if (missing) {
@@ -410,7 +531,7 @@ async function sendWhatsApp(env, to, row, task, src) {
       // as something it was not: the store room appeared under «סוג», the task
       // name under «מיקום». Read on a phone it looked like a broken system
       // reporting a road accident. This is the order the labels actually want.
-      r = await metaSend(env, to, TEMPLATE_FALLBACK, [kind, loc, finding]);
+      r = await metaSend(env, to, TEMPLATE_FALLBACK, [kind, loc, finding], B);
     }
     if (r.ok) return 'sent';
     const e2 = r.parsed && r.parsed.error;
@@ -426,30 +547,31 @@ async function sendWhatsApp(env, to, row, task, src) {
 // for seven days, which is long enough to act on a hazard and short enough that
 // a forwarded mail does not become a permanent key to the photo.
 const PHOTO_LINK_TTL = 7 * 24 * 3600;
-async function signPhoto(serviceKey, publicUrl) {
+async function signPhoto(serviceKey, publicUrl, B) {
   const m = String(publicUrl || '').match(/\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/([^?]+)/);
   if (!m) return null;
   try {
-    const r = await fetch(SUPABASE_URL + '/storage/v1/object/sign/' + m[1] + '/' + m[2], {
+    spend(B, 1);
+    const r = await tfetch(SUPABASE_URL + '/storage/v1/object/sign/' + m[1] + '/' + m[2], {
       method: 'POST',
       headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiresIn: PHOTO_LINK_TTL }),
-    });
+    }, DB_MS);
     if (!r.ok) return null;
     const d = await r.json();
     return d && d.signedURL ? SUPABASE_URL + '/storage/v1' + d.signedURL : null;
   } catch (e) { return null; }
 }
 
-async function sendEmail(env, to, row, task, src) {
-  const who = esc(row.u), loc = esc(row.loc || 'לא צוין'), finding = esc(row.f || 'ללא תיאור');
-  const date = esc(row.d || '');
+async function sendEmail(env, to, row, task, src, B) {
+  const who = esc(row.u), loc = esc(row.loc || '\u05dc\u05d0 \u05e6\u05d5\u05d9\u05df'), finding = esc(row.f || '\u05dc\u05dc\u05d0 \u05ea\u05d9\u05d0\u05d5\u05e8');
+  const date = esc(dmy(row.d));
   // A photo that cannot be opened is worse than no photo: it reads as a broken
   // system. Link it only when the signature actually came back.
   const signed = row.photo_url && /^https?:\/\//.test(row.photo_url) && env.SUPABASE_SERVICE_ROLE_KEY
-    ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url)
+    ? await signPhoto(env.SUPABASE_SERVICE_ROLE_KEY, row.photo_url, B)
     : null;
-  const photo = signed ? '<p><a href="' + esc(signed) + '">📷 תמונת הממצא</a></p>' : '';
+  const photo = signed ? '<p><a href="' + esc(signed) + '">📷 \u05ea\u05de\u05d5\u05e0\u05ea \u05d4\u05de\u05de\u05e6\u05d0</a></p>' : '';
   // A [TS-<id>] reply tag belongs here if mail-inbox.js is ever switched on
   // (needs admin consent for Mail.Read, DECISIONS 2026-09-27).
   // 27/09: a signed "mark as handled" link instead of reply-to-close. Opens a
@@ -461,10 +583,10 @@ async function sendEmail(env, to, row, task, src) {
     : '';
   const subject = src.emoji + ' ' + src.subject + ' - ' + clean(row.u, 40) + ', ' + clean(task, 40);
   const html = '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">'
-    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">תעשיות תפוגן - ניהול הבטיחות</p></div>'
+    + '<div style="background:#cc1f1f;padding:16px;text-align:center;border-radius:8px 8px 0 0"><h1 style="color:#fff;margin:0;font-size:18px">' + src.emoji + ' ' + esc(src.title) + '</h1><p style="color:#ffcccc;margin:4px 0 0;font-size:12px">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</p></div>'
     + '<div style="background:#fff;padding:20px;border:1px solid #e5e7eb;font-size:14px;line-height:1.7">'
-    + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>תאריך:</strong> ' + date + '</p><p><strong>מיקום:</strong> ' + loc + '</p><p><strong>הממצא:</strong> ' + finding + '</p>' + photo
-    + '<p style="margin-top:16px">' + closeBtn + '<a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">לניתוב באפליקציה</a></p>'
+    + '<p><strong>' + esc(src.whoLabel) + ':</strong> ' + who + '</p><p><strong>' + esc(src.lineLabel) + ':</strong> ' + src.lineText(row, task) + '</p><p><strong>\u05ea\u05d0\u05e8\u05d9\u05da:</strong> ' + date + '</p><p><strong>\u05de\u05d9\u05e7\u05d5\u05dd:</strong> ' + loc + '</p><p><strong>\u05d4\u05de\u05de\u05e6\u05d0:</strong> ' + finding + '</p>' + photo
+    + '<p style="margin-top:16px">' + closeBtn + '<a href="' + APP_URL + '" style="background:#cc1f1f;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">\u05dc\u05e0\u05d9\u05ea\u05d5\u05d1 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4</a></p>'
     + '</div><div style="background:#f9fafb;padding:10px;text-align:center;font-size:11px;color:#9ca3af;border-radius:0 0 8px 8px">' + esc(src.footer) + '</div></div>';
   // 2026-09-27: through Outlook as the account connected in /api/ms-auth, when
   // it granted Mail.Send. That is the only way the mail reaches an address at
@@ -473,20 +595,26 @@ async function sendEmail(env, to, row, task, src) {
   let outlookErr = null;
   if (odConfigured(env)) {
     try {
-      const tr = await tokenRow(env);
+      spend(B, 1);
+      const tr = await within(tokenRow(env), DB_MS, 'token read');
       if (hasMail(tr)) {
-        const { token } = await accessToken(env);
-        await sendMail(token, to, subject, html);
+        // accessToken reads the row again, and refreshes it (3 more) when it is near expiry.
+        const fresh = tr.access_token && tr.expires_at && Date.parse(tr.expires_at) > Date.now() + 60000;
+        spend(B, fresh ? 1 : 4);
+        const { token } = await within(accessToken(env), NET_MS, 'token');
+        spend(B, 1);
+        await within(sendMail(token, to, subject, html), NET_MS, 'outlook send');
         return 'sent';
       }
     } catch (e) { outlookErr = String((e && e.message) || e).substring(0, 140); }
   }
   if (!env.RESEND_KEY) return 'error: ' + (outlookErr || 'email not configured (RESEND_KEY missing in Cloudflare env)');
   try {
-    const r = await fetch('https://api.resend.com/emails', {
+    spend(B, 1);
+    const r = await tfetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: env.RESEND_FROM || 'Tapugan Safety <onboarding@resend.dev>', to: [to], subject, html, text: subject + ' - ' + clean(row.loc, 60) + ': ' + clean(row.f, 200) + ' ' + APP_URL })
-    });
+    }, NET_MS);
     if (r.ok) return 'sent';
     const t = await r.text();
     // Resend's most common refusal, and the one that reads like a bug in us.
@@ -496,8 +624,8 @@ async function sendEmail(env, to, row, task, src) {
     // net._http_response in the SQL editor to find out what to do.
     if (r.status === 403 && /only send testing emails/i.test(t)) {
       const own = (t.match(/\(([^()\s]+@[^()\s]+)\)/) || [])[1] || '';
-      return 'error: Resend שולח רק אל ' + (own || 'כתובת החשבון')
-        + ' כל עוד אין דומיין מאומת. או לשים את הכתובת הזו כיעד, או לאמת דומיין ב-resend.com/domains ולהגדיר RESEND_FROM ב-Cloudflare';
+      return 'error: Resend \u05e9\u05d5\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc ' + (own || '\u05db\u05ea\u05d5\u05d1\u05ea \u05d4\u05d7\u05e9\u05d1\u05d5\u05df')
+        + ' \u05db\u05dc \u05e2\u05d5\u05d3 \u05d0\u05d9\u05df \u05d3\u05d5\u05de\u05d9\u05d9\u05df \u05de\u05d0\u05d5\u05de\u05ea. \u05d0\u05d5 \u05dc\u05e9\u05d9\u05dd \u05d0\u05ea \u05d4\u05db\u05ea\u05d5\u05d1\u05ea \u05d4\u05d6\u05d5 \u05db\u05d9\u05e2\u05d3, \u05d0\u05d5 \u05dc\u05d0\u05de\u05ea \u05d3\u05d5\u05de\u05d9\u05d9\u05df \u05d1-resend.com/domains \u05d5\u05dc\u05d4\u05d2\u05d3\u05d9\u05e8 RESEND_FROM \u05d1-Cloudflare';
     }
     return 'error: ' + (outlookErr ? outlookErr + ' / ' : '') + 'Resend ' + r.status + ' ' + t.substring(0, 160);
   } catch (e) {

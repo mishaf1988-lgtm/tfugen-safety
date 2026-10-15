@@ -108,7 +108,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   {
     // The Pages Function is not importable here; its norm is one expression.
     const src = require('fs').readFileSync(path.resolve(__dirname, '../../functions/api/trustee-notify.js'), 'utf8');
-    const m = src.match(/norm: \(r\) => (\(r\.s === 'נסגר'[^\n]*),\n/);
+    // The function writes its Hebrew as \uXXXX escapes (15/10/2026, rule 1).
+    const m = src.match(/norm: \(r\) => (\(r\.s === '\\u05e0\\u05e1\\u05d2\\u05e8'[^\n]*),\n/);
     check('trustee-notify labels a finding already closed', !!m, null);
     if (m) {
       const fn = eval('(r) => ' + m[1]);

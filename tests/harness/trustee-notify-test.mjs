@@ -6,15 +6,18 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 function world(opts) {
   const calls = [];
-  const st = { row: opts.row, nm: opts.nm, prefs: opts.prefs, signOk: opts.signOk, resendUnverified: opts.resendUnverified, claimed: false, dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
+  const st = { row: opts.row, nm: opts.nm, prefs: opts.prefs, signOk: opts.signOk, resendUnverified: opts.resendUnverified, claimed: false, cl: new Set(), dedicatedMissing: opts.dedicatedMissing !== false, metaFail: opts.metaFail, resendOk: opts.resendOk !== false, authOk: opts.authOk !== false, tasks: opts.tasks, tasksStatus: opts.tasksStatus };
   globalThis.fetch = async (url, init) => {
     const u = String(url); const method = (init && init.method) || 'GET'; const body = init && init.body ? JSON.parse(init.body) : null;
-    calls.push({ u, method, body, headers: init && init.headers });
+    calls.push({ u, method, body, headers: init && init.headers, signal: init && init.signal });
+    // the run is cut right after its claim (15/10/2026): nothing after it ever answers
+    if (st.cutNow) return new Promise(() => {});
     const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.startsWith(SB + '/auth/v1/user')) return json(st.authOk ? { id: 'u1', email: 'admin@tfugen.local', is_anonymous: false } : { error: 'bad' }, st.authOk ? 200 : 401);
     if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'GET') return json(st.row ? [st.row] : []);
-    if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH' && opts.lost) return json([{ id: 'x' }]);
-    if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; return json([{ id: st.row.id }]); }
+    // the sweep's claim of a listed row: once per id, like the real notified_at=is.null guard
+    if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH' && opts.lost) { const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); if (st.cl.has(id)) return json([]); st.cl.add(id); return json([{ id }]); }
+    if (u.startsWith(SB + '/rest/v1/trustee_reports?id=eq.') && method === 'PATCH') { if (st.claimed || !st.row || st.row.notified_at) return json([]); st.claimed = true; if (opts.cut) st.cutNow = true; return json([{ id: st.row.id }]); }
     // near_miss, added 2026-09-21. Same shape of read and claim, different
     // table and different column names -- which is the whole risk.
     if (u.startsWith(SB + '/rest/v1/near_miss?id=eq.') && method === 'GET') return json(st.nm ? [st.nm] : []);
@@ -28,16 +31,37 @@ function world(opts) {
       return json(t ? [{ t }] : []);
     }
     if (u.startsWith(SB + '/rest/v1/notification_prefs')) return json(st.prefs ? [{ prefs: st.prefs }] : []);
-    if (u.startsWith(SB + '/rest/v1/notifications_log')) { if (method === 'POST') (st.logs = st.logs || []).push(...body); return new Response('', { status: 201 }); }
+    if (u.startsWith(SB + '/rest/v1/notifications_log')) {
+      if (method === 'POST') { (st.logs = st.logs || []).push(...body); return new Response('', { status: 201 }); }
+      if (opts.logReadFail) return new Response('x', { status: 503 });
+      const ids = (decodeURIComponent(u).match(/payload->>id=in\.\(([^)]*)\)/) || [])[1];
+      const want = ids ? ids.split(',') : [];
+      return json((st.logs || []).filter((l) => l.payload && want.includes(String(l.payload.id))));
+    }
     // server_state: the retry map (upgrade review 10)
+    // server_state as PostgREST does it: ignore-duplicates keeps a row, and the
+    // lease (stateLock) is a PATCH guarded by "free or older than the lease".
     if (u.startsWith(SB + '/rest/v1/server_state')) {
       st.state = st.state || Object.assign({}, opts.state || {});
-      if (method === 'POST') { body.forEach((r) => { st.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      const prefer = String((init && init.headers && init.headers.Prefer) || '');
+      if (method === 'POST') { body.forEach((r) => { if (/ignore-duplicates/.test(prefer) && r.key in st.state) return; st.state[r.key] = r.value; }); return new Response(null, { status: 201 }); }
+      if (method === 'PATCH') {
+        const d = decodeURIComponent(u), key = (d.match(/key=eq\.([^&]+)/) || [])[1];
+        const cur = st.state[key], cut = (d.match(/value\.lt\."([^"]+)"/) || [])[1], tok = (d.match(/&value=eq\.([^&]+)/) || [])[1];
+        const hit = cut !== undefined ? (cur == null || cur === '' || cur < cut) : tok !== undefined ? cur === tok : true;
+        if (hit) st.state[key] = body.value;
+        return /return=representation/.test(prefer) ? json(hit ? [{ key }] : []) : new Response(null, { status: 204 });
+      }
       return json(Object.keys(st.state).map((k) => ({ key: k, value: st.state[k], updated_at: 'x' })));
     }
     // the sweep's lists of rows never notified
-    if (u.startsWith(SB + '/rest/v1/trustee_reports?ok=eq.false') && method === 'GET') return json(opts.lost || []);
-    if (u.startsWith(SB + '/rest/v1/near_miss?select=') && method === 'GET') return json(opts.lostNm || []);
+    // ...and the rows claimed but never logged (the stale-claim pass, 15/10/2026)
+    if (u.startsWith(SB + '/rest/v1/trustee_reports?ok=eq.false') && method === 'GET') return json(/notified_at=not\.is\.null/.test(u) ? (opts.stale || []) : (opts.lost || []).filter((r) => !st.cl.has(r.id)));
+    if (u.startsWith(SB + '/rest/v1/near_miss?select=') && method === 'GET') return json(/notified_at=not\.is\.null/.test(u) ? (opts.staleNm || []) : (opts.lostNm || []));
+    // Outlook (when the env has the OneDrive app): the token row, a refresh, Graph sendMail
+    if (u.startsWith(SB + '/rest/v1/oauth_tokens')) { if (method === 'GET') return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: opts.tokenExpired ? '2000-01-01T00:00:00Z' : new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]); return new Response(null, { status: 201 }); }
+    if (u.startsWith('https://login.microsoftonline.com/')) return json({ access_token: 'at2', refresh_token: 'rt2', expires_in: 3600 });
+    if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') { if (opts.outlookFail) return json({ error: { code: 'ErrorAccessDenied' } }, 403); (st.mails = st.mails || []).push(body); return new Response(null, { status: 202 }); }
     if (u.includes('graph.facebook.com')) {
       if (st.metaFail) return json({ error: { code: 190, message: 'Invalid OAuth access token' } }, 401);
       if (body.template.name === 'tfugen_safety_report' && st.dedicatedMissing) return json({ error: { code: 132001, message: 'Template name does not exist in the translation' } }, 404);
@@ -330,5 +354,121 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     w = world({ prefs: null });
     j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
     check('no recipient configured: nothing tried', j.skipped === 'no recipient configured', j); }
+
+  // 15/10/2026 (review: "no data that disappears"): the trigger hangs up at 8s,
+  // so the answer goes back right after the claim and the sending runs in
+  // waitUntil; a run cut even so is found by the sweep and sent again, once.
+  console.log('\n11. answer at once, send in waitUntil; a run cut after the claim is sent again');
+  { const envS = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec' }, hs = { 'x-notify-secret': 'nsec' };
+    const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+    let w = world({ row: fresh(), prefs: prefsOn });
+    const later = [];
+    let r = await onRequest({ request: req({ id: 'r1' }, hs), env: envS, waitUntil: (p) => later.push(p) });
+    let j = await r.json();
+    check('with waitUntil: 202 right after the claim, the sending handed to waitUntil', r.status === 202 && j.ok && j.accepted && later.length === 1 && w.st.claimed, [r.status, j, later.length]);
+    await Promise.all(later);
+    check('...and waitUntil sends and logs it', w.calls.some((c) => c.u.includes('graph.facebook.com')) && (w.st.logs || []).some((l) => l.channel === 'whatsapp' && l.payload.id === 'r1'), (w.st.logs || []).map((l) => l.channel));
+    // the cut: the claim is written, then nothing after it answers
+    w = world({ row: fresh(), prefs: prefsOn, cut: true });
+    const held = [];
+    r = await onRequest({ request: req({ id: 'r1' }, hs), env: envS, waitUntil: (p) => held.push(p) });
+    await new Promise((res) => setTimeout(res, 20));
+    check('cut after the claim: claimed, nothing sent, nothing logged, nothing noted', r.status === 202 && w.st.claimed && !w.calls.some((c) => /facebook|resend/.test(c.u)) && !(w.st.logs || []).length && !(w.st.state || {}).notify_fail, w.calls.map((c) => c.u));
+    // 6 minutes later: the row has notified_at, no log line, no fail-map entry
+    const claimedRow = Object.assign(fresh(), { notified_at: ago(6) });
+    w = world({ prefs: prefsOn, stale: [claimedRow] });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    const q = w.calls.find((c) => /trustee_reports\?ok=eq\.false&notified_at=not\.is\.null/.test(c.u));
+    check('the sweep’s third pass sends it again', j.tried === 1 && j.resent === 1 && j.sent === 1 && (w.st.logs || []).some((l) => l.channel === 'whatsapp' && l.payload.id === 'r1'), j);
+    check('...it asks only for rows claimed over 5 minutes ago, within the 48 h window', q && /notified_at=lt\./.test(q.u) && /ts=gte\./.test(q.u), q && q.u);
+    check('...and does not claim it again (it is already claimed)', !w.calls.some((c) => c.method === 'PATCH' && /trustee_reports/.test(c.u)), w.calls.filter((c) => c.method === 'PATCH').map((c) => c.u));
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('the next tick finds its log line and leaves it: sent once', j.tried === 0 && w.calls.filter((c) => c.u.includes('api.resend.com')).length === 1, j);
+    w = world({ prefs: prefsOn, stale: [claimedRow] });
+    w.st.logs = [{ event_type: 'trustee_hazard', channel: 'email', payload: { id: 'r1' } }];
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('a claimed row with a "sent" log line is never sent again', j.tried === 0, j);
+    w = world({ prefs: prefsOn, stale: [claimedRow] });
+    w.st.logs = [{ event_type: 'trustee_hazard', channel: 'capped', payload: { id: 'r1', n: 16 } }];
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('...nor one the daily cap held back', j.tried === 0, j);
+    w = world({ prefs: prefsOn, stale: [claimedRow], state: { notify_fail: JSON.stringify({ 'trustee_reports:r1': { tries: 1, last: ago(5) } }) } });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('...nor one on the fail map (that pass has its own 15-minute clock)', j.tried === 0, j);
+    w = world({ prefs: prefsOn, stale: [claimedRow], logReadFail: true });
+    j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
+    check('the log cannot be read: nothing is resent (no guessing)', j.tried === 0 && j.log_read_failed, j);
+  }
+
+  console.log('\n12. six alerts waiting: at most 50 subrequests a run, none lost, none twice');
+  { const envO = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec', ONEDRIVE_CLIENT_ID: 'cid', ONEDRIVE_CLIENT_SECRET: 'cs' }, hs = { 'x-notify-secret': 'nsec' };
+    const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+    // the heaviest path: dedicated template missing, photo signed, Outlook token
+    // expired (refresh) and Outlook refusing, so Resend as well
+    const six = [1, 2, 3, 4, 5, 6].map((i) => Object.assign(fresh(), { id: 'r' + i, ts: ago(10 + i) }));
+    const w = world({ prefs: prefsOn, lost: six, tokenExpired: true, outlookFail: true });
+    const per = [];
+    for (let run = 0; run < 6; run++) {
+      const n0 = w.calls.length;
+      const j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envO })).json();
+      per.push(w.calls.length - n0);
+      if (!j.tried) break;
+    }
+    const sentIds = (w.st.logs || []).filter((l) => l.channel === 'email').map((l) => l.payload.id);
+    check('no run makes more than 50 subrequests', per.every((n) => n <= 50), per);
+    check('all six are sent within a few ticks', six.every((r) => sentIds.includes(r.id)), sentIds);
+    check('...each exactly once', sentIds.length === 6 && new Set(sentIds).size === 6, sentIds);
+  }
+  { // a failure noted in a run is kept even when that run is cut later
+    const envS = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec' }, hs = { 'x-notify-secret': 'nsec' };
+    const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+    const two = [1, 2].map((i) => Object.assign(fresh(), { id: 'q' + i, ts: ago(10 + i), photo_url: null }));
+    const w = world({ prefs: prefsOn, lost: two, metaFail: true, resendOk: false });
+    // the second hazard's first Meta call never answers: the run dies there
+    let metaCalls = 0; const f0 = globalThis.fetch;
+    globalThis.fetch = (u, i) => { if (String(u).includes('graph.facebook.com') && ++metaCalls === 2) return new Promise(() => {}); return f0(u, i); };
+    onRequest({ request: req({ op: 'retry' }, hs), env: envS });
+    await new Promise((res) => setTimeout(res, 50));
+    globalThis.fetch = f0;
+    const m = JSON.parse((w.st.state || {}).notify_fail || '{}');
+    check('the fail map is written after each hazard, not only at the end of the run', m['trustee_reports:q1'] && m['trustee_reports:q1'].tries === 1, m);
+  }
+
+  console.log('\n13. two sweeps at once: one send');
+  { const envS = { ...env, TRUSTEE_NOTIFY_SECRET: 'nsec' }, hs = { 'x-notify-secret': 'nsec' };
+    const ago = (min) => new Date(Date.now() - min * 60000).toISOString();
+    const row0 = Object.assign(fresh(), { notified_at: ago(20) });
+    const w = world({ row: row0, prefs: prefsOn, state: { notify_fail: JSON.stringify({ 'trustee_reports:r1': { tries: 1, last: ago(16) } }) } });
+    const [a, b] = await Promise.all([onRequest({ request: req({ op: 'retry' }, hs), env: envS }), onRequest({ request: req({ op: 'retry' }, hs), env: envS })]);
+    const [ja, jb] = [await a.json(), await b.json()];
+    const mails = w.calls.filter((c) => c.u.includes('api.resend.com')).length;
+    check('the same due retry, two sweeps at once: one email, one WhatsApp', mails === 1 && (w.st.logs || []).filter((l) => l.channel === 'whatsapp').length === 1, [mails, ja, jb]);
+    check('...the second one says the lease was held', ja.busy === true || jb.busy === true, [ja, jb]);
+    check('...the entry is off the fail map and the lease is free again', !JSON.parse(w.st.state.notify_fail)['trustee_reports:r1'] && !w.st.state.notify_retry_lock, w.st.state);
+  }
+
+  console.log('\n13b. every outbound call of the function has a deadline');
+  { const w = world({ row: fresh(), prefs: prefsOn });
+    await onRequest({ request: req({ id: 'r1' }), env });
+    const own = w.calls.filter((c) => /\/rest\/v1\/(trustee_reports|near_miss|notification_prefs|notifications_log|trustee_tasks)|\/storage\/v1\/|graph\.facebook\.com|api\.resend\.com/.test(c.u));
+    check('DB, photo link, Meta and Resend calls all carry an AbortSignal', own.length >= 8 && own.every((c) => c.signal && typeof c.signal.aborted === 'boolean'), own.filter((c) => !c.signal).map((c) => c.u));
+  }
+  console.log('\n14. the date in the mail is DD/MM/YYYY');
+  { const w = world({ row: fresh(), prefs: prefsOn });
+    await onRequest({ request: req({ id: 'r1' }), env });
+    const resend = w.calls.find((c) => c.u.includes('api.resend.com'));
+    check('2026-09-19 is shown as 19/09/2026', resend && /19\/09\/2026/.test(resend.body.html) && !/2026-09-19/.test(resend.body.html), resend && resend.body.html.match(/<strong>[^<]*<\/strong> [^<]*2026[^<]*/));
+    const w2 = world({});
+    await onRequest({ request: req({ test: true, email: true, email_to: 'me@tapugan.co.il' }, { Authorization: 'Bearer good' }), env });
+    const e2 = w2.calls.find((c) => c.u.includes('api.resend.com'));
+    check('...and in the test mail too', e2 && /\d{2}\/\d{2}\/\d{4}/.test(e2.body.html) && !/\d{4}-\d{2}-\d{2}/.test(e2.body.html), e2 && e2.body.html.slice(0, 200));
+  }
+
+  console.log('\n15. no raw Hebrew in the JS strings of the function (repo rule 1)');
+  { const fs = await import('node:fs');
+    const src = fs.readFileSync(new URL('../../functions/api/trustee-notify.js', import.meta.url), 'utf8');
+    const bad = src.split('\n').map((l, i) => [i + 1, l]).filter(([, l]) => !/^\s*\/\//.test(l) && /[֐-׿]/.test(l.replace(/\s\/\/\s.*$/, '')));
+    check('no line of code carries a raw Hebrew character (comments may)', !bad.length, bad.slice(0, 3).map(([n]) => n));
+  }
   console.log('\n' + pass + ' passed, ' + fail + ' failed'); process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR', e); process.exit(2); });
