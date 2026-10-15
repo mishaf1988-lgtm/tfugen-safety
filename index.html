@@ -3813,6 +3813,15 @@ var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
 function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
+// A fetch with a time limit (15/10/2026, review of the trustee and sync paths). A request that
+// never settles on a dropped mobile connection kept _obBusy true (no send until a reload), held a
+// sync slot for ever, or left a trustee's photo on "uploading". An abort is a network error ('net').
+function _fetchT(url,opts,ms){
+  if(typeof AbortController==='undefined')return fetch(url,opts);
+  var ac=new AbortController(),o={};Object.keys(opts||{}).forEach(function(k){o[k]=opts[k];});o.signal=ac.signal;
+  var t=setTimeout(function(){try{ac.abort();}catch(e){}},ms||30000);
+  return fetch(url,o).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
+}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',toolbox_talks:'ts',toolbox_reads:'ts',train_plan:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
@@ -3847,7 +3856,7 @@ function _sbFetchAll(url,cap){
     if(cap&&to>cap-1)to=cap-1;
     var want=to-from+1;
     if(want<1)return Promise.resolve({ok:true,rows:rows});
-    return fetch(url,{headers:_sbRangeH(from,to),priority:'low'}).then(function(r){
+    return _fetchT(url,{headers:_sbRangeH(from,to),priority:'low'},30000).then(function(r){
       if(!r.ok)return {ok:false,status:r.status};
       return r.json().then(function(j){
         if(!Array.isArray(j))return {ok:false,status:r.status};
@@ -4035,7 +4044,7 @@ function _obSend(op){
     }
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
-    return fetch(url,opts).then(function(r){
+    return _fetchT(url,opts,30000).then(function(r){
       // ---- 5.2 ----
       // sbH() asks for return=representation, so PostgREST answers a PATCH or
       // DELETE that matched NOTHING with 200 and []. Nobody read the body, so
@@ -4093,6 +4102,16 @@ function _obSend(op){
             }
           }catch(e){}
         }
+        // An insert whose answer was lost already arrived (15/10/2026): its retry is an upsert, which
+        // needs the UPDATE right a trustee's session does not have, so it was refused every 30
+        // seconds for ever, and the red pill offered to clear the queue. If the row is there, done.
+        if(op.op==='ins'&&op.row&&op.row.id&&(r.status===401||r.status===403||r.status===409)){
+          return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id',{headers:sbH()},15000)
+            .then(function(g2){return g2.ok?g2.json():[];}).then(function(rows){
+              if(Array.isArray(rows)&&rows.length)return r;
+              var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
+            },function(x){if(x&&x.status)throw x;var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});
+        }
         var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
       });}
     });
@@ -4118,6 +4137,7 @@ function _obDrainOps(){
   var p=Promise.resolve();
   q.forEach(function(op){
     p=p.then(function(){
+      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
@@ -5219,6 +5239,9 @@ window._lockNow=function(){
   try{_lockWipeSensitive();}catch(e){}
   try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
+  // The queue waits for the next sign-in (15/10/2026): with SB_ON on, the 30-second send signed in
+  // anonymously and the manager's writes went out as anonymous, refused or matching 0 rows.
+  SB_ON=false;
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
   try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
@@ -21863,7 +21886,7 @@ window._truLogExportXlsx=function(){
 // fallback for while the server is not connected.
 var _truSrv=null,_truSrvAt=0,_truSrvBusy=false;
 function _truApi(path,body){
-  return fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})})
+  return _fetchT(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})},30000)
     .then(function(r){return r.json().catch(function(){return {error:'HTTP '+r.status};}).then(function(j){if(!r.ok&&!j.error)j.error='HTTP '+r.status;return j;});});
 }
 function _truSrvRefresh(force){
@@ -22324,7 +22347,7 @@ function _isMgrDevice(){try{return localStorage.getItem(MGR_DEVICE_KEY)==='1';}c
 function _empGateStored(){try{return localStorage.getItem(_EMP_GATE_KEY)||'';}catch(e){return '';}}
 function _empGateForget(){try{localStorage.removeItem(_EMP_GATE_KEY);}catch(e){}}
 function _empGateAsk(code){
-  return fetch('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
+  return _fetchT('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})},20000)
     .then(function(r){return r.json().catch(function(){return {};}).then(function(j){return {status:r.status,ok:r.ok,data:j};});});
 }
 function _empGateShow(){
@@ -24599,7 +24622,13 @@ function capDispatch(j){
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
 var _PHOTO_BUCKET='incidents-photos';
 function _imgCompress(file,maxPx,q,cb){
+  // A photo the phone cannot decode (HEIC from an Android gallery, a 40MB original out of memory)
+  // called nothing back: the slot stayed on «מעלה...» and the whole tour was blocked (15/10/2026).
+  // Now every way out answers once, with the original file when it cannot be shrunk.
+  var cb0=cb,once=false;cb=function(b,d){if(once)return;once=true;clearTimeout(tt);cb0(b,d);};
+  var fail=function(){cb(file,'');},tt=setTimeout(fail,20000);
   var r=new FileReader();
+  r.onerror=fail;
   r.onload=function(e){
     var img=new Image();
     img.onload=function(){
@@ -24608,8 +24637,9 @@ function _imgCompress(file,maxPx,q,cb){
       var c=document.createElement('canvas');c.width=w;c.height=h;
       // JPEG has no transparency: a transparent PNG (a signature, a logo) came out on black (15/10/2026). White first.
       var cx=c.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
-      c.toBlob(function(blob){cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);
+      try{c.toBlob(function(blob){if(!blob){fail();return;}cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);}catch(x){fail();}
     };
+    img.onerror=fail;
     img.src=e.target.result;
   };
   r.readAsDataURL(file);
@@ -24679,11 +24709,21 @@ function _attachRenderPending(areaId,blob,pid){
 
 // ---- offline photo queue: send ----
 // Runs at the head of every outbox drain.
+// Photos still in the phone's queue after the last send (pid -> 1). A NEW row that carries one of
+// them waits for it (15/10/2026): sent first, it could never be fixed, because the trustee's
+// anonymous session may insert but not update, and the photo was lost. A pid not in the queue any
+// more (cleared, over the cap) does not hold the row back: the report goes without the photo.
+var _phLeft={};
+function _obWaitsPhoto(op){
+  if(!op||op.op!=='ins'||!op.row)return false;
+  return Object.keys(op.row).some(function(k){var v=op.row[k];return typeof v==='string'&&v.indexOf(_PH_PREFIX)===0&&_phLeft[v.slice(_PH_PREFIX.length)];});
+}
 function _phDrain(){
   if(_phBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   return new Promise(function(res){
     _phAll(function(list){
       _phN=list.length;
+      _phLeft={};list.forEach(function(rec){if(rec&&rec.pid)_phLeft[rec.pid]=1;});
       if(!list.length){res();return;}
       _phBusy=true;
       var p=Promise.resolve();
@@ -24693,7 +24733,7 @@ function _phDrain(){
             try{
               _fileUpload(rec.blob,rec.prefix,function(url){
                 // No url means the connection is still down: leave it queued.
-                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);}
+                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);delete _phLeft[rec.pid];}
                 done();
               });
             }catch(e){done();}
@@ -24733,6 +24773,9 @@ function _phResolve(pid,url){
   });
   // And a form may still be open with this area attached.
   try{Object.keys(_attachUrls).forEach(function(a){if(_attachUrls[a]===token)_attachUrls[a]=url;});}catch(e){}
+  // ...and the trustee's saved draft (15/10/2026): restored after the app was killed, it still held
+  // the placeholder of a photo already uploaded and deleted from the queue, so nothing fixed it.
+  try{var _dr=localStorage.getItem(_TRU_DRAFT_KEY);if(_dr&&_dr.indexOf(token)>=0)localStorage.setItem(_TRU_DRAFT_KEY,_dr.split(JSON.stringify(token).slice(1,-1)).join(JSON.stringify(url).slice(1,-1)));}catch(e){}
   try{sdb();}catch(e){}
 }
 var _attachUrls={};  // keyed by areaId
@@ -26929,7 +26972,7 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     _sbAuth().then(function(){
       if(!_sbToken)throw new Error('no session');
-      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body});
+      return _fetchT(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body},45000);
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
@@ -26939,7 +26982,7 @@ function _fileUpload(file,prefix,cb){
       })
       .catch(function(e){cb(null,'net',e&&e.message);});
   }
-  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,'image/jpeg');});
+  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,blob===file?(file.type||'application/octet-stream'):'image/jpeg');});
   else doUpload(file,file.type||'application/octet-stream');
 }
 
