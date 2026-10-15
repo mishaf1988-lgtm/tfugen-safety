@@ -22,6 +22,7 @@
 | `push-recheck.py` | PostToolUse על Bash (`git push`) | **מזהיר** אם `lessons-format-test.py` אדום אחרי ה-push: `push-gate.py` רץ לפני הפקודה ולא רואה commit שנעשה באותה פקודה (05/10/2026). `push-recheck-test.py` |
 | `ci-wait.sh` | (כלי, לא hook) | מחכה לבדיקת `tests` על ה-head של branch (ב-`michael-skills`: `checks`, לפי הארגומנט השני, 07/10/2026). רק הריצה האחרונה של ה-sha קובעת, ו-cancelled לא נספרת (05/10/2026). `tests` של ריצה שעבודה שלה בוטלה נשאר "failure" ולא "cancelled": מזוהה לפי `check_suite` ומדולג, וכל עוד יש עבודה רצה ממשיכים לחכות (#1200). `ci-wait-test.py` (צריך `jq`) |
 | `checkout-guard.py` | PreToolUse על Bash | **חוסם** `git checkout`/`git restore` של קובץ (או `.`) שיש בו שינויים שלא נשמרו מול HEAD, ומפנה ל-`cp` לגיבוי ולחזרה. החלפת branch, `-b`/`-B` ו-`restore --staged` עוברים. לקח 26 חזר פעמיים ב-08/10/2026, ושוב ב-12/10/2026 (הפניית פלט כמו `2>/dev/null` נקראה כשם branch; מאז מסוננת). `checkout-guard-test.py` |
+| `pkill-guard.py` | PreToolUse על Bash | **חוסם** `pkill -f` (תופס את ה-shell שמריץ אותו, exit 144) ו-`pgrep -f` בתוך לולאת `while`/`until` (הלולאה מוצאת את עצמה ולא נגמרת). עוברים: תבנית עם סוגריים (`pkill -f '[r]un.sh'`), kill לפי PID, ו-pkill/pgrep בלי `-f`. לקח 39 חזר פעמיים (05/10, 10/10/2026), BACKLOG 13.19. `pkill-guard-test.py` |
 | `live-check.py` | PreToolUse על `AskUserQuestion` | **חוסם פעם אחת** שאלון שאומר שמשהו "הקיים/הקיימת" או "כבר קיים/עובד/רץ/מחובר", עם הוראה לבדוק מול המערכת החיה (מסד, הרשאות הטוקן, Graph, `get_trigger`). אותה שאלה בפעם השנייה עוברת. לקח 61 חזר 4 פעמים (08/10/2026: "סריקת המייל הקיימת", מושבתת מ-27/09). `live-check-test.py` |
 | `raw-hebrew.py` | PostToolUse על Edit/Write | **מזהיר** (לא חוסם) כשעריכה של `index.html` הוסיפה שורות עברית גולמית בתוך `<script>` לעומת HEAD |
 
@@ -60,3 +61,11 @@ echo '{"tool_input":{"command":"bash tests/harness/run.sh"}}' | python3 .claude/
 
 בדיקה של ה-hook עצמו: מוסיפים שורת `var x='שלום';` ל-`index.html`, מריצים את
 `raw-hebrew.py` עם הנתיב, ומקבלים אזהרה עם `+1`. `git checkout index.html` מחזיר.
+
+## hook חדש על פקודת Bash
+
+לנתח את הפקודה כמילים של shell (`shlex` עם `punctuation_chars`), לא regex על הטקסט הגולמי.
+ב-15/10/2026 `pkill-guard.py` בגרסה הראשונה חסם את ה-commit שלו עצמו: הודעת ה-commit
+הכילה את המילים שהוא מחפש. טקסט במירכאות (הודעת commit, `echo`) וגוף של heredoc (קובץ
+או סקריפט שנכתב) הם נתונים, לא פקודה; `$(...)` בתוך מירכאות כפולות כן פקודה.
+בבדיקה: מקרה של הודעת commit ושל heredoc שמכילים את התבנית, ושבירה מכוונת לכל אחד.
