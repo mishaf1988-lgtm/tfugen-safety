@@ -165,13 +165,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         seen.push({ m: (o && o.method) || 'GET', pref: (o && o.headers && o.headers.Prefer) || '' });
         return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve([{ id: 'n1' }]), text: () => Promise.resolve('') });
       };
-      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n1', d: 'x' }, tries: 3 }).then(function () { return seen; });
+      _verSet('ncr', 'n1', null);  // 15/10/2026: only an unguarded op, after 3 answers of 0 rows (not 3 network errors)
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n1', d: 'x' }, tries: 3, zeroTries: 3 }).then(function () { return seen; });
     });
     check('after three refusals the row is put back as an upsert, not queued for ever', upsert[0].m === 'POST' && /merge-duplicates/.test(upsert[0].pref), upsert);
 
     const stillRefused = await page.evaluate(() => {
       window.fetch = function () { return Promise.resolve({ ok: false, status: 403, text: () => Promise.resolve('{"message":"new row violates row-level security policy"}') }); };
-      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n1' }, tries: 5 }).then(function () { return 'ok'; }, function (e) { return e.status; });
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n1' }, tries: 5, zeroTries: 5 }).then(function () { return 'ok'; }, function (e) { return e.status; });
     });
     check('...and if RLS is what refuses, the upsert is refused too and the op stays visible', stillRefused === 403, stillRefused);
 

@@ -4018,14 +4018,18 @@ function _obSend(op){
     // A conflict is not a transport failure, so it is never \u05e9\u05d5\u05e0\u05d4 away by the
     // upsert fallback: that would be the silent overwrite this fix exists to
     // stop. Only the user, through \u00ab\u05d4\u05e9\u05d0\u05e8 \u05d0\u05ea \u05e9\u05dc\u05d9\u00bb, clears a guard.
-    var asUpsert=(op.op==='upd'&&(op.tries||0)>=3&&!op.conflict&&op.row&&op.row.id);
+    // 15/10/2026: the guard is decided first. _verOf moves forward with every save of ours that
+    // lands; op.base is the version the edit was made against, for after a restart. An op with a
+    // version is NEVER sent as an upsert, and only answers of 0 rows count toward the upsert
+    // (zeroTries): 90 seconds of weak signal used to turn a guarded edit into an overwrite.
+    var _v=(op.op==='upd'&&op.row&&op.row.id)?(_verOf(op.tbl,op.row.id)||op.base||null):null;
+    var asUpsert=(op.op==='upd'&&!_v&&(op.zeroTries||0)>=3&&!op.conflict&&op.row&&op.row.id);
     if(op.op==='ins'||asUpsert){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
     else if(op.op==='upd'){
       url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);
       // Guard on the version the server last gave us. A row we have never
       // pulled (created offline, never synced) has none, and then this
       // behaves exactly as it did before.
-      var _v=_verOf(op.tbl,op.row.id);
       if(_v){url+='&'+_verCol()+'=eq.'+encodeURIComponent(_v);op._guarded=1;}
       opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);
     }
@@ -4117,7 +4121,9 @@ function _obDrainOps(){
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
-        op.conflict=!!(err&&err.conflict);
+        // Once a conflict, a conflict until the person decides (a network error after it used to clear it).
+        op.conflict=!!(op.conflict||(err&&err.conflict));
+        if(err&&err.zeroRows&&!err.conflict)op.zeroTries=(op.zeroTries||0)+1;
         op.lastError=(err&&err.conflict?'\u05d4\u05ea\u05e0\u05d2\u05e9\u05d5\u05ea':(err&&err.status?('HTTP '+err.status):'net'))+(err&&err.body?(' '+String(err.body).slice(0,200)):'');
         op.lastTs=Date.now();
         lastErr={tbl:op.tbl,op:op.op,status:err&&err.status,body:err&&err.body?String(err.body).slice(0,300):'',ts:Date.now()};
@@ -4176,7 +4182,9 @@ function _viewBlock(){
   return true;
 }
 function sbIns(tbl,row){if(_viewBlock())return;_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);_obPush({op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+// base: the server version this edit was made against, kept ON the op (15/10/2026). _rowVer lives in
+// memory only, so after a restart a queued offline edit had no guard at all and overwrote newer work.
+function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);var _b=_verOf(tbl,row.id);_obPush(_b?{op:'upd',tbl:tbl,row:row,base:_b}:{op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
 function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
@@ -4225,12 +4233,14 @@ function _verCol(){return 'ts';}
 function _verOf(t,id){return (_rowVer[t]&&_rowVer[t][id])||null;}
 function _verSet(t,id,v){if(!id)return;if(!_rowVer[t])_rowVer[t]={};if(v)_rowVer[t][id]=v;else delete _rowVer[t][id];}
 // The user chose \u00abmine wins\u00bb: drop the guard for this row so the retry lands.
-window._verForce=function(t,id){_verSet(t,id,null);if(typeof _obDrain==='function')_obDrain();};
+window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id)delete op.base;});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
 function _sbMergePull(t,rows,obBefore){
   var _vc=_verCol();
-  (rows||[]).forEach(function(r){if(r&&r.id)_verSet(t,r.id,r[_vc]||null);});
   var ob=obBefore||{},obNow=_obLocalState(t);
   Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
+  // A row with an edit still queued keeps the version the edit was made against (15/10/2026):
+  // recording the server's newer one here made the queued PATCH match it and overwrite.
+  (rows||[]).forEach(function(r){if(r&&r.id&&!ob[r.id])_verSet(t,r.id,r[_vc]||null);});
   var local={};
   (DB[t]||[]).forEach(function(r){if(r&&r.id)local[r.id]=r;});
   var merged=[],seen={};
@@ -4364,6 +4374,13 @@ var _rtPending=null,_rtChangedTbls={};
 function _rtApply(tbl,payload){
   if(!DB[tbl])DB[tbl]=[];
   var ev=payload.eventType,nr=payload.new,or_=payload.old;
+  // A row with an edit of ours still queued is not replaced (the edit would vanish from the screen,
+  // and a second edit from the server copy would undo the first); the rest record their version.
+  if((ev==='INSERT'||ev==='UPDATE')&&nr&&nr.id){
+    var _pend=false;try{_pend=_obGet().concat(_obMem).some(function(op){return op&&op.tbl===tbl&&op.op!=='del'&&op.row&&op.row.id===nr.id;});}catch(e){}
+    if(_pend)return;
+    try{if(nr[_verCol()])_verSet(tbl,nr.id,nr[_verCol()]);}catch(e){}
+  }
   if(ev==='INSERT'&&nr&&nr.id){
     if(DB[tbl].some(function(r){return r.id===nr.id;}))return;
     DB[tbl].unshift(nr);
@@ -4517,7 +4534,7 @@ function syncDiag(){
       +'\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05dc\u05da (\u05d3\u05d5\u05e8\u05e1 \u05d0\u05ea \u05d4\u05e9\u05e0\u05d9\u05d9\u05d4).\n'
       +'\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e9\u05dc\u05da \u05d5\u05dc\u05e7\u05d1\u05dc \u05d0\u05ea \u05de\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.';
     if(confirm(msg)){
-      conf.forEach(function(op){op.conflict=false;_verSet(op.tbl,op.row.id,null);});
+      conf.forEach(function(op){op.conflict=false;delete op.base;_verSet(op.tbl,op.row.id,null);});
       _obSet(q);_obDrain();
     }else{
       var keep=q.filter(function(op){return conf.indexOf(op)<0;});
