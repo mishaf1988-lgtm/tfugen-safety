@@ -44,7 +44,9 @@ function sbH(env, extra) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   return { apikey: k, Authorization: 'Bearer ' + k, ...(extra || {}) };
 }
-function newId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 6); }
+// The closure report of a finding: 'cl-' + the finding id + the Israel date.
+// Still a valid link id ([A-Za-z0-9_-]) and never "th-" (not a tour hazard).
+export function closureId(findingId, day) { return 'cl-' + findingId + '-' + String(day || todayIL()).replace(/-/g, ''); }
 function todayIL() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); }
 
 // The token sits in the URL: no referrer, no cache, no index, no framing.
@@ -180,11 +182,18 @@ async function closeHazardPost(env, tok, id, form) {
   const note = clean(form.get('note'), 300);
   if (!who) return formPage(tok, h, '\u05e6\u05e8\u05d9\u05da \u05dc\u05de\u05dc\u05d0 \u05de\u05d9 \u05d8\u05d9\u05e4\u05dc.', who, note);
   const photo = await uploadPhoto(env, id, form.get('photo'), 'thz-link-');
+  // return=representation (15/10/2026): when the hazard was closed between the
+  // read above and this PATCH (in the app, or by a second tap), the s=neq guard
+  // matches 0 rows. The page must then say "already closed", not "closed now",
+  // since this name, note and photo were not stored.
   const up = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=neq.' + encodeURIComponent(S_H_CLOSED), {
-    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
     body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: note || null, after_photo_url: photo.url }),
   });
   if (!up.ok) return formPage(tok, h, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + up.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
+  let changed = null;
+  try { changed = await up.json(); } catch (e) { changed = null; }
+  if (Array.isArray(changed) && changed.length === 0) return alreadyClosed(h);
   await notifyManager(env, h, who, note, !!photo.url);
   return page('\u2705 \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8', details(h)
     + '<p><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + '<br>' + (photo.url ? '\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4.' : esc(photo.note || '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.')) + '</p>'
@@ -232,13 +241,19 @@ export async function onRequest({ request, env }) {
   if (!who) return formPage(tok, f, '\u05e6\u05e8\u05d9\u05da \u05dc\u05de\u05dc\u05d0 \u05de\u05d9 \u05d8\u05d9\u05e4\u05dc.', who, note);
 
   const photo = await uploadPhoto(env, f.id, form.get('photo'));
+  // A fixed id per finding and day (15/10/2026): the page has no script (CSP),
+  // so a double tap on a weak signal sends two POSTs that both pass the
+  // "already closed" check above before either PATCH. With ignore-duplicates
+  // the second insert is a no-op, and so is a retry after "partly saved"; the
+  // PATCH below then runs and the retry ends in success. The day keeps a later
+  // closure after the manager reopened the finding as its own report.
   const rep = {
-    id: newId(), u: who, t: TASK_CLOSE, d: todayIL(), ok: true, ref: f.id,
+    id: closureId(f.id), u: who, t: TASK_CLOSE, d: todayIL(), ok: true, ref: f.id,
     loc: f.loc || null, location_id: f.location_id || null, tour: f.tour || null,
     f: note || null, photo_url: photo.url,
     mgr_note: '\u05e0\u05e1\u05d2\u05e8 \u05de\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc',
   };
-  const ins = await fetch(SB + '/rest/v1/trustee_reports', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rep) });
+  const ins = await fetch(SB + '/rest/v1/trustee_reports?on_conflict=id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rep) });
   if (!ins.ok) return formPage(tok, f, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + ins.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
   const up = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(f.id) + '&s=neq.' + encodeURIComponent(S_CLOSED), {
     method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED }),
