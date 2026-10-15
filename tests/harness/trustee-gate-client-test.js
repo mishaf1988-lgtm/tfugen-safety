@@ -38,10 +38,14 @@ window.supabase = { createClient: function () { return { auth: {
     await p.addInitScript((a) => {
       try {
         localStorage.removeItem(a.empKey); localStorage.removeItem(a.codeKey);
+        // A fresh phone: never accepted, nothing waiting to be sent (15/10/2026).
+        localStorage.removeItem('tfgn_emp_ok_at'); localStorage.removeItem('tfgn_tru_draft_v1'); localStorage.removeItem('tfgn_outbox');
+        if (a.okAt) localStorage.setItem('tfgn_emp_ok_at', String(Date.now() - a.okAt));
+        if (a.draft) localStorage.setItem('tfgn_tru_draft_v1', '{"ts":1}');
         if (a.emp) localStorage.setItem(a.empKey, '1');
         if (a.stored) localStorage.setItem(a.codeKey, a.stored);
       } catch (e) {}
-    }, { empKey: EMP_KEY, codeKey: CODE_KEY, emp: !!o.emp, stored: o.stored || '' });
+    }, { empKey: EMP_KEY, codeKey: CODE_KEY, emp: !!o.emp, stored: o.stored || '', okAt: o.okAt || 0, draft: !!o.draft });
     await p.route('**/*', async (r) => {
       const u = r.request().url();
       if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: SRC });
@@ -51,6 +55,10 @@ window.supabase = { createClient: function () { return { auth: {
         let sent = null; try { sent = JSON.parse(r.request().postData() || '{}').code; } catch (e) {}
         gateCalls.push(sent);
         if (o.server === 'down') return r.abort();
+        // A geo-block page, a Cloudflare error, the lock after too many guesses.
+        if (o.server === 'html403') return r.fulfill({ status: 403, contentType: 'text/html', body: '<html><body>Access denied</body></html>' });
+        if (o.server === '500') return r.fulfill({ status: 502, contentType: 'text/html', body: '<html>Bad gateway</html>' });
+        if (o.server === 'locked') return r.fulfill({ status: 429, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'locked', message: 'יותר מדי ניסיונות. נסה שוב בעוד שעה.' }) });
         if (o.server === 'unset') return r.fulfill({ status: 503, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'not configured', message: 'הקוד עדיין לא הוגדר' }) });
         if (o.server === 'wrong' || sent !== 'RIGHT') return r.fulfill({ status: 403, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ error: 'wrong code', message: 'קוד שגוי' }) });
         return r.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: JSON.stringify({ ok: true, remember: o.allowRemember !== false, allowRemember: o.allowRemember !== false }) });
@@ -305,6 +313,87 @@ window.supabase = { createClient: function () { return { auth: {
     // whose state says dashboard: rDash renders, the back arrow stays hidden.
     const nav = await p.evaluate(() => ({ cur: CUR, onDash: document.body.classList.contains('on-dash'), flag: localStorage.getItem('tfgn_emp_mode') }));
     check('...and the page state is the dashboard again, kiosk flag gone', nav.cur === 'dash' && nav.onDash && nav.flag === null, nav);
+    await p.close();
+  }
+
+  console.log('\n9. only "wrong code" is a wrong code (15/10/2026, B2)');
+  {
+    // A remembered code and a server that cannot decide: a geo-block page, a
+    // Cloudflare 5xx. These used to sign the phone out and show «קוד שגוי».
+    for (const sv of ['html403', '500']) {
+      const p = await open({ emp: true, stored: 'RIGHT', server: sv });
+      await p.waitForTimeout(300);
+      const s = await state(p);
+      check(sv + ' with a remembered code: let in, code kept', s.gate === 'none' && s.app === 'block' && s.stored === 'RIGHT', s);
+      await p.close();
+    }
+    const p1 = await open({ emp: true, server: 'html403' });
+    await type(p1, 'RIGHT');
+    const s1 = await state(p1);
+    check('typed code, geo-block page, phone never accepted: "no connection", not "wrong code"', s1.gate !== 'none' && /חיבור/.test(s1.err) && !/שגוי/.test(s1.err), s1.err);
+    await p1.close();
+    const p2 = await open({ emp: true, server: 'locked' });
+    await type(p2, 'RIGHT');
+    const s2 = await state(p2);
+    check('429: the lock message, not "wrong code"', /ניסיונות/.test(s2.err) && !/שגוי/.test(s2.err), s2.err);
+    await p2.close();
+    const p3 = await open({ emp: true, stored: 'RIGHT', server: 'locked' });
+    await p3.waitForTimeout(300);
+    const s3 = await state(p3);
+    check('429 on a remembered code: asked, with the lock message, and the code is kept', s3.gate !== 'none' && /ניסיונות/.test(s3.err) && s3.stored === 'RIGHT', s3);
+    await p3.close();
+  }
+
+  console.log('\n10. a dead zone after iOS killed the app (B1)');
+  {
+    const p = await open({ emp: true, server: 'down', okAt: 60 * 60 * 1000 });
+    await type(p, 'anything');
+    const s = await state(p);
+    check('accepted an hour ago, no signal: let in', s.gate === 'none' && s.app === 'block', s);
+    check('...and the code itself was never written down', !s.stored, s.stored);
+    await p.close();
+    const p2 = await open({ emp: true, server: 'down', okAt: 13 * 60 * 60 * 1000 });
+    await type(p2, 'anything');
+    const s2 = await state(p2);
+    check('accepted 13 hours ago, no signal: not let in, told why', s2.gate !== 'none' && /חיבור/.test(s2.err), s2);
+    await p2.close();
+    const p2b = await open({ emp: true, server: '500', okAt: 60 * 60 * 1000 });
+    await type(p2b, 'anything');
+    const s2b = await state(p2b);
+    check('accepted an hour ago, the server answers 5xx: let in as well', s2b.gate === 'none' && s2b.app === 'block', s2b);
+    await p2b.close();
+    const p3 = await open({ emp: true, server: 'down', draft: true });
+    await type(p3, 'anything');
+    const s3 = await state(p3);
+    check('a tour draft waiting on the phone: let in to send it', s3.gate === 'none' && s3.app === 'block', s3);
+    await p3.close();
+    const p4 = await open({ emp: true, server: 'ok' });
+    await type(p4, 'RIGHT');
+    const at = await p4.evaluate(() => parseInt(localStorage.getItem('tfgn_emp_ok_at') || '0', 10));
+    check('a code the server accepts stores when, not what', at > Date.now() - 60000 && !(await state(p4)).stored, at);
+    await p4.close();
+    // The phone knows it is offline: no code screen at all.
+    const p5 = await open({ emp: true, tap: false, server: 'down', okAt: 60 * 60 * 1000 });
+    await p5.context().setOffline(true);
+    await p5.evaluate(() => doEmpLogin());
+    await p5.waitForTimeout(300);
+    const s5 = await state(p5);
+    await p5.context().setOffline(false);
+    check('offline and accepted an hour ago: the trustee button goes straight in', s5.gate === 'none' && s5.app === 'block' && s5.emp, s5);
+    await p5.close();
+  }
+
+  console.log('\n11. Enter on the code field submits (A5)');
+  {
+    const p = await open({ emp: true, server: 'ok' });
+    await p.fill('#emp-gate-code', 'RIGHT');
+    await p.press('#emp-gate-code', 'Enter');
+    await p.waitForTimeout(300);
+    const s = await state(p);
+    check('Enter / Go on the keyboard enters', s.gate === 'none' && s.app === 'block', s);
+    // Codes are letters and digits since 10/10/2026 (codes.js pwOk): a numeric keypad would lock them out.
+    const im = await p.evaluate(() => document.getElementById('emp-gate-code').getAttribute('inputmode'));
+    check('...and the keyboard stays a text keyboard: codes have letters', im === 'text', im);
     await p.close();
   }
 

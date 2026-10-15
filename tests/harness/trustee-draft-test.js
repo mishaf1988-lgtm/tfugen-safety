@@ -95,7 +95,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('and the one real photo is still attached (the empty slots are not photos)', back.photos === 1 && back.photoVal === 'pending:blob-abc', back);
   }
 
-  console.log('\n3. declining throws it away for good');
+  console.log('\n3. declining starts a clean tour, and keeps the old one until the new one has content (15/10/2026)');
   {
     await boot();
     await fillTour();
@@ -105,7 +105,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     await page.waitForTimeout(150);
     const after = await state();
     check('saying no starts a clean tour', after.tasks.length === 0, after);
-    check('and the draft is deleted, so it is not offered again', (await savedDraft()) === null);
+    // A mis-tap on Cancel used to delete the tour for good.
+    check('the draft is kept: Cancel on the question no longer deletes it', (await savedDraft()) !== null);
   }
 
   console.log('\n4. a draft is never offered for the wrong thing');
