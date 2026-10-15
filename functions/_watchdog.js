@@ -19,17 +19,22 @@
 //   * the daily Vitre refresher import (vitre.js op:'sync', 06:00) that failed,
 //     or that has not run for 26 hours.
 //   * the database slow for an hour in working hours (15/10/2026, Michael: "that
-//     it works as smoothly as possible for the workers"): each tick times three
-//     small reads (probe), keeps the median of the last LAT_KEEP ticks, and a
-//     median over SLOW_MS on SLOW_TICKS ticks in a row between 06:00 and 18:00
-//     Israel time is a problem. The free Supabase server answered 2-10 seconds
-//     at times on 15/10/2026, at night too; this is how Michael hears of it
-//     before a worker does, and how the Pro decision gets its numbers.
+//     it works as smoothly as possible for the workers"): a sample times three
+//     small reads (probe), keeps the median of the last LAT_KEEP samples, and a
+//     median over SLOW_MS on SLOW_TICKS samples in a row, the oldest of them at
+//     least SLOW_SPAN_MS old, is a problem. It OPENS only between 06:00 and 18:00
+//     Israel time; once open it stays open while the samples stay slow, so the
+//     evening does not mail "back to normal". The free Supabase server answered
+//     2-10 seconds at times on 15/10/2026, at night too; this is how Michael
+//     hears of it before a worker does, and how the Pro decision gets its numbers.
+//     op:'watch' runs on EVERY hazard-file call, not every 15 minutes, so a
+//     sample is taken only when the last one is LAT_GAP_MS old (review
+//     15/10/2026: four samples in two minutes mailed "slow for an hour").
 // The mail goes out through the same Microsoft connection, so when that
 // connection is what broke, the mail cannot go: the app shows the same list
 // on the home screen (op:'status' -> watch), and says so when this check
 // itself has not run for 45 minutes.
-import { stateGet, stateSet, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
+import { stateGet, stateSet, stateLock, stateUnlock, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
 
 export const WATCH_KEY = 'sync_watch';
 // The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
@@ -37,8 +42,11 @@ export const FILE_ROWS = 205, FULL_WARN = 164;
 export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 * 60 * 1000;
 // The Vitre import runs once a day; a day and two hours without a run = the cron stopped.
 export const VITRE_KEY = 'vitre_sync', VITRE_STALE_MS = 26 * 60 * 60 * 1000;
-// The database speed check: ms for the median of 3 reads, an hour of slow ticks, 2 hours kept.
-export const SLOW_MS = 1000, SLOW_TICKS = 4, LAT_KEEP = 8, PROBE_MS = 10000, WORK_H = [6, 18];
+// The database speed check: ms for the median of 3 reads, 4 slow samples spanning 45 minutes
+// (an hour of slowness, give or take a sample), one sample per 10 minutes at most, 8 kept.
+export const SLOW_MS = 1000, SLOW_TICKS = 4, LAT_KEEP = 8, PROBE_MS = 4000, WORK_H = [6, 18];
+export const LAT_GAP_MS = 10 * 60 * 1000, SLOW_SPAN_MS = 45 * 60 * 1000;
+export const WATCH_LOCK = 'sync_watch_lock', WATCH_LEASE_MS = 120000;
 // Microsoft's answer when the client secret expired or was replaced.
 export const SECRET_RE = /AADSTS7000222|AADSTS7000215|invalid_client/;
 export const PARTS = [
@@ -73,30 +81,38 @@ export function ilHour(ms) {
   return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms));
 }
 const median = (a) => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
-// Pure. lat = [{at, ms}] oldest first, ms = the median of one tick. A problem when the
-// last SLOW_TICKS ticks are all slow and the last one is in working hours.
-export function slowIssue(lat, nowMs) {
+// Pure. lat = [{at, ms}] oldest first, ms = the median of one sample. A problem when the
+// last SLOW_TICKS samples are all slow and the oldest of them is SLOW_SPAN_MS old. It opens
+// only in working hours; wasOpen (it is open already) keeps it open after 18:00 while slow.
+export function slowIssue(lat, nowMs, wasOpen) {
   const last = (lat || []).slice(-SLOW_TICKS);
   if (last.length < SLOW_TICKS || last.some((x) => !(x && x.ms > SLOW_MS))) return null;
+  if (!(nowMs - (Date.parse(last[0].at) || nowMs) >= SLOW_SPAN_MS)) return null;
   const h = ilHour(nowMs);
-  if (h < WORK_H[0] || h >= WORK_H[1]) return null;
+  if (!wasOpen && (h < WORK_H[0] || h >= WORK_H[1])) return null;
   const ms = median(last.map((x) => x.ms));
   return { key: 'slow', title: '\u05d4\u05de\u05e1\u05d3 \u05d0\u05d9\u05d8\u05d9 \u05db\u05d1\u05e8 \u05e9\u05e2\u05d4', detail: '\u05d1\u05e7\u05e9\u05d4 \u05e7\u05d8\u05e0\u05d4 \u05dc\u05de\u05e1\u05d3 \u05dc\u05d5\u05e7\u05d7\u05ea \u05db-' + (ms / 1000).toFixed(1) + ' \u05e9\u05e0\u05d9\u05d5\u05ea (\u05d4\u05e8\u05d2\u05d9\u05dc: \u05e4\u05d7\u05d5\u05ea \u05de-0.2). \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e2\u05dc \u05d4\u05d3\u05e8\u05db\u05d4 \u05d0\u05d5 \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05de\u05e8\u05d2\u05d9\u05e9\u05d9\u05dd \u05ea\u05e7\u05d9\u05e2\u05d5\u05ea. \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05e9\u05db\u05d9\u05d7\u05d4: \u05d4\u05e9\u05e8\u05ea \u05d4\u05d7\u05d9\u05e0\u05de\u05d9 \u05e9\u05dc Supabase.' };
 }
-// Three small reads, one after the other; the median ms. A read that fails fast still
-// counts its time (the server answered); one that hangs counts PROBE_MS.
+// Three small reads at once; { ms: the median, fail: reads that threw }. An answer, even an
+// error status, counts its time (the server answered). A read that hangs counts PROBE_MS.
+// A read that THROWS at once (connection refused, DNS) also counts PROBE_MS, not its 5ms:
+// for a worker a database that cannot be reached is the worst case, not a fast one. It is
+// counted apart in `fail`, so the numbers kept for the Pro decision say which it was.
 export async function probe(env) {
   const url = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/locations?select=id&limit=1';
   const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY };
-  const out = [];
-  for (let i = 0; i < 3; i++) {
-    const t = Date.now(), ac = new AbortController(), to = setTimeout(() => ac.abort(), PROBE_MS);
+  let fail = 0;
+  const one = async () => {
+    const t = Date.now();
     let r = null;
-    try { r = await fetch(url, { headers: h, signal: ac.signal }); out.push(Date.now() - t); } catch (e) { out.push(PROBE_MS); }
+    try { r = await fetch(url, { headers: h, signal: AbortSignal.timeout(PROBE_MS) }); }
+    catch (e) { if (!(e && (e.name === 'TimeoutError' || e.name === 'AbortError'))) fail++; return PROBE_MS; }
+    const ms = Date.now() - t;
     try { if (r && r.body) await r.body.cancel(); } catch (e) {} // the answer is not needed, only its time
-    clearTimeout(to);
-  }
-  return median(out);
+    return ms;
+  };
+  const out = await Promise.all([one(), one(), one()]);
+  return { ms: median(out), fail };
 }
 
 export function stateKeys() {
@@ -110,7 +126,7 @@ export function stateKeys() {
 // started = when the watchdog first ran (a part with no ok_at yet gets an
 // hour from then, since ok_at is new with this change); vitre = the Vitre keys
 // are set, so the daily import is expected.
-export function assess(st, nowMs, connected, started, vitre, lat) {
+export function assess(st, nowMs, connected, started, vitre, lat, slowOpen) {
   const v = (k) => (st[k] && st[k].value) || '';
   const at = (k) => (st[k] && st[k].at) || '';
   const out = [];
@@ -137,7 +153,7 @@ export function assess(st, nowMs, connected, started, vitre, lat) {
     if (r && r.error) out.push({ key: 'vitre:err', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05e9\u05d2\u05d9\u05d0\u05d4', detail: String(r.error).substring(0, 200) + when });
     else if (nowMs - (last || Date.parse(started) || nowMs) >= VITRE_STALE_MS) out.push({ key: 'vitre:stale', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05dc\u05d0 \u05e8\u05e5', detail: (last ? '\u05d4\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(last).toISOString()) + '. ' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e8\u05d9\u05e6\u05d4. ') + '\u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d0\u05de\u05d5\u05e8 \u05dc\u05e8\u05d5\u05e5 \u05db\u05dc \u05d1\u05d5\u05e7\u05e8 \u05d1-06:00.' });
   }
-  const slow = slowIssue(lat, nowMs);
+  const slow = slowIssue(lat, nowMs, slowOpen);
   if (slow) out.push(slow);
   FILES.forEach(([f, name]) => {
     // 80% full (upgrade review 24): a month or two before it stops.
@@ -185,18 +201,43 @@ export function mailSubject(fresh, done, open) {
   return 'Tapugan Safety: \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3' + (Object.keys(open).length ? ' (\u05d7\u05dc\u05e7\u05d9\u05ea)' : '');
 }
 
+// One run at a time (15/10/2026): op:'watch' rides every hazard-file call, so two could read
+// the same state and both mail. A run that finds the lock held does nothing.
 export async function runWatch(env, appUrl) {
+  const tok = await stateLock(env, WATCH_LOCK, WATCH_LEASE_MS);
+  if (!tok) return { ok: true, busy: true };
+  try { return await watchOnce(env, appUrl); } finally { await stateUnlock(env, WATCH_LOCK, tok); }
+}
+async function watchOnce(env, appUrl) {
   const now = new Date(), nowIso = now.toISOString();
-  const st = await stateGet(env, stateKeys()).catch(() => ({}));
+  // Strict reads (15/10/2026): a failed read used to look like "no state", so it wiped
+  // sync_watch, forgot which problems were mailed and mailed them again. Now it writes nothing.
+  let st;
+  try { st = await stateGet(env, stateKeys(), true); } catch (e) { return { ok: false, error: 'state read failed: ' + String((e && e.message) || e).substring(0, 120) }; }
   let prev = null; try { prev = JSON.parse((st[WATCH_KEY] && st[WATCH_KEY].value) || 'null'); } catch (e) { prev = null; }
-  let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) { row = null; }
+  // tokenRow throws only when the read failed (no row = null): not the same as "not connected".
+  let row = null;
+  try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) { return { ok: false, error: 'token read failed: ' + String((e && e.message) || e).substring(0, 120) }; }
   const connected = !!(row && row.refresh_token);
   const started = (prev && prev.started) || nowIso;
-  let ms = null; try { ms = await probe(env); } catch (e) { ms = null; }
-  const lat = (((prev && prev.lat) || []).concat(ms == null ? [] : [{ at: nowIso, ms }])).slice(-LAT_KEEP);
-  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat);
+  // A sample only when the last one is LAT_GAP_MS old: the ticks are not 15 minutes apart.
+  const prevLat = (prev && Array.isArray(prev.lat)) ? prev.lat : [];
+  const lastAt = prevLat.length ? Date.parse(prevLat[prevLat.length - 1].at) || 0 : 0;
+  let ms = null, sample = null;
+  if (now.getTime() - lastAt >= LAT_GAP_MS) {
+    try { const p = await probe(env); ms = p.ms; sample = p.fail ? { at: nowIso, ms, fail: p.fail } : { at: nowIso, ms }; } catch (e) { sample = null; }
+  }
+  const lat = prevLat.concat(sample ? [sample] : []).slice(-LAT_KEEP);
+  const slowOpen = !!(prev && prev.open && prev.open.slow);
+  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat, slowOpen);
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;
+  // The samples are saved before the mail (15/10/2026): a mail step that hangs or dies must
+  // not lose them. Nothing is marked mailed yet, so a run that dies here mails next time.
+  if (sample && (s.fresh.length || s.done.length)) {
+    const pre = Object.assign({}, prev || {}, { at: nowIso, started, lat });
+    await stateSet(env, { [WATCH_KEY]: JSON.stringify(pre) }).catch(() => {});
+  }
   if ((s.fresh.length || s.done.length) && connected && hasMail(row)) {
     try {
       const { token, email } = await accessToken(env);

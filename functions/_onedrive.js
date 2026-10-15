@@ -42,6 +42,14 @@ export function hasMailRead(row) { return !!(row && /(^|\s)Mail\.Read(\s|$)/i.te
 export function hasMail(row) { return !!(row && /(^|\s)Mail\.Send(\s|$)/i.test(String(row.scope || ''))); }
 const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 
+// Time limits (15/10/2026, owner: "no hang"). Every fetch in this file carries
+// one (tests/harness/onedrive-timeout-test.mjs). An abort throws, and every
+// path here already throws or answers 'open'/{} on a failed fetch.
+export const SB_MS = 10000;      // Supabase REST
+export const GRAPH_MS = 20000;   // Graph and the Microsoft token endpoint
+export const PUT_MS = 30000;     // a file upload (the hazard workbook, the trustee log with photos)
+const tmo = (ms) => AbortSignal.timeout(ms);
+
 export function odConfigured(env) {
   return !!(env.ONEDRIVE_CLIENT_ID && env.ONEDRIVE_CLIENT_SECRET && env.SUPABASE_SERVICE_ROLE_KEY);
 }
@@ -65,7 +73,7 @@ function sb(env) {
 // strict (12/10/2026, the weekly digest): a failed read throws instead of looking like "no rows".
 export async function stateGet(env, keys, strict) {
   const s = sb(env);
-  const r = await fetch(s.url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: s.h });
+  const r = await fetch(s.url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: s.h, signal: tmo(SB_MS) });
   if (!r.ok) { if (strict) throw new Error('server_state HTTP ' + r.status); return {}; }
   const rows = await r.json();
   const out = {};
@@ -76,11 +84,14 @@ export async function stateSet(env, obj) {
   const s = sb(env);
   const now = new Date().toISOString();
   const rows = Object.keys(obj).map((k) => ({ key: k, value: obj[k] === null ? null : String(obj[k]), updated_at: now }));
-  await fetch(s.url + '/rest/v1/server_state?on_conflict=key', {
+  const r = await fetch(s.url + '/rest/v1/server_state?on_conflict=key', {
     method: 'POST',
     headers: { ...s.h, Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(rows),
+    signal: tmo(SB_MS),
   });
+  // 15/10/2026: a refused write used to pass in silence (callers .catch() it).
+  if (!r.ok) throw new Error('server_state write HTTP ' + r.status);
 }
 
 // A lease in server_state, so two runs never write the same file at once
@@ -94,9 +105,9 @@ export async function stateLock(env, key, leaseMs) {
   const s = sb(env);
   const now = Date.now(), iso = new Date(now).toISOString(), cutoff = new Date(now - leaseMs).toISOString();
   try {
-    await fetch(s.url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...s.h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify([{ key, value: '', updated_at: iso }]) });
+    await fetch(s.url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...s.h, Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify([{ key, value: '', updated_at: iso }]), signal: tmo(SB_MS) });
     const r = await fetch(s.url + '/rest/v1/server_state?key=eq.' + encodeURIComponent(key) + '&or=' + encodeURIComponent('(value.is.null,value.eq."",value.lt."' + cutoff + '")'),
-      { method: 'PATCH', headers: { ...s.h, Prefer: 'return=representation' }, body: JSON.stringify({ value: iso, updated_at: iso }) });
+      { method: 'PATCH', headers: { ...s.h, Prefer: 'return=representation' }, body: JSON.stringify({ value: iso, updated_at: iso }), signal: tmo(SB_MS) });
     if (!r.ok) return 'open';
     const rows = await r.json();
     return Array.isArray(rows) && rows.length ? iso : null;
@@ -106,7 +117,7 @@ export async function stateUnlock(env, key, token) {
   if (!token || token === 'open') return;
   const s = sb(env);
   await fetch(s.url + '/rest/v1/server_state?key=eq.' + encodeURIComponent(key) + '&value=eq.' + encodeURIComponent(token),
-    { method: 'PATCH', headers: { ...s.h, Prefer: 'return=minimal' }, body: JSON.stringify({ value: '', updated_at: new Date().toISOString() }) }).catch(() => {});
+    { method: 'PATCH', headers: { ...s.h, Prefer: 'return=minimal' }, body: JSON.stringify({ value: '', updated_at: new Date().toISOString() }), signal: tmo(SB_MS) }).catch(() => {});
 }
 
 // One run of fn per name at a time. A run that finds it busy leaves a mark
@@ -130,7 +141,7 @@ export async function runLeased(env, name, leaseMs, fn, depth) {
 // ---- token store: public.oauth_tokens ----
 export async function tokenRow(env) {
   const s = sb(env);
-  const r = await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&select=user_email,refresh_token,access_token,expires_at,scope,updated_at&order=updated_at.desc&limit=1', { headers: s.h });
+  const r = await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&select=user_email,refresh_token,access_token,expires_at,scope,updated_at&order=updated_at.desc&limit=1', { headers: s.h, signal: tmo(SB_MS) });
   if (!r.ok) throw new Error('token store read failed (' + r.status + ')');
   const rows = await r.json();
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -147,11 +158,12 @@ export async function saveTokens(env, email, t) {
     updated_at: new Date().toISOString(),
   };
   // One connected account at a time: a new sign-in replaces the old one.
-  await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&user_email=neq.' + encodeURIComponent(row.user_email), { method: 'DELETE', headers: s.h });
+  await fetch(s.url + '/rest/v1/oauth_tokens?provider=eq.' + PROVIDER + '&user_email=neq.' + encodeURIComponent(row.user_email), { method: 'DELETE', headers: s.h, signal: tmo(SB_MS) });
   const r = await fetch(s.url + '/rest/v1/oauth_tokens?on_conflict=provider,user_email', {
     method: 'POST',
     headers: { ...s.h, Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify(row),
+    signal: tmo(SB_MS),
   });
   if (!r.ok) throw new Error('token store write failed (' + r.status + ')');
 }
@@ -163,7 +175,7 @@ async function tokenCall(env, params) {
     scope: SCOPES,
     ...params,
   });
-  const r = await fetch(tokenUrl(env), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+  const r = await fetch(tokenUrl(env), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, signal: tmo(GRAPH_MS) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) {
     const why = (j && (j.error_description || j.error)) || ('HTTP ' + r.status);
@@ -197,7 +209,7 @@ export async function accessToken(env) {
 export async function putFile(token, folder, name, bytes, type) {
   const seg = String(folder || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
   const url = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '/' + encodeURIComponent(name) + ':/content';
-  const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type || 'application/octet-stream' }, body: bytes });
+  const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type || 'application/octet-stream' }, body: bytes, signal: tmo(PUT_MS) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg = (j && j.error && (j.error.message || j.error.code)) || '';
@@ -211,7 +223,7 @@ export async function putFile(token, folder, name, bytes, type) {
 // webUrl of a folder (or file) by path; null when it is not there.
 export async function itemUrl(token, path) {
   const seg = String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
-  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=webUrl', { headers: { Authorization: 'Bearer ' + token } });
+  const r = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + seg + '?select=webUrl', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
   if (!r.ok) return null;
   const j = await r.json().catch(() => ({}));
   return j.webUrl || null;
@@ -232,6 +244,7 @@ export async function sendMailTo(token, to, cc, subject, html, attachments) {
       message: Object.assign({ subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: list(to), ccRecipients: list(cc) }, attachments && attachments.length ? { attachments } : {}),
       saveToSentItems: false,
     }),
+    signal: tmo(GRAPH_MS),
   });
   if (r.status === 202 || r.ok) return true;
   const j = await r.json().catch(() => ({}));
@@ -248,6 +261,7 @@ export async function sendMail(token, to, subject, html) {
       message: { subject: String(subject || '').substring(0, 240), body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: to } }] },
       saveToSentItems: false,
     }),
+    signal: tmo(GRAPH_MS),
   });
   if (r.status === 202 || r.ok) return true;
   const j = await r.json().catch(() => ({}));

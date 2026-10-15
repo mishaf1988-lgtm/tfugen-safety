@@ -31,7 +31,13 @@ function world(o) {
         if (w.reports.some((x) => x.id === row.id)) { if (/resolution=ignore-duplicates/.test(prefer)) { w.ignored++; return new Response(null, { status: 201 }); } return json({ code: '23505' }, 409); }
         w.reports.push({ ...row, s: 'תקין' }); return new Response(null, { status: 201 });
       }
-      if (m === 'PATCH') { w.patches.push({ u, body: JSON.parse(body) }); if (w.patchFails > 0) { w.patchFails--; return new Response('x', { status: 503 }); } const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); const r = w.reports.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(body)); return new Response(null, { status: 204 }); }
+      // PATCH as PostgREST does it: the s=neq guard, and the changed rows back with return=representation
+      if (m === 'PATCH') {
+        w.patches.push({ u, body: JSON.parse(body), prefer }); if (w.patchFails > 0) { w.patchFails--; return new Response('x', { status: 503 }); }
+        const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]), neq = (u.match(/s=neq\.([^&]+)/) || [])[1];
+        const r = w.reports.find((x) => x.id === id && (neq === undefined || x.s !== decodeURIComponent(neq))); if (r) Object.assign(r, JSON.parse(body));
+        return /return=representation/.test(prefer) ? json(r ? [r] : []) : new Response(null, { status: 204 });
+      }
       if (o.readFail) return new Response('x', { status: 503 });
       const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
       const out = JSON.parse(JSON.stringify(w.reports.filter((r) => r.id === id)));
@@ -62,10 +68,10 @@ function world(o) {
   return w;
 }
 const get = (k, env) => onRequest({ request: new Request(URL0 + '?k=' + encodeURIComponent(k)), env: env || ENV });
-function post(fields, env) {
+function post(fields, env, waitUntil) {
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
-  return onRequest({ request: new Request(URL0, { method: 'POST', body: fd }), env: env || ENV });
+  return onRequest(Object.assign({ request: new Request(URL0, { method: 'POST', body: fd }), env: env || ENV }, waitUntil ? { waitUntil } : {}));
 }
 
 (async () => {
@@ -233,7 +239,24 @@ function post(fields, env) {
     check('the closure row id is fixed: cl- + the finding id + the day', w.inserts[0].id === w.inserts[1].id && /^cl-mudmp1oysfpo-\d{8}$/.test(w.inserts[0].id), w.inserts.map((x) => x.id));
     check('the id is valid for a link and never a tour hazard id', /^[A-Za-z0-9_-]{1,64}$/.test(w.inserts[0].id) && !/^th-/.test(w.inserts[0].id));
     check('insert uses on_conflict=id with resolution=ignore-duplicates', w.insertReqs.every((q) => /\?on_conflict=id$/.test(q.u) && /resolution=ignore-duplicates/.test(q.prefer)), w.insertReqs);
-    check('both pages say closed, the finding is closed', r1.status === 200 && r2.status === 200 && h1.includes('הליקוי נסגר') && h2.includes('הליקוי נסגר') && w.reports[0].s === 'נסגר');
+    // 15/10/2026: the PATCH asks for the changed row, so only one of the two
+    // may say "closed" and mail the manager; the other says "already closed".
+    const done = [h1, h2].filter((h) => h.includes('\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8')), already = [h1, h2].filter((h) => h.includes('\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05db\u05d1\u05e8 \u05e0\u05e1\u05d2\u05e8'));
+    check('double tap: one page says closed, the other says already closed; the finding is closed', r1.status === 200 && r2.status === 200 && done.length === 1 && already.length === 1 && w.reports[0].s === 'נסגר', [h1.slice(0, 200), h2.slice(0, 200)]);
+    check('double tap: ONE "closed" mail to the manager, not two', w.mails.length === 1, w.mails.length);
+    check('the finding PATCH asks for return=representation', w.patches.length === 2 && w.patches.every((p) => /return=representation/.test(p.prefer)), w.patches.map((p) => p.prefer));
+  }
+  {
+    // the page does not wait on Graph: the mail goes to waitUntil
+    const w = world(); const held = [];
+    const r = await post({ k: tok, who: 'דנה' }, ENV, (p) => held.push(p)); const h = await r.text();
+    check('with waitUntil: the page answers before the mail is sent, the mail is handed to waitUntil', h.includes('\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8') && held.length === 1, held.length);
+    await Promise.all(held);
+    check('...and waitUntil sends it', w.mails.length === 1, w.mails.length);
+    const w2 = world(); const held2 = [];
+    const htok = await makeCloseToken(ENV, H1.id);
+    await post({ k: htok, who: 'ויטלי' }, ENV, (p) => held2.push(p)); await Promise.all(held2);
+    check('the tour hazard mail goes the same way', held2.length === 1 && w2.mails.length === 1, [held2.length, w2.mails.length]);
   }
   {
     const w = world({ patchFails: 1 });

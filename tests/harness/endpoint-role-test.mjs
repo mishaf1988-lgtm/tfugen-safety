@@ -30,9 +30,9 @@ function world(o) {
   globalThis.fetch = async (url, init) => {
     const u = String(url);
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });
-    if (u.startsWith(SB + '/auth/v1/user')) return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true });
-    if (u.startsWith(SB + '/rest/v1/app_users')) return json(o.row ? [o.row] : []);
-    if (u.includes('graph.facebook.com')) { w.metaSent = true; return json({ messages: [{ id: 'wamid' }] }); }
+    if (u.startsWith(SB + '/auth/v1/user')) { w.authSignal = !!(init && init.signal); if (o.authThrow) throw new TypeError('network'); if (o.authStatus) return json({ msg: 'x' }, o.authStatus); return json(o.email ? { id: 'u1', email: o.email, is_anonymous: false } : { id: 'a', is_anonymous: true }); }
+    if (u.startsWith(SB + '/rest/v1/app_users')) { w.roleSignal = !!(init && init.signal); if (o.roleThrow) throw new TypeError('network'); if (o.roleStatus) return json({ msg: 'x' }, o.roleStatus); return json(o.row ? [o.row] : []); }
+    if (u.includes('graph.facebook.com')) { w.metaSent = true; w.metaSignal = !!(init && init.signal); return json(o.metaReply || { messages: [{ id: 'wamid' }] }, o.metaStatus || 200); }
     if (u.includes('api.anthropic.com') || u.includes('/ai/run') || u.includes('gateway.ai')) { w.aiCalled = true; return json({ content: [{ text: 'ok' }] }); }
     if (u.includes('api.resend.com')) { w.resendCalled = true; return json({ id: 'em' }); }
     return json({}, 200);   // trustee-notify's PostgREST reads, taskName, etc.
@@ -44,7 +44,7 @@ const call = async (fn, body) => {
     method: 'POST', headers: { origin: ORIGIN, authorization: 'Bearer tok', 'content-type': 'application/json' },
     body: JSON.stringify(body) }), env: ENV });
   let j = null; try { j = await r.json(); } catch (e) {}
-  return { status: r.status, json: j };
+  return { status: r.status, json: j, ctype: r.headers.get('content-type') };
 };
 // "gate passed" = the request was NOT turned away for who the caller is. A 400
 // (bad body) or 500 (missing downstream) past the gate still counts as passed.
@@ -117,6 +117,34 @@ const TEST_NOTIFY = { test: true, whatsapp_to: '972501234567', email_to: 'x@y.co
       tools: [{ name: 'web_search', type: 'web_search_20250305' }], tool_choice: { type: 'any' }, mcp_servers: [{ url: 'https://evil.example' }] });
     check('the request still goes out with model, max_tokens and messages', !!sent && sent.model === 'claude-haiku-4-5' && sent.max_tokens === 10 && Array.isArray(sent.messages), sent);
     check('tools, tool_choice and mcp_servers are dropped', !!sent && !('tools' in sent) && !('tool_choice' in sent) && !('mcp_servers' in sent), sent && Object.keys(sent));
+  }
+
+  console.log('\n6. an upstream that is down is 502, not "invalid session" or "insufficient role" (15/10/2026)');
+  {
+    let w = world({ ...MANAGER, authStatus: 503 }); let r = await call(waSend, WA);
+    check('/auth/v1/user answers 503: 502 "auth check failed", nothing sent', r.status === 502 && /auth check failed/.test(r.json.error) && !w.metaSent, r);
+    w = world({ ...MANAGER, authThrow: true }); r = await call(waSend, WA);
+    check('/auth/v1/user throws (timeout, network): 502', r.status === 502 && !w.metaSent, r);
+    w = world({ ...MANAGER, authStatus: 401 }); r = await call(waSend, WA);
+    check('/auth/v1/user answers 401: still 401 "invalid session token"', r.status === 401 && /invalid session token/.test(r.json.error), r);
+    w = world({ ...MANAGER, authStatus: 403 }); r = await call(waSend, WA);
+    check('...403 from auth (a bad token) is still 401', r.status === 401, r);
+    w = world({ ...MANAGER, roleStatus: 500 }); r = await call(waSend, WA);
+    check('the role read answers 500: 502 "role check failed", not 403', r.status === 502 && /role check failed/.test(r.json.error) && !w.metaSent, r);
+    w = world({ ...MANAGER, roleThrow: true }); r = await call(waSend, WA);
+    check('the role read throws: 502, not 403', r.status === 502 && !w.metaSent, r);
+    w = world({ email: 'nobody@tfugen.local', row: null }); r = await call(waSend, WA);
+    check('no app_users row (a real answer): still 403 "insufficient role"', denied(r) && !w.metaSent, r);
+    w = world(MANAGER); r = await call(waSend, WA);
+    check('both reads carry a time limit (AbortSignal)', w.authSignal === true && w.roleSignal === true, w);
+  }
+
+  console.log('\n7. wa-send answers in UTF-8, with a time limit on Meta (15/10/2026)');
+  {
+    const w = world({ ...MANAGER, metaReply: { error: { message: 'שגיאה' } }, metaStatus: 400 });
+    const r = await call(waSend, WA);
+    check('Meta\'s answer passes through with its status and charset=utf-8 (Safari)', r.status === 400 && /charset=utf-8/i.test(r.ctype || '') && r.json.error.message === 'שגיאה', r);
+    check('the Meta call carries a time limit', w.metaSignal === true, w);
   }
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
