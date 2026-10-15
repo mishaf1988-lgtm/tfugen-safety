@@ -155,6 +155,10 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     check('a תקין report is never sent', j.skipped === 'not a hazard' && !w.calls.some(c => /facebook|resend/.test(c.u)), j); }
   { const w = world({ row: Object.assign(fresh(), { ts: '2026-01-01T00:00:00Z' }), prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
     check('an old row (replayed webhook) is not sent', j.skipped === 'too old', j); }
+  { const w = world({ row: Object.assign(fresh(), { ts: '2026-01-01T00:00:00Z', received_at: new Date().toISOString() }), prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
+    check('a report the server just received is sent even when the phone says it is old (queue of days, wrong clock: received_at)', !j.skipped && w.calls.some(c => /facebook|resend/.test(c.u)), j); }
+  { const w = world({ row: Object.assign(fresh(), { received_at: '2026-01-01T00:00:00Z' }), prefs: prefsOn }); const j = await (await onRequest({ request: req({ id: 'r1' }), env })).json();
+    check('...and a row the server received long ago is too old, whatever the phone says', j.skipped === 'too old', j); }
   { const w = world({ row: null, prefs: prefsOn }); const r = await onRequest({ request: req({ id: 'nope' }), env }); check('unknown id → 404', r.status === 404); }
   { const r = await onRequest({ request: req({}), env }); check('missing id → 400', r.status === 400); }
   { const r = await onRequest({ request: req({ id: 'r1;drop' }), env }); check('odd id characters → 400', r.status === 400); }
@@ -344,7 +348,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     w = world({ prefs: prefsOn, lost: [lost] });
     j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
     const q = w.calls.find((c) => c.u.includes('trustee_reports?ok=eq.false'));
-    check('a finding the trigger never delivered (notified_at empty, 3 min to 48 h old): claimed and sent', j.tried === 1 && j.sent === 1 && q && /notified_at=is\.null/.test(q.u) && /ts=gte\./.test(q.u) && /ts=lte\./.test(q.u) && w.calls.some((c) => c.method === 'PATCH' && /id=eq\.r7&notified_at=is\.null/.test(c.u)), [j, q && q.u]);
+    check('a finding the trigger never delivered (notified_at empty, 3 min to 48 h old): claimed and sent', j.tried === 1 && j.sent === 1 && q && /notified_at=is\.null/.test(q.u) && /received_at=gte\./.test(q.u) && /received_at=lte\./.test(q.u) && w.calls.some((c) => c.method === 'PATCH' && /id=eq\.r7&notified_at=is\.null/.test(c.u)), [j, q && q.u]);
     w = world({ prefs: prefsOn });
     let res = await onRequest({ request: req({ op: 'retry' }), env: envS });
     check('retry without the secret: 403', res.status === 403);
@@ -380,7 +384,7 @@ const prefsOn = { trustee_hazard: { whatsapp: true, whatsapp_to: '972-50-1234567
     j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
     const q = w.calls.find((c) => /trustee_reports\?ok=eq\.false&notified_at=not\.is\.null/.test(c.u));
     check('the sweep’s third pass sends it again', j.tried === 1 && j.resent === 1 && j.sent === 1 && (w.st.logs || []).some((l) => l.channel === 'whatsapp' && l.payload.id === 'r1'), j);
-    check('...it asks only for rows claimed over 5 minutes ago, within the 48 h window', q && /notified_at=lt\./.test(q.u) && /ts=gte\./.test(q.u), q && q.u);
+    check('...it asks only for rows claimed over 5 minutes ago, within the 48 h window', q && /notified_at=lt\./.test(q.u) && /received_at=gte\./.test(q.u), q && q.u);
     check('...and does not claim it again (it is already claimed)', !w.calls.some((c) => c.method === 'PATCH' && /trustee_reports/.test(c.u)), w.calls.filter((c) => c.method === 'PATCH').map((c) => c.u));
     j = await (await onRequest({ request: req({ op: 'retry' }, hs), env: envS })).json();
     check('the next tick finds its log line and leaves it: sent once', j.tried === 0 && w.calls.filter((c) => c.u.includes('api.resend.com')).length === 1, j);

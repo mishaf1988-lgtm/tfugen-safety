@@ -107,7 +107,7 @@ const TASKS = {
 // table entry rather than a hunt through the delivery code.
 const SOURCES = {
   trustee_reports: {
-    select: 'id,u,t,d,loc,f,ok,s,photo_url,ts,notified_at',
+    select: 'id,u,t,d,loc,f,ok,s,photo_url,ts,received_at,notified_at',
     // Only a ליקוי is a hazard. A clean check is the trustee doing the job.
     skipReason: (r) => (r.ok === false ? null : 'not a hazard'),
     // One shape for the delivery code: who reported, where, what.
@@ -127,7 +127,7 @@ const SOURCES = {
     footer: '\u05e0\u05e9\u05dc\u05d7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05e9\u05e0\u05d0\u05de\u05df \u05e9\u05d5\u05de\u05e8 \u05dc\u05d9\u05e7\u05d5\u05d9. \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: \u05de\u05d5\u05d3\u05d5\u05dc\u05d9\u05dd > \u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',
   },
   near_miss: {
-    select: 'id,rep,descr,area,sev,typ,d,s,photo_url,ts,notified_at',
+    select: 'id,rep,descr,area,sev,typ,d,s,photo_url,ts,received_at,notified_at',
     // Every near-miss is worth knowing about the moment it is filed. There is
     // no "clean" near-miss to filter out.
     skipReason: () => null,
@@ -220,7 +220,10 @@ export async function onRequest(context) {
   const skip = src.skipReason(raw);
   if (skip) return jsonResp({ ok: true, skipped: skip }, 200, cors);
   if (raw.notified_at) return jsonResp({ ok: true, skipped: 'already notified' }, 200, cors);
-  const age = Date.now() - Date.parse(raw.ts || 0);
+  // The age counts from when the server got the report (received_at, 15/10/2026),
+  // not from the phone's clock: a report that waited days in the phone's queue,
+  // or a phone set to a wrong date, still reaches the manager.
+  const age = Date.now() - Date.parse(raw.received_at || raw.ts || 0);
   if (!(age < MAX_AGE_MS)) return jsonResp({ ok: true, skipped: 'too old' }, 200, cors);
   const row = src.norm(raw);
 
@@ -365,14 +368,14 @@ async function sweepOnce(env, serviceKey, B) {
   };
   const read = async (q) => { try { const r = await sb(q); const j = r.ok ? await r.json() : []; return Array.isArray(j) ? j : []; } catch (e) { return []; } };
   // 1. never delivered: the trigger's call did not arrive, or failed before the claim.
-  const win = '&ts=gte.' + encodeURIComponent(since) + '&ts=lte.' + encodeURIComponent(until) + '&order=ts.asc';
+  const win = '&received_at=gte.' + encodeURIComponent(since) + '&received_at=lte.' + encodeURIComponent(until) + '&order=received_at.asc';
   const lost = (await read('trustee_reports?ok=eq.false&notified_at=is.null' + win + '&limit=' + MAX_RETRY_RUN + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
     .concat((await read('near_miss?select=' + SOURCES.near_miss.select + '&notified_at=is.null' + win + '&limit=' + MAX_RETRY_RUN)).map((r) => ['near_miss', r]));
   // 3. claimed and never sent: the run that claimed it was cut before it
   // logged anything (15/10/2026). Claimed over 5 minutes ago, no fail-map entry,
   // and no log line that says it was dealt with.
   const stale = '&notified_at=not.is.null&notified_at=lt.' + encodeURIComponent(new Date(now - STALE_CLAIM_MS).toISOString())
-    + '&ts=gte.' + encodeURIComponent(since) + '&order=ts.asc&limit=' + STALE_LIMIT;
+    + '&received_at=gte.' + encodeURIComponent(since) + '&order=received_at.asc&limit=' + STALE_LIMIT;
   let claimed = (await read('trustee_reports?ok=eq.false' + stale + '&select=' + SOURCES.trustee_reports.select)).map((r) => ['trustee_reports', r])
     .concat((await read('near_miss?select=' + SOURCES.near_miss.select + stale)).map((r) => ['near_miss', r]))
     .filter(([k, r]) => r && r.id && r.notified_at && !/[^A-Za-z0-9_-]/.test(r.id) && !m[k + ':' + r.id]);
