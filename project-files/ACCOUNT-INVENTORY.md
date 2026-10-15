@@ -23,6 +23,7 @@
 | `trig_01PgHBDZYCBf8M9GsytoVMjd` | מסמכים חדשים בתיקיית הבטיחות | 2 לחודש 07:12 | `routine-od-scan.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01ELCjhJydNgjT9obYdDqnSu` | נוסח החוקים בנבו | 3 לחודש 07:22 | `routine-nevo-versions.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01AXicpR2Gn4DgterKACQ56A` | מגמות מנתוני המפעל | 4 לחודש 07:34 | `routine-factory-trends.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
+| `trig_01UvD1ZgRH4tatvZTSEd8YWS` | המפקח המדומה | 5 לחודש 07:46 | `routine-inspector.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01SogHpEgS3nkMoworDxmfTh` | מעקב הצעות מחיר | מוצ"ש 22:47 | `routine-quotes.md` | `session_012U83ozxzQjH8BcQ2AvykSf` |
 | `trig_01DskPcZDAt1uAjsZgPyWkam` | חוקר העוזר | א'-ה' 06:47 | `routine-researcher.md` | `session_019o8PKShtacN2m1BCbYdnQj` |
 | `trig_01EDtjPSEhnt86YLLNFwxxm9` | רטרו יומי | א'-ה' 07:52 | `retro-prompt.md` | `session_019o8PKShtacN2m1BCbYdnQj` |

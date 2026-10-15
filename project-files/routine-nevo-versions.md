@@ -23,5 +23,14 @@ select value from public.server_state where key = 'nevo_versions';
 insert into public.server_state(key, value, updated_at) values ('nevo_versions', '<JSON>', now()) on conflict (key) do update set value = excluded.value, updated_at = now();
 ובדוק בקריאה חוזרת שהערך נשמר.
 5. אם changed לא ריק: פתח שיחה-בת: create_session (מ-ToolSearch, "create_session") עם source_url https://github.com/mishaf1988-lgtm/michael-skills, model claude-sonnet-5-5, ופרומפט: "כל הודעה בעברית. קרא את proposals/README.md. ב-plugins/michael/skills/michael-assistant/references/law.md, בסעיף 'ממצאים שנבדקו', הוסף לכל חוק שורה: '<היום DD/MM/YYYY>, נבו: <שם החוק> התעדכן, נוסח עדכני נכון ליום <new> (היה <old>). מה השתנה לא נקרא; לפתוח את הדף לפני הסתמכות. <src_url>' (רק תוספות, לא לשכתב ולא למחוק). העלה באחד את שורת 'גרסה: DD/MM/YYYY (N)' ב-SKILL.md של העוזר, והוסף שורה בראש 'היסטוריית גרסאות'. הרץ python3 .github/scripts/account-skill-test.py. branch routine/nevo-versions-YYYY-MM-DD, commit, push, PR עם שורות 'רטרו:' ו-'skill:'. חכה שבדיקת checks ב-PR תהיה ירוקה, ומזג ל-main (מיכאל 07/10/2026: מיזוג בלי אישור שלו). אם מיזוג דרך כלי GitHub נחסם: git checkout main, git merge --ff-only, git push origin main. בסוף: מספר ה-PR והגרסה החדשה." עם השורות עצמן בתוך הפרומפט. חכה לה: get_session כל כמה דקות עד שהיא לא עובדת (עד 30 דקות), ואז list_events (kinds ["result"]).
-6. הודעה אחרונה: כמה חוקים נבדקו, כמה נכשלו (ושמותיהם), אילו התעדכנו, וקישור ל-PR אם נפתח.
+5א. שרשרת ההשפעה (15/10/2026, מיכאל "עשה" על רעיון 6 ב-ideas-lab.md): לכל חוק ב-changed, אחרי שהשיחה-הבת סיימה:
+   א. WebFetch על src_url עם prompt: "List the section numbers and one-line subjects of what changed in the latest version (תיקון), with the amendment date. Quote the section titles exactly. If the page does not say what changed, return UNKNOWN." בלי השלמה מהזיכרון.
+   ב. איפה החוק נוגע אצלנו. חפש את שם החוק (s) ואת מספרי הסעיפים:
+      - בקוד: grep -n על שם החוק ב-index.html וב-functions/ (רק מיקומים).
+      - במסד (routine-db.sh, select עם ilike על השם, רק הטבלאות שב-TABLES): docs, tr, equip_inspections, tasks, leg (שורות אחרות שמפנות אליו). הדרכות: grep על שם החוק ב-index.html (רשימת הנושאים לכל סוג הדרכה).
+      - בתיקייה: sharepoint_search על שם החוק, קריאה בלבד.
+   ג. רשימת משימות לכל חוק: שורה לכל מקום שנמצא, עם מה לבדוק בו ("טופס X מפנה לסעיף 4, שהשתנה"), והסעיף. מה שלא ידוע (UNKNOWN) נכתב ככזה.
+   ד. כתוב: שורה אחת לכל חוק בסוף "פתוח עכשיו" ב-STATUS.md: "- [ ] **⚖️ שינוי בחוק: <שם> (נוסח <new>)** <מספר> מקומות מושפעים: <רשימה קצרה>. מקור: <src_url>". לכל מקום שמתאים לסוכן אחר (תוקף, הדרכה, מסמך), גם בקשה בלוח המודעות ב-agent-common.md (אל: routine-validity או routine-researcher). branch routine/nevo-impact-YYYY-MM-DD, commit, PR עם "בלי לקח: ניתוח השפעה", "רטרו: <משפט>", "skill: אין", המתנה ל-tests (bash .claude/hooks/ci-wait.sh <branch> mishaf1988-lgtm/tfugen-safety) ומיזוג.
+   אסור לשנות קוד, מסמך, תוקף או הדרכה. רק רשימה.
+6. הודעה אחרונה: כמה חוקים נבדקו, כמה נכשלו (ושמותיהם), אילו התעדכנו, כמה מקומות מושפעים נמצאו, וקישור ל-PR אם נפתח.
 ---
