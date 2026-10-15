@@ -3766,22 +3766,30 @@ function _captchaScript(){
 // Resolves with a token, or null when the key is empty or the widget cannot
 // run (offline, blocked). Never rejects: the sign-in goes ahead without a
 // token and Supabase says clearly whether it needed one.
+var _TS_WAIT_MS=30000;
+// A dark screen with one line above the box, while Cloudflare wants the person to tap it.
+function _tsHint(on){var h=g('captcha-hint');
+  if(on){if(!h){h=document.createElement('div');h.id='captcha-hint';h.style.cssText='position:fixed;inset:0;z-index:10059;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:22vh 16px 0;color:var(--c-white,#fff);font:700 18px/1.5 Arial,sans-serif;text-align:center';
+    h.textContent='\u05d1\u05d3\u05d9\u05e7\u05ea \u05d0\u05d1\u05d8\u05d7\u05d4 \u05e9\u05dc Cloudflare: \u05dc\u05d7\u05e6\u05d5 \u05e2\u05dc \u05d4\u05ea\u05d9\u05d1\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d4\u05de\u05e9\u05d9\u05da \u05d1\u05db\u05e0\u05d9\u05e1\u05d4';document.body.appendChild(h);}h.style.display='flex';}
+  else if(h)h.style.display='none';}
 function _captcha(){
   if(!TURNSTILE_SITEKEY)return Promise.resolve(null);
   return _captchaScript().then(function(){
     return new Promise(function(res){
       var el=g('captcha');
-      if(!el){el=document.createElement('div');el.id='captcha';el.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:10060;';document.body.appendChild(el);}
+      if(!el){el=document.createElement('div');el.id='captcha';el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10060;';document.body.appendChild(el);}
       var done=false,t=null,mine=null;
       // Once the token is in hand the widget has nothing left to do. A challenge
       // that needed a tap leaves its box fixed at the bottom of the screen, over
       // whatever is there (01/10/2026: the menu's change-password entry), so it goes.
-      function fin(tok){if(done)return;done=true;clearTimeout(t);res(tok||null);
+      function fin(tok){if(done)return;done=true;clearTimeout(t);_tsHint(false);res(tok||null);
         setTimeout(function(){if(mine!==null&&_tsWidget===mine){try{turnstile.remove(mine);}catch(e){}_tsWidget=null;}},0);}
-      t=setTimeout(function(){fin(null);},120000);
+      // 30 seconds, then say so (15/10/2026, Michael: "I type the password and it is stuck": the check waited
+      // two minutes for a tap on a box at the bottom of the screen, with nothing on screen to say why).
+      t=setTimeout(function(){fin(null);_tsHint(false);try{toast('\u26a0\ufe0f \u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05d0\u05d1\u05d8\u05d7\u05d4 \u05e9\u05dc Cloudflare \u05dc\u05d0 \u05d4\u05e1\u05ea\u05d9\u05d9\u05de\u05d4. \u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3 \u05d5\u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');}catch(e){}},_TS_WAIT_MS);
       try{
         if(_tsWidget!==null){try{turnstile.remove(_tsWidget);}catch(e){}_tsWidget=null;}
-        _tsWidget=mine=turnstile.render(el,{sitekey:TURNSTILE_SITEKEY,appearance:'interaction-only',language:'auto',callback:function(tok){fin(tok);},'error-callback':function(){fin(null);},'expired-callback':function(){fin(null);}});
+        _tsWidget=mine=turnstile.render(el,{sitekey:TURNSTILE_SITEKEY,appearance:'interaction-only',language:'auto',callback:function(tok){fin(tok);},'error-callback':function(){fin(null);},'expired-callback':function(){fin(null);},'before-interactive-callback':function(){_tsHint(true);},'after-interactive-callback':function(){_tsHint(false);}});
       }catch(e){fin(null);}
     });
   }).catch(function(){return null;});
