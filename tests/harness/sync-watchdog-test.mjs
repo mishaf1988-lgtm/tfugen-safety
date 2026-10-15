@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime } from './_build/_watchdog.mjs';
+import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS } from './_build/_watchdog.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).substring(0, 400) : '')); } };
@@ -59,7 +59,7 @@ check('25 hours is not yet stale', assess(S({ ...fresh, vitre_sync: vs({ at: ago
 check('no Vitre run recorded, watchdog up 27 hours: stale', keys(assess(S(fresh), NOW, true, ago(27 * 60), true)).join() === 'vitre:stale');
 check('Vitre keys not set: no Vitre problem', assess(S({ ...fresh, vitre_sync: vs({ error: 'x' }) }), NOW, true, ago(6000), false).length === 0);
 check('the watchdog reads the key vitre.js writes', stateKeys().includes('vitre_sync') && /const SYNC_KEY = 'vitre_sync'/.test(src('functions/api/vitre.js')));
-check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\)\)/.test(src('functions/_watchdog.js')));
+check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat\)/.test(src('functions/_watchdog.js')));
 
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
@@ -138,6 +138,30 @@ const nc = probs && probs({ configured: true, connected: false, watch: null }, T
 check('not connected and no watch yet: said too', nc && nc.length === 1 && /OneDrive/.test(nc[0].title), nc);
 const me = probs && probs({ configured: true, connected: true, watch: { at: new Date(T - 5 * 60000).toISOString(), mailErr: 'outlook 401', open: [{ key: 'x', title: 'A' }] } }, T);
 check('a mail that did not go out is said on the card', me && me.some((x) => /לא נשלחה/.test(x.title)), me);
+
+console.log('\n6. the database speed (15/10/2026: "as smooth as possible for the workers")');
+const L = (...ms) => ms.map((x, i) => ({ at: ago(15 * (ms.length - i)), ms: x }));
+const DAY = Date.parse('2026-10-15T08:00:00Z'), NIGHT = Date.parse('2026-10-15T22:00:00Z'); // 11:00 and 01:00 Israel
+let sl = slowIssue(L(1500, 1200, 2600, 1100), DAY);
+check('an hour of slow ticks (4 x over 1s) at 11:00: "slow", with the seconds', sl && sl.key === 'slow' && /איטי/.test(sl.title) && /1\.\d שניות/.test(sl.detail), sl);
+check('the same at 01:00 (no one works): nothing', slowIssue(L(1500, 1200, 2600, 1100), NIGHT) === null);
+check('3 slow ticks and one normal: nothing (a spike is not an hour)', slowIssue(L(1500, 1200, 150, 1100), DAY) === null && slowIssue(L(1500, 1200, 2600), DAY) === null);
+check('exactly SLOW_MS is not slow; the thresholds are 1s and 4 ticks', slowIssue(L(SLOW_MS, 1500, 1500, 1500), DAY) === null && SLOW_MS === 1000 && SLOW_TICKS === 4);
+check('assess passes it through, and stays quiet without lat (old callers)', keys(assess(S(fresh), DAY, true, ago(600), false, L(1500, 1500, 1500, 1500))).includes('slow') && !keys(assess(S(fresh), DAY, true, ago(600))).includes('slow'));
+check('a slow-only mail says "slow", not "sync problem"; back to normal says so', /איטי/.test(mailSubject(['slow'], [], { slow: sl })) && !/סנכרון/.test(mailSubject(['slow'], [], { slow: sl })) && /חזר למהירות רגילה/.test(mailSubject([], [{ key: 'slow' }], {})) && /האפליקציה איטית/.test(mailHtml({ slow: { ...sl, since: ago(0) } }, ['slow'], [], 'x')) && !/בעיה בסנכרון/.test(mailHtml({ slow: { ...sl, since: ago(0) } }, ['slow'], [], 'x')));
+check('slow together with a sync problem: the sync wording stays', /בעיה בסנכרון/.test(mailSubject(['stale:deck', 'slow'], [], { 'stale:deck': { title: 'T' }, slow: sl })));
+check('keyboard characters only in the slow notice', !/[—–־«»…•→←]/.test(sl.title + sl.detail));
+const realFetch = globalThis.fetch;
+let calls = [];
+globalThis.fetch = async (url, init) => { calls.push(String(url)); throw Object.assign(new Error('aborted'), { name: 'AbortError' }); };
+let pm = await probe(env);
+check('probe: three reads of a real app table; a read that hangs counts PROBE_MS (10s)', pm === PROBE_MS && calls.length === 3 && calls.every((u) => /\/rest\/v1\/locations\?select=id&limit=1$/.test(u)), [pm, calls]);
+check('probe has a timeout (AbortController), so a hung server cannot hang the tick', /new AbortController\(\)[\s\S]{0,80}setTimeout\(\(\) => ac\.abort\(\), PROBE_MS\)/.test(src('functions/_watchdog.js')));
+globalThis.fetch = realFetch;
+store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: L(1, 2, 3, 4, 5, 6, 7, 8) });
+tokenOk = true; r = await runWatch(env, 'x');
+const w3 = JSON.parse(store[WATCH_KEY]);
+check('runWatch keeps the last LAT_KEEP ticks, the newest is this probe, and returns ms', w3.lat.length === LAT_KEEP && w3.lat[0].ms === 2 && typeof w3.lat[LAT_KEEP - 1].ms === 'number' && w3.lat[LAT_KEEP - 1].ms < PROBE_MS && r.ms === w3.lat[LAT_KEEP - 1].ms, [w3.lat, r.ms]);
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

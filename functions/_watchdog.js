@@ -18,6 +18,13 @@
 //     what to do, and not as four separate errors;
 //   * the daily Vitre refresher import (vitre.js op:'sync', 06:00) that failed,
 //     or that has not run for 26 hours.
+//   * the database slow for an hour in working hours (15/10/2026, Michael: "that
+//     it works as smoothly as possible for the workers"): each tick times three
+//     small reads (probe), keeps the median of the last LAT_KEEP ticks, and a
+//     median over SLOW_MS on SLOW_TICKS ticks in a row between 06:00 and 18:00
+//     Israel time is a problem. The free Supabase server answered 2-10 seconds
+//     at times on 15/10/2026, at night too; this is how Michael hears of it
+//     before a worker does, and how the Pro decision gets its numbers.
 // The mail goes out through the same Microsoft connection, so when that
 // connection is what broke, the mail cannot go: the app shows the same list
 // on the home screen (op:'status' -> watch), and says so when this check
@@ -30,6 +37,8 @@ export const FILE_ROWS = 205, FULL_WARN = 164;
 export const STALE_MS = 45 * 60 * 1000, ERR_MS = 30 * 60 * 1000, FIRST_MS = 60 * 60 * 1000;
 // The Vitre import runs once a day; a day and two hours without a run = the cron stopped.
 export const VITRE_KEY = 'vitre_sync', VITRE_STALE_MS = 26 * 60 * 60 * 1000;
+// The database speed check: ms for the median of 3 reads, an hour of slow ticks, 2 hours kept.
+export const SLOW_MS = 1000, SLOW_TICKS = 4, LAT_KEEP = 8, PROBE_MS = 10000, WORK_H = [6, 18];
 // Microsoft's answer when the client secret expired or was replaced.
 export const SECRET_RE = /AADSTS7000222|AADSTS7000215|invalid_client/;
 export const PARTS = [
@@ -60,6 +69,36 @@ export function ilTime(iso) {
   return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute;
 }
 
+export function ilHour(ms) {
+  return +new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms));
+}
+const median = (a) => { const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+// Pure. lat = [{at, ms}] oldest first, ms = the median of one tick. A problem when the
+// last SLOW_TICKS ticks are all slow and the last one is in working hours.
+export function slowIssue(lat, nowMs) {
+  const last = (lat || []).slice(-SLOW_TICKS);
+  if (last.length < SLOW_TICKS || last.some((x) => !(x && x.ms > SLOW_MS))) return null;
+  const h = ilHour(nowMs);
+  if (h < WORK_H[0] || h >= WORK_H[1]) return null;
+  const ms = median(last.map((x) => x.ms));
+  return { key: 'slow', title: '\u05d4\u05de\u05e1\u05d3 \u05d0\u05d9\u05d8\u05d9 \u05db\u05d1\u05e8 \u05e9\u05e2\u05d4', detail: '\u05d1\u05e7\u05e9\u05d4 \u05e7\u05d8\u05e0\u05d4 \u05dc\u05de\u05e1\u05d3 \u05dc\u05d5\u05e7\u05d7\u05ea \u05db-' + (ms / 1000).toFixed(1) + ' \u05e9\u05e0\u05d9\u05d5\u05ea (\u05d4\u05e8\u05d2\u05d9\u05dc: \u05e4\u05d7\u05d5\u05ea \u05de-0.2). \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05e9\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05e2\u05dc \u05d4\u05d3\u05e8\u05db\u05d4 \u05d0\u05d5 \u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05de\u05e8\u05d2\u05d9\u05e9\u05d9\u05dd \u05ea\u05e7\u05d9\u05e2\u05d5\u05ea. \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05e9\u05db\u05d9\u05d7\u05d4: \u05d4\u05e9\u05e8\u05ea \u05d4\u05d7\u05d9\u05e0\u05de\u05d9 \u05e9\u05dc Supabase.' };
+}
+// Three small reads, one after the other; the median ms. A read that fails fast still
+// counts its time (the server answered); one that hangs counts PROBE_MS.
+export async function probe(env) {
+  const url = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/locations?select=id&limit=1';
+  const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY };
+  const out = [];
+  for (let i = 0; i < 3; i++) {
+    const t = Date.now(), ac = new AbortController(), to = setTimeout(() => ac.abort(), PROBE_MS);
+    let r = null;
+    try { r = await fetch(url, { headers: h, signal: ac.signal }); out.push(Date.now() - t); } catch (e) { out.push(PROBE_MS); }
+    try { if (r && r.body) await r.body.cancel(); } catch (e) {} // the answer is not needed, only its time
+    clearTimeout(to);
+  }
+  return median(out);
+}
+
 export function stateKeys() {
   const keys = [WATCH_KEY, VITRE_KEY];
   PARTS.forEach((p) => ['ok_at', 'err', 'err_at'].forEach((x) => keys.push(p.k + '_' + x)));
@@ -71,7 +110,7 @@ export function stateKeys() {
 // started = when the watchdog first ran (a part with no ok_at yet gets an
 // hour from then, since ok_at is new with this change); vitre = the Vitre keys
 // are set, so the daily import is expected.
-export function assess(st, nowMs, connected, started, vitre) {
+export function assess(st, nowMs, connected, started, vitre, lat) {
   const v = (k) => (st[k] && st[k].value) || '';
   const at = (k) => (st[k] && st[k].at) || '';
   const out = [];
@@ -98,6 +137,8 @@ export function assess(st, nowMs, connected, started, vitre) {
     if (r && r.error) out.push({ key: 'vitre:err', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05e9\u05d2\u05d9\u05d0\u05d4', detail: String(r.error).substring(0, 200) + when });
     else if (nowMs - (last || Date.parse(started) || nowMs) >= VITRE_STALE_MS) out.push({ key: 'vitre:stale', title: '\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d4\u05e8\u05d9\u05e2\u05e0\u05d5\u05e0\u05d9\u05dd \u05de-Vitre: \u05dc\u05d0 \u05e8\u05e5', detail: (last ? '\u05d4\u05e8\u05d9\u05e6\u05d4 \u05d4\u05d0\u05d7\u05e8\u05d5\u05e0\u05d4: ' + ilTime(new Date(last).toISOString()) + '. ' : '\u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e8\u05e9\u05de\u05d4 \u05e8\u05d9\u05e6\u05d4. ') + '\u05d4\u05d9\u05d9\u05d1\u05d5\u05d0 \u05d0\u05de\u05d5\u05e8 \u05dc\u05e8\u05d5\u05e5 \u05db\u05dc \u05d1\u05d5\u05e7\u05e8 \u05d1-06:00.' });
   }
+  const slow = slowIssue(lat, nowMs);
+  if (slow) out.push(slow);
   FILES.forEach(([f, name]) => {
     // 80% full (upgrade review 24): a month or two before it stops.
     const n = +v('hazard_' + f + '_rows') || 0;
@@ -128,14 +169,18 @@ const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</
 export function mailHtml(open, fresh, done, appUrl) {
   const li = (t, d) => '<li style="margin-bottom:6px"><b>' + esc(t) + '</b>' + (d ? '<br>' + esc(d) : '') + '</li>';
   let h = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">';
-  if (fresh.length) h += '<p style="color:#b91c1c;font-weight:bold">\u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea:</p><ul>' + fresh.map((k) => li(open[k].title, open[k].detail)).join('') + '</ul>';
+  if (fresh.length) h += '<p style="color:#b91c1c;font-weight:bold">' + (onlySlow(fresh) ? '\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d9\u05d8\u05d9\u05ea:' : '\u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d1\u05d9\u05df \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4, \u05d4\u05e7\u05d1\u05e6\u05d9\u05dd \u05d5\u05d4\u05de\u05e6\u05d2\u05ea:') + '</p><ul>' + fresh.map((k) => li(open[k].title, open[k].detail)).join('') + '</ul>';
   if (done.length) h += '<p style="color:#15803d;font-weight:bold">\u05e0\u05e4\u05ea\u05e8:</p><ul>' + done.map((x) => li(x.title, '\u05de-' + ilTime(x.since) + ' \u05e2\u05d3 ' + ilTime(x.until))).join('') + '</ul>';
   const still = Object.keys(open).filter((k) => fresh.indexOf(k) < 0);
   if (still.length) h += '<p>\u05e2\u05d3\u05d9\u05d9\u05df \u05e4\u05ea\u05d5\u05d7: ' + still.map((k) => esc(open[k].title)).join('; ') + '</p>';
   h += '<p style="color:#555;font-size:12px">\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d0\u05d7\u05ea \u05db\u05e9\u05d1\u05e2\u05d9\u05d4 \u05de\u05ea\u05d7\u05d9\u05dc\u05d4 \u05d5\u05d0\u05d7\u05ea \u05db\u05e9\u05d4\u05d9\u05d0 \u05e0\u05e4\u05ea\u05e8\u05ea. \u05d4\u05e8\u05e9\u05d9\u05de\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4 \u05d1\u05de\u05e1\u05da \u05d4\u05d1\u05d9\u05ea \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4' + (appUrl ? ': <a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a>' : '') + '.</p></div>';
   return h;
 }
+// The slowness notice is not a sync problem; a mail about it alone says so.
+const onlySlow = (keys) => keys.length > 0 && keys.every((k) => (k && k.key ? k.key : k) === 'slow');
 export function mailSubject(fresh, done, open) {
+  if (fresh.length && onlySlow(fresh)) return 'Tapugan Safety: ' + open[fresh[0]].title;
+  if (!fresh.length && onlySlow(done || [])) return 'Tapugan Safety: \u05d4\u05de\u05e1\u05d3 \u05d7\u05d6\u05e8 \u05dc\u05de\u05d4\u05d9\u05e8\u05d5\u05ea \u05e8\u05d2\u05d9\u05dc\u05d4';
   if (fresh.length) return 'Tapugan Safety: \u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df (' + fresh.length + ') - ' + open[fresh[0]].title;
   return 'Tapugan Safety: \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3' + (Object.keys(open).length ? ' (\u05d7\u05dc\u05e7\u05d9\u05ea)' : '');
 }
@@ -147,7 +192,9 @@ export async function runWatch(env, appUrl) {
   let row = null; try { row = odConfigured(env) ? await tokenRow(env) : null; } catch (e) { row = null; }
   const connected = !!(row && row.refresh_token);
   const started = (prev && prev.started) || nowIso;
-  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET));
+  let ms = null; try { ms = await probe(env); } catch (e) { ms = null; }
+  const lat = (((prev && prev.lat) || []).concat(ms == null ? [] : [{ at: nowIso, ms }])).slice(-LAT_KEEP);
+  const list = assess(st, now.getTime(), connected, started, !!(env.VITRE_API_KEY_ID && env.VITRE_API_KEY_SECRET), lat);
   const s = step(prev, list, nowIso);
   let mailErr = '', sent = 0;
   if ((s.fresh.length || s.done.length) && connected && hasMail(row)) {
@@ -160,7 +207,7 @@ export async function runWatch(env, appUrl) {
   } else if (s.fresh.length || s.done.length) mailErr = connected ? 'no Mail.Send' : 'not connected';
   // A notice that cannot go out is kept for the next run, but not forever.
   const done = sent ? [] : s.done.slice(-20);
-  const value = { at: nowIso, started, open: s.open, done, mail_err: mailErr, mailed_at: sent ? nowIso : (prev && prev.mailed_at) || null };
+  const value = { at: nowIso, started, open: s.open, done, lat, mail_err: mailErr, mailed_at: sent ? nowIso : (prev && prev.mailed_at) || null };
   await stateSet(env, { [WATCH_KEY]: JSON.stringify(value) });
-  return { ok: true, open: Object.keys(s.open).length, fresh: s.fresh.length, resolved: sent ? s.done.length : 0, sent, mailErr };
+  return { ok: true, open: Object.keys(s.open).length, fresh: s.fresh.length, resolved: sent ? s.done.length : 0, sent, mailErr, ms };
 }
