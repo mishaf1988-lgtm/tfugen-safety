@@ -3599,7 +3599,7 @@ window.addEventListener('load', function(){
 window._wvSent=false;
 function _wvFlush(){
   try{
-    if(window._wvSent||!SB_ON||_viewOnly())return;
+    if(window._wvSent||!SB_ON||_viewOnly()||(typeof empIsOn==='function'&&empIsOn()))return;  // the kiosk may not read audit_log back (403 loop, 15/10/2026)
     if(!window._wv||!Object.keys(_wv).length)return;
     window._wvSent=true;
     var u=(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?_currentUser.username+'@tfugen.local':null;
@@ -3811,7 +3811,7 @@ function _sbWarm(){_sbBoot();if(!_sbClient)return Promise.resolve(null);return _
 var SB_ON=false;
 var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
 function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
-function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
+function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;if(_sbNamed()){var ex=new Error('session expired');ex.sessionExpired=true;_sbAuthBad=Date.now();throw ex;}return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 // A fetch with a time limit (15/10/2026, review of the trustee and sync paths). A request that
 // never settles on a dropped mobile connection kept _obBusy true (no send until a reload), held a
@@ -3860,8 +3860,11 @@ function _sbFetchAll(url,cap){
       if(!r.ok)return {ok:false,status:r.status};
       return r.json().then(function(j){
         if(!Array.isArray(j))return {ok:false,status:r.status};
+        // A row saved between two pages moves (its ts changed) and could appear twice: keep one.
+        var got=j.length;
+        if(pages){var seen={};rows.forEach(function(x){if(x&&x.id!=null)seen[x.id]=1;});j=j.filter(function(x){return !(x&&x.id!=null&&seen[x.id]);});}
         rows=rows.concat(j);pages++;
-        if(j.length<want)return {ok:true,rows:rows};             // a short page is the end
+        if(got<want)return {ok:true,rows:rows};             // a short page is the end
         if(cap&&rows.length>=cap)return {ok:true,rows:rows.slice(0,cap)};
         if(pages>=_SB_MAX_PAGES)return {ok:true,rows:rows,truncated:true};
         from=to+1;
@@ -3881,10 +3884,31 @@ function _sbFetchAll(url,cap){
 // read reused the same dead token.
 var _sbAuthBad=0;
 function _sbAuthRejected(){return _sbAuthBad>0;}
-function _sbReauth(){_sbAuthPromise=null;_sbToken=null;return _sbAuth();}
+// 15/10/2026 (sync review): a manager whose session was revoked (password reset, user disabled)
+// silently became an ANONYMOUS session here: RLS gave it [] on every staff table, the pull saved
+// the empty tables and the pill said synced. A signed-in person is refreshed, never swapped for
+// anonymous (only the trustee kiosk and the login screen use anonymous). One refresh at a time:
+// six pool slots each starting their own made several anonymous users and fighting captchas.
+function _sbNamed(){try{return !!(typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)&&!(typeof empIsOn==='function'&&empIsOn());}catch(e){return false;}}
+var _sbReauthP=null;
+function _sbReauth(){
+  if(_sbReauthP)return _sbReauthP;
+  var done=function(){_sbReauthP=null;};
+  if(_sbNamed()&&_sbClient&&_sbClient.auth&&_sbClient.auth.refreshSession){
+    _sbReauthP=_sbClient.auth.refreshSession().then(function(r){
+      var ss=r&&r.data&&r.data.session;
+      if(!ss){_sbAuthBad=Date.now();var ex=new Error('session expired');ex.sessionExpired=true;throw ex;}
+      _sbToken=ss.access_token;_sbAuthPromise=Promise.resolve(ss);_sbAuthBad=0;return ss;
+    });
+  }else{_sbAuthPromise=null;_sbToken=null;_sbReauthP=_sbAuth();}
+  _sbReauthP.then(done,done);
+  return _sbReauthP;
+}
 function sbGet(tbl){return _sbGetOnce(tbl,false);}
 function _sbGetOnce(tbl,isRetry){
-  var ord=(_sbTsCol[tbl]||'created_at')+'.desc';
+  // id breaks ties (15/10/2026): rows imported together share one created_at, and paging over an
+  // unstable order skipped some of them, which the merge then dropped from the screen.
+  var ord=(_sbTsCol[tbl]||'created_at')+'.desc,id.desc';
   var cap=_sbLimit[tbl]||0;
   // Column projection: noisy log tables fetch only the columns the UI uses,
   // shrinking payload by 60-80%. Hot business tables stay on `*` until each
@@ -3896,7 +3920,8 @@ function _sbGetOnce(tbl,isRetry){
   return _sbAuth().then(function(){
     return _sbFetchAll(SBU+'/rest/v1/'+tbl+'?select='+encodeURIComponent(cols)+'&order='+ord,cap);
   }).then(function(res){
-    if(res&&res.ok){_sbAuthBad=0;return Array.isArray(res.rows)?res.rows:null;}
+    // A read cut at the page limit is not the whole table: keep the cache rather than drop the rest.
+    if(res&&res.ok){_sbAuthBad=0;return (Array.isArray(res.rows)&&!res.truncated)?res.rows:null;}
     var st=res&&res.status;
     if(st===401||st===403){
       if(!isRetry)return _sbReauth().then(function(){return _sbGetOnce(tbl,true);}).catch(function(){_sbAuthBad=Date.now();return null;});
@@ -3913,6 +3938,11 @@ var _sbCols={
   notifications_log:'id,ts,user_email,event_type,channel,payload'
 };
 var OB_KEY='tfgn_outbox';
+// _obReady (15/10/2026): the queue may send as soon as the session is known, not only after all
+// 43 tables of the first sync came back (minutes on weak signal, every new save "pending").
+var _obReady=false,_obDrainP=null,_sbGen=0;
+function _obOn(){return SB_ON||_obReady;}
+function _obUid(){try{if(typeof empIsOn==='function'&&empIsOn())return 'kiosk';return (typeof _currentUser!=='undefined'&&_currentUser&&_currentUser.username)?String(_currentUser.username):'';}catch(e){return '';}}
 var OB_ERR_KEY='tfgn_outbox_lasterr';
 var _obBusy=false;
 function _obGet(){try{return JSON.parse(localStorage.getItem(OB_KEY)||'[]');}catch(e){return [];}}
@@ -3928,7 +3958,12 @@ function _obIdle(){var p=_obLast,again=function(){return _obLast!==p?_obIdle():n
 var _obFull=false;
 function _obSet(q){
   try{localStorage.setItem(OB_KEY,JSON.stringify(q||[]));_obFull=false;return true;}
-  catch(e){_obFull=true;return false;}
+  catch(e){
+    // 15/10/2026: the full local copy of the database (tfgn2) shares the quota with the queue and
+    // can be rebuilt from the server; the queue cannot. Drop the copy and try once more.
+    try{localStorage.removeItem('tfgn2');localStorage.setItem(OB_KEY,JSON.stringify(q||[]));_obFull=false;return true;}catch(e2){}
+    _obFull=true;return false;
+  }
 }
 function _obWarnFull(){
   if(_obWarnFull._shown)return;
@@ -3947,6 +3982,10 @@ function _obPush(op){
   if(_viewOnly())return;
   op.ts=op.ts||Date.now();
   op.oid=op.oid||('ob'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  // Whose action this is (15/10/2026): the queue is per phone, not per person. Another user signing
+  // in on the same phone used to send it under their own name and rights (the audit log then
+  // named them). An op waits for its own user.
+  if(!op.uid){var _u=_obUid();if(_u)op.uid=_u;}
   op.tries=op.tries||0;
   var q=_obGet();q.push(op);
   if(!_obSet(q)){_obMem.push(op);_obWarnFull();}
@@ -3969,7 +4008,7 @@ function _obMarkSent(op){
 // sbSync uses this to decide which local rows may survive a pull.
 function _obLocalState(t){
   var m={};
-  _obGet().forEach(function(op){
+  _obGet().concat(typeof _obMem!=='undefined'?_obMem:[]).forEach(function(op){
     if(op.tbl!==t)return;
     var id=(op.op==='del')?op.id:(op.row&&op.row.id);
     if(id)m[id]=op.op;
@@ -4013,6 +4052,7 @@ function _obBadge(state){
   // The session was rejected. The screen is showing a local copy that may be
   // days old, and the one thing it must not do is claim to be in the cloud.
   if(state==='auth'){p.classList.add('on','err');if(ic)ic.textContent='\ud83d\udd12';if(tx)tx.textContent='\u05d4\u05d7\u05d9\u05d1\u05d5\u05e8 \u05e4\u05d2 - \u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d9\u05e9\u05e0\u05d9\u05dd. \u05d4\u05e7\u05dc\u05e7 \u05dc\u05e4\u05e8\u05d8\u05d9\u05dd';return;}
+  if(n===0&&state==='ok'&&_sbStale&&!_sbAuthRejected()){p.classList.add('on');if(ic)ic.textContent='\u26a0';if(tx)tx.textContent='\u05d7\u05dc\u05e7 \u05de\u05d4\u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05dc\u05d0 \u05d4\u05ea\u05e2\u05d3\u05db\u05e0\u05d5';return;}
   if(n===0){if(state==='ok'&&!_sbAuthRejected()){p.classList.add('on','ok');if(ic)ic.textContent='\u2713';if(tx)tx.textContent='\u05d1\u05e2\u05e0\u05df';setTimeout(function(){p.classList.remove('on','ok');},2000);}return;}
   p.classList.add('on');if(ic)ic.textContent='\u21ba';if(tx)tx.textContent=n+' \u05de\u05de\u05ea\u05d9\u05df\u05d5\u05ea';
 }
@@ -4032,7 +4072,7 @@ function _obSend(op){
     // version is NEVER sent as an upsert, and only answers of 0 rows count toward the upsert
     // (zeroTries): 90 seconds of weak signal used to turn a guarded edit into an overwrite.
     var _v=(op.op==='upd'&&op.row&&op.row.id)?(_verOf(op.tbl,op.row.id)||op.base||null):null;
-    var asUpsert=(op.op==='upd'&&!_v&&(op.zeroTries||0)>=3&&!op.conflict&&op.row&&op.row.id);
+    var asUpsert=(op.op==='upd'&&op.row&&op.row.id&&(op.forceUpsert||(!_v&&(op.zeroTries||0)>=3&&!op.conflict&&!op.gone)));
     if(op.op==='ins'||asUpsert){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
     else if(op.op==='upd'){
       url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id);
@@ -4064,16 +4104,39 @@ function _obSend(op){
           // A DELETE that matched nothing is done: the row is already gone.
           if(op.op==='del')return r;
           var z=new Error('0 rows');z.status=r.status;z.zeroRows=true;
-          // With a version guard on, 0 rows means the row CHANGED under us,
-          // not that we lack permission. Saying \u00abno permission\u00bb there would
-          // send Michael looking in the wrong place.
-          if(op._guarded){
-            z.conflict=true;
-            z.body='\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05e8 \u05de\u05d0\u05d6 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05db\u05d0\u05df - \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d0 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05e9\u05d9\u05e0\u05d5\u05d9 \u05e9\u05dc \u05de\u05d9\u05e9\u05d4\u05d5 \u05d0\u05d7\u05e8';
-          }else{
-            z.body='\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4 (\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea)';
+          var classify=function(){
+            // With a version guard on, 0 rows means the row CHANGED under us,
+            // not that we lack permission. Saying \u00abno permission\u00bb there would
+            // send Michael looking in the wrong place.
+            if(op._guarded){
+              z.conflict=true;
+              z.body='\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e9\u05d5\u05e0\u05ea\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05e8 \u05de\u05d0\u05d6 \u05e9\u05e0\u05e4\u05ea\u05d7\u05d4 \u05db\u05d0\u05df - \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05d0 \u05d1\u05d5\u05e6\u05e2\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d0 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05e9\u05d9\u05e0\u05d5\u05d9 \u05e9\u05dc \u05de\u05d9\u05e9\u05d4\u05d5 \u05d0\u05d7\u05e8';
+            }else{
+              z.body='\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05d9\u05d3\u05db\u05df \u05d0\u05e3 \u05e9\u05d5\u05e8\u05d4 (\u05d4\u05e8\u05e9\u05d0\u05d4 \u05d0\u05d5 \u05e9\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05d0\u05d9\u05e0\u05d4 \u05e7\u05d9\u05d9\u05de\u05ea)';
+            }
+            throw z;
+          };
+          // 15/10/2026: 0 rows is three different things. Ask the server which (one GET):
+          //  - the row carries our own ts: our earlier send landed and its answer was lost -> done;
+          //  - the row is gone: deleted elsewhere -> the person decides (never an automatic upsert);
+          //  - otherwise a real conflict (guarded) or no permission (unguarded), as before.
+          if(op.op==='upd'&&op.row&&op.row.id){
+            return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id,'+_verCol(),{headers:sbH()},15000)
+              .then(function(g2){return g2.ok?g2.json():null;},function(){return null;})
+              .then(function(rows){
+                if(Array.isArray(rows)&&rows.length&&op.row[_verCol()]&&Date.parse(rows[0][_verCol()])===Date.parse(op.row[_verCol()])){
+                  try{_verSet(op.tbl,op.row.id,rows[0][_verCol()]);}catch(e){}
+                  return r;
+                }
+                if(Array.isArray(rows)&&!rows.length){
+                  var gz=new Error('gone');gz.status=r.status;gz.zeroRows=true;gz.conflict=true;gz.gone=true;
+                  gz.body='\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05e0\u05de\u05d7\u05e7\u05d4 \u05d1\u05de\u05e7\u05d5\u05dd \u05d0\u05d7\u05e8';
+                  throw gz;
+                }
+                classify();
+              });
           }
-          throw z;
+          classify();
         },function(){return r;});                                   // unreadable body: leave as before
       }
       if(!r.ok){return r.text().then(function(body){
@@ -4105,6 +4168,9 @@ function _obSend(op){
         // An insert whose answer was lost already arrived (15/10/2026): its retry is an upsert, which
         // needs the UPDATE right a trustee's session does not have, so it was refused every 30
         // seconds for ever, and the red pill offered to clear the queue. If the row is there, done.
+        // An audit row the server refuses for good (403: a session that may not write or read it back,
+        // 400: a bad op) is not data anyone typed: drop it rather than keep the queue red for ever.
+        if(op.tbl==='audit_log'&&(r.status===400||r.status===403))return r;
         if(op.op==='ins'&&op.row&&op.row.id&&(r.status===401||r.status===403||r.status===409)){
           return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id',{headers:sbH()},15000)
             .then(function(g2){return g2.ok?g2.json():[];}).then(function(rows){
@@ -4118,15 +4184,22 @@ function _obSend(op){
   });
 }
 function _obDrain(){
-  if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  if(_obBusy||!_obOn()||(typeof navigator!=='undefined'&&navigator.onLine===false))return _obDrainP||Promise.resolve();
+  // One drain at a time, photos and rows together (15/10/2026). A second drain started while a
+  // photo was uploading sent the rows at the same time and its end-merge put the placeholder back.
+  if(_obDrainP)return _obDrainP;
   // Queued photos go first: a row then reaches the server already carrying a
   // real URL, so the hazard webhook sends a link that opens. A row that had
   // already been sent is repaired by _phResolve with an update instead.
-  if(typeof _phDrain==='function')return _obLast=_phDrain().then(_obDrainOps);
-  return _obDrainOps();
+  // A photo store that never answers (WebKit after a resume) must not freeze the rows: 20 seconds.
+  var ph=(typeof _phDrain==='function')?Promise.race([_phDrain(),new Promise(function(r){setTimeout(r,20000);})]):Promise.resolve();
+  var end=function(){_obDrainP=null;};
+  _obDrainP=_obLast=ph.then(_obDrainOps,_obDrainOps);
+  _obDrainP.then(end,end);
+  return _obDrainP;
 }
 function _obDrainOps(){
-  if(_obBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  if(_obBusy||!_obOn()||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   _obSanitize();  // strip known-bad fields from any ops queued since last drain
   var mem=_obMem.slice(),memIds={};
   mem.forEach(function(op){if(op.oid)memIds[op.oid]=1;});
@@ -4135,15 +4208,28 @@ function _obDrainOps(){
   _obBusy=true;_obBadge();
   var remaining=[];var hadErr=false;var lastErr=null;
   var p=Promise.resolve();
+  // Held back this pass, untried, tries unchanged (15/10/2026):
+  //  - a later op of a record whose earlier op failed: an old edit retried after a newer one landed
+  //    overwrote it, and a delete after a failed insert counted as done and the record came back;
+  //  - everything after a network error: on a dead link each op waited its own 30 seconds;
+  //  - after the lock, and the ops of another user on this phone.
+  var heldKey={},netDown=false,tried={},me=_obUid();
+  var keyOf=function(op){var id=op.op==='del'?op.id:(op.row&&op.row.id);return (op.tbl&&id!=null&&op.tbl!=='audit_log')?op.tbl+'|'+id:null;};
   q.forEach(function(op){
     p=p.then(function(){
-      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
+      var k=keyOf(op);
+      if(netDown||!_obOn()||(op.uid&&op.uid!==me)||(k&&heldKey[k])){remaining.push(op);return;}
+      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){if(k)heldKey[k]=1;remaining.push(op);return;}   // not an error: it goes with its photo
+      if(op.oid)tried[op.oid]=1;
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
+        if(k)heldKey[k]=1;
+        if(!(err&&(err.status||err.conflict)))netDown=true;
         op.tries=(op.tries||0)+1;
         // Once a conflict, a conflict until the person decides (a network error after it used to clear it).
         op.conflict=!!(op.conflict||(err&&err.conflict));
         if(err&&err.zeroRows&&!err.conflict)op.zeroTries=(op.zeroTries||0)+1;
+        if(err&&err.gone)op.gone=true;
         op.lastError=(err&&err.conflict?'\u05d4\u05ea\u05e0\u05d2\u05e9\u05d5\u05ea':(err&&err.status?('HTTP '+err.status):'net'))+(err&&err.body?(' '+String(err.body).slice(0,200)):'');
         op.lastTs=Date.now();
         lastErr={tbl:op.tbl,op:op.op,status:err&&err.status,body:err&&err.body?String(err.body).slice(0,300):'',ts:Date.now()};
@@ -4151,7 +4237,7 @@ function _obDrainOps(){
       });
     });
   });
-  return _obLast=p.then(function(){
+  var endPass=function(){
     // Ops pushed while this drain was in flight live only in localStorage.
     // Never overwrite them with the pre-drain snapshot: drop what was sent,
     // keep the failed ones (with their updated tries) AND everything queued
@@ -4163,19 +4249,37 @@ function _obDrainOps(){
     var keep={},sent={};
     onDisk.forEach(function(op){if(op.oid)keep[op.oid]=op;});
     q.forEach(function(op){if(op.oid&&!keep[op.oid]&&!memIds[op.oid])sent[op.oid]=1;});
-    var merged=_obGet().filter(function(op){return op.oid&&!sent[op.oid];}).map(function(op){return keep[op.oid]||op;});
+    // The copy on disk wins for the row and the guard: _phResolve may have put the real photo address
+    // into it, and "keep mine" may have cleared its conflict and base, while this pass was running.
+    // This pass only adds what it learned by trying: the counters and the error.
+    var merged=_obGet().filter(function(op){return op.oid&&!sent[op.oid];}).map(function(op){
+      var d=keep[op.oid];if(!d||!tried[op.oid])return op;
+      var o={};Object.keys(op).forEach(function(k){o[k]=op[k];});
+      o.tries=d.tries;o.zeroTries=d.zeroTries;o.lastError=d.lastError;o.lastTs=d.lastTs;o.gone=d.gone;
+      o.conflict=(op.forceAt&&op.forceAt!==d.forceAt)?false:!!(d.conflict||op.conflict);
+      return o;
+    });
     onDisk.forEach(function(op){if(!op.oid)merged.push(op);});
     // If the queue itself will not fit any more, hold it in memory rather than
-    // letting _obSet drop it on the floor.
-    if(!_obSet(merged)){_obMem=_obMem.concat(merged);_obWarnFull();}
+    // letting _obSet drop it on the floor (and take the old copy off the disk, or its sent ops go twice).
+    if(!_obSet(merged)){try{localStorage.removeItem(OB_KEY);}catch(e){}_obMem=_obMem.concat(merged);_obWarnFull();}
     _obBusy=false;_obSetErr(hadErr?lastErr:null);_obBadge(hadErr?'err':((merged.length+_obMem.length)?null:'ok'));
     // Anything that arrived mid-flight is still waiting — send it now.
-    if(merged.length>onDisk.length&&!hadErr)_obDrain();
-  });
+    if(merged.length>onDisk.length&&!hadErr)setTimeout(_obDrain,0);
+  };
+  // A throw anywhere in the chain must still free the queue (it stayed busy until a reload).
+  return _obLast=p.then(endPass,function(e){try{console.warn('[outbox] pass failed:',e);}catch(x){}try{endPass();}catch(x){_obBusy=false;}});
 }
 function _audTitle(row){if(!row||typeof row!=='object')return null;var v=row.title||row.topic||row.d||row.descr||row.n||row.num||'';return String(v).substring(0,80)||null;}
+// Tables the database audits by itself (private.audit_tables(), migrations/2026-10-01_audit_log_db_triggers.sql):
+// a client audit row for them is thrown away by the server, so sending one is a wasted request per save.
+var _AUD_DB=['tour_hazards','trustee_reports','inc','ncr','near_miss','tasks','equip_inspections','docs','tr','mgmt_reviews','leg'];
 function _aud(op,tbl,idOrRow){
   if(tbl==='audit_log')return;
+  if(_AUD_DB.indexOf(tbl)>=0)return;
+  // The trustee kiosk (anonymous) cannot read audit_log back: every insert was refused (403, ~200 a day
+  // on one phone, 15/10/2026), stayed queued for ever and kept the red pill on next to real reports.
+  if(typeof empIsOn==='function'&&empIsOn())return;
   try{
     var record_id,title=null;
     if(op==='del'){
@@ -4201,11 +4305,11 @@ function _viewBlock(){
   try{toast('\u05de\u05e6\u05d1 \u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3, \u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e9\u05e0\u05d5\u05ea');}catch(e){}
   return true;
 }
-function sbIns(tbl,row){if(_viewBlock())return;_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(SB_ON)_obDrain();}
+function sbIns(tbl,row){if(_viewBlock())return;_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(_obOn())_obDrain();}
 // base: the server version this edit was made against, kept ON the op (15/10/2026). _rowVer lives in
 // memory only, so after a restart a queued offline edit had no guard at all and overwrote newer work.
-function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);var _b=_verOf(tbl,row.id);_obPush(_b?{op:'upd',tbl:tbl,row:row,base:_b}:{op:'upd',tbl:tbl,row:row});if(SB_ON)_obDrain();}
-function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(SB_ON)_obDrain();}
+function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);var _b=_verOf(tbl,row.id);_obPush(_b?{op:'upd',tbl:tbl,row:row,base:_b}:{op:'upd',tbl:tbl,row:row});if(_obOn())_obDrain();}
+function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(_obOn())_obDrain();}
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
 // re-render on any change because they aggregate across many tables.
@@ -4253,7 +4357,7 @@ function _verCol(){return 'ts';}
 function _verOf(t,id){return (_rowVer[t]&&_rowVer[t][id])||null;}
 function _verSet(t,id,v){if(!id)return;if(!_rowVer[t])_rowVer[t]={};if(v)_rowVer[t][id]=v;else delete _rowVer[t][id];}
 // The user chose \u00abmine wins\u00bb: drop the guard for this row so the retry lands.
-window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id)delete op.base;});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
+window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id){delete op.base;op.forceAt=Date.now();}});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
 function _sbMergePull(t,rows,obBefore){
   var _vc=_verCol();
   var ob=obBefore||{},obNow=_obLocalState(t);
@@ -4281,12 +4385,21 @@ function _sbMergePull(t,rows,obBefore){
   });
   DB[t]=merged;
 }
+// 15/10/2026: a table that did not come back (offline, timeout, 5xx) keeps its cached copy; the
+// pill must not then say "in the cloud" as if everything were fresh.
+var _sbStale=false;
+function _sbGenNow(){try{return _sbGen;}catch(e){return 0;}}
 function sbSync(silent){
+  var gen=_sbGenNow(),nulls=0;
+  // The queue may send once the session is known (B1), not after all 43 tables.
+  try{_sbAuth().then(function(){if(gen===_sbGenNow()&&!_obReady){_obReady=true;_obDrain();}},function(){});}catch(e){}
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
   var done=0;
   function finish(){
     done++;
     if(done!==tbls.length)return;
+    if(gen!==_sbGenNow())return;   // locked (or signed out) while this sync ran: its answers belong to no one now
+    try{_sbStale=nulls>0;}catch(e){}
     SB_ON=true;sdb();_sbRefresh(silent);_obDrain();
     // Every table came back null AND at least one of them was a 401/403:
     // the session is dead, not the network. Say so instead of \u2713 \u05d1\u05e2\u05e0\u05df.
@@ -4317,9 +4430,10 @@ function sbSync(silent){
       // null = the fetch failed (offline, 401, 5xx…). Leave the cache alone
       // so the app keeps working offline. Only a real answer from the server
       // — including an empty one — may replace it.
-      if(rows!==null)_sbMergePull(t,rows,obBefore);
+      if(gen!==_sbGenNow()){after();return;}
+      if(rows!==null)_sbMergePull(t,rows,obBefore);else nulls++;
       after();
-    },after);
+    },function(){nulls++;after();});
   }
   for(var i=0;i<Math.min(_SB_POOL,order.length);i++)pull();
 }
@@ -4337,6 +4451,7 @@ try{setTimeout(function(){if(typeof _phSync==='function')_phSync();},0);}catch(e
 var _sbFocusPull=0, _SB_FOCUS_MIN_MS=60000;
 function _sbPullOnFocus(force){
   if(!SB_ON)return;
+  if(typeof empIsOn==='function'&&empIsOn())return;   // the kiosk pulls its own few tables (_truPull)
   var now=Date.now();
   if(!force&&_sbFocusPull&&(now-_sbFocusPull)<_SB_FOCUS_MIN_MS)return;
   _sbFocusPull=now;
@@ -4345,7 +4460,9 @@ function _sbPullOnFocus(force){
 window.addEventListener('online',function(){_obDrain();_sbPullOnFocus(true);});
 window.addEventListener('focus',function(){_obDrain();_sbPullOnFocus(false);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON){_sbFocusPull=Date.now();sbSync(true);}},600*1000);
+setInterval(function(){if(SB_ON&&!(typeof empIsOn==='function'&&empIsOn())){_sbFocusPull=Date.now();sbSync(true);}},600*1000);
+// iOS home-screen apps do not reliably fire focus, and the 10-minute timer sleeps in the background.
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){_obDrain();_sbPullOnFocus(false);}});
 
 // --- Realtime sync (Supabase postgres_changes) ---
 var _sbRT=null,_rtState='off';
@@ -4367,6 +4484,8 @@ function _rtStart(){
         ch.on('postgres_changes',opts,function(p){_rtApply(t,p);});
       });
       ch.subscribe(function(st){
+        // Back after a drop: what changed while the socket was down was never sent to us. Pull it.
+        if(st==='SUBSCRIBED'&&_rtState&&_rtState!=='SUBSCRIBED'&&_rtState!=='off'){try{_sbPullOnFocus(true);}catch(e){}}
         _rtState=st;
         var pill=g('sync-pill');
         if(pill){pill.title='Realtime: '+st;if(st==='SUBSCRIBED')pill.setAttribute('data-rt','on');}
@@ -4554,7 +4673,7 @@ function syncDiag(){
       +'\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05dc\u05da (\u05d3\u05d5\u05e8\u05e1 \u05d0\u05ea \u05d4\u05e9\u05e0\u05d9\u05d9\u05d4).\n'
       +'\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e9\u05dc\u05da \u05d5\u05dc\u05e7\u05d1\u05dc \u05d0\u05ea \u05de\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.';
     if(confirm(msg)){
-      conf.forEach(function(op){op.conflict=false;delete op.base;_verSet(op.tbl,op.row.id,null);});
+      conf.forEach(function(op){op.conflict=false;op.forceAt=Date.now();if(op.gone){op.forceUpsert=true;op.gone=false;}delete op.base;_verSet(op.tbl,op.row.id,null);});
       _obSet(q);_obDrain();
     }else{
       var keep=q.filter(function(op){return conf.indexOf(op)<0;});
@@ -5241,7 +5360,7 @@ window._lockNow=function(){
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
   // The queue waits for the next sign-in (15/10/2026): with SB_ON on, the 30-second send signed in
   // anonymously and the manager's writes went out as anonymous, refused or matching 0 rows.
-  SB_ON=false;
+  SB_ON=false;_obReady=false;_sbGen++;   // a pull or a send already running stops using this session
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
   try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
@@ -20279,7 +20398,7 @@ function _loginResolveUser(lb,email,uname){
   if(lb)lb.textContent='\u05d1\u05d5\u05d3\u05e7 \u05d4\u05e8\u05e9\u05d0\u05d4...';
   _lgWait(fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(uname.toLowerCase())+'&select=*',{
     headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
-  }).then(function(rr){return rr.ok?rr.json():[];}),_LG_WAIT_MS,'user').then(function(rows){
+  }).then(function(rr){if(rr.ok)return rr.json();if(rr.status===404)return [];throw new Error('HTTP '+rr.status);}),_LG_WAIT_MS,'user').then(function(rows){
     _lgMark('user');
     var u=rows[0];
     var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
@@ -20477,21 +20596,9 @@ window._pwChangeSubmit=function(){
       _currentUser={username:'admin',role:'\u05d0\u05d3\u05de\u05d9\u05df',full_name:'\u05d0\u05d3\u05de\u05d9\u05df'};
       _finishLogin(pending.lb);return;
     }
-    fetch(SBU+'/rest/v1/app_users?username=eq.'+encodeURIComponent(pending.uname.toLowerCase())+'&select=*',{
-      headers:{apikey:SBK,Authorization:'Bearer '+_sbToken}
-    }).then(function(rr){return rr.ok?rr.json():[];}).then(function(rows){
-      var u=rows[0];
-      var approved=u&&u.active===true&&u.full_name&&u.full_name.trim();
-      if(!approved){
-        try{_rtStop();}catch(e){}try{_sbClient.auth.signOut();}catch(e){}
-        _sbToken=null;_sbAuthPromise=null;
-        if(pending.lb){pending.lb.disabled=false;pending.lb.textContent=pending.lb.dataset.txt||'\u05db\u05e0\u05d9\u05e1\u05d4';}
-        _loginErr('\u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05d8\u05e8\u05dd \u05d0\u05d5\u05e9\u05e8 \u05e2\u05f4\u05d9 \u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05e2\u05e8\u05db\u05ea. \u05e4\u05e0\u05d4 \u05dc\u05d0\u05d3\u05de\u05d9\u05df.');return;
-      }
-      _currentUser={username:pending.uname.toLowerCase()};
-      for(var k in u)_currentUser[k]=u[k];
-      _finishLogin(pending.lb);
-    });
+    // The same approval read as a normal sign-in (15/10/2026): this copy had no time limit and no error
+    // path, so a network error after the new password left the person on a silent login screen.
+    _loginResolveUser(pending.lb,pending.email,pending.uname);
     });
   }).catch(function(err){
     showErr('\u05e9\u05d2\u05d9\u05d0\u05d4: '+(err&&err.message||err));
@@ -24654,13 +24761,16 @@ function _imgCompress(file,maxPx,q,cb){
 // back to today's behaviour \u2014 an upload is never reported as saved when it
 // was not. This is the only IndexedDB use in the app.
 var _PH_DBN='tfgn-photos',_PH_STORE='q',_PH_MAX=30,_PHDB=null,_phBusy=false;
-function _phDb(cb){
-  if(_PHDB){cb(_PHDB);return;}
+function _phDb(cb0){
+  if(_PHDB){cb0(_PHDB);return;}
+  // 15/10/2026: WebKit can leave an open request hanging after a resume; the photo slot then stayed on
+  // "uploading" and the whole queue waited for ever. Three seconds, then "no store".
+  var once=false,cb=function(d){if(once)return;once=true;clearTimeout(tt);cb0(d);},tt=setTimeout(function(){cb(null);},3000);
   try{
     if(typeof indexedDB==='undefined'||!indexedDB){cb(null);return;}
     var rq=indexedDB.open(_PH_DBN,1);
     rq.onupgradeneeded=function(e){var d=e.target.result;if(!d.objectStoreNames.contains(_PH_STORE))d.createObjectStore(_PH_STORE,{keyPath:'pid'});};
-    rq.onsuccess=function(){_PHDB=rq.result;cb(_PHDB);};
+    rq.onsuccess=function(){if(once){try{rq.result.close();}catch(e){}return;}_PHDB=rq.result;try{_PHDB.onclose=function(){_PHDB=null;};}catch(e){}cb(_PHDB);};
     rq.onerror=function(){cb(null);};
     rq.onblocked=function(){cb(null);};
   }catch(e){cb(null);}
@@ -24668,25 +24778,29 @@ function _phDb(cb){
 function _phTx(mode,fn,cb){
   _phDb(function(db){
     if(!db){cb(null);return;}
-    try{fn(db.transaction(_PH_STORE,mode).objectStore(_PH_STORE),cb);}catch(e){cb(null);}
+    // "Connection to Indexed Database server lost" (iOS after a suspend): open again next time.
+    try{fn(db.transaction(_PH_STORE,mode).objectStore(_PH_STORE),cb);}catch(e){_PHDB=null;cb(null);}
   });
 }
 function _phPut(rec,cb){_phTx('readwrite',function(st,done){var r=st.put(rec);r.onsuccess=function(){done(rec);};r.onerror=function(){done(null);};},cb);}
-function _phAll(cb){_phTx('readonly',function(st,done){var r=st.getAll();r.onsuccess=function(){done(r.result||[]);};r.onerror=function(){done([]);};},function(x){cb(x||[]);});}
+// null = the store could not be read (not "no photos"): a row must then not go up as if its photo were gone.
+function _phAll(cb){_phTx('readonly',function(st,done){var r=st.getAll();r.onsuccess=function(){done(r.result||[]);};r.onerror=function(){done(null);};},function(x){cb(Array.isArray(x)?x:null);});}
 function _phDel(pid,cb){_phTx('readwrite',function(st,done){var r=st['delete'](pid);r.onsuccess=function(){done(1);};r.onerror=function(){done(null);};},function(ok){if(ok&&_phN>0)_phN--;_obBadge();if(cb)cb(ok);});}
 // Keep the badge honest across reloads: the count is read once at startup.
-function _phSync(cb){_phAll(function(l){_phN=l.length;_obBadge();if(cb)cb(l);});}
+function _phSync(cb){_phAll(function(l){if(l)_phN=l.length;_obBadge();if(cb)cb(l||[]);});}
 
 // ---- offline photo queue: capture ----
 // Called from _attachPick only when the upload failed for network reasons.
 function _phQueue(areaId,file,prefix,cb){
   var store=function(blob){
     _phAll(function(list){
+      if(!list){cb(false,'idb');return;}
       if(list.length>=_PH_MAX){cb(false,'full');return;}
       var pid='ph'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       _phPut({pid:pid,blob:blob,name:file.name||'photo.jpg',prefix:prefix,ts:Date.now()},function(ok){
         if(!ok){cb(false,'idb');return;}
         _phN=list.length+1;_obBadge();
+        _phLeft[pid]=1;   // a row saved now waits for it even if a drain is already running (15/10/2026)
         _attachUrls[areaId]=_PH_PREFIX+pid;
         _attachRenderPending(areaId,blob,pid);
         cb(true);
@@ -24713,27 +24827,48 @@ function _attachRenderPending(areaId,blob,pid){
 // them waits for it (15/10/2026): sent first, it could never be fixed, because the trustee's
 // anonymous session may insert but not update, and the photo was lost. A pid not in the queue any
 // more (cleared, over the cap) does not hold the row back: the report goes without the photo.
-var _phLeft={};
+var _phLeft={},_phUnknown=false,_phTries={},_phGaveUp={};
 function _obWaitsPhoto(op){
   if(!op||op.op!=='ins'||!op.row)return false;
-  return Object.keys(op.row).some(function(k){var v=op.row[k];return typeof v==='string'&&v.indexOf(_PH_PREFIX)===0&&_phLeft[v.slice(_PH_PREFIX.length)];});
+  return Object.keys(op.row).some(function(k){
+    var v=op.row[k];if(typeof v!=='string'||v.indexOf(_PH_PREFIX)!==0)return false;
+    var pid=v.slice(_PH_PREFIX.length);
+    if(_phGaveUp[pid])return false;
+    // The store could not be read: do not send a row as if its photo were gone (15/10/2026).
+    return _phUnknown||!!_phLeft[pid];
+  });
 }
 function _phDrain(){
-  if(_phBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  if(_phBusy||!_obOn()||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
+  // Busy from the first moment (15/10/2026): it was set only after the store answered, so one tour of
+  // ten rows started ten drains, each uploading every queued photo at once on a weak link.
+  _phBusy=true;
   return new Promise(function(res){
     _phAll(function(list){
+      if(!list){_phUnknown=true;_phBusy=false;res();return;}
+      _phUnknown=false;
       _phN=list.length;
       _phLeft={};list.forEach(function(rec){if(rec&&rec.pid)_phLeft[rec.pid]=1;});
-      if(!list.length){res();return;}
-      _phBusy=true;
+      if(!list.length){_phBusy=false;res();return;}
       var p=Promise.resolve();
       list.forEach(function(rec){
         p=p.then(function(){
           return new Promise(function(done){
             try{
-              _fileUpload(rec.blob,rec.prefix,function(url){
+              _fileUpload(rec.blob,rec.prefix,function(url,status){
                 // No url means the connection is still down: leave it queued.
                 if(url){_phResolve(rec.pid,url);_phDel(rec.pid);delete _phLeft[rec.pid];}
+                else{
+                  // A refusal for good (400 type, 403 policy, 413 size), or 8 failed tries: the photo stays in
+                  // the phone, but its report goes up without it and the person is told. A report held for
+                  // ever behind a photo the server will never take was a report that never arrived.
+                  var st=+status||0,perm=st>=400&&st<500&&st!==401&&st!==408&&st!==429;
+                  _phTries[rec.pid]=(_phTries[rec.pid]||0)+1;
+                  if((perm||_phTries[rec.pid]>=8)&&!_phGaveUp[rec.pid]){
+                    _phGaveUp[rec.pid]=1;
+                    try{toast('\u26a0 \u05ea\u05de\u05d5\u05e0\u05d4 \u05dc\u05d0 \u05e2\u05dc\u05ea\u05d4'+(st?' ('+st+')':'')+'. \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05e0\u05e9\u05dc\u05d7 \u05d1\u05dc\u05e2\u05d3\u05d9\u05d4, \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 \u05d1\u05d8\u05dc\u05e4\u05d5\u05df.');}catch(e){}
+                  }
+                }
                 done();
               });
             }catch(e){done();}
@@ -24766,10 +24901,13 @@ function _phResolve(pid,url){
   });
   if(changed)_obSet(q);
   // A row that already reached the server still holds the sentinel there.
-  touched.forEach(function(t){
+  // Only the photo field (15/10/2026): the whole local row could carry stale values over a newer
+  // server copy. Not from the kiosk: an anonymous session may insert but not update.
+  if(!(typeof empIsOn==='function'&&empIsOn()))touched.forEach(function(t){
     if(queued[t.tbl+'|'+t.row.id])return;
-    try{_aud('upd',t.tbl,t.row);}catch(e){}
-    _obPush({op:'upd',tbl:t.tbl,row:t.row});
+    var part={id:t.row.id};Object.keys(t.row).forEach(function(k){if(t.row[k]===url)part[k]=url;});
+    try{_aud('upd',t.tbl,part);}catch(e){}
+    _obPush({op:'upd',tbl:t.tbl,row:part});
   });
   // And a form may still be open with this area attached.
   try{Object.keys(_attachUrls).forEach(function(a){if(_attachUrls[a]===token)_attachUrls[a]=url;});}catch(e){}

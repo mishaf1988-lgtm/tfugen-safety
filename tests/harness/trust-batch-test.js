@@ -91,11 +91,12 @@ let ACCEPT = true, DIALOGS = [];
 
     const conflict = await page.evaluate(() => {
       _verSet('ncr', 'n2', '2026-09-20T08:00:00Z');       // what WE last saw
-      window.fetch = function () {
-        // the server row has since moved on, so nothing matches the filter
+      window.fetch = function (u, o) {
+        // the server row has since moved on, so nothing matches the filter; the check that follows finds it with a newer ts
+        if (!(o && o.method)) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: 'n2', ts: '2026-09-20T09:00:00Z' }]) });
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') });
       };
-      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n2', d: 'mine' } })
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n2', d: 'mine', ts: '2026-09-20T08:30:00Z' } })
         .then(function () { return { threw: false }; },
               function (e) { return { threw: true, conflict: !!e.conflict, zero: !!e.zeroRows, body: e.body }; });
     });
@@ -199,6 +200,26 @@ let ACCEPT = true, DIALOGS = [];
       return 'base' in _obGet()[0];
     });
     check('«keep mine» drops the stored base too, or the retry would hit the same conflict', force === false, force);
+    const zero = await page.evaluate(() => {
+      const mk = (row) => function (u, o) {
+        if (!(o && o.method)) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(row ? [row] : []) });
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') });
+      };
+      _rowVer = {}; _verSet('ncr', 'z1', 'v1'); _verSet('ncr', 'z2', 'v1');
+      window.fetch = mk({ id: 'z1', ts: '2026-10-15T08:00:00.000Z' });
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'z1', d: 'x', ts: '2026-10-15T08:00:00Z' } }).then(() => ({ own: 'done', v: _verOf('ncr', 'z1') }), (e) => ({ own: 'err ' + e.body })).then((a) => {
+        window.fetch = mk(null);
+        return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'z2', d: 'x', ts: '2026-10-15T08:00:00Z' } }).then(() => ({ ...a, gone: 'done' }), (e) => ({ ...a, gone: !!e.gone, conflict: !!e.conflict, body: e.body }));
+      });
+    });
+    check('0 rows, but the server row carries our own ts: our earlier send landed (lost answer) -> done, not a conflict', zero.own === 'done' && zero.v === '2026-10-15T08:00:00.000Z', zero);
+    check('0 rows and the row is gone: "deleted elsewhere", the person decides (no automatic upsert)', zero.gone === true && zero.conflict && /נמחקה/.test(zero.body || ''), zero);
+    const noAuto = await page.evaluate(() => {
+      const seen = []; _rowVer = {};
+      window.fetch = (u, o) => { seen.push((o && o.method) || 'GET'); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') }); };
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'z3' }, zeroTries: 9, gone: true }).then(() => seen, () => seen);
+    });
+    check('...a row known to be gone is never upserted back by itself, whatever the tries', noAuto[0] === 'PATCH', noAuto);
     await page.evaluate(() => { _obSet([]); _rowVer = {}; });
   }
 

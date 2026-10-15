@@ -126,9 +126,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         for (let i = 0; i < n; i++) out.push({ id: 'r' + calls + '_' + i });
         return Promise.resolve({ ok: true, status: 206, json: () => Promise.resolve(out), text: () => Promise.resolve('') });
       };
-      return sbGet('ncr').then(function (rows) { return { calls: calls, n: rows.length }; });
+      // 15/10/2026: a read cut at the page limit is not the whole table: null (keep the cache), not half a table.
+      return sbGet('ncr').then(function (rows) { return { calls: calls, n: rows ? rows.length : null }; });
     });
-    check('a server that never runs out is cut off rather than looped for ever', runaway.calls === 50 && runaway.n === 50000, runaway);
+    check('a server that never runs out is cut off rather than looped for ever, and the cut read does not replace the table', runaway.calls === 50 && runaway.n === null, runaway);
   }
 
   console.log('\n5.2 a write that changed nothing is not «sent»');
@@ -137,6 +138,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       const seen = [];
       window.fetch = function (u, o) {
         seen.push({ u: String(u), m: (o && o.method) || 'GET' });
+        // 15/10/2026: after 0 rows the app asks whether the row exists; here it does (RLS hid it from the update)
+        if (!(o && o.method)) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: 'n1', ts: '2026-01-01T00:00:00Z' }]) });
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') });
       };
       return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n1', d: 'x' } })
