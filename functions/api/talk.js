@@ -1316,7 +1316,24 @@ async function makeLink(env, request, ctx) {
     const at = b.op === 'close' ? new Date().toISOString() : null;
     const p = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ closed_at: at }) });
     if (!p.ok) return jsonResp({ error: b.op + ' failed' }, 502, cors);
-    return jsonResp({ ok: true, closed_at: at }, 200, cors);
+    // Closing files form 08.01 with everyone who signed and mails it (15/10/2026, Michael: "once I close it,
+    // all the forms arrive by mail"). A failure there leaves the training closed and says why.
+    let filed = null, fileErr = null;
+    if (b.op === 'close') {
+      try {
+        const rr = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + '&select=id,emp_name,dept,id_no,sig_url,read_at&order=read_at.asc', { headers: sbH(env) });
+        const reads = rr.ok ? await rr.json() : [];
+        if (Array.isArray(reads) && reads.length) {
+          const full = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id) + '&select=*', { headers: sbH(env) });
+          const t = full.ok ? ((await full.json()) || [])[0] : null;
+          filed = await file0801(env, t || talk, reads);
+          const fa = new Date().toISOString();
+          const q = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(talk.id), { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ form_at: fa }) }).catch(() => null);
+          if (q && q.ok) filed.form_at = fa;
+        }
+      } catch (e) { fileErr = String((e && e.message) || e).substring(0, 160); }
+    }
+    return jsonResp({ ok: true, closed_at: at, filed, fileErr }, 200, cors);
   }
   if (isClosed(talk)) return jsonResp({ error: 'closed' }, 409, cors);
   // Annual / quality (14/10/2026, Michael: "the trainer signs the training and the effectiveness check, and the
