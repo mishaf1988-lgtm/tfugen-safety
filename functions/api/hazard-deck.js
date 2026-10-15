@@ -125,7 +125,8 @@ export async function onRequest(context) {
     if (body.op === 'status' || body.op === 'setDate') {
       if (body.op === 'setDate') {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date || ''))) return jsonResp({ ok: false, error: 'bad date' }, 400, cors);
-        await stateSet(env, { deck_meeting_date: body.date });
+        try { await stateSet(env, { deck_meeting_date: body.date }); }
+        catch (e) { return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 503, cors); }
       }
       const s = await stateGet(env, ['deck_at', 'deck_err', 'deck_err_at', 'deck_url', 'deck_report', 'deck_meeting_date']).catch(() => ({}));
       const v = (k) => (s[k] && s[k].value) || null;

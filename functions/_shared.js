@@ -34,6 +34,11 @@ export function corsHeaders(origin, allowed, methods = 'POST,OPTIONS') {
 // phone: «âœ"» where a tick should be. claude.js always declared it on its
 // stream; this, which serves ten endpoints including trustee-notify and its
 // Hebrew task names, never did.
+// Time limits for outbound calls (15/10/2026, owner: "no hang"). A fetch with
+// no signal waits as long as the platform lets it; these make a dead upstream
+// an error the caller already handles.
+export const SB_TIMEOUT_MS = 10000;
+
 export function jsonResp(payload, status, cors) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -75,11 +80,15 @@ export async function requireUser(request, env, opts) {
   let resp, user;
   try {
     resp = await fetch(SUPABASE_URL + '/auth/v1/user', {
-      headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }
+      headers: { apikey: serviceKey, Authorization: 'Bearer ' + token },
+      signal: AbortSignal.timeout(SB_TIMEOUT_MS)
     });
   } catch (e) {
     return { ok: false, status: 502, error: 'auth check failed' };
   }
+  // 15/10/2026: a 5xx (or a timeout, above) is Supabase being down, not a bad
+  // token. Answering 401 there told a signed-in manager "invalid session".
+  if (resp.status >= 500) return { ok: false, status: 502, error: 'auth check failed' };
   if (!resp.ok) return { ok: false, status: 401, error: 'invalid session token' };
   try { user = await resp.json(); } catch (e) { return { ok: false, status: 502, error: 'auth check failed' }; }
   // Supabase marks these explicitly. Treat a missing email as anonymous too:
@@ -108,7 +117,16 @@ const ROLE_MAP = {
   'צופה': 'viewer',         // viewer (read-only, 2026-09-24)
   'מדווח': 'reporter'  // reporter (default)
 };
+// The role, or null for "no role". A failed READ is not "no role" (15/10/2026):
+// roleLookup reports it as {failed:true} so requireRole answers 502, not 403.
 export async function userRole(env, user) {
+  return (await roleLookup(env, user)).role;
+}
+async function roleLookup(env, user) {
+  const r = await roleRead(env, user);
+  return r && typeof r === 'object' ? r : { role: r };
+}
+async function roleRead(env, user) {
   const email = String((user && user.email) || '').toLowerCase();
   if (!email) return null;
   if (email === ADMIN_EMAIL) return 'admin';
@@ -125,20 +143,23 @@ export async function userRole(env, user) {
   if (!key) return null;
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(id) + '&select=role,active',
-      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
-    if (!r.ok) return null;
+      { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: AbortSignal.timeout(SB_TIMEOUT_MS) });
+    if (!r.ok) return { role: null, failed: true };
     const rows = await r.json();
-    const u = Array.isArray(rows) ? rows[0] : null;
+    if (!Array.isArray(rows)) return { role: null, failed: true };
+    const u = rows[0] || null;
     if (!u || u.active === false) return null;
     return ROLE_MAP[u.role] || null;
-  } catch (e) { return null; }
+  } catch (e) { return { role: null, failed: true }; }
 }
 // requireUser + a role gate. `allowed` is the list of roles that may proceed
 // (e.g. ['admin','manager']). Returns { ok, status, error, user, role }.
 export async function requireRole(request, env, allowed) {
   const who = await requireUser(request, env);
   if (!who.ok) return who;
-  const role = await userRole(env, who.user);
+  const look = await roleLookup(env, who.user);
+  if (look.failed) return { ok: false, status: 502, error: 'role check failed', user: who.user };
+  const role = look.role;
   if (!role || (Array.isArray(allowed) && allowed.indexOf(role) < 0)) {
     return { ok: false, status: 403, error: 'insufficient role', user: who.user, role: role };
   }
