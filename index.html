@@ -11995,7 +11995,11 @@ function _tbtSubjects(){var a=Array.prototype.filter.call(document.querySelector
 // What an annual / quality training still lacks before it is published (empty = ready).
 function _tbtTypedMissing(r,signedNow){var m=[];if(!r.d)m.push('\u05ea\u05d0\u05e8\u05d9\u05da');if(!r.trainer||!r.trainer_qual)m.push('\u05de\u05d3\u05e8\u05d9\u05da \u05d5\u05db\u05e9\u05d9\u05e8\u05d5\u05ea');if(!r.dur)m.push('\u05de\u05e9\u05da');
   if(!r.subjects)m.push('\u05e1\u05d5\u05d2\u05d9 \u05d4\u05d4\u05d3\u05e8\u05db\u05d4');if(r.eff_ok!==true&&r.eff_ok!==false)m.push('\u05d0\u05e4\u05e7\u05d8\u05d9\u05d1\u05d9 \u05db\u05df/\u05dc\u05d0');if(!r.trainer_signed_at&&!signedNow)m.push('\u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da');return m;}
-function _tbtSigUpload(id,cb){var c=g('tbt-trsig');if(!c||!_tbtSigDrawn)return cb(null);
+// The trainer's pad is transparent, and _fileUpload makes a JPEG: no transparency, so the background came out
+// black and the black strokes vanished into it (15/10/2026, Michael: "why is the form with a black box?").
+// The signature is drawn on white first, as the worker's page does.
+function _tbtSigUpload(id,cb){var c0=g('tbt-trsig');if(!c0||!_tbtSigDrawn)return cb(null);
+  var c=document.createElement('canvas');c.width=c0.width;c.height=c0.height;var cx=c.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,c.width,c.height);cx.drawImage(c0,0,0);
   c.toBlob(function(b){if(!b)return cb(null);var f;try{f=new File([b],'trainer.png',{type:'image/png'});}catch(e){f=b;f.name='trainer.png';}_fileUpload(f,'sig-'+id+'-trainer',function(url){cb(url||null);});},'image/png');}
 function _tbtLinkShow(r,url,perm){
   _tbtLinkTxt=(_tbtTyped(r.kind)?'\u05d4\u05d3\u05e8\u05db\u05d4 '+_TBT_KINDS[r.kind]+': ':perm?'\u05d4\u05d3\u05e8\u05db\u05ea \u05e7\u05dc\u05d9\u05d8\u05d4 \u05dc\u05e2\u05d5\u05d1\u05d3 \u05d7\u05d3\u05e9: ':'\u05d4\u05d3\u05e8\u05db\u05d4: ')+(r.title||'')+'\n\u05dc\u05e7\u05e8\u05d5\u05d0, \u05dc\u05e6\u05e4\u05d5\u05ea \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd:\n'+url;
@@ -24341,7 +24345,8 @@ function _imgCompress(file,maxPx,q,cb){
       var w=img.width,h=img.height;
       if(w>maxPx||h>maxPx){var sc=maxPx/Math.max(w,h);w=Math.round(w*sc);h=Math.round(h*sc);}
       var c=document.createElement('canvas');c.width=w;c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
+      // JPEG has no transparency: a transparent PNG (a signature, a logo) came out on black (15/10/2026). White first.
+      var cx=c.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
       c.toBlob(function(blob){cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);
     };
     img.src=e.target.result;

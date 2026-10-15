@@ -51,13 +51,15 @@ const o_t = (x) => String(x || '').trim();
     const n0 = ins.length; svTbt(); o.refused = { saved: ins.length !== n0, msg: toasts.slice(-1)[0] };
     document.querySelector('.tbt-subj[value="כיבוי אש"]').checked = true; set('tbt-subj-o', 'הדרכת ריתוך');
     set('tbt-eff-ok-f', '1');
-    const ups = []; window._fileUpload = (f, prefix, cb) => { ups.push(prefix); cb('https://x.supabase.co/storage/v1/object/public/incidents-photos/' + prefix + '.jpg'); };
+    const ups = [], upFiles = []; window._fileUpload = (f, prefix, cb) => { ups.push(prefix); upFiles.push(f); cb('https://x.supabase.co/storage/v1/object/public/incidents-photos/' + prefix + '.jpg'); };
     const cv = document.getElementById('tbt-trsig'); const rc = cv.getBoundingClientRect();
     const ev = (t, x, y) => cv.dispatchEvent(new PointerEvent(t, { clientX: rc.left + x, clientY: rc.top + y, bubbles: true }));
     ev('pointerdown', 10, 10); ev('pointermove', 60, 40); ev('pointermove', 120, 30); ev('pointerup', 120, 30);
     svTbt(); await new Promise((r) => setTimeout(r, 300));
     const sv = ins.filter((x) => x[0] === 'toolbox_talks').slice(-1)[0][1]; o.saved = { kind: sv.kind, dur: sv.dur, cc: sv.mail_cc, subjects: sv.subjects, effOk: sv.eff_ok, effD: sv.eff_d, d: sv.d }; const id = sv.id;
     o.sig = { ups, row: JSON.parse(JSON.stringify(DB.toolbox_talks.find((x) => x.id === id))) };
+    // 15/10/2026: the uploaded signature has a white background (a JPEG of a transparent pad came out black)
+    { const f = upFiles[0]; o.sigCorner = null; if (f) { const bm = await createImageBitmap(f); const cv = document.createElement('canvas'); cv.width = bm.width; cv.height = bm.height; const x = cv.getContext('2d'); x.drawImage(bm, 0, 0); o.sigCorner = [...x.getImageData(1, 1, 1, 1).data]; } }
     openModal('m-tbt'); o.fresh = { kind: document.getElementById('tbt-kind').value, dur: document.getElementById('tbt-dur').value, hidden: document.getElementById('tbt-dur-f').style.display === 'none' }; closeModal('m-tbt');
     _genEdit('toolbox_talks', id); o.edit = { kind: document.getElementById('tbt-kind').value, dur: document.getElementById('tbt-dur').value, cc: document.getElementById('tbt-cc').value }; closeModal('m-tbt');
     // link: until closed, and "close signatures"
@@ -194,6 +196,7 @@ const o_t = (x) => String(x || '').trim();
   check('an open annual training has "close signatures" in its row; closing says the form is filed and mailed', r.rowClose && r.rowCloseRes === 'closed' && /טופס 08.01 עם כל החותמים יישמר/.test(r.closeAsk || '') && /נשמר בתיקייה ונשלח אליך במייל/.test(r.rowCloseToast) && r.rowFormAt === '2026-10-15T09:00:01Z', [r.rowClose, r.rowCloseRes, r.rowCloseToast]);
   check('annual row: the count is who signed (everyone types), not "0 / employees"', String(r.rowCount).trim() === '1', r.rowCount);
   check('annual: the not-signed list is folded and not printed; the print says "הדרכה שנתית", no buttons', r.missFolded && /<h2>הדרכה שנתית: רשימת חותמים<\/h2>/.test(r.printHtml) && !/לא חתמו \(/.test(r.printHtml) && !/tbtMissMail|tbtForm0801/.test(r.printHtml), r.printHtml.slice(r.printHtml.indexOf('<h2>'), r.printHtml.indexOf('<h2>') + 300));
+  check('the trainer signature is uploaded on white, not transparent (a JPEG made it black)', Array.isArray(r.sigCorner) && r.sigCorner[0] === 255 && r.sigCorner[1] === 255 && r.sigCorner[2] === 255 && r.sigCorner[3] === 255, r.sigCorner);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
