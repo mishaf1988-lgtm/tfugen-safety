@@ -10,6 +10,7 @@ const HTML = 'file://' + path.resolve(__dirname, '../../index.html');
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
+const o_t = (x) => String(x || '').trim();
 (async () => {
   const browser = await pw.chromium.launch();
   const page = await (await browser.newContext({ viewport: { width: 375, height: 812 }, locale: 'he-IL' })).newPage();
@@ -89,6 +90,16 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
     o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
     o.unsaved = await _tbtPreviewFromForm();
+    // 15/10/2026 (Michael): "weekly" is not the platform's name; close from the row; the print lists only who signed
+    { o.modalTitle = document.querySelector('#m-tbt .modal-title').textContent; o.optWeekly = document.querySelector('#tbt-kind option[value=""]').textContent;
+      DB.toolbox_talks = [{ id: 'rowc', title: 'שנתית לסגירה', s: 'פורסמה', kind: 'annual', d: '2026-10-15' }]; DB.toolbox_reads = [{ id: 'rr', talk_id: 'rowc', emp_id: 'x:א', emp_name: 'א', id_no: '1', read_at: '2026-10-15T07:00:00Z' }];
+      goPage('training'); rTbt(); o.rowClose = !!document.querySelector('#tb-tbt [onclick^="tbtClose"][onclick*="close"]');
+      o.rowCount = (document.querySelector('#tb-tbt [onclick^="tbtWho"]') || {}).textContent;
+      const cl = []; window.confirm = (m) => { o.closeAsk = m; return true; };
+      window.fetch = (u, init) => { cl.push(JSON.parse(init.body)); return Promise.resolve(new Response(JSON.stringify({ ok: true, closed_at: '2026-10-15T09:00:00Z', filed: { n: 1, mailed: true, pdf: true, form_at: '2026-10-15T09:00:01Z' } }), { status: 200 })); };
+      const t0 = toasts.length; o.rowCloseRes = await tbtClose('rowc', 'close'); o.rowCloseToast = toasts.slice(t0).join('|'); o.rowFormAt = DB.toolbox_talks[0].form_at;
+      DB.toolbox_talks[0].closed_at = null; tbtWho('rowc'); const wb = document.getElementById('tbt-who-body');
+      o.missFolded = !!wb.querySelector('details.no-print') ; let html = ''; window.open = () => ({ document: { write(h) { html += h; }, close() {}, images: [] }, print() {} }); tbtWhoPrint(); o.printHtml = html; }
     // 15/10/2026: one list of topics per kind, from the folders: safety for annual, quality (GMP, allergens...) for quality
     { openModal('m-tbt'); const k = document.getElementById('tbt-kind'); const vals = () => [...document.querySelectorAll('#tbt-subj .tbt-subj')].map((c) => c.value);
       k.value = 'annual'; _tbtKindUi(); o.subjAnn = vals();
@@ -179,6 +190,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('annual: the safety topics found in the folders (16, machine guarding, emergency, PPE...)', r.subjAnn.length === 16 && ['מיגון מכונות', 'חירום ופינוי', 'ציוד מגן אישי', 'כיבוי אש'].every((v) => r.subjAnn.includes(v)) && !r.subjAnn.includes('אלרגנים'), r.subjAnn);
   check('quality: its own list (GMP, allergens, CCP, HACCP...), no safety topics', r.subjQa.length === 8 && ['GMP והיגיינה אישית', 'אלרגנים', 'CCP', 'HACCP'].every((v) => r.subjQa.includes(v)) && !r.subjQa.includes('כיבוי אש'), r.subjQa);
   check('editing a quality training: its topic ticked, a free one under "other", saved back as both', r.subjQaOn === 'אלרגנים' && r.subjQaOther === 'נושא חופשי' && r.subjQaSaved === 'אלרגנים\nנושא חופשי', [r.subjQaOn, r.subjQaOther, r.subjQaSaved]);
+  check('the form is "הדרכה", the plain kind is "read and sign (weekly, monthly or specific)"', /📖 הדרכה$/.test(o_t(r.modalTitle)) && /קריאה וחתימה \(שבועית, חודשית או נקודתית\)/.test(r.optWeekly), [r.modalTitle, r.optWeekly]);
+  check('an open annual training has "close signatures" in its row; closing says the form is filed and mailed', r.rowClose && r.rowCloseRes === 'closed' && /טופס 08.01 עם כל החותמים יישמר/.test(r.closeAsk || '') && /נשמר בתיקייה ונשלח אליך במייל/.test(r.rowCloseToast) && r.rowFormAt === '2026-10-15T09:00:01Z', [r.rowClose, r.rowCloseRes, r.rowCloseToast]);
+  check('annual row: the count is who signed (everyone types), not "0 / employees"', String(r.rowCount).trim() === '1', r.rowCount);
+  check('annual: the not-signed list is folded and not printed; the print says "הדרכה שנתית", no buttons', r.missFolded && /<h2>הדרכה שנתית: רשימת חותמים<\/h2>/.test(r.printHtml) && !/לא חתמו \(/.test(r.printHtml) && !/tbtMissMail|tbtForm0801/.test(r.printHtml), r.printHtml.slice(r.printHtml.indexOf('<h2>'), r.printHtml.indexOf('<h2>') + 300));
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

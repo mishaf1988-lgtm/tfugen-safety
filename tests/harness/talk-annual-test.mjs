@@ -121,10 +121,16 @@ console.log('\n3. a real close (14/10/2026, Michael: "בצע: סגירה אמי�
 {
   const lk = await link({ op: 'link', id: 'an1' }, 'good');
   const uo = lk.j && lk.j.url;
-  const np = w.patches.length;
+  const np = w.patches.length, nm = (w.mails || []).length, npu = (w.puts || []).length;
   let c = await link({ op: 'close', id: 'an1' }, 'good');
   const cp = w.patches.slice(np);
-  check('close: closed_at written, nothing else (link_v untouched)', c.st === 200 && c.j.ok && /^\d{4}-/.test(c.j.closed_at) && cp.length === 1 && Object.keys(cp[0].b).join() === 'closed_at' && cp[0].b.closed_at === c.j.closed_at, { c, cp });
+  check('close: closed_at written first, link_v untouched', c.st === 200 && c.j.ok && /^\d{4}-/.test(c.j.closed_at) && Object.keys(cp[0].b).join() === 'closed_at' && cp[0].b.closed_at === c.j.closed_at && !cp.some((x) => 'link_v' in x.b), { c, cp });
+  // 15/10/2026 (Michael: "once I close it, all the forms arrive by mail"): closing files form 08.01 and mails it
+  check('close files form 08.01 with everyone who signed, mails it, and stamps form_at', c.j.filed && c.j.filed.n === w.reads.length && c.j.filed.mailed && (w.mails || []).length === nm + 1 && (w.puts || []).length > npu && cp.length === 2 && cp[1].b.form_at === c.j.filed.form_at && !c.j.fileErr, { filed: c.j.filed, cp });
+  { const keep = w.reads, nm2 = (w.mails || []).length; w.reads = [];
+    const c0 = await link({ op: 'close', id: 'qa1' }, 'good');
+    check('close with nobody signed: closed, no form and no mail', c0.st === 200 && c0.j.ok && c0.j.filed === null && (w.mails || []).length === nm2, c0.j);
+    w.reads = keep; }
   check('close: a viewer is refused', (await link({ op: 'close', id: 'an1' }, 'rep')).st === 403);
   check('close on a weekly talk: refused', (await link({ op: 'close', id: 'wk1' }, 'good')).st === 409);
   T.ann.closed_at = c.j.closed_at;

@@ -149,11 +149,8 @@ const APP = {
     prep: async (p) => { await p.evaluate(() => { tbtWho('pilot-ann'); return tbtMissMail('pilot-ann'); }); await p.waitForTimeout(400); await scrollTo(p, '#tbt-miss-res', 0.18); },
     ring: { sel: '#tbt-miss-res [onclick^="tbtMissSend"]', n: 11 },
   },
-  'a12-close': {
-    talks: [PILOT],
-    prep: async (p) => { await p.click(rowBtn('tbtLink')); await p.waitForSelector('#m-tbt-link', { state: 'visible' }); await p.waitForTimeout(500); await scrollTo(p, '#tbt-link-revoke', 0.6); },
-    ring: { sel: '#tbt-link-revoke', n: 12 },
-  },
+  // 15/10/2026: "close signatures" sits in the row, next to publish (Michael), and files form 08.01.
+  'a12-close': { talks: [PILOT], reads: true, prep: async () => {}, ring: { sel: rowBtn('tbtClose'), n: 12 } },
   'a14-closed': {
     talks: [Object.assign({}, PILOT, { closed_at: TODAY + 'T12:00:00Z' })], reads: true,
     prep: async () => {},
