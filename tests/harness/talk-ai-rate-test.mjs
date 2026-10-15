@@ -65,7 +65,8 @@ console.log('\n5. the wiring');
   const direct = src.split('\n').filter((l) => /hebrewName\(env/.test(l));
   check('hebrewName is called only inside nameHe', direct.length === 1 && /return hebrewName\(env, raw\)/.test(direct[0]), direct);
   // 14/10/2026: + the department typed under "other" in the annual / quality training.
-  check('name, company, job, agency and a typed department all go through nameHe', (src.match(/await nameHe\(env, request, /g) || []).length === 5);
+  // Annual / quality names and a typed department are Hebrew letters only (heName, no AI) since 15/10/2026.
+check('name, company, job and agency go through nameHe (annual / quality: Hebrew only, no AI)', (src.match(/await nameHe\(env, request, /g) || []).length === 4 && /if \(typed && !heName\(raw\)\) return bad\('errNameT', 'heOnly', 422\)/.test(src));
   const rows = [{ key: 'guess:tlk:0123456789abcdef', value: '400' }, { key: 'guess:ai:0123456789abcdef', value: '250' }, { key: 'guess:ind:0123456789abcdef', value: '11' }];
   check('the codes screen does not count tlk as a locked address', lockedCount(rows) === 1, lockedCount(rows));
 }
