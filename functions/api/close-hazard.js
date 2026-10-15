@@ -170,10 +170,17 @@ async function notifyManager(env, f, who, note, hasPhoto) {
   } catch (e) { /* ignore */ }
 }
 
+// The manager's mail goes out after the page is answered (15/10/2026): the
+// person who closed it does not wait on Graph. No waitUntil (tests): inline.
+function later(ctx, p) {
+  if (ctx && typeof ctx.waitUntil === 'function') { ctx.waitUntil(p.catch(() => {})); return; }
+  return p;
+}
+
 // POST for a tour hazard: the row itself carries the closure (no report row
 // as for a trustee finding). Guarded by s != סגור, so a second tap or a
 // closure in the app in between changes nothing.
-async function closeHazardPost(env, tok, id, form) {
+async function closeHazardPost(env, tok, id, form, ctx) {
   let h;
   try { h = await loadHazard(env, id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
   if (!h) return page('\u05d4\u05de\u05e4\u05d2\u05e2 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'err', 404);
@@ -194,13 +201,14 @@ async function closeHazardPost(env, tok, id, form) {
   let changed = null;
   try { changed = await up.json(); } catch (e) { changed = null; }
   if (Array.isArray(changed) && changed.length === 0) return alreadyClosed(h);
-  await notifyManager(env, h, who, note, !!photo.url);
+  await later(ctx, notifyManager(env, h, who, note, !!photo.url));
   return page('\u2705 \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8', details(h)
     + '<p><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + '<br>' + (photo.url ? '\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4.' : esc(photo.note || '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.')) + '</p>'
     + '<p>\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e3.</p>', 'ok');
 }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(context) {
+  const { request, env } = context;
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return page('\u05ea\u05e7\u05dc\u05d4 \u05d1\u05e9\u05e8\u05ea', '<p>\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d4 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>', 'err', 500);
   const url = new URL(request.url);
 
@@ -230,7 +238,7 @@ export async function onRequest({ request, env }) {
   const t = await readCloseToken(env, tok);
   if (t.error) return tokenError(t);
   if (t.id === 'test') return page('\u05d6\u05d5 \u05d4\u05d5\u05d3\u05e2\u05ea \u05d1\u05d3\u05d9\u05e7\u05d4', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'ok');
-  if (isHazardId(t.id)) return closeHazardPost(env, tok, t.id, form);
+  if (isHazardId(t.id)) return closeHazardPost(env, tok, t.id, form, context);
   let f;
   try { f = await loadFinding(env, t.id); } catch (e) { return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.</p>', 'err', 502); }
   if (!f || !isFinding(f)) return page('\u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '<p>\u05dc\u05d0 \u05e0\u05e1\u05d2\u05e8 \u05d3\u05d1\u05e8.</p>', 'err', 404);
@@ -255,12 +263,18 @@ export async function onRequest({ request, env }) {
   };
   const ins = await fetch(SB + '/rest/v1/trustee_reports?on_conflict=id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rep) });
   if (!ins.ok) return formPage(tok, f, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + ins.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
+  // return=representation (15/10/2026): on a double tap both POSTs get here,
+  // and only the PATCH that changed the row may mail the manager and say
+  // "closed". The other one changed 0 rows: "already closed", and no mail.
   const up = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(f.id) + '&s=neq.' + encodeURIComponent(S_CLOSED), {
-    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED }),
+    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ s: S_CLOSED }),
   });
   if (!up.ok) return page('\u05e0\u05e9\u05de\u05e8 \u05d7\u05dc\u05e7\u05d9\u05ea', '<p>\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05e0\u05e9\u05de\u05e8, \u05d0\u05d1\u05dc \u05e1\u05d9\u05de\u05d5\u05df \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05db\u05e1\u05d2\u05d5\u05e8 \u05e0\u05db\u05e9\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 502);
 
-  await notifyManager(env, f, who, note, !!photo.url);
+  let changedF = null;
+  try { changedF = await up.json(); } catch (e) { changedF = null; }
+  if (Array.isArray(changedF) && changedF.length === 0) return alreadyClosed(f);
+  await later(context, notifyManager(env, f, who, note, !!photo.url));
   return page('\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8', details(f)
     + '<p><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + '<br>' + (photo.url ? '\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4.' : esc(photo.note || '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.')) + '</p>'
     + '<p>\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e3.</p>', 'ok');
