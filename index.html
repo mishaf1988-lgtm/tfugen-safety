@@ -4252,21 +4252,34 @@ function sbSync(silent){
   // every pull — including tables with queued outbox ops (they used to be
   // skipped entirely) and including an EMPTY answer (it used to be ignored,
   // so a server-side reset left zombie rows in localStorage forever).
-  tbls.forEach(function(t){
+  // At most _SB_POOL requests at a time, the home screen's tables first (15/10/2026, Michael: "the app is
+  // stuck, it gets in very slowly"). The free Supabase server queued the 43 requests every sign-in fired at
+  // once: 5-30 ms per table when quiet, 600-800 ms each in the 5 minutes of a sign-in, and the next tap
+  // waited behind them. When the first tables are in, the home screen is drawn again with fresh data.
+  var order=_SB_FIRST.filter(function(t){return tbls.indexOf(t)>=0;}).concat(tbls.filter(function(t){return _SB_FIRST.indexOf(t)<0;}));
+  var next=0,firstLeft=order.filter(function(t){return _SB_FIRST.indexOf(t)>=0;}).length;
+  function pull(){
+    if(next>=order.length)return;
+    var t=order[next++];
     // Snapshot the outbox before the request leaves; merged with the
     // snapshot at response time so an op uploaded mid-flight still counts
     // as "ours" for this pull.
     var obBefore=_obLocalState(t);
+    var after=function(){
+      if(_SB_FIRST.indexOf(t)>=0&&--firstLeft===0&&done+1<order.length){try{rDash();}catch(e){}}
+      finish();pull();
+    };
     sbGet(t).then(function(rows){
       // null = the fetch failed (offline, 401, 5xx…). Leave the cache alone
       // so the app keeps working offline. Only a real answer from the server
       // — including an empty one — may replace it.
-      if(rows===null){finish();return;}
-      _sbMergePull(t,rows,obBefore);
-      finish();
-    });
-  });
+      if(rows!==null)_sbMergePull(t,rows,obBefore);
+      after();
+    },after);
+  }
+  for(var i=0;i<Math.min(_SB_POOL,order.length);i++)pull();
 }
+var _SB_POOL=6,_SB_FIRST=['tasks','ncr','inc','equip_inspections','docs','tr','ppe','med','emp','trustee_reports','tour_hazards','app_users'];
 // Learn how many photos are already waiting from an earlier visit, so the
 // badge tells the truth from the first paint.
 try{setTimeout(function(){if(typeof _phSync==='function')_phSync();},0);}catch(e){}

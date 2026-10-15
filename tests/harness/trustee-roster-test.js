@@ -15,14 +15,14 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const M = new Date().toISOString().substring(0, 7);
 
   console.log('\n1. wiring + manager roster editor');
-  const w = await page.evaluate(() => {
+  const w = await page.evaluate(async () => {
     const lg = document.getElementById('login'); if (lg) lg.style.display = 'none';
     const app = document.getElementById('app'); if (app) app.style.display = 'block';
     ['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','ctr','equip_inspections','near_miss','rounds','tasks','locations','projects','inspection_types','env_aspects','leg','hzm','wst','env','ins','drl','med','hearing_tests','toolbox','trustee_reports'].forEach(k => { if (!DB[k]) DB[k] = []; });
     window.__toasts = []; window.toast = (m) => { window.__toasts.push(String(m)); };
     window.__ops = []; const oi = window.sbIns, ou = window.sbUpd; window.sbIns = function (t, r) { window.__ops.push(['ins', t, r.n]); return oi(t, r); }; window.sbUpd = function (t, r) { window.__ops.push(['upd', t, r.n, r.active]); return ou(t, r); };
     localStorage.setItem('tfgn2', JSON.stringify({ trustees: [{ id: 'c1', n: 'x', active: true }] })); DB.trustees = undefined; ldb(); const cached = DB.trustees.length === 1; localStorage.removeItem('tfgn2');
-    const asked = []; const og = window.sbGet; window.sbGet = (t) => { asked.push(t); return Promise.resolve(null); }; sbSync(true); window.sbGet = og;
+    const asked = []; const og = window.sbGet; window.sbGet = (t) => { asked.push(t); return Promise.resolve(null); }; sbSync(true); await new Promise((r) => setTimeout(r, 80)); window.sbGet = og; // the queue (_SB_POOL) asks the rest after the first answers
     DB.trustees = [{ id: 'tru_01', n: 'לב', dep: 'ייצור ואריזה', active: true }, { id: 'tru_02', n: 'גלינה', dep: 'מעבדה', active: true }, { id: 'tru_09', n: 'עזב', dep: 'אחזקה', active: false }];
     DB.trustee_reports = [{ id: 'r1', u: 'גלינה', t: 1, ok: true, s: 'תקין', d: new Date().toISOString().substring(0, 10), m: new Date().toISOString().substring(0, 7) }];
     window._currentUser = { username: 'admin' }; _applyRoleGates(); goPage('trustees');
