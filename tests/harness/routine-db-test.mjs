@@ -96,10 +96,11 @@ const call = async (body, key = 'k-123', method = 'POST', env = ENV) => {
     // od_move (a OneDrive item, conflictBehavior=fail). Still no DELETE.
     const src = fs.readFileSync(new URL('../../functions/api/routine-db.js', import.meta.url), 'utf8');
     const patches = src.match(/method:\s*'PATCH'/g) || [];
-    const ex = src.indexOf("body.op === 'expiry_set'"), od = src.indexOf("body.op === 'od_move'");
-    const at = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => m.index);
-    check('no DELETE anywhere; one PATCH in expiry_set and one in od_move', !/method:\s*'DELETE'/.test(src) && patches.length === 2 && ex > 0 && od > 0
-      && at.some((p) => p > ex && (od < ex || p < od)) && at.some((p) => p > od && (ex < od || p < ex)));
+    // each PATCH belongs to the op block it sits in (the nearest "body.op === '...'" above it)
+    const ops = [...src.matchAll(/body\.op === '([a-z_]+)'/g)].map((m) => ({ op: m[1], at: m.index }));
+    const owner = (p) => ops.filter((o) => o.at < p).pop();
+    const own = [...src.matchAll(/method:\s*'PATCH'/g)].map((m) => (owner(m.index) || {}).op).sort().join();
+    check('no DELETE anywhere; one PATCH each in expiry_set, od_move and talk_field (15/10/2026)', !/method:\s*'DELETE'/.test(src) && patches.length === 3 && own === 'expiry_set,od_move,talk_field', own);
   }
 
   console.log('\n4b. agent_report: append-only run log');
