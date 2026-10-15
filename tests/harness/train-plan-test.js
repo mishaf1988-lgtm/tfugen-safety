@@ -110,6 +110,15 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the eye opens the item (VIEW_CONFIG)', r.view === true, r.view);
   check('next year: copied from this year with its quarters, nothing done', r.y27.n === 30 && r.y27.q28 === '1,3' && r.y27.done && r.y27.st28 === 'plan', r.y27);
   check('a viewer: no create button, create does nothing, no edit buttons', !r.viewer.create && r.viewer.rows === 0 && !r.viewer.edit, r.viewer);
+  // The automatic mapping holds only while the subjects exist on the talk form, and only while the
+  // app and the weekly mail use the same one (15/10/2026: a renamed subject would stop marking in silence).
+  const maps = await page.evaluate(() => ({ auto: _TP_AUTO, subj: _TBT_SUBJ }));
+  const missingSubj = Object.entries(maps.auto).filter(([, a]) => a[1] && !(maps.subj[a[0]] || []).includes(a[1])).map(([n, a]) => n + ':' + a[1]);
+  check('every subject in _TP_AUTO is on the talk form (_TBT_SUBJ)', missingSubj.length === 0, missingSubj);
+  const wd = fs.readFileSync(path.resolve(__dirname, '../../functions/api/weekly-digest.js'), 'utf8');
+  const lit = (wd.match(/export const PLAN_AUTO = (\{[^;]*\});/) || [])[1];
+  let planAuto = null; try { planAuto = Function('return ' + lit)(); } catch (e) { planAuto = String(e); }
+  check('the weekly mail maps the same items to the same subjects (PLAN_AUTO = _TP_AUTO)', JSON.stringify(planAuto) === JSON.stringify(maps.auto), [planAuto, maps.auto]);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
