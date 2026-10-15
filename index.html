@@ -3815,7 +3815,7 @@ function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supa
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
 // A fetch with a time limit (15/10/2026, review of the trustee and sync paths). A request that
 // never settles on a dropped mobile connection kept _obBusy true (no send until a reload), held a
-// sync slot for ever, or left a trustee's photo on «מעלה...». An abort is a network error ('net').
+// sync slot for ever, or left a trustee's photo on "uploading". An abort is a network error ('net').
 function _fetchT(url,opts,ms){
   if(typeof AbortController==='undefined')return fetch(url,opts);
   var ac=new AbortController(),o={};Object.keys(opts||{}).forEach(function(k){o[k]=opts[k];});o.signal=ac.signal;
@@ -4137,7 +4137,7 @@ function _obDrainOps(){
   var p=Promise.resolve();
   q.forEach(function(op){
     p=p.then(function(){
-      if(_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
+      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
