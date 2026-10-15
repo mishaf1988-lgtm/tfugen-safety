@@ -57,8 +57,10 @@ const S_PUB = '\u05e4\u05d5\u05e8\u05e1\u05de\u05d4';
 const MAX_SIG = 300 * 1024;
 // Documents photographed at the induction (13/10/2026, Michael: "a place to photograph the documents
 // for a new worker, it can be several"; in the questionnaire: "embedded in the PDF", "free photos").
-// The phone shrinks each photo to a JPEG first (1400px, quality 0.7, a few hundred KB). They live
-// only inside the signed form in OneDrive and its mail, never in the database or Storage.
+// The phone shrinks each photo to a JPEG first (1400px, quality 0.7, a few hundred KB). They go inside the
+// signed form in OneDrive and its mail, never in the database. Until the form is filed and mailed they are
+// also kept in the private bucket (15/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05d2\u05dd \u05d1-Storage \u05d4\u05e4\u05e8\u05d8\u05d9 \u05e2\u05d3 \u05e9\u05ea\u05d5\u05d9\u05e7"): a failed filing
+// no longer loses them, and the manager sends the form again from "who signed" (op refile).
 export const MAX_DOCS = 8, MAX_DOC = 900 * 1024, MAX_DOCS_TOTAL = 4 * 1024 * 1024, MAIL_ATTACH_MAX = 3 * 1024 * 1024;
 // The page keeps under the server's limits (15/10/2026, A2: a photo over 900KB, or past 4MB in all, was
 // dropped by the server without a word): each photo shrunk until it is at most DOC_PAGE_MAX, and a photo
@@ -75,6 +77,10 @@ export function docsOf(list) {
   }
   return out;
 }
+// Where the photos wait until the form is filed: the private bucket (incidents-photos is public), one folder
+// per signature. Uploaded in parallel during the worker's request, each with its own time limit.
+export const DOCS_BUCKET = 'backups', DOCS_DIR = 'induction-docs/', DOC_KEEP_MS = 10000;
+export const DOCS_KEPT_NOTE = '\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05e9\u05de\u05d5\u05e8\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea \u05dc\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea';
 const MIN_SIG = 400;
 // A worker not on the list (03/10/2026, Michael: "not always everyone is on the
 // list"): an ID or passport number and a typed name, kept as emp_id
@@ -814,7 +820,8 @@ async function graphPdf(token, seg, ms) {
 // The status is written in steps (15/10/2026, A3): the HTML filed, then the PDF filed, then the mail. A run
 // cut in the middle (waitUntil has 30 seconds) used to leave "being sent" forever; now the row shows the
 // last step that was done. dropped: photos the server could not take (too big), noted in doc_err.
-export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, docs, dropped) {
+// kept: photos waiting in Storage; when the form did not go out, the row says they are kept for a resend.
+export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, docs, dropped, kept) {
   const out = { pdf: false, url: null, mailed: false, err: null, name: null };
   const note = dropped > 0 ? dropped + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5 \u05dc\u05d8\u05d5\u05e4\u05e1 (\u05d2\u05d3\u05d5\u05dc\u05d9\u05dd \u05de\u05d3\u05d9)' : null;
   const mark = async (b) => {
@@ -858,7 +865,8 @@ export async function fileInduction(env, talk, row, sig, lang, nowMs, answers, d
     out.mailed = true;
   } catch (e) { out.err = String((e && e.message) || e).substring(0, 200); }
   // Step 3, shown next to the signature in "who signed": filed, mailed, or why not.
-  const err = [out.err, note].filter(Boolean).join('; ') || null;
+  const keptNote = kept > 0 && !(out.url && out.mailed) ? kept + ' ' + DOCS_KEPT_NOTE : null;
+  const err = [out.err, note, keptNote].filter(Boolean).join('; ') || null;
   await mark(Object.assign(out.url ? { doc_url: out.url } : {}, { mailed_at: out.mailed ? new Date().toISOString() : null, doc_err: err }));
   return out;
 }
@@ -919,16 +927,56 @@ export function form0801Html(talk, reads, sigOf, trSig) {
   }
   return '<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>08.01</title><style>' + css + '</style></head><body>' + out + '</body></html>';
 }
-async function storageB64(env, url) {
+async function storageU8(env, url) {
   const m = /\/storage\/v1\/object\/(?:public\/|sign\/)?([^/]+)\/([^?]+)/.exec(String(url || ''));
   if (!m) return null;
   try {
     const r = await fetch(SB + '/storage/v1/object/' + m[1] + '/' + m[2], { headers: sbH(env) });
-    if (!r.ok) return null;
-    const u8 = new Uint8Array(await r.arrayBuffer());
+    return r.ok ? new Uint8Array(await r.arrayBuffer()) : null;
+  } catch (e) { return null; }
+}
+async function storageB64(env, url) {
+  try {
+    const u8 = await storageU8(env, url);
+    if (!u8) return null;
     // A signature drawn in the app is uploaded as JPEG (_fileUpload compresses images), the workers' as PNG.
     return 'data:' + (u8[0] === 0xFF && u8[1] === 0xD8 ? 'image/jpeg' : 'image/png') + ';base64,' + b64(u8);
   } catch (e) { return null; }
+}
+// The induction photos kept until the form is filed (15/10/2026). A failed upload never fails the signature:
+// the photo still goes into the form, it is only not kept for a resend.
+const docPath = (id, i) => DOCS_DIR + id + '/' + (i + 1) + '.jpg';
+function unb64(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+export async function keepDocs(env, id, docs) {
+  const done = await Promise.all((docs || []).map(async (d, i) => {
+    try {
+      const r = await headFetch(SB + '/storage/v1/object/' + DOCS_BUCKET + '/' + docPath(id, i), { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }), body: unb64(d) }, DOC_KEEP_MS);
+      return r.ok ? docPath(id, i) : null;
+    } catch (e) { return null; }
+  }));
+  return done.filter(Boolean);
+}
+export async function dropDocs(env, paths) {
+  if (!paths || !paths.length) return false;
+  try {
+    const r = await headFetch(SB + '/storage/v1/object/' + DOCS_BUCKET, { method: 'DELETE', headers: sbH(env, { 'Content-Type': 'application/json' }), body: JSON.stringify({ prefixes: paths }) }, DOC_KEEP_MS);
+    return r.ok;
+  } catch (e) { return false; }
+}
+// The kept photos of one signature, in their order (1.jpg, 2.jpg ...), at most MAX_DOCS.
+async function loadDocs(env, id) {
+  const dir = DOCS_DIR + id + '/';
+  const r = await headFetch(SB + '/storage/v1/object/list/' + DOCS_BUCKET, { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json' }), body: JSON.stringify({ prefix: dir, limit: 20 }) }, DOC_KEEP_MS);
+  if (!r.ok) throw new Error('docs list ' + r.status);
+  const names = ((await r.json()) || []).map((x) => String((x && x.name) || '')).filter((n) => /^\d+\.jpg$/.test(n))
+    .sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).slice(0, MAX_DOCS);
+  const docs = [], paths = [];
+  for (const n of names) {
+    const d = await headFetch(SB + '/storage/v1/object/' + DOCS_BUCKET + '/' + dir + n, { headers: sbH(env) }, DOC_KEEP_MS);
+    if (!d.ok) throw new Error('docs read ' + d.status);
+    docs.push(b64(new Uint8Array(await d.arrayBuffer()))); paths.push(dir + n);
+  }
+  return { docs, paths };
 }
 // The server builds the form itself only for a small training (15/10/2026, A1): Cloudflare's free plan allows
 // 50 calls out of one request, and each signature is one. Above this, the app builds it in the browser.
@@ -1486,7 +1534,11 @@ async function signCore(env, request, ctx, form, c) {
   // could not take are counted and written next to the signature (A2), never dropped without a word.
   if (ind) {
     const sent = form.getAll('doc').filter((v) => String(v || '').length > 0), docs = docsOf(sent);
-    const job = fileInduction(env, talk, row, sig, lang, undefined, [], docs, sent.length - docs.length);
+    // The photos into the private bucket first, in this request (15/10/2026): filing can fail or be cut, and
+    // they exist nowhere else. Deleted once the form is filed and mailed; kept for a resend otherwise.
+    const kept = docs.length ? await keepDocs(env, row.id, docs) : [];
+    const job = fileInduction(env, talk, row, sig, lang, undefined, [], docs, sent.length - docs.length, kept.length)
+      .then((out) => (out.url && out.mailed && kept.length ? dropDocs(env, kept) : null)).catch(() => null);
     if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(job); else await job;
   }
   // The typed number onto the card, only while the card is still empty (never over a number
@@ -1550,6 +1602,27 @@ async function makeLink(env, request, ctx) {
       catch (e) { failed.push({ dept: p.dept, error: String((e && e.message) || e).substring(0, 160) }); }
     }
     return jsonResp({ ok: !failed.length, sent, skipped, failed }, 200, cors);
+  }
+  // Send an induction form again (15/10/2026): the row, its signature and the photos kept in Storage, filed and
+  // mailed as on the worker's send. About 10 + 8 photos calls out, under the free plan's 50.
+  if (b && b.op === 'refile') {
+    const rr = await fetch(SB + '/rest/v1/toolbox_reads?id=eq.' + encodeURIComponent(String(b.id || '')) + '&select=*', { headers: sbH(env) });
+    const row = rr.ok ? ((await rr.json()) || [])[0] : null;
+    if (!row) return jsonResp({ error: 'not found' }, 404, cors);
+    const tr = await fetch(SB + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(String(row.talk_id || '')) + '&select=*', { headers: sbH(env) });
+    const t = tr.ok ? ((await tr.json()) || [])[0] : null;
+    if (!t) return jsonResp({ error: 'not found' }, 404, cors);
+    if (t.kind !== KIND_IND) return jsonResp({ error: 'not an induction' }, 409, cors);
+    const sig = row.sig_url ? await storageU8(env, row.sig_url) : null;
+    if (!sig) return jsonResp({ error: 'signature not loaded' }, 502, cors);
+    let kept;
+    try { kept = await loadDocs(env, row.id); } catch (e) { return jsonResp({ error: String((e && e.message) || e).substring(0, 120) }, 502, cors); }
+    // The note on photos the server could not take, kept from the first send.
+    const dm = /(\d+) \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d0 \u05e0\u05db\u05e0\u05e1\u05d5/.exec(String(row.doc_err || ''));
+    const out = await fileInduction(env, t, row, sig, row.lang, undefined, [], kept.docs, dm ? +dm[1] : 0, kept.paths.length);
+    const ok = !!(out.url && out.mailed);
+    if (ok && kept.paths.length) await dropDocs(env, kept.paths);
+    return jsonResp({ ok, url: out.url, mailed: out.mailed, docs: kept.docs.length, error: out.err }, ok ? 200 : 502, cors);
   }
   // Form 08.01 with everyone who signed (14/10/2026): any kind, published or closed.
   if (b && b.op === 'form0801') {

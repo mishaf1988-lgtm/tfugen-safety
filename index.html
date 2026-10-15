@@ -12688,11 +12688,28 @@ function _tbtQuizRead(){
 function _tbtDocTag(x){
   if(!x)return '';
   // Filed and mailed with a note (15/10/2026, A2: photos the server could not take): both are shown.
-  if(x.doc_err&&!x.mailed_at)return '<div style="font-size:10px;font-weight:700;color:var(--c-red-600,#b91c1c)">\u26a0\ufe0f \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: '+esc(String(x.doc_err).substring(0,80))+'</div>';
+  if(x.doc_err&&!x.mailed_at)return '<div style="font-size:10px;font-weight:700;color:var(--c-red-600,#b91c1c)">\u26a0\ufe0f \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: '+esc(String(x.doc_err).substring(0,80))+'</div>'+_tbtRefileBtn(x);
   var h='',note=x.doc_err?'<div style="font-size:10px;font-weight:700;color:var(--c-orange-650,#b45309)">\u26a0\ufe0f '+esc(String(x.doc_err).substring(0,80))+'</div>':'';
   if(x.mailed_at)h+='\ud83d\udce7 \u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05d9\u05d9\u05dc ';
   if(x.doc_url)h+='<a href="'+esc(x.doc_url)+'" target="_blank" rel="noopener">\ud83d\udcc4 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a>';
-  return h?'<div style="font-size:10px;font-weight:700;color:var(--c-green-700,#15803d)">'+h+'</div>'+note:'<div style="font-size:10px;color:var(--t3)">\u23f3 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4</div>';
+  // "Being sent" for more than 10 minutes: the run was cut (waitUntil), so the manager can send it again.
+  var stuck=!x.mailed_at&&x.read_at&&Date.now()-new Date(x.read_at).getTime()>600000;
+  return h?'<div style="font-size:10px;font-weight:700;color:var(--c-green-700,#15803d)">'+h+'</div>'+note+(x.mailed_at?'':_tbtRefileBtn(x)):'<div style="font-size:10px;color:var(--t3)">\u23f3 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4</div>'+(stuck?_tbtRefileBtn(x):'');
+}
+// Send the induction form again (15/10/2026): talk.js op refile rebuilds it from the row, the signature and the
+// photos kept in the private bucket, files and mails it.
+function _tbtRefileBtn(x){return x&&x.id?'<button type="button" class="btn btn-s btn-sm" style="margin-top:2px" data-id="'+esc(String(x.id))+'" onclick="tbtRefile(this.dataset.id,this)">\ud83d\udd01 \u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1</button>':'';}
+function tbtRefile(id,btn){
+  if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
+  if(btn){btn.disabled=true;btn.textContent='\u05e9\u05d5\u05dc\u05d7...';}
+  return _tbtMissPost({op:'refile',id:id}).then(function(x){
+    var r=(DB.toolbox_reads||[]).filter(function(y){return y&&y.id===id;})[0];
+    if(x.j&&r){if(x.j.url)r.doc_url=x.j.url;if(x.j.ok){r.mailed_at=new Date().toISOString();r.doc_err=null;}}
+    if(!x.ok||!x.j||!x.j.ok){toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+_tbtLinkErr(x.st,x.j&&x.j.error));if(_tbtWhoId)tbtWho(_tbtWhoId);return 'failed';}
+    toast('\u05d4\u05d8\u05d5\u05e4\u05e1 \u05e0\u05e9\u05dc\u05d7 \u2713');
+    if(_tbtWhoId)tbtWho(_tbtWhoId);
+    return 'ok';
+  },function(){if(btn){btn.disabled=false;btn.textContent='\ud83d\udd01 \u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1';}toast('\u26a0\ufe0f \u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4');return 'failed';});
 }
 function _tbtQuizTag(x){
   if(!x||!x.quiz_n)return '';
