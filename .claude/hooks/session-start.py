@@ -114,13 +114,41 @@ def install_user_hooks(cwd, home=None):
     f = os.path.join(home or os.path.expanduser("~"), ".claude", "settings.json")
     try:
         cur = json.load(open(f, encoding="utf-8"))
-    except Exception:
+        if not isinstance(cur, dict):
+            return False  # not ours to overwrite
+    except FileNotFoundError:
         cur = {}
-    if cur.get("hooks") == hooks:
+    except Exception:
+        return False  # unreadable or half-written settings: do not replace the whole file with just hooks
+    # Merge, not replace (retro 15/10/2026): a group of the repo's hooks is replaced, every other
+    # group the user or the cloud put there (a Stop check, a notifier) stays.
+    as_groups = lambda v: [g for g in v if isinstance(g, dict)] if isinstance(v, list) else []
+    group_hooks = lambda g: g.get("hooks") if isinstance(g.get("hooks"), list) else []
+    mine = lambda g: any(isinstance(h, dict) and str(h.get("command", "")).startswith('[ "$CLAUDE_PROJECT_DIR" = ') for h in group_hooks(g))  # the wrapper added above
+    old = cur.get("hooks") if isinstance(cur.get("hooks"), dict) else {}
+    merged = {}
+    for ev, groups in old.items():
+        keep = [g for g in as_groups(groups) if not mine(g)]
+        if keep:
+            merged[ev] = keep
+    for ev, groups in hooks.items():
+        merged[ev] = merged.get(ev, []) + groups
+    if cur.get("hooks") == merged:
         return False
-    cur["hooks"] = hooks
+    cur["hooks"] = merged
     os.makedirs(os.path.dirname(f), exist_ok=True)
-    json.dump(cur, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    tmp = f + ".tmp%d" % os.getpid()  # atomic: two sessions or a crash never leave half a file
+    try:
+        json.dump(cur, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        if os.path.exists(f):
+            os.chmod(tmp, os.stat(f).st_mode & 0o777)  # a 0600 file with secrets stays 0600
+        os.replace(tmp, f)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        return False
     return True
 
 

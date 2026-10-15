@@ -111,7 +111,7 @@ async function loadHazard(env, id) {
   const rows = await r.json();
   const h = Array.isArray(rows) && rows[0] ? rows[0] : null;
   if (!h) return null;
-  return { id: h.id, noun: NOUN_H, f: h.descr, loc: [h.dept, h.loc].filter(Boolean).join(' \u00b7 '), d: h.d || '',
+  return { id: h.id, noun: NOUN_H, f: h.descr, loc: [h.dept, h.loc].filter(Boolean).join(' - '), d: h.d || '',
     u: '\u05e1\u05d9\u05d5\u05e8 ' + (h.tour_no || '') + ', \u05de\u05e1"\u05d3 ' + (h.n || ''), closed: h.s === S_H_CLOSED };
 }
 
