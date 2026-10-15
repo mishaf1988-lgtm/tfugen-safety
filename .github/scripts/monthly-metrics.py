@@ -138,12 +138,17 @@ def agents_digest(log_text, common_text, ym, agents):
     knowledge lines dated in the month (they are what the daily retro promoted)."""
     y, m = ym.split('-')
     per = {}
+    helped = misled = 0
     for dd, mm_, yy, name, learned in LOG_LINE.findall(log_text or ''):
         if mm_ == m and yy == y:
             name = name.split(' (')[0].strip()
             c = per.setdefault(name, [0, 0])
             c[0] += 1
-            if learned.strip() not in ('אין', 'אין.', ''):
+            # Feedback on the shared knowledge rides after the learned text (15/10/2026, agent-common "סגירה").
+            parts = [x.strip() for x in learned.split(' | ')]
+            helped += sum(1 for x in parts[1:] if x.startswith('עזר:'))
+            misled += sum(1 for x in parts[1:] if x.startswith('הטעה:'))
+            if parts[0] not in ('אין', 'אין.', ''):
                 c[1] += 1
     sec = (common_text or '').split('## ידע משותף', 1)
     shared = len(re.findall(r'^- .*\b\d\d/%s/%s\b' % (m, y), sec[1] if len(sec) > 1 else '', re.M))
@@ -151,7 +156,8 @@ def agents_digest(log_text, common_text, ym, agents):
     out += ['- %s: %d ריצות, %d עם "למדתי"' % (n, c[0], c[1]) for n, c in sorted(per.items())] or ['אין שורות.']
     silent = sorted(set(agents) - set(per))
     out += ['', 'סוכנים בלי אף שורה: ' + (', '.join(silent) if silent else 'אין') + '.',
-            'שורות שנוספו לידע המשותף: %d.' % shared]
+            'שורות שנוספו לידע המשותף: %d.' % shared,
+            'משוב על הידע המשותף: %d "עזר", %d "הטעה".' % (helped, misled)]
     return out
 
 
