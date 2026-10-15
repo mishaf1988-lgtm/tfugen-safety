@@ -29,6 +29,17 @@ const o_t = (x) => String(x || '').trim();
     DB.emp = [{ id: 'e1', n: 'אחמד', dep: 'ייצור', eid: '1111111' }, { id: 'e2', n: 'דנה', dep: 'אריזה', eid: '2222222' }];
     DB.toolbox_talks = []; DB.toolbox_reads = [];
     const o = {};
+    // Form 08.01 is built in the browser (15/10/2026, A1): the server's shell, the signatures from Storage, the HTML posted back.
+    const png = await new Promise((res) => { const c = document.createElement('canvas'); c.width = 200; c.height = 60; const x = c.getContext('2d'); x.fillRect(10, 10, 120, 20); c.toBlob(res, 'image/png'); });
+    const TA = '<img class="sig" alt="" src="', TB = '">';
+    window.__f0801 = (calls, o2) => (u, init) => {
+      u = String(u); const R = (j) => Promise.resolve(new Response(JSON.stringify(j), { status: 200 }));
+      if (u.includes('/storage/v1/object/authenticated/')) { calls.push({ storage: u }); return Promise.resolve(o2.fail && o2.fail.test(u) ? new Response('x', { status: 404 }) : new Response(png, { status: 200 })); }
+      if (/[?&]op=form0801/.test(u)) { calls.push({ post: u, ct: init.headers['Content-Type'], html: init.body }); return R(Object.assign({ ok: true, pdf: true, n: (o2.ids || []).length, mailed: true, url: 'https://od.example/f.pdf' }, o2.res || {})); }
+      const b = JSON.parse(init.body); calls.push(b);
+      if (b.op === 'form0801' && b.shell) return R({ ok: true, shell: true, n: (o2.ids || []).length, html: o2.html || ('<!doctype html><title>08.01</title>' + (o2.ids || []).map((id) => TA + 'data:tap-sig,' + id + TB).join('')), sigs: (o2.ids || []).map((id) => ({ ph: 'data:tap-sig,' + id, url: 'https://x.supabase.co/storage/v1/object/public/incidents-photos/s-' + id + '.png' })), ph: 'data:tap-sig,', tag: [TA, TB], missHtml: '<span>MISS</span>' });
+      return R(o2.other ? o2.other(b) : {});
+    };
     o.tile = !!document.querySelector('#m-modules-sheet [onclick="_goFromSheet(\'m-modules-sheet\',\'training\')"]');
     // 14/10/2026 (Michael: "one tile, two tabs"): no separate tile for the course register; tabs on both pages.
     o.oneTile = !document.querySelector('#m-modules-sheet [onclick="_goFromSheet(\'m-modules-sheet\',\'tr\')"]');
@@ -64,9 +75,7 @@ const o_t = (x) => String(x || '').trim();
     _genEdit('toolbox_talks', id); o.edit = { kind: document.getElementById('tbt-kind').value, dur: document.getElementById('tbt-dur').value, cc: document.getElementById('tbt-cc').value }; closeModal('m-tbt');
     // link: until closed, and "close signatures"
     const calls = [];
-    window.fetch = (u, init) => { const b = JSON.parse(init.body); calls.push(b);
-      const j = b.op === 'form0801' ? { ok: true, pdf: true, n: 2, mailed: true, url: 'https://od.example/f.pdf' } : { url: 'https://tapugan-safety.pages.dev/api/talk?k=perm0', perm: true, link_v: 0 };
-      return Promise.resolve(new Response(JSON.stringify(j), { status: 200 })); };
+    window.fetch = window.__f0801(calls, { ids: ['r1', 'r2'], other: () => ({ url: 'https://tapugan-safety.pages.dev/api/talk?k=perm0', perm: true, link_v: 0 }) });
     o.link = await tbtLink(id);
     o.days = document.getElementById('tbt-link-days').textContent;
     o.rv = document.getElementById('tbt-link-revoke').textContent;
@@ -80,6 +89,8 @@ const o_t = (x) => String(x || '').trim();
     o.btn = !!document.getElementById('tbt-0801-btn');
     o.form = await tbtForm0801(id);
     o.formCall = calls.filter((c) => c.op === 'form0801')[0];
+    { const st = calls.filter((c) => c.storage), po = calls.filter((c) => c.post)[0] || {};
+      o.formBrowser = { st: st.length, auth: st.every((c) => /\/storage\/v1\/object\/authenticated\/incidents-photos\/s-r[12]\.png$/.test(c.storage)), ct: po.ct, url: po.post, sigs: ((po.html || '').match(/<img class="sig" alt="" src="data:image\/png;base64,/g) || []).length, left: /data:tap-sig/.test(po.html || '') }; }
     o.res = document.getElementById('tbt-0801-res').innerHTML;
     // the induction: each new worker signs his own form, no combined 08.01 (14/10/2026)
     DB.toolbox_talks.push({ id: 'indx', title: 'קליטה', s: 'פורסמה', kind: 'induction', d: '2026-10-10' });
@@ -87,7 +98,7 @@ const o_t = (x) => String(x || '').trim();
     tbtWho('indx'); o.indBtn = !!document.getElementById('tbt-0801-btn');
     // 14/10/2026: preview of form 08.01, also on a draft with no signatures, in a window opened before the fetch
     const wins = []; window.open = () => { const d = { html: '', open() {}, close() {}, write(h) { this.html += h; } }; const wv = { document: d, closed: false, close() { this.closed = true; } }; wins.push(wv); return wv; };
-    window.fetch = (u, init) => { const b = JSON.parse(init.body); calls.push(b); return Promise.resolve(new Response(JSON.stringify(b.preview ? { ok: true, preview: true, n: 0, html: '<html>תיעוד ביצוע הדרכה PREVIEW</html>' } : {}), { status: 200 })); };
+    window.fetch = window.__f0801(calls, { ids: [], html: '<html>תיעוד ביצוע הדרכה PREVIEW</html>' });
     DB.toolbox_talks.push({ id: 'drf', title: 'שנתית טיוטה', s: 'טיוטה', kind: 'annual', d: '2026-10-20' });
     tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
     o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
@@ -98,7 +109,7 @@ const o_t = (x) => String(x || '').trim();
       goPage('training'); rTbt(); o.rowClose = !!document.querySelector('#tb-tbt [onclick^="tbtClose"][onclick*="close"]');
       o.rowCount = (document.querySelector('#tb-tbt [onclick^="tbtWho"]') || {}).textContent;
       const cl = []; window.confirm = (m) => { o.closeAsk = m; return true; };
-      window.fetch = (u, init) => { cl.push(JSON.parse(init.body)); return Promise.resolve(new Response(JSON.stringify({ ok: true, closed_at: '2026-10-15T09:00:00Z', filed: { n: 1, mailed: true, pdf: true, form_at: '2026-10-15T09:00:01Z' } }), { status: 200 })); };
+      window.fetch = window.__f0801(cl, { ids: ['rr'], res: { n: 1, form_at: '2026-10-15T09:00:01Z' }, other: () => ({ ok: true, closed_at: '2026-10-15T09:00:00Z' }) });
       const t0 = toasts.length; o.rowCloseRes = await tbtClose('rowc', 'close'); o.rowCloseToast = toasts.slice(t0).join('|'); o.rowFormAt = DB.toolbox_talks[0].form_at;
       DB.toolbox_talks[0].closed_at = null; tbtWho('rowc'); const wb = document.getElementById('tbt-who-body');
       o.missFolded = !!wb.querySelector('details.no-print') ; let html = ''; window.open = () => ({ document: { write(h) { html += h; }, close() {}, images: [] }, print() {} }); tbtWhoPrint(); o.printHtml = html; }
@@ -130,7 +141,7 @@ const o_t = (x) => String(x || '').trim();
     o.stale = _tbtStale(DB.toolbox_talks, '2026-10-14').map((x) => x.id).join();
     o.staleNone = _tbtStaleHtml([DB.toolbox_talks[1]], '2026-10-14');
     goPage('training'); rTbt(); o.staleBox = document.getElementById('tbt-stale').innerHTML;
-    window.fetch = () => Promise.resolve(new Response(JSON.stringify({ ok: true, n: 1, form_at: '2026-10-14T09:00:00Z' }), { status: 200 }));
+    window.fetch = window.__f0801([], { ids: ['a1'], res: { n: 1, form_at: '2026-10-14T09:00:00Z' } });
     await tbtForm0801('st1'); o.afterForm = DB.toolbox_talks[0].form_at;
     // 14/10/2026: "close signatures" on an annual training really closes it; the row shows closed + reopen
     { const cl = []; window.confirm = () => true;
@@ -154,6 +165,19 @@ const o_t = (x) => String(x || '').trim();
       o.mmPrev = await tbtMissMail('mm1'); o.mmPrevCall = mc[0]; o.mmBox = document.getElementById('tbt-miss-res').innerHTML;
       o.mmTest = await tbtMissSend('mm1', true); o.mmTestCall = mc[1]; o.mmAskedTest = asked;
       o.mmSend = await tbtMissSend('mm1', false); o.mmSendCall = mc[2]; o.mmAsked = asked; o.mmRes = document.getElementById('tbt-miss-res').innerHTML; }
+    // 15/10/2026, the deep review: leading zeros (A7), a card with no ID (A6), the card credits by emp_id first (A5), photos noted (A2)
+    { o.idKey = [_tbtIdKey('012-345678'), _tbtIdKey('12345678'), _tbtIdKey('١٢٣'), _tbtIdKey('AB0123')];
+      DB.emp = [{ id: 'k1', n: 'כרמל', dep: 'ייצור', eid: '012345678', s: '2026-01-01' }, { id: 'k2', n: 'שקד', dep: 'אריזה', eid: '' }, { id: 'k3', n: 'נגה', dep: 'אריזה' }, { id: 'k4', n: 'עדי', dep: 'ייצור', eid: '555555', s: '2026-01-01' }];
+      DB.toolbox_talks = [{ id: 'ah', title: 'שנתית בדיקה', s: 'פורסמה', kind: 'annual', d: '2026-10-10' }, { id: 'wq', title: 'שבועית בדיקה', s: 'פורסמה', kind: '', d: '2026-10-11' }];
+      DB.toolbox_reads = [{ id: 'q1', talk_id: 'ah', emp_id: 'x:12345678:a', id_no: '12345678', emp_name: 'כרמל', read_at: '2026-10-10T07:00:00Z' },
+        { id: 'q2', talk_id: 'ah', emp_id: 'x:999999:b', id_no: '999999', emp_name: 'שקד', read_at: '2026-10-10T07:01:00Z' },
+        { id: 'q3', talk_id: 'wq', emp_id: 'k4', id_no: '12345678', emp_name: 'עדי', read_at: '2026-10-11T07:00:00Z' }];
+      tbtWho('ah'); const wb = document.getElementById('tbt-who-body').textContent;
+      o.deepWho = { n: wb.includes('לא חתמו: 1') && /\(1\): עדי/.test(wb) && !/\): [^)]*כרמל/.test(wb), cant: /לא ניתן לבדוק: אין ת\.ז\. בכרטיס \(1\):\s*נגה/.test(wb), shaked: !/\):[^)]*שקד/.test(wb.replace(/.*לא ניתן לבדוק/, '')), txt: wb.slice(0, 400) };
+      const k1 = _empTalksSection(DB.emp[0]), k4 = _empTalksSection(DB.emp[3]);
+      o.deepCard = { k1week: /שבועית בדיקה[\s\S]*?לא חתם/.test(k1.replace(/<[^>]+>/g, ' ')), k1ann: /שנתית בדיקה\s*✅/.test(k1.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')), k4week: /שבועית בדיקה\s*✅/.test(k4.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')) };
+      const dt = _tbtDocTag({ doc_url: 'https://od.example/x.pdf', mailed_at: '2026-10-15T08:00:00Z', doc_err: '1 מסמכים לא נכנסו לטופס (גדולים מדי)' });
+      o.docTag = { sent: /נשלח למייל/.test(dt) && /בתיקייה/.test(dt), note: /1 מסמכים לא נכנסו/.test(dt), notSent: /הטופס לא נשלח/.test(dt), redIfNotMailed: /הטופס לא נשלח/.test(_tbtDocTag({ doc_url: 'u', doc_err: 'outlook 429' })) }; }
     return o;
   });
   check('a "הדרכות" tile in the modules sheet', r.tile);
@@ -170,17 +194,18 @@ const o_t = (x) => String(x || '').trim();
   check('the link dialog: permanent until closed, the worker types his details', r.link === 'shown' && /עד שתסגור/.test(r.days) && /מקליד/.test(r.days), r.days);
   check('...the button says "close signatures", and asks before closing', /סגור חתימות/.test(r.rv) && /לסגור את החתימות/.test(r.asked), [r.rv, r.asked]);
   check('who signed: nobody "outside the list", the annual declaration; a worker counts as signed by the typed ID', !r.who.out && r.who.decl && r.who.miss && r.who.danaMissing && !r.who.ahmadMissing, r.who);
-  check('form 08.01: the button calls op form0801 and shows the result with a link', r.btn && r.form === 'ok' && r.formCall && r.formCall.id && /od\.example\/f\.pdf/.test(r.res) && /2/.test(r.res), r.res);
+  check('form 08.01: the button calls op form0801 and shows the result with a link', r.btn && r.form === 'ok' && r.formCall && r.formCall.id && r.formCall.shell === true && /od\.example\/f\.pdf/.test(r.res) && /2/.test(r.res), r.res);
+  check('form 08.01 is built in the browser: each signature from Storage with the manager\'s token, the finished HTML posted as text/html, no placeholder left', r.formBrowser.st === 2 && r.formBrowser.auth && /^text\/html/.test(r.formBrowser.ct || '') && /\/api\/talk\?op=form0801&id=.+&miss=0$/.test(r.formBrowser.url || '') && r.formBrowser.sigs === 2 && !r.formBrowser.left, r.formBrowser);
   check('one "הדרכות" tile; "courses and certifications" is a tab, on both pages', r.oneTile && r.tabs, r);
   check('no combined 08.01 button on the induction', r.indBtn === false);
   check('preview of 08.01 on a draft with no signatures; the "file it" button only once someone signed', r.prevBtn && !r.formBtnNoReads, r);
-  check('preview: op form0801 with preview, the HTML in the window opened first', r.prev === 'shown' && r.prevCall && r.prevCall.op === 'form0801' && r.prevCall.preview === true && /PREVIEW/.test(r.prevHtml || ''), r);
+  check('preview: op form0801 (shell, built here), the HTML in the window opened first', r.prev === 'shown' && r.prevCall && r.prevCall.op === 'form0801' && r.prevCall.shell === true && /PREVIEW/.test(r.prevHtml || ''), [r.prev, r.prevCall, (r.prevHtml || '').slice(0, 200)]);
   check('preview from an unsaved form asks to save first', r.unsaved === 'unsaved');
   check('preview window: a print button that prints, hidden on paper, added after the form is written', r.pv === true && r.pvBtn && r.pvHide && r.pvPrinted && r.pvWired, r);
   check('stale: annual / quality, published, 7+ days ago, no form 08.01 (not filed, newer, weekly, draft)', r.stale === 'st1,st6', r.stale);
   check('stale: a banner on the trainings page with a who-signed button; nothing when all filed', /08\.01/.test(r.staleBox) && /tbtWho/.test(r.staleBox) && /שנתית ישנה/.test(r.staleBox) && r.staleNone === '', r.staleBox);
   check('filing 08.01 stamps form_at on the row, so the banner goes', r.afterForm === '2026-10-14T09:00:00Z', r.afterForm);
-  check('close signatures on an annual training: op close, closed_at on the row (not a new link)', r.cl === 'closed' && r.clCall && r.clCall.op === 'close' && r.clRow === '2026-10-14T10:00:00Z', [r.cl, r.clCall, r.clRow]);
+  check('close signatures on an annual training: op close with file:false (the form is built here), closed_at on the row (not a new link)', r.cl === 'closed' && r.clCall && r.clCall.op === 'close' && r.clCall.file === false && r.clRow === '2026-10-14T10:00:00Z', [r.cl, r.clCall, r.clRow]);
   check('a closed training: "closed" with the date and a reopen button, no link button', r.clTag);
   check('reopen: op reopen, closed_at cleared, the link button back', r.ro === 'reopened' && r.roCall && r.roCall.op === 'reopen' && r.roRow === null && r.roLink, [r.ro, r.roCall, r.roRow, r.roLink]);
   check('a link on a closed training explains how to reopen', /פתח מחדש/.test(r.closedErr || ''), r.closedErr);
@@ -197,6 +222,10 @@ const o_t = (x) => String(x || '').trim();
   check('annual row: the count is who signed (everyone types), not "0 / employees"', String(r.rowCount).trim() === '1', r.rowCount);
   check('annual: the not-signed list is folded and not printed; the print says "הדרכה שנתית", no buttons', r.missFolded && /<h2>הדרכה שנתית: רשימת חותמים<\/h2>/.test(r.printHtml) && !/לא חתמו \(/.test(r.printHtml) && !/tbtMissMail|tbtForm0801/.test(r.printHtml), r.printHtml.slice(r.printHtml.indexOf('<h2>'), r.printHtml.indexOf('<h2>') + 300));
   check('the trainer signature is uploaded on white, not transparent (a JPEG made it black)', Array.isArray(r.sigCorner) && r.sigCorner[0] === 255 && r.sigCorner[1] === 255 && r.sigCorner[2] === 255 && r.sigCorner[3] === 255, r.sigCorner);
+  check('_tbtIdKey: leading zeros and dashes do not count, Arabic-Indic digits are digits (A7, B5)', r.idKey[0] === r.idKey[1] && r.idKey[2] === '123' && r.idKey[3] === 'ab0123', r.idKey);
+  check('who signed (annual): the card ID with a leading zero counts; a card with no ID by the exact name; one with neither under "cannot check", not "did not sign" (A6)', r.deepWho.n && r.deepWho.cant && r.deepWho.shaked, r.deepWho);
+  check('the employee card: a signature on another worker\'s card is not credited by the ID typed; a signature from outside the list is (A5)', r.deepCard.k1week && r.deepCard.k1ann && r.deepCard.k4week, r.deepCard);
+  check('induction filed and mailed with photos left out: both shown, not "not sent" (A2)', r.docTag.sent && r.docTag.note && !r.docTag.notSent && r.docTag.redIfNotMailed, r.docTag);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

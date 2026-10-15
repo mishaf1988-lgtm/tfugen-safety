@@ -66,7 +66,11 @@ console.log('\n5. the wiring');
   check('hebrewName is called only inside nameHe', direct.length === 1 && /return hebrewName\(env, raw\)/.test(direct[0]), direct);
   // 14/10/2026: + the department typed under "other" in the annual / quality training.
   // Annual / quality names and a typed department are Hebrew letters only (heName, no AI) since 15/10/2026.
-check('name, company, job and agency go through nameHe (annual / quality: Hebrew only, no AI)', (src.match(/await nameHe\(env, request, /g) || []).length === 4 && /if \(typed && !heName\(raw\)\) return bad\('errNameT', 'heOnly', 422\)/.test(src));
+  // 15/10/2026 (B7): the name through nameHe; company, job and agency through textHe (an answer checked as
+  // text, digits kept), counted in the same "tlk" limit; hebrewText is called only inside textHe.
+  check('the name goes through nameHe, company, job and agency through textHe (annual / quality: Hebrew only, no AI)', (src.match(/(?<!function )\bnameHe\(env, request, /g) || []).length === 1 && (src.match(/(?<!function )\btextHe\(env, request, /g) || []).length === 3 && /if \(typed && !heName\(raw\)\) return bad\('errNameT', 'heOnly', 422\)/.test(src));
+  const dt = src.split('\n').filter((l) => /hebrewText\(env/.test(l));
+  check('hebrewText is called only inside textHe, after the same count', dt.length === 1 && /return hebrewText\(env, raw\)/.test(dt[0]) && /export async function textHe[\s\S]{0,300}guessHit\(env, await guessKey\('tlk', request\)\)\) > TLK_AI_LIMIT\) return null;\s*return hebrewText/.test(src), dt);
   const rows = [{ key: 'guess:tlk:0123456789abcdef', value: '400' }, { key: 'guess:ai:0123456789abcdef', value: '250' }, { key: 'guess:ind:0123456789abcdef', value: '11' }];
   check('the codes screen does not count tlk as a locked address', lockedCount(rows) === 1, lockedCount(rows));
 }

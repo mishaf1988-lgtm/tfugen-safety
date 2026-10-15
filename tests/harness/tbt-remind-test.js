@@ -56,7 +56,10 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     // the link dialog still shares its own text
     _tbtLinkTxt = 'LINK'; await _tbtLinkCopy(); o.linkCopy = copied;
     // 15/10/2026: an annual training says so, not "weekly"
+    // (the cards carry an ID: on an annual training a card with none is 'cannot check', not 'did not sign', 15/10/2026)
+    DB.emp.forEach((e, i) => { e.eid = String(1111111 * (i + 1)); });
     DB.toolbox_talks[0].kind = 'annual'; tbtWho('p'); await tbtRemind('p'); o.annTxt = document.getElementById('tbt-rem-txt').value; DB.toolbox_talks[0].kind = null;
+    DB.emp.forEach((e) => { delete e.eid; });
     // a server error says why, in Hebrew
     window.fetch = () => Promise.resolve(new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 }));
     o.bad = await tbtRemind('p'); o.badToast = toasts.slice(-1)[0];

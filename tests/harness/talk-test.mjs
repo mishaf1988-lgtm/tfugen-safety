@@ -110,7 +110,9 @@ console.log('\n2. the page');
   check('a bad token: 403', (await get('tt1.zzz.bad')).status === 403);
   check('an expired token: 410', (await get(await makeTalkToken(ENV, 'tt1', Date.now() - 20 * 864e5))).status === 410);
   world({ empFail: true });
-  check('a DB error is a page, not a crash', (await get(tok)).status === 500);
+  // 15/10/2026 (B4): in the worker's language, with "try again" to the same page, not a Hebrew dead end
+  { const re = await get(tok, null, 'ru'), rt = await re.text();
+    check('a DB error is a page, not a crash: 503 in the worker\'s language with "try again" to the same link', re.status === 503 && rt.includes(LANGS.ru.errLoad) && rt.includes('id="retry"') && rt.includes(LANGS.ru.retry) && rt.includes('/api/talk?k='), [re.status, rt.slice(0, 200)]); }
 }
 
 console.log('\n3. signing');
@@ -251,7 +253,7 @@ console.log('\n6. languages (stage 3)');
   const exPost = await onRequest({ request: new Request(URL0, { method: 'POST', body: fd2 }), env: ENV });
   check('sending on an expired link: 410 in Amharic', exPost.status === 410 && (await exPost.text()).includes(LANGS.am.expired));
   for (const l of Object.keys(LANGS)) check('every language has the four error texts: ' + l, ['errT', 'expired', 'badLink', 'unpub'].every((k) => String(LANGS[l][k] || '').length > 5));
-  check('a page brought back by "back" after a failed send: the button works again', /addEventListener\('pageshow',function\(e\)\{if\(e\.persisted\)\{var b=document\.getElementById\('go'\);b\.disabled=false;b\.textContent=T\.send;/.test(await (await get(tok, null, 'ru')).text()));
+  check('a page brought back by "back" after a failed send: the button works again', /addEventListener\('pageshow',function\(e\)\{if\(!e\.persisted\)return;clearTimeout\(busy\);go\.disabled=false;go\.textContent=T\.send;/.test(await (await get(tok, null, 'ru')).text()));
   for (const l of Object.keys(LANGS)) {
     const bad = Object.entries(LANGS[l]).filter(([, v]) => /[–—־«»“”‘’…·]/.test(v));
     check('keyboard characters only: ' + l, bad.length === 0, bad);
@@ -264,12 +266,12 @@ console.log('\n7. a worker not on the list (03/10/2026)');
   let w = world();
   const page = await (await get(tok)).text();
   check('the list starts with "not on the list", and the name boxes are on the page', page.includes('<option value="' + OTHER + '">' + LANGS.he.other + '</option>') && page.includes('name="oname"') && page.includes('name="ocomp"'));
-  let r = await post({ k: tok, emp: OTHER, oname: 'Ivan Petrov', oid: '12345678-2', ocomp: 'ACME', ok: '1', sig: SIG, l: 'ru' });
+  let r = await post({ k: tok, emp: OTHER, oname: 'Ivan Petrov', oid: '22345678-2', ocomp: 'ACME', ok: '1', sig: SIG, l: 'ru' });
   const row = w.inserts[0] || {};
   check('a typed Latin name is saved in Hebrew letters, the company too', r.status === 200 && row.emp_name === 'איוון פטרוב' && row.dept === 'אקמי', row);
-  check('the number and the name as typed are kept in emp_id (x:<number>:<name>)', row.emp_id === 'x:123456782:ivan petrov', row.emp_id);
+  check('the number and the name as typed are kept in emp_id (x:<number>:<name>)', row.emp_id === 'x:223456782:ivan petrov', row.emp_id);
   check('the signature file name is ASCII', w.uploads.length === 1 && /sig-tt1-x[0-9a-f]{16}\.png$/.test(w.uploads[0].u), w.uploads[0] && w.uploads[0].u);
-  r = await post({ k: tok, emp: OTHER, oname: 'Иван', oid: '123456782', ok: '1', sig: SIG });
+  r = await post({ k: tok, emp: OTHER, oname: 'Иван', oid: '223456782', ok: '1', sig: SIG });
   check('the same number again, another spelling: "already signed", no second row', w.inserts.length === 1 && /כבר חתמת/.test(await r.text()));
   w = world();
   r = await post({ k: tok, emp: OTHER, oname: 'יוסי לוי', oid: 'AB12345', ok: '1', sig: SIG });
