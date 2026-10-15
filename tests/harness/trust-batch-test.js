@@ -153,6 +153,52 @@ let ACCEPT = true, DIALOGS = [];
     check('choosing the other way throws MY edit away, not theirs', discard.queued === 0, discard);
     check('...and pulls the server copy so the screen stops lying', discard.resynced, discard);
     check('...and says so', /בוטלה/.test(discard.toasts.join('|')), discard.toasts);
+    console.log('\n  15/10/2026: the guard holds after a restart, a pull, weak signal and a live update');
+    await page.evaluate(() => { _obSet([]); _rowVer = {}; });
+    const pat = () => { window.__seen = []; window.fetch = function (u, o) { window.__seen.push({ u: String(u), m: (o && o.method) || 'GET', pref: (o && o.headers && o.headers.Prefer) || '' }); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') }); }; };
+    const cold = await page.evaluate((f) => {
+      eval(f)();
+      _rowVer = {};                                                   // a restart: nothing in memory
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n7', d: 'offline' }, base: '2026-10-15T06:00:00Z' })
+        .then(() => ({ seen: window.__seen }), (e) => ({ seen: window.__seen, conflict: !!e.conflict }));
+    }, '(' + pat.toString() + ')');
+    check('after a restart, a queued edit is still guarded by the version it was made against (op.base)', /ts=eq\.2026-10-15T06%3A00%3A00Z|ts=eq\.2026-10-15T06:00:00Z/.test(cold.seen[0].u) && cold.conflict, cold);
+    const pulled = await page.evaluate(() => {
+      _rowVer = {}; _verSet('ncr', 'n8', 'v1');
+      DB.ncr = [{ id: 'n8', d: 'mine', ts: 'v1' }];
+      _obSet([{ op: 'upd', tbl: 'ncr', row: { id: 'n8', d: 'mine' }, base: 'v1', oid: 'o8' }]);
+      _sbMergePull('ncr', [{ id: 'n8', d: 'theirs', ts: 'v2' }, { id: 'n9', d: 'x', ts: 'v5' }]);
+      return { n8: _verOf('ncr', 'n8'), n9: _verOf('ncr', 'n9'), shown: DB.ncr.find((r) => r.id === 'n8').d };
+    });
+    check('a pull does not move the version of a row whose edit is still queued (it did, and the PATCH then overwrote)', pulled.n8 === 'v1' && pulled.n9 === 'v5' && pulled.shown === 'mine', pulled);
+    const weak = await page.evaluate((f) => {
+      eval(f)();
+      _rowVer = {};
+      return _obSend({ op: 'upd', tbl: 'ncr', row: { id: 'n10', d: 'x' }, base: 'v1', tries: 9, zeroTries: 0 }).then(() => window.__seen, () => window.__seen);
+    }, '(' + pat.toString() + ')');
+    check('nine failed tries (weak signal) on a guarded edit: still a guarded PATCH, never an upsert', weak[0].m === 'PATCH' && /ts=eq\.v1/.test(weak[0].u) && !/merge-duplicates/.test(weak[0].pref), weak);
+    const blip = await page.evaluate(() => {
+      _obSet([{ op: 'upd', tbl: 'ncr', row: { id: 'n11', d: 'x' }, base: 'v1', conflict: true, tries: 4, oid: 'o11' }]);
+      window.fetch = function () { return Promise.reject(new TypeError('Failed to fetch')); };
+      SB_ON = true; _obBusy = false;
+      return _obDrainOps().then(() => { const op = _obGet()[0]; return { conflict: op && op.conflict, zero: op && op.zeroTries }; });
+    });
+    check('a network error after a conflict keeps it a conflict (it used to clear it, and the next send overwrote)', blip.conflict === true && !blip.zero, blip);
+    const live = await page.evaluate(() => {
+      _rowVer = {}; DB.ncr = [{ id: 'n12', d: 'mine' }, { id: 'n13', d: 'old' }];
+      _obSet([{ op: 'upd', tbl: 'ncr', row: { id: 'n12', d: 'mine' }, base: 'v1', oid: 'o12' }]);
+      _rtApply('ncr', { eventType: 'UPDATE', new: { id: 'n12', d: 'theirs', ts: 'v9' } });
+      _rtApply('ncr', { eventType: 'UPDATE', new: { id: 'n13', d: 'new', ts: 'v7' } });
+      return { n12: DB.ncr.find((r) => r.id === 'n12').d, v12: _verOf('ncr', 'n12'), n13: DB.ncr.find((r) => r.id === 'n13').d, v13: _verOf('ncr', 'n13') };
+    });
+    check('a live update leaves a row with a queued edit alone, and records the version of the others', live.n12 === 'mine' && live.v12 === null && live.n13 === 'new' && live.v13 === 'v7', live);
+    const force = await page.evaluate(() => {
+      _obSet([{ op: 'upd', tbl: 'ncr', row: { id: 'n14' }, base: 'v1', conflict: true, oid: 'o14' }]);
+      window._obDrain = function () { return Promise.resolve(); };
+      _verForce('ncr', 'n14');
+      return 'base' in _obGet()[0];
+    });
+    check('«keep mine» drops the stored base too, or the retry would hit the same conflict', force === false, force);
     await page.evaluate(() => { _obSet([]); _rowVer = {}; });
   }
 
