@@ -26,11 +26,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const dflt = Array.isArray(DB.trustee_reports) && DB.trustee_reports.length === 0;
     // pull list: sbSync asks the server for the table
     const asked = []; const og = window.sbGet; window.sbGet = function (t) { asked.push(t); return Promise.resolve(null); };
-    sbSync(true); window.sbGet = og;
+    // 15/10/2026: sbSync queues its requests (_SB_POOL), so the stub stays until the queue is done (below)
+    sbSync(true);
     // realtime list: fake SDK records which tables the channel subscribes to
     const rt = []; window.supabase = { createClient: function () { return { auth: { onAuthStateChange() {}, getSession: () => Promise.resolve({ data: { session: { access_token: 't' } } }) }, channel: () => ({ on: (ev, o) => { rt.push(o.table); }, subscribe() {} }) }; } };
     _sbClient = null; _sbAuthPromise = null; _sbRT = null;
-    return new Promise((res) => { _rtStart(); setTimeout(() => res({ cached, dflt, asked: asked.includes('trustee_reports'), rt: rt.includes('trustee_reports'), ts: _sbTsCol.trustee_reports, backup: _BACKUP_TABLES.includes('trustee_reports'), label: _tskSrcLabel('trustee_reports'), primary: _PAGE_PRIMARY.trustees }), 100); });
+    return new Promise((res) => { _rtStart(); setTimeout(() => (window.sbGet = og, res({ cached, dflt, asked: asked.includes('trustee_reports'), rt: rt.includes('trustee_reports'), ts: _sbTsCol.trustee_reports, backup: _BACKUP_TABLES.includes('trustee_reports'), label: _tskSrcLabel('trustee_reports'), primary: _PAGE_PRIMARY.trustees })), 100); });
   });
   check('ldb: cached rows load, missing table defaults to []', w.cached && w.dflt, w);
   check('sbSync pulls trustee_reports; realtime subscribes to it', w.asked && w.rt, w);
