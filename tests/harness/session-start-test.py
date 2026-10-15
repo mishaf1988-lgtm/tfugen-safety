@@ -73,4 +73,11 @@ check("outside the repo the copy runs, with the repo as CLAUDE_PROJECT_DIR",
       p.returncode == 0 and os.path.exists(probe) and open(probe).read().strip() == r, (p.returncode, p.stderr, cmd))
 t = os.path.getmtime(os.path.join(hm, ".claude", "settings.json")); cl("true")
 check("unchanged hooks: not rewritten", os.path.getmtime(os.path.join(hm, ".claude", "settings.json")) == t)
+# retro 15/10/2026: a hook group that is not the repo's survives, the repo's are not doubled, no temp file is left
+sf = os.path.join(hm, ".claude", "settings.json"); cur_ = us()
+cur_["hooks"]["Stop"] = cur_["hooks"].get("Stop", []) + [{"hooks": [{"type": "command", "command": "~/.claude/stop-hook-git-check.sh"}]}]
+json.dump(cur_, open(sf, "w")); cl("true"); u2 = us()
+check("a foreign Stop hook survives the copy", any(h.get("command") == "~/.claude/stop-hook-git-check.sh" for g in u2["hooks"].get("Stop", []) for h in g.get("hooks", [])), u2["hooks"].get("Stop"))
+check("the repo's PreToolUse group is there once, not doubled", len(u2["hooks"]["PreToolUse"]) == 1, u2["hooks"]["PreToolUse"])
+check("no temp file left in ~/.claude", not [n for n in os.listdir(os.path.join(hm, ".claude")) if ".tmp" in n], os.listdir(os.path.join(hm, ".claude")))
 done()

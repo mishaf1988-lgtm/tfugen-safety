@@ -116,11 +116,23 @@ def install_user_hooks(cwd, home=None):
         cur = json.load(open(f, encoding="utf-8"))
     except Exception:
         cur = {}
-    if cur.get("hooks") == hooks:
+    # Merge, not replace (retro 15/10/2026): a group of the repo's hooks is replaced, every other
+    # group the user or the cloud put there (a Stop check, a notifier) stays.
+    mine = lambda g: any(h.get("command", "").startswith('[ "$CLAUDE_PROJECT_DIR" = ') for h in g.get("hooks", []))  # the wrapper added above
+    merged = {}
+    for ev, groups in (cur.get("hooks") or {}).items():
+        keep = [g for g in groups if not mine(g)]
+        if keep:
+            merged[ev] = keep
+    for ev, groups in hooks.items():
+        merged[ev] = merged.get(ev, []) + groups
+    if cur.get("hooks") == merged:
         return False
-    cur["hooks"] = hooks
+    cur["hooks"] = merged
     os.makedirs(os.path.dirname(f), exist_ok=True)
-    json.dump(cur, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    tmp = f + ".tmp%d" % os.getpid()  # atomic: two sessions or a crash never leave half a file
+    json.dump(cur, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    os.replace(tmp, f)
     return True
 
 
