@@ -25976,7 +25976,7 @@ function _backupSyncFromStorage(){
     if(!r.ok)return r.text().then(function(t){throw new Error('list backups '+r.status+': '+t.substring(0,160));});
     return r.json();
   }).then(function(rows){
-    supabaseFiles=(rows||[]).filter(function(it){return it&&it.name&&!it.name.endsWith('/');});
+    supabaseFiles=(rows||[]).filter(function(it){return it&&it.name&&it.id&&!it.name.endsWith('/');}); // folders (induction-docs/) have no id
     if(!supabaseFiles.length)return {value:[]};
     // 2. List existing copies in OneDrive. 404 just means folder hasn't
     //    been created yet — treat as empty.

@@ -136,6 +136,9 @@ console.log('\n4. "send again" from "who signed" (op refile)');
   check('the listing asked for the row folder', w.listed && w.listed.prefix === 'induction-docs/' + failedId + '/', w.listed);
   check('then the kept photos are deleted, and the row is clean', kept(failedId).length === 0 && w.dels.length === 1 && rows[failedId].mailed_at && rows[failedId].doc_err === null, rows[failedId]);
   reset();
+  const twice = await post({ op: 'refile', id: failedId }, 'good');
+  check('a form already mailed is not sent again: 409, no mail', twice.st === 409 && twice.j && twice.j.error === 'already sent' && !w.mails.length, twice);
+  reset();
   await sign('wk1');
   const wid = Object.keys(rows).find((k) => rows[k].talk_id === 'wk1');
   const wk = await post({ op: 'refile', id: wid }, 'good');
@@ -147,6 +150,7 @@ console.log('\n5. the app: a "send again" button where the form was not sent');
   const html = (await import('fs')).readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   const tag = html.slice(html.indexOf('function _tbtDocTag('), html.indexOf('function _tbtQuizTag('));
   check('the not-sent line carries the button, and it posts op refile with the row id', /\\u05dc\\u05d0 \\u05e0\\u05e9\\u05dc\\u05d7: '\+esc\(String\(x\.doc_err\)\.substring\(0,80\)\)\+'<\/div>'\+_tbtRefileBtn\(x\)/.test(tag) && /_tbtMissPost\(\{op:'refile',id:id\}\)/.test(tag) && /onclick="tbtRefile\(this\.dataset\.id,this\)"/.test(tag));
+  check('the backup sync skips folders (induction-docs/ has no id): a folder fetched as a file stopped the whole sync', /supabaseFiles=\(rows\|\|\[\]\)\.filter\(function\(it\)\{return it&&it\.name&&it\.id&&/.test(html));
   check('a viewer is blocked before any call', /function tbtRefile\(id,btn\)\{\s*if\(_viewOnly\(\)\)\{_viewBlock\(\);/.test(tag));
 }
 

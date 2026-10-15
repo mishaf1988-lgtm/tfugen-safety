@@ -1613,6 +1613,8 @@ async function makeLink(env, request, ctx) {
     const t = tr.ok ? ((await tr.json()) || [])[0] : null;
     if (!t) return jsonResp({ error: 'not found' }, 404, cors);
     if (t.kind !== KIND_IND) return jsonResp({ error: 'not an induction' }, 409, cors);
+    // A form already mailed is not sent again: a second click, or a stale screen, would mail HR twice.
+    if (row.mailed_at && b.force !== true) return jsonResp({ error: 'already sent', mailed_at: row.mailed_at }, 409, cors);
     const sig = row.sig_url ? await storageU8(env, row.sig_url) : null;
     if (!sig) return jsonResp({ error: 'signature not loaded' }, 502, cors);
     let kept;
