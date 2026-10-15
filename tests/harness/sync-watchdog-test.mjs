@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS } from './_build/_watchdog.mjs';
+import { assess, step, mailHtml, mailSubject, runWatch, stateKeys, WATCH_KEY, STALE_MS, ERR_MS, ilTime, slowIssue, probe, SLOW_MS, SLOW_TICKS, LAT_KEEP, PROBE_MS, LAT_GAP_MS, SLOW_SPAN_MS, WATCH_LOCK } from './_build/_watchdog.mjs';
 
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).substring(0, 400) : '')); } };
@@ -59,7 +59,7 @@ check('25 hours is not yet stale', assess(S({ ...fresh, vitre_sync: vs({ at: ago
 check('no Vitre run recorded, watchdog up 27 hours: stale', keys(assess(S(fresh), NOW, true, ago(27 * 60), true)).join() === 'vitre:stale');
 check('Vitre keys not set: no Vitre problem', assess(S({ ...fresh, vitre_sync: vs({ error: 'x' }) }), NOW, true, ago(6000), false).length === 0);
 check('the watchdog reads the key vitre.js writes', stateKeys().includes('vitre_sync') && /const SYNC_KEY = 'vitre_sync'/.test(src('functions/api/vitre.js')));
-check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat\)/.test(src('functions/_watchdog.js')));
+check('runWatch turns the Vitre check on from the Vitre env vars', /assess\(st, now\.getTime\(\), connected, started, !!\(env\.VITRE_API_KEY_ID && env\.VITRE_API_KEY_SECRET\), lat, slowOpen\)/.test(src('functions/_watchdog.js')));
 
 console.log('\n2. one mail when it starts, one when it is over');
 let st = step(null, [{ key: 'stale:deck', title: 'T', detail: 'D' }], ago(0));
@@ -77,16 +77,20 @@ check('mail: rtl, the problem, what was resolved, the link', /dir="rtl"/.test(ht
 check('keyboard characters only in the mail', !/[—–־«»…•→←]/.test(html + mailSubject(['k'], [], { k: { title: 'T' } }) + mailSubject([], [1], {})));
 
 console.log('\n3. runWatch against a fake server');
-let store = {}, mails = [], mailFail = false, tokenOk = true;
+let store = {}, mails = [], mailFail = false, tokenOk = true, readFail = false, tokenReadFail = false, lockHeld = false, seq = [];
 globalThis.fetch = async (url, init) => {
-  const u = String(url), body = init && init.body ? JSON.parse(init.body) : null;
+  const u = String(url), body = init && init.body ? JSON.parse(init.body) : null, m = (init && init.method) || 'GET';
   if (u.includes('/rest/v1/server_state?select=')) {
+    if (readFail) return { ok: false, status: 503, json: async () => ({}) };
     const ks = decodeURIComponent(u.match(/key=in\.\(([^)]*)\)/)[1]).split(',');
     return { ok: true, json: async () => ks.filter((k) => k in store).map((k) => ({ key: k, value: store[k], updated_at: ago(1) })) };
   }
-  if (u.includes('/rest/v1/server_state')) { (Array.isArray(body) ? body : [body]).forEach((r) => { store[r.key] = r.value; }); return { ok: true, status: 201, json: async () => ({}) }; }
-  if (u.includes('/rest/v1/oauth_tokens')) return { ok: true, json: async () => (tokenOk ? [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'a', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }] : []) };
-  if (u.includes('/sendMail')) { if (mailFail) return { ok: false, status: 503, json: async () => ({ error: { message: 'down' } }) }; mails.push(body.message); return { ok: true, status: 202, json: async () => ({}) }; }
+  // The lease (stateLock / stateUnlock): sync_watch_lock is taken unless the test holds it.
+  if (u.includes('/rest/v1/server_state?key=eq.')) { seq.push(m + ':lock'); return { ok: true, status: 200, json: async () => (lockHeld ? [] : [{ key: WATCH_LOCK }]) }; }
+  if (u.includes('/rest/v1/server_state') && /ignore-duplicates/.test((init.headers || {}).Prefer || '')) return { ok: true, status: 201, json: async () => ({}) };
+  if (u.includes('/rest/v1/server_state')) { (Array.isArray(body) ? body : [body]).forEach((r) => { store[r.key] = r.value; if (r.key === WATCH_KEY) seq.push('write:' + (JSON.parse(r.value).lat || []).length); }); return { ok: true, status: 201, json: async () => ({}) }; }
+  if (u.includes('/rest/v1/oauth_tokens')) { if (tokenReadFail) return { ok: false, status: 503, json: async () => ({}) }; return { ok: true, json: async () => (tokenOk ? [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'a', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }] : []) }; }
+  if (u.includes('/sendMail')) { seq.push('mail'); if (mailFail) return { ok: false, status: 503, json: async () => ({ error: { message: 'down' } }) }; mails.push(body.message); return { ok: true, status: 202, json: async () => ({}) }; }
   return { ok: false, status: 404, json: async () => ({}) };
 };
 const env = { SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'https://x.supabase.co', ONEDRIVE_CLIENT_ID: 'c', ONEDRIVE_CLIENT_SECRET: 's' };
@@ -153,15 +157,60 @@ check('slow together with a sync problem: the sync wording stays', /בעיה ב�
 check('keyboard characters only in the slow notice', !/[—–־«»…•→←]/.test(sl.title + sl.detail));
 const realFetch = globalThis.fetch;
 let calls = [];
-globalThis.fetch = async (url, init) => { calls.push(String(url)); throw Object.assign(new Error('aborted'), { name: 'AbortError' }); };
+globalThis.fetch = async (url, init) => { calls.push(String(url)); if (!init.signal) throw new Error('no signal'); throw Object.assign(new Error('timed out'), { name: 'TimeoutError' }); };
 let pm = await probe(env);
-check('probe: three reads of a real app table; a read that hangs counts PROBE_MS (10s)', pm === PROBE_MS && calls.length === 3 && calls.every((u) => /\/rest\/v1\/locations\?select=id&limit=1$/.test(u)), [pm, calls]);
-check('probe has a timeout (AbortController), so a hung server cannot hang the tick', /new AbortController\(\)[\s\S]{0,80}setTimeout\(\(\) => ac\.abort\(\), PROBE_MS\)/.test(src('functions/_watchdog.js')));
+check('probe: three reads of a real app table; a read that hangs counts PROBE_MS (4s), not a failure', pm.ms === PROBE_MS && pm.fail === 0 && PROBE_MS === 4000 && calls.length === 3 && calls.every((u) => /\/rest\/v1\/locations\?select=id&limit=1$/.test(u)), [pm, calls]);
+globalThis.fetch = async () => { throw new TypeError('connection refused'); };
+pm = await probe(env);
+check('a read that throws at once is "down": counts PROBE_MS (not 5ms fast), counted apart in fail', pm.ms === PROBE_MS && pm.fail === 3, pm);
+let inFlight = 0, maxIn = 0;
+globalThis.fetch = async () => { inFlight++; maxIn = Math.max(maxIn, inFlight); await new Promise((r) => setTimeout(r, 30)); inFlight--; return { ok: true, status: 200 }; };
+pm = await probe(env);
+check('the three reads run at once (a slow server costs one wait, not three)', maxIn === 3 && pm.ms < 1000 && pm.fail === 0, [maxIn, pm]);
+check('probe has a timeout, so a hung server cannot hang the tick', /signal: AbortSignal\.timeout\(PROBE_MS\)/.test(src('functions/_watchdog.js')));
 globalThis.fetch = realFetch;
 store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: L(1, 2, 3, 4, 5, 6, 7, 8) });
 tokenOk = true; r = await runWatch(env, 'x');
 const w3 = JSON.parse(store[WATCH_KEY]);
 check('runWatch keeps the last LAT_KEEP ticks, the newest is this probe, and returns ms', w3.lat.length === LAT_KEEP && w3.lat[0].ms === 2 && typeof w3.lat[LAT_KEEP - 1].ms === 'number' && w3.lat[LAT_KEEP - 1].ms < PROBE_MS && r.ms === w3.lat[LAT_KEEP - 1].ms, [w3.lat, r.ms]);
+
+console.log('\n7. the review of 15/10/2026: ticks are not 15 minutes apart');
+{
+  // op:'watch' rides every hazard-file call: four samples could come in two minutes.
+  const Lat = (mins, ms, base) => mins.map((mm) => ({ at: new Date((base || DAY) - mm * 60000).toISOString(), ms }));
+  check('4 slow samples within 3 minutes: NOT "slow for an hour"', slowIssue(Lat([3, 2, 1, 0], 2000), DAY) === null);
+  check('4 slow samples, the oldest 45 minutes old: slow', slowIssue(Lat([45, 30, 15, 0], 2000), DAY) !== null && SLOW_SPAN_MS === 45 * 60000);
+  check('...the oldest 44 minutes old: not yet', slowIssue(Lat([44, 30, 15, 0], 2000), DAY) === null);
+  check('once open, it stays open at 01:00 while the samples stay slow (no "back to normal" every evening)', slowIssue(Lat([45, 30, 15, 0], 2000, NIGHT), NIGHT, true) !== null);
+  check('...but it does not OPEN at 01:00', slowIssue(Lat([45, 30, 15, 0], 2000, NIGHT), NIGHT, false) === null);
+  check('...and closes when a sample is fast again', slowIssue(Lat([45, 30, 15], 2000).concat(Lat([0], 100)), DAY, true) === null);
+  // A sample only when the last one is LAT_GAP_MS (10 minutes) old.
+  store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: [{ at: new Date(Date.now() - 2 * 60000).toISOString(), ms: 50 }] });
+  r = await runWatch(env, 'x');
+  check('the last sample is 2 minutes old: no new sample, no probe', JSON.parse(store[WATCH_KEY]).lat.length === 1 && r.ms === null && LAT_GAP_MS === 600000, [r, JSON.parse(store[WATCH_KEY]).lat]);
+  store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: [{ at: new Date(Date.now() - 11 * 60000).toISOString(), ms: 50 }] });
+  r = await runWatch(env, 'x');
+  check('11 minutes old: one new sample', JSON.parse(store[WATCH_KEY]).lat.length === 2 && typeof r.ms === 'number');
+  // Strict read: a failed read writes nothing (it used to wipe sync_watch and re-mail).
+  const keep = JSON.stringify({ started: ago(600), open: { 'stale:deck': { title: 'T', since: ago(60), mailed: true } }, lat: [] });
+  store[WATCH_KEY] = keep; const nm = mails.length;
+  readFail = true; r = await runWatch(env, 'x'); readFail = false;
+  check('the state read fails: nothing written, nothing mailed, an error returned', store[WATCH_KEY] === keep && mails.length === nm && r.ok === false && /state read failed/.test(r.error), r);
+  tokenReadFail = true; r = await runWatch(env, 'x'); tokenReadFail = false;
+  check('the token read fails: not "not connected", nothing written', store[WATCH_KEY] === keep && mails.length === nm && r.ok === false && /token read failed/.test(r.error), r);
+  // One run at a time.
+  lockHeld = true; seq = []; r = await runWatch(env, 'x'); lockHeld = false;
+  check('another run holds sync_watch_lock: this one does nothing', r.busy === true && store[WATCH_KEY] === keep && !seq.some((x) => /^(write|mail)/.test(x)), [r, seq]);
+  seq = []; r = await runWatch(env, 'x');
+  check('...a free lock is taken and given back (PATCH twice)', seq.filter((x) => x === 'PATCH:lock').length === 2 && seq[0] === 'PATCH:lock' && seq[seq.length - 1] === 'PATCH:lock', seq);
+  // The samples are saved before the mail.
+  store.deck_ok_at = new Date(Date.now() - 50 * 60000).toISOString();
+  store[WATCH_KEY] = JSON.stringify({ started: ago(600), open: {}, lat: [{ at: ago(60), ms: 50 }] });
+  seq = []; r = await runWatch(env, 'x');
+  const wi = seq.indexOf('write:2'), mi = seq.indexOf('mail');
+  check('a sample and a mail in one run: the sample is written before the mail goes', wi >= 0 && mi > wi && r.sent === 1, seq);
+  check('runWatch takes the lock with a 2-minute lease', /stateLock\(env, WATCH_LOCK, WATCH_LEASE_MS\)/.test(src('functions/_watchdog.js')) && WATCH_LOCK === 'sync_watch_lock' && /WATCH_LEASE_MS = 120000/.test(src('functions/_watchdog.js')));
+}
 
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
