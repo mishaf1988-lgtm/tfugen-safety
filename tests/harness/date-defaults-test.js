@@ -17,7 +17,7 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
 // When something happened: today is the likely answer.
-const TODAY = ['a-d', 'd-u', 'drl-d', 'env-d', 'eqi-d', 'eqi-pdf-date', 'ins-d', 'leg-u', 'mf-due', 'mtg-ref', 'ncr-sd', 'nm-d', 'ppe-d', 'prj-start', 'ptw-de', 'ptw-ds', 'round-d', 't-d', 'tb-d', 'tbt-d', 'thz-d', 'tru-d', 'wst-d'];
+const TODAY = ['a-d', 'd-u', 'drl-d', 'env-d', 'eqi-d', 'eqi-pdf-date', 'ins-d', 'leg-u', 'mf-due', 'mtg-ref', 'ncr-sd', 'nm-d', 'ppe-d', 'prj-start', 'ptw-de', 'ptw-ds', 'round-d', 't-d', 'tb-d', 'tbt-d', 'thz-d', 'tp-dd', 'tru-d', 'wst-d'];
 // Empty means none / not yet / unknown.
 const NONE = {
   expiry: ['ctr-e', 'd-e', 'eqi-e', 'eqi-pdf-expiry', 'eqi-pdf-next', 'ppe-e', 't-e'],

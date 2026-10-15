@@ -42,8 +42,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   });
   check('never more than 6 requests in flight (was 43 at once)', r.pool === 6 && r.maxIn === 6, r.maxIn);
   check('the home screen tables leave first', r.started.slice(0, r.first.length).join() === r.first.join(), r.started.slice(0, 12));
-  check('every table is asked for once (43)', r.started.length === 43 && new Set(r.started).size === 43, r.started.length);
-  check('a failed table (null, or a rejected request) is skipped, the rest still merge', r.merged.length === 41 && !r.merged.includes('auds') && !r.merged.includes('ctr'), r.merged.length);
+  check('every table is asked for once (44 since train_plan, 15/10/2026)', r.started.length === 44 && new Set(r.started).size === 44, r.started.length);
+  check('a failed table (null, or a rejected request) is skipped, the rest still merge', r.merged.length === 42 && !r.merged.includes('auds') && !r.merged.includes('ctr'), r.merged.length);
   check('the home screen is drawn again once its tables are in, before the end', r.dashCalls === 1 && /^dash@/.test(r.events[0]) && +r.events[0].split('@')[1] < 41, r.events);
   check('the pull ends as before: online, one refresh', r.sbOn === true && r.refreshCalls === 1, [r.sbOn, r.refreshCalls]);
   check('no page errors', errors.length === 0, errors);
