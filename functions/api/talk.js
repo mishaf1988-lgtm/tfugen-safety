@@ -33,6 +33,11 @@ import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+// Every call from this file has a time limit (15/10/2026, review of the outside pages): a slow
+// database left the "saving" button spinning until Cloudflare gave up (~100s, error 524). Now the
+// person gets our error page within FETCH_MS, and the draft in the phone keeps what they typed.
+export const FETCH_MS = 20000;
+const fetch = (u, o) => globalThis.fetch(u, o && o.signal ? o : { ...(o || {}), signal: AbortSignal.timeout(FETCH_MS) });
 const APP_URL = 'https://tapugan-safety.pages.dev';
 const BUCKET = 'incidents-photos';
 const PREFIX = 'talk-link:v1:';
@@ -534,6 +539,13 @@ export async function guessGate(env, scope, request) {
 // is one address, so the limit is far above a department signing at once; a database that cannot
 // count lets the call go (a worker must not be stopped when it blinks). codes.js skips "tlk".
 export const TLK_AI_LIMIT = 300;
+// Free text that is not a name (job, agency, company: "\u05de\u05e4\u05e2\u05d9\u05dc \u05e7\u05d5 3", "\u05d9\u05d9\u05e6\u05d5\u05e8/\u05d0\u05e8\u05d9\u05d6\u05d4"): Hebrew letters with digits
+// and common punctuation are kept as typed. heName refused them, the assistant was asked, and when
+// its answer kept the digit the whole form came back refused (15/10/2026).
+export function heText(t) {
+  const s = String(t || '').replace(/\s+/g, ' ').trim().replace(/\u05f3/g, "'").replace(/\u05f4/g, '"');
+  return /^(?=.*[\u05d0-\u05ea])[\u05d0-\u05ea0-9'". ,/()&+-]{1,60}$/.test(s) ? s : null;
+}
 export async function nameHe(env, request, raw) {
   const direct = heName(raw);
   if (direct) return direct;
@@ -905,7 +917,7 @@ async function signedFiles(env, fileUrl) {
   return out;
 }
 
-const sigScript = (L) => `(function(){
+const sigScript = (L, dk) => `(function(){
 var T=${JSON.stringify({ noName: L.noName, noSig: L.noSig, saving: L.saving, send: L.send, oNeed: L.oNeed, oIdNeed: L.oIdNeed }).replace(/</g, '\\u003c')};
 var c=document.getElementById('pad'),x=c.getContext('2d'),drawn=false,down=false;
 function fit(){var r=c.getBoundingClientRect();c.width=r.width;c.height=180;x.lineWidth=2.5;x.lineCap='round';x.strokeStyle='#111';drawn=false;}
@@ -926,7 +938,24 @@ document.getElementById('f').addEventListener('submit',function(e){
   var b=document.getElementById('go');b.disabled=true;b.textContent=T.saving;
 });
 window.addEventListener('pageshow',function(e){if(e.persisted){var b=document.getElementById('go');b.disabled=false;b.textContent=T.send;}});
+var DK=${JSON.stringify(dk)},TTL=900000,f=document.getElementById('f');
+function fields(){return Array.prototype.filter.call(f.elements,function(el){return el.name&&el.type!=='hidden'&&el.type!=='file'&&el.type!=='submit'&&el.type!=='button';});}
+function save(){try{var o={at:Date.now(),v:{},sig:drawn?c.toDataURL('image/png'):'',docs:[]};fields().forEach(function(el){o.v[el.name]=el.type==='checkbox'?(el.checked?'1':''):el.value;});
+Array.prototype.forEach.call(document.querySelectorAll('input[name=doc]'),function(d){o.docs.push(d.value);});
+try{sessionStorage.setItem(DK,JSON.stringify(o));}catch(q){o.docs=[];sessionStorage.setItem(DK,JSON.stringify(o));}}catch(e){}}
+f.addEventListener('input',save);f.addEventListener('change',save);c.addEventListener('pointerup',save);document.getElementById('clr').addEventListener('click',save);
+var box=document.getElementById('dbox');if(box&&window.MutationObserver)new MutationObserver(save).observe(box,{childList:true});
+f.addEventListener('submit',save);
+document.addEventListener('DOMContentLoaded',function(){var o=null;try{o=JSON.parse(sessionStorage.getItem(DK)||'null');}catch(e){}
+if(!o||!(Date.now()-o.at<TTL)){try{sessionStorage.removeItem(DK);}catch(e){}return;}
+fields().forEach(function(el){if(!(el.name in o.v))return;if(el.type==='checkbox')el.checked=o.v[el.name]==='1';else el.value=o.v[el.name];el.dispatchEvent(new Event('change'));});
+if(o.sig){var im=new Image();im.onload=function(){x.drawImage(im,0,0,c.width,c.height);drawn=true;};im.src=o.sig;}
+if(o.docs&&o.docs.length&&window.__tlkAdd)o.docs.forEach(function(d){window.__tlkAdd(d);});});
 })();`;
+// The draft goes when the signature is saved (or was already there): the next worker on the
+// same phone starts empty. Keyed by the link, as sigScript writes it.
+const draftKey = (tok, g) => 'tlkd:' + (g ? 'g:' : '') + String(tok || '').slice(-40);
+const clearDraft = (tok, g, nonce) => '<script nonce="' + nonce + '">try{sessionStorage.removeItem(' + JSON.stringify(draftKey(tok, g)) + ');}catch(e){}</script>';
 
 async function signedIds(env, talkId) {
   const r = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talkId) + '&select=emp_id', { headers: sbH(env) });
@@ -944,6 +973,7 @@ c.addEventListener('pointermove',function(e){if(!down)return;var p=pt(e);x.lineT
 c.addEventListener('pointerup',function(){down=false;});
 document.getElementById('clr').addEventListener('click',function(){fit();});
 document.getElementById('f').addEventListener('submit',function(e){if(!drawn){e.preventDefault();alert('\u05d7\u05e1\u05e8\u05d4 \u05d7\u05ea\u05d9\u05de\u05d4');return;}document.getElementById('sig').value=c.toDataURL('image/png');document.getElementById('go').disabled=true;});
+window.addEventListener('pageshow',function(e){if(e.persisted)document.getElementById('go').disabled=false;});
 })();`;
 // The first trainer signature stays (13/10/2026, BACKLOG 13.9): the group link sits on the
 // manager's phone for a day, and anyone holding it could sign again in the trainer's place.
@@ -1000,10 +1030,12 @@ async function showTalk(env, tok, want, g, tr, cookie) {
   if (g && tr) return trainerPage(tok, talk);
   const x = textOf(talk, langOf(want));
   const lang = x.lang, L = LANGS[lang];
-  const emps = await getEmps(env);
+  const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he, typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
+  // The induction and the annual/quality pages ask for the name typed: no list to read (15/10/2026),
+  // so a hall scanning one code does not wait on, or fail with, the whole workers table.
+  const emps = ind || typed ? [] : await getEmps(env);
   const files = await signedFiles(env, talk.file_url);
   const vid = await videoHtml(env, talk, L);
-  const ind = talk.kind === KIND_IND, IL = IND_L[lang] || IND_L.he, typed = TYPED_KINDS.indexOf(talk.kind) >= 0;
   const quiz = ind ? [] : quizOf(talk, lang);
   const secs = ind || typed ? { intro: '', list: [] } : sectionsOf(x.body), sectioned = secs.list.length > 0;
   // Group mode only: who already signed, so the phone moves on to the next worker.
@@ -1070,13 +1102,13 @@ async function showTalk(env, tok, want, g, tr, cookie) {
     + '<button type="submit" id="go" style="display:block;width:100%;padding:14px;border:0;border-radius:10px;background:#15803d;color:#fff;font-size:18px;font-weight:700">' + esc(L.send) + '</button>'
     + '</form>'
     + (g ? '<p style="border-top:1px solid #e5e7eb;margin-top:16px;padding-top:12px" dir="rtl"><a href="' + esc(talkUrl(tok, 'he', true, true)) + '" style="color:#1e3a8a;font-weight:700">' + (talk.trainer_signed_at ? '\u2713 \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4' : '\u270d\ufe0f \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4: \u05d7\u05ea\u05d9\u05de\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da') + '</a></p>' : '')
-    + '<script nonce="' + nonce + '">' + sigScript(L) + '</script>'
+    + '<script nonce="' + nonce + '">' + sigScript(L, draftKey(tok, g)) + '</script>'
     + (quiz.length ? '<script nonce="' + nonce + '">' + quizScript(quiz, lang) + '</script>' : '')
     // The camera inside the page (13/10/2026, Michael on a Chrome tablet: the gallery opens, the
     // camera does not): getUserMedia, shutter and done. No mediaDevices = the label opens the file input.
     // Blocked (13/10/2026, the tablet said "blocked" without asking): the site permission or the
     // device's own camera switch, told apart with permissions.query, and a camera busy in another app.
-    + (ind ? '<script nonce="' + nonce + '">(function(){var b=document.getElementById("dadd"),f=document.getElementById("dfile"),f2=document.getElementById("dfile2"),g2=document.getElementById("dgal"),box=document.getElementById("dbox"),c=document.getElementById("dcnt");if(!b||!f||!f2||!g2||!box)return;var cnt=function(){var n=box.children.length;c.textContent=n?"\u05e6\u05d5\u05dc\u05de\u05d5 "+n+" \u05de\u05e1\u05de\u05db\u05d9\u05dd":"";};var full=function(){if(box.children.length>=' + MAX_DOCS + '){alert("\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + MAX_DOCS + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd");return true;}return false;};var add=function(src){var img=new Image();img.onload=function(){var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);var d=cv.toDataURL("image/jpeg",0.7),w=document.createElement("div"),im=document.createElement("img"),h=document.createElement("input"),x=document.createElement("button");w.style.cssText="position:relative";im.src=d;im.style.cssText="height:90px;border:1px solid #9ca3af;border-radius:6px";h.type="hidden";h.name="doc";h.value=d;x.type="button";x.textContent="\u05d4\u05e1\u05e8";x.style.cssText="display:block;margin-top:2px;width:100%;padding:4px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff";x.addEventListener("click",function(){w.remove();cnt();});w.appendChild(im);w.appendChild(h);w.appendChild(x);box.appendChild(w);cnt();};img.onerror=function(){alert("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4");};img.src=src;};var onf=function(){var fl=this.files&&this.files[0];this.value="";if(!fl)return;var r=new FileReader();r.onload=function(){add(r.result);};r.readAsDataURL(fl);};f.addEventListener("change",onf);f2.addEventListener("change",onf);g2.addEventListener("click",function(e){if(full())e.preventDefault();});var md=navigator.mediaDevices;var mk=function(t,bg,fg){var x=document.createElement("button");x.type="button";x.textContent=t;x.style.cssText="flex:1;padding:14px;font-size:18px;font-weight:700;border:2px solid #fff;border-radius:8px;background:"+bg+";color:"+fg;return x;};var openCam=function(){var ov=document.createElement("div"),v=document.createElement("video"),bar=document.createElement("div"),msg=document.createElement("div"),shot=mk("\u05e6\u05dc\u05dd","#1e3a8a","#fff"),done=mk("\u05e1\u05d9\u05d5\u05dd","#fff","#111"),stream=null;ov.id="camov";ov.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:#000;display:flex;flex-direction:column";v.setAttribute("playsinline","");v.muted=true;v.autoplay=true;v.style.cssText="flex:1;width:100%;min-height:0;object-fit:contain;background:#000";msg.id="cammsg";msg.style.cssText="color:#fff;padding:8px 12px;font-size:16px;text-align:center;min-height:22px";bar.style.cssText="display:flex;gap:10px;padding:12px";shot.id="camshot";done.id="camdone";shot.disabled=true;bar.appendChild(shot);bar.appendChild(done);ov.appendChild(v);ov.appendChild(msg);ov.appendChild(bar);document.body.appendChild(ov);var stop=function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});ov.remove();};done.addEventListener("click",stop);shot.addEventListener("click",function(){if(full()){stop();return;}var w=v.videoWidth,h=v.videoHeight;if(!w||!h)return;var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(v,0,0,w,h);add(cv.toDataURL("image/jpeg",0.9));msg.textContent="\u05e6\u05d5\u05dc\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05dc\u05dd \u05e2\u05d5\u05d3 \u05de\u05e1\u05de\u05da, \u05d0\u05d5 \u05e1\u05d9\u05d5\u05dd";});md.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){stream=s;v.srcObject=s;var p=v.play();if(p&&p.catch)p.catch(function(){});shot.disabled=false;msg.textContent="\u05dc\u05db\u05d5\u05d5\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e6\u05dc\u05dd";}).catch(function(err){shot.style.display="none";var n=err&&err.name,say=function(t){msg.textContent=t+" \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df (\u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05e0\u05d9).";};if(n==="NotReadableError"||n==="AbortError"){say("\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05ea\u05e4\u05d5\u05e1\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d7\u05e8\u05ea. \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1.");return;}if(n==="NotFoundError"||n==="OverconstrainedError"){say("\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05de\u05e6\u05dc\u05de\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8.");return;}if(n!=="NotAllowedError"){say("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e6\u05dc\u05de\u05d4.");return;}var site="\u05d4\u05d0\u05ea\u05e8 \u05d7\u05e1\u05d5\u05dd \u05d1\u05de\u05e6\u05dc\u05de\u05d4. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05e1\u05de\u05dc \u05e9\u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05db\u05ea\u05d5\u05d1\u05ea, \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea, \u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d0\u05e4\u05e9\u05e8, \u05d5\u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.",os="\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05db\u05d1\u05d5\u05d9\u05d4 \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05db\u05e9\u05d9\u05e8. \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea: \u05e4\u05e8\u05d8\u05d9\u05d5\u05ea, \u05d2\u05d9\u05e9\u05d4 \u05dc\u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d4\u05e4\u05e2\u05d9\u05dc. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d2\u05dd \u05de\u05ea\u05d2 \u05d0\u05d5 \u05de\u05e7\u05e9 \u05de\u05e6\u05dc\u05de\u05d4. \u05d0\u05d7\u05e8 \u05db\u05da \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.";if(!navigator.permissions||!navigator.permissions.query){say(site);return;}navigator.permissions.query({name:"camera"}).then(function(r){say(r.state==="denied"?site:os);},function(){say(site);});});};b.addEventListener("click",function(e){if(full()){e.preventDefault();return;}if(!md||!md.getUserMedia)return;e.preventDefault();openCam();});})();</script>' : '')
+    + (ind ? '<script nonce="' + nonce + '">(function(){var b=document.getElementById("dadd"),f=document.getElementById("dfile"),f2=document.getElementById("dfile2"),g2=document.getElementById("dgal"),box=document.getElementById("dbox"),c=document.getElementById("dcnt");if(!b||!f||!f2||!g2||!box)return;var cnt=function(){var n=box.children.length;c.textContent=n?"\u05e6\u05d5\u05dc\u05de\u05d5 "+n+" \u05de\u05e1\u05de\u05db\u05d9\u05dd":"";};var full=function(){if(box.children.length>=' + MAX_DOCS + '){alert("\u05d0\u05e4\u05e9\u05e8 \u05e2\u05d3 ' + MAX_DOCS + ' \u05de\u05e1\u05de\u05db\u05d9\u05dd");return true;}return false;};var add=function(src){var img=new Image();img.onload=function(){var k=Math.min(1,1400/Math.max(img.width,img.height)),cv=document.createElement("canvas");cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);var d=cv.toDataURL("image/jpeg",0.7),w=document.createElement("div"),im=document.createElement("img"),h=document.createElement("input"),x=document.createElement("button");w.style.cssText="position:relative";im.src=d;im.style.cssText="height:90px;border:1px solid #9ca3af;border-radius:6px";h.type="hidden";h.name="doc";h.value=d;x.type="button";x.textContent="\u05d4\u05e1\u05e8";x.style.cssText="display:block;margin-top:2px;width:100%;padding:4px;font-size:13px;border:1px solid #d1d5db;border-radius:6px;background:#fff";x.addEventListener("click",function(){w.remove();cnt();});w.appendChild(im);w.appendChild(h);w.appendChild(x);box.appendChild(w);cnt();};img.onerror=function(){alert("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e7\u05e8\u05d5\u05d0 \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4");};img.src=src;};window.__tlkAdd=add;var onf=function(){var fl=this.files&&this.files[0];this.value="";if(!fl)return;var r=new FileReader();r.onload=function(){add(r.result);};r.readAsDataURL(fl);};f.addEventListener("change",onf);f2.addEventListener("change",onf);g2.addEventListener("click",function(e){if(full())e.preventDefault();});var md=navigator.mediaDevices;var mk=function(t,bg,fg){var x=document.createElement("button");x.type="button";x.textContent=t;x.style.cssText="flex:1;padding:14px;font-size:18px;font-weight:700;border:2px solid #fff;border-radius:8px;background:"+bg+";color:"+fg;return x;};var openCam=function(){var ov=document.createElement("div"),v=document.createElement("video"),bar=document.createElement("div"),msg=document.createElement("div"),shot=mk("\u05e6\u05dc\u05dd","#1e3a8a","#fff"),done=mk("\u05e1\u05d9\u05d5\u05dd","#fff","#111"),stream=null;ov.id="camov";ov.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99;background:#000;display:flex;flex-direction:column";v.setAttribute("playsinline","");v.muted=true;v.autoplay=true;v.style.cssText="flex:1;width:100%;min-height:0;object-fit:contain;background:#000";msg.id="cammsg";msg.style.cssText="color:#fff;padding:8px 12px;font-size:16px;text-align:center;min-height:22px";bar.style.cssText="display:flex;gap:10px;padding:12px";shot.id="camshot";done.id="camdone";shot.disabled=true;bar.appendChild(shot);bar.appendChild(done);ov.appendChild(v);ov.appendChild(msg);ov.appendChild(bar);document.body.appendChild(ov);var stop=function(){if(stream)stream.getTracks().forEach(function(t){t.stop();});ov.remove();};done.addEventListener("click",stop);shot.addEventListener("click",function(){if(full()){stop();return;}var w=v.videoWidth,h=v.videoHeight;if(!w||!h)return;var cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(v,0,0,w,h);add(cv.toDataURL("image/jpeg",0.9));msg.textContent="\u05e6\u05d5\u05dc\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e6\u05dc\u05dd \u05e2\u05d5\u05d3 \u05de\u05e1\u05de\u05da, \u05d0\u05d5 \u05e1\u05d9\u05d5\u05dd";});md.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false}).then(function(s){stream=s;v.srcObject=s;var p=v.play();if(p&&p.catch)p.catch(function(){});shot.disabled=false;msg.textContent="\u05dc\u05db\u05d5\u05d5\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da \u05d5\u05dc\u05dc\u05d7\u05d5\u05e5 \u05e6\u05dc\u05dd";}).catch(function(err){shot.style.display="none";var n=err&&err.name,say=function(t){msg.textContent=t+" \u05d1\u05d9\u05e0\u05ea\u05d9\u05d9\u05dd \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05ea\u05de\u05d5\u05e0\u05d4 \u05de\u05d4\u05d8\u05dc\u05e4\u05d5\u05df (\u05d4\u05db\u05e4\u05ea\u05d5\u05e8 \u05d4\u05e9\u05e0\u05d9).";};if(n==="NotReadableError"||n==="AbortError"){say("\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05ea\u05e4\u05d5\u05e1\u05d4 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d0\u05d7\u05e8\u05ea. \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05d5\u05ea\u05d4 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1.");return;}if(n==="NotFoundError"||n==="OverconstrainedError"){say("\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d4 \u05de\u05e6\u05dc\u05de\u05d4 \u05d1\u05de\u05db\u05e9\u05d9\u05e8.");return;}if(n!=="NotAllowedError"){say("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05de\u05e6\u05dc\u05de\u05d4.");return;}var site="\u05d4\u05d0\u05ea\u05e8 \u05d7\u05e1\u05d5\u05dd \u05d1\u05de\u05e6\u05dc\u05de\u05d4. \u05dc\u05dc\u05d7\u05d5\u05e5 \u05e2\u05dc \u05d4\u05e1\u05de\u05dc \u05e9\u05de\u05e9\u05de\u05d0\u05dc \u05dc\u05db\u05ea\u05d5\u05d1\u05ea, \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea, \u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d0\u05e4\u05e9\u05e8, \u05d5\u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.",os="\u05d4\u05de\u05e6\u05dc\u05de\u05d4 \u05db\u05d1\u05d5\u05d9\u05d4 \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05d4\u05de\u05db\u05e9\u05d9\u05e8. \u05d1\u05d4\u05d2\u05d3\u05e8\u05d5\u05ea: \u05e4\u05e8\u05d8\u05d9\u05d5\u05ea, \u05d2\u05d9\u05e9\u05d4 \u05dc\u05de\u05e6\u05dc\u05de\u05d4, \u05dc\u05d4\u05e4\u05e2\u05d9\u05dc. \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d2\u05dd \u05de\u05ea\u05d2 \u05d0\u05d5 \u05de\u05e7\u05e9 \u05de\u05e6\u05dc\u05de\u05d4. \u05d0\u05d7\u05e8 \u05db\u05da \u05dc\u05e8\u05e2\u05e0\u05df \u05d0\u05ea \u05d4\u05d3\u05e3.";if(!navigator.permissions||!navigator.permissions.query){say(site);return;}navigator.permissions.query({name:"camera"}).then(function(r){say(r.state==="denied"?site:os);},function(){say(site);});});};b.addEventListener("click",function(e){if(full()){e.preventDefault();return;}if(!md||!md.getUserMedia)return;e.preventDefault();openCam();});})();</script>' : '')
     + (typed ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("idep"),o=document.getElementById("idepo");if(!s||!o)return;var f=function(){var on=s.value===' + JSON.stringify(IND_OTHER_DEP) + ';o.style.display=on?"block":"none";o.required=on;};s.addEventListener("change",f);f();})();</script>' : '')
     + (ind ? '<script nonce="' + nonce + '">(function(){var n=document.getElementById("iagn"),o=document.getElementById("ino"),f=function(){o.required=!n.value.trim();};n.addEventListener("input",f);f();})();</script>' : '')
     + (sectioned ? '<script nonce="' + nonce + '">(function(){var s=document.getElementById("wdep"),e=document.getElementById("emp");if(!s)return;var f=function(){var v=s.value;Array.prototype.forEach.call(document.querySelectorAll(".wsec"),function(d){d.style.display=d.getAttribute("data-dep")===v?"block":"none";});if(e)Array.prototype.forEach.call(e.querySelectorAll("option[data-t]"),function(o){o.hidden=!!v&&o.getAttribute("data-t")!==v;});};s.addEventListener("change",f);f();})();</script>' : '')
@@ -1142,7 +1174,7 @@ async function signTalk(env, request, ctx) {
     // Annual / quality: Hebrew letters only, no translation (15/10/2026, Michael: "no option at all to write in
     // another language, only Hebrew"). No AI call, so fifty at once never wait on it or hit its rate limit.
     if (typed && !heName(raw)) return bad('errNameT', 'heOnly', 422);
-    const n = typed ? heName(raw) : await nameHe(env, request, raw), dep = comp ? await nameHe(env, request, comp) : null;
+    const n = typed ? heName(raw) : await nameHe(env, request, raw), dep = comp ? heText(comp) || await nameHe(env, request, comp) : null;
     if (!n || (comp && !dep)) return bad('errNameT', 'errHe', 422);
     emp = { id: 'x:' + oid + ':' + raw.toLowerCase(), key: 'x:' + oid + ':', n, dep, out: true };
     // Annual / quality: the department picked from the list, or typed under "other" (14/10/2026).
@@ -1178,13 +1210,14 @@ async function signTalk(env, request, ctx) {
   if (talk.kind === KIND_IND) {
     const IL = IND_L[lang] || IND_L.he, f = indFields(form);
     if (!f.ok) return page(IL.errT, '<p>' + esc(IL[f.err]) + '</p>' + back, 'err', 400, '', lang);
-    const job = await nameHe(env, request, f.v.job), agency = f.v.agency ? await nameHe(env, request, f.v.agency) : null;
+    const job = heText(f.v.job) || await nameHe(env, request, f.v.job), agency = f.v.agency ? heText(f.v.agency) || await nameHe(env, request, f.v.agency) : null;
     if (!job || (f.v.agency && !agency)) return bad('errNameT', 'errHe', 422);
     indV = { ...f.v, job, agency };
   }
 
   const who = emp.out ? '&emp_id=like.' + encodeURIComponent(emp.key + '*') : '&emp_id=eq.' + encodeURIComponent(emp.id);
-  const done = (name) => page(L.thanks + ', ' + name, '<p>' + esc(L.already) + '</p>' + back, 'ok', 200, '', lang);
+  const dn = newId() + newId();
+  const done = (name) => page(L.thanks + ', ' + name, '<p>' + esc(L.already) + '</p>' + back + clearDraft(tok, g, dn), 'ok', 200, dn, lang);
   const dup = await fetch(SB + '/rest/v1/toolbox_reads?talk_id=eq.' + encodeURIComponent(talk.id) + who + '&select=id', { headers: sbH(env) });
   if (dup.ok) { const rows = await dup.json(); if (Array.isArray(rows) && rows.length) return done(emp.n); }
   if (emp.out) {
@@ -1234,7 +1267,7 @@ async function signTalk(env, request, ctx) {
     try { await fetch(SB + '/rest/v1/emp?id=eq.' + encodeURIComponent(emp.id) + '&or=(eid.is.null,eid.eq.)', { method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ eid: oid }) }); } catch (e) { /* the signature is saved */ }
   }
   return page(L.thanks + ', ' + emp.n, '<p>' + esc(L.saved) + '</p><p style="color:#6b7280;font-size:14px">' + esc(textOf(talk, lang).title) + '</p>'
-    + '<p><a href="' + esc(talkUrl(tok, lang, g)) + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#1e3a8a;color:#fff;font-weight:700;text-decoration:none">' + esc(L.next) + '</a></p>', 'ok', 200, '', lang);
+    + '<p><a href="' + esc(talkUrl(tok, lang, g)) + '" style="display:block;text-align:center;padding:12px;border-radius:10px;background:#1e3a8a;color:#fff;font-weight:700;text-decoration:none">' + esc(L.next) + '</a></p>' + clearDraft(tok, g, dn), 'ok', 200, dn, lang);
 }
 
 async function makeLink(env, request, ctx) {
