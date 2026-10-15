@@ -14,6 +14,10 @@ const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', ONEDRIVE_CLIENT_ID: 'cid', ONEDR
 const DAY = 86400000;
 const d = (x) => ({ date: x });
 const TODAY = '2026-10-04'; // a Sunday
+// The clock is frozen at TODAY (15/10/2026: the fixtures are dated from TODAY, and a hazard due 'plus(10)' =
+// 14/10 turned overdue on the real 15/10, so 'overdue 2' failed on every PR that day). Same on every run.
+{ const REAL = Date, FROZEN = REAL.parse(TODAY + 'T12:00:00Z');
+  globalThis.Date = class extends REAL { constructor(...a) { if (a.length === 0) super(FROZEN); else super(...a); } static now() { return FROZEN; } }; }
 const fdNow = () => new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
 const DAYMS = 86400000;
 const fdAgo = (n) => new Date(Date.now() - n * DAYMS).toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem' });
