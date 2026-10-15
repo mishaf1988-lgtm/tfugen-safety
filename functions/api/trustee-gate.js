@@ -33,6 +33,8 @@ const WRONG_GUESS_DELAY_MS = 800;
 // every test that loads either file.
 export const GUESS_LIMIT = 10;
 const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+// 15/10/2026 (owner: "no hang"): every Supabase call here gives up after 10s.
+const SB_MS = 10000;
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
 export async function guessKey(scope, request) {
   const ip = ipBucket(request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip'));
@@ -41,22 +43,22 @@ export async function guessKey(scope, request) {
 }
 async function guessHit(env, key) {
   try {
-    const r = await fetch(GUESS_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }) });
+    const r = await fetch(GUESS_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }), signal: AbortSignal.timeout(SB_MS) });
     if (!r.ok) return 0;
     const n = await r.json();
     return typeof n === 'number' ? n : 0;
   } catch (e) { return 0; }
 }
 async function guessClear(env, key) {
-  try { await fetch(GUESS_SB + '/rest/v1/rpc/guess_clear', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }) }); } catch (e) { /* the code was right */ }
+  try { await fetch(GUESS_SB + '/rest/v1/rpc/guess_clear', { method: 'POST', headers: guessH(env), body: JSON.stringify({ p_key: key }), signal: AbortSignal.timeout(SB_MS) }); } catch (e) { /* the code was right */ }
 }
 async function guessLocked(env, scope) {
   try {
-    const r = await fetch(GUESS_SB + '/rest/v1/server_state?key=eq.guess_locks&select=value', { headers: guessH(env) });
+    const r = await fetch(GUESS_SB + '/rest/v1/server_state?key=eq.guess_locks&select=value', { headers: guessH(env), signal: AbortSignal.timeout(SB_MS) });
     const rows = r.ok ? await r.json() : [];
     let list = []; try { list = JSON.parse((rows[0] && rows[0].value) || '[]'); } catch (e) { list = []; }
     list = (Array.isArray(list) ? list : []).concat([{ at: new Date().toISOString(), s: scope }]).slice(-50);
-    await fetch(GUESS_SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: Object.assign(guessH(env), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key: 'guess_locks', value: JSON.stringify(list), updated_at: new Date().toISOString() }) });
+    await fetch(GUESS_SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: Object.assign(guessH(env), { Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key: 'guess_locks', value: JSON.stringify(list), updated_at: new Date().toISOString() }), signal: AbortSignal.timeout(SB_MS) });
   } catch (e) { /* the lock holds anyway */ }
 }
 // A mail to Michael the moment an address is locked (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05d9\u05dc \u05dc\u05da \u05d5\u05db\u05e4\u05ea\u05d5\u05e8
@@ -80,23 +82,33 @@ async function lockMail(env, scope) {
   } catch (e) { /* the lock holds anyway */ }
 }
 // n attempts so far in the window, including this one; true = refuse without checking.
-export async function guessGate(env, scope, request) {
+// waitUntil (optional, 15/10/2026): the lock record and the mail go on after the answer, so the
+// eleventh guess is not held up by Microsoft.
+export async function guessGate(env, scope, request, waitUntil) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return { key: null, locked: false };
   const key = await guessKey(scope, request);
   const n = await guessHit(env, key);
-  if (n === GUESS_LIMIT + 1) { await guessLocked(env, scope); await lockMail(env, scope); }
+  if (n === GUESS_LIMIT + 1) {
+    const job = guessLocked(env, scope).then(() => lockMail(env, scope));
+    if (typeof waitUntil === 'function') waitUntil(job); else await job;
+  }
   return { key, locked: n > GUESS_LIMIT };
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-async function appCode(env) {
-  if (!env.SUPABASE_SERVICE_ROLE_KEY) return '';
+// The code set in the app: { ok: true, code } ('' = no row or an empty one), or
+// { ok: false } when the read itself failed (15/10/2026). Only an EMPTY row falls
+// back to TRUSTEE_CODE: a failed read used to look empty, so during a database
+// blink the current code was refused and an old, rotated-out one let in.
+export async function appCode(env) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) return { ok: true, code: '' };
   try {
-    const r = await fetch(SB + '/rest/v1/server_state?key=eq.trustee_code&select=value', { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY } });
-    if (!r.ok) return '';
+    const r = await fetch(SB + '/rest/v1/server_state?key=eq.trustee_code&select=value', { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY }, signal: AbortSignal.timeout(SB_MS) });
+    if (!r.ok) return { ok: false };
     const rows = await r.json();
-    return String((Array.isArray(rows) && rows[0] && rows[0].value) || '').trim();
-  } catch (e) { return ''; }
+    if (!Array.isArray(rows)) return { ok: false };
+    return { ok: true, code: String((rows[0] && rows[0].value) || '').trim() };
+  } catch (e) { return { ok: false }; }
 }
 
 // Same time whatever the mismatch, so the length of the real code is not
@@ -109,7 +121,8 @@ function same(a, b) {
   return diff === 0;
 }
 
-export async function onRequest({ request, env }) {
+export async function onRequest(context) {
+  const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
   const cors = corsHeaders(origin, allowed, 'POST,OPTIONS');
@@ -120,7 +133,11 @@ export async function onRequest({ request, env }) {
 
   // Since 10/10/2026 the code can be changed from the app (codes.js): server_state
   // 'trustee_code' first, TRUSTEE_CODE in Cloudflare while that row is empty.
-  const expected = ((await appCode(env)) || String(env.TRUSTEE_CODE || '').trim()).toLowerCase();
+  const app = await appCode(env);
+  if (!app.ok) {
+    return jsonResp({ error: 'try again', message: '\u05d1\u05e2\u05d9\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea \u05d1\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05e7\u05d5\u05d3. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05d3\u05e7\u05d4.' }, 503, cors);
+  }
+  const expected = (app.code || String(env.TRUSTEE_CODE || '').trim()).toLowerCase();
   if (!expected) {
     // Closed. Says so in words the trustee in front of it can act on.
     return jsonResp({
@@ -132,7 +149,7 @@ export async function onRequest({ request, env }) {
   let code = '';
   try { const b = await request.json(); code = String((b && b.code) || '').trim().toLowerCase(); } catch (e) { code = ''; }
 
-  const gg = await guessGate(env, 'tru', request);
+  const gg = await guessGate(env, 'tru', request, typeof context.waitUntil === 'function' ? context.waitUntil.bind(context) : null);
   if (gg.locked) return jsonResp({ error: 'locked', message: '\u05d9\u05d5\u05ea\u05e8 \u05de\u05d3\u05d9 \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1 \u05d1\u05e2\u05d5\u05d3 \u05e9\u05e2\u05d4.' }, 429, cors);
   if (!code || !same(code, expected)) {
     await new Promise((r) => setTimeout(r, WRONG_GUESS_DELAY_MS));

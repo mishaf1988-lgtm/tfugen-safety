@@ -69,6 +69,14 @@ console.log('\n2. the trustee code');
   const r = await g('482913');
   check('ten wrong: the eleventh refused (429) with a message', r.st === 429 && /יותר מדי ניסיונות/.test(r.b.message), r);
   check('...the lock is logged as the trustee code', w.locks.some((x) => x.s === 'tru'));
+  // 15/10/2026: the lock record and the mail go through waitUntil, so the eleventh guess is not held up.
+  const jobs = [], m0 = (w.mails || []).length;
+  const gw = async (c) => (await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code: c }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev', 'cf-connecting-ip': '8.8.8.8' } }), env: ENV, waitUntil: (p) => jobs.push(p) })).status;
+  for (let i = 0; i < 10; i++) await gw('000000');
+  const st11 = await gw('000000');
+  check('with waitUntil: the lock mail is handed to it, not awaited inline', st11 === 429 && jobs.length === 1 && (w.mails || []).length === m0, [st11, jobs.length]);
+  await Promise.all(jobs);
+  check('...and it still goes out', (w.mails || []).length === m0 + 1);
 }
 
 console.log('\n3. the weekly mail');

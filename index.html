@@ -1476,9 +1476,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- PASSWORD HUB (10/10/2026): the one entry "users and passwords" for a non-admin -->
-<div class="overlay" id="ov-pwhub" onclick="closeModal('m-pwhub')"></div>
+<div class="overlay" id="ov-pwhub" onclick="closeAsk('m-pwhub')"></div>
 <div class="modal" id="m-pwhub" style="display:none;max-width:400px">
-  <button class="close-btn" onclick="closeModal('m-pwhub')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-pwhub')">&#10005;</button>
   <div class="modal-title">&#128272; &#1492;&#1505;&#1497;&#1505;&#1502;&#1488;&#1493;&#1514; &#1513;&#1500;&#1497;</div>
   <div style="display:flex;flex-direction:column;gap:8px">
     <button type="button" class="btn btn-s" style="min-height:44px" onclick="closeModal('m-pwhub');_changePwOpen()">&#128273; &#1513;&#1504;&#1492; &#1488;&#1514; &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1513;&#1500;&#1497;</button>
@@ -1488,9 +1488,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-pwhub')">&#1505;&#1490;&#1493;&#1512;</button></div>
 </div>
 <!-- NEW USER MODAL (admin only) -->
-<div class="overlay" id="ov-newuser" onclick="closeModal('m-newuser')"></div>
+<div class="overlay" id="ov-newuser" onclick="closeAsk('m-newuser')"></div>
 <div class="modal" id="m-newuser" style="display:none;max-width:440px">
-  <button class="close-btn" onclick="closeModal('m-newuser')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-newuser')">&#10005;</button>
   <div class="modal-title">&#10133; &#1502;&#1513;&#1514;&#1502;&#1513; &#1495;&#1491;&#1513;</div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:8px">&#1497;&#1497;&#1493;&#1510;&#1512; &#1495;&#1513;&#1489;&#1493;&#1503; &#1499;&#1504;&#1497;&#1505;&#1492; + &#1505;&#1497;&#1505;&#1502;&#1492; &#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;&#1514;. &#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1514;&#1493;&#1510;&#1490; &#1488;&#1495;&#1512;&#1497; &#1492;&#1497;&#1510;&#1497;&#1512;&#1492; - &#1494;&#1493; &#1492;&#1492;&#1494;&#1491;&#1502;&#1504;&#1493;&#1514; &#1492;&#1497;&#1495;&#1497;&#1491;&#1492; &#1500;&#1512;&#1488;&#1493;&#1514; &#1488;&#1493;&#1514;&#1492;.</div>
   <div class="fgrid">
@@ -1510,9 +1510,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- USER CREDENTIALS MODAL (one-time view after create) -->
-<div class="overlay" id="ov-credentials" onclick="closeModal('m-credentials')"></div>
+<div class="overlay" id="ov-credentials" onclick="closeAsk('m-credentials')"></div>
 <div class="modal" id="m-credentials" style="display:none;max-width:420px">
-  <button class="close-btn" onclick="closeModal('m-credentials')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-credentials')">&#10005;</button>
   <div class="modal-title">&#9989; &#1492;&#1502;&#1513;&#1514;&#1502;&#1513; &#1504;&#1493;&#1510;&#1512;</div>
   <div style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-amber-450,#fbbf24);border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--c-orange-700,#92400e)">
     &#9888; &#1494;&#1493; &#1492;&#1508;&#1506;&#1501; &#1492;&#1497;&#1495;&#1497;&#1491;&#1492; &#1513;&#1492;&#1505;&#1497;&#1505;&#1502;&#1492; &#1502;&#1493;&#1510;&#1490;&#1514;. &#1492;&#1506;&#1514;&#1497;&#1511; &#1488;&#1493;&#1514;&#1492; &#1500;&#1502;&#1513;&#1514;&#1502;&#1513; &#1500;&#1508;&#1504;&#1497; &#1505;&#1490;&#1497;&#1512;&#1492;.
@@ -1535,9 +1535,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- RENAME USERNAME MODAL -->
-<div class="overlay" id="ov-rename" onclick="closeModal('m-rename')"></div>
+<div class="overlay" id="ov-rename" onclick="closeAsk('m-rename')"></div>
 <div class="modal" id="m-rename" style="display:none;max-width:400px">
-  <button class="close-btn" onclick="closeModal('m-rename')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-rename')">&#10005;</button>
   <div class="modal-title">&#128260; &#1513;&#1497;&#1504;&#1493;&#1497; &#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513;</div>
   <div style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-amber-450,#fbbf24);border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--c-orange-700,#92400e);line-height:1.5">
     &#9888; &#1513;&#1497;&#1504;&#1493;&#1497; &#1513;&#1501; &#1502;&#1513;&#1514;&#1502;&#1513; &#1502;&#1513;&#1504;&#1492; &#1490;&#1501; &#1488;&#1514; &#1492;-email &#1489;-Supabase Auth.
@@ -1555,9 +1555,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- USER EDIT MODAL -->
-<div class="overlay" id="ov-user" onclick="closeModal('m-user')"></div>
+<div class="overlay" id="ov-user" onclick="closeAsk('m-user')"></div>
 <div class="modal" id="m-user" style="display:none;max-width:440px">
-  <button class="close-btn" onclick="closeModal('m-user')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-user')">&#10005;</button>
   <div class="modal-title">&#9997; &#1506;&#1512;&#1497;&#1499;&#1514; &#1502;&#1513;&#1514;&#1502;&#1513;</div>
   <input type="hidden" id="u-id">
   <div class="fgrid">
@@ -1744,7 +1744,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 <div id="pg-easp" class="page">
   <div class="row">
     <div class="page-title">&#127811; <span>&#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501;</span></div>
-    <button class="btn btn-p" onclick="openModal('m-easp')">+ &#1492;&#1493;&#1505;&#1507; &#1492;&#1497;&#1489;&#1496;</button>
+    <button class="btn btn-p" onclick="_easpOpenNew()">+ &#1492;&#1493;&#1505;&#1507; &#1492;&#1497;&#1489;&#1496;</button>
   </div>
   <div class="card">
     <div class="card-title" style="font-size:11px;color:var(--t3);font-weight:400;line-height:1.5">&#1512;&#1497;&#1513;&#1493;&#1501; &#1492;&#1497;&#1489;&#1496;&#1497;&#1501; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1497;&#1501; &#1500;&#1508;&#1497; ISO 14001 &#1505;&#1506;&#1497;&#1507; 6.1.2 - &#1497;&#1505;&#1493;&#1491;&#1493;&#1514; &#1492;&#1508;&#1506;&#1497;&#1500;&#1493;&#1514; &#1513;&#1500; &#1492;&#1488;&#1512;&#1490;&#1493;&#1503; &#1513;&#1497;&#1499;&#1493;&#1500;&#1493;&#1514; &#1500;&#1492;&#1513;&#1508;&#1497;&#1506; &#1506;&#1500; &#1492;&#1505;&#1489;&#1497;&#1489;&#1492;.</div>
@@ -2201,9 +2201,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 <button id="ask-fab" onclick="openModal('m-ask');if(typeof _askInit==='function')_askInit();" title="&#1513;&#1488;&#1500; &#1488;&#1514; &#1492;&#1506;&#1493;&#1494;&#1512;" aria-label="&#1513;&#1488;&#1500;" style="position:fixed;bottom:calc(160px + env(safe-area-inset-bottom));right:16px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--c-green-650,#16a34a),var(--c-teal-700-2,#0d9488));color:var(--c-white,#fff);font-size:24px;display:flex;align-items:center;justify-content:center;z-index:49;box-shadow:0 6px 22px rgba(13,148,136,.45);border:none;cursor:pointer">&#128172;</button>
 
 <!-- SMART ASSISTANT (ASK) MODAL -->
-<div class="overlay" id="ov-ask" onclick="closeModal('m-ask')"></div>
+<div class="overlay" id="ov-ask" onclick="closeAsk('m-ask')"></div>
 <div class="modal" id="m-ask" style="display:none;max-width:600px">
-  <button class="close-btn" onclick="closeModal('m-ask')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ask')">&#10005;</button>
   <div class="modal-title">&#128172; &#1513;&#1488;&#1500; &#1488;&#1514; &#1492;&#1506;&#1493;&#1494;&#1512; (AI)</div>
   <div style="font-size:11px;color:var(--t3);line-height:1.6;margin-bottom:8px">&#1513;&#1488;&#1500; &#1513;&#1488;&#1500;&#1493;&#1514; &#1506;&#1500; &#1492;&#1504;&#1514;&#1493;&#1504;&#1497;&#1501; &#1513;&#1500;&#1498;. &#1500;&#1491;&#1493;&#1490;&#1502;&#1492;: "&#1499;&#1502;&#1492; NCR &#1511;&#1512;&#1497;&#1496;&#1497;&#1497;&#1501; &#1508;&#1514;&#1493;&#1495;&#1497;&#1501;?", "&#1502;&#1497; &#1488;&#1495;&#1512;&#1488;&#1497; &#1500;&#1499;&#1502;&#1492; &#1502;&#1513;&#1497;&#1502;&#1493;&#1514;?", "&#1502;&#1492; &#1493;&#1499;&#1502;&#1492; &#1512;&#1497;&#1513;&#1497;&#1493;&#1504;&#1493;&#1514; &#1497;&#1508;&#1493;&#1490; &#1492;&#1495;&#1493;&#1491;&#1513;?"</div>
   <div id="ask-history" style="max-height:50vh;overflow-y:auto;background:var(--c-blue-50-6,#f8fafc);border:1px solid var(--c-blue-100-3,#e2e8f0);border-radius:10px;padding:10px;margin-bottom:8px;font-size:13px;line-height:1.6"></div>
@@ -2291,9 +2291,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </nav>
 
 <!-- REPORTS SHEET -->
-<div class="overlay" id="ov-reports-sheet" onclick="closeModal('m-reports-sheet')"></div>
+<div class="overlay" id="ov-reports-sheet" onclick="closeAsk('m-reports-sheet')"></div>
 <div class="modal sheet-modal" id="m-reports-sheet" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-reports-sheet')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-reports-sheet')">&#10005;</button>
   <div class="modal-title">&#9888; &#1491;&#1497;&#1493;&#1493;&#1495;&#1497;&#1501;</div>
   <!-- Banner: clarifies that the reports modules are entry points for creating/editing records — for the unified open-items list, send the user to the Tasks page. -->
   <div style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-amber-350,#fcd34d);border-radius:8px;padding:10px 12px;margin:6px 0 10px;font-size:12px;color:var(--c-orange-700,#92400e);line-height:1.5">
@@ -2314,9 +2314,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- MODULES SHEET -->
-<div class="overlay" id="ov-modules-sheet" onclick="closeModal('m-modules-sheet')"></div>
+<div class="overlay" id="ov-modules-sheet" onclick="closeAsk('m-modules-sheet')"></div>
 <div class="modal sheet-modal" id="m-modules-sheet" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-modules-sheet')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-modules-sheet')">&#10005;</button>
   <div class="modal-title">&#128203; &#1502;&#1493;&#1491;&#1493;&#1500;&#1497;&#1501;</div>
   <input id="m-modules-search" type="search" placeholder="&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1502;&#1493;&#1491;&#1493;&#1500;..." oninput="_debModFilter(this.value)" onkeydown="_modulesSheetKey(event)" style="width:100%;padding:10px;margin-bottom:10px;border:1px solid var(--c-gray-150,#ddd);border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box">
   <!-- A1 (2026-09-18): six groups + a "frequent" row, so a manager finds any
@@ -2386,9 +2386,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   <div id="m-modules-empty" style="display:none;text-align:center;color:var(--t3);font-size:13px;padding:18px 0">אין מודול שמתאים לחיפוש</div>
 </div>
 
-<div class="overlay" id="ov-modules-vis" onclick="closeModal('m-modules-vis')"></div>
+<div class="overlay" id="ov-modules-vis" onclick="closeAsk('m-modules-vis')"></div>
 <div class="modal" id="m-modules-vis" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-modules-vis')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-modules-vis')">&#10005;</button>
   <div class="modal-title">&#9881;&#65039; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1514;&#1510;&#1493;&#1490;&#1492;</div>
 
   <div style="font-size:12px;color:var(--t2);font-weight:800;margin:8px 0 6px;padding-right:10px;position:relative">
@@ -2425,9 +2425,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 
 <!-- Incident Investigation Agent (B1, 2026-09-18): intake → 5-Why → save to the
      existing fields inc.five_why (+ root cause inc.r) → optional CAPA task / NCR. -->
-<div class="overlay" id="ov-inv" onclick="closeModal('m-inv')"></div>
+<div class="overlay" id="ov-inv" onclick="closeAsk('m-inv')"></div>
 <div class="modal" id="m-inv" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-inv')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-inv')">&#10005;</button>
   <div class="modal-title">&#128373;&#65039; חקירת תקרית <span style="font-size:11px;color:var(--t3);font-weight:600">(ISO 45001 &#167;10.2)</span></div>
   <div class="field"><label>תקרית</label><select id="inv-inc" class="inp" onchange="_invPick(this.value)"></select></div>
   <div id="inv-facts" style="font-size:12px;line-height:1.7;background:var(--c-blue-50-6,#f8fafc);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:6px 0 10px"></div>
@@ -2445,9 +2445,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   </div>
 </div>
 
-<div class="overlay" id="ov-changepw" onclick="closeModal('m-changepw')"></div>
+<div class="overlay" id="ov-changepw" onclick="closeAsk('m-changepw')"></div>
 <div class="modal" id="m-changepw" style="display:none;max-width:380px">
-  <button class="close-btn" onclick="closeModal('m-changepw')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-changepw')">&#10005;</button>
   <div class="modal-title">&#128273; &#1513;&#1504;&#1492; &#1505;&#1497;&#1505;&#1502;&#1492;</div>
   <div class="field"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1504;&#1493;&#1499;&#1495;&#1497;&#1514;</label><input id="cpw-current" type="password" autocomplete="current-password"></div>
   <div class="field" style="margin-top:8px"><label>&#1505;&#1497;&#1505;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492; (8+ &#1514;&#1493;&#1493;&#1497;&#1501;)</label><input id="cpw-new" type="password" autocomplete="new-password"></div>
@@ -2459,9 +2459,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
   </div>
 </div>
 
-<div class="overlay" id="ov-mfa-setup" onclick="closeModal('m-mfa-setup')"></div>
+<div class="overlay" id="ov-mfa-setup" onclick="closeAsk('m-mfa-setup')"></div>
 <div class="modal" id="m-mfa-setup" style="display:none;max-width:400px">
-  <button class="close-btn" onclick="closeModal('m-mfa-setup')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-mfa-setup')">&#10005;</button>
   <div class="modal-title">&#128272; &#1488;&#1497;&#1502;&#1493;&#1514; &#1491;&#1493;-&#1513;&#1500;&#1489;&#1497;</div>
   <div id="mfa-setup-body" style="font-size:13px;line-height:1.6"></div>
 </div>
@@ -2484,9 +2484,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div><!-- /app -->
 
 <!-- DOC MODAL -->
-<div class="overlay" id="ov-doc" onclick="closeModal('m-doc')"></div>
+<div class="overlay" id="ov-doc" onclick="closeAsk('m-doc')"></div>
 <div class="modal" id="m-doc" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-doc')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-doc')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1502;&#1505;&#1502;&#1498; ISO</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; *</label><input id="d-n"></div>
@@ -2504,9 +2504,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- AUD MODAL -->
-<div class="overlay" id="ov-aud" onclick="closeModal('m-aud')"></div>
+<div class="overlay" id="ov-aud" onclick="closeAsk('m-aud')"></div>
 <div class="modal" id="m-aud" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-aud')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-aud')">&#10005;</button>
   <div class="modal-title">&#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1508;&#1504;&#1497;&#1502;&#1497;&#1514;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1504;&#1493;&#1513;&#1488; *</label><input id="a-n"></div>
@@ -2523,10 +2523,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--s-blue)}
 </div>
 
 <!-- NCR MODAL -->
-<div class="overlay" id="ov-ncr" onclick="closeModal('m-ncr')"></div>
+<div class="overlay" id="ov-ncr" onclick="closeAsk('m-ncr')"></div>
 <div class="modal"
 id="m-ncr" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ncr')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ncr')">&#10005;</button>
   <div class="modal-title">&#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1492; / &#1502;&#1502;&#1510;&#1488;</div>
   <input type="hidden" id="ncr-id">
   <!-- Recurrence. Filled by _ncrRepeatBanner whenever the description or the
@@ -2582,9 +2582,9 @@ id="m-ncr" style="display:none">
 
 
 <!-- INC MODAL -->
-<div class="overlay" id="ov-inc" onclick="closeModal('m-inc')"></div>
+<div class="overlay" id="ov-inc" onclick="closeAsk('m-inc')"></div>
 <div class="modal" id="m-inc" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-inc')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-inc')">&#10005;</button>
   <div class="modal-title" id="m-inc-title">&#1491;&#1497;&#1493;&#1493;&#1495; &#1514;&#1488;&#1493;&#1504;&#1492; / &#1488;&#1497;&#1512;&#1493;&#1506;</div>
   <input type="hidden" id="i-id">
   <div class="fgrid">
@@ -2607,9 +2607,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TR MODAL -->
-<div class="overlay" id="ov-tr" onclick="closeModal('m-tr')"></div>
+<div class="overlay" id="ov-tr" onclick="closeAsk('m-tr')"></div>
 <div class="modal" id="m-tr" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tr')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tr')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1492;&#1491;&#1512;&#1499;&#1492;</div>
   <div class="fgrid">
     <!-- Bare until #668. The department report joins tr.w to emp.n by exact
@@ -2629,9 +2629,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- ONEDRIVE SETTINGS MODAL -->
-<div class="overlay" id="ov-od" onclick="closeModal('m-od')"></div>
+<div class="overlay" id="ov-od" onclick="closeAsk('m-od')"></div>
 <div class="modal" id="m-od" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-od')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-od')">&#10005;</button>
   <div class="modal-title">&#9729;&#65039; &#1495;&#1497;&#1489;&#1493;&#1512; OneDrive (&#1505;&#1504;&#1499;&#1512;&#1493;&#1503; &#1502;&#1505;&#1502;&#1499;&#1497;&#1501;)</div>
   <div id="od-status" style="margin:10px 0;font-size:13px"></div>
   <div class="fgrid">
@@ -2707,9 +2707,9 @@ id="m-ncr" style="display:none">
   </div>
 </div>
 <!-- RSK MODAL -->
-<div class="overlay" id="ov-rsk" onclick="closeModal('m-rsk')"></div>
+<div class="overlay" id="ov-rsk" onclick="closeAsk('m-rsk')"></div>
 <div class="modal" id="m-rsk" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-rsk')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-rsk')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1505;&#1497;&#1499;&#1493;&#1503;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1514;&#1497;&#1488;&#1493;&#1512; *</label><input id="r-d"></div>
@@ -2725,16 +2725,16 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- EMP MODAL -->
-<div class="overlay" id="ov-emp" onclick="closeModal('m-emp')"></div>
+<div class="overlay" id="ov-emp" onclick="closeAsk('m-emp')"></div>
 <div class="modal" id="m-vitre-imp" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-vitre-imp')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-vitre-imp')">&#10005;</button>
   <div class="modal-title" id="vitre-imp-title">&#11015;&#65039; &#1497;&#1497;&#1489;&#1493;&#1488; &#1506;&#1493;&#1489;&#1491;&#1497;&#1501; &#1502;-Vitre: &#1514;&#1510;&#1493;&#1490;&#1492; &#1502;&#1511;&#1491;&#1497;&#1502;&#1492;</div>
   <div style="font-size:11px;color:var(--t3);margin-bottom:8px">&#1499;&#1497;&#1493;&#1493;&#1503; &#1488;&#1495;&#1491; &#1489;&#1500;&#1489;&#1491; (Vitre &#1488;&#1500; &#1492;&#1488;&#1508;&#1500;&#1497;&#1511;&#1510;&#1497;&#1492;). &#1506;&#1512;&#1498; &#1512;&#1497;&#1511; &#1489;-Vitre &#1500;&#1488; &#1502;&#1493;&#1495;&#1511; &#1506;&#1512;&#1498; &#1511;&#1497;&#1497;&#1501;. &#1488;&#1507; &#1506;&#1493;&#1489;&#1491; &#1500;&#1488; &#1504;&#1502;&#1495;&#1511; &#1493;&#1500;&#1488; &#1502;&#1493;&#1513;&#1489;&#1514;.</div>
   <div id="vitre-imp-body" style="max-height:60vh;overflow-y:auto"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-vitre-imp')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" id="vitre-imp-apply" onclick="_vitreImportApply()">&#1488;&#1513;&#1512; &#1497;&#1497;&#1489;&#1493;&#1488;</button></div>
 </div>
 <div class="modal" id="m-emp" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-emp')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-emp')">&#10005;</button>
   <div class="modal-title">&#1492;&#1493;&#1505;&#1508;&#1514; &#1506;&#1493;&#1489;&#1491;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1502;&#1500;&#1488; *</label><input id="e-n"></div>
@@ -2752,7 +2752,7 @@ id="m-ncr" style="display:none">
 <!-- PTW MODAL -->
 <div class="overlay" id="ov-ptw"></div>
 <div class="modal" id="m-ptw" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ptw')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ptw')">&#10005;</button>
   <div class="modal-title">&#1492;&#1512;&#1513;&#1488;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492; &#1493;&#1489;&#1496;&#1497;&#1495;&#1493;&#1514; - &#1514;&#1508;&#1493;&#1490;&#1503;</div>
   <div class="fgrid">
     <div class="field"><label>&#1502;&#1505;&#1508;&#1512; &#1492;&#1512;&#1513;&#1488;&#1492;</label><input id="ptw-num" placeholder="&#1488;&#1493;&#1496;&#1493;&#1502;&#1496;&#1497;"></div>
@@ -2817,9 +2817,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- PPE MODAL -->
-<div class="overlay" id="ov-ppe" onclick="closeModal('m-ppe')"></div>
+<div class="overlay" id="ov-ppe" onclick="closeAsk('m-ppe')"></div>
 <div class="modal" id="m-ppe" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ppe')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ppe')">&#10005;</button>
   <div class="modal-title">&#1510;&#1497;&#1493;&#1491; &#1502;&#1490;&#1503; &#1488;&#1497;&#1513;&#1497;</div>
   <div class="fgrid">
     <div class="field"><label>&#1505;&#1493;&#1490; &#1510;&#1497;&#1493;&#1491; *</label><select id="ppe-ty"><option>&#1511;&#1505;&#1491;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1513;&#1511;&#1508;&#1497; &#1506;&#1497;&#1504;&#1497;&#1497;&#1501;</option><option>&#1488;&#1496;&#1502;&#1497; &#1488;&#1493;&#1494;&#1504;&#1497;&#1497;&#1501;</option><option>&#1499;&#1508;&#1508;&#1493;&#1514; &#1506;&#1489;&#1493;&#1491;&#1492;</option><option>&#1504;&#1506;&#1500;&#1497; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1488;&#1508;&#1493;&#1491; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</option><option>&#1502;&#1505;&#1499;&#1514; &#1504;&#1513;&#1497;&#1502;&#1492;</option><option>&#1488;&#1495;&#1512;</option></select></div>
@@ -2836,11 +2836,11 @@ id="m-ncr" style="display:none">
 <!-- MED MODAL -->
 
 <!-- EQI MODAL (Equipment Inspections) -->
-<div class="overlay" id="ov-eqi" onclick="closeModal('m-eqi')"></div>
+<div class="overlay" id="ov-eqi" onclick="closeAsk('m-eqi')"></div>
 <!-- EQI PDF AI ANALYSIS MODAL -->
-<div class="overlay" id="ov-eqi-pdf" onclick="closeModal('m-eqi-pdf')"></div>
+<div class="overlay" id="ov-eqi-pdf" onclick="closeAsk('m-eqi-pdf')"></div>
 <div class="modal" id="m-eqi-pdf" style="display:none;max-width:720px">
-  <button class="close-btn" onclick="closeModal('m-eqi-pdf')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-eqi-pdf')">&#10005;</button>
   <div class="modal-title">&#128196; &#1504;&#1497;&#1514;&#1493;&#1495; &#1514;&#1505;&#1511;&#1497;&#1512; &#1489;&#1491;&#1497;&#1511;&#1492; (PDF)</div>
   <div id="eqi-pdf-status" style="font-size:12px;color:var(--t3);margin-bottom:10px">&#1502;&#1493;&#1499;&#1503; &#1500;&#1492;&#1506;&#1500;&#1488;&#1492;...</div>
   <div id="eqi-pdf-result" style="display:none">
@@ -2867,7 +2867,7 @@ id="m-ncr" style="display:none">
 </div>
 
 <div class="modal" id="m-eqi" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-eqi')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-eqi')">&#10005;</button>
   <div class="modal-title">&#1489;&#1491;&#1497;&#1511;&#1514; &#1510;&#1497;&#1493;&#1491; &#1500;&#1508;&#1497; &#1508;&#1511;&#1493;&#1491;&#1492;</div>
   <input type="hidden" id="eqi-id">
   <div class="fgrid">
@@ -2919,9 +2919,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- NM MODAL (Near-Miss) -->
-<div class="overlay" id="ov-nm" onclick="closeModal('m-nm')"></div>
+<div class="overlay" id="ov-nm" onclick="closeAsk('m-nm')"></div>
 <div class="modal" id="m-nm" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-nm')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-nm')">&#10005;</button>
   <div class="modal-title">&#9940; &#1499;&#1502;&#1506;&#1496; &#1493;&#1504;&#1508;&#1490;&#1506;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="nm-d"></div>
@@ -2959,9 +2959,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TRUSTEES ROSTER (manager): who may report — maintained here, no code change -->
-<div class="overlay" id="ov-tru-roster" onclick="closeModal('m-tru-roster')"></div>
+<div class="overlay" id="ov-tru-roster" onclick="closeAsk('m-tru-roster')"></div>
 <div class="modal" id="m-tru-roster" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru-roster')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tru-roster')">&#10005;</button>
   <div class="modal-title">&#128101; רשימת הנאמנים</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">הנאמנים שמוצעים לבחירה בדיווח. נאמן מושבת נשאר בהיסטוריה ובלוח, אבל לא מוצע לבחירה.</div>
   <div id="tru-roster-list"></div>
@@ -2974,9 +2974,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TRUSTEE LINK (2026-09-20) — the ?emp=1 deep link, ready to paste into WhatsApp -->
-<div class="overlay" id="ov-tru-link" onclick="closeModal('m-tru-link')"></div>
+<div class="overlay" id="ov-tru-link" onclick="closeAsk('m-tru-link')"></div>
 <div class="modal" id="m-tru-link" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru-link')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tru-link')">&#10005;</button>
   <div class="modal-title">&#128279; קישור לנאמנים</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">שלח את הקישור הזה לנאמנים. מי שפותח אותו נוחת ישר במסך הדיווח - בלי סיסמה ובלי מסך כניסה. כדאי שכל נאמן ישמור אותו במסך הבית של הטלפון.</div>
   <input id="tru-link-url" readonly onclick="this.select()" style="width:100%;font:inherit;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--c-blue-50-6,#f8fafc);direction:ltr;text-align:left">
@@ -2984,9 +2984,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- SEND A FINDING TO MAINTENANCE / ELECTRICIAN (2026-09-23): the people who fix things do not use the app -->
-<div class="overlay" id="ov-tru-route" onclick="closeModal('m-tru-route')"></div>
+<div class="overlay" id="ov-tru-route" onclick="closeAsk('m-tru-route')"></div>
 <div class="modal" id="m-tru-route" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru-route')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tru-route')">&#10005;</button>
   <div class="modal-title">&#128228; שלח לטיפול</div>
   <div id="tru-route-sum" style="font-size:13px;line-height:1.5;background:var(--c-blue-50-6,#f8fafc);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px"></div>
   <div id="tru-route-recent" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
@@ -3007,9 +3007,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TRUSTEE TASK CATALOGUE (manager) -->
-<div class="overlay" id="ov-tru-tasks" onclick="closeModal('m-tru-tasks')"></div>
+<div class="overlay" id="ov-tru-tasks" onclick="closeAsk('m-tru-tasks')"></div>
 <div class="modal" id="m-tru-tasks" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru-tasks')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tru-tasks')">&#10005;</button>
   <div class="modal-title">&#128203; קטלוג המשימות החודשיות</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">המשימות שהנאמן רואה בטופס הדיווח. משימה מושבתת נשארת בהיסטוריה ובניקוד, אבל לא מוצעת לדיווח חדש.</div>
   <div id="tru-tasks-warn" style="display:none;font-size:12px;background:var(--c-orange-50,#fff7ed);border:1px solid var(--c-amber-500,#f59e0b);color:var(--c-orange-700,#92400e);border-radius:10px;padding:10px;margin-bottom:10px;line-height:1.5"></div>
@@ -3025,9 +3025,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TRUSTEE WINNER (phase 2) — announce the month's winner + winners history -->
-<div class="overlay" id="ov-tru-winner" onclick="closeModal('m-tru-winner')"></div>
+<div class="overlay" id="ov-tru-winner" onclick="closeAsk('m-tru-winner')"></div>
 <div class="modal" id="m-tru-winner" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tru-winner')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tru-winner')">&#10005;</button>
   <div class="modal-title">&#127942; זוכה החודש</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">הזוכה מוצג לנאמנים במסך שלהם. בתיקו, מי שטרם זכה מקבל עדיפות - כדי שהפרס יתגלגל.</div>
   <div style="font-weight:900;font-size:15px;margin-bottom:8px" id="tru-win-month"></div>
@@ -3042,9 +3042,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- ROUND MODAL (Morning Round) -->
-<div class="overlay" id="ov-round" onclick="closeModal('m-round')"></div>
+<div class="overlay" id="ov-round" onclick="closeAsk('m-round')"></div>
 <div class="modal" id="m-round" style="display:none;max-width:520px">
-  <button class="close-btn" onclick="closeModal('m-round')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-round')">&#10005;</button>
   <div class="modal-title">&#9728; &#1505;&#1489;&#1489; &#1489;&#1493;&#1511;&#1512;</div>
   <input type="hidden" id="round-id">
   <div class="fgrid">
@@ -3065,9 +3065,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TOOLBOX TALKS MODAL -->
-<div class="overlay" id="ov-thz" onclick="closeModal('m-thz')"></div>
+<div class="overlay" id="ov-thz" onclick="closeAsk('m-thz')"></div>
 <div class="modal" id="m-thz" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-thz')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-thz')">&#10005;</button>
   <div class="modal-title">&#128270; &#1502;&#1508;&#1490;&#1506; &#1502;&#1505;&#1497;&#1493;&#1512;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; &#1505;&#1497;&#1493;&#1512;</label><input type="date" id="thz-d"></div>
@@ -3090,17 +3090,17 @@ id="m-ncr" style="display:none">
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-thz')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svThz()">&#1513;&#1502;&#1493;&#1512;</button></div>
 </div>
-<div class="overlay" id="ov-tbt-who" onclick="closeModal('m-tbt-who')"></div>
+<div class="overlay" id="ov-tbt-who" onclick="closeAsk('m-tbt-who')"></div>
 <div class="modal" id="m-tbt-who" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tbt-who')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tbt-who')">&#10005;</button>
   <div class="modal-title">&#9997;&#65039; &#1502;&#1497; &#1495;&#1514;&#1501; &#1506;&#1500; &#1492;&#1492;&#1491;&#1512;&#1499;&#1492;</div>
   <div id="tbt-who-body"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-who')">&#1505;&#1490;&#1493;&#1512;</button><button class="btn btn-p" onclick="tbtWhoPrint()">&#128424;&#65039; &#1492;&#1491;&#1508;&#1505;</button></div>
 </div>
 <!-- WEEKLY TALK LINK (03/10/2026, BACKLOG 11.4): the link and a QR to scan from a tablet or a notice -->
-<div class="overlay" id="ov-tbt-link" onclick="closeModal('m-tbt-link')"></div>
+<div class="overlay" id="ov-tbt-link" onclick="closeAsk('m-tbt-link')"></div>
 <div class="modal" id="m-tbt-link" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tbt-link')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tbt-link')">&#10005;</button>
   <div class="modal-title">&#128279; קישור להדרכה</div>
   <div id="tbt-link-title" style="font-weight:700;font-size:14px;margin-bottom:4px"></div>
   <div id="tbt-link-days" style="font-size:12px;color:var(--t2);margin-bottom:10px"></div>
@@ -3109,9 +3109,9 @@ id="m-ncr" style="display:none">
   <button type="button" class="btn btn-s" id="tbt-link-revoke" style="display:none;width:100%;margin-top:8px;min-height:44px" onclick="tbtRevoke()">⛔ בטל את הקישור והפק קישור חדש</button>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt-link')">סגור</button><button class="btn btn-s" style="min-height:44px" onclick="_tbtLinkCopy()">&#128203; העתק</button><button class="btn btn-p" style="min-height:44px;background:var(--c-green-500,#25D366);border-color:var(--c-green-500,#25D366)" onclick="_tbtLinkShare()">&#128241; שתף</button></div>
 </div>
-<div class="overlay" id="ov-tbt" onclick="closeModal('m-tbt')"></div>
+<div class="overlay" id="ov-tbt" onclick="closeAsk('m-tbt')"></div>
 <div class="modal" id="m-tbt" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tbt')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tbt')">&#10005;</button>
   <div class="modal-title">&#128214; &#1492;&#1491;&#1512;&#1499;&#1492;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498;</label><input type="date" id="tbt-d"></div>
@@ -3151,9 +3151,9 @@ id="m-ncr" style="display:none">
   </div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-tbt')">&#1489;&#1497;&#1496;&#1493;&#1500;</button><button class="btn btn-p" onclick="svTbt()">&#1513;&#1502;&#1493;&#1512;</button><button class="btn btn-p" onclick="svTbt(1)" title="&#1513;&#1493;&#1502;&#1512;, &#1502;&#1508;&#1512;&#1505;&#1501; &#1493;&#1508;&#1493;&#1514;&#1495; &#1488;&#1514; &#1492;&#1511;&#1497;&#1513;&#1493;&#1512; &#1500;&#1506;&#1493;&#1489;&#1491;&#1497;&#1501;">&#128228; &#1513;&#1502;&#1493;&#1512; &#1493;&#1513;&#1500;&#1495;</button></div>
 </div>
-<div class="overlay" id="ov-toolbox" onclick="closeModal('m-toolbox')"></div>
+<div class="overlay" id="ov-toolbox" onclick="closeAsk('m-toolbox')"></div>
 <div class="modal" id="m-toolbox" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-toolbox')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-toolbox')">&#10005;</button>
   <div class="modal-title">&#128483;&#65039; &#1513;&#1497;&#1495;&#1514; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="tb-d"></div>
@@ -3170,9 +3170,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- TASK MODAL -->
-<div class="overlay" id="ov-tsk" onclick="closeModal('m-tsk')"></div>
+<div class="overlay" id="ov-tsk" onclick="closeAsk('m-tsk')"></div>
 <div class="modal" id="m-tsk" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-tsk')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tsk')">&#10005;</button>
   <div class="modal-title" id="m-tsk-title">&#9989; &#1502;&#1513;&#1497;&#1502;&#1492; &#1495;&#1491;&#1513;&#1492;</div>
   <input type="hidden" id="tsk-id">
   <input type="hidden" id="tsk-src-tbl">
@@ -3192,9 +3192,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- ENV ASPECT MODAL (full ISO 14001:6.1.2 methodology) -->
-<div class="overlay" id="ov-easp" onclick="closeModal('m-easp')"></div>
+<div class="overlay" id="ov-easp" onclick="closeAsk('m-easp')"></div>
 <div class="modal" id="m-easp" style="display:none;max-width:680px">
-  <button class="close-btn" onclick="closeModal('m-easp')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-easp')">&#10005;</button>
   <div class="modal-title">&#127811; &#1492;&#1497;&#1489;&#1496; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;</div>
   <input type="hidden" id="ea-id">
   <div style="font-size:11px;color:var(--t3);margin-bottom:8px;font-weight:700">&#128205; &#1494;&#1497;&#1492;&#1493;&#1497;</div>
@@ -3230,9 +3230,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- LOCATION MODAL -->
-<div class="overlay" id="ov-loc" onclick="closeModal('m-loc')"></div>
+<div class="overlay" id="ov-loc" onclick="closeAsk('m-loc')"></div>
 <div class="modal" id="m-loc" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-loc')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-loc')">&#10005;</button>
   <div class="card-title" id="loc-title">&#1502;&#1497;&#1511;&#1493;&#1501; &#1495;&#1491;&#1513;</div>
   <input type="hidden" id="loc-id">
   <input type="hidden" id="loc-level">
@@ -3246,9 +3246,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- ISSUE TYPE MODAL -->
-<div class="overlay" id="ov-itype" onclick="closeModal('m-itype')"></div>
+<div class="overlay" id="ov-itype" onclick="closeAsk('m-itype')"></div>
 <div class="modal" id="m-itype" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-itype')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-itype')">&#10005;</button>
   <div class="card-title" id="itype-title">&#1505;&#1493;&#1490; &#1488;&#1497;-&#1492;&#1514;&#1488;&#1502;&#1493;&#1514; &#1495;&#1491;&#1513;</div>
   <input type="hidden" id="itype-id">
   <input type="hidden" id="itype-level">
@@ -3263,9 +3263,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- PROJECT MODAL -->
-<div class="overlay" id="ov-prj" onclick="closeModal('m-prj')"></div>
+<div class="overlay" id="ov-prj" onclick="closeAsk('m-prj')"></div>
 <div class="modal" id="m-prj" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-prj')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-prj')">&#10005;</button>
   <div class="card-title" id="prj-title">&#1508;&#1512;&#1493;&#1497;&#1497;&#1511;&#1496; &#1495;&#1491;&#1513;</div>
   <input type="hidden" id="prj-id">
   <div class="modal-body">
@@ -3279,9 +3279,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- INSPECTION TYPE MODAL -->
-<div class="overlay" id="ov-itp" onclick="closeModal('m-itp')"></div>
+<div class="overlay" id="ov-itp" onclick="closeAsk('m-itp')"></div>
 <div class="modal" id="m-itp" style="display:none;max-width:480px">
-  <button class="close-btn" onclick="closeModal('m-itp')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-itp')">&#10005;</button>
   <div class="card-title" id="itp-title">&#1505;&#1493;&#1490; &#1489;&#1497;&#1511;&#1493;&#1512;&#1514; &#1495;&#1491;&#1513;</div>
   <input type="hidden" id="itp-id">
   <div class="modal-body">
@@ -3297,23 +3297,23 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- NOTIFICATION SETTINGS MODAL -->
-<div class="overlay" id="ov-tp" onclick="closeModal('m-tp')"></div>
+<div class="overlay" id="ov-tp" onclick="closeAsk('m-tp')"></div>
 <div class="modal" id="m-tp" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-tp')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-tp')">&#10005;</button>
   <div id="tp-body"></div>
 </div>
-<div class="overlay" id="ov-sys" onclick="closeModal('m-sys')"></div>
+<div class="overlay" id="ov-sys" onclick="closeAsk('m-sys')"></div>
 <div class="modal" id="m-sys" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-sys')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-sys')">&#10005;</button>
   <div class="modal-title">&#129658; &#1502;&#1510;&#1489; &#1492;&#1502;&#1506;&#1512;&#1499;&#1514;</div>
   <div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">&#1489;&#1491;&#1497;&#1511;&#1492; &#1495;&#1497;&#1492; &#1513;&#1500; &#1492;&#1491;&#1489;&#1512;&#1497;&#1501; &#1513;&#1504;&#1493;&#1496;&#1497;&#1501; &#1500;&#1492;&#1497;&#1513;&#1489;&#1512; &#1489;&#1513;&#1511;&#1496;: &#1500;&#1502;&#1497; &#1492;&#1492;&#1514;&#1512;&#1488;&#1493;&#1514; &#1492;&#1493;&#1500;&#1499;&#1493;&#1514;, &#1492;&#1488;&#1501; &#1492;&#1503; &#1489;&#1488;&#1502;&#1514; &#1497;&#1493;&#1510;&#1488;&#1493;&#1514;, &#1493;&#1502;&#1492; &#1502;&#1510;&#1489; &#1492;&#1490;&#1497;&#1489;&#1493;&#1497;.</div>
   <div id="sys-list"></div>
   <div class="modal-footer"><button class="btn btn-s" onclick="closeModal('m-sys')">&#1505;&#1490;&#1493;&#1512;</button><button class="btn btn-p" onclick="_sysStateRun()">&#8634; &#1489;&#1491;&#1493;&#1511; &#1513;&#1493;&#1489;</button></div>
 </div>
 
-<div class="overlay" id="ov-notif" onclick="closeModal('m-notif')"></div>
+<div class="overlay" id="ov-notif" onclick="closeAsk('m-notif')"></div>
 <div class="modal" id="m-notif" style="display:none;max-width:560px">
-  <button class="close-btn" onclick="closeModal('m-notif')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-notif')">&#10005;</button>
   <div class="card-title">&#128276; &#1492;&#1490;&#1491;&#1512;&#1493;&#1514; &#1492;&#1514;&#1512;&#1488;&#1493;&#1514;</div>
   <div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">&#1500;&#1499;&#1500; &#1505;&#1493;&#1490; &#1488;&#1497;&#1512;&#1493;&#1506; &#1489;&#1495;&#1512; &#1489;&#1488;&#1497;&#1494;&#1493; &#1506;&#1512;&#1493;&#1510;&#1497;&#1501; &#1500;&#1511;&#1489;&#1500; &#1492;&#1514;&#1512;&#1488;&#1492;. WhatsApp/Email &#1497;&#1497;&#1499;&#1504;&#1505;&#1493; &#1500;&#1514;&#1493;&#1511;&#1507; &#1488;&#1495;&#1512;&#1497; &#1488;&#1497;&#1513;&#1493;&#1512; ה-templates &#1492;&#1502;&#1514;&#1488;&#1497;&#1502;&#1497;&#1501;.</div>
   <div class="modal-body">
@@ -3350,9 +3350,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP -->
-<div class="overlay" id="ov-help" onclick="closeModal('m-help')"></div>
+<div class="overlay" id="ov-help" onclick="closeAsk('m-help')"></div>
 <div class="modal" id="m-help" style="display:none;max-width:520px">
-  <button class="close-btn" onclick="closeModal('m-help')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-help')">&#10005;</button>
   <div class="modal-title">&#9000;&#65039; &#1511;&#1497;&#1510;&#1493;&#1512;&#1497; &#1502;&#1511;&#1500;&#1491;&#1514;</div>
   <div class="modal-body" style="font-size:13px;line-height:1.7">
     <table style="width:100%;border-collapse:collapse">
@@ -3373,9 +3373,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- GLOBAL SEARCH MODAL -->
-<div class="overlay" id="ov-gsearch" onclick="closeModal('m-gsearch')"></div>
+<div class="overlay" id="ov-gsearch" onclick="closeAsk('m-gsearch')"></div>
 <div class="modal" id="m-gsearch" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-gsearch')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-gsearch')">&#10005;</button>
   <div class="modal-title">&#128269; &#1495;&#1497;&#1508;&#1493;&#1513; &#1490;&#1500;&#1493;&#1489;&#1500;&#1497;</div>
   <div class="fgrid">
     <div class="field fw"><input id="gsearch-q" placeholder="&#1492;&#1511;&#1500;&#1491; 2+ &#1514;&#1493;&#1493;&#1497;&#1501;..." class="inp" oninput="_debGsearch()" onkeydown="_gsKey(event)" autocomplete="off"></div>
@@ -3386,9 +3386,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- INS MODAL -->
-<div class="overlay" id="ov-ins" onclick="closeModal('m-ins')"></div>
+<div class="overlay" id="ov-ins" onclick="closeAsk('m-ins')"></div>
 <div class="modal" id="m-ins" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ins')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ins')">&#10005;</button>
   <div class="modal-title">&#1505;&#1497;&#1493;&#1512; &#1489;&#1496;&#1497;&#1495;&#1493;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="ins-d"></div>
@@ -3403,9 +3403,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- DRL MODAL -->
-<div class="overlay" id="ov-drl" onclick="closeModal('m-drl')"></div>
+<div class="overlay" id="ov-drl" onclick="closeAsk('m-drl')"></div>
 <div class="modal" id="m-drl" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-drl')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-drl')">&#10005;</button>
   <div class="modal-title">&#1514;&#1512;&#1490;&#1497;&#1500; &#1495;&#1497;&#1512;&#1493;&#1501;</div>
   <div class="fgrid">
     <div class="field"><label>&#1505;&#1493;&#1490; &#1514;&#1512;&#1490;&#1497;&#1500; *</label><select id="drl-ty"><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1513;&#1512;&#1497;&#1508;&#1492;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1491;&#1500;&#1497;&#1508;&#1514; &#1499;&#1497;&#1502;&#1497;&#1511;&#1500;&#1497;&#1501;</option><option>&#1508;&#1497;&#1504;&#1493;&#1497; &#1492;&#1494;&#1491;&#1492;&#1493;&#1514; &#1506;&#1493;&#1489;&#1491;</option><option>&#1514;&#1512;&#1490;&#1497;&#1500; &#1508;&#1497;&#1504;&#1493;&#1497; &#1499;&#1493;&#1500;&#1500;</option><option>&#1492;&#1514;&#1512;&#1506;&#1493;&#1514; &#1495;&#1497;&#1512;&#1493;&#1501;</option></select></div>
@@ -3420,9 +3420,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- MGMT REVIEW SAVE MODAL (BACKLOG 9.25) -->
-<div class="overlay" id="ov-mrsave" onclick="closeModal('m-mrsave')"></div>
+<div class="overlay" id="ov-mrsave" onclick="closeAsk('m-mrsave')"></div>
 <div class="modal" id="m-mrsave" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-mrsave')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-mrsave')">&#10005;</button>
   <div class="modal-title">&#1513;&#1502;&#1497;&#1512;&#1514; &#1505;&#1511;&#1497;&#1512;&#1514; &#1492;&#1504;&#1492;&#1500;&#1492; &#1500;&#1514;&#1497;&#1511;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1504;&#1493;&#1499;&#1495;&#1497;&#1501; *</label><input id="mrs-att" placeholder="&#1513;&#1502;&#1493;&#1514; &#1493;&#1514;&#1508;&#1511;&#1497;&#1491;&#1497;&#1501;, &#1502;&#1493;&#1508;&#1512;&#1491;&#1497;&#1501; &#1489;&#1508;&#1505;&#1497;&#1511;"></div>
@@ -3433,9 +3433,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- CTR MODAL -->
-<div class="overlay" id="ov-ctr" onclick="closeModal('m-ctr')"></div>
+<div class="overlay" id="ov-ctr" onclick="closeAsk('m-ctr')"></div>
 <div class="modal" id="m-ctr" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-ctr')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-ctr')">&#10005;</button>
   <div class="modal-title">&#1511;&#1489;&#1500;&#1503; / &#1505;&#1508;&#1511;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1492;&#1511;&#1489;&#1500;&#1503; *</label><input id="ctr-n"></div>
@@ -3451,9 +3451,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- WST MODAL -->
-<div class="overlay" id="ov-wst" onclick="closeModal('m-wst')"></div>
+<div class="overlay" id="ov-wst" onclick="closeAsk('m-wst')"></div>
 <div class="modal" id="m-wst" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-wst')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-wst')">&#10005;</button>
   <div class="modal-title">&#1514;&#1497;&#1506;&#1493;&#1491; &#1508;&#1505;&#1493;&#1500;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="wst-d"></div>
@@ -3470,9 +3470,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- HZM MODAL -->
-<div class="overlay" id="ov-hzm" onclick="closeModal('m-hzm')"></div>
+<div class="overlay" id="ov-hzm" onclick="closeAsk('m-hzm')"></div>
 <div class="modal" id="m-hzm" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-hzm')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-hzm')">&#10005;</button>
   <div class="modal-title">&#1495;&#1493;&#1502;&#1512; &#1502;&#1505;&#1493;&#1499;&#1503;</div>
   <div class="fgrid">
     <div class="field fw"><label>&#1513;&#1501; &#1492;&#1495;&#1493;&#1502;&#1512; *</label><input id="hzm-n"></div>
@@ -3489,9 +3489,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- ENV MODAL -->
-<div class="overlay" id="ov-env" onclick="closeModal('m-env')"></div>
+<div class="overlay" id="ov-env" onclick="closeAsk('m-env')"></div>
 <div class="modal" id="m-env" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-env')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-env')">&#10005;</button>
   <div class="modal-title">&#1502;&#1491;&#1497;&#1491;&#1492; &#1505;&#1489;&#1497;&#1489;&#1514;&#1497;&#1514;</div>
   <div class="fgrid">
     <div class="field"><label>&#1514;&#1488;&#1512;&#1497;&#1498; *</label><input type="date" id="env-d"></div>
@@ -3506,9 +3506,9 @@ id="m-ncr" style="display:none">
 </div>
 
 <!-- LEG MODAL -->
-<div class="overlay" id="ov-leg" onclick="closeModal('m-leg')"></div>
+<div class="overlay" id="ov-leg" onclick="closeAsk('m-leg')"></div>
 <div class="modal" id="m-leg" style="display:none">
-  <button class="close-btn" onclick="closeModal('m-leg')">&#10005;</button>
+  <button class="close-btn" onclick="closeAsk('m-leg')">&#10005;</button>
   <div class="modal-title">&#1495;&#1493;&#1511; / &#1514;&#1511;&#1504;&#1492; / &#1491;&#1512;&#1497;&#1513;&#1492; &#1512;&#1490;&#1493;&#1500;&#1496;&#1493;&#1512;&#1497;&#1514;</div>
   <input type="hidden" id="leg-id">
   <div class="fgrid">
@@ -3813,6 +3813,15 @@ var _sbClient=null,_sbToken=null,_sbAuthPromise=null;
 function _sbBoot(){if(_sbClient||typeof supabase==='undefined')return;_sbClient=supabase.createClient(SBU,SBK,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'tfgn_sb_auth',experimental:{passkey:true}}});_sbClient.auth.onAuthStateChange(function(_e,s){_sbToken=s?s.access_token:null;});}
 function _sbAuth(){_sbBoot();if(!_sbClient)return Promise.reject(new Error('supabase unavailable'));if(_sbAuthPromise)return _sbAuthPromise;_sbAuthPromise=_sbClient.auth.getSession().then(function(r){if(r.data&&r.data.session)return r.data.session;return _captcha().then(function(tok){return _sbClient.auth.signInAnonymously(tok?{options:{captchaToken:tok}}:undefined);}).then(function(r2){if(r2.error)throw r2.error;return r2.data.session;});}).then(function(s){if(s)_sbToken=s.access_token;return s;}).catch(function(e){_sbAuthPromise=null;throw e;});return _sbAuthPromise;}
 function sbH(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation'};}
+// A fetch with a time limit (15/10/2026, review of the trustee and sync paths). A request that
+// never settles on a dropped mobile connection kept _obBusy true (no send until a reload), held a
+// sync slot for ever, or left a trustee's photo on "uploading". An abort is a network error ('net').
+function _fetchT(url,opts,ms){
+  if(typeof AbortController==='undefined')return fetch(url,opts);
+  var ac=new AbortController(),o={};Object.keys(opts||{}).forEach(function(k){o[k]=opts[k];});o.signal=ac.signal;
+  var t=setTimeout(function(){try{ac.abort();}catch(e){}},ms||30000);
+  return fetch(url,o).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
+}
 function sbHUpsert(){return{'apikey':SBK,'Authorization':'Bearer '+(_sbToken||SBK),'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'};}
 var _sbTsCol={near_miss:'ts',rounds:'ts',equip_inspections:'ts',equip_inspection_history:'ts',ncr_ai:'ts',tasks:'ts',app_users:'ts',toolbox:'ts',toolbox_talks:'ts',toolbox_reads:'ts',train_plan:'ts',tour_hazards:'ts',audit_log:'ts',env_aspects:'ts',hearing_tests:'ts',ncr_comments:'ts',ncr_patterns:'ts',page_files:'ts',locations:'ts',saved_views:'ts',notification_prefs:'ts',custom_props:'ts',projects:'ts',notifications_log:'ts',inspection_types:'ts',issue_types:'ts',trustee_reports:'ts',trustees:'ts',trustee_winners:'ts',trustee_tasks:'ts',record_history:'ts',mgmt_reviews:'ts'};
 // Resolves to the row array on success — an EMPTY array means the table
@@ -3847,7 +3856,7 @@ function _sbFetchAll(url,cap){
     if(cap&&to>cap-1)to=cap-1;
     var want=to-from+1;
     if(want<1)return Promise.resolve({ok:true,rows:rows});
-    return fetch(url,{headers:_sbRangeH(from,to),priority:'low'}).then(function(r){
+    return _fetchT(url,{headers:_sbRangeH(from,to),priority:'low'},30000).then(function(r){
       if(!r.ok)return {ok:false,status:r.status};
       return r.json().then(function(j){
         if(!Array.isArray(j))return {ok:false,status:r.status};
@@ -4035,7 +4044,7 @@ function _obSend(op){
     }
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
     else return Promise.reject(new Error('unknown op'));
-    return fetch(url,opts).then(function(r){
+    return _fetchT(url,opts,30000).then(function(r){
       // ---- 5.2 ----
       // sbH() asks for return=representation, so PostgREST answers a PATCH or
       // DELETE that matched NOTHING with 200 and []. Nobody read the body, so
@@ -4093,6 +4102,16 @@ function _obSend(op){
             }
           }catch(e){}
         }
+        // An insert whose answer was lost already arrived (15/10/2026): its retry is an upsert, which
+        // needs the UPDATE right a trustee's session does not have, so it was refused every 30
+        // seconds for ever, and the red pill offered to clear the queue. If the row is there, done.
+        if(op.op==='ins'&&op.row&&op.row.id&&(r.status===401||r.status===403||r.status===409)){
+          return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id',{headers:sbH()},15000)
+            .then(function(g2){return g2.ok?g2.json():[];}).then(function(rows){
+              if(Array.isArray(rows)&&rows.length)return r;
+              var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
+            },function(x){if(x&&x.status)throw x;var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;});
+        }
         var e=new Error('HTTP '+r.status);e.status=r.status;e.body=body;throw e;
       });}
     });
@@ -4118,6 +4137,7 @@ function _obDrainOps(){
   var p=Promise.resolve();
   q.forEach(function(op){
     p=p.then(function(){
+      if(typeof _obWaitsPhoto==='function'&&_obWaitsPhoto(op)){remaining.push(op);return;}   // not an error: it goes with its photo
       return _obSend(op).then(function(){_obMarkSent(op);}).catch(function(err){
         hadErr=true;
         op.tries=(op.tries||0)+1;
@@ -5219,6 +5239,9 @@ window._lockNow=function(){
   try{_lockWipeSensitive();}catch(e){}
   try{if(_sbClient)_sbClient.auth.signOut();}catch(e){}
   _sbToken=null;_sbAuthPromise=null;_isAdmin=false;
+  // The queue waits for the next sign-in (15/10/2026): with SB_ON on, the 30-second send signed in
+  // anonymously and the manager's writes went out as anonymous, refused or matching 0 rows.
+  SB_ON=false;
   try{localStorage.removeItem(_LOCK_SEEN_KEY);}catch(e){}
   try{_mfOnLock();}catch(e){}
   var app=g('app');if(app)app.style.display='none';
@@ -5379,7 +5402,7 @@ function _closeAllOpenModals(except){
 // forever while generating a red overdue task. Each sv* function reads a fixed
 // set of inputs, so the map below IS that set \u2014 whatever the saver reads, the
 // editor fills.
-var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am","tbt-trainer":"trainer","tbt-trainer-q":"trainer_qual","tbt-video":"video_url","tbt-dept":"dept"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d","wst-site":"site","wst-cert":"cert"},"attach":"wst-attach-area"},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n"},"attach":"hzm-attach-area"},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"}},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
+var _EDIT_MODS={"toolbox_talks":{"m":"m-tbt","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"tbt-d":"d","tbt-title":"title","tbt-body":"body","tbt-s":"s","tbt-ar":"body_ar","tbt-ru":"body_ru","tbt-am":"body_am","tbt-trainer":"trainer","tbt-trainer-q":"trainer_qual","tbt-video":"video_url","tbt-dept":"dept"},"attach":"tbt-attach-area"},"tour_hazards":{"m":"m-thz","l":"\u05de\u05e4\u05d2\u05e2 \u05de\u05e1\u05d9\u05d5\u05e8","f":{"thz-d":"d","thz-tour":"tour_no","thz-dept":"dept","thz-loc":"loc","thz-descr":"descr","thz-sev":"sev","thz-resp":"resp","thz-resp2":"resp2","thz-action":"action","thz-due":"due","thz-s":"s","thz-closed":"closed_d","thz-notes":"notes"},"attach":"thz-attach-area","af":"photo_url"},"rsk":{"m":"m-rsk","l":"\u05e1\u05d9\u05db\u05d5\u05df","f":{"r-a":"a","r-o":"o","r-p":"p","r-s":"sv","r-ac":"ac","r-d":"d","r-last_review":"last_review"}},"tr":{"m":"m-tr","l":"\u05d4\u05d3\u05e8\u05db\u05d4","f":{"t-c":"c","t-d":"d","t-e":"e","t-sc":"sc","t-st":"s","t-w":"w","t-n":"n"},"attach":"tr-attach-area"},"ppe":{"m":"m-ppe","l":"\u05e6\u05de\u05d2","f":{"ppe-w":"w","ppe-m":"m","ppe-d":"d","ppe-e":"e","ppe-c":"c","ppe-ty":"ty"},"attach":"ppe-attach-area"},"emp":{"m":"m-emp","l":"\u05e2\u05d5\u05d1\u05d3","f":{"e-r":"r","e-d":"dep","e-s":"s","e-left":"left_d","e-ph":"ph","e-em":"em","e-n":"n","e-eid":"eid"}},"ctr":{"m":"m-ctr","l":"\u05e7\u05d1\u05dc\u05df","f":{"ctr-ty":"ty","ctr-c":"c","ctr-ph":"ph","ctr-e":"e","ctr-tr":"tr","ctr-s":"s","ctr-n":"n"},"attach":"ctr-attach-area"},"docs":{"m":"m-doc","l":"\u05de\u05e1\u05de\u05da","f":{"d-n":"n","d-c":"c","d-v":"v","d-o":"o","d-u":"u","d-e":"e","d-s":"s","d-i":"i","d-nt":"nt"},"attach":"doc-attach-area"},"ins":{"m":"m-ins","l":"\u05d1\u05d3\u05d9\u05e7\u05d4","f":{"ins-a":"a","ins-i":"i","ins-fn":"fn","ins-ac":"ac","ins-s":"s","ins-d":"d","ins-sc":"sc"}},"drl":{"m":"m-drl","l":"\u05ea\u05e8\u05d2\u05d9\u05dc","f":{"drl-d":"d","drl-p":"p","drl-dur":"dur","drl-sc":"sc","drl-n":"n","drl-ty":"ty"}},"wst":{"m":"m-wst","l":"\u05e4\u05e1\u05d5\u05dc\u05ea","f":{"wst-ty":"ty","wst-c":"c","wst-h":"h","wst-t":"t","wst-d":"d","wst-site":"site","wst-cert":"cert","wst-q":"q"},"attach":"wst-attach-area"},"hzm":{"m":"m-hzm","l":"\u05d7\u05d5\u05de\u05e8\u05d9\u05dd","f":{"hzm-un":"un","hzm-hs":"hs","hzm-loc":"loc","hzm-location-id":"location_id","hzm-ms":"ms","hzm-em":"em","hzm-n":"n","hzm-q":"q"},"attach":"hzm-attach-area"},"env":{"m":"m-env","l":"\u05e1\u05d1\u05d9\u05d1\u05d4","f":{"env-ty":"ty","env-me":"me","env-r":"r","env-u":"u","env-lim":"lim","env-s":"s","env-d":"d"}},"toolbox":{"m":"m-toolbox","l":"\u05ea\u05d9\u05d1\u05ea \u05db\u05dc\u05d9\u05dd","f":{"tb-d":"d","tb-presenter":"presenter","tb-attendees":"attendees","tb-s":"s","tb-notes":"notes","tb-topic":"topic"},"attach":"tb-attach-area"},"ptw":{"m":"m-ptw","l":"\u05d4\u05d9\u05ea\u05e8","f":{"ptw-sup":"sup","ptw-ph":"ph","ptw-wkr":"wkr","ptw-area":"area","ptw-location-id":"location_id","ptw-dep":"dep","ptw-ds":"ds","ptw-de":"de","ptw-ts":"ts","ptw-te":"te","ptw-desc":"desc","ptw-sg1n":"sg1n","ptw-sg1d":"sg1d","ptw-sg2n":"sg2n","ptw-sg2d":"sg2d","ptw-sg3n":"sg3n","ptw-sg3d":"sg3d","ptw-sg4n":"sg4n","ptw-sg4d":"sg4d","ptw-st":"s","ptw-num":"num","ptw-con":"con"},"c":{"ptw-hot":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05de\u05d5\u05ea","ptw-hgt":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d2\u05d5\u05d1\u05d4","ptw-elc":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d7\u05e9\u05de\u05dc","ptw-eng":"\u05e0\u05d9\u05ea\u05d5\u05e7 \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4","ptw-lft":"\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05d4\u05e0\u05e4\u05d4","ptw-chm":"\u05e7\u05e8\u05d1\u05ea \u05db\u05d9\u05de\u05d9\u05e7\u05dc\u05d9\u05dd","ptw-cnf":"\u05d7\u05dc\u05dc \u05de\u05d5\u05e7\u05e3","ptw-rof":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05e2\u05dc \u05d2\u05d2\u05d5\u05ea"},"cs":{"ptw-s1":"\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05d0\u05d9\u05e9\u05d9","ptw-s2":"\u05e8\u05ea\u05de\u05ea \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea","ptw-s3":"\u05e7\u05e1\u05d3\u05d4","ptw-s4":"\u05de\u05d8\u05e3 \u05db\u05d9\u05d1\u05d5\u05d9","ptw-s5":"\u05e2\u05d1\u05d5\u05d3\u05d4 \u05d1\u05d6\u05d5\u05d2\u05d5\u05ea","ptw-s6":"\u05d1\u05d9\u05d3\u05d5\u05d3 \u05d0\u05d6\u05d5\u05e8","ptw-s7":"\u05e4\u05d9\u05e0\u05d5\u05d9 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d3\u05dc\u05d9\u05e7\u05d9\u05dd","ptw-s8":"\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e1\u05d5\u05e4\u05d9\u05ea"}},"near_miss":{"m":"m-nm","l":"\u05db\u05de\u05e2\u05d8","f":{"nm-d":"d","nm-t":"t","nm-area":"area","nm-location-id":"location_id","nm-rep":"rep","nm-sev":"sev","nm-typ":"typ","nm-s":"s","nm-notes":"notes","nm-desc":"descr"},"attach":"nm-photo-area","af":"photo_url"},"auds":{"m":"m-aud","l":"\u05de\u05d1\u05d3\u05e7","f":{"a-a":"a","a-r":"r","a-d":"d","a-f":"f","a-sc":"sc","a-st":"s","a-sm":"sm","a-n":"n"}}};
 var _svEditing={};
 var _genEditOpening=false;
 function _svEditId(tbl){return _svEditing[tbl]||null;}
@@ -5390,7 +5413,7 @@ function _svPut(tbl,r){
   if(editId){
     var k=-1;
     for(var i=0;i<arr.length;i++)if(arr[i].id===editId){k=i;break;}
-    if(k>=0){arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k]);}
+    if(k>=0){arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k]);setTimeout(function(){_svViewRefresh(tbl,editId);},0);}
     else{arr.push(r);sbIns(tbl,r);}
     delete _svEditing[tbl];
     return false;
@@ -5402,6 +5425,12 @@ function _svPut(tbl,r){
 // no option for and then reads empty, so the save wrote null over it (env_aspects.status: free
 // text like "\u05de\u05d1\u05d5\u05e6\u05e2 - ..."). Carry the stored value in as an option, as _genEdit does.
 function _selSet(el,v){if(!el)return;v=(v===null||v===undefined)?'':String(v);if(el.tagName==='SELECT'&&v!==''&&![].some.call(el.options,function(o){return o.value===v;})){var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);}el.value=v;}
+// 15/10/2026: an edit replaced the local row with the form's row, so columns the form does not
+// carry (verified_by, created_at, imported fields) vanished from the local copy until a reload.
+// Merge into the stored row instead; the server PATCH (sbUpd) still sends only the form's fields.
+function _svLocal(tbl,id,r){var arr=DB[tbl]||(DB[tbl]=[]);for(var i=0;i<arr.length;i++)if(arr[i]&&arr[i].id===id){arr[i]=Object.assign({},arr[i],r);return arr[i];}arr.push(r);return r;}
+// After \u270e+save on the record's own view page, show the saved values there.
+function _svViewRefresh(tbl,id){try{if(typeof CUR!=='undefined'&&CUR==='view'&&typeof showView==='function'&&id)showView(tbl,id);}catch(e){}}
 function _editableTbl(tbl){return !!_EDIT_MODS[tbl];}
 function _genEdit(tbl,id){
   var cfg=_EDIT_MODS[tbl];if(!cfg)return;
@@ -5435,23 +5464,26 @@ function _genEdit(tbl,id){
     // certificate — the exact evidence an auditor asks for under §7.2. Same
     // pattern the incident and env-aspect forms already use.
     if(cfg.attach){
-      var _aArea=cfg.attach;
-      if(rec.file_url){
-        _attachUrls[_aArea]=rec.file_url;
-        var _fn=String(rec.file_url).split('/').pop().split('?')[0];
-        if(typeof _attachRender==='function')_attachRender(_aArea,rec.file_url,_fn);
+      var _aArea=cfg.attach,_aUrl=rec[cfg.af||'file_url'];
+      if(_aUrl){
+        _attachUrls[_aArea]=_aUrl;
+        var _fn=String(_aUrl).split('/').pop().split('?')[0];
+        if(typeof _attachRender==='function')_attachRender(_aArea,_aUrl,_fn);
       }else{
         _attachUrls[_aArea]=null;
         if(typeof _attachClear==='function')_attachClear(_aArea);
       }
     }
-    if(cfg.c){
-      var types=rec.types||[];
+    // Checkbox groups stored as one comma list: c -> rec.types, cs -> rec.safety (PTW safety
+    // measures, 15/10/2026: \u270e+save cleared them, the saver reads ptw-s1..s8 and nothing filled them).
+    [['c','types'],['cs','safety']].forEach(function(cc){
+      if(!cfg[cc[0]])return;
+      var types=rec[cc[1]]||[];
       if(typeof types==='string')types=types.split(',').map(function(x){return x.trim();});
-      Object.keys(cfg.c).forEach(function(dom){
-        var el=g(dom);if(el)el.checked=types.indexOf(cfg.c[dom])>=0;
+      Object.keys(cfg[cc[0]]).forEach(function(dom){
+        var el=g(dom);if(el)el.checked=types.indexOf(cfg[cc[0]][dom])>=0;
       });
-    }
+    });
     _svEditing[tbl]=id;
   }finally{_genEditOpening=false;}
   toast('\u05e2\u05e8\u05d9\u05db\u05d4 - \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05e8\u05e9\u05d5\u05de\u05d4');
@@ -5477,7 +5509,83 @@ function _shortForm(id){
   setTimeout(function(){var n=0;det.querySelectorAll('input:not([type=hidden]),textarea').forEach(function(x){if(String(x.value||'').trim())n++;});
     var sm=det.querySelector('summary');if(sm)sm.textContent='\u05e4\u05e8\u05d8\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd'+(n?' ('+n+' \u05de\u05dc\u05d0\u05d9\u05dd)':'');},0);
 }
+// ---- 15/10/2026: forms start clean, keep their record, and do not lose what was typed ----
+// (form review, items 3, 4 and 7). Israel's date and time, not UTC: between 00:00 and 02:59 the
+// UTC date is yesterday, and a datetime-local default from toISOString() put an incident 2-3
+// hours early once _incIsoDt read it back as local time.
+function _ilNow(){return new Date().toLocaleString('sv-SE',{timeZone:'Asia/Jerusalem'}).replace(' ','T').substring(0,16);}
+function _ilToday(){return _ilNow().substring(0,10);}
+// How the next openModal was called. null = a new record: every field back to its default and
+// the attached files dropped (a "+ new" form used to open with the previous record's expiry,
+// status, permit number and files). 'pre' = a new record whose opener already reset and filled
+// it. 'edit' = a stored record whose opener already filled it: no reset, and no "today" in a
+// date the record left empty (editNcr, editLeg, editInc fill before they open).
+var _modalFill=null;
+function _openFilled(id,mode){_modalFill=mode||'edit';try{openModal(id);}finally{_modalFill=null;}}
+var _FORM_RESET_EXTRA=['m-ncr','m-inc','m-leg','m-eqi','m-tsk','m-easp','m-round'];
+function _formResetOn(id){if(_FORM_RESET_EXTRA.indexOf(id)>=0)return true;if(typeof _EDIT_MODS==='undefined')return false;for(var t in _EDIT_MODS)if(_EDIT_MODS[t].m===id)return true;return false;}
+var _ATTACH_AREA_RE=/-(attach|photo|evidence)-area$/;
+function _formReset(id){
+  var mo=g(id);if(!mo)return;
+  mo.querySelectorAll('input,select,textarea').forEach(function(el){
+    var t=(el.type||'').toLowerCase();
+    if(t==='file'||t==='button'||t==='submit'||t==='reset')return;
+    if(t==='checkbox'||t==='radio'){el.checked=el.defaultChecked;return;}
+    if(t==='hidden'){el.value='';return;}   // a hidden input has no separate default: it is the record id
+    if(el.tagName==='SELECT'){var k=-1;for(var i=0;i<el.options.length;i++)if(el.options[i].defaultSelected){k=i;break;}el.selectedIndex=k>=0?k:(el.options.length?0:-1);return;}
+    el.value=el.defaultValue;
+    el.removeAttribute('data-auto');
+  });
+  mo.querySelectorAll('[id]').forEach(function(a){if(_ATTACH_AREA_RE.test(a.id)&&a.id!=='eqi-photo-area'&&typeof _attachClear==='function')_attachClear(a.id);});
+  if(id==='m-eqi'&&typeof _eqiFiles!=='undefined'){_eqiFiles=[];try{_eqiRenderFiles();}catch(e){}}
+}
+// What the form holds now, for "changed since it opened". Empty fields are left out, so a
+// finding row added and left empty is no change. Files count too.
+function _formVals(id){
+  var mo=g(id);if(!mo)return '';var out=[];
+  mo.querySelectorAll('input,select,textarea').forEach(function(el,i){
+    var t=(el.type||'').toLowerCase();
+    if(t==='file'||t==='button'||t==='submit'||t==='hidden')return;
+    var v=(t==='checkbox'||t==='radio')?(el.checked?'1':''):String(el.value||'');
+    if(v!=='')out.push((el.id||(el.className+'#'+i))+'='+v);
+  });
+  mo.querySelectorAll('[id]').forEach(function(a){if(!_ATTACH_AREA_RE.test(a.id))return;var u=(typeof _attachUrls!=='undefined'&&_attachUrls[a.id])||(typeof _attachPending!=='undefined'&&_attachPending[a.id]?'busy':'');if(u)out.push(a.id+'='+u);});
+  if(id==='m-eqi'&&typeof _eqiFiles!=='undefined'&&_eqiFiles.length)out.push('eqi-files='+_eqiFiles.length);
+  return out.join('\n');
+}
+// The baseline is taken when the user first touches the form, not when it opens: several
+// openers fill the fields right after openModal (some in a timeout), and that is not a change.
+var _mSnap={};
+function _mSnapTake(e){var mo=e.target&&e.target.closest&&e.target.closest('.modal');if(mo&&mo.id&&_mSnap[mo.id]===null)_mSnap[mo.id]=_formVals(mo.id);}
+document.addEventListener('focusin',_mSnapTake,true);
+document.addEventListener('pointerdown',_mSnapTake,true);
+function _formDirty(id){var s0=_mSnap[id];return typeof s0==='string'&&s0!==_formVals(id);}
+// X, a tap outside the form, Escape and the phone's back button come here; a save closes
+// through closeModal and never asks.
+function closeAsk(id){
+  // The trustee's tour is kept as a draft whatever happens: close without asking (_truClose saves it).
+  if(id==='m-tru'&&typeof _truClose==='function'){_truClose();return true;}
+  if(_formDirty(id)&&!confirm('\u05d9\u05e9 \u05d1\u05d8\u05d5\u05e4\u05e1 \u05e9\u05d9\u05e0\u05d5\u05d9\u05d9\u05dd \u05e9\u05dc\u05d0 \u05e0\u05e9\u05de\u05e8\u05d5. \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d1\u05dc\u05d9 \u05dc\u05e9\u05de\u05d5\u05e8?'))return false;
+  closeModal(id);return true;
+}
+// Back button: an open form gets its own history entry, so back closes the form (asking first
+// when it was changed) instead of leaving the page, or the installed app altogether.
+var _mhSkip=0;
+function _mhTop(){var open=null;document.querySelectorAll('.modal').forEach(function(m){if(m.style.display==='block'||m.style.display==='flex')open=m;});return open;}
+function _mhPush(id){try{var hs=history.state;if(hs&&hs.modal)history.replaceState({modal:id,page:hs.page||null},'');else history.pushState({modal:id,page:(hs&&hs.page)||null},'');}catch(e){}}
+// A reload keeps history.state: an entry left by a form that was open is a page entry again.
+try{if(history.state&&history.state.modal)history.replaceState({page:history.state.page||null},'');}catch(e){}
+window.addEventListener('popstate',function(e){
+  // Our own history.back() after a close. A form opened meanwhile gets its entry back.
+  if(_mhSkip>0){_mhSkip--;e.stopImmediatePropagation();var o=_mhTop();if(o&&o.id)_mhPush(o.id);return;}
+  var top=_mhTop();
+  if(!top||!top.id)return;   // no form open: the page navigation below handles it
+  e.stopImmediatePropagation();
+  closeAsk(top.id);
+  var still=_mhTop();if(still)_mhPush(still.id);
+});
 function openModal(id){
+  var _fill=_modalFill;_modalFill=null;
   try{_shortForm(id);}catch(e){}
   // A form whose only purpose is a save button a viewer cannot use.
   if(_viewOnly()){var fm=g(id);if(fm&&fm.querySelector('[onclick^="sv"]')){_viewBlock();return;}}
@@ -5485,6 +5593,7 @@ function openModal(id){
   // overwrite of the one that was being edited.
   if(!_genEditOpening)_svEditing={};
   _closeAllOpenModals(id);
+  if(!_genEditOpening&&!_fill&&_formResetOn(id))_formReset(id);
   if(id==='m-drl'&&typeof _drlFndReset==='function')_drlFndReset();
   if(id==='m-tbt'&&typeof _tbtTrReset==='function')_tbtTrReset();
   if(id==='m-tbt'&&typeof _tbtTrainerFill==='function')_tbtTrainerFill();
@@ -5550,13 +5659,15 @@ function openModal(id){
       mo.style.transform='translate(-50%,-50%)';
       mo.style.maxHeight='90vh';
     }
-    var t=new Date().toISOString().split('T')[0];
-    // data-nodefault: a date whose empty value means something (emp leaving date: empty = still working).
-    mo.querySelectorAll('input[type=date]:not([data-nodefault])').forEach(function(i){if(!i.value)i.value=t;});
-    mo.querySelectorAll('input[type=datetime-local]').forEach(function(i){if(!i.value)i.value=new Date().toISOString().slice(0,16);});
-    // Default empty time inputs to current local time (HH:MM) — 80% of reports are "now"
-    var _hm=(function(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})();
-    mo.querySelectorAll('input[type=time]').forEach(function(i){if(!i.value)i.value=_hm;});
+    // A stored record opened for editing keeps its empty dates empty.
+    if(_fill!=='edit'){
+      var _now=_ilNow(),t=_now.substring(0,10),_hm=_now.substring(11,16);
+      // data-nodefault: a date whose empty value means something (emp leaving date: empty = still working).
+      mo.querySelectorAll('input[type=date]:not([data-nodefault])').forEach(function(i){if(!i.value)i.value=t;});
+      mo.querySelectorAll('input[type=datetime-local]').forEach(function(i){if(!i.value)i.value=_now;});
+      // Default empty time inputs to current local time (HH:MM) — 80% of reports are "now"
+      mo.querySelectorAll('input[type=time]').forEach(function(i){if(!i.value)i.value=_hm;});
+    }
     if(typeof _locOptionsHtml==='function'){mo.querySelectorAll('select[id$="-location-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_locOptionsHtml(null);}});}
     if(typeof _prjOptionsHtml==='function'){mo.querySelectorAll('select[id$="-project-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_prjOptionsHtml(null);}});}
     if(typeof _itypeOptionsHtml==='function'){mo.querySelectorAll('select[id$="-issue-type-id"]').forEach(function(s){if(!s.options.length){s.innerHTML=_itypeOptionsHtml(null);}});}
@@ -5580,12 +5691,15 @@ function openModal(id){
     if(id==='m-train')try{initSig();}catch(e){}
     // Per-modal draft autosave hooks (only triggered for new entries; the
     // hooks self-detect edit-mode via their respective hidden id field).
-    if(id==='m-nm'){
+    // Not while editing a stored report (_genEdit): the draft would save it again as a new one.
+    if(id==='m-nm'&&!_genEditOpening){
       if(typeof _nmDraftCheck==='function')try{_nmDraftCheck();}catch(e){}
       if(typeof _nmDraftStart==='function')try{_nmDraftStart();}catch(e){}
     }
     // Scroll modal to top on open so user always sees the title first
     setTimeout(function(){try{mo.scrollTop=0;}catch(e){}},0);
+    _mSnap[id]=null;
+    _mhPush(id);
   }
 }
 
@@ -5602,6 +5716,8 @@ function _svClearEditFor(modalId){
 function closeModal(id){
   if(id==='m-mfa-setup'&&_mfaMust)return;   // mandatory for admin/manager: stays open until a factor is verified
   _svClearEditFor(id);
+  delete _mSnap[id];
+  if(typeof _attachDrop==='function')_attachDrop(id);
   var ov=g('ov-'+id.substr(2));
   var mo=g(id);
   if(ov){ov.style.display='none';ov.style.position='';ov.style.width='';ov.style.height='';}
@@ -5612,6 +5728,9 @@ function closeModal(id){
   if(!anyOpen){
     document.body.style.overflow='';
     if(_modalLastScrollY)try{window.scrollTo(0,_modalLastScrollY);}catch(e){}
+    // Closed by X or a save, not by back: drop the form's history entry. Later, so a form
+    // opened right after this one (closeModal(a);openModal(b)) takes the entry over instead.
+    setTimeout(function(){if(_mhTop()||_mhSkip>0)return;try{if(history.state&&history.state.modal){_mhSkip++;history.back();}}catch(e){}},0);
   }
 }
 
@@ -5622,10 +5741,11 @@ document.addEventListener('keydown',function(e){
   document.querySelectorAll('.modal').forEach(function(m){
     if(m.style.display==='block'||m.style.display==='flex')open=m;
   });
-  if(open&&open.id)closeModal(open.id);
+  if(open&&open.id){e.preventDefault();closeAsk(open.id);}
 });
 
 function svDoc(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var n=gv('d-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
   // id:gid() unconditionally \u2014 alone among the save functions \u2014 so \u2713 on an
   // existing document created a second row instead of correcting the first.
@@ -5644,7 +5764,7 @@ function svAud(){
   var fs=_audFndRead();
   // Michael, 03/10/2026: the number field is hidden; the count is the finding rows (an edit
   // with no new rows keeps the stored number, filled into the hidden field by the editor).
-  var r={id:_svEditId('auds')||gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d')||null,f:fs.length?fs.length:gi('a-f'),sc:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};
+  var r={id:_svEditId('auds')||gid(),n:n,a:gv('a-a'),r:gv('a-r'),d:gv('a-d')||null,f:fs.length?fs.length:(gv('a-f')===''?null:gi('a-f')),sc:gv('a-sc')===''?null:gi('a-sc'),s:gv('a-st'),sm:gv('a-sm')};
   // A past date with status "planned" is almost always an audit that was done
   // and the status was not changed (02/10/2026): then it never counts as done.
   if(r.s==='\u05de\u05ea\u05d5\u05db\u05e0\u05df'&&r.d&&r.d<=new Date().toISOString().split('T')[0]&&confirm('\u05ea\u05d0\u05e8\u05d9\u05da \u05d4\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e2\u05d1\u05e8 \u05d5\u05d4\u05e1\u05d8\u05d8\u05d5\u05e1 "\u05de\u05ea\u05d5\u05db\u05e0\u05df". \u05dc\u05e1\u05de\u05df "\u05d4\u05d5\u05e9\u05dc\u05dd"?'))r.s='\u05d4\u05d5\u05e9\u05dc\u05dd';
@@ -5657,6 +5777,7 @@ function svAud(){
   toast('\u05d1\u05d9\u05e7\u05d5\u05e8\u05ea \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;'+(ncrs.length?' ('+ncrs.length+' NCR)':''));rAud();
 }
 function openNewNcrModal(){
+  _formReset('m-ncr');
   ['ncr-id','ncr-d','ncr-loc','ncr-immediate','ncr-rc','ncr-rc-cat','ncr-success-criteria','ncr-c','ncr-o','ncr-u','ncr-sd','ncr-cd','ncr-notes'].forEach(function(i){var el=g(i);if(el)el.value='';});
   // a <select> ignores value=''; a new NCR starts at the default, and without
   // this it would keep whatever the previously-opened record had.
@@ -5672,7 +5793,7 @@ function openNewNcrModal(){
   var _rb=g('ncr-repeat');if(_rb){_rb.style.display='none';_rb.innerHTML='';}
   // A chain that was cancelled must not link the next NCR (they set it again after this).
   _nmChainPending=null;_audChainPending=null;
-  openModal('m-ncr');
+  _openFilled('m-ncr','pre');
   // Draft autosave \u2014 only for new NCRs (no ncr-id). Check for stale draft.
   _ncrDraftRestored=false;
   if(typeof _ncrDraftCheck==='function')_ncrDraftCheck();
@@ -5774,7 +5895,7 @@ function editNcr(id){
   setIf('ncr-five-why',rec.five_why);
   var sn=g('ncr-sens');if(sn)sn.checked=!!rec.sens;
   if(typeof ncrStatusChange==='function')try{ncrStatusChange();}catch(e){}
-  openModal('m-ncr');
+  _openFilled('m-ncr','edit');
   if(typeof _ncrRepeatBanner==='function')try{_ncrRepeatBanner();}catch(e){}
 }
 // The next free NCR number. Was String(DB.ncr.length+1): delete one row and
@@ -5848,7 +5969,7 @@ function svNcr(){
     p:gv('ncr-p')||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',
     ts:new Date().toISOString()
   };
-  if(id){DB.ncr=DB.ncr.map(function(r){return r.id===id?rec:r;});sbUpd('ncr',rec);}
+  if(id){_svLocal('ncr',id,rec);sbUpd('ncr',rec);}
   else{
     DB.ncr.push(rec);sbIns('ncr',rec);
     if(typeof _notifyEvent==='function' && rec.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'){
@@ -5859,13 +5980,14 @@ function svNcr(){
   var _audLinked=id?null:_audChainApply(rec);_audChainPending=null;
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' NCR: '+d.substring(0,30));
   if(!id&&typeof _ncrDraftClear==='function')_ncrDraftClear();
-  sdb();closeModal('m-ncr');rNcr();rDash();
+  sdb();closeModal('m-ncr');rNcr();rDash();if(id)_svViewRefresh('ncr',id);
   if(_nmLinked&&typeof rNm==='function')try{rNm();}catch(e){}
   if(_audLinked)try{rAud();}catch(e){}
   toast(_nmLinked?'\u05e0\u05e9\u05de\u05e8 ✓ \u05d5\u05d4\u05db\u05de\u05e2\u05d8-\u05e0\u05e4\u05d2\u05e2 \u05e1\u05d5\u05de\u05df \u05d1\u05d8\u05d9\u05e4\u05d5\u05dc':'\u05e0\u05e9\u05de\u05e8 ✓');
 }
 
 function openNewIncModal(){
+  _formReset('m-inc');
   var idEl=g('i-id');if(idEl)idEl.value='';
   var t=g('m-inc-title');if(t)t.textContent='\u05d3\u05d9\u05d5\u05d5\u05d7 \u05ea\u05d0\u05d5\u05e0\u05d4 / \u05d0\u05d9\u05e8\u05d5\u05e2';
   ['i-d','i-l','i-r','i-dy','i-dt'].forEach(function(i){var el=g(i);if(el)el.value='';});
@@ -5877,7 +5999,7 @@ function openNewIncModal(){
   if(typeof _locPopulate==='function')_locPopulate('i-location-id',null);
   var prjSel=g('i-project-id');if(prjSel&&typeof _prjOptionsHtml==='function')prjSel.innerHTML=_prjOptionsHtml(null);
   var itSel=g('i-issue-type-id');if(itSel&&typeof _itypeOptionsHtml==='function')itSel.innerHTML=_itypeOptionsHtml(null);
-  openModal('m-inc');if(typeof _incDeptList==='function')_incDeptList();
+  _openFilled('m-inc','pre');if(typeof _incDeptList==='function')_incDeptList();
   if(typeof _incDraftCheck==='function')_incDraftCheck();
   if(typeof _incDraftStart==='function')_incDraftStart();
 }
@@ -5964,7 +6086,7 @@ function editInc(id){
   if(rec.file_url){_attachUrls['inc-attach-area']=rec.file_url;_attachRender('inc-attach-area',rec.file_url,'');}
   else{_attachClear('inc-attach-area');}
   var t=g('m-inc-title');if(t)t.textContent='\u05e2\u05e8\u05d9\u05db\u05ea \u05ea\u05e7\u05e8\u05d9\u05ea';
-  openModal('m-inc');
+  _openFilled('m-inc','edit');
 }
 function svInc(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
@@ -5990,7 +6112,7 @@ function svInc(){
     // Imported from the accidents workbook (28/09): not in the form, kept.
     // rc (root cause, its own column since 29/09/2026) is set only by the investigation, kept here too.
     ['w','dept_group','src','created_at','rc'].forEach(function(k){if(prev[k]!=null&&r[k]==null)r[k]=prev[k];});
-    DB.inc=DB.inc.map(function(x){return x.id===existingId?r:x;});
+    _svLocal('inc',existingId,r);
     sbUpd('inc',r);
     addLog('\u05ea\u05e7\u05e8\u05d9\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+d.substring(0,30));
   }else{
@@ -6004,13 +6126,13 @@ function svInc(){
   ['i-id','i-d','i-l','i-r','i-dy','i-dt','i-dept','i-rep'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('inc-attach-area');
   if(!isEdit&&typeof _incDraftClear==='function')_incDraftClear();
-  toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();
+  toast('\u05d0\u05d9\u05e8\u05d5\u05e2 \u05e0\u05e9\u05de\u05e8 &#10003;');rInc();if(isEdit)_svViewRefresh('inc',existingId);
 }
 function svTr(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var w=gv('t-w'),n=gv('t-n');
   if(!w||!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e2\u05d5\u05d1\u05d3 \u05d5\u05d4\u05d3\u05e8\u05db\u05d4');return;}
-  var r={id:_svEditId('tr')||gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d')||null,e:gv('t-e')||null,sc:gi('t-sc'),s:gv('t-st'),file_url:_attachUrls['tr-attach-area']||null};
+  var r={id:_svEditId('tr')||gid(),w:w,n:n,c:gv('t-c'),d:gv('t-d')||null,e:gv('t-e')||null,sc:gv('t-sc')===''?null:gi('t-sc'),s:gv('t-st'),file_url:_attachUrls['tr-attach-area']||null};
   _svPut('tr',r);addLog('\u05d4\u05d3\u05e8\u05db\u05d4: '+w+' - '+n);sdb();closeModal('m-tr');
   ['t-w','t-n'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachClear('tr-attach-area');
@@ -6062,6 +6184,9 @@ function _ptwConIssue(name){
 }
 function _ptwConFill(){var dl=g('ptw-con-list');if(!dl)return;dl.innerHTML=(DB.ctr||[]).filter(function(c){return c&&c.n;}).map(function(c){return '<option value="'+esc(c.n)+'">';}).join('');}
 function _ptwConCheck(){var el=g('ptw-con-warn');if(!el)return '';var t=_ptwConIssue(gv('ptw-con'));el.innerHTML=t?'<span style="color:var(--bad)">\u26a0\ufe0f '+esc(t)+'</span>':'';return t;}
+// 15/10/2026: was 'PTW-'+(DB.ptw.length+1): delete one permit and the next new one is issued a
+// number a live permit already holds (the same bug _ncrMaxNum fixed for NCRs).
+function _ptwNextNum(){var mx=0;(DB.ptw||[]).forEach(function(r){var m=/^PTW-(\d+)$/.exec(String(r&&r.num||''));if(m){var v=parseInt(m[1],10);if(v>mx)mx=v;}});return 'PTW-'+String(mx+1).padStart(4,'0');}
 function svPtw(){
   var con=gv('ptw-con');if(!con){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd \u05e7\u05d1\u05dc\u05df');return;}
   function getChk(id){var el=g(id);return el&&el.checked;}
@@ -6083,7 +6208,7 @@ function svPtw(){
   if(getChk('ptw-s6'))safety.push('\u05d1\u05d9\u05d3\u05d5\u05d3 \u05d0\u05d6\u05d5\u05e8');
   if(getChk('ptw-s7'))safety.push('\u05e4\u05d9\u05e0\u05d5\u05d9 \u05d7\u05d5\u05de\u05e8\u05d9\u05dd \u05d3\u05dc\u05d9\u05e7\u05d9\u05dd');
   if(getChk('ptw-s8'))safety.push('\u05d1\u05d3\u05d9\u05e7\u05d4 \u05e1\u05d5\u05e4\u05d9\u05ea');
-  var num=gv('ptw-num')||('PTW-'+String(DB.ptw.length+1).padStart(4,'0'));
+  var num=gv('ptw-num')||_ptwNextNum();
   var r={id:_svEditId('ptw')||gid(),num:num,con:con,sup:gv('ptw-sup'),ph:gv('ptw-ph'),wkr:gv('ptw-wkr'),
     area:gv('ptw-area'),location_id:gv('ptw-location-id')||null,dep:gv('ptw-dep'),ds:gv('ptw-ds')||null,de:gv('ptw-de')||null,
     ts:gv('ptw-ts'),te:gv('ptw-te'),desc:gv('ptw-desc'),
@@ -6092,12 +6217,15 @@ function svPtw(){
     sg3n:gv('ptw-sg3n'),sg3d:gv('ptw-sg3d')||null,sg4n:gv('ptw-sg4n'),sg4d:gv('ptw-sg4d')||null,
     s:gv('ptw-st')};
   _svPut('ptw',r);
+  var _savedId=r.id;
   addLog('\u05d4\u05e8\u05e9\u05d0\u05ea \u05e2\u05d1\u05d5\u05d3\u05d4 \u05e0\u05d5\u05e1\u05e4\u05d4: '+num);sdb();closeModal('m-ptw');
   var ci=_ptwConIssue(con);
   var cw=g('ptw-con-warn');if(cw)cw.innerHTML='';
   toast(ci?'\u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4, \u05e9\u05d9\u05dd \u05dc\u05d1: '+ci:'\u05d4\u05e8\u05e9\u05d0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4 &#10003;');rPtw();
+  return _savedId;
 }
 function svPpe(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var ty=gv('ppe-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
   var r={id:_svEditId('ppe')||gid(),ty:ty,w:gv('ppe-w'),m:gv('ppe-m'),d:gv('ppe-d')||null,e:gv('ppe-e')||null,c:gv('ppe-c'),file_url:_attachUrls['ppe-attach-area']||null};
   _svPut('ppe',r);addLog('\u05e6\u05d9\u05d5\u05d3 \u05de\u05d2\u05df \u05e0\u05e9\u05de\u05e8');sdb();closeModal('m-ppe');
@@ -6121,7 +6249,7 @@ function svIns(){
 }
 function svDrl(){
   var ty=gv('drl-ty');if(!ty){alert('\u05d9\u05e9 \u05dc\u05d1\u05d7\u05d5\u05e8');return;}
-  var r={id:_svEditId('drl')||gid(),ty:ty,d:gv('drl-d')||null,p:gi('drl-p'),dur:gi('drl-dur'),sc:gi('drl-sc'),n:gv('drl-n')};
+  var r={id:_svEditId('drl')||gid(),ty:ty,d:gv('drl-d')||null,p:gv('drl-p')===''?null:gi('drl-p'),dur:gv('drl-dur')===''?null:gi('drl-dur'),sc:gv('drl-sc')===''?null:gi('drl-sc'),n:gv('drl-n')};
   _svPut('drl',r);
   var fs=_drlFndRead();if(!DB.tasks)DB.tasks=[];
   fs.forEach(function(x){var t={id:gid(),title:x.t,assignee:x.a,due:x.u,status:_TSK_OPEN,priority:_TSK_PRI_DEF,source_table:'drl',source_id:r.id,notes:null,ts:new Date().toISOString()};DB.tasks.push(t);sbIns('tasks',t);});
@@ -6156,6 +6284,7 @@ function _drlFndBadge(id){
   return '<div style="font-size:11px;color:'+(op?'var(--bad)':'var(--t3)')+'">\u05de\u05de\u05e6\u05d0\u05d9\u05dd: '+op+' \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \u05de\u05ea\u05d5\u05da '+ts.length+'</div>';
 }
 function svCtr(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var n=gv('ctr-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
   var r={id:_svEditId('ctr')||gid(),n:n,ty:gv('ctr-ty'),c:gv('ctr-c'),ph:gv('ctr-ph'),e:gv('ctr-e')||null,tr:gv('ctr-tr'),s:gv('ctr-s'),file_url:_attachUrls['ctr-attach-area']||null};
   _svPut('ctr',r);addLog('\u05e7\u05d1\u05dc\u05df \u05e0\u05e9\u05de\u05e8: '+n);sdb();closeModal('m-ctr');
@@ -6163,12 +6292,14 @@ function svCtr(){
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rCtr();
 }
 function svWst(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var d=gv('wst-d');if(!d){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da');return;}
-  var r={id:_svEditId('wst')||gid(),d:d,ty:gv('wst-ty'),q:gf('wst-q'),c:gv('wst-c'),h:gv('wst-h'),site:gv('wst-site'),cert:gv('wst-cert'),t:gv('wst-t'),file_url:_attachUrls['wst-attach-area']||null};
+  var r={id:_svEditId('wst')||gid(),d:d,ty:gv('wst-ty'),q:gv('wst-q')===''?null:gf('wst-q'),c:gv('wst-c'),h:gv('wst-h'),site:gv('wst-site'),cert:gv('wst-cert'),t:gv('wst-t'),file_url:_attachUrls['wst-attach-area']||null};
   _svPut('wst',r);_attachClear('wst-attach-area');addLog('\u05e4\u05e1\u05d5\u05dc\u05ea \u05ea\u05d5\u05e2\u05d3\u05d4');sdb();closeModal('m-wst');
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rWst();
 }
 function svHzm(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var n=gv('hzm-n');if(!n){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05e9\u05dd');return;}
   var r={id:_svEditId('hzm')||gid(),n:n,un:gv('hzm-un'),hs:gv('hzm-hs'),q:gv('hzm-q')===''?null:gf('hzm-q'),loc:gv('hzm-loc'),location_id:gv('hzm-location-id')||null,ms:gv('hzm-ms')||null,em:gv('hzm-em'),file_url:_attachUrls['hzm-attach-area']||null};
   _svPut('hzm',r);_attachClear('hzm-attach-area');addLog('\u05d7\u05d5\u05de\u05e8 \u05de\u05e1\u05d5\u05db\u05df \u05e0\u05d5\u05e1\u05e3: '+n);sdb();closeModal('m-hzm');
@@ -6181,18 +6312,19 @@ function svEnv(){
   toast('\u05e0\u05e9\u05de\u05e8 &#10003;');rEnv();
 }
 function openNewLegModal(){
+  _formReset('m-leg');
   ['leg-id','leg-s','leg-law-num','leg-topic','leg-src-url','leg-summary','leg-full-text','leg-u','leg-last-review','leg-o','leg-c-date','leg-c-by'].forEach(function(i){var el=g(i);if(el)el.value='';});
   _attachUrls['leg-evidence-area']=null;
   if(typeof _attachClear==='function')_attachClear('leg-evidence-area');
   var lt=g('leg-law-type');if(lt)lt.value='';
-  openModal('m-leg');
+  _openFilled('m-leg','pre');
 }
 function editLeg(id){
   var rec=(DB.leg||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   g('leg-id').value=rec.id;
   var setIf=function(elId,v){_selSet(g(elId),v||'');};
-  setIf('leg-s',rec.s);setIf('leg-d',rec.d);setIf('leg-a',rec.a||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4');
+  setIf('leg-s',rec.s);setIf('leg-a',rec.a||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4');
   setIf('leg-c',rec.c||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da');setIf('leg-u',rec.u);setIf('leg-o',rec.o);
   setIf('leg-law-type',rec.law_type);setIf('leg-law-num',rec.law_num);
   setIf('leg-topic',rec.topic);setIf('leg-src-url',rec.src_url);
@@ -6203,15 +6335,16 @@ function editLeg(id){
   setIf('leg-c-date',rec.c_date);setIf('leg-c-by',rec.c_by);
   _attachUrls['leg-evidence-area']=rec.c_evidence_url||null;
   if(rec.c_evidence_url&&typeof _attachRender==='function')_attachRender('leg-evidence-area',rec.c_evidence_url,'');
-  openModal('m-leg');
+  else if(typeof _attachClear==='function')_attachClear('leg-evidence-area');   // not the previous law's file
+  _openFilled('m-leg','edit');
 }
 function svLeg(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var s=gv('leg-s');if(!s){alert('\u05d9\u05e9 \u05dc\u05d4\u05d6\u05d9\u05df \u05de\u05e7\u05d5\u05e8 / \u05e9\u05dd \u05d4\u05d7\u05d5\u05e7');return;}
   var id=g('leg-id')&&g('leg-id').value;
   var r={
     id:id||gid(),
     s:s,
-    d:gv('leg-d')||null,
     a:gv('leg-a')||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4',
     c:gv('leg-c')||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da',
     u:gv('leg-u')||null,
@@ -6242,7 +6375,7 @@ function svLeg(){
     r.c_by=_prev.c_by||null;
   }
   if(id){
-    DB.leg=DB.leg.map(function(x){return x.id===id?r:x;});
+    _svLocal('leg',id,r);
     sbUpd('leg',r);
     addLog('\u05e2\u05d3\u05db\u05d5\u05df \u05d3\u05e8\u05d9\u05e9\u05d4 \u05e8\u05d2\u05d5\u05dc\u05d8\u05d5\u05e8\u05d9\u05ea: '+s.substring(0,30));
   }else{
@@ -6251,7 +6384,7 @@ function svLeg(){
     addLog('\u05d3\u05e8\u05d9\u05e9\u05d4 \u05e8\u05d2\u05d5\u05dc\u05d8\u05d5\u05e8\u05d9\u05ea \u05e0\u05d5\u05e1\u05e4\u05d4: '+s.substring(0,30));
   }
   sdb();closeModal('m-leg');
-  toast('\u05e0\u05e9\u05de\u05e8 \u2713');rLeg();
+  toast('\u05e0\u05e9\u05de\u05e8 \u2713');rLeg();if(id)_svViewRefresh('leg',id);
 }
 // Curated list of common Israeli safety + environment laws and regulations.
 // Only metadata (name, official identifier, link to Nevo). The full text /
@@ -6365,9 +6498,9 @@ function openLegStarterModal(){
   var m=g('m-leg-starter');var ov=g('ov-leg-starter');
   if(!m||!ov){
     // First call: build the modal in the DOM
-    var html='<div class="overlay" id="ov-leg-starter" onclick="closeModal(\'m-leg-starter\')"></div>'+
+    var html='<div class="overlay" id="ov-leg-starter" onclick="closeAsk(\'m-leg-starter\')"></div>'+
       '<div class="modal" id="m-leg-starter" style="display:none;max-width:560px">'+
-      '<button class="close-btn" onclick="closeModal(\'m-leg-starter\')">&#10005;</button>'+
+      '<button class="close-btn" onclick="closeAsk(\'m-leg-starter\')">&#10005;</button>'+
       '<div class="modal-title">\u05d4\u05d5\u05e1\u05e3 \u05d7\u05d5\u05e7\u05d9\u05dd \u05de\u05d5\u05de\u05dc\u05e6\u05d9\u05dd</div>'+
       '<div style="font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.5">\u05d1\u05d7\u05e8 \u05d0\u05ea \u05d4\u05d7\u05d5\u05e7\u05d9\u05dd \u05dc\u05d4\u05d5\u05e1\u05d9\u05e3 - \u05d9\u05d9\u05d5\u05e6\u05e8\u05d5 \u05d2\u05dc\u05d9\u05d9\u05d5\u05ea \u05e8\u05d9\u05e7\u05d5\u05ea \u05e2\u05dd \u05e9\u05dd, \u05de\u05e1\u05e4\u05e8 \u05d7\u05d5\u05e7, \u05ea\u05d7\u05d5\u05dd \u05d5\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc-\u05e0\u05d1\u05d5. \u05ea\u05de\u05dc\u05d0 \u05d0\u05ea \u05d4\u05ea\u05e7\u05e6\u05d9\u05e8 \u05d5\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d4\u05de\u05dc\u05d0 \u05d1\u05e2\u05e6\u05de\u05da \u05de\u05d4\u05de\u05e7\u05d5\u05e8.</div>'+
       '<div id="leg-starter-list" style="max-height:50vh;overflow-y:auto"></div>'+
@@ -6462,13 +6595,13 @@ function legAskAI(){
   });
 }
 function ptwPrint(){
-  var num=gv('ptw-num')||('PTW-'+String(DB.ptw.length+1).padStart(4,'0'));
   var con=gv('ptw-con');
   if(!con){alert('\u05de\u05dc\u05d0 \u05e9\u05dd \u05e7\u05d1\u05dc\u05df \u05dc\u05e4\u05e0\u05d9 \u05d4\u05d3\u05e4\u05e1\u05d4');return;}
   // Save first
-  svPtw();
-  // Open print view of last saved PTW
-  var p=DB.ptw[DB.ptw.length-1];
+  // The permit just saved, by its id: the last row of DB.ptw is a different permit when this
+  // one was opened through \u270e (15/10/2026).
+  var _pid=svPtw();
+  var p=_pid&&(DB.ptw||[]).filter(function(x){return x.id===_pid;})[0];
   if(!p)return;
   var w=window.open('','_blank','width=800,height=700');
   if(!w){alert('\u05d7\u05e1\u05d5\u05dd Popup');return;}
@@ -10574,7 +10707,7 @@ function _nmDraftCheck(){
 function svNm(){
   if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4');return;}
   var descr=gv('nm-desc');if(!descr){toast('\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05d5\u05d0 \u05e9\u05d3\u05d4 \u05d7\u05d5\u05d1\u05d4');return;}
-  var r={id:_svEditId('near_miss')||gid(),d:gv('nm-d')||new Date().toISOString().split('T')[0],t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev')||null,typ:gv('nm-typ')||null,s:gv('nm-s')||'\u05e4\u05ea\u05d5\u05d7',notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
+  var r={id:_svEditId('near_miss')||gid(),d:gv('nm-d')||_ilToday(),t:gv('nm-t'),descr:descr,area:gv('nm-area'),location_id:gv('nm-location-id')||null,rep:gv('nm-rep'),sev:gv('nm-sev')||null,typ:gv('nm-typ')||null,s:gv('nm-s')||'\u05e4\u05ea\u05d5\u05d7',notes:gv('nm-notes'),photo_url:_attachUrls['nm-photo-area']||null,ts:new Date().toISOString()};
   if(!DB.near_miss)DB.near_miss=[];
   _svPut('near_miss',r);addLog('\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2: '+descr.substring(0,30));sdb();
   if(typeof _nmDraftClear==='function')_nmDraftClear();
@@ -10861,7 +10994,7 @@ function svRound(){
     ts:new Date().toISOString()
   };
   if(!DB.rounds)DB.rounds=[];
-  if(id){DB.rounds=DB.rounds.map(function(x){return x.id===id?r:x;});sbUpd('rounds',r);}
+  if(id){_svLocal('rounds',id,r);sbUpd('rounds',r);}
   else{DB.rounds.push(r);sbIns('rounds',r);}
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 ('+theme+'): '+d);sdb();
   closeModal('m-round');
@@ -10875,7 +11008,7 @@ window._roundOpenNew=function(){
   openModal('m-round');
   setTimeout(function(){
     if(g('round-id'))g('round-id').value='';
-    var dEl=g('round-d');if(dEl&&!dEl.value)dEl.value=new Date().toISOString().split('T')[0];
+    var dEl=g('round-d');if(dEl&&!dEl.value)dEl.value=_ilToday();
     var insp=g('round-inspector');if(insp)insp.value='';
     var nt=g('round-notes');if(nt)nt.value='';
     _roundPopulateThemeSelect();
@@ -11110,7 +11243,9 @@ function svThz(){
   var r={id:editId||('th-'+gid()),d:gv('thz-d')||null,tour_no:parseInt(gv('thz-tour'),10)||null,dept:dept,loc:gv('thz-loc')||null,
     descr:descr,sev:gv('thz-sev')||null,resp:gv('thz-resp')||null,resp2:(gv('thz-resp2')&&gv('thz-resp2')!==gv('thz-resp'))?gv('thz-resp2'):null,action:gv('thz-action')||null,due:gv('thz-due')||(editId?null:_thzDueFor(gv('thz-sev'),gv('thz-d'))),
     s:s,closed_d:closed,notes:gv('thz-notes')||null};
-  var ph=_attachUrls['thz-attach-area'];if(ph)r.photo_url=ph;
+  // \u270e loads the stored photo into the form (_EDIT_MODS af), so the form's value is the answer:
+  // a photo removed while editing is removed (15/10/2026; it used to stay).
+  var ph=_attachUrls['thz-attach-area'];r.photo_url=ph||null;
   if(!editId){
     r.n=(DB.tour_hazards||[]).reduce(function(m,x){return Math.max(m,+x.n||0);},0)+1;
     r.photo_url=ph||null;r.ts=new Date().toISOString();
@@ -13369,6 +13504,7 @@ function tskFilter(f){window._tskFilter=f;window._tskSel={};['all','today','open
 function _tskPriBadge(p){var m={};m['\u05e7\u05e8\u05d9\u05d8\u05d9']='bR';m['\u05d2\u05d1\u05d5\u05d4']='bY';m['\u05e8\u05d2\u05d9\u05dc']='bX';m['\u05e0\u05de\u05d5\u05da']='bG';return '<span class="b '+(m[p]||'bX')+'">'+(p?esc(p):'-')+'</span>';}
 function _tskSrcLabel(tbl){var m={ncr:'\u05d0\u05d9 \u05d4\u05ea\u05d0\u05de\u05d4',inc:'\u05ea\u05e7\u05e8\u05d9\u05ea',rsk:'\u05e1\u05d9\u05db\u05d5\u05df',near_miss:'\u05db\u05de\u05e2\u05d8 \u05d5\u05e0\u05e4\u05d2\u05e2',exp:'\u05ea\u05e4\u05d5\u05d2\u05d4',equip_inspections:'\u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3',ppe:'PPE',tr:'\u05d4\u05d3\u05e8\u05db\u05d4',docs:'\u05de\u05e1\u05de\u05da',ctr:'\u05e7\u05d1\u05dc\u05df',inspection_types:'\u05d1\u05d3\u05d9\u05e7\u05d4 \u05d7\u05d5\u05d6\u05e8\u05ea',trustee_reports:'\u05e0\u05d0\u05de\u05df \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea',mgmt_reviews:'\u05e1\u05e7\u05d9\u05e8\u05ea \u05d4\u05e0\u05d4\u05dc\u05d4',drl:'\u05ea\u05e8\u05d2\u05d9\u05dc \u05d7\u05d9\u05e8\u05d5\u05dd'};return m[tbl]||tbl;}
 function openTskModal(srcTbl,srcId){
+  _formReset('m-tsk');
   ['tsk-title','tsk-assignee','tsk-due','tsk-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
   var st=g('tsk-status');if(st)st.value=_TSK_OPEN;
   var pr=g('tsk-priority');if(pr)pr.value=_TSK_PRI_DEF;
@@ -13402,7 +13538,7 @@ function openTskModal(srcTbl,srcId){
       if(['ppe','tr','docs','ctr','equip_inspections'].indexOf(srcTbl)>=0&&pr)pr.value='\u05d2\u05d1\u05d5\u05d4';
     }
   }else if(lbl){lbl.style.display='none';}
-  openModal('m-tsk');
+  _openFilled('m-tsk','pre');
 }
 function _populateTskParent(currentId){
   var sel=g('tsk-parent');if(!sel)return;
@@ -13438,7 +13574,7 @@ function svTsk(){
   if(_st!==_TSK_DONE&&_st!==_TSK_CANC)_cd=null;   // reopened: it is not closed any more
   var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:_st,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,project_id:gv('tsk-project-id')||null,notes:gv('tsk-notes')||null,closed_date:_cd,ext_id:(_old.ext_id||null),ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
-  if(existingIdx>=0){DB.tasks[existingIdx]=r;sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
+  if(existingIdx>=0){_svLocal('tasks',id,r);sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
   // BACKLOG 12.8 (09/10/2026): an urgent task with no target cannot be late, so nobody is chased
   // for it (measured: 3 open). A warning, not a block, like the document one (12.4).
@@ -13462,7 +13598,7 @@ function editTsk(id){
     if(vw)vw.textContent=_tskSrcLabel(rec.source_table)+': '+short;
     if(lbl)lbl.style.display='';
   }else if(lbl){lbl.style.display='none';}
-  openModal('m-tsk');
+  _openFilled('m-tsk','edit');
 }
 var _VIRT_LEAD_DAYS=30;
 function _collectVirtualTasks(){
@@ -14863,7 +14999,7 @@ function rEasp(){
         (dueRev?'<span style="background:var(--c-amber-100-2,#fef3c7);border:1px solid var(--c-orange-650,#b45309);border-radius:14px;padding:3px 10px;color:var(--c-orange-700,#92400e)">\u23f0 \u05ea\u05d0\u05e8\u05d9\u05da \u05d1\u05e7\u05e8\u05d4 \u05e2\u05d1\u05e8: <strong>'+dueRev+'</strong></span>':'');
     }
   }catch(e){}
-  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et" data-label=""><span class="et-ic">\ud83c\udf33</span>\u05d0\u05d9\u05df \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-easp\')">+ \u05d4\u05d9\u05d1\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
+  if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et" data-label=""><span class="et-ic">\ud83c\udf33</span>\u05d0\u05d9\u05df \u05d4\u05d9\u05d1\u05d8\u05d9\u05dd \u05e1\u05d1\u05d9\u05d1\u05ea\u05d9\u05d9\u05dd<br><button class="et-cta" onclick="_easpOpenNew()">+ \u05d4\u05d9\u05d1\u05d8 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
   tb.innerHTML=rows.slice().sort(function(a,b){
     var ar=(a.p_curr||0)*(a.sv_curr||0);var br=(b.p_curr||0)*(b.sv_curr||0);
     return br-ar;
@@ -14878,17 +15014,27 @@ function rEasp(){
   }).join('');
 }
 function svEasp(){
+  if(_attachBusy()){toast('\u05de\u05de\u05ea\u05d9\u05df \u05dc\u05e1\u05d9\u05d5\u05dd \u05d4\u05e2\u05dc\u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5');return;}
   var aspect=gv('ea-aspect');
   if(!aspect){toast('\u05d4\u05d9\u05d1\u05d8 \u05d4\u05d5\u05d0 \u05d7\u05d5\u05d1\u05d4');return;}
   var id=gv('ea-id')||gid();
   var existingIdx=(DB.env_aspects||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,lifecycle:gv('ea-lifecycle')||null,control_type:gv('ea-control')||null,direction:gv('ea-direction')||null,impact:gv('ea-impact')||null,controls:gv('ea-controls')||null,p_curr:parseInt(gv('ea-pcurr'))||null,sv_curr:parseInt(gv('ea-svcurr'))||null,additional_controls:gv('ea-addctrl')||null,p_pot:parseInt(gv('ea-ppot'))||null,sv_pot:parseInt(gv('ea-svpot'))||null,status:gv('ea-status')||null,owner:gv('ea-owner')||null,review_date:gv('ea-review')||null,explanation:gv('ea-explanation')||null,legal_ref:gv('ea-legal')||null,notes:gv('ea-notes')||null,file_url:_attachUrls['ea-attach-area']||null,ts:new Date().toISOString()};
   if(!DB.env_aspects)DB.env_aspects=[];
-  if(existingIdx>=0){DB.env_aspects[existingIdx]=r;sbUpd('env_aspects',r);}
+  if(existingIdx>=0){_svLocal('env_aspects',id,r);sbUpd('env_aspects',r);}
   else{DB.env_aspects.push(r);sbIns('env_aspects',r);}
   sdb();closeModal('m-easp');toast('\u05e0\u05e9\u05de\u05e8 \u2713');
   if(typeof _attachClear==='function')_attachClear('ea-attach-area');
-  rEasp();
+  var eaId=g('ea-id');if(eaId)eaId.value='';   // the next "+ add" must not overwrite this one
+  rEasp();if(existingIdx>=0)_svViewRefresh('env_aspects',id);
+}
+// "+ add aspect": a new record. A bare openModal kept ea-id from the last edit, so the new
+// aspect overwrote that one and lost its file (15/10/2026).
+function _easpOpenNew(){
+  _formReset('m-easp');
+  var e=g('ea-id');if(e)e.value='';
+  _attachUrls['ea-attach-area']=null;if(typeof _attachClear==='function')_attachClear('ea-attach-area');
+  _openFilled('m-easp','pre');
 }
 function editEasp(id){
   var rec=(DB.env_aspects||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
@@ -14904,7 +15050,7 @@ function editEasp(id){
   setIf('ea-explanation',rec.explanation);setIf('ea-legal',rec.legal_ref);setIf('ea-notes',rec.notes);
   if(rec.file_url){_attachUrls['ea-attach-area']=rec.file_url;_attachRender('ea-attach-area',rec.file_url,(rec.file_url.split('/').pop()||'').split('?')[0]);}
   else{if(typeof _attachClear==='function')_attachClear('ea-attach-area');}
-  openModal('m-easp');
+  _openFilled('m-easp','edit');
 }
 function rLoc(){
   var box=g('loc-tree');if(!box)return;
@@ -20931,9 +21077,9 @@ window.addEventListener('pagehide',function(){try{_truDraftSave();}catch(e){}});
 // standalone PWA simply exited, tour and all. Opening the form pushes one;
 // back closes the form (draft saved) and the trustee stays on the screen.
 var _truHist=false,_truHistSkip=0;
+// openModal gives every form its own history entry now (_mhPush); the trustee form uses that one.
 function _truHistPush(){
-  if(_truHist)return;
-  try{history.pushState({truModal:1},'');_truHist=true;}catch(e){}
+  return;
 }
 // Called first by the global popstate handler; true = handled here.
 function _truPopHook(e){
@@ -20949,8 +21095,7 @@ function _truPopHook(e){
 function _truClose(sent){
   if(!sent){try{_truDraftSave();}catch(e){}}
   _truDraftStop();
-  closeModal('m-tru');
-  if(_truHist){_truHist=false;_truHistSkip=Date.now();try{history.back();}catch(e){_truHistSkip=0;}}
+  closeModal('m-tru');   // closeModal drops the form's history entry
 }
 function _truDraftStop(){if(_TRU_DRAFT_TIMER){clearInterval(_TRU_DRAFT_TIMER);_TRU_DRAFT_TIMER=null;}}
 function _truDraftClear(){_truDraftStop();try{localStorage.removeItem(_TRU_DRAFT_KEY);}catch(e){}}
@@ -22041,7 +22186,7 @@ window._truLogExportXlsx=function(){
 // fallback for while the server is not connected.
 var _truSrv=null,_truSrvAt=0,_truSrvBusy=false;
 function _truApi(path,body){
-  return fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})})
+  return _fetchT(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify(body||{})},30000)
     .then(function(r){return r.json().catch(function(){return {error:'HTTP '+r.status};}).then(function(j){if(!r.ok&&!j.error)j.error='HTTP '+r.status;return j;});});
 }
 function _truSrvRefresh(force){
@@ -22529,7 +22674,7 @@ function _empGateAdmitOffline(){
   try{if(typeof empToast==='function')empToast('\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8 \u05dc\u05e9\u05e8\u05ea - \u05e0\u05db\u05e0\u05e1\u05ea \u05e2\u05dd \u05d4\u05e7\u05d5\u05d3 \u05e9\u05d0\u05d5\u05e9\u05e8 \u05e7\u05d5\u05d3\u05dd \u05d1\u05d8\u05dc\u05e4\u05d5\u05df');}catch(e){}
 }
 function _empGateAsk(code){
-  return fetch('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
+  return _fetchT('/api/trustee-gate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})},20000)
     .then(function(r){return r.json().catch(function(){return {};}).then(function(j){return {status:r.status,ok:r.ok,data:j};});});
 }
 function _empGateShow(){
@@ -24769,7 +24914,7 @@ function capTypeLabel(t){
 }
 
 function capDispatch(j){
-  var today=new Date().toISOString().split('T')[0];
+  var today=_ilToday();
   var d=j.date||today, t=j.time||'', desc=j.description||'', area=j.area||'';
   var rep=j.reporter||'', sev=j.severity||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9', notes=j.notes||j.suggested_action||'';
   var sevNm={'\u05e7\u05d8\u05df':'\u05e7\u05d8\u05d9\u05df','\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9':'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9','\u05d7\u05de\u05d5\u05e8':'\u05d7\u05de\u05d5\u05e8','\u05e7\u05e8\u05d9\u05d8\u05d9':'\u05d7\u05de\u05d5\u05e8'}[sev] || sev;
@@ -24781,7 +24926,7 @@ function capDispatch(j){
       openModal('m-nm');
       _setIf('nm-d',d); _setIf('nm-t',t); _setIf('nm-desc',desc); _setIf('nm-area',area);
       _setIf('nm-rep',rep); _setIf('nm-sev',sevNm); _setIf('nm-notes',notes);
-      if(_capPhotoUrl) _attachUrls['nm-photo-area']=_capPhotoUrl;
+      if(_capPhotoUrl){_attachUrls['nm-photo-area']=_capPhotoUrl;_attachRender('nm-photo-area',_capPhotoUrl,'');}
       break;
     case 'inc':
       // The form's ids are i-*: inc-* filled nothing (01/10/2026). openNewIncModal clears i-id,
@@ -24789,7 +24934,7 @@ function capDispatch(j){
       openNewIncModal();
       _setIf('i-dt',d+(t?'T'+t:'')); _setIf('i-d',desc);
       _setIf('i-sv',sev==='\u05e7\u05e8\u05d9\u05d8\u05d9'?'\u05d7\u05de\u05d5\u05e8':sev); _setIf('i-l',area); _setIf('i-r',rep||notes);
-      if(_capPhotoUrl) _attachUrls['inc-attach-area']=_capPhotoUrl;
+      if(_capPhotoUrl){_attachUrls['inc-attach-area']=_capPhotoUrl;_attachRender('inc-attach-area',_capPhotoUrl,'');}
       break;
     case 'ncr':
       // openNewNcrModal clears ncr-id (02/10/2026, lesson 38): a bare openModal kept
@@ -24800,16 +24945,19 @@ function capDispatch(j){
       if(typeof _ncrAutoDue==='function')_ncrAutoDue();
       break;
     case 'eqi':
-      openModal('m-eqi');
-      var _eqf=g('eqi-id');if(_eqf)_eqf.value='';  // same as ncr: never keep the last edited id
+      // The new-equipment opener resets every field and the file list; svEqi reads the photo
+      // from _eqiFiles, never from _attachUrls (15/10/2026: the captured photo was lost).
+      if(typeof _eqiOpenNew==='function')_eqiOpenNew();else openModal('m-eqi');
       _setIf('eqi-n',desc); _setIf('eqi-loc',area); _setIf('eqi-notes',notes); _setIf('eqi-d',d);
-      if(_capPhotoUrl) _attachUrls['eqi-photo-area']=_capPhotoUrl;
+      if(_capPhotoUrl&&typeof _eqiFiles!=='undefined'){_eqiFiles.push({url:_capPhotoUrl,name:'capture.jpg',mime:'image/jpeg'});try{_eqiRenderFiles();}catch(e){}}
       break;
     case 'ppe':
-      openModal('m-ppe'); _setIf('ppe-n',desc); _setIf('ppe-w',rep);
+      // The PPE form has no item-name field (ppe-n filled nothing): the description goes to the spec.
+      openModal('m-ppe'); _setIf('ppe-w',rep); _setIf('ppe-m',desc); _setIf('ppe-d',d);
       break;
     case 'tr':
-      openModal('m-tr'); _setIf('tr-n',desc); _setIf('tr-w',rep); _setIf('tr-d',d);
+      // The training form's ids are t-*: tr-* filled nothing.
+      openModal('m-tr'); _setIf('t-n',desc); _setIf('t-w',rep); _setIf('t-d',d);
       break;
     default:
       openModal('m-nm');
@@ -24827,7 +24975,13 @@ function capDispatch(j){
 var _nmPhotoUrl=null,_eqiPhotoUrl=null;
 var _PHOTO_BUCKET='incidents-photos';
 function _imgCompress(file,maxPx,q,cb){
+  // A photo the phone cannot decode (HEIC from an Android gallery, a 40MB original out of memory)
+  // called nothing back: the slot stayed on «מעלה...» and the whole tour was blocked (15/10/2026).
+  // Now every way out answers once, with the original file when it cannot be shrunk.
+  var cb0=cb,once=false;cb=function(b,d){if(once)return;once=true;clearTimeout(tt);cb0(b,d);};
+  var fail=function(){cb(file,'');},tt=setTimeout(fail,20000);
   var r=new FileReader();
+  r.onerror=fail;
   r.onload=function(e){
     var img=new Image();
     img.onload=function(){
@@ -24836,8 +24990,9 @@ function _imgCompress(file,maxPx,q,cb){
       var c=document.createElement('canvas');c.width=w;c.height=h;
       // JPEG has no transparency: a transparent PNG (a signature, a logo) came out on black (15/10/2026). White first.
       var cx=c.getContext('2d');cx.fillStyle='#ffffff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);
-      c.toBlob(function(blob){cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);
+      try{c.toBlob(function(blob){if(!blob){fail();return;}cb(blob,c.toDataURL('image/jpeg',q));},'image/jpeg',q);}catch(x){fail();}
     };
+    img.onerror=fail;
     img.src=e.target.result;
   };
   r.readAsDataURL(file);
@@ -24907,11 +25062,21 @@ function _attachRenderPending(areaId,blob,pid){
 
 // ---- offline photo queue: send ----
 // Runs at the head of every outbox drain.
+// Photos still in the phone's queue after the last send (pid -> 1). A NEW row that carries one of
+// them waits for it (15/10/2026): sent first, it could never be fixed, because the trustee's
+// anonymous session may insert but not update, and the photo was lost. A pid not in the queue any
+// more (cleared, over the cap) does not hold the row back: the report goes without the photo.
+var _phLeft={};
+function _obWaitsPhoto(op){
+  if(!op||op.op!=='ins'||!op.row)return false;
+  return Object.keys(op.row).some(function(k){var v=op.row[k];return typeof v==='string'&&v.indexOf(_PH_PREFIX)===0&&_phLeft[v.slice(_PH_PREFIX.length)];});
+}
 function _phDrain(){
   if(_phBusy||!SB_ON||(typeof navigator!=='undefined'&&navigator.onLine===false))return Promise.resolve();
   return new Promise(function(res){
     _phAll(function(list){
       _phN=list.length;
+      _phLeft={};list.forEach(function(rec){if(rec&&rec.pid)_phLeft[rec.pid]=1;});
       if(!list.length){res();return;}
       _phBusy=true;
       var p=Promise.resolve();
@@ -24921,7 +25086,7 @@ function _phDrain(){
             try{
               _fileUpload(rec.blob,rec.prefix,function(url){
                 // No url means the connection is still down: leave it queued.
-                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);}
+                if(url){_phResolve(rec.pid,url);_phDel(rec.pid);delete _phLeft[rec.pid];}
                 done();
               });
             }catch(e){done();}
@@ -24961,6 +25126,9 @@ function _phResolve(pid,url){
   });
   // And a form may still be open with this area attached.
   try{Object.keys(_attachUrls).forEach(function(a){if(_attachUrls[a]===token)_attachUrls[a]=url;});}catch(e){}
+  // ...and the trustee's saved draft (15/10/2026): restored after the app was killed, it still held
+  // the placeholder of a photo already uploaded and deleted from the queue, so nothing fixed it.
+  try{var _dr=localStorage.getItem(_TRU_DRAFT_KEY);if(_dr&&_dr.indexOf(token)>=0)localStorage.setItem(_TRU_DRAFT_KEY,_dr.split(JSON.stringify(token).slice(1,-1)).join(JSON.stringify(url).slice(1,-1)));}catch(e){}
   try{sdb();}catch(e){}
 }
 var _attachUrls={};  // keyed by areaId
@@ -25848,7 +26016,7 @@ window._mailPrefsOpen=function(){
 function _mailPrefsBuild(){
   var ov=document.createElement('div');ov.className='overlay';ov.id='ov-mail-prefs';ov.setAttribute('onclick',"closeModal('m-mail-prefs')");
   var m=document.createElement('div');m.className='modal';m.id='m-mail-prefs';m.style.display='none';
-  m.innerHTML='<button class="close-btn" onclick="closeModal(\'m-mail-prefs\')">&#10005;</button>'+
+  m.innerHTML='<button class="close-btn" onclick="closeAsk(\'m-mail-prefs\')">&#10005;</button>'+
     '<div class="modal-title">📧 \u05d4\u05d2\u05d3\u05e8\u05d5\u05ea \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05d9\u05dd</div>'+
     '<div id="mail-prefs-body" style="font-size:13px"></div>'+
     '<div class="modal-footer" style="flex-wrap:wrap;gap:6px">'+
@@ -27157,7 +27325,7 @@ function _fileUpload(file,prefix,cb){
   function doUpload(body,ct){
     _sbAuth().then(function(){
       if(!_sbToken)throw new Error('no session');
-      return fetch(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body});
+      return _fetchT(url,{method:'POST',headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken,'Content-Type':ct,'cache-control':'max-age=31536000'},body:body},45000);
     })
       .then(function(r){
         if(!r.ok)return r.text().then(function(t){cb(null,r.status,t);});
@@ -27167,7 +27335,7 @@ function _fileUpload(file,prefix,cb){
       })
       .catch(function(e){cb(null,'net',e&&e.message);});
   }
-  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,'image/jpeg');});
+  if(isImg)_imgCompress(file,1200,0.85,function(blob){doUpload(blob,blob===file?(file.type||'application/octet-stream'):'image/jpeg');});
   else doUpload(file,file.type||'application/octet-stream');
 }
 
@@ -27190,13 +27358,20 @@ function _attachPick(areaId,prefix){
     var file=inp.files&&inp.files[0];if(!file)return;
     var area=g(areaId);if(area)area.innerHTML='<div style="font-size:12px;color:var(--t3)">\u05de\u05e2\u05dc\u05d4...</div>';
     _attachPending[areaId]=true;
+    // 15/10/2026: an upload that ends after its form was saved, closed or cleared belongs to
+    // nobody. It used to write _attachUrls[area] anyway, and the NEXT new record got the file.
+    var tok=_attachTok[areaId]=(_attachTok[areaId]||0)+1;
+    var stale=function(){return _attachTok[areaId]!==tok;};
     _fileUpload(file,prefix,function(url,errStatus,errBody){
+      if(stale())return;
       if(url){_attachPending[areaId]=false;_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);return;}
       // Network failure: keep the photo on the device rather than lose it.
       // Anything else (403, file too large) is a real answer from the server
       // and waiting will not change it, so it is still shown as an error.
       if(errStatus==='net'&&typeof _phQueue==='function'){
         _phQueue(areaId,file,prefix,function(ok,why){
+          // The queue already pointed the area at the stored photo: undo it, and drop the photo.
+          if(stale()){if(ok&&_phIs(_attachUrls[areaId]))_attachClear(areaId,true);return;}
           _attachPending[areaId]=false;
           if(ok)return;
           _attachUrls[areaId]=null;
@@ -27211,9 +27386,26 @@ function _attachPick(areaId,prefix){
   inp.click();
 }
 
-function _attachClear(areaId){
-  // Drop the queued file too, or it would upload with nothing pointing at it.
-  try{if(_phIs(_attachUrls[areaId])&&typeof _phDel==='function')_phDel(String(_attachUrls[areaId]).slice(_PH_PREFIX.length));}catch(e){}
+var _attachTok={};   // areaId -> number of the pick in flight; any other number is stale
+// Is a queued photo (pending:<pid>) still the value of a stored row or of an op in the outbox?
+function _phRefd(v){
+  try{
+    for(var t in DB){var arr=DB[t];if(!arr||!arr.some)continue;if(arr.some(function(r){if(!r||typeof r!=='object')return false;for(var k in r)if(r[k]===v)return true;return false;}))return true;}
+    if((_obGet()||[]).some(function(op){if(!op||!op.row)return false;for(var k in op.row)if(op.row[k]===v)return true;return false;}))return true;
+  }catch(e){return true;}
+  return false;
+}
+// The form lets go of the files it was waiting for (closed or saved).
+function _attachDrop(modalId){
+  var mo=g(modalId);if(!mo)return;
+  mo.querySelectorAll('[id]').forEach(function(a){if(/-(attach|photo|evidence)-area$/.test(a.id)&&_attachPending[a.id]){_attachTok[a.id]=(_attachTok[a.id]||0)+1;_attachPending[a.id]=false;}});
+}
+function _attachClear(areaId,dropTok){
+  if(dropTok||_attachPending[areaId]){_attachTok[areaId]=(_attachTok[areaId]||0)+1;_attachPending[areaId]=false;}
+  // Drop the queued file too, or it would upload with nothing pointing at it. Only when nothing
+  // points at it: after a save the new row (and its op in the outbox) holds pending:<pid>, and
+  // the savers clear the form right after (15/10/2026: that deleted the photo for good).
+  try{if(_phIs(_attachUrls[areaId])&&typeof _phDel==='function'&&!_phRefd(_attachUrls[areaId]))_phDel(String(_attachUrls[areaId]).slice(_PH_PREFIX.length));}catch(e){}
   _attachUrls[areaId]=null;
   var area=g(areaId);
   if(area)area.innerHTML='<button type="button" class="btn btn-s" style="width:100%" onclick="_attachPick(\''+areaId+'\',\''+areaId+'\')">'+(areaId.indexOf('tru-ph-')===0?'&#128247; \u05e6\u05dc\u05dd / \u05d2\u05dc\u05e8\u05d9\u05d4':'&#128247; &#128196; \u05e6\u05dc\u05dd / \u05e7\u05d5\u05d1\u05e5')+'</button>';
@@ -27329,13 +27521,12 @@ window._eqiClearPhoto=function(){_eqiFiles=[];_eqiRenderFiles();};
 // edit/clone session.
 window._eqiOpenNew=function(){
   openModal('m-eqi');
-  setTimeout(function(){
-    var f=g('eqi-id');if(f)f.value='';
-    ['eqi-code','eqi-n','eqi-vendor','eqi-loc','eqi-d','eqi-e','eqi-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
-    var s=g('eqi-s');if(s)s.value='\u05ea\u05e7\u05d9\u05df';
-    if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',null);
-    _eqiFiles=[];_eqiRenderFiles();
-  },30);
+  // At once, not in a timeout (15/10/2026): Smart Capture fills the form right after this.
+  var f=g('eqi-id');if(f)f.value='';
+  ['eqi-code','eqi-n','eqi-vendor','eqi-loc','eqi-d','eqi-e','eqi-notes'].forEach(function(id){var el=g(id);if(el)el.value='';});
+  var s=g('eqi-s');if(s)s.value='\u05ea\u05e7\u05d9\u05df';
+  if(typeof _locPopulate==='function')_locPopulate('eqi-location-id',null);
+  _eqiFiles=[];_eqiRenderFiles();
 };
 function _eqiAddFiles(){
   var inp=g('_eqi_files_inp');
@@ -27485,7 +27676,8 @@ document.addEventListener('keydown',function(e){
   if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){e.preventDefault();openGlobalSearch();return;}
   if(e.key==='Escape'){
     var ovs=document.querySelectorAll('.overlay');var openMid=null;ovs.forEach(function(ov){if(ov.style.display==='block'&&ov.id){var mid='m-'+ov.id.substr(3);var mo=g(mid);if(mo&&mo.style.display!=='none'&&mo.style.display!=='')openMid=mid;}});
-    if(openMid){closeModal(openMid);e.preventDefault();}
+    // The form's own Escape handler (beside closeModal) already asked: never twice.
+    if(openMid&&!e.defaultPrevented){closeAsk(openMid);e.preventDefault();}
     window._gChordTs=0;
     return;
   }
@@ -27501,6 +27693,11 @@ document.addEventListener('keydown',function(e){
   }
   if((e.key==='n'||e.key==='N')){
     if(typeof CUR==='undefined'||!CUR)return;
+    // The modules with their own new-record opener go through it (15/10/2026): a bare openModal
+    // skipped their setup (ids, numbers, theme lists, drafts).
+    var _nOpen={ncr:'openNewNcrModal',inc:'openNewIncModal',leg:'openNewLegModal',eqi:'_eqiOpenNew',round:'_roundOpenNew',easp:'_easpOpenNew',tasks:'openTskModal',thz:'thzNew'};
+    var _nf=_nOpen[CUR]&&window[_nOpen[CUR]];
+    if(typeof _nf==='function'){e.preventDefault();_nf();return;}
     var mid='m-'+CUR;if(g(mid)){e.preventDefault();openModal(mid);}
   }
 });

@@ -114,7 +114,9 @@ export async function onRequest(context) {
   if (op === 'start') {
     if (!odConfigured(env)) return jsonResp({ error: 'server not configured: set ONEDRIVE_CLIENT_ID and ONEDRIVE_CLIENT_SECRET in Cloudflare' }, 503, cors);
     const state = await makeState(env, who.user && who.user.email);
-    await stateSet(env, { [NONCE_KEY]: JSON.parse(unb64urlText(state.split('.')[0])).n });
+    // 15/10/2026: stateSet throws on a refused write; without the nonce the sign-in would fail at the callback.
+    try { await stateSet(env, { [NONCE_KEY]: JSON.parse(unb64urlText(state.split('.')[0])).n }); }
+    catch (e) { return jsonResp({ error: 'state store unavailable, try again' }, 503, cors); }
     const q = new URLSearchParams({
       client_id: env.ONEDRIVE_CLIENT_ID, response_type: 'code', redirect_uri: REDIRECT,
       response_mode: 'query', scope: SCOPES, state, prompt: 'select_account',

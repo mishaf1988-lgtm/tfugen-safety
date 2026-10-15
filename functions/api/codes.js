@@ -73,10 +73,15 @@ async function mailChange(env, label, who, atIso) {
 // Open the guessing lock now (11/10/2026, Michael: "\u05d1\u05e6\u05e2: \u05de\u05d9\u05d9\u05dc \u05dc\u05da \u05d5\u05db\u05e4\u05ea\u05d5\u05e8 \u05e4\u05ea\u05d9\u05d7\u05d4"). The same limit as
 // talk.js and trustee-gate.js: a counter over LOCK_AT in the last hour = a locked address.
 export const LOCK_AT = 10;
+// guess:ai: (claude.js) and guess:tlk: (talk.js) count AI calls, not a lock on a password.
+// One list for the count and for "unlock" (15/10/2026: unlock zeroed the AI rate counters too).
+export const RATE_SCOPES = ['ai', 'tlk'];
+const RATE_RE = new RegExp('^guess:(?!' + RATE_SCOPES.map((x) => x + ':').join('|') + ')');
 export function lockedCount(rows) {
-  // guess:ai: (claude.js) and guess:tlk: (talk.js) count AI calls, not a lock on a password.
-  return (Array.isArray(rows) ? rows : []).filter((x) => x && /^guess:(?!ai:|tlk:)/.test(String(x.key || '')) && +x.value > LOCK_AT).length;
+  return (Array.isArray(rows) ? rows : []).filter((x) => x && RATE_RE.test(String(x.key || '')) && +x.value > LOCK_AT).length;
 }
+// The PostgREST filter for the lock counters only: guess:*, minus each rate scope.
+export const LOCK_KEYS_Q = 'key=like.guess%3A*' + RATE_SCOPES.map((x) => '&key=not.like.guess%3A' + x + '%3A*').join('');
 export async function onRequest(context) {
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
@@ -128,8 +133,8 @@ export async function onRequest(context) {
       return jsonResp({ key, value, updated_at: at }, 200, cors);
     }
     if (b.op === 'unlock') {
-      // Every counter back to zero (the same reset as guess_clear); who and when go to the log.
-      const r = await fetch(SB + '/rest/v1/server_state?key=like.guess%3A*&value=neq.0', { method: 'PATCH', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: '0' }) });
+      // Every LOCK counter back to zero (the same reset as guess_clear), not the AI rate counters; who and when go to the log.
+      const r = await fetch(SB + '/rest/v1/server_state?' + LOCK_KEYS_Q + '&value=neq.0', { method: 'PATCH', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: '0' }) });
       if (!r.ok) return jsonResp({ error: 'save failed' }, 502, cors);
       const rows = await r.json().catch(() => []);
       try {

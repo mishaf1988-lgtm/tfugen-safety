@@ -2,7 +2,7 @@
 // הסיסמות", the app's own codes): /api/codes lists and changes the HR code and the trustee code in
 // server_state, admin only, and logs who and when to audit_log without the code. The trustee
 // screen reads its code from server_state first, Cloudflare's TRUSTEE_CODE while that is empty.
-import { onRequest, randomCode, CODE_RE, pwOk, changeMailHtml, lockedCount } from './_build/codes.mjs';
+import { onRequest, randomCode, CODE_RE, pwOk, changeMailHtml, lockedCount, RATE_SCOPES } from './_build/codes.mjs';
 import fs from 'fs';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d).slice(0, 300) : '')); } };
@@ -17,6 +17,7 @@ globalThis.fetch = async (url, init) => {
   if (u.startsWith(SB + '/rest/v1/server_state') && m === 'PATCH') { w.patch = { u: decodeURIComponent(u), b: JSON.parse(init.body) }; return j([{ key: 'guess:tru:aa' }, { key: 'guess:ind:bb' }]); }
   if (u.startsWith(SB + '/rest/v1/server_state') && u.includes('key=like.guess')) { w.lockQ = decodeURIComponent(u); return j([{ key: 'guess:tru:aa', value: '11' }, { key: 'guess:ind:bb', value: '3' }]); }
   if (u.startsWith(SB + '/rest/v1/server_state') && m === 'POST') { const b = JSON.parse(init.body); w.writes.push({ u, b, prefer: init.headers.Prefer }); if (w.failWrite) return new Response('x', { status: 500 }); w.state[b.key] = b; return new Response(null, { status: 201 }); }
+  if (u.startsWith(SB + '/rest/v1/server_state') && w.readFail) { w.readFail === 'throw' ? (() => { throw new TypeError('network'); })() : null; return new Response('x', { status: 503 }); }
   if (u.startsWith(SB + '/rest/v1/server_state')) { const one = /key=eq\.([a-z_]+)/.exec(u); return j(Object.values(w.state).filter((x) => !one || x.key === one[1])); }
   if (u.startsWith(SB + '/rest/v1/oauth_tokens')) return j(w.noOd ? [] : [{ user_email: 'sviva@tapugan.co.il', refresh_token: 'r', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: 'Files.ReadWrite Mail.Send' }]);
   if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') { w.mails = (w.mails || []).concat([JSON.parse(init.body)]); return new Response(null, { status: w.mailFail ? 500 : 202 }); }
@@ -40,6 +41,9 @@ console.log('\n1b. the guessing lock (11/10/2026)');
   const u2 = await call({ op: 'unlock' }, 'admin');
   check('admin: every guess counter back to 0, the log says who', u2.st === 200 && u2.j.cleared === 2 && /key=like\.guess:\*/.test(w.patch.u) && /value=neq\.0/.test(w.patch.u) && w.patch.b.value === '0' && w.logs.length === n + 1 && w.logs[n].record_id === 'guess_locks' && w.logs[n].user_email === 'admin@tfugen.local', [u2, w.patch, w.logs[n]]);
   w.logs.splice(n, 1);
+  // 15/10/2026: "unlock" zeroed guess:ai:* and guess:tlk:* too, the AI rate counters that are not locks.
+  check('unlock touches the lock counters only: not guess:ai:*, not guess:tlk:*', /&key=not\.like\.guess:ai:\*/.test(w.patch.u) && /&key=not\.like\.guess:tlk:\*/.test(w.patch.u), w.patch.u);
+  check('...the same list as lockedCount (an AI counter over 10 is not a lock)', lockedCount([{ key: 'guess:ai:a', value: '99' }, { key: 'guess:tlk:b', value: '400' }]) === 0 && RATE_SCOPES.join() === 'ai,tlk');
 }
 
 console.log('\n2. the list');
@@ -94,6 +98,18 @@ console.log('\n4. the trustee screen reads the code from the app first');
   check('the old Cloudflare code no longer does', (await g('482913', ENV)) === 403);
   delete w.state.trustee_code;
   check('no app code: Cloudflare\'s still works', (await g('482913', ENV)) === 200);
+  // 15/10/2026: a failed read is not an empty row. It used to fall back to TRUSTEE_CODE, so in a
+  // database blink the current code was refused and an old, rotated-out one let in.
+  w.state.trustee_code = { key: 'trustee_code', value: 'tapugan2026' };
+  w.readFail = true;
+  const r503 = await gate({ request: new Request('https://tapugan-safety.pages.dev/api/trustee-gate', { method: 'POST', body: JSON.stringify({ code: '482913' }), headers: { 'Content-Type': 'application/json', origin: 'https://tapugan-safety.pages.dev' } }), env: ENV });
+  const j503 = await r503.json();
+  check('the read fails (503): "try again" 503, the old Cloudflare code is NOT let in', r503.status === 503 && j503.error === 'try again' && /נסה שוב/.test(j503.message), [r503.status, j503]);
+  check('...and the current app code is not called wrong either (503, not 403)', (await g('tapugan2026', ENV)) === 503);
+  w.readFail = 'throw';
+  check('the read throws (timeout): 503 as well', (await g('482913', ENV)) === 503);
+  w.readFail = false;
+  delete w.state.trustee_code;
 }
 
 console.log('\n5. the screen in the app');

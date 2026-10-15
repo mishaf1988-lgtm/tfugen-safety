@@ -86,7 +86,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     // Android back: the form had no history entry of its own, so the PWA exited.
     await page.evaluate((k) => localStorage.removeItem(k), KEY);
     const st = await page.evaluate(() => ({ s: history.state, cur: CUR }));
-    check('opening the form pushes a history entry', st.s && st.s.truModal === 1, st);
+    check('opening the form pushes a history entry (the shared form entry, _mhPush)', st.s && st.s.modal === 'm-tru', st);
     await page.evaluate(() => history.back());
     await page.waitForTimeout(250);
     check('back closes the form', (await modal()) === 'none');
