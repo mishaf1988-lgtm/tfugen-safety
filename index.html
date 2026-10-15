@@ -12364,16 +12364,24 @@ function tbtClose(id,op){
   if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
   var r=(DB.toolbox_talks||[]).filter(function(x){return x.id===id;})[0];if(!r)return Promise.resolve('missing');
   if(!confirm(op==='close'?'\u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea? \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4-QR \u05d9\u05e4\u05e1\u05d9\u05e7\u05d5 \u05dc\u05e2\u05d1\u05d5\u05d3, \u05d5\u05e2\u05d5\u05d1\u05d3 \u05e9\u05d9\u05e1\u05e8\u05d5\u05e7 \u05d9\u05e8\u05d0\u05d4 \u05e9\u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05e0\u05e1\u05d2\u05e8\u05d4. \u05d8\u05d5\u05e4\u05e1 08.01 \u05e2\u05dd \u05db\u05dc \u05d4\u05d7\u05d5\u05ea\u05de\u05d9\u05dd \u05d9\u05d9\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d5\u05d9\u05d9\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da \u05d1\u05de\u05d9\u05d9\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9.':'\u05dc\u05e4\u05ea\u05d5\u05d7 \u05de\u05d7\u05d3\u05e9 \u05d0\u05ea \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea? \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d5\u05d4-QR \u05d4\u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05d9\u05d7\u05d6\u05e8\u05d5 \u05dc\u05e2\u05d1\u05d5\u05d3.'))return Promise.resolve('kept');
-  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:op,id:id})})
-  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
+  // file:false (15/10/2026, A1): the form is built here, in the browser, after the close.
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:op,id:id,file:false})})
+  .then(_tbtJson)
   .then(function(x){
     if(!x.ok||!x.j||!x.j.ok){toast('\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
-    r.closed_at=x.j.closed_at||null;if(x.j.filed&&x.j.filed.form_at)r.form_at=x.j.filed.form_at;
+    r.closed_at=x.j.closed_at||null;
     try{addLog((op==='close'?'\u05e0\u05e1\u05d2\u05e8\u05d5 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea: ':'\u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9 \u05d7\u05ea\u05d9\u05de\u05d5\u05ea: ')+(r.title||id));}catch(e){}
     try{closeModal('m-tbt-link');}catch(e){}
-    toast(op!=='close'?'\ud83d\udd13 \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9':x.j.filed?'\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8. \u05d8\u05d5\u05e4\u05e1 08.01 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4'+(x.j.filed.mailed?' \u05d5\u05e0\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da \u05d1\u05de\u05d9\u05d9\u05dc':'')+' ('+x.j.filed.n+')':x.j.fileErr?'\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8, \u05d0\u05d1\u05dc \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05e7: '+x.j.fileErr+'. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e4\u05d9\u05e7 \u05de"\u05de\u05d9 \u05d7\u05ea\u05dd"':'\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8. \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd, \u05d0\u05d9\u05df \u05d8\u05d5\u05e4\u05e1 08.01');
     try{rTbt();}catch(e){}
-    return op==='close'?'closed':'reopened';
+    if(op!=='close'){toast('\ud83d\udd13 \u05d4\u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05e0\u05e4\u05ea\u05d7\u05d5 \u05de\u05d7\u05d3\u05e9');return 'reopened';}
+    var n=(DB.toolbox_reads||[]).filter(function(q){return q&&q.talk_id===id;}).length;
+    if(!n){toast('\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8. \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd, \u05d0\u05d9\u05df \u05d8\u05d5\u05e4\u05e1 08.01');return 'closed';}
+    toast('\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8. \u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d8\u05d5\u05e4\u05e1 08.01...');
+    return _tbt0801File(id,null).then(function(f){
+      if(f.st==='ok')toast('\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8. \u05d8\u05d5\u05e4\u05e1 08.01 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4'+(f.j.mailed?' \u05d5\u05e0\u05e9\u05dc\u05d7 \u05d0\u05dc\u05d9\u05da \u05d1\u05de\u05d9\u05d9\u05dc':'')+' ('+f.j.n+')'+(f.miss?'. '+f.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 (\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1)':''));
+      else toast('\ud83d\udd12 \u05e0\u05e1\u05d2\u05e8, \u05d0\u05d1\u05dc \u05d8\u05d5\u05e4\u05e1 08.01 \u05dc\u05d0 \u05d4\u05d5\u05e4\u05e7: '+(f.st==='kept'?f.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5':f.msg)+'. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05d4\u05e4\u05d9\u05e7 \u05de"\u05de\u05d9 \u05d7\u05ea\u05dd"');
+      return 'closed';
+    });
   })['catch'](function(e){toast('\u26a0\ufe0f '+((e&&e.message)||e));return 'failed';});
 }
 function tbtRevoke(){
@@ -12539,11 +12547,12 @@ function _tbtQuizRead(){
 // Induction (10/10/2026): the signed form was filed and mailed to Michael and HR, or why not.
 function _tbtDocTag(x){
   if(!x)return '';
-  if(x.doc_err)return '<div style="font-size:10px;font-weight:700;color:var(--c-red-600,#b91c1c)">\u26a0\ufe0f \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: '+esc(String(x.doc_err).substring(0,80))+'</div>';
-  var h='';
+  // Filed and mailed with a note (15/10/2026, A2: photos the server could not take): both are shown.
+  if(x.doc_err&&!x.mailed_at)return '<div style="font-size:10px;font-weight:700;color:var(--c-red-600,#b91c1c)">\u26a0\ufe0f \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7: '+esc(String(x.doc_err).substring(0,80))+'</div>';
+  var h='',note=x.doc_err?'<div style="font-size:10px;font-weight:700;color:var(--c-orange-650,#b45309)">\u26a0\ufe0f '+esc(String(x.doc_err).substring(0,80))+'</div>':'';
   if(x.mailed_at)h+='\ud83d\udce7 \u05e0\u05e9\u05dc\u05d7 \u05dc\u05de\u05d9\u05d9\u05dc ';
   if(x.doc_url)h+='<a href="'+esc(x.doc_url)+'" target="_blank" rel="noopener">\ud83d\udcc4 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4</a>';
-  return h?'<div style="font-size:10px;font-weight:700;color:var(--c-green-700,#15803d)">'+h+'</div>':'<div style="font-size:10px;color:var(--t3)">\u23f3 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4</div>';
+  return h?'<div style="font-size:10px;font-weight:700;color:var(--c-green-700,#15803d)">'+h+'</div>'+note:'<div style="font-size:10px;color:var(--t3)">\u23f3 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4</div>';
 }
 function _tbtQuizTag(x){
   if(!x||!x.quiz_n)return '';
@@ -12619,7 +12628,7 @@ function tbtTranslate(){
   if(btn)btn.disabled=true;
   function one(l){
     if(btn)btn.textContent='\u23f3 '+_TBT_LANG[l]+'...';
-    var prompt='Translate this workplace safety briefing from Hebrew to '+names[l]+'. The first line is the title: keep it as the first line. Keep the line breaks and the numbering. Use short, simple words that a factory worker understands. Keep names of machines, chemicals and units as they are. Output only the translation, with no notes and no quotes.\n\n'+src;
+    var prompt='Translate this workplace safety briefing from Hebrew to '+names[l]+'. The first line is the title: keep it as the first line. Keep the line breaks and the numbering. Use short, simple words that a factory worker understands. Keep names of machines, chemicals and units as they are. Keep every line that starts with ## unchanged, in Hebrew, exactly as written (it is a department heading the page matches). Output only the translation, with no notes and no quotes.\n\n'+src;
     return fetch(_AI,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(typeof _sbToken!=='undefined'?(_sbToken||''):'')},body:JSON.stringify({model:'gemini',max_tokens:8000,messages:[{role:'user',content:prompt}]})})
     .then(function(r){return r.text().then(function(t){return {ok:r.ok,t:t};});})
     .then(function(res){
@@ -12691,15 +12700,17 @@ function tbtWho(id){
   // Signed from outside the list (talk.js: emp_id "x:<typed name>"), not "left the list".
   // Annual / quality (14/10/2026): everyone types, so nobody is "outside the list"; a worker counts as
   // signed when the typed ID is the one on the card.
-  var typed=_tbtTyped(t.kind),idSet={};if(typed)reads.forEach(function(x){if(x.id_no)idSet[_tbtIdKey(x.id_no)]=1;});
+  // A card with no ID (15/10/2026, A6): the exact name typed counts; with no such name it is listed apart,
+  // "cannot check", not as a worker who did not sign (talk.js missingByDept, the same rule for the mail).
+  var typed=_tbtTyped(t.kind),idSet={},nmSet={},nk=function(v){return String(v||'').replace(/\s+/g,' ').trim().replace(/[\u2018\u2019\u201b\u00b4\u05f3]/g,"'").replace(/[\u201c\u201d\u201e\u05f4]/g,'"');};if(typed)reads.forEach(function(x){if(x.id_no)idSet[_tbtIdKey(x.id_no)]=1;if(x.emp_name)nmSet[nk(x.emp_name)]=1;});
   var isOut=function(x){return !typed&&String(x.emp_id||'').indexOf('x:')===0;};
   var outN=reads.filter(isOut).length;
   var byId={};(DB.emp||[]).forEach(function(e){if(e&&e.id!=null)byId[String(e.id)]=e;});
   var leftOf=function(x){var e=byId[String(x.emp_id)];return e&&_empLeft(e)?'\u05e2\u05d6\u05d1 \u05d1-'+fd(e.left_d):'';};
   var gone=typed?0:reads.filter(function(x){return !isOut(x)&&!cur[String(x.emp_id)];}).length;
-  var miss={};(DB.emp||[]).forEach(function(e){if(e&&e.id&&!_empLeft(e)&&_tbtDeptMatch(t.dept,e.dep)&&!signed[String(e.id)]&&!(typed&&e.eid&&idSet[_tbtIdKey(e.eid)])){var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');}});
+  var miss={},noId=[];(DB.emp||[]).forEach(function(e){if(!(e&&e.id&&!_empLeft(e)&&_tbtDeptMatch(t.dept,e.dep)&&!signed[String(e.id)]))return;var ek=typed?_tbtIdKey(e.eid):'';if(typed&&ek&&idSet[ek])return;if(typed&&!ek){if(!nmSet[nk(e.n)])noId.push(e.n||'-');return;}var d=e.dep||'\u05d0\u05d7\u05e8';(miss[d]=miss[d]||[]).push(e.n||'-');});
   // Induction is for new workers only: the whole list "did not sign" would be noise.
-  if(t.kind==='induction')miss={};
+  if(t.kind==='induction'){miss={};noId=[];}
   var missN=Object.keys(miss).reduce(function(m,d){return m+miss[d].length;},0);
   var tm=function(v){var d=new Date(v);return isNaN(d)?'':fd(d.toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}))+' '+d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jerusalem'});};
   var h='<div style="font-weight:700;margin-bottom:2px">'+esc(t.title||'')+'</div><div style="font-size:12px;color:var(--t3);margin-bottom:8px">'+fd(t.d)+'</div>'+(t.trainer?'<div style="font-size:12px;margin-bottom:8px">\u05de\u05d3\u05e8\u05d9\u05da: '+esc(t.trainer)+(t.trainer_qual?', '+esc(t.trainer_qual):'')+(t.trainer_sig_url?'<div>\u05d4\u05e6\u05d4\u05e8\u05ea \u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e0\u05d7\u05ea\u05de\u05d4 \u05d1-'+tm(t.trainer_signed_at)+' <img data-sign="'+esc(t.trainer_sig_url)+'" alt="" style="height:36px;max-width:110px;vertical-align:middle;background:var(--c-white,#fff);border:1px solid var(--c-gray-100-3,#e5e7eb);border-radius:4px"></div>':'<div style="color:var(--c-orange-650,#b45309)">\u05d4\u05de\u05d3\u05e8\u05d9\u05da \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd \u05e2\u05dc \u05e1\u05d9\u05d5\u05dd \u05d4\u05d4\u05d3\u05e8\u05db\u05d4</div>')+'</div>':'')+'<div style="font-size:12px;margin-bottom:8px">'+esc(typed?_tbtDeclAnn(t):_TBT_DECL)+'</div>'
@@ -12709,6 +12720,7 @@ function tbtWho(id){
     +'</tbody></table></div>':'<p class="et">\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd</p>';
   if(missN&&typed)h+='<details class="no-print" style="margin:12px 0 4px"><summary style="cursor:pointer;font-weight:700">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5 ('+missN+')</summary>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('')+'</details>';
   else if(missN)h+='<div style="font-weight:700;margin:12px 0 4px">\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</div>'+Object.keys(miss).sort(function(a,b){return a.localeCompare(b,'he');}).map(function(d){return '<div style="font-size:13px;margin-bottom:4px"><b>'+esc(d)+' ('+miss[d].length+'):</b> '+miss[d].map(esc).join(', ')+'</div>';}).join('');
+  if(noId.length)h+='<div class="no-print" style="font-size:13px;margin:6px 0 4px;color:var(--t2)"><b>\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d3\u05d5\u05e7: \u05d0\u05d9\u05df \u05ea.\u05d6. \u05d1\u05db\u05e8\u05d8\u05d9\u05e1 ('+noId.length+'):</b> '+noId.sort(function(a,b){return a.localeCompare(b,'he');}).map(esc).join(', ')+'</div>';
   if(missN&&t.s===_TBT_PUB&&!_viewOnly())h+='<div class="no-print" style="margin-top:6px"><button type="button" class="btn btn-p btn-sm" id="tbt-rem-btn" data-id="'+esc(t.id)+'" onclick="tbtRemind(this.dataset.id)">\ud83d\udce4 \u05ea\u05d6\u05db\u05d5\u05e8\u05ea \u05dc-'+missN+' \u05e9\u05dc\u05d0 \u05d7\u05ea\u05de\u05d5</button>'
     +'<div id="tbt-rem-box" style="display:none;margin-top:6px"><textarea id="tbt-rem-txt" rows="7" readonly style="width:100%;font-size:12px"></textarea><div style="display:flex;gap:8px;margin-top:4px"><button type="button" class="btn btn-s" style="min-height:44px" onclick="_tbtLinkCopy(g(\'tbt-rem-txt\').value,\'tbt-rem-txt\')">&#128203; \u05d4\u05e2\u05ea\u05e7</button><button type="button" class="btn btn-p" style="min-height:44px;background:var(--c-green-500,#25D366);border-color:var(--c-green-500,#25D366)" onclick="_tbtLinkShare(g(\'tbt-rem-txt\').value,\'tbt-rem-txt\')">&#128241; \u05e9\u05ea\u05e3</button></div></div></div>';
   _tbtRemMiss=miss;
@@ -12765,11 +12777,14 @@ function _tbtMarkOld(t,reads){
 // The employee card (BACKLOG 11.5, Michael 03/10/2026: yes): every published weekly talk
 // since the start date, signed or not. A signature from outside the list counts when its
 // ID matches the card's (emp.eid). Talks before the start date are not "missing".
-function _tbtIdKey(v){return String(v||'').replace(/[^0-9a-z]/gi,'').toLowerCase();}
+// Leading zeros do not count (15/10/2026, A7): "012345678" on a card is "12345678" typed (talk.js idKey). Arabic-Indic digits are 0-9.
+function _tbtIdKey(v){var s=String(v||'').replace(/[\u0660-\u0669]/g,function(c){return String(c.charCodeAt(0)-0x660);}).replace(/[\u06f0-\u06f9]/g,function(c){return String(c.charCodeAt(0)-0x6f0);}).replace(/[^0-9a-z]/gi,'').toLowerCase();return /^\d+$/.test(s)?s.replace(/^0+/,''):s;}
 function _empTalksSection(e){
   if(!e||e.id==null)return '';
   var id=String(e.id),eid=_tbtIdKey(e.eid),mine={};
-  (DB.toolbox_reads||[]).forEach(function(x){if(!x||!x.talk_id)return;if(String(x.emp_id)===id||(eid&&_tbtIdKey(x.id_no)===eid)){if(!mine[x.talk_id]||String(x.read_at||'')<String(mine[x.talk_id].read_at||''))mine[x.talk_id]=x;}});
+  // By emp_id first (15/10/2026, A5): a signature on another worker's card is his, whatever ID was typed;
+  // only a signature from outside the list (emp_id "x:...") is credited here by the ID.
+  (DB.toolbox_reads||[]).forEach(function(x){if(!x||!x.talk_id)return;var ex=String(x.emp_id==null?'':x.emp_id);if(ex===id||(ex.indexOf('x:')===0&&eid&&_tbtIdKey(x.id_no)===eid)){if(!mine[x.talk_id]||String(x.read_at||'')<String(mine[x.talk_id].read_at||''))mine[x.talk_id]=x;}});
   var from=/^\d{4}-\d{2}-\d{2}/.test(String(e.s||''))?String(e.s).substring(0,10):'';
   var to=_empLeft(e)?String(e.left_d).substring(0,10):'';
   var rows=(DB.toolbox_talks||[]).filter(function(t){return t&&(mine[t.id]||(t.s===_TBT_PUB&&(!from||_tbtKey(t)>=from)&&(!to||_tbtKey(t)<=to)));}).sort(function(a,b){return _tbtKey(b).localeCompare(_tbtKey(a));});
@@ -12814,32 +12829,98 @@ function tbtEffSave(id){
 // The ID number (regulation 6 as amended, in force 16/10/2026): the last 4 digits on the screen,
 // the full number only in the printed training register (Michael, 09/10/2026).
 function _tbtIdMask(v){var s=String(v||'');return !s?'-':s.length<=4?s:'***'+s.slice(-4);}
-// Preview of form 08.01 (14/10/2026, Michael: "see it before publishing"): the server builds it, nothing is filed;
-// the window opens before the fetch, Safari blocks one opened after it.
 function _tbtPreviewFromForm(){var id=_svEditId('toolbox_talks');if(!id){toast('\u05e7\u05d5\u05d3\u05dd \u05dc\u05e9\u05de\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d4 \u05db\u05d8\u05d9\u05d5\u05d8\u05d4');return Promise.resolve('unsaved');}return tbtForm0801Preview(id);}
 // Print straight from the preview (14/10/2026, Michael: "בצע"): a button the paper does not show.
 function _tbtPvPrint(w){try{var d=w.document;if(!d||!d.body||d.getElementById('tbt-pv-print'))return false;var st=d.createElement('style');st.textContent='@media print{#tbt-pv-print{display:none!important}}';(d.head||d.body).appendChild(st);var b=d.createElement('button');b.id='tbt-pv-print';b.type='button';b.textContent='\ud83d\udda8\ufe0f \u05d4\u05d3\u05e4\u05e1';b.style.cssText='position:fixed;top:8px;left:8px;z-index:9;background:var(--c-red-550,#cc1f1f);color:var(--c-white,#fff);padding:10px 18px;border:none;border-radius:8px;font-weight:700;font-family:Arial,sans-serif;font-size:14px;cursor:pointer';b.onclick=function(){try{w.focus();w.print();}catch(e){}};d.body.appendChild(b);return true;}catch(e){return false;}}
+// Form 08.01 is built here, in the manager's browser (15/10/2026, A1): the server, on Cloudflare's free plan
+// (50 calls out per request), loaded the signatures one by one and from about 35 signers each load failed
+// and the cell came out blank; a whole-factory annual training (up to 600) could never get its form. Now
+// talk.js sends the form's HTML with a placeholder per signature (op form0801, shell), the signatures are
+// loaded from Storage with the manager's own token, 8 at a time, and the finished HTML is posted back
+// (op=form0801 in the address) to be filed and mailed. A signature that cannot be loaded is said so in its
+// cell and counted, never a blank cell. The builder stays one: talk.js form0801Html.
+var _TBT_0801_BATCH=8;
+function _tbtSigData(url){
+  var m=String(url||'').match(/\/storage\/v1\/object\/(?:public\/|sign\/|authenticated\/)?([^\/]+)\/([^?]+)/);
+  if(!m)return Promise.resolve(null);
+  return fetch(SBU+'/storage/v1/object/authenticated/'+m[1]+'/'+m[2],{headers:{'apikey':SBK,'Authorization':'Bearer '+_sbToken}})
+  .then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.blob();})
+  .then(function(b){if(!b||!b.size)throw new Error('empty');return _tbtSigShrink(b);})
+  ['catch'](function(){return null;});
+}
+// A smaller PNG on white (the cell shows 120x26): 600 signatures stay a few MB for the PDF conversion.
+// A file that does not decode as a picture is a missing signature, not a broken image in the form.
+function _tbtSigShrink(b){
+  return new Promise(function(res){
+    if(typeof createImageBitmap!=='function'){var fr=new FileReader();fr.onload=function(){var d=String(fr.result||'');res(/^data:image\//.test(d)?d:null);};fr.onerror=function(){res(null);};fr.readAsDataURL(b);return;}
+    createImageBitmap(b).then(function(bm){
+      var k=Math.min(1,240/Math.max(1,bm.width)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(bm.width*k));c.height=Math.max(1,Math.round(bm.height*k));
+      var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bm,0,0,c.width,c.height);
+      var d=c.toDataURL('image/png');res(/^data:image\/png;base64,/.test(d)?d:null);
+    },function(){res(null);});
+  });
+}
+function _tbtJson(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});}
+function _tbtReEsc(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+// -> {html, n, miss}. prog(done, all) as the signatures come in.
+function _tbt0801Build(id,prog){
+  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'form0801',id:id,shell:true})})
+  .then(_tbtJson)
+  .then(function(x){
+    if(!x.ok||!x.j||!x.j.html){throw new Error(_tbtLinkErr(x.st,x.j&&x.j.error));}
+    var j=x.j,list=j.sigs||[],got={},i=0,done=0;
+    // A load that fails is tried once more before it counts as missing.
+    var one=function(s){return _tbtSigData(s.url).then(function(d){return d||_tbtSigData(s.url);}).then(function(d){got[s.ph]=d;done++;if(prog)prog(done,list.length);});};
+    var next=function(){if(i>=list.length)return Promise.resolve();var part=list.slice(i,i+_TBT_0801_BATCH);i+=part.length;return Promise.all(part.map(one)).then(next);};
+    return next().then(function(){
+      var A=(j.tag&&j.tag[0])||'<img class="sig" alt="" src="',B=(j.tag&&j.tag[1])||'">',P=j.ph||'data:tap-sig,',miss={},n=0;
+      // One pass over the page (600 replacements one by one would scan megabytes 600 times).
+      var html=j.html.replace(new RegExp(_tbtReEsc(A)+'('+_tbtReEsc(P)+'[^"]*)'+_tbtReEsc(B),'g'),function(all,ph){if(got[ph])return A+got[ph]+B;if(!miss[ph]){miss[ph]=1;n++;}return j.missHtml||'?';});
+      return {html:html,n:j.n,miss:n};
+    });
+  });
+}
+function _tbt0801Send(id,f){
+  return fetch('/api/talk?op=form0801&id='+encodeURIComponent(id)+'&miss='+(f.miss||0),{method:'POST',headers:{'Content-Type':'text/html; charset=utf-8','Authorization':'Bearer '+_sbToken},body:f.html}).then(_tbtJson);
+}
+// Build, ask when signatures are missing, send. -> {st:'ok'|'kept'|'failed', j, miss, msg}
+function _tbt0801File(id,prog){
+  return _tbt0801Build(id,prog).then(function(f){
+    if(f.miss&&!confirm(f.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5. \u05d1\u05d8\u05d5\u05e4\u05e1 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d1\u05de\u05e7\u05d5\u05de\u05df "\u05d4\u05d7\u05ea\u05d9\u05de\u05d4 \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d4". \u05dc\u05e9\u05de\u05d5\u05e8 \u05d5\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea?'))return {st:'kept',miss:f.miss};
+    if(prog)prog(-1);
+    return _tbt0801Send(id,f).then(function(x){
+      if(!x.ok||!x.j||!x.j.ok)return {st:'failed',msg:x.st===409?'\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd':_tbtLinkErr(x.st,x.j&&x.j.error),miss:f.miss};
+      var t0=(DB.toolbox_talks||[]).filter(function(q){return q.id===id;})[0];
+      if(x.j.form_at&&t0){t0.form_at=x.j.form_at;try{rTbt();}catch(e){}}
+      try{addLog('\u05d8\u05d5\u05e4\u05e1 08.01 \u05d4\u05d5\u05e4\u05e7: '+id+' ('+x.j.n+')');}catch(e){}
+      return {st:'ok',j:x.j,miss:f.miss};
+    });
+  },function(e){return {st:'failed',msg:(e&&e.message)||String(e)};});
+}
+// Preview of form 08.01 (14/10/2026, Michael: "see it before publishing"): built the same way, nothing is filed;
+// the window opens before the fetch, Safari blocks one opened after it.
 function tbtForm0801Preview(id){
   var w=window.open('','_blank');if(!w){toast('\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05d7\u05e1\u05dd \u05d7\u05dc\u05d5\u05df. \u05dc\u05d0\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd');return Promise.resolve('blocked');}
-  try{w.document.write('<p dir="rtl" style="font-family:Arial">\u05de\u05db\u05d9\u05df \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4...</p>');}catch(e){}
-  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'form0801',id:id,preview:true})})
-  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
-  .then(function(x){if(!x.ok||!x.j||!x.j.html){try{w.close();}catch(e){}toast('\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error));return 'failed';}
-    w.document.open();w.document.write(x.j.html);w.document.close();_tbtPvPrint(w);return 'shown';})
-  ['catch'](function(e){try{w.close();}catch(x){}toast('\u26a0\ufe0f '+((e&&e.message)||e));return 'failed';});
+  var say=function(t){try{w.document.open();w.document.write('<p dir="rtl" style="font-family:Arial">'+t+'</p>');w.document.close();}catch(e){}};
+  say('\u05de\u05db\u05d9\u05df \u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4...');
+  return _tbt0801Build(id,function(d,n){if(d>=0&&(d===n||d%40===0))say('\u05d8\u05d5\u05e2\u05df \u05d7\u05ea\u05d9\u05de\u05d5\u05ea '+d+' \u05de\u05ea\u05d5\u05da '+n+'...');})
+  .then(function(f){
+    w.document.open();w.document.write(f.html);w.document.close();_tbtPvPrint(w);
+    if(f.miss)toast('\u26a0\ufe0f '+f.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 (\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1)');
+    return 'shown';
+  })['catch'](function(e){try{w.close();}catch(x){}toast('\u26a0\ufe0f '+((e&&e.message)||e));return 'failed';});
 }
 function tbtForm0801(id){
   if(_viewOnly()){_viewBlock();return Promise.resolve('blocked');}
-  var b=g('tbt-0801-btn'),out=g('tbt-0801-res');if(b)b.disabled=true;if(out)out.textContent='\u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 (\u05db\u05de\u05d4 \u05e9\u05e0\u05d9\u05d5\u05ea)...';
-  return fetch('/api/talk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'form0801',id:id})})
-  .then(function(res){return res.json().then(function(j){return {ok:res.ok,st:res.status,j:j};},function(){return {ok:false,st:res.status,j:null};});})
-  .then(function(x){if(b)b.disabled=false;
-    if(!x.ok||!x.j||!x.j.ok){var m=x.st===409?'\u05e2\u05d5\u05d3 \u05d0\u05e3 \u05d0\u05d7\u05d3 \u05dc\u05d0 \u05d7\u05ea\u05dd':_tbtLinkErr(x.st,x.j&&x.j.error);if(out)out.textContent='\u26a0\ufe0f '+m;return 'failed';}
-    try{addLog('\u05d8\u05d5\u05e4\u05e1 08.01 \u05d4\u05d5\u05e4\u05e7: '+id+' ('+x.j.n+')');}catch(e){}
-    if(x.j.form_at){var t0=(DB.toolbox_talks||[]).filter(function(q){return q.id===id;})[0];if(t0){t0.form_at=x.j.form_at;try{rTbt();}catch(e){}}}
-    if(out)out.innerHTML='\u2705 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'+(x.j.pdf?' (PDF)':'')+', '+x.j.n+' \u05d7\u05d5\u05ea\u05de\u05d9\u05dd'+(x.j.mailed?'. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc':'')+(x.j.url?' <a href="'+esc(x.j.url)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d5\u05d4\u05d3\u05e4\u05e1</a>':'');
+  var b=g('tbt-0801-btn'),out=g('tbt-0801-res');if(b)b.disabled=true;if(out)out.textContent='\u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1...';
+  return _tbt0801File(id,function(d,n){if(!out)return;out.textContent=d<0?'\u05e9\u05d5\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 \u05d5\u05e9\u05d5\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc...':'\u05d8\u05d5\u05e2\u05df \u05d7\u05ea\u05d9\u05de\u05d5\u05ea '+d+' \u05de\u05ea\u05d5\u05da '+n+'...';})
+  .then(function(r){if(b)b.disabled=false;
+    if(r.st==='kept'){if(out)out.textContent='\u26a0\ufe0f '+r.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5. \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05d0 \u05e0\u05e9\u05de\u05e8, \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1';return 'kept';}
+    if(r.st!=='ok'){if(out)out.textContent='\u26a0\ufe0f '+r.msg;return 'failed';}
+    var j=r.j;
+    if(out)out.innerHTML='\u2705 \u05e0\u05e9\u05de\u05e8 \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d4\u05d3\u05e8\u05db\u05d5\u05ea'+(j.pdf?' (PDF)':'')+', '+j.n+' \u05d7\u05d5\u05ea\u05de\u05d9\u05dd'+(j.mailed?'. \u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc':'')+(r.miss?'. <b style="color:var(--red,#b91c1c)">'+r.miss+' \u05d7\u05ea\u05d9\u05de\u05d5\u05ea \u05dc\u05d0 \u05e0\u05d8\u05e2\u05e0\u05d5 (\u05de\u05e1\u05d5\u05de\u05e0\u05d5\u05ea \u05d1\u05d8\u05d5\u05e4\u05e1)</b>':'')+(j.url?' <a href="'+esc(j.url)+'" target="_blank" rel="noopener">\u05e4\u05ea\u05d7 \u05d5\u05d4\u05d3\u05e4\u05e1</a>':'');
     return 'ok';
-  })['catch'](function(e){if(b)b.disabled=false;if(out)out.textContent='\u26a0\ufe0f '+((e&&e.message)||e);return 'failed';});
+  });
 }
 // Who did not sign, to the department managers (14/10/2026, Michael in the questionnaire: "\u05de\u05d9 \u05dc\u05d0 \u05d7\u05ea\u05dd
 // \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd"): talk.js op missMail. First a preview (department, recipients, names), then a test to
@@ -12851,10 +12932,12 @@ function tbtMissMail(id){
   var out=g('tbt-miss-res');if(out)out.textContent='\u05de\u05db\u05d9\u05df \u05e8\u05e9\u05d9\u05de\u05d4 \u05dc\u05e4\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4...';
   return _tbtMissPost({op:'missMail',id:id,preview:true}).then(function(x){
     if(!x.ok||!x.j||!x.j.ok){if(out)out.textContent='\u26a0\ufe0f '+_tbtLinkErr(x.st,x.j&&x.j.error);return 'failed';}
-    var pl=x.j.plan||[],nd=x.j.noDept||[];
-    if(!pl.length&&!nd.length){if(out)out.textContent='\u2705 \u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05ea\u05de\u05d5';return 'none';}
+    var pl=x.j.plan||[],nd=x.j.noDept||[],ni=x.j.noIdNoDept||[];
+    if(!pl.length&&!nd.length&&!ni.length){if(out)out.textContent='\u2705 \u05db\u05dc \u05d4\u05e2\u05d5\u05d1\u05d3\u05d9\u05dd \u05d7\u05ea\u05de\u05d5';return 'none';}
     var h='<div style="border:1px solid var(--bd,#d1d5db);border-radius:8px;padding:8px"><b>\u05ea\u05e6\u05d5\u05d2\u05d4 \u05de\u05e7\u05d3\u05d9\u05de\u05d4, \u05e2\u05d5\u05d3 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7:</b>';
-    pl.forEach(function(p){h+='<div style="margin-top:6px"><b>'+esc(p.dept)+'</b> ('+p.names.length+'): '+(p.to.length?'\u05d0\u05dc '+esc(p.to.join(', ')):'<span style="color:var(--red,#b91c1c);font-weight:700">\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd, \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7</span>')+(p.to.length&&p.cc.length?' | \u05e2\u05d5\u05ea\u05e7: '+esc(p.cc.join(', ')):'')+'<div style="font-size:12px;color:var(--t2)">'+esc(p.names.join(', '))+'</div></div>';});
+    pl.forEach(function(p){h+='<div style="margin-top:6px"><b>'+esc(p.dept)+'</b> ('+p.names.length+'): '+(p.to.length?'\u05d0\u05dc '+esc(p.to.join(', ')):'<span style="color:var(--red,#b91c1c);font-weight:700">\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05d4\u05e0\u05de\u05e2\u05e0\u05d9\u05dd, \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7</span>')+(p.to.length&&p.cc.length?' | \u05e2\u05d5\u05ea\u05e7: '+esc(p.cc.join(', ')):'')+'<div style="font-size:12px;color:var(--t2)">'+esc(p.names.join(', '))+'</div>'+(p.noId&&p.noId.length?'<div style="font-size:12px;color:var(--t3)">\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d3\u05d5\u05e7: \u05d0\u05d9\u05df \u05ea.\u05d6. \u05d1\u05db\u05e8\u05d8\u05d9\u05e1 ('+p.noId.length+'): '+esc(p.noId.join(', '))+'</div>':'')+'</div>';});
+    // A6 (15/10/2026): a card with no ID cannot be checked; listed apart, never as "did not sign".
+    if(ni.length)h+='<div style="margin-top:6px;font-size:12px;color:var(--t3)"><b>\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d3\u05d5\u05e7: \u05d0\u05d9\u05df \u05ea.\u05d6. \u05d1\u05db\u05e8\u05d8\u05d9\u05e1</b> ('+ni.length+'): '+esc(ni.join(', '))+'</div>';
     if(nd.length)h+='<div style="margin-top:6px"><b>\u05d1\u05dc\u05d9 \u05de\u05d7\u05dc\u05e7\u05d4, \u05dc\u05d0 \u05d9\u05d9\u05e9\u05dc\u05d7</b> ('+nd.length+'): <span style="font-size:12px;color:var(--t2)">'+esc(nd.join(', '))+'</span></div>';
     if(pl.length)h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn btn-s btn-sm" data-id="'+esc(id)+'" onclick="tbtMissSend(this.dataset.id,true)">\ud83e\uddea \u05e9\u05dc\u05d7 \u05dc\u05d9 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4</button><button type="button" class="btn btn-p btn-sm" data-id="'+esc(id)+'" onclick="tbtMissSend(this.dataset.id,false)">\ud83d\udce7 \u05e9\u05dc\u05d7 \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd</button></div>';
     if(out)out.innerHTML=h+'</div>';return 'preview';
