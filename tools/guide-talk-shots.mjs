@@ -15,10 +15,10 @@
 // the number is the step number in the guide. The ring is measured after the
 // page settled, and a ring that falls outside the frame refuses to be written.
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import { createRequire } from 'module';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { fileURLToPath } from 'url';
+import { loadTalk } from './_talk-module.mjs';
 
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
@@ -26,14 +26,8 @@ let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'project-files', 'guide-training');
 
-// talk.js imports its neighbours as '../x.js'. Node runs them as ES modules
-// only under .mjs, so copy the four into a temp dir, the same mapping as
-// tests/harness/run.sh.
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'talk-shots-'));
-for (const m of ['_shared', '_closelink', '_ai', '_onedrive', '_logo']) fs.copyFileSync(path.join(ROOT, 'functions', m + '.js'), path.join(tmp, m + '.mjs'));
-fs.writeFileSync(path.join(tmp, 'talk.mjs'), fs.readFileSync(path.join(ROOT, 'functions/api/talk.js'), 'utf8')
-  .replace(/'\.\.\/(_shared|_closelink|_ai|_onedrive|_logo)\.js'/g, "'./$1.mjs'"));
-const T = await import(pathToFileURL(path.join(tmp, 'talk.mjs')).href);
+// talk.js and its neighbours, loaded as ES modules (tools/_talk-module.mjs).
+const { T, cleanup } = await loadTalk(ROOT);
 
 const ENV = { SUPABASE_SERVICE_ROLE_KEY: 'srv', TRUSTEE_NOTIFY_SECRET: 'guide-shots', GEMINI_API_KEY: 'g' };
 const PUB = 'פורסמה';
@@ -277,5 +271,5 @@ for (const name of names) {
   await ctx.close();
 }
 await browser.close();
-fs.rmSync(tmp, { recursive: true, force: true });
+cleanup();
 process.exit(failed ? 1 : 0);

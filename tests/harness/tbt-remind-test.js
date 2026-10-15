@@ -55,6 +55,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     o.copy = await _tbtLinkShare(document.getElementById('tbt-rem-txt').value, 'tbt-rem-txt'); o.copied = copied;
     // the link dialog still shares its own text
     _tbtLinkTxt = 'LINK'; await _tbtLinkCopy(); o.linkCopy = copied;
+    // 15/10/2026: an annual training says so, not "weekly"
+    DB.toolbox_talks[0].kind = 'annual'; tbtWho('p'); await tbtRemind('p'); o.annTxt = document.getElementById('tbt-rem-txt').value; DB.toolbox_talks[0].kind = null;
     // a server error says why, in Hebrew
     window.fetch = () => Promise.resolve(new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 }));
     o.bad = await tbtRemind('p'); o.badToast = toasts.slice(-1)[0];
@@ -72,6 +74,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('the share waits for a tap, then shares the message', r.boxShown && r.sharedBefore === null && r.shared === r.txt, [r.sharedBefore, r.shared]);
   check('without a share sheet the message is copied', r.copy === 'copied' && r.copied === r.txt, [r.copy, r.copied]);
   check('the link dialog still copies its own link', r.linkCopy === 'LINK', r.linkCopy);
+  check('an annual training: the reminder says annual, not weekly', /^תזכורת: הדרכה שנתית "עבודה בגובה"/.test(r.annTxt || ''), r.annTxt);
   check('a server error says why', r.bad === 'failed' && /התזכורת לא הוכנה: רק מנהל/.test(r.badToast), r.badToast);
   check('no button in view-only mode', !r.viewBtn);
   check('no page errors', errors.length === 0, errors);

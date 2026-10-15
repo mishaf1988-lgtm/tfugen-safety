@@ -73,7 +73,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     DB.toolbox_reads = [{ id: 'r1', talk_id: id, emp_id: 'x:1111111:ahmad', emp_name: 'אחמד', id_no: '1111111', dept: 'טוגנים', read_at: '2026-10-20T07:00:00Z' },
       { id: 'r2', talk_id: id, emp_id: 'x:9999999:temp', emp_name: 'זמני', id_no: '9999999', dept: 'אריזה', read_at: '2026-10-20T07:02:00Z' }];
     tbtWho(id); const wb = document.getElementById('tbt-who-body').textContent;
-    o.who = { out: wb.includes('מחוץ לרשימה') || wb.includes('לא ברשימת העובדים'), decl: wb.includes('בכל הנושאים שלמעלה'), miss: wb.includes('לא חתמו'), dana: wb.includes('דנה'), ahmadMissing: wb.includes('(1): אחמד'), danaMissing: wb.includes('אריזה (1): דנה') };
+    o.who = { out: wb.includes('מחוץ לרשימה') || wb.includes('לא ברשימת העובדים'), decl: wb.includes('אני מאשר/ת שעברתי הדרכה בנושאים: כיבוי אש, הדרכת ריתוך'), miss: wb.includes('לא חתמו'), dana: wb.includes('דנה'), ahmadMissing: wb.includes('(1): אחמד'), danaMissing: wb.includes('אריזה (1): דנה') };
     o.btn = !!document.getElementById('tbt-0801-btn');
     o.form = await tbtForm0801(id);
     o.formCall = calls.filter((c) => c.op === 'form0801')[0];
@@ -89,6 +89,12 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     tbtWho('drf'); o.prevBtn = !!document.querySelector('#tbt-who-body [onclick^="tbtForm0801Preview"]'); o.formBtnNoReads = !!document.getElementById('tbt-0801-btn');
     o.prev = await tbtForm0801Preview('drf'); o.prevCall = calls.slice(-1)[0]; o.prevHtml = wins[0] && wins[0].document.html;
     o.unsaved = await _tbtPreviewFromForm();
+    // 15/10/2026: annual / quality is face to face: no text, video, questions or read-aloud in the form; no text needed to publish
+    { openModal('m-tbt'); const k = document.getElementById('tbt-kind'); const fld = (id) => document.getElementById(id).closest('.field').style.display;
+      k.value = 'annual'; _tbtKindUi(); o.ffHidden = ['tbt-body', 'tbt-video', 'tbt-quiz', 'tbt-say-btn'].map(fld);
+      k.value = ''; _tbtKindUi(); o.ffShown = ['tbt-body', 'tbt-video', 'tbt-quiz', 'tbt-say-btn'].map(fld); closeModal('m-tbt');
+      const t0 = toasts.length; DB.toolbox_talks.push({ id: 'nob', title: 'בלי טקסט', s: 'טיוטה', kind: 'quality', d: '2026-10-20', trainer: 'x', trainer_qual: 'y' });
+      tbtPublish('nob'); o.noBodyToast = toasts.slice(t0).join('|'); }
     // 14/10/2026: a print button in the preview window, hidden on paper
     { const ev = []; const btn = { style: {} }; const d = { body: { appendChild(x) { ev.push(['b', x]); } }, head: { appendChild(x) { ev.push(['h', x]); } }, getElementById() { return null; }, createElement(t) { return t === 'button' ? btn : { tag: t }; } };
       const wv = { document: d, focus() {}, print() { ev.push(['print']); } };
@@ -162,6 +168,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   check('who did not sign: a button on an open annual training, none once closed', r.mmBtn && !r.mmBtnClosed, [r.mmBtn, r.mmBtnClosed]);
   check('...a preview first (op missMail, preview): department, recipients, copy, names, a department with no manager marked, the ones with no department', r.mmPrev === 'preview' && r.mmPrevCall.op === 'missMail' && r.mmPrevCall.preview === true && /ייצור טוגנים/.test(r.mmBox) && /prod@tapugan/.test(r.mmBox) && /עותק: sviva/.test(r.mmBox) && /אחמד, בוריס/.test(r.mmBox) && /אין נמען/.test(r.mmBox) && /הדר \(הנהלה\)/.test(r.mmBox) && /עוד לא נשלח/.test(r.mmBox), r.mmBox);
   check('...a test to Michael without asking; the real send asks first, then says what went and what was skipped', r.mmTest === 'test' && r.mmTestCall.test === true && r.mmAskedTest === 0 && r.mmSend === 'sent' && r.mmSendCall.test === false && !r.mmSendCall.preview && r.mmAsked === 1 && /נשלח: ייצור טוגנים \(2\)/.test(r.mmRes) && /לא נשלח: חומר גלם/.test(r.mmRes), [r.mmTest, r.mmSend, r.mmAsked, r.mmRes]);
+  check('annual: the text, video, questions and read-aloud fields are hidden; weekly shows them', r.ffHidden.every((x) => x === 'none') && r.ffShown.every((x) => x === ''), [r.ffHidden, r.ffShown]);
+  check('a quality training with no text is not refused as "nothing to publish"', !/אין תוכן לפרסם/.test(r.noBodyToast), r.noBodyToast);
   check('no page errors', errors.length === 0, errors);
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
