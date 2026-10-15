@@ -27,12 +27,12 @@ let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 
 // A stand-in for supabase-js. `session` is what getSession() hands back.
-const stub = (session) => `
+const stub = (session, sessHang) => `
 window.__made = 0;
 window.supabase = { createClient: function () {
   window.__made++;
   return { auth: {
-    getSession: function () { return Promise.resolve({ data: { session: ${JSON.stringify(session)} } }); },
+    getSession: function () { return ${sessHang ? 'new Promise(function () {})' : 'Promise.resolve({ data: { session: ' + JSON.stringify(session) + ' } })'}; },
     onAuthStateChange: function () { return { data: { subscription: { unsubscribe: function () {} } } }; },
     signInAnonymously: function () { return Promise.resolve({ data: { session: null }, error: null }); },
     signOut: function () { return Promise.resolve({}); },
@@ -80,7 +80,7 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
       if (/supabase-js/.test(u)) {
         if (o.lib === 'dead') return r.abort();
         if (o.lib === 'hang') return; // held open: no response, no error, ever
-        return r.fulfill({ contentType: 'application/javascript', body: stub(o.session || null) });
+        return r.fulfill({ contentType: 'application/javascript', body: stub(o.session || null, !!o.sessHang) });
       }
       if (/sw\.js$/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: '' });
       return r.abort();
@@ -180,6 +180,47 @@ const ANON = { access_token: 'anon', user: { email: null, is_anonymous: true } }
     // which is how this very case passed at 0ms before the wait was fixed.
     check('...after the cap, and not forever (' + (r.ms / 1000).toFixed(1) + 's)',
       r.ms > 5000 && r.ms < 15000, r.ms);
+  }
+
+  console.log('\n5b. the saved session cannot be checked (expired token, no signal): 15/10/2026');
+  {
+    // getSession() refreshes an expired token over the network first. With no signal it never
+    // answered (measured 170 s, 55 tries) and the sign-in button was wired only after it: "כניסה" did nothing.
+    const p = await ctx.newPage();
+    await p.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); localStorage.setItem('tfgn_last_seen', String(Date.now())); } catch (e) {} });
+    await p.route('**/*', async (rr) => {
+      const u = rr.request().url();
+      if (u === ORIGIN + '/') return rr.fulfill({ contentType: 'text/html; charset=utf-8', body: SRC });
+      if (/supabase-js/.test(u)) return rr.fulfill({ contentType: 'application/javascript', body: stub(ADMIN, true) });
+      return rr.abort();
+    });
+    const t0 = Date.now();
+    await p.goto(ORIGIN + '/', { waitUntil: 'commit' });
+    await p.waitForFunction(() => { const l = document.getElementById('login'); return !!(l && l.style.display); }, null, { timeout: 15000 }).catch(() => {});
+    const ms = Date.now() - t0, login = await p.evaluate(() => document.getElementById('login').style.display);
+    check('the sign-in screen appears within the 4-second cap, not never (' + (ms / 1000).toFixed(1) + 's)', login === 'flex' && ms < 8000, { login, ms });
+    await p.evaluate(() => { document.getElementById('pw').value = ''; document.getElementById('login-btn').click(); });
+    const msg = await p.evaluate(() => document.body.innerText.indexOf('\u05d4\u05d6\u05df \u05e1\u05d9\u05e1\u05de\u05d4') >= 0);
+    check('...and the button answers (an empty password is told so)', msg === true, msg);
+    await p.close();
+  }
+  {
+    // On a cheap phone the form is on the screen 1.5-4 s before the session check ends. A tap then
+    // used to do nothing; the button is wired before the check now.
+    const p = await ctx.newPage();
+    await p.addInitScript(() => { try { localStorage.setItem('tfgn_app_prefs', JSON.stringify({ lockMin: 720 })); } catch (e) {} });
+    await p.route('**/*', async (r) => {
+      const u = r.request().url();
+      if (u === ORIGIN + '/') return r.fulfill({ contentType: 'text/html; charset=utf-8', body: SRC });
+      if (/supabase-js/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: stub(ADMIN, true) });
+      return r.abort();
+    });
+    await p.goto(ORIGIN + '/', { waitUntil: 'domcontentloaded' });
+    await p.waitForTimeout(400);
+    await p.evaluate(() => { document.getElementById('pw').value = ''; document.getElementById('login-btn').click(); });
+    const early = await p.evaluate(() => document.body.innerText.indexOf('הזן סיסמה') >= 0);
+    check('a tap on "כניסה" before the session check ended is not lost', early === true, early);
+    await p.close();
   }
 
   console.log('\n6. a trustee reopening the app');

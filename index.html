@@ -3713,13 +3713,21 @@ window._sdbFlush = function(){
       if(_SDB_SKIP[k]) continue;
       snap[k] = DB[k];
     }
-    localStorage.setItem('tfgn2', JSON.stringify(snap));
+    try{localStorage.setItem('tfgn2', JSON.stringify(snap));}
+    catch(q){
+      // Full (15/10/2026): try once more without the two tables that grow fastest and come back from
+      // the server on every sync anyway, rather than keep no fresh copy at all.
+      delete snap.toolbox_reads;delete snap.record_history;
+      localStorage.setItem('tfgn2', JSON.stringify(snap));
+    }
     window._sdbFull=false;
   }catch(e){
     // This used to write {} — so a full device threw away the whole local
     // mirror, and the next ldb() loaded an app with no data in it. A stale
     // mirror is far better than none; keep what is there and say so.
     window._sdbFull=true;
+    // Once per session: a toast on every flush (every save, every live update) was noise.
+    if(window._sdbFullTold){_sdbTimer=null;return;}window._sdbFullTold=true;
     try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05d4\u05de\u05db\u05e9\u05d9\u05e8 \u05de\u05dc\u05d0 - \u05d4\u05e2\u05d5\u05ea\u05e7 \u05d4\u05de\u05e7\u05d5\u05de\u05d9 \u05dc\u05d0 \u05e2\u05d5\u05d3\u05db\u05df');}catch(_){}
   }
   _sdbTimer = null;
@@ -3731,6 +3739,15 @@ window._sdbFlush = function(){
 function sdb(){
   if(_sdbTimer) clearTimeout(_sdbTimer);
   _sdbTimer = setTimeout(_sdbFlush, 250);
+}
+// Live updates from other people (15/10/2026, load review): writing the whole local copy after each
+// one cost 130-460 ms on a phone, a freeze per incoming report. Their copy waits for a quiet moment;
+// pagehide and beforeunload still flush it.
+function sdbIdle(){
+  if(_sdbTimer) clearTimeout(_sdbTimer);
+  _sdbTimer = setTimeout(function(){
+    if(window.requestIdleCallback)requestIdleCallback(function(){_sdbFlush();},{timeout:5000});else _sdbFlush();
+  }, 2500);
 }
 // Make sure pending changes flush before the tab unloads, so the next
 // reload sees the latest snapshot (avoids racing the 250ms timer).
@@ -4547,11 +4564,13 @@ function _rtApply(tbl,payload){
   if(tbl==='trustee_tasks'&&typeof _truIsOpen==='function'&&_truIsOpen()&&typeof _truPull==='function')try{_truPull(false);}catch(e){}
   _rtChangedTbls[tbl]=1;
   if(_rtPending)return;
-  _rtPending=(window.requestAnimationFrame||function(f){return setTimeout(f,16);})(function(){
+  // One redraw per 1.2 seconds of live updates (15/10/2026): per animation frame, each report that
+  // arrived while a manager was typing froze the screen for 0.5-0.9 s on a mid-range phone.
+  _rtPending=setTimeout(function(){
     _rtPending=null;
     var tbls=Object.keys(_rtChangedTbls);
     _rtChangedTbls={};
-    sdb();
+    sdbIdle();
     // Pass a single changed table when only one fired in this frame so the
     // page-skip optimization in _sbRefresh can engage. When many fired,
     // check whether ANY of them affect the current page; if none, pass one
@@ -4565,7 +4584,7 @@ function _rtApply(tbl,payload){
     }else{
       _sbRefresh(true,null);
     }
-  });
+  },1200);
 }
 // One-time outbox sanitizer: strip known-bad fields written by older PDF flow
 // before they get sent (otherwise PostgREST returns PGRST204 on every retry).
@@ -22784,13 +22803,30 @@ window.addEventListener('focus',function(){if(typeof empIsOn==='function'&&empIs
     }else{
       showLogin();
     }
+    bindLogin();
+  }
+  // The sign-in button works from the first moment (15/10/2026, load review): it was wired only at the
+  // end of proceed(), after getSession(), which first refreshes an expired token over the network. With
+  // no signal that took for ever (measured: 170 s, 55 refresh tries) and "כניסה" did nothing; on a
+  // cheap phone even a normal open left it dead for 1.5-4 s after the form was on the screen.
+  var bound=false;
+  function bindLogin(){
+    if(bound)return;bound=true;
     var lb=g('login-btn');if(lb)lb.addEventListener('click',doLogin);
     var pw=g('pw');if(pw)pw.addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
   }
   function start(){
     _sbBoot();
+    bindLogin();
     if(!_sbClient){proceed(null);return;}
-    _sbClient.auth.getSession().then(function(r){return _mfaRestore(r&&r.data?r.data.session:null);}).then(function(s){proceed(s);}).catch(function(){proceed(null);});
+    // A saved session that cannot be checked within 4 seconds: show the sign-in screen rather than
+    // nothing. If the check answers later with a session, it is used only if no one signed in meanwhile.
+    var done=false,go=function(s){if(done)return;done=true;proceed(s);};
+    setTimeout(function(){if(!done)go(null);},4000);
+    _sbClient.auth.getSession().then(function(r){return _mfaRestore(r&&r.data?r.data.session:null);}).then(function(s){
+      if(done){if(s&&!(typeof _currentUser!=='undefined'&&_currentUser)){try{var ls=g('login');if(ls&&ls.style.display!=='none'){done=false;go(s);}}catch(e){}}return;}
+      go(s);
+    }).catch(function(){go(null);});
   }
   // supabase-js is loaded with <script defer>, which by definition has NOT run
   // while the parser is still here — and this block is inline, so it is here.
