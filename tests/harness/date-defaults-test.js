@@ -52,7 +52,8 @@ const NONE_ALL = [].concat(...Object.values(NONE));
   await page.waitForTimeout(700);
   const got = await page.evaluate(() => {
     window._role = () => 'admin'; window._isAdminUser = () => true;
-    const out = {}, today = new Date().toISOString().split('T')[0];
+    // The app's today is Israel's (_ilToday, #1549); this machine runs on UTC, so between 00:00 and 03:00 Israel they differ (lesson 102).
+    const out = {}, today = typeof _ilToday === 'function' ? _ilToday() : new Date().toISOString().split('T')[0];
     const mods = [...new Set([...document.querySelectorAll('.modal input[type=date]')].map((i) => i.closest('.modal').id))];
     for (const m of mods) {
       document.querySelectorAll('#' + m + ' input[type=date]').forEach((i) => { i.value = ''; });

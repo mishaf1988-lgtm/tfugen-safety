@@ -26,7 +26,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     try { localStorage.removeItem('tfgn_ncr_draft_v1'); } catch (e) {}
   });
   const pick = (v) => page.evaluate((v) => { const p = g('ncr-p'); p.value = v; p.dispatchEvent(new Event('change')); return gv('ncr-u'); }, v);
-  const today = (n) => page.evaluate((n) => { const b = new Date(); b.setDate(b.getDate() + n); return b.getFullYear() + '-' + String(b.getMonth() + 1).padStart(2, '0') + '-' + String(b.getDate()).padStart(2, '0'); }, n);
+  // From the discovery date the form fills: Israel's today (_ilToday, #1549); this machine is on UTC (lesson 102).
+  const today = (n) => page.evaluate((n) => { const sd = gv('ncr-sd') || (typeof _ilToday === 'function' ? _ilToday() : new Date().toISOString().slice(0, 10)); const b = new Date(sd + 'T12:00:00Z'); b.setUTCDate(b.getUTCDate() + n); return b.toISOString().slice(0, 10); }, n);
 
   console.log('\n1. a new NCR gets a target from the default priority');
   let r = await page.evaluate(() => { openNewNcrModal(); return { p: gv('ncr-p'), u: gv('ncr-u') }; });
