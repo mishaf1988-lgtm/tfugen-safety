@@ -40,10 +40,10 @@ const TAG = '<img src=x onerror="window.__pwned=2">';
   console.log('\n2. PTW print window');
   const r2 = await page.evaluate((tag) => {
     var out = '';
-    window.svPtw = function () {};
+    window.svPtw = function () { return 'p1'; };   // svPtw returns the id of the permit it saved (15/10/2026)
     window.open = function () { return { document: { write: function (s) { out += s; }, close: function () {}, open: function () {} }, focus: function () {}, print: function () {} }; };
     var el = document.getElementById('ptw-con'); if (el) el.value = 'c';
-    DB.ptw = [{ num: tag, con: tag, sup: tag, area: tag, dep: tag, ph: tag, wkr: tag, desc: tag, types: tag, safety: tag, ts: tag, te: tag, sg1n: tag, sg2n: tag, sg3n: tag, sg4n: tag }];
+    DB.ptw = [{ id: 'p1', num: tag, con: tag, sup: tag, area: tag, dep: tag, ph: tag, wkr: tag, desc: tag, types: tag, safety: tag, ts: tag, te: tag, sg1n: tag, sg2n: tag, sg3n: tag, sg4n: tag }];
     try { ptwPrint(); } catch (e) { return { err: String(e) }; }
     return { raw: out.split('<img src=x').length - 1, escaped: out.split('&lt;img src=x').length - 1, len: out.length };
   }, TAG);
