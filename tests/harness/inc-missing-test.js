@@ -82,7 +82,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   {
     const src = require('fs').readFileSync(path.resolve(__dirname, '../../index.html'), 'utf8');
     check('no _setIf on the nonexistent inc-* ids', !/_setIf\('inc-(dt|d|sv|l|r)'/.test(src));
-    check('openModal("m-inc") only in openNewIncModal and editInc (lesson 23)', (src.match(/openModal\('m-inc'\)/g) || []).length === 2);
+    // Since 15/10/2026 both open through _openFilled ('pre' / 'edit'), which calls openModal.
+    check('the incident form opens only in openNewIncModal and editInc (lesson 23)', (src.match(/openModal\('m-inc'\)/g) || []).length === 0 && (src.match(/_openFilled\('m-inc',/g) || []).length === 2);
     check('the inc case opens through openNewIncModal (clears i-id)', /case 'inc':\s*\n(\s*\/\/.*\n)*\s*openNewIncModal\(\);\s*\n\s*_setIf\('i-dt'/.test(src));
   }
 
