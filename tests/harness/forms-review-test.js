@@ -153,11 +153,16 @@ const JPEG = Buffer.from('/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDB
     dlgN = 0;
     await ev(() => svDoc()); await page.waitForTimeout(100);
     check('a save closes with no question', dlgN === 0 && !(await isOpen('m-doc')), dlgN);
+    // The save drops the form's history entry with a history.back() that lands asynchronously; on a busy
+    // runner it landed after the next openModal and the stack came out one entry short (CI, 15/10/2026).
+    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 5000 }); await page.waitForTimeout(100);
     // An untouched form and back: closes quietly, no page change
     await ev(() => openModal('m-doc')); dlgN = 0;
     await page.goBack(); await page.waitForTimeout(150);
     check('back on an untouched form: closes quietly, still on the page', dlgN === 0 && !(await isOpen('m-doc')) && (await ev(() => CUR)) === 'docs', dlgN);
-    // Page navigation by back still works once no form is open
+    // Page navigation by back still works once no form is open. Wait first until the history.back()
+    // queued by the earlier closes has landed (on a busy CI runner it arrived after goPage and popped it).
+    await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0 && CUR === 'docs', null, { timeout: 5000 }); await page.waitForTimeout(300);
     await ev(() => goPage('ncr')); await page.waitForTimeout(50);
     await ev(() => { openModal('m-doc'); closeModal('m-doc'); });
     await page.waitForFunction(() => !(history.state && history.state.modal) && _mhSkip === 0, null, { timeout: 3000 }); await page.waitForTimeout(100);
