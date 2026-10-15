@@ -72,6 +72,13 @@ def maybe_done(cwd, lines):
             for mine, n, t, td, txt in sorted(found)[:MAX_MAYBE]], len(found)
 
 
+def ideas_waiting(cwd):
+    """Ideas waiting for Michael's verdict (15/10/2026, project-files/ideas-lab.md, the inventor Routine)."""
+    t = read(os.path.join(cwd, "project-files", "ideas-lab.md"))
+    sec = t.split("## ממתין להחלטה", 1)[1].split("\n## ", 1)[0] if "## ממתין להחלטה" in t else ""
+    return [l[4:].strip()[:100] for l in sec.splitlines() if l.startswith("### ")]
+
+
 def report(cwd):
     out = ["== התחלת שיחה (session-start.py) ==",
            "skills לטעון: " + ", ".join(SKILLS) + " (CLAUDE.md, Workflow 1-2)"]
@@ -90,6 +97,9 @@ def report(cwd):
     chrome = chrome_open(cwd)
     if chrome:
         out += ["", "-- 🌐 משימות לכרום: %d פתוחות (project-files/chrome-queue.md). להזכיר למיכאל --" % len(chrome)] + chrome
+    ideas = ideas_waiting(cwd)
+    if ideas:
+        out += ["", "-- 💡 רעיונות שמחכים להחלטה של מיכאל: %d (project-files/ideas-lab.md). לשאול בשאלון כשמתאים, עד 4 בכל פעם --" % len(ideas)] + ideas
     rows = [l for l in read(os.path.join(cwd, "project-files", "METRICS.md")).splitlines() if l.startswith("|") and not re.match(r"\|\s*-", l)]
     if len(rows) > 1:
         out += ["", "-- METRICS (שורה אחרונה) --", rows[0], rows[-1]]
