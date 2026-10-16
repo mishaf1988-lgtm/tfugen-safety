@@ -1,0 +1,170 @@
+<title>משרד הסוכנים</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=Rubik:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a floor plan seen from above. Rooms are outlined areas on blueprint paper, each desk a tile
+   with a desk lamp whose light is the agent's state. Summary strip first, rooms below. */
+:root{
+  --paper:#eef2f6; --ink:#1d2a38; --ink-2:#4f6072; --line:#b9c6d4; --room:#f8fafc; --desk:#ffffff;
+  --lamp-done:#2f9e5b; --lamp-run:#e8a33d; --lamp-fail:#d1453b; --lamp-off:#9aa8b6; --lamp-wait:#3d7be8;
+  --accent:#2457a6; --glow:rgba(232,163,61,.35);
+  --f-display:"Suez One","Rubik",system-ui,sans-serif;
+  --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --f-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
+  --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
+  --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111a24; --ink:#e3eaf2; --ink-2:#9db0c3; --line:#2c3c4e; --room:#162231; --desk:#1c2a3b;
+  --lamp-done:#47c27b; --lamp-run:#f2b552; --lamp-fail:#ef6a5f; --lamp-off:#5d6e80; --lamp-wait:#6b9cf2;
+  --accent:#8fb4ee; --glow:rgba(242,181,82,.25); color-scheme:dark}
+html,body{background:var(--paper)}
+body{color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:28px 28px;background-position:-1px -1px;background-attachment:fixed}
+.wrap{max-width:1080px;margin:0 auto;padding-block:18px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px}
+h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-spacing:.2px;text-wrap:balance}
+.stamp{font-family:var(--f-data);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.strip{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--desk);
+  border:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+.chip b{font-weight:700}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--lamp-off);flex:none}
+.s-done .dot,.dot.s-done{background:var(--lamp-done)}
+.s-run .dot,.dot.s-run{background:var(--lamp-run);box-shadow:0 0 0 4px var(--glow)}
+.s-fail .dot,.dot.s-fail{background:var(--lamp-fail)}
+.s-wait .dot,.dot.s-wait{background:var(--lamp-wait)}
+.inbox{background:var(--desk);border:1px solid var(--lamp-wait);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.inbox h2,.room h2{font-family:var(--f-display);font-weight:400;font-size:17px;margin:0}
+.inbox ul{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px}
+.inbox li span{color:var(--ink-2)}
+.floor{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.room{background:var(--room);border:2px solid var(--ink-2);border-radius:4px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative;min-width:0}
+.room::after{content:"";position:absolute;top:-2px;inset-inline-end:28px;width:44px;height:2px;background:var(--room)}
+.room .sub{font-size:12px;color:var(--ink-2);margin-top:-6px}
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.desk{background:var(--desk);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;
+  text-align:start;font:inherit;color:inherit;cursor:pointer;min-width:0}
+.desk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.desk[aria-expanded="true"]{border-color:var(--accent)}
+.desk .top{display:flex;align-items:center;gap:7px}
+.desk .name{font-weight:700;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.desk .role{font-size:12px;color:var(--ink-2);line-height:1.35}
+.desk .when{font-family:var(--f-data);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.detail{grid-column:1/-1;background:var(--desk);border:1px solid var(--accent);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.detail dt{color:var(--ink-2);font-size:13px}
+.detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.empty{background:var(--desk);border:1px dashed var(--ink-2);border-radius:8px;padding:18px;color:var(--ink-2)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+@media (prefers-reduced-motion: no-preference){.s-run .dot{animation:lamp 2.4s ease-in-out infinite}}
+@keyframes lamp{50%{box-shadow:0 0 0 7px transparent}}
+</style>
+
+<div class="wrap" dir="rtl">
+  <header>
+    <h1>משרד הסוכנים</h1>
+    <div class="stamp" id="stamp">טוען...</div>
+  </header>
+  <div class="strip" id="strip"></div>
+  <section class="inbox" id="inbox" hidden>
+    <h2>מחכה לך</h2>
+    <ul id="inbox-list"></ul>
+  </section>
+  <div class="floor" id="floor">
+    <div class="empty" id="empty">המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.</div>
+  </div>
+  <div class="legend">
+    <span><i class="dot s-done"></i>סיים בהצלחה</span>
+    <span><i class="dot s-run"></i>עובד עכשיו</span>
+    <span><i class="dot s-wait"></i>מחכה לך</span>
+    <span><i class="dot s-fail"></i>נכשל</span>
+    <span><i class="dot"></i>עוד לא רץ</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ROOMS=['חדר המחקר','חדר המסמכים','חדר הדוחות','תזכורות'];
+  var ROOM_SUB={'חדר המחקר':'לומדים ומחפשים בחוץ','חדר המסמכים':'מייל, תיקיות ותוקף','חדר הדוחות':'דוחות, ביקורות ומגמות','תזכורות':'בדיקות חד-פעמיות'};
+  var LABEL={done:'סיים',run:'עובד',fail:'נכשל',wait:'מחכה לך',never:'עוד לא רץ'};
+  var agents=[],meta=null,open=null;
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+  // DD/MM/YYYY HH:MM, Israel time
+  function when(iso){
+    if(!iso)return '';
+    var d=new Date(iso);if(isNaN(d))return '';
+    var p={};new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jerusalem',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})
+      .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
+    return p.day+'/'+p.month+'/'+p.year+' '+p.hour+':'+p.minute;
+  }
+  function state(a){
+    if(a.waiting)return 'wait';
+    return ({done:1,run:1,fail:1,never:1})[a.status]?a.status:'never';
+  }
+  function render(){
+    var floor=document.getElementById('floor');
+    floor.textContent='';
+    var stamp=document.getElementById('stamp');
+    stamp.textContent=meta&&meta.updated_at?('עודכן '+when(meta.updated_at)):(agents.length?'':'עוד לא עודכן');
+    var strip=document.getElementById('strip');strip.textContent='';
+    var cnt={done:0,run:0,fail:0,wait:0,never:0};
+    agents.forEach(function(a){cnt[state(a)]++;});
+    var total=el('span','chip');total.appendChild(el('b',null,String(agents.length)));total.appendChild(document.createTextNode(' סוכנים'));strip.appendChild(total);
+    ['run','wait','fail','done','never'].forEach(function(k){
+      if(!cnt[k])return;
+      var c=el('span','chip s-'+k);c.appendChild(el('i','dot'));c.appendChild(el('b',null,String(cnt[k])));c.appendChild(document.createTextNode(' '+LABEL[k]));strip.appendChild(c);
+    });
+    var inbox=document.getElementById('inbox'),list=document.getElementById('inbox-list');list.textContent='';
+    var waiting=agents.filter(function(a){return a.waiting;});
+    inbox.hidden=!waiting.length;
+    waiting.forEach(function(a){var li=el('li');li.appendChild(el('strong',null,a.name+': '));li.appendChild(el('span',null,a.waiting));list.appendChild(li);});
+    if(!agents.length){floor.appendChild(el('div','empty','המשרד ריק עדיין. כל בוקר ב-07:38 סוכן קטן עובר על כל הסוכנים ושם כל אחד בשולחן שלו.'));return;}
+    var rooms=ROOMS.slice();
+    agents.forEach(function(a){if(a.room&&rooms.indexOf(a.room)<0)rooms.push(a.room);});
+    rooms.forEach(function(r){
+      var inRoom=agents.filter(function(a){return (a.room||'חדר המסמכים')===r;});
+      if(!inRoom.length)return;
+      inRoom.sort(function(x,y){return (x.order||99)-(y.order||99)||String(x.name).localeCompare(String(y.name),'he');});
+      var room=el('section','room');room.appendChild(el('h2',null,r));
+      if(ROOM_SUB[r])room.appendChild(el('div','sub',ROOM_SUB[r]));
+      var desks=el('div','desks');
+      inRoom.forEach(function(a){
+        var s=state(a);
+        var b=el('button','desk s-'+s);b.type='button';b.id='desk-'+a.id;
+        b.setAttribute('aria-expanded',open===a.id?'true':'false');
+        var top=el('div','top');top.appendChild(el('i','dot'));top.appendChild(el('span','name',a.name));b.appendChild(top);
+        if(a.role)b.appendChild(el('div','role',a.role));
+        b.appendChild(el('div','when',LABEL[s]+(a.last_run?', '+when(a.last_run):'')));
+        b.addEventListener('click',function(){open=(open===a.id)?null:a.id;render();});
+        desks.appendChild(b);
+        if(open===a.id){
+          var d=el('div','detail');var dl=el('dl');
+          [['מתי',a.schedule],['ריצה אחרונה',a.last_run?when(a.last_run)+' ('+LABEL[a.status]+')':'עוד לא רץ'],['ריצה הבאה',when(a.next_run)],
+           ['מה עשה',a.did],['מה למד',a.learned],['מחכה לך',a.waiting],['עלות לריצה',a.cost]].forEach(function(r2){
+            if(!r2[1])return;dl.appendChild(el('dt',null,r2[0]));dl.appendChild(el('dd',null,r2[1]));
+          });
+          d.appendChild(dl);desks.appendChild(d);
+        }
+      });
+      room.appendChild(desks);floor.appendChild(room);
+    });
+  }
+  render();
+  if(!window.claude||!window.claude.use){document.getElementById('stamp').textContent='אין חיבור לנתונים בתצוגה הזו';return;}
+  window.claude.use('db').then(function(db){
+    if(!db){document.getElementById('stamp').textContent='צריך להיכנס לחשבון כדי לראות את המשרד';return;}
+    db.collection('agents').onSnapshot(function(snap){
+      agents=snap.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x;});render();
+    },function(){document.getElementById('stamp').textContent='לא הצלחתי לקרוא את המשרד, נסה לרענן';});
+    db.doc('meta/office').onSnapshot(function(s){meta=s.data()||null;render();},function(){});
+  });
+})();
+</script>

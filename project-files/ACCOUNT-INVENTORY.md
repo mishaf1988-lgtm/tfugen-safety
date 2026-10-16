@@ -33,12 +33,15 @@
 | `trig_01KLpgHULq2BqUpphdiGWyWa` | הדרכה שבועית מהשטח | א' 05:53 | `routine-talk-field.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 | `trig_01SzAJJc2RDFcLoAeBEcWonK` | רדאר רגולציה שבועי | א' 08:17 | הפרומפט בטריגר עצמו (לא בקובץ) | שיחה חדשה בכל ריצה |
 | `trig_01BimkS5EroGgvLB1tZo6zQo` | תור משימות מ-Claude Code (Cowork) | כל שעה, דקה 19 | הפרומפט בטריגר; הכללים ב-`cowork-queue.md` | Cowork, קשור למחשב של מיכאל |
+| `trig_016Cc2xKxQ9W5AEf75yLhmtA` | משרד הסוכנים: עדכון בוקר | כל יום 07:38 | `routine-office.md` | `session_01JT8Fct6Z6Qv2GbaBBqxtQT` |
 
 שיחות "לא לארכב": ארבע השיחות בעמודה האחרונה. Routine יורה לתוך שיחה, וארכוב שלה עוצר אותו.
 
 ### Cowork
 - **משימה מתוזמנת** "תור משימות מ-Claude Code" (למעלה). רצה רק כשהמחשב של מיכאל דלוק ואפליקציית Claude פתוחה. הפרומפט המלא: `get_trigger` על המזהה, או `cowork-queue.md`.
 - **תור המשימות:** ארטיפקט פרטי `https://claude.ai/artifact/8YG6U1r72asze2EFHxz4db`, אוסף `cowork_tasks`, ו-assets (קבצים להעלאה). להעברה: ארטיפקט חדש, ולעדכן את הכתובת ב-`cowork-queue.md` ובפרומפט של המשימה. **לא לשתף אותו** (מי שכותב בו מאשר משימות).
+
+- **משרד הסוכנים:** ארטיפקט פרטי `https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi`, מוצמד בסרגל. אוסף `agents` (שולחן לכל טריגר) ומסמך `meta/office`, שה-Routine למעלה כותב כל בוקר. מקור העמוד: `project-files/agent-office-page.txt`. להעברה: לפרסם את המקור כארטיפקט חדש ולעדכן את הכתובת ב-`routine-office.md`.
 
 ### Connectors (claude.ai > Settings > Connectors)
 Microsoft 365 (קריאה: מייל, OneDrive, יומן, Teams), Supabase (`execute_sql` על `znhjtpcltrxxyfjczgvw`), Cloudflare Developer Platform, GitHub (repos `tfugen-safety` ו-`michael-skills`), Claude Docs. בחשבון חדש: לחבר את כולם, ולאשר את GitHub App על שני ה-repos.
