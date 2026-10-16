@@ -21,7 +21,7 @@ import {
   defaultAllowedOrigins,
   corsHeaders,
   jsonResp,
-  isAllowedCaller, sbFrom } from '../_shared.js';
+  isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 
 let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const RATE_LIMIT_SECONDS = 300;
@@ -53,7 +53,7 @@ export async function onRequest({ request, env }) {
   // (still return generic 200 so the requester can't tell).
   const lookupResp = await fetch(
     `${SUPABASE_URL}/rest/v1/app_users?username=eq.${encodeURIComponent(username)}&select=username,active&limit=1`,
-    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, signal: tmo(SB_MS) }
   );
   if (!lookupResp.ok) {
     return jsonResp({ ok: true }, 200, cors);
@@ -68,7 +68,7 @@ export async function onRequest({ request, env }) {
   const sinceIso = new Date(Date.now() - RATE_LIMIT_SECONDS * 1000).toISOString();
   const recentResp = await fetch(
     `${SUPABASE_URL}/rest/v1/password_reset_requests?username=eq.${encodeURIComponent(username)}&ts=gte.${encodeURIComponent(sinceIso)}&select=id&limit=1`,
-    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, signal: tmo(SB_MS) }
   );
   if (recentResp.ok) {
     const recent = await recentResp.json();
@@ -87,7 +87,7 @@ export async function onRequest({ request, env }) {
       'Content-Type': 'application/json',
       Prefer: 'return=minimal'
     },
-    body: JSON.stringify({ username, status: 'pending' })
+    body: JSON.stringify({ username, status: 'pending' }), signal: tmo(SB_MS)
   }).catch(() => {});
 
   return jsonResp({ ok: true }, 200, cors);

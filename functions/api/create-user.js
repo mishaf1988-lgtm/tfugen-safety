@@ -1,7 +1,7 @@
 // Cloudflare Pages Function — admin-only create user
 // Mirrors /api/create-user.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 
 let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const ADMIN_EMAIL = 'admin@tfugen.local';
@@ -40,7 +40,7 @@ export async function onRequest({ request, env }) {
   if (!token) return jsonResp({ error: 'missing bearer token' }, 401, cors);
 
   const verifyResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }
+    headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }, signal: tmo(SB_MS)
   });
   if (!verifyResp.ok) return jsonResp({ error: 'invalid session token' }, 401, cors);
   const userInfo = await verifyResp.json();
@@ -90,7 +90,7 @@ export async function onRequest({ request, env }) {
       // user_metadata stays for the client and for the transition.
       user_metadata: { username, full_name, must_change_password: true },
       app_metadata: { must_change_password: true }
-    })
+    }), signal: tmo(SB_MS)
   });
 
   if (!createAuthResp.ok) {
@@ -109,7 +109,7 @@ export async function onRequest({ request, env }) {
       'Content-Type': 'application/json',
       Prefer: 'resolution=merge-duplicates'
     },
-    body: JSON.stringify({ id: username, username, full_name, role, dept, phone, email, notes, active: true })
+    body: JSON.stringify({ id: username, username, full_name, role, dept, phone, email, notes, active: true }), signal: tmo(SB_MS)
   });
 
   if (!upsertResp.ok) {

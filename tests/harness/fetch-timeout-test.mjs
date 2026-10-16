@@ -1,10 +1,8 @@
 // Every outbound call from a server function has a time limit (16/10/2026, Michael in the
 // questionnaire: "בצע: מגבלת זמן לקריאות השרת"; BACKLOG 14.5). A fetch with no signal waits
 // as long as the platform lets it, so one dead upstream leaves the phone spinning.
-// Done in stages. This file holds the line:
-//   * the files already done have no call without a signal;
-//   * every other file may not grow: its count is pinned below, and a file that went down
-//     must be pinned lower in the same PR (so the number only ever falls);
+// Done in three stages the same day (17 + 31 + 59 calls). This file holds the line:
+//   * no call in functions/api without a signal, unless the line above says why (// no-timeout:);
 //   * close-hazard, the page a worker opens from the mail, answers a timed-out write with
 //     a page that sends them back to the link, not a crash.
 import fs from 'fs';
@@ -29,41 +27,30 @@ const callsOf = (s) => {
 };
 // A file may shadow fetch with one that adds a limit to every call (talk.js, 15/10/2026); then
 // every call in it is covered.
+// A file may shadow fetch with one that adds a limit to every call (talk.js, 15/10/2026); then
+// every call in it is covered.
 const WRAP = /^const fetch = \(u, o\) => globalThis\.fetch\(u, o && o\.signal \? o : \{ \.\.\.\(o \|\| \{\}\), signal: AbortSignal\.timeout\(\w+\) \}\);$/m;
+// A call left without a limit on purpose says why on the line above: `// no-timeout: <reason>`.
+// Today: the streamed AI answer in claude.js (a long answer runs past any fixed limit).
 const bareIn = (f) => {
   const s = fs.readFileSync(path.join(ROOT, 'functions/api', f), 'utf8');
-  return WRAP.test(s) ? [] : callsOf(s).filter((c) => !/\bsignal\s*:/.test(c));
+  if (WRAP.test(s)) return [];
+  return callsOf(s).filter((c) => {
+    if (/\bsignal\s*:/.test(c)) return false;
+    const at = s.indexOf(c), lineStart = s.lastIndexOf('\n', at), prev = s.substring(s.lastIndexOf('\n', lineStart - 1) + 1, lineStart);
+    return !/\/\/ no-timeout: \S/.test(prev);
+  });
 };
 
-const DONE = ['close-hazard.js', 'hazard-report.js', 'codes.js', 'hazard-file.js', 'hazard-deck.js', 'talk.js', 'routine-db.js', 'weekly-digest.js', 'vitre.js'];
-// Calls still without a limit, 16/10/2026. Lower a number when a file is fixed; never raise one.
-const LEFT = {
-  '_securityselftest.js': 18, 'backup-od.js': 2, 'claude.js': 2, 'create-user.js': 3, 'delete-user.js': 4,
-  'mail-inbox.js': 5, 'ms-auth.js': 1, 'od-pick.js': 1, 'od-read.js': 3, 'od-scan.js': 1, 'rename-user.js': 4,
-  'reset-password.js': 4, 'self-recovery.js': 3, 'trustee-log.js': 5,
-  'wa-status.js': 1, 'wa-templates.js': 2, 'xlsx-gaps.js': 1,
-};
-
-console.log('\n1. the files already done: every outbound call has a signal');
-for (const f of DONE) {
-  const bare = bareIn(f);
-  check(f + ': 0 calls without a limit', bare.length === 0, bare.map((c) => c.substring(0, 110)));
-}
-
-console.log('\n2. no file gains a call without a limit');
+console.log('\n1. every outbound call in functions/api has a time limit (stages 1-3 done, 16/10/2026)');
 const files = fs.readdirSync(path.join(ROOT, 'functions/api')).filter((f) => f.endsWith('.js'));
-const grew = [], fell = [];
-for (const f of files) {
-  if (DONE.includes(f)) continue;
-  const n = bareIn(f).length, was = LEFT[f] || 0;
-  if (n > was) grew.push(f + ': ' + n + ' (allowed ' + was + ')');
-  if (n < was) fell.push(f + ': ' + n + ' (pinned ' + was + ', lower it in LEFT)');
-}
-check('no file above its pinned count (a new fetch needs signal: tmo(...) from _shared.js)', grew.length === 0, grew);
-check('every count that fell is pinned at its new value', fell.length === 0, fell);
-check('LEFT names only files that exist', Object.keys(LEFT).every((f) => files.includes(f)), Object.keys(LEFT).filter((f) => !files.includes(f)));
-const total = Object.values(LEFT).reduce((a, b) => a + b, 0);
-console.log('    (left to do: ' + total + ' calls in ' + Object.keys(LEFT).length + ' files)');
+const bare = [];
+for (const f of files) for (const c of bareIn(f)) bare.push(f + ': ' + c.substring(0, 100));
+check(files.length + ' files, 0 calls without signal: tmo(...) (or a "// no-timeout:" reason)', bare.length === 0, bare);
+const marked = files.reduce((n, f) => n + (fs.readFileSync(path.join(ROOT, 'functions/api', f), 'utf8').match(/\/\/ no-timeout: \S/g) || []).length, 0);
+check('exemptions stay rare: at most 1 marked call (the streamed AI answer)', marked <= 1, marked);
+const backup = fs.readFileSync(path.join(ROOT, 'functions/api/backup-od.js'), 'utf8');
+check('backup-od: its counting wrapper gives every call the file limit', /return fetch\(url, init && init\.signal \? init : \{ \.\.\.\(init \|\| \{\}\), signal: tmo\(FILE_MS\) \}\);/.test(backup));
 
 console.log('\n3. the limits themselves');
 const shared = fs.readFileSync(path.join(ROOT, 'functions/_shared.js'), 'utf8');

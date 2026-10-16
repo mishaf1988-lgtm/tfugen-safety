@@ -23,7 +23,7 @@
 // link, and ok/error. The weekly mail lists the files of the last 7 days and
 // names a failed or stale scan; once a month a Routine reads the regulatory
 // ones (project-files/routine-od-scan.md).
-import { jsonResp } from '../_shared.js';
+import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
 import { ROOT } from './od-read.js';
 
@@ -114,7 +114,7 @@ export async function onRequest(context) {
   try {
     const { token } = await accessToken(env);
     const get = async (u) => {
-      const r = await fetch(u, { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch(u, { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
       return { status: r.status, json: r.status === 200 ? await r.json() : null };
     };
     // The start line: from now on, no enumeration of what is already there.

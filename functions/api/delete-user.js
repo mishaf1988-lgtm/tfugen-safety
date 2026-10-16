@@ -1,7 +1,7 @@
 // Cloudflare Pages Function — admin-only delete user
 // Mirrors /api/delete-user.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 
 let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const ADMIN_EMAIL = 'admin@tfugen.local';
@@ -25,7 +25,7 @@ export async function onRequest({ request, env }) {
   if (!token) return jsonResp({ error: 'missing bearer token' }, 401, cors);
 
   const verifyResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
-    headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }
+    headers: { apikey: serviceKey, Authorization: 'Bearer ' + token }, signal: tmo(SB_MS)
   });
   if (!verifyResp.ok) return jsonResp({ error: 'invalid session token' }, 401, cors);
   const userInfo = await verifyResp.json();
@@ -47,7 +47,7 @@ export async function onRequest({ request, env }) {
     const all = [];
     for (let page = 1; page <= 10; page++) {
       const r = await fetch(SUPABASE_URL + '/auth/v1/admin/users?page=' + page + '&per_page=1000', {
-        headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
+        headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }, signal: tmo(SB_MS)
       });
       if (!r.ok) break;
       const j = await r.json();
@@ -59,7 +59,7 @@ export async function onRequest({ request, env }) {
     if (targetUser) {
       const delResp = await fetch(SUPABASE_URL + '/auth/v1/admin/users/' + targetUser.id, {
         method: 'DELETE',
-        headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }
+        headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey }, signal: tmo(SB_MS)
       });
       authStatus = (delResp.ok || delResp.status === 204) ? 'deleted' : ('failed: HTTP ' + delResp.status);
     } else {
@@ -77,7 +77,7 @@ export async function onRequest({ request, env }) {
         apikey: serviceKey,
         Authorization: 'Bearer ' + serviceKey,
         Prefer: 'return=representation'
-      }
+      }, signal: tmo(SB_MS)
     });
     if (delRowResp.ok) {
       const arr = await delRowResp.json().catch(() => []);

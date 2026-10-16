@@ -15,7 +15,7 @@
 // who reached this endpoint must not be able to submit arbitrary text for
 // approval in the factory's name.
 
-import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = '4400035656982783';
@@ -94,7 +94,7 @@ export async function onRequest({ request, env }) {
       res = await fetch(`https://graph.facebook.com/${META_API_VERSION}/${WABA}/message_templates`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(SAFETY_TEMPLATE)
+        body: JSON.stringify(SAFETY_TEMPLATE), signal: tmo(GRAPH_MS)
       });
     } catch (e) {
       return jsonResp({ error: 'network failure', detail: String((e && e.message) || e) }, 502, cors);
@@ -119,7 +119,7 @@ export async function onRequest({ request, env }) {
   const url = `https://graph.facebook.com/${META_API_VERSION}/${WABA}/message_templates?fields=name,status,language,category&limit=50`;
   let r;
   try {
-    r = await fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+    r = await fetch(url, { headers: { 'Authorization': `Bearer ${TOKEN}` }, signal: tmo(GRAPH_MS) });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'network failure', detail: String(e && e.message || e) }), {
       status: 502,

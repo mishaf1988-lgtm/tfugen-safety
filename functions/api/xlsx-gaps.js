@@ -14,7 +14,7 @@
 // mail shows it (xlsxGapsLine in weekly-digest.js). pg_cron calls it every night with the
 // Vault secret (private.xlsx_gaps_tick).
 
-import { jsonResp } from '../_shared.js';
+import { jsonResp, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, stateSet } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
 import { ROOT } from './od-read.js';
@@ -102,7 +102,7 @@ export async function onRequest(context) {
   try {
     const { token } = await accessToken(env);
     const sheet = async (name) => {
-      const r = await fetch(rangeUrl(name), { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch(rangeUrl(name), { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
       if (r.status !== 200) throw new Error('sheet ' + r.status);
       return ((await r.json()).text) || [];
     };

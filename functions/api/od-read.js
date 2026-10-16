@@ -13,7 +13,7 @@
 // list (04/10/2026, Michael: "scan the whole folder"): {list: '<folder>'} or
 // {list: ''} for the safety folder itself = its files and sub-folders. raw may
 // also fetch .pdf / .docx / .doc / .txt / .csv, so the documents can be read.
-import { jsonResp } from '../_shared.js';
+import { jsonResp, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetNames, readZip, entryText } from '../_xlsxpatch.js';
 import { pptxOutline } from '../_pptx.js';
@@ -78,7 +78,7 @@ export async function onRequest(context) {
     if (!odConfigured(env)) return jsonResp({ ok: false, error: 'server not configured' }, 200, {});
     try {
       const { token } = await accessToken(env);
-      const r = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(m) + '/attachments/' + encodeURIComponent(a), { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch('https://graph.microsoft.com/v1.0/me/messages/' + encodeURIComponent(m) + '/attachments/' + encodeURIComponent(a), { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'mail ' + r.status }, 200, {});
       const att = await r.json();
       if (!mailAttOk(att)) return jsonResp({ ok: false, error: 'not a pdf or a photo' }, 200, {});
@@ -99,7 +99,7 @@ export async function onRequest(context) {
       const items = [];
       let next = G + seg(dir) + ':/children?$select=name,size,folder,file,lastModifiedDateTime&$top=999';
       for (let i = 0; next && i < 10; i++) {
-        const r = await fetch(next, { headers: { Authorization: 'Bearer ' + token } });
+        const r = await fetch(next, { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
         if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: dir }, 200, {});
         const j = await r.json();
         (j.value || []).forEach((x) => items.push({ name: x.name, dir: !!x.folder, n: x.folder ? x.folder.childCount : undefined, size: x.size, mod: x.lastModifiedDateTime }));
@@ -114,7 +114,7 @@ export async function onRequest(context) {
   if (!full) return jsonResp({ ok: false, error: 'bad path' }, 400, {});
   try {
     const { token } = await accessToken(env);
-    const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+    const r = await fetch(G + seg(full) + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
     if (!r.ok) return jsonResp({ ok: false, error: 'onedrive ' + r.status, path: full }, 200, {});
     const bytes = new Uint8Array(await r.arrayBuffer());
     if (body.raw === true) {
