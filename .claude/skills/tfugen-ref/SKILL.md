@@ -209,6 +209,8 @@ ALTER TABLE tbl ADD COLUMN IF NOT EXISTS col TEXT;
 
 ## Gotchas
 
+- Tests that slice `index.html` between two function names (`cut('function _empLeft', 'function rEmp(')` in `vitre-review-test.mjs`, the extractors in `outbox-race-test.js` and others): a new helper a sliced function calls must sit INSIDE that range, after the first function, or the test crashes with ReferenceError. Before adding a helper next to an existing function: `grep -rn "'function <name>" tests/harness` (16/10/2026, `_empToday` placed before `_empLeft`).
+
 - Operational tests (10/10/2026): `ops-sweep-test.js` (every page: open, 👁, ✏️, 🗑 and what is left) and `ops-create-test.js` (every "new" form: fill by type, save, in data + `sbIns` + on the page; then edit in place, `sbUpd`, no duplicate). Most pages edit through 👁 then `#view-edit` (`_genEdit`), not a ✏️ on the row. A bug Michael finds by hand = a new case in one of them.
 
 - Playwright `addInitScript` then `setContent` on a fresh page: the stub does NOT run (the first about:blank was created before it). `await page.goto('about:blank')` between them (10/10/2026, `talk-speak-test.mjs`). `window.speechSynthesis` is a getter: stub it with `Object.defineProperty`.

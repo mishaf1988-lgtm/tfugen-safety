@@ -177,6 +177,61 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('forceSync pulls even when a focus pull just ran', r.pulls >= 1, r);
   }
 
+  console.log('\n9. NCR, employees, tour hazards and trustee reports: the same cap (BACKLOG 14.3, 16/10/2026)');
+  {
+    // Measured in the deep review of 15/10/2026: 1000 NCRs painted in 2.7s, 500 employees in 1.9s.
+    const r = await page.evaluate(() => {
+      const iso = (d) => new Date(Date.now() + d * 864e5).toISOString().split('T')[0];
+      window._ncrShowAll = false; window._empShowAll = false; window._thzShowAll = false; window._truShowAll = false;
+      window._ncrQF = ''; window._ncrCauseFilter = null;
+      DB.ncr = Array.from({ length: 1000 }, (_, i) => ({ id: 'n' + i, num: 'NCR-' + i, d: 'ליקוי ' + i, a: 'בטיחות', s: 'פתוח', p: 'נמוכה', sd: iso(-i) }))
+        .concat(Array.from({ length: 3 }, (_, i) => ({ id: 'crit' + i, num: 'NCR-C' + i, d: 'קריטי ' + i, a: 'בטיחות', s: 'פתוח', p: 'קריטי', sd: iso(-2000) })));
+      DB.emp = Array.from({ length: 500 }, (_, i) => ({ id: 'e' + i, n: 'עובד ' + i, dept: 'ייצור', left_d: i < 100 ? iso(30) : null }))   // 100 with a leaving date ahead
+        .concat([{ id: 'left1', n: 'עזב', dept: 'ייצור', left_d: iso(-10) }]);
+      DB.tour_hazards = Array.from({ length: 300 }, (_, i) => ({ id: 'h' + i, n: i + 1, d: iso(-i), loc: 'מחסן', descr: 'מפגע ' + i, s: 'פתוח' }));
+      DB.trustee_reports = Array.from({ length: 300 }, (_, i) => ({ id: 'tr' + i, u: 'לב', t: 1, d: iso(-(i % 60)), m: iso(0).slice(0, 7), loc: 'מחסן', ok: false, f: 'ממצא ' + i, s: 'פתוח', ts: new Date(Date.now() - i * 60000).toISOString() }));
+      const out = {};
+      let t0 = performance.now(); goPage('ncr'); out.ncrMs = Math.round(performance.now() - t0);
+      const nt = g('tb-ncr');
+      out.ncr = { rows: nt.querySelectorAll('tr').length, crit: [0, 1, 2].filter((i) => nt.textContent.indexOf('קריטי ' + i) >= 0).length,
+        note: (nt.textContent.match(/מוצגות \d+ מתוך \d+/) || [''])[0], sum: ((g('ncr-summary') || {}).textContent || '') };
+      const undo = _capLiftForExport();
+      out.ncrExport = nt.querySelectorAll('tr').length;
+      undo();
+      out.ncrBack = nt.querySelectorAll('tr').length;
+      ncrShowAll(); out.ncrAll = nt.querySelectorAll('tr').length;
+      t0 = performance.now(); goPage('emp'); out.empMs = Math.round(performance.now() - t0);
+      const et = g('tb-emp');
+      out.emp = { rows: et.querySelectorAll('tr').length, left: et.textContent.indexOf('עזב') >= 0, note: /מוצגות 200 מתוך 501/.test(et.textContent) };
+      empShowAll(); out.empAll = et.querySelectorAll('tr').length;
+      goPage('thz'); const ht = g('tb-thz');
+      out.thz = { rows: ht.querySelectorAll('tr').length, newest: ht.textContent.indexOf('מפגע 299') >= 0, oldest: ht.textContent.indexOf('מפגע 0') >= 0 && /מפגע 0(?!\d)/.test(ht.textContent) };
+      goPage('trustees'); try { _truMgrSetFilter('all'); } catch (e) {} rTrustees(); const tt = g('tb-trustees');
+      out.tru = { rows: tt.querySelectorAll('tr').length, note: /מוצגות 200 מתוך 300/.test(tt.textContent) };
+      truShowAll(); out.truAll = tt.querySelectorAll('tr').length;
+      // _empLeft reads the date once a minute, not once per row
+      let calls = 0; const real = Date.prototype.toLocaleDateString;
+      Date.prototype.toLocaleDateString = function () { calls++; return real.apply(this, arguments); };
+      _empTodayC.t = 0; DB.emp.forEach((e) => _empLeft(e));
+      Date.prototype.toLocaleDateString = real;
+      out.dateCalls = calls;
+      return out;
+    });
+    check('NCR: 200 rows plus the footer, out of 1003', r.ncr.rows === 201 && /מוצגות 200 מתוך 1003/.test(r.ncr.note), r.ncr);
+    check('NCR: the three critical ones, seeded last and oldest, are painted', r.ncr.crit === 3, r.ncr);
+    check('NCR: the summary above still counts all 1003', r.ncr.sum.indexOf('1003') >= 0, r.ncr.sum.slice(0, 80));
+    check('NCR: export lifts the cap and puts it back', r.ncrExport === 1003 && r.ncrBack === 201, r);
+    check('NCR: «show all» paints every row', r.ncrAll === 1003, r.ncrAll);
+    check('employees: 200 plus the footer, the one who left is the part cut', r.emp.rows === 201 && !r.emp.left && r.emp.note, r.emp);
+    check('employees: «show all» paints all 501', r.empAll === 501, r.empAll);
+    check('tour hazards: capped, newest first kept', r.thz.rows === 201 && r.thz.newest && !r.thz.oldest, r.thz);
+    check('trustee reports: capped with the footer, «show all» paints 300', r.tru.rows === 201 && r.tru.note && r.truAll === 300, r);
+    check('_empLeft over 101 employees with a leaving date reads the date once, not 101 times', r.dateCalls === 1, r.dateCalls);
+    // Broken on purpose (16/10/2026): NCR without _capRows fails two (1003 rows); _CAP_PAGES without ncr
+    // fails the export one; _empLeft back to toLocaleDateString per row fails the last (101).
+    console.log('    (paint: NCR ' + r.ncrMs + 'ms, employees ' + r.empMs + 'ms)');
+  }
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
