@@ -5945,6 +5945,8 @@ var _NCR_DUE_DAYS={'\u05e7\u05e8\u05d9\u05d8\u05d9':1,'\u05d2\u05d1\u05d5\u05d4\
 function _ncrDueFor(p,sd){
   var n=_NCR_DUE_DAYS[p];if(!n)return null;
   var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(sd||'');
+  // No discovery date: Israel's today, like every other date in the app (#1549), not the device clock.
+  if(!m)m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof _ilToday==='function'?_ilToday():'');
   var b=m?new Date(+m[1],m[2]-1,+m[3]):new Date();
   b.setDate(b.getDate()+n);
   return b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');

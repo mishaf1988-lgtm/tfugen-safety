@@ -70,7 +70,7 @@ const DASH = /\u2014|\u2015|\u05be|\u00ab|\u00bb|\u2026|[\u201c\u201d\u2018\u201
   await page.evaluate(() => { g('ov-del-confirm').style.display = 'none'; g('m-del-confirm').style.display = 'none'; });
 
   // ---- NCR: due by priority, textarea 3 rows, table date plain, delete ✕ ----
-  r = await page.evaluate(() => { openNewNcrModal(); const today = new Date(); const iso = (d) => { const x = new Date(today); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); }; const u30 = gv('ncr-u'); g('ncr-p').value = 'קריטי'; _ncrAutoDue(); const u1 = gv('ncr-u'); return { u30, u1, exp30: iso(30), exp1: iso(1), rcRows: +g('ncr-rc').rows, cRows: +g('ncr-c').rows, rcW: g('ncr-rc').getBoundingClientRect().width, mdW: g('m-ncr').getBoundingClientRect().width }; });
+  r = await page.evaluate(() => { openNewNcrModal(); const today = new Date(); const iso = (d) => { const x = new Date(today); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); }; const u30 = gv('ncr-u'); g('ncr-p').value = 'קריטי'; _ncrAutoDue(); const u1 = gv('ncr-u'); const sd = gv('ncr-sd'); const from = (b, d) => { const x = new Date(b + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + d); return x.toISOString().slice(0, 10); }; return { u30, u1, exp30: from(typeof _ilToday === 'function' ? _ilToday() : new Date().toISOString().slice(0, 10), 30), exp1: sd ? from(sd, 1) : iso(1), rcRows: +g('ncr-rc').rows, cRows: +g('ncr-c').rows, rcW: g('ncr-rc').getBoundingClientRect().width, mdW: g('m-ncr').getBoundingClientRect().width }; });
   await shot('NCR-form');
   say('NCR due: 30d default, 1d on critical', r.u30 === r.exp30 && r.u1 === r.exp1, r);
   say('NCR root cause / action are 3-row textareas, full width', r.rcRows >= 3 && r.cRows >= 3 && r.rcW > r.mdW * 0.8, r);
