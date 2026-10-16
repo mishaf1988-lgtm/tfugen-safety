@@ -103,16 +103,52 @@ function blocked(country) {
   });
 }
 
+// Staging (16/10/2026, Michael: "a development and test environment"; project-files/staging/README.md).
+// A preview build (<hash>.tapugan-safety.pages.dev) runs against the test database tfugen-staging
+// and never reaches anything real. Michael could not pick the Preview environment in the
+// Cloudflare dashboard from his phone, so the test database comes from two variables the live
+// site never reads, STAGING_SUPABASE_URL and STAGING_SUPABASE_SERVICE_ROLE_KEY, and the swap is
+// made here, once, before any Function runs. Production (tapugan-safety.pages.dev itself) is
+// untouched: its host never matches.
+export const PREVIEW_HOST_RE = /\.tapugan-safety\.pages\.dev$/i;
+// Secrets that reach the outside world. On a preview they are removed, so a test can never send
+// a WhatsApp, an email, a Vitre call, a GitHub write or a machine-path request for real.
+export const PREVIEW_STRIP = ['META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_WABA_ID', 'RESEND_KEY',
+  'VITRE_API_KEY_ID', 'VITRE_API_KEY_SECRET', 'VITRE_PHOTO_KEY', 'ONEDRIVE_CLIENT_ID', 'ONEDRIVE_CLIENT_SECRET',
+  'ONEDRIVE_TENANT_ID', 'GH_SKILLS_TOKEN', 'ROUTINE_KEY', 'TRUSTEE_NOTIFY_SECRET'];
+// Returns true when env now points at the test database (and the outside secrets are gone).
+// Any failure, or a missing STAGING_ variable, returns false, and the caller refuses /api/*:
+// a preview that cannot be made safe answers nothing rather than reaching the live database.
+export function previewEnv(env) {
+  if (!env || !env.STAGING_SUPABASE_URL || !env.STAGING_SUPABASE_SERVICE_ROLE_KEY) return false;
+  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.STAGING_SUPABASE_URL) || /znhjtpcltrxxyfjczgvw/.test(env.STAGING_SUPABASE_URL)) return false;
+  try {
+    env.SUPABASE_URL = env.STAGING_SUPABASE_URL;
+    env.SUPABASE_SERVICE_ROLE_KEY = env.STAGING_SUPABASE_SERVICE_ROLE_KEY;
+    PREVIEW_STRIP.forEach((k) => { env[k] = ''; });
+  } catch (e) { return false; }
+  return env.SUPABASE_URL === env.STAGING_SUPABASE_URL && PREVIEW_STRIP.every((k) => !env[k]);
+}
+
 export async function onRequest(context) {
   const { request, env, next } = context;
+  let host = '';
+  try { host = new URL(request.url).hostname; } catch (e) { /* not a preview */ }
+  const preview = PREVIEW_HOST_RE.test(host);
+  const staged = preview && previewEnv(env);
 
   let path = '/';
   try { path = new URL(request.url).pathname; } catch (e) { /* keep '/' */ }
-  if (machineCall(request, path)) return next();
+  if (preview && !staged && path.indexOf('/api/') === 0) {
+    return new Response(JSON.stringify({ error: 'preview: test database not configured' }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...MUST_HAVE } });
+  }
+  if (!preview && machineCall(request, path)) return next();
 
   const country = (request.cf && request.cf.country) || null;
   const allowed = String((env && env.ALLOWED_COUNTRIES) || DEFAULT_ALLOWED)
     .split(',').map((c) => c.trim().toUpperCase()).filter(Boolean);
+  // A staged preview holds only sample data: Claude's cloud (US, checked 16/10/2026) may test it.
+  if (staged && allowed.indexOf('US') < 0) allowed.push('US');
 
   // T1 is how Cloudflare labels a Tor exit. The rule below already refuses it,
   // since T1 is not a country and will not be in the list -- this line earns
