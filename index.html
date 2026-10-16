@@ -6284,7 +6284,7 @@ function editInc(id){
   var rec=(DB.inc||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var setIf=function(elId,v){_selSet(g(elId),v==null?'':v);};
-  setIf('i-id',rec.id);
+  setIf('i-id',rec.id);_editPin('inc',rec.id);
   setIf('i-d',rec.d);setIf('i-dt',rec.dt);setIf('i-ty',rec.ty);setIf('i-sv',rec.sv);
   setIf('i-l',rec.l);setIf('i-dy',rec.dy);setIf('i-st',rec.s);setIf('i-r',rec.r);
   setIf('i-dt',_incLocalDt(rec.dt));setIf('i-dept',rec.dept);setIf('i-rep',rec.reported==null?'':String(!!rec.reported));_incDeptList();
@@ -6321,7 +6321,7 @@ function svInc(){
     // rc (root cause, its own column since 29/09/2026) is set only by the investigation, kept here too.
     ['w','dept_group','src','created_at','rc'].forEach(function(k){if(prev[k]!=null&&r[k]==null)r[k]=prev[k];});
     _svLocal('inc',existingId,r);
-    sbUpd('inc',r);
+    sbUpd('inc',r,_editPinTake('inc',existingId));
     addLog('\u05ea\u05e7\u05e8\u05d9\u05ea \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+d.substring(0,30));
   }else{
     DB.inc.push(r);sbIns('inc',r);
@@ -6530,7 +6530,7 @@ function openNewLegModal(){
 function editLeg(id){
   var rec=(DB.leg||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('leg-id').value=rec.id;
+  g('leg-id').value=rec.id;_editPin('leg',rec.id);
   var setIf=function(elId,v){_selSet(g(elId),v||'');};
   setIf('leg-s',rec.s);setIf('leg-a',rec.a||'\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d1\u05e2\u05d1\u05d5\u05d3\u05d4');
   setIf('leg-c',rec.c||'\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05e8\u05da');setIf('leg-u',rec.u);setIf('leg-o',rec.o);
@@ -6584,7 +6584,7 @@ function svLeg(){
   }
   if(id){
     _svLocal('leg',id,r);
-    sbUpd('leg',r);
+    sbUpd('leg',r,_editPinTake('leg',r.id));
     addLog('\u05e2\u05d3\u05db\u05d5\u05df \u05d3\u05e8\u05d9\u05e9\u05d4 \u05e8\u05d2\u05d5\u05dc\u05d8\u05d5\u05e8\u05d9\u05ea: '+s.substring(0,30));
   }else{
     DB.leg.push(r);
@@ -9766,7 +9766,7 @@ function eqiEdit(id){
   var r=(DB.equip_inspections||[]).find(function(x){return x.id===id;});if(!r)return;
   openModal('m-eqi');
   setTimeout(function(){
-    g('eqi-id').value=r.id;
+    g('eqi-id').value=r.id;_editPin('equip_inspections',r.id);
     g('eqi-code').value=r.code||'';
     g('eqi-n').value=r.n||'';
     g('eqi-vendor').value=r.vendor||'';
@@ -9815,7 +9815,7 @@ function svEqi(){
   };
   // The form does not hold every column (serial_number, deficiencies, report_number...). The
   // server row keeps them (an update sends only these fields); keep them in the local row too.
-  if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?Object.assign({},r,rec):r;});sbUpd('equip_inspections',rec);}
+  if(id){DB.equip_inspections=DB.equip_inspections.map(function(r){return r.id===id?Object.assign({},r,rec):r;});sbUpd('equip_inspections',rec,_editPinTake('equip_inspections',id));}
   else{DB.equip_inspections.push(rec);sbIns('equip_inspections',rec);}
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05d1\u05d3\u05d9\u05e7\u05ea \u05e6\u05d9\u05d5\u05d3: '+n.substring(0,30));
   _eqiClearPhoto();sdb();closeModal('m-eqi');rEqi();rDash();
@@ -11210,7 +11210,7 @@ function svRound(){
     ts:new Date().toISOString()
   };
   if(!DB.rounds)DB.rounds=[];
-  if(id){_svLocal('rounds',id,r);sbUpd('rounds',r);}
+  if(id){_svLocal('rounds',id,r);sbUpd('rounds',r,_editPinTake('rounds',id));}
   else{DB.rounds.push(r);sbIns('rounds',r);}
   addLog((id?'\u05e2\u05d3\u05db\u05d5\u05df':'\u05d7\u05d3\u05e9')+' \u05e1\u05d1\u05d1 \u05d1\u05d5\u05e7\u05e8 ('+theme+'): '+d);sdb();
   closeModal('m-round');
@@ -11238,7 +11238,7 @@ window._roundEdit=function(id){
   var r=(DB.rounds||[]).find(function(x){return x.id===id;});if(!r)return;
   openModal('m-round');
   setTimeout(function(){
-    if(g('round-id'))g('round-id').value=r.id;
+    if(g('round-id'))g('round-id').value=r.id;_editPin('rounds',r.id);
     var dEl=g('round-d');if(dEl)dEl.value=r.d||'';
     var insp=g('round-inspector');if(insp)insp.value=r.inspector||'';
     var nt=g('round-notes');if(nt)nt.value=r.notes||'';
@@ -12292,7 +12292,7 @@ window._tpCreate=function(){
 function _tpGet(id){return (DB.train_plan||[]).filter(function(r){return r&&r.id===id;})[0]||null;}
 window._tpOpen=function(id){
   if(!_tpCanEdit())return;
-  _tpEditId=id;var r=id?_tpGet(id):null;
+  _tpEditId=id;if(id)_editPin('train_plan',id);var r=id?_tpGet(id):null;
   if(id&&!r){toast('\u05d4\u05e1\u05e2\u05d9\u05e3 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var box=g('tp-body');if(!box)return;
   var n=r?r.n:(_tpRows(_tpYr).reduce(function(m,x){return Math.max(m,x.n||0);},0)+1),qs=r?_tpQs(r):[];
@@ -12323,7 +12323,7 @@ window._tpSave=function(){
   var r=_tpEditId?_tpGet(_tpEditId):null,isNew=!r;
   if(isNew){var n=_tpRows(_tpYr).reduce(function(m,x){return Math.max(m,x.n||0);},0)+1;r={id:'tp'+_tpYr+'-'+n+'-'+gid(),yr:_tpYr,n:n,done:[]};}
   r.t=t;r.who=(gv('tp-who')||'').trim()||null;r.aud=(gv('tp-aud')||'').trim()||null;r.q=q;r.ts=new Date().toISOString();
-  if(isNew){if(!DB.train_plan)DB.train_plan=[];DB.train_plan.push(r);sbIns('train_plan',r);}else sbUpd('train_plan',r);
+  if(isNew){if(!DB.train_plan)DB.train_plan=[];DB.train_plan.push(r);sbIns('train_plan',r);}else sbUpd('train_plan',r,_editPinTake('train_plan',r.id));
   sdb();closeModal('m-tp');rTp();toast('\u05e0\u05e9\u05de\u05e8 \u2713',{ok:true});
 };
 window._tpDoneAdd=function(){
@@ -13905,7 +13905,7 @@ function svTsk(){
   if(_st!==_TSK_DONE&&_st!==_TSK_CANC)_cd=null;   // reopened: it is not closed any more
   var r={id:id,title:t,assignee:gv('tsk-assignee')||null,due:gv('tsk-due')||null,status:_st,priority:gv('tsk-priority')||_TSK_PRI_DEF,source_table:gv('tsk-src-tbl')||null,source_id:gv('tsk-src-id')||null,parent_id:pid,project_id:gv('tsk-project-id')||null,notes:gv('tsk-notes')||null,closed_date:_cd,ext_id:(_old.ext_id||null),ts:new Date().toISOString()};
   if(!DB.tasks)DB.tasks=[];
-  if(existingIdx>=0){_svLocal('tasks',id,r);sbUpd('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
+  if(existingIdx>=0){_svLocal('tasks',id,r);sbUpd('tasks',r,_editPinTake('tasks',id));addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05e2\u05d5\u05d3\u05db\u05e0\u05d4: '+t.substring(0,30));}
   else{DB.tasks.push(r);sbIns('tasks',r);addLog('\u05de\u05e9\u05d9\u05de\u05d4 \u05d7\u05d3\u05e9\u05d4: '+t.substring(0,30));}
   // BACKLOG 12.8 (09/10/2026): an urgent task with no target cannot be late, so nobody is chased
   // for it (measured: 3 open). A warning, not a block, like the document one (12.4).
@@ -13916,7 +13916,7 @@ function svTsk(){
 }
 function editTsk(id){
   var rec=(DB.tasks||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('tsk-id').value=rec.id;g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
+  g('tsk-id').value=rec.id;_editPin('tasks',rec.id);g('tsk-title').value=rec.title||'';g('tsk-assignee').value=rec.assignee||'';g('tsk-due').value=rec.due||'';
   g('tsk-status').value=rec.status||_TSK_OPEN;g('tsk-priority').value=rec.priority||_TSK_PRI_DEF;g('tsk-notes').value=rec.notes||'';
   var tprj=g('tsk-project-id');if(tprj&&typeof _prjOptionsHtml==='function'){tprj.innerHTML=_prjOptionsHtml(rec.project_id||null);}
   g('tsk-src-tbl').value=rec.source_table||'';g('tsk-src-id').value=rec.source_id||'';
@@ -14034,7 +14034,7 @@ window._roleHint=function(selId,outId){
 function editUser(id){
   var u=(DB.app_users||[]).find(function(x){return x.id===id;});
   if(!u){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('u-id').value=u.id;
+  g('u-id').value=u.id;_editPin('app_users',u.id);
   g('u-username').value=u.username||u.id;
   g('u-full-name').value=u.full_name||'';
   g('u-role').value=u.role||'\u05de\u05d3\u05d5\u05d5\u05d7';
@@ -14061,7 +14061,7 @@ function svUser(){
   u.active=!!g('u-active').checked;
   u.notes=gv('u-notes')||null;
   u.ts=new Date().toISOString();
-  sbUpd('app_users',u);
+  sbUpd('app_users',u,_editPinTake('app_users',id));
   sdb();
   closeModal('m-user');
   toast('\u05e0\u05e9\u05de\u05e8 ✓');
@@ -15353,7 +15353,7 @@ function svEasp(){
   var existingIdx=(DB.env_aspects||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,aspect:aspect,activity:gv('ea-activity')||null,lifecycle:gv('ea-lifecycle')||null,control_type:gv('ea-control')||null,direction:gv('ea-direction')||null,impact:gv('ea-impact')||null,controls:gv('ea-controls')||null,p_curr:parseInt(gv('ea-pcurr'))||null,sv_curr:parseInt(gv('ea-svcurr'))||null,additional_controls:gv('ea-addctrl')||null,p_pot:parseInt(gv('ea-ppot'))||null,sv_pot:parseInt(gv('ea-svpot'))||null,status:gv('ea-status')||null,owner:gv('ea-owner')||null,review_date:gv('ea-review')||null,explanation:gv('ea-explanation')||null,legal_ref:gv('ea-legal')||null,notes:gv('ea-notes')||null,file_url:_attachUrls['ea-attach-area']||null,ts:new Date().toISOString()};
   if(!DB.env_aspects)DB.env_aspects=[];
-  if(existingIdx>=0){_svLocal('env_aspects',id,r);sbUpd('env_aspects',r);}
+  if(existingIdx>=0){_svLocal('env_aspects',id,r);sbUpd('env_aspects',r,_editPinTake('env_aspects',id));}
   else{DB.env_aspects.push(r);sbIns('env_aspects',r);}
   sdb();closeModal('m-easp');toast('\u05e0\u05e9\u05de\u05e8 \u2713');
   if(typeof _attachClear==='function')_attachClear('ea-attach-area');
@@ -15371,7 +15371,7 @@ function _easpOpenNew(){
 function editEasp(id){
   var rec=(DB.env_aspects||[]).find(function(r){return r.id===id;});if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   var setIf=function(elId,v){_selSet(g(elId),v||'');};
-  g('ea-id').value=rec.id;
+  g('ea-id').value=rec.id;_editPin('env_aspects',rec.id);
   setIf('ea-aspect',rec.aspect);setIf('ea-activity',rec.activity);setIf('ea-lifecycle',rec.lifecycle);
   setIf('ea-control',rec.control_type);setIf('ea-direction',rec.direction);
   setIf('ea-impact',rec.impact);setIf('ea-controls',rec.controls);
@@ -15430,7 +15430,7 @@ function _locOpenAdd(level,parentId){
 function editLoc(id){
   var rec=(DB.locations||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('loc-id').value=rec.id;
+  g('loc-id').value=rec.id;_editPin('locations',rec.id);
   g('loc-level').value=rec.level;
   g('loc-parent').value=rec.parent_id||'';
   g('loc-name').value=rec.name||'';
@@ -15450,7 +15450,7 @@ function svLoc(){
   var existingIdx=(DB.locations||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,name:name,parent_id:parent_id,level:level,notes:gv('loc-notes')||null,ts:new Date().toISOString()};
   if(!DB.locations)DB.locations=[];
-  if(existingIdx>=0){DB.locations[existingIdx]=r;sbUpd('locations',r);}
+  if(existingIdx>=0){DB.locations[existingIdx]=r;sbUpd('locations',r,_editPinTake('locations',id));}
   else{DB.locations.push(r);sbIns('locations',r);}
   sdb();closeModal('m-loc');toast('\u05e0\u05e9\u05de\u05e8 ✓');rLoc();
 }
@@ -16400,7 +16400,7 @@ function _itpOpenAdd(){
 function editItp(id){
   var rec=(DB.inspection_types||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('itp-id').value=rec.id;
+  g('itp-id').value=rec.id;_editPin('inspection_types',rec.id);
   g('itp-name').value=rec.name||'';
   g('itp-recur-count').value=rec.recur_count||1;
   g('itp-recur-unit').value=rec.recur_unit||'year';
@@ -16418,7 +16418,7 @@ function svItp(){
   var existingIdx=(DB.inspection_types||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,name:name,recur_count:parseInt(gv('itp-recur-count'))||1,recur_unit:gv('itp-recur-unit')||'year',next_due:gv('itp-next-due')||null,responsible:gv('itp-responsible')||null,notes:gv('itp-notes')||null,active:!!(g('itp-active')&&g('itp-active').checked),ts:new Date().toISOString()};
   if(!DB.inspection_types)DB.inspection_types=[];
-  if(existingIdx>=0){DB.inspection_types[existingIdx]=r;sbUpd('inspection_types',r);}
+  if(existingIdx>=0){DB.inspection_types[existingIdx]=r;sbUpd('inspection_types',r,_editPinTake('inspection_types',id));}
   else{DB.inspection_types.push(r);sbIns('inspection_types',r);}
   sdb();closeModal('m-itp');toast('\u05e0\u05e9\u05de\u05e8 ✓');rItp();
 }
@@ -16481,7 +16481,7 @@ function _itypeOpenAdd(level,parentId){
 function editItype(id){
   var rec=(DB.issue_types||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('itype-id').value=rec.id;
+  g('itype-id').value=rec.id;_editPin('issue_types',rec.id);
   g('itype-level').value=rec.level;
   g('itype-parent').value=rec.parent_id||'';
   g('itype-name').value=rec.name||'';
@@ -16502,7 +16502,7 @@ function svItype(){
   var existingIdx=(DB.issue_types||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,name:name,parent_id:parent_id,level:level,category:gv('itype-cat')||null,notes:gv('itype-notes')||null,ts:new Date().toISOString()};
   if(!DB.issue_types)DB.issue_types=[];
-  if(existingIdx>=0){DB.issue_types[existingIdx]=r;sbUpd('issue_types',r);}
+  if(existingIdx>=0){DB.issue_types[existingIdx]=r;sbUpd('issue_types',r,_editPinTake('issue_types',id));}
   else{DB.issue_types.push(r);sbIns('issue_types',r);}
   sdb();closeModal('m-itype');toast('\u05e0\u05e9\u05de\u05e8 ✓');rItype();
 }
@@ -16606,7 +16606,7 @@ function _prjOpenAdd(){
 function editPrj(id){
   var rec=(DB.projects||[]).find(function(r){return r.id===id;});
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
-  g('prj-id').value=rec.id;
+  g('prj-id').value=rec.id;_editPin('projects',rec.id);
   g('prj-name').value=rec.name||'';
   g('prj-desc').value=rec.description||'';
   g('prj-start').value=rec.start_date||'';
@@ -16622,7 +16622,7 @@ function svPrj(){
   var existingIdx=(DB.projects||[]).findIndex(function(r){return r.id===id;});
   var r={id:id,name:name,description:gv('prj-desc')||null,start_date:gv('prj-start')||null,end_date:gv('prj-end')||null,status:gv('prj-status')||'\u05e4\u05e2\u05d9\u05dc',ts:new Date().toISOString()};
   if(!DB.projects)DB.projects=[];
-  if(existingIdx>=0){DB.projects[existingIdx]=r;sbUpd('projects',r);}
+  if(existingIdx>=0){DB.projects[existingIdx]=r;sbUpd('projects',r,_editPinTake('projects',id));}
   else{DB.projects.push(r);sbIns('projects',r);}
   sdb();closeModal('m-prj');toast('\u05e0\u05e9\u05de\u05e8 ✓');rPrj();
 }
@@ -22324,12 +22324,12 @@ function _truMgrNote(id){
     +'<textarea id="tru-note-ta" rows="2" style="width:100%;font:inherit;font-size:14px;padding:8px;border:1px solid var(--border);border-radius:8px;resize:vertical"></textarea>'
     +'<div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-p" style="flex:1;min-height:44px" data-rid="'+esc(id)+'" onclick="_truMgrNoteSave(this.dataset.rid)">\u05e9\u05de\u05d5\u05e8</button><button class="btn btn-s" style="min-height:44px" onclick="_truMgrNoteCancel()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div>';
   row.appendChild(td);
-  var ta=g('tru-note-ta');if(ta){ta.value=r.mgr_note||'';try{ta.focus();}catch(e){}}
+  _editPin('trustee_reports',id);var ta=g('tru-note-ta');if(ta){ta.value=r.mgr_note||'';try{ta.focus();}catch(e){}}
 }
 function _truMgrNoteSave(id){
   var r=_truFind(id);if(!r)return;
   var ta=g('tru-note-ta');r.mgr_note=String(ta?ta.value:'').trim()||null;
-  sbUpd('trustee_reports',r);sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
+  sbUpd('trustee_reports',r,_editPinTake('trustee_reports',id));sdb();toast('\u05e0\u05e9\u05de\u05e8 \u2713');rTrustees();rDash();
 }
 // The recommended corrective action of a finding: the server fills it in
 // (trustee_reports.action, from the assistant); the manager changes it here.
@@ -22697,7 +22697,7 @@ function _truRosterEdit(id){
     +'<div style="font-size:11px;color:var(--t2);margin:4px 0">\u05e9\u05d9\u05e0\u05d5\u05d9 \u05d4\u05e9\u05dd \u05de\u05e2\u05d3\u05db\u05df \u05d2\u05dd \u05d0\u05ea \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7\u05d9\u05dd \u05d4\u05e7\u05d9\u05d9\u05de\u05d9\u05dd \u05e9\u05dc\u05d5 - \u05d0\u05d7\u05e8\u05ea \u05d4\u05e9\u05dd \u05d4\u05d9\u05e9\u05df \u05d9\u05d9\u05e9\u05d0\u05e8 \u05d1\u05dc\u05d5\u05d7 \u05d4\u05e0\u05d9\u05e7\u05d5\u05d3.</div>'
     +'<div style="display:flex;gap:8px"><button class="btn btn-p" style="flex:1;min-height:44px" data-rid="'+esc(id)+'" onclick="_truRosterEditSave(this.dataset.rid)">\u05e9\u05de\u05d5\u05e8</button><button class="btn btn-s" style="min-height:44px" onclick="_truRosterEditCancel()">\u05d1\u05d9\u05d8\u05d5\u05dc</button></div>';
   row.parentNode.insertBefore(box,row);
-  var a=g('tru-roster-en');if(a){a.value=t.n||'';try{a.focus();}catch(e){}}
+  _editPin('trustees',id);var a=g('tru-roster-en');if(a){a.value=t.n||'';try{a.focus();}catch(e){}}
   var b=g('tru-roster-ed-dep');if(b)b.value=t.dep||'';
 }
 function _truRosterEditSave(id){
@@ -22713,7 +22713,7 @@ function _truRosterEditSave(id){
     moved=_truRenameReporter(old,nw);
   }
   t.n=nw;t.dep=String(gv('tru-roster-ed-dep')||'').trim()||null;
-  sbUpd('trustees',t);sdb();
+  sbUpd('trustees',t,_editPinTake('trustees',id));sdb();
   try{addLog('\u05e0\u05d0\u05de\u05e0\u05d9\u05dd - \u05e2\u05d3\u05db\u05d5\u05df \u05e8\u05e9\u05d5\u05de\u05d4: '+old+(old!==nw?(' \u2190 '+nw+' ('+moved+' \u05e8\u05e9\u05d5\u05de\u05d5\u05ea)'):''));}catch(e){}
   _truRosterEditCancel();toast('\u05e0\u05e9\u05de\u05e8 \u2713');
   _truRosterRender();_truFillLists();rTrustees();rDash();
