@@ -8,7 +8,7 @@
 //   url    {id}    the item's current webUrl and name, so a link survives a move or a rename
 // Read only: every call to Microsoft Graph is a GET. Nothing is written, moved or shared
 // (m365-guard). An item outside the safety folder is refused, even by id.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken } from '../_onedrive.js';
 import { ROOT, safeDir } from './od-read.js';
 
@@ -38,7 +38,7 @@ export async function onRequest(context) {
   let body = {}; try { body = await request.json(); } catch (e) {}
   const get = async (url) => {
     const { token } = await accessToken(env);
-    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
     if (!r.ok) throw new Error('onedrive ' + r.status);
     return r.json();
   };

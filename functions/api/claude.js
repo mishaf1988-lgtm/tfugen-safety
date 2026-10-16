@@ -9,7 +9,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
 // models are kept for backward-compat — switch the client back any time by
@@ -121,7 +121,7 @@ async function aiRateHit(env, user) {
   if (!env.SUPABASE_SERVICE_ROLE_KEY || !user || !user.id) return 0;
   try {
     const k = env.SUPABASE_SERVICE_ROLE_KEY;
-    const r = await fetch(RATE_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: await aiRateKey(user.id) }) });
+    const r = await fetch(RATE_SB + '/rest/v1/rpc/guess_hit', { method: 'POST', headers: { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: await aiRateKey(user.id) }), signal: tmo(SB_MS) });
     if (!r.ok) return 0;
     const n = await r.json();
     return typeof n === 'number' ? n : 0;
@@ -290,6 +290,7 @@ export async function onRequest({ request, env }) {
   const ANTHROPIC_FIELDS = ['model', 'max_tokens', 'messages', 'system', 'stream', 'temperature'];
   const upBody = {};
   ANTHROPIC_FIELDS.forEach((k) => { if (parsed[k] !== undefined) upBody[k] = parsed[k]; });
+  // no-timeout: the answer streams and a long one runs past any fixed limit; the page shows it as it comes (BACKLOG 14.12).
   const upstream = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {

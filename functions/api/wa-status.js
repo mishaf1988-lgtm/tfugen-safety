@@ -7,7 +7,7 @@
 //
 // This endpoint never sends a WhatsApp message — read-only.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = '4400035656982783';
@@ -108,7 +108,7 @@ export async function onRequest({ request, env }) {
 
 async function probe(url, token) {
   try {
-    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
     const text = await r.text();
     let json;
     try { json = JSON.parse(text); } catch (e) { json = { raw: text.substring(0, 400) }; }

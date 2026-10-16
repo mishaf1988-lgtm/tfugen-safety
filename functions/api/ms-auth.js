@@ -12,7 +12,7 @@
 // in the last 15 minutes is refused, so nobody can attach their own Microsoft
 // account to the factory's server by sending a manager a link.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, CF_PROD } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, CF_PROD, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { odConfigured, authorizeUrl, SCOPES, exchangeCode, saveTokens, tokenRow, hasMail, stateGet, stateSet } from '../_onedrive.js';
 
 const REDIRECT = CF_PROD + '/api/ms-auth';
@@ -84,7 +84,7 @@ export async function onRequest(context) {
     try {
       const t = await exchangeCode(env, code, REDIRECT);
       if (!t.refresh_token) return back('err', 'no refresh token (offline_access missing)');
-      const me = await fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName', { headers: { Authorization: 'Bearer ' + t.access_token } });
+      const me = await fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName', { headers: { Authorization: 'Bearer ' + t.access_token }, signal: tmo(GRAPH_MS) });
       const mj = await me.json().catch(() => ({}));
       const email = (mj && (mj.mail || mj.userPrincipalName)) || 'unknown';
       await saveTokens(env, email, t);

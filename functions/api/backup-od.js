@@ -30,7 +30,7 @@
 // the photos take what is left, PHOTO_MAX per run at most, and the rest wait
 // for tomorrow (photos_left says how many).
 import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
-import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole } from '../_shared.js';
+import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
 
 export const STATE_KEY = 'backup_od';
 export const BASE = 'Apps/Tapugan Safety/_Backups';
@@ -113,7 +113,7 @@ async function run(env) {
   const sbh = { apikey: key, Authorization: 'Bearer ' + key };
   const limit = (parseInt(env.SUBREQ_LIMIT, 10) || 50) - RESERVE;
   let used = 0;
-  const f = (url, init) => { if (used >= limit) throw new Error('subrequest budget exhausted'); used++; return fetch(url, init); };
+  const f = (url, init) => { if (used >= limit) throw new Error('subrequest budget exhausted'); used++; return fetch(url, init && init.signal ? init : { ...(init || {}), signal: tmo(FILE_MS) }); };
   const left = () => limit - used;
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
   const rec = { at: new Date().toISOString(), ok: false, daily: { copied: [], pruned: 0 }, monthly: { copied: null, pruned: 0 }, photos: { copied: 0, left: 0, total: 0 }, newest: null, errors: [] };
@@ -269,7 +269,7 @@ export async function onRequest(context) {
     if (!BACKUP_RE.test(String(body.name || ''))) return jsonResp({ error: 'bad name' }, 400, cors);
     try {
       const { token } = await accessToken(env);
-      const r = await fetch(GRAPH + '/root:/' + seg(folder) + '/' + encodeURIComponent(body.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch(GRAPH + '/root:/' + seg(folder) + '/' + encodeURIComponent(body.name) + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
       if (!r.ok) return jsonResp({ error: 'onedrive read ' + r.status }, 502, cors);
       return new Response(r.body, { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
     } catch (e) { return jsonResp({ error: String((e && e.message) || e).substring(0, 200) }, 502, cors); }

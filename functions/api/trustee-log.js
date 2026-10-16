@@ -20,7 +20,7 @@
 // (signature in public.server_state). A failed upload leaves the signature
 // alone, so the next call tries again, and records the error for the tile.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead, runLeased } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
@@ -150,7 +150,7 @@ export async function attachPhotos(env, aoa, reports, now, od) {
     try {
       const r = await fetch(base + '/storage/v1/object/sign/' + encodeURIComponent(b), {
         method: 'POST', headers: { ...hdr, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b] }),
+        body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b] }), signal: tmo(SB_MS),
       });
       const j = r.ok ? await r.json() : [];
       (Array.isArray(j) ? j : []).forEach((e) => {
@@ -167,7 +167,7 @@ export async function attachPhotos(env, aoa, reports, now, od) {
     if (copies >= MAX_COPIES) { pending++; continue; }
     copies++;
     try {
-      const r = await fetch(base + '/storage/v1/object/authenticated/' + encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/'), { headers: hdr });
+      const r = await fetch(base + '/storage/v1/object/authenticated/' + encodeURIComponent(x.sp.bucket) + '/' + x.sp.path.split('/').map(encodeURIComponent).join('/'), { headers: hdr, signal: tmo(SB_MS) });
       // Gone from Storage (404) or not a picture: remember it as '' so it is not
       // retried on every write; its row keeps the Storage link.
       if (r.status === 404 || r.status === 400) { od.copied[id] = ''; continue; }
@@ -213,11 +213,11 @@ export async function attachPhotos(env, aoa, reports, now, od) {
       if (thumbs) {
         // format=origin: without it Supabase may answer WebP, which Excel
         // does not embed and imageInfo does not read.
-        r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain&format=origin', { headers: hdr });
+        r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + THUMB_W + '&quality=60&resize=contain&format=origin', { headers: hdr, signal: tmo(SB_MS) });
         if (!r.ok) { diag.push({ row: x.i, src: 'thumb', status: r.status }); thumbs = false; r = null; } // no transforms on this plan: stop asking
       }
       let src = r ? 'thumb' : 'orig';
-      if (!r) r = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr });
+      if (!r) r = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr, signal: tmo(SB_MS) });
       if (!r.ok) { diag.push({ row: x.i, src, status: r.status }); continue; }
       let b = new Uint8Array(await r.arrayBuffer());
       let info = imageInfo(b);
@@ -225,7 +225,7 @@ export async function attachPhotos(env, aoa, reports, now, od) {
         // A thumbnail we cannot embed: take the original instead.
         diag.push({ row: x.i, src, n: b.length, type: r.headers.get('content-type'), info: null });
         src = 'orig';
-        const r2 = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr });
+        const r2 = await fetch(base + '/storage/v1/object/authenticated/' + obj, { headers: hdr, signal: tmo(SB_MS) });
         if (!r2.ok) continue;
         b = new Uint8Array(await r2.arrayBuffer()); info = imageInfo(b);
       }

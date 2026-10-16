@@ -18,7 +18,7 @@
 // so the finding is marked closed here, with the service key.
 // The Excel log follows on its own: the insert fires trustee_reports_log.
 // Nothing is ever deleted. Each message is handled once (ids in server_state).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMailRead, stateGet, stateSet, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 
@@ -76,7 +76,7 @@ function esc(s) {
 }
 
 async function graph(token, path) {
-  const r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
+  const r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
     const e = new Error('graph ' + r.status + ': ' + String((j.error && (j.error.message || j.error.code)) || '').substring(0, 120));
@@ -105,7 +105,7 @@ async function bestPhoto(token, msgId) {
 }
 
 async function closeOne(env, token, msg, c) {
-  const r = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(c.id) + '&select=id,u,t,ok,s,loc,location_id,f,tour', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(c.id) + '&select=id,u,t,ok,s,loc,location_id,f,tour', { headers: sbH(env), signal: tmo(SB_MS) });
   const rows = r.ok ? await r.json() : [];
   const f = Array.isArray(rows) && rows[0];
   if (!f) return { result: 'unknown finding' };
@@ -119,7 +119,7 @@ async function closeOne(env, token, msg, c) {
       const p = await bestPhoto(token, msg.id);
       if (p) {
         const name = 'tru-mail-' + String(c.id).replace(/[^A-Za-z0-9_-]/g, '') + '-' + Date.now() + '.' + p.ext;
-        const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': p.type, 'x-upsert': 'false' }), body: p.bytes });
+        const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': p.type, 'x-upsert': 'false' }), body: p.bytes, signal: tmo(FILE_MS) });
         if (up.ok) photoUrl = SB + '/storage/v1/object/public/' + BUCKET + '/' + name;
       }
     } catch (e) { /* closed without a photo rather than not closed */ }
@@ -131,10 +131,10 @@ async function closeOne(env, token, msg, c) {
     f: c.text || null, photo_url: photoUrl,
     mgr_note: '\u05e0\u05e1\u05d2\u05e8 \u05d1\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05de\u05d9\u05d9\u05dc: ' + c.from,
   };
-  const ins = await fetch(SB + '/rest/v1/trustee_reports', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rep) });
+  const ins = await fetch(SB + '/rest/v1/trustee_reports', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rep), signal: tmo(SB_MS) });
   if (!ins.ok) return { result: 'insert failed ' + ins.status, retry: true };
   const up = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(f.id) + '&s=neq.' + encodeURIComponent(S_CLOSED), {
-    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED }),
+    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED }), signal: tmo(SB_MS),
   });
   if (!up.ok) return { result: 'close failed ' + up.status, closure: rep.id };
 

@@ -15,7 +15,7 @@
 //
 // Read-only. No state changes. No secrets in response.
 
-import { jsonResp } from '../_shared.js';
+import { jsonResp, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 
 const SBU = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
 const SBK = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
@@ -90,7 +90,7 @@ export async function onRequest({ request }) {
     let who = null;
     try {
       const vr = await fetch(SBU + '/auth/v1/user', {
-        headers: { apikey: SBK, Authorization: 'Bearer ' + userToken }
+        headers: { apikey: SBK, Authorization: 'Bearer ' + userToken }, signal: tmo(SB_MS)
       });
       if (vr.ok) who = await vr.json();
     } catch (e) { /* who stays null */ }
@@ -130,7 +130,7 @@ export async function onRequest({ request }) {
       const rows = await Promise.all(list.map(async (p) => {
         try {
           const r = await fetch(SBU + '/rest/v1/' + p.t + '?select=*&limit=1', {
-            headers: { ...hdrs, Prefer: 'count=exact' }
+            headers: { ...hdrs, Prefer: 'count=exact' }, signal: tmo(SB_MS)
           });
           const cr = r.headers.get('content-range') || '';
           const n = parseInt((cr.split('/')[1] || '-1'), 10);
@@ -172,7 +172,7 @@ export async function onRequest({ request }) {
           const r = await fetch(SBU + '/storage/v1/object/list/' + b, {
             method: 'POST',
             headers: { ...hdrs, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prefix: '', limit: 1 })
+            body: JSON.stringify({ prefix: '', limit: 1 }), signal: tmo(SB_MS)
           });
           let listed = 0;
           if (r.ok) { const j = await r.json(); listed = Array.isArray(j) ? j.length : 0; }
@@ -199,7 +199,7 @@ export async function onRequest({ request }) {
         const sr = await fetch(SBU + '/auth/v1/signup', {
           method: 'POST',
           headers: { apikey: SBK, 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}), signal: tmo(SB_MS)
         });
         if (sr.ok) { const j = await sr.json(); tok = j.access_token || (j.session && j.session.access_token) || null; }
       } catch (e) { /* tok stays null */ }
@@ -239,7 +239,7 @@ export async function onRequest({ request }) {
 
   // ----- 1. HTML Cache-Control -----
   try {
-    const r = await fetch(origin + '/index.html', { method: 'HEAD', cf: { cacheTtl: 0 } });
+    const r = await fetch(origin + '/index.html', { method: 'HEAD', cf: { cacheTtl: 0 }, signal: tmo(SB_MS) });
     const cc = r.headers.get('cache-control') || '';
     pushCheck({
       id: 'cache_control_html',
@@ -254,7 +254,7 @@ export async function onRequest({ request }) {
   // ----- 2. Security headers on / -----
   let homeHeaders = null;
   try {
-    const r = await fetch(origin + '/', { method: 'HEAD', cf: { cacheTtl: 0 } });
+    const r = await fetch(origin + '/', { method: 'HEAD', cf: { cacheTtl: 0 }, signal: tmo(SB_MS) });
     homeHeaders = r.headers;
   } catch (e) {}
   if (homeHeaders) {
@@ -298,7 +298,7 @@ export async function onRequest({ request }) {
   // Fetch /api/wa-status with NO Origin header (simulating external curl).
   // Server should 403.
   try {
-    const r = await fetch(origin + '/api/wa-status', { method: 'GET' });
+    const r = await fetch(origin + '/api/wa-status', { method: 'GET', signal: tmo(SB_MS) });
     pushCheck({
       id: 'wa_status_origin_gate_blocks_no_origin',
       expected: '403',
@@ -311,7 +311,7 @@ export async function onRequest({ request }) {
 
   // ----- 4. M4 — wa-templates origin gate (negative test) -----
   try {
-    const r = await fetch(origin + '/api/wa-templates', { method: 'GET' });
+    const r = await fetch(origin + '/api/wa-templates', { method: 'GET', signal: tmo(SB_MS) });
     pushCheck({
       id: 'wa_templates_origin_gate_blocks_no_origin',
       expected: '403',
@@ -324,7 +324,7 @@ export async function onRequest({ request }) {
 
   // ----- 5. C1 — Resend key not in current HTML payload -----
   try {
-    const r = await fetch(origin + '/index.html', { cf: { cacheTtl: 0 } });
+    const r = await fetch(origin + '/index.html', { cf: { cacheTtl: 0 }, signal: tmo(SB_MS) });
     const body = await r.text();
     const leaked = /re_[A-Za-z0-9]{8,}/.test(body) || /service_role/.test(body);
     pushCheck({
@@ -351,7 +351,7 @@ export async function onRequest({ request }) {
     const r = await fetch(origin + '/api/wa-send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Origin': origin },
-      body: '{}'
+      body: '{}', signal: tmo(SB_MS)
     });
     pushCheck({
       id: 'wa_send_requires_auth_no_bearer',
@@ -370,7 +370,7 @@ export async function onRequest({ request }) {
         'Origin': origin,
         'Authorization': 'Bearer bogus.invalid.token'
       },
-      body: '{}'
+      body: '{}', signal: tmo(SB_MS)
     });
     pushCheck({
       id: 'wa_send_requires_auth_bogus_bearer',
@@ -399,7 +399,7 @@ export async function onRequest({ request }) {
     // M1: sens NCR count visible to caller.
     try {
       const r = await fetch(SBU + '/rest/v1/ncr?sens=eq.true&select=id', {
-        headers: { ...sbHeaders, Prefer: 'count=exact' }
+        headers: { ...sbHeaders, Prefer: 'count=exact' }, signal: tmo(SB_MS)
       });
       const cr = r.headers.get('content-range') || '';
       const total = (cr.split('/')[1] || '?');
@@ -417,7 +417,7 @@ export async function onRequest({ request }) {
     // H2: app_users count visible to caller.
     try {
       const r = await fetch(SBU + '/rest/v1/app_users?select=id', {
-        headers: { ...sbHeaders, Prefer: 'count=exact' }
+        headers: { ...sbHeaders, Prefer: 'count=exact' }, signal: tmo(SB_MS)
       });
       const cr = r.headers.get('content-range') || '';
       const total = parseInt((cr.split('/')[1] || '-1'), 10);
@@ -435,7 +435,7 @@ export async function onRequest({ request }) {
     // M2: password_reset_requests visible to caller.
     try {
       const r = await fetch(SBU + '/rest/v1/password_reset_requests?select=id', {
-        headers: { ...sbHeaders, Prefer: 'count=exact' }
+        headers: { ...sbHeaders, Prefer: 'count=exact' }, signal: tmo(SB_MS)
       });
       const cr = r.headers.get('content-range') || '';
       const total = parseInt((cr.split('/')[1] || '-1'), 10);
@@ -465,7 +465,7 @@ export async function onRequest({ request }) {
       const r = await fetch(SBU + '/storage/v1/object/list/incidents-photos', {
         method: 'POST',
         headers: { ...sbHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 1, prefix: '' })
+        body: JSON.stringify({ limit: 1, prefix: '' }), signal: tmo(SB_MS)
       });
       const named = callerEmail && callerEmail.indexOf('@') > 0;
       pushCheck({
@@ -492,7 +492,7 @@ export async function onRequest({ request }) {
         const su = await fetch(SBU + '/auth/v1/signup', {
           method: 'POST',
           headers: { apikey: SBK, 'Content-Type': 'application/json' },
-          body: '{}'
+          body: '{}', signal: tmo(SB_MS)
         });
         const sj = await su.json().catch(() => ({}));
         anonTok = sj && sj.access_token;
@@ -520,7 +520,7 @@ export async function onRequest({ request }) {
         ];
         for (const [id, path, expected] of probes) {
           try {
-            const r = await fetch(SBU + path, { method: 'POST', headers: anonH, body: JSON.stringify({ limit: 50, prefix: '' }) });
+            const r = await fetch(SBU + path, { method: 'POST', headers: anonH, body: JSON.stringify({ limit: 50, prefix: '' }), signal: tmo(SB_MS) });
             let rows = [];
             try { rows = await r.json(); } catch (e) { rows = []; }
             const listed = Array.isArray(rows) ? rows.filter((x) => x && x.name && !/^tru-ph-/.test(x.name)) : [];
@@ -538,7 +538,7 @@ export async function onRequest({ request }) {
                                    ['anon_cannot_read_audit_log', 'audit_log'],
                                    ['anon_cannot_read_app_users', 'app_users']]) {
           try {
-            const r = await fetch(SBU + '/rest/v1/' + table + '?select=id&limit=5', { headers: anonH });
+            const r = await fetch(SBU + '/rest/v1/' + table + '?select=id&limit=5', { headers: anonH, signal: tmo(SB_MS) });
             let rows = [];
             try { rows = await r.json(); } catch (e) { rows = []; }
             const n = Array.isArray(rows) ? rows.length : 0;
