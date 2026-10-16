@@ -177,6 +177,43 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     check('forceSync pulls even when a focus pull just ran', r.pulls >= 1, r);
   }
 
+  console.log('\n8b. realtime up: the full pull is a safety net, not a 10-minute habit (BACKLOG 14.4, 16/10/2026)');
+  {
+    const r = await page.evaluate(() => {
+      window.__pulls = 0;
+      window.sbSync = function () { window.__pulls++; _sbFocusPull = Date.now(); };
+      window._obDrain = function () {};
+      SB_ON = true;
+      const ago = (ms) => { _sbFocusPull = Date.now() - ms; };
+      const vis = (hiddenMs) => {
+        _sbHiddenAt = Date.now() - hiddenMs;
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      };
+      const out = {};
+      _rtState = 'SUBSCRIBED'; _sbHiddenFor = 0;
+      ago(11 * 60000); _sbTimerPull(); out.timer11 = window.__pulls;            // realtime up, 11 min: no
+      ago(61 * 60000); _sbTimerPull(); out.timer61 = window.__pulls;            // an hour: yes
+      ago(5 * 60000); window.dispatchEvent(new Event('focus')); out.focus = window.__pulls;   // quick app switch: no
+      ago(5 * 60000); vis(30000); out.short = window.__pulls;                   // 30s in the background: no
+      ago(5 * 60000); vis(3 * 60000); out.long = window.__pulls;                // 3 min in the background: yes
+      ago(5 * 60000); window.dispatchEvent(new Event('online')); out.online = window.__pulls;  // reconnect: always
+      _rtState = 'CLOSED';
+      ago(11 * 60000); _sbTimerPull(); out.offTimer = window.__pulls;           // no realtime: every 10 min, as before
+      ago(61000); window.dispatchEvent(new Event('focus')); out.offFocus = window.__pulls;
+      delete document.visibilityState;
+      return out;
+    });
+    check('realtime up: the 10-minute timer skips while the last pull is under an hour old', r.timer11 === 0, r);
+    check('...and still pulls once an hour', r.timer61 === 1, r);
+    check('realtime up: a quick switch back to the app pulls nothing', r.focus === 1 && r.short === 1, r);
+    check('realtime up: back after 3 minutes in the background pulls (the socket may have died)', r.long === 2, r);
+    check('a reconnect always pulls', r.online === 3, r);
+    check('realtime down: the 10-minute timer and the focus pull work as before', r.offTimer === 4 && r.offFocus === 5, r);
+    // Broken on purpose (16/10/2026): with _rtLive() returning false the first check fails (1);
+    // with the hidden time ignored the fourth fails.
+  }
+
   console.log('\n9. NCR, employees, tour hazards and trustee reports: the same cap (BACKLOG 14.3, 16/10/2026)');
   {
     // Measured in the deep review of 15/10/2026: 1000 NCRs painted in 2.7s, 500 employees in 1.9s.
