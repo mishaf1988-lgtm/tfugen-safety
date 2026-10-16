@@ -11,20 +11,25 @@
 // cuts the same bytes out of the deployed index.html. A failed load falls back to
 // /?inline=1, which the middleware and the service worker leave untouched.
 export const APP_ID = 'app-main';
-const OPEN = '<script id="' + APP_ID + '">';
+// The two scripts after the page's markup (16/10/2026, BACKLOG 14.11: 139KB + 189KB that were
+// still parsed inline at every open) go out the same way, each as its own file at its own
+// place in the page, so they still run in the same order and after the same markup.
+// p = the part name in the URL; the main script keeps the plain /app.js?v= it always had.
+export const PARTS = { main: APP_ID, t1: 'app-tail-1', t2: 'app-tail-2' };
 
-// The text of <script id="app-main"> in html, or null. An inline script cannot contain
+// The text of <script id="<id>"> in html, or null. An inline script cannot contain
 // "</script>" (the HTML parser would end it there), so the first one closes it.
-export function extractApp(html) {
+export function extractApp(html, id) {
   const s = String(html || '');
-  const i = s.indexOf(OPEN);
+  const open = '<script id="' + (id || APP_ID) + '">';
+  const i = s.indexOf(open);
   if (i < 0) return null;
-  const j = s.indexOf('</script>', i + OPEN.length);
-  return j < 0 ? null : s.substring(i + OPEN.length, j);
+  const j = s.indexOf('</script>', i + open.length);
+  return j < 0 ? null : s.substring(i + open.length, j);
 }
 
 export const buildOf = (env) => String((env && env.CF_PAGES_COMMIT_SHA) || 'dev').substring(0, 7);
-export const appSrc = (build) => '/app.js?v=' + build;
+export const appSrc = (build, part) => (part && part !== 'main' ? '/app.js?p=' + part + '&v=' : '/app.js?v=') + build;
 // Back to the inline page once, never in a loop.
 export const ON_ERROR = "if(!/[?&]inline=1/.test(location.search))location.replace('/?inline=1')";
 
@@ -34,11 +39,15 @@ export const ON_ERROR = "if(!/[?&]inline=1/.test(location.search))location.repla
 export function rewriteApp(res, build, R) {
   const Rw = R || globalThis.HTMLRewriter;
   if (!Rw) return res;
-  return new Rw().on('script#' + APP_ID, {
-    element(el) {
-      el.setAttribute('src', appSrc(build));
-      el.setAttribute('onerror', ON_ERROR);
-      el.setInnerContent('');
-    },
-  }).transform(res);
+  let rw = new Rw();
+  Object.keys(PARTS).forEach((part) => {
+    rw = rw.on('script#' + PARTS[part], {
+      element(el) {
+        el.setAttribute('src', appSrc(build, part));
+        el.setAttribute('onerror', ON_ERROR);
+        el.setInnerContent('');
+      },
+    });
+  });
+  return rw.transform(res);
 }

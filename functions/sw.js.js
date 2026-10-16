@@ -29,7 +29,8 @@ const CACHE = 'tfgn-${BUILD}';
 // worker (with its matching pair) stays (15/10/2026: a swallowed failure still activated and deleted the
 // old cache, so the next open with no signal had no app). '/index.html' is not fetched separately any
 // more: it was the same 170 KB a second time on every install.
-const ESSENTIAL = ['/', '/app.js?v=${BUILD}'];
+// The two tail scripts (16/10/2026, BACKLOG 14.11) are part of the page as much as app.js is.
+const ESSENTIAL = ['/', '/app.js?v=${BUILD}', '/app.js?p=t1&v=${BUILD}', '/app.js?p=t2&v=${BUILD}'];
 const EXTRA = ['/manifest.webmanifest', '/icon.svg', '/logo.jpg'];
 const SHELL = ESSENTIAL.concat(EXTRA, ['/index.html']);
 // /app.js (10/10/2026) is the page's main script, cut out of index.html by the server: it
