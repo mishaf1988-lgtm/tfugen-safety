@@ -70,7 +70,7 @@ Line numbers measured 02/10/2026 with `grep -n`; they drift with every PR, so `g
 | `sdb()` | 3372 | save DB → localStorage `tfgn2` (debounced 250ms, the write is in `window._sdbFlush=` 3350, `setItem` at 3357) |
 | `ldb()` | 3380 | load DB from localStorage |
 | `_obPush/_obDrain` | 3563/3725 | outbox queue |
-| `sbIns/sbUpd/sbDel` | 3806-3808 | queue Supabase ops (`sbIns`/`sbUpd` are wrapped again by `window.sbIns=` 24844 / `window.sbUpd=` 24849) |
+| `sbIns/sbUpd/sbDel` | ~4330 | queue Supabase ops (`sbIns`/`sbUpd` are wrapped again by the OneDrive hook, `window.sbIns=` / `window.sbUpd=` ~27650: a new argument must be forwarded there too, 16/10/2026 the pin of 14.2 was swallowed). `sbUpd(tbl,row,pin)`: `pin` = the version the form was opened at (`_editPin`/`_editPinTake`) |
 | `sbSync(silent)` | 3882 | pull all tables → DB |
 | `askDel(tbl,id)` | 4256 | delete with confirm |
 | `_aiThin(t)` / `_aiFwNone(t)` | grep | AI buttons: description only a label or under 8 chars / 5-Why answer "not enough". With `_AI_THIN_MSG`, `_AI_THIN_ANS`, `_AI_THIN_RULE`, `_AI_FW_RULE` |
