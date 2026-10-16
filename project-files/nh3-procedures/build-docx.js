@@ -39,7 +39,7 @@ const center = (t, o = {}) => para(t, Object.assign({ align: AlignmentType.CENTE
 
 // The header of every page, as on the procedure PDFs: title, document number, page,
 // update date, and the logo.
-function header(title, num) {
+function header(title, num, label) {
   const c = [2200, 4038, 3400];
   const page = new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, children: [
     run('עמוד ', { size: 20 }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 20 }),
@@ -51,27 +51,35 @@ function header(title, num) {
       new TableRow({ children: [
         cell(new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: LOGO, transformation: { width: 96, height: 64 } })] }), c[0], { rows: 2 }),
         cell(center(title, { bold: true, size: 26 }), c[1], { rows: 2 }),
-        cell(center('תיעוד ' + num, { bold: true, size: 22 }), c[2]),
+        cell(center((label || 'תיעוד') + ' ' + num, { bold: true, size: 22 }), c[2]),
       ] }),
       new TableRow({ children: [cell([page, center('ת. עדכון: ' + DATE, { size: 20 })], c[2])] }),
     ],
   }), para('', { after: 0 })] });
 }
 
-// Written by / approved by, on the first page as on the originals. The signatures stay empty:
-// the document is signed on paper or in the signing page, not by Claude.
-function signTable() {
+// Written by / approved by, on the first page as on the originals. A signature goes in only
+// from the signing page (Michael, 16/10/2026: "בצע: דף חתימה לשנינו"): SIGS=<dir> with
+// michael.png / itai.png, saved there by each signer; no file = an empty cell to sign on paper.
+const SIGS = process.env.SIGS || '';
+function sigCell(key, w) {
+  const f = SIGS && path.join(SIGS, key + '.png');
+  const kids = [run('חתימה:', { bold: true, size: 22 })];
+  if (f && fs.existsSync(f)) {
+    const b = fs.readFileSync(f), iw = b.readUInt32BE(16), ih = b.readUInt32BE(20), h = 30;
+    kids.push(new ImageRun({ type: 'png', data: b, transformation: { width: Math.round(h * iw / ih), height: h } }));
+  }
+  return cell(para(kids, { after: 0 }), w);
+}
+function signTable(rows) {
   const c = [2400, 2400, 2438, 2400];
-  const row = (who, name, role) => new TableRow({ children: [
+  const row = (who, name, role, key) => new TableRow({ children: [
     cell(para([run(who + ' ', { bold: true, size: 22 }), run(name, { size: 22 })], { after: 0 }), c[0]),
     cell(para([run('תפקיד: ', { bold: true, size: 22 }), run(role, { size: 22 })], { after: 0 }), c[1]),
     cell(para([run('תאריך: ', { bold: true, size: 22 }), run(DATE, { size: 22 })], { after: 0 }), c[2]),
-    cell(para(run('חתימה:', { bold: true, size: 22 }), { after: 0 }), c[3]),
+    sigCell(key, c[3]),
   ] });
-  return new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: c, visuallyRightToLeft: true, rows: [
-    row('נכתב ע"י:', 'מיכאל פרייליך', 'מנהל בטיחות ואיכות הסביבה'),
-    row('אושר ע"י:', 'איתי הושמד', 'מנהל המפעל'),
-  ] });
+  return new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: c, visuallyRightToLeft: true, rows: rows.map((r) => row(...r)) });
 }
 
 // The changes table at the end: what changed in this revision, so a reader of the
@@ -99,14 +107,41 @@ function body(lines) {
   });
 }
 
-function doc(title, num, lines, rev) {
+const WROTE = ['נכתב ע"י:', 'מיכאל פרייליך', 'מנהל בטיחות ואיכות הסביבה', 'michael'];
+const APPROVED = ['אושר ע"י:', 'איתי הושמד', 'מנהל המפעל', 'itai'];
+
+// A form (146.03) is signed by the contractor at the end, under the clauses; its header says
+// "טופס" and it carries "עודכן ע"י" only, as on the 2024 form.
+function contractorBlock() {
+  const c = [3212, 3213, 3213];
+  const line = (t, w) => cell(para(run(t, { size: 22 }), { after: 0 }), w);
+  const hd = (t, w) => cell(center(t, { bold: true, size: 22 }), w, { fill: 'D9D9D9' });
+  return [
+    para(run('הצהרת הקבלן', { bold: true, size: 26 }), { after: 120 }),
+    para('קראתי את ההוראות, הבנתי אותן, ואני מתחייב לקיים אותן ולהדריך בהן את עובדיי.', { after: 120 }),
+    new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: c, visuallyRightToLeft: true, rows: [
+      new TableRow({ children: [line('שם הקבלן:', c[0]), line('ת.ז.:', c[1]), line('ח.פ / עוסק מורשה:', c[2])] }),
+      new TableRow({ children: [line('תאריך:', c[0]), line('חתימה:', c[1]), line('', c[2])] }),
+    ] }),
+    para('', { after: 160 }),
+    para(run('עובדי הקבלן', { bold: true, size: 24 }), { after: 100 }),
+    new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: c, visuallyRightToLeft: true, rows: [
+      new TableRow({ tableHeader: true, children: [hd('שם העובד', c[0]), hd('ת.ז.', c[1]), hd('חתימה', c[2])] }),
+      ...Array.from({ length: 8 }, () => new TableRow({ height: { value: 440, rule: 'atLeast' }, children: [line('', c[0]), line('', c[1]), line('', c[2])] })),
+    ] }),
+  ];
+}
+
+function doc(title, num, lines, rev, opts) {
+  const form = !!(opts && opts.form);
   return new Document({
     styles: { default: { document: { run: { font: FONT, size: 24 } } } },
     sections: [{
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, bottom: 1200, left: 1134, right: 1134, header: 500 } } },
-      headers: { default: header(title, num) },
+      headers: { default: header(title, num, form ? 'טופס' : 'תיעוד') },
       footers: { default: new Footer({ children: [center('העותק המבוקר נמצא אצל מנהל הבטיחות. עותק מודפס אינו מבוקר.', { size: 16, color: '666666' })] }) },
-      children: [signTable(), para('', { after: 200 }), ...body(lines), para('', { after: 200 }),
+      children: [signTable(form ? [['עודכן ע"י:'].concat(WROTE.slice(1))] : [WROTE, APPROVED]), para('', { after: 200 }), ...body(lines), para('', { after: 200 }),
+        ...(form ? contractorBlock().concat([para('', { after: 200 })]) : []),
         para(run('רישום שינויים', { bold: true, size: 26 }), { after: 120 }), changes(rev)],
     }],
   });
@@ -119,13 +154,14 @@ if (require.main === module) {
   const out = [
     [P.T2603, '26.03', P.L2603, P.R2603, 'נוהל 26.03 - טיפול במקרה של דליפת אמוניה - 16.10.2026.docx'],
     [P.T2604, '26.04', P.L2604, P.R2604, 'נוהל 26.04 - ריקון יזום של אמוניה ונעילה ותיוג - 16.10.2026.docx'],
+    [P.T14603, '146.03', P.L14603, P.R14603, 'טופס 146.03 - הוראות בטיחות לקבלני חוץ - 16.10.2026.docx', { form: true }],
   ];
   // Keyboard characters only (CLAUDE.md, 21/09/2026): refuse to build otherwise.
   const BAD = /[–—־׳״«»“”‘’•…·←-⇿]/;
-  for (const [t, n, l, r, f] of out) {
+  for (const [t, n, l, r, f, o] of out) {
     const all = [t].concat(l.map((x) => x[1]), [].concat(...r));
     const bad = all.find((s) => BAD.test(s));
     if (bad) { console.error('non-keyboard character in: ' + bad); process.exit(1); }
-    Packer.toBuffer(doc(t, n, l, r)).then((b) => { fs.writeFileSync(path.join(__dirname, f), b); console.log('wrote ' + f + ' ' + b.length); });
+    Packer.toBuffer(doc(t, n, l, r, o)).then((b) => { fs.writeFileSync(path.join(__dirname, f), b); console.log('wrote ' + f + ' ' + b.length); });
   }
 }
