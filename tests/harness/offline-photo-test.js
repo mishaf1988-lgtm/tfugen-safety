@@ -150,6 +150,67 @@ const pick = async (page, areaId) => {
   });
   check('trustee and manager both see «⏳ ממתינה» instead of a photo link that opens nothing', ch.mineChip && !ch.mineLink && ch.mgrChip && !ch.mgrLink, ch);
 
+  console.log('\n8. The app is closed while a trustee photo uploads: the photo survives (BACKLOG 14.1)');
+  // The upload never answers (the app was killed mid-way). Before 16/10/2026 the photo entered the
+  // queue only after a network failure, so here it existed nowhere but in the dead page.
+  const k3 = await page.evaluate(() => {
+    _fileUpload = function (b, p, cb) { window.__hung = (window.__hung || 0) + 1; if (window.__hung > 1) cb(null, 'net'); };   // the 1st call never answers
+    window.__hung = 0;
+    _truSetMe('לב'); _truReport(3);
+    const key = _truForm.tasks[3].items[0].k;
+    _truFormSetOk(3, key, false);
+    return key;
+  });
+  const area3 = 'tru-ph-3-' + k3;
+  await page.evaluate((a) => { _attachPick(a, a); }, area3);
+  await page.setInputFiles('#_att_inp_' + area3, { name: 'hazard.jpg', mimeType: 'image/jpeg', buffer: JPEG });
+  await page.waitForFunction(() => window.__hung > 0, null, { timeout: 8000 });
+  const mid = await page.evaluate((a) => new Promise(res => {
+    // A drain that starts meanwhile must not send the same photo a second time.
+    _phDrain().then(() => {
+      _truDraftSave();
+      _phAll(l => res({ n: l.length, url: _attachUrls[a], hung: window.__hung, draft: localStorage.getItem(_TRU_DRAFT_KEY) || '' }));
+    });
+  }), area3);
+  check('while it uploads, the photo is already in the phone queue and the form holds pending:', mid.n === 1 && /^pending:ph/.test(mid.url || ''), mid);
+  check('the draft written on close holds the queued photo', mid.draft.indexOf(mid.url) >= 0, mid.draft.slice(0, 200));
+  check('a drain during the upload does not send it twice', mid.hung === 1, mid.hung);
+  // Broken on purpose (16/10/2026): with the old order (_fileUpload first, queue only on 'net') the
+  // first check fails with n=0 and url=null. Without the _phFly skip in _phDrain the third fails with 2.
+
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(900);
+  const back = await page.evaluate((tok) => new Promise(res => {
+    window.__up = 0;
+    _fileUpload = function (blob, prefix, cb) { window.__up++; cb('https://sb.co/storage/v1/object/public/incidents-photos/' + prefix + '-late.jpg'); };
+    SB_ON = true; _obSet([]);
+    _phAll(before => _phDrain().then(() => _phAll(after => res({
+      before: before.length, after: after.length, up: window.__up,
+      draft: localStorage.getItem(_TRU_DRAFT_KEY) || '', tok
+    }))));
+  }), mid.url);
+  check('after reopening the app the photo is still on the phone', back.before === 1, back);
+  check('it goes up once, and the draft now points at the real URL', back.up === 1 && back.after === 0 && /-late\.jpg/.test(back.draft) && back.draft.indexOf(back.tok) < 0, back);
+
+  console.log('\n9. Online pick: uploaded straight away, nothing left on the phone');
+  const on = await page.evaluate(() => {
+    const lg = document.getElementById('login'); if (lg) lg.style.display = 'none';
+    const app = document.getElementById('app'); if (app) app.style.display = 'block';
+    ['trustee_reports', 'trustees', 'trustee_winners', 'near_miss', 'tasks'].forEach(k => { if (!DB[k]) DB[k] = []; });
+    window.toast = function () {};
+    localStorage.removeItem(_TRU_DRAFT_KEY);
+    _truSetMe('לב'); _truReport(1);
+    const key = _truForm.tasks[1].items[0].k;
+    _truFormSetOk(1, key, false);
+    return key;
+  });
+  const area4 = 'tru-ph-1-' + on;
+  await page.evaluate((a) => { _attachPending[a] = true; _attachPick(a, a); }, area4);
+  await page.setInputFiles('#_att_inp_' + area4, { name: 'hazard.jpg', mimeType: 'image/jpeg', buffer: JPEG });
+  await page.waitForFunction((a) => _attachPending[a] === false, area4, { timeout: 8000 });
+  const ok4 = await page.evaluate((a) => new Promise(res => setTimeout(() => _phAll(l => res({ n: l.length, url: _attachUrls[a], phN: _phN, up: window.__up })), 300)), area4);
+  check('the form holds the real URL, the queue is empty and the photo went up once', /-late\.jpg$/.test(ok4.url || '') && ok4.n === 0 && ok4.phN === 0 && ok4.up === 2, ok4);
+
   const realErrs = errs.filter(e => !/net::ERR|Failed to load|supabase|web-vitals/i.test(e));
   check('no unexpected page errors', realErrs.length === 0, realErrs.slice(0, 5));
   await browser.close();
