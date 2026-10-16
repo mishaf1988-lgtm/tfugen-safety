@@ -8475,6 +8475,12 @@ function _capNote(total,shown,onMore,cols){
 }
 function tskShowAll(){window._tskShowAll=true;rTasks();}
 function expShowAll(){window._expShowAll=true;rExp();}
+// 16/10/2026 (BACKLOG 14.3): the same cap on the other big lists. 1000 NCRs took 2.7s to paint,
+// 500 employees 1.9s. All four are sorted most-relevant-first before the cap.
+function ncrShowAll(){window._ncrShowAll=true;rNcr();}
+function empShowAll(){window._empShowAll=true;rEmp();}
+function thzShowAll(){window._thzShowAll=true;rThz();}
+function truShowAll(){window._truShowAll=true;rTrustees();}
 // This page aggregates six registers, and every empty tab said the same
 // thing: \ud83d\udd27 \u00ab\u05d0\u05d9\u05df \u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05e6\u05d9\u05d5\u05d3\u00bb with a button that opens a NEW equipment
 // inspection. So pressing \u00ab\u05e4\u05d2\u00bb to confirm that nothing has expired \u2014 the good
@@ -11349,7 +11355,8 @@ function rThz(){
   });
   if(!rows.length){tb.innerHTML='<tr><td colspan="9" class="et" data-label="">&#128270;<br>\u05d0\u05d9\u05df \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05dc\u05d4\u05e6\u05d2\u05d4<br><button class="et-cta" onclick="thzNew()">+ \u05de\u05e4\u05d2\u05e2 \u05d7\u05d3\u05e9</button></td></tr>';return;}
   var latest=_thzLatestTour();
-  tb.innerHTML=rows.slice().sort(function(a,b){return (+b.n||0)-(+a.n||0);}).map(function(r){
+  var _thzAll=rows.slice().sort(function(a,b){return (+b.n||0)-(+a.n||0);}),_thzShown=_capRows(_thzAll,'_thzShowAll');
+  tb.innerHTML=_thzShown.map(function(r){
     var isNew=(+r.tour_no||0)===latest[r.dept];
     var due=r.due?fd(r.due):(_thzNoDue(r)?'<span class="b bY">\u05d7\u05e1\u05e8 \u05d9\u05e2\u05d3</span>':'\u05d7\u05e1\u05e8');
     if(_thzOverdue(r))due='<span style="color:var(--red);font-weight:700">'+fd(r.due)+'<br><small>\u05d1\u05d0\u05d9\u05d7\u05d5\u05e8 '+(-du(r.due))+' \u05d9\u05de\u05d9\u05dd</small></span>'+(_thzEsc(-du(r.due),r.sev)?'<div><span class="b bR">\u05d4\u05e1\u05dc\u05de\u05d4</span></div>':'');
@@ -11365,7 +11372,7 @@ function rThz(){
       +'<td>'+due+'</td>'
       +'<td>'+sb(r.s)+(r.s===_THZ_CLOSED&&r.closed_d?'<div style="font-size:10px;color:var(--t3)">'+fd(r.closed_d)+'</div>':'')+'</td>'
       +'<td>'+viewBtn+' '+delBtn+'</td></tr>';
-  }).join('');
+  }).join('')+_capNote(_thzAll.length,_thzShown.length,'thzShowAll()',9);
 }
 function _thzFill(){
   _thzOpts('thz-dept',_THZ_DEPTS.concat(['\u05d0\u05d7\u05d6\u05e7\u05d4']),false);_thzOpts('thz-resp',_THZ_RESP,false);
@@ -14870,7 +14877,8 @@ if(!rows.length){
   else if(locF||filter!=='all'){emptyMsg+=' \u05ea\u05d5\u05d0\u05de\u05d5\u05ea \u05dc\u05e1\u05d9\u05e0\u05d5\u05df. <a onclick="ncrClearAll()" style="color:var(--c-blue-350,#4d9fff);cursor:pointer;text-decoration:underline">\u05e0\u05e7\u05d4 \u05e4\u05d9\u05dc\u05d8\u05e8\u05d9\u05dd</a>';}
   tb.innerHTML='<tr><td colspan="9" class="et">'+emptyMsg+'</td></tr>';return;
 }
-tb.innerHTML=rows.map(function(n){
+var _ncrTotal=rows.length,_ncrShown=_capRows(rows,'_ncrShowAll');
+tb.innerHTML=_ncrShown.map(function(n){
   var isSaf=n.category==='saf'||(n.a&&n.a.indexOf('\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea')>=0);
   var ico=isSaf?'&#128737;':'&#127807;';
   var sensBadge=n.sens?' &#128274;':'';
@@ -14907,7 +14915,7 @@ tb.innerHTML=rows.map(function(n){
     '<td>'+eb(n.u)+'</td>'+
     '<td>'+capaBtn+viewBtn+' '+editBtn+' '+delBtn+'</td>'+
   '</tr>';
-}).join('');
+}).join('')+_capNote(_ncrTotal,_ncrShown.length,'ncrShowAll()',9);
 }
 // ---- 1.11 ----
 // \u05de\u05d4 \u05d4\u05e1\u05d9\u05d1\u05d4 \u05d4\u05db\u05d9 \u05e9\u05db\u05d9\u05d7\u05d4 \u05dc\u05d0\u05d9-\u05d4\u05ea\u05d0\u05de\u05d5\u05d9\u05d5\u05ea \u05d0\u05e6\u05dc\u05db\u05dd? is the question an ISO audit opens
@@ -16842,11 +16850,14 @@ function _notifyEvent(eventKey,payload){
 }
 
 // Left = a leaving date up to today, Israel's day (Michael, 03/10/2026). A date ahead = still working.
-function _empLeft(e){return !!(e&&/^\d{4}-\d{2}-\d{2}/.test(String(e.left_d||''))&&String(e.left_d).substring(0,10)<=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'}));}
+function _empLeft(e){return !!(e&&/^\d{4}-\d{2}-\d{2}/.test(String(e.left_d||''))&&String(e.left_d).substring(0,10)<=_empToday());}
+var _empTodayC={t:0,d:''};   // toLocaleDateString with a time zone is slow; once a minute is plenty
+function _empToday(){var n=Date.now();if(n-_empTodayC.t>60000||!_empTodayC.d){_empTodayC.t=n;_empTodayC.d=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Jerusalem'});}return _empTodayC.d;}
 function rEmp(){
   var tb=g('tb-emp');if(!tb)return;
   if(!DB.emp.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">\ud83d\udc65<br>\u05d0\u05d9\u05df \u05e2\u05d5\u05d1\u05d3\u05d9\u05dd<br><button class="et-cta" onclick="openModal(\'m-emp\')">+ \u05e2\u05d5\u05d1\u05d3 \u05e8\u05d0\u05e9\u05d5\u05df</button></td></tr>';return;}
-  tb.innerHTML=DB.emp.slice().sort(function(a,b){return (_empLeft(a)?1:0)-(_empLeft(b)?1:0);}).map(function(e){return '<tr'+(_empLeft(e)?' style="opacity:.6"':'')+'><td><strong>'+esc(e.n)+'</strong>'+(_empLeft(e)?' <span class="b bX">\u05e2\u05d6\u05d1 '+fd(e.left_d)+'</span>':'')+'</td><td>'+(e.r?esc(e.r):'-')+'</td><td>'+(e.dep?esc(e.dep):'-')+'</td><td>'+(e.ph?esc(e.ph):'-')+'</td><td>'+(e.em?esc(e.em):'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('');
+  var _empAll=DB.emp.slice().sort(function(a,b){return (_empLeft(a)?1:0)-(_empLeft(b)?1:0);}),_empShown=_capRows(_empAll,'_empShowAll');
+  tb.innerHTML=_empShown.map(function(e){return '<tr'+(_empLeft(e)?' style="opacity:.6"':'')+'><td><strong>'+esc(e.n)+'</strong>'+(_empLeft(e)?' <span class="b bX">\u05e2\u05d6\u05d1 '+fd(e.left_d)+'</span>':'')+'</td><td>'+(e.r?esc(e.r):'-')+'</td><td>'+(e.dep?esc(e.dep):'-')+'</td><td>'+(e.ph?esc(e.ph):'-')+'</td><td>'+(e.em?esc(e.em):'-')+'</td><td><button class="btn btn-d btn-sm" data-vtbl="emp" data-vid="'+esc(e.id)+'" onclick="showView(this.dataset.vtbl,this.dataset.vid)">&#128065;&#65039;</button></td><td><button class="btn btn-d btn-sm" data-dtbl="emp" data-did="'+esc(e.id)+'"   onclick="askDel(this.dataset.dtbl,this.dataset.did)">&#128465;&#65039;</button></td></tr>';}).join('')+_capNote(_empAll.length,_empShown.length,'empShowAll()',7);
 }
 
 // Every task spawned from one record, newest first. The link has always been
@@ -19283,15 +19294,15 @@ window._exportICS=function(){
 // 200 rows of N - a file that looks complete and is not. An export that
 // silently drops records is worse than a slow page, which is the same reason
 // the counters above those lists were never capped.
+var _CAP_PAGES={tasks:['_tskShowAll','rTasks'],exp:['_expShowAll','rExp'],ncr:['_ncrShowAll','rNcr'],emp:['_empShowAll','rEmp'],thz:['_thzShowAll','rThz'],trustees:['_truShowAll','rTrustees']};
 function _capLiftForExport(){
-  var was={tsk:window._tskShowAll,exp:window._expShowAll};
-  window._tskShowAll=true;window._expShowAll=true;
-  try{if(CUR==='tasks'&&typeof rTasks==='function')rTasks();}catch(e){}
-  try{if(CUR==='exp'&&typeof rExp==='function')rExp();}catch(e){}
+  var was={};
+  Object.keys(_CAP_PAGES).forEach(function(pg){var f=_CAP_PAGES[pg][0];was[f]=window[f];window[f]=true;});
+  var paint=function(){var c=typeof CUR!=='undefined'&&_CAP_PAGES[CUR];if(c&&typeof window[c[1]]==='function')try{window[c[1]]();}catch(e){}};
+  paint();
   return function(){
-    window._tskShowAll=was.tsk;window._expShowAll=was.exp;
-    try{if(CUR==='tasks'&&typeof rTasks==='function')rTasks();}catch(e){}
-    try{if(CUR==='exp'&&typeof rExp==='function')rExp();}catch(e){}
+    Object.keys(was).forEach(function(f){window[f]=was[f];});
+    paint();
   };
 }
 window._exportCSV=function(){
@@ -21838,7 +21849,8 @@ function rTrustees(){
     return true;
   }).sort(function(a,b){return String(b.ts||b.d||'').localeCompare(String(a.ts||a.d||''));});
   if(!list.length){tb.innerHTML='<tr><td colspan="7" class="et" data-label="">'+(_truMgrF==='open'?'\u05d0\u05d9\u05df \u05de\u05de\u05e6\u05d0\u05d9\u05dd \u05e4\u05ea\u05d5\u05d7\u05d9\u05dd \ud83d\udc4d':'\u05d0\u05d9\u05df \u05e8\u05e9\u05d5\u05de\u05d5\u05ea')+'</td></tr>';return;}
-  tb.innerHTML=list.map(function(r){
+  var _truShown=_capRows(list,'_truShowAll');
+  tb.innerHTML=_truShown.map(function(r){
     var t=_truTask(r.t);
     var photo=_phIs(r.photo_url)?' '+_phChip(12):(r.photo_url?' <a data-sign="'+escU(r.photo_url)+'" target="_blank" title="\u05ea\u05de\u05d5\u05e0\u05d4">\ud83d\udcf7</a>':'');
     var after=(DB.trustee_reports||[]).find(function(x){return x.t===8&&x.ref===r.id;});
@@ -21861,7 +21873,7 @@ function rTrustees(){
       +'<td data-label="\u05e1\u05d8\u05d8\u05d5\u05e1">'+_truStatusBadge(r)+_truVerifyBadge(r)+_truAgeChip(r)+'</td>'
       +'<td data-label=""><button class="btn btn-d btn-sm" data-rid="'+esc(r.id)+'" onclick="_truRowMenu(this,this.dataset.rid)" aria-label="\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea">\u22ef</button></td>'
       +'</tr>';
-  }).join('');
+  }).join('')+_capNote(list.length,_truShown.length,'truShowAll()',7);
   if(typeof _signifyDom==='function')try{_signifyDom(tb);}catch(e){}
 }
 function _truRowMenu(anchor,id){
