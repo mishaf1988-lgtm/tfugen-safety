@@ -139,5 +139,31 @@ open(os.path.join(work, "b.txt"), "w").write("b3\n"); sh(work, "git", "commit", 
 r = sup.verdict(work, "סיימתי.", set(), False)
 check("a new commit after the squash: blocks again", r and "commits" in r, r)
 
+print("\nthe office: opened after every SessionStart (16/10/2026, Michael: \"לא תמיד מציג את המשרד\")")
+OFF = "https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi"
+def start(f, kind):
+    f.write(json.dumps({"attachment": {"type": "hook_success", "hookName": "SessionStart:" + kind, "hookEvent": "SessionStart",
+        "content": "== התחלת שיחה ==\n🏢 משרד הסוכנים: בתחילת השיחה Artifact עם action \"open\" ו-url " + OFF + " (מיכאל)"}}, ensure_ascii=False) + "\n")
+def opened(f, url=OFF, action="open"):
+    tline(f, "assistant", [{"type": "tool_use", "name": "Artifact", "input": {"action": action, "url": url}}])
+def tr(steps):
+    p = os.path.join(root, "o%d.jsonl" % len(os.listdir(root)))
+    with open(p, "w", encoding="utf-8") as f:
+        for s_ in steps: s_(f)
+    return p
+check("startup, opened: nothing pending", sup.office_pending(tr([lambda f: start(f, "startup"), opened])) is None)
+check("startup, not opened: pending", sup.office_pending(tr([lambda f: start(f, "startup")])) == OFF)
+check("opened, then resumed and not opened again: pending (the bug of 16/10/2026)", sup.office_pending(tr([lambda f: start(f, "startup"), opened, lambda f: start(f, "resume")])) == OFF)
+check("resumed and opened again: nothing pending", sup.office_pending(tr([lambda f: start(f, "startup"), opened, lambda f: start(f, "resume"), opened])) is None)
+check("a read of the office is not an open", sup.office_pending(tr([lambda f: start(f, "startup"), lambda f: opened(f, action="read")])) == OFF)
+check("another artifact opened: still pending", sup.office_pending(tr([lambda f: start(f, "startup"), lambda f: opened(f, url="https://claude.ai/artifact/Other123")])) == OFF)
+check("no office line in SessionStart: nothing pending", sup.office_pending(tr([lambda f: tline(f, "user", "שלום")])) is None)
+def run_main(path):
+    p = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".claude", "hooks", "supervisor.py")],
+        input=json.dumps({"transcript_path": path, "cwd": work}), capture_output=True, text=True, encoding="utf-8")
+    return p.stdout
+out = run_main(tr([lambda f: start(f, "resume"), lambda f: tline(f, "assistant", [{"type": "text", "text": "לבצע?"}])]))
+check("the hook blocks with the url, even on a closing question", '"block"' in out and OFF in out, out)
+
 print("\n%d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)

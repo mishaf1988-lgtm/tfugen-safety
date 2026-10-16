@@ -16,6 +16,10 @@ Before a turn ends it checks, locally and without network:
      no code item without Michael = the session stays open for his answer)
   5. a PR was merged since the last reply, project-files/chrome-queue.md has
      open tasks, and the reply has no "לכרום" line -> block (Michael, 12/10/2026)
+  6. session-start.py asked to open the agents' office (🏢) and no Artifact
+     "open" of that url came after it -> block, even on a question or with
+     ci-wait running (Michael, 16/10/2026: "לא תמיד מציג את המשרד": the
+     session was resumed twice, the hook asked again, and it was not opened)
 It lets the stop through when the reply ends on a question to Michael (an
 approval he must give), when ci-wait.sh is running in the background (its
 end wakes the session), and never blocks twice in a row (stop_hook_active).
@@ -90,6 +94,35 @@ def transcript(path):
                         tools.add(c.get("name", ""))
                         recent.add(c.get("name", ""))
     return "\n".join(texts), tools, recent
+
+
+OFFICE_MARK = "🏢 משרד הסוכנים"
+
+
+def office_pending(path):
+    """The office url the last SessionStart (startup or resume) asked to open, when
+    no Artifact open of it followed; else None. The Artifacts button of a session
+    shows only what was opened in it (session-start.py), and a resumed session is
+    asked again, so each SessionStart needs its own open."""
+    pending = None
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            try:
+                row = json.loads(line)
+            except Exception:
+                continue
+            att = row.get("attachment") or {}
+            if att.get("hookEvent") == "SessionStart" and OFFICE_MARK in str(att.get("content", "")):
+                m = re.search(r"https://claude\.ai/artifact/([A-Za-z0-9]+)", str(att.get("content", "")))
+                pending = m.group(0) if m else pending
+                continue
+            msg = row.get("message") or {}
+            if pending and msg.get("role") == "assistant" and isinstance(msg.get("content"), list):
+                for c in msg["content"]:
+                    inp = c.get("input") if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") == "Artifact" else None
+                    if isinstance(inp, dict) and inp.get("action") == "open" and pending.rsplit("/", 1)[-1] in str(inp.get("url", "")):
+                        pending = None
+    return pending
 
 
 def ci_wait_running():
@@ -184,6 +217,11 @@ def main():
         sys.exit(0)
     cwd = data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or "."
     try:
+        office = office_pending(data["transcript_path"])
+        if office:
+            print(json.dumps({"decision": "block", "reason": "המפקח: השיחה התחילה או הופעלה מחדש, והמשרד לא נפתח (מיכאל 16/10/2026: \"לא תמיד מציג את המשרד\"). "
+                              "לקרוא ל-Artifact עם action \"open\" ו-url " + office + ", ואז לסיים."}, ensure_ascii=False))
+            sys.exit(0)
         text, tools, recent = transcript(data["transcript_path"])
         reason = verdict(cwd, text, tools, ci_wait_running(), recent)
     except Exception:
