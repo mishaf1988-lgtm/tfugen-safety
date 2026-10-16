@@ -60,7 +60,7 @@ function header(title, num, label) {
 
 // Written by / approved by, on the first page as on the originals. A signature goes in only
 // from the signing page (Michael, 16/10/2026: "בצע: דף חתימה לשנינו"): SIGS=<dir> with
-// michael.png / itai.png, saved there by each signer; no file = an empty cell to sign on paper.
+// michael.png / tzachi.png, saved there by each signer; no file = an empty cell to sign on paper.
 const SIGS = process.env.SIGS || '';
 function sigCell(key, w) {
   const f = SIGS && path.join(SIGS, key + '.png');
@@ -108,7 +108,9 @@ function body(lines) {
 }
 
 const WROTE = ['נכתב ע"י:', 'מיכאל פרייליך', 'מנהל בטיחות ואיכות הסביבה', 'michael'];
-const APPROVED = ['אושר ע"י:', 'איתי הושמד', 'מנהל המפעל', 'itai'];
+// 16/10/2026: Michael, "איתי לא מנהל מפעל כבר זה צחי". The originals of 2025 named Itai Hushmand; the
+// current title is from the appointment letters of 14/10/2026 ("צחי וולפוביץ, סמנכ"ל תפעול").
+const APPROVED = ['אושר ע"י:', 'צחי וולפוביץ', 'סמנכ"ל תפעול', 'tzachi'];
 
 // A form (146.03) is signed by the contractor at the end, under the clauses; its header says
 // "טופס" and it carries "עודכן ע"י" only, as on the 2024 form.
