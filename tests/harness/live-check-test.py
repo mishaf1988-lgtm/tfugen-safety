@@ -4,7 +4,11 @@
 import json, tempfile
 from _common import run, check, done
 st = tempfile.mkdtemp()
-env = {"LIVE_CHECK_STATE": st}
+root = tempfile.mkdtemp()
+import os
+os.makedirs(os.path.join(root, "project-files"))
+open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("## x\n**מה:** `received_at` ב-`trustee_reports`.\n" + "trustee_reports\n" * 10)
+env = {"LIVE_CHECK_STATE": st, "LIVE_CHECK_ROOT": root}
 def ask(q, opts=(), sid="s"):
     return run("live-check.py", {"tool_name": "AskUserQuestion", "session_id": sid, "tool_input": {"questions": [{"question": q, "options": [{"label": l, "description": dsc} for l, dsc in opts]}]}}, env)
 o = ask("הסריקה הקיימת של המייל תזהה תשובות. מאשר?")
@@ -17,4 +21,10 @@ check("no claim: passes", ask("לאילו פריטים להוסיף קישור?"
 check("'קיימת' without ה (a new thing that will exist) passes", ask("תהיה טבלה קיימת אחרי זה?") == "")
 check("another tool: nothing", run("live-check.py", {"tool_name": "Bash", "tool_input": {"command": "echo הקיים"}}, env) == "")
 check("bad input: nothing, no crash", run("live-check.py", {}, env) == "")
+# lesson 15 (16/10/2026): asked to approve received_at, built the day before.
+o = ask("להוסיף שעת קבלה בשרת (received_at)?", [("בצע", "עמודה חדשה")])
+check("a rare identifier already in DECISIONS: denied, naming where", '"deny"' in o and "received_at: DECISIONS.md:2" in o and "15" in o, o)
+check("...and asked again it passes", ask("להוסיף שעת קבלה בשרת (received_at)?", [("בצע", "עמודה חדשה")]) == "")
+check("a common identifier (11 hits) does not stop the question", ask("לשנות את trustee_reports?") == "")
+check("an identifier not in any decision passes", ask("להוסיף new_column?") == "")
 done()
