@@ -43,6 +43,7 @@
 
 - **משרד הסוכנים:** ארטיפקט פרטי `https://claude.ai/artifact/AmxFowGHYDqyhd1sE9qphi`, מוצמד בסרגל. אוסף `agents` (שולחן לכל טריגר) ומסמך `meta/office`, שה-Routine למעלה כותב כל בוקר. מקור העמוד: `project-files/agent-office-page.txt`. להעברה: לפרסם את המקור כארטיפקט חדש ולעדכן את הכתובת ב-`routine-office.md`.
 - **דף החתימה על נהלים 26.03, 26.04 ו-146.03 (16/10/2026):** ארטיפקט פרטי `https://claude.ai/artifact/NQTGARqzS6t7tyeYNLyYPM`, מסמכים `sig/michael` ו-`sig/tzachi` (PNG של החתימה, `by`, `at`), ו-PDF של שלושת המסמכים ב-assets. להעברה: לקרוא את שני המסמכים (`ArtifactData get`) לפני שהחשבון נסגר; אחרי התיוק החתום אין בו צורך.
+- **פרויקט Supabase לניסוי (16/10/2026):** `tfugen-staging`, מזהה `ldzbjbsumzqjyvtpiwqo`, eu-west-1, תוכנית Free, באותו ארגון של החי. נתוני דוגמה בלבד. להעברה: לייצא סכמה (או לבנות מחדש מהמסמך ב-STATUS, פריט "סביבת פיתוח וניסוי"); אין בו נתונים שצריך לשמור.
 
 ### Connectors (claude.ai > Settings > Connectors)
 Microsoft 365 (קריאה: מייל, OneDrive, יומן, Teams), Supabase (`execute_sql` על `znhjtpcltrxxyfjczgvw`), Cloudflare Developer Platform, GitHub (repos `tfugen-safety` ו-`michael-skills`), Claude Docs. בחשבון חדש: לחבר את כולם, ולאשר את GitHub App על שני ה-repos.
