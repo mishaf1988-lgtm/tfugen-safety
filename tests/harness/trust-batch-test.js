@@ -278,6 +278,40 @@ let ACCEPT = true, DIALOGS = [];
     }, [V1, V2]);
     check('the NCR editor pins the version it opened', ncr.pin === V1, ncr);
     check('«keep mine» drops the pin, or the retry would be refused for ever', ncr.after === null, ncr);
+
+    // The custom editors (16/10/2026, BACKLOG 14.2 part 2): each opens with _editPin and saves with
+    // _editPinTake, so a form open on the phone does not overwrite a change the PC saved meanwhile.
+    const ED = [
+      ['inc', 'editInc', 'svInc', { d: 'נפילה במדרגות', dt: '2026-10-15T08:00:00.000Z', ty: 'כמעט תאונה', sv: 'קל', l: 'מחסן', s: 'פתוח', r: 'בדיקה' }],
+      ['leg', 'editLeg', 'svLeg', { law_num: '1', topic: 'חוק', s: 'בתוקף' }],
+      ['equip_inspections', 'eqiEdit', 'svEqi', { n: 'מלגזה', code: 'M1', d: '2026-01-01', e: '2027-01-01', s: 'תקין' }],
+      ['tasks', 'editTsk', 'svTsk', { title: 'לבדוק מטף', assignee: 'דני', due: '2026-11-01', s: 'open' }],
+      ['env_aspects', 'editEasp', 'svEasp', { activity: 'שטיפה', aspect: 'שפכים', impact: 'זיהום', s: 'פעיל' }],
+      ['locations', 'editLoc', 'svLoc', { name: 'מחסן א', level: 1 }],
+      ['inspection_types', 'editItp', 'svItp', { name: 'מלגזה', recur_count: 6, recur_unit: 'month' }],
+      ['issue_types', 'editItype', 'svItype', { name: 'חשמל', level: 1 }],
+      ['projects', 'editPrj', 'svPrj', { name: 'שיפוץ' }],
+      ['app_users', 'editUser', 'svUser', { username: 'dani', role: 'viewer', full_name: 'דני כהן' }],
+    ];
+    const eds = await page.evaluate(async ([V1, V2, ED]) => {
+      window._obDrain = function () {};
+      const out = {};
+      for (const [t, open, save, f] of ED) {
+        _obSet([]); _rowVer = {}; window.__toasts = [];
+        const row = Object.assign({ id: 'e-' + t, ts: V1 }, f);
+        DB[t] = [Object.assign({}, row)];
+        _sbMergePull(t, [Object.assign({}, row)], {});
+        try { window[open]('e-' + t); } catch (e) { out[t] = 'open: ' + e.message; continue; }
+        await new Promise((r) => setTimeout(r, 30)); // eqiEdit fills the form in a setTimeout
+        _sbMergePull(t, [Object.assign({}, row, { ts: V2 })], {});
+        try { window[save](); } catch (e) { out[t] = 'save: ' + e.message; continue; }
+        const op = _obGet().filter(o => o.tbl === t && o.op === 'upd').slice(-1)[0];
+        out[t] = op ? (op.pin || null) : ('no op: ' + window.__toasts.join(' | '));
+      }
+      window._obDrain = window.__realDrain; _obSet([]); _rowVer = {};
+      return out;
+    }, [V1, V2, ED]);
+    ED.forEach(([t]) => check('the ' + t + ' editor saves against the version it opened', eds[t] === V1, eds[t]));
   }
 
   console.log('\n3.11 the record says who touched it');
