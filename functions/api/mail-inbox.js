@@ -65,8 +65,12 @@ function sbH(env, extra) {
   const k = env.SUPABASE_SERVICE_ROLE_KEY;
   return { apikey: k, Authorization: 'Bearer ' + k, ...(extra || {}) };
 }
-function newId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+// The closure row's id comes from the mail itself (16/10/2026, BACKLOG 14.9): when the insert
+// went through but its answer was lost, the message is retried next run, and a random id would
+// write a second closure for the same reply. The same id lets the retry be a no-op.
+async function closureId(msgId) {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mail:' + String(msgId))));
+  return 'm' + Array.from(h.slice(0, 6)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 function todayIL() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
@@ -113,25 +117,27 @@ async function closeOne(env, token, msg, c) {
   if (f.ok !== false || !(t >= 1 && t !== TASK_CLOSE)) return { result: 'not a finding' };
   if (f.s === S_CLOSED) return { result: 'already closed' };
 
+  const cid = await closureId(msg.id);
   let photoUrl = null;
   if (msg.hasAttachments) {
     try {
       const p = await bestPhoto(token, msg.id);
       if (p) {
-        const name = 'tru-mail-' + String(c.id).replace(/[^A-Za-z0-9_-]/g, '') + '-' + Date.now() + '.' + p.ext;
-        const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': p.type, 'x-upsert': 'false' }), body: p.bytes, signal: tmo(FILE_MS) });
+        const name = 'tru-mail-' + String(c.id).replace(/[^A-Za-z0-9_-]/g, '') + '-' + cid + '.' + p.ext;
+        // the same name on a retry, so the same photo is written over, not added twice
+        const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': p.type, 'x-upsert': 'true' }), body: p.bytes, signal: tmo(FILE_MS) });
         if (up.ok) photoUrl = SB + '/storage/v1/object/public/' + BUCKET + '/' + name;
       }
     } catch (e) { /* closed without a photo rather than not closed */ }
   }
 
   const rep = {
-    id: newId(), u: c.name, t: TASK_CLOSE, d: todayIL(), ok: true, ref: f.id,
+    id: cid, u: c.name, t: TASK_CLOSE, d: todayIL(), ok: true, ref: f.id,
     loc: f.loc || null, location_id: f.location_id || null, tour: f.tour || null,
     f: c.text || null, photo_url: photoUrl,
     mgr_note: '\u05e0\u05e1\u05d2\u05e8 \u05d1\u05ea\u05e9\u05d5\u05d1\u05d4 \u05dc\u05de\u05d9\u05d9\u05dc: ' + c.from,
   };
-  const ins = await fetch(SB + '/rest/v1/trustee_reports', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify(rep), signal: tmo(SB_MS) });
+  const ins = await fetch(SB + '/rest/v1/trustee_reports?on_conflict=id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rep), signal: tmo(SB_MS) });
   if (!ins.ok) return { result: 'insert failed ' + ins.status, retry: true };
   const up = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(f.id) + '&s=neq.' + encodeURIComponent(S_CLOSED), {
     method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ s: S_CLOSED }), signal: tmo(SB_MS),
