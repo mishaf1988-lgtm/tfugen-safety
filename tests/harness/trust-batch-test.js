@@ -223,6 +223,63 @@ let ACCEPT = true, DIALOGS = [];
     await page.evaluate(() => { _obSet([]); _rowVer = {}; });
   }
 
+  console.log('\n  16/10/2026 (A8, BACKLOG 14.2): the version is the one the form was OPENED at');
+  {
+    // A form open on the phone while the PC saved the same record. The pull moved _verOf to the
+    // PC's version, and the guard used to be taken at save time, so the phone's save matched it
+    // and overwrote the PC's change in silence.
+    const V1 = '2026-10-16T06:00:00.000Z', V2 = '2026-10-16T06:05:00.000Z';
+    const run = (pull, pendingFirst) => page.evaluate(([V1, V2, pull, pendingFirst]) => {
+      window.__realDrain = window.__realDrain || window._obDrain; window._obDrain = function () {};
+      _obSet([]); _rowVer = {};
+      DB.near_miss = []; _sbMergePull('near_miss', [{ id: 'dA', d: '2026-10-15', descr: 'כבל על הרצפה', s: 'פתוח', ts: V1 }], {});
+      DB.near_miss = [{ id: 'dA', d: '2026-10-15', descr: 'כבל על הרצפה', s: 'פתוח', ts: V1 }];
+      if (pendingFirst) _obPush({ op: 'upd', tbl: 'near_miss', row: { id: 'dA', s: 'פתוח' } });
+      _genEdit('near_miss', 'dA');
+      if (pull) _sbMergePull('near_miss', [{ id: 'dA', d: '2026-10-15', descr: 'כבל - מהמחשב', s: 'בטיפול', ts: V2 }], {});
+      document.getElementById('nm-desc').value = 'כבל - מהטלפון';
+      svNm();
+      const op = _obGet().filter(o => o.tbl === 'near_miss' && o.op === 'upd').slice(-1)[0] || {};
+      const seen = [];
+      window.fetch = function (u, o) {
+        seen.push(String(u));
+        if (!(o && o.method)) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: 'dA', ts: pull ? V2 : V1 }]) });
+        const want = decodeURIComponent((String(u).match(/[?&]ts=eq\.([^&]+)/) || [])[1] || '');
+        const cur = pull ? V2 : V1;
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(!want || want === cur ? [{ id: 'dA', ts: '2026-10-16T06:10:00.000Z' }] : []), text: () => Promise.resolve('[]') });
+      };
+      return _obSend(op).then(() => ({ pin: op.pin || null, conflict: false, seen }), (e) => ({ pin: op.pin || null, conflict: !!e.conflict, seen }))
+        .then((x) => { window._obDrain = window.__realDrain; _obSet([]); return x; });
+    }, [V1, V2, pull, pendingFirst]);
+
+    const a8 = await run(true, false);
+    check('the edit carries the version the form was opened at', a8.pin === V1, a8);
+    check('a change saved elsewhere while the form was open is a conflict, not a silent overwrite', a8.conflict === true && /ts=eq\./.test(a8.seen[0] || ''), a8);
+    // Broken on purpose (16/10/2026): with _obSend back to _verOf first, this check fails (conflict:false).
+    // Caught on the first run: the OneDrive hook wraps sbUpd(tbl,row) and dropped the pin (pin:null).
+    const calm = await run(false, false);
+    check('...and with nothing changed elsewhere the same save lands', calm.pin === V1 && calm.conflict === false, calm);
+    const own = await run(false, true);
+    check('an edit of ours still waiting is not pinned (it would conflict with itself)', own.pin === null, own);
+
+    const ncr = await page.evaluate(([V1, V2]) => {
+      window._obDrain = function () {};
+      _obSet([]); _rowVer = {};
+      DB.ncr = [{ id: 'nA', num: 'NCR-9', d: 'שמן ברצפה', a: 'בטיחות', s: 'פתוח', p: 'בינונית', ts: V1 }];
+      _sbMergePull('ncr', [DB.ncr[0]], {});
+      editNcr('nA');
+      _sbMergePull('ncr', [Object.assign({}, DB.ncr[0], { d: 'מהמחשב', ts: V2 })], {});
+      svNcr();
+      const op = _obGet().filter(o => o.tbl === 'ncr' && o.op === 'upd').slice(-1)[0] || {};
+      window._verForce('ncr', 'nA');
+      const after = _obGet().filter(o => o.tbl === 'ncr' && o.op === 'upd').slice(-1)[0] || {};
+      window._obDrain = window.__realDrain; _obSet([]); _rowVer = {};
+      return { pin: op.pin || null, after: after.pin || null };
+    }, [V1, V2]);
+    check('the NCR editor pins the version it opened', ncr.pin === V1, ncr);
+    check('«keep mine» drops the pin, or the retry would be refused for ever', ncr.after === null, ncr);
+  }
+
   console.log('\n3.11 the record says who touched it');
   {
     const r = await page.evaluate(() => {

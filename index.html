@@ -4089,7 +4089,10 @@ function _obSend(op){
     // lands; op.base is the version the edit was made against, for after a restart. An op with a
     // version is NEVER sent as an upsert, and only answers of 0 rows count toward the upsert
     // (zeroTries): 90 seconds of weak signal used to turn a guarded edit into an overwrite.
-    var _v=(op.op==='upd'&&op.row&&op.row.id)?(_verOf(op.tbl,op.row.id)||op.base||null):null;
+    // 16/10/2026 (A8, BACKLOG 14.2): op.pin is the version the edit form was OPENED at. _verOf moves
+    // with every pull, so a form left open on the phone while the PC saved took the PC's version
+    // at save time and overwrote its change in silence.
+    var _v=(op.op==='upd'&&op.row&&op.row.id)?(op.pin||_verOf(op.tbl,op.row.id)||op.base||null):null;
     var asUpsert=(op.op==='upd'&&op.row&&op.row.id&&(op.forceUpsert||(!_v&&(op.zeroTries||0)>=3&&!op.conflict&&!op.gone)));
     if(op.op==='ins'||asUpsert){url=SBU+'/rest/v1/'+op.tbl;opts.method='POST';opts.headers=(op.tbl==='audit_log')?sbH():sbHUpsert();opts.body=JSON.stringify(op.row);}
     else if(op.op==='upd'){
@@ -4326,7 +4329,7 @@ function _viewBlock(){
 function sbIns(tbl,row){if(_viewBlock())return;_aud('ins',tbl,row);_obPush({op:'ins',tbl:tbl,row:row});if(_obOn())_obDrain();}
 // base: the server version this edit was made against, kept ON the op (15/10/2026). _rowVer lives in
 // memory only, so after a restart a queued offline edit had no guard at all and overwrote newer work.
-function sbUpd(tbl,row){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);var _b=_verOf(tbl,row.id);_obPush(_b?{op:'upd',tbl:tbl,row:row,base:_b}:{op:'upd',tbl:tbl,row:row});if(_obOn())_obDrain();}
+function sbUpd(tbl,row,pin){if(!row||!row.id)return;if(_viewBlock())return;_aud('upd',tbl,row);var _b=pin||_verOf(tbl,row.id),op={op:'upd',tbl:tbl,row:row};if(_b)op.base=_b;if(pin)op.pin=pin;_obPush(op);if(_obOn())_obDrain();}
 function sbDel(tbl,id){if(_viewBlock())return;_aud('del',tbl,id);_obPush({op:'del',tbl:tbl,id:id});if(_obOn())_obDrain();}
 // Page CUR -> the one primary table whose changes the page renders.
 // Pages NOT in this map (dash, mr, cal, tasks, audit, exp, view) always
@@ -4373,9 +4376,20 @@ var _rowVer={};
 // `ts` records no version on pull and is therefore sent unguarded, as before.
 function _verCol(){return 'ts';}
 function _verOf(t,id){return (_rowVer[t]&&_rowVer[t][id])||null;}
+// The version an edit form was opened at (tbl|id -> ts). Not pinned while an op of ours for the
+// same row is still waiting: that op will move the server past the version seen now, and the
+// save would then conflict with our own earlier edit. It falls back to the save-time version.
+var _editVer={};
+function _editPin(t,id){
+  if(!t||!id)return;
+  var k=t+'|'+id,v=_verOf(t,id);delete _editVer[k];
+  try{if((_obGet()||[]).concat(_obMem||[]).some(function(op){return op&&op.tbl===t&&op.row&&op.row.id===id;}))return;}catch(e){return;}
+  if(v)_editVer[k]=v;
+}
+function _editPinTake(t,id){var k=t+'|'+id,v=_editVer[k]||null;delete _editVer[k];return v;}
 function _verSet(t,id,v){if(!id)return;if(!_rowVer[t])_rowVer[t]={};if(v)_rowVer[t][id]=v;else delete _rowVer[t][id];}
 // The user chose \u00abmine wins\u00bb: drop the guard for this row so the retry lands.
-window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id){delete op.base;op.forceAt=Date.now();}});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
+window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id){delete op.base;delete op.pin;op.forceAt=Date.now();}});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
 function _sbMergePull(t,rows,obBefore){
   var _vc=_verCol();
   var ob=obBefore||{},obNow=_obLocalState(t);
@@ -4693,7 +4707,7 @@ function syncDiag(){
       +'\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d0\u05ea \u05d4\u05d2\u05e8\u05e1\u05d4 \u05e9\u05dc\u05da (\u05d3\u05d5\u05e8\u05e1 \u05d0\u05ea \u05d4\u05e9\u05e0\u05d9\u05d9\u05d4).\n'
       +'\u05d1\u05d9\u05d8\u05d5\u05dc = \u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e9\u05dc\u05da \u05d5\u05dc\u05e7\u05d1\u05dc \u05d0\u05ea \u05de\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.';
     if(confirm(msg)){
-      conf.forEach(function(op){op.conflict=false;op.forceAt=Date.now();if(op.gone){op.forceUpsert=true;op.gone=false;}delete op.base;_verSet(op.tbl,op.row.id,null);});
+      conf.forEach(function(op){op.conflict=false;op.forceAt=Date.now();if(op.gone){op.forceUpsert=true;op.gone=false;}delete op.base;delete op.pin;_verSet(op.tbl,op.row.id,null);});
       _obSet(q);_obDrain();
     }else{
       var keep=q.filter(function(op){return conf.indexOf(op)<0;});
@@ -5552,7 +5566,7 @@ function _svPut(tbl,r){
   if(editId){
     var k=-1;
     for(var i=0;i<arr.length;i++)if(arr[i].id===editId){k=i;break;}
-    if(k>=0){arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k]);setTimeout(function(){_svViewRefresh(tbl,editId);},0);}
+    if(k>=0){arr[k]=Object.assign({},arr[k],r);sbUpd(tbl,arr[k],_editPinTake(tbl,editId));setTimeout(function(){_svViewRefresh(tbl,editId);},0);}
     else{arr.push(r);sbIns(tbl,r);}
     delete _svEditing[tbl];
     return false;
@@ -5624,6 +5638,7 @@ function _genEdit(tbl,id){
       });
     });
     _svEditing[tbl]=id;
+    _editPin(tbl,id);
   }finally{_genEditOpening=false;}
   toast('\u05e2\u05e8\u05d9\u05db\u05d4 - \u05e9\u05de\u05d9\u05e8\u05d4 \u05ea\u05e2\u05d3\u05db\u05df \u05d0\u05ea \u05d4\u05e8\u05e9\u05d5\u05de\u05d4');
 }
@@ -6018,6 +6033,7 @@ function editNcr(id){
   if(!rec){toast('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0');return;}
   if(rec.sens&&!_isAdminUser()){toast('\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05e8\u05e9\u05d5\u05de\u05d4 \u05e8\u05d2\u05d9\u05e9\u05d4');return;}
   g('ncr-id').value=rec.id;
+  _editPin('ncr',rec.id);
   var _uEd=g('ncr-u');if(_uEd)_uEd.removeAttribute('data-auto');
   var setIf=function(elId,v){_selSet(g(elId),v||'');};
   setIf('ncr-d',rec.d);setIf('ncr-a',rec.a);setIf('ncr-loc',rec.loc);
@@ -6110,7 +6126,7 @@ function svNcr(){
     p:gv('ncr-p')||'\u05d1\u05d9\u05e0\u05d5\u05e0\u05d9\u05ea',
     ts:new Date().toISOString()
   };
-  if(id){_svLocal('ncr',id,rec);sbUpd('ncr',rec);}
+  if(id){_svLocal('ncr',id,rec);sbUpd('ncr',rec,_editPinTake('ncr',id));}
   else{
     DB.ncr.push(rec);sbIns('ncr',rec);
     if(typeof _notifyEvent==='function' && rec.p==='\u05e7\u05e8\u05d9\u05d8\u05d9'){
@@ -27635,7 +27651,7 @@ function _odMirrorRecord(tbl,rec){
   if(typeof sbUpd==='function'&&!window._sbUpdOdHooked){
     window._sbUpdOdHooked=true;
     var origUpd=sbUpd;
-    window.sbUpd=function(tbl,row){origUpd(tbl,row);if(row)schedule(tbl,row.id);};
+    window.sbUpd=function(tbl,row,pin){origUpd(tbl,row,pin);if(row)schedule(tbl,row.id);};   // pin: the version the form opened at (14.2)
   }
 })();
 function _fileUpload(file,prefix,cb){
