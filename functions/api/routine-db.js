@@ -59,7 +59,7 @@
 //              from body, by the manager). Plain keyboard text, no ID-like digits. talkFieldApply.
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
-import { jsonResp } from '../_shared.js';
+import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
 import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 
@@ -342,7 +342,7 @@ export async function onRequest(context) {
   const url = env.SUPABASE_URL || SB_DEFAULT, k = env.SUPABASE_SERVICE_ROLE_KEY;
   const h = { apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' };
   const stateRead = async (keys) => {
-    const r = await fetch(url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: h });
+    const r = await fetch(url + '/rest/v1/server_state?select=key,value,updated_at&key=in.(' + keys.map(encodeURIComponent).join(',') + ')', { headers: h, signal: tmo(SB_MS) });
     if (!r.ok) throw new Error('read ' + r.status);
     return r.json();
   };
@@ -351,7 +351,7 @@ export async function onRequest(context) {
       if (TABLES.indexOf(body.table) < 0) return jsonResp({ ok: false, error: 'table not allowed' }, 400, {});
       const q = cleanQuery(body.query, body.table);
       if (q === null) return jsonResp({ ok: false, error: 'query not allowed' }, 400, {});
-      const r = await fetch(url + '/rest/v1/' + body.table + (q ? '?' + q : ''), { headers: h });
+      const r = await fetch(url + '/rest/v1/' + body.table + (q ? '?' + q : ''), { headers: h, signal: tmo(SB_MS) });
       if (!r.ok) return jsonResp({ ok: false, error: 'select ' + r.status, detail: (await r.text()).slice(0, 300) }, 200, {});
       return jsonResp({ ok: true, rows: await r.json() }, 200, {});
     }
@@ -367,7 +367,7 @@ export async function onRequest(context) {
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
         method: 'POST',
         headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: body.key, value, updated_at: new Date().toISOString() }]),
+        body: JSON.stringify([{ key: body.key, value, updated_at: new Date().toISOString() }]), signal: tmo(SB_MS),
       });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       const rows = await stateRead([body.key]);
@@ -386,7 +386,7 @@ export async function onRequest(context) {
       const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
         method: 'POST',
         headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log), updated_at: e.at }]),
+        body: JSON.stringify([{ key: 'agent_log', value: JSON.stringify(log), updated_at: e.at }]), signal: tmo(SB_MS),
       });
       if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       return jsonResp({ ok: true, entry: e, kept: log.length }, 200, {});
@@ -403,7 +403,7 @@ export async function onRequest(context) {
         const r = await fetch(url + '/rest/v1/server_state?on_conflict=key', {
           method: 'POST',
           headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify([{ key: CLAIM_KEY, value: JSON.stringify(res.map), updated_at: now }]),
+          body: JSON.stringify([{ key: CLAIM_KEY, value: JSON.stringify(res.map), updated_at: now }]), signal: tmo(SB_MS),
         });
         if (!r.ok) return jsonResp({ ok: false, error: 'write ' + r.status }, 200, {});
       }
@@ -415,7 +415,7 @@ export async function onRequest(context) {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
       const cols = ['id', 'e', 'file_url', t.note, t.extra].join(',');
-      const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h });
+      const g = await fetch(url + '/rest/v1/' + body.table + '?select=' + cols + '&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
       if (!Array.isArray(rows) || rows.length !== 1) return jsonResp({ ok: false, error: 'row not found' }, 200, {});
@@ -424,7 +424,7 @@ export async function onRequest(context) {
       if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
       if (!p.patch) return jsonResp({ ok: true, changed: false, row: rows[0] }, 200, {});
       const w = await fetch(url + '/rest/v1/' + body.table + '?id=eq.' + encodeURIComponent(id), {
-        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(p.patch),
+        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify(p.patch), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
@@ -435,21 +435,21 @@ export async function onRequest(context) {
       const id = String(body.id === undefined || body.id === null ? '' : body.id);
       if (!/^w\d{8}$/.test(id)) return jsonResp({ ok: false, error: 'bad id' }, 400, {});
       for (const k of Object.keys(body)) if (['op', 'id', 'dept', 'text'].indexOf(k) < 0) return jsonResp({ ok: false, error: 'field not allowed: ' + k }, 400, {});
-      const g = await fetch(url + '/rest/v1/toolbox_talks?select=id,d,s,kind,dept,created_by,body&id=eq.' + encodeURIComponent(id), { headers: h });
+      const g = await fetch(url + '/rest/v1/toolbox_talks?select=id,d,s,kind,dept,created_by,body&id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!g.ok) return jsonResp({ ok: false, error: 'read ' + g.status }, 200, {});
       const rows = await g.json();
       const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
       const p = talkFieldApply(Array.isArray(rows) && rows.length === 1 ? rows[0] : null, body, today);
       if (p.error) return jsonResp({ ok: false, error: p.error }, 400, {});
       // Signed = the text is evidence (ISO 45001 7.4); it is not changed under the signatures.
-      const sr = await fetch(url + '/rest/v1/toolbox_reads?select=id&limit=1&talk_id=eq.' + encodeURIComponent(id), { headers: h });
+      const sr = await fetch(url + '/rest/v1/toolbox_reads?select=id&limit=1&talk_id=eq.' + encodeURIComponent(id), { headers: h, signal: tmo(SB_MS) });
       if (!sr.ok) return jsonResp({ ok: false, error: 'reads ' + sr.status }, 200, {});
       const signed = await sr.json();
       if (!Array.isArray(signed) || signed.length) return jsonResp({ ok: false, error: 'already signed' }, 400, {});
       if (p.body === rows[0].body) return jsonResp({ ok: true, changed: false }, 200, {});
       // s=eq.draft in the write too: published between the read and the write = nothing written.
       const w = await fetch(url + '/rest/v1/toolbox_talks?id=eq.' + encodeURIComponent(id) + '&s=eq.' + encodeURIComponent(TALK_DRAFT), {
-        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify({ body: p.body }),
+        method: 'PATCH', headers: { ...h, Prefer: 'return=representation' }, body: JSON.stringify({ body: p.body }), signal: tmo(SB_MS),
       });
       if (!w.ok) return jsonResp({ ok: false, error: 'write ' + w.status, detail: (await w.text()).slice(0, 300) }, 200, {});
       const after = await w.json();
@@ -473,18 +473,18 @@ export async function onRequest(context) {
       const gh = { Authorization: 'Bearer ' + at.token, 'Content-Type': 'application/json' };
       const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
       const enc = (p) => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-      const src = await fetch(G + enc(c.from) + '?select=id,name,size,file', { headers: gh });
+      const src = await fetch(G + enc(c.from) + '?select=id,name,size,file', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!src.ok) return jsonResp({ ok: false, error: 'source ' + src.status }, 200, {});
       const sj = await src.json();
       if (!sj.file) return jsonResp({ ok: false, error: 'source is not a file' }, 200, {});
-      const dst = await fetch(G + enc(c.toDir) + '?select=id,folder', { headers: gh });
+      const dst = await fetch(G + enc(c.toDir) + '?select=id,folder', { headers: gh, signal: tmo(GRAPH_MS) });
       if (!dst.ok) return jsonResp({ ok: false, error: 'folder ' + dst.status }, 200, {});
       const dj = await dst.json();
       if (!dj.folder) return jsonResp({ ok: false, error: 'to_dir is not a folder' }, 200, {});
-      const taken = await fetch(G + enc(c.toDir + '/' + c.name) + '?select=id', { headers: gh });
+      const taken = await fetch(G + enc(c.toDir + '/' + c.name) + '?select=id', { headers: gh, signal: tmo(GRAPH_MS) });
       if (taken.status !== 404) return jsonResp({ ok: false, error: taken.ok ? 'name taken' : 'name check ' + taken.status }, 200, {});
       const mv = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(sj.id) + '?@microsoft.graph.conflictBehavior=fail', {
-        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: dj.id }, name: c.name }),
+        method: 'PATCH', headers: gh, body: JSON.stringify({ parentReference: { id: dj.id }, name: c.name }), signal: tmo(GRAPH_MS),
       });
       const mj = await mv.json().catch(() => ({}));
       if (!mv.ok) return jsonResp({ ok: false, error: 'move ' + mv.status }, 200, {});
@@ -496,7 +496,7 @@ export async function onRequest(context) {
           const now = new Date().toISOString();
           const rows = await stateRead([SKIP_MOVED_KEY]);
           const value = skipMovedAdd(rows && rows[0] && rows[0].value, sj.id, now, Date.parse(now));
-          const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: SKIP_MOVED_KEY, value, updated_at: now }]) });
+          const w = await fetch(url + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: { ...h, Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify([{ key: SKIP_MOVED_KEY, value, updated_at: now }]), signal: tmo(SB_MS) });
           recorded = w.ok;
         } catch (e) { recorded = false; }
       }

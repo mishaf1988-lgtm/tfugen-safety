@@ -29,7 +29,7 @@
 //   VITRE_API_KEY_SECRET  "מפתח סודי"        -> header X-api-key-secret
 // Never in code, never in the browser. Same posture as META_ACCESS_TOKEN / RESEND_KEY.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireUser, CF_PROD, CF_PREVIEW_RE, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
 import { stateGet, stateSet, stateLock, stateUnlock } from '../_onedrive.js';
 
 const VITRE_BASE = 'https://publicapi.hbinov.com';
@@ -69,7 +69,7 @@ async function staffRole(env, user) {
   if (!key) return null;
   try {
     const r = await fetch(SUPABASE_URL + '/rest/v1/app_users?id=eq.' + encodeURIComponent(id) + '&select=role,active',
-      { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
     if (!r.ok) return null;
     const rows = await r.json();
     const u = Array.isArray(rows) ? rows[0] : null;
@@ -217,7 +217,7 @@ async function fetchOwnPhoto(env, obj) {
   if (!key) return { ok: false, error: 'missing SUPABASE_SERVICE_ROLE_KEY' };
   const SUPABASE_URL = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
   try {
-    const r = await fetch(SUPABASE_URL + '/storage/v1/object/' + obj.bucket + '/' + obj.path, { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    const r = await fetch(SUPABASE_URL + '/storage/v1/object/' + obj.bucket + '/' + obj.path, { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(FILE_MS) });
     if (!r.ok) return { ok: false, error: 'storage ' + r.status };
     const ct = (r.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
     if (!/^image\//.test(ct)) return { ok: false, error: 'not an image (' + ct + ')' };
@@ -442,7 +442,7 @@ async function runSync(env) {
     res.found = all.length;
     all.forEach(t => { const c = String(t.createDate || '').slice(0, 10); if (c && (!res.newest || c > res.newest)) res.newest = c; });
     const h = { apikey: key, Authorization: 'Bearer ' + key };
-    const ex = await fetch(SUPABASE_URL + '/rest/v1/toolbox?select=ext_id&ext_id=not.is.null&limit=100000', { headers: h });
+    const ex = await fetch(SUPABASE_URL + '/rest/v1/toolbox?select=ext_id&ext_id=not.is.null&limit=100000', { headers: h, signal: tmo(SB_MS) });
     if (!ex.ok) throw new Error('toolbox read ' + ex.status);
     const have = {};
     (await ex.json()).forEach(x => { if (x && x.ext_id) have[String(x.ext_id)] = 1; });
@@ -457,7 +457,7 @@ async function runSync(env) {
     }
     if (rows.length) {
       const ins = await fetch(SUPABASE_URL + '/rest/v1/toolbox', {
-        method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(rows)
+        method: 'POST', headers: { ...h, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(rows), signal: tmo(SB_MS)
       });
       if (!ins.ok) throw new Error('toolbox insert ' + ins.status + ' ' + (await ins.text()).slice(0, 200));
       res.added = rows.length;
@@ -896,7 +896,7 @@ export async function onRequest({ request, env }) {
       if (!serviceKey) out.photoError = 'missing SUPABASE_SERVICE_ROLE_KEY';
       else {
         try {
-          const src = await fetch(img.url);
+          const src = await fetch(img.url, { signal: tmo(FILE_MS) });
           if (!src.ok) out.photoError = 'vitre file ' + src.status;
           else {
             const ct = src.headers.get('content-type') || 'image/jpeg';
@@ -906,7 +906,7 @@ export async function onRequest({ request, env }) {
             const up = await fetch(SUPABASE_URL + '/storage/v1/object/incidents-photos/' + fname, {
               method: 'POST',
               headers: { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey, 'Content-Type': ct, 'x-upsert': 'true', 'cache-control': 'max-age=31536000' },
-              body
+              body, signal: tmo(FILE_MS)
             });
             if (up.ok) out.photoUrl = SUPABASE_URL + '/storage/v1/object/public/incidents-photos/' + fname;
             else out.photoError = 'storage ' + up.status + ' ' + (await up.text()).slice(0, 200);

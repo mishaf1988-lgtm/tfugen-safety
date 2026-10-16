@@ -35,13 +35,13 @@ const bareIn = (f) => {
   return WRAP.test(s) ? [] : callsOf(s).filter((c) => !/\bsignal\s*:/.test(c));
 };
 
-const DONE = ['close-hazard.js', 'hazard-report.js', 'codes.js', 'hazard-file.js', 'hazard-deck.js', 'talk.js'];
+const DONE = ['close-hazard.js', 'hazard-report.js', 'codes.js', 'hazard-file.js', 'hazard-deck.js', 'talk.js', 'routine-db.js', 'weekly-digest.js', 'vitre.js'];
 // Calls still without a limit, 16/10/2026. Lower a number when a file is fixed; never raise one.
 const LEFT = {
   '_securityselftest.js': 18, 'backup-od.js': 2, 'claude.js': 2, 'create-user.js': 3, 'delete-user.js': 4,
   'mail-inbox.js': 5, 'ms-auth.js': 1, 'od-pick.js': 1, 'od-read.js': 3, 'od-scan.js': 1, 'rename-user.js': 4,
-  'reset-password.js': 4, 'routine-db.js': 15, 'self-recovery.js': 3, 'trustee-log.js': 5,
-  'vitre.js': 6, 'wa-status.js': 1, 'wa-templates.js': 2, 'weekly-digest.js': 9, 'xlsx-gaps.js': 1,
+  'reset-password.js': 4, 'self-recovery.js': 3, 'trustee-log.js': 5,
+  'wa-status.js': 1, 'wa-templates.js': 2, 'xlsx-gaps.js': 1,
 };
 
 console.log('\n1. the files already done: every outbound call has a signal');
