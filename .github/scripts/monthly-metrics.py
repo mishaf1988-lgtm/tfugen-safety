@@ -132,7 +132,7 @@ def routine_agents(root=ROOT):
     return names
 
 
-def agents_digest(log_text, common_text, ym, agents):
+def agents_digest(log_text, common_text, ym, agents, prs=None):
     """Michael, 09/10/2026: does the shared learning of the agents work? Per month: learning
     lines per agent, how many learned something, agents that wrote nothing, and shared
     knowledge lines dated in the month (they are what the daily retro promoted)."""
@@ -154,6 +154,19 @@ def agents_digest(log_text, common_text, ym, agents):
     shared = len(re.findall(r'^- .*\b\d\d/%s/%s\b' % (m, y), sec[1] if len(sec) > 1 else '', re.M))
     out = ['', '### למידה של הסוכנים ב-%s/%s (`agent-log.md`)' % (m, y), '']
     out += ['- %s: %d ריצות, %d עם "למדתי"' % (n, c[0], c[1]) for n, c in sorted(per.items())] or ['אין שורות.']
+    # The cost manager (15/10/2026, Michael: "בצע: מנהל העלויות"; idea 7 in ideas-lab.md): what each
+    # agent gave this month. A PR an agent opened is on routine/<name without routine->-..., retro on
+    # routine/retro-... An agent that ran 4 times or more with nothing learned and no PR is a candidate
+    # to run less often or to merge into another; Michael decides. The cost side is in agent-costs.md.
+    heads = [str((p or {}).get('head') or '') for p in (prs or [])]
+    def prs_of(n):
+        pre = 'routine/' + (n[len('routine-'):] if n.startswith('routine-') else n) + '-'
+        return sum(1 for h in heads if h.startswith(pre))
+    value = [(n, c[0], c[1], prs_of(n)) for n, c in sorted(per.items())]
+    thin = [n for n, runs, lrn, pr in value if runs >= 4 and lrn == 0 and pr == 0]
+    out += ['', '### מה כל סוכן נתן ב-%s/%s (מנהל העלויות)' % (m, y), '']
+    out += ['- %s: %d ריצות, %d עם "למדתי", %d PRs שמוזגו' % v for v in value] or ['אין שורות.']
+    out += ['', 'מועמדים לדילול או לאיחוד (4 ריצות ומעלה, בלי "למדתי" ובלי PR): ' + (', '.join(thin) if thin else 'אין') + '.']
     silent = sorted(set(agents) - set(per))
     out += ['', 'סוכנים בלי אף שורה: ' + (', '.join(silent) if silent else 'אין') + '.',
             'שורות שנוספו לידע המשותף: %d.' % shared,
@@ -270,6 +283,7 @@ def main():
     if not re.match(r'^\d{4}-(0[1-9]|1[0-2])$', ym):
         sys.exit('month must be YYYY-MM, got %r' % ym)
     prs = [{'number': p['number'], 'title': p['title'], 'body': p.get('body') or '',
+            'head': ((p.get('head') or {}).get('ref') or ''),
             'conclusions': conclusions(p['number'])} for p in merged_prs(ym)]
     lessons = read_lessons()
     row, detail = summarize(prs, lessons, ym)
@@ -277,7 +291,7 @@ def main():
     with open(OUT, 'w', encoding='utf-8') as f:
         log = open(AGENT_LOG, encoding='utf-8').read() if os.path.exists(AGENT_LOG) else ''
         common = open(AGENT_COMMON, encoding='utf-8').read() if os.path.exists(AGENT_COMMON) else ''
-        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym) + agents_digest(log, common, ym, routine_agents())))
+        f.write(render(existing, row, detail, ym, now, lessons_digest(lessons, ym) + agents_digest(log, common, ym, routine_agents(), prs)))
     print(row)
 
 
