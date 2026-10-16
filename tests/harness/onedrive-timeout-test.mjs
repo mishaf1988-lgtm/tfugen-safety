@@ -89,5 +89,31 @@ console.log('\n5. callers that did not catch a stateSet now answer, not crash');
   check('ms-auth "start": no sign-in link without the saved nonce (503)', /try \{ await stateSet\(env, \{ \[NONCE_KEY\][\s\S]{0,120}\}\s*\n\s*catch \(e\) \{ return jsonResp\(\{ error: 'state store unavailable, try again' \}, 503, cors\); \}/.test(ma));
 }
 
+console.log('\n6. hazard-file.js and hazard-deck.js: every outbound call has a time limit (BACKLOG 14.5, 16/10/2026)');
+{
+  // The requests these files send to themselves in waitUntil (new URL('/api/...')) are other runs, not
+  // calls to wait on, so they are the only ones allowed without a signal.
+  const callsOf = (s) => {
+    const out = []; let i = -1;
+    while ((i = s.indexOf('fetch(', i + 1)) >= 0) {
+      if (/[A-Za-z_.]$/.test(s[i - 1] || '')) continue;
+      let depth = 0, j = i + 5;
+      for (; j < s.length; j++) { if (s[j] === '(') depth++; else if (s[j] === ')') { depth--; if (!depth) break; } }
+      out.push(s.substring(i, j + 1));
+    }
+    return out;
+  };
+  for (const f of ['api/hazard-file.js', 'api/hazard-deck.js']) {
+    const calls = callsOf(src(f)).filter((c) => !/new URL\('\/api\//.test(c));
+    const bare = calls.filter((c) => !/signal: (tmo\((SB_MS|GRAPH_MS|FILE_MS)\)|AbortSignal\.timeout\(FILE_MS\))/.test(c));
+    check(f + ': ' + calls.length + ' calls, every one with a signal', calls.length >= 1 && bare.length === 0, bare.map((c) => c.substring(0, 120)));
+  }
+  const hf = src('api/hazard-file.js');
+  check('the limits: database 10s, Graph 20s, a file up or down 60s', /export const SB_MS = 10000, GRAPH_MS = 20000, FILE_MS = 60000;/.test(hf));
+  // Broken on purpose (16/10/2026): with the signal taken off graphPut's PUT the hazard-file check fails.
+  const raw = src('api/trustee-gate.js').split('\n').map((l, n) => [n + 1, l]).filter(([, l]) => /[\u0590-\u05ff]/.test(l) && !/^\s*(\/\/|\*)/.test(l));
+  check('trustee-gate.js: no raw Hebrew in code, only \\uXXXX (comments aside)', raw.length === 0, raw.map(([n, l]) => n + ': ' + l.trim().slice(0, 80)));
+}
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

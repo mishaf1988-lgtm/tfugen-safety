@@ -42,6 +42,11 @@ import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_s
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
+// 16/10/2026 (BACKLOG 14.5): every outbound call has a time limit, as in _onedrive.js. A Graph or
+// database call that hung held the run (and its lease) until Cloudflare gave up. The requests this
+// file sends to itself in waitUntil are the exception: they are other runs, not calls to wait on.
+export const SB_MS = 10000, GRAPH_MS = 20000, FILE_MS = 60000;
+const tmo = (ms) => AbortSignal.timeout(ms);
 
 export const FOLDER_BASE = '\u05e9\u05d5\u05dc\u05d7\u05df \u05d4\u05e2\u05d1\u05d5\u05d3\u05d4/\u05e0\u05d9\u05d4\u05d5\u05dc \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea/13_\u05e1\u05d9\u05d5\u05e8\u05d9 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd';
 // A file per year (upgrade review 24, Michael 30/09/2026: «a new file every
@@ -59,12 +64,12 @@ export const FOLDER = folderFor(FIRST_YEAR);
 // yet taken is taken from the copy on this run). Returns the metadata response.
 export async function yearItem(token, name, type, year, select) {
   const auth = { Authorization: 'Bearer ' + token };
-  const get = (y, sel) => fetch(G + seg(folderFor(y)) + '/' + encodeURIComponent(name) + '?select=' + sel, { headers: auth });
+  const get = (y, sel) => fetch(G + seg(folderFor(y)) + '/' + encodeURIComponent(name) + '?select=' + sel, { headers: auth, signal: tmo(GRAPH_MS) });
   let mr = await get(year, select);
   if (mr.status !== 404 || year <= FIRST_YEAR) return { mr, rolled: false };
   const pr = await get(year - 1, 'id,@microsoft.graph.downloadUrl');
   if (!pr.ok) return { mr, rolled: false };
-  const dl = await fetch((await pr.json())['@microsoft.graph.downloadUrl']);
+  const dl = await fetch((await pr.json())['@microsoft.graph.downloadUrl'], { signal: tmo(FILE_MS) });
   if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
   await graphPut(token, folderFor(year), name, new Uint8Array(await dl.arrayBuffer()), type);
   mr = await get(year, select);
@@ -270,7 +275,7 @@ export async function readAll(env, path, budget) {
   const out = [];
   for (let page = 0; page < READ_MAX_PAGES; page++) {
     if (budget) budget.spend(1);
-    const r = await fetch(base + pagedPath(path, page * READ_PAGE), { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    const r = await fetch(base + pagedPath(path, page * READ_PAGE), { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
     if (!r.ok) throw new Error('read ' + path.split('?')[0] + ' failed (' + r.status + ')');
     const j = await r.json();
     if (!Array.isArray(j)) return out;
@@ -281,7 +286,7 @@ export async function readAll(env, path, budget) {
   throw new Error('read ' + path.split('?')[0] + ': more than ' + READ_PAGE * READ_MAX_PAGES + ' rows');
 }
 export async function graphPut(token, folder, name, bytes, type) {
-  const r = await fetch(G + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type }, body: bytes });
+  const r = await fetch(G + seg(folder) + '/' + encodeURIComponent(name) + ':/content', { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': type }, body: bytes, signal: tmo(FILE_MS) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error('onedrive ' + r.status + (j && j.error ? ': ' + String(j.error.message || j.error.code).substring(0, 160) : '')); e.status = r.status; throw e; }
   return j;
@@ -500,7 +505,7 @@ export async function signPhotos(env, urls) {
   (urls || []).forEach((u) => { const sp = storagePath(u, base); if (sp) (buckets[sp.bucket] = buckets[sp.bucket] || []).push({ u, path: sp.path }); });
   for (const b of Object.keys(buckets)) {
     try {
-      const r = await fetch(base + '/storage/v1/object/sign/' + encodeURIComponent(b), { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, sbHdr(env)), body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b].map((x) => x.path) }) });
+      const r = await fetch(base + '/storage/v1/object/sign/' + encodeURIComponent(b), { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, sbHdr(env)), body: JSON.stringify({ expiresIn: SIGN_SECONDS, paths: buckets[b].map((x) => x.path) }), signal: tmo(SB_MS) });
       const j = r.ok ? await r.json() : [];
       (Array.isArray(j) ? j : []).forEach((e) => {
         if (!e || !e.signedURL || e.error) return;
@@ -517,7 +522,7 @@ export async function fetchThumb(env, url, width) {
   const obj = encodeURIComponent(sp.bucket) + '/' + sp.path.split('/').map(encodeURIComponent).join('/');
   try {
     // format=origin: otherwise WebP, which Excel does not show (trustee-log.js, 27/09).
-    const r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + (width || THUMB_W) + '&quality=60&resize=contain&format=origin', { headers: sbHdr(env) });
+    const r = await fetch(base + '/storage/v1/render/image/authenticated/' + obj + '?width=' + (width || THUMB_W) + '&quality=60&resize=contain&format=origin', { headers: sbHdr(env), signal: tmo(FILE_MS) });
     if (!r.ok) return null;
     const b = new Uint8Array(await r.arrayBuffer());
     return picInfo(b) ? b : null;
@@ -605,7 +610,7 @@ export async function applyEdits(env, ed, hazards, reports, max) {
   if (ed.fresh.length && budget <= 0) { done.pending = true; return done; }
   if (ed.fresh.length) {
     done.calls++;
-    const r = await fetch(base + 'tour_hazards', { method: 'POST', headers: h, body: JSON.stringify(ed.fresh) });
+    const r = await fetch(base + 'tour_hazards', { method: 'POST', headers: h, body: JSON.stringify(ed.fresh), signal: tmo(SB_MS) });
     if (!r.ok) throw new Error('new hazards from the file failed (' + r.status + ')');
     ed.fresh.forEach((x) => hazards.push(x)); done.created = ed.fresh.length; budget--;
   }
@@ -614,7 +619,7 @@ export async function applyEdits(env, ed, hazards, reports, max) {
       if (budget <= 0) return false;
       const body = Object.assign({}, p); delete body.id;
       done.calls++;
-      const r = await fetch(base + table + '?id=eq.' + encodeURIComponent(p.id), { method: 'PATCH', headers: h, body: JSON.stringify(body) });
+      const r = await fetch(base + table + '?id=eq.' + encodeURIComponent(p.id), { method: 'PATCH', headers: h, body: JSON.stringify(body), signal: tmo(SB_MS) });
       if (!r.ok) throw new Error(table + ' update from the file failed (' + r.status + ')');
       const rec = arr.find((x) => x.id === p.id); if (rec) Object.assign(rec, body);
       budget--; done[k]++; done.written.push((table === 'tour_hazards' ? 'h:' : 't:') + p.id);
@@ -659,7 +664,7 @@ export async function runFile(env, which, force, opt) {
     // Nothing new on either side: one metadata read, nothing downloaded.
     if (!force && ours && ours === meta.cTag && val('sig') === sig) return { ok: true, file: which, pushed: false, reason: 'unchanged', rows: reg.rows.length };
     B.spend(1);
-    const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
+    const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: tmo(FILE_MS) });
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
     // Did a person save it since our last write? The cTag alone is not enough:
@@ -777,11 +782,11 @@ export async function runArchive(env, now) {
   const auth = { Authorization: 'Bearer ' + token };
   if (doSnap) {
     const f = FILES.xlsm, name = stampMonth(f.name, prevMonth), py = +prevMonth.substring(0, 4);
-    const ex = await fetch(G + seg(MONTHLY(py)) + '/' + encodeURIComponent(name) + '?select=id', { headers: auth });
+    const ex = await fetch(G + seg(MONTHLY(py)) + '/' + encodeURIComponent(name) + '?select=id', { headers: auth, signal: tmo(GRAPH_MS) });
     if (ex.status === 404) {
-      const mr = await fetch(G + seg(folderFor(py)) + '/' + encodeURIComponent(f.name) + '?select=id,@microsoft.graph.downloadUrl', { headers: auth });
+      const mr = await fetch(G + seg(folderFor(py)) + '/' + encodeURIComponent(f.name) + '?select=id,@microsoft.graph.downloadUrl', { headers: auth, signal: tmo(GRAPH_MS) });
       if (!mr.ok) throw new Error('onedrive ' + mr.status);
-      const dl = await fetch((await mr.json())['@microsoft.graph.downloadUrl']);
+      const dl = await fetch((await mr.json())['@microsoft.graph.downloadUrl'], { signal: tmo(FILE_MS) });
       if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
       await graphPut(token, MONTHLY(py), name, new Uint8Array(await dl.arrayBuffer()), f.type);
       out.snap = name;
@@ -793,14 +798,14 @@ export async function runArchive(env, now) {
     // This year's copies and last year's (they stop growing on 1 January).
     const y = ilYear(now), old = [], gone = [];
     for (const yy of y > FIRST_YEAR ? [y, y - 1] : [y]) {
-      const lr = await fetch(G + seg(OVERWRITTEN(yy)) + ':/children?$select=id,name,createdDateTime,file&$top=200', { headers: auth });
+      const lr = await fetch(G + seg(OVERWRITTEN(yy)) + ':/children?$select=id,name,createdDateTime,file&$top=200', { headers: auth, signal: tmo(GRAPH_MS) });
       const items = lr.status === 404 ? [] : lr.ok ? ((await lr.json()).value || []) : null;
       if (!items) throw new Error('onedrive ' + lr.status);
       const cut = now.getTime() - KEEP_DAYS * DAY;
       items.filter((x) => x.file && COPY_RE.test(x.name || '') && Date.parse(x.createdDateTime) < cut).forEach((x) => old.push(x));
     }
     for (const x of old.slice(0, MAX_PRUNE)) {
-      const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id), { method: 'DELETE', headers: auth });
+      const d = await fetch('https://graph.microsoft.com/v1.0/me/drive/items/' + encodeURIComponent(x.id), { method: 'DELETE', headers: auth, signal: tmo(GRAPH_MS) });
       if (d.ok || d.status === 404) gone.push(x.name);
     }
     out.pruned = gone;

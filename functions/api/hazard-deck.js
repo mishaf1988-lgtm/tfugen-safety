@@ -12,7 +12,7 @@
 // {op:'setDate', date}, {force:true} (admin/manager session).
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, runLeased } from '../_onedrive.js';
-import { G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q, ilYear, folderFor, yearItem } from './hazard-file.js';
+import { G, seg, graphPut, stampName, buildRegister, readAll, TASKS_Q, ilYear, folderFor, yearItem, FILE_MS } from './hazard-file.js';
 import { meetingHazards, meetingAccidents } from '../_meeting.js';
 import { deckContent, patchDeck } from '../_deckpatch.js';
 
@@ -73,7 +73,7 @@ export async function runDeck(env, force, s3Now, opt) {
     if (!mr.ok) throw Object.assign(new Error('onedrive ' + mr.status), { status: mr.status });
     const meta = await mr.json();
     if (!force && val('deck_sig') === sig && val('deck_ctag') === meta.cTag) return { ok: true, pushed: false, reason: 'unchanged', date };
-    const dl = await fetch(meta['@microsoft.graph.downloadUrl']);
+    const dl = await fetch(meta['@microsoft.graph.downloadUrl'], { signal: AbortSignal.timeout(FILE_MS) });   // 14.5
     if (!dl.ok) throw new Error('download failed (' + dl.status + ')');
     const orig = new Uint8Array(await dl.arrayBuffer());
     const { bytes, report, changed } = await patchDeck(orig, deckContent(m, rows, date, { s3Month, s3Now, nearMiss, repMonth }));
