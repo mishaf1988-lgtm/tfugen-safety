@@ -4119,7 +4119,7 @@ function _obSend(op){
       // Guard on the version the server last gave us. A row we have never
       // pulled (created offline, never synced) has none, and then this
       // behaves exactly as it did before.
-      if(_v){url+='&'+_verCol()+'=eq.'+encodeURIComponent(_v);op._guarded=1;}
+      if(_v){url+='&'+_verCol(op.tbl)+'=eq.'+encodeURIComponent(_v);op._guarded=1;}
       opts.method='PATCH';opts.headers=sbH();opts.body=JSON.stringify(op.row);
     }
     else if(op.op==='del'){url=SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.id);opts.method='DELETE';opts.headers=sbH();}
@@ -4137,7 +4137,7 @@ function _obSend(op){
         return r.json().then(function(j){
           if(Array.isArray(j)&&j.length){
             // the server tells us the new version; guard against it next time
-            if(op.op==='upd')try{_verSet(op.tbl,op.row.id,j[0][_verCol()]||null);}catch(e){}
+            if(op.op==='upd')try{_verSet(op.tbl,op.row.id,j[0][_verCol(op.tbl)]||null);}catch(e){}
             return r;
           }
           if(!Array.isArray(j))return r;
@@ -4161,11 +4161,11 @@ function _obSend(op){
           //  - the row is gone: deleted elsewhere -> the person decides (never an automatic upsert);
           //  - otherwise a real conflict (guarded) or no permission (unguarded), as before.
           if(op.op==='upd'&&op.row&&op.row.id){
-            return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id,'+_verCol(),{headers:sbH()},15000)
+            return _fetchT(SBU+'/rest/v1/'+op.tbl+'?id=eq.'+encodeURIComponent(op.row.id)+'&select=id,'+_verCol(op.tbl),{headers:sbH()},15000)
               .then(function(g2){return g2.ok?g2.json():null;},function(){return null;})
               .then(function(rows){
-                if(Array.isArray(rows)&&rows.length&&op.row[_verCol()]&&Date.parse(rows[0][_verCol()])===Date.parse(op.row[_verCol()])){
-                  try{_verSet(op.tbl,op.row.id,rows[0][_verCol()]);}catch(e){}
+                if(Array.isArray(rows)&&rows.length&&op.row[_verCol(op.tbl)]&&Date.parse(rows[0][_verCol(op.tbl)])===Date.parse(op.row[_verCol(op.tbl)])){
+                  try{_verSet(op.tbl,op.row.id,rows[0][_verCol(op.tbl)]);}catch(e){}
                   return r;
                 }
                 if(Array.isArray(rows)&&!rows.length){
@@ -4393,7 +4393,9 @@ var _rowVer={};
 // this whole thing exists for: `ncr` is absent from _sbTsCol, which is an
 // ORDERING map, so it fell back to created_at. A table whose rows carry no
 // `ts` records no version on pull and is therefore sent unguarded, as before.
-function _verCol(){return 'ts';}
+// ptw.ts is the permit's start time ("08:00"), not a version: ptw has its own `ver`, moved by
+// the server on every write (migration 2026-10-16_ptw_ver.sql, BACKLOG 14.2).
+function _verCol(t){return t==='ptw'?'ver':'ts';}
 function _verOf(t,id){return (_rowVer[t]&&_rowVer[t][id])||null;}
 // The version an edit form was opened at (tbl|id -> ts). Not pinned while an op of ours for the
 // same row is still waiting: that op will move the server past the version seen now, and the
@@ -4410,7 +4412,7 @@ function _verSet(t,id,v){if(!id)return;if(!_rowVer[t])_rowVer[t]={};if(v)_rowVer
 // The user chose \u00abmine wins\u00bb: drop the guard for this row so the retry lands.
 window._verForce=function(t,id){_verSet(t,id,null);try{var q=_obGet();q.forEach(function(op){if(op&&op.tbl===t&&op.row&&op.row.id===id){delete op.base;delete op.pin;op.forceAt=Date.now();}});_obSet(q);}catch(e){}if(typeof _obDrain==='function')_obDrain();};
 function _sbMergePull(t,rows,obBefore){
-  var _vc=_verCol();
+  var _vc=_verCol(t);
   var ob=obBefore||{},obNow=_obLocalState(t);
   Object.keys(obNow).forEach(function(id){ob[id]=obNow[id];});
   // A row with an edit still queued keeps the version the edit was made against (15/10/2026):
@@ -4588,7 +4590,7 @@ function _rtApply(tbl,payload){
   if((ev==='INSERT'||ev==='UPDATE')&&nr&&nr.id){
     var _pend=false;try{_pend=_obGet().concat(_obMem).some(function(op){return op&&op.tbl===tbl&&op.op!=='del'&&op.row&&op.row.id===nr.id;});}catch(e){}
     if(_pend)return;
-    try{if(nr[_verCol()])_verSet(tbl,nr.id,nr[_verCol()]);}catch(e){}
+    try{if(nr[_verCol(tbl)])_verSet(tbl,nr.id,nr[_verCol(tbl)]);}catch(e){}
   }
   if(ev==='INSERT'&&nr&&nr.id){
     if(DB[tbl].some(function(r){return r.id===nr.id;}))return;
