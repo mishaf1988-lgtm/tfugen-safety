@@ -14,7 +14,7 @@
 //
 //   POST {op:'list'}                       -> {codes:[{key,set,value,source,updated_at}]}
 //   POST {op:'set', key, value?}           -> {key,value,updated_at}; no value = 6 random digits
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -41,7 +41,7 @@ export function randomCode(n) {
 }
 
 async function readRows(env) {
-  const r = await fetch(SB + '/rest/v1/server_state?key=in.(' + Object.keys(CODE_KEYS).join(',') + ')&select=key,value,updated_at', { headers: h(env) });
+  const r = await fetch(SB + '/rest/v1/server_state?key=in.(' + Object.keys(CODE_KEYS).join(',') + ')&select=key,value,updated_at', { headers: h(env), signal: tmo(SB_MS) });
   if (!r.ok) throw new Error('server_state ' + r.status);
   const rows = await r.json();
   const by = {};
@@ -105,13 +105,13 @@ export async function onRequest(context) {
       // The last three changes, for the card (10/10/2026, Michael: "מאשר"): who, which, when.
       let recent = [];
       try {
-        const r = await fetch(SB + '/rest/v1/audit_log?source=eq.codes&select=ts,user_email,record_id&order=ts.desc&limit=3', { headers: h(env) });
+        const r = await fetch(SB + '/rest/v1/audit_log?source=eq.codes&select=ts,user_email,record_id&order=ts.desc&limit=3', { headers: h(env), signal: tmo(SB_MS) });
         if (r.ok) recent = (await r.json()).map((x) => ({ ts: x.ts, who: String(x.user_email || '').split('@')[0], key: x.record_id, label: x.record_id === 'guess_locks' ? '\u05e4\u05ea\u05d9\u05d7\u05ea \u05e0\u05e2\u05d9\u05dc\u05ea \u05e0\u05d9\u05d7\u05d5\u05e9' : ((CODE_KEYS[x.record_id] || {}).label || x.record_id) }));
       } catch (e) { recent = []; }
       let locked = 0;
       try {
         const since = new Date(Date.now() - 3600e3).toISOString();
-        const r = await fetch(SB + '/rest/v1/server_state?key=like.guess%3A*&updated_at=gte.' + encodeURIComponent(since) + '&select=key,value', { headers: h(env) });
+        const r = await fetch(SB + '/rest/v1/server_state?key=like.guess%3A*&updated_at=gte.' + encodeURIComponent(since) + '&select=key,value', { headers: h(env), signal: tmo(SB_MS) });
         if (r.ok) locked = lockedCount(await r.json());
       } catch (e) { locked = 0; }
       return jsonResp({ codes, recent, locked }, 200, cors);
@@ -122,11 +122,11 @@ export async function onRequest(context) {
       const value = b.value === undefined || b.value === null || b.value === '' ? randomCode(10) : String(b.value).trim().toLowerCase();
       if (!pwOk(value)) return jsonResp({ error: 'format', message: '\u05d4\u05e1\u05d9\u05e1\u05de\u05d4: 8 \u05e2\u05d3 32 \u05ea\u05d5\u05d5\u05d9\u05dd, \u05d0\u05d5\u05ea\u05d9\u05d5\u05ea \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d5\u05de\u05e1\u05e4\u05e8\u05d9\u05dd, \u05dc\u05e4\u05d7\u05d5\u05ea \u05d0\u05d7\u05d3 \u05de\u05db\u05dc \u05e1\u05d5\u05d2' }, 400, cors);
       const at = new Date().toISOString();
-      const w = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key, value, updated_at: at }) });
+      const w = await fetch(SB + '/rest/v1/server_state?on_conflict=key', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ key, value, updated_at: at }), signal: tmo(SB_MS) });
       if (!w.ok) return jsonResp({ error: 'save failed' }, 502, cors);
       // Who and when, never the code. A failed log does not undo the change.
       try {
-        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: key, op: 'UPDATE', title: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05e1\u05d9\u05e1\u05de\u05d4: ' + CODE_KEYS[key].label, source: 'codes' }) });
+        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: key, op: 'UPDATE', title: '\u05d4\u05d7\u05dc\u05e4\u05ea \u05e1\u05d9\u05e1\u05de\u05d4: ' + CODE_KEYS[key].label, source: 'codes' }), signal: tmo(SB_MS) });
       } catch (e) { /* the code is changed */ }
       const job = mailChange(env, CODE_KEYS[key].label, String((who.user && who.user.email) || '').split('@')[0], at);
       if (typeof context.waitUntil === 'function') context.waitUntil(job); else await job;
@@ -134,11 +134,11 @@ export async function onRequest(context) {
     }
     if (b.op === 'unlock') {
       // Every LOCK counter back to zero (the same reset as guess_clear), not the AI rate counters; who and when go to the log.
-      const r = await fetch(SB + '/rest/v1/server_state?' + LOCK_KEYS_Q + '&value=neq.0', { method: 'PATCH', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: '0' }) });
+      const r = await fetch(SB + '/rest/v1/server_state?' + LOCK_KEYS_Q + '&value=neq.0', { method: 'PATCH', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ value: '0' }), signal: tmo(SB_MS) });
       if (!r.ok) return jsonResp({ error: 'save failed' }, 502, cors);
       const rows = await r.json().catch(() => []);
       try {
-        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: 'guess_locks', op: 'UPDATE', title: '\u05e4\u05ea\u05d9\u05d7\u05ea \u05e0\u05e2\u05d9\u05dc\u05ea \u05e0\u05d9\u05d7\u05d5\u05e9', source: 'codes' }) });
+        await fetch(SB + '/rest/v1/audit_log', { method: 'POST', headers: h(env, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }), body: JSON.stringify({ user_email: (who.user && who.user.email) || null, table_name: 'server_state', record_id: 'guess_locks', op: 'UPDATE', title: '\u05e4\u05ea\u05d9\u05d7\u05ea \u05e0\u05e2\u05d9\u05dc\u05ea \u05e0\u05d9\u05d7\u05d5\u05e9', source: 'codes' }), signal: tmo(SB_MS) });
       } catch (e) { /* opened */ }
       return jsonResp({ cleared: Array.isArray(rows) ? rows.length : 0 }, 200, cors);
     }

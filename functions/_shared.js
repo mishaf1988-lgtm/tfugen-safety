@@ -38,6 +38,9 @@ export function corsHeaders(origin, allowed, methods = 'POST,OPTIONS') {
 // no signal waits as long as the platform lets it; these make a dead upstream
 // an error the caller already handles.
 export const SB_TIMEOUT_MS = 10000;
+// Graph metadata 20s, a whole file up or down 60s (the same split as hazard-file.js).
+export const GRAPH_TIMEOUT_MS = 20000, FILE_TIMEOUT_MS = 60000;
+export const tmo = (ms) => AbortSignal.timeout(ms);
 
 export function jsonResp(payload, status, cors) {
   return new Response(JSON.stringify(payload), {

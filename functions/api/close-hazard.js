@@ -21,6 +21,7 @@
 // close_note and after_photo_url, and the file in folder 13 follows through
 // the tour_hazards trigger. The photo is optional (Michael, same day).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
+import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 import { readCloseToken } from '../_closelink.js';
@@ -99,7 +100,7 @@ export function formPage(tok, f, err, who, note) {
 }
 
 async function loadFinding(env, id) {
-  const r = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(id) + '&select=id,u,t,d,ok,s,loc,location_id,f,tour', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(id) + '&select=id,u,t,d,ok,s,loc,location_id,f,tour', { headers: sbH(env), signal: tmo(SB_MS) });
   if (!r.ok) throw new Error('db ' + r.status);
   const rows = await r.json();
   return Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -108,7 +109,7 @@ async function loadFinding(env, id) {
 // A tour hazard, shaped for details(): description, department and place,
 // the tour and its date.
 async function loadHazard(env, id) {
-  const r = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&select=id,n,d,tour_no,dept,loc,descr,s', { headers: sbH(env) });
+  const r = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&select=id,n,d,tour_no,dept,loc,descr,s', { headers: sbH(env), signal: tmo(SB_MS) });
   if (!r.ok) throw new Error('db ' + r.status);
   const rows = await r.json();
   const h = Array.isArray(rows) && rows[0] ? rows[0] : null;
@@ -141,7 +142,7 @@ async function uploadPhoto(env, id, file, prefix) {
   const ext = info.ext === 'png' ? 'png' : 'jpg';
   const name = (prefix || 'tru-link-') + id.replace(/[^A-Za-z0-9_-]/g, '') + '-' + Date.now() + '.' + ext;
   try {
-    const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/' + (ext === 'png' ? 'png' : 'jpeg'), 'x-upsert': 'false' }), body: bytes });
+    const up = await fetch(SB + '/storage/v1/object/' + BUCKET + '/' + name, { method: 'POST', headers: sbH(env, { 'Content-Type': 'image/' + (ext === 'png' ? 'png' : 'jpeg'), 'x-upsert': 'false' }), body: bytes, signal: tmo(FILE_MS) });
     if (up.ok) return { url: SB + '/storage/v1/object/public/' + BUCKET + '/' + name };
   } catch (e) { /* closed without a photo rather than not closed */ }
   return { url: null, note: '\u05e9\u05de\u05d9\u05e8\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4. \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8 \u05d1\u05dc\u05d9 \u05ea\u05de\u05d5\u05e0\u05d4.' };
@@ -152,7 +153,7 @@ async function notifyManager(env, f, who, note, hasPhoto) {
   const hz = f.noun === NOUN_H;
   try {
     if (!odConfigured(env)) return;
-    const r = await fetch(SB + '/rest/v1/notification_prefs?id=eq.' + encodeURIComponent(PREFS_ID) + '&select=prefs', { headers: sbH(env) });
+    const r = await fetch(SB + '/rest/v1/notification_prefs?id=eq.' + encodeURIComponent(PREFS_ID) + '&select=prefs', { headers: sbH(env), signal: tmo(SB_MS) });
     const rows = r.ok ? await r.json() : [];
     const p = rows && rows[0] && rows[0].prefs && rows[0].prefs.trustee_hazard;
     const to = p && p.email && clean(p.email_to, 120);
@@ -195,7 +196,7 @@ async function closeHazardPost(env, tok, id, form, ctx) {
   // since this name, note and photo were not stored.
   const up = await fetch(SB + '/rest/v1/tour_hazards?id=eq.' + encodeURIComponent(id) + '&s=neq.' + encodeURIComponent(S_H_CLOSED), {
     method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }),
-    body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: note || null, after_photo_url: photo.url }),
+    body: JSON.stringify({ s: S_H_CLOSED, closed_d: todayIL(), closed_by: who, close_note: note || null, after_photo_url: photo.url }), signal: tmo(SB_MS),
   });
   if (!up.ok) return formPage(tok, h, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + up.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
   let changed = null;
@@ -207,7 +208,7 @@ async function closeHazardPost(env, tok, id, form, ctx) {
     + '<p>\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05e7\u05d5\u05d1\u05e5 \u05d4\u05de\u05e4\u05d2\u05e2\u05d9\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e3.</p>', 'ok');
 }
 
-export async function onRequest(context) {
+async function handle(context) {
   const { request, env } = context;
   if (!env.SUPABASE_SERVICE_ROLE_KEY) return page('\u05ea\u05e7\u05dc\u05d4 \u05d1\u05e9\u05e8\u05ea', '<p>\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d4 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.</p>', 'err', 500);
   const url = new URL(request.url);
@@ -261,13 +262,13 @@ export async function onRequest(context) {
     f: note || null, photo_url: photo.url,
     mgr_note: '\u05e0\u05e1\u05d2\u05e8 \u05de\u05e7\u05d9\u05e9\u05d5\u05e8 \u05d1\u05de\u05d9\u05d9\u05dc',
   };
-  const ins = await fetch(SB + '/rest/v1/trustee_reports?on_conflict=id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rep) });
+  const ins = await fetch(SB + '/rest/v1/trustee_reports?on_conflict=id', { method: 'POST', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' }), body: JSON.stringify(rep), signal: tmo(SB_MS) });
   if (!ins.ok) return formPage(tok, f, '\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4 (' + ins.status + '). \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.', who, note);
   // return=representation (15/10/2026): on a double tap both POSTs get here,
   // and only the PATCH that changed the row may mail the manager and say
   // "closed". The other one changed 0 rows: "already closed", and no mail.
   const up = await fetch(SB + '/rest/v1/trustee_reports?id=eq.' + encodeURIComponent(f.id) + '&s=neq.' + encodeURIComponent(S_CLOSED), {
-    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ s: S_CLOSED }),
+    method: 'PATCH', headers: sbH(env, { 'Content-Type': 'application/json', Prefer: 'return=representation' }), body: JSON.stringify({ s: S_CLOSED }), signal: tmo(SB_MS),
   });
   if (!up.ok) return page('\u05e0\u05e9\u05de\u05e8 \u05d7\u05dc\u05e7\u05d9\u05ea', '<p>\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05e0\u05e9\u05de\u05e8, \u05d0\u05d1\u05dc \u05e1\u05d9\u05de\u05d5\u05df \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05db\u05e1\u05d2\u05d5\u05e8 \u05e0\u05db\u05e9\u05dc. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05de\u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4.</p>', 'err', 502);
 
@@ -278,4 +279,14 @@ export async function onRequest(context) {
   return page('\u2705 \u05d4\u05dc\u05d9\u05e7\u05d5\u05d9 \u05e0\u05e1\u05d2\u05e8', details(f)
     + '<p><strong>\u05d8\u05d9\u05e4\u05dc:</strong> ' + esc(who) + '<br>' + (photo.url ? '\ud83d\udcf7 \u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05e0\u05e9\u05de\u05e8\u05d4.' : esc(photo.note || '\u05dc\u05d0 \u05e6\u05d5\u05e8\u05e4\u05d4 \u05ea\u05de\u05d5\u05e0\u05d4.')) + '</p>'
     + '<p>\u05e2\u05d5\u05d3\u05db\u05df \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05d5\u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e0\u05d0\u05de\u05e0\u05d9\u05dd. \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e1\u05d2\u05d5\u05e8 \u05d0\u05ea \u05d4\u05d3\u05e3.</p>', 'ok');
+}
+
+// Every outbound call has a time limit (16/10/2026, BACKLOG 14.5). A limit that runs
+// out throws; the reads above already answer "try again", and this catches the
+// writes. A write that timed out may still have landed, so the page sends the
+// worker back to the link, where the s=neq guards answer "already closed".
+export async function onRequest(context) {
+  try { return await handle(context); } catch (e) {
+    return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05e0\u05d4 \u05d1\u05d6\u05de\u05df. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05db\u05d1\u05e8 \u05e0\u05e9\u05de\u05e8\u05d4: \u05e4\u05ea\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05de\u05d4\u05de\u05d9\u05d9\u05dc. \u05d0\u05dd \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8, \u05d6\u05d4 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05e9\u05dd.</p>', 'err', 504);
+  }
 }
