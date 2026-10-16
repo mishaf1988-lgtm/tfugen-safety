@@ -21,13 +21,13 @@ import {
   defaultAllowedOrigins,
   corsHeaders,
   jsonResp,
-  isAllowedCaller
-} from '../_shared.js';
+  isAllowedCaller, sbFrom } from '../_shared.js';
 
-const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const RATE_LIMIT_SECONDS = 300;
 
 export async function onRequest({ request, env }) {
+  SUPABASE_URL = sbFrom(env);
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
   const cors = corsHeaders(origin, allowed, 'POST,OPTIONS');

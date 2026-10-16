@@ -24,7 +24,7 @@
 // tells the link holder about one worker, and asking costs a signature in that
 // worker's name when they had not signed (checker, 03/10/2026; accepted).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
@@ -32,7 +32,7 @@ import { LOGO_JPG } from '../_logo.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
 
-const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 // Every call from this file has a time limit (15/10/2026, review of the outside pages): a slow
 // database left the "saving" button spinning until Cloudflare gave up (~100s, error 524). Now the
 // person gets our error page within FETCH_MS, and the draft in the phone keeps what they typed.
@@ -528,7 +528,7 @@ async function codeGate(env, talk, cookieHeader) {
 // The same block sits in talk.js and trustee-gate.js; a shared module would need a build entry in
 // every test that loads either file.
 export const GUESS_LIMIT = 10;
-const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
 export async function guessKey(scope, request) {
   const ip = ipBucket(request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip'));
@@ -1732,6 +1732,7 @@ async function makeLink(env, request, ctx) {
 }
 
 export async function onRequest(context) {
+  SB = sbFrom(context.env); GUESS_SB = sbFrom(context.env);
   const { request, env } = context;
   try {
     if (request.method === 'OPTIONS') {

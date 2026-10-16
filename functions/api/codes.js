@@ -14,10 +14,10 @@
 //
 //   POST {op:'list'}                       -> {codes:[{key,set,value,source,updated_at}]}
 //   POST {op:'set', key, value?}           -> {key,value,updated_at}; no value = 6 random digits
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, sbFrom } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 
-const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 export const CODE_KEYS = {
   induction_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05de\u05e9\u05d0\u05d1\u05d9 \u05d0\u05e0\u05d5\u05e9 (\u05d8\u05d5\u05e4\u05e1 \u05e7\u05dc\u05d9\u05d8\u05d4)', env: null },
   trustee_code: { label: '\u05e1\u05d9\u05e1\u05de\u05ea \u05e0\u05d0\u05de\u05e0\u05d9 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea', env: 'TRUSTEE_CODE' },
@@ -83,6 +83,7 @@ export function lockedCount(rows) {
 // The PostgREST filter for the lock counters only: guess:*, minus each rate scope.
 export const LOCK_KEYS_Q = 'key=like.guess%3A*' + RATE_SCOPES.map((x) => '&key=not.like.guess%3A' + x + '%3A*').join('');
 export async function onRequest(context) {
+  SB = sbFrom(context.env);
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const cors = corsHeaders(request.headers.get('origin') || '', allowed, 'POST,OPTIONS');
