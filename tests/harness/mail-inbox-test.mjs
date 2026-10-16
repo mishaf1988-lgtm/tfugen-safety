@@ -29,12 +29,12 @@ function world(o) {
       return json([{ user_email: 'sviva@tapugan.co.il', refresh_token: 'rt', access_token: 'at', expires_at: new Date(Date.now() + 3600e3).toISOString(), scope: o.scope === undefined ? 'Files.ReadWrite Mail.Send Mail.Read' : o.scope }]);
     }
     if (u.startsWith(SB + '/rest/v1/trustee_reports')) {
-      if (m === 'POST') { const r = JSON.parse(body); w.inserts.push(r); if (o.insertFail) return new Response('x', { status: 500 }); return new Response(null, { status: 201 }); }
+      if (m === 'POST') { const r = JSON.parse(body); w.inserts.push(r); w.insertMeta = (w.insertMeta || []).concat([{ u, prefer: init.headers.Prefer }]); if (o.insertFail) return new Response('x', { status: 500 }); if (w.loseNext) { w.loseNext = false; throw new Error('timeout'); } return new Response(null, { status: 201 }); }
       if (m === 'PATCH') { w.patches.push({ u, body: JSON.parse(body) }); const id = decodeURIComponent(u.match(/id=eq\.([^&]+)/)[1]); const r = w.reports.find((x) => x.id === id); if (r) Object.assign(r, JSON.parse(body)); return new Response(null, { status: 204 }); }
       const id = decodeURIComponent((u.match(/id=eq\.([^&]+)/) || [])[1] || '');
       return json(w.reports.filter((r) => r.id === id));
     }
-    if (u.startsWith(SB + '/storage/v1/object/incidents-photos/')) { w.uploads.push({ u, type: init.headers['Content-Type'], n: body.length }); return json({ Key: 'x' }); }
+    if (u.startsWith(SB + '/storage/v1/object/incidents-photos/')) { w.uploads.push({ u, type: init.headers['Content-Type'], n: body.length, upsert: init.headers['x-upsert'] }); return json({ Key: 'x' }); }
     if (u.startsWith('https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages')) { w.inboxQ = decodeURIComponent(u); return json({ value: o.messages || [] }); }
     if (/\/me\/messages\/[^/]+\/attachments/.test(u)) { const id = decodeURIComponent(u.split('/me/messages/')[1].split('/')[0]); return json({ value: (o.attachments || {})[id] || [] }); }
     if (u === 'https://graph.microsoft.com/v1.0/me/sendMail') { w.mails.push(JSON.parse(body)); return new Response(null, { status: 202 }); }
@@ -73,7 +73,7 @@ console.log('\n2. a reply with a phone photo closes the finding');
   check('reply text kept, note says by mail from whom', ins.f === 'טופל, הוחלף פנס' && /avi@tapugan\.co\.il/.test(ins.mgr_note), ins);
   check('date is YYYY-MM-DD', /^\d{4}-\d{2}-\d{2}$/.test(ins.d), ins.d);
   check('the phone photo uploaded, not the logo', w.uploads.length === 1 && w.uploads[0].n === JPG.length && w.uploads[0].type === 'image/jpeg', w.uploads);
-  check('photo_url in the bucket pattern', /\/storage\/v1\/object\/public\/incidents-photos\/tru-mail-mudmp1oysfpo-\d+\.jpg$/.test(ins.photo_url || ''), ins.photo_url);
+  check('photo_url in the bucket pattern', /\/storage\/v1\/object\/public\/incidents-photos\/tru-mail-mudmp1oysfpo-m[0-9a-f]{12}\.jpg$/.test(ins.photo_url || ''), ins.photo_url);
   check('finding marked closed', w.patches.length === 1 && w.patches[0].body.s === 'נסגר' && w.reports[0].s === 'נסגר', w.patches);
   check('confirmation mailed to the sender, without the tag', w.mails.length === 1 && w.mails[0].message.toRecipients[0].emailAddress.address === 'avi@tapugan.co.il' && !/\[TS-/.test(w.mails[0].message.subject), w.mails[0] && w.mails[0].message.subject);
   check('inbox read since a time, oldest first', /receivedDateTime ge /.test(w.inboxQ) && /orderby=receivedDateTime asc/.test(w.inboxQ), w.inboxQ);
@@ -110,6 +110,27 @@ console.log('\n4. edge cases');
   const w = world({ scope: 'Files.ReadWrite Mail.Send' });
   const r = await runInbox(ENV);
   check('no Mail.Read yet: skipped quietly, inbox not read', r.skipped === 'no Mail.Read' && w.inboxQ === null, r);
+}
+
+console.log('\n4b. the insert went through but its answer was lost (BACKLOG 14.9)');
+{
+  const w = world({ reports: [F1], messages: [msg('m6', 'RE: ' + tag(F1.id), 'avi@tapugan.co.il', 'טופל', { hasAttachments: true })],
+    attachments: { m6: [{ '@odata.type': '#microsoft.graph.fileAttachment', name: 'IMG_6.jpg', contentType: 'image/jpeg', size: JPG.length, contentBytes: b64(JPG) }] } });
+  w.loseNext = true;
+  const r1 = await runInbox(ENV);
+  check('first run: not remembered, retried next run', r1.closed === 0 && JSON.parse(w.state.mail_inbox_done).indexOf('m6') < 0, r1);
+  const r2 = await runInbox(ENV);
+  check('second run closes it', r2.closed === 1 && w.reports[0].s === 'נסגר', r2);
+  check('both tries carry the same closure id, taken from the mail', w.inserts.length === 2 && w.inserts[0].id === w.inserts[1].id && /^m[0-9a-f]{12}$/.test(w.inserts[0].id), w.inserts.map((x) => x.id));
+  check('...and the insert ignores a row that is already there', w.insertMeta.every((x) => /on_conflict=id/.test(x.u) && /resolution=ignore-duplicates/.test(x.prefer)), w.insertMeta);
+  check('the photo goes to the same name, written over', w.uploads.length === 2 && w.uploads[0].u === w.uploads[1].u && w.uploads.every((x) => x.upsert === 'true'), w.uploads);
+}
+{
+  const a = world({ reports: [F1], messages: [msg('m7', 'RE: ' + tag(F1.id), 'avi@tapugan.co.il', 'טופל')] });
+  await runInbox(ENV);
+  const b = world({ reports: [F1], messages: [msg('m8', 'RE: ' + tag(F1.id), 'avi@tapugan.co.il', 'טופל')] });
+  await runInbox(ENV);
+  check('another mail: another closure id', a.inserts[0].id !== b.inserts[0].id, [a.inserts[0].id, b.inserts[0].id]);
 }
 
 console.log('\n5. who may call it');
