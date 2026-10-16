@@ -160,6 +160,33 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const nmp = await page.evaluate(() => { let got = []; const real = window._attachPick; window._attachPick = (a, pre) => got.push(pre); _isAdmin = false; document.body.classList.add('emp-mode'); _nmPickPhoto(); document.body.classList.remove('emp-mode'); _isAdmin = true; _nmPickPhoto(); window._attachPick = real; return got; });
   check('a near-miss photo from the kiosk is named tru-ph-* (the only name the anonymous storage policy allows)', nmp[0] === 'tru-ph-nm' && nmp[1] === 'nm', nmp);
 
+  console.log('\n7. one stuck op can be given up alone (BACKLOG 14.7, 16/10/2026)');
+  // The only way out of an op the server keeps refusing was clearing the whole queue, every other unsent
+  // save with it. Cancel on the first question ("retry"), then the new one offers that op alone.
+  const st = await page.evaluate(() => {
+    const msgs = []; const answers = [false, true];
+    const realConfirm = window.confirm; window.confirm = (m) => { msgs.push(String(m)); return answers.shift(); };
+    window.__synced = 0; const realSync = window.sbSync; window.sbSync = () => { window.__synced++; };
+    _obMem = [];
+    _obSet([
+      { oid: 'o1', op: 'ins', tbl: 'ncr', row: { id: 'x1', num: 'NCR-77' }, tries: 4, lastError: 'HTTP 400 bad column' },
+      { oid: 'o2', op: 'upd', tbl: 'ncr', row: { id: 'x1', s: 'סגור' }, tries: 0 },
+      { oid: 'o3', op: 'ins', tbl: 'tasks', row: { id: 't9', title: 'משימה' }, tries: 0 },
+      { oid: 'o4', op: 'ins', tbl: 'near_miss', row: { id: 'n5' }, tries: 6, lastError: 'net' },
+    ]);
+    syncDiag();
+    const left = _obGet().map((o) => o.oid);
+    window.confirm = realConfirm; window.sbSync = realSync;
+    const netOnly = _obStuck([{ op: 'ins', tbl: 'x', row: { id: 'a' }, tries: 9, lastError: 'net' }]);
+    _obSet([]);
+    return { msgs: msgs.length, ask: msgs[1] || '', left, synced: window.__synced, toasts: window.__toasts.slice(-1), netOnly };
+  });
+  check('the second question names the stuck op and its error', /NCR-77/.test(st.ask) && /HTTP 400/.test(st.ask) && /לוותר רק עליה/.test(st.ask), st.ask);
+  check('only that op and the later op of the same row are gone; the other saves stay', JSON.stringify(st.left) === JSON.stringify(['o3', 'o4']), st.left);
+  check('the person is told (1 more of the same record) and the row is pulled back from the server', /הוסרה/.test(st.toasts[0] || '') && /ועוד 1/.test(st.toasts[0] || '') && st.synced === 1, st);
+  check('a network error is never "stuck": it goes by itself when the signal returns', st.netOnly === null, st.netOnly);
+  // Broken on purpose (16/10/2026): with _obDropOne keeping the later ops of the row, the second check fails (o2 stays).
+
   await browser.close();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

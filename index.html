@@ -3993,6 +3993,19 @@ function _obWarnFull(){
   try{if(typeof toast==='function')toast('\u26a0 \u05d0\u05d7\u05e1\u05d5\u05df \u05de\u05dc\u05d0 - \u05d4\u05d3\u05d9\u05d5\u05d5\u05d7 \u05d1\u05d6\u05d9\u05db\u05e8\u05d5\u05df \u05d1\u05dc\u05d1\u05d3');}catch(e){}
 }
 function _obLastErr(){try{return JSON.parse(localStorage.getItem(OB_ERR_KEY)||'null');}catch(e){return null;}}
+// The op the person may give up on alone: the first that keeps failing for a reason other than the
+// network (a conflict has its own question above). A network error is not "stuck": it goes by itself.
+function _obStuck(q){return (q||[]).filter(function(op){return op&&!op.conflict&&(op.tries||0)>=3&&op.lastError&&!/^net/.test(String(op.lastError));})[0]||null;}
+// Removes that op and every later op of the same row (an update of a row whose insert is dropped could
+// never land). Returns how many went.
+function _obDropOne(op){
+  var key=function(o){return o&&o.tbl+'|'+((o.op==='del')?o.id:(o.row&&o.row.id));},k=key(op),seen=false,n=0;
+  var keep=function(list){return (list||[]).filter(function(o){if(o===op||(op.oid&&o&&o.oid===op.oid))seen=true;var drop=seen&&key(o)===k;if(drop)n++;return !drop;});};
+  _obSet(keep(_obGet()));_obMem=keep(_obMem);   // the memory overflow is newer than the disk: same order
+  if(!_obGet().length&&!_obMem.length)_obSetErr(null);
+  _obBadge();
+  return n;
+}
 function _obSetErr(e){try{if(e)localStorage.setItem(OB_ERR_KEY,JSON.stringify(e));else localStorage.removeItem(OB_ERR_KEY);}catch(x){}}
 function _obPush(op){
   // Backstop: nothing a viewer does waits in the outbox. Writes that start on
@@ -4742,6 +4755,19 @@ function syncDiag(){
   if(q.length){lines.push('','\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8:');q.slice(0,10).forEach(function(op){lines.push('  '+op.op+' '+op.tbl+(op.tries?(' \u00d7'+op.tries):'')+(op.lastError?(' - '+op.lastError):''));});if(q.length>10)lines.push('  ...\u05d5\u05e2\u05d5\u05d3 '+(q.length-10));}
   lines.push('','\u05d0\u05d9\u05e9\u05d5\u05e8 = \u05dc\u05e0\u05e1\u05d5\u05ea \u05d0\u05d9\u05dc\u05d5\u05e3 \u05de\u05d7\u05d3\u05e9. \u05d1\u05d9\u05d8\u05d5\u05dc = \u05d0\u05e4\u05e9\u05e8\u05d5\u05d9\u05d5\u05ea \u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05d8\u05de\u05d5\u05df + \u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d7\u05d3\u05e9.');
   if(confirm(lines.join('\n'))){_obDrain();return;}
+  // 16/10/2026 (BACKLOG 14.7): one op the server keeps refusing left a single way out, clearing the
+  // whole queue, and every other unsent save went with it. Offer to give up on that one first.
+  var stuck=_obStuck(q);
+  if(stuck){
+    var sl=(stuck.row&&(stuck.row.num||stuck.row.n||stuck.row.name||stuck.row.title||stuck.row.d||stuck.row.id))||stuck.id||'';
+    if(confirm('\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d0\u05d7\u05ea \u05e0\u05ea\u05e7\u05e2\u05d4 ('+stuck.tries+' \u05e0\u05d9\u05e1\u05d9\u05d5\u05e0\u05d5\u05ea):\n\n'+stuck.op+' '+stuck.tbl+' "'+String(sl).substring(0,60)+'"'+(stuck.lastError?'\n'+String(stuck.lastError).substring(0,160):'')
+      +'\n\n\u05dc\u05d5\u05d5\u05ea\u05e8 \u05e8\u05e7 \u05e2\u05dc\u05d9\u05d4? \u05e9\u05d0\u05e8 \u05d4\u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8 \u05d9\u05d9\u05e9\u05dc\u05d7\u05d5 \u05db\u05e8\u05d2\u05d9\u05dc, \u05d5\u05d4\u05e8\u05e9\u05d5\u05de\u05d4 \u05ea\u05d7\u05d6\u05d5\u05e8 \u05dc\u05d2\u05e8\u05e1\u05d4 \u05e9\u05d1\u05e9\u05e8\u05ea.')){
+      var gone=_obDropOne(stuck);
+      toast('\u05d4\u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05ea\u05e7\u05d5\u05e2\u05d4 \u05d4\u05d5\u05e1\u05e8\u05d4'+(gone>1?(' (\u05d5\u05e2\u05d5\u05d3 '+(gone-1)+' \u05e9\u05dc \u05d0\u05d5\u05ea\u05d4 \u05e8\u05e9\u05d5\u05de\u05d4)'):'')+' \u2713');
+      if(typeof sbSync==='function')sbSync(true);
+      return;
+    }
+  }
   if(q.length&&confirm('\u05dc\u05e0\u05e7\u05d5\u05ea '+q.length+' \u05e4\u05e2\u05d5\u05dc\u05d5\u05ea \u05e0\u05db\u05e9\u05dc\u05d5\u05ea \u05de\u05d4\u05ea\u05d5\u05e8? (\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d1\u05d8\u05dc)\n\n\u05d0\u05d5 \u05d1\u05d9\u05d8\u05d5\u05dc \u2192 \u05e0\u05d9\u05e7\u05d5\u05d9 \u05de\u05d8\u05de\u05d5\u05df \u05de\u05dc\u05d0 \u05d5\u05d8\u05e2\u05d9\u05e0\u05d4 \u05de\u05d7\u05d3\u05e9')){_obSet([]);_obSetErr(null);_obBadge();toast('\u05d4\u05ea\u05d5\u05e8 \u05e0\u05d5\u05e7\u05d4 \u2713');return;}
   _forceFreshLoad();
 }
