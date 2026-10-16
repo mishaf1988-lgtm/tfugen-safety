@@ -40,6 +40,8 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 - Headers: `apikey` + `Authorization: Bearer <key>`
 - 17 טבלאות; אחרי כל שינוי schema - וודא שכל ה-17 מחזירות `200 OK`
 - Key table: `ncr` (375 records)
+- **פונקציית שרת (`functions/api/*.js`): כל `fetch` החוצה עם `signal: tmo(...)`** מ-`_shared.js` (16/10/2026, BACKLOG 14.12): `SB_TIMEOUT_MS` 10 שניות למסד, `GRAPH_TIMEOUT_MS` 20 ל-Graph, `FILE_TIMEOUT_MS` 60 לקובץ שלם. בלי זה שירות תקוע משאיר את הטלפון מסתובב. הקריאה צריכה להיות בתוך `try` שמחזיר תשובה (דף או JSON), כי מגבלה שנגמרת זורקת שגיאה. `fetch-timeout-test.mjs` נועל: קובץ שתוקן נשאר 0, ושאר הקבצים לא עולים מהמספר הרשום ב-`LEFT`.
+- **כתובת המסד מ-`env.SUPABASE_URL || <החי>`, לא כקבוע** (BACKLOG 14.13): קבוע עוקף את מסד הניסוי בגרסאות תצוגה.
 
 ### 6. AI Agents
 - כל agent חדש צריך endpoint דרך `/api/claude`

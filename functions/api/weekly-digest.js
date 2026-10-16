@@ -37,7 +37,7 @@
 // so the two UTC slots of the cron and a manual send never double the mail.
 // The result lands in server_state (key weekly_digest). No Mail.Send, no
 // OneDrive connection = the mail cannot go; the result says so.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMail, stateGet, stateSet } from '../_onedrive.js';
 import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
@@ -528,7 +528,7 @@ export async function emptyRegs(env) {
   const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
   const res = await Promise.all(REQ_REGS.map(async ([t, label]) => {
     try {
-      const r = await fetch(base + t + '?select=*&limit=1', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      const r = await fetch(base + t + '?select=*&limit=1', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
       if (!r.ok) return null;
       const j = await r.json();
       return Array.isArray(j) && !j.length ? label : null;
@@ -547,7 +547,7 @@ export async function expiries(env, today) {
   const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
     try {
       const sel = Array.from(new Set(['id', 'e'].concat(nc, oc, QUOTE_SRC[t] ? QUOTE_SRC[t][1] : []))).join(',');
-      const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      const r = await fetch(base + t + '?select=' + sel + '&e=lte.' + lim + '&order=e.asc&limit=500', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
       if (!r.ok) { failed.push(label); return [label, nc, oc, []]; }
       const j = await r.json();
       return [label, nc, oc, Array.isArray(j) ? j : [], QUOTE_SRC[t] ? t : undefined, t];
@@ -556,19 +556,19 @@ export async function expiries(env, today) {
   const sets = {};
   await Promise.all(REC_SRC.map(async ([label, t, sel]) => {
     try {
-      const r = await fetch(base + t + '?select=' + sel + '&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+      const r = await fetch(base + t + '?select=' + sel + '&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
       if (!r.ok) throw new Error(r.status);
       sets[t] = await r.json();
     } catch (e) { failed.push(label); }
   }));
   let eqf = null;
   try {
-    const r = await fetch(base + 'equip_inspections?select=id,n,code,s,d,deficiencies&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    const r = await fetch(base + 'equip_inspections?select=id,n,code,s,d,deficiencies&limit=1000', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
     if (r.ok) eqf = eqiFailLine(await r.json());
   } catch (e) { eqf = null; }
   let links = null;
   try {
-    const r = await fetch(base + 'tasks?select=source_table,source_id,status&source_id=not.is.null&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+    const r = await fetch(base + 'tasks?select=source_table,source_id,status&source_id=not.is.null&limit=5000', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
     if (r.ok) links = await r.json();
   } catch (e) { links = null; }
   const qs = await stateGet(env, [QUOTE_KEY, VENDOR_KEY]).catch(() => ({}));
@@ -675,18 +675,18 @@ export async function uploadLog(env) {
     const { token } = await accessToken(env);
     const seg = UPLOAD_LOG.split('/').map(encodeURIComponent).join('/');
     const base = 'https://graph.microsoft.com/v1.0/me/drive/root:/' + seg;
-    const r = await fetch(base + '?$select=lastModifiedDateTime', { headers: { Authorization: 'Bearer ' + token } });
+    const r = await fetch(base + '?$select=lastModifiedDateTime', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(SB_MS) });
     if (r.status === 404) return { missing: true };
     if (!r.ok) return { error: 'onedrive ' + r.status };
     const mod = (await r.json()).lastModifiedDateTime || null;
-    const c = await fetch(base + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+    const c = await fetch(base + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
     if (!c.ok) return { error: 'onedrive ' + c.status };
     const text = logText(new Uint8Array(await c.arrayBuffer()));
     // What waits in the folder's top (read only). A failed listing just leaves the check out.
     let pending = [];
     try {
       const dir = UPLOAD_LOG.split('/').slice(0, -1).map(encodeURIComponent).join('/');
-      const k = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + dir + ':/children?$select=name,file&$top=200', { headers: { Authorization: 'Bearer ' + token } });
+      const k = await fetch('https://graph.microsoft.com/v1.0/me/drive/root:/' + dir + ':/children?$select=name,file&$top=200', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(GRAPH_MS) });
       if (k.ok) pending = ((await k.json()).value || []).filter((x) => x && x.file && /\.(zip|skill)$/i.test(x.name || '')).map((x) => x.name);
     } catch (e) { pending = []; }
     return { mod, text, pending };
@@ -826,7 +826,7 @@ export function assistantLine(q, nowMs) {
 export async function assistantQueue(env) {
   if (!env.GH_SKILLS_TOKEN) return null;
   try {
-    const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': 'tapugan-safety-digest' } });
+    const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': 'tapugan-safety-digest' }, signal: tmo(SB_MS) });
     if (!r.ok) return { error: 'HTTP ' + r.status };
     return { text: await r.text() };
   } catch (e) { return { error: String((e && e.message) || e) }; }
