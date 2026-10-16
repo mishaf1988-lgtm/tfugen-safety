@@ -4,7 +4,7 @@
 # gate's 403. routine-db's "live" op (a machine path, behind ROUTINE_KEY) returns the deployed
 # commit and the sha256 of the index.html it serves. This waits until that hash equals the hash
 # of origin/main's index.html, up to 20 minutes (a Cloudflare deploy takes 1-3).
-# Exit 0 = live runs main (or later) with that commit's index. 4 = no match in time (or the call failed). 3 = no ROUTINE_KEY.
+# Exit 0 = live runs main (or later) with that commit's index, and its three app scripts went out as /app.js. 4 = no match in time (or the call failed). 3 = no ROUTINE_KEY.
 cd "$(dirname "$0")/.." || exit 4
 git fetch -q origin main || exit 4
 # The commit to prove (LIVE_WANT, e.g. the merge sha; default origin/main now). The index alone is
@@ -24,7 +24,14 @@ for i in $(seq 1 "$tries"); do
     [ "$commit" != "$wantc" ] && git fetch -q origin main
     if [ "$commit" = "$wantc" ] || git merge-base --is-ancestor "$wantc" "$commit" 2>/dev/null; then
       has=$(git show "$commit:index.html" 2>/dev/null | sha256sum | cut -d' ' -f1)
-      if [ "$got" = "$has" ]; then echo "live OK: commit ${commit:0:7}, index matches that commit"; exit 0; fi
+      if [ "$got" = "$has" ]; then
+        # The right index but the scripts not swapped to /app.js (main, ?p=t1, ?p=t2; 16/10/2026):
+        # the page falls back inline, so it is not the deploy the harness tested. Waiting will not change it.
+        if printf '%s' "$out" | grep -q '"app_swap":false'; then
+          echo "live commit ${commit:0:7} has its index, but the app scripts were not all swapped: $(printf '%s' "$out" | sed -n 's/.*"app_parts":\({[^}]*}[^}]*}[^}]*}}\).*/\1/p')" >&2; exit 4
+        fi
+        echo "live OK: commit ${commit:0:7}, index matches that commit"; exit 0
+      fi
     fi
   fi
   echo "try $i: live commit ${commit:0:7}, index ${got:0:12} (waiting for ${wantc:0:7} or later)"

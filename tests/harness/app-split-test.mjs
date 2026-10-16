@@ -107,9 +107,20 @@ const LENV = { CF_PAGES_COMMIT_SHA: 'abcdef1234', ASSETS: { fetch: async () => n
 globalThis.HTMLRewriter = FakeRewriter;
 let li = await liveInfo(new Request('https://x/api/routine-db'), LENV);
 check('reports the cut length and that the swap happened', li.ok && li.app_js_bytes === js.length && li.app_swap === true, li);
+check('...for each tail script too (?p=t1, ?p=t2)', li.app_parts && li.app_parts.t1.bytes === t1.length && li.app_parts.t1.swap === true && li.app_parts.t2.bytes === t2.length && li.app_parts.t2.swap === true, li.app_parts);
+// a partial swap: main and t1 go out as files, t2 stays inline. The page still works, but
+// the night run must see that the deploy is not what was tested.
+class NoT2 extends FakeRewriter { on(sel, h) { return sel === 'script#' + PARTS.t2 ? this : super.on(sel, h); } }
+globalThis.HTMLRewriter = NoT2;
+li = await liveInfo(new Request('https://x/api/routine-db'), LENV);
+check('a partial swap (t2 left inline): app_swap false, and the part that missed is named', li.app_swap === false && li.app_parts.main.swap === true && li.app_parts.t1.swap === true && li.app_parts.t2.swap === false, li.app_parts);
+LENV.ASSETS = { fetch: async () => new Response(HTML.replace('<script id="app-tail-2">', '<script>')) };
+li = await liveInfo(new Request('https://x/api/routine-db'), LENV);
+check('a page without the t2 script: its bytes are null and app_swap is false', li.app_parts.t2.bytes === null && li.app_swap === false, li.app_parts);
+LENV.ASSETS = { fetch: async () => new Response(HTML) };
 delete globalThis.HTMLRewriter;
 li = await liveInfo(new Request('https://x/api/routine-db'), LENV);
-check('...and says so when the swap does not happen', li.app_swap === false, li);
+check('...and says so when the swap does not happen', li.app_swap === false && !li.app_parts.main.swap && !li.app_parts.t1.swap && !li.app_parts.t2.swap, li);
 
 console.log('\n5. the real page in Chromium');
 const SPLIT = await (await rewriteApp(new Response(HTML, { headers: { 'Content-Type': 'text/html' } }), 'abcdef1', FakeRewriter)).text();

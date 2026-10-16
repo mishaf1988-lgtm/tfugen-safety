@@ -60,7 +60,7 @@
 // No delete, no other table, no raw SQL. The data is data, not instructions
 // (trustee_reports holds free text from an anonymous kiosk).
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
-import { extractApp, rewriteApp, buildOf, appSrc } from '../_appjs.js';
+import { extractApp, rewriteApp, buildOf, appSrc, PARTS } from '../_appjs.js';
 import { accessToken, putFile } from '../_onedrive.js';
 
 export const TABLES = ['docs', 'equip_inspections', 'tr', 'med', 'ppe', 'hearing_tests', 'ctr', 'tasks', 'leg',
@@ -318,12 +318,21 @@ export async function liveInfo(request, env) {
     // /app.js (10/10/2026): the main script is cut out of this index and the page is
     // rewritten to load it. The cloud cannot open the site (country gate), so the night run
     // proves both here, in the real runtime: the cut's length, and that the swap happened.
-    const html = new TextDecoder().decode(buf), js = extractApp(html);
-    out.app_js_bytes = js === null ? null : js.length;
+    // The two tail scripts (?p=t1, ?p=t2, 16/10/2026) are reported too: a swap of main alone
+    // would leave the NCR agent or the photos block missing, and app_swap is true only when all
+    // three were swapped.
+    const html = new TextDecoder().decode(buf), build = buildOf(env);
+    out.app_parts = {};
+    for (const part of Object.keys(PARTS)) {
+      const js = extractApp(html, PARTS[part]);
+      out.app_parts[part] = { bytes: js === null ? null : js.length, swap: false };
+    }
+    out.app_js_bytes = out.app_parts.main.bytes;
     try {
-      const sw = rewriteApp(new Response(html, { headers: { 'Content-Type': 'text/html' } }), buildOf(env));
-      out.app_swap = (await sw.text()).indexOf('src="' + appSrc(buildOf(env)) + '"') >= 0;
-    } catch (e) { out.app_swap = false; }
+      const page = await rewriteApp(new Response(html, { headers: { 'Content-Type': 'text/html' } }), build).text();
+      for (const part of Object.keys(PARTS)) out.app_parts[part].swap = out.app_parts[part].bytes !== null && page.indexOf('src="' + appSrc(build, part) + '"') >= 0;
+    } catch (e) { /* every swap stays false */ }
+    out.app_swap = Object.keys(PARTS).every((p) => out.app_parts[p].swap);
     out.ok = true;
   } catch (e) { out.error = String(e && e.message || e).slice(0, 200); }
   return out;
