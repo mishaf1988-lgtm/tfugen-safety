@@ -119,15 +119,24 @@ export const PREVIEW_STRIP = ['META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META
 // Returns true when env now points at the test database (and the outside secrets are gone).
 // Any failure, or a missing STAGING_ variable, returns false, and the caller refuses /api/*:
 // a preview that cannot be made safe answers nothing rather than reaching the live database.
+// Why the last previewEnv said no, for the 503 (names only, never a value).
+export let previewWhy = '';
 export function previewEnv(env) {
-  if (!env || !env.STAGING_SUPABASE_URL || !env.STAGING_SUPABASE_SERVICE_ROLE_KEY) return false;
-  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.STAGING_SUPABASE_URL) || /znhjtpcltrxxyfjczgvw/.test(env.STAGING_SUPABASE_URL)) return false;
+  previewWhy = '';
+  if (!env || !env.STAGING_SUPABASE_URL || !env.STAGING_SUPABASE_SERVICE_ROLE_KEY) {
+    previewWhy = 'missing: ' + ['STAGING_SUPABASE_URL', 'STAGING_SUPABASE_SERVICE_ROLE_KEY'].filter((k) => !(env && env[k])).join(', ');
+    return false;
+  }
+  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.STAGING_SUPABASE_URL) || /znhjtpcltrxxyfjczgvw/.test(env.STAGING_SUPABASE_URL)) { previewWhy = 'STAGING_SUPABASE_URL is not a test project URL'; return false; }
+  previewWhy = 'env is read-only';
   try {
     env.SUPABASE_URL = env.STAGING_SUPABASE_URL;
     env.SUPABASE_SERVICE_ROLE_KEY = env.STAGING_SUPABASE_SERVICE_ROLE_KEY;
     PREVIEW_STRIP.forEach((k) => { env[k] = ''; });
   } catch (e) { return false; }
-  return env.SUPABASE_URL === env.STAGING_SUPABASE_URL && PREVIEW_STRIP.every((k) => !env[k]);
+  const ok = env.SUPABASE_URL === env.STAGING_SUPABASE_URL && PREVIEW_STRIP.every((k) => !env[k]);
+  previewWhy = ok ? '' : 'env did not change';
+  return ok;
 }
 
 export async function onRequest(context) {
@@ -140,7 +149,7 @@ export async function onRequest(context) {
   let path = '/';
   try { path = new URL(request.url).pathname; } catch (e) { /* keep '/' */ }
   if (preview && !staged && path.indexOf('/api/') === 0) {
-    return new Response(JSON.stringify({ error: 'preview: test database not configured' }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...MUST_HAVE } });
+    return new Response(JSON.stringify({ error: 'preview: test database not configured', why: previewWhy }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...MUST_HAVE } });
   }
   if (!preview && machineCall(request, path)) return next();
 

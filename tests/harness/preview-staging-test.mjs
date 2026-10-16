@@ -58,12 +58,14 @@ console.log('\n3. a preview that cannot be made safe answers nothing');
   const noVars = realEnv(); delete noVars.STAGING_SUPABASE_URL;
   let r = await call('a1b2c3.tapugan-safety.pages.dev', '/api/hazard-report', 'IL', noVars);
   check('no STAGING_SUPABASE_URL: /api/* 503, the Function never runs', r.status === 503 && r.seen === null, r.status);
+  check('...the 503 names what is missing, no value', /missing: STAGING_SUPABASE_URL/.test(r.body) && !/test-key|live-key/.test(r.body), r.body);
   const liveAsTest = realEnv(); liveAsTest.STAGING_SUPABASE_URL = LIVE;
   r = await call('a1b2c3.tapugan-safety.pages.dev', '/api/hazard-report', 'IL', liveAsTest);
   check('STAGING_SUPABASE_URL set to the LIVE project by mistake: 503', r.status === 503 && r.seen === null, r.status);
   const frozen = Object.freeze(realEnv());
   r = await call('a1b2c3.tapugan-safety.pages.dev', '/api/hazard-report', 'IL', frozen);
   check('env that cannot be changed: 503, not the live database', r.status === 503 && r.seen === null, r.status);
+  check('...and says why', /env is read-only/.test(r.body), r.body);
   check('...and from the US that preview stays blocked (no US without staging)', (await call('a1b2c3.tapugan-safety.pages.dev', '/', 'US', noVars)).status === 403);
 }
 
