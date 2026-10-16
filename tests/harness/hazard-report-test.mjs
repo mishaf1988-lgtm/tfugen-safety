@@ -249,6 +249,30 @@ const ROWS = [
   c = await call({ email: 'qwer@tfugen.local', row: { role: 'צופה', active: true } }, { op: 'statusSend', depts: ['חומר גלם'] });
   check('status: viewer refused, nothing sent', c.status === 403 && !c.w.mails.length, c.status);
 
+  // BACKLOG 14.8 (16/10/2026): a retry after a lost answer repeats the key; what was mailed under it is not mailed again.
+  {
+    c = await call({ email: 'admin@tfugen.local' }, { op: 'send', depts: ['חומר גלם'], key: 'k1abcdefgh' });
+    const mark = c.w.state.hazard_send_key;
+    check('send with a key: mailed, the department kept under the key', c.j.ok && c.w.mails.length === 1 && /"key":"k1abcdefgh"/.test(mark || '') && /חומר גלם/.test(mark || ''), mark);
+    const row = { key: 'hazard_send_key', value: mark, updated_at: 'x' };
+    c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k1abcdefgh' });
+    check('the same key again: nothing mailed, answered as sent again', c.j.ok && !c.w.mails.length && c.j.sent.length === 1 && c.j.sent[0].again === true && c.j.sent[0].to.length === 5 && !c.w.state.hazard_report_last, c.j);
+    c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k2abcdefgh' });
+    check('a new key (a new press): mailed', c.j.ok && c.w.mails.length === 1 && !c.j.sent[0].again, c.j.sent);
+    c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'k1abcdefgh', test: true });
+    check('the same key for a test send: a different kind, mailed', c.j.ok && c.w.mails.length === 1, c.j.sent);
+    c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'statusSend', depts: ['חומר גלם'], key: 'k1abcdefgh', note: 'x' });
+    check('the same key for a status mail: a different kind, mailed', c.j.ok && c.w.mails.length === 1, c.j.sent);
+    c = await call({ email: 'admin@tfugen.local', mailFail: true }, { op: 'send', depts: ['חומר גלם'], key: 'k3abcdefgh' });
+    check('a failed mail is not kept under the key (a retry sends it)', !c.j.ok && !c.w.state.hazard_send_key, c.w.state);
+    c = await call({ email: 'admin@tfugen.local', hz: HZS }, { op: 'statusSend', depts: ['חומר גלם'], key: 's1abcdefgh', note: 'x' });
+    const srow = { key: 'hazard_send_key', value: c.w.state.hazard_send_key, updated_at: 'x' };
+    c = await call({ email: 'admin@tfugen.local', hz: HZS, stateRows: [srow] }, { op: 'statusSend', depts: ['חומר גלם'], key: 's1abcdefgh', note: 'x' });
+    check('status: the same key again: nothing mailed, the last-status date not moved', c.j.ok && !c.w.mails.length && c.j.sent[0].again === true && !c.w.state.hazard_status_depts, c.j);
+    c = await call({ email: 'admin@tfugen.local', stateRows: [row] }, { op: 'send', depts: ['חומר גלם'], key: 'bad key!' });
+    check('a malformed key is ignored: mailed as before', c.j.ok && c.w.mails.length === 1, c.j.sent);
+  }
+
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('HARNESS ERROR', e); process.exit(2); });

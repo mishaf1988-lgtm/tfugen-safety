@@ -17,6 +17,8 @@
 // POST {op:'preview'} -> every department; {op:'send', depts:[...], test?};
 // {op:'statusSend', depts:[...], note, test?} -> the status mail (14/10/2026).
 // test: true sends each report to the connected account only.
+// key (send / statusSend): one per press in the app, the same on its retries;
+// a department already mailed under it is not mailed again (BACKLOG 14.8).
 import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
@@ -29,6 +31,19 @@ const APP_URL = 'https://tapugan-safety.pages.dev';
 const CLOSE_TH = '\u05e1\u05d2\u05d9\u05e8\u05d4', CLOSE_LINK = '\u2705 \u05e1\u05de\u05df \u05db\u05d8\u05d5\u05e4\u05dc';
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/');
 const S_DONE = '\u05e1\u05d2\u05d5\u05e8';
+// 16/10/2026 (BACKLOG 14.8): the app waits 30 s for an answer, and a send with
+// photos can take longer. The mails went out, the app showed a failure, a second
+// press mailed every department again. Now the app sends a key with each press and
+// keeps it for its retries; what was mailed under it is kept in one server_state
+// row (the last key only) and answered as sent again:true instead of mailed twice.
+const SEND_KEY = 'hazard_send_key';
+const okKey = (k) => (typeof k === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(k) ? k : null);
+async function keyDone(env, kind, key) {
+  if (!key) return [];
+  const st = await stateGet(env, [SEND_KEY]).catch(() => ({}));
+  try { const v = JSON.parse((st[SEND_KEY] && st[SEND_KEY].value) || 'null'); return v && v.kind === kind && v.key === key && Array.isArray(v.sent) ? v.sent : []; } catch (e) { return []; }
+}
+const keyMark = (env, kind, key, sent) => (key ? stateSet(env, { [SEND_KEY]: JSON.stringify({ kind, key, sent }) }).catch(() => {}) : null);
 const OLD = ' - \u05de\u05e1\u05d9\u05d5\u05e8 \u05e7\u05d5\u05d3\u05dd!';
 // The choices of the hazard form (index.html _THZ_RESP), the only values setResp writes.
 export const RESP_CHOICES = ['\u05de\u05e0\u05d4\u05dc \u05d4\u05de\u05d7\u05dc\u05e7\u05d4', '\u05d0\u05d7\u05d6\u05e7\u05d4', '\u05d7\u05e9\u05de\u05dc', '\u05d4\u05e0\u05d3\u05e1\u05d4', '\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea'];
@@ -256,15 +271,18 @@ export async function onRequest(context) {
       const test = body.test === true, me = row.user_email;
       if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
       const sent = [], skipped = [], failed = [];
+      const key = okKey(body.key), kind = 'status' + (test ? ':test' : ''), done = await keyDone(env, kind, key);
+      const again = (d) => done.find((x) => x.dept === d);
       // The photos of the open rows, as in the report: inline pictures for the
       // first MAIL_PICS of the whole send, links for the rest.
-      const openRows = {}; REPORT_DEPTS.forEach((d) => { if (want.indexOf(d) >= 0) openRows[d] = buildReport(d, data.rows, data.rcpt, {}, today).rows; });
+      const openRows = {}; REPORT_DEPTS.forEach((d) => { if (want.indexOf(d) >= 0 && !again(d)) openRows[d] = buildReport(d, data.rows, data.rcpt, {}, today).rows; });
       const need = []; Object.keys(openRows).forEach((d) => openRows[d].forEach((x) => { const u = x.src && data.urls.get(x.src); if (u) need.push(u); }));
       const links = need.length ? await signPhotos(env, need) : {};
       const pics = {}; let k = 0;
       for (const u of need) { if (u in pics) continue; if (k >= MAIL_PICS) { pics[u] = null; continue; } k++; pics[u] = await fetchThumb(env, u, MAIL_PIC_W); }
       for (const dept of REPORT_DEPTS) {
         if (want.indexOf(dept) < 0) continue;
+        if (again(dept)) { sent.push(Object.assign({}, again(dept), { again: true })); continue; }
         const photos = new Map(), attachments = [];
         openRows[dept].forEach((x, i) => {
           const u = x.src && data.urls.get(x.src); if (!u) return;
@@ -280,12 +298,12 @@ export async function onRequest(context) {
         if (!test && !s.to.length) { skipped.push({ dept, why: '\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df \u05d1\u05d2\u05d9\u05dc\u05d9\u05d5\u05df \u05e0\u05de\u05e2\u05e0\u05d9\u05dd' }); continue; }
         const to = test ? [me] : s.to, cc = test ? [] : s.cc;
         const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(s.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(s.cc.join(', ')) + '</div>' + s.html : s.html;
-        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html, attachments); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue, photos: attachments.length }); }
+        try { await sendMailTo(token, to, cc, (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + s.title, html, attachments); sent.push({ dept, to, cc, test, since, count: s.open, closed: s.closed, overdue: s.overdue, photos: attachments.length }); await keyMark(env, kind, key, done.concat(sent.filter((x) => !x.again))); }
         catch (e) { failed.push({ dept, error: String((e && e.message) || e).substring(0, 160) }); }
       }
       const at = new Date().toISOString();
-      if (!test && sent.length) {
-        sent.forEach((x) => { lastBy[x.dept] = at; });
+      if (!test && sent.some((x) => !x.again)) {
+        sent.forEach((x) => { if (!x.again) lastBy[x.dept] = at; });
         await stateSet(env, { hazard_status_last: JSON.stringify({ at, by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }), hazard_status_depts: JSON.stringify(lastBy) }).catch(() => {});
       }
       return jsonResp({ ok: !failed.length, at: test ? null : at, sent, skipped, failed }, 200, cors);
@@ -308,13 +326,16 @@ export async function onRequest(context) {
     const me = row.user_email;
     if (test && !me) return jsonResp({ ok: false, error: '\u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2 \u05dc\u05d0\u05d9\u05d6\u05d4 \u05d7\u05e9\u05d1\u05d5\u05df \u05dc\u05e9\u05dc\u05d5\u05d7' }, 200, cors);
     // The photos of the rows being sent: pictures for the first MAIL_PICS, links for the rest.
-    const inSend = reports.filter((r) => want.indexOf(r.dept) >= 0 && r.count);
+    const key = okKey(body.key), kind = 'send' + (test ? ':test' : ''), done = await keyDone(env, kind, key);
+    const again = (d) => done.find((x) => x.dept === d);
+    const inSend = reports.filter((r) => want.indexOf(r.dept) >= 0 && r.count && !again(r.dept));
     const need = []; inSend.forEach((r) => r.rows.forEach((x) => { const u = x.src && data.urls.get(x.src); if (u) need.push(u); }));
     const links = need.length ? await signPhotos(env, need) : {};
     const pics = {}; let k = 0;
     for (const u of need) { if (u in pics) continue; if (k >= MAIL_PICS) { pics[u] = null; continue; } k++; pics[u] = await fetchThumb(env, u, MAIL_PIC_W); }
     const sent = [], skipped = [], failed = [];
     for (const rep0 of reports) {
+      if (want.indexOf(rep0.dept) >= 0 && again(rep0.dept)) { sent.push(Object.assign({}, again(rep0.dept), { again: true })); continue; }
       let rep = rep0, attachments = [];
       // "Mark as handled" per row (upgrade review 13): the register id without
       // its kind, h:th-... for a tour hazard, t:<id> for a trustee finding;
@@ -336,10 +357,10 @@ export async function onRequest(context) {
       const to = test ? [me] : rep.to, cc = test ? [] : rep.cc;
       const subject = (test ? '\u05d1\u05d3\u05d9\u05e7\u05d4 - ' : '') + rep.title;
       const html = test ? '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:13px;background:#fff8e1;border:1px solid #e0c46c;padding:8px;margin-bottom:10px">\u05de\u05d9\u05d9\u05dc \u05d1\u05d3\u05d9\u05e7\u05d4, \u05e0\u05e9\u05dc\u05d7 \u05e8\u05e7 \u05d0\u05dc\u05d9\u05da. \u05d1\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d0\u05de\u05d9\u05ea\u05d9\u05ea: \u05d0\u05dc ' + esc(rep.to.join(', ') || '(\u05d0\u05d9\u05df \u05e0\u05de\u05e2\u05df)') + ' | \u05e2\u05d5\u05ea\u05e7 ' + esc(rep.cc.join(', ')) + '</div>' + rep.html : rep.html;
-      try { await sendMailTo(token, to, cc, subject, html, attachments); sent.push({ dept: rep.dept, to, cc, count: rep.count, test, photos: attachments.length }); }
+      try { await sendMailTo(token, to, cc, subject, html, attachments); sent.push({ dept: rep.dept, to, cc, count: rep.count, test, photos: attachments.length }); await keyMark(env, kind, key, done.concat(sent.filter((x) => !x.again))); }
       catch (e) { failed.push({ dept: rep.dept, error: String((e && e.message) || e).substring(0, 160) }); }
     }
-    if (!test) await stateSet(env, { hazard_report_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.map((x) => x.dept) }) }).catch(() => {});
+    if (!test && sent.some((x) => !x.again)) await stateSet(env, { hazard_report_last: JSON.stringify({ at: new Date().toISOString(), by: (who.user && who.user.email) || null, sent: sent.filter((x) => !x.again).map((x) => x.dept) }) }).catch(() => {});
     return jsonResp({ ok: !failed.length, sent, skipped, failed }, 200, cors);
   } catch (e) {
     return jsonResp({ ok: false, error: String((e && e.message) || e).substring(0, 200) }, 200, cors);

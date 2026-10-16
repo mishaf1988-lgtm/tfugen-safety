@@ -52,6 +52,28 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
   const tc = await page.evaluate(() => window._calls.slice(-1)[0]);
   check('a "שלח לי לבדיקה" button: asks, then sends with test:true', t.has && tc[1].op === 'send' && tc[1].test === true && /לבדיקה, רק אליך/.test(t.txt), [tc, t.txt]);
 
+  console.log('\n  BACKLOG 14.8: a retry after a lost answer repeats the key');
+  const rk = await page.evaluate(async () => {
+    const real = window._truApi, keys = [], wait = () => new Promise((r) => setTimeout(r, 50));
+    let mode = 'lost';
+    window._truApi = function (p, b) {
+      if (b.op === 'preview') return real(p, b);
+      keys.push(b.key);
+      if (mode === 'lost') return Promise.reject(new Error('timeout'));
+      return Promise.resolve({ ok: true, sent: [{ dept: 'מעצבים', to: ['Roman@tapugan.co.il'], cc: [], count: 2, again: mode === 'again' }], skipped: [], failed: [] });
+    };
+    const press = async () => { hzrSend(); hzrAskYes(); await wait(); };
+    await press(); await press();
+    mode = 'again'; await press();
+    const text = document.getElementById('hzr').textContent;
+    mode = 'ok'; await press();
+    window._truApi = real;
+    return { keys, text };
+  });
+  check('a key on the send; the same key after a lost answer and on the retry that succeeds', !!rk.keys[0] && rk.keys[0] === rk.keys[1] && rk.keys[1] === rk.keys[2], rk.keys);
+  check('after a full success: a new key for the next press', rk.keys[3] && rk.keys[3] !== rk.keys[2], rk.keys);
+  check('a department the server skipped as already sent says so', /מעצבים: נשלח ל-1 נמענים \(2 מפגעים\) \(כבר נשלח קודם, לא נשלח שוב\)/.test(rk.text), rk.text.slice(0, 200));
+
   console.log('\n  upgrade review 16: a save in Excel not taken yet');
   const un = await page.evaluate(async () => {
     const rep = (dept, count, to) => ({ dept, title: 't', to, cc: [], count, old: 0, overdue: 0, rows: [] });

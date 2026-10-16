@@ -11876,7 +11876,7 @@ function _hzrRender(){
   }
   if(_hzr.result){
     var rs=_hzr.result;
-    h+='<div class="hz-card">'+(rs.sent||[]).map(function(x){return '<div>&#9989; '+esc(x.dept)+(x.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': \u05e0\u05e9\u05dc\u05d7 \u05dc-'+x.to.length+' \u05e0\u05de\u05e2\u05e0\u05d9\u05dd ('+x.count+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd)</div>';}).join('')
+    h+='<div class="hz-card">'+(rs.sent||[]).map(function(x){return '<div>&#9989; '+esc(x.dept)+(x.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': \u05e0\u05e9\u05dc\u05d7 \u05dc-'+x.to.length+' \u05e0\u05de\u05e2\u05e0\u05d9\u05dd ('+x.count+' \u05de\u05e4\u05d2\u05e2\u05d9\u05dd)'+(x.again?' (\u05db\u05d1\u05e8 \u05e0\u05e9\u05dc\u05d7 \u05e7\u05d5\u05d3\u05dd, \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7 \u05e9\u05d5\u05d1)':'')+'</div>';}).join('')
       +(rs.skipped||[]).map(function(x){return '<div>&#9898; '+esc(x.dept)+': '+esc(x.why)+'</div>';}).join('')
       +(rs.failed||[]).map(function(x){return '<div style="color:var(--er,var(--c-red-600,#b91c1c))">&#10060; '+esc(x.dept)+': '+esc(x.error)+'</div>';}).join('')+'</div>';
   }
@@ -12040,18 +12040,30 @@ function hzrStatus(test){
   if(!ds.length){toast('\u05dc\u05d0 \u05e1\u05d5\u05de\u05e0\u05d4 \u05d0\u05e3 \u05de\u05d7\u05dc\u05e7\u05d4');return;}
   _hzr.ask={test:!!test,ds:ds,status:true};_hzrRender();
 }
+// BACKLOG 14.8 (16/10/2026): a send with photos can outlast the 30 s wait, so the
+// mails go out and the screen says failed. One key per kind of send, kept until a
+// full success: a second press repeats the key and the server skips what it mailed.
+// Outside _hzr, which a reopened screen replaces.
+var _hzrSendKey=null;
+function _hzrKey(kind){
+  var k=_hzrSendKey;
+  if(!k||k.kind!==kind)k=_hzrSendKey={kind:kind,key:Date.now().toString(36)+Math.random().toString(36).slice(2,10)};
+  return k.key;
+}
 function hzrAskYes(){
   var a=_hzr&&_hzr.ask;if(!a)return;
   _hzr.ask=null;_hzr.busy=true;_hzrRender();
   if(a.status){
-    _truApi('/api/hazard-report',{op:'statusSend',depts:a.ds,test:a.test,note:_hzr.note||''}).then(function(j){
-      if(j&&j.at&&j.sent){_hzr.statusLast=_hzr.statusLast||{};j.sent.forEach(function(x){_hzr.statusLast[x.dept]=j.at;});}
+    _truApi('/api/hazard-report',{op:'statusSend',depts:a.ds,test:a.test,note:_hzr.note||'',key:_hzrKey('status'+(a.test?':test':''))}).then(function(j){
+      if(j&&j.ok)_hzrSendKey=null;
+      if(j&&j.at&&j.sent){_hzr.statusLast=_hzr.statusLast||{};j.sent.forEach(function(x){if(!x.again)_hzr.statusLast[x.dept]=j.at;});}
       _hzr.busy=false;_hzr.result=j&&(j.sent||j.failed)?j:{failed:[{dept:'',error:(j&&j.error)||'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
       try{addLog('\u05de\u05d9\u05d9\u05dc \u05e1\u05d8\u05d8\u05d5\u05e1 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7'+(a.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
     })['catch'](function(){_hzr.busy=false;_hzr.result={failed:[{dept:'',error:'\u05d4\u05e9\u05dc\u05d9\u05d7\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4'}]};}).then(_hzrRender);
     return;
   }
-  _truApi('/api/hazard-report',{op:'send',depts:a.ds,test:a.test,anyway:!!_hzr.unsynced}).then(function(j){
+  _truApi('/api/hazard-report',{op:'send',depts:a.ds,test:a.test,anyway:!!_hzr.unsynced,key:_hzrKey('send'+(a.test?':test':''))}).then(function(j){
+    if(j&&j.ok)_hzrSendKey=null;
     _hzr.busy=false;if(j&&j.unsynced)_hzr.unsynced=true;_hzr.result=j||{failed:[{dept:'',error:'\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4'}]};
     if(j&&j.error&&!j.sent){_hzr.result={failed:[{dept:'',error:j.error}]};}
     try{addLog('\u05d3\u05d5\u05d7 \u05de\u05e4\u05d2\u05e2\u05d9\u05dd \u05e0\u05e9\u05dc\u05d7'+(a.test?' (\u05d1\u05d3\u05d9\u05e7\u05d4)':'')+': '+((j&&j.sent)||[]).map(function(x){return x.dept;}).join(', '));}catch(e){}
