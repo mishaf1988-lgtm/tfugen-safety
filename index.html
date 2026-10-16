@@ -25341,7 +25341,7 @@ function _phQueue(areaId,file,prefix,cb){
         _phLeft[pid]=1;   // a row saved now waits for it even if a drain is already running (15/10/2026)
         _attachUrls[areaId]=_PH_PREFIX+pid;
         _attachRenderPending(areaId,blob,pid);
-        cb(true);
+        cb(true,null,pid,blob);
       });
     });
   };
@@ -25365,7 +25365,7 @@ function _attachRenderPending(areaId,blob,pid){
 // them waits for it (15/10/2026): sent first, it could never be fixed, because the trustee's
 // anonymous session may insert but not update, and the photo was lost. A pid not in the queue any
 // more (cleared, over the cap) does not hold the row back: the report goes without the photo.
-var _phLeft={},_phUnknown=false,_phTries={},_phGaveUp={};
+var _phLeft={},_phUnknown=false,_phTries={},_phGaveUp={},_phFly={};
 function _obWaitsPhoto(op){
   if(!op||op.op!=='ins'||!op.row)return false;
   return Object.keys(op.row).some(function(k){
@@ -25393,6 +25393,7 @@ function _phDrain(){
         p=p.then(function(){
           return new Promise(function(done){
             try{
+              if(_phFly[rec.pid]){done();return;}   // _attachPick is sending it right now (14.1)
               _fileUpload(rec.blob,rec.prefix,function(url,status){
                 // No url means the connection is still down: leave it queued.
                 if(url){_phResolve(rec.pid,url);_phDel(rec.pid);delete _phLeft[rec.pid];}
@@ -27685,6 +27686,37 @@ function _attachPick(areaId,prefix){
     // nobody. It used to write _attachUrls[area] anyway, and the NEXT new record got the file.
     var tok=_attachTok[areaId]=(_attachTok[areaId]||0)+1;
     var stale=function(){return _attachTok[areaId]!==tok;};
+    // 16/10/2026 (BACKLOG 14.1): a trustee photo is kept on the phone BEFORE it goes up. It entered
+    // the queue only after a network failure, so a trustee who closed the app while it uploaded lost
+    // it. Now the draft holds pending:<pid> from the first moment; an upload that ends swaps it for
+    // the URL everywhere (_phResolve, the draft included) and drops the stored copy. No store
+    // (private mode, full queue): the upload goes straight up, as before.
+    if(areaId.indexOf('tru-ph-')===0&&typeof _phQueue==='function'){
+      _phQueue(areaId,file,prefix,function(ok,why,pid,blob){
+        if(!ok){if(!stale())direct();return;}
+        var token=_PH_PREFIX+pid;
+        if(stale()){if(_attachUrls[areaId]===token)_attachUrls[areaId]=null;_phDropOrphan(pid);return;}
+        _phFly[pid]=1;
+        _fileUpload(blob,prefix,function(url,errStatus,errBody){
+          delete _phFly[pid];
+          if(url){
+            _phResolve(pid,url);_phDel(pid);delete _phLeft[pid];
+            if(stale())return;
+            _attachPending[areaId]=false;_attachRender(areaId,url,file.name);return;
+          }
+          // No network: it stays queued and is already shown as waiting; the drain sends it.
+          if(errStatus==='net'){if(stale())_phDropOrphan(pid);else _attachPending[areaId]=false;return;}
+          // A real answer from the server (403, too large): waiting will not change it.
+          if(_attachUrls[areaId]===token)_attachUrls[areaId]=null;
+          if(!_phRefd(token))_phDel(pid);
+          if(stale())return;
+          _attachPending[areaId]=false;_attachShowErr(areaId,errStatus,errBody);
+        });
+      });
+      return;
+    }
+    direct();
+    function direct(){
     _fileUpload(file,prefix,function(url,errStatus,errBody){
       if(stale())return;
       if(url){_attachPending[areaId]=false;_attachUrls[areaId]=url;_attachRender(areaId,url,file.name);return;}
@@ -27705,8 +27737,20 @@ function _attachPick(areaId,prefix){
       _attachPending[areaId]=false;
       _attachUrls[areaId]=null;_attachShowErr(areaId,errStatus,errBody);
     });
+    }
   };
   inp.click();
+}
+// A queued photo whose form went away before anything held it: nothing would ever show it, so it
+// must not upload for nothing. Held = a row, an op in the outbox, an open form or the trustee draft.
+function _phDropOrphan(pid){
+  var token=_PH_PREFIX+pid;
+  try{
+    if(_phRefd(token))return;
+    for(var a in _attachUrls)if(_attachUrls[a]===token)return;
+    var dr=localStorage.getItem(_TRU_DRAFT_KEY);if(dr&&dr.indexOf(token)>=0)return;
+  }catch(e){return;}
+  _phDel(pid);delete _phLeft[pid];
 }
 
 var _attachTok={};   // areaId -> number of the pick in flight; any other number is stale
