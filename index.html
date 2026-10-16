@@ -4423,6 +4423,7 @@ var _sbStale=false;
 function _sbGenNow(){try{return _sbGen;}catch(e){return 0;}}
 function sbSync(silent){
   var gen=_sbGenNow(),nulls=0;
+  _sbFocusPull=Date.now();   // any full pull (sign-in, full sync) counts for the throttles below
   // The queue may send once the session is known (B1), not after all 43 tables.
   try{_sbAuth().then(function(){if(gen===_sbGenNow()&&!_obReady){_obReady=true;_obDrain();}},function(){});}catch(e){}
   var tbls=['docs','auds','ncr','inc','tr','rsk','emp','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'];
@@ -4481,20 +4482,38 @@ try{setTimeout(function(){if(typeof _phSync==='function')_phSync();},0);}catch(e
 // Reconnecting after being offline still pulls immediately: that is exactly
 // when the local copy is most likely to be stale.
 var _sbFocusPull=0, _SB_FOCUS_MIN_MS=60000;
+// 16/10/2026 (BACKLOG 14.4): the full pull of 44 tables every 10 minutes and on every return to the
+// app came to about 13MB an hour, while realtime already streams the same 44 tables live. With the
+// socket up, the pull is only a safety net: once an hour, and on return only after more than two
+// minutes in the background (a phone drops the socket in the background before its status says so).
+// A socket that comes back, a reconnect and "full sync" still pull at once (force).
+var _SB_RT_SAFETY_MS=60*60000,_SB_HIDDEN_PULL_MS=2*60000,_sbHiddenAt=0,_sbHiddenFor=0;
+function _rtLive(){return _rtState==='SUBSCRIBED';}
 function _sbPullOnFocus(force){
   if(!SB_ON)return;
   if(typeof empIsOn==='function'&&empIsOn())return;   // the kiosk pulls its own few tables (_truPull)
   var now=Date.now();
   if(!force&&_sbFocusPull&&(now-_sbFocusPull)<_SB_FOCUS_MIN_MS)return;
+  if(!force&&_rtLive()&&_sbHiddenFor<_SB_HIDDEN_PULL_MS&&_sbFocusPull&&(now-_sbFocusPull)<_SB_RT_SAFETY_MS)return;
+  _sbHiddenFor=0;
   _sbFocusPull=now;
   sbSync(true);
 }
 window.addEventListener('online',function(){_obDrain();_sbPullOnFocus(true);});
 window.addEventListener('focus',function(){_obDrain();_sbPullOnFocus(false);});
 setInterval(function(){_obDrain();},30000);
-setInterval(function(){if(SB_ON&&!(typeof empIsOn==='function'&&empIsOn())){_sbFocusPull=Date.now();sbSync(true);}},600*1000);
+function _sbTimerPull(){
+  if(!SB_ON||(typeof empIsOn==='function'&&empIsOn()))return;
+  if(_rtLive()&&_sbFocusPull&&(Date.now()-_sbFocusPull)<_SB_RT_SAFETY_MS)return;
+  _sbFocusPull=Date.now();sbSync(true);
+}
+setInterval(_sbTimerPull,600*1000);
 // iOS home-screen apps do not reliably fire focus, and the 10-minute timer sleeps in the background.
-document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){_obDrain();_sbPullOnFocus(false);}});
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState!=='visible'){_sbHiddenAt=Date.now();return;}
+  if(_sbHiddenAt){_sbHiddenFor=Math.max(_sbHiddenFor,Date.now()-_sbHiddenAt);_sbHiddenAt=0;}
+  _obDrain();_sbPullOnFocus(false);
+});
 
 // --- Realtime sync (Supabase postgres_changes) ---
 var _sbRT=null,_rtState='off';
