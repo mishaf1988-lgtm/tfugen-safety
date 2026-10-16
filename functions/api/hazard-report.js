@@ -19,7 +19,7 @@
 // test: true sends each report to the connected account only.
 // key (send / statusSend): one per press in the app, the same on its retries;
 // a department already mailed under it is not mailed again (BACKLOG 14.8).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
@@ -70,7 +70,7 @@ const fd = (v) => { const d = v && typeof v === 'object' ? v.date : v; const m =
 // The register workbook: this year's; in the first minutes of a year, before the tick has
 // copied it into the new folder, last year's (upgrade review 24).
 async function readBook(token) {
-  const book0 = (y) => fetch(G + seg(folderFor(y) + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token } });
+  const book0 = (y) => fetch(G + seg(folderFor(y) + '/' + FILES.xlsm.name) + ':/content', { headers: { Authorization: 'Bearer ' + token }, signal: tmo(FILE_MS) });
   let r = await book0(ilYear());
   if (r.status === 404) r = await book0(ilYear() - 1);
   if (!r.ok) throw new Error('the workbook could not be read (onedrive ' + r.status + ')');
@@ -237,7 +237,7 @@ export async function onRequest(context) {
       if (!m || text.length < 4) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
       const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
       const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]) + '&or=(action.is.null,action.eq.)', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ action: text }) });
+      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]) + '&or=(action.is.null,action.eq.)', { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ action: text }), signal: tmo(SB_MS) });
       const got = up.ok ? await up.json().catch(() => []) : [];
       return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, action: text }, 200, cors);
     }
@@ -251,7 +251,7 @@ export async function onRequest(context) {
       if (!m || RESP_CHOICES.indexOf(resp) < 0) return jsonResp({ ok: false, error: 'bad request' }, 400, cors);
       const table = m[1] === 'h' ? 'tour_hazards' : 'trustee_reports';
       const key = env.SUPABASE_SERVICE_ROLE_KEY, base = env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co';
-      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]), { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(m[1] === 'h' ? { resp, resp2: null } : { resp }) });
+      const up = await fetch(base + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(m[2]), { method: 'PATCH', headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(m[1] === 'h' ? { resp, resp2: null } : { resp }), signal: tmo(SB_MS) });
       const got = up.ok ? await up.json().catch(() => []) : [];
       return jsonResp({ ok: up.ok && got.length === 1, saved: got.length === 1, resp }, 200, cors);
     }
