@@ -19,6 +19,13 @@ description: How to read and change the live Supabase database of tfugen-safety 
 
 - SQL של policies, DROP או ALTER: רק דרך `apply_migration`/`execute_sql`, וקובץ ההגירה דרך Write. heredoc ב-Bash עם SQL כזה נחסם ונועל גם פקודות קריאה אחריו (לקח 40).
 
+## מסד הניסוי (16/10/2026)
+- `tfugen-staging`, project_id `ldzbjbsumzqjyvtpiwqo`: אותה סכמה כמו החי, נתוני דוגמה בלבד, משתמש `claude-test` (אדמין). שם מותר לכתוב, למחוק ולשבור. **לפני כל כתיבה לבדוק את ה-project_id**: שני הפרויקטים באותו ארגון.
+- לבדוק מסך או זרימה בדפדפן אמיתי מהענן: `tests/staging/e2e.js` (הנוהל ב-`project-files/staging/README.md`).
+- **משתמש Auth שנוצר ב-SQL:** עמודות הטוקנים ב-`auth.users` (`confirmation_token`, `recovery_token`, `email_change*`, `phone_change*`, `reauthentication_token`) חייבות להיות `''`, לא NULL. אחרת הכניסה מחזירה 500 "Database error querying schema" (16/10/2026).
+- **קובץ SQL גדול (מעל 100KB) מהענן למסד:** לא דרך הצ'אט. הקובץ ב-branch, `net.http_get` ל-raw של GitHub מתוך המסד, בדיקת MD5, ופונקציה שמריצה `execute` עם `set_config('search_path', 'public, extensions', true)` (בלי זה `nextval('x_seq')` לא נמצא). טרנזקציה אחת (`project-files/staging/README.md`).
+- migration בחי שמשנה סכמה: להריץ את אותה migration גם על הניסוי, אחרת הוא מתיישן.
+
 ## לפני טענה על נתונים
 - `select count(*)` אמיתי, ולכתוב את המספר עם תאריך המדידה (לקח 9).
 - מבנה טבלה: `information_schema.columns`, לא קבצי ה-migration. בקבצים יש טבלאות שנוצרו מזמן ועמודות שנוספו ידנית (למשל `tasks.parent_id`).

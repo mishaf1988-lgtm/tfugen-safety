@@ -3757,8 +3757,14 @@ window.addEventListener('pagehide',     function(){ if(_sdbTimer)_sdbFlush(); })
 function ldb(){try{var x=localStorage.getItem('tfgn2');if(x){var d=JSON.parse(x);['docs','auds','ncr','inc','tr','rsk','emp','hist','ptw','ppe','med','ins','drl','ctr','wst','hzm','env','leg','equip_inspections','near_miss','rounds','hearing_tests','tasks','app_users','toolbox','toolbox_talks','toolbox_reads','train_plan','tour_hazards','env_aspects','page_files','locations','saved_views','notification_prefs','custom_props','projects','notifications_log','inspection_types','issue_types','trustee_reports','trustees','trustee_winners','trustee_tasks','record_history','mgmt_reviews'].forEach(function(k){if(d[k])DB[k]=d[k];});}if(!DB.ncr)DB.ncr=[];if(!DB.equip_inspections)DB.equip_inspections=[];if(!DB.near_miss)DB.near_miss=[];if(!DB.rounds)DB.rounds=[];if(!DB.hearing_tests)DB.hearing_tests=[];if(!DB.tasks)DB.tasks=[];if(!DB.app_users)DB.app_users=[];if(!DB.toolbox)DB.toolbox=[];if(!DB.toolbox_talks)DB.toolbox_talks=[];if(!DB.toolbox_reads)DB.toolbox_reads=[];if(!DB.tour_hazards)DB.tour_hazards=[];if(!DB.env_aspects)DB.env_aspects=[];if(!DB.page_files)DB.page_files=[];if(!DB.trustee_reports)DB.trustee_reports=[];if(!DB.trustees)DB.trustees=[];if(!DB.trustee_winners)DB.trustee_winners=[];if(!DB.trustee_tasks)DB.trustee_tasks=[];NCRI=DB.ncr.reduce(function(m,n){var v=parseInt((n.num||'NCR-0').split('-')[1])||0;return Math.max(m,v);},0)+1;}catch(e){}}
 // Shown in the print header (and nowhere else) so a printout tells which build it came from.
 var _APP_BUILD='2026-09-22.v1';
-var SBU='https://znhjtpcltrxxyfjczgvw.supabase.co';
-var SBK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+// Staging (16/10/2026, Michael: "a development and test environment"; project-files/staging/README.md):
+// a Cloudflare preview build (<hash>.tapugan-safety.pages.dev) talks to the test database
+// tfugen-staging, never to the live one. Production (tapugan-safety.pages.dev itself),
+// file:// and localhost keep the live database, exactly as before.
+var _STAGING=/\.tapugan-safety\.pages\.dev$/i.test((typeof location!=='undefined'&&location.hostname)||'');
+var SBU=_STAGING?'https://ldzbjbsumzqjyvtpiwqo.supabase.co':'https://znhjtpcltrxxyfjczgvw.supabase.co';
+var SBK=_STAGING?'sb_publishable_zITtcP-mcfm8Jv6nBmqFjg_zXpCFdL1':'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+if(_STAGING){try{document.title='\u05e0\u05d9\u05e1\u05d5\u05d9 - '+document.title;}catch(e){}}
 // ---- Cloudflare Turnstile (30/09/2026, security review, finding 4) ----
 // Anyone holding the publishable key can mint anonymous sessions for free;
 // Turnstile makes each one cost a bot check. Empty key = OFF: no script, no
@@ -23428,8 +23434,8 @@ var _naf={};
 var _naVer={};
 // Rated analyses (any version) from the last _ncrLoadAI, for _ncrFbExamples.
 var _naFb=[];
-var _SB='https://znhjtpcltrxxyfjczgvw.supabase.co';
-var _SK='sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
+var _SB=SBU;   // same database as SBU: the test one on a preview build (16/10/2026)
+var _SK=SBK;
 /* ---- PWA: register service worker + install prompt ---- */
 var _pwaPrompt=null;
 if('serviceWorker' in navigator){
