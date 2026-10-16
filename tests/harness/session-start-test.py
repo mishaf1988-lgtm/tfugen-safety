@@ -12,6 +12,12 @@ run = lambda cwd, inp="{}": subprocess.run([sys.executable, hook("session-start.
 p = run(d); o = p.stdout
 check("exit 0", p.returncode == 0, p.stderr)
 check("names the skills to load", "tfugen-lean" in o and "tfugen-lessons" in o, o)
+check("no office file: no office line", "משרד הסוכנים" not in o, o)
+open(os.path.join(d, "project-files", "routine-office.md"), "w", encoding="utf-8").write("**העמוד:** `https://claude.ai/artifact/Abc123XYZ` (משרד)\n")
+o2 = run(d).stdout
+check("the agents' office: opened at the start of every conversation, URL from routine-office.md", "משרד הסוכנים" in o2 and "https://claude.ai/artifact/Abc123XYZ" in o2 and '"open"' in o2, o2)
+# Broken on purpose (16/10/2026): with the office lines taken out of report() the check above fails.
+os.remove(os.path.join(d, "project-files", "routine-office.md"))
 check("prints the handoff", "handoff-05-10-2026-10.00.md" in o and "בדיקה X" in o, o)
 check("open items: 2, the closed one left out", "2 פריטים פתוחים" in o and "משימה ב" in o and "סגורה" not in o, o)
 check("last METRICS row with its header", "10/2026 | 12%" in o and "| חודש" in o and "09/2026" not in o, o)
