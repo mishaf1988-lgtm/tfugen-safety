@@ -312,6 +312,23 @@ let ACCEPT = true, DIALOGS = [];
       return out;
     }, [V1, V2, ED]);
     ED.forEach(([t]) => check('the ' + t + ' editor saves against the version it opened', eds[t] === V1, eds[t]));
+
+    // ptw (16/10/2026): `ts` there is the permit's start time ("08:00"), so the guard is on `ver`.
+    const ptw = await page.evaluate(([V1, V2]) => {
+      window._obDrain = function () {};
+      _obSet([]); _rowVer = {};
+      const row = { id: 'pA', num: 'PTW-1', con: 'קבלן', ts: '08:00', te: '12:00', s: 'פעיל', ver: V1 };
+      DB.ptw = [Object.assign({}, row)];
+      _sbMergePull('ptw', [Object.assign({}, row)], {});
+      _genEdit('ptw', 'pA');
+      _sbMergePull('ptw', [Object.assign({}, row, { con: 'מהמחשב', ver: V2 })], {});
+      svPtw();
+      const op = _obGet().filter(o => o.tbl === 'ptw' && o.op === 'upd').slice(-1)[0] || {};
+      let url = '';
+      window.fetch = function (u, o) { if (o && o.method === 'PATCH') url = String(u); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]), text: () => Promise.resolve('[]') }); };
+      return _obSend(op).then(() => 0, () => 0).then(() => { window._obDrain = window.__realDrain; _obSet([]); _rowVer = {}; return { pin: op.pin || null, url }; });
+    }, [V1, V2]);
+    check('ptw guards on ver, the version the permit form opened at', ptw.pin === V1 && /[?&]ver=eq\./.test(ptw.url) && !/[?&]ts=eq\./.test(ptw.url), ptw);
   }
 
   console.log('\n3.11 the record says who touched it');

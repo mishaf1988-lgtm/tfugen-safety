@@ -35,7 +35,7 @@
 "password_reset_requests":["approved_at","approved_by","id","notes","status","ts","username"],
 "ppe":["c","created_at","d","e","ext_id","file_url","id","m","ty","w"],
 "projects":["description","end_date","id","name","start_date","status","ts"],
-"ptw":["area","con","created_at","de","dep","desc","ds","id","location_id","num","ph","s","safety","sg1d","sg1n","sg2d","sg2n","sg3d","sg3n","sg4d","sg4n","sup","te","ts","types","wkr"],
+"ptw":["area","con","created_at","de","dep","desc","ds","id","location_id","num","ph","s","safety","sg1d","sg1n","sg2d","sg2n","sg3d","sg3n","sg4d","sg4n","sup","te","ts","types","ver","wkr"],
 "record_history":["changed_by","d_old","e_new","e_old","id","note","record_id","table_name","ts"],
 "rounds":["chemicals","corridors","d","fire","firstaid","id","inspector","items","notes","ppe","s","samples","theme","ts"],
 "rsk":["a","ac","created_at","ct","d","id","last_review","o","p","sv"],
