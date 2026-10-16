@@ -41,6 +41,12 @@ export const SB_TIMEOUT_MS = 10000;
 // Graph metadata 20s, a whole file up or down 60s (the same split as hazard-file.js).
 export const GRAPH_TIMEOUT_MS = 20000, FILE_TIMEOUT_MS = 60000;
 export const tmo = (ms) => AbortSignal.timeout(ms);
+// The database a function talks to (16/10/2026, BACKLOG 14.13). On a preview build the
+// middleware puts the test project in env.SUPABASE_URL; a file that kept the live address
+// as a constant skipped it. Files with such a constant set it from here at the top of
+// onRequest (one deployment = one env, so the module value is the same for every request).
+export const SB_LIVE = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+export const sbFrom = (env) => (env && env.SUPABASE_URL) || SB_LIVE;
 
 export function jsonResp(payload, status, cors) {
   return new Response(JSON.stringify(payload), {

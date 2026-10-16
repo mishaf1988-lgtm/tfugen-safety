@@ -21,12 +21,12 @@
 // close_note and after_photo_url, and the file in folder 13 follows through
 // the tour_hazards trigger. The photo is optional (Michael, same day).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
+import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, sbFrom } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 import { readCloseToken } from '../_closelink.js';
 
-const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const APP_URL = 'https://tapugan-safety.pages.dev';
 const BUCKET = 'incidents-photos';
 const PREFS_ID = 'admin@tfugen.local';
@@ -286,6 +286,7 @@ async function handle(context) {
 // writes. A write that timed out may still have landed, so the page sends the
 // worker back to the link, where the s=neq guards answer "already closed".
 export async function onRequest(context) {
+  SB = sbFrom(context.env);
   try { return await handle(context); } catch (e) {
     return page('\u05ea\u05e7\u05dc\u05d4 \u05d6\u05de\u05e0\u05d9\u05ea', '<p>\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05e2\u05e0\u05d4 \u05d1\u05d6\u05de\u05df. \u05d9\u05d9\u05ea\u05db\u05df \u05e9\u05d4\u05e1\u05d2\u05d9\u05e8\u05d4 \u05db\u05d1\u05e8 \u05e0\u05e9\u05de\u05e8\u05d4: \u05e4\u05ea\u05d7 \u05e9\u05d5\u05d1 \u05d0\u05ea \u05d4\u05e7\u05d9\u05e9\u05d5\u05e8 \u05de\u05d4\u05de\u05d9\u05d9\u05dc. \u05d0\u05dd \u05d4\u05de\u05e4\u05d2\u05e2 \u05e0\u05e1\u05d2\u05e8, \u05d6\u05d4 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05e9\u05dd.</p>', 'err', 504);
   }

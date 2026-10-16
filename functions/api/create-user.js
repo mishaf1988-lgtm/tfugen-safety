@@ -1,9 +1,9 @@
 // Cloudflare Pages Function — admin-only create user
 // Mirrors /api/create-user.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom } from '../_shared.js';
 
-const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const ADMIN_EMAIL = 'admin@tfugen.local';
 const MAX_BODY_BYTES = 5000;
 
@@ -23,6 +23,7 @@ function genPassword() {
 }
 
 export async function onRequest({ request, env }) {
+  SUPABASE_URL = sbFrom(env);
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
   const cors = corsHeaders(origin, allowed, 'POST,OPTIONS');

@@ -19,7 +19,7 @@
 // Unset TRUSTEE_CODE means closed, not open. Nobody is using the trustee
 // screen yet, and a lock that defaults to open is not a lock.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
@@ -32,7 +32,7 @@ const WRONG_GUESS_DELAY_MS = 800;
 // The same block sits in talk.js and trustee-gate.js; a shared module would need a build entry in
 // every test that loads either file.
 export const GUESS_LIMIT = 10;
-const GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let GUESS_SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 // 15/10/2026 (owner: "no hang"): every Supabase call here gives up after 10s.
 const SB_MS = 10000;
 const guessH = (env) => ({ apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY, 'Content-Type': 'application/json' });
@@ -95,7 +95,7 @@ export async function guessGate(env, scope, request, waitUntil) {
   return { key, locked: n > GUESS_LIMIT };
 }
 export async function guessOk(env, g) { if (g && g.key) await guessClear(env, g.key); }
-const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 // The code set in the app: { ok: true, code } ('' = no row or an empty one), or
 // { ok: false } when the read itself failed (15/10/2026). Only an EMPTY row falls
 // back to TRUSTEE_CODE: a failed read used to look empty, so during a database
@@ -122,6 +122,7 @@ function same(a, b) {
 }
 
 export async function onRequest(context) {
+  GUESS_SB = sbFrom(context.env); SB = sbFrom(context.env);
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';

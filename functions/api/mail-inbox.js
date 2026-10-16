@@ -18,11 +18,11 @@
 // so the finding is marked closed here, with the service key.
 // The Excel log follows on its own: the insert fires trustee_reports_log.
 // Nothing is ever deleted. Each message is handled once (ids in server_state).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMailRead, stateGet, stateSet, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 
-const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const APP_URL = 'https://tapugan-safety.pages.dev';
 const BUCKET = 'incidents-photos';
 export const DOMAIN = '@tapugan.co.il';
@@ -181,6 +181,7 @@ export async function runInbox(env) {
 }
 
 export async function onRequest(context) {
+  SB = sbFrom(context.env);
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const cors = corsHeaders(request.headers.get('Origin') || '', allowed, 'POST,OPTIONS');

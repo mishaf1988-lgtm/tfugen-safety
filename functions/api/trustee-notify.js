@@ -30,11 +30,11 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 
-const SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
 const META_API_VERSION = 'v25.0';
 const APP_URL = 'https://tapugan-safety.pages.dev';
 const PREFS_ID = 'admin@tfugen.local';
@@ -152,6 +152,7 @@ function dmy(d) { const m = String(d == null ? '' : d).match(/^(\d{4})-(\d{2})-(
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 export async function onRequest(context) {
+  SUPABASE_URL = sbFrom(context.env);
   const { request, env } = context;
   const allowed = defaultAllowedOrigins(env);
   const origin = request.headers.get('origin') || '';
