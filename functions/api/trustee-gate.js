@@ -142,7 +142,7 @@ export async function onRequest(context) {
     // Closed. Says so in words the trustee in front of it can act on.
     return jsonResp({
       error: 'not configured',
-      message: 'קוד הכניסה לנאמנים עדיין לא הוגדר. פנה לממונה הבטיחות.'
+      message: '\u05e7\u05d5\u05d3 \u05d4\u05db\u05e0\u05d9\u05e1\u05d4 \u05dc\u05e0\u05d0\u05de\u05e0\u05d9\u05dd \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8. \u05e4\u05e0\u05d4 \u05dc\u05de\u05de\u05d5\u05e0\u05d4 \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea.'
     }, 503, cors);
   }
 
@@ -155,7 +155,7 @@ export async function onRequest(context) {
     await new Promise((r) => setTimeout(r, WRONG_GUESS_DELAY_MS));
     return jsonResp({
       error: 'wrong code',
-      message: 'קוד שגוי'
+      message: '\u05e7\u05d5\u05d3 \u05e9\u05d2\u05d5\u05d9'
     }, 403, cors);
   }
   // Michael, 2026-09-21: «אני רוצה הזנה של קוד כל פעם מחדש», so the default was
