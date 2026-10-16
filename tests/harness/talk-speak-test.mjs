@@ -6,7 +6,7 @@
 // Runs the real talk.js: the server with fetch mocked, the page in Chromium at its real URL
 // with its real headers (the CSP must let the page fetch its voice).
 import { createRequire } from 'module';
-import { onRequest, makeTalkToken, SPEAK, speechText, spokenOf, PLAYER, TTS_MODEL, TTS_VOICE } from './_build/talk.mjs';
+import { onRequest, makeTalkToken, SPEAK, speechText, spokenOf, PLAYER, TTS_MODEL, TTS_VOICE, sayParts, SAY_PART } from './_build/talk.mjs';
 
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch (e) { pw = require('playwright-core'); }
@@ -21,6 +21,8 @@ const pcm = (n, off) => Buffer.from(Int16Array.from({ length: n }, (_, i) => (i 
 const ev = (b) => 'data: ' + JSON.stringify({ event_type: 'step.delta', index: 0, delta: { type: 'audio', mime_type: 'audio/l16', sample_rate: 24000, data: b.toString('base64') } }) + '\n\n';
 const ALL = pcm(2405, 0);
 const SSE = ev(ALL.subarray(0, 4801)) + ev(ALL.subarray(4801));
+// A part that plays 24 seconds (2405 samples at 100 Hz), for the read-ahead test.
+const SLOW = 'data: ' + JSON.stringify({ event_type: 'step.delta', index: 0, delta: { type: 'audio', mime_type: 'audio/l16', sample_rate: 100, data: ALL.toString('base64') } }) + '\n\n';
 
 let world = {};
 globalThis.fetch = async (url, init) => {
@@ -45,7 +47,7 @@ const post = (body, auth) => onRequest({ request: new Request(URL0, { method: 'P
 const STUB = (o) => {
   window.__q = []; window.__said = []; window.__cancel = 0; window.__closed = 0;
   if (o.audio) {
-    window.AudioContext = function () { this.currentTime = 0; this.destination = {}; };
+    window.AudioContext = function () { this.currentTime = 0; this.destination = {}; window.__ac = this; };
     window.AudioContext.prototype = { resume() {}, close() { window.__closed++; },
       createBuffer(c, n, r) { const d = new Float32Array(n); return { length: n, sampleRate: r, duration: n / r, getChannelData: () => d }; },
       createBufferSource() { const s = { connect() {}, start(t) { window.__q.push({ n: s.buffer.length, r: s.buffer.sampleRate, t }); window.__src = (window.__src || []).concat(s); } }; return s; } };
@@ -95,6 +97,32 @@ const STUB = (o) => {
   r = await get('op=player');
   check('?op=player serves the player script', r.status === 200 && /javascript/.test(r.headers.get('content-type')) && (await r.text()) === PLAYER);
 
+  console.log('\n2b. in parts (BACKLOG 14.10: the induction form was one 35MB stream)');
+  const LONG = Array.from({ length: 60 }, (_, i) => 'כלל מספר ' + (i + 1) + ': ' + 'שמירה על בטיחות בעבודה במפעל, '.repeat(6).trim() + '.').join('\n');
+  const ps = sayParts(LONG);
+  check('a long text splits into parts of at most ' + SAY_PART + ' characters, at line ends', ps.length > 5 && ps.every((x) => x.length <= SAY_PART) && ps.join('\n') === LONG, ps.map((x) => x.length));
+  const one = 'משפט ראשון. '.repeat(300).trim();
+  const ps1 = sayParts(one);
+  check('one line longer than a part: cut after a sentence, nothing lost', ps1.length > 1 && ps1.every((x) => x.length <= SAY_PART && /\.$/.test(x)) && ps1.join(' ') === one, ps1.map((x) => x.slice(-12)));
+  check('a short text: one part, as it was', sayParts('שלום.').length === 1 && sayParts('')[0] === '');
+  world = { talk: { body: LONG, title: 'הדרכה' } };
+  const want = sayParts(spokenOf({ ...TALK, body: LONG, title: 'הדרכה' }, 'he'));
+  r = await get('op=say&s=0&k=' + encodeURIComponent(tok));
+  check('?s=0: the first part only, and how many there are', r.status === 200 && r.headers.get('x-tts-parts') === String(want.length) && world.tts[0].b.input[0].content[0].text === want[0], [r.headers.get('x-tts-parts'), want.length]);
+  world = { talk: { body: LONG, title: 'הדרכה' } };
+  r = await get('op=say&s=' + (want.length - 1) + '&k=' + encodeURIComponent(tok));
+  check('?s=<last>: the last part', r.status === 200 && world.tts[0].b.input[0].content[0].text === want[want.length - 1]);
+  world = { talk: { body: LONG, title: 'הדרכה' } };
+  r = await get('op=say&s=' + want.length + '&k=' + encodeURIComponent(tok));
+  check('?s past the end: 404, Gemini not called', r.status === 404 && !world.tts, r.status);
+  world = { talk: { body: LONG, title: 'הדרכה' } };
+  r = await get('op=say&s=x&k=' + encodeURIComponent(tok));
+  check('?s not a number: 404', r.status === 404 && !world.tts, r.status);
+  world = { talk: { body: LONG, title: 'הדרכה' } };
+  r = await get('op=say&k=' + encodeURIComponent(tok));
+  check('no ?s (a page from before parts): the whole text, as before', r.status === 200 && !r.headers.get('x-tts-parts') && world.tts[0].b.input[0].content[0].text === spokenOf({ ...TALK, body: LONG, title: 'הדרכה' }, 'he'));
+  world = {};
+
   console.log('\n3. the manager listens before publishing (POST op say)');
   world = {};
   r = await post({ op: 'say', title: 'נושא (טופס 08.01)', body: '1. כובע חבטה' }, 'good');
@@ -104,6 +132,9 @@ const STUB = (o) => {
   check('a reporter: refused, Gemini not called', r.status === 403 && !world.tts, r.status);
   r = await post({ op: 'say', title: 'x', body: 'y' });
   check('no login: refused', r.status === 401 || r.status === 403, r.status);
+  world = {};
+  r = await post({ op: 'say', title: 'נושא', body: LONG, part: 1 }, 'good');
+  check('POST with part: that part of the form text, the count in a header the app can read', r.status === 200 && world.tts[0].b.input[0].content[0].text === sayParts(speechText('נושא', LONG))[1] && /X-TTS-Parts/i.test(r.headers.get('access-control-expose-headers') || ''), r.headers.get('access-control-expose-headers'));
 
   console.log('\n4. the page');
   const browser = await pw.chromium.launch();
@@ -116,6 +147,7 @@ const STUB = (o) => {
     await p.route('**/*', async (rt) => {
       const u = rt.request().url();
       if (!u.startsWith(URL0)) return rt.abort();
+      if (u.includes('op=say') && o.parts) { p.__says.push(u); return rt.fulfill({ status: 200, body: SLOW, headers: { 'Content-Type': 'text/event-stream', 'X-TTS-Parts': String(o.parts) } }); }
       if (u.includes('op=say')) { p.__says.push(u); return o.serverDown ? rt.fulfill({ status: 502, body: '{"error":"x"}', contentType: 'application/json' }) : rt.fulfill({ status: 200, body: SSE, headers: { 'Content-Type': 'text/event-stream' } }); }
       world = {};
       const res = await get('k=' + encodeURIComponent(tok) + (l ? '&l=' + l : ''));
@@ -166,6 +198,20 @@ const STUB = (o) => {
   await p.close();
   p = await open({ audio: false, voices: [] }, 'he');
   check('no Web Audio and no voice: no button', !(await vis(p)));
+  await p.close();
+
+  p = await open({ audio: true, voices: [], parts: 3 }, 'he');
+  await p.click('#say'); await p.waitForTimeout(500);
+  check('in parts: part 0, then part 1 at once (less than 25 seconds queued), not part 2 yet', p.__says.length === 2 && /[?&]s=0(&|$)/.test(p.__says[0]) && /[?&]s=1(&|$)/.test(p.__says[1]), p.__says);
+  await p.evaluate(() => { window.__ac.currentTime = 30; }); await p.waitForTimeout(1400);
+  check('...when under 25 seconds are left to play, part 2', p.__says.length === 3 && /[?&]s=2(&|$)/.test(p.__says[2]), p.__says);
+  await p.evaluate(() => window.__src.forEach((x) => x.onended && x.onended()));
+  check('...and after the last part plays, the button is "read aloud" again', (await p.textContent('#say')).includes(SPEAK.he.listen));
+  await p.close();
+  p = await open({ audio: true, voices: [], parts: 3 }, 'he');
+  await p.click('#say'); await p.waitForTimeout(400);
+  await p.click('#say'); await p.evaluate(() => { window.__ac.currentTime = 999; }); await p.waitForTimeout(1300);
+  check('a stop in the middle: no more parts are fetched', p.__says.length === 2, p.__says);
   await p.close();
 
   check('no page errors (and the CSP let the page fetch its voice)', !errs.length, errs);

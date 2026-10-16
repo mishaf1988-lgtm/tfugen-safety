@@ -233,6 +233,37 @@ export function speechText(title, body) {
     .join('\n').substring(0, TTS_MAX);
 }
 export function spokenOf(talk, lang) { const x = textOf(talk, lang); return speechText(x.title, x.body); }
+// Read aloud in parts (16/10/2026, BACKLOG 14.10): the whole induction form was one stream of
+// about 10 minutes, 35MB, all decoded and queued on the phone at once. Now the page asks for
+// part 0, learns how many there are (X-TTS-Parts), and asks for the next one only when less
+// than about 25 seconds are left to play. A part ends at a line, or at a sentence when one line
+// is longer than a part, so the voice never stops mid-word. Each part has its own cache entry.
+export const SAY_PART = 1500;
+export function sayParts(text, max) {
+  const lim = max || SAY_PART, out = [];
+  let cur = '';
+  for (const line of String(text || '').split('\n')) {
+    let l = line;
+    while (l.length > lim) {
+      let k = Math.max(l.lastIndexOf('. ', lim), l.lastIndexOf(', ', lim), l.lastIndexOf(' ', lim));
+      k = k < lim / 2 ? lim : k + 1;
+      if (cur) { out.push(cur); cur = ''; }
+      out.push(l.substring(0, k).trim()); l = l.substring(k).trim();
+    }
+    if (!l) continue;
+    if (cur && cur.length + 1 + l.length > lim) { out.push(cur); cur = l; } else cur = cur ? cur + '\n' + l : l;
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
+// One part of text, or the whole when part is not given (a page or player from before parts).
+function sayPart(env, text, lang, ctx, part, extra) {
+  if (part === null || part === undefined || part === '') return sayStream(env, text, lang, ctx, extra);
+  const parts = sayParts(text), i = Number(part);
+  const H = Object.assign({ 'X-TTS-Parts': String(parts.length), 'Access-Control-Expose-Headers': 'X-TTS-Parts' }, extra || {});
+  if (!Number.isInteger(i) || i < 0 || i >= parts.length) return new Response('{"error":"part"}', { status: 404, headers: Object.assign({}, H, { 'Content-Type': 'application/json' }) });
+  return sayStream(env, parts[i], lang, ctx, H);
+}
 const GEM = 'https://generativelanguage.googleapis.com/v1beta';
 // The stream from Gemini, untouched: decoding base64 audio here would cost more CPU than the free
 // plan's 10ms. The page decodes. The current API (interactions) first; generateContent with
@@ -284,14 +315,14 @@ async function sayStream(env, text, lang, ctx, extra) {
   }
   return new Response(body, { headers: Object.assign({}, H, { 'Cache-Control': 'no-store', 'X-TTS': 'gemini' }) });
 }
-async function sayTalk(env, tok, want, g, ctx, cookie) {
+async function sayTalk(env, tok, want, g, ctx, cookie, part) {
   const t = await readTok(env, tok, g);
   if (t.error) return new Response('{"error":"link"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const talk = await getTalk(env, t.id);
   if (!talk || talk.s !== S_PUB || !permOk(t, talk) || isClosed(talk)) return new Response('{"error":"talk"}', { status: 404, headers: { 'Content-Type': 'application/json' } });
   if (!(await codeGate(env, talk, cookie)).ok) return new Response('{"error":"code"}', { status: 403, headers: { 'Content-Type': 'application/json' } });
   const lang = textOf(talk, langOf(want)).lang;
-  return sayStream(env, spokenOf(talk, lang), lang, ctx);
+  return sayPart(env, spokenOf(talk, lang), lang, ctx, part);
 }
 // The player, one copy: inlined in the worker's page and served at ?op=player to the app's
 // "listen" button. Reads Server-Sent Events (or one JSON), finds every base64 audio part
@@ -318,13 +349,16 @@ var s=ac.createBufferSource();s.buffer=buf;s.connect(ac.destination);var st=Math
 s.onended=function(){live--;ended();};}
 function feed(x){var j;try{j=JSON.parse(x);}catch(e){return;}var out=[];audios(j,out);for(var i=0;i<out.length;i++)play(out[i]);}
 function lines(b,last){var p=b.split('\\n'),rest=last?'':p.pop();for(var i=0;i<p.length;i++){var l=p[i].replace(/\\r$/,'');if(l.indexOf('data:')===0)feed(l.slice(5).trim());}return rest;}
-var init=o.init||{};if(ctl)init.signal=ctl.signal;
-fetch(o.url,init).then(function(r){if(!r.ok)throw new Error('http '+r.status);var ct=r.headers.get('content-type')||'',sse=/event-stream/.test(ct);
+var parts=1,LEAD=25;
+function wait(n){if(stopped)return;if(at-ac.currentTime<LEAD)load(n);else setTimeout(function(){wait(n);},1000);}
+function load(i){var q=o.req?o.req(i):{url:o.url,init:o.init},init=q.init||{};if(ctl)init.signal=ctl.signal;
+fetch(q.url,init).then(function(r){if(!r.ok)throw new Error('http '+r.status);if(o.req&&!i)parts=Math.max(1,+(r.headers.get('x-tts-parts')||1)||1);var ct=r.headers.get('content-type')||'',sse=/event-stream/.test(ct);
 if(!sse||!r.body||!r.body.getReader)return r.text().then(function(t){if(sse)lines(t,true);else feed(t);});
 var rd=r.body.getReader(),dec=new TextDecoder(),b='';
 function pump(){return rd.read().then(function(x){if(x.done){lines(b,true);return;}b=lines(b+dec.decode(x.value,{stream:true}),false);return pump();});}
-return pump();}).then(function(){done=true;if(!got){fin();if(o.onFail)o.onFail('empty');}else ended();},
-function(e){if(stopped)return;done=true;if(!got){fin();if(o.onFail)o.onFail(String(e&&e.message||e));}else ended();});
+return pump();}).then(function(){if(stopped)return;if(i+1<parts){wait(i+1);return;}done=true;if(!got){fin();if(o.onFail)o.onFail('empty');}else ended();},
+function(e){if(stopped)return;done=true;if(!got){fin();if(o.onFail)o.onFail(String(e&&e.message||e));}else ended();});}
+load(0);
 return{stop:fin};};})();`;
 export const speakScript = (lang, text) => `(function(){
   var b=document.getElementById('say'),f=document.getElementById('f'),S=window.speechSynthesis,AC=window.AudioContext||window.webkitAudioContext;
@@ -338,7 +372,7 @@ export const speakScript = (lang, text) => `(function(){
   b.addEventListener('click',function(){
     if(on){if(cur)cur.stop();if(S)S.cancel();idle();return;}
     on=true;b.textContent='\\u23f9 '+W.stop;
-    if(AC&&window.tapSay)cur=window.tapSay({url:url,onEnd:idle,onFail:function(){cur=null;phone();}});else phone();
+    if(AC&&window.tapSay)cur=window.tapSay({url:url,req:function(i){return{url:url+'&s='+i};},onEnd:idle,onFail:function(){cur=null;phone();}});else phone();
   });
 })();`;
 export const langOf = (l) => (Object.prototype.hasOwnProperty.call(LANGS, l) ? l : 'he');
@@ -1562,7 +1596,7 @@ async function makeLink(env, request, ctx) {
   if (b && b.op === 'say') {
     const lang = langOf(b.lang), text = speechText(b.title, b.body);
     if (!text) return jsonResp({ error: 'empty' }, 400, cors);
-    return sayStream(env, text, lang, ctx, cors);
+    return sayPart(env, text, lang, ctx, b.part, cors);
   }
   // Who did not sign, to the department managers (14/10/2026): preview (nothing sent), test (to the
   // connected account only), or the real send; annual / quality, published and still open.
@@ -1742,7 +1776,7 @@ export async function onRequest(context) {
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return errPage('\u05d4\u05e9\u05e8\u05ea \u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8.', 500);
     if (request.method === 'GET') {
       const q = new URL(request.url).searchParams;
-      if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context, request.headers.get('cookie'));
+      if (q.get('op') === 'say') return await sayTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', context, request.headers.get('cookie'), q.get('s'));
       if (q.get('op') === 'player') return new Response(PLAYER, { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' } });
       // A page that cannot load says so in the worker's language, with "try again" (B4).
       try { return await showTalk(env, q.get('k') || '', q.get('l') || '', q.get('g') === '1', q.get('t') === '1', request.headers.get('cookie')); }

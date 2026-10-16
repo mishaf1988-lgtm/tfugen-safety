@@ -12856,7 +12856,9 @@ function tbtSay(lang,el){
   var AC=window.AudioContext||window.webkitAudioContext,ac=null;try{ac=AC?new AC():null;if(ac)ac.resume();}catch(e){ac=null;}
   var go=function(){
     if(!_tbtSayCur)return;
-    _tbtSayCur=window.tapSay({ac:ac,url:'/api/talk',init:{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'say',lang:lang,title:title,body:body})},
+    var sayInit=function(i){return{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_sbToken},body:JSON.stringify({op:'say',lang:lang,title:title,body:body,part:i})};};
+    // url+init: the whole text, for a player cached from before parts (an hour); req: one part at a time (BACKLOG 14.10).
+    _tbtSayCur=window.tapSay({ac:ac,url:'/api/talk',init:sayInit(),req:function(i){return{url:'/api/talk',init:sayInit(i)};},
       onEnd:function(){_tbtSayCur=null;_tbtSayLbl(false);},
       onFail:function(e){_tbtSayCur=null;_tbtSayLbl(false);toast('\u26a0\ufe0f \u05d4\u05d4\u05e7\u05e8\u05d0\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: '+String(e||'').substring(0,60));}});
   };
