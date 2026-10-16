@@ -35,8 +35,10 @@ with open(os.path.join(cl, "project-files", "routine-db.sh"), "w") as f:
 
 
 
-def run(commit, index_sha, want=None):
-    env = dict(os.environ, FAKE_LIVE=json.dumps({"ok": True, "commit": commit, "index_sha256": index_sha}, separators=(",", ":")), LIVE_TRIES="1", LIVE_SLEEP="0")
+def run(commit, index_sha, want=None, extra=None):
+    live = {"ok": True, "commit": commit, "index_sha256": index_sha}
+    live.update(extra or {})
+    env = dict(os.environ, FAKE_LIVE=json.dumps(live, separators=(",", ":")), LIVE_TRIES="1", LIVE_SLEEP="0")
     if want:
         env["LIVE_WANT"] = want
     p = subprocess.run(["bash", os.path.join(cl, "project-files", "live-check.sh")], capture_output=True, text=True, env=env, timeout=60)
@@ -52,5 +54,9 @@ check("main moved on while waiting: a later commit with ITS index: 0", run(shas[
 check("a later commit serving an older index: 4", run(shas[2], v1, shas[1]) == 4)
 check("default want = origin/main: the tip with its index: 0", run(shas[2], v3) == 0)
 check("no answer from op live: 4", run("", "") == 4)
+# 16/10/2026: the right index, but a script not swapped to /app.js (here t2) = not the tested deploy
+parts = lambda t2: {"main": {"bytes": 9, "swap": True}, "t1": {"bytes": 9, "swap": True}, "t2": {"bytes": 9, "swap": t2}}
+check("all three app scripts swapped: 0", run(shas[2], v3, None, {"app_parts": parts(True), "app_swap": True}) == 0)
+check("t2 not swapped (app_swap false): 4", run(shas[2], v3, None, {"app_parts": parts(False), "app_swap": False}) == 4)
 shutil.rmtree(T, ignore_errors=True)
 done()
