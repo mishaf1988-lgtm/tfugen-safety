@@ -7,7 +7,8 @@ st = tempfile.mkdtemp()
 root = tempfile.mkdtemp()
 import os
 os.makedirs(os.path.join(root, "project-files"))
-open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("## x\n**מה:** `received_at` ב-`trustee_reports`.\n" + "trustee_reports\n" * 10)
+open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("## x\n**מה:** `received_at` ב-`trustee_reports`.\n" + "trustee_reports\n" * 10
+    + "## 17/10/2026 - הקוד והסוכנים של מיכאל; ה-repo נשאר ציבורי, הסוכנים עוברים לפרטי\n")
 env = {"LIVE_CHECK_STATE": st, "LIVE_CHECK_ROOT": root}
 def ask(q, opts=(), sid="s"):
     return run("live-check.py", {"tool_name": "AskUserQuestion", "session_id": sid, "tool_input": {"questions": [{"question": q, "options": [{"label": l, "description": dsc} for l, dsc in opts]}]}}, env)
@@ -27,4 +28,11 @@ check("a rare identifier already in DECISIONS: denied, naming where", '"deny"' i
 check("...and asked again it passes", ask("להוסיף שעת קבלה בשרת (received_at)?", [("בצע", "עמודה חדשה")]) == "")
 check("a common identifier (11 hits) does not stop the question", ask("לשנות את trustee_reports?") == "")
 check("an identifier not in any decision passes", ask("להוסיף new_column?") == "")
+# lesson 10 (17/10/2026): the same subject asked again in plain Hebrew, no identifier.
+REPO = "ה-repo של תפוגן (tfugen-safety) ציבורי, כלומר כל אחד יכול לראות ולהעתיק את הקוד של המוצר. לבדוק את המעבר לפרטי?"
+o = ask(REPO, [("בצע: לבדוק מה נשבר (מומלץ)", "x"), ("להשאיר ציבורי", "y")])
+check("a decision heading sharing 3+ words: denied, naming the line", '"deny"' in o and "DECISIONS.md:13" in o and "10" in o, o)
+check("...and asked again it passes", ask(REPO, [("בצע: לבדוק מה נשבר (מומלץ)", "x"), ("להשאיר ציבורי", "y")]) == "")
+check("two shared words are not enough", ask("לפרסם את הקוד?", [("ציבורי", "")]) == "")
+check("an unrelated question of the same day passes", ask("בערך כמה כסף אתה חושב להשקיע בשיווק בהתחלה?", [("עד 2,000", "")]) == "")
 done()
