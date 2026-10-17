@@ -11,6 +11,7 @@
 // flows (mark closed, verify a trustee's closure).
 import { onRequest } from './_build/vitre.mjs';
 import fs from 'node:fs';
+import { clientSite } from '../../functions/_site.js';
 let pass = 0, fail = 0;
 const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else { fail++; console.log('  ✗ ' + l + (d !== undefined ? '  -> ' + JSON.stringify(d) : '')); } };
 const SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
@@ -151,7 +152,7 @@ console.log('\n5. client: note parsing, the call, the note afterwards (index.htm
     const log = { upd: [], toasts: [], sdb: 0 };
     const ctx = {
       fetch: fetchImpl, toast: (m) => log.toasts.push(m), sbUpd: (t, r) => log.upd.push({ t, r: Object.assign({}, r) }), sdb: () => log.sdb++,
-      rTrustees: () => {}, _sbToken: 'tok', _currentUser: user === undefined ? { username: 'michael' } : user, _VITRE_SMS_ON: true,
+      SITE: clientSite(), rTrustees: () => {}, _sbToken: 'tok', _currentUser: user === undefined ? { username: 'michael' } : user, _VITRE_SMS_ON: true,
       fd: (d) => { const p = String(d).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
     };
     const fn = new Function(...Object.keys(ctx), src + '\nreturn { apptOf: _truVitreApptOf, closedIn: _truVitreClosedIn, close: _truVitreClose };');
@@ -183,7 +184,7 @@ console.log('\n5. client: note parsing, the call, the note afterwards (index.htm
   m = mk(fetchOk);
   const ctxOff = mk(fetchOk);
   // the page flag off: nothing goes out
-  const fnOff = new Function('fetch', 'toast', 'sbUpd', 'sdb', 'rTrustees', '_sbToken', '_currentUser', '_VITRE_SMS_ON', 'fd', src + '\nreturn _truVitreClose;')(fetchOk, () => {}, () => {}, () => {}, () => {}, 'tok', { username: 'm' }, false, (d) => d);
+  const fnOff = new Function('fetch', 'toast', 'sbUpd', 'sdb', 'rTrustees', '_sbToken', '_currentUser', '_VITRE_SMS_ON', 'fd', 'SITE', src + '\nreturn _truVitreClose;')(fetchOk, () => {}, () => {}, () => {}, () => {}, 'tok', { username: 'm' }, false, (d) => d, clientSite());
   check('_VITRE_SMS_ON=false: nothing is called', fnOff({ mgr_note: NOTE }) === null && calls.length === 0);
   void ctxOff;
 

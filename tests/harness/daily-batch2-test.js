@@ -227,7 +227,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
         // the source keeps its Hebrew as \\uXXXX escapes (project rule 1), so
         // match on the code around APP_VER rather than on the label.
         menuUsesIt: /\(v'\+APP_VER\+'\)/.test(src),
-        aboutUsesIt: src.indexOf("'+APP_VER+'") >= 0 && /alert\('TFUGEN[^\n]*APP_VER/.test(src),
+        aboutUsesIt: src.indexOf("'+APP_VER+'") >= 0 && /alert\(SITE\.name\+' Management System[^\n]*APP_VER/.test(src),
         backupUsesIt: /version:APP_VER/.test(src),
       };
     });

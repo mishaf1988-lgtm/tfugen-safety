@@ -17,7 +17,8 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
     const inline = [];
     const re = /<script([^>]*)>([\s\S]*?)<\/script>/g; let m;
     while ((m = re.exec(src))) if (!/src=/.test(m[1])) inline.push(m[2]);
-    check('3 inline script blocks, all still valid javascript', inline.length === 3 && inline.every((b) => { try { new Function(b); return true; } catch (e) { return false; } }), inline.length);
+    // 4 since 17/10/2026: <script id="site-config"> (the factory's details from functions/_site.js)
+    check('4 inline script blocks, all still valid javascript', inline.length === 4 && inline.every((b) => { try { new Function(b); return true; } catch (e) { return false; } }), inline.length);
     const logs = inline.join('\n').match(/\bconsole\.log\(/g) || [];
     check('no bare console.log() is left in the app code', logs.length === 0, logs.length);
     const infos = inline.join('\n').match(/\bconsole\.info\(/g) || [];
