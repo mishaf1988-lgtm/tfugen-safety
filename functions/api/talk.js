@@ -414,7 +414,7 @@ export function deviceOf(ua) {
 // \u05dc\u05de\u05e0\u05d4\u05dc\u05d9\u05dd"). A worker's training department (TBT_DEPTS) -> the department of the department report,
 // whose managers (recipients sheet, part 1) get the mail; packing goes with production, as in
 // AREA_DEPT (Michael, 29/09/2026). A worker in no training department is listed to the manager only.
-export const TBT_REPORT = { '\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd': '\u05de\u05e2\u05e6\u05d1\u05d9\u05dd', '\u05d0\u05e8\u05d9\u05d6\u05d4': '\u05d9\u05d9\u05e6\u05d5\u05e8 \u05d8\u05d5\u05d2\u05e0\u05d9\u05dd', '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd': '\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd', '\u05ea\u05d5\u05e6"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd': '\u05ea\u05d5\u05e6\u05d2', '\u05de\u05e2\u05d1\u05d3\u05d4': '\u05de\u05e2\u05d1\u05d3\u05d5\u05ea', '\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc': '\u05d0\u05d7\u05d6\u05e7\u05d4' };
+export const TBT_REPORT = SITE.tbtReport;
 // Leading zeros do not count (15/10/2026, A7): "012345678" on a card is "12345678" typed. index.html _tbtIdKey is the same.
 export const idKey = (v) => { const s = latinDigits(v).replace(/[^0-9a-z]/gi, '').toLowerCase(); return /^\d+$/.test(s) ? s.replace(/^0+/, '') : s; };
 const nameKey = (v) => plainQuotes(String(v || '').replace(/\s+/g, ' ').trim());
@@ -491,7 +491,7 @@ export const HE_ONLY_PATTERN = ' *[\u05d0-\u05ea][\u05d0-\u05ea\u05f3\u05f4\'"' 
 const HE_ONLY_ATTR = (L) => ' dir="rtl" lang="he" pattern="' + esc(HE_ONLY_PATTERN) + '" title="' + esc(L.heOnly) + '"';
 export const DEP_OTHER_PH = '\u05e9\u05dd \u05d4\u05de\u05d7\u05dc\u05e7\u05d4';
 // The training departments and the employee-card names that belong to each (index.html _TBT_DEPTS).
-export const TBT_DEPTS = [["\u05d8\u05d5\u05d2\u05e0\u05d9\u05dd", ["\u05d9\u05e6\u05d5\u05e8"]], ["\u05de\u05e2\u05d5\u05e6\u05d1\u05d9\u05dd", ["\u05d8\u05d1\u05e2 (\u05de\u05e2\u05e6\u05d1\u05d9\u05dd)"]], ["\u05d0\u05e8\u05d9\u05d6\u05d4", ["\u05d0\u05e8\u05d9\u05d6\u05d4"]], ["\u05d7\u05d5\u05de\u05e8 \u05d2\u05dc\u05dd", ["\u05d7\u05d5\u05de\u05e8\u05d9 \u05d2\u05dc\u05dd"]], ["\u05ea\u05d5\u05e6\"\u05d2 \u05d5\u05de\u05d7\u05e1\u05e0\u05d9\u05dd", ["\u05ea\u05d5\u05e6\u05d2"]], ["\u05de\u05e2\u05d1\u05d3\u05d4", ["\u05de\u05e2\u05d1\u05d3\u05d4"]], ["\u05d0\u05d7\u05d6\u05e7\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc", ["\u05d0\u05d7\u05d6\u05e7\u05d4, \u05d0\u05e0\u05e8\u05d2\u05d9\u05d4 \u05d5\u05d7\u05e9\u05de\u05dc"]]];
+export const TBT_DEPTS = SITE.tbtDepts;
 export function deptMatch(dept, empDep) {
   if (!dept) return true;
   const d = String(empDep || ''), row = TBT_DEPTS.find((x) => x[0] === dept);
