@@ -39,6 +39,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # The push below is forced. If last month's PR from metrics/auto was not merged, its row
+      # would be lost (14/10/2026 retro): the script keeps the rows of months main does not have.
+      - name: Unmerged month
+        run: |
+          git fetch -q origin metrics/auto 2>/dev/null || { echo "no metrics/auto"; exit 0; }
+          git show FETCH_HEAD:project-files/METRICS.md > "$RUNNER_TEMP/carry.md" 2>/dev/null || exit 0
+          echo "CARRY_FILE=$RUNNER_TEMP/carry.md" >> "$GITHUB_ENV"
       - name: Measure
         env:
           GITHUB_TOKEN: ${{ github.token }}

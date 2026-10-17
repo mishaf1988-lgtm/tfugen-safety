@@ -77,6 +77,13 @@ check('render: same month replaced, not duplicated', doc3.count('| 10/2026') == 
 row12 = mm.summarize([], LES, '2026-12')[0]
 row01 = mm.summarize([], LES, '2027-01')[0]
 doc4 = mm.render(mm.render(doc3, row12, [], '2026-12', now), row01, [], '2027-01', now)
+# 14/10/2026 retro: last month's row sits on the unmerged metrics/auto branch; main lacks it.
+carry = mm.render(doc, row9, [], '2026-09', now)  # the branch: 10/2026 and 09/2026
+main_doc = mm.render('', row10b, [], '2026-10', now)  # main: only 10/2026 (a newer value)
+row11 = '| 11/2026 | 2 | - | - | 0 | 0 | 0 | 0 |'
+doc5 = mm.table_rows(mm.render(main_doc, row11, [], '2026-11', now, carry=carry))
+check('carry keeps the unmerged month and does not override a merged one', [l.split('|')[1].strip() for l in doc5] == ['11/2026', '10/2026', '09/2026'] and row10b in doc5, doc5)
+check('no carry: as before', mm.table_rows(mm.render(main_doc, row11, [], '2026-11', now)) == [row11, row10b])
 check('render: year boundary sorts 01/2027 before 12/2026', doc4.index('| 01/2027') < doc4.index('| 12/2026') < doc4.index('| 10/2026'))
 check('render: detail block replaced, not appended', doc4.count(mm.DETAIL_START) == 1)
 
