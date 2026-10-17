@@ -58,6 +58,7 @@ UPLOAD_LOG = "\u05d9\u05d5\u05de\u05df.txt"  # "יומן.txt": lines are only ad
 # On a segment that names the log: anything but an append ("Add-Content", ">>", "Out-File -Append").
 LOG_OVERWRITE = re.compile(r"(^|[\s;&|({])(Set-Content|sc|Clear-Content|clc)\b|(?<![>\d&])>(?![>&])|\bOut-File\b(?!.*-Append)", re.I)
 SEGMENTS = re.compile(r"\|\||&&|[;|\n]")
+STATEMENTS = re.compile(r"\|\||&&|[;\n]")
 PEOPLE_WRITE = re.compile(r"(teams|chat|channel|calendar|event|meeting)", re.I)
 WRITE = re.compile(r"create|update|write|upload|put|patch|copy|draft|edit|set|add|append|replace", re.I)
 FILEISH = re.compile(r"file|folder|drive|sharepoint|onedrive|upload|item", re.I)
@@ -104,9 +105,19 @@ def upload_move_ok(args):
     return all(_base(p) == b for p in srcs) or "." not in b
 
 
+# Where the command stands inside the synced folder (cd there, or a variable that holds it), every
+# later delete counts; otherwise only a delete whose own segment names the folder (17/10/2026: a
+# Python "del L[i]" and a "git mv" of a repo file were denied because a heredoc line elsewhere in
+# the same command mentioned OneDrive).
+ENTERS = re.compile(r"^\s*(cd|pushd|Set-Location|sl|chdir)\b|^\s*(export\s+|\$)?[A-Za-z_][A-Za-z0-9_]*\s*=", re.I)
+
+
 def shell_onedrive(cmd):
     """Why a shell command that names the synced OneDrive folder is denied, or None."""
-    for seg in SEGMENTS.split(cmd):
+    stmts = STATEMENTS.split(cmd)  # a pipeline is one statement: "Get-ChildItem <OneDrive> | Remove-Item"
+    inside = any(ENTERS.search(x) and ONEDRIVE_PATH.search(x) for x in stmts)
+    segs = [seg for st in stmts if inside or ONEDRIVE_PATH.search(st) for seg in SEGMENTS.split(st)]
+    for seg in segs:
         if UPLOAD_LOG in seg and LOG_OVERWRITE.search(seg):
             return ("a shell write that overwrites or empties '%s'. m365-guard (4), Michael 07/10/2026: lines are only "
                     "added at its end (Add-Content, >>, Out-File -Append)." % UPLOAD_LOG)
