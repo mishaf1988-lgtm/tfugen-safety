@@ -250,7 +250,7 @@ const check = (l, c, d) => { if (c) { pass++; console.log('  ✓ ' + l); } else 
       window.alert = real;
       return said;
     });
-    check('the about box names Michael', /מיכאל פריילך/.test(about || ''), about);
+    check('the about box names the owner (SITE.owner, spelt right since 17/10/2026)', /מיכאל פרייליך/.test(about || ''), about);
     check('...and credits nobody else as its developer', !/Claude/.test(about || ''), about);
     check('...and still carries the version and the date',
       about && about.indexOf(r.ver) > 0 && /\d{4}-\d{2}-\d{2}/.test(about), about);
