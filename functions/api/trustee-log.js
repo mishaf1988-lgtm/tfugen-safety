@@ -20,11 +20,10 @@
 // (signature in public.server_state). A failed upload leaves the signature
 // alone, so the next call tries again, and records the error for the tile.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { buildXlsx, XLSX_TYPE, imageInfo } from '../_xlsx.js';
 import { odConfigured, accessToken, putFile, itemUrl, stateGet, stateSet, tokenRow, hasMail, hasMailRead, runLeased } from '../_onedrive.js';
 import { readAll } from './hazard-file.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 export const LOG_FOLDER = SITE.odRoot + '/\u05e0\u05d0\u05de\u05e0\u05d9 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea';
 // Every trustee photo is also copied, once, into this folder (Michael, 27/09:

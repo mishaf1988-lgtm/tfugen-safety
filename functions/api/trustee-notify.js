@@ -30,10 +30,9 @@
 // Env: SUPABASE_SERVICE_ROLE_KEY (required), META_PHONE_NUMBER_ID +
 // META_ACCESS_TOKEN (WhatsApp), RESEND_KEY (+ optional RESEND_FROM) for email.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail, stateGet, stateSet, runLeased } from '../_onedrive.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const META_API_VERSION = 'v25.0';

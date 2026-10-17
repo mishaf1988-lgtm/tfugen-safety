@@ -18,10 +18,9 @@
 // so the finding is marked closed here, with the service key.
 // The Excel log follows on its own: the insert fires trustee_reports_log.
 // Nothing is ever deleted. Each message is handled once (ids in server_state).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, sbFrom, FILE_TIMEOUT_MS as FILE_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMailRead, stateGet, stateSet, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 const APP_URL = SITE.appUrl;

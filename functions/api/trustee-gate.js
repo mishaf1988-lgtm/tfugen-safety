@@ -19,9 +19,8 @@
 // Unset TRUSTEE_CODE means closed, not open. Nobody is using the trustee
 // screen yet, and a lock that defaults to open is not a lock.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 const WRONG_GUESS_DELAY_MS = 800;
 // The guessing lock (10/10/2026, the security review: a wrong guess only waited, and a script in

@@ -24,14 +24,13 @@
 // tells the link holder about one worker, and asking costs a signature in that
 // worker's name when they had not signed (checker, 03/10/2026; accepted).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, ipBucket, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { makeLinkToken, readLinkToken } from '../_closelink.js';
 import { hebrewName, hebrewText, heName, heText, plainQuotes } from '../_ai.js';
 import { accessToken, putFile, sendMailTo } from '../_onedrive.js';
 import { LOGO_JPG } from '../_logo.js';
 import { readRecipients } from './hazard-report.js';
 import { REPORT_DEPTS } from './hazard-file.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 // Every call from this file has a time limit (15/10/2026, review of the outside pages): a slow

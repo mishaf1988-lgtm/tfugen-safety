@@ -14,9 +14,8 @@
 //
 //   POST {op:'list'}                       -> {codes:[{key,set,value,source,updated_at}]}
 //   POST {op:'set', key, value?}           -> {key,value,updated_at}; no value = 6 random digits
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, sbFrom } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, SB_TIMEOUT_MS as SB_MS, tmo, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { accessToken, sendMailTo } from '../_onedrive.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 export const CODE_KEYS = {

@@ -15,8 +15,7 @@
 //
 // Read-only. No state changes. No secrets in response.
 
-import { jsonResp, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
-import { SITE, SB_LIVE } from '../_shared.js';
+import { jsonResp, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 
 const SBU = SB_LIVE;
 const SBK = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';

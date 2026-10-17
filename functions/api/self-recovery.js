@@ -21,8 +21,7 @@ import {
   defaultAllowedOrigins,
   corsHeaders,
   jsonResp,
-  isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
-import { SB_LIVE } from '../_shared.js';
+  isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SB_LIVE } from '../_shared.js';
 
 let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const RATE_LIMIT_SECONDS = 300;

@@ -19,13 +19,12 @@
 // test: true sends each report to the connected account only.
 // key (send / statusSend): one per press in the app, the same on its retries;
 // a department already mailed under it is not mailed again (BACKLOG 14.8).
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMailTo, stateSet, stateGet } from '../_onedrive.js';
 import { readSheetRows, sheetsDigest } from '../_xlsxpatch.js';
 import { makeCloseToken, closeUrl } from '../_closelink.js';
 import { FILES, REPORT_DEPTS, buildRegister, readAll, TASKS_Q, photoOf, signPhotos, fetchThumb, ilYear, folderFor } from './hazard-file.js';
 import { suggestAction } from '../_ai.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 const G = 'https://graph.microsoft.com/v1.0/me/drive/root:/';
 const APP_URL = SITE.appUrl;

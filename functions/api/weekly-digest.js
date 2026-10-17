@@ -37,14 +37,13 @@
 // so the two UTC slots of the cron and a manual send never double the mail.
 // The result lands in server_state (key weekly_digest). No Mail.Send, no
 // OneDrive connection = the mail cannot go; the result says so.
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_TIMEOUT_MS as SB_MS, GRAPH_TIMEOUT_MS as GRAPH_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, tokenRow, hasMail, sendMail, stateGet, stateSet } from '../_onedrive.js';
 import { buildRegister, readAll, TASKS_Q } from './hazard-file.js';
 import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
 import { UPLOAD_LOG } from './od-read.js';
 import { TBT_DEPTS, deptMatch, PERM_KINDS, TYPED_KINDS } from './talk.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 export const STATE_KEY = 'weekly_digest';
 export const APP_URL = SITE.appUrl;

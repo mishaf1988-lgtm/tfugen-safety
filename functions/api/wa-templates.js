@@ -15,8 +15,7 @@
 // who reached this endpoint must not be able to submit arbitrary text for
 // approval in the factory's name.
 
-import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
-import { SITE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo, SITE } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
 const FALLBACK_WABA_ID = SITE.wabaId;

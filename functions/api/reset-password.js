@@ -1,8 +1,7 @@
 // Cloudflare Pages Function — admin-only password reset
 // Mirrors /api/reset-password.js (Vercel Edge Function).
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
-import { SITE, SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SITE, SB_LIVE } from '../_shared.js';
 
 let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const ADMIN_EMAIL = SITE.adminEmail;

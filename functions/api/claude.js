@@ -9,8 +9,7 @@
 // shape into Anthropic's {content:[{text}]} shape so all 14 client call
 // sites keep working unchanged.
 
-import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
-import { SB_LIVE } from '../_shared.js';
+import { defaultAllowedOrigins, originPasses, corsHeaders, jsonResp, isAllowedCaller, requireRole, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo, SB_LIVE } from '../_shared.js';
 
 // Allowed models. Cloudflare Workers AI models start with "@cf/". Anthropic
 // models are kept for backward-compat — switch the client back any time by

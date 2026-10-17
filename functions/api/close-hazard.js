@@ -21,11 +21,10 @@
 // close_note and after_photo_url, and the file in folder 13 follows through
 // the tour_hazards trigger. The photo is optional (Michael, same day).
 // Not in MACHINE_PATHS: a person opens it, so the Israel-only rule applies.
-import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, sbFrom } from '../_shared.js';
+import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, sbFrom, SITE, SB_LIVE } from '../_shared.js';
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 import { readCloseToken } from '../_closelink.js';
-import { SITE, SB_LIVE } from '../_shared.js';
 
 let SB = SB_LIVE; // set from env in onRequest (sbFrom)
 const APP_URL = SITE.appUrl;

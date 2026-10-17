@@ -50,7 +50,7 @@ for f in trustee-log ms-auth trustee-notify mail-inbox close-hazard hazard-file 
   sed -e "s#'../_shared.js'#'./_shared.mjs'#" -e "s#'../_xlsx.js'#'./_xlsx.mjs'#" -e "s#'../_onedrive.js'#'./_onedrive.mjs'#" -e "s#'../_closelink.js'#'./_closelink.mjs'#" -e "s#'../_xlsxpatch.js'#'./_xlsxpatch.mjs'#" -e "s#'../_ai.js'#'./_ai.mjs'#" -e "s#'./hazard-file.js'#'./hazard-file.mjs'#" -e "s#'./hazard-deck.js'#'./hazard-deck.mjs'#" -e "s#'./od-read.js'#'./od-read.mjs'#" -e "s#'../_meeting.js'#'./_meeting.mjs'#" -e "s#'../_pptx.js'#'./_pptx.mjs'#" -e "s#'../_deckpatch.js'#'./_deckpatch.mjs'#" -e "s#'../_watchdog.js'#'./_watchdog.mjs'#" -e "s#'../_appjs.js'#'./_appjs.mjs'#" -e "s#'../_logo.js'#'./_logo.mjs'#" -e "s#'./talk.js'#'./talk.mjs'#" -e "s#'./hazard-report.js'#'./hazard-report.mjs'#" ../../functions/api/$f.js > _build/$f.mjs
 done
 # _site.js (17/10/2026): the factory's names and addresses, imported by _shared and the root modules
-cp ../../functions/_site.js _build/_site.mjs
+cp ../../functions/_site.js _build/_site.mjs; cp ../../functions/_site.js _build/_site.js  # also for tests that copy _shared.js into _build themselves
 sed -i "s#'./_site.js'#'./_site.mjs'#" _build/*.mjs
 filter="${1:-}"; fail=0
 # SHARD=i/n (the GitHub workflow, 01/10/2026): only every n-th file, from i.

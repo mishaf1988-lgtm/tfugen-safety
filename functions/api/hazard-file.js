@@ -38,11 +38,10 @@
 // force:true; admin/manager session). One file per request (CPU budget): the
 // xlsm, then the request calls itself for the xlsx.
 
-import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole } from '../_shared.js';
+import { defaultAllowedOrigins, corsHeaders, jsonResp, requireRole, SB_LIVE } from '../_shared.js';
 import { odConfigured, accessToken, stateGet, stateSet, tokenRow, runLeased } from '../_onedrive.js';
 import { patchSheetRows, sheetsDigest, readSheetRows, picInfo, PIC_ROW_PT } from '../_xlsxpatch.js';
 import { runWatch, WATCH_KEY } from '../_watchdog.js';
-import { SB_LIVE } from '../_shared.js';
 // 16/10/2026 (BACKLOG 14.5): every outbound call has a time limit, as in _onedrive.js. A Graph or
 // database call that hung held the run (and its lease) until Cloudflare gave up. The requests this
 // file sends to itself in waitUntil are the exception: they are other runs, not calls to wait on.
