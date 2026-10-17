@@ -32,7 +32,8 @@ const INCLUDE = [
   'tests/harness/site-config-test.mjs',   // sets up a new factory (--write) and guards its name
   'tools/make-logo.py',
 ];
-const REPLACE = { 'functions/_site.js': 'tools/platform/_site.js', 'README.md': 'tools/platform/README.md' };
+const REPLACE = { 'functions/_site.js': 'tools/platform/_site.js', 'README.md': 'tools/platform/README.md',
+  'SETUP.md': 'tools/platform/SETUP.md', 'db/demo-data.sql': 'tools/platform/demo-data.sql' };
 // Words that are only history in a comment here, rewritten in the copy alone. Changing them in
 // this repo would cost more than the word: the service worker reinstalls on every phone.
 const REWRITE = {
