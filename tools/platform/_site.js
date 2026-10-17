@@ -64,6 +64,8 @@ export const SITE = {
   ],
   trainPlanAuto: {},
   // The manager's mail signature, under every hazard report.
+  // The agents in agents/ and the days after which a silent one turns red in the weekly mail.
+  agentPeriods: { compliance: 35, trends: 35, inspector: 35, 'talk-field': 8 },
   signature: '<div style="margin-top:16px;font-family:Arial,sans-serif;font-size:14px">\u05d1\u05d1\u05e8\u05db\u05d4,<br><br><b>' + OWNER + '.</b><br>' + COMPANY + '<br><a href="mailto:' + MANAGER_EMAIL + '">' + MANAGER_EMAIL + '</a></div>'
 };
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Every Routine that reports with agent_report is on the weekly mail's list (11/10/2026).
 
-weekly-digest.js AGENT_PERIODS decides when a silent agent turns red. Two agents
+SITE.agentPeriods (functions/_site.js, read by weekly-digest.js as AGENT_PERIODS) decides when a
+silent agent turns red. Two agents
 (routine-validity, routine-mail-filing) were set up without being added, so if they had
 stopped, nothing in the mail would have shown it. The name comes from "שם הסוכן: <name>" in
 project-files/routine-*.md and retro-prompt.md. NOT_RECURRING: Routines that do not run on a
-schedule, with the reason.
+schedule, with the reason. The product template (tools/platform/_site.js) is checked the same
+way against tools/platform/agents/*.md (17/10/2026).
 """
 import glob, os, re, sys
 
@@ -21,20 +23,35 @@ def check(label, cond, detail=None):
 
 
 js = open(os.path.join(ROOT, 'functions/api/weekly-digest.js'), encoding='utf-8').read()
-m = re.search(r'export const AGENT_PERIODS = \{([^}]*)\}', js)
-check('AGENT_PERIODS found', bool(m))
-listed = set(re.findall(r"'?([a-z][a-z0-9-]*)'?\s*:\s*\d+", m.group(1) if m else ''))
-files = glob.glob(os.path.join(ROOT, 'project-files/routine-*.md')) + [os.path.join(ROOT, 'project-files/retro-prompt.md')]
-names = {}
-for f in files:
-    if not os.path.exists(f): continue
-    for n in re.findall(r'שם הסוכן: ([a-z0-9-]+)', open(f, encoding='utf-8').read()):
-        names[n] = os.path.basename(f)
-check('agent names found in the Routine files', len(names) >= 8, sorted(names))
-for n, f in sorted(names.items()):
-    if n in NOT_RECURRING: continue
-    check(n + ' (' + f + ') is on AGENT_PERIODS', n in listed)
-for n in sorted(listed):
-    check(n + ' on AGENT_PERIODS has a Routine file', n in names)
+check('weekly-digest.js reads AGENT_PERIODS from SITE', 'export const AGENT_PERIODS = SITE.agentPeriods;' in js)
+
+
+def periods(site):
+    m = re.search(r'agentPeriods: \{([^}]*)\}', open(os.path.join(ROOT, site), encoding='utf-8').read())
+    check(site + ': agentPeriods found', bool(m))
+    return set(re.findall(r"'?([a-z][a-z0-9-]*)'?\s*:\s*\d+", m.group(1) if m else ''))
+
+
+def names_in(files, least):
+    names = {}
+    for f in files:
+        if not os.path.exists(f): continue
+        for n in re.findall(r'שם הסוכן: ([a-z0-9-]+)', open(f, encoding='utf-8').read()):
+            names[n] = os.path.basename(f)
+    check('agent names found (' + str(least) + '+)', len(names) >= least, sorted(names))
+    return names
+
+
+def match(site, files, least):
+    listed, names = periods(site), names_in(files, least)
+    for n, f in sorted(names.items()):
+        if n in NOT_RECURRING: continue
+        check(n + ' (' + f + ') is on agentPeriods of ' + site, n in listed)
+    for n in sorted(listed):
+        check(n + ' on agentPeriods of ' + site + ' has a Routine file', n in names)
+
+
+match('functions/_site.js', glob.glob(os.path.join(ROOT, 'project-files/routine-*.md')) + [os.path.join(ROOT, 'project-files/retro-prompt.md')], 8)
+match('tools/platform/_site.js', glob.glob(os.path.join(ROOT, 'tools/platform/agents/*.md')), 4)
 print('\n%d passed, %d failed' % (ok, bad))
 sys.exit(1 if bad else 0)
