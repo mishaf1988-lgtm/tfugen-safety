@@ -203,7 +203,41 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
       check(pg + ': the trash, the password and confirm delete the row on the server', right && !right.err && !right.open && right.server === 0 && !right.local, right);
     } else if (id) await page.evaluate(async ({ tbl, id }) => { sbDel(tbl, id); await _obIdle(); }, { tbl, id });
   }
-  console.log('\n6. never the live database');
+  console.log('\n6. a trustee phone: anonymous session, its own report, nothing else');
+  // The kiosk with no password (17/10/2026): a fresh browser, the same preview host, no sign-in.
+  // The trustee code is checked by /api/trustee-gate, which this local server does not run, so this
+  // part tests what the phone does with the database: the anonymous session, the insert under the
+  // anonymous policies, and that manager tables stay closed. The Turnstile widget is skipped (the
+  // site key belongs to the live host); the test project must accept an anonymous sign-in without it.
+  // trustee_reports rows are never deleted (CLAUDE.md), so each run leaves one row marked e2e-kiosk.
+  const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Jerusalem', locale: 'he-IL' });
+  const kiosk = await ctx2.newPage();
+  kiosk.on('request', (r) => { try { hosts.add(new URL(r.url()).host); } catch (e) {} });
+  kiosk.on('pageerror', (e) => errors.push('kiosk: ' + String(e.message || e)));
+  await kiosk.goto('http://' + HOST + ':' + port + '/index.html', { waitUntil: 'load' });
+  await kiosk.waitForTimeout(1500);
+  const anon = await kiosk.evaluate(async () => {
+    window._captcha = () => Promise.resolve(null);
+    try { await _sbAuth(); } catch (e) { return { err: String(e && (e.message || e)) }; }
+    const claims = JSON.parse(atob(_sbToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const d = new Date().toISOString().substring(0, 10), id = gid();
+    const row = { id: id, u: 'e2e-kiosk', m: _truMonthKey(d), t: 1, d: d, location_id: null, loc: 'e2e-kiosk', ok: true, f: null, photo_url: null, s: TRUSTEE_S_OK, ts: new Date().toISOString() };
+    sbIns('trustee_reports', row);
+    await _obIdle();
+    const get = async (q) => { const r = await fetch(SBU + '/rest/v1/' + q, { headers: sbH() }); return { status: r.status, rows: r.ok ? await r.json() : await r.text() }; };
+    return { anonymous: claims.is_anonymous === true, id: id, own: await get('trustee_reports?id=eq.' + id + '&select=id,u,s'), ncr: await get('ncr?select=id&limit=5'), emp: await get('emp?select=id&limit=5'), outbox: _obGet().length };
+  });
+  if (anon && anon.err && /anonymous sign-ins are disabled/i.test(anon.err)) {
+    // A setting of the test project only (Authentication > Sign In / Providers), chrome-queue C17.
+    console.log('  - skipped: anonymous sign-ins are off in the test project (chrome-queue C17)');
+  } else {
+  check('kiosk: an anonymous session from the test database', anon && !anon.err && anon.anonymous, anon);
+  check('kiosk: the report reached the server under the anonymous policies', anon && anon.own && anon.own.status === 200 && anon.own.rows.length === 1 && anon.outbox === 0, anon && { own: anon.own, outbox: anon.outbox });
+  check('kiosk: NCR and employees stay closed to it', anon && anon.ncr && Array.isArray(anon.ncr.rows) && anon.ncr.rows.length === 0 && Array.isArray(anon.emp.rows) && anon.emp.rows.length === 0, anon && { ncr: anon.ncr, emp: anon.emp });
+  }
+  await ctx2.close();
+
+  console.log('\n7. never the live database');
   check('no request went to the live Supabase', !hosts.has(LIVE_DB), [...hosts]);
   check('requests did go to the test Supabase', hosts.has(TEST_DB), [...hosts]);
   check('no page errors', errors.length === 0, errors.slice(0, 5));
