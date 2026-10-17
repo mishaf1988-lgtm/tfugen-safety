@@ -22,8 +22,9 @@ import {
   corsHeaders,
   jsonResp,
   isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { SB_LIVE } from '../_shared.js';
 
-let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
+let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
 const RATE_LIMIT_SECONDS = 300;
 
 export async function onRequest({ request, env }) {

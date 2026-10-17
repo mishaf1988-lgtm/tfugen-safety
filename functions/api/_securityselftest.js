@@ -16,8 +16,9 @@
 // Read-only. No state changes. No secrets in response.
 
 import { jsonResp, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { SITE, SB_LIVE } from '../_shared.js';
 
-const SBU = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const SBU = SB_LIVE;
 const SBK = 'sb_publishable_N2ihyyjK_qZEyB0vqunNtQ_oi4roa0M';
 
 function decodeJwtEmail(token) {
@@ -392,7 +393,7 @@ export async function onRequest({ request }) {
     });
   } else {
     const sbHeaders = { apikey: SBK, Authorization: 'Bearer ' + userToken };
-    const callerRoleHint = callerEmail === 'admin@tfugen.local'
+    const callerRoleHint = callerEmail === SITE.adminEmail
       ? 'admin'
       : (callerEmail ? 'authenticated (' + callerEmail + ')' : 'unknown');
 
@@ -598,7 +599,7 @@ export async function onRequest({ request }) {
 
   const html = `<!doctype html><html dir="rtl" lang="he"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>בדיקת אבטחה - Tapugan Safety</title>
+<title>בדיקת אבטחה - ${SITE.name}</title>
 <style>
  body{font-family:-apple-system,Arial,Heebo,sans-serif;margin:0;padding:14px;background:#f8fafc;color:#1a1d23}
  h1{font-size:17px;margin:0 0 2px}

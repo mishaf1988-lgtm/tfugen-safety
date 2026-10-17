@@ -35,6 +35,7 @@
 // on the home screen (op:'status' -> watch), and says so when this check
 // itself has not run for 45 minutes.
 import { stateGet, stateSet, stateLock, stateUnlock, tokenRow, accessToken, hasMail, sendMail, odConfigured } from './_onedrive.js';
+import { SITE } from './_site.js';
 
 export const WATCH_KEY = 'sync_watch';
 // The file's prepared rows and the 80% warning (hazard-file.js MAX_ROW - 1, FULL_WARN).
@@ -99,7 +100,7 @@ export function slowIssue(lat, nowMs, wasOpen) {
 // for a worker a database that cannot be reached is the worst case, not a fast one. It is
 // counted apart in `fail`, so the numbers kept for the Pro decision say which it was.
 export async function probe(env) {
-  const url = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/locations?select=id&limit=1';
+  const url = (env.SUPABASE_URL || SITE.supabaseUrl) + '/rest/v1/locations?select=id&limit=1';
   const h = { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: 'Bearer ' + env.SUPABASE_SERVICE_ROLE_KEY };
   let fail = 0;
   const one = async () => {
@@ -195,10 +196,10 @@ export function mailHtml(open, fresh, done, appUrl) {
 // The slowness notice is not a sync problem; a mail about it alone says so.
 const onlySlow = (keys) => keys.length > 0 && keys.every((k) => (k && k.key ? k.key : k) === 'slow');
 export function mailSubject(fresh, done, open) {
-  if (fresh.length && onlySlow(fresh)) return 'Tapugan Safety: ' + open[fresh[0]].title;
-  if (!fresh.length && onlySlow(done || [])) return 'Tapugan Safety: \u05d4\u05de\u05e1\u05d3 \u05d7\u05d6\u05e8 \u05dc\u05de\u05d4\u05d9\u05e8\u05d5\u05ea \u05e8\u05d2\u05d9\u05dc\u05d4';
-  if (fresh.length) return 'Tapugan Safety: \u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df (' + fresh.length + ') - ' + open[fresh[0]].title;
-  return 'Tapugan Safety: \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3' + (Object.keys(open).length ? ' (\u05d7\u05dc\u05e7\u05d9\u05ea)' : '');
+  if (fresh.length && onlySlow(fresh)) return SITE.name + ': ' + open[fresh[0]].title;
+  if (!fresh.length && onlySlow(done || [])) return SITE.name + ': \u05d4\u05de\u05e1\u05d3 \u05d7\u05d6\u05e8 \u05dc\u05de\u05d4\u05d9\u05e8\u05d5\u05ea \u05e8\u05d2\u05d9\u05dc\u05d4';
+  if (fresh.length) return SITE.name + ': \u05d1\u05e2\u05d9\u05d4 \u05d1\u05e1\u05e0\u05db\u05e8\u05d5\u05df (' + fresh.length + ') - ' + open[fresh[0]].title;
+  return SITE.name + ': \u05d4\u05e1\u05e0\u05db\u05e8\u05d5\u05df \u05d7\u05d6\u05e8 \u05dc\u05e2\u05d1\u05d5\u05d3' + (Object.keys(open).length ? ' (\u05d7\u05dc\u05e7\u05d9\u05ea)' : '');
 }
 
 // One run at a time (15/10/2026): op:'watch' rides every hazard-file call, so two could read

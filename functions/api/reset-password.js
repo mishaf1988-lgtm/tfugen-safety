@@ -2,9 +2,10 @@
 // Mirrors /api/reset-password.js (Vercel Edge Function).
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, sbFrom, SB_TIMEOUT_MS as SB_MS, tmo } from '../_shared.js';
+import { SITE, SB_LIVE } from '../_shared.js';
 
-let SUPABASE_URL = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
-const ADMIN_EMAIL = 'admin@tfugen.local';
+let SUPABASE_URL = SB_LIVE; // set from env in onRequest (sbFrom)
+const ADMIN_EMAIL = SITE.adminEmail;
 const MAX_BODY_BYTES = 1000;
 
 function genPassword() {
@@ -51,7 +52,7 @@ export async function onRequest({ request, env }) {
   if (!username) return jsonResp({ error: 'username required' }, 400, cors);
   if (username === 'admin') return jsonResp({ error: 'cannot reset admin password from this endpoint' }, 400, cors);
 
-  const targetEmail = username + '@tfugen.local';
+  const targetEmail = username + '@' + SITE.loginDomain;
 
   async function listAllUsers() {
     const all = [];

@@ -48,6 +48,9 @@ description: Use when developing features for the TFUGEN Safety Management Syste
 - מודל: Claude Sonnet/Opus (ראה `api/claude.js`)
 - שמור prompts בעברית כ-`\uXXXX`
 
+### 7. שם המפעל וכתובות בשרת = `SITE` (17/10/2026)
+שם, חברה, כתובת האתר והמסד, דומיין הכניסה, מיילים ותיקיית OneDrive יושבים רק ב-`functions/_site.js` (המוצר, שלב 1). קובץ ב-`functions/api` מקבל `SITE` / `SB_LIVE` מ-`'../_shared.js'`; קובץ בשורש `functions/` מייבא `'./_site.js'`. ערך חדש של המפעל = שדה חדש ב-`SITE`, לא קבוע בקובץ. `site-config-test.mjs` נכשל על `tapugan`/`tfugen`/`תפוגן`/מזהה המסד מחוץ ל-`_site.js` ו-`_logo.js`.
+
 ## Workflow לכל משימה חדשה
 
 1. **קרא STATUS.md** - רק הסעיף «🔔 פתוח עכשיו» (ראה CLAUDE.md, «קרא חכם»)
@@ -165,8 +168,8 @@ fetch('/api/claude', {
 **82. `\uXXXX` בתוכן של כלי Write הפך לעברית גולמית (13/10/2026, PR זה).**
 מה קרה: כתבתי סקריפט עריכה לסקראץ' ב-Write, עם `'\u05e9\u05d8\u05d7'` בתוך מחרוזת JS. פרמטרי הכלי הם JSON, ו-JSON מפענח `\u05e9` לתו עצמו, אז לקובץ נכנס `'שטח'`. hook העברית הגולמית לא ראה את זה כי העריכה ב-`index.html` רצה דרך `python3`. נתפס ב-`rule1-hebrew-test.js` בהרצת המערך.
 הכלל: בתוכן של Write או Edit לכתוב `\\u05e9` (לוכסן כפול), או לייצר את ה-escape בסקריפט (`'\\u%04x'%ord(c)`). אחרי כל עריכה ב-`python3` להריץ `node tests/harness/rule1-hebrew-test.js` לפני ה-commit.
-נאכף: `rule1-hebrew-test.js` (במערך), כולל אימוג'י כ-escape של 5 ספרות; הלוכסן הכפול: טקסט.
-חזר: 1 (13/10/2026: המחולל `'\\u%04x'%ord(c)` כתב את 📷 כ-`\u1f4f7`, וזה לא escape תקין ב-JS. תו מעל U+FFFF צריך צמד surrogate (`\ud83d\udcf7`), ובפייתון: `json.dumps(c)[1:-1]`. נתפס ב-`rule1-hebrew-test.js`.)
+נאכף: `rule1-hebrew-test.js` (במערך), כולל אימוג'י כ-escape של 5 ספרות, ומ-17/10/2026 גם תקרה לשורות עברית גולמית בקוד `functions/` (30, רק יורדת); הלוכסן הכפול: טקסט.
+חזר: 2 (17/10/2026: `functions/_site.js` ובדיקה חדשה נכתבו ב-Write עם `\u05ea...`, ונכנסו כעברית. נתפס ב-`grep` על תווים לא-ASCII לפני ה-commit; מאז התקרה ב-`rule1-hebrew-test.js`. 13/10/2026: 13/10/2026: המחולל `'\\u%04x'%ord(c)` כתב את 📷 כ-`\u1f4f7`, וזה לא escape תקין ב-JS. תו מעל U+FFFF צריך צמד surrogate (`\ud83d\udcf7`), ובפייתון: `json.dumps(c)[1:-1]`. נתפס ב-`rule1-hebrew-test.js`.)
 
 **84. המצגת כתבה 0 בכל עמודות התרשים, בשקט, אחרי שנשמרה ב-PowerPoint (13/10/2026, PR זה).**
 מה קרה: מיכאל: "משהו לא עובד תקין גם במצגת וגם במספרים". בתרשים "מפגעים לפי מחלקה" כל המחלקות הראו 0 ו"הכל סגור", כשהיו 18 פתוחים. PowerPoint שמר את התווית "מחלקה\nנסגרו N" עם `\r\n`. `setBars` חילק לפי `\n` בלבד, קיבל "מחלקה\r", לא מצא אותה בנתונים וכתב 0. הדוח `deck_report` לא הזכיר את זה. הבדיקות עברו כי ה-fixture נכתב בקוד ולא נשמר אף פעם ב-PowerPoint. נמצא רק כשהתרשים נקרא מהקובץ החי (`od-read` עם `part`).

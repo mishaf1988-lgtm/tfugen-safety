@@ -24,7 +24,8 @@ const dir = path.join(ROOT, 'functions/api');
 const bad = [];
 for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.js'))) {
   const s = fs.readFileSync(path.join(dir, f), 'utf8');
-  const re = new RegExp('^(const|let) (\\w+) = ' + LIVE_LIT.replace(/[.]/g, '\\.') + ';', 'gm');
+  // since 17/10/2026 the address is SB_LIVE (from _site.js), not a literal: both count
+  const re = new RegExp('^(const|let) (\\w+) = (?:' + LIVE_LIT.replace(/[.]/g, '\\.') + '|SB_LIVE);', 'gm');
   let m;
   while ((m = re.exec(s))) {
     const [, kind, name] = m;

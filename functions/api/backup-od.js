@@ -36,15 +36,16 @@
 // for tomorrow (photos_left says how many).
 import { odConfigured, accessToken, stateGet, stateSet } from '../_onedrive.js';
 import { corsHeaders, defaultAllowedOrigins, jsonResp, requireRole, FILE_TIMEOUT_MS as FILE_MS, tmo } from '../_shared.js';
+import { SITE, SB_LIVE } from '../_shared.js';
 
 export const STATE_KEY = 'backup_od';
-export const BASE = 'Apps/Tapugan Safety/_Backups';
+export const BASE = SITE.odRoot + '/_Backups';
 export const DAILY = BASE + '/cron', MONTHLY = BASE + '/monthly', PHOTOS = BASE + '/photos';
 export const DAILY_KEEP = 15, MONTHLY_KEEP = 12, PHOTO_MAX = 15;
 export const TALKS = BASE + '/talks', TALKS_KEEP = 15;
 export const CODE = BASE + '/code', CODE_KEEP = 8, CODE_EVERY_DAYS = 7;
 // [repo, private?]. A private one is skipped (and said so) until the token is there.
-export const CODE_REPOS = [['mishaf1988-lgtm/tfugen-safety', false], ['mishaf1988-lgtm/michael-skills', true]];
+export const CODE_REPOS = SITE.codeRepos;
 const CODE_RE = /^(.+)-(\d{2})-(\d{2})-(\d{4})\.zip$/;
 export function codeName(repo, today) { const [y, m, d] = String(today).split('-'); return repo.split('/')[1] + '-' + d + '-' + m + '-' + y + '.zip'; }
 // The newest zip of this repo is at least CODE_EVERY_DAYS old (or there is none).
@@ -91,10 +92,10 @@ const TALKS_RE = /^talks-(\d{2})-(\d{2})-(\d{4})\.json$/;
 // The worker runs once a day; a newest file older than this means it stopped.
 export const FRESH_MS = 36 * 3600 * 1000;
 const RESERVE = 6; // token read + refresh + token save (2) + state write + slack
-const SB_DEFAULT = 'https://znhjtpcltrxxyfjczgvw.supabase.co';
+const SB_DEFAULT = SB_LIVE;
 const GRAPH = 'https://graph.microsoft.com/v1.0/me/drive';
 
-const BACKUP_RE = /^tapugan-backup-(\d{4})-(\d{2})-\d{2}_[\d-]+\.json$/; // complete; "-partial" does not match
+const BACKUP_RE = new RegExp('^' + SITE.backupPrefix + '-(\\d{4})-(\\d{2})-\\d{2}_[\\d-]+\\.json$'); // complete; "-partial" does not match
 
 // Pure helpers (tested).
 export function missing(source, have) {
@@ -268,7 +269,7 @@ async function run(env) {
       if (priv && !env.GH_SKILLS_TOKEN) { rec.code.skipped.push(repo + ': no GH_SKILLS_TOKEN'); continue; }
       if (left() < 3) { rec.code.skipped.push(repo + ': budget, tomorrow'); continue; }
       const url = priv ? 'https://api.github.com/repos/' + repo + '/zipball/main' : 'https://codeload.github.com/' + repo + '/zip/refs/heads/main';
-      const hd = priv ? { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, 'User-Agent': 'tapugan-backup', Accept: 'application/vnd.github+json' } : { 'User-Agent': 'tapugan-backup' };
+      const hd = priv ? { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, 'User-Agent': SITE.backupPrefix, Accept: 'application/vnd.github+json' } : { 'User-Agent': SITE.backupPrefix };
       const r = await f(url, { headers: hd, signal: tmo(60000) });
       if (!r.ok) { err('code', repo + ' ' + r.status); continue; }
       const bytes = await r.arrayBuffer();

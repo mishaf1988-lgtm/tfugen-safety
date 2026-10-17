@@ -25,11 +25,12 @@ import { SB_TIMEOUT_MS as SB_MS, FILE_TIMEOUT_MS as FILE_MS, tmo, sbFrom } from 
 import { odConfigured, tokenRow, hasMail, accessToken, sendMail } from '../_onedrive.js';
 import { imageInfo } from '../_xlsx.js';
 import { readCloseToken } from '../_closelink.js';
+import { SITE, SB_LIVE } from '../_shared.js';
 
-let SB = 'https://znhjtpcltrxxyfjczgvw.supabase.co'; // set from env in onRequest (sbFrom)
-const APP_URL = 'https://tapugan-safety.pages.dev';
+let SB = SB_LIVE; // set from env in onRequest (sbFrom)
+const APP_URL = SITE.appUrl;
 const BUCKET = 'incidents-photos';
-const PREFS_ID = 'admin@tfugen.local';
+const PREFS_ID = SITE.adminEmail;
 const TASK_CLOSE = 8;
 const S_CLOSED = '\u05e0\u05e1\u05d2\u05e8';
 const S_H_CLOSED = '\u05e1\u05d2\u05d5\u05e8';
@@ -65,12 +66,12 @@ export function page(title, inner, tone, status) {
   const color = tone === 'ok' ? '#15803d' : tone === 'err' ? '#cc1f1f' : '#1e3a8a';
   const html = '<!doctype html><html lang="he" dir="rtl"><head><meta charset="UTF-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">'
-    + '<title>Tapugan Safety</title></head>'
+    + '<title>' + SITE.name + '</title></head>'
     + '<body style="font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0;padding:16px">'
     + '<div style="background:#fff;border-radius:12px;max-width:480px;margin:0 auto;box-shadow:0 4px 20px rgba(0,0,0,.08);overflow:hidden">'
     + '<div style="background:' + color + ';color:#fff;padding:14px 18px;font-size:17px;font-weight:700">' + esc(title) + '</div>'
     + '<div style="padding:18px;font-size:15px;line-height:1.7;color:#1f2937">' + inner + '</div>'
-    + '<div style="padding:10px 18px;background:#f9fafb;font-size:11px;color:#9ca3af">\u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'
+    + '<div style="padding:10px 18px;background:#f9fafb;font-size:11px;color:#9ca3af">' + SITE.company + ' - \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea</div>'
     + '</div></body></html>';
   return new Response(html, { status: status || 200, headers: HEADERS });
 }

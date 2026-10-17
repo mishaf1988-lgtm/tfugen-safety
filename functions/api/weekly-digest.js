@@ -44,9 +44,10 @@ import { meetingDate } from './hazard-deck.js';
 import { WATCH_KEY, ilTime } from '../_watchdog.js';
 import { UPLOAD_LOG } from './od-read.js';
 import { TBT_DEPTS, deptMatch, PERM_KINDS, TYPED_KINDS } from './talk.js';
+import { SITE, SB_LIVE } from '../_shared.js';
 
 export const STATE_KEY = 'weekly_digest';
-export const APP_URL = 'https://tapugan-safety.pages.dev';
+export const APP_URL = SITE.appUrl;
 export const SOON_DAYS = 7, EXP_DAYS = 30, EXP_SHOW = 40, TOPICS = 3, REPEAT_MS = 20 * 3600 * 1000;
 const DAY = 86400000;
 // The same four as _REQ_REGS in index.html: [table, label].
@@ -132,9 +133,9 @@ const H = {
   app: '\u05dc\u05e4\u05ea\u05d5\u05d7 \u05d0\u05ea \u05d4\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4',
   exp: '\u05ea\u05e4\u05d5\u05d2\u05d5\u05ea: \u05e4\u05d2 \u05d0\u05d5 \u05d9\u05e4\u05d5\u05d2 \u05d1-30 \u05d9\u05d5\u05dd', expTh: ['\u05e1\u05d5\u05d2', '\u05e9\u05dd', '\u05d0\u05d7\u05e8\u05d0\u05d9', '\u05ea\u05e4\u05d5\u05d2\u05d4'], expired: '\u05e4\u05d2 \u05dc\u05e4\u05e0\u05d9 ', noTask: '\u05d1\u05dc\u05d9 \u05de\u05e9\u05d9\u05de\u05d4', more: '\u05d5\u05e2\u05d5\u05d3 ', expFail: '\u05dc\u05d0 \u05e0\u05e7\u05e8\u05d0, \u05dc\u05d1\u05d3\u05d5\u05e7 \u05d1\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4: ',
   qGroups: '\u05d1\u05e7\u05e9\u05d5\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05e4\u05d9 \u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', qGTh: ['\u05e0\u05d5\u05ea\u05df \u05e9\u05d9\u05e8\u05d5\u05ea', '\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd', '\u05d1\u05e7\u05e9\u05d4'], qMailN: '\u05de\u05d9\u05d9\u05dc ', qNoVendor: '\u05e1\u05e4\u05e7 \u05dc\u05d0 \u05d9\u05d3\u05d5\u05e2', qDone: '\u05d1\u05d8\u05d9\u05e4\u05d5\u05dc',
-  qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qMany: ['\u05de\u05d9\u05d9\u05dc \u05d0\u05d7\u05d3 \u05dc-', ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'], qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 - \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df',
+  qTh: '\u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qAsk: '\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8', qNoMail: ' (\u05d0\u05d9\u05df \u05de\u05d9\u05d9\u05dc \u05e1\u05e4\u05e7)', qMany: ['\u05de\u05d9\u05d9\u05dc \u05d0\u05d7\u05d3 \u05dc-', ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05e9\u05dc \u05d4\u05e1\u05e4\u05e7'], qSent: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d1\u05e7\u05e9\u05d4 ', qQuote: '\u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05e6\u05e2\u05d4 ', qOrder: '\u05e0\u05e9\u05dc\u05d7\u05d4 \u05d4\u05d6\u05de\u05e0\u05d4 ', qPlanned: '\u05de\u05ea\u05d5\u05db\u05e0\u05df ', qWait: '\u05d0\u05d9\u05df \u05ea\u05e9\u05d5\u05d1\u05d4 ', qSubj: '\u05d1\u05e7\u05e9\u05ea \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 - ' + SITE.company,
   qBody: ['\u05e9\u05dc\u05d5\u05dd,', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea:', '\u05d0\u05d1\u05e7\u05e9 \u05d4\u05e6\u05e2\u05ea \u05de\u05d7\u05d9\u05e8 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2 \u05d1\u05d3\u05d9\u05e7\u05d4 \u05ea\u05e7\u05d5\u05e4\u05ea\u05d9\u05ea \u05dc\u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u05d4\u05d1\u05d0\u05d9\u05dd:'], qSerial: '\u05de\u05e1\u05e4\u05e8 \u05e1\u05d9\u05d3\u05d5\u05e8\u05d9 ', qReport: '\u05d3\u05d5\u05d7 \u05e7\u05d5\u05d3\u05dd ', qLoc: '\u05de\u05d9\u05e7\u05d5\u05dd ', qExp: '\u05ea\u05d5\u05e7\u05e3 \u05e0\u05d5\u05db\u05d7\u05d9 ',
-  qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, \u05ea\u05e2\u05e9\u05d9\u05d5\u05ea \u05ea\u05e4\u05d5\u05d2\u05df'],
+  qEnd: '\u05d0\u05e9\u05de\u05d7 \u05dc\u05e7\u05d1\u05dc \u05d2\u05dd \u05de\u05d5\u05e2\u05d3 \u05d0\u05e4\u05e9\u05e8\u05d9 \u05dc\u05d1\u05d9\u05e6\u05d5\u05e2.', qSign: ['\u05ea\u05d5\u05d3\u05d4,', '\u05de\u05d9\u05db\u05d0\u05dc \u05e4\u05e8\u05d9\u05d9\u05dc\u05d9\u05da', '\u05de\u05de\u05d5\u05e0\u05d4 \u05d1\u05d8\u05d9\u05d7\u05d5\u05ea \u05d5\u05d0\u05d9\u05db\u05d5\u05ea \u05e1\u05d1\u05d9\u05d1\u05d4, ' + SITE.company],
   qVendor: '\u05e1\u05e4\u05e7:',
   odNew: '\u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd \u05d1\u05ea\u05d9\u05e7\u05d9\u05d9\u05ea \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea (7 \u05d9\u05de\u05d9\u05dd)',
   eqf: '\u05e6\u05d9\u05d5\u05d3 \u05dc\u05d0 \u05db\u05e9\u05d9\u05e8, \u05dc\u05d0 \u05dc\u05e9\u05d9\u05de\u05d5\u05e9 \u05e2\u05d3 \u05ea\u05d9\u05e7\u05d5\u05df: ', eqfMore: ' \u05d5\u05e2\u05d5\u05d3 ',
@@ -518,14 +519,14 @@ export function statusBlock(m) {
 }
 
 export function digestSubject(d, today) {
-  return 'Tapugan Safety: ' + H.title.split(' - ')[0] + ' ' + fd(today) + ' - ' + d.overdueCount + ' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8, ' + d.soon.length + ' \u05d9\u05e2\u05d3 \u05e7\u05e8\u05d5\u05d1, ' + d.trustee.length + ' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd';
+  return SITE.name + ': ' + H.title.split(' - ')[0] + ' ' + fd(today) + ' - ' + d.overdueCount + ' \u05d1\u05d0\u05d9\u05d7\u05d5\u05e8, ' + d.soon.length + ' \u05d9\u05e2\u05d3 \u05e7\u05e8\u05d5\u05d1, ' + d.trustee.length + ' \u05dc\u05d9\u05e7\u05d5\u05d9\u05d9 \u05e0\u05d0\u05de\u05e0\u05d9\u05dd';
 }
 
 // One row is enough to know a register is not empty. A read that fails says
 // nothing (null), so a passing network error is not reported as an empty register.
 export async function emptyRegs(env) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/';
   const res = await Promise.all(REQ_REGS.map(async ([t, label]) => {
     try {
       const r = await fetch(base + t + '?select=*&limit=1', { headers: { apikey: key, Authorization: 'Bearer ' + key }, signal: tmo(SB_MS) });
@@ -541,7 +542,7 @@ export async function emptyRegs(env) {
 // is named in the mail ("not read"), so a network error never reads as "none".
 export async function expiries(env, today) {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const base = (env.SUPABASE_URL || 'https://znhjtpcltrxxyfjczgvw.supabase.co') + '/rest/v1/';
+  const base = (env.SUPABASE_URL || SB_LIVE) + '/rest/v1/';
   const lim = new Date(Date.parse(today + 'T12:00:00Z') + EXP_DAYS * DAY).toISOString().substring(0, 10);
   const failed = [];
   const lists = await Promise.all(EXP_SRC.map(async ([t, label, nc, oc]) => {
@@ -826,7 +827,7 @@ export function assistantLine(q, nowMs) {
 export async function assistantQueue(env) {
   if (!env.GH_SKILLS_TOKEN) return null;
   try {
-    const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': 'tapugan-safety-digest' }, signal: tmo(SB_MS) });
+    const r = await fetch(ASST_QUEUE, { headers: { Authorization: 'Bearer ' + env.GH_SKILLS_TOKEN, Accept: 'application/vnd.github.raw', 'User-Agent': SITE.slug + '-digest' }, signal: tmo(SB_MS) });
     if (!r.ok) return { error: 'HTTP ' + r.status };
     return { text: await r.text() };
   } catch (e) { return { error: String((e && e.message) || e) }; }

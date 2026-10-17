@@ -1,4 +1,5 @@
 import { rewriteApp, buildOf } from './_appjs.js';
+import { SITE } from './_site.js';
 // Cloudflare Pages middleware — who is allowed to reach the front door.
 //
 // Michael, 2026-09-21: «צריך שהמערכת תהיה נגישה רק מישראל בלבד ולא מכל העולם».
@@ -83,7 +84,7 @@ function blocked(country) {
   const body = '<!doctype html><html lang="he" dir="rtl"><head>'
     + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
     + '<meta name="robots" content="noindex, nofollow">'
-    + '<title>Tapugan Safety</title></head>'
+    + '<title>' + SITE.name + '</title></head>'
     + '<body style="font-family:Arial,Heebo,sans-serif;background:#f5f7fa;margin:0;'
     + 'display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px">'
     + '<div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:420px;'
@@ -110,7 +111,7 @@ function blocked(country) {
 // site never reads, STAGING_SUPABASE_URL and STAGING_SUPABASE_SERVICE_ROLE_KEY, and the swap is
 // made here, once, before any Function runs. Production (tapugan-safety.pages.dev itself) is
 // untouched: its host never matches.
-export const PREVIEW_HOST_RE = /\.tapugan-safety\.pages\.dev$/i;
+export const PREVIEW_HOST_RE = SITE.previewHostRe;
 // Secrets that reach the outside world. On a preview they are removed, so a test can never send
 // a WhatsApp, an email, a Vitre call, a GitHub write or a machine-path request for real.
 export const PREVIEW_STRIP = ['META_ACCESS_TOKEN', 'META_PHONE_NUMBER_ID', 'META_WABA_ID', 'RESEND_KEY',
@@ -127,7 +128,7 @@ export function previewEnv(env) {
     previewWhy = 'missing: ' + ['STAGING_SUPABASE_URL', 'STAGING_SUPABASE_SERVICE_ROLE_KEY'].filter((k) => !(env && env[k])).join(', ');
     return false;
   }
-  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.STAGING_SUPABASE_URL) || /znhjtpcltrxxyfjczgvw/.test(env.STAGING_SUPABASE_URL)) { previewWhy = 'STAGING_SUPABASE_URL is not a test project URL'; return false; }
+  if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(env.STAGING_SUPABASE_URL) || env.STAGING_SUPABASE_URL === SITE.supabaseUrl) { previewWhy = 'STAGING_SUPABASE_URL is not a test project URL'; return false; }
   previewWhy = 'env is read-only';
   try {
     env.SUPABASE_URL = env.STAGING_SUPABASE_URL;

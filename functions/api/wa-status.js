@@ -8,9 +8,10 @@
 // This endpoint never sends a WhatsApp message — read-only.
 
 import { defaultAllowedOrigins, corsHeaders, jsonResp, isAllowedCaller, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { SITE } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
-const FALLBACK_WABA_ID = '4400035656982783';
+const FALLBACK_WABA_ID = SITE.wabaId;
 
 export async function onRequest({ request, env }) {
   const allowed = defaultAllowedOrigins(env);

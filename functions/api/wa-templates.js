@@ -16,15 +16,16 @@
 // approval in the factory's name.
 
 import { defaultAllowedOrigins, corsHeaders, isAllowedCaller, jsonResp, requireUser, requireRole, GRAPH_TIMEOUT_MS as GRAPH_MS, tmo } from '../_shared.js';
+import { SITE } from '../_shared.js';
 
 const META_API_VERSION = 'v25.0';
-const FALLBACK_WABA_ID = '4400035656982783';
+const FALLBACK_WABA_ID = SITE.wabaId;
 
 // Must match TEMPLATE_DEDICATED and the parameter order in trustee-notify.js:
 //   {{1}} reporter · {{2}} kind · {{3}} location · {{4}} finding
 // project-files/WHATSAPP-TEMPLATE.md explains every line.
 const SAFETY_TEMPLATE = {
-  name: 'tfugen_safety_report',
+  name: SITE.waTemplates.dedicated,
   language: 'he',
   category: 'UTILITY',
   components: [
@@ -40,7 +41,7 @@ const SAFETY_TEMPLATE = {
         ]]
       }
     },
-    { type: 'FOOTER', text: 'תעשיות תפוגן, מערכת ניהול הבטיחות' }
+    { type: 'FOOTER', text: SITE.company + ', \u05de\u05e2\u05e8\u05db\u05ea \u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05d1\u05d8\u05d9\u05d7\u05d5\u05ea' }
   ]
 };
 
