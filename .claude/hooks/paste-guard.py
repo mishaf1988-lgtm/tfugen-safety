@@ -15,6 +15,7 @@ Never blocks twice in a row (stop_hook_active). Test: python3 tests/harness/past
 """
 import json, os, re, subprocess, sys
 sys.stdin.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")  # the Hebrew reason, on Windows too (hook-utf8-test)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
