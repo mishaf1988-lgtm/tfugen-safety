@@ -33,5 +33,25 @@ try:
     check("db/schema.sql builds tables and holds no dump stamp", schema.count("create table if not exists") >= 50 and "-- dumped " not in schema)
 finally:
     shutil.rmtree(out, ignore_errors=True)
+
+# 17/10/2026: the out-dir may be a clone of safety-platform. Its own files survive; the rest is replaced.
+clone = tempfile.mkdtemp(prefix="platform-clone-")
+try:
+    own = {".git/HEAD": "ref: refs/heads/main\n", "handoff.md": "# handoff\n", "checklist-day1.md": "- [ ] x\n",
+           "demo/a.sql": "-- demo\n", "docs/terms.md": "# terms\n", "marketing/plan.md": "# plan\n"}
+    for rel, txt in own.items():
+        os.makedirs(os.path.dirname(os.path.join(clone, rel)) or clone, exist_ok=True)
+        open(os.path.join(clone, rel), "w", encoding="utf-8").write(txt)
+    open(os.path.join(clone, "old-file.txt"), "w").write("from an earlier export")
+    p = subprocess.run(["node", os.path.join(ROOT, "tools", "export-platform.mjs"), clone],
+                       cwd=ROOT, capture_output=True, text=True, encoding="utf-8", timeout=240)
+    log = (p.stdout or "") + (p.stderr or "")
+    check("export into a clone exits 0 and ends clean", p.returncode == 0 and "clean:" in log, log[-800:])
+    check("the clone's own files are kept, unchanged", all(os.path.exists(os.path.join(clone, r)) and open(os.path.join(clone, r), encoding="utf-8").read() == t for r, t in own.items()),
+          [r for r in own if not os.path.exists(os.path.join(clone, r))])
+    check("a file the export no longer makes is removed", not os.path.exists(os.path.join(clone, "old-file.txt")))
+    check("the clone gets the app", os.path.exists(os.path.join(clone, "index.html")) and os.path.exists(os.path.join(clone, "CLAUDE.md")))
+finally:
+    shutil.rmtree(clone, ignore_errors=True)
 print("\n%d passed, %d failed" % (ok, bad))
 sys.exit(1 if bad else 0)

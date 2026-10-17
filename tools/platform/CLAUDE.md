@@ -2,6 +2,15 @@
 
 Claude Code loads this file at the start of every session in this repo.
 
+## 0. כללי הקו (גוברים על כל השאר)
+
+1. ב-repo הזה אין נתונים, שמות, נהלים, מסמכים, אזורים, מחלקות או מספרים של מעסיק כלשהו. גם לא בהודעת commit, ב-PR או בדוגמה.
+2. קוד מגיע מהמערכת של המעסיק רק דרך כלי הייצוא, רק כשהסריקה clean, ורק כשמיכאל דוחף.
+3. מידע שמגיע מהקו של המעסיק (צ'אט אחר, קובץ, הדבקה) נבדק לפני שנכנס לכאן, ופרט מזהה נשאר בחוץ.
+4. נתוני הדגמה מומצאים בלבד (`demo/`).
+5. חשבונות העסק (מסד, אתר, מייל, דומיין) נפרדים, ולא משתמשים בחשבון של המעסיק לשום דבר.
+6. המסמכים של הקו (`handoff.md`, `checklist-day1.md`, `demo/`, `docs/`, `marketing/`) קיימים רק כאן ולא במקור הייצוא. ייצוא שמחליף את תוכן ה-repo חייב לשמור אותם.
+
 ## The product
 
 **Safety Platform**: a safety and environment management system for factories (ISO 45001, ISO 14001). One copy per factory: its own database (Supabase) and its own site (Cloudflare Pages). The factory owns its data.
