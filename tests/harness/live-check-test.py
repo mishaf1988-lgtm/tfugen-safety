@@ -8,7 +8,8 @@ root = tempfile.mkdtemp()
 import os
 os.makedirs(os.path.join(root, "project-files"))
 open(os.path.join(root, "DECISIONS.md"), "w", encoding="utf-8").write("## x\n**מה:** `received_at` ב-`trustee_reports`.\n" + "trustee_reports\n" * 10
-    + "## 17/10/2026 - הקוד והסוכנים של מיכאל; ה-repo נשאר ציבורי, הסוכנים עוברים לפרטי\n")
+    + "## 17/10/2026 - הקוד והסוכנים של מיכאל; ה-repo נשאר ציבורי, הסוכנים עוברים לפרטי\n"
+    + "## 2026-09-25 - פיילוט כניסה ב-Face ID / טביעת אצבע (passkeys של Supabase), קודם על הטלפון של מיכאל\n")
 env = {"LIVE_CHECK_STATE": st, "LIVE_CHECK_ROOT": root}
 def ask(q, opts=(), sid="s"):
     return run("live-check.py", {"tool_name": "AskUserQuestion", "session_id": sid, "tool_input": {"questions": [{"question": q, "options": [{"label": l, "description": dsc} for l, dsc in opts]}]}}, env)
@@ -35,4 +36,12 @@ check("a decision heading sharing 3+ words: denied, naming the line", '"deny"' i
 check("...and asked again it passes", ask(REPO, [("בצע: לבדוק מה נשבר (מומלץ)", "x"), ("להשאיר ציבורי", "y")]) == "")
 check("two shared words are not enough", ask("לפרסם את הקוד?", [("ציבורי", "")]) == "")
 check("an unrelated question of the same day passes", ask("בערך כמה כסף אתה חושב להשקיע בשיווק בהתחלה?", [("עד 2,000", "")]) == "")
+# 17/10/2026: a questionnaire about test runs matched the passkeys heading on Supabase, phone, sign-in.
+TESTS = "מה כבר בדקת או ביצעת?"
+TOPTS = [("C17: כניסה אנונימית בניסוי", "מתג אחד ב-Supabase של פרויקט הניסוי"), ("#1595/#1596 בטלפון", "בדיקות בטלפון אמיתי"), ("לעצור כאן (מומלץ)", "ה-handoff מעודכן")]
+check("tools and everyday words do not match a decision (passkeys heading)", ask(TESTS, TOPTS, sid="t2") == "")
+import sys, importlib
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".claude", "hooks"))
+LC = importlib.import_module("live-check")
+check("a stop word with a prefix letter stays a stop word ('מומלץ' is not 'ומלץ')", LC.words("מומלץ בדיקות") == set(), LC.words("מומלץ בדיקות"))
 done()
